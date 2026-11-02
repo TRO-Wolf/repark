@@ -16,6 +16,8 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   the Muse MAX second verifier's round 5 pending on the records head. 39 of 40 clauses PROVEN (C-017, the verification, is OPEN). `Path: STANDARD`.
   Branch `fix/spark-door-temp-view-ddl-1`, not pushed.
   pins: spark-door-temp-view-ddl-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032, C-033, C-034, C-035, C-036, C-038, C-039, C-040
+- [spark-door-temp-view-ddl-1-domain-table.md](spark-door-temp-view-ddl-1-domain-table.md) — the AUD-015 domain table: 13 heads, 22 target spellings, view present or absent, catalogs `mem` and `hd`, Spark 4.1.2 and RePark at `4fd5c6c1`; readings 1 to 5 and the class counts.
+- [spark-door-temp-view-ddl-1-domain-cells.jsonl](spark-door-temp-view-ddl-1-domain-cells.jsonl) — the 1144 cells of that table, one JSON object each (catalog, head, spelling, view, statement, class, both answers, both state changes).
 - [nested-literal-seam-1-ledger.md](nested-literal-seam-1-ledger.md) — **NESTED-LITERAL-SEAM-1
   (2026-10-27):** a nested date literal under the row-merge CASE, a constant nested value
   (partitioned or not), a date into a MAP timestamp key on D3, D8 and D10, the read-path CAST of
