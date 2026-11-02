@@ -226,6 +226,56 @@ Verifier round 5 (FAIL, 2026-11-02) on `618df399`, the round-4 fix head with Git
 - **Verdict tally (2026-11-02, clerk).** 40 clauses: 40 PROVEN, 0 OPEN, 0 REJECTED. C-039 is PROVEN on the table. C-017 is re-scoped to the table under the one-round ruling and PROVEN; its original clause and its round-by-round verdicts are kept as dated history in its row.
 
 
+## Coverage attestation (transcribed 2026-11-02)
+
+Transcribed from the critics' own attestations and hand-backs, and the domain table measured on both engines on 2026-11-02. The clerk authored no coverage. Each category row states what a source attests under the category meanings of references/05-critic.md; where a critic used another label, the evidence names it.
+
+```
+COVERAGE_ATTESTATION:
+  pr_unit: spark-door-temp-view-ddl-1
+  attested_by: Opus 5.5 round-5 verifier (claude-opus-5-5) on head 618df399; Muse MAX round-5 critic run 20261102T144103Z on head 4fd5c6c1; the orchestrator, for the domain table measured on both engines on 2026-11-02
+  basis: transcribed from the critics' own category attestations and hand-backs, under the category meanings of references/05-critic.md; the clerk authored no coverage
+  complete: true
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: Clauses C-038, C-039 and C-040 checked against behaviour by both critics. Muse round 5: claims 1, 2, 4 and 5 PROVEN by execution; claim 3 FAIL on R5F1 and R5F2 (qualified quoted DROP and TRUNCATE that delete where Spark refuses) and on R5F3 and R5F4 (text precision of C-039 (e)); claim 6 PROVEN except the C-039 (e) precision. Opus round 5: C-040 measured on Spark 4.1.2 (the eight pinned forms, PARSE_SYNTAX_ERROR at the comma); F17 (S2 in the verdict, S1 on the deleting heads in the table) tested the ruling and the first sentence of C-039 against behaviour; F19 tested the trailing-garbage clause of C-039 (e) against TRUNCATE; F20 tested the merge commit message against the map baseline (records only, no head effect). Dispositions: F17 carded in QUOTED-TARGET-NO-VIEW-1, folded into IDENT-DIALECT-1; F19 corrected in C-039 (e); F20 recorded; R5F1 and R5F2 carded in DROP-QUALIFIED-QUOTED-TABLE-1, folded into IDENT-DIALECT-1; R5F3 and R5F4 corrected in C-039 (e) as held text divergences.
+      artifacts: [task/ledgers/staging/spark-door-temp-view-ddl-1-ledger.md, task/roadmap/mid-term/ident-dialect-1-card-2026-11-02.md, python/repark/tests/writes/test_temp_view_ddl_target_2.py, crates/repark-spark/src/tests/temp_view_alter.rs, crates/repark-core/tests/temp_view_doors.rs]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Input domain of the target scanner. Opus round 5 (its label AT-1, input domain of the target scanner): doubled and bare backticks, literal tokens, double, single and curly quotes, separators and multiple targets, prefixes, trailing clauses and Unicode word characters, each with and without a view on mem and hd, 868 RePark rows against Spark 4.1.2 rows from the same matrix. Muse round 5 (run 20261102T144103Z): a 490-row fresh-session matrix on mem and hd, one-part quoted and literal DROP, VIEW and TRUNCATE, the view-scoped heads and the qualified DROP and TRUNCATE forms. Orchestrator, head 4fd5c6c1, 2026-11-02: the 1144-cell domain table, 13 heads by 22 target spellings by view present or absent by catalogs mem and hd, Spark 4.1.2 on the hadoop catalog (572 Spark cells); every in-scope cell is equal, carded, or same-effect with a text difference (S3). Findings: F17, F18, F19, R5F1, R5F2. Dispositions: classes 1, 2 and 4 carded in IDENT-DIALECT-1; the multi-name DELETE cells are class 1's grammar rule.
+      artifacts: [task/ledgers/staging/spark-door-temp-view-ddl-1-domain-cells.jsonl, task/ledgers/staging/spark-door-temp-view-ddl-1-domain-table.md, task/roadmap/mid-term/ident-dialect-1-card-2026-11-02.md]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Failure path checked for partial effect. After each refused statement the table rows were compared with the pre-statement state (Opus round 5 probe; Muse claim 2: table rows and describe byte-identical). Findings on the failure path: F17 (no-view quoted write, ALTER and RENAME targets change the table where Spark refuses) and R5F1 and R5F2 (qualified quoted DROP and TRUNCATE delete the table where Spark refuses). Dispositions: F17 carded in QUOTED-TARGET-NO-VIEW-1, folded into IDENT-DIALECT-1; R5F1 and R5F2 carded in DROP-QUALIFIED-QUOTED-TABLE-1, folded into IDENT-DIALECT-1. With a view in scope every refusal in both matrices holds the view and the table (Opus round 5).
+      artifacts: [task/ledgers/staging/spark-door-temp-view-ddl-1-domain-cells.jsonl, task/roadmap/mid-term/quoted-target-no-view-1-card-2026-11-02.md, task/roadmap/mid-term/drop-qualified-quoted-table-1-card-2026-11-02.md]
+    - id: AT-4
+      status: N/A
+      justification: Opus round 5, every other category, N/A untouched by d35a792b..618df399. The only code-file change after 618df399 is one EXCEPTIONS baseline row in scripts/check_map_size.py; the commits after it are records.
+    - id: AT-5
+      status: N/A
+      justification: Opus round 5, every other category, N/A untouched by d35a792b..618df399. Muse round 5 claim 5 checked records hygiene only (no scratch, home, session or secret tokens in d35a792b..4fd5c6c1); it is not a security attack.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Data integrity checked after each statement. The matrices read the table rows after every statement (Opus round 5 probe; Muse claim 2 on refusals). Data-changing findings: F17 (no-view INSERT, INSERT OVERWRITE, DELETE and UPDATE change rows; ALTER adds a column) and R5F1 (qualified quoted DROP removes the table) and R5F2 (qualified quoted TRUNCATE empties it). Dispositions: carded in IDENT-DIALECT-1 (classes 1 and 2) and DROP-QUALIFIED-QUOTED-TABLE-1 (data-deleting, folded). The compatibility half (schema drift, migrations, version compatibility) was not attacked by either critic.
+      artifacts: [task/ledgers/staging/spark-door-temp-view-ddl-1-domain-cells.jsonl, task/roadmap/mid-term/drop-qualified-quoted-table-1-card-2026-11-02.md, task/roadmap/mid-term/quoted-target-no-view-1-card-2026-11-02.md]
+    - id: AT-7
+      status: N/A
+      justification: Opus round 5, every other category, N/A untouched by d35a792b..618df399. The only code-file change after 618df399 is one EXCEPTIONS baseline row in scripts/check_map_size.py; the commits after it are records.
+    - id: AT-8
+      status: ATTACKED
+      evidence: Error contract checked against Spark 4.1.2 texts. Opus round 5 (its labels AT-3 and AT-8): RePark answers are Spark's for every pinned packet form, byte-equal to the C-024 (c) envelope (condition, token and SQLSTATE; no line-and-position suffix); not Spark's for the unpinned quoted write heads (F17) or for Unicode tokens (F18). Muse round 5 claim 5: refusal texts are Spark's parse error and ruling 76(a) holds. Findings: F17 and F18 carded (IDENT-DIALECT-1 classes 1 and 2; QUOTED-TARGET-NO-VIEW-1 and UNICODE-WORD-IDENTIFIER-1 folded); R5F3 (DROP TABLE t'x' names the token ' where Spark names 'x') and R5F4 (TRUNCATE TABLE t$ with a view gives the view-check text where Spark gives the parse error at $) corrected in C-039 (e) as held S3 text divergences. Dependency and version contracts were not attacked by either critic.
+      artifacts: [task/roadmap/mid-term/unicode-word-identifier-1-card-2026-11-02.md, task/roadmap/mid-term/ident-dialect-1-card-2026-11-02.md, task/ledgers/staging/spark-door-temp-view-ddl-1-domain-table.md]
+    - id: AT-9
+      status: N/A
+      justification: Opus round 5, every other category, N/A untouched by d35a792b..618df399. No log, metric or alarm path is in the delta; the refusal texts were checked against ruling 76(a) under AT-8.
+    - id: AT-10
+      status: ATTACKED
+      evidence: Pins at 618df399 (Opus round 5) and at 4fd5c6c1 (Muse round 5 gates), all green: cargo test -p repark-spark --lib temp_view, 58 passed; cargo test -p repark-core --test temp_view_doors, 10 passed; pytest of the temp-view DDL target 2 file with the iceberg view drop case, 192 passed; pytest of the AUD-006 and DDL pin files and the body-hash file, 1403 passed and 1 skipped; pytest tests/sql, 483 passed and 1 skipped; check_map_size and check_lib_rs exit 0 (Opus). Every pin cited by C-038 to C-040 exists and asserts its clause text (Muse claim 6). Spot check: the pins do not reach the unpinned quoted write heads (F17) or the non-ASCII registry path (F18), so the suite does not catch them. No mutation run is recorded in either hand-back. The domain table has no table-driven pin yet; that pin is owed by IDENT-DIALECT-1.
+      artifacts: [python/repark/tests/writes/test_temp_view_ddl_target_2.py, python/repark/tests/writes/test_temp_view_ddl_target_1.py, python/repark/tests/writes/test_temp_view_name_case.py, python/repark/tests/writes/test_temp_view_name_fold.py, python/repark/tests/writes/test_temp_view_write_target.py, python/repark/tests/writes/test_ice_write_options_1.py, python/repark/tests/session/test_production_file_size.py, python/repark/tests/iceberg/test_ice_views_1.py, crates/repark-spark/src/tests/temp_view_alter.rs, crates/repark-core/tests/temp_view_doors.rs]
+```
+
+
 ## Clone
 
 The clone is removed at merge.
