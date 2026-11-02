@@ -1,4 +1,4 @@
-use datafusion::error::Result;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::TableReference;
 use datafusion::sql::sqlparser::ast::{Ident, ObjectName, ObjectType, Statement};
@@ -6,6 +6,7 @@ use datafusion::sql::sqlparser::dialect::DatabricksDialect;
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::Parser;
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
+use repark_common::spark_error;
 use repark_core::{CatalogRegistry, TempViewSession};
 
 use crate::namespace_ddl::consume_word;
@@ -18,7 +19,7 @@ use crate::view_ddl::execute::{
 };
 use crate::view_ddl::parse::try_parse_show_views;
 use crate::view_ddl::temp_alter::route_temp_view_alter;
-use crate::view_ddl::temp_parse::try_parse_create_temp_view;
+use crate::view_ddl::temp_parse::{spark_parse_error, try_parse_create_temp_view};
 use crate::view_ddl::temp_view::temp_view_column_comments;
 use crate::view_ddl::temp_write::refuse_temp_view_write_target;
 use crate::write_options::StatementWriteOptions;
@@ -31,6 +32,9 @@ pub(crate) async fn route_temp_view_statement(
     write_options: &StatementWriteOptions,
     temp_views: Option<&dyn TempViewSession>,
 ) -> Option<Result<DataFrame>> {
+    if let Some(refusal) = refuse_leading_semicolon(sql) {
+        return Some(Err(refusal));
+    }
     if let Some(parsed) = try_parse_create_temp_view(sql) {
         return Some(
             route_create_temp_view(ctx, catalogs, parsed, write_options, temp_views).await,
@@ -68,6 +72,19 @@ pub(crate) async fn route_temp_view_statement(
         }
         (Err(error), _) => Err(error),
         (_, Err(error)) => Err(temp_view_err(error)),
+    })
+}
+
+fn refuse_leading_semicolon(sql: &str) -> Option<DataFusionError> {
+    let tokens = Tokenizer::new(&DatabricksDialect {}, sql).tokenize().ok()?;
+    let first = tokens
+        .into_iter()
+        .find(|token| !matches!(token, Token::Whitespace(_)))?;
+    matches!(first, Token::SemiColon).then(|| {
+        spark_parse_error(spark_error::message(
+            spark_error::PARSE_SYNTAX_ERROR,
+            &[("near", "';'")],
+        ))
     })
 }
 

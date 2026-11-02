@@ -73,12 +73,21 @@ fn alter_target(sql: &str) -> Option<(ObjectName, bool, AlterRoute)> {
     let if_exists = parser.parse_keywords(&[Keyword::IF, Keyword::EXISTS]);
     let only = parser.parse_keyword(Keyword::ONLY);
     let name = parser.parse_object_name(false).ok()?;
+    let quoted_target = name
+        .0
+        .iter()
+        .filter_map(|part| part.as_ident())
+        .any(|ident| ident.quote_style.is_some_and(|quote| quote != '`'));
     let on_cluster = parser.parse_keywords(&[Keyword::ON, Keyword::CLUSTER]);
     if on_cluster {
         parser.parse_identifier().ok()?;
     }
     let route = alter_route(&mut parser)?;
-    Some((name, iceberg || if_exists || only || on_cluster, route))
+    Some((
+        name,
+        iceberg || if_exists || only || on_cluster || quoted_target,
+        route,
+    ))
 }
 
 fn refuse(operation: &'static str) -> AlterRoute {
@@ -135,11 +144,29 @@ fn add_route(parser: &mut Parser<'_>) -> AlterRoute {
     refuse("ADD COLUMN")
 }
 
+fn bare_words(parser: &mut Parser<'_>, words: &[&str]) -> bool {
+    let matched = words.iter().enumerate().all(|(index, word)| {
+        matches!(
+            &parser.peek_nth_token(index).token,
+            Token::Word(peeked) if peeked.quote_style.is_none()
+                && peeked.value.eq_ignore_ascii_case(word)
+        )
+    });
+    if matched {
+        for _ in words {
+            parser.next_token();
+        }
+    }
+    matched
+}
+
+fn ref_head(parser: &mut Parser<'_>) -> bool {
+    let named = matches!(parser.peek_nth_token(1).token, Token::Word(_));
+    named && (bare_words(parser, &["BRANCH"]) || bare_words(parser, &["TAG"]))
+}
+
 fn drop_route(parser: &mut Parser<'_>) -> AlterRoute {
-    if ["IDENTIFIER", "BRANCH", "TAG"]
-        .iter()
-        .any(|word| consume_word(parser, word))
-    {
+    if bare_words(parser, &["IDENTIFIER", "FIELDS"]) || ref_head(parser) {
         return AlterRoute::Extension("DROP");
     }
     if consume_word(parser, "CONSTRAINT") {
@@ -185,7 +212,7 @@ fn set_route(parser: &mut Parser<'_>) -> AlterRoute {
     if consume_word(parser, "LOCATION") {
         return refuse("SET LOCATION ...");
     }
-    if consume_word(parser, "IDENTIFIER") {
+    if bare_words(parser, &["IDENTIFIER", "FIELDS"]) {
         return AlterRoute::Extension("SET");
     }
     unknown("SET")
