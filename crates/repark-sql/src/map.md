@@ -1,6 +1,6 @@
 # map — repark-sql/src
 
-MAP-COLUMN-PANIC-NATIVE-DOOR-1 (2026-10-21) and MAP-STRUCT-KEY-SUBSCRIPT-1 (2026-11-01): `dialect.rs`'s `AnsiDialect::configure_analyzer_rules` pushes `SparkMapRewrite` after the unit-widen call, then `SparkMapSubscript` (the same two pushes as `NativeDoorTypes`), so a non-constant `map(...)` goes to the Spark per-row kernel instead of panicking, and a struct-key subscript reads Spark's value. A repeated or NULL key raises Spark's `[DUPLICATED_MAP_KEY]` / `[NULL_MAP_KEY]` text; a literal map with distinct keys stays on DataFusion's constructor. Pins: `tests/ansi_door_map_column.rs` and `tests/map_struct_key_subscript.rs`.
+MAP-COLUMN-PANIC-NATIVE-DOOR-1 (2026-10-21) and MAP-STRUCT-KEY-SUBSCRIPT-1 (2026-11-01): `dialect.rs`'s `AnsiDialect::configure_analyzer_rules` seats `SparkMapSubscript` before `type_coercion`, then pushes `SparkMapRewrite` (as `NativeDoorTypes` does), so a non-constant `map(...)` goes to the Spark per-row kernel instead of panicking, and a struct-key subscript reads Spark's value. A repeated or NULL key raises Spark's `[DUPLICATED_MAP_KEY]` / `[NULL_MAP_KEY]` text; a literal map with distinct keys stays on DataFusion's constructor. Pins: `tests/ansi_door_map_column.rs` and `tests/map_struct_key_subscript.rs`.
 
 ICE-MIXED-CASE-1 (2026-09-17): the ANSI door stays exact — `merge.rs`/`router.rs` force `case_insensitive = false` on the MERGE spec so only the Spark door folds case.
 

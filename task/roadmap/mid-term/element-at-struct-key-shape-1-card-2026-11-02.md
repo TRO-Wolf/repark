@@ -2,13 +2,13 @@
 
 **Date:** 2026-11-02. **Filed by:** `claude-haiku-5-5` for the orchestrator, from the MAP-STRUCT-KEY-SUBSCRIPT-1 hand-back (the residue R2 of its records).
 
-**Status:** filed; grade C, P3; not dispatched. RePark's answer is unmeasured: the first unit measures it before any fix.
+**Status:** filed; grade C, P3; not dispatched. RePark's answer is measured (the round-1 verifier, head and base); the first unit fixes it.
 
-**Why:** On a map `MAP<STRUCT<k: INT, j: INT>, INT>`, Spark 4.1.2 refuses `element_at(m, named_struct('j', 2, 'k', 1))` with `DATATYPE_MISMATCH.MAP_FUNCTION_DIFF_TYPES`, because the key's struct type differs from the map's key type. RePark's `element_at` coercion casts the key by field name, so it may answer a value where Spark refuses. The subscript form `m[named_struct('j', 2, 'k', 1)]` is not affected: MAP-STRUCT-KEY-SUBSCRIPT-1 casts that by position, as Spark does (Spark answers `[[1, None], [2, None]]` there).
+**Why:** On a map `MAP<STRUCT<k: INT, j: INT>, INT>`, Spark 4.1.2 refuses `element_at(m, named_struct('j', 2, 'k', 1))` with `DATATYPE_MISMATCH.MAP_FUNCTION_DIFF_TYPES`, because the key's struct type differs from the map's key type. RePark's `element_at` coercion casts the key by field name and answers a value where Spark refuses. The subscript form `m[named_struct('j', 2, 'k', 1)]` is not affected: MAP-STRUCT-KEY-SUBSCRIPT-1 casts that by position, as Spark does (Spark answers `[[1, None], [2, None]]` there).
 
 **Site:** the argument coercion of `element_at` in RePark, which casts a struct key by name. The exact site is not located yet; the first unit locates it.
 
-**Fix (proposed):** the first unit measures RePark's answer on the shape above. A struct key whose field names or order differ from the map's key type refuses as Spark does, with the same error class; the pin is the Spark refusal text's class and the required type.
+**Fix (proposed):** a struct key whose field names or order differ from the map's key type refuses as Spark does, with the same error class; the pin is the Spark refusal text's class and the required type.
 
 **Measured (Spark 4.1.2, copied from the MAP-STRUCT-KEY-SUBSCRIPT-1 builder's notes, measured once on a hadoop catalog):**
 
@@ -17,7 +17,7 @@ SELECT id, element_at(m, named_struct('j', 2, 'k', 1)) FROM c
 AnalysisException [DATATYPE_MISMATCH.MAP_FUNCTION_DIFF_TYPES] Input to `element_at` should have been "MAP" followed by a value with same key type, but it's ["MAP<STRUCT<k: INT, j: INT>, INT>", "STRUCT<j: INT NOT NULL, k: INT NOT NULL>"]. SQLSTATE: 42K09
 ```
 
-RePark on this shape: unmeasured.
+RePark on this shape (the round-1 verifier, head and base): `SELECT id, element_at(m, named_struct('j', 2, 'k', 1)) FROM c ORDER BY id` gives `[[1, 7], [2, None]]`, a cast by name.
 
 **Retires:** the card when `element_at` with a struct key of another field order or name refuses as Spark does, pinned, or when the owner rules the cast-by-name answer as a kept divergence.
 

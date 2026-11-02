@@ -60,6 +60,9 @@ function-registry + analyzer-rule installation + the composed
   among the insertions and asserts its seat before `type_coercion` at the position the
   configured list holds, immediately before `spark_fractional_division`. The existing
   assertions keep their entries in their present order.
+  **MAP-STRUCT-KEY-SUBSCRIPT-1 fix round 1 (2026-11-02):** the same contract test pins a
+  `spark_map_subscript` seat immediately before `type_coercion`, after `join_condition_refusals`,
+  and the filter passes it through.
 - `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `apply_default_catalog(session, name)`
   (registry and carrier, a no-op once `USE` pinned the current catalog),
   `with_configured_defaults` (the build carrier from `spark.sql.defaultCatalog`),

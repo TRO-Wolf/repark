@@ -6,11 +6,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
 A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <path>[::<name>], ...` line per clause, or `C-NNN: none (records)`), read by `scripts/check_ledger_grammar.py` rule B; it moves with its ledger and gets no row here.
 ## Contents
 - [map-struct-key-subscript-1-ledger.md](map-struct-key-subscript-1-ledger.md) — **MAP-STRUCT-KEY-SUBSCRIPT-1
-  (2026-11-01, AUD-016, branch `fix/map-struct-key-subscript-1`, merge pending):** a map subscript whose key is a
+  (2026-11-01, AUD-016, branch `fix/map-struct-key-subscript-1`, head `25022b1d`, merge pending):** a map subscript whose key is a
   struct, array or map is planned through RePark's `element_at` kernel by `SparkMapSubscript` on the Spark, ANSI and
-  native doors, cast by position like Spark; DataFusion's `get_field` is never reached for nested keys. 24 of 26
-  clauses PROVEN (C-019 the native-door pin and C-025 verification OPEN). `risk_tier: standard`.
-  pins: map-struct-key-subscript-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026
+  native doors and the DataFrame expression context, positional at every depth like Spark; DataFusion's `get_field` is
+  never reached for nested keys. Round 1 (the verifier's FAIL) fixed F1 to F4 and F7; F5, F6 and F8 are carded. 29 of 32
+  clauses PROVEN (C-019 the native-door pin, C-025 verification and C-032 the open items OPEN). `risk_tier: standard`.
+  pins: map-struct-key-subscript-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-014, C-015, C-016, C-017, C-018, C-019, C-020, C-021, C-022, C-023, C-024, C-025, C-026, C-027, C-028, C-029, C-030, C-031, C-032
 - [nested-literal-seam-1-ledger.md](nested-literal-seam-1-ledger.md) — **NESTED-LITERAL-SEAM-1
   (2026-10-27):** a nested date literal under the row-merge CASE, a constant nested value
   (partitioned or not), a date into a MAP timestamp key on D3, D8 and D10, the read-path CAST of

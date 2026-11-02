@@ -6,7 +6,7 @@ C-003: crates/repark-sql/tests/map_struct_key_subscript.rs::a_struct_key_subscri
 C-004: crates/repark-sql/tests/map_struct_key_subscript.rs::a_struct_key_subscript_under_a_filter_answers_sparks_values
 C-005: crates/repark-sql/tests/map_struct_key_subscript.rs::a_struct_key_subscript_over_a_literal_map_answers_sparks_values
 C-006: crates/repark-sql/tests/map_struct_key_subscript.rs::a_one_field_struct_key_subscript_answers_sparks_values
-C-007: crates/repark-sql/tests/map_struct_key_subscript.rs::a_struct_key_holding_a_null_field_matches_the_entry_with_that_null_field
+C-007: crates/repark-sql/tests/map_struct_key_subscript.rs::a_struct_key_holding_a_null_field_matches_the_entry_with_that_null_field, crates/repark-sql/tests/map_struct_key_subscript.rs::a_null_map_and_a_missing_struct_key_answer_null
 C-008: crates/repark-sql/tests/map_struct_key_subscript.rs::a_null_map_and_a_missing_struct_key_answer_null
 C-009: crates/repark-sql/tests/map_struct_key_subscript.rs::a_struct_key_is_cast_to_the_map_key_type_by_position_like_spark
 C-010: crates/repark-sql/tests/map_struct_key_subscript.rs::a_nested_struct_key_is_cast_by_position_at_every_level
@@ -26,3 +26,9 @@ C-023: none (records)
 C-024: none (records)
 C-025: none (records)
 C-026: none (records)
+C-027: crates/repark-sql/tests/map_struct_key_subscript.rs::a_struct_inside_an_array_key_is_cast_by_position, crates/repark-sql/tests/map_struct_key_subscript.rs::a_struct_inside_an_array_inside_a_struct_key_is_cast_by_position, crates/repark-sql/tests/map_struct_key_subscript.rs::the_ansi_door_casts_a_struct_inside_an_array_key_by_position
+C-028: crates/repark-sql/tests/map_struct_key_subscript.rs::a_struct_key_leaf_of_another_kind_refuses_like_spark, crates/repark-sql/tests/map_struct_key_subscript.rs::a_numeric_or_null_struct_key_leaf_is_cast_like_spark, crates/repark-sql/tests/map_struct_key_subscript.rs::a_string_struct_key_leaf_answers_like_spark
+C-029: python/repark/tests/functions/test_map_struct_key_subscript_1.py::test_a_frame_struct_key_lookup_answers_spark_in_the_writing_session, python/repark/tests/functions/test_map_struct_key_subscript_1.py::test_a_frame_struct_key_lookup_answers_spark_in_a_fresh_session
+C-030: python/repark/tests/functions/test_map_struct_key_subscript_1.py::test_a_frame_struct_key_lookup_answers_spark_in_the_writing_session, python/repark/tests/functions/test_map_struct_key_subscript_1.py::test_a_frame_struct_key_lookup_answers_spark_in_a_fresh_session, crates/repark-spark/src/extension/tests.rs::analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_coercion
+C-031: crates/repark-sql/tests/map_struct_key_subscript.rs::a_nested_key_refusal_names_the_types_in_spark_notation
+C-032: none (records)
