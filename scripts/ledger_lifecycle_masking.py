@@ -27,7 +27,7 @@ def _find_run(line: str, size: int, start: int) -> int:
     return -1
 
 
-def _blank_multiline_spans(text: str) -> str:
+def _blank_span_runs(text: str) -> str:
     chars = list(text)
     index = 0
     while index < len(chars):
@@ -46,6 +46,44 @@ def _blank_multiline_spans(text: str) -> str:
                 chars[blank] = " "
         index = closer + size
     return "".join(chars)
+
+
+def _block_opener(line: str) -> bool:
+    if _fence_mark(line) is not None:
+        return True
+    if line.startswith("<!--"):
+        return True
+    stripped = line.lstrip(" ")
+    if len(line) - len(stripped) > 3:
+        return False
+    hashes = len(stripped) - len(stripped.lstrip("#"))
+    if 1 <= hashes <= 6:
+        rest = stripped[hashes:]
+        if rest == "" or rest[0] in " \t\n":
+            return True
+    if stripped.startswith("- ") or stripped.startswith("* "):
+        return True
+    digits = 0
+    while digits < len(stripped) and stripped[digits].isdigit():
+        digits += 1
+    return digits > 0 and stripped[digits:].startswith(". ")
+
+
+def _blank_multiline_spans(text: str) -> str:
+    lines = text.splitlines(keepends=True)
+    bounds: list[int] = [0]
+    for index, line in enumerate(lines):
+        if not line.strip() or _block_opener(line):
+            bounds.append(index)
+            bounds.append(index + 1)
+    bounds.append(len(lines))
+    chunks: list[str] = []
+    for edge in range(len(bounds) - 1):
+        start = bounds[edge]
+        end = bounds[edge + 1]
+        if start < end:
+            chunks.append(_blank_span_runs("".join(lines[start:end])))
+    return "".join(chunks)
 
 
 def _masked_lines(text: str) -> list[tuple[str, str]]:
