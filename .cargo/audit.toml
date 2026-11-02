@@ -28,8 +28,4 @@ ignore = [
   # dependents' sources; reachability is NOT established for 0391 and 0403. See deny.toml for the
   # full rationale. Revisit at the datafusion release on arrow 60, then the fork repin, then the
   # zstd bump; tracked by card DEPS-1. Mirrored in deny.toml.
-  "RUSTSEC-2026-0391",
-  "RUSTSEC-2026-0398",
-  "RUSTSEC-2026-0403",
-  "RUSTSEC-2026-0435",
 ]
