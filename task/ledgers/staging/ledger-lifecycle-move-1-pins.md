@@ -28,3 +28,8 @@ C-025: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_commented_
 C-026: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_long_fence_hides_inner_marker_and_decoy, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_tilde_fence_hides_inner_marker_and_decoy
 C-027: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_code_span_opener_leaves_the_row_visible
 C-028: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_masked_lines_keep_every_position, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_code_span_opener_leaves_the_row_visible
+C-029: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_indented_marker_is_text_and_row_moves, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_indented_marker_inside_a_fence_is_text
+C-030: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_triple_span_hides_the_opener_and_row_moves, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_double_span_hides_the_opener_and_row_moves
+C-031: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_info_backtick_line_is_text_and_row_moves
+C-032: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_masked_lines_keep_every_position, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_code_span_opener_leaves_the_row_visible
+C-033: none (records)
