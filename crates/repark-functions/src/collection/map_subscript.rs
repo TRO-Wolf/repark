@@ -103,7 +103,8 @@ fn rewrite_expr(
     let Ok([map, lookup]) = <[Expr; 2]>::try_from(function.args) else {
         return internal_err!("a map subscript takes a map and one key");
     };
-    if !accepts(&lookup_type, &key_type) {
+    let ansi = crate::ansi::spark_ansi_enabled_from_options(config);
+    if !accepts(&lookup_type, &key_type) || (!ansi && !legacy_accepts(&lookup_type, &key_type)) {
         return plan_err!(
             "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve the map subscript due to data \
              type mismatch: The second parameter requires the \"{}\" type, however the key has the \
@@ -267,6 +268,60 @@ fn accepts(from: &DataType, to: &DataType) -> bool {
                 accepts(from_element.data_type(), to_element.data_type())
             }
             (None, None) if !from.is_nested() && !to.is_nested() => leaf_accepts(from, to),
+            _ => false,
+        },
+    }
+}
+
+fn legacy_accepts(from: &DataType, to: &DataType) -> bool {
+    match (from, to) {
+        (DataType::Null, _) => true,
+        (DataType::Struct(_) | DataType::Map(..), _)
+        | (_, DataType::Struct(_) | DataType::Map(..)) => same_spark_type(from, to),
+        _ => match (list_element(from), list_element(to)) {
+            (Some(from_element), Some(to_element)) => {
+                legacy_accepts(from_element.data_type(), to_element.data_type())
+            }
+            _ => true,
+        },
+    }
+}
+
+fn same_spark_type(from: &DataType, to: &DataType) -> bool {
+    match (from, to) {
+        (DataType::Struct(from_fields), DataType::Struct(to_fields)) => {
+            from_fields.len() == to_fields.len()
+                && from_fields
+                    .iter()
+                    .zip(to_fields.iter())
+                    .all(|(from_field, to_field)| {
+                        from_field.name() == to_field.name()
+                            && same_spark_type(from_field.data_type(), to_field.data_type())
+                    })
+        }
+        (DataType::Map(from_entries, _), DataType::Map(to_entries, _)) => {
+            same_spark_type(from_entries.data_type(), to_entries.data_type())
+        }
+        _ => match (list_element(from), list_element(to)) {
+            (Some(from_element), Some(to_element)) => {
+                same_spark_type(from_element.data_type(), to_element.data_type())
+            }
+            (None, None) => {
+                from == to
+                    || (is_string(from) && is_string(to))
+                    || (is_binary(from) && is_binary(to))
+                    || matches!(
+                        (from, to),
+                        (
+                            DataType::Timestamp(_, Some(_)),
+                            DataType::Timestamp(_, Some(_))
+                        ) | (DataType::Timestamp(_, None), DataType::Timestamp(_, None))
+                            | (
+                                DataType::Date32 | DataType::Date64,
+                                DataType::Date32 | DataType::Date64
+                            )
+                    )
+            }
             _ => false,
         },
     }
