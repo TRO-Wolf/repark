@@ -22,9 +22,9 @@ impl SqlDialect for AnsiDialect {
         &self,
         rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
     ) -> datafusion::error::Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
-        let mut rules = repark_functions::analyzer_rules_with_timestamp_unit_widen(rules)?;
+        let rules = repark_functions::analyzer_rules_with_timestamp_unit_widen(rules)?;
+        let mut rules = repark_functions::collection::insert_map_subscript_before_coercion(rules)?;
         rules.push(Arc::new(repark_functions::collection::SparkMapRewrite));
-        rules.push(Arc::new(repark_functions::collection::SparkMapSubscript));
         Ok(rules)
     }
 

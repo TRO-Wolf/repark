@@ -1,14 +1,18 @@
-use datafusion::arrow::datatypes::{DataType, Fields};
+use std::sync::Arc;
+
+use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
-use datafusion::common::{DFSchema, Result, internal_err, plan_err};
-use datafusion::functions::core::expr_fn::{get_field, named_struct};
+use datafusion::common::{DFSchema, Result, ScalarValue, internal_err, plan_err};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
-use datafusion::logical_expr::{Cast, Expr, ExprSchemable, LogicalPlan, lit, when};
+use datafusion::logical_expr::{Expr, ExprSchemable, LogicalPlan, lit};
 use datafusion::optimizer::AnalyzerRule;
 
+use super::key_by_position::key_by_position_udf;
 use super::{element_at_udf, spark_type_name};
+
+const SUBSCRIPT_FUNCTIONS: [&str; 3] = ["get_field", "array_element", "__repark_get_item__"];
 
 #[derive(Debug, Default)]
 pub struct SparkMapSubscript;
@@ -22,6 +26,19 @@ impl AnalyzerRule for SparkMapSubscript {
     fn name(&self) -> &str {
         "spark_map_subscript"
     }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn insert_map_subscript_before_coercion(
+    mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+) -> Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+    let Some(position) = rules.iter().position(|rule| rule.name() == "type_coercion") else {
+        return plan_err!(
+            "the map subscript rule requires the default type_coercion analyzer rule"
+        );
+    };
+    rules.insert(position, Arc::new(SparkMapSubscript));
+    Ok(rules)
 }
 
 fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
@@ -48,20 +65,19 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
     let Ok([map, lookup]) = <[Expr; 2]>::try_from(function.args) else {
         return internal_err!("a map subscript takes a map and one key");
     };
-    if !same_shape(&lookup_type, &key_type) {
+    if !accepts(&lookup_type, &key_type) {
         return plan_err!(
             "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve the map subscript due to data \
              type mismatch: The second parameter requires the \"{}\" type, however the key has the \
              type \"{}\". SQLSTATE: 42K09",
-            spark_struct_name(&key_type),
-            spark_struct_name(&lookup_type)
+            spark_type_text(&key_type),
+            spark_type_text(&lookup_type)
         );
     }
-    let key = by_position(lookup, &lookup_type, &key_type)?;
     let key = if lookup_type == key_type {
-        key
+        lookup
     } else {
-        Expr::Cast(Cast::new(Box::new(key), key_type))
+        key_by_position_udf().call(vec![lookup, lit(ScalarValue::try_from(&key_type)?)])
     };
     Ok(Transformed::yes(Expr::ScalarFunction(
         ScalarFunction::new_udf(element_at_udf(), vec![map, key]),
@@ -75,7 +91,7 @@ fn nested_key_subscript(expr: &Expr, schema: &DFSchema) -> Option<(DataType, Dat
     let [map, lookup] = function.args.as_slice() else {
         return None;
     };
-    if function.func.name() != "get_field" {
+    if !SUBSCRIPT_FUNCTIONS.contains(&function.func.name()) {
         return None;
     }
     let DataType::Map(entries, _) = map.get_type(schema).ok()? else {
@@ -91,46 +107,7 @@ fn nested_key_subscript(expr: &Expr, schema: &DFSchema) -> Option<(DataType, Dat
     Some((key_type, lookup.get_type(schema).ok()?))
 }
 
-fn by_position(expr: Expr, from: &DataType, to: &DataType) -> Result<Expr> {
-    match (from, to) {
-        (DataType::Struct(from_fields), DataType::Struct(to_fields))
-            if needs_position(from, to) =>
-        {
-            rebuild(expr, from_fields, to_fields)
-        }
-        _ => Ok(expr),
-    }
-}
-
-fn needs_position(from: &DataType, to: &DataType) -> bool {
-    let (DataType::Struct(from_fields), DataType::Struct(to_fields)) = (from, to) else {
-        return false;
-    };
-    from_fields.len() == to_fields.len()
-        && from_fields
-            .iter()
-            .zip(to_fields.iter())
-            .any(|(from_field, to_field)| {
-                from_field.name() != to_field.name()
-                    || needs_position(from_field.data_type(), to_field.data_type())
-            })
-}
-
-fn rebuild(expr: Expr, from_fields: &Fields, to_fields: &Fields) -> Result<Expr> {
-    let mut parts = Vec::with_capacity(to_fields.len() * 2);
-    for (from_field, to_field) in from_fields.iter().zip(to_fields.iter()) {
-        let child = get_field(expr.clone(), from_field.name().as_str());
-        parts.push(lit(to_field.name().as_str()));
-        parts.push(by_position(
-            child,
-            from_field.data_type(),
-            to_field.data_type(),
-        )?);
-    }
-    when(expr.is_not_null(), named_struct(parts)).end()
-}
-
-fn same_shape(from: &DataType, to: &DataType) -> bool {
+fn accepts(from: &DataType, to: &DataType) -> bool {
     match (from, to) {
         (DataType::Null, _) => true,
         (DataType::Struct(from_fields), DataType::Struct(to_fields)) => {
@@ -139,32 +116,61 @@ fn same_shape(from: &DataType, to: &DataType) -> bool {
                     .iter()
                     .zip(to_fields.iter())
                     .all(|(from_field, to_field)| {
-                        same_shape(from_field.data_type(), to_field.data_type())
+                        accepts(from_field.data_type(), to_field.data_type())
                     })
         }
-        (DataType::Struct(_), _) | (_, DataType::Struct(_)) => false,
         (
-            DataType::List(from_field) | DataType::LargeList(from_field),
+            DataType::List(from_field)
+            | DataType::LargeList(from_field)
+            | DataType::FixedSizeList(from_field, _),
             DataType::List(to_field) | DataType::LargeList(to_field),
-        ) => same_shape(from_field.data_type(), to_field.data_type()),
-        _ => true,
+        ) => accepts(from_field.data_type(), to_field.data_type()),
+        (DataType::Map(from_entries, _), DataType::Map(to_entries, _)) => {
+            accepts(from_entries.data_type(), to_entries.data_type())
+        }
+        _ if from.is_nested() || to.is_nested() => false,
+        _ => {
+            from == to
+                || (is_string(from) && is_string(to))
+                || (from.is_numeric() && (to.is_numeric() || is_string(to)))
+        }
     }
 }
 
-fn spark_struct_name(data_type: &DataType) -> String {
-    let DataType::Struct(fields) = data_type else {
-        return spark_type_name(data_type);
-    };
-    let members: Vec<String> = fields
-        .iter()
-        .map(|field| {
-            let nullability = if field.is_nullable() { "" } else { " NOT NULL" };
-            format!(
-                "{}: {}{nullability}",
-                field.name(),
-                spark_struct_name(field.data_type())
-            )
-        })
-        .collect();
-    format!("STRUCT<{}>", members.join(", "))
+fn is_string(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    )
+}
+
+fn spark_type_text(data_type: &DataType) -> String {
+    match data_type {
+        DataType::Struct(fields) => {
+            let members: Vec<String> = fields
+                .iter()
+                .map(|field| {
+                    let nullability = if field.is_nullable() { "" } else { " NOT NULL" };
+                    format!(
+                        "{}: {}{nullability}",
+                        field.name(),
+                        spark_type_text(field.data_type())
+                    )
+                })
+                .collect();
+            format!("STRUCT<{}>", members.join(", "))
+        }
+        DataType::List(field) | DataType::LargeList(field) | DataType::FixedSizeList(field, _) => {
+            format!("ARRAY<{}>", spark_type_text(field.data_type()))
+        }
+        DataType::Map(entries, _) => match entries.data_type() {
+            DataType::Struct(fields) if fields.len() == 2 => format!(
+                "MAP<{}, {}>",
+                spark_type_text(fields[0].data_type()),
+                spark_type_text(fields[1].data_type())
+            ),
+            other => spark_type_name(other),
+        },
+        other => spark_type_name(other),
+    }
 }
