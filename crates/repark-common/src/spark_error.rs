@@ -12,6 +12,7 @@ pub enum Condition {
     UnsupportedFeatureCatalogOperation,
     InvalidPartitionOperationPartitionManagementIsUnsupported,
     ParseSyntaxError,
+    InvalidIdentifier,
     IncompatibleDataForTableCannotSafelyCast,
     InsertColumnArityMismatchNotEnoughDataColumns,
     NotNullAssertViolation,
@@ -62,6 +63,7 @@ pub const UNSUPPORTED_FEATURE_CATALOG_OPERATION: Condition =
 pub const INVALID_PARTITION_OPERATION_PARTITION_MANAGEMENT_IS_UNSUPPORTED: Condition =
     Condition::InvalidPartitionOperationPartitionManagementIsUnsupported;
 pub const PARSE_SYNTAX_ERROR: Condition = Condition::ParseSyntaxError;
+pub const INVALID_IDENTIFIER: Condition = Condition::InvalidIdentifier;
 pub const INCOMPATIBLE_DATA_FOR_TABLE_CANNOT_SAFELY_CAST: Condition =
     Condition::IncompatibleDataForTableCannotSafelyCast;
 pub const INSERT_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS: Condition =
@@ -124,6 +126,7 @@ impl Condition {
                 "INVALID_PARTITION_OPERATION.PARTITION_MANAGEMENT_IS_UNSUPPORTED"
             }
             Self::ParseSyntaxError => "PARSE_SYNTAX_ERROR",
+            Self::InvalidIdentifier => "INVALID_IDENTIFIER",
             Self::IncompatibleDataForTableCannotSafelyCast => {
                 "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST"
             }
@@ -196,6 +199,7 @@ impl Condition {
             Self::InvalidPartitionOperationPartitionManagementIsUnsupported
             | Self::ParseSyntaxError
             | Self::IdentifierTooManyNameParts => Some("42601"),
+            Self::InvalidIdentifier => Some("42602"),
             Self::IncompatibleDataForTableCannotSafelyCast => Some("KD000"),
             Self::InsertColumnArityMismatchNotEnoughDataColumns
             | Self::CreateViewColumnArityMismatchNotEnoughDataColumns
@@ -251,6 +255,9 @@ impl Condition {
                 "The partition command is invalid. Table {tableName} does not support partition management."
             }
             Self::ParseSyntaxError => "Syntax error at or near {near}.",
+            Self::InvalidIdentifier => {
+                "The unquoted identifier {ident} is invalid and must be back quoted as: `{ident}`.\nUnquoted identifiers can only contain ASCII letters ('a' - 'z', 'A' - 'Z'), digits ('0' - '9'), and underbar ('_').\nUnquoted identifiers must also not start with a digit.\nDifferent data sources and meta stores may impose additional restrictions on valid identifiers."
+            }
             Self::IncompatibleDataForTableCannotSafelyCast => {
                 "Cannot write incompatible data for the table {tableName}: Cannot safely cast {columnName} \"{fromType}\" to \"{toType}\"."
             }
@@ -431,6 +438,7 @@ mod tests {
         ("catalogName", "spark_catalog"),
         ("namespace", "`SC`.`NS`"),
         ("path", "/tmp/missing"),
+        ("ident", "ü1"),
         ("detail", "boom"),
         ("display", "not a ts"),
         ("reference", "`id`"),
@@ -473,6 +481,7 @@ mod tests {
         UNSUPPORTED_FEATURE_CATALOG_OPERATION,
         INVALID_PARTITION_OPERATION_PARTITION_MANAGEMENT_IS_UNSUPPORTED,
         PARSE_SYNTAX_ERROR,
+        INVALID_IDENTIFIER,
         INCOMPATIBLE_DATA_FOR_TABLE_CANNOT_SAFELY_CAST,
         INSERT_COLUMN_ARITY_MISMATCH_NOT_ENOUGH_DATA_COLUMNS,
         NOT_NULL_ASSERT_VIOLATION,
@@ -511,7 +520,7 @@ mod tests {
 
     #[test]
     fn catalogue_lists_every_condition_once() {
-        assert_eq!(ALL.len(), 44);
+        assert_eq!(ALL.len(), 45);
         let mut names: Vec<&str> = ALL.iter().map(|condition| condition.name()).collect();
         names.sort_unstable();
         names.dedup();

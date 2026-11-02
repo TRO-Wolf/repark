@@ -188,6 +188,18 @@ impl PyReparkSession {
     }
 
     #[allow(clippy::missing_errors_doc)]
+    pub fn refuse_target_grammar(&self, query: &str) -> PyResult<()> {
+        repark_core::spark_target_grammar_message(query).map_or(Ok(()), |message| {
+            Err(crate::datafusion_to_py_err(
+                datafusion::error::DataFusionError::SQL(
+                    Box::new(datafusion::sql::sqlparser::parser::ParserError::ParserError(message)),
+                    None,
+                ),
+            ))
+        })
+    }
+
+    #[allow(clippy::missing_errors_doc)]
     pub fn sql_built(&self, py: Python<'_>, query: &str) -> PyResult<PyDataFrame> {
         fenced_span!("py.sql", "PyReparkSession.sql_built", {
             let grown = crate::deep_stack::sql_drive_grown(query)

@@ -316,8 +316,6 @@ async fn a_bare_identifier_word_after_drop_is_a_column_and_a_double_quoted_targe
         ("ALTER TABLE t DROP tag, v", "DROP COLUMNS"),
         ("ALTER TABLE t DROP `branch`", "DROP COLUMNS"),
         ("ALTER TABLE t SET identifier", "SET"),
-        ("ALTER TABLE \"t\" RENAME TO t2", "RENAME"),
-        ("ALTER TABLE \"t\" WRITE ORDERED BY id", "WRITE"),
     ] {
         assert_eq!(
             outcome(&view_t(), sql).await,
@@ -326,6 +324,16 @@ async fn a_bare_identifier_word_after_drop_is_a_column_and_a_double_quoted_targe
                  {operation}' expects a table but `t` is a view.  SQLSTATE: 42809"
             ),
             "{sql}"
+        );
+    }
+    for sql in [
+        "ALTER TABLE \"t\" RENAME TO t2",
+        "ALTER TABLE \"t\" WRITE ORDERED BY id",
+    ] {
+        let outcome = outcome(&view_t(), sql).await;
+        assert!(
+            outcome.contains(&parse_refusal("'\"t\"'")),
+            "{sql}: {outcome}"
         );
     }
 }
