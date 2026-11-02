@@ -451,3 +451,116 @@ def test_move_without_a_source_row_synthesises_exactly_one_row(repo: Path) -> No
     completed = (repo / "task/ledgers/completed/map.md").read_text()
     assert "[m4-demo-ledger.md](m4-demo-ledger.md) — Ledger — M4-DEMO\n" in completed
     assert completed.count("m4-demo-ledger.md") == 2
+
+
+def _commented_repo(repo: Path, tail: str) -> str:
+    comment = (
+        "<!--\n- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** inside a comment.\n-->\n"
+    )
+    _write(
+        repo,
+        "task/ledgers/staging/map.md",
+        "# map\n\n## Purpose\nStaging.\n\n## Contents\n"
+        "- [aaa-ledger.md](aaa-ledger.md) — **AAA:** stays.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n" + comment + tail,
+    )
+    _write(repo, "task/ledgers/staging/m1-demo-ledger.md", "# Ledger — M1\n")
+    _write(
+        repo,
+        "task/ledgers/completed/map.md",
+        "# map\n\n## Contents\n- [aaa-old-ledger.md](aaa-old-ledger.md) — **AAA-OLD:** first.\n"
+        "- [zzz-old-ledger.md](zzz-old-ledger.md) — **ZZZ-OLD:** last.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n",
+    )
+    _write(repo, "task/ledgers/completed/zzz-old-ledger.md", "# Ledger — ZZZ-OLD\n")
+    _commit(repo, "m1 with a commented bullet")
+    return comment
+
+
+def test_move_skips_a_commented_bullet_and_cuts_the_real_row(repo: Path) -> None:
+    comment = _commented_repo(
+        repo,
+        "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n"
+        "  " + PINS_LABEL + " m1-demo/C-001\n",
+    )
+    assert _run(repo, "move", "task/ledgers/staging/m1-demo-ledger.md", "completed").returncode == 0
+    staging = (repo / "task/ledgers/staging/map.md").read_text()
+    assert comment in staging
+    assert "**M1:** the real row." not in staging
+    completed = (repo / "task/ledgers/completed/map.md").read_text()
+    assert completed.count("m1-demo-ledger.md") == 2
+    assert "— **M1:** the real row.\n" in completed
+    assert "  " + PINS_LABEL + " m1-demo/C-001\n" in completed
+    assert "inside a comment" not in completed
+
+
+def test_move_with_only_a_commented_bullet_synthesises(repo: Path) -> None:
+    comment = _commented_repo(repo, "")
+    assert _run(repo, "move", "task/ledgers/staging/m1-demo-ledger.md", "completed").returncode == 0
+    assert comment in (repo / "task/ledgers/staging/map.md").read_text()
+    completed = (repo / "task/ledgers/completed/map.md").read_text()
+    assert "[m1-demo-ledger.md](m1-demo-ledger.md) — Ledger — M1\n" in completed
+    assert completed.count("m1-demo-ledger.md") == 2
+
+
+def test_move_skips_a_prose_bullet_and_cuts_the_real_row(repo: Path) -> None:
+    _write(
+        repo,
+        "task/ledgers/staging/map.md",
+        "# map\n\n## Purpose\nStaging.\n\n## Contents\n"
+        "- [aaa-ledger.md](aaa-ledger.md) — **AAA:** stays.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n"
+        "\n## Notes\n- See [m1-demo-ledger.md](m1-demo-ledger.md) for the background.\n"
+        "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n",
+    )
+    _write(repo, "task/ledgers/staging/m1-demo-ledger.md", "# Ledger — M1\n")
+    _commit(repo, "m1 with a prose bullet")
+    assert _run(repo, "move", "task/ledgers/staging/m1-demo-ledger.md", "completed").returncode == 0
+    staging = (repo / "task/ledgers/staging/map.md").read_text()
+    assert (
+        "- See [m1-demo-ledger.md](../completed/m1-demo-ledger.md) for the background.\n"
+        in staging
+    )
+    assert "**M1:** the real row." not in staging
+    completed = (repo / "task/ledgers/completed/map.md").read_text()
+    assert completed.count("m1-demo-ledger.md") == 2
+    assert "— **M1:** the real row.\n" in completed
+
+
+def test_move_skips_a_fenced_bullet_and_cuts_the_real_row(repo: Path) -> None:
+    fence = (
+        "```md\n- [m1-demo-ledger.md](../completed/m1-demo-ledger.md) — **M1:** filed form.\n```\n"
+    )
+    _write(
+        repo,
+        "task/ledgers/staging/map.md",
+        "# map\n\n## Purpose\nStaging.\n\n## Contents\n"
+        "- [aaa-ledger.md](aaa-ledger.md) — **AAA:** stays.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n" + fence +
+        "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n",
+    )
+    _write(repo, "task/ledgers/staging/m1-demo-ledger.md", "# Ledger — M1\n")
+    _commit(repo, "m1 with a fenced bullet")
+    assert _run(repo, "move", "task/ledgers/staging/m1-demo-ledger.md", "completed").returncode == 0
+    staging = (repo / "task/ledgers/staging/map.md").read_text()
+    assert fence in staging
+    assert "**M1:** the real row." not in staging
+    completed = (repo / "task/ledgers/completed/map.md").read_text()
+    assert completed.count("m1-demo-ledger.md") == 2
+    assert "— **M1:** the real row.\n" in completed
+    assert "filed form" not in completed
+
+
+def test_move_and_archive_refuse_a_history_source(repo: Path) -> None:
+    history = "docs/history/facade/file.md"
+    _write(repo, history, "# frozen\n")
+    _commit(repo, "history file")
+    moved = _run(repo, "move", history, "completed")
+    assert moved.returncode == 2
+    assert "ERROR:" in moved.stderr
+    assert "history is frozen" in moved.stderr
+    archived = _run(repo, "archive", history)
+    assert archived.returncode == 2
+    assert "ERROR:" in archived.stderr
+    assert "history is frozen" in archived.stderr
+    assert _git(repo, "status", "--short").strip() == ""
