@@ -127,27 +127,19 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   answers Spark rows with an Arrow NULL comment (alias COMMENT clauses kept); SHOW
   VIEWS appends the session's temp rows. Every other target falls through to
   the catalog arms unchanged.
-  **SPARK-DOOR-TEMP-VIEW-TARGET-1 (2026-10-29):** before the DROP and DESCRIBE arms, the router calls `temp_write::refuse_temp_view_write_target` when the statement's write-options map is empty, so a view-named write target refuses before any write route runs; with write options, the existing write-options refusal answers first. `temp_view_home_segments` is `pub(crate)` for that check.
+  **SPARK-DOOR-TEMP-VIEW-TARGET-1 (2026-10-29):** before the DROP and DESCRIBE arms, the router calls `temp_write::refuse_temp_view_write_target` when the statement's write-options map is empty, so a view-named write target refuses before any write route runs; with write options, the existing write-options refusal answers first. `temp_view_home_segments` is `pub(crate)` for that check. `route_temp_view_alter` (`temp_alter.rs`) takes the ALTER heads after it.
 - `temp_write.rs` — **SPARK-DOOR-TEMP-VIEW-TARGET-1 (2026-10-29, AUD-006):** `refuse_temp_view_write_target`, called by `temp_ddl.rs::route_temp_view_statement`. It parses only the target of `DELETE FROM`, `UPDATE`, `MERGE [WITH SCHEMA EVOLUTION] INTO`, `INSERT [INTO | OVERWRITE] [TABLE]` (not `[LOCAL] DIRECTORY`) and `TRUNCATE TABLE`, resolves it through `temp_view_home_segments` (shared with DROP and DESCRIBE), and refuses a view-named target: `EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE` for DELETE, INSERT, INSERT OVERWRITE and TRUNCATE TABLE (the statement's own operation token), and Spark's `UNSUPPORTED_FEATURE.TABLE_OPERATION` text for UPDATE and MERGE INTO. A resolution error counts as not a view, so an ordinary write never fails because of the check.
-  **Fix round 1 (2026-10-29):** `merge_head` accepts `MERGE WITH SCHEMA EVOLUTION INTO`, so that spelling of a view name refuses with the MERGE class (the facade does not expand the spelling; its two-part lead is carded as MERGE-SCHEMA-EVOLUTION-SPELLING-1).
+  **Fix round 1:** `merge_head` accepts `MERGE WITH SCHEMA EVOLUTION INTO` (its two-part lead is carded as MERGE-SCHEMA-EVOLUTION-SPELLING-1).
+- `temp_alter.rs` — **SPARK-DOOR-TEMP-VIEW-DDL-1 (2026-11-02, AUD-015):** `route_temp_view_alter`, called by `temp_ddl.rs` for an `ALTER` head after the AUD-006 check. It parses `ALTER TABLE [IF EXISTS] <name>` and the operation head, refuses a view-named target with Spark 4.1.2's `EXPECT_TABLE_NOT_VIEW` text (NO_ALTERNATIVE, or USE_ALTER_VIEW for properties and SERDE), renames the view for `RENAME TO` through `renamed_temp_view`, and lets the Iceberg extension heads reach the table.
 - `temp_view.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** `ReplanningTempView`
   keeps the plan it built at CREATE (`definition_plan`), and the free function
   `definition_plan` answers it for a provider that is one; `extension.rs` registers that
   function as the session's `ViewDefinitionPlans` resolver so the store gates can follow a
   `-NULL` column through a temp view. `get_logical_plan` stays unimplemented, so
-  DataFusion never inlines a replanning view.
-  **ATTR-VIEW-SEMANTICS-1 item (d) (2026-10-05):** the provider schema is born
-  without attribute ids (`strip_schema_ids` at CREATE), while the registered
-  frame carries the definition's ids above the scan
-  (`copy_attribute_ids` in `execute.rs`), so reads keep the carried ids and
-  the write/aggregate strip doors never meet a keyed `TableScan`;
-  `temp_view_scan` sees the registered frame through that pass-through
-  projection for DESCRIBE comments and the recursive-view walk.
-  **ATTR-VIEW-SEMANTICS-1 item (a) (2026-10-05):** the carry is deleted, so the
-  registered frame is the born-clean scan and each read mints fresh ids through
-  the facade stamp, like Spark; `temp_view_scan` keeps its Projection arm and
-  matches the bare scan.
-  See `task/roadmap/mid-term/attr-view-semantics-1-card-2026-10-04.md`.
+  DataFusion never inlines a replanning view. `renamed_temp_view` rebuilds one under a new name.
+  **ATTR-VIEW-SEMANTICS-1 (2026-10-05):** the provider schema is born without attribute ids,
+  and the carry of the definition's ids is deleted, so each read mints fresh ids through the
+  facade stamp, as Spark does (card `task/roadmap/mid-term/attr-view-semantics-1-card-2026-10-04.md`).
 - `temp_view.rs` — **IPI-40 PR6** `ReplanningTempView`, the provider behind
   a SQL temp view (registered through `create_or_replace_temp_view_from`): it
   re-plans the stored body at every scan under the creation-time catalog and

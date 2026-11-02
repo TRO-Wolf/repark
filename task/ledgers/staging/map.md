@@ -5,6 +5,13 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <path>[::<name>], ...` line per clause, or `C-NNN: none (records)`), read by `scripts/check_ledger_grammar.py` rule B; it moves with its ledger and gets no row here.
 ## Contents
+- [spark-door-temp-view-ddl-1-ledger.md](spark-door-temp-view-ddl-1-ledger.md) —
+  **SPARK-DOOR-TEMP-VIEW-DDL-1 (2026-11-02, AUD-015, Critical), in flight:** on the Spark door,
+  every `ALTER TABLE <name>` head through a temporary view's name refuses with Spark 4.1.2's text
+  and holds the same-named Iceberg table; `RENAME TO` renames the view. 15 of 17 clauses PROVEN
+  (C-014 the session-database assumption and C-017 the verification stay OPEN). `Path: STANDARD`.
+  Branch `fix/spark-door-temp-view-ddl-1`, not pushed.
+  pins: spark-door-temp-view-ddl-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012, C-013, C-015, C-016
 - [nested-literal-seam-1-ledger.md](nested-literal-seam-1-ledger.md) — **NESTED-LITERAL-SEAM-1
   (2026-10-27):** a nested date literal under the row-merge CASE, a constant nested value
   (partitioned or not), a date into a MAP timestamp key on D3, D8 and D10, the read-path CAST of
