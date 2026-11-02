@@ -28,6 +28,8 @@ enum Alternative {
 enum AlterRoute {
     Refuse(&'static str, Alternative),
     Rename(ObjectName, Token),
+    Extension(&'static str),
+    Unknown(String),
 }
 
 pub(crate) async fn route_temp_view_alter(
@@ -35,32 +37,48 @@ pub(crate) async fn route_temp_view_alter(
     sql: &str,
     temp_views: &dyn TempViewSession,
 ) -> Option<Result<DataFrame>> {
-    let (name, route) = alter_target(sql)?;
+    let (name, prefixed, route) = alter_target(sql)?;
     let home = temp_view_home_segments(&name, temp_views).ok()??;
     let view = home.last()?;
     let source = written_leaf(&name, view);
-    Some(match route {
-        AlterRoute::Refuse(operation, alternative) => Err(DataFusionError::Plan(refusal_text(
+    let refused = |operation: &str, alternative| {
+        Err(DataFusionError::Plan(refusal_text(
             operation,
             alternative,
             &source,
-        ))),
-        AlterRoute::Rename(destination, next) => {
+        )))
+    };
+    Some(match route {
+        AlterRoute::Refuse(operation, alternative) => refused(operation, alternative),
+        AlterRoute::Rename(destination, next) if !prefixed => {
             rename_temp_view(ctx, sql, temp_views, &home, &source, &destination, &next).await
         }
+        AlterRoute::Rename(..) => refused("RENAME", Alternative::NoAlternative),
+        AlterRoute::Extension(_) if !prefixed => return None,
+        AlterRoute::Extension(head) => refused(head, Alternative::NoAlternative),
+        AlterRoute::Unknown(head) => refused(&head, Alternative::NoAlternative),
     })
 }
 
-fn alter_target(sql: &str) -> Option<(ObjectName, AlterRoute)> {
+fn alter_target(sql: &str) -> Option<(ObjectName, bool, AlterRoute)> {
     let tokens = Tokenizer::new(&DatabricksDialect {}, sql).tokenize().ok()?;
     let mut parser = Parser::new(&DatabricksDialect {}).with_tokens(tokens);
-    if !parser.parse_keywords(&[Keyword::ALTER, Keyword::TABLE]) {
+    if !parser.parse_keyword(Keyword::ALTER) {
         return None;
     }
-    let _ = parser.parse_keywords(&[Keyword::IF, Keyword::EXISTS]);
+    let iceberg = parser.parse_keyword(Keyword::ICEBERG);
+    if !parser.parse_keyword(Keyword::TABLE) {
+        return None;
+    }
+    let if_exists = parser.parse_keywords(&[Keyword::IF, Keyword::EXISTS]);
+    let only = parser.parse_keyword(Keyword::ONLY);
     let name = parser.parse_object_name(false).ok()?;
+    let on_cluster = parser.parse_keywords(&[Keyword::ON, Keyword::CLUSTER]);
+    if on_cluster {
+        parser.parse_identifier().ok()?;
+    }
     let route = alter_route(&mut parser)?;
-    Some((name, route))
+    Some((name, iceberg || if_exists || only || on_cluster, route))
 }
 
 fn refuse(operation: &'static str) -> AlterRoute {
@@ -71,105 +89,128 @@ fn refuse_use_alter_view(operation: &'static str) -> AlterRoute {
     AlterRoute::Refuse(operation, Alternative::UseAlterView)
 }
 
+fn unknown(head: &str) -> AlterRoute {
+    AlterRoute::Unknown(head.to_string())
+}
+
 fn alter_route(parser: &mut Parser<'_>) -> Option<AlterRoute> {
-    let Token::Word(head) = parser.next_token().token else {
-        return None;
+    let head = match parser.next_token().token {
+        Token::EOF | Token::SemiColon => return None,
+        Token::Word(word) => word.value.to_ascii_uppercase(),
+        other => return Some(unknown(&other.to_string())),
     };
-    match head.value.to_ascii_uppercase().as_str() {
+    Some(match head.as_str() {
         "ADD" => add_route(parser),
         "DROP" => drop_route(parser),
         "RENAME" => rename_route(parser),
-        "ALTER" => Some(refuse("ALTER COLUMN")),
-        "CHANGE" => Some(refuse("CHANGE COLUMN")),
+        "ALTER" => refuse("ALTER COLUMN"),
+        "CHANGE" => refuse("CHANGE COLUMN"),
         "REPLACE" => replace_route(parser),
         "SET" => set_route(parser),
-        "UNSET" => Some(refuse_use_alter_view("UNSET TBLPROPERTIES")),
+        "UNSET" => refuse_use_alter_view("UNSET TBLPROPERTIES"),
         "PARTITION" => partition_route(parser),
-        "CLUSTER" => Some(refuse("CLUSTER BY")),
-        "RECOVER" => Some(refuse("RECOVER PARTITIONS")),
-        _ => None,
-    }
+        "CLUSTER" => refuse("CLUSTER BY"),
+        "RECOVER" => refuse("RECOVER PARTITIONS"),
+        "DEFAULT" if consume_word(parser, "COLLATION") => refuse("DEFAULT COLLATION"),
+        "WRITE" => AlterRoute::Extension("WRITE"),
+        "CREATE" => AlterRoute::Extension("CREATE"),
+        _ => AlterRoute::Unknown(head),
+    })
 }
 
-fn add_route(parser: &mut Parser<'_>) -> Option<AlterRoute> {
+fn add_route(parser: &mut Parser<'_>) -> AlterRoute {
     if consume_word(parser, "COLUMNS") {
-        return Some(refuse("ADD COLUMNS"));
+        return refuse("ADD COLUMNS");
     }
     if consume_word(parser, "CONSTRAINT") {
-        return Some(refuse("ADD CONSTRAINT"));
+        return refuse("ADD CONSTRAINT");
     }
     let _ = parser.parse_keywords(&[Keyword::IF, Keyword::NOT, Keyword::EXISTS]);
     if consume_word(parser, "PARTITION") {
-        return (!consume_word(parser, "FIELD")).then(|| refuse("ADD PARTITION ..."));
+        if consume_word(parser, "FIELD") {
+            return AlterRoute::Extension("ADD");
+        }
+        return refuse("ADD PARTITION ...");
     }
-    Some(refuse("ADD COLUMN"))
+    refuse("ADD COLUMN")
 }
 
-fn drop_route(parser: &mut Parser<'_>) -> Option<AlterRoute> {
+fn drop_route(parser: &mut Parser<'_>) -> AlterRoute {
     if ["IDENTIFIER", "BRANCH", "TAG"]
         .iter()
         .any(|word| consume_word(parser, word))
     {
-        return None;
+        return AlterRoute::Extension("DROP");
     }
     if consume_word(parser, "CONSTRAINT") {
-        return Some(refuse("DROP CONSTRAINT"));
+        return refuse("DROP CONSTRAINT");
     }
     let _ = parser.parse_keywords(&[Keyword::IF, Keyword::EXISTS]);
     if consume_word(parser, "PARTITION") {
-        return (!consume_word(parser, "FIELD")).then(|| refuse("DROP PARTITION ..."));
+        if consume_word(parser, "FIELD") {
+            return AlterRoute::Extension("DROP");
+        }
+        return refuse("DROP PARTITION ...");
     }
-    Some(refuse("DROP COLUMNS"))
+    refuse("DROP COLUMNS")
 }
 
-fn rename_route(parser: &mut Parser<'_>) -> Option<AlterRoute> {
+fn rename_route(parser: &mut Parser<'_>) -> AlterRoute {
     if !parser.parse_keyword(Keyword::TO) {
-        return Some(refuse("RENAME COLUMN"));
+        return refuse("RENAME COLUMN");
     }
-    let destination = parser.parse_object_name(false).ok()?;
-    Some(AlterRoute::Rename(destination, parser.peek_token().token))
+    match parser.parse_object_name(false) {
+        Ok(destination) => AlterRoute::Rename(destination, parser.peek_token().token),
+        Err(_) => unknown("RENAME"),
+    }
 }
 
-fn replace_route(parser: &mut Parser<'_>) -> Option<AlterRoute> {
+fn replace_route(parser: &mut Parser<'_>) -> AlterRoute {
     if ["PARTITION", "BRANCH", "TAG"]
         .iter()
         .any(|word| consume_word(parser, word))
     {
-        return None;
+        return AlterRoute::Extension("REPLACE");
     }
-    Some(refuse("REPLACE COLUMNS"))
+    refuse("REPLACE COLUMNS")
 }
 
-fn set_route(parser: &mut Parser<'_>) -> Option<AlterRoute> {
+fn set_route(parser: &mut Parser<'_>) -> AlterRoute {
     if consume_word(parser, "TBLPROPERTIES") {
-        return Some(refuse_use_alter_view("SET TBLPROPERTIES"));
+        return refuse_use_alter_view("SET TBLPROPERTIES");
     }
     if consume_word(parser, "SERDE") || consume_word(parser, "SERDEPROPERTIES") {
-        return Some(refuse_use_alter_view("SET [SERDE|SERDEPROPERTIES]"));
+        return refuse_use_alter_view("SET [SERDE|SERDEPROPERTIES]");
     }
-    consume_word(parser, "LOCATION").then(|| refuse("SET LOCATION ..."))
+    if consume_word(parser, "LOCATION") {
+        return refuse("SET LOCATION ...");
+    }
+    if consume_word(parser, "IDENTIFIER") {
+        return AlterRoute::Extension("SET");
+    }
+    unknown("SET")
 }
 
-fn partition_route(parser: &mut Parser<'_>) -> Option<AlterRoute> {
+fn partition_route(parser: &mut Parser<'_>) -> AlterRoute {
     if !parser.consume_token(&Token::LParen) {
-        return None;
+        return unknown("PARTITION");
     }
     let mut depth = 1_usize;
     while depth > 0 {
         match parser.next_token().token {
             Token::LParen => depth += 1,
             Token::RParen => depth -= 1,
-            Token::EOF => return None,
+            Token::EOF => return unknown("PARTITION"),
             _ => {}
         }
     }
     if consume_word(parser, "RENAME") {
-        return Some(refuse("RENAME TO PARTITION"));
+        return refuse("RENAME TO PARTITION");
     }
     if consume_word(parser, "SET") {
         return set_route(parser);
     }
-    None
+    unknown("PARTITION")
 }
 
 fn refusal_text(operation: &str, alternative: Alternative, shown: &str) -> String {
