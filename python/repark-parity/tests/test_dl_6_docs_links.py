@@ -210,3 +210,32 @@ def test_indented_fence_opener_still_hides_links(repo: Path) -> None:
     _write(repo, "README.md", _README + "  ```text\n  [broken](MISSING.md)\n  ```\n")
     result = _run(repo)
     assert result.returncode == 0, result.stderr
+
+
+def test_history_file_with_missing_task_targets_is_clean(repo: Path) -> None:
+    _write(
+        repo,
+        "docs/history/facade/file.md",
+        "# frozen\n\nSee [a](../../../task/ledgers/staging/gone-ledger.md) and\n"
+        "[b](../../../task/roadmap/mid-term/gone.md).\n",
+    )
+    _track(repo)
+    result = _run(repo)
+    assert result.returncode == 0, result.stderr
+
+
+def test_history_file_with_a_missing_docs_target_still_reds(repo: Path) -> None:
+    _write(repo, "docs/history/facade/file.md", "# frozen\n\nSee [a](../../guide-missing.md).\n")
+    _track(repo)
+    result = _run(repo)
+    assert result.returncode == 1
+    assert (
+        "docs/history/facade/file.md:3: ../../guide-missing.md -> does not exist" in result.stderr
+    )
+
+
+def test_live_file_with_a_missing_task_target_still_reds(repo: Path) -> None:
+    _write(repo, "README.md", _README + "[gone](task/ledgers/staging/gone-ledger.md)\n")
+    result = _run(repo)
+    assert result.returncode == 1
+    assert "README.md:11: task/ledgers/staging/gone-ledger.md -> does not exist" in result.stderr

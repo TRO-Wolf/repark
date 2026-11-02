@@ -4,13 +4,13 @@
 
 **Status:** filed, not dispatched. Grade C, P3.
 
-**Why:** `ALTER TABLE ... DROP COLUMN m.key.a` on a `map<struct<a: int>, int>` column succeeds in the fork's `update_schema`. Spark 4.1.2 refuses the same ALTER with `Unsupported table change: Cannot alter map keys`. The read after the drop is correct at `14a93602`: the empty-struct keys, the values and the validity are intact, where the base refused the scan. Loud or correct is met on the read; the schema change itself diverges from Spark.
+**Why:** `ALTER TABLE ... DROP COLUMN m.key.a` on a `map<struct<a: int>, int>` column succeeds in the fork's `update_schema`. Spark 4.1.2 refuses the same ALTER with `Unsupported table change: Cannot alter map keys`. The read after the drop returns the empty-struct keys, the values and the validity at `14a93602`, where the base refused the scan. It is not a correct answer for the dropped schema: the drop can collapse distinct keys into equal ones (a dated correction, 2026-11-01, from the third audit: `{k:1,j:2}` and `{k:3,j:2}` both read `{j:2}`, a map of cardinality 2 that Spark cannot hold). The schema change itself diverges from Spark.
 
 **Site:** the fork's `update_schema`, on the drop of a field inside a map key struct.
 
 **Fix (either):** the fork refuses the map-key drop with Spark's condition, `Cannot alter map keys`; or the owner records the divergence as a kept divergence, dated, and this card closes on that ruling.
 
-**Measured (fork ledger S-14):** on the head, the read after the drop answers the map correctly (keys as empty structs, values `[7, 8]`, validity `[true, false]`); the schema change succeeds on the fork and is refused by Spark.
+**Measured (fork ledger S-14):** on the head, the read after the drop answers the map correctly (keys as empty structs, values `[7, 8]`, validity `[true, false]`); the schema change succeeds on the fork and is refused by Spark. The key collapse is the third audit's measurement, 2026-11-01, and is not among the values this line cites.
 
 **Retires:** the card when the fork refuses the map-key drop with Spark's condition and a pin shows the refusal, or when the owner records the kept divergence with its date.
 
