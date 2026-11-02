@@ -37,3 +37,5 @@ C-034: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_multiline_
 C-035: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_lone_tick_before_a_blank_line_leaves_the_row_visible, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_lone_tick_in_a_bullet_leaves_the_next_row_visible, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_lone_tick_before_a_heading_leaves_the_row_visible
 C-036: none (records)
 C-037: none (records)
+C-038: none (records)
+C-039: none (records)
