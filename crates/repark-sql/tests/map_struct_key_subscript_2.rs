@@ -4,6 +4,7 @@ use datafusion::arrow::array::{Array, RecordBatch, StringArray};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::DataType;
 use repark_core::{ReparkSession, SqlDialect};
+use repark_functions::ansi::SparkAnsiConfig;
 use repark_spark::{SparkDialect, SparkExtension};
 use tempfile::TempDir;
 
@@ -552,6 +553,18 @@ async fn a_datetime_element_and_a_nested_array_of_structs_are_cast_like_spark() 
     }
 }
 
+fn set_ansi(door: &Door, enabled: bool) {
+    let state = door.session.context().state_ref();
+    let mut state = state.write();
+    state
+        .config_mut()
+        .options_mut()
+        .extensions
+        .get_mut::<SparkAnsiConfig>()
+        .expect("the Spark door carries the ANSI setting")
+        .enabled = enabled;
+}
+
 async fn expect_ansi_off(door: &Door) {
     for (sql, given) in ANSI_OFF_REFUSALS {
         let error = answer(&door.session, sql)
@@ -594,9 +607,9 @@ async fn with_ansi_off_in_the_builder_a_struct_key_of_another_type_refuses_like_
 async fn ansi_set_inside_a_session_gates_the_struct_key_cast_both_ways() {
     let door = spark_door(UTC, &[&ANSI_TABLES]).await;
     expect_ansi_on(&door).await;
-    run(&door.session, "SET spark.sql.ansi.enabled = false").await;
+    set_ansi(&door, false);
     expect_ansi_off(&door).await;
-    run(&door.session, "SET spark.sql.ansi.enabled = true").await;
+    set_ansi(&door, true);
     expect_ansi_on(&door).await;
 }
 
