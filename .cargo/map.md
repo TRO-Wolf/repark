@@ -10,7 +10,7 @@ Workspace-wide cargo configuration.
   systems that ship only `python3` (not `/usr/bin/python`). Inert until `repark-python` lands
   (phase 3); maturin overrides it when building wheels.
 - `audit.toml` — `cargo audit` ignore list (the `make rust-audit` gate). Kept in sync with
-  `deny.toml` `[advisories].ignore`; seven ignored advisory ids on 2026-11-02; reasons below.
+  `deny.toml` `[advisories].ignore`; three ignored advisory ids on 2026-11-02 after four were retired that day; reasons below.
 
 ## Ignored advisories
 
@@ -30,26 +30,10 @@ The TOML lists stay bare; the reason lives here, never as a TOML comment (owner 
   (requires ^0.37). Exposure is DoS-only, and the parser only sees S3 API responses (AWS-authored
   XML), not attacker-controlled input. Revisit at the next DataFusion-family bump (when
   `object_store` moves past ^0.39) and when the fork bumps opendal/reqsign.
-- **RUSTSEC-2026-0435 (thrift, CVE-2026-43868)**, dated 2026-11-02. `TBinaryInputProtocol::read_bytes`
-  sizes a buffer from an attacker-controlled 4-byte length with no upper bound; the fix is thrift
-  0.23.0. Single path: `thrift` 0.17.0 <- `parquet` 58.4.0 <- `datafusion` 54.1.0 <-
-  `iceberg-datafusion` 0.9.1 (the fork). `parquet` 58.4.0 declares `thrift = "0.17"`, so 0.23 is
-  semver-unreachable and `cargo update -p thrift` cannot reach it. `parquet` uses only
-  `TCompactInputProtocol` and `TCompactOutputProtocol`; the vulnerable read is in the binary
-  protocol (`src/protocol/binary.rs`), so the sink is unreachable from this tree. Verified
-  2026-11-02: `cargo tree --workspace -i thrift@0.17.0` shows the single path, and
-  `cargo deny check advisories` with the id un-ignored shows exactly one finding (this id).
-  Revisit at the DataFusion-family bump: `parquet` 59.2.0 carries no thrift dependency.
-- **RUSTSEC-2026-0391, RUSTSEC-2026-0398, RUSTSEC-2026-0403 (zstd, zstd-safe)**, dated 2026-10-26,
-  tracked by card DEPS-1. Patched lines are zstd >=0.14.3 (0391) and zstd-safe >=8.2.0 (0398,
-  0403); this tree ships zstd 0.13.3 and zstd-safe 7.2.4, pinned by nine dependents (`parquet`
-  58.4.0, `arrow-ipc` 58.4.0, `datafusion` 54.1.0, `datafusion-datasource` 54.1.0, `apache-avro`
-  0.21.0, `orc-rust` 0.8.0, `compression-codecs` 0.4.38, the fork's `iceberg` 0.9.1, `repark-core`).
-  `datafusion` 55.2.0 still requires zstd ^0.13, so the patched line becomes reachable only after a
-  datafusion release on arrow 60, then the fork repin, then the zstd bump. Reachability is not
-  established for 0391 and 0403; the seekable API behind 0398 is absent from all six zstd-using
-  dependents' sources (measured 2026-10-26). The full text of record is the `deny.toml` comment
-  block above these ids.
+### Retired
+
+- **RUSTSEC-2026-0435 (thrift)**: retired 2026-11-02 by the compatible lock refresh, because parquet 58.4.1 requires thrift 0.23.0, which carries the fix for RUSTSEC-2026-0435.
+- **RUSTSEC-2026-0391, RUSTSEC-2026-0398, RUSTSEC-2026-0403 (zstd, zstd-safe)**: retired 2026-11-02 by the compatible lock refresh, because the zstd lines moved to 0.13.4 / zstd-safe 7.4.0 and 0.14.3 / zstd-safe 8.2.0, outside the affected ranges of RUSTSEC-2026-0391, -0398 and -0403.
 
 ## I want to...
 
