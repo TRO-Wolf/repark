@@ -9,6 +9,8 @@ work in this repository.
 
 Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../AGENTS.md).
 
+Links from these frozen copies to ledgers or cards that later moved are left as written, by the 2026-11-01 ruling, and the link gates accept them.
+
 ## Contents
 
 - [port-v2/](port-v2/map.md) — the v1 → v2 port (2026-08-06 → 2026-08-08, closed at milestone one):

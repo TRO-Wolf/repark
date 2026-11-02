@@ -206,19 +206,7 @@ only above 3x the measured noise floor, so a wide floor queues nothing.
   family moves to `column_render.py`) and `dataframe/core.py` 3652 → 3595
   (the unemitted-id family moves to `unemitted_ids.py`) with the script
   baseline. Pins: `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
-- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 V-4 (2026-10-02):**
-  mirror row ratchets `dataframe/core.py` 3653 → 3652 with the script baseline
-  (the checkpoint swap moves to `cache_handle.bind_checkpoint_scan`).
-- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3e (2026-10-01):**
-  mirror row ratchets `dataframe/core.py` 3803 → 3800 with the script baseline
-  (the `selectExpr` body moves out and the select star arms fold into one
-  delegate).
-- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3d (2026-10-01):**
-  mirror row ratchets `dataframe/core.py` 3836 → 3803 with the script baseline
-  (the `drop`/`dropDuplicates` binding moves to `spark/subset_resolve.py`).
-- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3c (2026-10-01):**
-  mirror row ratchets `dataframe/core.py` 3846 → 3836 with the script baseline
-  (the lifted duplicate-finals refusal and its docstring).
+- `test_cap_1_source_file_line_cap.py` — **ATTR-ID-1 S3c, S3d, S3e and V-4 (2026-10-01/02):** the mirror rows ratchet `dataframe/core.py` 3846 → 3836 (S3c, the lifted duplicate-finals refusal), 3836 → 3803 (S3d, the `drop`/`dropDuplicates` binding moves to `spark/subset_resolve.py`), 3803 → 3800 (S3e, the `selectExpr` body moves out) and 3653 → 3652 (V-4, the checkpoint swap moves to `cache_handle.bind_checkpoint_scan`), each with the script baseline.
 - `test_cap_1_source_file_line_cap.py` — **TA-SINGLE-SERIES-PARALLEL-1 S2a (2026-10-05):** the mirror
   rows ratchet `repark-ta/src/udf/mod.rs` 1801 → 1791 and `python/repark/src/repark/spark/ta.py`
   1818 → 1795 with the script baselines.
@@ -249,12 +237,8 @@ only above 3x the measured noise floor, so a wide floor queues nothing.
 - `test_cap_1_source_file_line_cap.py` — **S3-PATH-WRITE-1 round 1 (2026-09-28):**
   the `writer_readwriter.py` mirror row leaves with the script row (1093 → 996, under
   the default); python_approved 32 → 31.
-- `test_cap_1_source_file_line_cap.py` — **FNP-MATH-1 step 4 (2026-09-16, run 18a):**
-  mirror row ratchets `functions_expr.py` 2198 → 2195 with the script baseline.
-- `test_cap_1_source_file_line_cap.py` — **FNP-MATH-1 step 5 (2026-09-16, run 18a):**
-  mirror row ratchets `functions_expr.py` 2195 → 2192 with the script baseline.
-- `test_cap_1_source_file_line_cap.py` — **FNP-MATH-1 step 6 (2026-09-16, run 18a):**
-  mirror row ratchets `functions_expr.py` 2192 → 2193 with the script baseline.
+- `test_cap_1_source_file_line_cap.py` — **FNP-MATH-1 steps 4 to 6 (2026-09-16, run 18a):**
+  mirror row ratchets `functions_expr.py` 2198 → 2195 → 2192 → 2193 with the script baseline.
 - `test_cap_1_source_file_line_cap.py` — **FNP-GEN-1 step 2 (2026-09-16):**
   mirror rows ratchet `functions_expr.py` 2235 → 2213 and
   `test_explode_rewrite.py` 1135 → 1133; a short-lived
@@ -288,10 +272,8 @@ only above 3x the measured noise floor, so a wide floor queues nothing.
   ceiling), `write/merge/tests/streaming_scan.rs` 3020 → 3018 and
   `write/predicate_dml/tests/predicate_dml.rs` 1440 → 1435 (the identity spec builder becomes
   `PredicateDmlSpec::identity`).
-  **Round 2 (2026-09-19):** dropping that exception row also drops the Rust exception
-  COUNT, 38 → 37, which round 1 left at its old literal — the gate itself reported 37 and
-  only this mirror still said 38, so `test_cap_1_exception_tables_equal_the_measured_debt`
-  was red. The count now matches the gate.
+  **Round 2 (2026-09-19):** the exception COUNT follows the dropped row, 38 → 37, to match
+  the gate (`test_cap_1_exception_tables_equal_the_measured_debt`).
 - `test_cap_1_source_file_line_cap.py` — **ICE-CATALOG-SESSION-1 round 3 rebase (2026-09-20, run 27):**
   mirror rows follow the measured debt after the IPI-29 rebase: `catalog_config.rs`
   1028 → 1007 and `repark-spark/src/alter.rs` 1444 → 1439 with
@@ -312,12 +294,7 @@ only above 3x the measured noise floor, so a wide floor queues nothing.
 - `test_cap_1_source_file_line_cap.py` — **U11-EDGE-1 round 2 (2026-09-26):** mirror rows
   ratchet `crates/repark-python/src/dataframe.rs` 1017 → 1016 and `dataframe/core.py`
   3991 → 3981 with `scripts/check_rust_file_size.py` / `scripts/check_lib_py.py`.
-  Round 4 (2026-09-26): the `dataframe.rs` row ratchets 1016 → 1005 with
-  `scripts/check_rust_file_size.py`.
-  Round 4, V-002: the `dataframe/core.py` row ratchets 3981 → 3979 with
-  `scripts/check_lib_py.py`.
-  Round 5: the `dataframe/core.py` row ratchets 3979 → 3976 with `scripts/check_lib_py.py`.
-  Round 6: the `dataframe/core.py` row ratchets 3976 → 3973 with `scripts/check_lib_py.py`.
+  Rounds 4 to 6 (2026-09-26) ratchet `dataframe.rs` to 1005 and `dataframe/core.py` to 3973.
   **ATTR-ID-1 S3a (2026-09-30):** the `dataframe/core.py` row ratchets 3973 → 3921 with
   `scripts/check_lib_py.py`.
 - `test_cap_1_source_file_line_cap.py` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):**
@@ -339,14 +316,9 @@ only above 3x the measured noise floor, so a wide floor queues nothing.
   round 16a):** mirror rows for `time_window/mod.rs` 1268,
   `spark_time_window.rs` 1125, `test_fnp_win_1.py` 1209, counts 38/32
   (`datetime.rs` keeps 1700 per audit S-2).
-  **FNP-WIN-1 (2026-09-15, verification round 2, L-002/L-003):** mirror rows
-  move to `time_window/mod.rs` 1338, `test_fnp_win_1.py` 1314, counts still
-  38/32 (ratchets only, no new row).
-  **FNP-WIN-1 (2026-09-15, verification round 2, L-001):** mirror rows move
-  to `time_window/mod.rs` 1416, `test_fnp_win_1.py` 1415, counts still
-  38/32.
-  **FNP-WIN-1 (2026-09-15, verification round 2, L-004):** mirror rows move
-  to `dataframe.rs` 1021, `test_fnp_win_1.py` 1454, counts still 38/32.
+  **FNP-WIN-1 (2026-09-15, verification round 2, L-001 to L-004):** mirror rows
+  move to `time_window/mod.rs` 1338 then 1416, `test_fnp_win_1.py` 1314, 1415 then
+  1454, and `dataframe.rs` 1021; counts still 38/32 (ratchets only, no new row).
   default).
 - `test_cap_1_source_file_line_cap.py` — **FNP-11B step 6 (2026-09-15):**
   `functions.py` mirror row 1960 → 1984 and `functions_expr.py` 2235 → 2237
@@ -540,7 +512,7 @@ both tables with the script baselines (backtick-disclosure retire).
   deleted the Parquet-only format gates from both files and REM4 dropped the
   stale `plan_and_commit_cow` Parquet-write doc line.
   **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables. The approved Rust exception count is 36 since CSV-INFER-PERF-1 retired `session.rs`.
-- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables. WRITE-DISTRIBUTION-2 (2026-09-06): `write/append.rs` 1884 → 1883 in both tables. DFCORE-1 (2026-09-07): `dataframe/core.py` row 6302 → 5954 and `dataframe/joins_columns.py` row 1239 → 1238 with the script baseline.
+- `test_cap_1_source_file_line_cap.py` — H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables. WRITE-DISTRIBUTION-2 (2026-09-06): `write/append.rs` 1884 → 1883 in both tables. DFCORE-1 (2026-09-07): `dataframe/core.py` row 6302 → 5954 and `dataframe/joins_columns.py` row 1239 → 1238 with the script baseline.
 - `test_cap_1_source_file_line_cap.py` — DFCORE-2 (2026-09-07): `dataframe/core.py` row 5954 → 5263 with the script baseline; the two new UDF projection modules carry no row.
 - `test_cap_1_source_file_line_cap.py` — DFCORE-3 (2026-09-07): `dataframe/core.py` row 5263 → 5060 and `dataframe/writer_readwriter.py` row 1113 → 1111 with the script baseline; the new statistics module carries no row.
 - `test_cap_1_source_file_line_cap.py` — DFCORE-4a (2026-09-07): `dataframe/core.py` row 5060 → 4819 with the script baseline; the new sampling module carries no row.
@@ -607,18 +579,18 @@ both tables with the script baselines (backtick-disclosure retire).
 - `test_cap_1_source_file_line_cap.py` — REVIEW-FIX-6 (2026-09-10): `dataframe/core.py` row 4487 → 4486 with the script baseline; the four-line both-set guard is paid for by five moved comment lines, their facts moved to `python/repark/src/repark/spark/dataframe/map.md`.
 - `test_cap_1_source_file_line_cap.py` — DISPLAY-LAZY-1 (2026-09-11, measured on the rebased tree after REVIEW-FIX-6 #487 took the row to 4486 by the same comment-funded method): `dataframe/core.py` row 4486 → 4485 with the script baseline; the checkpoint-arm `_eager_shape` record is paid for by deleting the cache-pinned early-return rationale (fact restated on the dataframe map).
   FACADE-1 (2026-09-12): `dataframe/core.py` 4485 → 4473 → 4470 with the script baseline.
-- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. FNP-9/10 (2026-09-06): `functions_expr.py` 2259 → 2256 in both tables as `arrays_zip` and `schema_of_json` trade a multi-line refusal for a one-line wrapper.
-- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables.
-- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. NULLABILITY-2
+- `test_cap_1_source_file_line_cap.py` — FNP-9/10 (2026-09-06): `functions_expr.py` 2259 → 2256 in both tables as `arrays_zip` and `schema_of_json` trade a multi-line refusal for a one-line wrapper.
+- `test_cap_1_source_file_line_cap.py` — H3-SPILL-RESIDUE-1 (2026-09-06): `repark-python/src/dataframe.rs` 1127 → 1126 in both tables.
+- `test_cap_1_source_file_line_cap.py` — NULLABILITY-2
   (2026-09-05): `core.py` row 6303 → 6302 with the script baseline, then the
   `_live_parity.py` row 1877 → 1778 with the script baseline when the three
   converged nullability disclosures retire.
-- `test_cap_1_source_file_line_cap.py` — **FN-FIX-2 (2026-09-04):** `analyzer.rs` 1161→1142. PERF-FACADE-1 (2026-09-05): `core.py` row 6368 → 6303 with the script baseline. CUTOVER-SCHEMA-1 (2026-09-05): `session.rs` 1040 → 1039 and `repark-python/src/dataframe.rs` 1171 → 1127 with the script baselines; the REG-1 DEC-9 pin follows the row's narrowed rationale. PERF-ICE-CATALOG-IO-1 (2026-09-05): `session.rs` 1039 → 1002 in both tables. PERF-APPROXPCT-1 (2026-09-05): `repark-python/src/column/mod.rs` 1053 → 1052 with the script baseline.
+- `test_cap_1_source_file_line_cap.py` — PERF-APPROXPCT-1 (2026-09-05): `repark-python/src/column/mod.rs` 1053 → 1052 with the script baseline.
 - `test_cap_1_source_file_line_cap.py` — **DF-PLAN-INTROSPECT-1 (2026-09-15, rebase onto #610/#612):** `dataframe/core.py` row 4014 → 4015 with the script baseline (the wrapped import gains `replace_expr`).
-  **CSV-INFER-PERF-1 (2026-09-06):** `session.rs` exception retired (1002 → 988, under the default); the `_RUST_BASELINES` row is deleted. Round 2: `reader.py` 1026 → 1022 in both tables.
-  DF-PRINTSCHEMA-1 (2026-09-04): the `dataframe/core.py` row ratchets 6371 → 6368 with the gate table.
-  FN-REGEXP-EXTRACT-1 (2026-09-04): the `functions_expr.py` row ratchets 2261 → 2259 with the gate table.
-  PERF-APPROXPCT-1 round 2 (2026-09-06): the `functions_expr.py` row ratchets 2259 → 2258 with the gate table.
+  **CSV-INFER-PERF-1 (2026-09-06):** `session.rs` exception retired (1002 → 988, under the default; its
+  `_RUST_BASELINES` row deleted), round 2 `reader.py` 1026 → 1022 in both tables. DF-PRINTSCHEMA-1
+  (2026-09-04): `dataframe/core.py` 6371 → 6368. FN-REGEXP-EXTRACT-1 (2026-09-04) and PERF-APPROXPCT-1 round 2
+  (2026-09-06): `functions_expr.py` 2261 → 2259 → 2258; all with the gate table.
   TYPES-1 (2026-09-05): `dataframe/core.py` 6303 → 6305 (increase — the two `__repark_rn` BIGINT casts) and `test_window_parity.py` 1481 → 1422 with the gate table. TYPES-1 round 4 (2026-09-05): `core.py` 6305 → 6303 with the gate table (one import joined absorbs the increase); `datetime.rs` 1704 → 1709 with the gate table (increase — the year-sign arm, no compressible lines, owner approval at merge). TYPES-1 round 5 (2026-09-05): `datetime.rs` 1709 → 1700 with the gate table (the year arm moves to `spark_year_pad.rs`).
   **FN-FIX-1 (2026-09-03):** `datetime.rs` 1709→1704, `column/mod.rs` 1105→1102, `functions_expr.py` 2265→2261.
   RP-7 (2026-09-02) mirrors the two downward ratchets `write/merge/mod.rs` 1889→1795 and `write/predicate_dml.rs` 1164→1142. V3-10 ratchets `repark-spark/src/alter.rs` 1831→1830 and
@@ -774,15 +746,7 @@ both tables with the script baselines (backtick-disclosure retire).
   (keyed `path:link` per D-9, so a line shift never reds the gate) drops exactly its own
   finding while a stranger link stays red and a malformed entry fails closed (exit 2); a
   stale allowlist entry that matched no finding reds the gate with its own line (D-8, audit
-  round 1); the real tree runs green under the seeded allowlist. **REVIEW-FIX-12
-  (2026-09-10):** eight red-first pins for the REVIEW-1 rounds Q-35, Q-36, Q-37, Q-38, Q-46,
-  Q-47 — a heading that is a link slugs its rendered text (and the raw-markdown anchor is
-  rejected), `Foo` / `Foo` / `Foo-1` anchor `foo` / `foo-1` / `foo-1-1`, a `docs:` token in
-  ledger prose is no evidence cell, an unclosed fence is its own finding, an absolute
-  target is skipped, a same-file anchor that does not resolve reds, a four-space-indented
-  fence hides nothing (while a two-space-indented opener still does, as a guard). The
-  clean fixture's same-file fragment now points at its target file, so the count is six
-  links. The tests carry no inline pins, so both units' clauses are cited on this line.
+  round 1); the real tree runs green under the seeded allowlist. **REVIEW-FIX-12 (2026-09-10):** eight red-first pins for the REVIEW-1 rounds (rendered-text slugs, duplicate-slug suffixes, `docs:` tokens in prose, the unclosed fence, the absolute target, same-file anchors, the indented fence); the clean fixture's same-file fragment points at its target file, so the count is six links. LEDGER-LIFECYCLE-MOVE-1 (2026-11-01): the history exemption is pinned by `test_history_file_with_missing_task_targets_is_clean` (red before it), `test_history_file_with_a_missing_docs_target_still_reds` and `test_live_file_with_a_missing_task_target_still_reds` (green throughout).
 - `test_dl_5_contract_compaction.py` — **DL-5 (2026-08-25):** STATUS Current milestone keeps
   the forward path and drops the H-2 wave paste (C-001, C-002); STATUS ceiling ratchets down
   (C-003); engineering-method points at AGENTS.md for invariants and keeps the method
@@ -831,19 +795,17 @@ both tables with the script baselines (backtick-disclosure retire).
   `completed`; `archive` is not a `move` target. The provocation proofs of
   `check`: a ledger outside the bins, an archive prefix disagreeing with its
   month, a dead ledger link in a non-map document, and the frozen rule (link
-  repair and a prepended errata pass; a prose edit and a deletion fail).
+  repair and a prepended errata pass; a prose edit and a deletion fail). LEDGER-LIFECYCLE-MOVE-1 (2026-11-01; fix rounds 1 to 4, 2026-11-02): the pins are bound by name in the unit's `-pins.md` sidecar; fix round 5 (2026-11-02) adds `test_multiline_span_hides_the_opener_and_row_moves`, `test_double_span_across_lines_hides_the_opener`, `test_unmatched_run_at_end_of_file_is_literal`, `test_masked_lines_multiline_keep_every_position`, `test_lone_tick_before_a_blank_line_leaves_the_row_visible`, `test_lone_tick_in_a_bullet_leaves_the_next_row_visible` and `test_lone_tick_before_a_heading_leaves_the_row_visible`; the void `test_multiline_span_hides_a_row_bullet_and_real_row_moves` is absent.
 - `test_map_governance_1.py` — **MAP-GOVERNANCE-1 (2026-10-29):** the sidecar the grammar gate reads (`task/ledgers/<bin>/<unit>-pins.md`): a path binds only if tracked and bindable, a `::name` only if its file defines it, `none (records)` counts and is listed, and a sidecar counts only beside its own ledger. The migration binds, cuts citation text only, keeps hand edits and is idempotent. The size ratchet: 200 lines and 16 KiB, exact-baseline rows that fail on growth and on unlowered shrinkage, `--update-baselines` that only lowers, and the `make ci` and ci.yml wiring.
 - `test_map_governance_1_lifecycle.py` — **MAP-GOVERNANCE-1:** `ledger_lifecycle.py` carries a unit's sidecar with its ledger on `move` and `archive`, with no map row; `archive` files it under the ledger's own date; a sidecar in a frozen bin may be edited and a ledger row may not; a move followed by the size ratchet stays green; `archive` moves an excepted map's ratchet row by exactly its link growth.
 - `test_map_governance_1_union.py` — **MAP-GOVERNANCE-1 (2026-10-30, round 10):** the union binding model (a clause binds its citing entries' bindable files and its ledger row's bindable files; an id-less disclaimer keeps the binding and is reported); a row-named test file is added beside the citation's file; a sidecar in another bin does not satisfy the floor; shell heredocs, multi-line quoted strings, `$((...))`, nested Rust block comments and strict pytest decorators define nothing.
-- `test_pyc_6_docstring_presence.py` — **PYC-6 (2026-08-22; the prose-homes pin retargeted to PYC's
-  history record by DL-4, 2026-08-25):** five presence
+- `test_pyc_6_docstring_presence.py` — **PYC-6 (2026-08-22):** five presence
   rules only; style `D` not in py-lint select; tests keep the `D` per-file
   ignore; EXCEPTIONS is 39 keys summing to 136, no `/tests/` path, sorted;
   Ruff pin matches the Makefile; dual-wired `make ci` + ci.yml; on the
   pre-commit hook (conventions stays off).
 - `test_map_pr_gate_1.py` — **MAP-PR-GATE-1:** the map.md lockstep is a warning in both modes (MAP-GOVERNANCE-1). Branch-mode fixtures (`--base <ref>`) over scratch repos: code and map together pass; code-only, a new directory without a map, and a `.py` change without its map each print `WARNING:` and exit 0; deletion-only is quiet; a root-level file maps to `map.md`; a diff is taken from the merge base. Staged mode exits 0 with `WARNING:`. The `sync_map_md.py` duplicate-row rule fires on a two-row fixture, survives `--fix` and stays quiet on a single row naming a file twice. C-011 pins ci.yml's guard step as PR-only with the base ref taken into `env` as `BASE_REF` and expanded as `${BASE_REF}` in both run lines (no `${{ }}` inside the run block).
-- `test_pyc_5_close.py` — **PYC-5 (2026-08-22; the prose-homes pin retargeted to PYC's history
-  record and its slate copy dropped by DL-4, 2026-08-25):** nested-def EXCEPTIONS empty;
+- `test_pyc_5_close.py` — **PYC-5 (2026-08-22):** nested-def EXCEPTIONS empty;
   DATACLASS leftover is dual-wire only; facade tests no longer ignore ANN201;
   conventions guard is not on the pre-commit hook and stays in `make ci` +
   ci.yml.
@@ -856,7 +818,6 @@ both tables with the script baselines (backtick-disclosure retire).
   `test_id` refuse; recorded-denominator dummy ids are strings; `repark-parity`
   declares `pydantic>=2.10,<3`; isolated `make py-test` / ci.yml `--with pydantic`
   (C1-Q-001); root Ruff ANN ignores split so parity tests see ANN201/ANN202.
-  **PYC-5:** facade ANN201 pin retargeted (ignore dropped).
   Behaviour stays on `test_compare_reports.py` / `test_compat_harness.py`.
 - `test_datasets_secrets.py` — **DS-3** secrets fixture: A9 defaults, table-identity
   determinism, manifest class→column coverage in schema order, the needle labels
@@ -1092,14 +1053,10 @@ RP-42 fork pin bump (2026-09-20, run 27): `test_v3_cov_docs.py` holds its own co
   `scripts/check_rust_file_size.py` (`ALTER COLUMN … TYPE` moved to `alter_column_type.rs`).
   No other row moves.
 - `test_cap_1_source_file_line_cap.py` — **U5 PR2a ALTER COLUMN COMMENT (2026-09-24):** the `crates/repark-spark/src/alter.rs` mirror row ratchets 1382 → 1354 and the `crates/repark-spark/src/tests/alter.rs` row 1184 → 1182, to the measured files and `scripts/check_rust_file_size.py` (the residual `ALTER COLUMN … COMMENT` refusal is deleted and its refusal pin flips to a landed doc). No other row moves.
-- `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py`. No other row moves.
-- `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py`. No other row moves. Round 2 (2026-09-24): the same row ratchets 1073 → 1039 in lockstep with the gate. U7 PR2 (2026-09-24): 1039 → 1033 in lockstep with the gate (the `DataFrameWriterV2.option` branch/tag refusal leaves).
-- `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py`. No other row moves. Round 2 (2026-09-24): the same row ratchets 1073 → 1039 in lockstep with the gate.
+- `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24 to 2026-09-25):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py` (PR1); round 2 (2026-09-24) 1073 → 1039 in lockstep with the gate; U7 PR2 (2026-09-24) 1039 → 1033 (the `DataFrameWriterV2.option` branch/tag refusal leaves), then 1033 → 1031 (`overwrite(condition)` delegates its SQL to `writer_schema.py`), then 1031 → 1029 (slice-2 round 2, 2026-09-25: the by-name binding moves to Rust). No other row moves.
 - `test_cap_1_source_file_line_cap.py` — **WO U5 PR2b round 2 (2026-09-25):** the mirror rows
   move with the ratchet: `repark-iceberg/src/write/merge/mod.rs` 1630 → 1628 and
   `repark-spark/src/tests/ctas.rs` 1357 → 1356.
-- `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py`. No other row moves. Round 2 (2026-09-24): the same row ratchets 1073 → 1039 in lockstep with the gate. U7 PR2 (2026-09-24): 1039 → 1033 in lockstep with the gate (the `DataFrameWriterV2.option` branch/tag refusal leaves), then 1033 → 1031 (`overwrite(condition)` delegates its SQL to `writer_schema.py`).
-- `test_cap_1_source_file_line_cap.py` — **U7 PR1 writer surface (2026-09-24):** the `python/repark/src/repark/spark/dataframe/writer_readwriter.py` mirror row ratchets 1077 → 1073 to the measured file and `scripts/check_lib_py.py`. No other row moves. Round 2 (2026-09-24): the same row ratchets 1073 → 1039 in lockstep with the gate. U7 PR2 (2026-09-24): 1039 → 1033 in lockstep with the gate (the `DataFrameWriterV2.option` branch/tag refusal leaves), then 1033 → 1031 (`overwrite(condition)` delegates its SQL to `writer_schema.py`), then 1031 → 1029 (slice-2 round 2, 2026-09-25: the by-name binding moves to Rust).
 - `test_cap_1_source_file_line_cap.py` — **DEEP-FILTER-CHAIN-CRASH-1 re-verify fold (2026-09-30):** the `repark-python/src/column/mod.rs` row (1005) and the `repark-python/src/session.rs` row (1122) retire with the script rows (`mod.rs` 1005 → 969: tests to `expr_tests.rs`, level constructors to `levels.rs`; `session.rs` 1122 → 802: tests to `session_tests.rs`); the rust count 36 → 34.
 - `test_cap_1_source_file_line_cap.py` — **ICE-RESOURCE-BOUND-1 (2026-10-26):** the approved Rust size table's `crates/repark-iceberg/src/write/append.rs` row follows the ratchet in `scripts/check_rust_file_size.py` from 1737 to 1736 (the builder's ratchet; the cap test requires the two tables to be equal). No other `_RUST_BASELINES` row moves.
 

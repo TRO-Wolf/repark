@@ -8,6 +8,8 @@ from pathlib import Path
 
 ALLOWLIST_PATH = "scripts/docs_links_allowlist.txt"
 LEDGERS_PREFIX = "task/ledgers/"
+ROADMAP_PREFIX = "task/roadmap/"
+HISTORY_PREFIX = "docs/history/"
 EXTERNAL_PREFIXES = ("http://", "https://", "mailto:", "ftp://")
 DESCRIPTION = (
     "Check every tracked markdown file: each relative link resolves to a tracked file, an"
@@ -167,6 +169,10 @@ def scan_file(
                 findings.append((number, raw, ESCAPED))
                 continue
             if not exists:
+                if relative.startswith(HISTORY_PREFIX) and (
+                    posix.startswith(LEDGERS_PREFIX) or posix.startswith(ROADMAP_PREFIX)
+                ):
+                    continue
                 findings.append((number, raw, MISSING))
                 continue
             if not _is_tracked_target(posix, is_directory, tracked, tracked_list):

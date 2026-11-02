@@ -119,6 +119,26 @@ def _load_doc_blocks() -> ModuleType:
 
 
 BLOCKS = _load_doc_blocks()
+
+
+def _load_masking() -> ModuleType:
+    """The markdown masking, for its fenced and commented line pairs."""
+    location = Path(__file__).resolve().parent / "ledger_lifecycle_masking.py"
+    specification = importlib.util.spec_from_file_location("ledger_lifecycle_masking", location)
+    if specification is None or specification.loader is None:
+        raise RuntimeError(f"cannot load {location}")
+    module = importlib.util.module_from_spec(specification)
+    sys.modules[specification.name] = module
+    specification.loader.exec_module(module)
+    return module
+
+
+MASK = _load_masking()
+FENCE_PATTERN = MASK.FENCE_PATTERN
+_fence_mark = MASK._fence_mark
+_find_run = MASK._find_run
+_blank_multiline_spans = MASK._blank_multiline_spans
+_masked_lines = MASK._masked_lines
 HISTORY_DIR = "docs/history"
 STATUS_RECORD = "status-record.md"
 
@@ -141,25 +161,6 @@ def known_paths(tracked: list[str]) -> set[str]:
             known.add(parent)
             parent = posixpath.dirname(parent)
     return known
-
-
-def _masked_lines(text: str) -> list[tuple[str, str]]:
-    """Each line paired with a copy whose code spans are blanked, fenced blocks blanked whole."""
-    pairs: list[tuple[str, str]] = []
-    in_fence = False
-    for line in text.splitlines(keepends=True):
-        if MAPS.FENCE_PATTERN.match(line):
-            in_fence = not in_fence
-            pairs.append((line, " " * len(line)))
-            continue
-        masked = " " * len(line) if in_fence else MAPS.CODE_SPAN_PATTERN.sub(_blank, line)
-        pairs.append((line, masked))
-    return pairs
-
-
-def _blank(match: re.Match[str]) -> str:
-    """Same-length whitespace, so positions survive masking."""
-    return " " * len(match.group(0))
 
 
 def resolve(base_dir: str, target: str) -> str | None:
@@ -269,19 +270,35 @@ def _collapse_blanks(lines: list[str], start: int, end: int) -> list[str]:
     return kept
 
 
-def cut_row(text: str, map_dir: str, path: str) -> tuple[str, str | None]:
+def cut_row(text: str, map_dir: str, old: str, new: str) -> tuple[str, str | None]:
     """Remove the `## Contents` row whose first link is `path`; return (text, row)."""
     lines = text.splitlines(keepends=True)
     start, end = _contents_bounds(lines)
-    for row_start, row_end in _row_spans(lines, start, end):
+    shown = [masked for _line, masked in _masked_lines(text)]
+    names = (Path(old).name, Path(new).name)
+    spans = _row_spans(lines, start, end)
+    spans += [span for span in _row_spans(lines, 0, len(lines)) if not start <= span[0] < end]
+    for row_start, row_end in spans:
+        if not any(shown[row_start].startswith("- [" + name + "](") for name in names):
+            continue
         target = _first_link(lines[row_start])
-        if target is not None and resolve(map_dir, target) == path:
-            row = "".join(lines[row_start:row_end])
-            if not row.endswith("\n"):
-                row += "\n"
-            remaining = lines[:row_start] + lines[row_end:]
+        if target is None or resolve(map_dir, target) != new:
+            continue
+        row = "".join(lines[row_start:row_end])
+        if not row.endswith("\n"):
+            row += "\n"
+        remaining = lines[:row_start] + lines[row_end:]
+        if start <= row_start < end:
             width = row_end - row_start
             return "".join(_collapse_blanks(remaining, start, end - width)), row
+        if (
+            row_start > 0
+            and row_end < len(lines)
+            and not lines[row_start - 1].strip()
+            and not lines[row_end].strip()
+        ):
+            remaining = remaining[: row_start - 1] + remaining[row_start:]
+        return "".join(remaining), row
     return text, None
 
 
@@ -365,9 +382,18 @@ def _purpose_for(directory: str) -> str:
     return PURPOSE.get(directory, "Ledgers filed by the lifecycle script.")
 
 
+def _moved_link_count(text: str, base_dir: str, moves: dict[str, str]) -> int:
+    count = 0
+    for _line, masked in _masked_lines(text):
+        for match in MAPS.LINK_PATTERN.finditer(masked):
+            if resolve(base_dir, match.group(1)) in moves:
+                count += 1
+    return count
+
+
 def plan(
     repo: Path, tracked: list[str], moves: dict[str, str], promised: set[str]
-) -> tuple[dict[str, str], int, list[str]]:
+) -> tuple[dict[str, str], int, list[str], list[tuple[str, int]]]:
     """Every markdown file's new text keyed by its new path, the link count, and new dangling links.
 
     `promised` names files the caller will write after the plan (the regenerated
@@ -380,10 +406,16 @@ def plan(
     texts: dict[str, str] = {}
     originals: dict[str, str] = {}
     rewritten = 0
+    frozen: list[tuple[str, int]] = []
     for path in tracked:
         if not path.endswith(".md") or not (repo / path).is_file():
             continue
         text = (repo / path).read_text(encoding="utf-8")
+        if path.startswith(HISTORY_DIR + "/"):
+            count = _moved_link_count(text, posixpath.dirname(path), moves)
+            if count:
+                frozen.append((path, count))
+            continue
         new_path = moves.get(path, path)
         originals[new_path] = text
         new_text, count = rewrite_links(
@@ -400,9 +432,9 @@ def plan(
         target_map = posixpath.join(target_dir, MAP_NAME)
         row = None
         if source_map in texts and source_map != target_map:
-            texts[source_map], row = cut_row(texts[source_map], posixpath.dirname(old), new)
+            texts[source_map], row = cut_row(texts[source_map], posixpath.dirname(old), old, new)
         if row is None:
-            row = _synthesized_row(new, texts[new])
+            row = _synthesized_row(new, texts.get(new, ""))
         else:
             row, _count = rewrite_links(row, posixpath.dirname(old), target_dir, {}, known_after)
             old_name, new_name = Path(old).name, Path(new).name
@@ -423,7 +455,7 @@ def plan(
         for target in dangling(texts[path], base, known_after):
             if target not in before:
                 broken.append(f"{path}: `{target}` would not resolve")
-    return texts, rewritten, broken
+    return texts, rewritten, broken, frozen
 
 
 def apply(repo: Path, moves: dict[str, str], texts: dict[str, str]) -> int:
@@ -518,7 +550,7 @@ def execute(
     repo: Path, tracked: list[str], moves: dict[str, str], verb: str, promised: set[str]
 ) -> int:
     """Plan, verify, apply; the shared tail of `archive` and `move`."""
-    texts, rewritten, broken = plan(repo, tracked, moves, promised)
+    texts, rewritten, broken, frozen = plan(repo, tracked, moves, promised)
     if broken:
         for line in broken:
             print(line, file=sys.stderr)
@@ -542,6 +574,8 @@ def execute(
         f"rewrote {rewritten} link(s), wrote {written} file(s), "
         f"moved {followed} map-size baseline row(s)"
     )
+    for path, count in frozen:
+        print(f"ledger-lifecycle: {path} left frozen ({count} link(s) to moved files)")
     return 0
 
 
@@ -567,6 +601,9 @@ def run_archive(repo: Path, paths: list[str]) -> int:
     moves: dict[str, str] = {}
     carried = _carried(paths)
     for path in sorted(paths):
+        if path.startswith(HISTORY_DIR + "/"):
+            print(f"ERROR: {path} is under docs/history/ — history is frozen", file=sys.stderr)
+            return 2
         if path not in tracked:
             print(f"ERROR: {path} is not a tracked file", file=sys.stderr)
             return 2
@@ -610,6 +647,9 @@ def run_archive(repo: Path, paths: list[str]) -> int:
 
 def run_move(repo: Path, path: str, bin_name: str) -> int:
     """`move`: relocate one document into a named bin."""
+    if path.startswith(HISTORY_DIR + "/"):
+        print(f"ERROR: {path} is under docs/history/ — history is frozen", file=sys.stderr)
+        return 2
     tracked = MAPS.tracked_paths(repo)
     if path not in tracked:
         print(f"ERROR: {path} is not a tracked file", file=sys.stderr)
@@ -841,6 +881,8 @@ def run_check(repo: Path, base: str | None) -> int:
     links = 0
     for path in tracked:
         if not path.endswith(".md") or not (repo / path).is_file():
+            continue
+        if path.startswith(HISTORY_DIR + "/"):
             continue
         base_dir = posixpath.dirname(path)
         text = (repo / path).read_text(encoding="utf-8")

@@ -34,7 +34,7 @@ jobs:
             /usr/local/share/powershell /usr/share/miniconda
           sudo docker system prune -af --volumes >/dev/null 2>&1 || true
           df -h /
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.12"
       # SHA-pinned (see ci.yml note).
@@ -43,7 +43,7 @@ jobs:
           toolchain: "1.96.0"
           components: rustfmt, clippy
       # Both keys must match ci.yml; rust-cache otherwise adds the job ID and misses this cache.
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0  # v2.9.2 (node24)
         with:
           prefix-key: "v3-df54"
           shared-key: "lint"
@@ -72,14 +72,14 @@ jobs:
             /usr/local/share/powershell /usr/share/miniconda
           sudo docker system prune -af --volumes >/dev/null 2>&1 || true
           df -h /
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.12"
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master 2026-07-11
         with:
           toolchain: "1.96.0"
       # prefix-key AND shared-key MUST match ci.yml's rust-test restore (see warm-lint note).
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0  # v2.9.2 (node24)
         with:
           prefix-key: "v3-df54-test"
           shared-key: "test"
@@ -97,13 +97,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.12"
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master 2026-07-11
         with:
           toolchain: "1.96.0"
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0  # v2.9.2 (node24)
         with:
           prefix-key: "v2-df54-wheel"
           shared-key: "wheel"
