@@ -549,3 +549,110 @@ def test_a_view_stored_under_the_exact_rule_does_not_hold_the_folded_name(
     session.conf.set("spark.sql.caseSensitive", "false")
     session.sql("ALTER TABLE t DROP COLUMN v").collect()
     assert _state(session, catalog).rows == ["{'id': 1}", "{'id': 2}", "{'id': 3}"]
+
+
+PREFIX_SPELLINGS = [
+    "ALTER TABLE ONLY {}",
+    "ALTER TABLE IF EXISTS ONLY {}",
+    "ALTER TABLE {} ON CLUSTER c1",
+    "ALTER ICEBERG TABLE {}",
+]
+PREFIX_IDS = ["only", "if-exists-only", "on-cluster", "iceberg-table"]
+PREFIX_HEADS = [
+    ("DROP COLUMN v", "DROP COLUMNS", NO_ALTERNATIVE),
+    ("DROP COLUMNS (v)", "DROP COLUMNS", NO_ALTERNATIVE),
+    ("ADD COLUMN z INT", "ADD COLUMN", NO_ALTERNATIVE),
+    ("ADD COLUMNS (z INT)", "ADD COLUMNS", NO_ALTERNATIVE),
+    ("RENAME COLUMN v TO v2", "RENAME COLUMN", NO_ALTERNATIVE),
+    ("ALTER COLUMN id TYPE BIGINT", "ALTER COLUMN", NO_ALTERNATIVE),
+    (
+        "SET TBLPROPERTIES ('write.delete.mode'='merge-on-read')",
+        "SET TBLPROPERTIES",
+        USE_ALTER_VIEW,
+    ),
+    ("UNSET TBLPROPERTIES ('k0')", "UNSET TBLPROPERTIES", USE_ALTER_VIEW),
+    ("RENAME TO t2", "RENAME", NO_ALTERNATIVE),
+    ("ADD PARTITION FIELD id", "ADD", NO_ALTERNATIVE),
+    ("WRITE ORDERED BY id", "WRITE", NO_ALTERNATIVE),
+]
+PREFIX_HEAD_IDS = [
+    "drop-column",
+    "drop-columns",
+    "add-column",
+    "add-columns",
+    "rename-column",
+    "alter-column-type",
+    "set-tblproperties",
+    "unset-tblproperties",
+    "rename-to",
+    "add-partition-field",
+    "write-order",
+]
+HUNTED_SPELLINGS = [
+    ("ALTER TABLE ONLY `t` DROP COLUMN v", "DROP COLUMNS"),
+    ("alter table only t drop column v", "DROP COLUMNS"),
+    ("ALTER /* c */ TABLE /* c */ ONLY /* c */ t DROP COLUMN v", "DROP COLUMNS"),
+    ("ALTER TABLE ONLY -- c\n t DROP COLUMN v", "DROP COLUMNS"),
+    ("ALTER\tICEBERG\nTABLE t RENAME TO t2", "RENAME"),
+    ("ALTER TABLE t ON CLUSTER c1 PARTITION (id=1) SET LOCATION 'relocated'", "SET LOCATION ..."),
+    ("ALTER TABLE t SWAP WITH w", "SWAP"),
+    ("ALTER TABLE t SET OWNER TO someone", "SET"),
+    ("ALTER TABLE t PARTITION (id=1) ADD COLUMN z INT", "PARTITION"),
+    ("ALTER TABLE t DEFAULT COLLATION UTF8_LCASE", "DEFAULT COLLATION"),
+]
+HUNTED_IDS = [
+    "only-quoted-view",
+    "lower-case",
+    "block-comments",
+    "line-comment",
+    "iceberg-rename-whitespace",
+    "on-cluster-partition-location",
+    "swap-with",
+    "set-owner",
+    "partition-other-head",
+    "default-collation",
+]
+
+
+@pytest.mark.parametrize(("head", "operation", "alternative"), PREFIX_HEADS, ids=PREFIX_HEAD_IDS)
+@pytest.mark.parametrize("prefix", PREFIX_SPELLINGS, ids=PREFIX_IDS)
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_a_repark_only_prefix_through_a_view_name_refuses_and_holds_the_table(
+    session: ReparkSession,
+    tmp_path: Path,
+    catalog: str,
+    prefix: str,
+    head: str,
+    operation: str,
+    alternative: str,
+) -> None:
+    _seed(session, catalog, "t")
+    session.sql("CREATE OR REPLACE TEMPORARY VIEW w AS SELECT 7 AS id").collect()
+    statement = f"{prefix.format('t')} {head}"
+    expected = _refusal(operation, alternative, "t")
+    _assert_refused_and_held(session, tmp_path, catalog, "t", statement, expected)
+
+
+@pytest.mark.parametrize(("statement", "operation"), HUNTED_SPELLINGS, ids=HUNTED_IDS)
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_a_hunted_alter_spelling_through_a_view_name_refuses_and_holds_the_table(
+    session: ReparkSession, tmp_path: Path, catalog: str, statement: str, operation: str
+) -> None:
+    _seed(session, catalog, "t")
+    session.sql("CREATE OR REPLACE TEMPORARY VIEW w AS SELECT 7 AS id").collect()
+    expected = _refusal(operation, NO_ALTERNATIVE, "t")
+    _assert_refused_and_held(session, tmp_path, catalog, "t", statement, expected)
+
+
+@pytest.mark.parametrize("catalog", CATALOGS)
+def test_a_quoted_only_names_a_table_and_never_reaches_the_view_named_table(
+    session: ReparkSession, tmp_path: Path, catalog: str
+) -> None:
+    _seed(session, catalog, "t")
+    state = _state(session, catalog)
+    files = _files(tmp_path, catalog)
+    with pytest.raises(Exception, match=r"ONLY"):
+        session.sql("ALTER TABLE `ONLY` DROP COLUMN v").collect()
+    assert _state(session, catalog) == state
+    assert _files(tmp_path, catalog) == files
+    assert _ids(session, "SELECT id FROM t") == [99]

@@ -227,3 +227,62 @@ async fn rename_to_a_qualified_or_malformed_destination_refuses_with_spark_text(
         "{trailing}"
     );
 }
+
+const PREFIXED: [(&str, &str); 12] = [
+    ("ALTER TABLE ONLY t DROP COLUMN v", "DROP COLUMNS"),
+    (
+        "ALTER TABLE IF EXISTS ONLY t ADD COLUMN z INT",
+        "ADD COLUMN",
+    ),
+    (
+        "ALTER TABLE t ON CLUSTER c1 RENAME COLUMN v TO v2",
+        "RENAME COLUMN",
+    ),
+    (
+        "ALTER ICEBERG TABLE t ALTER COLUMN id TYPE BIGINT",
+        "ALTER COLUMN",
+    ),
+    ("ALTER TABLE ONLY t RENAME TO t2", "RENAME"),
+    ("ALTER TABLE t ON CLUSTER c1 RENAME TO t2", "RENAME"),
+    ("ALTER TABLE IF EXISTS t RENAME TO t2", "RENAME"),
+    ("ALTER ICEBERG TABLE t ADD PARTITION FIELD id", "ADD"),
+    ("ALTER TABLE ONLY t WRITE ORDERED BY id", "WRITE"),
+    ("ALTER TABLE t SWAP WITH w", "SWAP"),
+    ("ALTER TABLE t SET OWNER TO someone", "SET"),
+    (
+        "ALTER TABLE t DEFAULT COLLATION UTF8_LCASE",
+        "DEFAULT COLLATION",
+    ),
+];
+
+#[tokio::test]
+async fn every_prefix_and_unknown_head_through_a_view_name_refuses() {
+    for (sql, operation) in PREFIXED {
+        assert_eq!(
+            outcome(&view_t(), sql).await,
+            format!(
+                "Error during planning: [EXPECT_TABLE_NOT_VIEW.NO_ALTERNATIVE] 'ALTER TABLE ... \
+                 {operation}' expects a table but `t` is a view.  SQLSTATE: 42809"
+            ),
+            "{sql}"
+        );
+    }
+    assert_eq!(
+        outcome(&view_t(), "ALTER TABLE ONLY t UNSET TBLPROPERTIES ('k0')").await,
+        "Error during planning: [EXPECT_TABLE_NOT_VIEW.USE_ALTER_VIEW] 'ALTER TABLE ... UNSET \
+         TBLPROPERTIES' expects a table but `t` is a view. Please use ALTER VIEW instead. \
+         SQLSTATE: 42809"
+    );
+}
+
+#[tokio::test]
+async fn a_prefixed_alter_with_no_view_of_that_name_passes_the_view_check() {
+    let views = NamedViews { names: vec!["w"] };
+    for (sql, _) in PREFIXED {
+        let outcome = outcome(&views, sql).await;
+        assert!(
+            !outcome.contains("EXPECT_TABLE_NOT_VIEW"),
+            "{sql}: {outcome}"
+        );
+    }
+}
