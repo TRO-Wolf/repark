@@ -30,3 +30,10 @@ C-027: python/repark/tests/writes/test_temp_view_ddl_target_1.py::test_a_double_
 C-028: python/repark/tests/writes/test_temp_view_ddl_target_1.py::test_drop_table_through_a_view_name_drops_the_view_then_drop_if_exists_drops_the_table, python/repark/tests/writes/test_temp_view_ddl_target_1.py::test_a_leading_semicolon_write_or_drop_through_a_view_name_refuses_and_holds_both
 C-029: none (records)
 C-030: none (records)
+C-031: crates/repark-core/tests/temp_view_doors.rs::a_digit_leading_temp_view_name_resolves_unquoted_and_an_undecidable_name_refuses, python/repark/tests/writes/test_temp_view_ddl_target_1.py::test_a_digit_leading_view_name_refuses_every_alter_head_and_holds_the_table, python/repark/tests/writes/test_temp_view_ddl_target_1.py::test_a_digit_leading_view_name_behind_only_refuses
+C-032: crates/repark-core/tests/temp_view_doors.rs::a_digit_leading_temp_view_name_resolves_unquoted_and_an_undecidable_name_refuses
+C-033: crates/repark-spark/src/tests/temp_view_alter.rs::an_undecided_view_lookup_refuses_every_head_that_consults_it
+C-034: crates/repark-spark/src/tests/temp_view_alter.rs::a_double_quoted_drop_or_truncate_target_naming_a_view_refuses, python/repark/tests/writes/test_temp_view_ddl_target_1.py::test_a_double_quoted_drop_or_truncate_target_refuses_and_holds_both
+C-035: python/repark/tests/writes/test_temp_view_ddl_target_1.py::test_a_digit_leading_view_name_refuses_every_write_head, python/repark/tests/writes/test_temp_view_ddl_target_1.py::test_drop_table_through_a_digit_leading_view_name_drops_the_view, python/repark/tests/writes/test_temp_view_ddl_target_1.py::test_rename_to_through_a_digit_leading_view_name_renames_the_view
+C-036: crates/repark-core/tests/temp_view_doors.rs::a_digit_leading_temp_view_name_resolves_unquoted_and_an_undecidable_name_refuses, crates/repark-spark/src/tests/temp_view_alter.rs::an_undecided_view_lookup_refuses_every_head_that_consults_it
+C-037: none (records)

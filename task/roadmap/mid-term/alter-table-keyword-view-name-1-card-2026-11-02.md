@@ -10,4 +10,4 @@
 
 **Retires:** the card when an unquoted view named `only` gives Spark 4.1.2's answers through the view's name, pinned, or the charter declines it.
 
-**Relation:** [SPARK-DOOR-TEMP-VIEW-DDL-1 ledger](../../ledgers/staging/spark-door-temp-view-ddl-1-ledger.md) (round-2 kept divergence, clause C-030 (a)).
+**Relation:** [SPARK-DOOR-TEMP-VIEW-DDL-1 ledger](../../ledgers/staging/spark-door-temp-view-ddl-1-ledger.md) (round-2 kept divergence, clause C-030 (a)). Family: [ALTER-RENAME-QUOTED-DESTINATION-1](alter-rename-quoted-destination-1-card-2026-11-02.md) (the Muse critic's round-3 finding R3F2, an ALTER parse-family lead; clause C-037).
