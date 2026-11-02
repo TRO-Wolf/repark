@@ -38,6 +38,32 @@ const STRING_FIELD_KEY_TABLE: [&str; 3] = [
     "INSERT INTO ice.ns.s VALUES (2, map(named_struct('k', 'a', 'j', 5), 9))",
 ];
 
+const LEAF_TABLES: [&str; 18] = [
+    "CREATE TABLE ice.ns.ls (id INT, m MAP<STRUCT<k: STRING, j: INT>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.ls VALUES (1, map(named_struct('k', 'a', 'j', 2), 7, named_struct('k', '2024-01-01', 'j', 2), 8, named_struct('k', 'true', 'j', 2), 9, named_struct('k', '1.0', 'j', 2), 10, named_struct('k', '1', 'j', 2), 11, named_struct('k', '1.0E20', 'j', 2), 13, named_struct('k', '2024-01-01 00:00:00', 'j', 2), 14)), (2, map(named_struct('k', 'a', 'j', 5), 12))",
+    "CREATE TABLE ice.ns.nn (id INT, m MAP<STRUCT<k: INT NOT NULL, j: INT>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.nn VALUES (1, map(named_struct('k', 1, 'j', 2), 7, named_struct('k', 3, 'j', 2), 8)), (2, map(named_struct('k', 1, 'j', 5), 9))",
+    "CREATE TABLE ice.ns.ts (id INT, m MAP<STRUCT<t: TIMESTAMP, j: INT>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.ts VALUES (1, map(named_struct('t', TIMESTAMP '2024-01-01 00:00:00', 'j', 2), 7)), (2, map(named_struct('t', TIMESTAMP '2024-01-02 00:00:00', 'j', 2), 8))",
+    "CREATE TABLE ice.ns.tsn (id INT, m MAP<STRUCT<t: TIMESTAMP_NTZ, j: INT>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.tsn VALUES (1, map(named_struct('t', TIMESTAMP_NTZ '2024-01-01 00:00:00', 'j', 2), 7)), (2, map(named_struct('t', TIMESTAMP_NTZ '2024-01-02 00:00:00', 'j', 2), 8))",
+    "CREATE TABLE ice.ns.dt (id INT, m MAP<STRUCT<d: DATE, j: INT>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.dt VALUES (1, map(named_struct('d', DATE '2024-01-01', 'j', 2), 7)), (2, map(named_struct('d', DATE '2024-01-02', 'j', 2), 8))",
+    "CREATE TABLE ice.ns.bo (id INT, m MAP<STRUCT<b: BOOLEAN, j: INT>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.bo VALUES (1, map(named_struct('b', true, 'j', 2), 7)), (2, map(named_struct('b', false, 'j', 2), 8))",
+    "CREATE TABLE ice.ns.bi (id INT, m MAP<STRUCT<b: BINARY, j: INT>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.bi VALUES (1, map(named_struct('b', X'01', 'j', 2), 7)), (2, map(named_struct('b', X'61', 'j', 2), 8))",
+    "CREATE TABLE ice.ns.dec (id INT, m MAP<STRUCT<k: DECIMAL(5,2), j: INT>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.dec VALUES (1, map(named_struct('k', CAST(1.50 AS DECIMAL(5,2)), 'j', 2), 7, named_struct('k', CAST(1.51 AS DECIMAL(5,2)), 'j', 2), 8)), (2, map(named_struct('k', CAST(123.45 AS DECIMAL(5,2)), 'j', 2), 9))",
+    "CREATE TABLE ice.ns.deep (id INT, m MAP<STRUCT<a: INT, s: STRUCT<x: INT, t: STRUCT<p: INT, q: INT>>>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.deep VALUES (1, map(named_struct('a', 1, 's', named_struct('x', 2, 't', named_struct('p', 3, 'q', 4))), 7, named_struct('a', 1, 's', named_struct('x', 2, 't', CAST(NULL AS STRUCT<p: INT, q: INT>))), 8, named_struct('a', 1, 's', CAST(NULL AS STRUCT<x: INT, t: STRUCT<p: INT, q: INT>>)), 9)), (2, map(named_struct('a', 2, 's', named_struct('x', 3, 't', named_struct('p', 4, 'q', 4))), 12))",
+];
+
+const ARRAY_STRUCT_TABLE: [&str; 2] = [
+    "CREATE TABLE ice.ns.as_ (id INT, m MAP<ARRAY<STRUCT<k: INT, j: INT>>, INT>) USING iceberg",
+    "INSERT INTO ice.ns.as_ VALUES (1, map(array(named_struct('k', 1, 'j', 2)), 7, array(named_struct('k', 1, 'j', 2), named_struct('k', 3, 'j', 4)), 8, array(named_struct('k', 1, 'j', 2), CAST(NULL AS STRUCT<k: INT, j: INT>)), 10)), (2, map(array(named_struct('k', 5, 'j', 6)), 9))",
+];
+
 const ARRAY_OF_STRUCT_LITERAL: &str = "SELECT map(array(named_struct('k', 1, 'j', 2)), 7)";
 
 const STRUCT_OF_ARRAY_LITERAL: &str =
@@ -58,6 +84,7 @@ async fn spark_door(tables: &[&[&str]]) -> Door {
     let session = ReparkSession::builder()
         .with_extension(Arc::new(SparkExtension))
         .with_sql_dialect(dialect)
+        .config("spark.sql.session.timeZone", "UTC")
         .build()
         .expect("spark session");
     session
@@ -652,4 +679,219 @@ async fn the_ansi_door_casts_a_struct_inside_an_array_key_by_position() {
         &["\"STRUCT<k: STRING"],
     )
     .await;
+}
+
+#[tokio::test]
+async fn a_floating_leaf_against_a_string_field_is_cast_with_sparks_text() {
+    let door = spark_door(&[&LEAF_TABLES]).await;
+    expect(
+        &door,
+        "SELECT id, m[named_struct('k', 1e20D, 'j', 2)] FROM ice.ns.ls ORDER BY id",
+        &["1|13", "2|NULL"],
+    )
+    .await;
+    for (map_key, lookup) in [
+        ("'1.2345678E7'", "12345678.0D"),
+        ("'1.0E-5'", "0.00001D"),
+        ("'1.0E10'", "CAST(1e10 AS FLOAT)"),
+    ] {
+        expect(
+            &door,
+            &format!(
+                "SELECT map(named_struct('k', {map_key}, 'j', 2), 7)[named_struct('k', {lookup}, 'j', 2)]"
+            ),
+            &["7"],
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn any_leaf_against_a_string_field_is_cast_like_spark() {
+    let door = spark_door(&[&LEAF_TABLES]).await;
+    for (leaf, answer) in [
+        ("DATE'2024-01-01'", "1|8"),
+        ("true", "1|9"),
+        ("TIMESTAMP '2024-01-01 00:00:00'", "1|14"),
+        ("X'61'", "1|7"),
+        ("1.0D", "1|10"),
+        ("1.0", "1|10"),
+        ("1", "1|11"),
+        ("CAST(1.0 AS FLOAT)", "1|10"),
+    ] {
+        expect(
+            &door,
+            &format!("SELECT id, m[named_struct('k', {leaf}, 'j', 2)] FROM ice.ns.ls ORDER BY id"),
+            &[answer, "2|NULL"],
+        )
+        .await;
+    }
+    expect(
+        &door,
+        "SELECT map(named_struct('k', 'true', 'j', 2), 9)[named_struct('k', true, 'j', 2)]",
+        &["9"],
+    )
+    .await;
+    expect(
+        &door,
+        "SELECT map(named_struct('k', '2024-01-01', 'j', 2), 8)[named_struct('k', DATE '2024-01-01', 'j', 2)]",
+        &["8"],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn date_timestamp_and_timestamp_ntz_leaves_are_cast_among_themselves_like_spark() {
+    let door = spark_door(&[&LEAF_TABLES]).await;
+    for (table, field, leaf) in [
+        ("dt", "d", "DATE'2024-01-01'"),
+        ("dt", "d", "TIMESTAMP '2024-01-01 00:00:00'"),
+        ("ts", "t", "TIMESTAMP '2024-01-01 00:00:00'"),
+        ("ts", "t", "DATE '2024-01-01'"),
+        ("ts", "t", "TIMESTAMP_NTZ '2024-01-01 00:00:00'"),
+        ("tsn", "t", "TIMESTAMP_NTZ '2024-01-01 00:00:00'"),
+        ("tsn", "t", "TIMESTAMP '2024-01-01 00:00:00'"),
+    ] {
+        expect(
+            &door,
+            &format!(
+                "SELECT id, m[named_struct('{field}', {leaf}, 'j', 2)] FROM ice.ns.{table} ORDER BY id"
+            ),
+            &["1|7", "2|NULL"],
+        )
+        .await;
+    }
+    expect(
+        &door,
+        "SELECT id, m[named_struct('d', date_add(DATE'2023-12-31', id), 'j', 2)] FROM ice.ns.dt ORDER BY id",
+        &["1|7", "2|8"],
+    )
+    .await;
+    expect(
+        &door,
+        "SELECT map(named_struct('d', DATE '2024-01-01', 'j', 2), 7)[named_struct('d', TIMESTAMP '2024-01-01 10:00:00', 'j', 2)]",
+        &["7"],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn equal_boolean_and_binary_leaves_answer_and_other_kinds_refuse_like_spark() {
+    let door = spark_door(&[&LEAF_TABLES]).await;
+    expect(
+        &door,
+        "SELECT id, m[named_struct('b', true, 'j', 2)] FROM ice.ns.bo ORDER BY id",
+        &["1|7", "2|NULL"],
+    )
+    .await;
+    expect(
+        &door,
+        "SELECT id, m[named_struct('b', X'01', 'j', 2)] FROM ice.ns.bi ORDER BY id",
+        &["1|7", "2|NULL"],
+    )
+    .await;
+    for (table, key, given) in [
+        ("bo", "named_struct('b', 1, 'j', 2)", "\"STRUCT<b: INT"),
+        (
+            "bo",
+            "named_struct('b', 'true', 'j', 2)",
+            "\"STRUCT<b: STRING",
+        ),
+        ("bi", "named_struct('b', 'a', 'j', 2)", "\"STRUCT<b: STRING"),
+        (
+            "dt",
+            "named_struct('d', '2024-01-01', 'j', 2)",
+            "\"STRUCT<d: STRING",
+        ),
+        (
+            "ts",
+            "named_struct('t', '2024-01-01 00:00:00', 'j', 2)",
+            "\"STRUCT<t: STRING",
+        ),
+    ] {
+        expect_refusal(
+            &door,
+            &format!("SELECT id, m[{key}] FROM ice.ns.{table} ORDER BY id"),
+            &[given],
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn a_null_leaf_for_a_required_key_field_matches_nothing() {
+    let door = spark_door(&[&LEAF_TABLES]).await;
+    expect(
+        &door,
+        "SELECT id, m[named_struct('k', CAST(NULL AS INT), 'j', 2)] FROM ice.ns.nn ORDER BY id",
+        &["1|NULL", "2|NULL"],
+    )
+    .await;
+    expect(
+        &door,
+        "SELECT id, m[named_struct('k', CASE WHEN id = 1 THEN 1 END, 'j', 2)] FROM ice.ns.nn ORDER BY id",
+        &["1|7", "2|NULL"],
+    )
+    .await;
+    expect(
+        &door,
+        "SELECT id, m[named_struct('j', 1L, 'k', 2L)] FROM ice.ns.nn ORDER BY id",
+        &["1|7", "2|NULL"],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn decimal_and_deep_struct_keys_stay_sparks_values() {
+    let door = spark_door(&[&LEAF_TABLES, &ARRAY_STRUCT_TABLE]).await;
+    for (leaf, answer) in [
+        ("CAST(1.505 AS DECIMAL(6,3))", ["1|8", "2|NULL"]),
+        ("CAST(1.504 AS DECIMAL(6,3))", ["1|7", "2|NULL"]),
+        ("CAST(123.45 AS DECIMAL(10,2))", ["1|NULL", "2|9"]),
+        ("1.51D", ["1|8", "2|NULL"]),
+    ] {
+        expect(
+            &door,
+            &format!("SELECT id, m[named_struct('k', {leaf}, 'j', 2)] FROM ice.ns.dec ORDER BY id"),
+            &answer,
+        )
+        .await;
+    }
+    for (key, answer) in [
+        (
+            "named_struct('A', 1, 'S', named_struct('X', 2, 'T', named_struct('Q', 3, 'P', 4)))",
+            ["1|7", "2|NULL"],
+        ),
+        (
+            "named_struct('a', 1, 's', named_struct('x', 2, 't', CAST(NULL AS STRUCT<q: INT, p: INT>)))",
+            ["1|8", "2|NULL"],
+        ),
+        (
+            "named_struct('a', 1L, 's', CAST(NULL AS STRUCT<x: BIGINT, t: STRUCT<p: BIGINT, q: BIGINT>>))",
+            ["1|9", "2|NULL"],
+        ),
+        (
+            "named_struct('a', id, 's', named_struct('x', id + 1, 't', named_struct('p', id + 2, 'q', 4)))",
+            ["1|7", "2|12"],
+        ),
+    ] {
+        expect(
+            &door,
+            &format!("SELECT id, m[{key}] FROM ice.ns.deep ORDER BY id"),
+            &answer,
+        )
+        .await;
+    }
+    for key in [
+        "array(named_struct('k', 1, 'j', 2), CAST(NULL AS STRUCT<k: INT, j: INT>))",
+        "array(named_struct('k', 1L, 'j', 2L), CAST(NULL AS STRUCT<k: BIGINT, j: BIGINT>))",
+        "array(named_struct('x', 1, 'y', 2), CAST(NULL AS STRUCT<x: INT, y: INT>))",
+    ] {
+        expect(
+            &door,
+            &format!("SELECT id, m[{key}] FROM ice.ns.as_ ORDER BY id"),
+            &["1|10", "2|NULL"],
+        )
+        .await;
+    }
 }
