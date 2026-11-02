@@ -149,7 +149,7 @@ def _masked_lines(text: str) -> list[tuple[str, str]]:
     in_fence = False
     in_comment = False
     for line in text.splitlines(keepends=True):
-        if MAPS.FENCE_PATTERN.match(line):
+        if not in_comment and MAPS.FENCE_PATTERN.match(line):
             in_fence = not in_fence
             pairs.append((line, " " * len(line)))
             continue
@@ -296,20 +296,11 @@ def cut_row(text: str, map_dir: str, old: str, new: str) -> tuple[str, str | Non
     """Remove the `## Contents` row whose first link is `path`; return (text, row)."""
     lines = text.splitlines(keepends=True)
     start, end = _contents_bounds(lines)
-    for row_start, row_end in _row_spans(lines, start, end):
-        target = _first_link(lines[row_start])
-        if target is not None and resolve(map_dir, target) == new:
-            row = "".join(lines[row_start:row_end])
-            if not row.endswith("\n"):
-                row += "\n"
-            remaining = lines[:row_start] + lines[row_end:]
-            width = row_end - row_start
-            return "".join(_collapse_blanks(remaining, start, end - width)), row
     shown = [masked for _line, masked in _masked_lines(text)]
     names = (Path(old).name, Path(new).name)
-    for row_start, row_end in _row_spans(lines, 0, len(lines)):
-        if start <= row_start < end:
-            continue
+    spans = _row_spans(lines, start, end)
+    spans += [span for span in _row_spans(lines, 0, len(lines)) if not start <= span[0] < end]
+    for row_start, row_end in spans:
         if not any(shown[row_start].startswith("- [" + name + "](") for name in names):
             continue
         target = _first_link(lines[row_start])
@@ -319,6 +310,9 @@ def cut_row(text: str, map_dir: str, old: str, new: str) -> tuple[str, str | Non
         if not row.endswith("\n"):
             row += "\n"
         remaining = lines[:row_start] + lines[row_end:]
+        if start <= row_start < end:
+            width = row_end - row_start
+            return "".join(_collapse_blanks(remaining, start, end - width)), row
         if (
             row_start > 0
             and row_end < len(lines)

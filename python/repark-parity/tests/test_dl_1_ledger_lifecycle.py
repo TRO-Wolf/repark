@@ -568,8 +568,9 @@ def _contents_repo(repo: Path, head: str) -> None:
     _write(
         repo,
         "task/ledgers/staging/map.md",
-        "# map\n\n## Purpose\nStaging.\n\n## Contents\n" + head +
-        "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n"
+        "# map\n\n## Purpose\nStaging.\n\n## Contents\n"
+        + head
+        + "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n"
         "  " + PINS_LABEL + " m1-demo/C-001\n"
         "\n## Pointers\n- Up: [../map.md](../map.md)\n",
     )
@@ -600,8 +601,7 @@ def test_contents_prose_bullet_stays_and_real_row_moves(repo: Path) -> None:
     _moved_contents_row(repo)
     staging = (repo / "task/ledgers/staging/map.md").read_text()
     assert (
-        "- See [m1-demo-ledger.md](../completed/m1-demo-ledger.md) for the background.\n"
-        in staging
+        "- See [m1-demo-ledger.md](../completed/m1-demo-ledger.md) for the background.\n" in staging
     )
 
 
@@ -628,8 +628,9 @@ def test_comment_holding_a_fence_line_leaves_the_row_visible(repo: Path) -> None
         "task/ledgers/staging/map.md",
         "# map\n\n## Purpose\nStaging.\n\n## Contents\n"
         "- [aaa-ledger.md](aaa-ledger.md) — **AAA:** stays.\n"
-        "\n## Pointers\n- Up: [../map.md](../map.md)\n" + comment +
-        "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n"
+        + comment
+        + "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n"
         "  " + PINS_LABEL + " m1-demo/C-001\n",
     )
     _write(repo, "task/ledgers/staging/m1-demo-ledger.md", "# Ledger — M1\n")
@@ -651,8 +652,9 @@ def test_fence_holding_a_comment_opener_leaves_the_row_visible(repo: Path) -> No
         "task/ledgers/staging/map.md",
         "# map\n\n## Purpose\nStaging.\n\n## Contents\n"
         "- [aaa-ledger.md](aaa-ledger.md) — **AAA:** stays.\n"
-        "\n## Pointers\n- Up: [../map.md](../map.md)\n" + fence +
-        "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n"
+        + fence
+        + "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n"
         "  " + PINS_LABEL + " m1-demo/C-001\n",
     )
     _write(repo, "task/ledgers/staging/m1-demo-ledger.md", "# Ledger — M1\n")
