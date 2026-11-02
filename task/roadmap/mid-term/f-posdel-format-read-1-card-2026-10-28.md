@@ -4,6 +4,8 @@
 
 **Status:** dispatched 2026-10-28 on a Muse MAX lane. Landed on the fork as PR `#375` (squash `56aa8913`, 2026-10-28) and pinned by RP-61 (PR #1209, merged 2026-10-29 as `6ec819ef`).
 
+**Label scope:** excluded from the v2 label this round (owner ruling 2026-11-02): the label does not claim Avro or ORC delete files, which RePark writes and reads back since RP-61; their coverage and AUD-013 are the immediate follow-up after the label.
+
 **Target:** the owned `iceberg-rust` fork, at the pin `ea0b7741a57eb81ff25ee9dc18487d641b435a1b` (the five `rev` lines of RePark's root `Cargo.toml`). This is the owner's fork work; no RePark lane implements it.
 
 **Consumer:** RePark's merge-on-read DELETE. The RePark guard ([ICE-DELETE-FORMAT-GUARD-1](ice-delete-format-guard-1-card-2026-10-28.md)) refuses an explicit non-Parquet delete format until this fork unit lands; lifting that refusal is a RePark change after the repin.

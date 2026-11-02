@@ -104,3 +104,11 @@ The label closes on the merge of PR #1195. The owner's words on 2026-10-27: "I s
 - **AUD-008 (High, library panic):** dropping a struct's only field, then `SELECT *`, panics in the fork's reader. Card [F-STRUCT-EMPTY-CHILD-PANIC-1](../../roadmap/mid-term/f-struct-empty-child-panic-1-card-2026-10-29.md), a fork unit then an RP-63 repin.
 
 Section 1's rule (a silent value is never a carve-out) applies to AUD-006 and AUD-007; AUD-008 is a library panic, a disqualifier under the production definition. The re-date needs the three units merged, their pins green, and a targeted re-audit of those fixes. The other second-audit findings (AUD-009, AUD-011, AUD-013, AUD-014) are carded or dated rows and do not hold the label. The cards await the owner's charter, and no unit is chartered by this round. The label ledger's rows C-057 to C-072 record the closures and this withdrawal; C-022 is reopened in effect and keeps its text.
+
+**Ruled 2026-11-02 (owner, evening; release scope, adopted):** the release carries the format-v2 label only, and the scope rulings below bind the label and the work after it.
+
+1. v1.5.6 carries the format-v2 label only; the format-v3 label moves to a later release with its own estimate.
+2. Avro and ORC delete files are excluded from the v2 label this round, stated as a limit. They become the immediate follow-up units after the label: AUD-003 write side; AUD-013 maintenance residue, card [F-MAINT-AVRO-ORC-DELETE-RESIDUE-1](../../roadmap/mid-term/f-maint-avro-orc-delete-residue-1-card-2026-10-29.md).
+3. CORPUS-1 runs after RP-65: a two-day discovery-and-pilot unit (a reference inventory for the five label families with pinned upstreams, the hadoop-discovery family piloted end to end, a per-family remaining-work estimate, and a drafted supported-behaviour and exclusions list). It carries no fixes.
+
+The gate is preserved: a panic, a wrong read or a wrong write blocks the label whether or not an inventory listed it; cards are for refusal-text, over-refusal and refuse-with-hint classes only.
