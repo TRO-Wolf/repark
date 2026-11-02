@@ -96,7 +96,7 @@ repark-core's error map.
   (`` `<ns>`.`<name>` ``, shared with `saveAsTable` as `already_exists_error`) from
   `repark_common::spark_error`, and the declared default-format / path-create refusal. Round 2:
   the path relation splits at the last `/` keeping every other character (Iceberg's
-  `PathIdentifier`: `` `file:///r/a`.b ``, `` `/r/a/b`.`` ``), and `save_target_names_table`
+  `PathIdentifier`: `` `file:///r/a`.b ``, `` `/r/a/b`. ``), and `save_target_names_table`
   is the one path-or-name test. Pins: `../tests/writer_partitioning.rs`.
 - `writer_plan.rs` — **U7 PR1 round 2 (2026-09-24):** `plan_writer`, the statement kernel for
   `saveAsTable` and `save()`. It maps the action, mode, existence and layout to a

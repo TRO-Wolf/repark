@@ -33,3 +33,7 @@ C-030: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_triple_spa
 C-031: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_info_backtick_line_is_text_and_row_moves
 C-032: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_masked_lines_keep_every_position, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_code_span_opener_leaves_the_row_visible
 C-033: none (records)
+C-034: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_multiline_span_hides_the_opener_and_row_moves, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_double_span_across_lines_hides_the_opener, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_unmatched_run_at_end_of_file_is_literal, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_masked_lines_multiline_keep_every_position
+C-035: python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_lone_tick_before_a_blank_line_leaves_the_row_visible, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_lone_tick_in_a_bullet_leaves_the_next_row_visible, python/repark-parity/tests/test_dl_1_ledger_lifecycle.py::test_lone_tick_before_a_heading_leaves_the_row_visible
+C-036: none (records)
+C-037: none (records)
