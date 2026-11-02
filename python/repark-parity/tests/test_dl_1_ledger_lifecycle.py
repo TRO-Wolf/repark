@@ -882,3 +882,58 @@ def test_masked_lines_keep_every_position() -> None:
     )
     for line, masked in module._masked_lines(text):
         assert len(masked) == len(line)
+
+
+def _moved_multiline_row(repo: Path, head: str) -> str:
+    result = _run(repo, "move", "task/ledgers/staging/m1-demo-ledger.md", "completed")
+    assert result.returncode == 0, result.stderr
+    assert "rewrote 1 link(s)" in result.stdout
+    staging = (repo / "task/ledgers/staging/map.md").read_text()
+    assert head in staging
+    assert "**M1:** the real row." not in staging
+    completed = (repo / "task/ledgers/completed/map.md").read_text()
+    assert completed.count("m1-demo-ledger.md") == 2
+    assert "— **M1:** the real row.\n" in completed
+    return result.stdout
+
+
+def test_multiline_span_hides_the_opener_and_row_moves(repo: Path) -> None:
+    head = "Open `code <!--\nmore ` tail\n"
+    _indented_repo(repo, head)
+    _moved_multiline_row(repo, head)
+
+
+def test_multiline_span_hides_a_row_bullet_and_real_row_moves(repo: Path) -> None:
+    head = (
+        "`span opens\n"
+        "- [m1-demo-ledger.md](../completed/m1-demo-ledger.md) — **M1:** filed.\n"
+        "close ` here\n"
+    )
+    _indented_repo(repo, head)
+    _moved_multiline_row(repo, head)
+    assert "filed" not in (repo / "task/ledgers/completed/map.md").read_text()
+
+
+def test_double_span_across_lines_hides_the_opener(repo: Path) -> None:
+    head = "`` opens ` single <!--\nstill open `` tail\n"
+    _indented_repo(repo, head)
+    _moved_multiline_row(repo, head)
+
+
+def test_unmatched_run_at_end_of_file_is_literal(repo: Path) -> None:
+    head = "`never closed, just text\n"
+    _indented_repo(repo, head)
+    _moved_multiline_row(repo, head)
+
+
+def test_masked_lines_multiline_keep_every_position() -> None:
+    module = _load_lifecycle()
+    text = (
+        "`multiline opens <!--\n"
+        "still span ` closes\n"
+        "`` double opens\n"
+        "closes `` tail\n"
+        "`unmatched at end\n"
+    )
+    for line, masked in module._masked_lines(text):
+        assert len(masked) == len(line)
