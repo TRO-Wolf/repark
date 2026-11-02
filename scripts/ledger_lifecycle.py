@@ -147,12 +147,35 @@ def _masked_lines(text: str) -> list[tuple[str, str]]:
     """Each line paired with a copy whose code spans are blanked, fenced blocks blanked whole."""
     pairs: list[tuple[str, str]] = []
     in_fence = False
+    in_comment = False
     for line in text.splitlines(keepends=True):
         if MAPS.FENCE_PATTERN.match(line):
             in_fence = not in_fence
             pairs.append((line, " " * len(line)))
             continue
-        masked = " " * len(line) if in_fence else MAPS.CODE_SPAN_PATTERN.sub(_blank, line)
+        if in_fence:
+            pairs.append((line, " " * len(line)))
+            continue
+        visible: list[str] = []
+        cursor = 0
+        while True:
+            if in_comment:
+                end = line.find("-->", cursor)
+                if end == -1:
+                    visible.append(" " * (len(line) - cursor))
+                    break
+                visible.append(" " * (end + 3 - cursor))
+                in_comment = False
+                cursor = end + 3
+            else:
+                start = line.find("<!--", cursor)
+                if start == -1:
+                    visible.append(line[cursor:])
+                    break
+                visible.append(line[cursor:start])
+                in_comment = True
+                cursor = start + 4
+        masked = MAPS.CODE_SPAN_PATTERN.sub(_blank, "".join(visible))
         pairs.append((line, masked))
     return pairs
 
@@ -269,24 +292,28 @@ def _collapse_blanks(lines: list[str], start: int, end: int) -> list[str]:
     return kept
 
 
-def cut_row(text: str, map_dir: str, path: str) -> tuple[str, str | None]:
+def cut_row(text: str, map_dir: str, old: str, new: str) -> tuple[str, str | None]:
     """Remove the `## Contents` row whose first link is `path`; return (text, row)."""
     lines = text.splitlines(keepends=True)
     start, end = _contents_bounds(lines)
     for row_start, row_end in _row_spans(lines, start, end):
         target = _first_link(lines[row_start])
-        if target is not None and resolve(map_dir, target) == path:
+        if target is not None and resolve(map_dir, target) == new:
             row = "".join(lines[row_start:row_end])
             if not row.endswith("\n"):
                 row += "\n"
             remaining = lines[:row_start] + lines[row_end:]
             width = row_end - row_start
             return "".join(_collapse_blanks(remaining, start, end - width)), row
+    shown = [masked for _line, masked in _masked_lines(text)]
+    names = (Path(old).name, Path(new).name)
     for row_start, row_end in _row_spans(lines, 0, len(lines)):
         if start <= row_start < end:
             continue
+        if not any(shown[row_start].startswith("- [" + name + "](") for name in names):
+            continue
         target = _first_link(lines[row_start])
-        if target is None or resolve(map_dir, target) != path:
+        if target is None or resolve(map_dir, target) != new:
             continue
         row = "".join(lines[row_start:row_end])
         if not row.endswith("\n"):
@@ -433,9 +460,9 @@ def plan(
         target_map = posixpath.join(target_dir, MAP_NAME)
         row = None
         if source_map in texts and source_map != target_map:
-            texts[source_map], row = cut_row(texts[source_map], posixpath.dirname(old), new)
+            texts[source_map], row = cut_row(texts[source_map], posixpath.dirname(old), old, new)
         if row is None:
-            row = _synthesized_row(new, texts[new])
+            row = _synthesized_row(new, texts.get(new, ""))
         else:
             row, _count = rewrite_links(row, posixpath.dirname(old), target_dir, {}, known_after)
             old_name, new_name = Path(old).name, Path(new).name
@@ -602,6 +629,9 @@ def run_archive(repo: Path, paths: list[str]) -> int:
     moves: dict[str, str] = {}
     carried = _carried(paths)
     for path in sorted(paths):
+        if path.startswith(HISTORY_DIR + "/"):
+            print(f"ERROR: {path} is under docs/history/ — history is frozen", file=sys.stderr)
+            return 2
         if path not in tracked:
             print(f"ERROR: {path} is not a tracked file", file=sys.stderr)
             return 2
@@ -645,6 +675,9 @@ def run_archive(repo: Path, paths: list[str]) -> int:
 
 def run_move(repo: Path, path: str, bin_name: str) -> int:
     """`move`: relocate one document into a named bin."""
+    if path.startswith(HISTORY_DIR + "/"):
+        print(f"ERROR: {path} is under docs/history/ — history is frozen", file=sys.stderr)
+        return 2
     tracked = MAPS.tracked_paths(repo)
     if path not in tracked:
         print(f"ERROR: {path} is not a tracked file", file=sys.stderr)

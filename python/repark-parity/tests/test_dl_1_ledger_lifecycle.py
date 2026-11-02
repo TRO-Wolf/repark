@@ -454,9 +454,7 @@ def test_move_without_a_source_row_synthesises_exactly_one_row(repo: Path) -> No
 
 
 def _commented_repo(repo: Path, tail: str) -> str:
-    comment = (
-        "<!--\n- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** inside a comment.\n-->\n"
-    )
+    comment = "<!--\n- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** inside a comment.\n-->\n"
     _write(
         repo,
         "task/ledgers/staging/map.md",
@@ -518,8 +516,7 @@ def test_move_skips_a_prose_bullet_and_cuts_the_real_row(repo: Path) -> None:
     assert _run(repo, "move", "task/ledgers/staging/m1-demo-ledger.md", "completed").returncode == 0
     staging = (repo / "task/ledgers/staging/map.md").read_text()
     assert (
-        "- See [m1-demo-ledger.md](../completed/m1-demo-ledger.md) for the background.\n"
-        in staging
+        "- See [m1-demo-ledger.md](../completed/m1-demo-ledger.md) for the background.\n" in staging
     )
     assert "**M1:** the real row." not in staging
     completed = (repo / "task/ledgers/completed/map.md").read_text()
@@ -536,8 +533,9 @@ def test_move_skips_a_fenced_bullet_and_cuts_the_real_row(repo: Path) -> None:
         "task/ledgers/staging/map.md",
         "# map\n\n## Purpose\nStaging.\n\n## Contents\n"
         "- [aaa-ledger.md](aaa-ledger.md) — **AAA:** stays.\n"
-        "\n## Pointers\n- Up: [../map.md](../map.md)\n" + fence +
-        "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n",
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n"
+        + fence
+        + "- [m1-demo-ledger.md](m1-demo-ledger.md) — **M1:** the real row.\n",
     )
     _write(repo, "task/ledgers/staging/m1-demo-ledger.md", "# Ledger — M1\n")
     _commit(repo, "m1 with a fenced bullet")
