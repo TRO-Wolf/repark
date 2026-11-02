@@ -91,6 +91,10 @@ evidence shows the attack happened; there is no rule that a clean pass is suspec
 triggered by a category merely *looking* clean. That framing is retired; only the attestation below
 is checked.
 
+## Re-review packet
+
+After remediation the Orchestrator hands the re-review Critic, a fresh session, a packet: the head previously reviewed, the current head, the full intervening diff, the findings addressed with their reproduction commands, the regression evidence, and the clauses and attack categories the fix claims to touch. The Critic verifies that claimed boundary against the diff rather than trusting it, and widens the attack whenever the fix touches shared parsing, resolution, coercion, dependencies, security boundaries or write behaviour. Every touched category is re-attested. A PASS recorded against an earlier head is never combined with a later head's evidence.
+
 ## Coverage attestation format
 
 R4 defines convergence as attestation, not a findings count: every applicable category `ATTACKED`

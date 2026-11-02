@@ -371,9 +371,7 @@ section instead of restating it; a brief may narrow these, never relax them.
 - **Workspace validity:** commits MUST pass the installed hooks; verify hooks fire before
   the first commit in any worktree. A hook bypass or non-firing-hook workspace is a
   slate-failing violation.
-- **Gates:** every unit gates, including STOP / report-only units: the scoped local gate (comment
-  gate, release native, `cargo test -p` touched crates, own pytests) plus CI's required checks —
-  never the whole-workspace suite locally (owner, 2026-09-18); REAL exit codes; Makefile-pinned lint.
+- **Gates:** the scoped local gate plus CI's required checks, per "Verify before done" — never the whole-workspace suite locally (owner, 2026-09-18); REAL exit codes; Makefile-pinned lint.
 - **Ledgers:** one `task/ledgers/staging/<unit>-ledger.md` per unit, linked from that
   directory's `map.md` in the same commit; `move`d to `completed/` in the unit's last commit.
   Ledger presence is a gate item.
@@ -386,6 +384,7 @@ section instead of restating it; a brief may narrow these, never relax them.
   gate; path-changing regroups are declared-rename units that ship alone with a name map.
 - **Disk:** the pre-spend checks, scoped cleanup, and handoff report in
   ["Resource discipline"](#resource-discipline--disk-and-artifacts) bind every unit.
+- **Session hygiene:** output to a file, tail in context; hand back at 150 turns or 300k context — manifest row `delegated_session_bounds`.
 - **Never:** AWS credentials/envs, `Cargo.toml [patch]` changes, `.github/` changes,
   secrets in any output. Clean STOP states only — a dirty worktree is not a delivered unit.
 
