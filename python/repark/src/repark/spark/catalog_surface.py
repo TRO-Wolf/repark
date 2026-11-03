@@ -99,6 +99,7 @@ def _raise_table_or_view_already_exists(resolved: str) -> NoReturn:
 
 
 def _resolve_table_identity(session: ReparkSession, table_name: str) -> tuple[str, str]:
+    session._ensure_alive().refuse_table_identifier_grammar(table_name)
     resolved = session.resolve_table_name(table_name, prefer_temp_view=True)
     parts = _split_identifier(table_name)
     if len(parts) == 1 and _temp_view_home_ref(session._ensure_alive(), _quoted_segment(parts[0])):
@@ -628,8 +629,9 @@ def create_table(
     from repark.spark.types import StructType
 
     session = catalog._session
-    session._ensure_alive()
+    inner = session._ensure_alive()
     table_name = _require_str(table_name, "tableName")
+    inner.refuse_table_identifier_grammar(table_name)
     resolved = session.resolve_table_name(table_name, prefer_temp_view=False)
     if _known_table(session, resolved):
         _raise_table_or_view_already_exists(resolved)

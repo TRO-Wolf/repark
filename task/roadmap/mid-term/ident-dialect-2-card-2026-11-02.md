@@ -38,5 +38,13 @@
 | c7 hex | `DROP TABLE 0x1` | TABLE_OR_VIEW_NOT_FOUND `0x1` (a valid identifier) | own refusal | |
 | F from-first select | `FROM a SELECT id, 'z'` | rows `[[7, "z"]]` | refuses PARSE_SYNTAX_ERROR at `'z'`, no change | over-refusal, S3 |
 | F from-first insert | ``FROM a INSERT OVERWRITE TABLE t SELECT id, 'z'`` | ok, `t` changed | refuses PARSE_SYNTAX_ERROR at `'z'`, no change | over-refusal, S3 |
+| 1B-R1 bare alias | `FROM VALUES 1, 2 v, "t"` | PARSE_SYNTAX_ERROR at `"t"` | at `11afbf6e`: RePark's own parser text, no state change; the grammar scan does not refuse it | text, S3 |
+| 1B-R2 listColumns | `listColumns(tableName, dbName)` with a quoted `tableName` | table-not-found (Spark builds the identifier without parsing) | at `11afbf6e`: grammar refusal, no state change | text, S3 |
+| 1B-R3 load | `format("iceberg").load('123')` | unmeasured | at `11afbf6e`: grammar refusal at parse | text, S3 |
+| 1B-R4 save and createTable | `save(<identifier>)` on the writer and `createTable` with a quoted identifier | reader text unstructured or unmeasured | at `11afbf6e`: refuses; the text is not pinned | text, S3 |
+| 1B-K1 bare values | `SELECT * FROM a, values, "t"` (unquoted `values`, no row list, at a relation start) | unmeasured (refusal expected) | at `11afbf6e`: table-not-found (AnalysisException), no state change | S3, candidate |
+| 1B-K2 LATERAL VIEW values | `... LATERAL VIEW posexplode(array(1)) x AS p, values, "t"` | unmeasured (refusal expected) | at `11afbf6e`: UnsupportedOperationException (LATERAL VIEWS), no state change | S3, candidate |
+
+The six rows marked `1B-` were added by the IDENT-DIALECT-1B records round on 2026-11-03: the Spark answers are the unit's measurements where measured, and RePark's answers are the round-1 and delta verifiers' probes at `11afbf6e`.
 
 **Retires:** each row when it answers as Spark does, pinned, or the owner declines it. The RENAME destination of [ALTER-RENAME-QUOTED-DESTINATION-1](alter-rename-quoted-destination-1-card-2026-11-02.md) is one of these rows and retires with it.

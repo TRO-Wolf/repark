@@ -347,7 +347,7 @@ fn relation_refusal(lexemes: &[Lexeme]) -> Option<String> {
     None
 }
 
-const FROM_CLAUSE_ENDS: [&str; 18] = [
+const FROM_CLAUSE_ENDS: [&str; 17] = [
     "WHERE",
     "GROUP",
     "HAVING",
@@ -363,17 +363,14 @@ const FROM_CLAUSE_ENDS: [&str; 18] = [
     "SORT",
     "CLUSTER",
     "DISTRIBUTE",
-    "LATERAL",
     "PIVOT",
     "UNPIVOT",
 ];
 
 fn comma_relation_refusal(lexemes: &[Lexeme], start: usize) -> Option<String> {
-    if word_is(lexemes.get(start), "VALUES") {
-        return None;
-    }
     let mut depth = 0usize;
-    for (index, lexeme) in lexemes.iter().enumerate().skip(start) {
+    let mut index = start;
+    while let Some(lexeme) = lexemes.get(index) {
         match lexeme {
             Lexeme::Punct('(') => depth += 1,
             Lexeme::Punct(')' | ';') if depth == 0 => return None,
@@ -386,21 +383,91 @@ fn comma_relation_refusal(lexemes: &[Lexeme], start: usize) -> Option<String> {
             }
             Lexeme::Word(_)
                 if depth == 0
-                    && FROM_CLAUSE_ENDS
-                        .iter()
-                        .any(|keyword| word_is(Some(lexeme), keyword)) =>
+                    && word_is(Some(lexeme), "VALUES")
+                    && relation_starts_at(lexemes, start, index) =>
             {
-                return None;
+                index = values_rows_end(lexemes, index + 1);
+                continue;
             }
+            Lexeme::Word(_) if depth == 0 && keyword_in(lexeme, &FROM_CLAUSE_ENDS) => return None,
             _ => {}
         }
+        index += 1;
     }
     None
 }
 
+fn relation_starts_at(lexemes: &[Lexeme], start: usize, index: usize) -> bool {
+    index == start
+        || index
+            .checked_sub(1)
+            .and_then(|previous| lexemes.get(previous))
+            .is_some_and(|previous| {
+                *previous == Lexeme::Punct(',') || word_is(Some(previous), "JOIN")
+            })
+}
+
+fn keyword_in(lexeme: &Lexeme, keywords: &[&str]) -> bool {
+    keywords
+        .iter()
+        .any(|keyword| word_is(Some(lexeme), keyword))
+}
+
+fn group_end(lexemes: &[Lexeme], open: usize) -> usize {
+    let mut depth = 0usize;
+    for (index, lexeme) in lexemes.iter().enumerate().skip(open) {
+        match lexeme {
+            Lexeme::Punct('(') => depth += 1,
+            Lexeme::Punct(')') if depth <= 1 => return index + 1,
+            Lexeme::Punct(')') => depth -= 1,
+            _ => {}
+        }
+    }
+    lexemes.len()
+}
+
+fn alias_end(lexemes: &[Lexeme], alias: usize) -> usize {
+    let after = alias
+        + usize::from(matches!(
+            lexemes.get(alias),
+            Some(Lexeme::Word(_) | Lexeme::Backquoted)
+        ));
+    if lexemes.get(after) == Some(&Lexeme::Punct('(')) {
+        group_end(lexemes, after)
+    } else {
+        after
+    }
+}
+
+fn values_rows_end(lexemes: &[Lexeme], start: usize) -> usize {
+    let mut index = start;
+    let mut after_row = false;
+    while let Some(lexeme) = lexemes.get(index) {
+        match lexeme {
+            Lexeme::Punct('(') => {
+                index = group_end(lexemes, index);
+                after_row = true;
+                continue;
+            }
+            Lexeme::Punct(')' | ';') => return index,
+            Lexeme::Word(_) if word_is(Some(lexeme), "AS") => return alias_end(lexemes, index + 1),
+            Lexeme::Word(_)
+                if keyword_in(lexeme, &FROM_CLAUSE_ENDS) || keyword_in(lexeme, &NOT_AN_ALIAS) =>
+            {
+                return index;
+            }
+            Lexeme::Word(_) | Lexeme::Backquoted if after_row => return alias_end(lexemes, index),
+            _ => {}
+        }
+        after_row = false;
+        index += 1;
+    }
+    index
+}
+
 #[must_use]
 pub fn spark_table_identifier_message(name: &str) -> Option<String> {
-    read_identifier(&spark_lexemes(name), 0, QuotedAfterDot::AtSegment).err()
+    read_identifier(&spark_lexemes(name), 0, QuotedAfterDot::AtDot).err()
 }
 
 #[must_use]
@@ -412,3 +479,8 @@ pub fn spark_target_grammar_message(sql: &str) -> Option<String> {
         .map_or(&lexemes[..0], |start| &lexemes[start..]);
     head_target_refusal(statement).or_else(|| relation_refusal(statement))
 }
+
+const NOT_AN_ALIAS: [&str; 12] = [
+    "JOIN", "LEFT", "RIGHT", "FULL", "INNER", "CROSS", "NATURAL", "ANTI", "SEMI", "ON", "USING",
+    "LATERAL",
+];

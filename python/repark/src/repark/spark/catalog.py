@@ -189,6 +189,7 @@ class Catalog:
 
         inner = self._session._ensure_alive()
         table_name = _require_str(table_name, "tableName")
+        inner.refuse_table_identifier_grammar(table_name)
         parts = _split_identifier(table_name)
         state = self._session._catalog_state()
         current_catalog = str(state["current_catalog"])

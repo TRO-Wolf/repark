@@ -269,11 +269,18 @@ def test_save_as_table_rejects_sql_fragment_name(spark: ReparkSession) -> None:
 
 
 def test_save_as_table_rejects_path_escape_segment(spark: ReparkSession) -> None:
-    """O3-C4-SEC-001: quoted '..' / separator segments fail at _sql_table_ref (not only CTAS)."""
-    with pytest.raises(AnalysisException, match=r"path traversal|path separators|invalid"):
+    """O3-C4-SEC-001: back-quoted '..' / separator segments fail at _sql_table_ref (not only CTAS).
+
+    A double-quoted segment is a string literal in Spark's grammar and refuses at parse first.
+    """
+    with pytest.raises(AnalysisException, match=r"PARSE_SYNTAX_ERROR"):
         _source(spark, "(1,'a')").write.saveAsTable('glue_catalog.writer_ns.".."')
-    with pytest.raises(AnalysisException, match=r"path traversal|path separators|invalid"):
+    with pytest.raises(AnalysisException, match=r"PARSE_SYNTAX_ERROR"):
         _source(spark, "(1,'a')").write.saveAsTable('glue_catalog."a/b".t')
+    with pytest.raises(AnalysisException, match=r"path traversal|path separators"):
+        _source(spark, "(1,'a')").write.saveAsTable("glue_catalog.writer_ns.`..`")
+    with pytest.raises(AnalysisException, match=r"path traversal|path separators"):
+        _source(spark, "(1,'a')").write.saveAsTable("glue_catalog.`a/b`.t")
 
 
 def test_insert_into_rejects_sql_fragment_name(spark: ReparkSession) -> None:

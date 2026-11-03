@@ -48,6 +48,7 @@ def _resolve_writer_table(dataframe: DataFrame, name: str) -> tuple[str, str]:
     from repark.spark.catalog import DEFAULT_CATALOG_NAME, DEFAULT_DATABASE_NAME
     from repark.spark.session import _sql_table_ref, resolve_table_name
 
+    dataframe._session.refuse_table_identifier_grammar(name)
     token = getattr(dataframe, "_alive_token", {}) or {}
     state = token.get("catalog_state") if isinstance(token, dict) else None
     if not isinstance(state, dict):

@@ -419,7 +419,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **IPI-51 PR2 (2026-09-20):** the hand-formatted `[CONDITION]` strings in
   `text_scan.rs`, `orc_scan.rs`, `time_travel.rs`, `column_resolution.rs`,
   `stack.rs` (+ `stack/udf.rs`), and `session_time_zone.rs` render through
-  `repark_common::spark_error`, byte-identical. `stack.rs` keeps `Result` and `engine_err` and drops the unused `Error` import the M-1 move left behind.
+  `repark_common::spark_error`, byte-identical. `stack.rs` drops the unused `Error` import.
   **FNP-MATH-1 WO-6b R3 (2026-09-21):** an `Execution` message headed
   `[ARITHMETIC_OVERFLOW]` routes to `Error::Arithmetic` carrying the inner message
   verbatim (never the `Execution error: ` display); `Analysis` peels DataFusion's
@@ -840,8 +840,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `session/df_guards/map.md`).
 - `idents.rs` — table-identifier segment parse + path-escape refuse
   (via `repark_iceberg::write::idents::path_escape_kind`
-  — shared needles). **IDENT-DIALECT-1 (2026-11-02):** Spark's grammar:
-  a quoted segment, a second target and a non-ASCII word refuse at the token (backticks double).
+  — shared needles). **IDENT-DIALECT-1/1B (2026-11-02/03):** Spark's grammar: a quoted segment, a second target or a non-ASCII word refuses at the token (backticks double); the VALUES skip fires only at a relation start (`relation_starts_at`); a single-quoted post-dot segment refuses at the dot (`spark_table_identifier_message`).
 - `namespace_create.rs` — **R-6 / G-6 Q1 (2026-08-14):** the shared
   `refuse_contradictory_namespace_location` predicate (and its message helper)
   used by `session.rs` `create_namespace` and both SQL doors' `IF NOT EXISTS`
@@ -1531,7 +1530,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 | `s3a://` path not found but `s3://` works | Both schemes must be registered per bucket (`register_bucket_store` does both); DataFusion looks up `scheme://bucket` verbatim. |
 | `table_exists` on a quoted name misparses | Quote-aware `parse_table_identifier_segments` (double-quote/backtick; dots inside quotes OK); path-escape segments (`..` / `/` / `\`) reject at parse. |
 | `SHOW TABLES` / `DESCRIBE` refuses "unless information_schema is enabled" | Set it on the builder: `.config("datafusion.catalog.information_schema", "true")` (P2G R2 — `apply_datafusion_config_keys` in `session.rs`). It is OFF by default; nothing else enables it. |
-| A nested-column query got slower after 2026-08-18 | Only if the plan carries an `Unnest` (a repeated `explode` / multi-pass `dynamicFlatten`) AND `push_down_leaf_projections` fails on it: DF-54.1 guard 2 then keeps the unoptimized plan rather than the miscompiled one, so struct-field extraction is not hoisted toward the leaves for that subtree (`session/df_guards.rs`). Plans with no `Unnest` are untouched — MEASURED identical to stock DataFusion, plan and timing. There is deliberately no knob that restores the miscompile; `.config("datafusion.optimizer.enable_leaf_expression_pushdown", "false")` still turns the whole optimization off. Pins: `bare_session_keeps_leaf_expression_pushdown_enabled`, `a_plan_without_unnest_keeps_the_stock_leaf_pushdown`, `an_unnest_plan_the_rule_can_rewrite_still_gets_leaf_pushdown`. |
+| A nested-column query got slower after 2026-08-18 | Only with an `Unnest` (a repeated `explode` / multi-pass `dynamicFlatten`) AND `push_down_leaf_projections` failing on it: DF-54.1 guard 2 keeps the unoptimized plan for that subtree, so struct-field extraction is not hoisted toward the leaves (`session/df_guards.rs`). Plans without `Unnest` are untouched (measured identical to stock). No knob restores the miscompile; `.config("datafusion.optimizer.enable_leaf_expression_pushdown", "false")` still turns the whole optimization off. Pins: `bare_session_keeps_leaf_expression_pushdown_enabled`, `a_plan_without_unnest_keeps_the_stock_leaf_pushdown`, `an_unnest_plan_the_rule_can_rewrite_still_gets_leaf_pushdown`. |
 | `dynamicFlatten` / `dynamic_flatten` wrong names, collisions, or null-parent zeros | Kernel is `dynamic_flatten.rs` — structs are a null-safe Project (the `null_mask.rs` extractor, or the CASE on a dictionary struct; never DF struct unnest); lists bind through `Column::new_unqualified`. Pins: `dynamic_flatten/tests.rs`. |
 | A `datafusion.*` builder key fails the build | Intended: an unknown/unparseable key is `Error::Config` naming the key, so a typo cannot go silently inert. Check the spelling against DataFusion's `ConfigOptions`. |
 | `spark.sql.session.timeZone` seems to have no effect on `year`/`hour`/`date_trunc` | Since H-1a split B it DOES, on a Spark-extended session. On a session built without `SparkExtension` it does not, because stock DataFusion's `date_part` reads the array's own zone — the zone reaches the extractors through `SparkExtension::configure`. Pins: `crates/repark-spark/tests/session_timezone.rs`, `crates/repark-sql/tests/session_timezone_ansi_door.rs`. |
