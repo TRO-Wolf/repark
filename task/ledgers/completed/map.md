@@ -11,6 +11,7 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
 ## Contents
 - [ident-dialect-1-ledger.md](ident-dialect-1-ledger.md) — **IDENT-DIALECT-1 (2026-11-02, completed at `914e5bbb`):** a table identifier reads Spark's grammar on every head and on the Spark door; clauses C-001 to C-012 (C-012 OPEN, carded as IDENT-DIALECT-1B); pins in [ident-dialect-1-pins.md](ident-dialect-1-pins.md).
 - [ident-dialect-1b-ledger.md](ident-dialect-1b-ledger.md) — **IDENT-DIALECT-1B (2026-11-03, completed at `11afbf6e`):** a relation after a VALUES row list or a LATERAL subquery reads Spark's grammar on INSERT OVERWRITE and MERGE, and every table door reads its identifier the same way; clauses C-001 to C-014 (C-013 OPEN, carded as IDENT-DIALECT-2 rows; C-014 REJECTED); pins in [ident-dialect-1b-pins.md](ident-dialect-1b-pins.md).
+- [rp-65-idless-repin-1-ledger.md](rp-65-idless-repin-1-ledger.md) — **RP-65-IDLESS-REPIN-1 (2026-11-03, completed at `bbd87737`, squashed to main as `63bbb1b6`, PR #1246):** the fork repins to `66901f02` (fork #381), with the id-less top-level no-mapping pins through both doors and the facade; clauses C-001 to C-012 (C-009 to C-011 OPEN as leads L1 and L2 and the residue; C-012 REJECTED); pins in [rp-65-idless-repin-1-pins.md](rp-65-idless-repin-1-pins.md).
 - [abs-expr-1-ledger.md](abs-expr-1-ledger.md) —
   **ABS-EXPR-1 (2026-09-13), in flight:** `F.abs` / `F.cbrt` / `F.nullif` lower to one
   native `call_scalar` each (`expr_fn::abs` / `cbrt` / `nullif`) — the facade `when(...)`
