@@ -68,10 +68,7 @@ async fn hinted_missing_file_keeps_its_error_when_newer_files_exist() {
     assert!(matches!(error, Error::Analysis(_)));
     assert_eq!(
         error.to_string(),
-        format!(
-            "no Iceberg table found at '{root}': version-hint.text names \
-             'v2.metadata.json', which does not exist"
-        )
+        format!("Metadata file for version 2 is missing under {root}/metadata")
     );
 }
 
@@ -203,10 +200,7 @@ async fn hinted_missing_version_refuses_when_only_newer_gzip_files_exist() {
     assert!(matches!(error, Error::Analysis(_)));
     assert_eq!(
         error.to_string(),
-        format!(
-            "no Iceberg table found at '{root}': version-hint.text names \
-             'v2.metadata.json', which does not exist"
-        )
+        format!("Metadata file for version 2 is missing under {root}/metadata")
     );
 }
 

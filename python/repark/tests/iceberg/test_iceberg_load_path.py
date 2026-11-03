@@ -47,10 +47,7 @@ NO_METADATA_REFUSAL = (
     "no Iceberg table found at '{path}': expected metadata files under "
     "'<location>/metadata' or a '<location>/metadata/version-hint.text'"
 )
-HINTED_MISSING_REFUSAL = (
-    "no Iceberg table found at '{path}': version-hint.text names "
-    "'v7.metadata.json', which does not exist"
-)
+HINTED_MISSING_REFUSAL = "Metadata file for version 7 is missing under {path}/metadata"
 METADATA_TABLE_REFUSAL = "Error during planning: table 'ns.events.snapshots' not found"
 SNAPSHOT_ID_REFUSAL = (
     "Time travel option `snapshot-id` is no longer supported, "

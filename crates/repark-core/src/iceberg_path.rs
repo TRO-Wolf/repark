@@ -101,35 +101,45 @@ async fn resolve_metadata_location(file_io: &FileIO, location: &str, path: &str)
         return Ok(location.to_string());
     }
     let location = location.strip_suffix('/').unwrap_or(location);
-    let hint_location = format!("{location}/metadata/version-hint.text");
-    if file_io.exists(&hint_location).await.map_err(iceberg_err)?
-        && let Some(version) = read_version_hint(file_io, &hint_location).await?
-    {
-        let Some(hinted) = hadoop_metadata_file(file_io, location, version).await? else {
-            return Err(hinted_metadata_missing_error(
-                path,
-                &format!("v{version}.metadata.json"),
-            ));
-        };
-        return newest_from_hint(file_io, location, version, hinted, path).await;
-    }
     let metadata_dir = format!("{location}/metadata");
-    let files: Vec<FileInfo> = file_io
-        .list(&metadata_dir)
+    let (version, found) = if let Some(version) = read_version_hint(file_io, &metadata_dir).await {
+        (
+            version,
+            hadoop_metadata_file(file_io, location, version).await?,
+        )
+    } else {
+        let files = list_metadata_dir(file_io, &metadata_dir).await?;
+        let Some((version, listed)) = listed_hadoop_version(&files) else {
+            return latest_metadata_location(&files)
+                .map(str::to_string)
+                .ok_or_else(|| no_metadata_error(path));
+        };
+        (version, Some(listed))
+    };
+    let Some(found) = found else {
+        return Err(if version == 0 {
+            no_metadata_error(path)
+        } else {
+            missing_version_error(path, version)
+        });
+    };
+    newest_from_hint(file_io, location, version, found, path).await
+}
+
+async fn list_metadata_dir(file_io: &FileIO, metadata_dir: &str) -> Result<Vec<FileInfo>> {
+    Ok(file_io
+        .list(metadata_dir)
         .await
         .map_err(iceberg_err)?
         .into_iter()
-        .filter(|file| is_direct_child(&file.location, &metadata_dir))
-        .collect();
-    latest_metadata_location(&files)
-        .map(str::to_string)
-        .ok_or_else(|| no_metadata_error(path))
+        .filter(|file| is_direct_child(&file.location, metadata_dir))
+        .collect())
 }
 
 async fn newest_from_hint(
     file_io: &FileIO,
     location: &str,
-    hinted_version: u64,
+    hinted_version: i32,
     hinted: String,
     path: &str,
 ) -> Result<String> {
@@ -137,7 +147,7 @@ async fn newest_from_hint(
     let mut version = hinted_version;
     let mut newest = hinted;
     for _ in 0..=HINT_WALK_LIMIT {
-        let Some(next_version) = next_java_int_version(version) else {
+        let Some(next_version) = version.checked_add(1) else {
             return Ok(newest);
         };
         let Some(next) = hadoop_metadata_file(file_io, location, next_version).await? else {
@@ -149,13 +159,17 @@ async fn newest_from_hint(
     Err(hint_walk_limit_error(path, &hinted_name))
 }
 
+fn hadoop_metadata_names(version: i32) -> [String; 3] {
+    HADOOP_METADATA_SUFFIXES.map(|suffix| format!("v{version}{suffix}"))
+}
+
 async fn hadoop_metadata_file(
     file_io: &FileIO,
     location: &str,
-    version: u64,
+    version: i32,
 ) -> Result<Option<String>> {
-    for suffix in HADOOP_METADATA_SUFFIXES {
-        let candidate = format!("{location}/metadata/v{version}{suffix}");
+    for name in hadoop_metadata_names(version) {
+        let candidate = format!("{location}/metadata/{name}");
         if file_io.exists(&candidate).await.map_err(iceberg_err)? {
             return Ok(Some(candidate));
         }
@@ -163,24 +177,44 @@ async fn hadoop_metadata_file(
     Ok(None)
 }
 
-fn next_java_int_version(version: u64) -> Option<u64> {
-    i32::try_from(version)
-        .ok()
-        .and_then(|version| version.checked_add(1))
-        .and_then(|next| u64::try_from(next).ok())
+async fn read_version_hint(file_io: &FileIO, metadata_dir: &str) -> Option<i32> {
+    let input = file_io
+        .new_input(format!("{metadata_dir}/version-hint.text"))
+        .ok()?;
+    java_hint_version(&input.read().await.ok()?)
 }
 
-async fn read_version_hint(file_io: &FileIO, hint_location: &str) -> Result<Option<u64>> {
-    let raw = file_io
-        .new_input(hint_location)
-        .map_err(iceberg_err)?
-        .read()
-        .await
-        .map_err(iceberg_err)?;
-    let Ok(text) = std::str::from_utf8(&raw) else {
-        return Ok(None);
-    };
-    Ok(java_int_version(text.trim()))
+fn java_hint_version(raw: &[u8]) -> Option<i32> {
+    String::from_utf8_lossy(raw)
+        .split(['\n', '\r'])
+        .next()
+        .and_then(|line| line.parse::<i32>().ok())
+}
+
+fn listed_hadoop_version(files: &[FileInfo]) -> Option<(i32, String)> {
+    let listed: HashMap<&str, &str> = files
+        .iter()
+        .filter_map(|file| {
+            let name = file.location.rsplit('/').next()?;
+            Some((name, file.location.as_str()))
+        })
+        .collect();
+    listed
+        .keys()
+        .filter_map(|name| hadoop_listing_stem(name))
+        .filter(|version| *version >= 0)
+        .filter_map(|version| {
+            hadoop_metadata_names(version)
+                .iter()
+                .find_map(|name| listed.get(name.as_str()))
+                .map(|location| (version, (*location).to_string()))
+        })
+        .max_by_key(|(version, _)| *version)
+}
+
+fn hadoop_listing_stem(name: &str) -> Option<i32> {
+    let (stem, _) = name.strip_prefix('v')?.split_once('.')?;
+    stem.parse().ok()
 }
 
 fn java_int_version(digits: &str) -> Option<u64> {
@@ -190,10 +224,10 @@ fn java_int_version(digits: &str) -> Option<u64> {
         .and_then(|version| u64::try_from(version).ok())
 }
 
-fn hinted_metadata_missing_error(path: &str, file_name: &str) -> Error {
+fn missing_version_error(path: &str, version: i32) -> Error {
     Error::Analysis(format!(
-        "no Iceberg table found at '{path}': version-hint.text names \
-         '{file_name}', which does not exist"
+        "Metadata file for version {version} is missing under {}/metadata",
+        path.strip_suffix('/').unwrap_or(path)
     ))
 }
 
@@ -284,3 +318,9 @@ mod tests;
 
 #[cfg(test)]
 mod hint_walk_tests;
+
+#[cfg(test)]
+mod discovery_rule_tests;
+
+#[cfg(test)]
+mod corpus_cells_tests;
