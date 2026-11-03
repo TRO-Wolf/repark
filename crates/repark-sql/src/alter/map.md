@@ -15,6 +15,10 @@ which are pure functions, plus the `ALTER COLUMN … FIRST|AFTER` move recognize
   and executor declared in `../alter.rs` (`ADD COLUMN[S]`, `RENAME COLUMN`, `DROP COLUMN[S]`
   on a dotted path, `GenericDialect`). An all-top-level statement returns `None` and keeps
   the stock path. Pinned end to end in `../../tests/alter_nested_column.rs`.
+  **MAP-KEY-ALTER-1 (2026-11-03):** a drop, rename or add under a map key refuses through
+  `column_path_changes_map_key_refusal` before the commit, and `../alter.rs`
+  `execute_column_move` applies `map_key_move`, as the Spark door does
+  (`../../tests/alter_map_key.rs`).
   **Round 2 (2026-09-18, run 22b):** the statement is tokenized and passed through
   `rewrite_nested_type_tokens` (`MAP<K, V>` → `MAP(K, V)`) before the parser, and
   `nested_add_refusal` answers Spark's `FIELD_ALREADY_EXISTS` / `UNRESOLVED_COLUMN` before the

@@ -330,7 +330,7 @@ repark-core's error map.
   orc/avro.
 - `data_format.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28), reverted by RP-61 (2026-10-28):** `resolve_delete_format` returns PUFFIN on format-version 3, else an explicit per-write `delete-format` option or the `write.delete.format.default` property (through `parse_format`, so `avro` and `orc` are honoured), else the data format. The guard's helpers are removed with their callers: `MorDeleteFormat`, `mor_delete_format`, `fork_mor_delete_format`, `delete_format_under`, `repark_reads_merge_on_read`, `fork_reads_merge_on_read`, `refuse_any_unreadable_delete_format`, `refuse_any_unreadable_fork_delete_format`, `refuse_inherited`, `inherited_delete_format_refusal` and `readable_delete_format`, with the constants `DELETE_FORMAT_PROPERTY`, `DELETE_FORMAT_OPTION`, `DATA_FORMAT_PROPERTY`, `MERGE_MODE_PROPERTY` and `MERGE_ON_READ`. The file is the pre-guard state on `3d24ad40` plus one unit test, `explicit_avro_or_orc_delete_format_is_honoured_on_parquet_data`; the fallback's test `delete_falls_back_to_data_format` is back.
 - `map_key_change.rs` — **MAP-KEY-ALTER-1 (2026-11-03):** Java `ApplyChanges.map`'s key rule
-  at the Spark door: a nested drop, rename or add under a map key refuses `Unsupported table
+  at both doors: a nested drop, rename or add under a map key refuses `Unsupported table
   change: Cannot alter map keys: <map>` (a struct key's own add: `Cannot add fields to map
   keys`); `map_key_move` no-ops a key-struct child's move as Java does, refuses one deeper.
   Pins: repark-spark `tests/map_key_alter.rs`.

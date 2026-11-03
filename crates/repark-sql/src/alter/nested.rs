@@ -8,8 +8,10 @@ use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use repark_core::EngineContext;
 use repark_iceberg::write::alter::{ColumnPosition, starts_with_alter};
 use repark_iceberg::write::column_move::nested_name_known_ci;
+use repark_iceberg::write::map_key_change::column_path_changes_map_key_refusal;
 use repark_iceberg::write::nested_column::{
-    ColumnPathChange, apply_column_path_changes, nested_add_refusal, nested_required_add_refusal,
+    ColumnPathChange, NestedTypeRefusal, apply_column_path_changes, nested_add_refusal,
+    nested_required_add_refusal,
 };
 use repark_iceberg::write::nested_type_sql::rewrite_nested_type_tokens;
 
@@ -269,6 +271,13 @@ pub(crate) async fn execute_nested_column_ddl(
     }
     if let Some(message) = nested_required_add_refusal(&changes) {
         return Err(DataFusionError::Execution(message));
+    }
+    match column_path_changes_map_key_refusal(table.metadata().current_schema(), &changes, false) {
+        Some(NestedTypeRefusal::Unsupported(message)) => {
+            return Err(DataFusionError::Execution(message));
+        }
+        Some(NestedTypeRefusal::Analysis(message)) => return Err(DataFusionError::Plan(message)),
+        None => {}
     }
     apply_column_path_changes(target.catalog.as_ref(), &table, &changes, false)
         .await
