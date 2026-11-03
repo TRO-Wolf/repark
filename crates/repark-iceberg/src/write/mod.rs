@@ -28,6 +28,7 @@ pub mod illegal_argument;
 pub mod insert_defaults;
 /// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over `LogicalPlan::Dml`.
 pub mod insert_gate;
+pub mod map_key_change;
 pub mod merge;
 pub mod meta_delete;
 mod name_resolution;

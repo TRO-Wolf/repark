@@ -16,6 +16,7 @@ use repark_iceberg::write::alter::{
     ColumnPosition, SchemaChange, apply_schema_changes_on_table, starts_with_alter,
 };
 use repark_iceberg::write::column_move::nested_name_known_ci;
+use repark_iceberg::write::map_key_change::column_path_changes_map_key_refusal;
 use repark_iceberg::write::nested_column::{
     ColumnPathChange, NestedTypeRefusal, apply_column_path_changes, column_paths_commit_refusal,
     nested_add_refusal, nested_required_add_refusal, nested_spark_only_type_refusal,
@@ -799,10 +800,26 @@ async fn execute_nested_drop(
     if changes.is_empty() {
         return Ok(Some(ctx.read_empty()?));
     }
+    refuse_map_key_change(table, &changes, case_sensitive)?;
     apply_column_path_changes(handle, table, &changes, case_sensitive)
         .await
         .map_err(iceberg_err)?;
     Ok(None)
+}
+
+fn refuse_map_key_change(
+    table: &Table,
+    changes: &[ColumnPathChange],
+    case_sensitive: bool,
+) -> Result<()> {
+    match column_path_changes_map_key_refusal(
+        table.metadata().current_schema(),
+        changes,
+        case_sensitive,
+    ) {
+        Some(refusal) => Err(nested_type_error(refusal)),
+        None => Ok(()),
+    }
 }
 
 fn refuse_bad_nested_add(
@@ -890,6 +907,7 @@ pub(crate) async fn execute_nested_column_ddl(
             if let Some(message) = nested_required_add_refusal(&changes) {
                 return Err(DataFusionError::Execution(message));
             }
+            refuse_map_key_change(&table, &changes, case_sensitive)?;
             apply_column_path_changes(handle.as_ref(), &table, &changes, case_sensitive)
                 .await
                 .map_err(iceberg_err)?;
@@ -899,6 +917,7 @@ pub(crate) async fn execute_nested_column_ddl(
                 path: from.join("."),
                 to: to.clone(),
             }];
+            refuse_map_key_change(&table, &changes, case_sensitive)?;
             apply_column_path_changes(handle.as_ref(), &table, &changes, case_sensitive)
                 .await
                 .map_err(iceberg_err)?;

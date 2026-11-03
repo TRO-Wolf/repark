@@ -44,7 +44,7 @@ ICE-INTEGRITY-PINS-1 fix round 1 (2026-10-22, verifier round 1): the hold in `ki
 
 ICE-INTEGRITY-PINS-1 pin K (U-9, 2026-10-22): `kill_mid_write.rs` and `kill_mid_write_hold.rs` kill a writer between its data files and its commit. The test re-runs its own binary as a child (`REPARK_KILL_MID_WRITE_CHILD` names the cell); the child's session catalog is wrapped in `HoldCatalog`, a test-only decorator that forwards every `Catalog` method and holds the commit call (`update_table` for K-1 to K-6, `publish_create_table` for K-7) after writing a marker with the attempted snapshot and its new files; the parent sends SIGKILL, reopens in a fresh session through `CALL ice.system.register_table` on the newest metadata file, and checks the pre-state, the orphans against ruling 82's ceiling and the per-kind counts, the `remove_orphan_files` dry run and a following write. K-7 asserts the local catalog's CTAS answer (the staged metadata file is the commit; orchestrator ruling K-1, local catalog only); K-C0 and K-C1 are the forwarding controls. Red on main `18626942` without the decorator (18 of 18); green on head. `#[cfg(unix)]`. Revert check: the decorator disabled reds 18 of 18, forwarding before the hold and an orphan count that skips manifests each red the 12 K-1 to K-6 cells, dropping the session key reds K-2; 20 of 20 runs in a row. The registry row ICE-LOCAL-COMMIT-POINT-1 names these pins.
 
-MAP-COLUMN-PANIC-1 (2026-10-20): `map_column_panic_1.rs` pins `map(<key>, <non-literal value>)` through production-built sessions over a three-row Iceberg table: a column, a function, a cast, a struct, an array and a map value, two pairs, a column key, widening to the common value type, NULL values, a timestamp and a wall-cast value, lookup, `size` and a predicate over the map, Spark's `DUPLICATED_MAP_KEY`, `NULL_MAP_KEY` and `WRONG_NUM_ARGS` texts, the literal controls, and INSERT, UPDATE and MERGE into a `MAP<STRING, INT>` table. Red on main `e6ff5375`: 18 of 20 (a one-row source panics `list array`; many rows answer `map requires key and value lists to have the same length`); the two controls answer on main. Green on head.
+MAP-COLUMN-PANIC-1 (2026-10-20): `map_column_panic_1.rs` pins `map(<key>, <non-literal value>)` through production-built sessions over a three-row Iceberg table: a column, a function, a cast, a struct, an array and a map value, two pairs, a column key, widening to the common value type, NULL values, a timestamp and a wall-cast value, lookup, `size` and a predicate over the map, Spark's `DUPLICATED_MAP_KEY`, `NULL_MAP_KEY` and `WRONG_NUM_ARGS` texts, the literal controls, and INSERT, UPDATE and MERGE into a `MAP<STRING, INT>` table. Red on main `e6ff5375`: 18 of 20 (`list array` panics, `map requires key and value lists to have the same length`); green on head.
 
 CROSS-JOIN-CONDITION-1 fold 3 (2026-10-09): `join_condition_refusals.rs` gains the `IN`-subquery cell (a refused join nested in a subquery expression, killing the m5 plan-descent mutant).
 
@@ -76,6 +76,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `map_column_panic_1.rs` — **MAP-COLUMN-PANIC-1 (2026-10-20):** the 20 pins above; they read each answer as rendered rows and the Arrow key and value types, and assert the map field is never nullable.
+- `map_key_alter.rs` — **MAP-KEY-ALTER-1 (2026-11-03):** replays `docs/corpus/nested-cells-2026-11-03.jsonl`'s `A-ddl` rows (skipped if absent): `mapkey_*` answer Spark, the rest keep their outcome; 8 arm pins.
 - `commit_unknown_doors.rs` — **ICE-INTEGRITY-PINS-1 pin U offline twin (2026-10-22):** the 24 cells U-1 to U-4 × three
   doors × v2 and v3, the seed with the status-check properties, and the fresh-session resolution.
 - `commit_unknown_gate.rs` — **ICE-INTEGRITY-PINS-1 pin U offline twin (2026-10-22):** `GateCatalog`, the test-only
@@ -1355,14 +1356,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   parse error; an unknown parent refuses; `DROP COLUMN IF EXISTS` on a missing child is a
   no-op; the recognizer leaves top-level forms, column moves and reads to their own paths;
   struct, map and list inserts read back. `fork292_nested_add_reads_null_for_rows_written_before`
-  (a child added after the write reads `NULL`) needs fork PR #292.
-  `forkwrite_list_insert_reads_back` pins the list-column `INSERT` read-back, green since
-  RP-29 (fork #295 F-LIST-INSERT-1).
-  **WO-A10 (2026-09-23):** the double-quoted-path refusal destructures
-  `repark_common::Error::Parse` before comparing the complete text.
+  (reads `NULL`) needs fork #292.
+  `forkwrite_list_insert_reads_back` pins the list `INSERT` read-back (fork #295).
+  **WO-A10 (2026-09-23):** the double-quoted-path refusal compares the whole `Parse` text.
   **Round 3 (2026-09-18, run 22b):** `nested_add_comment_takes_a_double_quoted_string_spark_shaped`
   adds `s.d COMMENT "x.y"`, `s.e COMMENT "c"` and `s.f COMMENT "x.y" FIRST` and reads the
-  children and docs back in Spark's order (V-001; red before the fix: `PARSE_SYNTAX_ERROR`).
+  children and docs back in Spark's order (V-001).
   `ctas_filtering_a_map_column_with_lt_answers_spark_rows` reads Spark's row back from
   `CREATE TABLE … AS SELECT * FROM src WHERE map < 5 AND map > 0` (V-002). The `#[ignore]`d
   `ident_struct_kw_ctas_filtering_a_struct_column_with_lt_answers_spark_rows` waits on

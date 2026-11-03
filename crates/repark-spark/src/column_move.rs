@@ -6,6 +6,8 @@ use repark_iceberg::write::alter::{
     ColumnPosition, SchemaChange, apply_schema_changes_on_table, resolve_move_names,
     starts_with_alter,
 };
+use repark_iceberg::write::map_key_change::{MapKeyMove, map_key_move};
+use repark_iceberg::write::nested_column::NestedTypeRefusal;
 
 use crate::alter::{
     Sig, collect_name_parts, is_period_at, render_sig_at, table_parts_to_ident,
@@ -109,6 +111,16 @@ pub(crate) async fn execute_column_move_ddl(
         &ddl.position,
     )
     .map_err(DataFusionError::Plan)?;
+    match map_key_move(table.metadata().current_schema(), &mover) {
+        MapKeyMove::Applies => {}
+        MapKeyMove::KeyStructUnchanged => return ctx.read_empty(),
+        MapKeyMove::Refused(NestedTypeRefusal::Unsupported(message)) => {
+            return Err(DataFusionError::Execution(message));
+        }
+        MapKeyMove::Refused(NestedTypeRefusal::Analysis(message)) => {
+            return Err(DataFusionError::Plan(message));
+        }
+    }
     apply_schema_changes_on_table(
         handle.as_ref(),
         &table,
