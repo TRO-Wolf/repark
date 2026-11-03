@@ -231,7 +231,7 @@ fn build_fixture(cell: &Cell, base: &[Vec<u8>], root: &Path) {
     } else if let Some(text) = hint_text(&cell.hint, newest) {
         std::fs::write(&hint, text).expect("hint");
         if cell.hint == "unreadable" {
-            std::fs::set_permissions(&hint, std::fs::Permissions::from_mode(0)).expect("chmod");
+            std::fs::set_permissions(&hint, std::fs::Permissions::from_mode(0o000)).expect("chmod");
         }
     }
 }

@@ -90,7 +90,7 @@ async fn unreadable_hint_falls_to_the_listing() {
     let (_dir, root) = table(&GAP);
     write_hint(&root, b"4");
     let hint = format!("{root}/metadata/version-hint.text");
-    std::fs::set_permissions(&hint, std::fs::Permissions::from_mode(0)).expect("chmod");
+    std::fs::set_permissions(&hint, std::fs::Permissions::from_mode(0o000)).expect("chmod");
     let answer = resolved(&root).await;
     std::fs::set_permissions(&hint, std::fs::Permissions::from_mode(0o644)).expect("chmod");
     assert_eq!(answer, "<root>/metadata/v4.metadata.json");

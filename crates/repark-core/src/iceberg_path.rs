@@ -102,21 +102,19 @@ async fn resolve_metadata_location(file_io: &FileIO, location: &str, path: &str)
     }
     let location = location.strip_suffix('/').unwrap_or(location);
     let metadata_dir = format!("{location}/metadata");
-    let (version, listed) = match read_version_hint(file_io, &metadata_dir).await {
-        Some(version) => (version, None),
-        None => {
-            let files = list_metadata_dir(file_io, &metadata_dir).await?;
-            let Some((version, listed)) = listed_hadoop_version(&files) else {
-                return latest_metadata_location(&files)
-                    .map(str::to_string)
-                    .ok_or_else(|| no_metadata_error(path));
-            };
-            (version, Some(listed))
-        }
-    };
-    let found = match listed {
-        Some(listed) => Some(listed),
-        None => hadoop_metadata_file(file_io, location, version).await?,
+    let (version, found) = if let Some(version) = read_version_hint(file_io, &metadata_dir).await {
+        (
+            version,
+            hadoop_metadata_file(file_io, location, version).await?,
+        )
+    } else {
+        let files = list_metadata_dir(file_io, &metadata_dir).await?;
+        let Some((version, listed)) = listed_hadoop_version(&files) else {
+            return latest_metadata_location(&files)
+                .map(str::to_string)
+                .ok_or_else(|| no_metadata_error(path));
+        };
+        (version, Some(listed))
     };
     let Some(found) = found else {
         return Err(if version == 0 {
