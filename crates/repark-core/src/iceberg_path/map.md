@@ -8,7 +8,8 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
 ## Contents
 
 - `tests.rs` — the resolver and path-door battery, in these families:
-  - the metadata-location picker: `NNNNN-<uuid>.metadata.json` selects the highest numeric
+  - the metadata-location picker, now only the fallback for a `metadata/` dir with no Java
+    candidate (HADOOP-DISCOVERY-RULE-1): `NNNNN-<uuid>.metadata.json` selects the highest numeric
     prefix (00010- beats 00002-), `v<N>.metadata.json` the higher N (v10 beats v9), a whole
     ASCII-digit `v` stem with a lower-case `v` and a canonical UUID suffix are required
     (exactly 36 characters, hex of any case, dashes only at 8/13/18/23), names outside the
@@ -16,7 +17,7 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
     `v_form_*`, `names_outside_*`, `valid_forms_*`, `each_valid_form_*`, `uuid_dashes_*`,
     `uuid_suffix_length_and_case_edges`, `upper_case_v_prefix_*`);
   - hint and listing: `version-hint.text` wins over the listing (a hint of `0` selects `v0`),
-    a hinted file must exist, an unparsable, non-UTF-8, negative or `u64`-overflowing hint
+    a hinted file must exist, an unparsable, non-UTF-8, below-`int` or `u64`-overflowing hint
     falls back to the listing (`hint_zero_*`, `hint_below_*`, `hint_beyond_u64_*`), a trailing-slash location
     resolves through the listing, and an explicit `.metadata.json` resolves verbatim
     (`version_hint_*`, `hinted_*`, `unparsable_*`, `non_utf8_*`, `listing_*`,
@@ -49,6 +50,13 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
     of `2147483647` selects that file, and a hint beyond the range falls back to the
     listing (`v_form_zero_*`, `v_form_versions_beyond_*`, `v_form_java_int_max_*`,
     `v_form_u64_overflow_*`, `hint_at_java_int_max_*`, `hint_beyond_java_int_*`).
+- `discovery_rule_tests.rs` — HADOOP-DISCOVERY-RULE-1 (2026-11-03), Iceberg Java's
+  `findVersion`/`refresh` ported: the hint is the first line through `Integer.parseInt` (CRLF and
+  `+N` parse, a leading space does not); an unreadable hint or a directory falls to the listing; a
+  negative, past or removed hinted version refuses `Metadata file for version N is missing under
+  <loc>/metadata`; a zero hint with no `v0` is a missing table; the listing keeps the highest
+  `v([^.]*)\..*` stem whose canonical name is listed, so a catalog-style name never beats a `v`
+  name.
 - `hint_walk_tests.rs` — the stale-hint walk battery (ICE-HADOOP-HINT-WINDOW-1, 2026-10-28), a
   sibling of `tests.rs` in the default layout with its own two-line `FileIO` helper. A
   `version-hint.text` naming `N` is not the last word while `v<N+1>`, ... exist

@@ -312,18 +312,15 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   R-DF-LOAD-METADATA-JSON (2026-09-23):** `ReparkSession::read_iceberg_path`, the
   `format("iceberg").load(<path>)` arm — Spark's `IcebergSource` rule applied at the
   engine door. A path ending `.metadata.json` loads that exact file through the fork's
-  `StaticTable::from_metadata_file`; any other path is a table location that strips one
-  trailing `/`, prefers `<loc>/metadata/version-hint.text` (`v<N>.metadata.json`), else
-  lists the direct children of `<loc>/metadata/` for the highest leading-integer metadata
-  file in either the `NNNNN-<uuid>` or `v<N>` form, with `v<N>` and hint versions bounded
-  to the Java `int` range. From 2026-10-28 (ICE-HADOOP-HINT-WINDOW-1, PR #1205) the hinted file
-  is not the last word: `newest_from_hint` probes `v<N+1>`, `v<N+2>`, ... and answers the last
-  existing one, stopping at the first gap and at the Java `int` bound, and refuses past
-  `HINT_WALK_LIMIT` (10,000) files; the missing-hinted-file error and the listing fallbacks are
-  unchanged. From 2026-10-29 (ICE-HADOOP-GZIP-METADATA-1, PR #1218) the hinted version, the walk
-  and the listing also probe Java's compressed names `v<N>.gz.metadata.json` and
-  `v<N>.metadata.json.gz`, in Java's order (`hadoop_metadata_file`, `metadata_file_order`), and
-  the walk-limit refusal names the hinted file found. Lower-case `file://<authority>` and
+  `StaticTable::from_metadata_file`; any other path is a table location (one trailing `/` stripped)
+  resolved by Iceberg Java's `HadoopTableOperations` rule (HADOOP-DISCOVERY-RULE-1, 2026-11-03,
+  over ICE-HADOOP-HINT-WINDOW-1 and ICE-HADOOP-GZIP-METADATA-1): the hint's first line through
+  `Integer.parseInt`, else (any read or parse failure) the highest listed `v<N>` with a
+  canonical name; that version must exist under `v<N>.metadata.json`, `.gz.metadata.json` or
+  `.metadata.json.gz` (Java's order) else `Metadata file for version N is missing`, version 0
+  being a missing table; then `newest_from_hint` walks `v<N+1>`, ... to the first gap, the Java
+  `int` bound or `HINT_WALK_LIMIT` (10,000). A `metadata/` dir with no Java candidate keeps the
+  older leading-integer listing over `NNNNN-<uuid>` names (`latest_metadata_location`). Lower-case `file://<authority>` and
   `file:<relative>` arguments
   refuse Spark's texts before any I/O, and `file:/abs`-style spellings read as
   `file:///abs`. A location with no resolvable metadata raises `Error::Analysis` naming the

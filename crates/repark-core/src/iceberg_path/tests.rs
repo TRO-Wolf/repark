@@ -155,10 +155,7 @@ async fn hinted_metadata_file_must_exist() {
     assert!(matches!(error, Error::Analysis(_)));
     assert_eq!(
         error.to_string(),
-        format!(
-            "no Iceberg table found at '{root}': version-hint.text names \
-             'v7.metadata.json', which does not exist"
-        )
+        format!("Metadata file for version 7 is missing under {root}/metadata")
     );
 }
 
@@ -839,7 +836,7 @@ async fn hint_zero_selects_v0() {
 #[tokio::test]
 async fn hint_below_java_int_range_falls_back_to_listing() {
     assert_eq!(
-        resolve_with_hint("-1").await,
+        resolve_with_hint("-2147483649").await,
         "<root>/metadata/v2.metadata.json"
     );
 }
