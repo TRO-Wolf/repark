@@ -31,6 +31,18 @@ DELTA_HEADS = frozenset(
         "insert_ow_lateral_comma",
         "merge_values_comma",
         "select_lateral_view_comma",
+        "f1b_join_values_col",
+        "f1b_join_values_bt_col",
+        "f1b_where_values",
+        "f1b_select_values_col_comma",
+    }
+)
+VALUES_COLUMN_HEADS = frozenset(
+    {
+        "f1b_join_values_col",
+        "f1b_join_values_bt_col",
+        "f1b_where_values",
+        "f1b_select_values_col_comma",
     }
 )
 CARD_CONTROL_HEADS = frozenset({"from_first_select", "from_first_insert_ow"})
@@ -115,6 +127,12 @@ def _seed(spark: ReparkSession, catalog: str, view: bool, carried: bool) -> None
         spark.sql("CREATE OR REPLACE TEMPORARY VIEW t2 AS SELECT 99 AS id")
 
 
+def _seed_values_column_table(spark: ReparkSession, catalog: str) -> None:
+    spark.sql(f"DROP TABLE IF EXISTS {catalog}.ns.b")
+    spark.sql(f"CREATE TABLE {catalog}.ns.b (id INT, `values` INT) USING iceberg")
+    spark.sql(f"INSERT INTO {catalog}.ns.b VALUES (7, 7)")
+
+
 def _state(spark: ReparkSession, catalog: str) -> dict[str, Any]:
     state: dict[str, Any] = {}
     for name in (*NAMES, "t2"):
@@ -194,6 +212,8 @@ def test_identifier_cell_answers_like_the_measured_table(
     session: ReparkSession, cell: dict[str, Any]
 ) -> None:
     _seed(session, cell["cat"], cell["view"], _carried_rename_view(cell))
+    if cell["head"] in VALUES_COLUMN_HEADS:
+        _seed_values_column_table(session, cell["cat"])
     before = _state(session, cell["cat"])
     answer = _run(session, cell["stmt"])
     after = _state(session, cell["cat"])
@@ -203,9 +223,9 @@ def test_identifier_cell_answers_like_the_measured_table(
 
 def test_the_table_covers_every_unit_spelling_on_every_head_and_catalog() -> None:
     keys = {(cell["cat"], cell["head"], cell["spelling"], cell["view"]) for cell in CELLS}
-    assert len(keys) == len(CELLS) == 1188
+    assert len(keys) == len(CELLS) == 1200
     delta = [cell for cell in CELLS if cell["head"] in DELTA_HEADS]
-    assert len(delta) == 40
+    assert len(delta) == 52
     assert len([cell for cell in CELLS if cell["head"] in CARD_CONTROL_HEADS]) == 4
     assert {cell["cat"] for cell in delta} == {"mem", "hd"}
     unit = [cell for cell in CELLS if cell["spelling"] in UNIT_SPELLINGS and cell not in delta]

@@ -207,6 +207,10 @@ async fn the_grammar_refuses_a_target_on_heads_that_need_more_and_on_a_second_ta
             "SELECT * FROM a LATERAL VIEW explode(array(1)) x AS e, \"t\"",
             "'\"t\"'",
         ),
+        (
+            "INSERT OVERWRITE t SELECT a.id, 'z' FROM a JOIN t ON a.id = t.values, \"a\"",
+            "'\"a\"'",
+        ),
     ] {
         let outcome = outcome(&views, sql).await;
         assert!(outcome.contains(&parse_refusal(near)), "{sql}: {outcome}");

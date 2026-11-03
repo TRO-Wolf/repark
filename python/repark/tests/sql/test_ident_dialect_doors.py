@@ -67,6 +67,7 @@ DOORS: dict[str, Door] = {
 }
 SPELLINGS = {
     "dq": ('hd.ns."t"', "[PARSE_SYNTAX_ERROR] Syntax error at or near '\"t\"'"),
+    "sq": ("hd.ns.'t'", "[PARSE_SYNTAX_ERROR] Syntax error at or near '.'"),
     "unicode": (
         "hd.ns.ü1",
         "[INVALID_IDENTIFIER] The unquoted identifier ü1 is invalid and must be back quoted "
