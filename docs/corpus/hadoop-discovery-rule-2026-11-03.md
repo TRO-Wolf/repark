@@ -35,11 +35,13 @@ a gzip name over plain bytes fails to parse, and a plain name over gzip bytes fa
 strips `\n` and calls `Integer.parseInt`.
 
 - Any exception (missing file, unreadable file, a directory, an empty file whose `readLine` is
-  null, a non-numeric value, a leading space, a trailing `\r`, a value beyond Java `int`) is
+  null, a non-numeric value, a leading space, a trailing `\r` (corrected below), a value beyond Java `int`) is
   caught, and the rule falls to R3, provided `metadata/` exists. If `metadata/` does not exist
   the answer is version 0.
 - A value that parses is returned as is, including `0` and negative numbers. A trailing `\n` is
-  removed by `readLine`; `CRLF` leaves `\r`, which does not parse.
+  removed by `readLine`; `CRLF` leaves `\r`, which does not parse (corrected below).
+
+Correction (2026-11-03, HADOOP-DISCOVERY-RULE-1 verifiers): `BufferedReader.readLine` strips `\r\n` and a lone `\r`, so a CRLF hint parses as the number; the earlier sentence was wrong.
 
 ## R3. The listing fallback
 

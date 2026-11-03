@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-29. **Filed by:** the clerk of the ICE-HADOOP-GZIP-METADATA-1 verification round 1 (`claude-haiku-5-5`), from the Opus 5.5 verifier's finding S3-4 on PR #1218 (verdict on `94ad2bd8`). The shape is older than that PR and is not a regression of it.
 
-**Status:** folded into HADOOP-DISCOVERY-RULE-1 (owner 2026-11-03). The fix shape and the pins are that card's; this card stays as the record of the probe.
+**Status:** closed 2026-11-03 by HADOOP-DISCOVERY-RULE-1 (PR #1251, squashed to main as `d2f3313e`): a readable negative hint refuses with Java's missing-version text, pinned by `negative_hint_refuses_naming_the_missing_version`. This card stays as the record of the probe.
 
 **Why:** On a `type=hadoop` table, a readable `version-hint.text` that holds a negative integer, such as `-1`, makes the path read fall through to the newest metadata file in the listing and answer its rows. Java's `HadoopTableOperations` reads the hint with `Integer.parseInt`, which accepts `-1`, and the read then refuses with its missing-version error; Spark errors on load. So RePark answers where Java refuses. The verifier reads this as a leniency, not a wrong value. The parity registry's DF-LOAD sentence places a negative hint "like" Java's `findVersion`; that comparison does not hold for this value, and the registry carries a dated correction.
 

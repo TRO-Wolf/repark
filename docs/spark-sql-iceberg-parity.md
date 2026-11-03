@@ -282,6 +282,8 @@ the CTAS/INSERT succeeds. It lives here because the refuse is the Iceberg
   pins, and the option refusal is declared rather than ignored.
   pins: dfload-1/C-001, C-003, C-004, C-005, C-006, C-008, C-009, C-010
 
+**Dated 2026-11-03, HADOOP-DISCOVERY-RULE-1 (PR #1251), supersedes the hint sentences of the R-DF-LOAD-PATH paragraph above.** A bare integer hint in the Java `int` range selects its version, which must exist under one of the three names; otherwise the path read refuses with Java's text, `Metadata file for version N is missing under <loc>/metadata`, which Java's `refresh` raises too (a negative value included: Java's `parseInt` accepts it and then refuses). The listing accepts only `v<N>` stems, a whole integer in the Java `int` range; the leading-integer fallback applies only when no canonical candidate exists (the registered leniency of the v2 label draft). An unreadable hint, a directory in place of the hint, and an empty, non-numeric, space-led or out-of-range hint fall to the listing as Java does; a CRLF or lone-CR hint parses as its number (the dated correction of the rule doc, R2). AUD-017 (a catalog-style name winning the no-hint listing) and AUD-018 (an unreadable hint refusing where Spark lists) are fixed by that unit: D1 84 of 84 EQUAL; D2 168 of 252 EQUAL, the other 84 under the D4 exclusion. The ledger rows C-081 and C-082 of the v2 label ledger are superseded by dated lines there. Ledger: [HADOOP-DISCOVERY-RULE-1](../task/ledgers/completed/hadoop-discovery-rule-1-ledger.md).
+
 #### R-DF-LOAD-METADATA-JSON — `format("iceberg").load(<file>.metadata.json)` — **FIXED 2026-09-23**
 
 - **Before** — the same invalid-identifier `AnalysisException` as R-DF-LOAD-PATH.
