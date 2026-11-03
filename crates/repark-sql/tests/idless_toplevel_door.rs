@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Write;
 use std::fs::File;
 use std::path::Path;
 use std::sync::Arc;
@@ -99,7 +100,10 @@ fn cell(column: &ArrayRef, row: usize) -> String {
 }
 
 fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    bytes.iter().fold(String::new(), |mut text, byte| {
+        let _ = write!(text, "{byte:02x}");
+        text
+    })
 }
 
 fn rendered(batches: &[RecordBatch]) -> Vec<String> {
