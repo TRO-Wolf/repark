@@ -14,3 +14,5 @@ A dated file is not edited after filing; a later measurement is a new file.
 | [commit-inventory-2026-11-03.md](commit-inventory-2026-11-03.md) | Family 5, a commit that succeeds while the door reports failure. |
 | [hadoop-discovery-rule-2026-11-03.md](hadoop-discovery-rule-2026-11-03.md) | The pilot's rule: Java's hint read, listing fallback, name forms and cleanup, with line citations. |
 | [hadoop-discovery-cells-2026-11-03.jsonl](hadoop-discovery-cells-2026-11-03.jsonl) | The pilot's measured cells in the AUD-015 table schema, Spark 4.1.2 against RePark. |
+| [remaining-work-estimate-2026-11-03.md](remaining-work-estimate-2026-11-03.md) | Cells to build per family, hours from the pilot, defects found, a date range. |
+| [v2-label-supported-behaviour-draft-2026-11-03.md](v2-label-supported-behaviour-draft-2026-11-03.md) | Draft of the v2 label's supported behaviours, evidence and exclusions. |
