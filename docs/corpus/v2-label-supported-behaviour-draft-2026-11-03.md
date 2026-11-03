@@ -22,7 +22,7 @@ metadata files carry a name Java's writer produces (`v<N>.metadata.json`, `v<N>.
 | Behaviour | Pass (EQUAL) | Cells |
 |---|---|---|
 | A current hint reads the newest version | 67 | 67 |
-| A hint behind the newest walks forward to it, stopping at the first missing version | 85 | 133 (the other 48 both refuse, text differs: S3) |
+| A hint behind the newest walks forward to it, stopping at the first missing version | 85 | 134 (48 both refuse, text differs: S3; 1 RePark refuses where Spark reads, S3) |
 | A missing, empty, non-numeric, space-led or beyond-`int` hint falls back to the listing's newest version | 319 | 319 |
 | A hint ending in a newline or CRLF reads as the number | 126 | 126 |
 | A hint past the newest, or zero, refuses (Spark refuses too) | 0 EQUAL, 126 both refuse | 126 (S3 text only) |
