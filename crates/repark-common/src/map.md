@@ -38,10 +38,10 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
 - `spark_error.rs` — the Spark error-condition catalogue (IPI-51 PR2): the
   closed `Condition` enum plus one screaming-cap constant per row, `message()`
   rendering `[CONDITION] … SQLSTATE: XXXXX`, and the `analysis` / `parse` /
-  `unsupported` / `illegal_argument` constructors returning `Error`. The
+  `unsupported` / `illegal_argument` constructors returning `Error`. INVALID_IDENTIFIER (42602) is one condition. The
   no-suggestion unresolved-column row preserves Spark's two spaces before
   `SQLSTATE`. Unit tests
-  at the bottom of the module pin every row's name, SQLSTATE, and template. Clippy-clean sqlstate() match (merged same-SQLSTATE arms), if-let in substitute, and a test-module Row alias.
+  at the bottom of the module pin every row's name, SQLSTATE, and template. Clippy-clean sqlstate() match and a test-module Row alias.
   **ICE-VIEWS-1 (2026-09-20):** `VIEW_ALREADY_EXISTS` / `VIEW_NOT_FOUND` /
   `CREATE_VIEW_COLUMN_ARITY_MISMATCH` (both directions) rows with unit pins.
   **IPI-40 ALTER VIEW (2026-09-23):** `UNSUPPORTED_FEATURE.CATALOG_OPERATION` refuses view property changes on catalogs without view support with SQLSTATE `0A000`.

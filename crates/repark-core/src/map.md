@@ -839,9 +839,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `lib.rs` re-exports the DataFrame door's binder as `frame_names` (row in
   `session/df_guards/map.md`).
 - `idents.rs` — table-identifier segment parse + path-escape refuse
-  (`reject_path_escape_segment` delegates to `repark_iceberg::write::idents::path_escape_kind`
-  — shared needles). **FNP-4B (2026-09-15):** segment unescaping generalized to the quote
-  character (embedded backticks double).
+  (via `repark_iceberg::write::idents::path_escape_kind`
+  — shared needles). **IDENT-DIALECT-1 (2026-11-02):** Spark's grammar:
+  a quoted segment, a second target and a non-ASCII word refuse at the token (backticks double).
 - `namespace_create.rs` — **R-6 / G-6 Q1 (2026-08-14):** the shared
   `refuse_contradictory_namespace_location` predicate (and its message helper)
   used by `session.rs` `create_namespace` and both SQL doors' `IF NOT EXISTS`

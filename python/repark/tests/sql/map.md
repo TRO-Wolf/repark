@@ -14,8 +14,10 @@ pins.
 - [test_deep_filter_chain_crash_1.py](test_deep_filter_chain_crash_1.py) — DEEP-FILTER-CHAIN-CRASH-1 — deep operator chains answer instead of crashing. Nine shapes, one interpreter per test; no `xdist_group` (DEEP-BATTERY-SPLIT-1).
 - [test_deep_reverify_1.py](test_deep_reverify_1.py) — DEEP-FILTER-CHAIN-CRASH-1 re-verify fold — VD2 pins on main, small stacks, and GC. The four main-thread shapes run one interpreter each; the 256 KiB, 512 KiB and GC fixtures were one shape each and stay (DEEP-BATTERY-SPLIT-1).
 - [test_deep_subquery_expression_1.py](test_deep_subquery_expression_1.py) — DEEP-FILTER-CHAIN-CRASH-1 verifier fold — subquery plans and deep expressions. Six shapes, one interpreter per test; `xdist_group` only on the two DataFrame-door refusals (DEEP-BATTERY-SPLIT-1).
+- [data](data/map.md) — measured cell tables read by the pins (own `map.md`).
 - [test_f1_sql_expander.py](test_f1_sql_expander.py) — Free-SQL bare-name expander — Path A statement forms via resolve_table_name SSOT.
 - [test_fuzz_smoke.py](test_fuzz_smoke.py) — R-SQL-FUZZER — always-on smoke battery (200 queries, fixed seed 42).
+- [test_ident_dialect_1.py](test_ident_dialect_1.py) — IDENT-DIALECT-1 — the AUD-015 domain table as the clause: every cell seeded as measured, the twelve unit spellings answer Spark 4.1.2 (refusal condition, state change, rows), the control spellings answer RePark as measured at 4fd5c6c1.
 - [test_qi1_idents.py](test_qi1_idents.py) — QI1 — quoting / path-escape single-source pins (CQ-006/007).
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) — RANGE-TVF-ID-1 — the range() table function names its column id like Spark.
 - [test_range_tvf_id_2.py](test_range_tvf_id_2.py) — RANGE-TVF-ID-2 - range() argument edge cases answer Spark 4.1.2.

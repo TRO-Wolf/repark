@@ -43,6 +43,57 @@ PATH_ESCAPE_PROBES: Final[tuple[tuple[str, str], ...]] = (
 PATH_ESCAPE_SAFE: Final[tuple[str, ...]] = ("ok_table", "my_table", "t0", "Order")
 
 
+_SPARK_UNQUOTED_SEGMENT: Final[re.Pattern[str]] = re.compile(r"[A-Za-z0-9_]+")
+_SPARK_NUMERIC_WORD: Final[re.Pattern[str]] = re.compile(
+    r"[0-9]+(?:[LSY]|(?:E[0-9]+)?(?:D|F|BD)?)", re.IGNORECASE
+)
+
+
+def is_spark_unquoted_segment(name: str) -> bool:
+    """Return True when ``name`` is an unquoted Spark identifier segment.
+
+    Spark's grammar takes ASCII letters, digits and underscore, a digit first included,
+    unless the whole word is a numeric literal.
+    """
+    return (
+        _SPARK_UNQUOTED_SEGMENT.fullmatch(name) is not None
+        and _SPARK_NUMERIC_WORD.fullmatch(name) is None
+    )
+
+
+def strip_sql_comments(query: str) -> str:
+    """Return ``query`` with each ``--`` and ``/* */`` comment outside quotes replaced by a space.
+
+    Args:
+        query: SQL text.
+
+    Returns:
+        The text with its comments removed; quoted text is kept as written.
+    """
+    kept: list[str] = []
+    index = 0
+    length = len(query)
+    while index < length:
+        char = query[index]
+        pair = query[index : index + 2]
+        if pair in {"--", "/*"}:
+            closer = "\n" if pair == "--" else "*/"
+            end = query.find(closer, index + 2)
+            index = length if end < 0 else end + len(closer)
+            kept.append(" ")
+            continue
+        if char in {"'", '"', "`"}:
+            end = index + 1
+            while end < length and query[end] != char:
+                end += 2 if query[end] == "\\" and char != "`" else 1
+            kept.append(query[index : end + 1])
+            index = end + 1
+            continue
+        kept.append(char)
+        index += 1
+    return "".join(kept)
+
+
 def is_plain_ident(name: str) -> bool:
     """Return True when ``name`` is a plain unquoted SQL identifier segment."""
     return _PLAIN_IDENT.fullmatch(name) is not None

@@ -481,7 +481,10 @@ def test_load_case_twin_table_matches_sql_door(spark: Any) -> None:
 
 
 def test_quoted_dollar_missing_table_refuses_all_files(spark: Any) -> None:
-    """V-002: the missing-table dollar spelling refuses before the load.
+    """V-002: the double-quoted dollar spelling refuses at parse, as on Spark 4.1.2.
+
+    A double-quoted segment is Spark's PARSE_SYNTAX_ERROR on a missing or an existing
+    table alike; the dotted ``all_files VERSION AS OF`` form keeps its own refusal.
 
     pins: ipi-23-mt-reader-1/C-015
     """
@@ -499,11 +502,14 @@ def test_quoted_dollar_missing_table_refuses_all_files(spark: Any) -> None:
         spark.sql(existing_query).collect()
     with pytest.raises(AnalysisException) as existing_dotted:
         spark.sql(f"SELECT count(*) FROM {table}.all_files VERSION AS OF {first}").collect()
-    assert str(missing.value) == str(existing_dollar.value)
-    assert str(missing.value) == str(existing_dotted.value)
-    assert missing.value.getSqlState() == existing_dollar.value.getSqlState()
-    assert missing.value.getSqlState() == existing_dotted.value.getSqlState()
-    assert "Cannot select snapshot in table: ALL_FILES" in str(missing.value)
+    for caught, segment in (
+        (missing, '"missing$all_files"'),
+        (existing_dollar, '"t_dollar_refuse$all_files"'),
+    ):
+        assert caught.value.getCondition() == "PARSE_SYNTAX_ERROR"
+        assert caught.value.getSqlState() == "42601"
+        assert f"Syntax error at or near '{segment}'. SQLSTATE: 42601" in str(caught.value)
+    assert "Cannot select snapshot in table: ALL_FILES" in str(existing_dotted.value)
 
 
 def test_load_uppercase_suffix_equals_sql(spark: Any) -> None:
@@ -559,13 +565,26 @@ def test_load_all_types_without_as_of_equals_sql(spark: Any) -> None:
 
 
 def test_load_quoted_dollar_spelling_equals_sql(spark: Any) -> None:
-    """Sweep: both doors agree on the quoted ``t$suffix`` spelling Spark refuses.
+    """Sweep: both doors refuse the double-quoted ``t$suffix`` spelling, read the back-quoted one.
+
+    Spark 4.1.2 refuses the double-quoted spelling with PARSE_SYNTAX_ERROR on the SQL door
+    and ``Cannot parse identifier`` on ``load``; RePark answers PARSE_SYNTAX_ERROR on both.
 
     pins: ipi-23-mt-reader-1/C-019
     """
     _seeded(spark, "t_dollar_nosof")
-    reader = _iceberg_reader(spark).load(f'{CATALOG}.{NAMESPACE}."t_dollar_nosof$snapshots"')
-    sql = spark.sql(f'SELECT * FROM {CATALOG}.{NAMESPACE}."t_dollar_nosof$snapshots"')
+    quoted = f'{CATALOG}.{NAMESPACE}."t_dollar_nosof$snapshots"'
+    with pytest.raises(AnalysisException) as reader_refused:
+        _iceberg_reader(spark).load(quoted).collect()
+    with pytest.raises(AnalysisException) as sql_refused:
+        spark.sql(f"SELECT * FROM {quoted}").collect()
+    for caught in (reader_refused, sql_refused):
+        assert caught.value.getCondition() == "PARSE_SYNTAX_ERROR"
+        assert caught.value.getSqlState() == "42601"
+        assert "Syntax error at or near '\"t_dollar_nosof$snapshots\"'" in str(caught.value)
+    backquoted = f"{CATALOG}.{NAMESPACE}.`t_dollar_nosof$snapshots`"
+    reader = _iceberg_reader(spark).load(backquoted)
+    sql = spark.sql(f"SELECT * FROM {backquoted}")
     assert _frame_rows(reader) == _frame_rows(sql)
     assert _frame_cols(reader) == _frame_cols(sql)
 

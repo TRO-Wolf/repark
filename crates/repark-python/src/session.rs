@@ -188,6 +188,16 @@ impl PyReparkSession {
     }
 
     #[allow(clippy::missing_errors_doc)]
+    pub fn refuse_target_grammar(&self, query: &str) -> PyResult<()> {
+        refuse_grammar_message(repark_core::spark_target_grammar_message(query))
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn refuse_table_identifier_grammar(&self, name: &str) -> PyResult<()> {
+        refuse_grammar_message(repark_core::idents::spark_table_identifier_message(name))
+    }
+
+    #[allow(clippy::missing_errors_doc)]
     pub fn sql_built(&self, py: Python<'_>, query: &str) -> PyResult<PyDataFrame> {
         fenced_span!("py.sql", "PyReparkSession.sql_built", {
             let grown = crate::deep_stack::sql_drive_grown(query)
@@ -808,4 +818,15 @@ fn deferred_reader_error(surface: &str) -> PyErr {
          scheduled post-milestone-one. See the \"Post-milestone-one (BACKLOG)\" \
          row in task/todo.md."
     )))
+}
+
+fn refuse_grammar_message(message: Option<String>) -> PyResult<()> {
+    message.map_or(Ok(()), |message| {
+        Err(crate::datafusion_to_py_err(
+            datafusion::error::DataFusionError::SQL(
+                Box::new(datafusion::sql::sqlparser::parser::ParserError::ParserError(message)),
+                None,
+            ),
+        ))
+    })
 }

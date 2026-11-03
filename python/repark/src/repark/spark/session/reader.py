@@ -463,6 +463,7 @@ class DataFrameReader:
                 raise AnalysisException("Iceberg load requires a table identifier argument")
             if "/" in str(effective_path):
                 return _reader_iceberg_path.load_iceberg_path(self, str(effective_path))
+            self._session._ensure_alive().refuse_table_identifier_grammar(str(effective_path))
             # spark.table() / read.table() still prefer temp views; format("iceberg").load
             # must not silent-shadow a catalog table with a same-name temp view.
             # Time-travel options + residual denylist already applied above.

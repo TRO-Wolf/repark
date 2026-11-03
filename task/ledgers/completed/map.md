@@ -9,6 +9,7 @@ else. The next pickup's `make ledger-archive` files everything here under
 A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <path>[::<name>], ...` line per clause, or `C-NNN: none (records)`), read by `scripts/check_ledger_grammar.py` rule B; it moves with its ledger and gets no row here.
 
 ## Contents
+- [ident-dialect-1-ledger.md](ident-dialect-1-ledger.md) — **IDENT-DIALECT-1 (2026-11-02, completed at `914e5bbb`):** a table identifier reads Spark's grammar on every head and on the Spark door; clauses C-001 to C-012 (C-012 OPEN, carded as IDENT-DIALECT-1B); pins in [ident-dialect-1-pins.md](ident-dialect-1-pins.md).
 - [abs-expr-1-ledger.md](abs-expr-1-ledger.md) —
   **ABS-EXPR-1 (2026-09-13), in flight:** `F.abs` / `F.cbrt` / `F.nullif` lower to one
   native `call_scalar` each (`expr_fn::abs` / `cbrt` / `nullif`) — the facade `when(...)`

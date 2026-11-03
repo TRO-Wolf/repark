@@ -255,7 +255,7 @@ EXPECTED_SYMBOL_HASHES = {
         "1487ad6ad0fd8406e55a935574d1af0dc7d65f3e808e6bbf55b0a1ee0e65d3ba"
     ),
     "_parse_table_identifier_segments": (
-        "325cf80e37941747a79effbec637e87e0317c2583da632d821de8bf22215bed5"
+        "9cade66f0422a9360878fb94a5247a412ecf8e94444080673d21e95aa0a63828"
     ),
     "_prepare_nested_cell": ("fe9a531e3994ae6480ad877931fd4d3b8d4542f66c1e3b31a2a324f564c754b6"),
     "_promote_csv_string_types": (
@@ -299,7 +299,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_rows_from_pandas": ("793ee7519856503c01bf3afcd30b0aff09503a39a2e3c14c9b72e0c1ed665b69"),
     "_rows_from_polars": ("9b85f5efbe8418db0295ccd5e6e4c6f3350c6871c9146dd0bce26eef320f757c"),
     "_scan_sql_table_identifier_end": (
-        "042082f773fa9d46b44c7fad2dc8bde11e69d4b58772e3574fc46aba3538275f"
+        "498cc19d9bf733675ccf7afb39130f1305742cc863a97afbb92b927a673f992f"
     ),
     "_schema_fields": ("034ec372d6e657ac6e453b34586c51e03d96def8a112494f7c1146cdf6d13304"),
     "_schema_names_and_permutation": (
@@ -377,7 +377,7 @@ EXPECTED_SYMBOL_HASHES = {
     ),
     "_unbounded_batch_warned": ("16df4f8b7be6bea1ff40984e9e382317ed86bb54403eea374b1467d377f5da11"),
     "_update_rest_has_set_clause": (
-        "e31e2f9f95bb70759d93a3171bfa084e5b90b1fc2ee32e0328e4173f7fdaeffd"
+        "1df9baea184a825e8911af302aafac37fe9d80d53ae34ed728c6e5201369e6de"
     ),
     "_validate_decimal_column_envelope": (
         "ce721975668df3006331b41a052a75a5dab1194cf418b5e732818e62f516e37b"

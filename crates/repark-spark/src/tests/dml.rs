@@ -504,7 +504,7 @@ async fn g3e8_delete_in_subquery_quoted_and_temp_view_source_execute() {
     execute(
         &ctx,
         &catalogs,
-        "DELETE FROM \"ice\".\"sales\".\"tgt\" WHERE id IN (SELECT id FROM ice.sales.keys)",
+        "DELETE FROM `ice`.`sales`.`tgt` WHERE id IN (SELECT id FROM ice.sales.keys)",
     )
     .await
     .expect("quoted-target IN must execute");
@@ -602,7 +602,7 @@ async fn g3e8_delete_not_in_quoted_and_fromless_execute() {
     execute(
         &ctx,
         &catalogs,
-        "DELETE FROM \"ice\".\"sales\".\"tgt\" WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
+        "DELETE FROM `ice`.`sales`.`tgt` WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
     )
     .await
     .expect("quoted-target NOT IN must execute");

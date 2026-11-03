@@ -399,14 +399,16 @@ def test_alter_table_set_on_view_name_answers_table_path_missing(
 
 
 def test_bare_alter_view_without_verb_is_not_swallowed(spark: ReparkSession) -> None:
-    """Near-miss c — ALTER VIEW with no verb keeps the engine's parse refusal."""
+    """Near-miss c — ALTER VIEW with no verb refuses with Spark 4.1.2's parse error."""
     spark.sql("CREATE VIEW sc.ns.v AS SELECT id FROM sc.ns.t")
     with pytest.raises(ParseException) as caught:
         spark.sql("ALTER VIEW sc.ns.v")
     assert type(caught.value) is ParseException
-    assert str(caught.value) == 'SQL error: ParserError("Expected: AS, found: EOF")'
-    assert caught.value.getCondition() == UNSTRUCTURED_CONDITION
-    assert caught.value.getSqlState() == UNSTRUCTURED_SQLSTATE
+    assert str(caught.value) == (
+        "[PARSE_SYNTAX_ERROR] Syntax error at or near end of input. SQLSTATE: 42601"
+    )
+    assert caught.value.getCondition() == "PARSE_SYNTAX_ERROR"
+    assert caught.value.getSqlState() == "42601"
     assert sorted(_rows(spark.sql("SELECT * FROM sc.ns.v"))) == [[1], [2]]
 
 

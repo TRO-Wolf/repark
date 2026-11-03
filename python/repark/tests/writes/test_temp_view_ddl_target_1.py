@@ -785,8 +785,16 @@ def test_a_double_quoted_target_naming_a_view_refuses_and_never_renames(
     session: ReparkSession, tmp_path: Path, catalog: str, statement: str, operation: str
 ) -> None:
     _seed(session, catalog, "t")
-    expected = _refusal(operation, NO_ALTERNATIVE, "t")
-    _assert_refused_and_held(session, tmp_path, catalog, "t", statement, expected)
+    state = _state(session, catalog)
+    files = _files(tmp_path, catalog)
+    with pytest.raises(Exception, match=r"PARSE_SYNTAX_ERROR") as raised:
+        session.sql(statement).collect()
+    assert "Syntax error at or near '\"t\"'. SQLSTATE: 42601" in str(raised.value), operation
+    assert _state(session, catalog) == state
+    assert _files(tmp_path, catalog) == files
+    assert _ids(session, "SELECT id FROM t") == [99]
+    session.stop()
+    assert _reopened_state(tmp_path, catalog) == state
 
 
 @pytest.mark.parametrize("catalog", CATALOGS)

@@ -30,6 +30,8 @@ def run_sql(session: ReparkSession, query: str, *, built: bool) -> DataFrame:
     from repark.spark.udtf import try_sql_registered_udtf
 
     inner = session._ensure_alive()
+    if not built:
+        inner.refuse_target_grammar(query)
     _promote_active(session)
     for rewrite in (
         try_sql_set_statement,

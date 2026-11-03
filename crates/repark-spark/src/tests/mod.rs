@@ -70,6 +70,7 @@ mod enc_1_fold;
 mod float_agg;
 mod hadoop_rename;
 mod ice_ddl_clauses_1;
+mod ident_dialect;
 mod identifier_fields;
 mod input_file_name;
 mod insert_arity;
