@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-01. **Filed by:** the third-audit records round (`claude-haiku-5-5`), from the targeted re-audit of the format-v2 label, finding AUD-017 ([the report](../../../docs/audits/iceberg-v2-label-targeted-reaudit-2026-11-01.md), section 5).
 
-**Status:** open. Grade C (clerk). P3. Not dispatched; no build is owed until the owner charters it. Not a label blocker (ledger clause C-081).
+**Status:** folded into HADOOP-DISCOVERY-RULE-1 (owner 2026-11-03). The fix shape and the pins are that card's; this card stays as the record of the audit's probe. Not a label blocker (ledger clause C-081).
 
 **Why:** On a `type=hadoop` table with no readable hint, the path read orders the metadata files by their leading number. A catalog-style `NNNNN-<uuid>.metadata.json` numbered above the newest `vN` wins, so the read returns an older state and a deleted row comes back. Spark ignores such names. No ordinary RePark or Spark flow the audit found creates the layout, which is why it is rated Low; the audit says it would rate Critical if one did. The registry's DF-LOAD sentence records that the listing accepts both name forms, without the consequence of mixing them.
 
