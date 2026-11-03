@@ -4,7 +4,7 @@
 
 **Unit:** IDENT-DIALECT-1B. **Grade:** A. **Priority:** P1 for the v2 label, because the acting cells are S1 on the deleting head (INSERT OVERWRITE) and S2 on MERGE.
 
-**Status:** open, not built. Ruled out of IDENT-DIALECT-1 by owner ruling A on 2026-11-02, after the round cap (one build, one critique, one delta fix, one delta re-check). It is the next one-round unit, brief `opus-ident-dialect-1b.md`.
+**Status:** closed 2026-11-03 at `11afbf6e` (the IDENT-DIALECT-1B PR, #1245), on the ruled clause. Ruled out of IDENT-DIALECT-1 by owner ruling A on 2026-11-02.
 
 **Why:** IDENT-DIALECT-1's delta (ledger clause C-008) made every relation after a top-level comma in a FROM clause read with Spark's grammar. The round-2 verifier (Opus 5.5, `claude-opus-5-5`) found that `comma_relation_refusal` stops reading the FROM clause before the comma in two places: after the row list of `FROM VALUES ... AS alias`, where it skips the whole clause, and at any `LATERAL` word, which includes a `LATERAL (subquery) alias` relation. A quoted relation after either escape is not refused, and a temporary view it names acts. The orchestrator reproduced it and measured Spark 4.1.2 on 2026-11-02 (hadoop catalog, seeded as the AUD-015 table). The ledger is [ident-dialect-1-ledger.md](../../ledgers/completed/ident-dialect-1-ledger.md), clause C-012.
 
@@ -28,3 +28,15 @@ Rows 1 to 6 are this card's twelve cells. Rows 7 and 8 are the from-first forms.
 **Pin plan.** Twelve facade cells: rows 1 to 6 on the memory and the hadoop catalog, each asserting Spark's refusal kind and text, or Spark's state change for the control row, with the view present. Two Rust door cases in `crates/repark-spark/src/tests/ident_dialect.rs`: one for the VALUES row-list escape (rows 1, 2 and 5) and one for the LATERAL subquery escape (row 4). Write the pins red first.
 
 **Retires:** the card when rows 1 to 6 answer as Spark does on both catalogs, pinned, and the two Rust door cases pass. The round-2 verifier's edge probes (the statements of the verdict's table) are repeated as the unit's independent check.
+
+## Closure (2026-11-03)
+
+Closed at `11afbf6e` on `fix/ident-dialect-1b`, stacked on `fix/ident-dialect-1` (PR #1244). Commits: `f8fd0329` (pins red: sixteen cells), `9196e2c0` (the VALUES and LATERAL scan fix; every facade table door reads its identifier through `refuse_table_identifier_grammar`), `038ad239` (the writer path-escape re-pin), `0319bc30` (the delta pins red: twelve `f1b_*` cells and the single-quoted spelling on the doors), `11afbf6e` (the delta fix: `relation_starts_at`, and the dot position for a single-quoted segment).
+
+Rounds. Round 1 at `038ad239`: Opus FAIL on F1 (S1: a `values` column after a dot fired the VALUES skip, so INSERT OVERWRITE acted on the view); F2 (S3, the single-quoted spelling not pinned on the doors) and F3 (S3, the from-first controls, carded). Muse PASS. Delta at `11afbf6e`: Opus PASS and Muse PASS; F1 and F2 closed, no findings.
+
+Counts. The cells file holds 1200 rows (table test 1201 cases); door pins 65; Rust door cases 8 and 1. Spark 4.1.2 answers from the hadoop catalog, RePark on the memory and hadoop catalogs.
+
+Doors through `refuse_table_identifier_grammar`: `spark.table`, `spark.read.table`, `format("iceberg").load` (after the legacy time-travel refusals), `DataFrame.writeTo`, `mergeInto`, `write.insertInto`, `write.saveAsTable`, `write.format("iceberg").save(<identifier>)` (refuses; text not pinned), `catalog.tableExists`, `listColumns`, `getTable`, `cacheTable`, `isCached`, `uncacheTable`, `refreshTable`, `recoverPartitions`, `createTable` and `createExternalTable`. `dropTempView` and `dropGlobalTempView` take a plain view name and are not routed.
+
+Ledger: [ident-dialect-1b-ledger.md](../../ledgers/completed/ident-dialect-1b-ledger.md) (C-001 to C-012 PROVEN, C-013 OPEN, C-014 REJECTED). Residue rows: [IDENT-DIALECT-2](ident-dialect-2-card-2026-11-02.md).

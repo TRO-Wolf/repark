@@ -86,7 +86,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   non-printable text keeps the Python residue path byte-for-byte.
   pins: facade-4/C-010, C-012, C-016, C-018, C-020..C-024, C-026, C-029..C-031, C-033; types-geo-ddl-1/C-002
 - `_idents.py` — single home for SQL identifier, path-segment, and string-literal
-  escaping. Callers must use these helpers for embedded user names and values. **IDENT-DIALECT-1 (2026-11-02):** the head target's grammar check is here.
+  escaping. Callers must use these helpers for embedded user names and values. **IDENT-DIALECT-1/1B:** the head-target grammar check is here.
   **FNP-4B (2026-09-15):** identifier quoting is backticks (both doors read them as
   identifiers; the Spark door reads double quotes as strings).
 - `_integral.py` — **Round 3 (2026-09-06):** Spark INTEGRAL-type coercion for facade
@@ -147,7 +147,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** `getDatabase` reads the stored comment and location through
   `_native.namespace_metadata` instead of parsing the display-masked `DESCRIBE NAMESPACE`.
   **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 2 (2026-10-29):** `tableExists` quotes a one-part name only when the caller quoted it (an unquoted non-ASCII name stays an error, as in Spark), and `dropTempView` passes the literal name, quoted, so it matches only the folded literal as Spark does (C-021).
-- `catalog_surface.py` — **CATALOG-SURFACE-1 (2026-09-14):** the thirteen-name second
+- `catalog_surface.py` — **IDENT-DIALECT-1/1B (2026-11-03):** the identifier grammar runs first in `_resolve_table_identity` and `create_table`. **CATALOG-SURFACE-1 (2026-09-14):** the thirteen-name second
   half of the `Catalog` surface — `getTable` / `listColumns` / `listFunctions` /
   `getFunction` metadata (DESCRIBE + SHOW PARTITIONS + the `repark.spark.functions`
   export table), the `cacheTable` / `isCached` / `uncacheTable` trio over EAGER-OWN-1
@@ -158,8 +158,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   §5 CAT-RECOVER-1, `refreshTable` via `refresh_catalog_provider`, `refreshByPath`
   None). `ReparkSession.table` delegates to `catalog_surface.session_table`, which
   resolves the name temp-view-first and scans the held cache view when the identity
-  is catalog-cached (the free-SQL DROP rewriter never re-qualifies a temp view —
-  the same contract the old inline body kept); `Catalog.clearCache` and
+  is catalog-cached; `Catalog.clearCache` and
   `Catalog.uncacheTable` release entries from the same registry.
   **CATALOG-SURFACE-1 critic round 1 (2026-09-14, L-001..L-007 / R-6/R-7):** each
   held cache entry stores an identity token — the Iceberg `current-snapshot-id`
