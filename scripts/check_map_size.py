@@ -94,7 +94,7 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "docs/design/map.md": (221, 18635),
     "docs/examples/functions/map.md": (207, 18079),
     "docs/guide/map.md": (243, 18311),
-    "docs/map.md": (374, 31179),
+    "docs/map.md": (373, 31128),
     "docs/perf/map.md": (478, 35483),
     "map.md": (304, 42845),
     "python/repark-parity/tests/live_spark/map.md": (304, 20290),
