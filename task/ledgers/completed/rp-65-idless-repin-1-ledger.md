@@ -1,6 +1,6 @@
 # Unit ledger — RP-65-IDLESS-REPIN-1 · the fork repins to 66901f02 (F-IDLESS-TOPLEVEL-POSITIONAL-1, fork #381), and the id-less top-level no-mapping pins run through both doors and the facade
 
-**Date:** 2026-11-03 · **Branch:** the RP-65 PR branch (PR #1246) · **Base:** `24d76986` (the merge base with origin/main) · **Head:** `bbd87737` · **Squash:** `63bbb1b6` on main
+**Date:** 2026-11-03 · **Branch:** `chore/rp-65-idless-repin` (PR #1246) · **Base:** `24d76986` (the merge base with origin/main) · **Head:** `bbd87737` · **Squash:** `63bbb1b6` on main
 **Model:** builder `claude-opus-5-5` · verifiers `claude-opus-5-5` and `muse-spark-1.3-contributor` (round 1) · records `claude-haiku-5-5`
 **Policy:** [../../../AGENTS.md](../../../AGENTS.md) · **Path:** STANDARD.
 
