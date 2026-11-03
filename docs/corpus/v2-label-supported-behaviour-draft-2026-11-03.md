@@ -27,9 +27,7 @@ metadata files carry a name Java's writer produces (`v<N>.metadata.json`, `v<N>.
 | A hint ending in a newline reads as the number | 63 | 63 |
 | A hint past the newest, or zero, refuses (Spark refuses too) | 0 EQUAL, 126 both refuse | 126 (S3 text only) |
 
-Not yet supported, open with a card: a negative hint answers where Java refuses
-(HADOOP-HINT-NEGATIVE-1, 63 cells on these names, S2); an unreadable hint or a directory in
-place of the hint refuses where Java lists (HADOOP-HINT-UNREADABLE-FALLBACK-1, 126 cells, S3).
+Not yet supported, with one fix unit before the label: HADOOP-DISCOVERY-RULE-1 (owner, 2026-11-03), which carries a negative hint answering where Java refuses (HADOOP-HINT-NEGATIVE-1, 63 cells on these names, S2), an unreadable hint or a directory in place of the hint refusing where Java lists (HADOOP-HINT-UNREADABLE-FALLBACK-1, 126 cells, S3), and the catalog-style name that wins the no-hint listing (HADOOP-HINT-CATALOG-STYLE-NAME-1, D1). The label claims none of these until that unit lands.
 
 ## Families 2 to 5 (not yet measured by this unit)
 
@@ -45,7 +43,7 @@ place of the hint refuses where Java lists (HADOOP-HINT-UNREADABLE-FALLBACK-1, 1
 | Exclusion | Reason it does not invalidate the v2 claim |
 |---|---|
 | Avro and ORC delete files (AUD-003, AUD-013) | Owner ruling of 2026-11-02: excluded from the v2 label this round, immediate follow-ups. |
-| Proposed: the `type=hadoop` catalog door on tables written by another process (D8, 84 cells) | RePark's `type=hadoop` is its in-process memory catalog by design (ICE-LOCAL-COMMIT-POINT-1, HADOOP-FACADE-FRESH-SESSION-1); the refusal is loud (`table not found`), never a wrong read, and the path read is the discovery door. |
-| Proposed: path appends to an existing hadoop table (D7, 1764 cells) | `format("iceberg").save(<path>)` refuses with `TABLE_OR_VIEW_NOT_FOUND` as ICE-WRITE-DF-SAVE-1 states; nothing is written: RePark's metadata directory is unchanged on all 1910 cells, and the Spark judge reads the pre-write state on every fixture but the five checksum controls. |
-| Proposed: metadata files whose name lies about the payload (D4, 504 cells) | No Java or RePark writer produces a gzip name over plain bytes or a plain name over gzip bytes; RePark reads the payload and answers the version Java selects (ledger lead C-012). |
-| Proposed, needs a ruling: a catalog-style `NNNNN-<uuid>.metadata.json` inside a hadoop table's `metadata/` with no readable hint (D1, 84 cells; and 21 D3 cells) | These are wrong reads, so the gate statement above blocks the label unless the precondition is excluded. No RePark or Spark flow measured so far writes a catalog-style name into a hadoop table's directory (AUD-017); ledger clause C-081 already rules the card not a label blocker. The draft lists it so the owner rules it against the gate statement explicitly. |
+| Adopted (owner, 2026-11-03): the `type=hadoop` catalog door on tables written by another process (D8, 84 cells) | RePark's `type=hadoop` is its in-process memory catalog by design (ICE-LOCAL-COMMIT-POINT-1, HADOOP-FACADE-FRESH-SESSION-1); the refusal is loud (`table not found`), never a wrong read, and the path read is the discovery door. |
+| Adopted (owner, 2026-11-03): path appends to an existing hadoop table (D7, 1764 cells) | `format("iceberg").save(<path>)` refuses with `TABLE_OR_VIEW_NOT_FOUND` as ICE-WRITE-DF-SAVE-1 states; nothing is written: RePark's metadata directory is unchanged on all 1910 cells, and the Spark judge reads the pre-write state on every fixture but the five checksum controls. |
+| Adopted (owner, 2026-11-03): metadata files whose name lies about the payload (D4, 504 cells) | No Java or RePark writer produces a gzip name over plain bytes or a plain name over gzip bytes; RePark reads the payload and answers the version Java selects (ledger lead C-012). |
+| Fixed before the label: HADOOP-DISCOVERY-RULE-1 (owner, 2026-11-03): a catalog-style `NNNNN-<uuid>.metadata.json` inside a hadoop table's `metadata/` with no readable hint (D1, 84 cells; and 21 D3 cells) | Not an exclusion. These are wrong reads, so the gate statement above blocks the label until they are fixed; the owner ruled the fix before the label as one unit with D3, with D2 riding along. No RePark or Spark flow measured so far writes a catalog-style name into a hadoop table's directory (AUD-017). |
