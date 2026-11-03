@@ -27,6 +27,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — ICE-HADOOP-VN-1 — a stale Hadoop `vN` writer raises loud and loses nothing.
 - [test_ice_idless_struct_1.py](test_ice_idless_struct_1.py) — ICE-NESTED-DDL-1 / RP-64 — an id-less Parquet file reads its struct children by id (shapes a to i, two filter pins); red on `14a93602`, green on `ee592dcf`.
 - [test_ice_idless_late_file_1.py](test_ice_idless_late_file_1.py) — ICE-NESTED-DDL-1 / RP-64 fix round 1 — a late id-less file reads values (pins j to o, control n); red on `ee592dcf`, green on `56ff5545`.
+- [test_ice_idless_toplevel_1.py](test_ice_idless_toplevel_1.py) — RP-65 — an unmapped id-less top-level string/binary pair reads, answers its null tests, `!=` and prefixes, and refuses `=` and `>`; green on `66901f02`.
 - [test_ice_metadata_cols_1.py](test_ice_metadata_cols_1.py) — IPI-20 PR-1 — the Spark door serves the metadata columns ``_file`` … ``_deleted``.
 - [test_ice_mixed_case_1.py](test_ice_mixed_case_1.py) — ICE-MIXED-CASE-1 — the Spark door resolves mixed-case columns case-insensitively.
 - [test_ice_mt_as_of_1.py](test_ice_mt_as_of_1.py) — xo55-mt R1 — the Spark door serves ``VERSION AS OF`` on Iceberg metadata tables.
@@ -58,9 +59,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_views_6_temp_errors.py](test_ice_views_6_temp_errors.py) — IPI-40 views PR6 error-path battery — every temp-view refusal with its complete text.
 - [test_iceberg_hygiene.py](test_iceberg_hygiene.py) — R-ICEBERG-HYGIENE oracles — column-def CREATE + ref DDL time-travel pins.
 - [test_iceberg_load_path.py](test_iceberg_load_path.py) — R-DF-LOAD-PATH / R-DF-LOAD-METADATA-JSON — ``format("iceberg").load(<path>)`` reads.
-  The hadoop hint pins (2026-10-28 and 10-29, `test_iceberg_load_path.py`): a stale `version-hint.text`, or a
-  gzip-named newer metadata file, after a committed `DELETE` on a `type=hadoop` table, reads the newest committed rows on the path door. The gzip-named pin (ICE-HADOOP-GZIP-METADATA-1) is red with its fix reverted (`assert [1, 2, 3] == [2, 3]`); the hint-window pin (ICE-HADOOP-HINT-WINDOW-1) asserts the same survivors, its red text unrecorded.
-  The dfload-1 C-011 to C-013 merge facts are in its sidecar.
+  The hadoop hint pins (2026-10-28, 10-29): after a committed `DELETE` on a `type=hadoop` table, a stale `version-hint.text` or a gzip-named newer metadata file reads the newest rows; ICE-HADOOP-GZIP-METADATA-1 and ICE-HADOOP-HINT-WINDOW-1 assert those survivors. Merge facts: the sidecar.
 - [test_maintenance_call.py](test_maintenance_call.py) — R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
 - [test_maintenance_policy_1.py](test_maintenance_policy_1.py) — `run_maintenance` policy surface: dry-run default, override kwargs, refusal without a policy.
 - [test_metadata_tables.py](test_metadata_tables.py) — Oracle — Spark-style Iceberg metadata tables.

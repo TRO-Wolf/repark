@@ -17,6 +17,7 @@ holds behavior observed from outside the crate.
 - `write_door_native.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** pins 1 to 4 and the WS2-20 pin: `every_value_writing_door_passes_the_stage`, `a_missing_kernel_refuses_on_every_routed_door`, `the_sink_guard_never_fires_on_a_routed_door`, `a_plain_update_from_add_months_stores_session_midnight` and `a_partition_overwrite_guards_an_integer_overflow_at_plan_time`.
 - `write_door_native.rs` — **WRITE-SPINE-1 step 2 fix round 2 (2026-10-25):** the two by-name resolution pins: `a_by_name_column_that_differs_only_in_case_resolves_to_its_target` (the case-insensitive fallback of `resolve_target`, mutant C2) and `a_by_name_frame_in_another_order_resolves_by_name_not_position` (by-name order, mutant C7); both drive `conform_table_frame` on a New York Spark session.
 - [eqdel_dropped_key_door.rs](eqdel_dropped_key_door.rs) — **RP-62-EQDEL-REPIN-1 (2026-10-29, F-EQDEL-DROPPED-KEY-1 at fork `935cc55c`):** the dropped equality-delete key through both doors. Parquet survivors read back in the same, a fresh Spark and a fresh native session (`a_dropped_equality_delete_key_on_parquet_data_reads_back_the_survivors`, `a_dropped_and_re_added_equality_delete_key_on_parquet_data_reads_back_the_survivors`; red at `56aa8913`); Avro and ORC accept the survivors or a `DataInvalid` refusal (`..._on_avro_data_is_loud_or_correct`, `..._on_orc_data_is_loud_or_correct`).
+- [idless_toplevel_door.rs](idless_toplevel_door.rs) — **RP-65-IDLESS-REPIN-1 (2026-11-03, fork `66901f02`):** an id-less arrow-written Parquet file admitted with `add_files`, mapping unset, through the Spark door and an adopted native session: the string/binary pair's reads, answered filters and refusals (`IN` names `=`), the loud narrowed decimal, the mapped reads. Red at `56ff5545` except the reordered same-type mapping control.
 - [native_door_delete_format.rs](native_door_delete_format.rs) — **NATIVE-DOOR-DELETE-FORMAT-1 (2026-10-29, closes its card, cites RP-61 C-017):** the native door runs five DML and MERGE shapes on an inherited Avro table, an inherited ORC table and an explicit Parquet delete format over Avro data; each checks one live position-delete file in the expected format and record count, and the survivors read back in the same and a fresh native session (`native_dml_and_merge_on_inherited_avro_write_and_read_back_an_avro_delete` and its ORC and explicit-Parquet siblings). Green only, as ruled.
   (RP-62's lock, suite, gate, verification and merge clauses are records in its sidecar; this file pins none of them)
 - [write_door_native.rs](write_door_native.rs) — **WRITE-SPINE-1 step 3a round 2 (2026-10-24,
@@ -120,32 +121,7 @@ holds behavior observed from outside the crate.
   the backticked column and `"STRING"`/`"BIGINT"`; numeric and string-to-string UPDATE
   statements succeed; a missing table keeps its own error.
   pins: ipi-51/W-UPDATE-TYPE-ERR
-- `ice_tsns_type_planner_1_lattice.rs` — **ICE-TSNS-TYPE-PLANNER-1 step 1 (2026-10-13):**
-  the planner and lattice pins on both doors (a Spark-door session and an `AnsiDialect`
-  session over one four-column batch: microsecond and nanosecond, naive and zoned).
-  `written_type_names_plan_to_the_spark_types_on_both_doors` reads the Arrow type of
-  `CAST(… AS TIMESTAMP)`, the `TIMESTAMP '…'` literal, `TIMESTAMP_NTZ`, `timestamp_ns` and
-  `timestamptz_ns`; `mixed_unit_positions_take_the_finest_unit_on_both_doors` reads
-  `coalesce`, `UNION ALL`, `CASE` and `array` over the eight mixed ordered pairs;
-  `join_keys_share_the_finest_unit_in_the_optimized_plan` reads the `on` keys and the
-  filter operands of the **optimized** join for `=`, `<` and `<=>`;
-  `equal_units_plan_no_cast_on_both_doors` holds the rule off equal units;
-  `the_ansi_door_plans_timestamp_as_the_wall_and_timestamptz_as_the_instant` is ruling 94
-  (Q6, 2026-10-15): type and ticks of `TIMESTAMP`, the `TIMESTAMP '…'` literal and
-  `TIMESTAMPTZ` over a nanosecond-precision wall, and `CAST(1 AS …)` reading seconds; the
-  type-name cells expect the naive wall for `TIMESTAMP` on the ANSI door only; the carried
-  R-013 cell that held the ANSI door off the by-name kernels is gone (2026-10-15): the
-  by-name registration stays, as main and U-6 pin it;
-  `an_aggregate_zero_takes_the_unit_of_its_array_elements` is the M3 aggregate cell (a
-  `TIMESTAMP` zero beside nanosecond elements answers nanoseconds, equal to a
-  `timestamptz_ns` zero);
-  `a_union_distinct_over_tagged_fields_takes_the_finest_unit_on_both_doors` is the M3
-  UNION cell: a branch over fields that carry `PARQUET:field_id` against an untagged one,
-  in both orders, equals `SELECT DISTINCT` over the `UNION ALL`;
-  `a_widened_position_equals_its_written_nanosecond_cast_on_both_doors` is halt H7's cell.
-  Result types are read from the optimized plan: a frame's own schema is the unanalyzed
-  one. On head `07cbe563` five of the six are green; the R-013 cell is red because the
-  by-name registration stays (the unit ledger, section 5).
+- `ice_tsns_type_planner_1_lattice.rs` — **ICE-TSNS-TYPE-PLANNER-1 step 1 (2026-10-13):** the planner and lattice pins on a Spark-door and an `AnsiDialect` session over one four-column batch (microsecond and nanosecond, naive and zoned). `written_type_names_plan_to_the_spark_types_on_both_doors` reads the written type names; `mixed_unit_positions_take_the_finest_unit_on_both_doors` the mixed-unit positions; `join_keys_share_the_finest_unit_in_the_optimized_plan` the optimized join keys; `equal_units_plan_no_cast_on_both_doors` the rule off equal units; `the_ansi_door_plans_timestamp_as_the_wall_and_timestamptz_as_the_instant` is ruling 94 (Q6); `an_aggregate_zero_takes_the_unit_of_its_array_elements` is M3; `a_union_distinct_over_tagged_fields_takes_the_finest_unit_on_both_doors` is the M3 UNION cell; `a_widened_position_equals_its_written_nanosecond_cast_on_both_doors` is halt H7. Result types come from the optimized plan. The R-013 cell was removed on 2026-10-15; the by-name registration stays (the unit ledger, section 5).
 - `ansi_store_kernel_registry.rs` — **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14), parity
   row R-013:** at session build the ANSI door resolves every name of
   `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table
