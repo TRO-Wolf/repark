@@ -27,8 +27,13 @@ DELTA_HEADS = frozenset(
         "delete_subq_comma",
         "update_subq_comma",
         "merge_subq_comma",
+        "insert_ow_values_comma",
+        "insert_ow_lateral_comma",
+        "merge_values_comma",
+        "select_lateral_view_comma",
     }
 )
+CARD_CONTROL_HEADS = frozenset({"from_first_select", "from_first_insert_ow"})
 GRAMMAR_CONDITIONS = frozenset({"PARSE_SYNTAX_ERROR", "INVALID_IDENTIFIER"})
 NAMES = ("t", "a", "`a``b`", "`1t`", "`ü1`", "`\uff54`")
 VIEW_NAMES = ("t", "`a``b`", "`1t`", "`ü1`", "`\uff54`")
@@ -141,6 +146,8 @@ def _run(spark: ReparkSession, statement: str) -> str:
 
 
 def _expectation(cell: dict[str, Any]) -> str:
+    if cell["head"] in CARD_CONTROL_HEADS:
+        return "held"
     if cell["head"] in DELTA_HEADS:
         return "spark_acts" if cell["spark_kind"] in {"ok", "rows"} else "spark_refuses"
     if cell["spelling"] not in UNIT_SPELLINGS or cell["spark_kind"] == CAPABILITY_REFUSAL:
@@ -156,6 +163,9 @@ def _assert_cell(cell: dict[str, Any], answer: str, changed: list[str]) -> None:
     expectation = _expectation(cell)
     measured = cell["repark"]
     shown = f"{cell['stmt']!r} answered {answer!r} changing {changed}"
+    if expectation == "held":
+        assert changed == [], shown
+        return
     if expectation == "measured":
         assert _kind(answer) == _kind(measured), shown
         assert changed == cell["repark_changed"], shown
@@ -193,9 +203,10 @@ def test_identifier_cell_answers_like_the_measured_table(
 
 def test_the_table_covers_every_unit_spelling_on_every_head_and_catalog() -> None:
     keys = {(cell["cat"], cell["head"], cell["spelling"], cell["view"]) for cell in CELLS}
-    assert len(keys) == len(CELLS) == 1172
+    assert len(keys) == len(CELLS) == 1188
     delta = [cell for cell in CELLS if cell["head"] in DELTA_HEADS]
-    assert len(delta) == 28
+    assert len(delta) == 40
+    assert len([cell for cell in CELLS if cell["head"] in CARD_CONTROL_HEADS]) == 4
     assert {cell["cat"] for cell in delta} == {"mem", "hd"}
     unit = [cell for cell in CELLS if cell["spelling"] in UNIT_SPELLINGS and cell not in delta]
     assert len(unit) == 624
