@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-03. **Filed by:** the records clerk (`claude-haiku-5-5`) on the owner's rulings of 2026-11-03 ("proceed with your recommendations"), from the CORPUS-1 pilot.
 
-**Status:** dispatched 2026-11-03, Opus 5.5 lane. Owner ruling 2026-11-03: D1 and D3 are fixed before the v2 label as one unit; D2 rides along as the same mechanism; the codec-by-name (R1) is not ported.
+**Status:** closed 2026-11-03 at `5ca218f8` (PR #1251, squashed to main as `d2f3313e`) after the two verifiers. Ledger: [hadoop-discovery-rule-1-ledger.md](../../ledgers/completed/hadoop-discovery-rule-1-ledger.md) (clauses C-001 to C-011 PROVEN; C-012 to C-015 OPEN). Leads: L1 the Unicode-digit hint, card [HADOOP-HINT-UNICODE-DIGITS-1](hadoop-hint-unicode-digits-1-card-2026-11-03.md); L2 the unlistable metadata directory, card [HADOOP-METADATA-DIR-UNLISTABLE-1](hadoop-metadata-dir-unlistable-1-card-2026-11-03.md); L3 the untested version-0 arm of the listing filter, a lead for the next touch of `iceberg_path.rs`; L4 the walk-limit text after a listed version, a wording point. Owner ruling 2026-11-03: D1 and D3 are fixed before the v2 label as one unit; D2 rides along as the same mechanism; the codec-by-name (R1) is not ported.
 
 **Clause:** the cells table, the rows of groups D1, D3 and D2 of the [remaining-work estimate](../../../docs/corpus/remaining-work-estimate-2026-11-03.md), re-measured on the path read against Spark. The append rows (`path_insert`) of those hints stay under the D7 exclusion, not this unit.
 

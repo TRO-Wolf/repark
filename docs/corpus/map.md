@@ -16,5 +16,7 @@ A dated file is not edited after filing; a later measurement is a new file.
 | [hadoop-discovery-cells-2026-11-03.jsonl](hadoop-discovery-cells-2026-11-03.jsonl) | The pilot's measured cells in the AUD-015 table schema, Spark 4.1.2 against RePark. |
 | [deletes-rule-2026-11-03.md](deletes-rule-2026-11-03.md) | Family 4's rule with line citations (sequence numbers, position, equality and v3 deletion-vector deletes, six evolution steps) and the measured summary. |
 | [deletes-cells-2026-11-03.jsonl](deletes-cells-2026-11-03.jsonl) | Family 4's 6464 measured cells in the AUD-015 table schema, Parquet delete files only, Spark 4.1.2 against RePark. |
+| [names-rule-2026-11-03.md](names-rule-2026-11-03.md) | Family 2's rule: temp-view precedence, `IDENTIFIER()`, the double-quoted config, listing heads, with citations and the cell summary. |
+| [names-cells-2026-11-03.jsonl](names-cells-2026-11-03.jsonl) | Family 2's measured cells from the Spark golden files, facade and native door, Spark 4.1.2 against RePark. |
 | [remaining-work-estimate-2026-11-03.md](remaining-work-estimate-2026-11-03.md) | Cells to build per family, hours from the pilot, defects found, a date range. |
 | [v2-label-supported-behaviour-draft-2026-11-03.md](v2-label-supported-behaviour-draft-2026-11-03.md) | Draft of the v2 label's supported behaviours, evidence and exclusions. |

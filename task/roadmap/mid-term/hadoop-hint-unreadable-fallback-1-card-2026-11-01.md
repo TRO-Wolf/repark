@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-01. **Filed by:** the third-audit records round (`claude-haiku-5-5`), from the targeted re-audit of the format-v2 label, finding AUD-018 ([the report](../../../docs/audits/iceberg-v2-label-targeted-reaudit-2026-11-01.md), section 5).
 
-**Status:** open. Grade C (clerk). P3. Not dispatched; no build is owed until the owner charters it. Not a label blocker (ledger clause C-082).
+**Status:** closed 2026-11-03 for the Java-name forms by HADOOP-DISCOVERY-RULE-1 (PR #1251, squashed to main as `d2f3313e`): an unreadable or directory-shaped hint falls to the listing, pinned by `unreadable_hint_falls_to_the_listing` and `hint_that_is_a_directory_falls_to_the_listing`. The 84 lying-name cells (42 gzip-named plain payloads and 42 plain-named gzip payloads, under an unreadable or directory hint) stay under the D4 exclusion (ledger clause C-009). Not a label blocker (ledger clause C-082, superseded 2026-11-03 by that unit).
 
 **Cells (pilot, 2026-11-03):** the unreadable hint and the directory-shaped hint (`version-hint.text` is a directory; RePark refuses with `Is a directory (os error 21)`, Spark lists) are group D2 of the [remaining-work estimate](../../../docs/corpus/remaining-work-estimate-2026-11-03.md): 252 cells, 168 REPARK_REFUSES_SPARK_ACTS and 84 REFUSE_TEXT, S3. **Carried by:** HADOOP-DISCOVERY-RULE-1 (owner 2026-11-03), which ports the listing fallback for both shapes.
 
