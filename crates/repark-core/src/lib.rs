@@ -12,7 +12,7 @@ mod error_map;
 mod extension;
 mod freq_items;
 mod iceberg_path;
-mod idents;
+pub mod idents;
 mod isnan;
 mod lineage_columns;
 pub mod local_fs_policy;
@@ -72,7 +72,7 @@ pub use session_time_zone::{
 
 pub use backend::{ExecutionBackend, SingleNodeBackend};
 pub use dialect::{DataFusionDialect, EngineContext, SqlDialect, TempViewSession};
-pub use idents::spark_numeric_literal;
+pub use idents::{spark_numeric_literal, spark_target_grammar_message};
 // === Pre-execute belt ===
 pub use extension::{SessionBuildConf, SessionExtension};
 pub use pre_execute::PreExecute;

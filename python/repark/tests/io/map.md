@@ -50,7 +50,7 @@ pins.
 - [test_udf.py](test_udf.py) — Classic scalar Python udf: per-row facade projection-rewrite over mapInArrow.
 - [test_udf_oracle.py](test_udf_oracle.py) — Live PySpark 4.1.2 oracle for classic scalar Python udf (U8).
 - [test_udtf.py](test_udtf.py) — UDTF scalar-arg core (mapInArrow + FROM name(lit_args)).
-- [test_writer.py](test_writer.py) — Facade tests for ``DataFrame.write`` (Group E: E6).
+- [test_writer.py](test_writer.py) — Facade tests for ``DataFrame.write`` (Group E: E6). IDENT-DIALECT-1B (2026-11-03): a double-quoted path-escape segment in `saveAsTable` refuses at parse; the back-quoted twin keeps the path refusal.
 - [_record_boundary_shapes_goldens.py](_record_boundary_shapes_goldens.py) — Record mode for the G10 boundary-shape corpus — re-derive every Spark half.
 - [applyinpandas_oracle_funcs.py](applyinpandas_oracle_funcs.py) — Picklable helpers for the live PySpark applyInPandas oracle (must be importable).
 - [mapinarrow_oracle_funcs.py](mapinarrow_oracle_funcs.py) — Picklable helpers for the live PySpark mapInArrow oracle (must be a real importable module).

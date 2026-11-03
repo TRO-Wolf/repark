@@ -491,7 +491,7 @@ async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_
     let dollar = execute(
         &ctx,
         &catalogs,
-        "SELECT snapshot_id FROM ice.sales.\"hidden$snapshots\"",
+        "SELECT snapshot_id FROM ice.sales.`hidden$snapshots`",
     )
     .await
     .expect("the `$` spelling must still resolve")

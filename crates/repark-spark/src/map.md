@@ -119,7 +119,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   falls through unchanged.
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_with_statement_options` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
-  write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests). The MERGE arm delegates to `merge::execute_merge_statement` in `merge.rs` (OUTPUT refusal, timestamp_ns cast lowering; moved out of `router.rs` in IPI-40 PR6a1 to hold the router under the file-size ceiling) so `execute_inner` stays under clippy's 100-line cap (run 22b).
+  write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests). **IDENT-DIALECT-1 (2026-11-02):** the grammar refusal runs before expansion. The MERGE arm delegates to `merge::execute_merge_statement` in `merge.rs` (OUTPUT refusal, timestamp_ns cast lowering; moved out of `router.rs` in IPI-40 PR6a1).
   **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `Statement::{ShowCatalogs, ShowTables,
   ShowColumns}` arms route to `use_ddl`; the `DESCRIBE TABLE` intercept skips the Iceberg
   path when a bare name resolves as a session table, so temp views keep winning.

@@ -3,6 +3,7 @@
 **Date:** 2026-11-02. **Filed by:** the SPARK-DOOR-TEMP-VIEW-DDL-1 records round (`claude-haiku-5-5`), for the orchestrator, from the Muse MAX critic's round-3 finding R3F2 (S3) on `90c2cc0d`.
 
 **Status:** open. Grade C, P3. Spark 4.1.2 is measured: `PARSE_SYNTAX_ERROR` at the double quote (round-4 verifier, F14; ledger clause C-037, PROVEN). Fix round 4 refuses the quoted destination with a view in scope (C-039). Not dispatched; awaiting the owner's charter.
+**2026-11-02 (IDENT-DIALECT-1):** the cells of this card are the RENAME destination (`RENAME TO "t2"`), a position outside the head target. The card stays open and its destination is carded with the other positions in [IDENT-DIALECT-2](ident-dialect-2-card-2026-11-02.md).
 
 **Why:** With a temporary view `t` in scope and an Iceberg table `t` in the current namespace, `ALTER TABLE t RENAME TO "t2"`, with the destination double-quoted, renames the view on RePark, and the table is held. The Spark 4.1.2 answer is `PARSE_SYNTAX_ERROR` at the double quote, because double quotes are not identifier syntax in Spark SQL; the round-4 verifier measured it (C-037). Fix round 2 refuses a double-quoted target (C-027) and fix round 3 refuses a double-quoted DROP TABLE or TRUNCATE TABLE target (C-034); the quoted destination of `RENAME TO` was in neither set of pins.
 

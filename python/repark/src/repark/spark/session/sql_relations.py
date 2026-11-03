@@ -5,7 +5,8 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 
-from repark.spark._idents import is_plain_ident as _is_plain_ident
+from repark.spark._idents import is_spark_unquoted_segment as _is_spark_unquoted_segment
+from repark.spark._idents import strip_sql_comments as _strip_sql_comments
 
 from repark.spark._idents import quote_ident as _quote_ident
 
@@ -552,7 +553,7 @@ def _update_rest_has_set_clause(rest: str) -> bool:
 
     """
 
-    stripped = rest.lstrip()
+    stripped = rest[_skip_sql_ws_and_comments(rest, 0) :]
 
     if not stripped:
         return False
@@ -619,7 +620,7 @@ def _scan_sql_table_identifier_end(query: str, start: int) -> int | None:
 
             saw_segment = True
 
-        elif char.isalpha() or char == "_":
+        elif char.isalnum() or char == "_":
             index += 1
 
             while index < length and (query[index].isalnum() or query[index] == "_"):
@@ -789,7 +790,7 @@ def _parse_table_identifier_segments(name: str) -> list[str]:
             if not segment:
                 raise PySparkValueError("empty identifier segment")
 
-            if not _is_plain_ident(segment):
+            if not _is_spark_unquoted_segment(segment):
                 raise PySparkValueError(f"invalid unquoted segment {segment[:64]!r}")
 
             _reject_path_escape_segment(segment)
@@ -935,7 +936,8 @@ def _expand_truncate_target_sql(query: str, resolve: Callable[..., str]) -> str 
 
     rest = query[name_end:]
 
-    if rest.strip().rstrip(";").strip() or raw_name.strip().startswith('"'):
+    tail = rest[_skip_sql_ws_and_comments(rest, 0) :]
+    if tail.rstrip(";").strip() or raw_name.strip().startswith('"'):
         return query
 
     try:
@@ -955,6 +957,7 @@ def _expand_drop_table_or_view_sql(query: str, resolve: Callable[..., str]) -> s
     before the catalog, as Spark does; qualified names resolve to the catalog.
     """
 
+    query = _strip_sql_comments(query)
     table_match = _DROP_TABLE_SQL_RE.match(query)
 
     if table_match is not None:

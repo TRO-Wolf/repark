@@ -1,6 +1,7 @@
 # Card DROP-TARGET-TRAILING-COMMENT-1: `DROP TABLE` with a trailing SQL comment refuses where Spark 4.1.2 drops the object
 
 **Status (2026-11-02): folded into IDENT-DIALECT-1 (2026-11-02).** Its classes are rows of [ident-dialect-1-card-2026-11-02.md](ident-dialect-1-card-2026-11-02.md). This card is kept as the record of its finding; nothing here is built or dispatched.
+**Closed 2026-11-02 by IDENT-DIALECT-1 at `914e5bbb`:** class 4, over-refusal (trailing comment); ledger clause C-004.
 
 **Date:** 2026-11-02. **Filed by:** the SPARK-DOOR-TEMP-VIEW-DDL-1 records round (`claude-haiku-5-5`), for the orchestrator, from the round-5 Opus 5.5 delta verdict, lead L13, at `618df399`.
 

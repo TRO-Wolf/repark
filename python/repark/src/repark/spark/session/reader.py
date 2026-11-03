@@ -367,6 +367,7 @@ class DataFrameReader:
         snapshot-static scan; the legacy ``snapshot-id`` / ``as-of-timestamp`` / ``tag``
         options refuse like Spark 4.1.2. Other semantic reader options fail loud.
         """
+        self._session._ensure_alive().refuse_table_identifier_grammar(table_name)
         self._reject_unsupported_semantic_options()
         travel = self._iceberg_time_travel_opts()
         window = _reader_support.collect_incremental_window(self._options)
@@ -468,6 +469,7 @@ class DataFrameReader:
             # Time-travel options + residual denylist already applied above.
             travel = self._iceberg_time_travel_opts()
             window = _reader_support.collect_incremental_window(self._options)
+            self._session._ensure_alive().refuse_table_identifier_grammar(str(effective_path))
             if window:
                 return _reader_incremental.load_incremental(
                     self._session, str(effective_path), window, travel

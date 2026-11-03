@@ -1,6 +1,7 @@
 # Card QUOTED-TARGET-NO-VIEW-1: with no temporary view in scope, a double- or single-quoted write or ALTER target changes the table, where Spark 4.1.2 refuses it
 
 **Status (2026-11-02): folded into IDENT-DIALECT-1 (2026-11-02).** Its classes are rows of [ident-dialect-1-card-2026-11-02.md](ident-dialect-1-card-2026-11-02.md). This card is kept as the record of its finding; nothing here is built or dispatched.
+**Closed 2026-11-02 by IDENT-DIALECT-1 at `914e5bbb`:** class 1, quoted segment; ledger clause C-002.
 
 **Date:** 2026-11-02. **Filed by:** the SPARK-DOOR-TEMP-VIEW-DDL-1 records round (`claude-haiku-5-5`), for the orchestrator, from the round-5 Opus 5.5 delta verdict, findings table, row F17 (S2), at `618df399`.
 
