@@ -323,3 +323,6 @@ mod hint_walk_tests;
 
 #[cfg(test)]
 mod discovery_rule_tests;
+
+#[cfg(test)]
+mod corpus_cells_tests;

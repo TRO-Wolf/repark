@@ -57,6 +57,12 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
   <loc>/metadata`; a zero hint with no `v0` is a missing table; the listing keeps the highest
   `v([^.]*)\..*` stem whose canonical name is listed, so a catalog-style name never beats a `v`
   name.
+- `corpus_cells_tests.rs` — HADOOP-DISCOVERY-RULE-1's table-driven pin: every `path_select` row
+  of `docs/corpus/hadoop-discovery-cells-2026-11-03.jsonl` rebuilt on a five-commit RePark
+  history with the row's writer, name-form, cleanup and hint manipulations, asserting Spark's rows
+  or a refusal (Java's missing-version text where Spark gives it). 1418 rows pinned; skipped: 20
+  `crc_kept` controls (Hadoop's checksum sidecar) and 472 lying-name rows Spark refuses by codec
+  (D4, owner-ruled exclusion). Red on `05d0437d` with the pilot's 600 recorded mismatches.
 - `hint_walk_tests.rs` — the stale-hint walk battery (ICE-HADOOP-HINT-WINDOW-1, 2026-10-28), a
   sibling of `tests.rs` in the default layout with its own two-line `FileIO` helper. A
   `version-hint.text` naming `N` is not the last word while `v<N+1>`, ... exist
