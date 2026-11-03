@@ -399,6 +399,11 @@ fn comma_relation_refusal(lexemes: &[Lexeme], start: usize) -> Option<String> {
 }
 
 #[must_use]
+pub fn spark_table_identifier_message(name: &str) -> Option<String> {
+    read_identifier(&spark_lexemes(name), 0, QuotedAfterDot::AtSegment).err()
+}
+
+#[must_use]
 pub fn spark_target_grammar_message(sql: &str) -> Option<String> {
     let lexemes = spark_lexemes(sql);
     let statement = lexemes

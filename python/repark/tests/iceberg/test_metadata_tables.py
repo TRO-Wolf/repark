@@ -514,7 +514,9 @@ def test_a_hidden_metadata_table_is_still_queryable_at_the_facade(
     dotted = spark.sql(f"SELECT snapshot_id FROM {TABLE}.snapshots").to_arrow()
     assert dotted.num_rows == multi_snapshot["snapshot_count"]
 
-    dollar = spark.sql('SELECT snapshot_id FROM mem.ns."events$snapshots"').to_arrow()
+    with pytest.raises(ParseException, match=r"PARSE_SYNTAX_ERROR"):
+        spark.sql('SELECT snapshot_id FROM mem.ns."events$snapshots"').to_arrow()
+    dollar = spark.sql("SELECT snapshot_id FROM mem.ns.`events$snapshots`").to_arrow()
     assert dollar.num_rows == multi_snapshot["snapshot_count"]
     assert sorted(dollar.column("snapshot_id").to_pylist()) == sorted(
         dotted.column("snapshot_id").to_pylist()

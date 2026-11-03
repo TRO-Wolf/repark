@@ -12,7 +12,7 @@ mod error_map;
 mod extension;
 mod freq_items;
 mod iceberg_path;
-mod idents;
+pub mod idents;
 mod isnan;
 mod lineage_columns;
 pub mod local_fs_policy;
