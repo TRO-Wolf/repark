@@ -12,3 +12,5 @@ A dated file is not edited after filing; a later measurement is a new file.
 | [nested-inventory-2026-11-03.md](nested-inventory-2026-11-03.md) | Family 3, nested-type reader and expression shapes. |
 | [deletes-inventory-2026-11-03.md](deletes-inventory-2026-11-03.md) | Family 4, delete files by format and evolution (Avro and ORC delete files excluded). |
 | [commit-inventory-2026-11-03.md](commit-inventory-2026-11-03.md) | Family 5, a commit that succeeds while the door reports failure. |
+| [hadoop-discovery-rule-2026-11-03.md](hadoop-discovery-rule-2026-11-03.md) | The pilot's rule: Java's hint read, listing fallback, name forms and cleanup, with line citations. |
+| [hadoop-discovery-cells-2026-11-03.jsonl](hadoop-discovery-cells-2026-11-03.jsonl) | The pilot's measured cells in the AUD-015 table schema, Spark 4.1.2 against RePark. |
