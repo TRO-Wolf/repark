@@ -381,7 +381,11 @@ fn comma_relation_refusal(lexemes: &[Lexeme], start: usize) -> Option<String> {
                     return Some(message);
                 }
             }
-            Lexeme::Word(_) if depth == 0 && word_is(Some(lexeme), "VALUES") => {
+            Lexeme::Word(_)
+                if depth == 0
+                    && word_is(Some(lexeme), "VALUES")
+                    && relation_starts_at(lexemes, start, index) =>
+            {
                 index = values_rows_end(lexemes, index + 1);
                 continue;
             }
@@ -391,6 +395,16 @@ fn comma_relation_refusal(lexemes: &[Lexeme], start: usize) -> Option<String> {
         index += 1;
     }
     None
+}
+
+fn relation_starts_at(lexemes: &[Lexeme], start: usize, index: usize) -> bool {
+    index == start
+        || index
+            .checked_sub(1)
+            .and_then(|previous| lexemes.get(previous))
+            .is_some_and(|previous| {
+                *previous == Lexeme::Punct(',') || word_is(Some(previous), "JOIN")
+            })
 }
 
 fn keyword_in(lexeme: &Lexeme, keywords: &[&str]) -> bool {
@@ -453,7 +467,7 @@ fn values_rows_end(lexemes: &[Lexeme], start: usize) -> usize {
 
 #[must_use]
 pub fn spark_table_identifier_message(name: &str) -> Option<String> {
-    read_identifier(&spark_lexemes(name), 0, QuotedAfterDot::AtSegment).err()
+    read_identifier(&spark_lexemes(name), 0, QuotedAfterDot::AtDot).err()
 }
 
 #[must_use]
