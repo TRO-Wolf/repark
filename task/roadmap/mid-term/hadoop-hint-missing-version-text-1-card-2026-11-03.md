@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-03. **Filed by:** the records clerk (`claude-haiku-5-5`) on the owner's ruling of 2026-11-03, from the CORPUS-1 pilot (defect D6 of the [remaining-work estimate](../../../docs/corpus/remaining-work-estimate-2026-11-03.md)).
 
-**Status:** open. Grade C (clerk). S3, refusal text: not a label blocker under the label gate. Not dispatched; no build is owed until the owner charters it.
+**Status:** closed 2026-11-03 by HADOOP-DISCOVERY-RULE-1 (PR #1251, squashed to main as `d2f3313e`), fix shape (a): a hinted version with no file refuses with Java's text naming the version and the metadata directory, pinned by `hint_past_the_newest_refuses_naming_the_metadata_dir` and `hint_into_a_removed_version_refuses`. Ledger clause C-002; the text difference is no longer carried as a card.
 
 **Why:** A `version-hint.text` that names a version with no metadata file, for example a hint past the newest file, makes both engines refuse a path read of a `type=hadoop` table. Java's `refresh` (R4 of the [rule doc](../../../docs/corpus/hadoop-discovery-rule-2026-11-03.md)) raises `ValidationException("Metadata file for version %d is missing under %s")`, which names the version. RePark refuses with its own message, which names the hinted file `v<N>.metadata.json`. The class is the same; the words differ.
 
