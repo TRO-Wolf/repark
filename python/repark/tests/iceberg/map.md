@@ -59,9 +59,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_views_6_temp_errors.py](test_ice_views_6_temp_errors.py) — IPI-40 views PR6 error-path battery — every temp-view refusal with its complete text.
 - [test_iceberg_hygiene.py](test_iceberg_hygiene.py) — R-ICEBERG-HYGIENE oracles — column-def CREATE + ref DDL time-travel pins.
 - [test_iceberg_load_path.py](test_iceberg_load_path.py) — R-DF-LOAD-PATH / R-DF-LOAD-METADATA-JSON — ``format("iceberg").load(<path>)`` reads.
-  The hadoop hint pins (2026-10-28 and 10-29, `test_iceberg_load_path.py`): a stale `version-hint.text`, or a
-  gzip-named newer metadata file, after a committed `DELETE` on a `type=hadoop` table, reads the newest committed rows on the path door. The gzip-named pin (ICE-HADOOP-GZIP-METADATA-1) is red with its fix reverted (`assert [1, 2, 3] == [2, 3]`); the hint-window pin (ICE-HADOOP-HINT-WINDOW-1) asserts the same survivors, its red text unrecorded.
-  The dfload-1 C-011 to C-013 merge facts are in its sidecar.
+  The hadoop hint pins (2026-10-28, 10-29): after a committed `DELETE` on a `type=hadoop` table, a stale `version-hint.text` or a gzip-named newer metadata file reads the newest rows; ICE-HADOOP-GZIP-METADATA-1 and ICE-HADOOP-HINT-WINDOW-1 assert those survivors. Merge facts: the sidecar.
 - [test_maintenance_call.py](test_maintenance_call.py) — R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
 - [test_maintenance_policy_1.py](test_maintenance_policy_1.py) — `run_maintenance` policy surface: dry-run default, override kwargs, refusal without a policy.
 - [test_metadata_tables.py](test_metadata_tables.py) — Oracle — Spark-style Iceberg metadata tables.
