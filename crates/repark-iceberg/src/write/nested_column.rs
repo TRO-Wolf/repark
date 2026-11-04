@@ -162,22 +162,24 @@ pub enum NestedTypeRefusal {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum MapKeyTouch<'a> {
+pub(super) enum MapKeyTouch<'a> {
     Update(&'a MapType),
     Alter(&'a MapType),
+    AddFields(&'a MapType),
 }
 
 impl<'a> MapKeyTouch<'a> {
-    fn map(self) -> &'a MapType {
+    pub(super) fn map(self) -> &'a MapType {
         match self {
-            Self::Update(map) | Self::Alter(map) => map,
+            Self::Update(map) | Self::Alter(map) | Self::AddFields(map) => map,
         }
     }
 
-    fn refusal(self) -> NestedTypeRefusal {
+    pub(super) fn refusal(self) -> NestedTypeRefusal {
         let verb = match self {
             Self::Update(_) => "update",
             Self::Alter(_) => "alter",
+            Self::AddFields(_) => "add fields to",
         };
         NestedTypeRefusal::Unsupported(format!(
             "Unsupported table change: Cannot {verb} map keys: {}",
@@ -186,10 +188,10 @@ impl<'a> MapKeyTouch<'a> {
     }
 }
 
-struct ResolvedNestedPath<'a> {
-    names: Vec<String>,
+pub(super) struct ResolvedNestedPath<'a> {
+    pub(super) names: Vec<String>,
     field_type: &'a Type,
-    map_key: Option<MapKeyTouch<'a>>,
+    pub(super) map_key: Option<MapKeyTouch<'a>>,
     container_child: bool,
 }
 
@@ -201,6 +203,14 @@ pub struct ResolvedColumnPath {
 }
 
 impl ResolvedColumnPath {
+    pub(super) fn under_map_key(names: Vec<String>, touch: MapKeyTouch<'_>) -> Self {
+        Self {
+            names,
+            map_key: Some((touch.map().key_field.id, touch.refusal())),
+            container_child: false,
+        }
+    }
+
     #[must_use]
     pub fn names(&self) -> &[String] {
         &self.names
@@ -235,7 +245,7 @@ fn struct_child<'a>(fields: &'a StructType, part: &str) -> Option<&'a NestedFiel
         .find(|field| field.name.eq_ignore_ascii_case(part))
 }
 
-fn resolve_nested_path<'a>(
+pub(super) fn resolve_nested_path<'a>(
     schema: &'a Schema,
     path: &[String],
 ) -> std::result::Result<ResolvedNestedPath<'a>, NestedTypeRefusal> {

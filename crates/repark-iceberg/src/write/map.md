@@ -329,6 +329,11 @@ repark-core's error map.
   unpartitioned MERGE, position deletes), and WO3a opened `validate_write_format` to
   orc/avro.
 - `data_format.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28), reverted by RP-61 (2026-10-28):** `resolve_delete_format` returns PUFFIN on format-version 3, else an explicit per-write `delete-format` option or the `write.delete.format.default` property (through `parse_format`, so `avro` and `orc` are honoured), else the data format. The guard's helpers are removed with their callers: `MorDeleteFormat`, `mor_delete_format`, `fork_mor_delete_format`, `delete_format_under`, `repark_reads_merge_on_read`, `fork_reads_merge_on_read`, `refuse_any_unreadable_delete_format`, `refuse_any_unreadable_fork_delete_format`, `refuse_inherited`, `inherited_delete_format_refusal` and `readable_delete_format`, with the constants `DELETE_FORMAT_PROPERTY`, `DELETE_FORMAT_OPTION`, `DATA_FORMAT_PROPERTY`, `MERGE_MODE_PROPERTY` and `MERGE_ON_READ`. The file is the pre-guard state on `3d24ad40` plus one unit test, `explicit_avro_or_orc_delete_format_is_honoured_on_parquet_data`; the fallback's test `delete_falls_back_to_data_format` is back.
+- `map_key_change.rs` — **MAP-KEY-ALTER-1 (2026-11-03):** Java `ApplyChanges.map`'s key rule for
+  both DDL doors and both `schema_evolution.rs` unions: a drop, any rename, add, widening or
+  nullability change under a map key refuses `Unsupported table change: Cannot alter map keys: <map>`
+  (a struct key's own add: `Cannot add fields to`; a primitive key widened: `Cannot update`);
+  `map_key_move` no-ops a key-struct child's move unless after itself. Pins: repark-spark `tests/map_key_alter.rs`, `tests/map_key_union.rs`.
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).
@@ -1419,10 +1424,7 @@ repark-core's error map.
   `apply_column_path_changes`, which folds them into ONE fork `UpdateSchema` whose
   case-sensitivity the caller passes (Spark door: the session flag; SQL door: insensitive).
   Both doors' nested `ALTER TABLE` intercepts commit through it. RP-56 verifier fold
-  (2026-09-28): `nested_add_refusal` routes exact/`try_` by the same flag.
-  A sibling of `alter.rs` rather than a new `SchemaChange` arm because `alter.rs` sits at its
-  exact file-size ceiling. 2 in-module tests (children evolve by field id; a required child
-  without a default refuses and the schema id stays).
+  (2026-09-28): `nested_add_refusal` routes exact/`try_` by the same flag. 2 in-module tests.
   **RP-56 DIFF-PROBE fold (2026-09-29):** `apply_column_path_changes` routes through
   `column_move::route_column_path_changes` on collided schemas (unique exact names apply,
   anything else keeps the insensitive path and its refusal), and the existence filters use
@@ -1432,8 +1434,7 @@ repark-core's error map.
   `[UNRESOLVED_COLUMN.WITH_SUGGESTION] … SQLSTATE: 42703`, an existing child (case-insensitive)
   Spark's `[FIELD_ALREADY_EXISTS] Cannot add column, because `s`.`a` already exists in
   "STRUCT<…>". SQLSTATE: 42710`, the table schema rendered in Spark's `DataType.sql` form
-  (`NOT NULL`, `COMMENT`, backticked names that need it). It reuses `column_move.rs`'s
-  `unresolved_column` / `top_level_names` (now `pub(super)`). 2 more in-module tests.
+  (`NOT NULL`, `COMMENT`, quoted names). 2 more in-module tests.
   **WO U5 PR1 round 2 (2026-09-24):** `resolve_nested_type_change` is the nested `ALTER COLUMN
   … TYPE` pre-check. It walks the path the way Spark does: struct steps case-insensitive,
   `key` / `value` / `element` exact, and anything else `INVALID_FIELD_NAME` or
@@ -1442,12 +1443,11 @@ repark-core's error map.
   `canUpCast` fails. An `Unsupported` refusal carries Iceberg Java's `Cannot change column
   type: …` when the pair is not an Iceberg promotion, or `Cannot update map keys: map<…>` for a
   promotion on a map key. Otherwise it returns the resolved dotted path. `iceberg_type_name`
-  renders Java's `Type.toString` (`decimal(9, 2)`, `map<int, int>`), which the fork's Display
-  does not.
+  renders Java's `Type.toString` (`decimal(9, 2)`, `map<int, int>`), unlike the fork's
+  Display.
   **Round 3 (2026-09-24):** `nested_spark_only_type_refusal` resolves the same path and
-  answers `NOT_SUPPORTED_CHANGE_COLUMN` with a caller-supplied Spark target name. It serves
-  targets Iceberg has no type for (TINYINT, SMALLINT, CHAR(n), VARCHAR(n)), which Spark never
-  up-casts to.
+  answers `NOT_SUPPORTED_CHANGE_COLUMN` with a caller-supplied Spark target name for the
+  types Iceberg lacks (TINYINT, SMALLINT, CHAR(n), VARCHAR(n)).
   **WO U5 PR2a (2026-09-24):** `resolve_column_path` resolves a column path of any depth the
   same way for `ALTER COLUMN … COMMENT` and returns the schema-cased dotted name. A map `key`
   step refuses with the shared `map_key_refusal` (`Unsupported table change: Cannot update map
@@ -1457,8 +1457,7 @@ repark-core's error map.
   `UpdateColumnDoc`.
   **Round 3 (2026-09-24):** `resolve_nested_path` keeps a `MapKeyTouch`. A path ending at a
   map `key` gives `Cannot update map keys: <map>`, and a path strictly under one gives `Cannot
-  alter map keys: <map>`, naming the innermost map. The nested TYPE route raises it where it
-  raised the key refusal. `resolve_column_path` returns a `ResolvedColumnPath` that holds the
+  alter map keys: <map>`, naming the innermost map; `map_key_change.rs` reads it too. `resolve_column_path` returns a `ResolvedColumnPath` that holds the
   refusal back, so the Spark door can resolve and check repeats first.
   `column_paths_commit_refusal` then picks the refusal of the first map in the post-order
   schema visit that Iceberg's `ApplyChanges` makes. `doc_lands` is false for a list `element`
@@ -1987,13 +1986,11 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
   `TransactionAction` trait is `pub(crate)`, so an external engine cannot ask an
   `UpdateSchemaAction` what schema it *would* produce without committing it —
   and the data files must carry the evolved schema's field ids before they are
-  written. The schema update therefore commits first and the write runs against
-  the table it returns. That costs nothing observable: a schema update emits
-  only `AddSchema` + `SetCurrentSchema`, never `AddSnapshot`, so the data commit
-  is still the only new snapshot (pinned in
-  [`schema_evolution/`](schema_evolution/map.md)), and it is what Spark itself
-  does — its `MERGE WITH SCHEMA EVOLUTION` runs the schema changes as commands
-  before the merge. The residue is atomicity: a failure between the two leaves a
+  written. The schema update therefore commits first; it emits no `AddSnapshot`,
+  so the data commit is the only new snapshot (pinned in
+  [`schema_evolution/`](schema_evolution/map.md)), as Spark's `MERGE WITH
+  SCHEMA EVOLUTION` runs the schema changes before the merge. Before it,
+  `map_key_change.rs` checks the union's map-key steps. The residue is atomicity: a failure between the two leaves a
   widened schema and no rows, which is Spark's behaviour too.
 
 ## U6 WRITE-REFUSALS (2026-09-24) — MERGE type changes

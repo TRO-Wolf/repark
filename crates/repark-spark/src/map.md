@@ -1536,8 +1536,8 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `router.rs` ahead of the residual refusal): an `ALTER`-prefix fast path before any tokenize,
   dotted `AFTER` references refuse with Spark's `[PARSE_SYNTAX_ERROR]`, nested paths resolve,
   every move commits through one loaded table (`apply_schema_changes_on_table`), unknown names
-  refuse with Spark's `UNRESOLVED_COLUMN` framing. A sibling module, not an `alter.rs` arm,
-  because that file sits at its exact ceiling. 4 in-module tests + [`tests/column_move.rs`](tests/column_move.rs).
+  refuse with Spark's `UNRESOLVED_COLUMN` framing; a map-key field's move follows
+  `map_key_move` (MAP-KEY-ALTER-1). 4 in-module tests + [`tests/column_move.rs`](tests/column_move.rs).
 - `table_props_ddl.rs` — **WO-IDENTIFIERS (2026-09-21, cells `D-SET-IDENTIFIER` /
   `D-DROP-IDENTIFIER`):** the `ALTER TABLE … SET|DROP IDENTIFIER FIELDS <col>[, …]` pre-parse
   (`try_parse_set_identifier_fields_ddl` / `try_parse_drop_identifier_fields_ddl` /
@@ -1569,10 +1569,9 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `SparkSqlDialect` (so a `MAP<K, V>` child type parses) and claims it only when a column path
   has a dot; an all-top-level statement falls through to the stock path untouched. `element`
   and `value` path steps (`arrs.element.y`, `m.value.q`) go to the fork verbatim. Every change
-  commits through `repark_iceberg::write::nested_column::apply_column_path_changes` — the
-  fork's `UpdateSchema` (`add_column_to` / `add_required_column_to` with the parent path,
-  `rename_column`, `delete_column`); RePark keeps no schema model of its own. A required child
-  without a default refuses with the fork's `Incompatible change: cannot add required column…`.
+  commits through `repark_iceberg::write::nested_column::apply_column_path_changes`, the fork's
+  `UpdateSchema`, after `column_path_changes_map_key_refusal` (MAP-KEY-ALTER-1). A required
+  child without a default refuses `Incompatible change: cannot add required column…`.
   Pins: [`tests/nested_column_ddl.rs`](tests/nested_column_ddl.rs).
   **RP-56 DIFF-PROBE fold (2026-09-29):** the nested-DROP `IF EXISTS` filter uses
   `column_move::nested_name_known_ci` so a stored-case path on a collided schema skips

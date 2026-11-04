@@ -10,6 +10,8 @@ use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Error as IcebergError, ErrorKind};
 
 use crate::write::append::iceberg_err;
+use crate::write::map_key_change::union_map_key_refusal;
+use crate::write::nested_column::NestedTypeRefusal;
 
 pub const ACCEPT_ANY_SCHEMA_PROP: &str = "write.spark.accept-any-schema";
 
@@ -33,6 +35,7 @@ pub async fn evolve_schema(
     table: &Table,
     incoming: Schema,
 ) -> Result<Table> {
+    refuse_map_key_union(table, &incoming)?;
     let tx = Transaction::new(table);
     let action = tx
         .update_schema()
@@ -48,6 +51,7 @@ pub async fn evolve_merge_schema(
     table: &Table,
     incoming: Schema,
 ) -> Result<Table> {
+    refuse_map_key_union(table, &incoming)?;
     let current = table.metadata().current_schema();
     let tx = Transaction::new(table);
     let mut action = tx.update_schema().case_sensitive(false);
@@ -68,6 +72,18 @@ pub async fn evolve_merge_schema(
         .apply(tx)
         .map_err(type_change_err)?;
     tx.commit(catalog.as_ref()).await.map_err(type_change_err)
+}
+
+fn refuse_map_key_union(table: &Table, incoming: &Schema) -> Result<()> {
+    match union_map_key_refusal(table.metadata().current_schema(), incoming) {
+        Some(NestedTypeRefusal::Unsupported(message)) => {
+            Err(datafusion::error::DataFusionError::Execution(message))
+        }
+        Some(NestedTypeRefusal::Analysis(message)) => {
+            Err(datafusion::error::DataFusionError::Plan(message))
+        }
+        None => Ok(()),
+    }
 }
 
 fn type_change_err(err: IcebergError) -> datafusion::error::DataFusionError {

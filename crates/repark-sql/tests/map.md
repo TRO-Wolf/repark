@@ -79,15 +79,15 @@ holds behavior observed from outside the crate.
   sqlparser's STRUCT-literal parse error (IDENT-STRUCT-KW-1), and it reports a mismatch the
   day it answers.
 - `alter_nested_column.rs` — **ICE-NESTED-EVO-1 (2026-09-17):**
-  `nested_add_rename_and_drop_on_the_ansi_door` pins the ANSI door's nested DDL end to end:
+  `nested_add_rename_and_drop_on_the_ansi_door` pins the nested DDL end to end:
   `CREATE TABLE … (s STRUCT<a INT, b VARCHAR>)`, `ADD COLUMN s.c BIGINT`,
   `RENAME COLUMN s.a TO a2`, `DROP COLUMN s.b` leave `s struct<a2 int, c bigint>`, and
-  `ADD COLUMN s.r INT NOT NULL` refuses as an incompatible change.
+  `ADD COLUMN s.r INT NOT NULL` refuses.
 - `alter_column_move.rs` — **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):**
   `alter_column_move_reorders_and_noop_writes_no_metadata` pins the ANSI-door move end to
-  end (reorder, no-op keeps the order and commits nothing per R-001 FIXED 2026-09-18 at
-  fork #293, unknown `AFTER` sibling refuses Spark-shaped, dotted `AFTER` reference
-  refuses Spark-shaped). Split out of `../src/tests.rs`, which sits at its exact ceiling.
+  end (reorder, no-op commits nothing (R-001), unknown `AFTER` sibling and
+  dotted `AFTER` refuse Spark-style).
+- `alter_map_key.rs` — **MAP-KEY-ALTER-1 (2026-11-03):** the ANSI door refuses a drop, rename or add under a map key in Spark's text; a key-child move no-ops unless after itself.
 - `ansi_door_string_literals.rs` — **SQP-1 control (C-006):** the native/ANSI door keeps generic literal semantics (backslash literal, `\'` does not lex, raw strings refuse) — Spark-only (ADR-0002).
 - `parser_productions.rs` — pins stock-parser support and the productions that still require
   pre-parse recognition (`ALTER … SET PROPERTIES`, `ALTER … EXECUTE`, and `FOR … AS OF`).

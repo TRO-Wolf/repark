@@ -21,6 +21,8 @@ use repark_iceberg::write::format_version::{
     FORMAT_VERSION_PROPERTY, format_version_from_number, format_version_number,
     set_properties_and_format_version,
 };
+use repark_iceberg::write::map_key_change::{MapKeyMove, map_key_move};
+use repark_iceberg::write::nested_column::NestedTypeRefusal;
 
 use crate::create_table::{CreateTarget, resolve_target, sql_type_to_iceberg};
 use crate::properties::{refuse_format_value, refuse_sorted_by};
@@ -401,6 +403,16 @@ pub(crate) async fn execute_column_move(
         &ddl.position,
     )
     .map_err(DataFusionError::Plan)?;
+    match map_key_move(table.metadata().current_schema(), &mover, &at) {
+        MapKeyMove::Applies => {}
+        MapKeyMove::KeyStructUnchanged => return cx.ctx.read_empty(),
+        MapKeyMove::Refused(NestedTypeRefusal::Unsupported(message)) => {
+            return Err(DataFusionError::Execution(message));
+        }
+        MapKeyMove::Refused(NestedTypeRefusal::Analysis(message)) => {
+            return Err(DataFusionError::Plan(message));
+        }
+    }
     apply_schema_changes_on_table(
         target.catalog.as_ref(),
         &table,
