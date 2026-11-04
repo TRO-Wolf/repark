@@ -110,7 +110,9 @@ async fn publish_absent(
 ) -> bool {
     let current = match catalog.load_table(base.identifier()).await {
         Ok(current) => current,
-        Err(error) => return error.kind() == ErrorKind::TableNotFound,
+        Err(error) => {
+            return mode == StagedTableMode::Create && error.kind() == ErrorKind::TableNotFound;
+        }
     };
     let Some(handed) = handed else {
         return mode == StagedTableMode::Replace

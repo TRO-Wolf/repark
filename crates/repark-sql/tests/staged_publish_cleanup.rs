@@ -36,6 +36,7 @@ const REFRESH: u8 = 4;
 const UNKNOWN: u8 = 5;
 const LOST_ACK: u8 = 6;
 const BUILT_OVER: u8 = 7;
+const DROPPED: u8 = 8;
 
 #[derive(Debug)]
 struct FaultCatalog {
@@ -201,6 +202,13 @@ impl Catalog for FaultCatalog {
         table: Table,
         base: Option<String>,
     ) -> iceberg::Result<Table> {
+        if self.point.load(Ordering::SeqCst) == DROPPED {
+            self.inner.drop_table(table.identifier()).await?;
+            return Err(iceberg::Error::new(
+                ErrorKind::Unexpected,
+                "replace rejected before a concurrent drop",
+            ));
+        }
         self.fault()?;
         let published = self.inner.publish_replace_table(table, base).await;
         if published.is_ok() && self.point.load(Ordering::SeqCst) == BUILT_OVER {
@@ -839,5 +847,27 @@ async fn a_rejected_schema_only_replace_removes_its_staged_metadata_and_keeps_th
         if kind == "hadoop" {
             assert_eq!(seen.walked, PRE_T, "{kind}");
         }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_rejected_replace_whose_table_was_dropped_before_the_probe_keeps_every_file() {
+    let stmt =
+        "CREATE OR REPLACE TABLE fault.ns.t AS SELECT CAST(8 AS INT) AS id, CAST(80 AS INT) AS v";
+    for kind in ["memory", "hadoop"] {
+        let seen = cell(stmt, kind, "t", DROPPED).await;
+        assert!(
+            seen.failed
+                .as_deref()
+                .is_some_and(|e| e.contains("replace rejected before a concurrent drop")),
+            "{kind}: {:?}",
+            seen.failed
+        );
+        assert_eq!(seen.rejected_files.len(), 1, "{kind}");
+        assert_eq!(
+            (seen.fresh.as_str(), seen.reopened.as_str()),
+            ("absent", "rows id,v;8,80"),
+            "{kind}"
+        );
     }
 }
