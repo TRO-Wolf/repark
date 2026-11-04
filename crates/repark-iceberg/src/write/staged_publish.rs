@@ -2,11 +2,13 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use std::sync::Mutex;
 
 use async_trait::async_trait;
-use iceberg::spec::DataFile;
+use iceberg::spec::{DataFile, SnapshotRef};
 use iceberg::table::Table;
 use iceberg::transaction::{StagedTableMode, StagedTableTransaction};
+use iceberg::view::{View, ViewCommit};
 use iceberg::{
     Catalog, ErrorKind, Namespace, NamespaceIdent, Result, TableCommit, TableCreation, TableIdent,
+    ViewCreation,
 };
 
 #[allow(clippy::missing_errors_doc)]
@@ -114,28 +116,39 @@ async fn publish_absent(
         return mode == StagedTableMode::Replace
             || current.metadata().uuid() != base.metadata().uuid();
     };
-    match mode {
-        StagedTableMode::Create => current.metadata().uuid() != handed.metadata().uuid(),
-        StagedTableMode::Replace => {
-            current.metadata_location() != handed.metadata_location()
-                && (handed.metadata().current_snapshot_id().is_none()
-                    || current.metadata().current_snapshot_id()
-                        != handed.metadata().current_snapshot_id())
-        }
-    }
+    !publish_landed(&current, mode, base, handed)
 }
 
-async fn snapshot_files(handed: &Table, base: &Table) -> Vec<String> {
+fn publish_landed(current: &Table, mode: StagedTableMode, base: &Table, handed: &Table) -> bool {
+    let metadata = current.metadata();
+    let location_logged = handed.metadata_location().is_some_and(|location| {
+        current.metadata_location() == Some(location)
+            || metadata
+                .metadata_log()
+                .iter()
+                .any(|entry| entry.metadata_file == location)
+    });
+    let snapshot_kept = new_snapshots(handed, base)
+        .any(|snapshot| metadata.snapshot_by_id(snapshot.snapshot_id()).is_some());
+    let uuid_kept = mode == StagedTableMode::Create && metadata.uuid() == handed.metadata().uuid();
+    location_logged || snapshot_kept || uuid_kept
+}
+
+fn new_snapshots<'a>(handed: &'a Table, base: &Table) -> impl Iterator<Item = &'a SnapshotRef> {
     let known: HashSet<i64> = base
         .metadata()
         .snapshots()
         .map(|snapshot| snapshot.snapshot_id())
         .collect();
+    handed
+        .metadata()
+        .snapshots()
+        .filter(move |snapshot| !known.contains(&snapshot.snapshot_id()))
+}
+
+async fn snapshot_files(handed: &Table, base: &Table) -> Vec<String> {
     let mut paths = Vec::new();
-    for snapshot in handed.metadata().snapshots() {
-        if known.contains(&snapshot.snapshot_id()) {
-            continue;
-        }
+    for snapshot in new_snapshots(handed, base) {
         paths.push(snapshot.manifest_list().to_string());
         match snapshot
             .load_manifest_list(handed.file_io(), handed.metadata())
@@ -204,6 +217,37 @@ impl Catalog for PublishCapture<'_> {
         self.inner.update_namespace(namespace, properties).await
     }
 
+    async fn update_namespace_properties(
+        &self,
+        namespace: &NamespaceIdent,
+        removals: HashSet<String>,
+        updates: HashMap<String, String>,
+    ) -> Result<()> {
+        self.inner
+            .update_namespace_properties(namespace, removals, updates)
+            .await
+    }
+
+    async fn set_namespace_properties(
+        &self,
+        namespace: &NamespaceIdent,
+        updates: HashMap<String, String>,
+    ) -> Result<()> {
+        self.inner
+            .set_namespace_properties(namespace, updates)
+            .await
+    }
+
+    async fn remove_namespace_properties(
+        &self,
+        namespace: &NamespaceIdent,
+        removals: HashSet<String>,
+    ) -> Result<()> {
+        self.inner
+            .remove_namespace_properties(namespace, removals)
+            .await
+    }
+
     async fn drop_namespace(&self, namespace: &NamespaceIdent) -> Result<()> {
         self.inner.drop_namespace(namespace).await
     }
@@ -260,11 +304,51 @@ impl Catalog for PublishCapture<'_> {
             .await
     }
 
+    async fn list_views(&self, namespace: &NamespaceIdent) -> Result<Vec<TableIdent>> {
+        self.inner.list_views(namespace).await
+    }
+
+    async fn create_view(
+        &self,
+        namespace: &NamespaceIdent,
+        creation: ViewCreation,
+    ) -> Result<View> {
+        self.inner.create_view(namespace, creation).await
+    }
+
+    async fn load_view(&self, view: &TableIdent) -> Result<View> {
+        self.inner.load_view(view).await
+    }
+
+    async fn drop_view(&self, view: &TableIdent) -> Result<()> {
+        self.inner.drop_view(view).await
+    }
+
+    async fn view_exists(&self, view: &TableIdent) -> Result<bool> {
+        self.inner.view_exists(view).await
+    }
+
+    async fn rename_view(&self, src: &TableIdent, dest: &TableIdent) -> Result<()> {
+        self.inner.rename_view(src, dest).await
+    }
+
+    async fn update_view(&self, commit: ViewCommit) -> Result<View> {
+        self.inner.update_view(commit).await
+    }
+
     fn name(&self) -> &str {
         self.inner.name()
     }
 
     fn properties(&self) -> &HashMap<String, String> {
         self.inner.properties()
+    }
+
+    async fn invalidate_table(&self, table: &TableIdent) -> Result<()> {
+        self.inner.invalidate_table(table).await
+    }
+
+    async fn invalidate_view(&self, view: &TableIdent) -> Result<()> {
+        self.inner.invalidate_view(view).await
     }
 }
