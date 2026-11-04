@@ -13,7 +13,7 @@ const ORACLE: &str = include_str!(concat!(
 
 const TABLE: &str = "ice.sales.nested";
 
-fn json_cell(column: &dyn Array, index: usize) -> Json {
+pub(super) fn json_cell(column: &dyn Array, index: usize) -> Json {
     if column.is_null(index) {
         return Json::Null;
     }
@@ -67,7 +67,7 @@ fn json_cell(column: &dyn Array, index: usize) -> Json {
     }
 }
 
-fn sorted(mut rows: Vec<Json>) -> Vec<Json> {
+pub(super) fn sorted(mut rows: Vec<Json>) -> Vec<Json> {
     rows.sort_by_key(ToString::to_string);
     rows
 }

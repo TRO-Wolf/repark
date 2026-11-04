@@ -21,6 +21,8 @@ pub async fn plan_statement_with_column_repair(
     statement: datafusion::sql::parser::Statement,
     case_insensitive: bool,
 ) -> Result<LogicalPlan> {
+    let mut statement = statement;
+    dereference::spell_dereferences_as_field_names(&mut statement);
     let bytes = stack::stack_bytes_for(&statement);
     stack::on_grown_stack(bytes, plan_with_repair(state, statement, case_insensitive)).await
 }
@@ -899,6 +901,7 @@ fn direct_tables(statement: &Statement) -> Vec<(String, TableReference)> {
 }
 
 mod ambiguity;
+mod dereference;
 mod display;
 mod fold;
 mod fold_text;
@@ -909,6 +912,7 @@ mod star_twins;
 mod struct_fields;
 mod twins;
 
+pub use dereference::spell_dereferences_as_field_names;
 pub use fold_text::fold_query_text;
 pub use stack::{GrownStack, on_grown_stack_with, remaining_stack, run_on_grown_stack};
 
