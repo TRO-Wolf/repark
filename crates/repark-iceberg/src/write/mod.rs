@@ -63,6 +63,7 @@ pub mod sink_offsets;
 pub mod snapshot_refs;
 pub mod sort_order;
 pub mod sql_text;
+mod staged_publish;
 pub mod statement_writes;
 mod static_value;
 /// The ANSI store-assignment matrix — ONE home for MERGE and the non-MERGE insert/append lowerings.
@@ -166,6 +167,7 @@ pub use session_write_conf::{
     session_write_conf_from_options, session_write_conf_is_set, unset_session_write_key,
     with_session_write_conf,
 };
+pub use staged_publish::{commit_staged, publish_applied, written_paths};
 pub use store_assign::{
     WRITE_SPARK_CLASS, ansi_store_assignable, normalize_for_assignment,
     refuse_unless_ansi_store_assignable,

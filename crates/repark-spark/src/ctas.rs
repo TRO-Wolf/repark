@@ -9,9 +9,7 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{CreateTable, CreateTableOptions, SqlOption};
 use iceberg::io::FileIO;
 use iceberg::spec::UnboundPartitionSpec;
-use iceberg::transaction::{
-    ApplyTransactionAction, StagedTableMode, StagedTableTransaction, Transaction,
-};
+use iceberg::transaction::{ApplyTransactionAction, StagedTableTransaction, Transaction};
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 use repark_iceberg::write::void_store::arrow_schema_to_iceberg_with_unknown;
 
@@ -337,9 +335,7 @@ async fn finish_ctas_staged_commit(
     let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);
     if options.is_empty() && session.is_empty() {
         let data_files = write_ctas_query(ctx, staged.table(), query).await?;
-        staged
-            .add_data_files(data_files)
-            .commit(catalog.as_ref())
+        repark_iceberg::write::commit_staged(staged, data_files, catalog.as_ref())
             .await
             .map_err(iceberg_err)?;
         return Ok(());
@@ -371,6 +367,7 @@ async fn finish_ctas_staged_commit(
         )
         .await?
     };
+    let written = repark_iceberg::write::written_paths(&data_files);
     let tx = Transaction::new(&staged_table);
     let tx = if replace_write {
         let engine =
@@ -393,20 +390,16 @@ async fn finish_ctas_staged_commit(
     }
     .map_err(iceberg_err)?;
     let table = tx.apply_locally().await.map_err(iceberg_err)?;
-    match mode {
-        StagedTableMode::Create => {
-            catalog
-                .publish_create_table(table)
-                .await
-                .map_err(iceberg_err)?;
-        }
-        StagedTableMode::Replace => {
-            catalog
-                .publish_replace_table(table, replace_base)
-                .await
-                .map_err(iceberg_err)?;
-        }
-    }
+    repark_iceberg::write::publish_applied(
+        catalog.as_ref(),
+        &staged_table,
+        mode,
+        table,
+        replace_base,
+        &written,
+    )
+    .await
+    .map_err(iceberg_err)?;
     Ok(())
 }
 
