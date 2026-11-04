@@ -191,3 +191,8 @@ Rows of the label draft's family-3 table these cells support:
 - A candidate row the cells support: full-row path reads of struct, map, list and list-of-struct
   columns on Parquet and Avro match Spark through add, drop, rename, re-add, promotion and move;
   ORC nested reads, the map-key ALTER (D1, D16) and the empty struct (D8, D9) are the exclusions.
+
+## Dated updates
+
+- 2026-11-04, D1 (the ALTER and union arms, 28 cells; the table row above is unchanged): fixed by MAP-KEY-ALTER-1 (PR #1256; ledger [map-key-alter-1-ledger.md](../../task/ledgers/completed/map-key-alter-1-ledger.md)). The DDL and union refusals now match Spark's text with the field ids masked. The fork-side drop stays open on [F-MAP-KEY-DROP-ALTER-1](../../task/roadmap/mid-term/f-map-key-drop-alter-1-card-2026-10-31.md).
+- 2026-11-04, D16 (the move, 9 cells; the table row above is unchanged): fixed by MAP-KEY-ALTER-1 (PR #1256). A move of a direct key child commits nothing and leaves the key struct unchanged, as Spark's ALTER does. Spark commits a metadata file for the unapplied move and RePark commits none.
