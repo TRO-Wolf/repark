@@ -33,6 +33,7 @@ const LOAD: u8 = 3;
 const REFRESH: u8 = 4;
 const UNKNOWN: u8 = 5;
 const LOST_ACK: u8 = 6;
+const BUILT_OVER: u8 = 7;
 
 #[derive(Debug)]
 struct FaultCatalog {
@@ -43,6 +44,28 @@ struct FaultCatalog {
 }
 
 impl FaultCatalog {
+    fn build_over(&self) {
+        let inner = Arc::clone(&self.inner);
+        std::thread::spawn(move || {
+            let runtime = tokio::runtime::Builder::new_multi_thread()
+                .worker_threads(2)
+                .enable_all()
+                .build()
+                .expect("side runtime");
+            runtime.block_on(async {
+                let side = session();
+                side.register_iceberg_catalog("fault", inner)
+                    .await
+                    .expect("register side writer");
+                run(&side, "INSERT INTO fault.ns.t VALUES (9, 90)")
+                    .await
+                    .expect("a later commit on top of the landed publish");
+            });
+        })
+        .join()
+        .expect("side writer");
+    }
+
     fn fault(&self) -> iceberg::Result<()> {
         let point = self.point.load(Ordering::SeqCst);
         if !matches!(point, BEFORE | UNKNOWN) || self.spent.swap(true, Ordering::SeqCst) {
@@ -178,6 +201,13 @@ impl Catalog for FaultCatalog {
     ) -> iceberg::Result<Table> {
         self.fault()?;
         let published = self.inner.publish_replace_table(table, base).await;
+        if published.is_ok() && self.point.load(Ordering::SeqCst) == BUILT_OVER {
+            self.build_over();
+            return Err(iceberg::Error::new(
+                ErrorKind::Unexpected,
+                "acknowledgement lost before a later commit",
+            ));
+        }
         self.lost_ack(self.published(published))
     }
 }
@@ -406,6 +436,122 @@ async fn cell(stmt: &str, kind: &str, target: &str, point: u8) -> Outcome {
     }
 }
 
+async fn missing(table: Option<&Table>) -> usize {
+    let Some(table) = table else {
+        return 0;
+    };
+    let gone = |path: &str| !Path::new(&local(path)).exists();
+    let mut count = table
+        .metadata()
+        .metadata_log()
+        .iter()
+        .filter(|entry| gone(&entry.metadata_file))
+        .count();
+    for snapshot in table.metadata().snapshots() {
+        if gone(snapshot.manifest_list()) {
+            count += 1;
+            continue;
+        }
+        let Ok(list) = snapshot
+            .load_manifest_list(table.file_io(), table.metadata())
+            .await
+        else {
+            count += 1;
+            continue;
+        };
+        for manifest in list.entries() {
+            if gone(&manifest.manifest_path) {
+                count += 1;
+                continue;
+            }
+            let Ok(loaded) = manifest.load_manifest(table.file_io()).await else {
+                count += 1;
+                continue;
+            };
+            count += loaded
+                .entries()
+                .iter()
+                .filter(|entry| entry.is_alive() && gone(entry.data_file().file_path()))
+                .count();
+        }
+    }
+    count
+}
+
+struct BuiltOver {
+    failed: Option<String>,
+    fresh: String,
+    missing: usize,
+    walked_to: String,
+    stale_walked: String,
+}
+
+async fn built_over(stmt: &str, kind: &str) -> BuiltOver {
+    let tmp = tempfile::TempDir::new().expect("root");
+    let root = tmp.path();
+    let inner = catalog_at(kind, root).await;
+    let fault = Arc::new(FaultCatalog {
+        inner: Arc::clone(&inner),
+        point: AtomicU8::new(NONE),
+        spent: AtomicBool::new(false),
+        tripped: AtomicBool::new(false),
+    });
+    let writer = session();
+    writer
+        .register_iceberg_catalog("fault", Arc::clone(&fault) as Arc<dyn Catalog>)
+        .await
+        .expect("register");
+    for sql in SEEDS {
+        run(&writer, sql).await.expect("seed");
+    }
+    fault.point.store(BUILT_OVER, Ordering::SeqCst);
+    let failed = run(&writer, stmt).await.err();
+    fault.point.store(NONE, Ordering::SeqCst);
+    let table_dir = root.join("ns").join("t");
+    let loaded = inner.load_table(&ident("t")).await.ok();
+    let (walked_to, stale_walked) = if kind == "hadoop" {
+        std::fs::write(table_dir.join("metadata/version-hint.text"), "2").expect("stale hint");
+        let walked = hadoop_walk(&table_dir);
+        let name = walked
+            .as_deref()
+            .and_then(|path| Path::new(path).file_name())
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        (name, reopen(root, kind, "t", walked).await)
+    } else {
+        ("-".to_string(), "-".to_string())
+    };
+    BuiltOver {
+        failed,
+        fresh: read_through(Arc::clone(&inner), "t").await,
+        missing: missing(loaded.as_ref()).await,
+        walked_to,
+        stale_walked,
+    }
+}
+
+fn assert_built_over_kept(stmt: &str, rows: &str, seen: &BuiltOver, kind: &str) {
+    assert!(
+        seen.failed
+            .as_deref()
+            .is_some_and(|e| e.contains("acknowledgement lost before a later commit")),
+        "{kind} {stmt}: {:?}",
+        seen.failed
+    );
+    assert_eq!(
+        (seen.fresh.as_str(), seen.missing),
+        (rows, 0),
+        "{kind} {stmt}"
+    );
+    if kind == "hadoop" {
+        assert_eq!(
+            (seen.walked_to.as_str(), seen.stale_walked.as_str()),
+            ("v4.metadata.json", rows),
+            "{kind} {stmt}"
+        );
+    }
+}
+
 fn changed_rows(head: &str) -> &'static str {
     match head {
         "CTAS" => "rows id,v;7,70",
@@ -601,6 +747,53 @@ async fn a_publish_that_landed_before_its_error_keeps_every_committed_file() {
                 (changed_rows(head), changed_rows(head), 0),
                 "{view}"
             );
+        }
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_replace_that_landed_and_was_built_over_before_the_probe_keeps_every_file() {
+    let stmt = "CREATE OR REPLACE TABLE fault.ns.t USING iceberg AS SELECT CAST(8 AS INT) AS id, CAST(80 AS INT) AS v";
+    for kind in ["memory", "hadoop"] {
+        let seen = built_over(stmt, kind).await;
+        assert_built_over_kept(stmt, "rows id,v;8,80;9,90", &seen, kind);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn the_landed_probe_searches_the_metadata_log_for_a_schema_only_replace() {
+    let stmt = "CREATE OR REPLACE TABLE fault.ns.t (id INT, v INT) USING iceberg";
+    for kind in ["memory", "hadoop"] {
+        let seen = built_over(stmt, kind).await;
+        assert_built_over_kept(stmt, "rows id,v;9,90", &seen, kind);
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_rejected_schema_only_replace_removes_its_staged_metadata_and_keeps_the_previous_version()
+{
+    let stmt = "CREATE OR REPLACE TABLE fault.ns.t (id INT, v INT, x INT) USING iceberg";
+    for kind in ["memory", "hadoop"] {
+        let seen = cell(stmt, kind, "t", BEFORE).await;
+        assert!(
+            seen.failed
+                .as_deref()
+                .is_some_and(|e| e.contains("catalog update unavailable")),
+            "{kind}: {:?}",
+            seen.failed
+        );
+        assert!(
+            seen.rejected_files.is_empty(),
+            "{kind}: {:?}",
+            seen.rejected_files
+        );
+        assert_eq!(
+            (seen.fresh.as_str(), seen.reopened.as_str(), seen.orphans),
+            (PRE_T, PRE_T, 0),
+            "{kind}"
+        );
+        if kind == "hadoop" {
+            assert_eq!(seen.walked, PRE_T, "{kind}");
         }
     }
 }
