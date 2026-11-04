@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-31. **Filed by:** `claude-haiku-5-5` for the orchestrator, from the RP-63 records round, from the fork ledger of F-STRUCT-EMPTY-CHILD-PANIC-1, clause S-14.
 
-**Status:** filed, not dispatched. Grade C, P3.
+**Status:** filed, not dispatched. Grade C, P3. 2026-11-04: RePark refuses at both doors and on unions since MAP-KEY-ALTER-1 (PR #1256); the fork's own `update_schema` still accepts the drop (fork-side lead, unchanged).
 
 **Why:** `ALTER TABLE ... DROP COLUMN m.key.a` on a `map<struct<a: int>, int>` column succeeds in the fork's `update_schema`. Spark 4.1.2 refuses the same ALTER with `Unsupported table change: Cannot alter map keys`. The read after the drop returns the empty-struct keys, the values and the validity at `14a93602`, where the base refused the scan. It is not a correct answer for the dropped schema: the drop can collapse distinct keys into equal ones (a dated correction, 2026-11-01, from the third audit: `{k:1,j:2}` and `{k:3,j:2}` both read `{j:2}`, a map of cardinality 2 that Spark cannot hold). The schema change itself diverges from Spark.
 
