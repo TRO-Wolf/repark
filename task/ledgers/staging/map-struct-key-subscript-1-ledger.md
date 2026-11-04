@@ -213,3 +213,5 @@ Clause tally after round 5 (C-001 to C-055): 46 PROVEN, 9 OPEN, 0 REJECTED.
 ## Clone
 
 The clone is removed at merge.
+
+2026-11-04: residue F5 closed by SUBSCRIPT-DOT-ACCESS-1 (PR #1259). Card `subscript-dot-access-1-card-2026-11-02.md` is closed; the Spark door answers the field after a map subscript with a struct key (ledger clauses C-001 to C-004 of that unit).
