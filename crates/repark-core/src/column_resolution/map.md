@@ -1,12 +1,9 @@
 # map — repark-core/src/column_resolution
 
-ICE-MIXED-CASE-1 (2026-09-17, Q-20b-2): the fold's unit battery lives here,
-split from `../column_resolution.rs` under the file-size gate. Statement cells
-(false/true spellings), fragment scoping, the `[AMBIGUOUS_REFERENCE]` shape,
-backticked exact under `true`, and the DataFrame filter alias binding.
-Round 21b: the helpers pass `case_insensitive` to `plan_statement_with_column_repair`
-explicitly (the module owns no carrier); `dataframe_filter_binds_projection_alias`
-plans through `sql_with_column_repair` so the flag reaches the fold.
+ICE-MIXED-CASE-1 (2026-09-17, Q-20b-2): the fold's unit battery (split from `../column_resolution.rs`):
+statement cells, fragment scoping, the `[AMBIGUOUS_REFERENCE]` shape, backticked exact under `true`, the filter alias.
+Round 21b: the helpers pass `case_insensitive` to `plan_statement_with_column_repair` explicitly;
+`dataframe_filter_binds_projection_alias` plans through `sql_with_column_repair` so the flag reaches the fold.
 Run 21b red-first pins: `v01_*`, `v02_*`, `v04_*`, `l08_*` on `measured_ctx` (MemTables
 shaped like the probe's tables), and the 42704 / one-option-per-twin sentence.
 Step 5: `l08_bare_twin_options_carry_the_full_relation_name` registers `sc.ns.tw` in a
@@ -16,12 +13,10 @@ Step 2 adds `v01_order_by_a_select_alias_still_orders_by_the_alias` (the positio
 keeps ORDER BY on the alias).
 Round 2 (2026-09-18): the measured fixture's table tuple is the `MeasuredTable` alias
 (clippy `type_complexity`).
-Round 2 N-02: `l08_every_reference_to_a_case_twin_is_ambiguous` is deleted — it stayed green
-with the step-5 audit reverted (the old walk refuses every such reference too; proof in the
-ledger) and the Python `test_case_twin_reference_is_ambiguous_exact_or_not` holds the same four
-cells. `l08_qualified_reference_is_not_ambiguous_because_a_bare_spelling_appears_elsewhere` is
-the pin that goes red under that revert (the old walk over-refused); `l08_correlated_reference_to_a_case_twin_is_ambiguous`
-pins the outer-reference audit (red on the round-1 head and under the revert).
+Round 2 N-02: `l08_every_reference_to_a_case_twin_is_ambiguous` is deleted (green with the step-5 audit
+reverted; ledger proof; the Python `test_case_twin_reference_is_ambiguous_exact_or_not` holds its cells).
+`l08_qualified_reference_is_not_ambiguous_because_a_bare_spelling_appears_elsewhere` goes red under that revert;
+`l08_correlated_reference_to_a_case_twin_is_ambiguous` pins the outer-reference audit.
 Round 2 Q-21b-12: `n03_star_over_a_case_twin_answers_both_columns_declared` pins the declared
 star answer on a twin MemTable (Spark refuses 42711; a star refusal here would also refuse the
 DataFrame `filter` / `table` lowerings, which Spark answers — ledger N-03).
@@ -152,6 +147,9 @@ not raw FieldNotFound text (retargeted 2026-09-21).
   `Projection`/`Join`/`Filter`/`Aggregate`/`Window` — DataFusion emits no
   `SubqueryAlias` for an unaliased derived table) and under `Subquery`
   (lateral only), so every derived-table boundary audits as nested.
+- `dereference.rs` — **SUBSCRIPT-DOT-ACCESS-1 (2026-11-04):** run first by `plan_statement_with_column_repair`:
+  a `.f` DataFusion refuses (after a subscript, call or parenthesis) becomes a field-name access;
+  a leading column path stays an identifier chain. Pins inline.
 - `display.rs` — **U11-EDGE-1 (2026-09-26):** the query-spelling display rewrite. Under the
   default `caseSensitive=false`, `display_rewrite` compares the planned output names with the
   projection as written (the left branch of a set operation) and re-plans once with quoted

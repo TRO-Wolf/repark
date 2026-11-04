@@ -4,7 +4,7 @@ use serde_json::Value as Json;
 use super::super::*;
 use super::common::*;
 
-const CELLS: &str = concat!(
+pub(super) const CELLS: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../docs/corpus/nested-cells-2026-11-03.jsonl"
 );
@@ -21,19 +21,19 @@ const ALTER_MK: &str = "Unsupported table change: Cannot alter map keys: \
      map<struct<#: a: optional int, #: b: optional string>, int>";
 
 #[derive(Debug, Clone)]
-struct Cell {
-    spelling: String,
-    head: String,
-    stmt: String,
-    spark: String,
-    repark: String,
+pub(super) struct Cell {
+    pub(super) spelling: String,
+    pub(super) head: String,
+    pub(super) stmt: String,
+    pub(super) spark: String,
+    pub(super) repark: String,
 }
 
-fn text(row: &Json, key: &str) -> String {
+pub(super) fn text(row: &Json, key: &str) -> String {
     row[key].as_str().unwrap_or_default().to_string()
 }
 
-fn ddl_cells() -> Option<Vec<Cell>> {
+pub(super) fn ddl_cells() -> Option<Vec<Cell>> {
     let body = std::fs::read_to_string(CELLS).ok()?;
     Some(
         body.lines()
@@ -61,7 +61,7 @@ fn spark_message(answer: &str) -> &str {
     answer.strip_prefix("ERR ").unwrap_or(answer)
 }
 
-async fn outcome(
+pub(super) async fn outcome(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
@@ -107,7 +107,7 @@ fn substituted_insert(cells: &[Cell], cell: &Cell) -> String {
     none.stmt.replace("mapkey_parquet_none", &cell.spelling)
 }
 
-fn statement_for(cells: &[Cell], cell: &Cell) -> String {
+pub(super) fn statement_for(cells: &[Cell], cell: &Cell) -> String {
     if !(unit_fixture(&cell.spelling) && cell.head == "insert1") {
         return local(&cell.stmt);
     }
