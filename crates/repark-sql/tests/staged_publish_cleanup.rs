@@ -37,6 +37,12 @@ const UNKNOWN: u8 = 5;
 const LOST_ACK: u8 = 6;
 const BUILT_OVER: u8 = 7;
 const DROPPED: u8 = 8;
+const EXPIRED_OVER: u8 = 9;
+const EXPIRE_SIDE: [&str; 3] = [
+    "ALTER TABLE fault.ns.t SET TBLPROPERTIES ('write.metadata.previous-versions-max'='1')",
+    "INSERT INTO fault.ns.t VALUES (9, 90)",
+    "CALL fault.system.expire_snapshots(table => 'ns.t', older_than => 4102444800000, retain_last => 1)",
+];
 
 #[derive(Debug)]
 struct FaultCatalog {
@@ -47,7 +53,7 @@ struct FaultCatalog {
 }
 
 impl FaultCatalog {
-    fn build_over(&self) {
+    fn build_over(&self, expire: bool) {
         let inner = Arc::clone(&self.inner);
         std::thread::spawn(move || {
             let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -56,13 +62,20 @@ impl FaultCatalog {
                 .build()
                 .expect("side runtime");
             runtime.block_on(async {
-                let side = writer();
+                let side = if expire { session() } else { writer() };
                 side.register_iceberg_catalog("fault", inner)
                     .await
                     .expect("register side writer");
-                run(&side, "INSERT INTO fault.ns.t VALUES (9, 90)")
-                    .await
-                    .expect("a later commit on top of the landed publish");
+                let statements: &[&str] = if expire {
+                    &EXPIRE_SIDE
+                } else {
+                    &["INSERT INTO fault.ns.t VALUES (9, 90)"]
+                };
+                for statement in statements {
+                    run(&side, statement)
+                        .await
+                        .expect("a later commit on top of the landed publish");
+                }
             });
         })
         .join()
@@ -211,8 +224,9 @@ impl Catalog for FaultCatalog {
         }
         self.fault()?;
         let published = self.inner.publish_replace_table(table, base).await;
-        if published.is_ok() && self.point.load(Ordering::SeqCst) == BUILT_OVER {
-            self.build_over();
+        let point = self.point.load(Ordering::SeqCst);
+        if published.is_ok() && matches!(point, BUILT_OVER | EXPIRED_OVER) {
+            self.build_over(point == EXPIRED_OVER);
             return Err(iceberg::Error::new(
                 ErrorKind::Unexpected,
                 "acknowledgement lost before a later commit",
@@ -500,11 +514,13 @@ struct BuiltOver {
     failed: Option<String>,
     fresh: String,
     missing: usize,
+    reopened: String,
+    hint_walked: String,
     walked_to: String,
     stale_walked: String,
 }
 
-async fn built_over(stmt: &str, kind: &str) -> BuiltOver {
+async fn built_over(stmt: &str, kind: &str, point: u8) -> BuiltOver {
     let tmp = tempfile::TempDir::new().expect("root");
     let root = tmp.path();
     let inner = catalog_at(kind, root).await;
@@ -522,11 +538,20 @@ async fn built_over(stmt: &str, kind: &str) -> BuiltOver {
     for sql in SEEDS {
         run(&writer, sql).await.expect("seed");
     }
-    fault.point.store(BUILT_OVER, Ordering::SeqCst);
+    fault.point.store(point, Ordering::SeqCst);
     let failed = run(&writer, stmt).await.err();
     fault.point.store(NONE, Ordering::SeqCst);
     let table_dir = root.join("ns").join("t");
     let loaded = inner.load_table(&ident("t")).await.ok();
+    let newest = metadata_files(&table_dir)
+        .into_iter()
+        .max_by_key(|path| version(path));
+    let reopened = reopen(root, kind, "t", newest).await;
+    let hint_walked = if kind == "hadoop" {
+        reopen(root, kind, "t", hadoop_walk(&table_dir)).await
+    } else {
+        "-".to_string()
+    };
     let (walked_to, stale_walked) = if kind == "hadoop" {
         std::fs::write(table_dir.join("metadata/version-hint.text"), "2").expect("stale hint");
         let walked = hadoop_walk(&table_dir);
@@ -543,6 +568,8 @@ async fn built_over(stmt: &str, kind: &str) -> BuiltOver {
         failed,
         fresh: read_through(Arc::clone(&inner), "t").await,
         missing: missing(loaded.as_ref()).await,
+        reopened,
+        hint_walked,
         walked_to,
         stale_walked,
     }
@@ -768,7 +795,7 @@ async fn a_replace_that_landed_and_was_built_over_before_the_probe_keeps_every_f
     let stmt =
         "CREATE OR REPLACE TABLE fault.ns.t AS SELECT CAST(8 AS INT) AS id, CAST(80 AS INT) AS v";
     for kind in ["memory", "hadoop"] {
-        let seen = built_over(stmt, kind).await;
+        let seen = built_over(stmt, kind, BUILT_OVER).await;
         assert_built_over_kept(stmt, "rows id,v;8,80;9,90", &seen, kind);
     }
 }
@@ -777,7 +804,7 @@ async fn a_replace_that_landed_and_was_built_over_before_the_probe_keeps_every_f
 async fn the_landed_probe_searches_the_metadata_log_for_a_schema_only_replace() {
     let stmt = "CREATE OR REPLACE TABLE fault.ns.t (id INT, v INT)";
     for kind in ["memory", "hadoop"] {
-        let seen = built_over(stmt, kind).await;
+        let seen = built_over(stmt, kind, BUILT_OVER).await;
         assert_built_over_kept(stmt, "rows id,v;9,90", &seen, kind);
     }
 }
@@ -869,5 +896,31 @@ async fn a_rejected_replace_whose_table_was_dropped_before_the_probe_keeps_every
             ("absent", "rows id,v;8,80"),
             "{kind}"
         );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_landed_replace_whose_log_entry_and_snapshot_are_gone_keeps_every_file_the_table_still_references()
+ {
+    let stmt =
+        "CREATE OR REPLACE TABLE fault.ns.t AS SELECT CAST(8 AS INT) AS id, CAST(80 AS INT) AS v";
+    let rows = "rows id,v;8,80;9,90";
+    for kind in ["memory", "hadoop"] {
+        let seen = built_over(stmt, kind, EXPIRED_OVER).await;
+        assert!(
+            seen.failed
+                .as_deref()
+                .is_some_and(|e| e.contains("acknowledgement lost before a later commit")),
+            "{kind}: {:?}",
+            seen.failed
+        );
+        assert_eq!(
+            (seen.fresh.as_str(), seen.reopened.as_str(), seen.missing),
+            (rows, rows, 0),
+            "{kind}"
+        );
+        if kind == "hadoop" {
+            assert_eq!(seen.hint_walked, rows, "{kind}");
+        }
     }
 }
