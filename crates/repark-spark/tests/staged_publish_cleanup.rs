@@ -60,7 +60,7 @@ impl FaultCatalog {
                 .build()
                 .expect("side runtime");
             runtime.block_on(async {
-                let side = if expire { session() } else { session() };
+                let side = session();
                 side.register_iceberg_catalog("fault", inner)
                     .await
                     .expect("register side writer");
