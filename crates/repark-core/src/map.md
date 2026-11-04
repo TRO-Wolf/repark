@@ -814,14 +814,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `column_resolution.rs` — **U11-EDGE-1 round 6 (2026-09-26, V-001):** the SQL audit's
   ambiguity candidates drop a scratch relation (`frame_names::is_scratch_relation`), so a
   `_repark_h1_sel_*` view renders its candidates unqualified.
-  **Round 7 (2026-09-26, V-001):** `audit_plan_for_ambiguity` does not descend into a view
-  the statement names: `written_references` collects the named table factors that are not a
-  CTE of the statement (`WrittenRefs::views`, the alias when one is written), and the walk
-  jumps over a `SubqueryAlias` carrying one of those names. The outer statement's written
-  references belonged to the view body before, so `SELECT id, Data FROM v` over a temp view of
-  `jn.select(a['ID'].alias('id'), …)` refused `[`sc`.`ns`.`t`.`id`, `id`]` — the by-name write
-  binding of `writeTo(t).append()` and `INSERT INTO t SELECT id, Data FROM v` both plan through
-  it. CTE bodies and derived tables are still audited.
+  **Round 7 (2026-09-26, V-001):** `audit_plan_for_ambiguity` skips a view the statement names
+  (`written_references` → `WrittenRefs::views`, alias when written; the walk jumps a `SubqueryAlias` of one),
+  so `SELECT id, Data FROM v` over a temp view of `jn.select(a['ID'].alias('id'), …)` stops refusing (the
+  `writeTo(t).append()` and `INSERT INTO t SELECT` bindings plan through it). CTE and derived bodies stay audited.
+  **SUBSCRIPT-DOT-ACCESS-1 (2026-11-04):** the Spark-door planner respells refused dereferences first
+  (`column_resolution/dereference.rs`); the native door's `PreExecute::plan` is not wired.
   **Round 7 (V-002):** `stamp_unresolved_column` leaves every `_repark_*` / `__repark_*` field
   out of the `UNRESOLVED_COLUMN.WITH_SUGGESTION` list (the round-2 relation rule extended to
   field names; a list left empty keeps DataFusion's error), so a twin-join frame's attribute

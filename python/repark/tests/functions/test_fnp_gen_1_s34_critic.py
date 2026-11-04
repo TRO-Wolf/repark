@@ -184,13 +184,8 @@ def test_sql_door_from_csv_default_timestamp_value(spark: ReparkSession) -> None
         assert [_epoch(_single_struct(result)["t"], zone)] == cells[0]["rows"][0]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="FNP-GEN-1 remediation: struct-field access on a call result needs the "
-    "DataFusion SQL dot-access seam, owned by run 18c (R-18a-5).",
-)
 def test_sql_door_from_csv_dot_access_cells(spark: ReparkSession) -> None:
-    """The exact critic SQL exprs answer the epoch once the dot-access seam lands."""
+    """The exact critic SQL exprs answer the oracle's epoch through a field access on the call."""
     cells = [
         cell
         for cell in _oracle()["cells"]

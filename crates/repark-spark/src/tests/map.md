@@ -559,11 +559,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   C-012): the escape domain, `\'`/unpaired-backslash lexing, adjacency + the DataFusion-native
   `OPTIONS` carve-out, quote-runs-are-not-triple-quotes, raw strings, LIKE/RLIKE/backtick controls,
   exactly-once-on-every-path, the one-caller grep pin, the Generic-dialect honesty pin.
-- `string_literal_escape_1.rs` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the
-  PE-10 pins in their own leaf (the SQP-1 leaf is byte-frozen, so nothing lands
-  there): doubled-`""` collapse in double-quoted literals, `r"…"` answering,
-  raw `''`/`""` head/tail splitting, verbatim doublings kept and raw values
-  marked, the escape-free-doubles borrow pin, and direct quote-awareness units.
+- `string_literal_escape_1.rs` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the PE-10 pins
+  (the SQP-1 leaf is byte-frozen): `""` collapse, `r"…"`, raw `''`/`""` head/tail splits,
+  verbatim doublings kept, raw values marked, the borrow pin, quote-awareness units.
   **DIFF-PROBE fold (2026-09-29):** `verbatim_ddl_positions_take_default_treatment`
   pins verbatim DDL canonicals (property lists borrowed, backslashes unescaped,
   `COMMENT` doubles rewritten single-quoted, the `SELECT comment` alias guard,
@@ -574,6 +572,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):**
   `built_statements_parse_default_on_a_verbatim_session` pins the override
   wiring: `Some(false)` answers default values, `None` keeps the flag.
+- `subscript_dot_access.rs` — **SUBSCRIPT-DOT-ACCESS-1 (2026-11-04):** nested-cells `A-read` rows that refused `Dot access not supported`: 275 Spark-door rows on fixtures from the `A-ddl` replay (format swapped) answer or refuse as Spark; skips counted per reason. Plus the card statements and grammar neighbours (helpers of `map_key_alter.rs`, `nested_assign_oracle.rs`).
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
   B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
   leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
@@ -2785,16 +2784,13 @@ name. Fix round 3 adds `star_and_inserted_struct_values_resolve_by_name` (`UPDAT
 matched and NOT MATCHED BY SOURCE refuses Spark's `Multiple assignments` text).
 `nested_assign_oracle.rs` replays
 [`python/repark/tests/writes/u8_write_sql_nested_spark_oracle.json`](../../../../python/repark/tests/writes/u8_write_sql_nested_spark_oracle.json)
-(read with `include_str!`). It covers 154 of its 177 keys (150 until U9-TYPES-1 retired the
-`U2-order` / `U2-order2` R-16 residues, 2026-09-26; 152 until ICE-STRUCT-PAIRING-1 retired the
-two `E6-evo-*-reorder-noprop` R-18 residues, 2026-10-14), counted exactly: every key without a
-residue record and without an ARRAY or MAP column. The Rust test context has no Spark `array` /
-`map` constructors, and the facade replays every key. Each case runs on the test context rebuilt
-with a core `ReparkSession`'s optimizer rules (fix round 4), so the DataFusion 54.1 guards apply
-as on a real session; a key's `conf` sets `spark.sql.caseSensitive` and an empty `seed` skips the
-seed insert. The table is `ice.sales.nested` (fix round 5), so the MERGE alias `t` in a refusal
-text is not respelled as the table. Each refusal compares the class (Parse for a `ParseException` key, else Analysis)
-and the full normalized message. Rows compare as JSON with structs and maps as objects.
+(read with `include_str!`). It covers 154 of its 177 keys (U9-TYPES-1 retired two R-16 residues 2026-09-26,
+ICE-STRUCT-PAIRING-1 two R-18 ones 2026-10-14), counted exactly: every key without a
+residue record and without an ARRAY or MAP column (the facade replays every key).
+Each case runs with a core `ReparkSession`'s optimizer rules (fix round 4), so the DataFusion 54.1
+guards apply; a key's `conf` sets `spark.sql.caseSensitive`, an empty `seed` skips the seed insert.
+The table is `ice.sales.nested` (fix round 5) so the MERGE alias `t` is not respelled. A refusal
+compares its class (Parse or Analysis) and the full normalized message; rows compare as JSON.
 
 **ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26) — the refusal cells and the kill pair.**
 

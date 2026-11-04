@@ -57,11 +57,11 @@ pins.
 - [test_fnp_agg_1_critic.py](test_fnp_agg_1_critic.py) — FNP-AGG-1 slice (d) remediation pins: the grouping_id exact-order rule.
 - [test_fnp_alias_1.py](test_fnp_alias_1.py) — FNP-ALIAS-1 pins: PySpark alias names over existing kernels, oracle-driven.
 - [test_fnp_bitmap_facade_1.py](test_fnp_bitmap_facade_1.py) — Facade pins for the three Spark bitmap aggregates against oracle cells F6D-*/B8-*.
-- [test_fnp_critic_remediation.py](test_fnp_critic_remediation.py) — Regression pins for critic-found defects, grouped by provenance rather than subsystem.
+- [test_fnp_critic_remediation.py](test_fnp_critic_remediation.py) — Regression pins for critic-found defects, grouped by provenance.
 - [test_fnp_degrees_rust_1.py](test_fnp_degrees_rust_1.py) — DEGREES-RUST-1 pins: facade and SQL-door degrees/radians against DEG-* and DEGI-* cells.
 - [test_fnp_gen_1.py](test_fnp_gen_1.py) — FNP-GEN-1 step-1 pins: generators and semi-structured parsers over the o245 oracle.
 - [test_fnp_gen_1_s34.py](test_fnp_gen_1_s34.py) — FNP-GEN-1 steps 3-4 pins: tuple, csv and csv-schema kernels over the s34 oracle.
-- [test_fnp_gen_1_s34_critic.py](test_fnp_gen_1_s34_critic.py) — FNP-GEN-1 remediation pins: critic cells for corrupt records, timestamps and decimals.
+- [test_fnp_gen_1_s34_critic.py](test_fnp_gen_1_s34_critic.py) — FNP-GEN-1 remediation pins: critic cells (corrupt records, timestamps, decimals, dot access).
 - [test_fnp_math_1.py](test_fnp_math_1.py) — FNP-MATH-1 step-1 red pins over fnp_math_1_spark_oracle.json, both doors, both ANSI settings.
 - [test_fnp_misc_1.py](test_fnp_misc_1.py) — FNP-MISC-1 pins for call_function, call_udf, arrow_udf, arrow_udtf, bucket(Column).
 - [test_fnp_win_1.py](test_fnp_win_1.py) — FNP-WIN-1 pins for window, window_time, session_window over the live oracle.
