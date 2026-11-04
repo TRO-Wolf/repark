@@ -403,7 +403,7 @@ pub(crate) async fn execute_column_move(
         &ddl.position,
     )
     .map_err(DataFusionError::Plan)?;
-    match map_key_move(table.metadata().current_schema(), &mover) {
+    match map_key_move(table.metadata().current_schema(), &mover, &at) {
         MapKeyMove::Applies => {}
         MapKeyMove::KeyStructUnchanged => return cx.ctx.read_empty(),
         MapKeyMove::Refused(NestedTypeRefusal::Unsupported(message)) => {

@@ -89,6 +89,7 @@ mod local_fs_ddl;
 mod ltz_store;
 mod map_column_panic_1;
 mod map_key_alter;
+mod map_key_union;
 mod mem_layout;
 mod merge;
 mod merge_cardinality_mor;

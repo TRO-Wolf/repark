@@ -329,11 +329,11 @@ repark-core's error map.
   unpartitioned MERGE, position deletes), and WO3a opened `validate_write_format` to
   orc/avro.
 - `data_format.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28), reverted by RP-61 (2026-10-28):** `resolve_delete_format` returns PUFFIN on format-version 3, else an explicit per-write `delete-format` option or the `write.delete.format.default` property (through `parse_format`, so `avro` and `orc` are honoured), else the data format. The guard's helpers are removed with their callers: `MorDeleteFormat`, `mor_delete_format`, `fork_mor_delete_format`, `delete_format_under`, `repark_reads_merge_on_read`, `fork_reads_merge_on_read`, `refuse_any_unreadable_delete_format`, `refuse_any_unreadable_fork_delete_format`, `refuse_inherited`, `inherited_delete_format_refusal` and `readable_delete_format`, with the constants `DELETE_FORMAT_PROPERTY`, `DELETE_FORMAT_OPTION`, `DATA_FORMAT_PROPERTY`, `MERGE_MODE_PROPERTY` and `MERGE_ON_READ`. The file is the pre-guard state on `3d24ad40` plus one unit test, `explicit_avro_or_orc_delete_format_is_honoured_on_parquet_data`; the fallback's test `delete_falls_back_to_data_format` is back.
-- `map_key_change.rs` — **MAP-KEY-ALTER-1 (2026-11-03):** Java `ApplyChanges.map`'s key rule
-  at both doors: a nested drop, rename or add under a map key refuses `Unsupported table
-  change: Cannot alter map keys: <map>` (a struct key's own add: `Cannot add fields to map
-  keys`); `map_key_move` no-ops a key-struct child's move as Java does, refuses one deeper.
-  Pins: repark-spark `tests/map_key_alter.rs`.
+- `map_key_change.rs` — **MAP-KEY-ALTER-1 (2026-11-03):** Java `ApplyChanges.map`'s key rule for
+  both DDL doors and both `schema_evolution.rs` unions: a drop, any rename, add, widening or
+  nullability change under a map key refuses `Unsupported table change: Cannot alter map keys: <map>`
+  (a struct key's own add: `Cannot add fields to`; a primitive key widened: `Cannot update`);
+  `map_key_move` no-ops a key-struct child's move unless after itself. Pins: repark-spark `tests/map_key_alter.rs`, `tests/map_key_union.rs`.
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). DML-A adds `WHEN NOT MATCHED BY SOURCE`.
   See [merge/map.md](merge/map.md).
@@ -1986,13 +1986,11 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
   `TransactionAction` trait is `pub(crate)`, so an external engine cannot ask an
   `UpdateSchemaAction` what schema it *would* produce without committing it —
   and the data files must carry the evolved schema's field ids before they are
-  written. The schema update therefore commits first and the write runs against
-  the table it returns. That costs nothing observable: a schema update emits
-  only `AddSchema` + `SetCurrentSchema`, never `AddSnapshot`, so the data commit
-  is still the only new snapshot (pinned in
-  [`schema_evolution/`](schema_evolution/map.md)), and it is what Spark itself
-  does — its `MERGE WITH SCHEMA EVOLUTION` runs the schema changes as commands
-  before the merge. The residue is atomicity: a failure between the two leaves a
+  written. The schema update therefore commits first; it emits no `AddSnapshot`,
+  so the data commit is the only new snapshot (pinned in
+  [`schema_evolution/`](schema_evolution/map.md)), as Spark's `MERGE WITH
+  SCHEMA EVOLUTION` runs the schema changes before the merge. Before it,
+  `map_key_change.rs` checks the union's map-key steps. The residue is atomicity: a failure between the two leaves a
   widened schema and no rows, which is Spark's behaviour too.
 
 ## U6 WRITE-REFUSALS (2026-09-24) — MERGE type changes

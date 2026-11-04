@@ -87,7 +87,7 @@ holds behavior observed from outside the crate.
   `alter_column_move_reorders_and_noop_writes_no_metadata` pins the ANSI-door move end to
   end (reorder, no-op commits nothing (R-001), unknown `AFTER` sibling and
   dotted `AFTER` refuse Spark-style).
-- `alter_map_key.rs` — **MAP-KEY-ALTER-1 (2026-11-03):** the ANSI door refuses a drop, rename or add under a map key with Spark's text, table unchanged; a key-child move is a no-op.
+- `alter_map_key.rs` — **MAP-KEY-ALTER-1 (2026-11-03):** the ANSI door refuses a drop, rename or add under a map key in Spark's text; a key-child move no-ops unless after itself.
 - `ansi_door_string_literals.rs` — **SQP-1 control (C-006):** the native/ANSI door keeps generic literal semantics (backslash literal, `\'` does not lex, raw strings refuse) — Spark-only (ADR-0002).
 - `parser_productions.rs` — pins stock-parser support and the productions that still require
   pre-parse recognition (`ALTER … SET PROPERTIES`, `ALTER … EXECUTE`, and `FOR … AS OF`).

@@ -58,10 +58,10 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_views_6_temp.py](test_ice_views_6_temp.py) — IPI-40 views PR6a1 battery — SQL ``CREATE [OR REPLACE] TEMPORARY VIEW``.
 - [test_ice_views_6_temp_errors.py](test_ice_views_6_temp_errors.py) — IPI-40 views PR6 error-path battery — every temp-view refusal with its complete text.
 - [test_iceberg_hygiene.py](test_iceberg_hygiene.py) — R-ICEBERG-HYGIENE oracles — column-def CREATE + ref DDL time-travel pins.
-- [test_iceberg_load_path.py](test_iceberg_load_path.py) — R-DF-LOAD-PATH / R-DF-LOAD-METADATA-JSON — ``format("iceberg").load(<path>)`` reads.
-  The hadoop hint pins (2026-10-28, 10-29): after a committed `DELETE` on a `type=hadoop` table, a stale `version-hint.text` or a gzip-named newer metadata file reads the newest rows; ICE-HADOOP-GZIP-METADATA-1 and ICE-HADOOP-HINT-WINDOW-1 assert those survivors. Merge facts: the sidecar.
+- [test_iceberg_load_path.py](test_iceberg_load_path.py) — R-DF-LOAD-PATH / R-DF-LOAD-METADATA-JSON — ``format("iceberg").load(<path>)`` reads. The hadoop hint pins (2026-10-28, 10-29): after a committed `DELETE` on a `type=hadoop` table, a stale `version-hint.text` or a gzip-named newer metadata file reads the newest rows; ICE-HADOOP-GZIP-METADATA-1 and ICE-HADOOP-HINT-WINDOW-1 assert those survivors. Merge facts: the sidecar.
 - [test_maintenance_call.py](test_maintenance_call.py) — R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
 - [test_maintenance_policy_1.py](test_maintenance_policy_1.py) — `run_maintenance` policy surface: dry-run default, override kwargs, refusal without a policy.
+- [test_map_key_union_1.py](test_map_key_union_1.py) — MAP-KEY-ALTER-1 delta — evolving BY NAME, MERGE and DataFrame writes refuse a map-key change, writing nothing; a map value still evolves.
 - [test_metadata_tables.py](test_metadata_tables.py) — Oracle — Spark-style Iceberg metadata tables.
 - [test_mw5_baseline_delta.py](test_mw5_baseline_delta.py) — MW-5: re-run the MW-0 merge-on-read growth demo and pin the compact delta.
 - [test_mw8_runbook.py](test_mw8_runbook.py) — Run the documented maintenance runbook end to end and pin what each step changes.
@@ -138,29 +138,29 @@ path expression repointed in the same unit and no other line changed:
 | `_record_ice_column_reorder_1.py` | its usage block sets `PYTHONPATH=python/repark/tests` for the root-helper import; names its own or a sibling's new path in a docstring or recorded string. |
 | `_record_ice_drop_ns_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` when run as a script. |
 | `_record_ice_hadoop_vn_1.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` when run as a script; anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_ice_mixed_case_1.py` | names its own or a sibling's new path in a docstring or recorded string; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_mixed_case_1.py` | names its own or a sibling's new path in a docstring or recorded string; anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `_record_ice_nan_pushdown_1.py` | names its own or a sibling's new path in a docstring or recorded string; reads the root `fixtures/` one level up. |
-| `_record_ice_nested_evo_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_nested_evo_1.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `_record_ice_page_prune_1.py` | its usage block sets `PYTHONPATH=python/repark/tests`; names its own or a sibling's new path in a docstring or recorded string; reads the root `fixtures/` one level up. |
 | `_record_ice_procs_route_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` when run as a script. |
-| `_record_ice_promote_read_1.py` | puts the tests root on `sys.path` when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_promote_read_1.py` | puts the tests root on `sys.path` when run as a script; anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `_record_ice_rdf_sort_parse_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string. |
 | `_record_ice_replace_columns_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` when run as a script. |
 | `_record_ice_tt_resolve_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` when run as a script. |
-| `_record_rdf_options_1_oracle.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_rdf_options_1_oracle.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `_record_v3_multiarg_1.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` when run as a script. |
-| `test_ice_hadoop_vn_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_ice_mixed_case_1.py` | names its own or a sibling's new path in a docstring or recorded string; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ice_hadoop_vn_1.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ice_mixed_case_1.py` | names its own or a sibling's new path in a docstring or recorded string; anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `test_ice_nan_pushdown_1.py` | reads the root `fixtures/` one level up. |
 | `test_ice_page_prune_1.py` | reads the root `fixtures/` one level up. |
-| `test_mw8_runbook.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_rp3_c009_write_default.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_rp4_c004_to_branch.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_sql_harden_cutover.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_v3_lineage_columns.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_v3_live_oracle.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_v3e3_fixtures.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_v3e4_refs_time_travel.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_mw8_runbook.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_rp3_c009_write_default.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_rp4_c004_to_branch.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_sql_harden_cutover.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_v3_lineage_columns.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_v3_live_oracle.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_v3e3_fixtures.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_v3e4_refs_time_travel.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
 
 ## Pointers
 

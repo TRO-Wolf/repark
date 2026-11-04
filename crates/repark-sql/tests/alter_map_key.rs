@@ -186,3 +186,35 @@ async fn native_door_still_evolves_map_value_and_list_element_fields() {
         assert!(acts(create, alter).await, "{alter}");
     }
 }
+
+#[tokio::test]
+async fn native_door_refuses_every_rename_of_a_map_key_field() {
+    for alter in [
+        "RENAME COLUMN mk.key.a TO A",
+        "RENAME COLUMN mk.key.a TO B",
+        "RENAME COLUMN mk.key.A TO B",
+        "RENAME COLUMN mk.key.b TO A",
+        "RENAME COLUMN mk.key.a TO a",
+    ] {
+        refuses_unchanged(MAP_KEY_CREATE, alter, ALTER_MK).await;
+    }
+}
+
+#[tokio::test]
+async fn native_door_refuses_a_map_key_field_moved_after_itself() {
+    for (alter, expected) in [
+        (
+            "ALTER COLUMN mk.key.b AFTER b",
+            "Cannot move mk.key.b after itself",
+        ),
+        ("ALTER COLUMN id AFTER id", "Cannot move id after itself"),
+    ] {
+        refuses_unchanged(MAP_KEY_CREATE, alter, expected).await;
+    }
+    for alter in [
+        "ALTER COLUMN mk.key.b FIRST",
+        "ALTER COLUMN mk.key.a AFTER b",
+    ] {
+        assert!(!acts(MAP_KEY_CREATE, alter).await, "{alter}");
+    }
+}

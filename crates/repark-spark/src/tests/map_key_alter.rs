@@ -403,3 +403,37 @@ async fn map_value_and_list_element_fields_still_evolve() {
         acts_changed(create, "val", alter).await;
     }
 }
+
+#[tokio::test]
+async fn renaming_a_map_key_field_refuses_whatever_the_new_name() {
+    for alter in [
+        "RENAME COLUMN mk.key.a TO A",
+        "RENAME COLUMN mk.key.a TO B",
+        "RENAME COLUMN mk.key.A TO B",
+        "RENAME COLUMN mk.key.b TO A",
+        "RENAME COLUMN mk.key.a TO a",
+        "RENAME COLUMN mk.key.a TO b",
+    ] {
+        refuses_unchanged(MAP_KEY_CREATE, "mk", alter, ALTER_MK).await;
+    }
+}
+
+#[tokio::test]
+async fn moving_a_map_key_field_after_itself_refuses_before_the_no_op() {
+    for (alter, expected) in [
+        (
+            "ALTER COLUMN mk.key.b AFTER b",
+            "Cannot move mk.key.b after itself",
+        ),
+        ("ALTER COLUMN mk.key.B AFTER b", "after itself"),
+        ("ALTER COLUMN id AFTER id", "Cannot move id after itself"),
+    ] {
+        refuses_unchanged(MAP_KEY_CREATE, "mk", alter, expected).await;
+    }
+    for alter in [
+        "ALTER COLUMN mk.key.b FIRST",
+        "ALTER COLUMN mk.key.a AFTER b",
+    ] {
+        acts_unchanged(MAP_KEY_CREATE, "mk", alter).await;
+    }
+}
