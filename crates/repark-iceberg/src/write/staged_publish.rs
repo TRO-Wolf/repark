@@ -71,13 +71,27 @@ async fn discard_rejected(
     if error.kind() == ErrorKind::CommitStateUnknown {
         return;
     }
-    if !publish_absent(catalog, mode, base, handed).await {
+    let Probe::Absent(current) = publish_absent(catalog, mode, base, handed).await else {
         tracing::warn!(
             table = %base.identifier(),
             "staged publish failed but the catalog state is not known to exclude it; keeping its files"
         );
         return;
-    }
+    };
+    let referenced = match &current {
+        Some(current) => match referenced_files(current, base).await {
+            Ok(referenced) => referenced,
+            Err(error) => {
+                tracing::warn!(
+                    ?error,
+                    table = %base.identifier(),
+                    "could not walk the current table's files; keeping the staged publish's files"
+                );
+                return;
+            }
+        },
+        None => HashSet::new(),
+    };
     let mut paths = BTreeSet::new();
     if let Some(handed) = handed {
         paths.extend(snapshot_files(handed, base).await);
@@ -91,7 +105,7 @@ async fn discard_rejected(
         paths.insert(location.to_string());
     }
     paths.extend(written.iter().cloned());
-    for path in paths {
+    for path in paths.into_iter().filter(|path| !referenced.contains(path)) {
         if let Err(error) = base.file_io().delete(&path).await {
             tracing::warn!(
                 ?error,
@@ -102,23 +116,81 @@ async fn discard_rejected(
     }
 }
 
+enum Probe {
+    Kept,
+    Absent(Option<Box<Table>>),
+}
+
 async fn publish_absent(
     catalog: &dyn Catalog,
     mode: StagedTableMode,
     base: &Table,
     handed: Option<&Table>,
-) -> bool {
+) -> Probe {
     let current = match catalog.load_table(base.identifier()).await {
         Ok(current) => current,
-        Err(error) => {
-            return mode == StagedTableMode::Create && error.kind() == ErrorKind::TableNotFound;
+        Err(error)
+            if mode == StagedTableMode::Create && error.kind() == ErrorKind::TableNotFound =>
+        {
+            return Probe::Absent(None);
+        }
+        Err(_) => return Probe::Kept,
+    };
+    let absent = match handed {
+        Some(handed) => !publish_landed(&current, mode, base, handed),
+        None => {
+            mode == StagedTableMode::Replace || current.metadata().uuid() != base.metadata().uuid()
         }
     };
-    let Some(handed) = handed else {
-        return mode == StagedTableMode::Replace
-            || current.metadata().uuid() != base.metadata().uuid();
-    };
-    !publish_landed(&current, mode, base, handed)
+    if absent {
+        Probe::Absent(Some(Box::new(current)))
+    } else {
+        Probe::Kept
+    }
+}
+
+async fn referenced_files(current: &Table, base: &Table) -> Result<HashSet<String>> {
+    let metadata = current.metadata();
+    let known = snapshot_ids(base);
+    let mut referenced: HashSet<String> = metadata
+        .metadata_log()
+        .iter()
+        .map(|entry| entry.metadata_file.clone())
+        .chain(current.metadata_location().map(str::to_string))
+        .collect();
+    let current_id = metadata.current_snapshot_id();
+    for snapshot in metadata.snapshots() {
+        referenced.insert(snapshot.manifest_list().to_string());
+        if known.contains(&snapshot.snapshot_id()) && Some(snapshot.snapshot_id()) != current_id {
+            continue;
+        }
+        let list = snapshot
+            .load_manifest_list(current.file_io(), metadata)
+            .await?;
+        for manifest in list.entries() {
+            if known.contains(&manifest.added_snapshot_id)
+                || !referenced.insert(manifest.manifest_path.clone())
+            {
+                continue;
+            }
+            let loaded = manifest.load_manifest(current.file_io()).await?;
+            referenced.extend(
+                loaded
+                    .entries()
+                    .iter()
+                    .map(|entry| entry.data_file().file_path().to_string()),
+            );
+        }
+    }
+    Ok(referenced)
+}
+
+fn snapshot_ids(table: &Table) -> HashSet<i64> {
+    table
+        .metadata()
+        .snapshots()
+        .map(|snapshot| snapshot.snapshot_id())
+        .collect()
 }
 
 fn publish_landed(current: &Table, mode: StagedTableMode, base: &Table, handed: &Table) -> bool {
@@ -137,11 +209,7 @@ fn publish_landed(current: &Table, mode: StagedTableMode, base: &Table, handed: 
 }
 
 fn new_snapshots<'a>(handed: &'a Table, base: &Table) -> impl Iterator<Item = &'a SnapshotRef> {
-    let known: HashSet<i64> = base
-        .metadata()
-        .snapshots()
-        .map(|snapshot| snapshot.snapshot_id())
-        .collect();
+    let known = snapshot_ids(base);
     handed
         .metadata()
         .snapshots()
