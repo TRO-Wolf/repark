@@ -7,11 +7,11 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-09-12._
+_Last updated: 2026-11-05._
 
 ## Release state
 
-**v1.5.6 (in flight):** after the tag: U-8 (R-011 refuses outside UTC), EXPLAIN-DML-WRITE-1, the map-panic fixes, pin K; the v2 label only, and the v3 label moves to a later release (owner ruling 2026-11-02). [Notes draft](task/roadmap/mid-term/v1-5-6-release-notes-draft.md).
+**v1.5.6 (in flight):** after the tag: U-8 (R-011 refuses outside UTC), EXPLAIN-DML-WRITE-1, the map-panic fixes, pin K; the v2 label only (owner ruling 2026-11-02; [label text](docs/spark-sql-iceberg-parity.md#format-v2-label-supported-behaviour-2026-11-05) filed 2026-11-05, sign-off pending), and the v3 label moves to a later release. [Notes draft](task/roadmap/mid-term/v1-5-6-release-notes-draft.md).
 
 **v1.5.5 (2026-10-13):** R-008 (every write door stores INSERT's instant into `timestamptz_ns`), the frame door (R-019), `current_date` in the session zone, the Postgres write core and routing, the merge module split. Matrix 705/132/5/0 (2026-10-13 run on `293896ce`). Tagged `v1.5.5` at `7fb5f6b2` (re-tag, #1127). [Notes](task/roadmap/mid-term/v1-5-5-release-notes-2026-10-13.md). The re-tag also ships U-1, U-3, U-5, U-6, U-7 (reconciled 2026-10-22).
 
@@ -25,9 +25,7 @@ _Last updated: 2026-09-12._
 
 **v1.5.0 (2026-09-27) — the Spark–Iceberg parity minor.** The gate is met: zero non-EQUAL cells that Spark 4.1.2 answers on the 842-cell matrix, except dated owner carve-outs — **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-27 (main `f7422565`). Carved out: C-1 structured streaming (now 1.7), C-2 nested namespaces (v1.6.0 card), C-4 the v3 variant type; C-3 and C-5 count EQUAL under dated harness rules. Notes: [v1-5-0-release-notes-draft-2026-09-27.md](task/roadmap/mid-term/v1-5-0-release-notes-draft-2026-09-27.md).
 
-**v1.4.2 (2026-09-15):** DECIMAL-CACHE-1 (#632): decimal overflow past 38 digits types like
-PySpark 4.1.2 (`decimal(38,10) * 5` → `decimal(38,8)`) and materializes through `.eager()` /
-`.cache()` / `.persist()`; the cache view conforms every batch or names both fields.
+**v1.4.2 (2026-09-15):** DECIMAL-CACHE-1 (#632): decimal overflow past 38 digits types like PySpark 4.1.2 and materializes through the cache paths.
 
 **v1.4.1 (2026-09-14):** the five-leg wheel set on PyPI (Windows, macOS arm64/x86_64, Linux
 aarch64/x86_64), each an import smoke and one collect; PLATFORM-2..4 stay slated for 1.6.
@@ -40,9 +38,9 @@ aarch64/x86_64), each an import smoke and one collect; PLATFORM-2..4 stay slated
 
 ## Iceberg maturity (2026-10-27)
 
-The level names are the [2026-10-13 re-rating](docs/artifacts/iceberg-rerating-2026-10-13.html)'s. Each capability is judged against the [production-grade definition](docs/production-grade.md); evidence is cited by pointer, on main `105d4625`.
+Levels: the [2026-10-13 re-rating](docs/artifacts/iceberg-rerating-2026-10-13.html)'s, judged against the [production-grade definition](docs/production-grade.md); evidence by pointer, on main `105d4625`.
 
-- **Format-v2 reads and writes: WITHDRAWN 2026-10-29; the targeted re-audit of 2026-11-01 closed AUD-006, AUD-007 and AUD-008 and found AUD-015 (Critical) and AUD-016 (High), both dispatched; the label waits for their fixes, a re-audit of them, and the fork fix of the id-less positional card (ruled 2026-11-01 to block the label).** Filed: the [third audit](docs/audits/iceberg-v2-label-targeted-reaudit-2026-11-01.md), the [second](docs/audits/iceberg-v2-label-independent-reaudit-2026-10-29.md) and the [first](docs/audits/iceberg-v2-label-independent-audit-2026-10-28.md); the [label order](task/wo/ice-v2-label-1/order.md) records it. Fixed since: id-less structs by fork #379 and #380 and RP-64 (PR #1228, `d0562058`); emptied structs by fork #378 and RP-63 (PR #1226). Evidence (signed 2026-10-27, PR #1195): the [parity registry](docs/spark-sql-iceberg-parity.md) (R-011, ICE-COMMIT-UNKNOWN-1, ICE-LOCAL-COMMIT-POINT-1); the closure ledgers [nested-literal-seam-1](task/ledgers/staging/nested-literal-seam-1-ledger.md) and [ice-replace-kill-doors-1](task/ledgers/completed/ice-replace-kill-doors-1-ledger.md); the integrity ledger [ice-integrity-pins-1](task/ledgers/staging/ice-integrity-pins-1-ledger.md); the [bound record](docs/perf/resource-bound-2026-10-26.md); the cross-read leg of [aws-acceptance](.github/workflows/aws-acceptance.yml) (run 40295982749); carve-outs ENC-1 items 1 and 5, ENC-CTAS-REPLACE-1 and NESTED-TEXT-LEAF-STORE-1 (fix 1.5.7). Carried on the label: the hint walk (#1205, `9ab67d7d`), NESTED-LITERAL-SEAM-1 (#1197), ICE-REPLACE-KILL-DOORS-1 (#1196), and the replace residuals as declared. Owner ruling 2026-11-02: Avro and ORC delete files are excluded from this label; CORPUS-1 runs after RP-65.
+- **Format-v2 reads and writes: WITHDRAWN 2026-10-29; the targeted re-audit of 2026-11-01 closed AUD-006, AUD-007 and AUD-008 and found AUD-015 (Critical) and AUD-016 (High), both dispatched; the label waits for their fixes, a re-audit of them, and the fork fix of the id-less positional card (ruled 2026-11-01 to block the label).** Filed: the [third audit](docs/audits/iceberg-v2-label-targeted-reaudit-2026-11-01.md), the [second](docs/audits/iceberg-v2-label-independent-reaudit-2026-10-29.md) and the [first](docs/audits/iceberg-v2-label-independent-audit-2026-10-28.md); the [label order](task/wo/ice-v2-label-1/order.md) records it. Fixed since: id-less structs by fork #379 and #380 and RP-64 (PR #1228, `d0562058`); emptied structs by fork #378 and RP-63 (PR #1226). Evidence (signed 2026-10-27, PR #1195): the [parity registry](docs/spark-sql-iceberg-parity.md) (R-011, ICE-COMMIT-UNKNOWN-1, ICE-LOCAL-COMMIT-POINT-1); the closure ledgers [nested-literal-seam-1](task/ledgers/staging/nested-literal-seam-1-ledger.md) and [ice-replace-kill-doors-1](task/ledgers/completed/ice-replace-kill-doors-1-ledger.md); the integrity ledger [ice-integrity-pins-1](task/ledgers/staging/ice-integrity-pins-1-ledger.md); the [bound record](docs/perf/resource-bound-2026-10-26.md); the cross-read leg of [aws-acceptance](.github/workflows/aws-acceptance.yml) (run 40295982749); carve-outs ENC-1 items 1 and 5, ENC-CTAS-REPLACE-1 and NESTED-TEXT-LEAF-STORE-1 (fix 1.5.7). Carried on the label: the hint walk (#1205, `9ab67d7d`), NESTED-LITERAL-SEAM-1 (#1197), ICE-REPLACE-KILL-DOORS-1 (#1196), and the replace residuals as declared. Owner 2026-11-02: Avro and ORC deletes excluded from this label; CORPUS-1 after RP-65.
 - **Format-v3 core: HARDENED-NARROW** until V3-LABEL-1.
 - **Nanosecond columns and struct writes: EXPERIMENTAL** (rated 2026-10-13).
 
