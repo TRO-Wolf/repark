@@ -27,11 +27,13 @@ SHA-256 of the AUD-015 cells file:
 
 `0507e12cfeefc7f6514a32517d2a4a972a91b647838cd3f8427b6b68a8d73377`
 
-- [ansi_subscript_field_cells.jsonl](ansi_subscript_field_cells.jsonl) — 93 cells measured
+- [ansi_subscript_field_cells.jsonl](ansi_subscript_field_cells.jsonl) — 137 cells measured
   2026-11-05 on Spark 4.1.2 with Iceberg 1.11.0 (hadoop catalog): array subscripts, `element_at`,
   `try_element_at`, lambdas, CASE and AND guards, duplicate and case-colliding struct fields, and
   DELETE, UPDATE, INSERT and MERGE statements that reach them, under ANSI, legacy and
-  case-sensitive confs, each with Spark's answer or refusal text and its readback after DML.
+  case-sensitive confs, each with Spark's answer or refusal text and its readback after DML;
+  44 delta cells add Column-index subscripts on the SQL and DataFrame doors (`insertInto`
+  included) and `struct(...)` field naming and collisions.
   Read by [../test_ansi_subscript_field.py](../test_ansi_subscript_field.py).
 
 ## Pointers
