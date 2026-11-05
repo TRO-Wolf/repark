@@ -18557,7 +18557,7 @@ oracle is involved.
 
 ## Format-v2 label: supported behaviour (2026-11-05)
 
-**Status: PRODUCTION (label PR 2026-11-05; audited sign-off pending).** Supersedes the draft [v2-label-supported-behaviour-draft-2026-11-03.md](corpus/v2-label-supported-behaviour-draft-2026-11-03.md) (ICE-V2-LABEL-1, U-13). Dated history: WITHDRAWN 2026-10-29 pending the fixes of AUD-006, AUD-007, AUD-008 (ledger [ice-v2-label-1-ledger.md](../task/ledgers/staging/ice-v2-label-1-ledger.md) C-072); the targeted re-audit of 2026-11-01 ruled NO on AUD-015 and AUD-016 (its section 2, [report](audits/iceberg-v2-label-targeted-reaudit-2026-11-01.md)). Those two fixes have merged since (table below). The re-audit of the fixes has not run, so this row carries no sign-off. The open items are listed under "Open at this commit".
+**Status: PROPOSED for PRODUCTION (label text 2026-11-05, ICE-V2-LABEL-1); the label re-dates to PRODUCTION only on the audited sign-off (ICE-V2-LABEL-REAUDIT-1, next); until then the maturity stays WITHDRAWN 2026-10-29 (ledger C-072).** Supersedes the draft [v2-label-supported-behaviour-draft-2026-11-03.md](corpus/v2-label-supported-behaviour-draft-2026-11-03.md) (ICE-V2-LABEL-1, U-13). Dated history: WITHDRAWN 2026-10-29 pending the fixes of AUD-006, AUD-007, AUD-008 (ledger [ice-v2-label-1-ledger.md](../task/ledgers/staging/ice-v2-label-1-ledger.md) C-072); the targeted re-audit of 2026-11-01 ruled NO on AUD-015 and AUD-016 (its section 2, [report](audits/iceberg-v2-label-targeted-reaudit-2026-11-01.md)). Those two fixes have merged since (table below). The re-audit of the fixes has not run, so this row carries no sign-off. The open items are listed under "Open at this commit".
 
 Gate statement (owner, 2026-11-02 and 2026-11-03), verbatim:
 
@@ -18598,7 +18598,7 @@ Evidence: [names-cells-2026-11-03.jsonl](corpus/names-cells-2026-11-03.jsonl) (2
 - Temporary-view column resolution: columnresolution-views statements 1 and 3 to 8 are EQUAL; statement 2 is D10 (not claimed).
 - SHOW TABLE EXTENDED partition and pattern refusals are EQUAL_REFUSE (statements 15 to 21).
 
-The names corpus does not support any claim for `IDENTIFIER()`, the double-quoted-identifiers configuration, global temporary views, one-part CREATE and DROP SCHEMA, session variables or EXECUTE IMMEDIATE. Those are excluded below. The AUD-015 table ([ident_dialect_1_cells.jsonl](../python/repark/tests/sql/data/ident_dialect_1_cells.jsonl), 1200 cells, measured before the fixes) has no post-fix re-measure in the corpus, so no family-2 claim rests on it.
+The names corpus does not support any claim for `IDENTIFIER()`, the double-quoted-identifiers configuration, global temporary views, one-part CREATE and DROP SCHEMA, session variables or EXECUTE IMMEDIATE. Those are excluded below. The configuration is accepted and not honoured, and CREATE VIEW on the hadoop catalog persists where Spark's hadoop catalog refuses; the owner ruled both on 2026-11-03 as a card and a capability difference (names-rule, groups D2 and D9). The AUD-015 table ([ident_dialect_1_cells.jsonl](../python/repark/tests/sql/data/ident_dialect_1_cells.jsonl), 1200 cells, measured before the fixes) has no post-fix re-measure in the corpus, so no family-2 claim rests on it.
 
 ### Family 3: nested types
 
@@ -18606,7 +18606,7 @@ Evidence: [nested-cells-2026-11-03.jsonl](corpus/nested-cells-2026-11-03.jsonl) 
 
 - No panic in 2973 cells on either door (nested-rule, summary).
 - Full-row reads (`SELECT *` and the column) of struct, map, list and list-of-struct columns on Parquet and Avro match Spark on every evolution step but `drop_last`, on both doors and on the writer axis: 280 of 280 cells.
-- The ALTER and schema-union refusals on a map-key struct field match Spark's text (MAP-KEY-ALTER-1, PR #1256). The drop arm is not claimed; see Open item 2.
+- The ALTER refusals on a map-key struct field, DROP COLUMN included, refuse on the Spark door with Spark's text and on the native door, committing nothing; the schema-evolution unions that would change a map-key field refuse before any write (MAP-KEY-ALTER-1, PR #1256; ledger [map-key-alter-1-ledger.md](../task/ledgers/completed/map-key-alter-1-ledger.md) C-001, C-002, C-004). The fork-side drop is a lead only; see Open item 2.
 - A field access after a subscript answers on the Spark door (SUBSCRIPT-DOT-ACCESS-1, PR #1259). The native door keeps refusing that form, which is outside the claim.
 - Id-less struct children read by id (RP-64, PR #1228, fork PRs #379 and #380; ledger C-078). The corpus did not measure this shape; its evidence is the ICE-IDLESS pins.
 
@@ -18641,8 +18641,9 @@ Evidence: [commit-cells-2026-11-04.jsonl](corpus/commit-cells-2026-11-04.jsonl) 
 | Zero hint with no `v0` (D5; card HADOOP-HINT-ZERO-TEXT-1) | 84 cells | Refusal text only; both sides refuse (ledger C-011). |
 | Listing I/O error on an unlistable metadata directory (C-013; card HADOOP-METADATA-DIR-UNLISTABLE-1) | open lead | Neither reading is a wrong read (ledger C-013). |
 | `IDENTIFIER()` (names D1) | 782 cells, plus 36 D1c | Owner, 2026-11-03 (family exclusion). |
-| `spark.sql.ansi.doubleQuotedIdentifiers` accepted and not honoured (names D2, D3) | 32 + 2 D2c (2 S1), 18 | Owner, 2026-11-03: accepted and not honoured. The two S1 cells are the temporary-view DROP listed under Open item 3. |
+| `spark.sql.ansi.doubleQuotedIdentifiers` accepted and not honoured (names D2, D3) | D2 32 and D2c 2; D3 18 | Owner, 2026-11-03 ("proceed with your recommendations" on the names report): accepted and not honoured. It creates a temporary view that Spark refuses (two S2 cells); its DROP is the two S1-tagged cells, with no table data involved. A card, not a wrong write (names-rule, group D2). |
 | Global temporary views (names D6) | 48 cells | Owner, 2026-11-03. |
+| `CREATE VIEW` persisting on the hadoop catalog where Spark's hadoop catalog refuses (names D9); the memory-catalog half reads the same way | 4 cells | Owner, 2026-11-03 ("proceed with your recommendations" on the names report): a capability difference against the hadoop reference, not a wrong write; a card (names-rule, group D9). |
 | One-part `CREATE SCHEMA` and `DROP SCHEMA` (names D4) | 44 cells, plus 166 D4c | Owner, 2026-11-03. |
 | Session variables and `EXECUTE IMMEDIATE` (names D12) | 124 cells | Owner, 2026-11-03; listed for the owner in names-rule. |
 | ORC nested reads (nested D3; card ICE-ORC-AVRO-1, row R-1) | 323 cells | Owner, 2026-11-03: outside the parity claim. |
@@ -18665,9 +18666,9 @@ Evidence: [commit-cells-2026-11-04.jsonl](corpus/commit-cells-2026-11-04.jsonl) 
 
 These items keep the row from a sign-off. Each needs the owner's ruling or a merge before the label can be signed.
 
-1. The re-audit of the AUD-015 and AUD-016 fixes has not run. The 2026-11-01 report says the label "should not be re-dated yet" until it does.
-2. `DROP COLUMN` of a map-key struct field is accepted on RePark where Spark refuses it, and the fork then produces duplicate map keys (third audit, AUD-020 item 5; nested-rule, dated 2026-11-04; card F-MAP-KEY-DROP-ALTER-1). Under the gate statement this is a wrong write, and no owner ruling covers it. Family 3 does not claim the drop arm.
-3. Twelve facade names cells where RePark acts and Spark refuses: 2 S1 (a DROP VIEW of a temporary view under the double-quoted configuration) and 10 S2 (CREATE TABLE and CREATE VIEW, in the identifier-clause, double-quoted and show-views files). Under the gate statement these are wrong writes unless the owner rules on them.
+1. Resolved in the record: the status is PROPOSED for PRODUCTION, not PRODUCTION. The audited sign-off (ICE-V2-LABEL-REAUDIT-1, next) re-audits the AUD-015 and AUD-016 fixes, and the 2026-11-01 report's "should not be re-dated yet" holds until that sign-off.
+2. The map-key DROP arm is a fork-side lead only, unreachable from RePark's doors. Since PR #1256 (merged `3dc43ce1`) RePark refuses a DROP COLUMN of a field inside a map-key struct on both doors, and the schema-evolution unions too; the fork-side drop stays open on card F-MAP-KEY-DROP-ALTER-1 (nested-rule, dated 2026-11-04). The third audit's AUD-020 item 5 predates PR #1256. Records: map-key-alter-1 ledger C-001, C-002, C-004.
+3. Four facade names cells where RePark creates a table that Spark refuses: `CREATE TABLE tab` in the view pass of the identifier-clause and identifier-clause-legacy files, statement 39, one cell per catalog in each file (S2). The owner's 2026-11-03 ruling covers the other eight of the twelve (the double-quoted configuration, 4 cells, and CREATE VIEW, 4 cells; the memory-catalog halves are the names-rule's own capability reading, D9). The ruling as relayed does not name these four, and the names-rule groups do not place them, so they stay open until the owner rules. They sit in the IDENTIFIER() files, which the owner excluded as a family; the owner should confirm that covers them.
 4. Expression answers that Spark refuses: D10 (4 cells) and D13 (6 cells, 3 of them S2). Family 3 excludes expression cells, but no owner ruling covers these.
 5. The family-1, 3, 4 and 5 cells files hold the pre-fix RePark column. Their post-fix counts are the ledgers' record, not a re-measure on main.
 6. The names family's AUD-015 table has no post-fix re-measure in the corpus (see family 2).
