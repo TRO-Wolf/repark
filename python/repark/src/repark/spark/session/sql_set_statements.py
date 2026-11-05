@@ -33,6 +33,7 @@ from repark.errors import (
     UnsupportedOperationException,
 )
 from repark import _native
+from repark.spark.session.builder_conf import SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY
 from repark.spark.session.create_dataframe_rows import _materialize_arrow_as_memtable_frame
 from repark.spark.session.session_configuration import (
     SPARK_SQL_ANSI_ENABLED_KEY,
@@ -89,6 +90,10 @@ _SET_BARE_RE = re.compile(r"SET\Z", re.IGNORECASE)
 _SET_TO_RE = re.compile(rf"SET\s+{_KEY_TOKEN}\s+TO\b", re.IGNORECASE)
 _RESET_KEY_RE = re.compile(rf"RESET\s+{_KEY_TOKEN}\Z", re.IGNORECASE)
 _RESET_BARE_RE = re.compile(r"RESET\Z", re.IGNORECASE)
+
+_SET_READ_DEFAULTS: dict[str, str] = {
+    SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY: "false",
+}
 
 _TYPED_VALUE_KINDS: dict[str, str] = {
     "spark.sql.shuffle.partitions": "int",
@@ -246,6 +251,8 @@ def _unquote_zone_literal(literal: str) -> str:
 def _read_frame(session: ReparkSession, key: str) -> DataFrame:
     """Answer ``SET <key>`` — the effective conf value, or ``<undefined>`` when unset."""
     value = session.conf.get(key, _UNDEFINED_CONF_VALUE)
+    if value == _UNDEFINED_CONF_VALUE:
+        value = _SET_READ_DEFAULTS.get(key, value)
     return _pair_frame(session, [(key, _redact_conf_value(key, value))])
 
 

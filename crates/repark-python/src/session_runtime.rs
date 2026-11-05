@@ -4,8 +4,9 @@ use datafusion::error::DataFusionError;
 use pyo3::prelude::*;
 use repark_core::{Error, ReparkSession, ReparkSessionBuilder, Result, SESSION_TIME_ZONE_KEY};
 use repark_functions::ansi::{
-    SPARK_SQL_ANSI_ENABLED_KEY, SparkAnsiConfig, parse_runtime_spark_sql_ansi_enabled,
-    parse_spark_sql_ansi_enabled,
+    SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY, SPARK_SQL_ANSI_ENABLED_KEY, SparkAnsiConfig,
+    double_quoted_identifiers_refusal_message, parse_double_quoted_identifiers,
+    parse_runtime_spark_sql_ansi_enabled, parse_spark_sql_ansi_enabled,
 };
 use repark_functions::case_sensitive::{
     SPARK_SQL_CASE_SENSITIVE_KEY, SparkCaseSensitiveConfig, parse_runtime_spark_sql_case_sensitive,
@@ -173,6 +174,14 @@ fn apply_runtime_config(
             })?
         };
         write_ansi_flag(session, enabled)?;
+        return Ok(());
+    }
+    if key == SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY {
+        if parse_double_quoted_identifiers(value).map_err(refused_boolean_knob)? {
+            return Err(Error::NotImplemented(
+                double_quoted_identifiers_refusal_message(),
+            ));
+        }
         return Ok(());
     }
     if key == SESSION_TIME_ZONE_KEY {
