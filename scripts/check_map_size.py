@@ -84,7 +84,7 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "crates/repark-spark/src/call/map.md": (444, 36836),
     "crates/repark-spark/src/map.md": (2524, 211618),
     "crates/repark-spark/src/router/map.md": (332, 27642),
-    "crates/repark-spark/src/tests/map.md": (2720, 237170),
+    "crates/repark-spark/src/tests/map.md": (2719, 237168),
     "crates/repark-spark/src/view_ddl/map.md": (220, 16914),
     "crates/repark-spark/src/void_type/map.md": (245, 17027),
     "crates/repark-spark/tests/map.md": (602, 57758),

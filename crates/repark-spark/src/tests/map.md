@@ -156,7 +156,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `view_use_resolution.rs` — **IPI-40 PR3 r2b (2026-09-23):** USE resolution per view entry point on the engine: bare and two-part ALTER VIEW SET/UNSET/RENAME, two-part CREATE and DROP after `USE ice`, and SHOW VIEWS IN with a one-part namespace after USE and an explicit `cat.ns` under a different current catalog. Each is killed by reverting its own call site to DataFusion's `ctx` defaults.
 - `show_tblproperties_routing.rs` — SHOW TBLPROPERTIES pins the complete view row set, warehouse location, Arrow schema, viewless catalog fallback, and error routing. `bare_name_completes_from_use_session_defaults` pins the same rows for a bare name after `use_ddl::set_session_defaults(ice, sales)`; it goes red if completion reads DataFusion's `default_catalog`. `commented_view_hides_comment_in_listing_and_key_lookup` (PR5 r2) pins a commented view's full listing without `comment` and the `('comment')` miss row. **WO TBLPROPS-1 (2026-09-26):** the table arms answer — `viewless_catalog_table_answers_after_one_view_probe` and `missing_view_with_existing_table_answers` keep the one-probe counts against the table rows, and `router_preserves_show_parse_error_and_answers_table` pins the fresh five through the router.
 - `show_tblproperties.rs` — **WO TBLPROPS-1 (2026-09-26):** the table contract on the Rust door, end to end through `execute`: the fresh five rows, the stored `owner` and `comment` never rows (each also a keyed miss), the decimal snapshot id after insert, the `SET TBLPROPERTIES` seven with `format=iceberg/orc`, the v1 single `format-version`, a stored codec beating `zstd` and the default after `UNSET` (the fork stamps the codec at CREATE, so only the UNSET pin bites the default branch), keyed hits and case-sensitive misses, two/one-part names after `USE`, the empty temp-view frame, the missing-table refusal, and the fall-through sweep over every arm.
-- `show_create_view_routing.rs` — **IPI-40 PR5 (2026-09-24, V-SHOW-CREATE):** `SHOW CREATE TABLE` on a view through the router. It pins the v1 and v2 texts, including the Arrow schema and the metadata location. It pins bare and two-part names after USE, the stored body verbatim (a bare `t` stays unqualified) and backslash-escaped quotes in a column doc and a view comment. Near misses keep the answers of main d4caca39, whose view arm is `Ok(true) => None` (`/tmp/xb-views5/target/probe5/r5/m01-main-equivalence.log`): `AS SERDE` on a view (the `Diagnostic`-wrapped parser error at column 32), and a bare name shadowed by a session table (the
+- `show_create_view_routing.rs` — **IPI-40 PR5 (2026-09-24, V-SHOW-CREATE):** `SHOW CREATE
+  TABLE` on a view through the router. It pins the v1 and v2 texts, including the Arrow schema
+  and the metadata location. It pins bare and two-part names after USE, the stored body
+  verbatim (a bare `t` stays unqualified) and backslash-escaped quotes in a column doc and a
+  view comment. Near misses keep the answers of main d4caca39, whose view arm is `Ok(true) => None`
+  (`/tmp/xb-views5/target/probe5/r5/m01-main-equivalence.log`): `AS SERDE` on a view (the `Diagnostic`-wrapped
+  parser error at column 32), and a bare name shadowed by a session table (the
   `information_schema` refusal). `load_view` returning `ViewNotFound` or `FeatureUnsupported`
   answers the full `TABLE_OR_VIEW_NOT_FOUND` text for `fault`. Any other load failure, and a
   `view_exists` failure (pinned at `try_show_create_intercept` and through the router), keeps
@@ -459,8 +465,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `crates/repark-sql/src/v3/cow.rs` hash for the two ANSI twins V3-11 adds there, and once more
   in the remediation round that renamed them off `sparks_..._order`; the other three hashes are
   untouched.
-- `v3_fanout_order.rs` — **WO ROW-LINEAGE-ORDER-1 (2026-09-26):** the delegated-`INSERT`
-  end-to-end pins for Spark's fanout-writer file order through the fork's
+- `v3_fanout_order.rs` — **WO ROW-LINEAGE-ORDER-1 (2026-09-26):** the delegated-`INSERT` end-to-end pins for Spark's fanout-writer file order through the fork's
   `DataFileCommitOrder` hook. The scoreboard cell verbatim (S1, `[(2,0,1),(3,3,2),
   (4,2,1)]`, red before as `[(2,2,1),(3,3,2),(4,1,1)]`), seven keys at shuffle 4
   (S2, file order `y,z,w,x,q,a1,b1`), the one-bucket tie at shuffle 4 and at the
@@ -470,17 +475,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   hook). S4 (`INSERT OVERWRITE`) is deferred to R-FILEORDER-2: both doors commit
   overwrites through owned stage-then-swap, so the fork's `Overwrite` arm is
   unreachable.
-- `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
-  unreachable names and the sketch family; passthrough attach pin.
+- `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six unreachable names and the sketch family; passthrough attach pin.
   **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):** the source pin
   matches the valve call inside the shared pre-gate chain.
-- `spark_string_literals.rs` — **SQP-1:** the string-literal escape pins (C-001..C-008, C-010,
-  C-012): the escape domain, `\'`/unpaired-backslash lexing, adjacency + the DataFusion-native
+- `spark_string_literals.rs` — **SQP-1:** the string-literal escape pins (C-001..C-008, C-010, C-012): the escape domain, `\'`/unpaired-backslash lexing, adjacency + the DataFusion-native
   `OPTIONS` carve-out, quote-runs-are-not-triple-quotes, raw strings, LIKE/RLIKE/backtick controls,
   exactly-once-on-every-path, the one-caller grep pin, the Generic-dialect honesty pin.
-- `string_literal_escape_1.rs` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the PE-10 pins
-  (the SQP-1 leaf is byte-frozen): `""` collapse, `r"…"`, raw `''`/`""` head/tail splits,
-  verbatim doublings kept, raw values marked, the borrow pin, quote-awareness units.
+- `string_literal_escape_1.rs` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the PE-10 pins (the SQP-1 leaf is byte-frozen): `""` collapse, `r"…"`, raw `''`/`""` head/tail splits, verbatim doublings kept, raw values marked, the borrow pin, quote-awareness units.
   **DIFF-PROBE fold (2026-09-29):** `verbatim_ddl_positions_take_default_treatment`
   pins verbatim DDL canonicals (property lists borrowed, backslashes unescaped,
   `COMMENT` doubles rewritten single-quoted, the `SELECT comment` alias guard,
@@ -493,9 +494,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   wiring: `Some(false)` answers default values, `None` keeps the flag.
 - `subscript_dot_access.rs` — **SUBSCRIPT-DOT-ACCESS-1 (2026-11-04):** nested-cells `A-read` rows that refused `Dot access not supported`: 224 Spark-door rows on fixtures from the `A-ddl` replay (format swapped) answer or refuse as Spark; skips counted per reason. Plus the card statements and grammar neighbours (helpers of `map_key_alter.rs`, `nested_assign_oracle.rs`).
 - `ansi_subscript_field.rs` — ANSI-SUBSCRIPT-AND-AMBIGUOUS-FIELD-1 (2026-11-05): the re-audit `f3-ruling1` cells and nested D10/D13 rows refuse as Spark 4.1.2.
-- `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
-  B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
-  leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
+- `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/ B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12), leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
 - `cast_binary_ansi.rs` — **BL-11 (2026-09-16):** the ANSI-dimmed door pins — integral encode
   as big-endian bytes of natural width with value, Arrow type and nullability when ANSI is
   off; `CAST_WITH_CONF_SUGGESTION` plus the conf remedy for integrals when ANSI is on;
