@@ -1,5 +1,4 @@
-Commit outcome: the reference rule and the fault cells (2026-11-04)
-====================================================================
+# Commit outcome: the reference rule and the fault cells (2026-11-04)
 
 CORPUS-5-COMMIT, family 5 of the CORPUS-1 reference corpus (AUD-002, AUD-011). It extends
 [commit-inventory-2026-11-03.md](commit-inventory-2026-11-03.md), whose 61 upstream rows and
@@ -13,8 +12,7 @@ this unit. The `spark` column of every cell is the reference contract read from 
 source and tests cited here. It is not a JVM run, and the head notes in R1 name the source for
 each head.
 
-The rule
---------
+## The rule
 
 **R1. The command-result contract, per head.** The twelve heads are CTAS, RTAS, INSERT,
 INSERT OVERWRITE, DELETE, UPDATE, MERGE, TRUNCATE, ALTER TABLE ADD/DROP/RENAME COLUMN, ALTER TABLE
@@ -109,8 +107,7 @@ at that publish reads back as committed, and this is pinned by
 3. **Java refresh walk** (`type=hadoop` only): the hint, then the forward walk (R3). This is the
    version a Java reader of the same directory takes as current.
 
-The fixture (kind C, fault injection)
--------------------------------------
+## The fixture (kind C, fault injection)
 
 The fixture is a throwaway Rust test in `crates/repark-sql/tests` of the lane clone. It was left
 untracked, is not committed, and is not product code. It extends the `FaultCatalog` of
@@ -160,8 +157,7 @@ The classes are as follows:
 A panic would have been class `PANIC`, reported first. A success reported for an uncommitted change
 would have been S1.
 
-Summary
--------
+## Summary
 
 **Panics: none. S1: none.** 364 cells. On every one of the 364, the outcome or the state was read
 back.
@@ -232,6 +228,7 @@ row "5 Commit outcome". It is not edited here. The cells support it as follows:
 - D2 (12 S2 cells) is a failure at the publish call, not after it, so it does not contradict the
   row as written. A label claim for CTAS, RTAS or CREATE TABLE under a failed publish is not
   supported until D2 is ruled on.
+- 2026-11-04: fixed by STAGED-PUBLISH-CLEANUP-1 (PR #1261). The twelve D2 cells read EQUAL on both doors: a rejected staged publish removes its files, and a landed publish is kept. Re-measured at 20389129 with 0 class moves.
 
 The estimate row ("about 144 … 12 heads x 6 failure points x 2 doors", 2.5 to 5 hours) is not
 edited either. This unit ran 364 cells (the catalog axis doubled the count) in 0.3 hours (0.5 for the whole lane, rule reading and gates included).

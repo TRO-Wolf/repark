@@ -1,11 +1,10 @@
 # map — crates/repark-spark/tests/
 
-CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002).
+CC-3 (2026-08-30): comments condensed to one line.
 
 ## Purpose
 
-Integration tests of the assembled Spark door: a real `repark_core::ReparkSession` built with
-`SparkExtension` + `SparkDialect`, exercised end-to-end.
+Integration tests of the assembled Spark door: a real `repark_core::ReparkSession` built with `SparkExtension` + `SparkDialect`, exercised end-to-end.
 
 ## Contents
 
@@ -548,10 +547,11 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `create_physical_plan`); an intervening filter between two live windows stacks two
   (`sql_intervening_filter_between_windows_stacks_window_agg_exec`). Ledger:
   [../../../task/ta1-sql-fusion-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-15-ta1-sql-fusion-ledger.md).
+- [staged_publish_cleanup.rs](staged_publish_cleanup.rs) — **STAGED-PUBLISH-CLEANUP-1 (2026-11-04):** the Spark door's staged CTAS, RTAS and CREATE TABLE publishes (the D2 table and nine probes); `pins: staged-publish-cleanup-1/C-001`.
 - [post_publish_outcome.rs](post_publish_outcome.rs) — **ICE-POST-PUBLISH-OUTCOME-1 (2026-10-28):** a CTAS and an RTAS whose session name refresh fails after the publish report the committed outcome, and the next statement lists the table once the refresh recovers. A catalog failure before the publish still fails and leaves no table (the control). A fault-injecting catalog wrapper arms the failure after the publish. Red on `321c6095` (`Err("Unexpected => table listing unavailable")`), green at `24e0c3c7`.
   The round-4 measurement of C-005 and C-006 (two failed listing references, then success; no product site calls the old invalidation directly) is a records entry in its unit's sidecar; this file pins none of them.
   The round-4 gate runs of C-008 (the suites and the facade at `78827c24`, copied) are records in its unit's sidecar; this file pins none of them.
-- [delete_format_guard.rs](delete_format_guard.rs) — **RP-61-POSDEL-FORMAT-REPIN-1 (2026-10-28): the post-revert contract.** Twenty-four `#[tokio::test]` functions, looped over Avro and ORC where a format applies, on format-v2 merge-on-read tables. An inherited Avro or ORC delete format writes its position-delete file in the data format on the RePark route (DELETE and UPDATE), on the fork route (a `BETWEEN` DELETE, an IN-list DELETE, a `BETWEEN` UPDATE) and on MERGE, and each reads back: DELETE `[0, 4]`, UPDATE `[0, 4, 11, 12, 13]`, one delete file each. An explicit `write.delete.format.default` of avro or orc is honoured on every route, and an explicit Parquet format on Avro data still writes Parquet. The case-varied targets (`ICE.NS.T`, `ice.NS.t`, `ice.ns.T`) and the branch-qualified targets match the Parquet outcome on the same statement. A branch DML or MERGE on an inherited Avro or ORC table commits on the branch, a comment-prefixed one too, and a session WAP branch is created and committed on. The upper-case `MERGE-ON-READ` mode runs copy-on-write on the fork route and on the branch DELETE; the RePark route still writes a delete file. The Parquet controls and the BUG-001 pin are unchanged. Red first: on the pin `ea0b7741` with the reverted code, the Avro and ORC reads fail with `Corrupt footer` (the AUD-003 shape); on the RP-61 pin with the interim guard, 15 of 24 fail on the guard's refusals. The interim ICE-DELETE-FORMAT-GUARD-1 tests are gone; their clause ids stay in the merged ledger and its sidecar.
+- [delete_format_guard.rs](delete_format_guard.rs) — **RP-61-POSDEL-FORMAT-REPIN-1 (2026-10-28): the post-revert contract.** Twenty-four `#[tokio::test]` functions, looped over Avro and ORC where a format applies, on format-v2 merge-on-read tables. An inherited Avro or ORC delete format writes its position-delete file in the data format on the RePark route (DELETE and UPDATE), on the fork route (a `BETWEEN` DELETE, an IN-list DELETE, a `BETWEEN` UPDATE) and on MERGE, and each reads back: DELETE `[0, 4]`, UPDATE `[0, 4, 11, 12, 13]`, one delete file each. An explicit `write.delete.format.default` of avro or orc is honoured on every route, and an explicit Parquet format on Avro data still writes Parquet. The case-varied targets (`ICE.NS.T`, `ice.NS.t`, `ice.ns.T`) and the branch-qualified targets match the Parquet outcome on the same statement. A branch DML or MERGE on an inherited Avro or ORC table commits on the branch, a comment-prefixed one too, and a session WAP branch is created and committed on. The upper-case `MERGE-ON-READ` mode runs copy-on-write on the fork route and on the branch DELETE; the RePark route still writes a delete file. The Parquet controls and the BUG-001 pin are unchanged. The interim ICE-DELETE-FORMAT-GUARD-1 tests are gone; their clause ids stay in the merged ledger and its sidecar.
   (the lock, route and gate measurements are records in its unit's sidecar; this file pins none of them)
   (the verification of this unit, a records entry in its sidecar; this file pins none of it)
   (the merge of this unit, a records entry in its sidecar; this file pins none of it)
