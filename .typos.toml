@@ -22,6 +22,7 @@ extend-exclude = [
   "python/repark/tests/functions/fnp_math_1_spark_oracle.json",
   "python/repark/tests/functions/fnp_math_1_q12_q15_oracle.json",
   "crates/repark-common/src/java_case_dump.txt",
+  "docs/corpus/reaudit-cells-2026-11-05.jsonl",
 ]
 
 [default.extend-identifiers]
