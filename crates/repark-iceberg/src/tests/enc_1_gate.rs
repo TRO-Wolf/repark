@@ -24,6 +24,7 @@ const PRIMITIVES: &[(&str, &[&str])] = &[
             GUARD,
             "repark-iceberg/src/catalog/provider.rs",
             "repark-iceberg/src/write/sink_offsets/append_fence.rs",
+            "repark-iceberg/src/write/staged_publish.rs",
         ],
     ),
     ("Table>::builder()", &[]),

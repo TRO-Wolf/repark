@@ -565,9 +565,7 @@ async fn execute_schema_create(
         let staged = StagedTableTransaction::begin_replace(&existing, creation)
             .await
             .map_err(iceberg_err)?;
-        staged
-            .add_data_files(Vec::new())
-            .commit(catalog.as_ref())
+        repark_iceberg::write::commit_staged(staged, Vec::new(), catalog.as_ref())
             .await
             .map_err(iceberg_err)?;
     } else if catalogs.location_policy(&create.catalog)
@@ -744,10 +742,7 @@ async fn commit_staged_schema_only(
         repark_iceberg::catalog::begin_staged_create(plan.file_io, table_ident.clone(), creation)
             .await
             .map_err(iceberg_err)?;
-    // Schema-only: no data write — empty pending files publish metadata only.
-    staged
-        .add_data_files(Vec::new())
-        .commit(catalog)
+    repark_iceberg::write::commit_staged(staged, Vec::new(), catalog)
         .await
         .map_err(iceberg_err)?;
     Ok(())

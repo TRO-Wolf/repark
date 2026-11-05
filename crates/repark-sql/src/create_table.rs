@@ -268,9 +268,7 @@ async fn execute_staged_create(
         None => (Vec::new(), Vec::new()),
     };
     if snapshot_extra.is_empty() || (data_files.is_empty() && !replace_write) {
-        staged
-            .add_data_files(data_files)
-            .commit(target.catalog.as_ref())
+        repark_iceberg::write::commit_staged(staged, data_files, target.catalog.as_ref())
             .await
             .map_err(iceberg_err)?;
     } else {
@@ -295,10 +293,11 @@ async fn publish_staged_with_summary(
     replace_write: bool,
     replace_base: Option<String>,
 ) -> Result<()> {
-    use iceberg::transaction::{ApplyTransactionAction, StagedTableMode, Transaction};
+    use iceberg::transaction::{ApplyTransactionAction, Transaction};
 
     let staged_table = staged.table().clone();
     let mode = staged.mode();
+    let written = repark_iceberg::write::written_paths(&data_files);
     let tx = Transaction::new(&staged_table);
     let tx = if replace_write {
         let engine =
@@ -321,18 +320,16 @@ async fn publish_staged_with_summary(
     }
     .map_err(iceberg_err)?;
     let table = tx.apply_locally().await.map_err(iceberg_err)?;
-    match mode {
-        StagedTableMode::Create => target
-            .catalog
-            .publish_create_table(table)
-            .await
-            .map_err(iceberg_err)?,
-        StagedTableMode::Replace => target
-            .catalog
-            .publish_replace_table(table, replace_base)
-            .await
-            .map_err(iceberg_err)?,
-    };
+    repark_iceberg::write::publish_applied(
+        target.catalog.as_ref(),
+        &staged_table,
+        mode,
+        table,
+        replace_base,
+        &written,
+    )
+    .await
+    .map_err(iceberg_err)?;
     Ok(())
 }
 
