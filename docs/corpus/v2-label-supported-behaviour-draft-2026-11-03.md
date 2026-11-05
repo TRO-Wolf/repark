@@ -1,5 +1,7 @@
 # Format-v2 label: supported behaviour, draft (2026-11-03)
 
+Superseded 2026-11-05 by the label section in docs/spark-sql-iceberg-parity.md (ICE-V2-LABEL-1)
+
 CORPUS-1 output 3, second half. A DRAFT for the owner: it states what the v2 label would claim
 per finding family, the evidence for each claim, and the exclusions. It claims nothing the cells
 do not show; a family whose cells are not built yet says so. Inventory and estimate:
@@ -54,4 +56,4 @@ Supported after HADOOP-DISCOVERY-RULE-1 (owner, 2026-11-03; PR #1251): a catalog
 | Adopted (owner, 2026-11-03), family 3: `STRUCT<>` in DDL and struct literals (D8) | Outside the parity claim, so it does not invalidate the v2 claim (owner, 2026-11-03). |
 | Adopted (owner, 2026-11-03): native-door DataFusion read semantics, a 1-based array subscript and `element_at` over a map answering a list | Outside the parity claim, so it does not invalidate the v2 claim (owner, 2026-11-03). |
 | Native-door post-commit reporting (NATIVE-DOOR-POST-PUBLISH-1, owner 2026-11-04): a native CTAS, RTAS, TRUNCATE, ADD, DROP or RENAME COLUMN, DROP TABLE or CREATE TABLE whose post-commit name refresh fails returns the failure after a committed change (D1, 32 cells) | The family-5 claim is for the Spark door only; the native door keeps this defect until its card is charted, so the label does not extend to it. |
-| DROP TABLE leftovers (owner, 2026-11-04): after a successful DROP TABLE the earlier metadata files stay, and a reopen can bring the table back (D3, 8 cells) | Not claimed by the label: these cells are STATE_DIFFERS, so they stay outside the claim until their card is ruled. |
+| DROP TABLE leftovers (owner, 2026-11-04): after a successful DROP TABLE the earlier metadata files stay, and a reopen can bring the table back (D3, 8 cells) | Not claimed by the label: these cells are STATE_DIFFERS, so they stay outside the claim until their card is ruled. Card: [drop-table-leftovers-1-card-2026-11-05.md](../../task/roadmap/mid-term/drop-table-leftovers-1-card-2026-11-05.md). |
