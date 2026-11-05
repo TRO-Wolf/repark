@@ -688,7 +688,9 @@ fn extract_named_struct_value(
     let mut remaining = found.fields.as_slice();
     loop {
         let field = remaining.first()?;
-        let mut named = args.iter().filter(|(name, _, _)| name.eq_ignore_ascii_case(field));
+        let mut named = args
+            .iter()
+            .filter(|(name, _, _)| name.eq_ignore_ascii_case(field));
         if named.nth(1).is_some() {
             return None;
         }

@@ -788,7 +788,10 @@ pub fn try_multiply(left: Expr, right: Expr) -> Expr {
 
 #[must_use]
 pub fn try_element_at(container: Expr, key: Expr) -> Expr {
-    call(crate::collection::try_element_at_udf(), vec![container, key])
+    call(
+        crate::collection::try_element_at_udf(),
+        vec![container, key],
+    )
 }
 
 /// Spark `try_to_date(expr[, format])` — NULL on parse failure.

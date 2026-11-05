@@ -152,7 +152,12 @@ async fn fixture(ctx: &SessionContext, catalogs: &CatalogRegistry, table: &str, 
     } else {
         ("(id INT, l ARRAY<INT>, m MAP<STRING, INT>)", ARRAY_ROWS)
     };
-    run(ctx, catalogs, &format!("CREATE TABLE {table} {columns}{V2}")).await;
+    run(
+        ctx,
+        catalogs,
+        &format!("CREATE TABLE {table} {columns}{V2}"),
+    )
+    .await;
     run(ctx, catalogs, &rows.replace("{t}", table)).await;
 }
 
@@ -168,7 +173,10 @@ fn expected_refusal(head: &str, spark: &str) -> Option<String> {
 #[tokio::test]
 async fn reaudit_ruling_cells_answer_or_refuse_as_spark_and_write_nothing_spark_refuses() {
     let Some(rows) = reaudit_rows() else {
-        eprintln!("skipped: neither {} nor {} is present", REAUDIT_CELLS[0], REAUDIT_CELLS[1]);
+        eprintln!(
+            "skipped: neither {} nor {} is present",
+            REAUDIT_CELLS[0], REAUDIT_CELLS[1]
+        );
         return;
     };
     assert_eq!(rows.len(), 8);
@@ -213,7 +221,10 @@ async fn nested_corpus_d10_and_d13_expressions_refuse_with_sparks_text() {
         if row["cat"] != "B-expr" || row["view"] != "facade-sql" {
             continue;
         }
-        if NESTED_OUTSIDE_UNIT.iter().any(|(name, _)| *name == spelling) {
+        if NESTED_OUTSIDE_UNIT
+            .iter()
+            .any(|(name, _)| *name == spelling)
+        {
             outside += 1;
             continue;
         }
@@ -231,18 +242,54 @@ async fn nested_corpus_d10_and_d13_expressions_refuse_with_sparks_text() {
 }
 
 const NEIGHBOURS: &[(&str, &str)] = &[
-    ("SELECT array(1, 2, 3)[3]", "[INVALID_ARRAY_INDEX] The index 3 is out of bounds. The array has 3 elements."),
-    ("SELECT array(1, 2, 3)[-1]", "[INVALID_ARRAY_INDEX] The index -1 is out of bounds. The array has 3 elements."),
-    ("SELECT array(named_struct('a', 1))[5].a", "[INVALID_ARRAY_INDEX] The index 5 is out of bounds. The array has 1 elements."),
-    ("SELECT transform(array(array(1), array(1, 2)), a -> a[1])", "[INVALID_ARRAY_INDEX] The index 1 is out of bounds. The array has 1 elements."),
-    ("SELECT element_at(array(1, 2, 3), -4)", "[INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index -4 is out of bounds. The array has 3 elements."),
-    ("SELECT element_at(array(1, 2, 3), 0)", "[INVALID_INDEX_OF_ZERO] The index 0 is invalid."),
-    ("SELECT try_element_at(array(1, 2, 3), 0)", "[INVALID_INDEX_OF_ZERO] The index 0 is invalid."),
-    ("SELECT named_struct('a', 1, 'A', 2).a", "[AMBIGUOUS_REFERENCE_TO_FIELDS] Ambiguous reference to the field `a`. It appears 2 times"),
-    ("SELECT named_struct('a', 1, 'A', 2, 'a', 3).a", "[AMBIGUOUS_REFERENCE_TO_FIELDS] Ambiguous reference to the field `a`. It appears 3 times"),
-    ("SELECT named_struct('x', named_struct('a', 1, 'a', 2)).x.a", "[AMBIGUOUS_REFERENCE_TO_FIELDS] Ambiguous reference to the field `a`. It appears 2 times"),
-    ("SELECT map('k', named_struct('a', 1, 'a', 2))['k'].a", "[AMBIGUOUS_REFERENCE_TO_FIELDS] Ambiguous reference to the field `a`. It appears 2 times"),
-    ("SELECT named_struct('a', 1, 'a', 2)['a']", "[AMBIGUOUS_REFERENCE_TO_FIELDS] Ambiguous reference to the field `a`. It appears 2 times"),
+    (
+        "SELECT array(1, 2, 3)[3]",
+        "[INVALID_ARRAY_INDEX] The index 3 is out of bounds. The array has 3 elements.",
+    ),
+    (
+        "SELECT array(1, 2, 3)[-1]",
+        "[INVALID_ARRAY_INDEX] The index -1 is out of bounds. The array has 3 elements.",
+    ),
+    (
+        "SELECT array(named_struct('a', 1))[5].a",
+        "[INVALID_ARRAY_INDEX] The index 5 is out of bounds. The array has 1 elements.",
+    ),
+    (
+        "SELECT transform(array(array(1), array(1, 2)), a -> a[1])",
+        "[INVALID_ARRAY_INDEX] The index 1 is out of bounds. The array has 1 elements.",
+    ),
+    (
+        "SELECT element_at(array(1, 2, 3), -4)",
+        "[INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index -4 is out of bounds. The array has 3 elements.",
+    ),
+    (
+        "SELECT element_at(array(1, 2, 3), 0)",
+        "[INVALID_INDEX_OF_ZERO] The index 0 is invalid.",
+    ),
+    (
+        "SELECT try_element_at(array(1, 2, 3), 0)",
+        "[INVALID_INDEX_OF_ZERO] The index 0 is invalid.",
+    ),
+    (
+        "SELECT named_struct('a', 1, 'A', 2).a",
+        "[AMBIGUOUS_REFERENCE_TO_FIELDS] Ambiguous reference to the field `a`. It appears 2 times",
+    ),
+    (
+        "SELECT named_struct('a', 1, 'A', 2, 'a', 3).a",
+        "[AMBIGUOUS_REFERENCE_TO_FIELDS] Ambiguous reference to the field `a`. It appears 3 times",
+    ),
+    (
+        "SELECT named_struct('x', named_struct('a', 1, 'a', 2)).x.a",
+        "[AMBIGUOUS_REFERENCE_TO_FIELDS] Ambiguous reference to the field `a`. It appears 2 times",
+    ),
+    (
+        "SELECT map('k', named_struct('a', 1, 'a', 2))['k'].a",
+        "[AMBIGUOUS_REFERENCE_TO_FIELDS] Ambiguous reference to the field `a`. It appears 2 times",
+    ),
+    (
+        "SELECT named_struct('a', 1, 'a', 2)['a']",
+        "[AMBIGUOUS_REFERENCE_TO_FIELDS] Ambiguous reference to the field `a`. It appears 2 times",
+    ),
 ];
 
 const NEIGHBOUR_ANSWERS: &[(&str, &str)] = &[
@@ -294,8 +341,15 @@ async fn legacy_mode_answers_null_and_case_sensitive_mode_resolves_a_case_pair()
     assert_eq!(lower, Ok(vec![Json::Array(vec![Json::from(1)])]));
     let upper = answer(&ctx, &catalogs, "SELECT named_struct('a', 1, 'A', 2).A").await;
     assert_eq!(upper, Ok(vec![Json::Array(vec![Json::from(2)])]));
-    let exact = answer(&ctx, &catalogs, "SELECT named_struct('a', 1, 'A', 2, 'a', 3).a")
-        .await
-        .expect_err("exact duplicate");
-    assert!(exact.contains("Ambiguous reference to the field `a`. It appears 2 times"), "{exact}");
+    let exact = answer(
+        &ctx,
+        &catalogs,
+        "SELECT named_struct('a', 1, 'A', 2, 'a', 3).a",
+    )
+    .await
+    .expect_err("exact duplicate");
+    assert!(
+        exact.contains("Ambiguous reference to the field `a`. It appears 2 times"),
+        "{exact}"
+    );
 }
