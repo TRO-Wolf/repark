@@ -10,6 +10,7 @@ pins.
 
 ## Contents
 
+- [test_ansi_subscript_field.py](test_ansi_subscript_field.py) — ANSI-SUBSCRIPT-AND-AMBIGUOUS-FIELD-1 — every case in `data/ansi_subscript_field_cells.jsonl` (subscripts, `element_at`, duplicate fields, DML reach, three confs) answers or refuses as Spark 4.1.2 on the facade, with Spark's readback after DML.
 - [test_deep_expr_build_small_stack_1.py](test_deep_expr_build_small_stack_1.py) — DEEP-FILTER-CHAIN-CRASH-1 CI-segv fold — deep expression builds never overflow a caller stack. Two shapes (caller thread, 8 MiB thread), each in its own interpreter (DEEP-BATTERY-SPLIT-1).
 - [test_deep_filter_chain_crash_1.py](test_deep_filter_chain_crash_1.py) — DEEP-FILTER-CHAIN-CRASH-1 — deep operator chains answer instead of crashing. Nine shapes, one interpreter per test; no `xdist_group` (DEEP-BATTERY-SPLIT-1).
 - [test_deep_reverify_1.py](test_deep_reverify_1.py) — DEEP-FILTER-CHAIN-CRASH-1 re-verify fold — VD2 pins on main, small stacks, and GC. The four main-thread shapes run one interpreter each; the 256 KiB, 512 KiB and GC fixtures were one shape each and stay (DEEP-BATTERY-SPLIT-1).
