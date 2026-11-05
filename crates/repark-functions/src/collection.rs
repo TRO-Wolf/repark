@@ -43,6 +43,9 @@ mod map_rewrite;
 mod map_subscript;
 mod size;
 
+pub(crate) const GET_ITEM_NAME: &str = "__repark_get_item__";
+pub(crate) const COLUMN_GET_ITEM_NAME: &str = "__repark_column_get_item__";
+
 /// The collection shims registered after DataFusion's defaults.
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
@@ -185,7 +188,12 @@ pub fn spark_array_get_udf() -> Arc<ScalarUDF> {
 /// Embedded `Column[key]` UDF for 0-based arrays or map keys.
 #[must_use]
 pub fn spark_get_item_udf() -> Arc<ScalarUDF> {
-    Arc::new(ScalarUDF::from(SparkGetItem::new()))
+    Arc::new(ScalarUDF::from(SparkGetItem::new(true)))
+}
+
+#[must_use]
+pub fn spark_column_get_item_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkGetItem::new(false)))
 }
 
 #[derive(Debug)]
@@ -264,23 +272,24 @@ impl ScalarUDFImpl for SparkArrayGet {
     }
 }
 
-/// `SparkGetItem` — Spark `[]` / `GetItem`: array 0-based **or** map-by-key.
 #[derive(Debug)]
 struct SparkGetItem {
     signature: Signature,
+    tolerant: bool,
 }
 
 impl SparkGetItem {
-    fn new() -> Self {
+    fn new(tolerant: bool) -> Self {
         Self {
             signature: Signature::user_defined(Volatility::Immutable),
+            tolerant,
         }
     }
 }
 
 impl PartialEq for SparkGetItem {
-    fn eq(&self, _other: &Self) -> bool {
-        true
+    fn eq(&self, other: &Self) -> bool {
+        self.tolerant == other.tolerant
     }
 }
 
@@ -293,7 +302,17 @@ impl Hash for SparkGetItem {
 }
 
 impl ScalarUDFImpl for SparkGetItem {
-    crate::shim_udf_boilerplate!("__repark_get_item__");
+    fn name(&self) -> &str {
+        if self.tolerant {
+            GET_ITEM_NAME
+        } else {
+            COLUMN_GET_ITEM_NAME
+        }
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
         if let Some(element) = list_element_type(&arg_types[0]) {
@@ -340,7 +359,7 @@ impl ScalarUDFImpl for SparkGetItem {
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let container_type = args.arg_fields[0].data_type().clone();
         if list_element_type(&container_type).is_some() {
-            return SparkArrayGet::new(true).invoke_with_args(args);
+            return SparkArrayGet::new(self.tolerant).invoke_with_args(args);
         }
         invoke_map(&args)
     }
@@ -581,7 +600,6 @@ mod tests {
             .collect()
     }
 
-    /// Spark array `element_at`: 1-based, negative counts from the end, out-of-range → NULL.
     #[tokio::test]
     async fn element_at_array_is_one_based() {
         let ctx = ctx();
@@ -596,6 +614,14 @@ mod tests {
         assert_eq!(
             i64_values(&ctx, "SELECT try_element_at([10, 20, 30], 4)").await,
             vec![None]
+        );
+        assert_eq!(
+            i64_values(&ctx, "SELECT element_at([10, 20, 30], 3)").await,
+            vec![Some(30)]
+        );
+        assert_eq!(
+            i64_values(&ctx, "SELECT element_at([10, 20, 30], -3)").await,
+            vec![Some(10)]
         );
     }
 
@@ -640,6 +666,45 @@ mod tests {
     }
 
     /// Polymorphic `GetItem` for 0-based arrays and map keys.
+    #[tokio::test]
+    async fn a_column_key_subscript_raises_under_ansi_and_get_stays_tolerant() {
+        use datafusion::logical_expr::expr::ScalarFunction as Call;
+        use datafusion::logical_expr::{Expr, col, lit};
+
+        let ctx = SessionContext::new();
+        let frame = ctx
+            .sql("SELECT [10, 20, 30] AS arr, 0 AS i")
+            .await
+            .expect("array frame");
+        let index = col("i") + lit(9i64);
+        let raising = frame
+            .clone()
+            .select(vec![Expr::ScalarFunction(Call::new_udf(
+                spark_column_get_item_udf(),
+                vec![col("arr"), index.clone()],
+            ))])
+            .expect("select column get item")
+            .collect()
+            .await
+            .unwrap_err();
+        assert!(
+            raising
+                .to_string()
+                .contains("[INVALID_ARRAY_INDEX] The index 9 is out of bounds. The array has 3"),
+            "{raising}"
+        );
+        let tolerant = frame
+            .select(vec![Expr::ScalarFunction(Call::new_udf(
+                spark_get_item_udf(),
+                vec![col("arr"), index],
+            ))])
+            .expect("select get")
+            .collect()
+            .await
+            .expect("get answers");
+        assert!(tolerant[0].column(0).is_null(0));
+    }
+
     #[tokio::test]
     async fn get_item_array_zero_based_and_map_by_key() {
         use datafusion::logical_expr::{Expr, col, lit};

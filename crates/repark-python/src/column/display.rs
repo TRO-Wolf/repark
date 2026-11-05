@@ -762,7 +762,17 @@ impl PyColumnParts {
                     )));
                 }
             };
-            let native = call_two(call_name, inner, key)?;
+            let native = if kind == "key" {
+                PyColumn::combine_surveyed(
+                    Expr::ScalarFunction(ScalarFunction::new_udf(
+                        repark_functions::collection::spark_column_get_item_udf(),
+                        vec![inner.expr(), key.expr()],
+                    )),
+                    [inner, key],
+                )
+            } else {
+                call_two(call_name, inner, key)?
+            };
             Ok((native, spark_display, sql_expr, None))
         })
     }
