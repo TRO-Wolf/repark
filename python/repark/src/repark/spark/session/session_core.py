@@ -11,7 +11,11 @@ import repark.spark.session.session_surface as _session_surface
 import repark.spark.session.sql_run as _sql_run
 from repark.spark.session._coerce import range_bound_as_int as _range_bound_as_int
 from repark.spark.session._coerce import sql_clause_end_after as _sql_clause_end_after
-from repark.spark.session.builder_conf import RuntimeConfig, SparkContext
+from repark.spark.session.builder_conf import (
+    SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY,
+    RuntimeConfig,
+    SparkContext,
+)
 from repark.spark.session.catalog_resolution import _refused_spelling, _segment_temp_view_home_ref
 from repark.spark.session.session_configuration import (
     fold_config_file_into_builder,
@@ -2156,6 +2160,7 @@ class ReparkSession:
                     if key in (
                         PARTITION_OVERWRITE_MODE_KEY,
                         DEFAULT_CATALOG_KEY,
+                        SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY,
                     ) or _looks_like_datafusion_conf_key(key):
                         RuntimeConfig(_sf._active_session).set(key, text)
                         _sf._active_session._builder_config[key] = text
