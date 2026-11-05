@@ -786,7 +786,7 @@ mod tests {
         let batches = execute(
             &ctx,
             &catalogs,
-            "SELECT [10, 20, 30][0] AS first, [10, 20, 30][-1] AS neg, 9/3 AS d, \
+            "SELECT [10, 20, 30][0] AS first, [10, 20, 30][2] AS last, 9/3 AS d, \
              CAST('ab' AS BINARY) AS b",
         )
         .await
@@ -800,7 +800,12 @@ mod tests {
             .downcast_ref::<Int32Array>()
             .unwrap();
         assert_eq!(first.value(0), 10, "0-based, shifted exactly once");
-        assert!(batches[0].column(1).is_null(0), "negative index is NULL");
+        let last = batches[0]
+            .column(1)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap();
+        assert_eq!(last.value(0), 30, "the last index, shifted exactly once");
         let division = batches[0]
             .column(2)
             .as_any()

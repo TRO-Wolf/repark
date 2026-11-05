@@ -563,7 +563,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **FNP-8 (2026-09-06):** `exists` is a native kernel (the FNP-4a `array_any_match`
   alias is gone); `aggregate` refuses init/merge width mismatches instead of coercing.
 - `try_invert/` — FNP-7a/7b scalar `try_*` kernels (NULL instead of raise). `try_element_at`
-  aliases `element_at`. `try_sum` reuses datafusion-spark; `try_avg` is its own UDAF
+  never raises. `try_sum` reuses datafusion-spark; `try_avg` is its own UDAF
   (decimal overflow NULL; INTERVAL input is the FNP-11 loud refuse).
 - `temporal_ctor/` — FNP-11A scalar temporal kernels (constructors, intervals,
   month arithmetic, zone conversion, add/diff, dateadd/datediff arity routes;
