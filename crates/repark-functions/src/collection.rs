@@ -33,6 +33,7 @@ mod array_sort;
 mod arrays_overlap;
 mod arrays_zip;
 mod create_map;
+mod field_ambiguity;
 mod flatten;
 mod key_by_position;
 mod map_concat;
@@ -143,6 +144,7 @@ pub fn create_map_udf() -> Arc<ScalarUDF> {
 }
 
 pub use create_map::SQL_MAP_NAME;
+pub use field_ambiguity::SparkFieldAmbiguity;
 pub use map_rewrite::SparkMapRewrite;
 pub use map_subscript::{
     SparkMapSubscript, insert_map_subscript_before_coercion, map_array_subscripts_as_lookups,

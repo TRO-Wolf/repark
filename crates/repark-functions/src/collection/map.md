@@ -65,6 +65,7 @@ needed.
 - `flatten.rs` — **FN-FIX-1:** a NULL sub-array makes the row NULL.
   Output `ListArray` from inner values + mapped offsets (no per-row concat).
   `#[ignore = "1e6-row release bench"]` `one_million_rows_within_three_times_datafusion` (≤ 3× DataFusion).
+- `field_ambiguity.rs` — **ANSI-SUBSCRIPT-AND-AMBIGUOUS-FIELD-1 (2026-11-05, AUD-023):** `SparkFieldAmbiguity`, an `AnalyzerRule` that refuses a `get_field` path step whose struct has two or more fields named the key (exactly under `spark.sql.caseSensitive=true`, ignoring ASCII case otherwise) with Spark's `[AMBIGUOUS_REFERENCE_TO_FIELDS]` text (Spark's `ExtractValue.findField`). Registered after `SparkMapSubscript`.
 - `concat_array.rs` — **DOOR-CONVERGE-2 (2026-09-15):** the array arm of the door-converged
   `concat` UDF (`string.rs` keeps the name; this module holds the helpers). Element types fold
   through `array_insert::tightest_common` (text pairs normalize to `Utf8`, binary pairs to
