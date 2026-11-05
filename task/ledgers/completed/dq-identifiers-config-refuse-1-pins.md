@@ -1,0 +1,10 @@
+# dq-identifiers-config-refuse-1 pin binding: one line per clause, read and verified by scripts/check_ledger_grammar.py rule B.
+
+C-001: python/repark/tests/sql/test_dq_identifiers_config_refuse_1.py::test_aud021_cell_set_paths_refuse_and_the_statement_runs_under_the_default, python/repark/tests/sql/test_dq_identifiers_config_refuse_1.py::test_sql_set_arms_answer_like_spark_and_true_refuses, python/repark/tests/sql/test_dq_identifiers_config_refuse_1.py::test_conf_set_arms_answer_like_spark_and_true_refuses, python/repark/tests/sql/test_dq_identifiers_config_refuse_1.py::test_builder_config_true_refuses_on_reuse_and_on_a_fresh_build, crates/repark-spark/src/tests/spark_dialect.rs::configure_refuses_double_quoted_identifiers_true_as_unsupported
+C-002: python/repark/tests/sql/test_dq_identifiers_config_refuse_1.py::test_conf_set_arms_answer_like_spark_and_true_refuses, python/repark/tests/sql/test_dq_identifiers_config_refuse_1.py::test_builder_config_true_refuses_on_reuse_and_on_a_fresh_build, python/repark/tests/sql/test_dq_identifiers_config_refuse_1.py::test_builder_config_false_builds_and_reset_answers_false
+C-003: python/repark/tests/sql/test_dq_identifiers_config_refuse_1.py::test_sql_set_arms_answer_like_spark_and_true_refuses, python/repark/tests/sql/test_dq_identifiers_config_refuse_1.py::test_conf_set_arms_answer_like_spark_and_true_refuses
+C-004: python/repark/tests/sql/test_dq_identifiers_config_refuse_1.py::test_dml_reach_statement_after_a_refused_set_answers_spark_config_off
+C-005: python/repark/tests/sql/test_dq_identifiers_config_refuse_1.py::test_dml_reach_statement_after_a_refused_set_answers_spark_config_off
+C-006: none (records)
+C-007: python/repark-parity/tests/test_cap_1_source_file_line_cap.py::test_cap_1_exception_tables_equal_the_measured_debt
+C-008: none (records)
