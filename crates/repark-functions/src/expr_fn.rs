@@ -786,10 +786,9 @@ pub fn try_multiply(left: Expr, right: Expr) -> Expr {
     call(crate::try_invert::try_multiply_udf(), vec![left, right])
 }
 
-/// Spark `try_element_at(container, key)` — alias of `element_at` (NULL on OOB / missing key).
 #[must_use]
 pub fn try_element_at(container: Expr, key: Expr) -> Expr {
-    element_at(container, key)
+    call(crate::collection::try_element_at_udf(), vec![container, key])
 }
 
 /// Spark `try_to_date(expr[, format])` — NULL on parse failure.

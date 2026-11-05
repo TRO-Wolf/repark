@@ -47,6 +47,7 @@ mod size;
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
     vec![
         element_at_udf(),
+        try_element_at_udf(),
         str_to_map_udf(),
         shuffle_udf(),
         map_from_entries_udf(),
@@ -165,13 +166,18 @@ pub fn cardinality_udf() -> Arc<ScalarUDF> {
 /// Spark `element_at` UDF instance (1-based array / map-by-key).
 #[must_use]
 pub fn element_at_udf() -> Arc<ScalarUDF> {
-    Arc::new(ScalarUDF::from(SparkElementAt::new()).with_aliases(["try_element_at"]))
+    Arc::new(ScalarUDF::from(SparkElementAt::new(false)))
+}
+
+#[must_use]
+pub fn try_element_at_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkElementAt::new(true)))
 }
 
 /// Embedded `[]` UDF: 0-based access with NULL for invalid indices.
 #[must_use]
 pub fn spark_array_get_udf() -> Arc<ScalarUDF> {
-    Arc::new(ScalarUDF::from(SparkArrayGet::new()))
+    Arc::new(ScalarUDF::from(SparkArrayGet::new(false)))
 }
 
 /// Embedded `Column[key]` UDF for 0-based arrays or map keys.
@@ -180,23 +186,24 @@ pub fn spark_get_item_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkGetItem::new()))
 }
 
-/// `SparkArrayGet` — Spark `GetArrayItem` (`arr[i]`): 0-based; negative or out-of-range → NULL.
 #[derive(Debug)]
 struct SparkArrayGet {
     signature: Signature,
+    tolerant: bool,
 }
 
 impl SparkArrayGet {
-    fn new() -> Self {
+    fn new(tolerant: bool) -> Self {
         Self {
             signature: Signature::any(2, Volatility::Immutable),
+            tolerant,
         }
     }
 }
 
 impl PartialEq for SparkArrayGet {
-    fn eq(&self, _other: &Self) -> bool {
-        true
+    fn eq(&self, other: &Self) -> bool {
+        self.tolerant == other.tolerant
     }
 }
 
@@ -224,6 +231,16 @@ impl ScalarUDFImpl for SparkArrayGet {
         let arrays = ColumnarValue::values_to_arrays(&args.args)?;
         let indices = cast(arrays[1].as_ref(), &DataType::Int64)?;
         let indices = indices.as_primitive::<Int64Type>();
+        if !self.tolerant && crate::ansi::spark_ansi_enabled_from_options(&args.config_options) {
+            for (index, size) in bounded_rows(arrays[0].as_ref(), indices) {
+                if index < 0 || index >= size {
+                    return Err(crate::spark_elt::invalid_array_index(
+                        index,
+                        usize::try_from(size).unwrap_or_default(),
+                    ));
+                }
+            }
+        }
         let shifted: Int64Array = indices
             .iter()
             .map(|index| {
@@ -321,7 +338,7 @@ impl ScalarUDFImpl for SparkGetItem {
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let container_type = args.arg_fields[0].data_type().clone();
         if list_element_type(&container_type).is_some() {
-            return SparkArrayGet::new().invoke_with_args(args);
+            return SparkArrayGet::new(true).invoke_with_args(args);
         }
         invoke_map(&args)
     }
@@ -331,19 +348,21 @@ impl ScalarUDFImpl for SparkGetItem {
 #[derive(Debug)]
 struct SparkElementAt {
     signature: Signature,
+    tolerant: bool,
 }
 
 impl SparkElementAt {
-    fn new() -> Self {
+    fn new(tolerant: bool) -> Self {
         Self {
             signature: Signature::user_defined(Volatility::Immutable),
+            tolerant,
         }
     }
 }
 
 impl PartialEq for SparkElementAt {
-    fn eq(&self, _other: &Self) -> bool {
-        true
+    fn eq(&self, other: &Self) -> bool {
+        self.tolerant == other.tolerant
     }
 }
 
@@ -380,7 +399,17 @@ fn list_element_type(data_type: &DataType) -> Option<DataType> {
 }
 
 impl ScalarUDFImpl for SparkElementAt {
-    crate::shim_udf_boilerplate!("element_at");
+    fn name(&self) -> &str {
+        if self.tolerant {
+            "try_element_at"
+        } else {
+            "element_at"
+        }
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
         if let Some(element) = list_element_type(&arg_types[0]) {
@@ -427,10 +456,30 @@ impl ScalarUDFImpl for SparkElementAt {
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let container_type = args.arg_fields[0].data_type().clone();
         if list_element_type(&container_type).is_some() {
-            return invoke_array(&args);
+            let raises = !self.tolerant
+                && crate::ansi::spark_ansi_enabled_from_options(&args.config_options);
+            return invoke_array(&args, raises);
         }
         invoke_map(&args)
     }
+}
+
+fn bounded_rows<'a>(
+    lists: &'a dyn Array,
+    indices: &'a datafusion::arrow::array::PrimitiveArray<Int64Type>,
+) -> impl Iterator<Item = (i64, i64)> + 'a {
+    (0..indices.len()).filter_map(move |row| {
+        if lists.is_null(row) || indices.is_null(row) {
+            return None;
+        }
+        let size = match lists.data_type() {
+            DataType::List(_) => lists.as_list::<i32>().value_length(row).into(),
+            DataType::LargeList(_) => lists.as_list::<i64>().value_length(row),
+            DataType::FixedSizeList(_, size) => (*size).into(),
+            _ => return None,
+        };
+        Some((indices.value(row), size))
+    })
 }
 
 /// Run `udf` over already-coerced arguments — the delegation core both paths share.
@@ -450,16 +499,23 @@ fn delegate(
     })
 }
 
-/// Reject index 0, then run Spark `element_at` (1-based, negative-from-end, out-of-range NULL).
-fn invoke_array(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
+fn invoke_array(args: &ScalarFunctionArgs, raises: bool) -> Result<ColumnarValue> {
     let arrays = ColumnarValue::values_to_arrays(&args.args)?;
     let indices = cast(arrays[1].as_ref(), &DataType::Int64)?;
     let indices = indices.as_primitive::<Int64Type>();
-    for row in 0..indices.len() {
-        if indices.is_valid(row) && indices.value(row) == 0 {
+    for (index, size) in bounded_rows(arrays[0].as_ref(), indices) {
+        if index.unsigned_abs() > size.unsigned_abs() {
+            if raises {
+                return Err(DataFusionError::Execution(format!(
+                    "[INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index {index} is out of bounds. The \
+                     array has {size} elements. Use `try_element_at` to tolerate accessing element \
+                     at invalid index and return NULL instead. SQLSTATE: 22003"
+                )));
+            }
+        } else if index == 0 {
             return Err(DataFusionError::Execution(
-                "element_at: SQL array indices start at 1; the index 0 is invalid (Spark \
-                 INVALID_INDEX_OF_ZERO)"
+                "[INVALID_INDEX_OF_ZERO] The index 0 is invalid. An index shall be either < 0 or \
+                 > 0 (the first element has index 1). SQLSTATE: 22003"
                     .to_string(),
             ));
         }
@@ -536,7 +592,7 @@ mod tests {
             vec![Some(30)]
         );
         assert_eq!(
-            i64_values(&ctx, "SELECT element_at([10, 20, 30], 4)").await,
+            i64_values(&ctx, "SELECT try_element_at([10, 20, 30], 4)").await,
             vec![None]
         );
     }
