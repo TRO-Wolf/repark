@@ -18663,6 +18663,7 @@ Evidence: [commit-cells-2026-11-04.jsonl](corpus/commit-cells-2026-11-04.jsonl) 
 | Identifier-field drop, differing refusal text (deletes D4) | 32 cells | Refusal text only (S3). Not claimed. |
 | Deletes not measured | none | Partitioned tables, several equality-delete schemas, struct equality keys, RePark-written equality deletes, the unregistered catalog door (deletes-rule). |
 | Commit not measured | none | Format v3, merge-on-read DELETE, UPDATE and MERGE, partitioned tables, the `repark.sql` facade door, the DataFrame writers, Glue, S3 Tables and REST catalogs, retries, a version-hint failure, the `REPLACE TABLE` and `ALTER TABLE RENAME TO` spellings (commit-rule). |
+| Kept divergence (owner 2026-11-05): rows holding NaN under a comparison filter in DELETE and UPDATE: RePark follows Spark SQL's own semantics (NaN > 0 is true), Spark-on-Iceberg's DML follows Iceberg's evaluator, which treats NaN comparisons as false and keeps the row; Spark's own SELECT and DELETE disagree with each other here (audit AUD-024; card [NAN-UNDER-ICEBERG-SCAN-FILTERS-1](../task/roadmap/mid-term/nan-under-iceberg-scan-filters-1-card-2026-11-05.md)) | deletes and updates on Iceberg tables with a NaN row under a comparison filter (AUD-024) | Owner, 2026-11-05: kept divergence, stated here and tracked for upstream. |
 
 ### Open at this commit
 
