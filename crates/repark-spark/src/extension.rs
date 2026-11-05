@@ -39,6 +39,27 @@ fn mask_session_conf_configuration(
     }
 }
 
+fn refuse_double_quoted_identifiers(
+    conf: &std::collections::HashMap<String, String>,
+) -> datafusion::error::Result<()> {
+    let Some(raw) = conf.get(repark_functions::ansi::SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY)
+    else {
+        return Ok(());
+    };
+    match repark_functions::ansi::parse_double_quoted_identifiers(raw) {
+        Ok(false) => Ok(()),
+        Ok(true) => Err(datafusion::error::DataFusionError::NotImplemented(
+            repark_functions::ansi::double_quoted_identifiers_refusal_message(),
+        )),
+        Err(refusal) => Err(datafusion::error::DataFusionError::Configuration(
+            repark_functions::merge_schema::boolean_type_mismatch_message(
+                refusal.key,
+                &repark_common::redaction::mask_value_credentials(&refusal.raw),
+            ),
+        )),
+    }
+}
+
 fn install_spark_session_conf(
     session: SessionBuildConf<'_>,
     mut config: SessionConfig,
@@ -46,6 +67,7 @@ fn install_spark_session_conf(
     let settings =
         repark_functions::cardinality::repark_sql_settings_from_config_map(session.conf)?;
     config = repark_functions::cardinality::with_repark_sql_config(config, settings);
+    refuse_double_quoted_identifiers(session.conf)?;
     let ansi_enabled = repark_functions::ansi::spark_ansi_from_config_map(session.conf)?;
     config = repark_functions::ansi::with_spark_ansi_config(config, ansi_enabled);
     let case_sensitive =
