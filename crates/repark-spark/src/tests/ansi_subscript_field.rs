@@ -46,16 +46,16 @@ const SPARK_WRAPPED_CAUSE: &[(&str, &str)] = &[
     ),
 ];
 
-const NESTED_IN_UNIT: [&str; 5] = [
+const NESTED_IN_UNIT: [&str; 6] = [
     "arr_element_at_oob",
     "arr_empty_subscript",
     "arr_subscript_neg",
     "arr_subscript_oob",
     "ns_dup_field",
+    "ns_struct_pos",
 ];
 
-const NESTED_OUTSIDE_UNIT: [(&str, &str); 3] = [
-    ("ns_struct_pos", "D13: struct() names its fields c0 and c1"),
+const NESTED_OUTSIDE_UNIT: [(&str, &str); 2] = [
     ("ns_case", "D13: a case-different single field refuses"),
     ("map_null_subscript", "D13: m[NULL] raises an Arrow error"),
 ];
@@ -231,14 +231,18 @@ async fn nested_corpus_d10_and_d13_expressions_refuse_with_sparks_text() {
         if !NESTED_IN_UNIT.contains(&spelling.as_str()) {
             continue;
         }
-        let message = spark_message(&text(&row, "spark")).unwrap().to_string();
-        let error = answer(&ctx, &catalogs, &text(&row, "stmt"))
-            .await
-            .expect_err(&spelling);
-        assert!(error.contains(&message), "{spelling}: {error}");
+        let spark = text(&row, "spark");
+        let got = answer(&ctx, &catalogs, &text(&row, "stmt")).await;
+        match spark_message(&spark) {
+            Some(message) => {
+                let error = got.expect_err(&spelling);
+                assert!(error.contains(message), "{spelling}: {error}");
+            }
+            None => assert_eq!(got, Ok(rows_after(&spark)), "{spelling}"),
+        }
         pinned += 1;
     }
-    assert_eq!((pinned, outside), (5, 3));
+    assert_eq!((pinned, outside), (6, 2));
 }
 
 const NEIGHBOURS: &[(&str, &str)] = &[
@@ -352,4 +356,165 @@ async fn legacy_mode_answers_null_and_case_sensitive_mode_resolves_a_case_pair()
         exact.contains("Ambiguous reference to the field `a`. It appears 2 times"),
         "{exact}"
     );
+}
+
+const AMBIGUOUS_COL2: &str = "[AMBIGUOUS_REFERENCE_TO_FIELDS] Ambiguous reference to the field \
+     `col2`. It appears 2 times in the schema. SQLSTATE: 42000";
+
+const STRUCT_NAMES: &[(&str, Result<&str, &str>)] = &[
+    ("SELECT struct(1, 2).col1", Ok("[[1]]")),
+    ("SELECT struct(1, 'x').col2", Ok("[[\"x\"]]")),
+    ("SELECT STRUCT(1, 2).col2", Ok("[[2]]")),
+    ("SELECT struct(1 AS a, 2).col2", Ok("[[2]]")),
+    (
+        "SELECT struct(1, 'x') AS s",
+        Ok("[[{\"col1\": 1, \"col2\": \"x\"}]]"),
+    ),
+    (
+        "SELECT struct(1 AS c0, 2) AS s",
+        Ok("[[{\"c0\": 1, \"col2\": 2}]]"),
+    ),
+    (
+        "SELECT struct(id, i) AS s FROM {t}",
+        Ok("[[{\"i\": 0, \"id\": 1}], [{\"i\": 0, \"id\": 2}]]"),
+    ),
+    (
+        "SELECT struct({t}.id, 1) AS s FROM {t}",
+        Ok("[[{\"col2\": 1, \"id\": 1}], [{\"col2\": 1, \"id\": 2}]]"),
+    ),
+    (
+        "SELECT struct(id + 1, upper('x')) AS s FROM {t} WHERE id = 1",
+        Ok("[[{\"col1\": 2, \"col2\": \"X\"}]]"),
+    ),
+    ("SELECT struct(1, 2).c0", Err("Field c0 not found")),
+    ("SELECT struct(1 AS col2, 2).col2", Err(AMBIGUOUS_COL2)),
+    ("SELECT struct(1 AS COL2, 2).col2", Err(AMBIGUOUS_COL2)),
+    (
+        "SELECT struct(id, id).id FROM {t}",
+        Err(
+            "[AMBIGUOUS_REFERENCE_TO_FIELDS] Ambiguous reference to the field `id`. It appears 2 times",
+        ),
+    ),
+];
+
+const STRUCT_WRITES: &[(&str, Result<&str, &str>)] = &[
+    (
+        "INSERT INTO {u} SELECT 9, struct(1 AS col2, 2).col2",
+        Err(AMBIGUOUS_COL2),
+    ),
+    (
+        "UPDATE {u} SET v = struct(1 AS col2, 2).col2 + 10",
+        Err(AMBIGUOUS_COL2),
+    ),
+    (
+        "INSERT INTO {u} SELECT 9, struct(1, 2).col1",
+        Ok("[[9, 1], [100, 100]]"),
+    ),
+    ("UPDATE {u} SET v = struct(1, 2).col2", Ok("[[100, 2]]")),
+];
+
+#[tokio::test]
+async fn a_column_index_subscript_raises_on_the_sql_door() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    repark_functions::register_all(&ctx);
+    let table = "ice.sales.column_index";
+    run(
+        &ctx,
+        &catalogs,
+        &format!("CREATE TABLE {table} (id INT, l ARRAY<INT>, i INT){V2}"),
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("INSERT INTO {table} VALUES (1, array(10, 20, 30), 0), (2, array(40), 0)"),
+    )
+    .await;
+    for sql in [
+        format!("SELECT id, l[i + 9] FROM {table}"),
+        format!("SELECT id FROM {table} WHERE l[i + 9] IS NULL"),
+    ] {
+        let error = answer(&ctx, &catalogs, &sql).await.expect_err(&sql);
+        assert!(
+            error.contains("[INVALID_ARRAY_INDEX] The index 9 is out of bounds."),
+            "{sql}: {error}"
+        );
+    }
+    let inside = answer(&ctx, &catalogs, &format!("SELECT id, l[i] FROM {table}")).await;
+    assert_eq!(
+        inside,
+        Ok(sorted(
+            serde_json::from_str::<Vec<Json>>("[[1, 10], [2, 40]]").unwrap()
+        ))
+    );
+}
+
+#[tokio::test]
+async fn struct_fields_take_sparks_names_and_colliding_names_refuse() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    repark_functions::register_all(&ctx);
+    let table = "ice.sales.struct_names";
+    run(
+        &ctx,
+        &catalogs,
+        &format!("CREATE TABLE {table} (id INT, i INT){V2}"),
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        &format!("INSERT INTO {table} VALUES (1, 0), (2, 0)"),
+    )
+    .await;
+    for (sql, want) in STRUCT_NAMES {
+        let sql = sql.replace("{t}", table);
+        let got = answer(&ctx, &catalogs, &sql).await;
+        match want {
+            Ok(rows) => assert_eq!(
+                got,
+                Ok(sorted(serde_json::from_str::<Vec<Json>>(rows).unwrap())),
+                "{sql}"
+            ),
+            Err(message) => {
+                let error = got.expect_err(&sql);
+                assert!(error.contains(message), "{sql}: {error}");
+            }
+        }
+    }
+    for (index, (sql, want)) in STRUCT_WRITES.iter().enumerate() {
+        let target = format!("ice.sales.struct_write_{index}");
+        run(
+            &ctx,
+            &catalogs,
+            &format!("CREATE TABLE {target} (id INT, v INT){V2}"),
+        )
+        .await;
+        run(
+            &ctx,
+            &catalogs,
+            &format!("INSERT INTO {target} VALUES (100, 100)"),
+        )
+        .await;
+        let sql = sql.replace("{u}", &target);
+        let got = answer(&ctx, &catalogs, &sql).await;
+        let after = answer(&ctx, &catalogs, &format!("SELECT * FROM {target}")).await;
+        let rows = match want {
+            Ok(rows) => {
+                assert!(got.is_ok(), "{sql}: {got:?}");
+                *rows
+            }
+            Err(message) => {
+                let error = got.expect_err(&sql);
+                assert!(error.contains(message), "{sql}: {error}");
+                "[[100, 100]]"
+            }
+        };
+        assert_eq!(
+            after,
+            Ok(sorted(serde_json::from_str::<Vec<Json>>(rows).unwrap())),
+            "{sql}"
+        );
+    }
 }

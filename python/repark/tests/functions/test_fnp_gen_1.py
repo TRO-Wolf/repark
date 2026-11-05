@@ -167,8 +167,8 @@ def test_sql_door_generator_projects_struct_fields(spark: ReparkSession, name: s
 
 
 @pytest.mark.xfail(
-    reason="struct(1,'a') names its fields c0/c1, not Spark's col1/col2 — "
-    "fnp-gen-1 D-17 residual, owned by the struct-field-naming slice",
+    reason="inline over a literal struct array answers nullable fields where Spark's are "
+    "not null — fnp-gen-1 D-17 residual",
     strict=False,
 )
 def test_sql_door_inline_over_a_literal_array(spark: ReparkSession) -> None:

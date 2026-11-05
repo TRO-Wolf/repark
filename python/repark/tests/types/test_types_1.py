@@ -199,8 +199,8 @@ def test_narrowed_literal_in_array_struct_map() -> None:
     assert _frame_type(facade_array) == ("list<item: int32>", False)
     assert facade_array.toArrow().column("r").to_pylist() == [[1, 2], [1, 2], [1, 2]]
     struct = "SELECT struct(1, 'a') AS r"
-    assert _door_type(session, struct) == ("struct<c0: int32, c1: string>", False)
-    assert session.sql(struct).toArrow().column("r").to_pylist() == [{"c0": 1, "c1": "a"}]
+    assert _door_type(session, struct) == ("struct<col1: int32, col2: string>", False)
+    assert session.sql(struct).toArrow().column("r").to_pylist() == [{"col1": 1, "col2": "a"}]
     facade_struct = frame.select(F.struct(F.lit(1), F.lit("a")).alias("r"))
     assert _frame_type(facade_struct) == ("struct<1: int32, a: string>", False)
     mapping = "SELECT map(1, 'a') AS r"

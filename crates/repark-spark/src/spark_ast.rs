@@ -134,6 +134,7 @@ pub(crate) fn apply_pregate_rewrites_before_identity_dml(
     run(crate::refuse_collation_in_statement(statement))?;
     run(crate::refuse_declared_function_in_statement(statement))?;
     crate::keyword_lower::lower_empty_map_calls(statement);
+    crate::keyword_lower::name_struct_fields(statement);
     run(crate::cast_gate::rewrite_and_refuse_casts(sql, statement))?;
     Ok(())
 }
