@@ -123,6 +123,35 @@ pub fn parse_runtime_spark_sql_ansi_enabled(
     }
 }
 
+pub const SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY: &str =
+    "spark.sql.ansi.doubleQuotedIdentifiers";
+
+#[allow(clippy::missing_errors_doc)]
+pub fn parse_double_quoted_identifiers(raw: &str) -> std::result::Result<bool, BooleanConfRefusal> {
+    let trimmed = raw.trim();
+    if trimmed.eq_ignore_ascii_case("true") {
+        Ok(true)
+    } else if trimmed.eq_ignore_ascii_case("false") {
+        Ok(false)
+    } else {
+        Err(BooleanConfRefusal {
+            key: SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY,
+            raw: raw.to_string(),
+        })
+    }
+}
+
+#[must_use]
+pub fn double_quoted_identifiers_refusal_message() -> String {
+    format!(
+        "[UNSUPPORTED_FEATURE] The feature is not supported: the configuration \
+         \"{SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY}\" = true in RePark. RePark reads \
+         double-quoted text as a string literal, as Spark does with the configuration off; \
+         quote identifiers with backticks. The session configuration is unchanged. \
+         SQLSTATE: 0A000"
+    )
+}
+
 /// Attach the ANSI flag to a [`SessionConfig`] (Spark door `configure` hook).
 #[must_use]
 pub fn with_spark_ansi_config(config: SessionConfig, enabled: bool) -> SessionConfig {
@@ -343,6 +372,33 @@ mod tests {
         UInt16Array, UInt32Array, UInt64Array,
     };
     use datafusion::arrow::compute::cast;
+
+    #[test]
+    fn double_quoted_identifiers_parse_like_a_spark_boolean() {
+        assert_eq!(parse_double_quoted_identifiers("true").ok(), Some(true));
+        assert_eq!(parse_double_quoted_identifiers(" TRUE ").ok(), Some(true));
+        assert_eq!(parse_double_quoted_identifiers("False").ok(), Some(false));
+        for raw in ["'true'", "1", "yes", "maybe", ""] {
+            let refusal = parse_double_quoted_identifiers(raw)
+                .err()
+                .map(|refusal| (refusal.key, refusal.raw));
+            assert_eq!(
+                refusal,
+                Some((
+                    SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY,
+                    raw.to_string()
+                ))
+            );
+        }
+    }
+
+    #[test]
+    fn double_quoted_identifiers_refusal_names_the_config() {
+        let message = double_quoted_identifiers_refusal_message();
+        assert!(message.starts_with("[UNSUPPORTED_FEATURE] "));
+        assert!(message.contains("\"spark.sql.ansi.doubleQuotedIdentifiers\" = true in RePark"));
+        assert!(message.ends_with("SQLSTATE: 0A000"));
+    }
 
     #[test]
     fn parse_accepts_boolean_tokens() {

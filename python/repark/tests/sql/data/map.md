@@ -16,7 +16,14 @@ Measured cell tables that a facade SQL pin reads as its clause.
   after a VALUES row list, a LATERAL subquery or a `values` column). Read by
   [../test_ident_dialect_1.py](../test_ident_dialect_1.py) (IDENT-DIALECT-1 and 1B).
 
-SHA-256 of the cells file:
+- [dq_identifiers_config_refuse_1_cells.jsonl](dq_identifiers_config_refuse_1_cells.jsonl) —
+  Spark 4.1.2 (Iceberg 1.11.0) answers for `spark.sql.ansi.doubleQuotedIdentifiers`: the
+  `SQLConf` entry, 21 `SET`/`RESET` arms, 3 `conf.set` arms and the six DML-reach statements
+  with the config off (plus Spark's config-on answers) and under `spark.sql.ansi.enabled=false`
+  with the config on. Read by
+  [../test_dq_identifiers_config_refuse_1.py](../test_dq_identifiers_config_refuse_1.py).
+
+SHA-256 of the AUD-015 cells file:
 
 `0507e12cfeefc7f6514a32517d2a4a972a91b647838cd3f8427b6b68a8d73377`
 

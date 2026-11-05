@@ -116,6 +116,54 @@ fn configure_refuses_verbatim_notabool() {
     );
 }
 
+fn configure_with_double_quoted_identifiers(
+    raw: &str,
+) -> datafusion::error::Result<datafusion::prelude::SessionConfig> {
+    let mut conf = HashMap::new();
+    conf.insert(
+        "spark.sql.ansi.doubleQuotedIdentifiers".to_string(),
+        raw.to_string(),
+    );
+    let zone = SessionTimeZone::default();
+    SparkExtension.configure(
+        SessionBuildConf {
+            conf: &conf,
+            session_time_zone: &zone,
+        },
+        datafusion::prelude::SessionConfig::new(),
+    )
+}
+
+#[test]
+fn configure_refuses_double_quoted_identifiers_true_as_unsupported() {
+    for raw in ["true", "TRUE", " true "] {
+        match configure_with_double_quoted_identifiers(raw) {
+            Err(datafusion::error::DataFusionError::NotImplemented(message)) => assert!(
+                message.contains(
+                    "the configuration \"spark.sql.ansi.doubleQuotedIdentifiers\" = true in RePark"
+                ),
+                "{message}"
+            ),
+            other => panic!("`{raw}` must refuse as unsupported: {other:?}"),
+        }
+    }
+    for raw in ["false", "FALSE"] {
+        assert!(
+            configure_with_double_quoted_identifiers(raw).is_ok(),
+            "{raw}"
+        );
+    }
+    match configure_with_double_quoted_identifiers("maybe") {
+        Err(datafusion::error::DataFusionError::Configuration(message)) => assert_eq!(
+            message,
+            "[INVALID_CONF_VALUE.TYPE_MISMATCH] The value 'maybe' in the config \
+             \"spark.sql.ansi.doubleQuotedIdentifiers\" is invalid. It should be a/an \
+             'boolean' value. SQLSTATE: 22022"
+        ),
+        other => panic!("`maybe` must refuse as a type mismatch: {other:?}"),
+    }
+}
+
 #[tokio::test]
 async fn double_quoted_literal_is_a_string() {
     let ctx = production_ctx(false);

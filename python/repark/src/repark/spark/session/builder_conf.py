@@ -46,6 +46,8 @@ _CACHE_BYTE_BUDGET_KEYS_LOWER: frozenset[str] = frozenset(
     {"repark.cache.max_bytes", "repark.cache.max_total_bytes"}
 )
 
+SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY = "spark.sql.ansi.doubleQuotedIdentifiers"
+
 _CATALOG_KEY_PREFIXES: tuple[str, str] = ("spark.sql.catalog.", "repark.sql.catalog.")
 
 _CATALOG_EXTENSIONS_KEY_LOWER = "repark.sql.catalogextensions"
@@ -253,6 +255,7 @@ class RuntimeConfig:
             SPARK_SQL_FAIL_AMBIGUOUS_SELF_JOIN_KEY,
             SPARK_SQL_SELF_JOIN_AUTO_RESOLVE_KEY,
             TIME_PARSER_POLICY_KEY,
+            SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY,
         ):
             _native.set_runtime_config(inner, key, text)
             if key == SESSION_TIME_ZONE_KEY:
@@ -308,6 +311,14 @@ class RuntimeConfig:
         catalog_name = _late_catalog_block_name(key)
         if catalog_name is not None:
             self._register_late_catalog_block(catalog_name)
+
+    @staticmethod
+    def _reuse_fold_routes_through_set(key: str) -> bool:
+        return key in (
+            PARTITION_OVERWRITE_MODE_KEY,
+            DEFAULT_CATALOG_KEY,
+            SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY,
+        ) or _looks_like_datafusion_conf_key(key)
 
     def _register_late_catalog_block(self, name: str) -> None:
         """Offer one name's accumulated block to the live session (H-02).
