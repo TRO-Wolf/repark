@@ -18559,6 +18559,8 @@ oracle is involved.
 
 **Status: PROPOSED for PRODUCTION (label text 2026-11-05, ICE-V2-LABEL-1); the label re-dates to PRODUCTION only on the audited sign-off (ICE-V2-LABEL-REAUDIT-1, next); until then the maturity stays WITHDRAWN 2026-10-29 (ledger C-072).** Supersedes the draft [v2-label-supported-behaviour-draft-2026-11-03.md](corpus/v2-label-supported-behaviour-draft-2026-11-03.md) (ICE-V2-LABEL-1, U-13). Dated history: WITHDRAWN 2026-10-29 pending the fixes of AUD-006, AUD-007, AUD-008 (ledger [ice-v2-label-1-ledger.md](../task/ledgers/staging/ice-v2-label-1-ledger.md) C-072); the targeted re-audit of 2026-11-01 ruled NO on AUD-015 and AUD-016 (its section 2, [report](audits/iceberg-v2-label-targeted-reaudit-2026-11-01.md)). Those two fixes have merged since (table below). The re-audit of the fixes has not run, so this row carries no sign-off. The open items are listed under "Open at this commit".
 
+Audited 2026-11-05 (ICE-V2-LABEL-REAUDIT-1): does not stand; see [docs/audits/iceberg-v2-label-corpus-audit-2026-11-05.md](audits/iceberg-v2-label-corpus-audit-2026-11-05.md).
+
 Gate statement (owner, 2026-11-02 and 2026-11-03), verbatim:
 
 > A panic, a wrong read or a wrong write blocks the label whether or not the inventory listed it; cards are for refusal-text, over-refusal and refuse-with-hint classes only.
