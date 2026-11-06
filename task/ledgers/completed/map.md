@@ -1910,6 +1910,8 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
   funnel entries. `risk_tier: standard`. Branch `feat/write-order-dist-1`.
   pins: write-order-dist-1/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-012
 
+- [dq-identifiers-config-refuse-1-ledger.md](dq-identifiers-config-refuse-1-ledger.md) — **DQ-IDENTIFIERS-CONFIG-REFUSE-1 (completed 2026-11-05, PR #1266, `6a8e4c33`):** the double-quoted-identifiers configuration is refused loudly on every set path (AUD-021); clauses C-001 to C-008 PROVEN or records, C-009 to C-018 OPEN as the residue card's cells; pins in [dq-identifiers-config-refuse-1-pins.md](dq-identifiers-config-refuse-1-pins.md).
+
 ## Pointers
 - Up: [../map.md](../map.md)
 - Policy: [../../../AGENTS.md](../../../AGENTS.md) "Markdown document lifecycle"
