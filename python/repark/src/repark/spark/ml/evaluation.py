@@ -276,7 +276,7 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
         except (AttributeError, TypeError, ValueError):
             type_name = ""
         if "Array" in type_name or "List" in type_name or "Vector" in type_name:
-            score_sql = f"CAST(array_element({score_quoted}, 1) AS DOUBLE)"
+            score_sql = f"CAST(try_element_at({score_quoted}, 2) AS DOUBLE)"
         elif "Struct" in type_name:
             nested_names: set[str] = set()
             try:
@@ -388,7 +388,7 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
                 if (
                     n_pos <= 0.0
                     and n_neg <= 0.0
-                    and ("array_element" in score_sql or "array_position" in score_sql)
+                    and ("try_element_at" in score_sql or "array_position" in score_sql)
                 ):
                     raise IllegalArgumentException(
                         "BinaryClassificationEvaluator.areaUnderROC: no usable scores after "
@@ -512,7 +512,7 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
             if (
                 n_pos <= 0.0
                 and n_neg <= 0.0
-                and ("array_element" in score_sql or "array_position" in score_sql)
+                and ("try_element_at" in score_sql or "array_position" in score_sql)
             ):
                 raise IllegalArgumentException(
                     "BinaryClassificationEvaluator.areaUnderPR: no usable scores after "

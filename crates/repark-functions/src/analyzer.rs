@@ -613,7 +613,7 @@ mod tests {
     /// The `[]` subscript is 0-based and NULLs invalid indices.
     #[tokio::test]
     async fn array_subscript_is_zero_based() {
-        let ctx = ctx();
+        let ctx = ctx_legacy();
         let sql = "SELECT [10, 20, 30][idx] FROM (VALUES (0), (1), (2), (3), (-1)) \
                    AS t(idx) ORDER BY idx";
         let batch = batch(&ctx, sql).await;

@@ -23,13 +23,14 @@ const SHARED_ARGUMENTS: [&str; 7] = [
     "make_array",
 ];
 const SHARED_AFTER_FIRST: [&str; 2] = ["nvl2", "if"];
-const LIST_AND_ELEMENT: [&str; 6] = [
+const LIST_AND_ELEMENT: [&str; 7] = [
     "array_append",
     "array_prepend",
     "array_contains",
     "array_position",
     "array_remove",
     "element_at",
+    "try_element_at",
 ];
 const LISTS: [&str; 4] = ["array_concat", "concat", "array_except", "array_intersect"];
 const TYPE_COERCION_RULE: &str = "type_coercion";

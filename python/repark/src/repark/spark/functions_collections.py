@@ -178,14 +178,6 @@ def element_at(
     raises ``INVALID_INDEX_OF_ZERO``. Contrast :func:`get` (0-based; ``getitem``,
     including maps).
 
-    **Out of range is NULL here, not an error.** Spark under ANSI raises
-    ``INVALID_ARRAY_INDEX_IN_ELEMENT_AT``; this engine returns NULL on both
-    doors. repark's ``spark.sql.ansi.enabled`` defaults to ``true``, but the
-    documented scope of that flag is ``/`` and ``%`` by zero — see
-    ``docs/guide/session-and-conf.md``: "Do not read 'ANSI on' as 'every
-    arithmetic fault raises'". Element-at out-of-range is a recorded divergence
-    rather than silently changing behavior.
-
     Parameters
     ----------
     col : Column or str
@@ -196,7 +188,7 @@ def element_at(
     Returns
     -------
     Column
-        The element or map value; **NULL** when missing / out of range.
+        The element or map value.
 
     Examples
     --------

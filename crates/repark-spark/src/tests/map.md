@@ -79,26 +79,12 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `map_key_alter.rs` — **MAP-KEY-ALTER-1 (2026-11-03):** replays the nested-cells corpus `A-ddl` rows (skipped if absent): `mapkey_*` answer Spark, others keep theirs; 10 arm pins.
 - `map_key_union.rs` — **MAP-KEY-ALTER-1 delta:** every evolving write refuses a map-key change; value/element unions evolve.
 - `commit_unknown_doors.rs` — **ICE-INTEGRITY-PINS-1 pin U offline twin (2026-10-22):** the 24 cells U-1 to U-4 × three doors × v2 and v3, the seed with the status-check properties, and the fresh-session resolution.
-- `commit_unknown_gate.rs` — **ICE-INTEGRITY-PINS-1 pin U offline twin (2026-10-22):** `GateCatalog`, the test-only
-  decorator that forwards or drops the commit, answers `CommitStateUnknown`, cuts reads and records the attempt.
-- `kill_mid_write.rs` — **ICE-INTEGRITY-PINS-1 pin K (2026-10-22), ICE-REPLACE-KILL-DOORS-1
-  (2026-10-27):** the 24 kill cells (K-1 to K-10 on format v2 and v3, controls K-C0 and K-C1;
-  K-8, K-9 and K-10 are the replace doors), the child entry `kill_mid_write_child`, the reopen and the
-  orphan, dry-run and write checks; `#[cfg(unix)]`.
-- `kill_mid_write_release.rs` — **ICE-INTEGRITY-PINS-1 fix round 2 (2026-10-22):** how a held
-  child ends without its parent's kill: the parent-gone pin and its intermediate, the pre-start
-  orphan pin and its intermediate, and the hold-limit pin; `#[cfg(unix)]`.
-- `kill_mid_write_hold.rs` — **ICE-INTEGRITY-PINS-1 pin K (2026-10-22):** `HoldCatalog`, the
-  test-only catalog decorator (hold, forward-then-hold, forward), its marker, and the reachable
-  and attempted file sets; `#[cfg(unix)]`. **ICE-REPLACE-KILL-DOORS-1 (2026-10-27):** the
+- `commit_unknown_gate.rs` — **ICE-INTEGRITY-PINS-1 pin U offline twin (2026-10-22):** `GateCatalog`, the test-only decorator that forwards or drops the commit, answers `CommitStateUnknown`, cuts reads and records the attempt.
+- `kill_mid_write.rs` — **ICE-INTEGRITY-PINS-1 pin K (2026-10-22), ICE-REPLACE-KILL-DOORS-1 (2026-10-27):** the 24 kill cells (K-1 to K-10 on format v2 and v3, controls K-C0 and K-C1; K-8, K-9 and K-10 are the replace doors), the child entry `kill_mid_write_child`, the reopen and the orphan, dry-run and write checks; `#[cfg(unix)]`.
+- `kill_mid_write_release.rs` — **ICE-INTEGRITY-PINS-1 fix round 2 (2026-10-22):** how a held child ends without its parent's kill: the parent-gone pin and its intermediate, the pre-start orphan pin and its intermediate, and the hold-limit pin; `#[cfg(unix)]`.
+- `kill_mid_write_hold.rs` — **ICE-INTEGRITY-PINS-1 pin K (2026-10-22):** `HoldCatalog`, the test-only catalog decorator (hold, forward-then-hold, forward), its marker, and the reachable and attempted file sets; `#[cfg(unix)]`. **ICE-REPLACE-KILL-DOORS-1 (2026-10-27):** the
   `publish_replace_table` hold and the `holding` file written on entry to the hold.
-- `pa_local_fs_policy.rs` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04):**
-  the Spark door's local-file write policy at default conf: `EXPLAIN ANALYZE COPY` outside
-  refuses naming `repark.sql.allowLocalFilesystemDDL` with no file written; plain `EXPLAIN`
-  answers without writing; `COPY` and `CREATE EXTERNAL TABLE` through `<warehouse>/link ->
-  <outside>` with one and three missing parents refuse; a `..` after a missing parent and a
-  dangling warehouse symlink refuse; locations `aaaaé`, `aaaaaaé` and `file://aaaaaaaaé` (a
-  character across bytes 5, 7, 9) refuse with the policy error, not a panic; the
+- `pa_local_fs_policy.rs` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04):** the Spark door's local-file write policy at default conf: `EXPLAIN ANALYZE COPY` outside refuses naming `repark.sql.allowLocalFilesystemDDL` with no file written; plain `EXPLAIN` answers without writing; `COPY` and `CREATE EXTERNAL TABLE` through `<warehouse>/link -> <outside>` with one and three missing parents refuse; a `..` after a missing parent and a dangling warehouse symlink refuse; locations `aaaaé`, `aaaaaaé` and `file://aaaaaaaaé` (a character across bytes 5, 7, 9) refuse with the policy error, not a panic; the
   `file://localhost` forms classify. Controls write: under the warehouse, through an
   in-warehouse symlink, and under the opt-in. Red on main 6 of 15.
   **Fix round (2026-10-15, owner rulings 103 and 104):** each pin named "writes outside on
@@ -129,11 +115,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   now asserts the ruled `EXPLAIN ANALYZE` text, which the seam raises before the ENC-1 refusal;
   the table is unchanged as before.
   **ICE-DELETE-FORMAT-GUARD-1 fix round 1 (2026-10-28):** `encrypted_table_case_variant_namespace_delete_refuses` pins the ENC-1 refusal of a keyed DELETE; red on `f1935e81`.
-- `enc_1_fold.rs` — **ENC-1 fold 1 (2026-10-09):** the verifier's writing shapes as
-  pins, each on format v2 and v3: explicit branch targets (INSERT, UPDATE, DELETE in
-  copy-on-write and merge-on-read), WAP sessions (`spark.wap.branch`, `spark.wap.id`), the
-  first write through an empty-table branch, `run_maintenance(dry_run => false)`, the
-  non-fast-forward `cherrypick_snapshot`, a stale-handle commit, the public
+- `enc_1_fold.rs` — **ENC-1 fold 1 (2026-10-09):** the verifier's writing shapes as pins, each on format v2 and v3: explicit branch targets (INSERT, UPDATE, DELETE in copy-on-write and merge-on-read), WAP sessions (`spark.wap.branch`, `spark.wap.id`), the first write through an empty-table branch, `run_maintenance(dry_run => false)`, the non-fast-forward `cherrypick_snapshot`, a stale-handle commit, the public
   `write::append`, the two stats procedures and `rewrite_table_path`. Every pin asserts the
   one refusal text and that snapshots, refs, the metadata pointer and the full recursive
   file listing are unchanged. Controls: ref, expiry and property commits still run on a
@@ -141,14 +123,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   Fold 2 (2026-10-09) adds `keyed_table_with_hostile_metadata_text_still_alters_expires_and_unsets`:
   a property value or column comment that spells `AddSnapshot {`, `SetStatistics {` or
   `SetPartitionStatistics {` leaves ALTER, expiry and UNSET working on a keyed table.
-- `cast_overflow_insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** end-to-end refusal
-  pins over a real Iceberg table: every door refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with
-  source/target/column named and nothing written; in-range, int-to-int and string stores
-  keep their behavior.
-- `describe_view_routing.rs` — DESCRIBE routing pins table and view probe failures,
-  the viewless catalog refusal, unchanged tables, and stored view columns after
-  the source table disappears, including EXTENDED. Failure pins check the
-  DataFusion variant and the wrapped Iceberg error kind. It also owns the
+- `cast_overflow_insert.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** end-to-end refusal pins over a real Iceberg table: every door refuses `CAST_OVERFLOW_IN_TABLE_INSERT` with source/target/column named and nothing written; in-range, int-to-int and string stores keep their behavior.
+- `describe_view_routing.rs` — DESCRIBE routing pins table and view probe failures, the viewless catalog refusal, unchanged tables, and stored view columns after the source table disappears, including EXTENDED. Failure pins check the DataFusion variant and the wrapped Iceberg error kind. It also owns the
   `FaultCatalog`/`ViewFaults` doubles the ALTER VIEW pins share: counted or
   failing `table_exists`, `view_exists`, `rename_view` and `update_view`, and a failing
   `namespace_exists` for the bare SHOW VIEWS probe in `temp_view_errors.rs`.
@@ -156,9 +132,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `temp_view_alter.rs` — **SPARK-DOOR-TEMP-VIEW-DDL-1 (AUD-015; fix round 3):** ALTER TABLE pins on a stub session: a no-view control, RENAME TO destinations, RePark-only prefixes, unknown heads, the leading `;` (`a_leading_semicolon_refuses_before_every_temp_view_check`), the bare `identifier` word and a double-quoted target, a double-quoted DROP or TRUNCATE target and a failing lookup.
 - `ident_dialect.rs` — IDENT-DIALECT-1 (2026-11-02): table identifiers read with Spark's grammar on the DROP, TRUNCATE, DELETE and SELECT heads, and the refusals on INSERT, UPDATE, ALTER and MERGE (`every_head_reads_a_table_identifier_with_spark_grammar`, `the_grammar_refuses_a_target_on_heads_that_need_more_and_on_a_second_target`).
 - `temp_view_attr_ids.rs` — **ATTR-VIEW-SEMANTICS-1 (2026-10-05):** the producer pin over a stub `TempViewSession`: a SQL temp view over a stamped `tv` registers a frame whose scan and provider schemas carry no attribute ids, and each read mints fresh ids through the facade stamp. See `task/roadmap/mid-term/attr-view-semantics-1-card-2026-10-04.md`.
-- `temp_view_errors.rs` — **IPI-40 PR6b3b (2026-09-24):** end-to-end pins over a
-  ctx-backed `TempViewSession` (`CtxTempViews`) for every `view_ddl/temp_view.rs` refusal with
-  the complete text: the 101st nested temp view's `VIEW_EXCEED_MAX_NESTED_DEPTH` (a plain
+- `temp_view_errors.rs` — **IPI-40 PR6b3b (2026-09-24):** end-to-end pins over a ctx-backed `TempViewSession` (`CtxTempViews`) for every `view_ddl/temp_view.rs` refusal with the complete text: the 101st nested temp view's `VIEW_EXCEED_MAX_NESTED_DEPTH` (a plain
   `#[tokio::test]` on the default test-thread stack; a 100-view chain still reads), read-time
   `INCOMPATIBLE_VIEW_SCHEMA_CHANGE` / `CANNOT_UP_CAST_DATATYPE` / `TABLE_OR_VIEW_NOT_FOUND`,
   CREATE-time arity (both directions), multi-statement and unparsable bodies, an unknown
@@ -167,10 +141,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   refusal that moved to `merge.rs`; a bare SHOW VIEWS keeps the Iceberg error when the
   current namespace's existence probe fails. Every Plan-class pin checks the root variant
   beside the complete text (PR6 r2).
-- `temp_view_routing.rs` — **IPI-40 PR6 (2026-09-24):** Rust pins for the
-  temporary-view door: the CREATE TEMPORARY VIEW parser branches (heads, verbatim
-  bodies, near misses, GLOBAL and the Spark-measured parse refusals as full
-  ParserError text), the session-less `NO_TEMP_VIEW_HOME` refusal, and a stub
+- `temp_view_routing.rs` — **IPI-40 PR6 (2026-09-24):** Rust pins for the temporary-view door: the CREATE TEMPORARY VIEW parser branches (heads, verbatim bodies, near misses, GLOBAL and the Spark-measured parse refusals as full ParserError text), the session-less `NO_TEMP_VIEW_HOME` refusal, and a stub
   `TempViewSession` through `router::execute_in_session` pinning temp-first body
   qualification, the already-exists refusal, OR REPLACE, quoted names, the
   write-body refusal, temp DROP VIEW / DROP TABLE (bare, PURGE, IF EXISTS,
@@ -198,10 +169,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   its Iceberg kind with the full public `External error: …` text. A view with no SQL
   representation (created through the catalog API) and an unregistered catalog passed to
   `execute_show_create_view` each pin their complete `Plan` text.
-- `viewless_catalog.rs` — **ICE-VIEWS-1 R2 (2026-09-21):** the A-9 SQL-door
-  battery: `test_views_refuse_on_glue_and_s3tables` drives CREATE, CREATE OR
-  REPLACE (over a missing name and over an existing table) and SHOW VIEWS=[]
-  through the router on memory-backed viewless doubles named `glue` and
+- `viewless_catalog.rs` — **ICE-VIEWS-1 R2 (2026-09-21):** the A-9 SQL-door battery: `test_views_refuse_on_glue_and_s3tables` drives CREATE, CREATE OR REPLACE (over a missing name and over an existing table) and SHOW VIEWS=[] through the router on memory-backed viewless doubles named `glue` and
   `s3tables`, pinning class, null condition and exact message.
 - `parquet_dictionary.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):** the
   `parquet.enable.dictionary` battery, read from the written footers: a table that names no
@@ -215,8 +183,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `an_owned_plain_update_resolves_a_mixed_case_set_target` and
   `..._a_wrong_case_quoted_set_target` hold the owned plain-UPDATE route to Spark's
   case-insensitive SET resolution, the regression the round-8 CI red found on MC-UPD-01/02.
-- `session_write_conf_removals.rs` — **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20):** the
-  removal side of the static `INSERT OVERWRITE … PARTITION` oracle, the fourth critic's
+- `session_write_conf_removals.rs` — **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20):** the removal side of the static `INSERT OVERWRITE … PARTITION` oracle, the fourth critic's
   `P1-MOR-ROW-FILTER-REMOVED-SET-OMITS-DELETE-FILES`. Cells `QD-MOR-*` (Spark 4.1.2, run 25c)
   measure a merge-on-read table whose target partition already holds a position-delete file:
   the overwrite removes that delete file too, so `removed-delete-files=1`,
@@ -224,11 +191,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `deleted-records=2` stays the record count of the data file, which the position delete does
   not lower. Taking the removed set from the live DATA files only reds these three delete-side
   pins and nothing else.
-- `session_write_conf_removals.rs` — **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20):** a
-  static `INSERT OVERWRITE … PARTITION (k = '<literal>')` on an identity DECIMAL, DOUBLE or
-  BOOLEAN column. Cells `QD-TYPE-*` record that Spark 4.1.2 takes all three — a free key stamps,
-  and `deleted-records` refuses naming `2`, the live rows of the partition cleared — so the
-  round-4 removed-set resolver has to RUN on those shapes. Dropping the `Decimal128` arm of
+- `session_write_conf_removals.rs` — **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20):** a static `INSERT OVERWRITE … PARTITION (k = '<literal>')` on an identity DECIMAL, DOUBLE or BOOLEAN column. Cells `QD-TYPE-*` record that Spark 4.1.2 takes all three — a free key stamps, and `deleted-records` refuses naming `2`, the live rows of the partition cleared — so the round-4 removed-set resolver has to RUN on those shapes. Dropping the `Decimal128` arm of
   `cast_datum` reds the DECIMAL pin and nothing else; DOUBLE and BOOLEAN already cast.
 - `session_write_conf_removals.rs` — **ICE-SESSION-WRITE-CONF-1 round 5 (2026-09-20):**
   `an_empty_source_static_overwrite_names_the_partition_it_clears` is the discriminator the
@@ -238,20 +201,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `deleted-records=2`. Every other static pin stages a file in the named partition, which is why
   they stayed green under that revert. The revert now reds this pin and the three `QD-MOR-*`
   delete-side pins.
-- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 6, the merge with
-  ICE-META-DELETE-1 (2026-09-20):** `session_team_stamps_cow_delete_overwrite` seeds TWO rows
-  and deletes one. On one row its `DELETE` covered the only data file, so after #739 (IPI-08)
-  it routes through the fork's `can_delete_using_metadata` and commits a metadata-only delete —
-  and Spark stamps NOTHING there (the recorded `QS-DELETE-PART-META` cell's `delete` summary
-  carries a null `team`), so the pin's `Some("a")` became the wrong expectation for the wrong
-  reason: it had stopped exercising the CoW overwrite arm it names. A partial delete keeps it
-  on that arm, where the session property IS stamped. The metadata route's no-stamp is pinned
-  on the Python side by `QS-DELETE-PART-META`, no longer an xfail.
-- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 4, the absolute layout
-  (2026-09-20):** the layout battery no longer compares conf against no-conf alone — both runs
-  assert Spark's OWN answer (cells `QU-*`): one live data file and `added-data-files=1` for the
-  CoW UPDATE and DELETE, two for the second INSERT. Restoring per-batch writers on the identity
-  UPDATE moves both sides together, so only the absolute assertion catches it; it reds.
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 6, the merge with ICE-META-DELETE-1 (2026-09-20):** `session_team_stamps_cow_delete_overwrite` seeds TWO rows and deletes one. On one row its `DELETE` covered the only data file, so after #739 (IPI-08) it routes through the fork's `can_delete_using_metadata` and commits a metadata-only delete — and Spark stamps NOTHING there (the recorded `QS-DELETE-PART-META` cell's `delete` summary carries a null `team`), so the pin's `Some("a")` became the wrong expectation for the wrong reason: it had stopped exercising the CoW overwrite arm it names. A partial delete keeps it on that arm, where the session property IS stamped. The metadata route's no-stamp is pinned on the Python side by `QS-DELETE-PART-META`, no longer an xfail.
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 4, the absolute layout (2026-09-20):** the layout battery no longer compares conf against no-conf alone — both runs assert Spark's OWN answer (cells `QU-*`): one live data file and `added-data-files=1` for the CoW UPDATE and DELETE, two for the second INSERT. Restoring per-batch writers on the identity UPDATE moves both sides together, so only the absolute assertion catches it; it reds.
   `a_mixed_case_metric_suffix_is_a_different_key_and_stamps` and `the_exact_metric_suffix_still_refuses`
   are the `QC-*` pair.
 - `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):**
@@ -266,10 +217,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   never-written partition, a live partition refuses naming `deleted-records=2`, and the
   total always collides naming `total-records=4`. Restoring `EngineSummary::for_overwrite`
   on that arm reds these three and nothing else.
-- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the
-  Spark-door session-conf pins (snapshot properties and codec on append,
-  overwrite, CTAS, by-name and plain INSERT, plus the writer-option precedence
-  cells; comment-free per the owner ban).
+- `session_write_conf.rs` — **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the Spark-door session-conf pins (snapshot properties and codec on append, overwrite, CTAS, by-name and plain INSERT, plus the writer-option precedence cells; comment-free per the owner ban).
   **Round 3 (2026-09-19):** the layout-invariance battery
   (`a_session_conf_keeps_a_plain_{update,insert,delete}_layout`), the answer to the
   second verification critic's `P1-OWNERSHIP-FILE-COUNT`. Each runs the statement twice
@@ -304,11 +252,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   sets BOTH `team` and a colliding `deleted-records=5` and asserts the delete snapshot
   carries neither, so mutation (h) — routing TRUNCATE through
   `commit_overwrite_replace_all_with_summary` — reds it on the refusal.
-- `spark_dialect.rs` — **FNP-4B (2026-09-15):** the Spark-door dialect pins over a
-  production-configured session — Databricks session dialect, the `escapedStringLiterals`
-  carrier (default off, `true` honored, `notabool` refused), double-quoted STRING
-  literals with Spark escapes, the `D/F/S/Y/L/BD` numeric suffixes with Spark Arrow
-  types, the out-of-range `\U` Java artifact, backtick field names, and
+- `spark_dialect.rs` — **FNP-4B (2026-09-15):** the Spark-door dialect pins over a production-configured session — Databricks session dialect, the `escapedStringLiterals` carrier (default off, `true` honored, `notabool` refused), double-quoted STRING literals with Spark escapes, the `D/F/S/Y/L/BD` numeric suffixes with Spark Arrow types, the out-of-range `\U` Java artifact, backtick field names, and
   `named_struct(…).field` access (non-null, chained), BD precision/scale, typed-literal
   nullability, `1e3L`/`0x1D` unresolved identifiers, and `[INVALID_NUMERIC_LITERAL_RANGE]`.
   **Round 5 (2026-09-15):** the harness contexts register
@@ -347,9 +291,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **U9-TYPES-1 (2026-09-25):** `transform_keys`, `transform_values`, `map_filter` and
   `map_zip_with` over `map()` answer the empty map on ANSI on and off, and a produced null key
   (`NULL` or a typed null) still refuses with Spark's exact `NULL_MAP_KEY` text (ledger R-21).
-- `list_null_compound.rs` — **ICE-LIST-NULL-2 (2026-09-19):** copy-on-write DELETE with a
-  compound predicate over a nested column answers Spark through the Spark door — one pin per
-  nested kind (list, map, struct) per compound shape (`id > 1 AND xs IS NULL` keeps
+- `list_null_compound.rs` — **ICE-LIST-NULL-2 (2026-09-19):** copy-on-write DELETE with a compound predicate over a nested column answers Spark through the Spark door — one pin per nested kind (list, map, struct) per compound shape (`id > 1 AND xs IS NULL` keeps
   `[1, 3, 4]`, `xs IS NULL OR id = 1` keeps `[3, 4]`, the fixture's surviving ids). Red
   2026-09-19 on the loud `DataInvalid => Accessor for Field xs not found`; green once the
   plain-identity claim declines non-primitive selections to the fork DELETE path.
@@ -368,8 +310,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `LOCALLY` and `DISTRIBUTED BY PARTITION`, …) with Spark's full `no viable alternative at
   input '<EOF>'` / `','` / `')'` text and a `metadata_file_count` assertion, because every
   earlier head committed the order typed before a trailing comma.
-- [u9_map.rs](u9_map.rs) — **WO U9-TYPES-1 (2026-09-25):** `map()` / `MAP()` is an empty
-  map of `Null` keys and values; a `MAP<STRING, INT>` column and a nested map column take
+- [u9_map.rs](u9_map.rs) — **WO U9-TYPES-1 (2026-09-25):** `map()` / `MAP()` is an empty map of `Null` keys and values; a `MAP<STRING, INT>` column and a nested map column take
   `map('k', 1)`, `map()`, `NULL` and `SELECT … map()` and read back with lookups; the
   back-quoted `` `map`() `` is the same map, and `UPDATE` plus the three MERGE assigning
   clauses write `map()` (r2).
@@ -387,9 +328,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   A `UUID` column advertises `Utf8` through the catalog provider, reads and writes canonical
   lower-case text, and refuses invalid text; `CAST(x AS UUID)` refuses with Spark's text;
   `ALTER COLUMN u TYPE STRING` keeps `uuid`; DELETE / UPDATE through uuid text.
-- [u9_uuid_void_writes.rs](u9_uuid_void_writes.rs) — **WO U9-TYPES-1 round-1 fixer
-  (2026-09-26):** one pin per path. MERGE joins on uuid text (source column and literal),
-  inserts and updates an upper-case string that stores lower case, and refuses `nope` with
+- [u9_uuid_void_writes.rs](u9_uuid_void_writes.rs) — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** one pin per path. MERGE joins on uuid text (source column and literal), inserts and updates an upper-case string that stores lower case, and refuses `nope` with
   `Invalid UUID string: nope`; `INSERT OVERWRITE` (whole table, static `PARTITION (p = 2)`, and
   the column-list form the DataFrame `overwritePartitions` lowers to) stores upper-case text
   lower case; `_file` projects beside `u` as text with a text filter. Red before the fix (each
@@ -408,9 +347,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `UPDATE SET u = s.u`) and `nested_uuid_assignments_type_as_text_like_spark` (the five
   `STRUCT<u: uuid>` assignments, each against Spark's measured rows). Both red before the fix
   (a committed raw-byte row, then the store-assign refusal).
-- [alter_write_order_transform.rs](alter_write_order_transform.rs) — **WO U5 PR2b
-  (2026-09-24):** D-WRITE-ORDERED-TRANSFORM. Seventeen measured `WRITE ORDERED BY` specs land
-  the sort order Spark wrote (rendered as `transform source direction nulls`) with `range`;
+- [alter_write_order_transform.rs](alter_write_order_transform.rs) — **WO U5 PR2b (2026-09-24):** D-WRITE-ORDERED-TRANSFORM. Seventeen measured `WRITE ORDERED BY` specs land the sort order Spark wrote (rendered as `transform source direction nulls`) with `range`;
   `LOCALLY` leaves the distribution unset and `DISTRIBUTED BY PARTITION` sets `hash`. The
   refusal table pins full text and class (IllegalArgument, NotImplemented, the fork's
   `Cannot bind`), and nothing commits. A plain `INSERT` after `bucket(4, id)` stamps order 1
@@ -454,15 +391,8 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   RC-COMMENT, `rc_twice` RC-THEN-INSERT + RC-TWICE, `rc_not_null` RC-NOT-NULL, `rc_dup`
   RC-DUP, `rc_part` RC-PART-DROP-SOURCE + RC-PART-KEEP-NAME, `rc_sorted` RC-SORTED, and
   `rc_shape` the two unmeasured Hive-style shapes (a column position, a nested name).
-- `v3_upgrade_calls.rs` — **V3-10:** the catalog-call budget for `ALTER … SET TBLPROPERTIES`,
-  counted through a wrapper registered into BOTH the catalog registry and the DF provider: an
-  upgrading ALTER is (2 `load_table`, 0 `list_tables`, 0 `namespace_exists`) — one load for the
-  resolve and one inside the fork's commit CAS — where the namespace-re-registering version was
-  (3, 1, 2); an ordinary property ALTER is (2, 0, 0) unchanged and a same-version request is
-  (1, 0, 0). The same test then reads `_row_id` through the session, which is what makes the
-  removal safe rather than merely cheaper.
-- `v3_upgrade.rs` — **V3-10:** the in-place v2 → v3 upgrade on the Spark door — opt-in gate and
-  its without-opt-in twin, downgrade / `'1'` / `'-1'` / `'0'` / `'4'` / `'x'` / `''` / `'3.0'` /
+- `v3_upgrade_calls.rs` — **V3-10:** the catalog-call budget for `ALTER … SET TBLPROPERTIES`, counted through a wrapper registered into BOTH the catalog registry and the DF provider: an upgrading ALTER is (2 `load_table`, 0 `list_tables`, 0 `namespace_exists`) — one load for the resolve and one inside the fork's commit CAS — where the namespace-re-registering version was (3, 1, 2); an ordinary property ALTER is (2, 0, 0) unchanged and a same-version request is (1, 0, 0). The same test then reads `_row_id` through the session, which is what makes the removal safe rather than merely cheaper.
+- `v3_upgrade.rs` — **V3-10:** the in-place v2 → v3 upgrade on the Spark door — opt-in gate and its without-opt-in twin, downgrade / `'1'` / `'-1'` / `'0'` / `'4'` / `'x'` / `''` / `'3.0'` /
   `' 3 '` refusals in Spark's own two classes, same-version no-op,
   upgrade beside another key as ONE commit, and the post-upgrade v3 paths (append lineage, COW
   DELETE/UPDATE, MoR MERGE deletion vector, `rewrite_data_files`, `register_table`) at live-Spark
@@ -479,12 +409,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **WO U5 PR2b round 2 (2026-09-25):** the downgrade rows pin Spark's
   `Execution error: Unsupported table change: Cannot downgrade vN table to vM` for 3→2 and for
   `1`, `-1`, `0` on a v2 table.
-- `v3_legacy_delete.rs` — **V3-12:** the Spark-SQL-door cells for a v3 merge-on-read write over an
-  upgraded table's legacy parquet position deletes. Seven merge cells (MERGE-DELETE and the append
-  after it, UPDATE, subquery DELETE, two legacy deletes on one data file, an untouched sibling
-  keeping its own, copy-on-write leaving it alone). Spark merges **every** applicable live position
-  delete that names a touched data file and removes **only the file-scoped** ones; it COMMITS the
-  covering-two-files shape and leaves that delete live forever.
+- `v3_legacy_delete.rs` — **V3-12:** the Spark-SQL-door cells for a v3 merge-on-read write over an upgraded table's legacy parquet position deletes. Seven merge cells (MERGE-DELETE and the append after it, UPDATE, subquery DELETE, two legacy deletes on one data file, an untouched sibling keeping its own, copy-on-write leaving it alone). Spark merges **every** applicable live position delete that names a touched data file and removes **only the file-scoped** ones; it COMMITS the covering-two-files shape and leaves that delete live forever.
   **RP-8 (2026-09-03):** at pin `c1d6c9de` the engine does too, so the two loud refusals became
   merge cells at Spark's measured values. `a_plain_where_merge_on_read_delete_over_a_legacy_delete_merges_into_the_dv`
   and a new UPDATE twin pin the A2 outcome for the spellings that plan through the fork's own
@@ -540,8 +465,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   `crates/repark-sql/src/v3/cow.rs` hash for the two ANSI twins V3-11 adds there, and once more
   in the remediation round that renamed them off `sparks_..._order`; the other three hashes are
   untouched.
-- `v3_fanout_order.rs` — **WO ROW-LINEAGE-ORDER-1 (2026-09-26):** the delegated-`INSERT`
-  end-to-end pins for Spark's fanout-writer file order through the fork's
+- `v3_fanout_order.rs` — **WO ROW-LINEAGE-ORDER-1 (2026-09-26):** the delegated-`INSERT` end-to-end pins for Spark's fanout-writer file order through the fork's
   `DataFileCommitOrder` hook. The scoreboard cell verbatim (S1, `[(2,0,1),(3,3,2),
   (4,2,1)]`, red before as `[(2,2,1),(3,3,2),(4,1,1)]`), seven keys at shuffle 4
   (S2, file order `y,z,w,x,q,a1,b1`), the one-bucket tie at shuffle 4 and at the
@@ -551,17 +475,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   hook). S4 (`INSERT OVERWRITE`) is deferred to R-FILEORDER-2: both doors commit
   overwrites through owned stage-then-swap, so the fork's `Overwrite` arm is
   unreachable.
-- `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six
-  unreachable names and the sketch family; passthrough attach pin.
+- `declared_refuse.rs` — **FNP-15/16:** Spark-door parse-altitude refusals for the six unreachable names and the sketch family; passthrough attach pin.
   **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):** the source pin
   matches the valve call inside the shared pre-gate chain.
-- `spark_string_literals.rs` — **SQP-1:** the string-literal escape pins (C-001..C-008, C-010,
-  C-012): the escape domain, `\'`/unpaired-backslash lexing, adjacency + the DataFusion-native
+- `spark_string_literals.rs` — **SQP-1:** the string-literal escape pins (C-001..C-008, C-010, C-012): the escape domain, `\'`/unpaired-backslash lexing, adjacency + the DataFusion-native
   `OPTIONS` carve-out, quote-runs-are-not-triple-quotes, raw strings, LIKE/RLIKE/backtick controls,
   exactly-once-on-every-path, the one-caller grep pin, the Generic-dialect honesty pin.
-- `string_literal_escape_1.rs` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the PE-10 pins
-  (the SQP-1 leaf is byte-frozen): `""` collapse, `r"…"`, raw `''`/`""` head/tail splits,
-  verbatim doublings kept, raw values marked, the borrow pin, quote-awareness units.
+- `string_literal_escape_1.rs` — **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the PE-10 pins (the SQP-1 leaf is byte-frozen): `""` collapse, `r"…"`, raw `''`/`""` head/tail splits, verbatim doublings kept, raw values marked, the borrow pin, quote-awareness units.
   **DIFF-PROBE fold (2026-09-29):** `verbatim_ddl_positions_take_default_treatment`
   pins verbatim DDL canonicals (property lists borrowed, backslashes unescaped,
   `COMMENT` doubles rewritten single-quoted, the `SELECT comment` alias guard,
@@ -572,10 +492,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):**
   `built_statements_parse_default_on_a_verbatim_session` pins the override
   wiring: `Some(false)` answers default values, `None` keeps the flag.
-- `subscript_dot_access.rs` — **SUBSCRIPT-DOT-ACCESS-1 (2026-11-04):** nested-cells `A-read` rows that refused `Dot access not supported`: 275 Spark-door rows on fixtures from the `A-ddl` replay (format swapped) answer or refuse as Spark; skips counted per reason. Plus the card statements and grammar neighbours (helpers of `map_key_alter.rs`, `nested_assign_oracle.rs`).
-- `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
-  B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
-  leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
+- `subscript_dot_access.rs` — **SUBSCRIPT-DOT-ACCESS-1 (2026-11-04):** nested-cells `A-read` rows that refused `Dot access not supported`: 224 Spark-door rows on fixtures from the `A-ddl` replay (format swapped) answer or refuse as Spark; skips counted per reason. Plus the card statements and grammar neighbours (helpers of `map_key_alter.rs`, `nested_assign_oracle.rs`).
+- `ansi_subscript_field.rs` — ANSI-SUBSCRIPT-AND-AMBIGUOUS-FIELD-1 (2026-11-05): the re-audit `f3-ruling1` cells and nested D10/D13 rows refuse as Spark 4.1.2.
+- `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/ B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12), leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
 - `cast_binary_ansi.rs` — **BL-11 (2026-09-16):** the ANSI-dimmed door pins — integral encode
   as big-endian bytes of natural width with value, Arrow type and nullability when ANSI is
   off; `CAST_WITH_CONF_SUGGESTION` plus the conf remedy for integrals when ANSI is on;

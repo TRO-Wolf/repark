@@ -59,7 +59,7 @@ fn refuse_in_node(node: &LogicalPlan) -> Result<()> {
     .map(|_| ())
 }
 
-fn refuse_in_expr(expr: &Expr, schema: &DFSchema) -> Result<()> {
+pub(crate) fn refuse_in_expr(expr: &Expr, schema: &DFSchema) -> Result<()> {
     match expr {
         Expr::BinaryExpr(BinaryExpr { left, op, right }) => {
             let Some(symbol) = ordering_symbol(*op) else {

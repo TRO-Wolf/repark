@@ -15,7 +15,7 @@ use datafusion_spark::function::math::expr_fn as spark_math;
 use datafusion_spark::function::string::expr_fn as spark_string;
 use datafusion_spark::function::url as spark_url_udfs;
 
-use crate::datetime;
+use crate::{collection, datetime};
 
 /// Wrap `udf` applied to `args` as a scalar-function [`Expr`].
 pub(crate) fn call(udf: Arc<ScalarUDF>, args: Vec<Expr>) -> Expr {
@@ -786,10 +786,9 @@ pub fn try_multiply(left: Expr, right: Expr) -> Expr {
     call(crate::try_invert::try_multiply_udf(), vec![left, right])
 }
 
-/// Spark `try_element_at(container, key)` — alias of `element_at` (NULL on OOB / missing key).
 #[must_use]
 pub fn try_element_at(container: Expr, key: Expr) -> Expr {
-    element_at(container, key)
+    call(collection::try_element_at_udf(), vec![container, key])
 }
 
 /// Spark `try_to_date(expr[, format])` — NULL on parse failure.
