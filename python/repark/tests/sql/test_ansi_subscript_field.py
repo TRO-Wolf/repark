@@ -59,6 +59,24 @@ IN_UNIT = (
     "INVALID_INDEX_OF_ZERO",
     "AMBIGUOUS_REFERENCE_TO_FIELDS",
 )
+SEAT_CLASSES = (
+    "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES",
+    "DATATYPE_MISMATCH.DATA_DIFF_TYPES",
+    "INCOMPATIBLE_COLUMN_TYPE",
+)
+SEAT_TEXT_OUTSIDE = {
+    "f5_array": "array(...) is not a positional seat",
+    "f5_case": "CASE is not a positional seat",
+    "f5_coalesce": "coalesce is not a positional seat",
+    "f5_except": "EXCEPT is not a positional seat",
+    "f5_intersect": "INTERSECT is not a positional seat",
+    "f5_eq_arity": "a different arity keeps the planner text",
+    "f5_in_arity": "a different arity keeps the planner text",
+    "f5_union_arity": "a different arity keeps the planner text",
+    "f5_w_delete_arity": "a different arity keeps the planner text",
+    "f5_eq_type": "the SQL planner refuses before the analyzer runs",
+    "f5x_c_bool_int": "the SQL planner refuses before the analyzer runs",
+}
 OUTSIDE_UNIT = {
     ("ansi", "get_past"): "the `get` routine is not resolved on the facade",
     ("ansi", "dup_star"): "nested rule D4: star over a struct refuses",
@@ -70,7 +88,7 @@ OUTSIDE_UNIT = {
     ("ansi", "f4_name_col_key"): "card: SQL m[k] with a column key on a table refuses",
     ("ansi", "f4_name_map_null_key"): "a NULL map key refuses on the engine",
     ("ansi", "f4_w_delete_named"): "card C1: a DELETE WHERE chain refuses with the extracted text",
-    ("ansi", "f5_eq_string"): "a struct pair of different field types answers (question)",
+    ("ansi", "f5x_t_union_string"): "a UNION of INT and STRING struct fields keeps STRING",
     ("ansi", "f6_getitem_str"): "a map value by string key keeps the key name (question)",
     ("ansi", "f6_sub_str"): "a map value by string key keeps the key name (question)",
     ("ansi", "f6_amb_key"): "a map value by string key keeps the key name (question)",
@@ -112,9 +130,11 @@ def _row_independent(text: str) -> str:
     return text.split(" The array has ")[0]
 
 
-def _assert_refusal(want: str, raised: BaseException) -> None:
+def _assert_refusal(want: str, raised: BaseException, name: str = "") -> None:
     if _error_class(want) in IN_UNIT:
         assert _row_independent(want) in str(raised)
+    if _error_class(want) in SEAT_CLASSES and name not in SEAT_TEXT_OUTSIDE:
+        assert f"[{_error_class(want)}]" in str(raised)
 
 
 @pytest.fixture
@@ -135,9 +155,10 @@ CELL_ROWS = _cells()
 
 
 def test_the_cell_table_holds_every_enumerated_case() -> None:
-    assert len(CELL_ROWS) == 240
+    assert len(CELL_ROWS) == 320
     assert sum(row.get("door") == "dataframe" for row in CELL_ROWS) == 42
     assert {(row["conf"], row["name"]) for row in CELL_ROWS} >= set(OUTSIDE_UNIT)
+    assert {row["name"] for row in CELL_ROWS} >= set(SEAT_TEXT_OUTSIDE)
     refusals = [row for row in CELL_ROWS if "error" in row["spark"]]
     assert sum(_error_class(row["spark"]["error"]) in IN_UNIT for row in refusals) == 81
 
@@ -166,7 +187,7 @@ def test_the_spark_door_answers_as_spark_does(door: ReparkSession, cell: dict[st
     if "error" in want:
         with pytest.raises(Exception) as raised:
             _rows(door, sql)
-        _assert_refusal(want["error"], raised.value)
+        _assert_refusal(want["error"], raised.value, cell["name"])
     elif "spark_readback" in cell:
         door.sql(sql).collect()
     else:

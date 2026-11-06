@@ -14,15 +14,24 @@ use datafusion::logical_expr::{
     ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Union, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
+use repark_functions::cast_map::spark_sql_name;
+
+use super::map_ordering::render;
 
 const STRUCT_BY_POSITION: &str = "__repark_struct_by_position__";
+const ORDINALS: [&str; 10] = [
+    "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth",
+];
 
 #[derive(Debug, Default)]
 pub struct StructOperandsByPosition;
 
 impl AnalyzerRule for StructOperandsByPosition {
-    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up_with_subqueries(align_node).data()
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
+        let case_sensitive =
+            repark_functions::case_sensitive::spark_case_sensitive_from_options(config);
+        plan.transform_up_with_subqueries(|node| align_node(node, case_sensitive))
+            .data()
     }
 
     fn name(&self) -> &'static str {
@@ -43,9 +52,105 @@ pub fn insert_struct_position_rule_before_coercion(
     Ok(rules)
 }
 
-fn align_node(node: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Seat {
+    Comparison,
+    Promoting,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Pairing {
+    Same,
+    Widen,
+    Clash,
+}
+
+fn pairing(left: &DataType, right: &DataType, seat: Seat, case_sensitive: bool) -> Pairing {
+    match (left, right) {
+        (DataType::Struct(left_fields), DataType::Struct(right_fields)) => {
+            if left_fields.len() != right_fields.len() {
+                return Pairing::Clash;
+            }
+            let named = left_fields.iter().zip(right_fields.iter()).all(|(l, r)| {
+                if case_sensitive {
+                    l.name() == r.name()
+                } else {
+                    l.name().eq_ignore_ascii_case(r.name())
+                }
+            });
+            let mut result = Pairing::Same;
+            for (l, r) in left_fields.iter().zip(right_fields.iter()) {
+                match pairing(l.data_type(), r.data_type(), seat, case_sensitive) {
+                    Pairing::Same => {}
+                    Pairing::Widen if named => result = Pairing::Widen,
+                    _ => return Pairing::Clash,
+                }
+            }
+            result
+        }
+        (DataType::Struct(_), _) | (_, DataType::Struct(_)) => Pairing::Clash,
+        _ if spark_sql_name(left) == spark_sql_name(right) => Pairing::Same,
+        _ if widens(left, right, seat, case_sensitive) => Pairing::Widen,
+        _ => Pairing::Clash,
+    }
+}
+
+fn widens(left: &DataType, right: &DataType, seat: Seat, case_sensitive: bool) -> bool {
+    let decimal_digits = |data_type: &DataType| match data_type {
+        DataType::Decimal32(precision, scale)
+        | DataType::Decimal64(precision, scale)
+        | DataType::Decimal128(precision, scale)
+        | DataType::Decimal256(precision, scale) => Some(i16::from(*precision) - i16::from(*scale)),
+        _ => None,
+    };
+    let integer_digits = |data_type: &DataType| match data_type {
+        DataType::Int8 | DataType::UInt8 => Some(3),
+        DataType::Int16 | DataType::UInt16 => Some(5),
+        DataType::Int32 | DataType::UInt32 => Some(10),
+        DataType::Int64 | DataType::UInt64 => Some(20),
+        _ => None,
+    };
+    let plain_numeric =
+        |data_type: &DataType| integer_digits(data_type).is_some() || data_type.is_floating();
+    let temporal = |data_type: &DataType| data_type.is_temporal();
+    match (left, right) {
+        (DataType::Null, _) | (_, DataType::Null) => true,
+        (
+            DataType::List(l) | DataType::LargeList(l) | DataType::FixedSizeList(l, _),
+            DataType::List(r) | DataType::LargeList(r) | DataType::FixedSizeList(r, _),
+        ) => pairing(l.data_type(), r.data_type(), seat, case_sensitive) != Pairing::Clash,
+        (DataType::Map(l, _), DataType::Map(r, _)) => {
+            pairing(l.data_type(), r.data_type(), seat, case_sensitive) != Pairing::Clash
+        }
+        _ if seat == Seat::Promoting
+            && (left.is_numeric() || left.is_temporal() || is_string(left))
+            && (right.is_numeric() || right.is_temporal() || is_string(right)) =>
+        {
+            true
+        }
+        _ if plain_numeric(left) && plain_numeric(right) => true,
+        _ => match (
+            integer_digits(left),
+            decimal_digits(right),
+            decimal_digits(left),
+            integer_digits(right),
+        ) {
+            (Some(digits), Some(room), _, _) | (_, _, Some(room), Some(digits)) => room >= digits,
+            _ => temporal(left) && temporal(right),
+        },
+    }
+}
+
+fn is_string(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    )
+}
+
+fn align_node(node: LogicalPlan, case_sensitive: bool) -> Result<Transformed<LogicalPlan>> {
     if let LogicalPlan::Union(union) = node {
-        return align_union(union);
+        return align_union(union, case_sensitive);
     }
     if !has_struct_candidate(&node) {
         return Ok(Transformed::no(node));
@@ -57,7 +162,7 @@ fn align_node(node: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let preserver = NamePreserver::new(&node);
     node.map_expressions(|expr| {
         let name = preserver.save(&expr);
-        expr.transform_up(|leaf| Ok(align_expr(leaf, &schema)))
+        expr.transform_up(|leaf| align_expr(leaf, &schema, case_sensitive))
             .map(|aligned| aligned.update_data(|expr| name.restore(expr)))
     })
 }
@@ -88,17 +193,45 @@ fn is_comparison(op: Operator) -> bool {
     )
 }
 
-fn align_expr(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+fn spark_operator(op: Operator) -> &'static str {
+    match op {
+        Operator::NotEq => "!=",
+        Operator::Lt => "<",
+        Operator::LtEq => "<=",
+        Operator::Gt => ">",
+        Operator::GtEq => ">=",
+        Operator::IsNotDistinctFrom => "<=>",
+        Operator::IsDistinctFrom => "NOT <=>",
+        _ => "=",
+    }
+}
+
+fn align_expr(expr: Expr, schema: &DFSchema, case_sensitive: bool) -> Result<Transformed<Expr>> {
     match expr {
         Expr::BinaryExpr(BinaryExpr { left, op, right }) if is_comparison(op) => {
             let target = left.get_type(schema).ok();
+            let current = right.get_type(schema).ok();
+            if let (Some(target), Some(current)) = (&target, &current)
+                && clashes(target, current, Seat::Comparison, case_sensitive)
+            {
+                return Err(DataFusionError::Plan(format!(
+                    "[DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES] Cannot resolve \"({} {} {})\" due to \
+                     data type mismatch: the left and right operands of the binary operator have \
+                     incompatible types (\"{}\" and \"{}\"). SQLSTATE: 42K09",
+                    render(&left),
+                    spark_operator(op),
+                    render(&right),
+                    spark_sql_name(target),
+                    spark_sql_name(current)
+                )));
+            }
             let (right, changed) = aligned_operand(target.as_ref(), *right, schema);
             let expr = Expr::BinaryExpr(BinaryExpr::new(left, op, Box::new(right)));
-            if changed {
+            Ok(if changed {
                 Transformed::yes(expr)
             } else {
                 Transformed::no(expr)
-            }
+            })
         }
         Expr::InList(InList {
             expr: value,
@@ -106,6 +239,23 @@ fn align_expr(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
             negated,
         }) => {
             let target = value.get_type(schema).ok();
+            if let Some(target) = &target {
+                for item in &list {
+                    if let Ok(current) = item.get_type(schema)
+                        && clashes(target, &current, Seat::Promoting, case_sensitive)
+                    {
+                        return Err(DataFusionError::Plan(format!(
+                            "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"({} IN ({}))\" \
+                             due to data type mismatch: Input to `in` should all be the same \
+                             type, but it's [\"{}\", \"{}\"]. SQLSTATE: 42K09",
+                            render(&value),
+                            list.iter().map(render).collect::<Vec<_>>().join(", "),
+                            spark_sql_name(target),
+                            spark_sql_name(&current)
+                        )));
+                    }
+                }
+            }
             let mut changed = false;
             let list = list
                 .into_iter()
@@ -116,14 +266,21 @@ fn align_expr(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
                 })
                 .collect();
             let expr = Expr::InList(InList::new(value, list, negated));
-            if changed {
+            Ok(if changed {
                 Transformed::yes(expr)
             } else {
                 Transformed::no(expr)
-            }
+            })
         }
-        other => Transformed::no(other),
+        other => Ok(Transformed::no(other)),
     }
+}
+
+fn clashes(target: &DataType, current: &DataType, seat: Seat, case_sensitive: bool) -> bool {
+    matches!(
+        (target, current),
+        (DataType::Struct(left), DataType::Struct(right)) if left.len() == right.len()
+    ) && pairing(target, current, seat, case_sensitive) == Pairing::Clash
 }
 
 fn aligned_operand(target: Option<&DataType>, operand: Expr, schema: &DFSchema) -> (Expr, bool) {
@@ -140,28 +297,24 @@ fn aligned_operand(target: Option<&DataType>, operand: Expr, schema: &DFSchema) 
 }
 
 fn renamed_type(target: &DataType, current: &DataType) -> Option<DataType> {
-    match (target, current) {
-        (DataType::Struct(target_fields), DataType::Struct(current_fields))
-            if target_fields.len() == current_fields.len() =>
-        {
-            let fields = target_fields
-                .iter()
-                .zip(current_fields.iter())
-                .map(|(target_field, current_field)| {
-                    renamed_type(target_field.data_type(), current_field.data_type()).map(
-                        |data_type| {
-                            Field::new(target_field.name(), data_type, current_field.is_nullable())
-                                .with_metadata(current_field.metadata().clone())
-                        },
-                    )
-                })
-                .collect::<Option<Vec<_>>>()?;
-            Some(DataType::Struct(Fields::from(fields)))
-        }
-        (DataType::Struct(_), _) | (_, DataType::Struct(_)) => None,
-        _ if target == current => Some(current.clone()),
-        _ => None,
+    let (DataType::Struct(target_fields), DataType::Struct(current_fields)) = (target, current)
+    else {
+        return None;
+    };
+    if target_fields.len() != current_fields.len() {
+        return None;
     }
+    let fields = target_fields
+        .iter()
+        .zip(current_fields.iter())
+        .map(|(target_field, current_field)| {
+            let data_type = renamed_type(target_field.data_type(), current_field.data_type())
+                .unwrap_or_else(|| current_field.data_type().clone());
+            Field::new(target_field.name(), data_type, current_field.is_nullable())
+                .with_metadata(current_field.metadata().clone())
+        })
+        .collect::<Vec<_>>();
+    Some(DataType::Struct(Fields::from(fields)))
 }
 
 fn by_position(operand: Expr, target: DataType) -> Expr {
@@ -171,7 +324,7 @@ fn by_position(operand: Expr, target: DataType) -> Expr {
     ))
 }
 
-fn align_union(union: Union) -> Result<Transformed<LogicalPlan>> {
+fn align_union(union: Union, case_sensitive: bool) -> Result<Transformed<LogicalPlan>> {
     let Some(first) = union.inputs.first().cloned() else {
         return Ok(Transformed::no(LogicalPlan::Union(union)));
     };
@@ -179,7 +332,7 @@ fn align_union(union: Union) -> Result<Transformed<LogicalPlan>> {
     let mut inputs = Vec::with_capacity(union.inputs.len());
     for (position, input) in union.inputs.iter().enumerate() {
         match (position > 0)
-            .then(|| renamed_input(first.schema(), input))
+            .then(|| renamed_input(first.schema(), input, position, case_sensitive))
             .transpose()?
             .flatten()
         {
@@ -199,26 +352,54 @@ fn align_union(union: Union) -> Result<Transformed<LogicalPlan>> {
     })
 }
 
-fn renamed_input(target: &DFSchema, input: &Arc<LogicalPlan>) -> Result<Option<LogicalPlan>> {
+fn ordinal(index: usize) -> String {
+    ORDINALS
+        .get(index)
+        .map_or_else(|| format!("{}th", index + 1), |word| (*word).to_string())
+}
+
+fn renamed_input(
+    target: &DFSchema,
+    input: &Arc<LogicalPlan>,
+    position: usize,
+    case_sensitive: bool,
+) -> Result<Option<LogicalPlan>> {
     let schema = input.schema();
     if schema.fields().len() != target.fields().len() {
         return Ok(None);
     }
     let mut changed = false;
-    let exprs = schema
-        .iter()
-        .zip(target.fields().iter())
-        .map(|((qualifier, field), target_field)| {
-            let column = Expr::Column(Column::from((qualifier, field)));
+    let mut exprs = Vec::with_capacity(schema.fields().len());
+    for (index, ((qualifier, field), target_field)) in
+        schema.iter().zip(target.fields().iter()).enumerate()
+    {
+        if clashes(
+            target_field.data_type(),
+            field.data_type(),
+            Seat::Promoting,
+            case_sensitive,
+        ) {
+            return Err(DataFusionError::Plan(format!(
+                "[INCOMPATIBLE_COLUMN_TYPE] UNION can only be performed on tables with compatible \
+                 column types. The {} column of the {} table is \"{}\" type which is not \
+                 compatible with \"{}\" at the same column of the first table.. SQLSTATE: 42825",
+                ordinal(index),
+                ordinal(position),
+                spark_sql_name(field.data_type()),
+                spark_sql_name(target_field.data_type())
+            )));
+        }
+        let column = Expr::Column(Column::from((qualifier, field)));
+        exprs.push(
             match renamed_type(target_field.data_type(), field.data_type()) {
                 Some(renamed) if &renamed != field.data_type() => {
                     changed = true;
                     by_position(column, renamed).alias(field.name())
                 }
                 _ => column,
-            }
-        })
-        .collect::<Vec<_>>();
+            },
+        );
+    }
     if !changed {
         return Ok(None);
     }

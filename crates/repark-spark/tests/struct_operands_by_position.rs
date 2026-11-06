@@ -310,3 +310,230 @@ async fn struct_operands_compare_and_union_by_position() {
         assert_eq!(readback, Ok(sorted(after)), "{sql}");
     }
 }
+
+const BINARY_OP: &str = "[DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES]";
+const DATA_DIFF: &str = "[DATATYPE_MISMATCH.DATA_DIFF_TYPES]";
+const UNION_TYPES: &str = "[INCOMPATIBLE_COLUMN_TYPE]";
+
+const FIELD_TYPES: &[(&str, Result<&[&str], &str>)] = &[
+    (
+        "SELECT struct(1) = struct(CAST(1 AS BIGINT))",
+        Ok(&["true"]),
+    ),
+    ("SELECT struct(1) = struct(1.0D)", Ok(&["true"])),
+    (
+        "SELECT struct(1) < struct(CAST(1 AS BIGINT))",
+        Ok(&["false"]),
+    ),
+    (
+        "SELECT struct(1) <=> struct(CAST(1 AS BIGINT))",
+        Ok(&["true"]),
+    ),
+    (
+        "SELECT named_struct('a', 1) = named_struct('a', CAST(1 AS BIGINT))",
+        Ok(&["true"]),
+    ),
+    (
+        "SELECT named_struct('A', 1) = named_struct('a', CAST(1 AS BIGINT))",
+        Ok(&["true"]),
+    ),
+    (
+        "SELECT named_struct('a', struct(1)) = named_struct('a', struct(CAST(1 AS BIGINT)))",
+        Ok(&["true"]),
+    ),
+    (
+        "SELECT struct(CAST(1 AS DECIMAL(5,2))) = struct(CAST(1 AS DECIMAL(5,2)))",
+        Ok(&["true"]),
+    ),
+    (
+        "SELECT struct(1) = struct(CAST(1 AS DECIMAL(12,2)))",
+        Ok(&["true"]),
+    ),
+    (
+        "SELECT struct(CAST(1 AS FLOAT)) = struct(1.0D)",
+        Ok(&["true"]),
+    ),
+    (
+        "SELECT struct(array(1)) = struct(array(CAST(1 AS BIGINT)))",
+        Ok(&["true"]),
+    ),
+    (
+        "SELECT id, named_struct('id', id) = named_struct('id', CAST(1 AS BIGINT)) FROM {t}",
+        Ok(&["1, true", "2, false"]),
+    ),
+    ("SELECT struct(1) IN (struct('1'))", Ok(&["true"])),
+    (
+        "SELECT struct(1) IN (struct(CAST(1 AS DECIMAL(5,2))))",
+        Ok(&["true"]),
+    ),
+    (
+        "SELECT struct(1) AS r UNION ALL SELECT struct(CAST(1 AS BIGINT))",
+        Ok(&["{col1: 1}", "{col1: 1}"]),
+    ),
+    ("SELECT struct(1) = struct('1')", Err(BINARY_OP)),
+    (
+        "SELECT struct(CAST(1 AS DECIMAL(5,2))) = struct(CAST(1 AS DECIMAL(7,2)))",
+        Err(BINARY_OP),
+    ),
+    (
+        "SELECT struct(1) = struct(CAST(1 AS DECIMAL(5,2)))",
+        Err(BINARY_OP),
+    ),
+    (
+        "SELECT struct(1.0D) = struct(CAST(1 AS DECIMAL(5,2)))",
+        Err(BINARY_OP),
+    ),
+    (
+        "SELECT id, struct(id) = struct(CAST(1 AS BIGINT)) FROM {t}",
+        Err(BINARY_OP),
+    ),
+    (
+        "SELECT id, struct(id, v) = struct(1, CAST(1 AS BIGINT)) FROM {t}",
+        Err(BINARY_OP),
+    ),
+    (
+        "SELECT id, struct(id, v) = CAST(NULL AS STRUCT<a: BIGINT, b: INT>) FROM {t}",
+        Err(BINARY_OP),
+    ),
+    (
+        "SELECT id, named_struct('id', id) = named_struct('id', '1') FROM {t}",
+        Err(BINARY_OP),
+    ),
+    (
+        "SELECT id, struct(id) IN (struct(CAST(1 AS BIGINT))) FROM {t}",
+        Err(DATA_DIFF),
+    ),
+    ("SELECT struct(1) IN (struct(array(1)))", Err(DATA_DIFF)),
+    (
+        "SELECT struct(id) AS r FROM {t} UNION ALL SELECT struct(CAST(1 AS BIGINT))",
+        Err(UNION_TYPES),
+    ),
+    (
+        "SELECT struct(id) AS r FROM {t} UNION ALL SELECT struct('1')",
+        Err(UNION_TYPES),
+    ),
+    (
+        "SELECT named_struct('a', 1) AS r UNION ALL SELECT named_struct('b', 1.0D)",
+        Err(UNION_TYPES),
+    ),
+];
+
+const FIELD_TYPE_WRITES: &[(&[&str; 2], &str, Option<&str>, &[&str])] = &[
+    (
+        &UV,
+        "DELETE FROM {t} WHERE struct(id) = struct('1')",
+        Some(BINARY_OP),
+        &["1, 1", "2, 2"],
+    ),
+    (
+        &UV,
+        "DELETE FROM {t} WHERE struct(id) = struct(CAST(1 AS BIGINT))",
+        Some(BINARY_OP),
+        &["1, 1", "2, 2"],
+    ),
+    (
+        &UV,
+        "DELETE FROM {t} WHERE struct(id) = struct(1.0D)",
+        Some(BINARY_OP),
+        &["1, 1", "2, 2"],
+    ),
+    (
+        &UV,
+        "DELETE FROM {t} WHERE named_struct('a', struct(id)) = named_struct('a', struct(CAST(1 AS BIGINT)))",
+        Some(BINARY_OP),
+        &["1, 1", "2, 2"],
+    ),
+    (
+        &UV,
+        "DELETE FROM {t} WHERE (struct(id, v) <=> CAST(NULL AS STRUCT<a: BIGINT, b: INT>)) = false",
+        Some(BINARY_OP),
+        &["1, 1", "2, 2"],
+    ),
+    (
+        &UV,
+        "DELETE FROM {t} WHERE named_struct('id', id) = named_struct('id', '1')",
+        Some(BINARY_OP),
+        &["1, 1", "2, 2"],
+    ),
+    (
+        &UV,
+        "DELETE FROM {t} WHERE named_struct('id', id) = named_struct('id', CAST(1 AS DECIMAL(5,2)))",
+        Some(BINARY_OP),
+        &["1, 1", "2, 2"],
+    ),
+    (
+        &UV,
+        "UPDATE {t} SET v = 9 WHERE struct(id) = struct('1')",
+        Some(BINARY_OP),
+        &["1, 1", "2, 2"],
+    ),
+    (
+        &UV,
+        "DELETE FROM {t} WHERE struct(id) IN (struct('1'))",
+        Some(DATA_DIFF),
+        &["1, 1", "2, 2"],
+    ),
+    (
+        &UV,
+        "DELETE FROM {t} WHERE struct(id) IN (struct(CAST(1 AS BIGINT)))",
+        Some(DATA_DIFF),
+        &["1, 1", "2, 2"],
+    ),
+    (
+        &UV,
+        "DELETE FROM {t} WHERE named_struct('id', id) = named_struct('id', CAST(1 AS BIGINT))",
+        None,
+        &["2, 2"],
+    ),
+    (
+        &UV,
+        "DELETE FROM {t} WHERE struct(id) = struct(1)",
+        None,
+        &["2, 2"],
+    ),
+    (
+        &SA,
+        "INSERT INTO {t} SELECT 1, struct(5) UNION ALL SELECT 2, struct(CAST(1 AS BIGINT))",
+        None,
+        &["0, {a: 0}", "1, {a: 5}", "2, {a: 1}"],
+    ),
+    (
+        &SA,
+        "INSERT INTO {t} SELECT 1, named_struct('q', 5) UNION ALL SELECT 2, named_struct('r', CAST(1 AS BIGINT))",
+        Some(UNION_TYPES),
+        &["0, {a: 0}"],
+    ),
+];
+
+#[tokio::test]
+async fn struct_operands_whose_field_types_spark_cannot_pair_refuse_and_write_nothing() {
+    let (session, _warehouse) = catalog_session().await;
+    let table = "ice.ns.field_types";
+    create(&session, table, &UV).await;
+    for (sql, want) in FIELD_TYPES {
+        let sql = sql.replace("{t}", table);
+        let got = answer(&session, &sql).await;
+        match want {
+            Ok(rows) => assert_eq!(got, Ok(sorted(rows)), "{sql}"),
+            Err(class) => {
+                let error = got.expect_err(&sql);
+                assert!(error.contains(class), "{sql}: {error}");
+            }
+        }
+    }
+    for (index, (fixture, sql, refusal, after)) in FIELD_TYPE_WRITES.iter().enumerate() {
+        let target = format!("ice.ns.field_type_write_{index}");
+        create(&session, &target, fixture).await;
+        let sql = sql.replace("{t}", &target);
+        let got = answer(&session, &sql).await;
+        match refusal {
+            None => assert!(got.is_ok(), "{sql}: {got:?}"),
+            Some(class) => {
+                let error = got.expect_err(&sql);
+                assert!(error.contains(class), "{sql}: {error}");
+            }
+        }
+        let readback = answer(&session, &format!("SELECT * FROM {target}")).await;
+        assert_eq!(readback, Ok(sorted(after)), "{sql}");
+    }
+}

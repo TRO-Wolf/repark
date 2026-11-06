@@ -118,8 +118,11 @@ here and is re-exported in one line.
   `StructOperandsByPosition`, seated directly before `type_coercion`: when two struct operands
   of a comparison or `IN`, or a later `UNION` branch, have the same arity and the same field
   types by position, the second takes the first's field names through
-  `__repark_struct_by_position__`, so Spark 4.1.2's positional answer holds. Other shapes are
-  left to `type_coercion`.
+  `__repark_struct_by_position__`, so Spark 4.1.2's positional answer holds. Field names that match by
+  the session case rule may widen field types as Spark's tightest common type does (an `IN`
+  list or a `UNION` branch also promotes strings); two same-arity structs that cannot pair refuse
+  with Spark's class for the seat (`BINARY_OP_DIFF_TYPES`, `DATA_DIFF_TYPES`,
+  `INCOMPATIBLE_COLUMN_TYPE`) and both struct types. Other shapes are left to `type_coercion`.
 - `statement_guard.rs` — **WO-C10 (2026-09-23):** shared multi-statement refusal plus the
   front-door unclosed bracketed-comment guard. The guard tokenizes with `DatabricksDialect`,
   then scans outer unclosed comments while ignoring quoted text and line comments. It keeps an
