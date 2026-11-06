@@ -140,7 +140,8 @@ impl SessionExtension for SparkExtension {
         let rules = crate::spark_literal_typing::insert_literal_rule_before_coercion(rules)?;
         let rules =
             crate::normalize::join_condition::insert_join_condition_rule_before_coercion(rules)?;
-        repark_functions::collection::insert_map_subscript_before_coercion(rules)
+        let rules = repark_functions::collection::insert_map_subscript_before_coercion(rules)?;
+        crate::normalize::struct_position::insert_struct_position_rule_before_coercion(rules)
     }
 
     /// Register Spark functions and analyzer rules, then compose the TA window extension.

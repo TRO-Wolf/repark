@@ -114,6 +114,12 @@ here and is re-exported in one line.
   holds `strip_create_table_using`, moved here from `../normalize.rs` (comments shed
   in the move) to keep that file at its ceiling. Unit pins are inline in the module;
   the parse-level pins sit beside round 1's in `../tests/ice_ddl_clauses_1.rs`.
+- `struct_position.rs` — **ANSI-SUBSCRIPT-AND-AMBIGUOUS-FIELD-1 delta 2 (2026-11-06):**
+  `StructOperandsByPosition`, seated directly before `type_coercion`: when two struct operands
+  of a comparison or `IN`, or a later `UNION` branch, have the same arity and the same field
+  types by position, the second takes the first's field names through
+  `__repark_struct_by_position__`, so Spark 4.1.2's positional answer holds. Other shapes are
+  left to `type_coercion`.
 - `statement_guard.rs` — **WO-C10 (2026-09-23):** shared multi-statement refusal plus the
   front-door unclosed bracketed-comment guard. The guard tokenizes with `DatabricksDialect`,
   then scans outer unclosed comments while ignoring quoted text and line comments. It keeps an
