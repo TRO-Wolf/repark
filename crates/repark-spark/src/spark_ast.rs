@@ -180,6 +180,23 @@ pub(crate) fn apply_pregate_judge_rewrites(
     );
 }
 
+fn dml_matches_no_rows(state: &SessionState, plan: &LogicalPlan) -> Result<bool> {
+    let LogicalPlan::Dml(dml) = under_analyze(plan) else {
+        return Ok(false);
+    };
+    if !matches!(dml.op, WriteOp::Delete | WriteOp::Update) {
+        return Ok(false);
+    }
+    let mut input = state.optimize(dml.input.as_ref())?;
+    while let LogicalPlan::Projection(projection) = input {
+        input = Arc::unwrap_or_clone(projection.input);
+    }
+    Ok(matches!(
+        input,
+        LogicalPlan::EmptyRelation(ref empty) if !empty.produce_one_row
+    ))
+}
+
 fn under_analyze(plan: &LogicalPlan) -> &LogicalPlan {
     match plan {
         LogicalPlan::Analyze(analyze) => analyze.input.as_ref(),
@@ -271,6 +288,9 @@ async fn execute_passthrough_inner(
     let is_eager_command = matches!(&plan, LogicalPlan::Dml(_) | LogicalPlan::Copy(_));
     // Eager analysis exposes Spark-adjusted types to Arrow export and CTAS schema derivation.
     let plan = repark_functions::analyze_eagerly(&state, plan)?;
+    if dml_matches_no_rows(&state, &plan)? {
+        return ctx.read_empty();
+    }
     let plan = conform_insert_narrowed_ints(ctx, plan).await?;
     let target = insert_defaults::dml_target(under_analyze(&plan))
         .and_then(|(name, ident)| catalogs.get(&name).map(|catalog| (catalog, ident)));

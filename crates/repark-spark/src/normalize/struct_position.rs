@@ -11,16 +11,20 @@ use datafusion::common::{Column, DFSchema, Result, ScalarValue};
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::expr::{InList, InSubquery, ScalarFunction};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
+use datafusion::logical_expr::planner::{ExprPlanner, PlannerResult, RawBinaryExpr};
+use datafusion::logical_expr::type_coercion::binary::comparison_coercion;
 use datafusion::logical_expr::{
     BinaryExpr, ColumnarValue, Expr, ExprSchemable, LogicalPlan, Operator, Projection,
     ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Union, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
+use datafusion::sql::sqlparser::ast::BinaryOperator;
 use repark_functions::cast_map::spark_sql_name;
 
 use super::map_ordering::{refuse_in_expr, render};
 
 const STRUCT_BY_POSITION: &str = "__repark_struct_by_position__";
+const PLANNED_BY_POSITION: &str = "__repark_struct_by_position_planned__";
 const ORDINALS: [&str; 10] = [
     "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth",
 ];
@@ -211,21 +215,18 @@ fn spark_operator(op: Operator) -> &'static str {
 fn align_expr(expr: Expr, schema: &DFSchema, case_sensitive: bool) -> Result<Transformed<Expr>> {
     match expr {
         Expr::BinaryExpr(BinaryExpr { left, op, right }) if is_comparison(op) => {
+            let (left, left_planned) = planned_operand(*left);
+            let (right, right_planned) = planned_operand(*right);
+            if left_planned || right_planned {
+                return positional_comparison(left, op, right, schema, case_sensitive);
+            }
+            let (left, right) = (Box::new(left), Box::new(right));
             let target = left.get_type(schema).ok();
             let current = right.get_type(schema).ok();
             if let (Some(target), Some(current)) = (&target, &current)
                 && clashes(target, current, Seat::Comparison, case_sensitive)
             {
-                return Err(DataFusionError::Plan(format!(
-                    "[DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES] Cannot resolve \"({} {} {})\" due to \
-                     data type mismatch: the left and right operands of the binary operator have \
-                     incompatible types (\"{}\" and \"{}\"). SQLSTATE: 42K09",
-                    render(&left),
-                    spark_operator(op),
-                    render(&right),
-                    spark_sql_name(target),
-                    spark_sql_name(current)
-                )));
+                return Err(binary_op_diff_types(&left, op, &right, target, current));
             }
             let (right, changed) = aligned_operand(target.as_ref(), *right, schema);
             let expr = Expr::BinaryExpr(BinaryExpr::new(left, op, Box::new(right)));
@@ -279,6 +280,145 @@ fn align_expr(expr: Expr, schema: &DFSchema, case_sensitive: bool) -> Result<Tra
             Ok(Transformed::no(Expr::InSubquery(in_subquery)))
         }
         other => Ok(Transformed::no(other)),
+    }
+}
+
+fn binary_op_diff_types(
+    left: &Expr,
+    op: Operator,
+    right: &Expr,
+    left_type: &DataType,
+    right_type: &DataType,
+) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES] Cannot resolve \"({} {} {})\" due to data type \
+         mismatch: the left and right operands of the binary operator have incompatible types \
+         (\"{}\" and \"{}\"). SQLSTATE: 42K09",
+        render(left),
+        spark_operator(op),
+        render(right),
+        spark_sql_name(left_type),
+        spark_sql_name(right_type)
+    ))
+}
+
+#[derive(Debug, Default)]
+pub struct DuplicateFieldOperands;
+
+impl ExprPlanner for DuplicateFieldOperands {
+    fn plan_binary_op(
+        &self,
+        expr: RawBinaryExpr,
+        schema: &DFSchema,
+    ) -> Result<PlannerResult<RawBinaryExpr>> {
+        let Some(op) = comparison_operator(&expr.op) else {
+            return Ok(PlannerResult::Original(expr));
+        };
+        let (Ok(left_type), Ok(right_type)) =
+            (expr.left.get_type(schema), expr.right.get_type(schema))
+        else {
+            return Ok(PlannerResult::Original(expr));
+        };
+        if !holds_struct_pair(&left_type, &right_type)
+            || !(has_duplicate_names(&left_type) || has_duplicate_names(&right_type))
+        {
+            return Ok(PlannerResult::Original(expr));
+        }
+        let left_positional = positional_type(&left_type);
+        let right_positional = positional_type(&right_type);
+        if comparison_coercion(&left_positional, &right_positional).is_none() {
+            return Err(binary_op_diff_types(
+                &expr.left,
+                op,
+                &expr.right,
+                &left_type,
+                &right_type,
+            ));
+        }
+        let left = planned_by_position(expr.left, left_positional);
+        let right = planned_by_position(expr.right, right_positional);
+        Ok(PlannerResult::Planned(Expr::BinaryExpr(BinaryExpr::new(
+            Box::new(left),
+            op,
+            Box::new(right),
+        ))))
+    }
+}
+
+fn comparison_operator(op: &BinaryOperator) -> Option<Operator> {
+    match op {
+        BinaryOperator::Eq => Some(Operator::Eq),
+        BinaryOperator::NotEq => Some(Operator::NotEq),
+        BinaryOperator::Lt => Some(Operator::Lt),
+        BinaryOperator::LtEq => Some(Operator::LtEq),
+        BinaryOperator::Gt => Some(Operator::Gt),
+        BinaryOperator::GtEq => Some(Operator::GtEq),
+        BinaryOperator::Spaceship => Some(Operator::IsNotDistinctFrom),
+        _ => None,
+    }
+}
+
+fn has_duplicate_names(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::Struct(fields) => {
+            let mut names: Vec<&str> = fields.iter().map(|field| field.name().as_str()).collect();
+            names.sort_unstable();
+            names.windows(2).any(|pair| pair[0] == pair[1])
+                || fields
+                    .iter()
+                    .any(|field| has_duplicate_names(field.data_type()))
+        }
+        DataType::List(field)
+        | DataType::LargeList(field)
+        | DataType::FixedSizeList(field, _)
+        | DataType::Map(field, _) => has_duplicate_names(field.data_type()),
+        _ => false,
+    }
+}
+
+fn positional_field(field: &FieldRef, name: &str) -> FieldRef {
+    Arc::new(
+        Field::new(
+            name,
+            positional_type(field.data_type()),
+            field.is_nullable(),
+        )
+        .with_metadata(field.metadata().clone()),
+    )
+}
+
+fn positional_type(data_type: &DataType) -> DataType {
+    match data_type {
+        DataType::Struct(fields) => DataType::Struct(Fields::from(
+            fields
+                .iter()
+                .enumerate()
+                .map(|(index, field)| positional_field(field, &format!("_{}", index + 1)))
+                .collect::<Vec<_>>(),
+        )),
+        DataType::List(field) => DataType::List(positional_field(field, field.name())),
+        DataType::LargeList(field) => DataType::LargeList(positional_field(field, field.name())),
+        DataType::FixedSizeList(field, size) => {
+            DataType::FixedSizeList(positional_field(field, field.name()), *size)
+        }
+        DataType::Map(entries, sorted) => {
+            let DataType::Struct(fields) = entries.data_type() else {
+                return data_type.clone();
+            };
+            let fields = fields
+                .iter()
+                .map(|field| positional_field(field, field.name()))
+                .collect::<Vec<_>>();
+            DataType::Map(
+                Arc::new(Field::new(
+                    entries.name(),
+                    DataType::Struct(Fields::from(fields)),
+                    entries.is_nullable(),
+                )),
+                *sorted,
+            )
+        }
+        other => other.clone(),
     }
 }
 
@@ -437,9 +577,58 @@ fn renamed_type(target: &DataType, current: &DataType) -> Option<DataType> {
 
 fn by_position(operand: Expr, target: DataType) -> Expr {
     Expr::ScalarFunction(ScalarFunction::new_udf(
-        Arc::new(ScalarUDF::new_from_impl(StructByPosition::new(target))),
+        Arc::new(ScalarUDF::new_from_impl(StructByPosition::new(
+            STRUCT_BY_POSITION,
+            target,
+        ))),
         vec![operand],
     ))
+}
+
+fn planned_by_position(operand: Expr, target: DataType) -> Expr {
+    Expr::ScalarFunction(ScalarFunction::new_udf(
+        Arc::new(ScalarUDF::new_from_impl(StructByPosition::new(
+            PLANNED_BY_POSITION,
+            target,
+        ))),
+        vec![operand],
+    ))
+}
+
+fn planned_operand(expr: Expr) -> (Expr, bool) {
+    match expr {
+        Expr::ScalarFunction(mut function)
+            if function.func.name() == PLANNED_BY_POSITION && function.args.len() == 1 =>
+        {
+            (function.args.remove(0), true)
+        }
+        other => (other, false),
+    }
+}
+
+fn positional_comparison(
+    left: Expr,
+    op: Operator,
+    right: Expr,
+    schema: &DFSchema,
+    case_sensitive: bool,
+) -> Result<Transformed<Expr>> {
+    let left_type = left.get_type(schema)?;
+    let right_type = right.get_type(schema)?;
+    if clashes(&left_type, &right_type, Seat::Comparison, case_sensitive) {
+        return Err(binary_op_diff_types(
+            &left,
+            op,
+            &right,
+            &left_type,
+            &right_type,
+        ));
+    }
+    Ok(Transformed::yes(Expr::BinaryExpr(BinaryExpr::new(
+        Box::new(by_position(left, positional_type(&left_type))),
+        op,
+        Box::new(by_position(right, positional_type(&right_type))),
+    ))))
 }
 
 fn align_union(union: Union, case_sensitive: bool) -> Result<Transformed<LogicalPlan>> {
@@ -528,13 +717,15 @@ fn renamed_input(
 
 #[derive(Debug)]
 struct StructByPosition {
+    name: &'static str,
     target: DataType,
     signature: Signature,
 }
 
 impl StructByPosition {
-    fn new(target: DataType) -> Self {
+    fn new(name: &'static str, target: DataType) -> Self {
         Self {
+            name,
             target,
             signature: Signature::any(1, Volatility::Immutable),
         }
@@ -543,7 +734,7 @@ impl StructByPosition {
 
 impl PartialEq for StructByPosition {
     fn eq(&self, other: &Self) -> bool {
-        self.target == other.target
+        self.name == other.name && self.target == other.target
     }
 }
 
@@ -551,14 +742,14 @@ impl Eq for StructByPosition {}
 
 impl Hash for StructByPosition {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        STRUCT_BY_POSITION.hash(state);
+        self.name.hash(state);
         self.target.hash(state);
     }
 }
 
 impl ScalarUDFImpl for StructByPosition {
     fn name(&self) -> &str {
-        STRUCT_BY_POSITION
+        self.name
     }
 
     fn signature(&self) -> &Signature {

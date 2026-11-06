@@ -160,6 +160,10 @@ impl SessionExtension for SparkExtension {
         ctx.add_analyzer_rule(Arc::new(crate::spark_typed::FoldSparkNumericCasts));
         ctx.add_analyzer_rule(Arc::new(crate::spark_typed::SparkProjectionDisplay));
         ctx.add_analyzer_rule(Arc::new(repark_core::StackRewrite));
+        datafusion::execution::FunctionRegistry::register_expr_planner(
+            &mut *ctx.state_ref().write(),
+            Arc::new(crate::normalize::struct_position::DuplicateFieldOperands),
+        )?;
         ctx.add_analyzer_rule(Arc::new(repark_iceberg::StoreOverflowCast));
         TaExtension.register(ctx)
     }

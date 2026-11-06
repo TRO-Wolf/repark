@@ -125,8 +125,11 @@ here and is re-exported in one line.
   `INCOMPATIBLE_COLUMN_TYPE`) and both struct types. Delta 3: the rule descends into list
   elements and map keys and values with the same rules, refuses a map comparison in every seat
   (`INVALID_ORDERING_TYPE`, through `map_ordering::refuse_in_expr`), and refuses an `IN` subquery
-  whose struct column does not pair (`IN_SUBQUERY_DATA_TYPE_MISMATCH`). Other shapes are left
-  to `type_coercion`.
+  whose struct column does not pair (`IN_SUBQUERY_DATA_TYPE_MISMATCH`). `DuplicateFieldOperands`,
+  an expression planner registered by `SparkExtension`, renames a compared struct with duplicate
+  field names to positional names while the SQL is planned, so DataFusion's name-based struct
+  coercion (which asserts on duplicates) never sees it; the rule then pairs or refuses it on the
+  Spark-typed operands. Other shapes are left to `type_coercion`.
 - `statement_guard.rs` — **WO-C10 (2026-09-23):** shared multi-statement refusal plus the
   front-door unclosed bracketed-comment guard. The guard tokenizes with `DatabricksDialect`,
   then scans outer unclosed comments while ignoring quoted text and line comments. It keeps an
