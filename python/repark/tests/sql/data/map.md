@@ -38,14 +38,15 @@ SHA-256 of the AUD-015 cells file:
   80 more add struct operands whose field types differ, in every seat and in DML.
   Read by [../test_ansi_subscript_field.py](../test_ansi_subscript_field.py).
 
-- [struct_domain_cells.jsonl](struct_domain_cells.jsonl) — the struct-domain table: 971 cells
+- [struct_domain_cells.jsonl](struct_domain_cells.jsonl) — the struct-domain table: 1031 cells
   measured 2026-11-06 on Spark 4.1.2 with Iceberg 1.11.0 (hadoop catalog, ANSI on). Seats (SELECT,
   WHERE, CTE, scalar and IN subqueries, a temporary view, UNION ALL, DELETE, UPDATE SET and WHERE,
   INSERT SELECT and UNION ALL, every MERGE clause, and the DataFrame `select`, `filter`,
   `insertInto` and append) x shapes (each `struct(...)` naming arm, `named_struct`, structs inside
   structs, arrays and map values, struct columns, typed NULLs) x type pairs (equal, widenable, not
   widenable; same, different and duplicate names). Each cell has Spark's answer or error class and
-  its readback after a write. [struct_domain_grid.py](struct_domain_grid.py) builds the grid and
+  its readback after a write. 60 cells add null struct literals (`CAST(NULL AS STRUCT<...>)`,
+  negated, under `OR TRUE`, `IS NULL` and `<=>`) in WHERE, DELETE, UPDATE and MERGE. [struct_domain_grid.py](struct_domain_grid.py) builds the grid and
   [struct_domain_driver.py](struct_domain_driver.py) measures it on either engine.
 
 ## Pointers

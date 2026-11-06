@@ -269,6 +269,23 @@ NESTED = (
 NESTED_SEATS = ("select", "where", "delete", "update_where", "merge_on")
 
 
+NULL_PREDICATES = (
+    ("null_same", "{a}st = CAST(NULL AS STRUCT<x: INT>)"),
+    ("null_other", "{a}st = CAST(NULL AS STRUCT<y: INT>)"),
+    ("not_null_same", "NOT ({a}st = CAST(NULL AS STRUCT<x: INT>))"),
+    ("not_null_other", "NOT ({a}st = CAST(NULL AS STRUCT<y: INT>))"),
+    ("named_null", "struct({a}i) = CAST(NULL AS STRUCT<i: INT>)"),
+    ("not_named_null", "NOT (struct({a}i) = CAST(NULL AS STRUCT<z: INT>))"),
+    ("null_or_true", "{a}st = CAST(NULL AS STRUCT<x: INT>) OR TRUE"),
+    ("null_is_null", "({a}st = CAST(NULL AS STRUCT<x: INT>)) IS NULL"),
+    ("null_safe_column", "{a}st <=> CAST(NULL AS STRUCT<x: INT>)"),
+    ("null_safe_null", "CAST(NULL AS STRUCT<x: INT>) <=> CAST(NULL AS STRUCT<x: INT>)"),
+    ("int_null", "{a}v = CAST(NULL AS INT)"),
+    ("folded_false", "{a}id = 1 AND 1 = 0"),
+)
+NULL_SEATS = ("where", "delete", "update_where", "merge_on", "merge_matched_and")
+
+
 def _cmp(op: str, left: str, right: str) -> str:
     if op == "in":
         return f"{left} IN ({right})"
@@ -421,9 +438,20 @@ def _nested_cells() -> list[dict[str, str]]:
     return out
 
 
+def _null_cells() -> list[dict[str, str]]:
+    out = []
+    for name, predicate in NULL_PREDICATES:
+        for seat in NULL_SEATS:
+            _, template, qualifier, _ = COMPARE_SEATS[seat]
+            cmp = "(" + predicate.replace("{a}", qualifier) + ")"
+            stmt = template.replace("{cmp}", cmp)
+            out.append(_cell(f"e_{seat}_{name}", seat, "null_literal", name, stmt))
+    return out
+
+
 def cells() -> list[dict[str, str]]:
     """Return the struct-domain grid: seats x shapes x type pairs, without answers."""
-    out = _shape_cells() + _combo_cells() + _value_cells() + _nested_cells()
+    out = _shape_cells() + _combo_cells() + _value_cells() + _nested_cells() + _null_cells()
     keys = [cell["key"] for cell in out]
     if len(keys) != len(set(keys)):
         raise ValueError("struct domain keys must be unique")
