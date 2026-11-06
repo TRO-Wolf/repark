@@ -119,7 +119,8 @@ pub(crate) async fn execute_in_session<S: std::hash::BuildHasher>(
             Ok,
         )
         .map_err(|error| crate::show_table_extended::refusal_or(sql, error))?;
-    let canonical_sql = canonical.as_ref();
+    let named = crate::keyword_lower::name_struct_fields_in_sql(canonical.as_ref());
+    let canonical_sql = named.as_deref().unwrap_or(canonical.as_ref());
     // Clone the registry snapshot so P11 survives `.await` thread hops.
     let mut catalogs = catalogs.clone();
     catalogs.set_read_only_catalogs(read_only_catalogs.iter().cloned().collect());

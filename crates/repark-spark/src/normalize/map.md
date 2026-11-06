@@ -122,7 +122,11 @@ here and is re-exported in one line.
   the session case rule may widen field types as Spark's tightest common type does (an `IN`
   list or a `UNION` branch also promotes strings); two same-arity structs that cannot pair refuse
   with Spark's class for the seat (`BINARY_OP_DIFF_TYPES`, `DATA_DIFF_TYPES`,
-  `INCOMPATIBLE_COLUMN_TYPE`) and both struct types. Other shapes are left to `type_coercion`.
+  `INCOMPATIBLE_COLUMN_TYPE`) and both struct types. Delta 3: the rule descends into list
+  elements and map keys and values with the same rules, refuses a map comparison in every seat
+  (`INVALID_ORDERING_TYPE`, through `map_ordering::refuse_in_expr`), and refuses an `IN` subquery
+  whose struct column does not pair (`IN_SUBQUERY_DATA_TYPE_MISMATCH`). Other shapes are left
+  to `type_coercion`.
 - `statement_guard.rs` — **WO-C10 (2026-09-23):** shared multi-statement refusal plus the
   front-door unclosed bracketed-comment guard. The guard tokenizes with `DatabricksDialect`,
   then scans outer unclosed comments while ignoring quoted text and line comments. It keeps an

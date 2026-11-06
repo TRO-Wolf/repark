@@ -14,7 +14,7 @@ mod ltz_values_cast;
 mod ntz_cast_lower;
 mod struct_names;
 
-pub(crate) use struct_names::name_struct_fields;
+pub(crate) use struct_names::name_struct_fields_in_sql;
 
 fn null_expr() -> Expr {
     Expr::Value(ValueWithSpan {

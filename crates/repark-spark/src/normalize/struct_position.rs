@@ -1,13 +1,15 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, ArrayRef, AsArray, StructArray};
+use datafusion::arrow::array::{
+    Array, ArrayRef, AsArray, FixedSizeListArray, LargeListArray, ListArray, MapArray, StructArray,
+};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Fields};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{Column, DFSchema, Result, ScalarValue};
 use datafusion::error::DataFusionError;
-use datafusion::logical_expr::expr::{InList, ScalarFunction};
+use datafusion::logical_expr::expr::{InList, InSubquery, ScalarFunction};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
     BinaryExpr, ColumnarValue, Expr, ExprSchemable, LogicalPlan, Operator, Projection,
@@ -16,7 +18,7 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::AnalyzerRule;
 use repark_functions::cast_map::spark_sql_name;
 
-use super::map_ordering::render;
+use super::map_ordering::{refuse_in_expr, render};
 
 const STRUCT_BY_POSITION: &str = "__repark_struct_by_position__";
 const ORDINALS: [&str; 10] = [
@@ -71,13 +73,10 @@ fn pairing(left: &DataType, right: &DataType, seat: Seat, case_sensitive: bool) 
             if left_fields.len() != right_fields.len() {
                 return Pairing::Clash;
             }
-            let named = left_fields.iter().zip(right_fields.iter()).all(|(l, r)| {
-                if case_sensitive {
-                    l.name() == r.name()
-                } else {
-                    l.name().eq_ignore_ascii_case(r.name())
-                }
-            });
+            let named = left_fields
+                .iter()
+                .zip(right_fields.iter())
+                .all(|(l, r)| same_name(l.name(), r.name(), case_sensitive));
             let mut result = Pairing::Same;
             for (l, r) in left_fields.iter().zip(right_fields.iter()) {
                 match pairing(l.data_type(), r.data_type(), seat, case_sensitive) {
@@ -88,14 +87,21 @@ fn pairing(left: &DataType, right: &DataType, seat: Seat, case_sensitive: bool) 
             }
             result
         }
+        (
+            DataType::List(l) | DataType::LargeList(l) | DataType::FixedSizeList(l, _),
+            DataType::List(r) | DataType::LargeList(r) | DataType::FixedSizeList(r, _),
+        )
+        | (DataType::Map(l, _), DataType::Map(r, _)) => {
+            pairing(l.data_type(), r.data_type(), seat, case_sensitive)
+        }
         (DataType::Struct(_), _) | (_, DataType::Struct(_)) => Pairing::Clash,
         _ if spark_sql_name(left) == spark_sql_name(right) => Pairing::Same,
-        _ if widens(left, right, seat, case_sensitive) => Pairing::Widen,
+        _ if widens(left, right, seat) => Pairing::Widen,
         _ => Pairing::Clash,
     }
 }
 
-fn widens(left: &DataType, right: &DataType, seat: Seat, case_sensitive: bool) -> bool {
+fn widens(left: &DataType, right: &DataType, seat: Seat) -> bool {
     let decimal_digits = |data_type: &DataType| match data_type {
         DataType::Decimal32(precision, scale)
         | DataType::Decimal64(precision, scale)
@@ -115,13 +121,6 @@ fn widens(left: &DataType, right: &DataType, seat: Seat, case_sensitive: bool) -
     let temporal = |data_type: &DataType| data_type.is_temporal();
     match (left, right) {
         (DataType::Null, _) | (_, DataType::Null) => true,
-        (
-            DataType::List(l) | DataType::LargeList(l) | DataType::FixedSizeList(l, _),
-            DataType::List(r) | DataType::LargeList(r) | DataType::FixedSizeList(r, _),
-        ) => pairing(l.data_type(), r.data_type(), seat, case_sensitive) != Pairing::Clash,
-        (DataType::Map(l, _), DataType::Map(r, _)) => {
-            pairing(l.data_type(), r.data_type(), seat, case_sensitive) != Pairing::Clash
-        }
         _ if seat == Seat::Promoting
             && (left.is_numeric() || left.is_temporal() || is_string(left))
             && (right.is_numeric() || right.is_temporal() || is_string(right)) =>
@@ -162,8 +161,11 @@ fn align_node(node: LogicalPlan, case_sensitive: bool) -> Result<Transformed<Log
     let preserver = NamePreserver::new(&node);
     node.map_expressions(|expr| {
         let name = preserver.save(&expr);
-        expr.transform_up(|leaf| align_expr(leaf, &schema, case_sensitive))
-            .map(|aligned| aligned.update_data(|expr| name.restore(expr)))
+        expr.transform_up(|leaf| {
+            refuse_in_expr(&leaf, &schema)?;
+            align_expr(leaf, &schema, case_sensitive)
+        })
+        .map(|aligned| aligned.update_data(|expr| name.restore(expr)))
     })
 }
 
@@ -173,7 +175,7 @@ fn has_struct_candidate(node: &LogicalPlan) -> bool {
             Ok(matches!(
                 leaf,
                 Expr::BinaryExpr(BinaryExpr { op, .. }) if is_comparison(*op)
-            ) || matches!(leaf, Expr::InList(_)))
+            ) || matches!(leaf, Expr::InList(_) | Expr::InSubquery(_)))
         })
         .unwrap_or(false)
     })
@@ -272,15 +274,96 @@ fn align_expr(expr: Expr, schema: &DFSchema, case_sensitive: bool) -> Result<Tra
                 Transformed::no(expr)
             })
         }
+        Expr::InSubquery(in_subquery) => {
+            refuse_in_subquery(&in_subquery, schema, case_sensitive)?;
+            Ok(Transformed::no(Expr::InSubquery(in_subquery)))
+        }
         other => Ok(Transformed::no(other)),
     }
 }
 
+fn refuse_in_subquery(
+    in_subquery: &InSubquery,
+    schema: &DFSchema,
+    case_sensitive: bool,
+) -> Result<()> {
+    let Ok(left) = in_subquery.expr.get_type(schema) else {
+        return Ok(());
+    };
+    let Some(right) = in_subquery
+        .subquery
+        .subquery
+        .schema()
+        .fields()
+        .first()
+        .map(|field| field.data_type().clone())
+    else {
+        return Ok(());
+    };
+    if !holds_struct_pair(&left, &right) || subquery_pairs(&left, &right, case_sensitive) {
+        return Ok(());
+    }
+    Err(DataFusionError::Plan(format!(
+        "[DATATYPE_MISMATCH.IN_SUBQUERY_DATA_TYPE_MISMATCH] Cannot resolve \"({} IN \
+         (listquery()))\" due to data type mismatch: The data type of one or more elements in \
+         the left hand side of an IN subquery is not compatible with the data type of the output \
+         of the subquery. Mismatched columns: [({}:{}, {}:{})], Left side: [{}], Right side: \
+         [{}]. SQLSTATE: 42K09",
+        render(&in_subquery.expr),
+        render(&in_subquery.expr),
+        spark_sql_name(&left),
+        render(&in_subquery.expr),
+        spark_sql_name(&right),
+        spark_sql_name(&left),
+        spark_sql_name(&right)
+    )))
+}
+
+fn subquery_pairs(left: &DataType, right: &DataType, case_sensitive: bool) -> bool {
+    match (left, right) {
+        (DataType::Struct(left_fields), DataType::Struct(right_fields)) => {
+            left_fields.len() == right_fields.len()
+                && left_fields.iter().zip(right_fields.iter()).all(|(l, r)| {
+                    same_name(l.name(), r.name(), case_sensitive)
+                        && subquery_pairs(l.data_type(), r.data_type(), case_sensitive)
+                })
+        }
+        (DataType::Struct(_), _) | (_, DataType::Struct(_)) => false,
+        _ => spark_sql_name(left) == spark_sql_name(right) || is_string(left) || is_string(right),
+    }
+}
+
+fn same_name(left: &str, right: &str, case_sensitive: bool) -> bool {
+    if case_sensitive {
+        left == right
+    } else {
+        left.eq_ignore_ascii_case(right)
+    }
+}
+
+fn holds_struct_pair(left: &DataType, right: &DataType) -> bool {
+    match (left, right) {
+        (DataType::Struct(left_fields), DataType::Struct(right_fields)) => {
+            left_fields.len() == right_fields.len()
+        }
+        (
+            DataType::List(l) | DataType::LargeList(l) | DataType::FixedSizeList(l, _),
+            DataType::List(r) | DataType::LargeList(r) | DataType::FixedSizeList(r, _),
+        ) => holds_struct_pair(l.data_type(), r.data_type()),
+        (DataType::Map(l, _), DataType::Map(r, _)) => match (l.data_type(), r.data_type()) {
+            (DataType::Struct(left_entries), DataType::Struct(right_entries)) => left_entries
+                .iter()
+                .zip(right_entries.iter())
+                .any(|(l, r)| holds_struct_pair(l.data_type(), r.data_type())),
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
 fn clashes(target: &DataType, current: &DataType, seat: Seat, case_sensitive: bool) -> bool {
-    matches!(
-        (target, current),
-        (DataType::Struct(left), DataType::Struct(right)) if left.len() == right.len()
-    ) && pairing(target, current, seat, case_sensitive) == Pairing::Clash
+    holds_struct_pair(target, current)
+        && pairing(target, current, seat, case_sensitive) == Pairing::Clash
 }
 
 fn aligned_operand(target: Option<&DataType>, operand: Expr, schema: &DFSchema) -> (Expr, bool) {
@@ -296,7 +379,42 @@ fn aligned_operand(target: Option<&DataType>, operand: Expr, schema: &DFSchema) 
     }
 }
 
+fn renamed_element(target: &FieldRef, current: &FieldRef) -> Option<FieldRef> {
+    let data_type = renamed_type(target.data_type(), current.data_type())?;
+    Some(Arc::new(
+        Field::new(current.name(), data_type, current.is_nullable())
+            .with_metadata(current.metadata().clone()),
+    ))
+}
+
 fn renamed_type(target: &DataType, current: &DataType) -> Option<DataType> {
+    match (target, current) {
+        (
+            DataType::List(target)
+            | DataType::LargeList(target)
+            | DataType::FixedSizeList(target, _),
+            DataType::List(element),
+        ) => return renamed_element(target, element).map(DataType::List),
+        (
+            DataType::List(target)
+            | DataType::LargeList(target)
+            | DataType::FixedSizeList(target, _),
+            DataType::LargeList(element),
+        ) => return renamed_element(target, element).map(DataType::LargeList),
+        (
+            DataType::List(target)
+            | DataType::LargeList(target)
+            | DataType::FixedSizeList(target, _),
+            DataType::FixedSizeList(element, size),
+        ) => {
+            return renamed_element(target, element)
+                .map(|element| DataType::FixedSizeList(element, *size));
+        }
+        (DataType::Map(target, _), DataType::Map(entries, sorted)) => {
+            return renamed_element(target, entries).map(|entries| DataType::Map(entries, *sorted));
+        }
+        _ => {}
+    }
     let (DataType::Struct(target_fields), DataType::Struct(current_fields)) = (target, current)
     else {
         return None;
@@ -483,6 +601,55 @@ impl ScalarUDFImpl for StructByPosition {
 }
 
 fn renamed_array(array: &ArrayRef, target: &DataType) -> Result<ArrayRef> {
+    match target {
+        DataType::List(field) => {
+            if let Some(source) = array.as_list_opt::<i32>() {
+                let values = renamed_array(source.values(), field.data_type())?;
+                return Ok(Arc::new(ListArray::try_new(
+                    Arc::clone(field),
+                    source.offsets().clone(),
+                    values,
+                    source.nulls().cloned(),
+                )?));
+            }
+        }
+        DataType::LargeList(field) => {
+            if let Some(source) = array.as_list_opt::<i64>() {
+                let values = renamed_array(source.values(), field.data_type())?;
+                return Ok(Arc::new(LargeListArray::try_new(
+                    Arc::clone(field),
+                    source.offsets().clone(),
+                    values,
+                    source.nulls().cloned(),
+                )?));
+            }
+        }
+        DataType::FixedSizeList(field, size) => {
+            if let Some(source) = array.as_fixed_size_list_opt() {
+                let values = renamed_array(source.values(), field.data_type())?;
+                return Ok(Arc::new(FixedSizeListArray::try_new(
+                    Arc::clone(field),
+                    *size,
+                    values,
+                    source.nulls().cloned(),
+                )?));
+            }
+        }
+        DataType::Map(field, sorted) => {
+            if let Some(source) = array.as_map_opt() {
+                let entries: ArrayRef = Arc::new(source.entries().clone());
+                let entries = renamed_array(&entries, field.data_type())?;
+                return Ok(Arc::new(MapArray::try_new(
+                    Arc::clone(field),
+                    source.offsets().clone(),
+                    entries.as_struct().clone(),
+                    source.nulls().cloned(),
+                    *sorted,
+                )?));
+            }
+        }
+        _ => {}
+    }
     let DataType::Struct(fields) = target else {
         return Ok(Arc::clone(array));
     };
