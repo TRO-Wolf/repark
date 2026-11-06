@@ -4,11 +4,14 @@ use std::ops::ControlFlow;
 use std::sync::Arc;
 
 use datafusion::arrow::datatypes::DataType as ArrowDataType;
+use datafusion::common::DFSchema;
 use datafusion::config::Dialect;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::SessionState;
 use datafusion::logical_expr::expr::Alias;
-use datafusion::logical_expr::{Cast, Expr as DataFusionExpr, ExprSchemable, LogicalPlan, WriteOp};
+use datafusion::logical_expr::{
+    Cast, EmptyRelation, Expr as DataFusionExpr, ExprSchemable, LogicalPlan, WriteOp,
+};
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::parser::{ResetStatement, Statement as DfStatement};
@@ -180,21 +183,24 @@ pub(crate) fn apply_pregate_judge_rewrites(
     );
 }
 
-fn dml_matches_no_rows(state: &SessionState, plan: &LogicalPlan) -> Result<bool> {
-    let LogicalPlan::Dml(dml) = under_analyze(plan) else {
-        return Ok(false);
+fn skip_empty_dml(state: &SessionState, plan: LogicalPlan) -> Result<LogicalPlan> {
+    let LogicalPlan::Dml(dml) = under_analyze(&plan) else {
+        return Ok(plan);
     };
     if !matches!(dml.op, WriteOp::Delete | WriteOp::Update) {
-        return Ok(false);
+        return Ok(plan);
     }
     let mut input = state.optimize(dml.input.as_ref())?;
     while let LogicalPlan::Projection(projection) = input {
         input = Arc::unwrap_or_clone(projection.input);
     }
-    Ok(matches!(
-        input,
-        LogicalPlan::EmptyRelation(ref empty) if !empty.produce_one_row
-    ))
+    if matches!(input, LogicalPlan::EmptyRelation(ref empty) if !empty.produce_one_row) {
+        return Ok(LogicalPlan::EmptyRelation(EmptyRelation {
+            produce_one_row: false,
+            schema: Arc::new(DFSchema::empty()),
+        }));
+    }
+    Ok(plan)
 }
 
 fn under_analyze(plan: &LogicalPlan) -> &LogicalPlan {
@@ -287,10 +293,7 @@ async fn execute_passthrough_inner(
     // Spark applies commands eagerly.
     let is_eager_command = matches!(&plan, LogicalPlan::Dml(_) | LogicalPlan::Copy(_));
     // Eager analysis exposes Spark-adjusted types to Arrow export and CTAS schema derivation.
-    let plan = repark_functions::analyze_eagerly(&state, plan)?;
-    if dml_matches_no_rows(&state, &plan)? {
-        return ctx.read_empty();
-    }
+    let plan = skip_empty_dml(&state, repark_functions::analyze_eagerly(&state, plan)?)?;
     let plan = conform_insert_narrowed_ints(ctx, plan).await?;
     let target = insert_defaults::dml_target(under_analyze(&plan))
         .and_then(|(name, ident)| catalogs.get(&name).map(|catalog| (catalog, ident)));
