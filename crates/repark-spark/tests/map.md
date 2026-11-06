@@ -148,7 +148,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   write with the internal error that names the kernel, and the table stays empty. Main stored
   the UTC wall. Risk: a session built without the kernel stores a wall shifted by the zone
   offset with no error.
-- `struct_pairing_doors.rs` — **WRITE-SPINE-1 step 2 fix round 1 (2026-10-25):** `the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1` pins the PARTITION carve-out of ice-struct-pairing-1 C-031 on the stage's PartitionOverwrite site.
+- `struct_operands_by_position.rs` — **ANSI-SUBSCRIPT-AND-AMBIGUOUS-FIELD-1 delta 2 (2026-11-06):** a string subscript names its `struct(...)` field and collisions refuse; struct `=`, `<=>`, `IN`, `UNION` and DML pair by position as Spark 4.1.2.
 - [struct_pairing_doors.rs](struct_pairing_doors.rs) —
   **ICE-STRUCT-PAIRING-1 step 1 (2026-10-14), parity row R-016:** the sixteen write doors at
   the Rust door (`ReparkSession::sql`, and `sql_built_with_write_options` with the DataFrame

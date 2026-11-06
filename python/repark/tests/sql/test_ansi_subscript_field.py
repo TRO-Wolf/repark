@@ -27,6 +27,26 @@ FIXTURES = {
         "INSERT INTO {t} VALUES (1, named_struct('a', 1, 'b', 'x')), "
         "(2, named_struct('a', 7, 'b', 'y')), (3, NULL)",
     ),
+    "MX": (
+        "CREATE TABLE {t} (id INT, v INT, l ARRAY<INT>, m MAP<STRING, INT>, "
+        "s STRUCT<x: INT, y: INT>)" + V2,
+        "INSERT INTO {t} VALUES (1, 1, array(10, 20), map('a', 7), named_struct('x', 8, 'y', 9))",
+    ),
+    "NX": (
+        "CREATE TABLE {t} (id INT, k STRING, ls ARRAY<STRUCT<a: INT>>, "
+        "n STRUCT<a: MAP<STRING, INT>, b: STRUCT<x: INT>>, m MAP<STRING, INT>)" + V2,
+        "INSERT INTO {t} VALUES (1, 'a', array(named_struct('a', 3)), "
+        "named_struct('a', map('x', 4), 'b', named_struct('x', 5)), map('a', 7, 'B', 8))",
+    ),
+    "UV": ("CREATE TABLE {t} (id INT, v INT)" + V2, "INSERT INTO {t} VALUES (1, 1), (2, 2)"),
+    "SA": (
+        "CREATE TABLE {t} (id INT, s STRUCT<a: INT>)" + V2,
+        "INSERT INTO {t} VALUES (0, named_struct('a', 0))",
+    ),
+    "SB": (
+        "CREATE TABLE {t} (id INT, s STRUCT<a: INT, b: INT>)" + V2,
+        "INSERT INTO {t} VALUES (0, named_struct('a', 1, 'b', 2))",
+    ),
 }
 CONFS = {
     "ansi": ("true", "false"),
@@ -46,6 +66,17 @@ OUTSIDE_UNIT = {
     ("ansi", "dml_delete_case_guard"): "DataFusion rewrites a boolean CASE guard to AND and OR",
     ("ansi", "f2_alias_mixed"): "nested rule D7: collecting a struct with duplicate names refuses",
     ("ansi", "f2_w_delete_alias_dup"): "card C1: a DELETE WHERE chain refuses with the dot text",
+    ("ansi", "f4_name_array_fields"): "an array-of-struct field path refuses on the engine",
+    ("ansi", "f4_name_col_key"): "card: SQL m[k] with a column key on a table refuses",
+    ("ansi", "f4_name_map_null_key"): "a NULL map key refuses on the engine",
+    ("ansi", "f4_w_delete_named"): "card C1: a DELETE WHERE chain refuses with the extracted text",
+    ("ansi", "f5_eq_string"): "a struct pair of different field types answers (question)",
+    ("ansi", "f6_getitem_str"): "a map value by string key keeps the key name (question)",
+    ("ansi", "f6_sub_str"): "a map value by string key keeps the key name (question)",
+    ("ansi", "f6_amb_key"): "a map value by string key keeps the key name (question)",
+    ("ansi", "f6_w_amb_key"): "a map value by string key keeps the key name (question)",
+    ("ansi", "f6_dot_str"): "a dotted struct path string refuses on the DataFrame door",
+    ("ansi", "f6_dot_str_arg"): "a dotted struct path string refuses on the DataFrame door",
 }
 
 
@@ -104,11 +135,11 @@ CELL_ROWS = _cells()
 
 
 def test_the_cell_table_holds_every_enumerated_case() -> None:
-    assert len(CELL_ROWS) == 137
-    assert sum(row.get("door") == "dataframe" for row in CELL_ROWS) == 14
+    assert len(CELL_ROWS) == 240
+    assert sum(row.get("door") == "dataframe" for row in CELL_ROWS) == 42
     assert {(row["conf"], row["name"]) for row in CELL_ROWS} >= set(OUTSIDE_UNIT)
     refusals = [row for row in CELL_ROWS if "error" in row["spark"]]
-    assert sum(_error_class(row["spark"]["error"]) in IN_UNIT for row in refusals) == 69
+    assert sum(_error_class(row["spark"]["error"]) in IN_UNIT for row in refusals) == 81
 
 
 @pytest.mark.parametrize(
@@ -149,6 +180,17 @@ def _array_frame(door: ReparkSession) -> Any:
     return door.createDataFrame([(1, [10, 20, 30], 0), (2, [40], 0)], "id INT, l ARRAY<INT>, i INT")
 
 
+def _struct_frame(door: ReparkSession) -> Any:
+    return door.sql(
+        "SELECT 1 AS id, 1 AS v, 'a' AS k, array(10, 20) AS l, map('a', 7) AS m, "
+        "named_struct('x', 8, 'y', 9) AS s"
+    )
+
+
+def _col2() -> Any:
+    return sf.struct(sf.lit(1).alias("col2"), sf.lit(2)).getField("col2")
+
+
 DATAFRAME_CASES: dict[str, Callable[[Any], Any]] = {
     "f1_df_sub_litcol": lambda df: df.select(sf.col("l")[sf.lit(9)]),
     "f1_df_sub_expr": lambda df: df.select(sf.col("l")[sf.col("i") + 9]),
@@ -165,12 +207,50 @@ DATAFRAME_CASES: dict[str, Callable[[Any], Any]] = {
     ),
     "f1_w_insert_into": lambda df: df.select("id", sf.col("l").getItem(sf.col("i") + 9).alias("v")),
     "f1_w_insert_into_sub": lambda df: df.select("id", sf.col("l")[sf.lit(9)].alias("v")),
+    "f6_lits": lambda df: df.select(sf.struct(sf.lit(1), sf.lit(2)).alias("r")),
+    "f6_mixed": lambda df: df.select(sf.struct("id", sf.lit(1)).alias("r")),
+    "f6_cols": lambda df: df.select(sf.struct(sf.col("id"), "v").alias("r")),
+    "f6_dfcol": lambda df: df.select(sf.struct(df["id"], df.v).alias("r")),
+    "f6_alias": lambda df: df.select(sf.struct(sf.lit(1).alias("a"), sf.lit(2)).alias("r")),
+    "f6_name": lambda df: df.select(sf.struct(sf.lit(1).name("z")).alias("r")),
+    "f6_expr": lambda df: df.select(sf.struct(sf.col("id") + 1, sf.abs("v")).alias("r")),
+    "f6_cast": lambda df: df.select(sf.struct(sf.col("id").cast("long")).alias("r")),
+    "f6_qualified": lambda df: df.alias("t").select(sf.struct(sf.col("t.id")).alias("r")),
+    "f6_getfield": lambda df: df.select(sf.struct(sf.col("s").getField("x")).alias("r")),
+    "f6_getitem_str": lambda df: df.select(sf.struct(sf.col("m").getItem("a")).alias("r")),
+    "f6_sub_str": lambda df: df.select(sf.struct(sf.col("m")["a"]).alias("r")),
+    "f6_getitem_int": lambda df: df.select(sf.struct(sf.col("l").getItem(0)).alias("r")),
+    "f6_getitem_col": lambda df: df.select(sf.struct(sf.col("m")[sf.col("k")]).alias("r")),
+    "f6_dot_str": lambda df: df.select(sf.struct(sf.col("s.x")).alias("r")),
+    "f6_dot_str_arg": lambda df: df.select(sf.struct("s.x").alias("r")),
+    "f6_attr": lambda df: df.select(sf.struct(df.s.x).alias("r")),
+    "f6_nested": lambda df: df.select(sf.struct(sf.struct(sf.lit(1))).alias("r")),
+    "f6_getf": lambda df: df.select(sf.struct(sf.lit(1), sf.lit(2)).getField("col2")),
+    "f6_getf_mixed": lambda df: df.select(sf.struct("id", sf.lit(5)).getField("col2")),
+    "f6_amb": lambda df: df.select(_col2()),
+    "f6_amb_cols": lambda df: df.select(sf.struct("id", "id").getField("id")),
+    "f6_amb_key": lambda df: df.select(
+        sf.struct(sf.col("m")["a"], sf.lit(2).alias("a")).getField("a")
+    ),
+    "f6_unaliased": lambda df: df.select(sf.struct(sf.lit(1), "id")),
+    "f6_eq": lambda df: df.select(sf.struct("id", "v") == sf.struct(sf.lit(1), sf.lit(1))),
+    "f6_w_amb": lambda df: df.select("id", _col2().alias("v")),
+    "f6_w_ok": lambda df: df.select(
+        "id", sf.struct(sf.lit(1), sf.lit(2)).getField("col2").alias("v")
+    ),
+    "f6_w_amb_key": lambda df: df.select(
+        "id", sf.struct(sf.col("m")["a"], sf.lit(2).alias("a")).getField("a").alias("v")
+    ),
 }
 
 
 @pytest.mark.parametrize(
     "cell",
-    [row for row in CELL_ROWS if row.get("door") == "dataframe"],
+    [
+        row
+        for row in CELL_ROWS
+        if row.get("door") == "dataframe" and (row["conf"], row["name"]) not in OUTSIDE_UNIT
+    ],
     ids=lambda row: f"{row['conf']}-{row['name']}",
 )
 def test_the_dataframe_door_answers_as_spark_does(
@@ -183,14 +263,18 @@ def test_the_dataframe_door_answers_as_spark_does(
         frame = door.sql("SELECT map('k', 1) AS m").select(sf.col("m")[sf.lit("z")])
         assert _frame_rows(frame) == want["rows"]
         return
-    frame = DATAFRAME_CASES[cell["name"]](_array_frame(door))
+    source = _struct_frame(door) if cell["name"].startswith("f6_") else _array_frame(door)
+    frame = DATAFRAME_CASES[cell["name"]](source)
     if "spark_readback" in cell:
         door.sql("CREATE NAMESPACE IF NOT EXISTS asf.ns").collect()
-        for statement in FIXTURES["U"]:
+        for statement in FIXTURES[cell.get("fixture", "U")]:
             door.sql(statement.format(t="asf.ns.t")).collect()
-        with pytest.raises(Exception) as raised:
+        if "error" in want:
+            with pytest.raises(Exception) as raised:
+                frame.write.insertInto("asf.ns.t")
+            _assert_refusal(want["error"], raised.value)
+        else:
             frame.write.insertInto("asf.ns.t")
-        _assert_refusal(want["error"], raised.value)
         assert _rows(door, "SELECT * FROM asf.ns.t") == cell["spark_readback"]
     elif "error" in want:
         with pytest.raises(Exception) as raised:
