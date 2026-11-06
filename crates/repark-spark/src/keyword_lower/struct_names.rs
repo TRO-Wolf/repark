@@ -27,7 +27,7 @@ pub(crate) fn name_struct_fields_in_sql(sql: &str) -> Option<String> {
     if inserts.is_empty() {
         return None;
     }
-    inserts.sort_by(|left, right| right.0.cmp(&left.0));
+    inserts.sort_by_key(|insert| std::cmp::Reverse(insert.0));
     let mut named = sql.to_string();
     for (at, text) in inserts {
         named.insert_str(at, &text);
