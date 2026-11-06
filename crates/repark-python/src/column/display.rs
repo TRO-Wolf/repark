@@ -17,6 +17,26 @@ mod construct;
 #[cfg(test)]
 mod tests;
 
+fn struct_field_name(expr: &Expr, index: usize) -> String {
+    let key = match expr {
+        Expr::Alias(alias) => return alias.name.clone(),
+        Expr::Column(column) => return column.name.clone(),
+        Expr::ScalarFunction(function) if function.func.name() == "get_field" => {
+            function.args.get(1..).and_then(<[Expr]>::last)
+        }
+        _ => None,
+    };
+    match key {
+        Some(Expr::Literal(
+            ScalarValue::Utf8(Some(name))
+            | ScalarValue::Utf8View(Some(name))
+            | ScalarValue::LargeUtf8(Some(name)),
+            _,
+        )) => name.clone(),
+        _ => format!("col{}", index + 1),
+    }
+}
+
 fn wrap_binary(left: &str, spark_op: &str, right: &str) -> String {
     let mut out = String::with_capacity(left.len() + spark_op.len() + right.len() + 4);
     out.push('(');
@@ -774,6 +794,17 @@ impl PyColumnParts {
                 call_two(call_name, inner, key)?
             };
             Ok((native, spark_display, sql_expr, None))
+        })
+    }
+
+    #[staticmethod]
+    fn struct_field_names(fields: Vec<PyColumn>) -> PyResult<Vec<String>> {
+        fenced!("ColumnParts.struct_field_names", {
+            Ok(fields
+                .iter()
+                .enumerate()
+                .map(|(index, field)| struct_field_name(&field.expr, index))
+                .collect())
         })
     }
 

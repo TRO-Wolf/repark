@@ -202,7 +202,7 @@ def test_narrowed_literal_in_array_struct_map() -> None:
     assert _door_type(session, struct) == ("struct<col1: int32, col2: string>", False)
     assert session.sql(struct).toArrow().column("r").to_pylist() == [{"col1": 1, "col2": "a"}]
     facade_struct = frame.select(F.struct(F.lit(1), F.lit("a")).alias("r"))
-    assert _frame_type(facade_struct) == ("struct<1: int32, a: string>", False)
+    assert _frame_type(facade_struct) == ("struct<col1: int32, col2: string>", False)
     mapping = "SELECT map(1, 'a') AS r"
     assert _door_type(session, mapping) == ("map<int32, string>", False)
     assert session.sql(mapping).toArrow().column("r").to_pylist() == [[(1, "a")]]
