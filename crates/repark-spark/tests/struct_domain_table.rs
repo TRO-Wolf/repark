@@ -37,8 +37,8 @@ const FIXTURES: &[(&str, [&str; 3])] = &[
         ],
     ),
 ];
+const PANICKED: &str = "the engine panicked";
 const WRITES: [&str; 4] = ["DELETE", "UPDATE", "MERGE", "INSERT"];
-const PENDING_RULING: [&str; 1] = ["d_delete_typed_null_24"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Reason {
@@ -50,8 +50,6 @@ enum Reason {
 const C1: Reason = Reason::Card("C1: a DELETE WHERE struct field chain refuses");
 const UNION_STRING: Reason = Reason::Card("UNION widening of a STRING field to a number");
 const ORACLE: Reason = Reason::OracleDefect;
-const DUPLICATE_NAMES: Reason =
-    Reason::CannotPlan("DataFusion asserts on duplicate struct field names while planning");
 const PLANNER_TYPES: Reason =
     Reason::CannotPlan("DataFusion's SQL planner types the comparison before the analyzer");
 const UNION_ARITY: Reason =
@@ -60,78 +58,29 @@ const UNION_INTO_WIDER: Reason =
     Reason::CannotPlan("the Iceberg provider cannot cast a UNION input into a wider struct");
 
 const DIFFERS: &[(&str, Reason)] = &[
-    ("a_select_bare_int_bigint_dup", DUPLICATE_NAMES),
-    ("a_select_bare_int_double_dup", DUPLICATE_NAMES),
-    ("a_select_bare_int_dec12_dup", DUPLICATE_NAMES),
-    ("a_select_bare_int_string_dup", DUPLICATE_NAMES),
     ("a_select_bare_int_boolean_diff", PLANNER_TYPES),
     ("a_select_bare_int_boolean_same", PLANNER_TYPES),
-    ("a_select_bare_int_boolean_dup", DUPLICATE_NAMES),
-    ("a_select_qualified_int_bigint_dup", DUPLICATE_NAMES),
-    ("a_select_qualified_int_double_dup", DUPLICATE_NAMES),
-    ("a_select_qualified_int_dec12_dup", DUPLICATE_NAMES),
-    ("a_select_qualified_int_string_dup", DUPLICATE_NAMES),
     ("a_select_qualified_int_boolean_diff", PLANNER_TYPES),
     ("a_select_qualified_int_boolean_same", PLANNER_TYPES),
-    ("a_select_qualified_int_boolean_dup", DUPLICATE_NAMES),
-    ("a_select_nested_int_bigint_dup", DUPLICATE_NAMES),
-    ("a_select_nested_int_double_dup", DUPLICATE_NAMES),
-    ("a_select_nested_int_dec12_dup", DUPLICATE_NAMES),
-    ("a_select_nested_int_string_dup", DUPLICATE_NAMES),
     ("a_select_nested_int_boolean_diff", PLANNER_TYPES),
     ("a_select_nested_int_boolean_same", PLANNER_TYPES),
-    ("a_select_nested_int_boolean_dup", DUPLICATE_NAMES),
-    ("a_select_paren_int_bigint_dup", DUPLICATE_NAMES),
-    ("a_select_paren_int_double_dup", DUPLICATE_NAMES),
-    ("a_select_paren_int_dec12_dup", DUPLICATE_NAMES),
-    ("a_select_paren_int_string_dup", DUPLICATE_NAMES),
     ("a_select_paren_int_boolean_diff", PLANNER_TYPES),
     ("a_select_paren_int_boolean_same", PLANNER_TYPES),
-    ("a_select_paren_int_boolean_dup", DUPLICATE_NAMES),
     ("a_delete_subscript_int_int_diff", C1),
     ("a_delete_subscript_int_int_same", C1),
     ("a_delete_subscript_int_bigint_same", C1),
-    ("a_select_subscript_int_bigint_dup", DUPLICATE_NAMES),
     ("a_delete_subscript_int_double_same", C1),
-    ("a_select_subscript_int_double_dup", DUPLICATE_NAMES),
     ("a_delete_subscript_int_dec12_same", C1),
-    ("a_select_subscript_int_dec12_dup", DUPLICATE_NAMES),
-    ("a_select_subscript_int_string_dup", DUPLICATE_NAMES),
     ("a_select_subscript_int_boolean_diff", PLANNER_TYPES),
     ("a_select_subscript_int_boolean_same", PLANNER_TYPES),
-    ("a_select_subscript_int_boolean_dup", DUPLICATE_NAMES),
-    ("a_select_dot_int_bigint_dup", DUPLICATE_NAMES),
-    ("a_select_dot_int_double_dup", DUPLICATE_NAMES),
-    ("a_select_dot_int_dec12_dup", DUPLICATE_NAMES),
-    ("a_select_dot_int_string_dup", DUPLICATE_NAMES),
     ("a_select_dot_int_boolean_diff", PLANNER_TYPES),
     ("a_select_dot_int_boolean_same", PLANNER_TYPES),
-    ("a_select_dot_int_boolean_dup", DUPLICATE_NAMES),
-    ("a_select_literal_int_int_dup", DUPLICATE_NAMES),
-    ("a_select_literal_int_bigint_dup", DUPLICATE_NAMES),
-    ("a_select_literal_int_double_dup", DUPLICATE_NAMES),
-    ("a_select_literal_int_dec12_dup", DUPLICATE_NAMES),
-    ("a_select_literal_int_string_dup", DUPLICATE_NAMES),
     ("a_select_literal_int_boolean_diff", PLANNER_TYPES),
     ("a_select_literal_int_boolean_same", PLANNER_TYPES),
-    ("a_select_literal_int_boolean_dup", DUPLICATE_NAMES),
-    ("a_select_expression_int_bigint_dup", DUPLICATE_NAMES),
-    ("a_select_expression_int_double_dup", DUPLICATE_NAMES),
-    ("a_select_expression_int_dec12_dup", DUPLICATE_NAMES),
-    ("a_select_expression_int_string_dup", DUPLICATE_NAMES),
     ("a_select_expression_int_boolean_diff", PLANNER_TYPES),
     ("a_select_expression_int_boolean_same", PLANNER_TYPES),
-    ("a_select_expression_int_boolean_dup", DUPLICATE_NAMES),
-    ("a_select_alias_int_bigint_dup", DUPLICATE_NAMES),
-    ("a_select_alias_int_double_dup", DUPLICATE_NAMES),
-    ("a_select_alias_int_dec12_dup", DUPLICATE_NAMES),
-    ("a_select_alias_int_string_dup", DUPLICATE_NAMES),
     ("a_select_alias_int_boolean_diff", PLANNER_TYPES),
     ("a_select_alias_int_boolean_same", PLANNER_TYPES),
-    ("a_select_alias_int_boolean_dup", DUPLICATE_NAMES),
-    ("a_select_bare_float_double_dup", DUPLICATE_NAMES),
-    ("a_select_bare_date_timestamp_dup", DUPLICATE_NAMES),
-    ("a_select_bare_dec5_dec7_dup", DUPLICATE_NAMES),
     ("b_union_all_k4_string", UNION_STRING),
     ("c_insert_union_all_vl_int_named", UNION_INTO_WIDER),
     ("c_insert_union_all_vl_int_alias_x", UNION_INTO_WIDER),
@@ -283,7 +232,7 @@ impl Grid {
         AssertUnwindSafe(run)
             .catch_unwind()
             .await
-            .unwrap_or_else(|_| Err("the engine panicked".to_string()))
+            .unwrap_or_else(|_| Err(PANICKED.to_string()))
     }
 
     async fn fresh(&mut self, name: &str) -> String {
@@ -374,7 +323,7 @@ async fn every_struct_domain_cell_answers_and_writes_as_spark_does() {
         .lines()
         .map(|line| serde_json::from_str(line).expect("cell"))
         .collect();
-    assert_eq!(cells.len(), 971);
+    assert_eq!(cells.len(), 1031);
     let keys: Vec<&str> = cells
         .iter()
         .filter_map(|cell| cell["key"].as_str())
@@ -385,10 +334,13 @@ async fn every_struct_domain_cell_answers_and_writes_as_spark_does() {
     for cell in &cells {
         let key = cell["key"].as_str().expect("key");
         let seat = cell["seat"].as_str().expect("seat");
-        if seat.starts_with("df_") || PENDING_RULING.contains(&key) {
+        if seat.starts_with("df_") {
             continue;
         }
         let outcome = grid.run(seat, cell["stmt"].as_str().expect("stmt")).await;
+        if outcome.answer == Value::String(PANICKED.to_string()) {
+            mismatches.push(format!("{key}: {PANICKED}"));
+        }
         let same = matches_spark(cell, &outcome);
         match differs.get(key) {
             None if !same => mismatches.push(format!(

@@ -102,6 +102,8 @@ class Grid:
         except (KeyboardInterrupt, SystemExit):
             raise
         except BaseException as error:
+            if type(error).__name__ == "PanicException":
+                return "error", "PANIC " + error_of(error)
             return "error", error_of(error)
 
 
