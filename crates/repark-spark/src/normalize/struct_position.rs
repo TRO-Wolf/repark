@@ -57,7 +57,7 @@ fn align_node(node: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let preserver = NamePreserver::new(&node);
     node.map_expressions(|expr| {
         let name = preserver.save(&expr);
-        expr.transform_up(|leaf| align_expr(leaf, &schema))
+        expr.transform_up(|leaf| Ok(align_expr(leaf, &schema)))
             .map(|aligned| aligned.update_data(|expr| name.restore(expr)))
     })
 }
@@ -88,17 +88,17 @@ fn is_comparison(op: Operator) -> bool {
     )
 }
 
-fn align_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
+fn align_expr(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     match expr {
         Expr::BinaryExpr(BinaryExpr { left, op, right }) if is_comparison(op) => {
             let target = left.get_type(schema).ok();
             let (right, changed) = aligned_operand(target.as_ref(), *right, schema);
             let expr = Expr::BinaryExpr(BinaryExpr::new(left, op, Box::new(right)));
-            Ok(if changed {
+            if changed {
                 Transformed::yes(expr)
             } else {
                 Transformed::no(expr)
-            })
+            }
         }
         Expr::InList(InList {
             expr: value,
@@ -116,13 +116,13 @@ fn align_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
                 })
                 .collect();
             let expr = Expr::InList(InList::new(value, list, negated));
-            Ok(if changed {
+            if changed {
                 Transformed::yes(expr)
             } else {
                 Transformed::no(expr)
-            })
+            }
         }
-        other => Ok(Transformed::no(other)),
+        other => Transformed::no(other),
     }
 }
 

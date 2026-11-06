@@ -207,7 +207,7 @@ DATAFRAME_CASES: dict[str, Callable[[Any], Any]] = {
     ),
     "f1_w_insert_into": lambda df: df.select("id", sf.col("l").getItem(sf.col("i") + 9).alias("v")),
     "f1_w_insert_into_sub": lambda df: df.select("id", sf.col("l")[sf.lit(9)].alias("v")),
-    "f6_lits": lambda df: df.select(sf.struct(sf.lit(1), sf.lit(2)).alias("r")),
+    "f6_literals": lambda df: df.select(sf.struct(sf.lit(1), sf.lit(2)).alias("r")),
     "f6_mixed": lambda df: df.select(sf.struct("id", sf.lit(1)).alias("r")),
     "f6_cols": lambda df: df.select(sf.struct(sf.col("id"), "v").alias("r")),
     "f6_dfcol": lambda df: df.select(sf.struct(df["id"], df.v).alias("r")),

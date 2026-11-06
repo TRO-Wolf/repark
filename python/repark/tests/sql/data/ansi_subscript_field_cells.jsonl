@@ -210,7 +210,7 @@
 {"conf": "ansi", "fixture": "SB", "name": "f5_w_insert_swapped", "spark": {"rows": []}, "spark_readback": [[0, {"a": 1, "b": 2}], [5, {"a": 1, "b": 2}]], "stmt": "INSERT INTO {t} SELECT 5, named_struct('b', 1, 'a', 2)"}
 {"conf": "ansi", "fixture": "SA", "name": "f5_w_insert_where_eq", "spark": {"rows": []}, "spark_readback": [[0, {"a": 0}], [6, {"a": 0}]], "stmt": "INSERT INTO {t} SELECT 6, s FROM {t} WHERE s = struct(0)"}
 {"conf": "ansi", "fixture": "UV", "name": "f5_w_delete_arity", "spark": {"error": "[DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES] Cannot resolve \"(struct(id, v) = struct(1))\" due to data type mismatch: the left and right operands of the binary operator have incompatible types (\"STRUCT<id: INT, v: INT>\" and \"STRUCT<col1: INT NOT NULL>\"). SQLSTATE: 42K09"}, "spark_readback": [[1, 1], [2, 2]], "stmt": "DELETE FROM {t} WHERE struct(id, v) = struct(1)"}
-{"conf": "ansi", "door": "dataframe", "name": "f6_lits", "spark": {"rows": [[{"col1": 1, "col2": 2}]]}}
+{"conf": "ansi", "door": "dataframe", "name": "f6_literals", "spark": {"rows": [[{"col1": 1, "col2": 2}]]}}
 {"conf": "ansi", "door": "dataframe", "name": "f6_mixed", "spark": {"rows": [[{"col2": 1, "id": 1}]]}}
 {"conf": "ansi", "door": "dataframe", "name": "f6_cols", "spark": {"rows": [[{"id": 1, "v": 1}]]}}
 {"conf": "ansi", "door": "dataframe", "name": "f6_dfcol", "spark": {"rows": [[{"id": 1, "v": 1}]]}}
