@@ -99,7 +99,9 @@ class Grid:
                 self.spark.sql(stmt).collect()
                 return "ok", "ok"
             return "rows", rows_of(self.spark.sql(stmt))
-        except Exception as error:
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except BaseException as error:
             return "error", error_of(error)
 
 

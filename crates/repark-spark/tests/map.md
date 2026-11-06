@@ -148,7 +148,8 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   write with the internal error that names the kernel, and the table stays empty. Main stored
   the UTC wall. Risk: a session built without the kernel stores a wall shifted by the zone
   offset with no error.
-- `struct_operands_by_position.rs` — **ANSI-SUBSCRIPT-AND-AMBIGUOUS-FIELD-1 delta 2 (2026-11-06):** a string subscript names its `struct(...)` field and collisions refuse; struct `=`, `<=>`, `IN`, `UNION` and DML pair by position as Spark 4.1.2.
+- `struct_operands_by_position.rs` — **ANSI-SUBSCRIPT-AND-AMBIGUOUS-FIELD-1 d2 (2026-11-06):** string subscripts name `struct(...)` fields, collisions refuse; struct `=`, `<=>`, `IN`, `UNION` and DML pair by position.
+- `struct_domain_table.rs` — **d3 (2026-11-06):** each SQL cell of `struct_domain_cells.jsonl` matches Spark or is listed with a reason.
 - [struct_pairing_doors.rs](struct_pairing_doors.rs) —
   **ICE-STRUCT-PAIRING-1 step 1 (2026-10-14), parity row R-016:** the sixteen write doors at
   the Rust door (`ReparkSession::sql`, and `sql_built_with_write_options` with the DataFrame
@@ -157,10 +158,9 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   Spark's rule in the test (by position on `INSERT`, `VALUES`, `INSERT OVERWRITE`, `REPLACE
   WHERE` and `insertInto`; by name elsewhere), with the refusal's full text and table label.
   `UPDATE` with no `WHERE` keeps main's raw refusal for the reordered shape (parity row
-  R-014). Red on main: 34 of 64 cells. **Correction (2026-10-14):** `INSERT … VALUES` with a
+  R-014). Red on main: 34 of 64 cells. Correction: `INSERT … VALUES` with a
   surplus or a missing field keeps main's raw planner refusal (list L1, parity row R-018), as
-  the facade fixture holds it; red on main is 32 of 64 cells. Build round 2: the count of
-  written rows is `i32::from`, for clippy's `bool_to_int_with_if`; and
+  the facade fixture holds it; red on main is 32 of 64 cells.
   `the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1` pins hint H-1 on
   the partition overwrite route: `PARTITION (p = 1)` (S3, `strict_partition_store_cast`)
   refuses with the static-partition hint and `PARTITION (p)` (S2 through
