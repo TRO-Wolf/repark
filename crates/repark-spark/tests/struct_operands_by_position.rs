@@ -418,7 +418,14 @@ const FIELD_TYPES: &[(&str, Result<&[&str], &str>)] = &[
     ),
 ];
 
-const FIELD_TYPE_WRITES: &[(&[&str; 2], &str, Option<&str>, &[&str])] = &[
+type FieldTypeWrite = (
+    &'static [&'static str; 2],
+    &'static str,
+    Option<&'static str>,
+    &'static [&'static str],
+);
+
+const FIELD_TYPE_WRITES: &[FieldTypeWrite] = &[
     (
         &UV,
         "DELETE FROM {t} WHERE struct(id) = struct('1')",
