@@ -1,0 +1,76 @@
+# Finding cells
+
+- p15 `d = 0.0` | select | spark-sql | v2-cow | WRONG-READ | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p33 `element_at(arr, 1) = 1` | select | spark-sql | v2-cow | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p15 `d = 0.0` | delete | spark-sql | v2-cow | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p29 `st.y IS NULL` | delete | spark-sql | v2-cow | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {2,3,4,5,6,7} | RePark: REFUSED AnalysisException DELETE operation on table 'ice.ns.spark_sql_delete_v2_cow_p29_t' caused by | own select {2,3,4,5,6,7}
+- p30 `st = named_struct('x', 1, 'y', 'a')` | delete | spark-sql | v2-cow | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED IllegalArgumentException Cannot create expression literal from | RePark: ok {1,8} | own select {1,8}
+- p33 `element_at(arr, 1) = 1` | delete | spark-sql | v2-cow | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED Py4JJavaError An error occurred while calling o47.sql. : org.apache.spark.SparkException: | RePark: ok {1,8} | own select {1,8}
+- p34 `m['k'] = 1` | delete | spark-sql | v2-cow | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {1,8} | RePark: REFUSED AnalysisException DELETE operation on table 'ice.ns.spark_sql_delete_v2_cow_p34_t' caused by | own select {1,8}
+- p36 `CASE WHEN i = 1 THEN true END` | delete | spark-sql | v2-cow | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {1,8} | RePark: REFUSED AnalysisException DELETE operation on table 'ice.ns.spark_sql_delete_v2_cow_p36_t' caused by | own select {1,8}
+- p15 `d = 0.0` | delete | spark-sql | v2-mor | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p29 `st.y IS NULL` | delete | spark-sql | v2-mor | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {2,3,4,5,6,7} | RePark: REFUSED AnalysisException DELETE operation on table 'ice.ns.spark_sql_delete_v2_mor_p29_t' caused by | own select {2,3,4,5,6,7}
+- p30 `st = named_struct('x', 1, 'y', 'a')` | delete | spark-sql | v2-mor | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED IllegalArgumentException Cannot create expression literal from | RePark: ok {1,8} | own select {1,8}
+- p33 `element_at(arr, 1) = 1` | delete | spark-sql | v2-mor | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p34 `m['k'] = 1` | delete | spark-sql | v2-mor | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {1,8} | RePark: REFUSED AnalysisException DELETE operation on table 'ice.ns.spark_sql_delete_v2_mor_p34_t' caused by | own select {1,8}
+- p36 `CASE WHEN i = 1 THEN true END` | delete | spark-sql | v2-mor | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {1,8} | RePark: REFUSED AnalysisException DELETE operation on table 'ice.ns.spark_sql_delete_v2_mor_p36_t' caused by | own select {1,8}
+- p15 `d = 0.0` | delete | spark-sql | v3 | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p29 `st.y IS NULL` | delete | spark-sql | v3 | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {2,3,4,5,6,7} | RePark: REFUSED AnalysisException DELETE operation on table 'ice.ns.spark_sql_delete_v3_p29_t' caused by Schema | own select {2,3,4,5,6,7}
+- p30 `st = named_struct('x', 1, 'y', 'a')` | delete | spark-sql | v3 | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED IllegalArgumentException Cannot create expression literal from | RePark: ok {1,8} | own select {1,8}
+- p33 `element_at(arr, 1) = 1` | delete | spark-sql | v3 | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED Py4JJavaError An error occurred while calling o47.sql. : org.apache.spark.SparkException: | RePark: ok {1,8} | own select {1,8}
+- p34 `m['k'] = 1` | delete | spark-sql | v3 | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {1,8} | RePark: REFUSED AnalysisException DELETE operation on table 'ice.ns.spark_sql_delete_v3_p34_t' caused by Schema | own select {1,8}
+- p36 `CASE WHEN i = 1 THEN true END` | delete | spark-sql | v3 | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {1,8} | RePark: REFUSED AnalysisException DELETE operation on table 'ice.ns.spark_sql_delete_v3_p36_t' caused by Schema | own select {1,8}
+- p04 `i NOT IN (1, NULL)` | update | spark-sql | v2-cow | KNOWN-EMPTY-DML, FEWER-COMMIT | Spark: ok {} | RePark: ok {} | own select {}
+- p15 `d = 0.0` | update | spark-sql | v2-cow | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p29 `st.y IS NULL` | update | spark-sql | v2-cow | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {2,3,4,5,6,7} | RePark: REFUSED AnalysisException UPDATE operation on table 'ice.ns.spark_sql_update_v2_cow_p29_t' caused by | own select {2,3,4,5,6,7}
+- p33 `element_at(arr, 1) = 1` | update | spark-sql | v2-cow | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED Py4JJavaError An error occurred while calling o47.sql. : org.apache.spark.SparkException: | RePark: ok {1,8} | own select {1,8}
+- p34 `m['k'] = 1` | update | spark-sql | v2-cow | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {1,8} | RePark: REFUSED AnalysisException UPDATE operation on table 'ice.ns.spark_sql_update_v2_cow_p34_t' caused by | own select {1,8}
+- p36 `CASE WHEN i = 1 THEN true END` | update | spark-sql | v2-cow | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {1,8} | RePark: REFUSED AnalysisException UPDATE operation on table 'ice.ns.spark_sql_update_v2_cow_p36_t' caused by | own select {1,8}
+- p04 `i NOT IN (1, NULL)` | update | spark-sql | v2-mor | KNOWN-EMPTY-DML, FEWER-COMMIT | Spark: ok {} | RePark: ok {} | own select {}
+- p15 `d = 0.0` | update | spark-sql | v2-mor | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p29 `st.y IS NULL` | update | spark-sql | v2-mor | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {2,3,4,5,6,7} | RePark: REFUSED AnalysisException UPDATE operation on table 'ice.ns.spark_sql_update_v2_mor_p29_t' caused by | own select {2,3,4,5,6,7}
+- p33 `element_at(arr, 1) = 1` | update | spark-sql | v2-mor | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p34 `m['k'] = 1` | update | spark-sql | v2-mor | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {1,8} | RePark: REFUSED AnalysisException UPDATE operation on table 'ice.ns.spark_sql_update_v2_mor_p34_t' caused by | own select {1,8}
+- p36 `CASE WHEN i = 1 THEN true END` | update | spark-sql | v2-mor | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {1,8} | RePark: REFUSED AnalysisException UPDATE operation on table 'ice.ns.spark_sql_update_v2_mor_p36_t' caused by | own select {1,8}
+- p04 `i NOT IN (1, NULL)` | update | spark-sql | v3 | KNOWN-EMPTY-DML, FEWER-COMMIT | Spark: ok {} | RePark: ok {} | own select {}
+- p15 `d = 0.0` | update | spark-sql | v3 | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p29 `st.y IS NULL` | update | spark-sql | v3 | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {2,3,4,5,6,7} | RePark: REFUSED AnalysisException UPDATE operation on table 'ice.ns.spark_sql_update_v3_p29_t' caused by Schema | own select {2,3,4,5,6,7}
+- p33 `element_at(arr, 1) = 1` | update | spark-sql | v3 | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED Py4JJavaError An error occurred while calling o47.sql. : org.apache.spark.SparkException: | RePark: ok {1,8} | own select {1,8}
+- p34 `m['k'] = 1` | update | spark-sql | v3 | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {1,8} | RePark: REFUSED AnalysisException UPDATE operation on table 'ice.ns.spark_sql_update_v3_p34_t' caused by Schema | own select {1,8}
+- p36 `CASE WHEN i = 1 THEN true END` | update | spark-sql | v3 | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {1,8} | RePark: REFUSED AnalysisException UPDATE operation on table 'ice.ns.spark_sql_update_v3_p36_t' caused by Schema | own select {1,8}
+- p15 `d = 0.0` | insert | spark-sql | v2-cow | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p33 `element_at(arr, 1) = 1` | insert | spark-sql | v2-cow | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p15 `d = 0.0` | insert | spark-sql | v2-mor | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p33 `element_at(arr, 1) = 1` | insert | spark-sql | v2-mor | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p15 `d = 0.0` | insert | spark-sql | v3 | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p33 `element_at(arr, 1) = 1` | insert | spark-sql | v3 | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p04 `i NOT IN (1, NULL)` | ctas | spark-sql | v2-cow | KNOWN-EMPTY-DML, FEWER-COMMIT | Spark: ok {} | RePark: ok {} | own select {}
+- p15 `d = 0.0` | ctas | spark-sql | v2-cow | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p33 `element_at(arr, 1) = 1` | ctas | spark-sql | v2-cow | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p04 `i NOT IN (1, NULL)` | ctas | spark-sql | v2-mor | KNOWN-EMPTY-DML, FEWER-COMMIT | Spark: ok {} | RePark: ok {} | own select {}
+- p15 `d = 0.0` | ctas | spark-sql | v2-mor | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p33 `element_at(arr, 1) = 1` | ctas | spark-sql | v2-mor | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p04 `i NOT IN (1, NULL)` | ctas | spark-sql | v3 | KNOWN-EMPTY-DML, FEWER-COMMIT | Spark: ok {} | RePark: ok {} | own select {}
+- p15 `d = 0.0` | ctas | spark-sql | v3 | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p33 `element_at(arr, 1) = 1` | ctas | spark-sql | v3 | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p04 `i NOT IN (1, NULL)` | merge | spark-sql | v2-cow | KNOWN-EMPTY-DML, FEWER-COMMIT | Spark: ok {} | RePark: ok {} | own select {}
+- p15 `d = 0.0` | merge | spark-sql | v2-cow | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p33 `element_at(arr, 1) = 1` | merge | spark-sql | v2-cow | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p04 `i NOT IN (1, NULL)` | merge | spark-sql | v2-mor | KNOWN-EMPTY-DML, FEWER-COMMIT | Spark: ok {} | RePark: ok {} | own select {}
+- p15 `d = 0.0` | merge | spark-sql | v2-mor | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p33 `element_at(arr, 1) = 1` | merge | spark-sql | v2-mor | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p04 `i NOT IN (1, NULL)` | merge | spark-sql | v3 | KNOWN-EMPTY-DML, FEWER-COMMIT | Spark: ok {} | RePark: ok {} | own select {}
+- p15 `d = 0.0` | merge | spark-sql | v3 | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p33 `element_at(arr, 1) = 1` | merge | spark-sql | v3 | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p15 `d = 0.0` | select | filter-str | v2-cow | WRONG-READ | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p33 `element_at(arr, 1) = 1` | select | filter-str | v2-cow | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p15 `d = 0.0` | insert | filter-str | v2-cow | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p33 `element_at(arr, 1) = 1` | insert | filter-str | v2-cow | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p15 `d = 0.0` | select | f-expr | v2-cow | WRONG-READ | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p27 `st.x = 1` | select | f-expr | v2-cow | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {1,8} | RePark: REFUSED AnalysisException type_coercion caused by Schema error: No field named st.x. Valid fields are | own select {1,8}
+- p29 `st.y IS NULL` | select | f-expr | v2-cow | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {2,3,4,5,6,7} | RePark: REFUSED AnalysisException Optimizer rule 'simplify_expressions' failed caused by Schema error: No field | own select {2,3,4,5,6,7}
+- p33 `element_at(arr, 1) = 1` | select | f-expr | v2-cow | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
+- p15 `d = 0.0` | insert | f-expr | v2-cow | WRONG-WRITE | Spark: ok {4,6} | RePark: ok {6} | own select {6}
+- p27 `st.x = 1` | insert | f-expr | v2-cow | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {1,8} | RePark: REFUSED AnalysisException type_coercion caused by Schema error: No field named st.x. Valid fields are | own select {1,8}
+- p29 `st.y IS NULL` | insert | f-expr | v2-cow | REFUSED-WHERE-SPARK-ACCEPTED | Spark: ok {2,3,4,5,6,7} | RePark: REFUSED AnalysisException Optimizer rule 'simplify_expressions' failed caused by Schema error: No field | own select {2,3,4,5,6,7}
+- p33 `element_at(arr, 1) = 1` | insert | f-expr | v2-cow | ACCEPTED-WHERE-SPARK-REFUSED | Spark: REFUSED ArrayIndexOutOfBoundsException [INVALID_ARRAY_INDEX_IN_ELEMENT_AT] The index 1 is out of bounds. The array has | RePark: ok {1,8} | own select {1,8}
