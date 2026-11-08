@@ -53,6 +53,12 @@ EXPECTED_RULING_OPUS = (
     "preserves this block byte-for-byte in `AGENTS.md` and `CLAUDE.md`."
 )
 
+EXPECTED_SEMANTIC_PRECEDENCE = (
+    "- **Semantic precedence** (owner, 2026-11-08): a behaviour question no brief settles "
+    "follows the door's reference order in [PROJECT.md](PROJECT.md#semantic-precedence); "
+    "measured cells only."
+)
+
 DOCUMENT_TITLES = {
     "AGENTS.md": "# AGENTS.md — the authoritative contributor contract",
     "CLAUDE.md": "# CLAUDE.md — the Claude adapter (not authoritative)",
@@ -106,6 +112,8 @@ def findings(repo: Path) -> list[str]:
             )
         elif agents_text.count(EXPECTED_RULING_OPUS) != 1:
             found.append("AGENTS.md: Opus 5.0 ban ruling must appear exactly once")
+        if agents_text.count(EXPECTED_SEMANTIC_PRECEDENCE) != 1:
+            found.append("AGENTS.md: semantic-precedence pointer must appear exactly once")
     return found
 
 
