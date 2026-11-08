@@ -63,3 +63,40 @@ Clone paths were replaced with `<base-clone>` and `<prototype-clone>`, scratch p
 2. Skips and xfails are reported beside the six buckets, not forced into one of them.
 3. The call-site count is 215 in the collected files (233 with the helpers), not the brief's 236.
 4. The brief's `Authored-By` trailer is used on the commit. No other attribution line is added.
+
+## Write cells (2026-11-08)
+
+Run by the Claude Haiku 5.5 clerk (`claude-haiku-5-5`) under the owner's 2026-11-08 "Proceed with any measurements you need". The table is [write-cells.md](write-cells.md); the probe is [probe_write_cells.py](probe_write_cells.py); the raw rows are [raw/write-cells-base.jsonl](raw/write-cells-base.jsonl), [raw/write-cells-proto.jsonl](raw/write-cells-proto.jsonl) and [raw/write-cells-spark.jsonl](raw/write-cells-spark.jsonl). The reference is Spark 4.1.2 with Iceberg 1.11.0. Trino is the native door's reference and is unmeasured, so Spark stands in for it.
+
+### Legs
+
+- `base`: the base venv of the base clone at `03f925c5`. Native door (`repark.sql()`, stock DataFusion) and facade (`ReparkSession.sql()`).
+- `proto`: the prototype venv (`AnsiDialect` routing, the same three-line patch). Native door and facade.
+- `spark`: `c26-oracle` Python, PySpark 4.1.2, a Hadoop catalog `ice` with the Iceberg 1.11.0 runtime jar, ANSI on, UTC, `local[2]`.
+
+Each leg ran in its own process. The base and proto legs ran with the venv interpreter, and the render step ran with the base venv (stdlib only).
+
+### Commands
+
+    probe_write_cells.py --leg base  --scratch <scratch>/base  --raw-dir raw
+    probe_write_cells.py --leg proto --scratch <scratch>/proto --raw-dir raw
+    JAVA_HOME=<jdk-17> probe_write_cells.py --leg spark --scratch <scratch>/spark --spark-jar <iceberg-1.11.0-runtime.jar> --raw-dir raw
+    probe_write_cells.py --render --raw-dir raw --out write-cells.md
+
+### Hashes (as committed)
+
+- `probe_write_cells.py` sha256 51433920213ded83401fb0295ee05a1362733558eb48ec1bae6ab3f568baf918
+- `raw/write-cells-base.jsonl` sha256 2d4bb1e46d4c1815994455ff7f918b9fc880291f3404ac5d119be1132d42553d
+- `raw/write-cells-proto.jsonl` sha256 27df2c11306b7bf32f39a72d6dde200337841af8ab5bdec2350640f07a745b68
+- `raw/write-cells-spark.jsonl` sha256 698e3f08cbbcf4de26361beeded30c80a97902798e68491f0a97dfb2054cc6ac
+- `write-cells.md` sha256 626321eb9a9b65f51f7aa4f301da8265f3a7fe97399383b4021af1c7ebfd560e
+
+### Deviations and measured facts
+
+1. The native door's `CREATE TABLE ... USING iceberg TBLPROPERTIES (...)` is refused by the parser (`Expected: end of statement, found: USING`). The native door then refuses the bare `TBLPROPERTIES` spelling as `This feature is not implemented: Unsupported SQL statement`. So proto/native v2-mor and v3 tables cannot be created and are SETUP-MISSING. The probe retried the native spelling without `USING iceberg`; the first run's refusal is recorded here and the final raw rows show the second refusal.
+2. Group E tables declare `id INT NOT NULL`, seeded with the group W rows (1,10),(2,20),(3,30),(4,40). The brief names the NOT NULL requirement but gives no seed; this is the chosen seed.
+3. Spark uses one Hadoop catalog and one warehouse for the leg. Each cell drops `ice.ns.t` and `ice.ns.s` with PURGE and removes their directories before its own create and seed. The repark legs use a fresh memory-catalog warehouse per cell. The Spark leg therefore does not use a private catalog per cell.
+4. Group R on facade was not run, because the brief names base against proto against Spark only.
+5. R1 on Spark is the statement as written. Spark rejects `generate_series`, so its outcome is a refusal, not a comparison of answers.
+6. The Spark leg ran before the coordinator's rule that every Spark JVM runs under `flock /tmp/oc-worker/build-slots/spark-jvm.lock`. It was the only Spark run, and no later Spark run is planned for this table.
+7. Files are counted as every non-hidden file under `data/` except `.crc` files, so Iceberg merge-on-read delete files are included.
