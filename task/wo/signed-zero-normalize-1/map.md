@@ -6,5 +6,6 @@ carries the defaults the owner accepted) and the domain table the build measures
 only; no product code.
 
 - [sketch.md](sketch.md) — the design sketch of 2026-11-08: the seats, the UDF, the doors, the domain table in section 9, the pins, the split and the owner questions with defaults.
+- [evidence/](evidence/map.md) — the domain table measurement (D1 to D17 as written in sketch section 9) on the Spark 4.1.2 oracle and the release wheel built from `fdc61f26`: the probe, the raw legs, the generated table and summary, and the provenance.
 
 Up: [../map.md](../map.md).
