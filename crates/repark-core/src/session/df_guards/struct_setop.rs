@@ -168,9 +168,12 @@ fn union_input_type(input: &LogicalPlan, position: usize) -> Option<DataType> {
 }
 
 fn refuse_in_join(join: &Join) -> DataFusionResult<()> {
-    let operation = match join.join_type {
-        JoinType::LeftSemi => "INTERSECT",
-        JoinType::LeftAnti => "EXCEPT",
+    let distinct = matches!(join.left.as_ref(), LogicalPlan::Distinct(_));
+    let operation = match (join.join_type, distinct) {
+        (JoinType::LeftSemi, true) => "INTERSECT",
+        (JoinType::LeftSemi, false) => "INTERSECT ALL",
+        (JoinType::LeftAnti, true) => "EXCEPT",
+        (JoinType::LeftAnti, false) => "EXCEPT ALL",
         _ => return Ok(()),
     };
     if join.null_equality != NullEquality::NullEqualsNull || join.filter.is_some() {

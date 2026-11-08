@@ -289,8 +289,12 @@ def snapshot_of(root: Path, table: str) -> tuple[int, int | None]:
 def op_word(op: str) -> str:
     if op in UNION_WORD:
         return "UNION"
+    if op == "INTERSECT ALL":
+        return "INTERSECT ALL"
     if op in INTERSECT_FAMILY:
         return "INTERSECT"
+    if op == "EXCEPT ALL":
+        return "EXCEPT ALL"
     return "EXCEPT"
 
 

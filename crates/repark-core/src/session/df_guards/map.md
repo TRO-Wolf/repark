@@ -8,7 +8,7 @@ wrapped optimizer rule) and declares this directory.
 
 ## Contents
 
-- [struct_setop.rs](struct_setop.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** the `struct_setop_names` analyzer rule refuses a set operation whose struct operands differ in field-name order or set at any depth. It sits before `type_coercion`: DataFusion's struct coercion pairs fields by name, so after it the `Cast` has already chosen names.
+- [struct_setop.rs](struct_setop.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** the `struct_setop_names` analyzer rule refuses a set operation whose struct operands differ in field-name order or set at any depth. It sits before `type_coercion`: DataFusion's struct coercion pairs fields by name, so after it the `Cast` has already chosen names.  **Item 5:** join refusals name `INTERSECT ALL` / `EXCEPT ALL` from any non-`Distinct` left side.
   **Delta 1 (2026-11-08):** `insert_struct_setop_before_coercion` is `pub` to the crate root so the Python expression context seats the same rule ahead of `type_coercion` too.
 - `skipping_limit.rs` — **OFFSET-NESTED-SORT-1 (2026-10-08):** a guard for a DataFusion 54.1.0
   defect. DataFusion's `EnforceSorting` rule (its sort pushdown,
@@ -21,17 +21,17 @@ wrapped optimizer rule) and declares this directory.
   `skip_safe_physical_optimizer_rules()` returns DataFusion's recommended physical rule list
   with `EnforceSorting` replaced by `SkipSafeEnforceSorting`, which keeps the rule's name and
   position. `../df_guards.rs` installs the list before the three RePark physical rules.
-  The wrapper runs the inner rule unchanged when the plan has no `GlobalLimitExec` with
-  `skip > 0`; the only added work is one walk of the plan (`TreeNode::exists`). Otherwise it
-  goes bottom-up: for each skipping limit it runs the inner rule on the limit's input as a plan
-  of its own, rebuilds the limit over the result, and replaces it with
-  `SealedSkippingLimitExec`, a leaf. The leaf reports the limit's own properties (ordering,
-  one partition) and has no children, so the rule has nothing below the seal to push a row cap
-  or a sort into: the property that holds is that the seal is a leaf. (Verifier mutation D made
-  the seal report the limit's `fetch`; the lane pins, 1356 answered cells and every plan of a
-  statement without an `OFFSET` did not change, so the missing `fetch` is not what holds the
+  Without a `GlobalLimitExec` with `skip > 0` the wrapper runs the inner rule unchanged;
+  the only added work is one plan walk (`TreeNode::exists`). Otherwise it
+  goes bottom-up: the inner rule runs on each skipping limit's input as a plan
+  of its own; the limit is rebuilt over the result and replaced with
+  `SealedSkippingLimitExec`, a leaf reporting the limit's own properties (ordering,
+  one partition) with no children, so the rule has nothing below the seal to push a row cap
+  or a sort into: the seal is a leaf. (Verifier mutation D made
+  the seal report the limit's `fetch`; the 1356 answered cells and every plan of a
+  statement without an `OFFSET` stood still, so the missing `fetch` is not what holds the
   cap back.) The wrapper then runs the inner rule on the sealed plan and puts every limit
-  back top-down. A seal never leaves the rule: the later rules cannot see the plan a seal
+  back top-down. A seal never leaves the rule: later rules cannot see the plan a seal
   holds (`OutputRequirements` puts its marker node below a top-level limit, so the marker would
   stay), so `execute` on a seal is an internal error and `no_seal_survives_into_a_final_plan`
   pins the removal.

@@ -303,8 +303,10 @@ fn op_token(op: Op) -> &'static str {
 fn op_word(op: Op) -> &'static str {
     match op {
         Op::UnionAll | Op::Union | Op::UnionDistinct | Op::DfUnion | Op::DfUnionByName => "UNION",
-        Op::Intersect | Op::IntersectAll => "INTERSECT",
-        Op::Except | Op::ExceptAll => "EXCEPT",
+        Op::Intersect => "INTERSECT",
+        Op::IntersectAll => "INTERSECT ALL",
+        Op::Except => "EXCEPT",
+        Op::ExceptAll => "EXCEPT ALL",
     }
 }
 
