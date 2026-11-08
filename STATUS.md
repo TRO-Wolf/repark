@@ -7,11 +7,11 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-09-12._
+_Last updated: 2026-11-08._
 
 ## Release state
 
-**v1.5.6 (in flight):** after the tag: U-8 (R-011 refuses outside UTC), EXPLAIN-DML-WRITE-1, the map-panic fixes, pin K; the v2 label only (owner ruling 2026-11-02; [label text](docs/spark-sql-iceberg-parity.md#format-v2-label-supported-behaviour-2026-11-05) PROPOSED for PRODUCTION (label text 2026-11-05, ICE-V2-LABEL-1); the label re-dates to PRODUCTION only on the audited sign-off (ICE-V2-LABEL-REAUDIT-1, next); until then the maturity stays WITHDRAWN 2026-10-29 (ledger C-072)), and the v3 label moves to a later release. [Notes draft](task/roadmap/mid-term/v1-5-6-release-notes-draft.md).
+**v1.5.6 (release prep 2026-11-08, untagged):** the empty-DML guard (EMPTY-DML-SHARED-GUARD-1, #1277: a DELETE or UPDATE whose condition folds to no rows writes nothing and reports zero rows), and the rest of the cycle, listed in the [notes](task/roadmap/mid-term/v1-5-6-release-notes-2026-11-08.md). The v2 production label is not part of this release (ruling A, 2026-11-08); the v3 label moves to a later release. Qualification: [record](task/roadmap/mid-term/v1-5-6-qualification-record.md).
 
 **v1.5.5 (2026-10-13):** R-008 (every write door stores INSERT's instant into `timestamptz_ns`), the frame door (R-019), `current_date` in the session zone, the Postgres write core and routing, the merge module split. Matrix 705/132/5/0 (2026-10-13). Tagged `v1.5.5` at `7fb5f6b2` (re-tag, #1127). [Notes](task/roadmap/mid-term/v1-5-5-release-notes-2026-10-13.md). The re-tag also ships U-1, U-3, U-5, U-6, U-7 (reconciled 2026-10-22).
 
@@ -107,10 +107,8 @@ in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit
   - **Next:** lineage carry and merge-on-read hold on the statement matrix's DML shapes (`V3-COW-1`,
     `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, the three `V3-UPGRADE-DV` rows and
     `F-v3-10-partition-file-order` FIXED), not yet after schema evolution; open v3 residuals are
-    `V3-COV-3` (#666), `V3-FILEORDER-1`, `V3-COV-4`
-    / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8`. RP-10 (F-25,
-    `PERF-DVCLOSE-STMT-1`), PERF-SCAN-1, SQL-HARDEN-1 and RP-11 (F-24, `B-MOR-3-FLOOR-1`)
-    landed 2026-09-04.
+    `V3-FILEORDER-1`, `V3-UPGRADE-V4-1`, `G3-E8`; `V3-COV-3` (RP-31, 2026-09-18, Spark's where the
+    orders coincide) and `V3-COV-4`/`-5`/`-6` are FIXED per the registry.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->

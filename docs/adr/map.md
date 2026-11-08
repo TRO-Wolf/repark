@@ -14,7 +14,9 @@ decision, numbered `NNNN-slug.md`. Supersede with a new ADR rather than rewritin
   RePark-owned; DataFusion never forked.
 - [0002-two-sql-doors.md](0002-two-sql-doors.md) — ANSI/Trino-style native dialect + Spark-dialect
   facade; no blended parser; shared Iceberg machinery beneath both; dual-spelling rule (+ one test
-  row per door) for new SQL surface.
+  row per door) for new SQL surface. 2026-11-08 addendum (P10): the dialect is selected per session
+  by `sql.dialect` (`spark` | `trino`), immutable after creation, default by entry point; no
+  mixed-dialect session; lands with the 1.12 server core.
 - [0003-copy-then-rehome-port.md](0003-copy-then-rehome-port.md) — the four port phases
   (bootstrap → engine core → two doors → facade + parity), the census-multiset acceptance gate,
   v1-freeze at milestone one, public ≠ released.
@@ -22,7 +24,9 @@ decision, numbered `NNNN-slug.md`. Supersede with a new ADR rather than rewritin
   bindings-as-thin-adapter; the three deferred server problems (credential vending, Python UDFs,
   resource policy); distribution deferred behind the `ExecutionBackend` seam. 2026-10-21 amendment:
   a read at process start into a static is the allowed class, the query path stays free of
-  environment reads, and `REPARK_PANIC_FATAL` is the first such switch.
+  environment reads, and `REPARK_PANIC_FATAL` is the first such switch. 2026-11-08 addendum:
+  distribution is a planned shape after the server core; the coordinator-side commit constraint
+  stands.
 - [0005-defer-session-decomposition.md](0005-defer-session-decomposition.md) — **Deferred**: the
   internal `ReparkSession` decomposition into named services is driver-gated (PyO3 pressure, a
   second `ExecutionBackend`, cancellation / per-query resource policy, server-protocol needs),

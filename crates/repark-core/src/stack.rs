@@ -1,3 +1,4 @@
+mod empty_dml;
 mod exec;
 mod planner;
 mod rewrite;

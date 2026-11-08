@@ -76,3 +76,5 @@ With the value `1` a panic caught at the Python boundary resumes unwinding inste
 `repark internal error` exception, and the facade test suite sets the variable, so a caught panic in
 any test is a hard failure. The first version of the switch read the environment on the caught-panic
 arm, at query time; the owner ruled on 2026-10-21 to keep the switch and move the read.
+
+**Addendum, 2026-11-08 (owner):** distribution is a planned shape after the server core (1.12); the coordinator-side commit constraint above stands.

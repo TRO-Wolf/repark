@@ -70,3 +70,5 @@ Not discharged by this note, and deliberately still open: the maintenance-as-cal
 (decision 1's last clause), which sql-doors.md §2 Q7 keeps standing with a named trigger — a
 statement-shaped need demonstrated by dbt-repark post-hooks would require a **superseding ADR
 note first**, then the surface.
+
+**Addendum, 2026-11-08 (owner, P10):** the two dialects are selected per session by `sql.dialect` (`spark` | `trino`), immutable after creation, default by entry point; the PySpark facade and the Spark Connect server are Spark only; no mixed-dialect session; the no-blended-parser rule stands. Lands with the 1.12 server core.
