@@ -14,7 +14,9 @@ decision, numbered `NNNN-slug.md`. Supersede with a new ADR rather than rewritin
   RePark-owned; DataFusion never forked.
 - [0002-two-sql-doors.md](0002-two-sql-doors.md) — ANSI/Trino-style native dialect + Spark-dialect
   facade; no blended parser; shared Iceberg machinery beneath both; dual-spelling rule (+ one test
-  row per door) for new SQL surface.
+  row per door) for new SQL surface. 2026-11-08 addendum (P10): the dialect is selected per session
+  by `sql.dialect` (`spark` | `trino`), immutable after creation, default by entry point; no
+  mixed-dialect session; lands with the 1.12 server core.
 - [0003-copy-then-rehome-port.md](0003-copy-then-rehome-port.md) — the four port phases
   (bootstrap → engine core → two doors → facade + parity), the census-multiset acceptance gate,
   v1-freeze at milestone one, public ≠ released.

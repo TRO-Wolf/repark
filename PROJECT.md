@@ -21,14 +21,21 @@ Apache Arrow, zero-copy.
 Three doors over one plan layer:
 
 - **Native DataFrame door** (Polars's standard surface as the contract).
-- **Native SQL door** (ANSI, Trino-style, DuckDB as the second reference).
+- **Native SQL door** (ANSI, Trino-style, DuckDB as the second reference; catalog-determines-format
+  CTAS, `WITH (…)` table properties, `FOR VERSION AS OF` time travel, maintenance as callable ops).
 - **Spark door** (the in-process PySpark facade today; the Spark Connect server at 1.12 is the same
   door reached over the wire, so an unmodified `pyspark` client submits jobs with
-  `spark.remote(...)`).
+  `spark.remote(...)`). Its `.sql()` keeps the **Spark dialect** unchanged, so existing PySpark
+  pipelines migrate with only the import line changed.
 
-The Iceberg machinery (commit semantics, MERGE, snapshots, evolution) is shared beneath both doors;
-the dialect layers are thin translators. Every door produces the same DataFusion logical plan;
-semantics live in plan rules, never in a door.
+The Iceberg machinery (commit semantics, MERGE, snapshots, evolution) is shared beneath all three
+doors; the dialect layers are thin translators. Every door produces the same DataFusion logical
+plan; semantics live in plan rules, never in a door.
+
+The SQL dialect is selected per session (`sql.dialect = "spark" | "trino"`), fixed when the session
+is created, with the default set by the entry point: the PySpark facade and the Spark Connect server
+are Spark only and refuse the key; the native session defaults to Trino; no session mixes dialects
+(owner, 2026-11-08, P10; lands with the 1.12 server core).
 
 ## Goals
 
@@ -140,8 +147,8 @@ goal.
 | Analytics | grouped aggregation and windows at 1e6–1e7 rows against DuckDB on the same data |
 | TA serving | many-symbol windows, wide multi-indicator SELECT, last-row serving against `polars_talib` |
 | dbt-repark | the reference dbt project end to end |
-| ETL job vs Spark | the reference ETL shapes (read Iceberg, join, aggregate, write Iceberg; read Postgres, transform, write Iceberg) measured against Spark 4.1.2 local mode on the same box and data; **gate: at or better than Spark**; published target: within a stated factor of Polars and DuckDB where the shape has an equivalent |
-| Connector read | partitioned parallel read of one table straight into Arrow against ConnectorX, within a stated factor (the 1.6 and 1.10 read bar, moved into the intent table) |
+| ETL job vs Spark | the reference ETL shapes (read Iceberg, join, aggregate, write Iceberg; read Postgres, transform, write Iceberg) measured against Spark 4.1.2 local mode on the same box and data; **gate: at or better than Spark 4.1.2 local mode**; **published targets: Polars and DuckDB published targets at 2.0× for the first baseline, tightened each release; a target is published and re-measured, a gate blocks a merge** (where the shape has an equivalent) |
+| Connector read | partitioned parallel read of one table straight into Arrow against ConnectorX, within 1.25× ConnectorX on the same query and data (gate; the 1.6 and 1.10 read bar, moved into the intent table) |
 
 ## Differentiators
 
