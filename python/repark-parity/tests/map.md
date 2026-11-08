@@ -444,10 +444,10 @@ only above 3x the measured noise floor, so a wide floor queues nothing.
   param pins exact; binding targets join the scratch-tree sources.
 - `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
   in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
-  files; one-byte drift, malformed or missing files, relocation, duplication, and symlink
-  redirection fail closed. The review-held enforcement boundary stays exact, unique, and adjacent
-  to the ruling. The attribution-blind density gate stays absent. CAP-1's exact-baseline Rust and
-  Python source gates remain wired. No source-comment sweep belongs to this unit.
+  files; drift, malformed or missing files, relocation, duplication, and symlink redirection fail
+  closed. The review-held enforcement boundary and the semantic-precedence pointer bullet stay
+  exact and unique in `AGENTS.md`. The attribution-blind density gate stays absent. CAP-1's
+  exact-baseline Rust and Python source gates remain wired.
 - `test_model_ban.py` — provocations for `scripts/check_model_ban.py`, the 2026-10-17 Opus 5.0
   ban gate: the live tree is clean, every banned spelling is caught, the allowed id and prose
   pass, the gate is wired in `make ci` and ci.yml, and every map names it.

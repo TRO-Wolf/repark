@@ -189,6 +189,7 @@ CI-enforced tools never silently skip locally (uvx provisions the pinned tool on
 - **Spell things out** — no casual abbreviations (`config` not `cfg`, `index` not `idx`).
 - **Tier-2 CI (live AWS) never runs against unmerged code**; nightly on `main` + manual dispatch via
   OIDC only. No self-hosted runners in any tier. No secrets in tier-1 workflows.
+- **Semantic precedence** (owner, 2026-11-08): a behaviour question no brief settles follows the door's reference order in [PROJECT.md](PROJECT.md#semantic-precedence); measured cells only.
 
 ## Change discipline
 
@@ -321,7 +322,7 @@ defects that motivate them) live on the crate that owns the code:
 ## Explicitly out of scope (do not reintroduce without a decision)
 
 - **PyIceberg** — neither the Python lib nor the `pyiceberg_core` crate. Iceberg = `iceberg-rust` only.
-- **Sail / pysail** — own-the-stack was chosen; no dependency on it.
+- **Sail / PySail** — no dependency, in code or build, ever; design and source may be read as a reference and cited (owner, 2026-11-08).
 - **Distributed cluster** — the `ExecutionBackend` seam marks the boundary (see
   [ARCHITECTURE.md](ARCHITECTURE.md) "what the seam is, honestly"). Do not build
   Ballista-for-writes (it cannot serialize Iceberg write/commit plan nodes).
