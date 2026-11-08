@@ -472,3 +472,135 @@ fn entry_point_families_emit_py_entry_spans() {
         );
     }
 }
+
+const SEAT_EMPTY_DML: [&str; 6] = [
+    "DELETE FROM seat_probe WHERE false",
+    "DELETE FROM seat_probe WHERE 1 = 0",
+    "DELETE FROM seat_probe WHERE id IS NULL",
+    "UPDATE seat_probe SET flag = 'z' WHERE false",
+    "UPDATE seat_probe SET flag = 'z' WHERE NULL",
+    "UPDATE seat_probe SET flag = 'z' WHERE flag = NULL",
+];
+
+fn seat_probe_table() -> Arc<datafusion::datasource::MemTable> {
+    use arrow::array::{Int64Array, StringArray};
+    use arrow::datatypes::{DataType, Field, Schema};
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("flag", DataType::Utf8, true),
+    ]));
+    let batch = arrow::record_batch::RecordBatch::try_new(
+        Arc::clone(&schema),
+        vec![
+            Arc::new(Int64Array::from(vec![1, 2, 3])),
+            Arc::new(StringArray::from(vec!["a", "b", "c"])),
+        ],
+    )
+    .expect("seat probe rows");
+    Arc::new(
+        datafusion::datasource::MemTable::try_new(schema, vec![vec![batch]])
+            .expect("seat probe table"),
+    )
+}
+
+async fn seat_answer(
+    context: &datafusion::prelude::SessionContext,
+    sql: &str,
+) -> Vec<arrow::record_batch::RecordBatch> {
+    let frame = context
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("{sql}: {error}"));
+    frame
+        .collect()
+        .await
+        .unwrap_or_else(|error| panic!("{sql}: {error}"))
+}
+
+fn seat_column(batches: &[arrow::record_batch::RecordBatch]) -> Vec<String> {
+    let mut values = Vec::new();
+    for batch in batches {
+        for index in 0..batch.num_rows() {
+            let cell = arrow::util::display::array_value_to_string(batch.column(0), index)
+                .expect("render");
+            values.push(cell);
+        }
+    }
+    values
+}
+
+pub(crate) fn assert_the_context_plans_an_empty_dml_as_a_no_op(
+    context: &datafusion::prelude::SessionContext,
+    label: &str,
+) {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("runtime");
+    runtime.block_on(async {
+        context
+            .register_table("seat_probe", seat_probe_table())
+            .expect("register seat probe");
+        for sql in SEAT_EMPTY_DML {
+            let counts = seat_column(&seat_answer(context, sql).await);
+            assert_eq!(counts, vec!["0".to_string()], "{label}: {sql}");
+        }
+        let rows = seat_answer(context, "SELECT flag FROM seat_probe ORDER BY id").await;
+        assert_eq!(
+            seat_column(&rows),
+            vec!["a", "b", "c"],
+            "{label}: rows survive"
+        );
+        let selective = seat_answer(context, "DELETE FROM seat_probe WHERE id = 1").await;
+        assert_eq!(
+            seat_column(&selective),
+            vec!["1".to_string()],
+            "{label}: control"
+        );
+        let rows = seat_answer(context, "SELECT flag FROM seat_probe ORDER BY id").await;
+        assert_eq!(
+            seat_column(&rows),
+            vec!["b", "c"],
+            "{label}: control deleted one row"
+        );
+    });
+}
+
+#[test]
+fn every_python_door_session_plans_an_empty_dml_as_a_no_op() {
+    Python::attach(|py| {
+        let facade =
+            PyReparkSession::new(py, None, None, None, None, None).expect("facade session");
+        assert_the_context_plans_an_empty_dml_as_a_no_op(facade.session.context(), "facade");
+        let native = PyReparkSession::native(py, None, None, None, None).expect("native session");
+        assert_the_context_plans_an_empty_dml_as_a_no_op(native.session.context(), "native");
+    });
+}
+
+#[test]
+fn the_native_door_answers_a_zero_count_for_an_empty_dml() {
+    Python::attach(|py| {
+        let session = PyReparkSession::native(py, None, None, None, None).expect("native session");
+        session
+            .session
+            .context()
+            .register_table("seat_probe", seat_probe_table())
+            .expect("register seat probe");
+        for sql in SEAT_EMPTY_DML {
+            let frame = session.sql(py, sql).expect(sql);
+            let batches = frame
+                .runtime_handle()
+                .block_on(frame.inner().clone().collect())
+                .expect(sql);
+            assert_eq!(seat_column(&batches), vec!["0".to_string()], "{sql}");
+        }
+        let frame = session
+            .sql(py, "SELECT flag FROM seat_probe ORDER BY id")
+            .expect("read");
+        let batches = frame
+            .runtime_handle()
+            .block_on(frame.inner().clone().collect())
+            .expect("read");
+        assert_eq!(seat_column(&batches), vec!["a", "b", "c"]);
+    });
+}

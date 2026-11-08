@@ -22,6 +22,7 @@ def _write_contracts(tree: Path, checker: ModuleType) -> None:
     agents = (
         f"{checker.expected_prefix(checker.DOCUMENT_TITLES['AGENTS.md'])}"
         f"{checker.EXPECTED_BOUNDARY}\n\n{checker.EXPECTED_RULING_OPUS}\n\n"
+        f"{checker.EXPECTED_SEMANTIC_PRECEDENCE}\n\n"
     )
     claude = (
         f"{checker.expected_prefix(checker.DOCUMENT_TITLES['CLAUDE.md'])}"
@@ -165,6 +166,28 @@ def test_duplicated_opus_ban_fails_closed(tmp_path: Path) -> None:
     assert checker.findings(tmp_path) == [
         "CLAUDE.md: Opus 5.0 ban ruling must appear exactly once",
         "AGENTS.md: Opus 5.0 ban ruling must appear exactly once",
+    ]
+
+
+def test_semantic_precedence_pointer_mutation_fails_closed(tmp_path: Path) -> None:
+    checker = _load_checker()
+    _write_contracts(tmp_path, checker)
+    path = tmp_path / "AGENTS.md"
+    text = path.read_text(encoding="utf-8").replace("measured cells only", "measured cells", 1)
+    path.write_text(text, encoding="utf-8")
+    assert checker.findings(tmp_path) == [
+        "AGENTS.md: semantic-precedence pointer must appear exactly once"
+    ]
+
+
+def test_duplicated_semantic_precedence_pointer_fails_closed(tmp_path: Path) -> None:
+    checker = _load_checker()
+    _write_contracts(tmp_path, checker)
+    path = tmp_path / "AGENTS.md"
+    text = path.read_text(encoding="utf-8")
+    path.write_text(f"{text}{checker.EXPECTED_SEMANTIC_PRECEDENCE}\n", encoding="utf-8")
+    assert checker.findings(tmp_path) == [
+        "AGENTS.md: semantic-precedence pointer must appear exactly once"
     ]
 
 
