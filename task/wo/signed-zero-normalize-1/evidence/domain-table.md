@@ -179,10 +179,10 @@ test layout and the same route; RePark-main is the release wheel answer. The con
 | D11-merge-v3 | D11 | v3 | spark-sql | zsplit | MERGE INTO {dm} AS t USING (SELECT CAST(6 AS BIGINT) AS id, CAST('-0.0' AS DOUBLE) AS d) AS u ON t.id = u.id WHEN MATCHED THEN UPDATE SET d = u.d | (4,-0.0); (6,-0.0) | (4,-0.0); (6,-0.0) | (4,-0.0); (6,-0.0) | EQUAL | - |
 | D12-select-cow | D12 | v2-cow | spark-sql | part | SELECT id FROM {dm} WHERE d = 0.0 | (4); (6) | (6) | (6) | PRUNED-WRONG | - |
 | D12-delete-cow | D12 | v2-cow | spark-sql | part | DELETE FROM {dm} WHERE d = 0.0 | (1,1.5,1.5,f1) | (1,1.5,1.5,f1); (4,-0.0,-0.0,f4) | (1,1.5,1.5,f1); (4,-0.0,-0.0,f4) | PRUNED-WRONG | - |
-| D12-group-cow | D12 | v2-cow | spark-sql | part | SELECT d, count(*) AS c FROM {dm} GROUP BY d | (1.5,1); (0.0,2) | (0.0,2); (1.5,1) | (0.0,1); (-0.0,1); (1.5,1) | WRONG-WRITE | - |
+| D12-group-cow | D12 | v2-cow | spark-sql | part | SELECT d, count(*) AS c FROM {dm} GROUP BY d | (1.5,1); (0.0,2) | (0.0,2); (1.5,1) | (0.0,1); (-0.0,1); (1.5,1) | WRONG-READ | - |
 | D12-select-mor | D12 | v2-mor | spark-sql | part | SELECT id FROM {dm} WHERE d = 0.0 | (4); (6) | (6) | (6) | PRUNED-WRONG | - |
 | D12-delete-mor | D12 | v2-mor | spark-sql | part | DELETE FROM {dm} WHERE d = 0.0 | (1,1.5,1.5,f1) | (1,1.5,1.5,f1); (4,-0.0,-0.0,f4) | (1,1.5,1.5,f1); (4,-0.0,-0.0,f4) | PRUNED-WRONG | - |
-| D12-group-mor | D12 | v2-mor | spark-sql | part | SELECT d, count(*) AS c FROM {dm} GROUP BY d | (1.5,1); (0.0,2) | (0.0,2); (1.5,1) | (-0.0,1); (0.0,1); (1.5,1) | WRONG-WRITE | - |
+| D12-group-mor | D12 | v2-mor | spark-sql | part | SELECT d, count(*) AS c FROM {dm} GROUP BY d | (1.5,1); (0.0,2) | (0.0,2); (1.5,1) | (-0.0,1); (0.0,1); (1.5,1) | WRONG-READ | - |
 | D3-1 | D3 | v2-cow | spark-sql | none | SELECT CAST('-0.0' AS DOUBLE) = 0.0 AS x | (True) | (True) | (False) | WRONG-READ | - |
 | D3-1 | D3 | v2-cow | native | none | SELECT CAST('-0.0' AS DOUBLE) = 0.0 AS x | (True) | (True) | (False) | WRONG-READ | - |
 | D3-2 | D3 | v2-cow | spark-sql | none | SELECT CAST('-0.0' AS DOUBLE) < 0.0 AS x | (False) | (False) | (True) | WRONG-READ | - |

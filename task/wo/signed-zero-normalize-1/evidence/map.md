@@ -8,6 +8,7 @@ rendered from the raw files by the probe itself.
 - [raw/](raw/) — one JSONL file per leg: `spark-signed-zero-*.jsonl` (the Spark oracle) and `repark-main-signed-zero-*.jsonl` (the release wheel). The first line of each file is the leg header.
 - [domain-table.md](domain-table.md) — one row per RePark cell on the test layout, with the truth, Spark, RePark-main and label columns; generated.
 - [summary.md](summary.md) — counts by label, row group and route; the findings list; the timing and spill sections; the legs; generated.
+- [cards.md](cards.md) — the open items carded from this measurement: UPDATE-SCHEMA-BATCH-MISMATCH-1, E2 and E9 as missing evidence.
 - [provenance.md](provenance.md) — wheel and jar hashes, versions, session settings, the commands run, the label rules and the deviations from the brief.
 
 Up: [../map.md](../map.md).

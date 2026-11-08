@@ -16,7 +16,7 @@ Spark-on-Iceberg answer on the test layout for the same route.
 | D11 | spark-sql | RePark | EQUAL | 15 |
 | D11 | spark-sql | Spark | EQUAL | 15 |
 | D12 | spark-sql | RePark | PRUNED-WRONG | 4 |
-| D12 | spark-sql | RePark | WRONG-WRITE | 2 |
+| D12 | spark-sql | RePark | WRONG-READ | 2 |
 | D12 | spark-sql | Spark | EQUAL | 2 |
 | D12 | spark-sql | Spark | PRUNED-WRONG | 4 |
 | D13 | spark-sql | RePark | EQUAL | 2 |
@@ -232,10 +232,10 @@ Spark-on-Iceberg answer on the test layout for the same route.
 - D7-merge-Mc-mor spark-sql (v2-mor): WRONG-WRITE
 - D12-select-cow spark-sql (v2-cow): PRUNED-WRONG
 - D12-delete-cow spark-sql (v2-cow): PRUNED-WRONG
-- D12-group-cow spark-sql (v2-cow): WRONG-WRITE
+- D12-group-cow spark-sql (v2-cow): WRONG-READ
 - D12-select-mor spark-sql (v2-mor): PRUNED-WRONG
 - D12-delete-mor spark-sql (v2-mor): PRUNED-WRONG
-- D12-group-mor spark-sql (v2-mor): WRONG-WRITE
+- D12-group-mor spark-sql (v2-mor): WRONG-READ
 - D3-1 spark-sql (v2-cow): WRONG-READ
 - D3-1 native (v2-cow): WRONG-READ
 - D3-2 spark-sql (v2-cow): WRONG-READ

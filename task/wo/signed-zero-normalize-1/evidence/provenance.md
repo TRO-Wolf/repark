@@ -109,11 +109,30 @@ mechanism (the min and max statistics of a zero-only file, E1 and E3) explains t
 
 ## Observed intermittent refusal
 
-`UPDATE ... WHERE d <=> 0.0` on a RePark zero-only table refused once with `Mismatch between schema and batches`
-in two full runs, on different kinds: D7-update-8-cow in the second run, D7-update-8-v3 in the final run. Each full
-run answered the same statement on the other kinds. Twelve isolated repeats on fresh v2 CoW tables all answered with
-the correct state (both rows updated). The refusal is recorded as REFUSED-WHERE-SPARK-ACCEPTED in the final table and
-is not explained here.
+`UPDATE ... WHERE d <=> 0.0` through the facade on the `zsplit` layout refused with
+`Mismatch between schema and batches` in four of the five full runs (v3 in runs 1, 2, 3 and the final run; v2 CoW
+in runs 2 and 3). The v2 MoR and native answers were correct in every run. Twelve isolated repeats on fresh v2 CoW
+tables answered correctly. Carded as UPDATE-SCHEMA-BATCH-MISMATCH-1 in `cards.md`, with the run table. The first
+hand-back said the refusal occurred in two runs; the card corrects that.
+
+## Truth accepted
+
+The truth for read cells is Spark SQL on an inline `VALUES` view of the same rows (no Iceberg storage, no pruning).
+The orchestrator accepted this in place of Spark's direct Parquet read. E4 (the direct Parquet read, RePark side,
+and the bloom-filtered file) is listed as NOT RUN.
+
+## Spill status
+
+At 1 GB, RePark (facade and native) showed `spill_count=0` and `spilled_bytes=0.0 B` on every operator for the E8
+shape. The RePark spill path is therefore NOT exercised by this measurement. The build's table must force a spill
+(a smaller limit, or more rows). Spark's spill was measured with adaptive execution off, on the Spark spill leg only.
+
+## Render change after the legs
+
+The D12 GROUP BY rows are SELECT statements that carry the DML family in the raw records, so they were labelled
+WRONG-WRITE. The renderer now treats a SELECT statement as a read. This is a render-only change: no leg was re-run,
+and the tables and summary were re-rendered from the existing raw files. Counts moved from WRONG-WRITE 20 to 18 and
+WRONG-READ 174 to 176 (the two D12 GROUP BY rows, RePark, cow and mor).
 
 ## Row-order and message variance
 

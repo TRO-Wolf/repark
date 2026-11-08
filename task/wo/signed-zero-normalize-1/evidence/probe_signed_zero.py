@@ -1482,6 +1482,8 @@ def label_of(
     if outcome == REFUSED and theirs == ANSWERED:
         return ["NATIVE-REFUSED" if native else "REFUSED-WHERE-SPARK-ACCEPTED"]
     family = record["family"]
+    if str(record.get("text", "")).lstrip().upper().startswith("SELECT"):
+        family = "read"
     bad = "WRONG-WRITE" if family == "dml" else "WRONG-READ"
     ordered = bool(record.get("ordered"))
     mine, true_rows = record["rows"], truth["rows"]
