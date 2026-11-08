@@ -291,13 +291,12 @@ fn operands(door: Door, shape: &Shape) -> (&'static str, &'static str, &'static 
 fn op_token(op: Op) -> &'static str {
     match op {
         Op::UnionAll => "UNION ALL",
-        Op::Union => "UNION",
+        Op::Union | Op::DfUnion | Op::DfUnionByName => "UNION",
         Op::UnionDistinct => "UNION DISTINCT",
         Op::Intersect => "INTERSECT",
         Op::Except => "EXCEPT",
         Op::IntersectAll => "INTERSECT ALL",
         Op::ExceptAll => "EXCEPT ALL",
-        Op::DfUnion | Op::DfUnionByName => "UNION",
     }
 }
 
