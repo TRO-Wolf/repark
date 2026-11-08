@@ -20,7 +20,7 @@ not this directory.
   (evaluated intakes awaiting a charter — the two 2026-08 intakes and the fork handoff) and
   `epic-term/` (north-star tracks). Short-term stays [../briefs/next-sequence.md](../briefs/next-sequence.md).
 
-- [handoff-frontier-2026-10-23.md](handoff-frontier-2026-10-23.md) — frontier handoff updated after run 4 (2026-10-23): U/X proof, distinct cross-read timeout sites, bounded diagnostic plan, ordered queue, standing rules and lane mechanics.
+- [handoff-frontier-2026-10-23.md](handoff-frontier-2026-10-23.md) (superseded) · [handoff-frontier-2026-11-07.md](handoff-frontier-2026-11-07.md) — next-orchestrator hand-off (2026-11-07): #1267 pause, queue, rules.
 - [retro/](retro/map.md) — **process retrospectives:** the 2026-11-02 audit-3 closeout record and the one-round rules it drove.
 - [lrs-z-retrospective.md](lrs-z-retrospective.md) — **LRS close-out (2026-08-20):** seven units,
   the invariant held, and the two findings that matter most were both found while doing something
