@@ -154,3 +154,35 @@ results are recorded here):
   differs. In both, the multisets and labels are identical, and the rendered tables are unchanged.
 - **Labels added:** `CONJUNCT-DROPPED` (Table A, as the brief asked). Table B uses `WRONG-READ`, `WRONG-WRITE`,
   `ORDER-DIFFER` and `SIGN-ONLY`, defined above; the brief's labels for Table B were not fixed.
+
+## TIMESTAMP(9) cell (Part 1 of the 2026-11-08 extension)
+
+Legs. All RePark legs run the release wheel built from `fdc61f26` (repark 1.5.5, wheel sha256 `07f94d4dcf98…`). The
+Spark leg runs the Spark 4.1.2 oracle on JDK 17.0.15, with the Iceberg Spark runtime 1.11.0 jar (sha256
+`d6ea6c5d0992…`). The session zone is `America/New_York` on the Spark and facade legs. Each leg ran in its own JVM or
+interpreter, one at a time.
+
+- `spark`: six statements, one JVM. Raw `timestamp9-spark.jsonl`.
+- `repark-facade` base: three statements, the builder without `repark.sql.allowCreateFormatVersion3`. Raw
+  `timestamp9-repark-facade-base.jsonl`.
+- `repark-facade` v3: three statements, the flag in the builder config, `TBLPROPERTIES ('format-version'='3')`. Raw
+  `timestamp9-repark-facade-v3.jsonl`.
+- `repark-native` base: three statements, `PyReparkSession.native(config={})`, so no flag. Raw
+  `timestamp9-repark-native-base.jsonl`.
+- `repark-native` flag control (extra, not in the brief): the native base with the flag in the config. Raw
+  `timestamp9-repark-native-flag-control.jsonl`.
+
+Commands (placeholders for paths; the runner is a session script and is not committed):
+
+```
+JAVA_HOME=<jdk-17> <oracle-python> -I <runner> --probe <probe> --engine spark --phase all --label spark-4.1.2 --warehouse <warehouse> --out raw/timestamp9-spark.jsonl --ivy-jar <ivy-jar>
+<venv-main-fdc61f26>/bin/python -I <runner> --probe <probe> --engine facade --phase base --label repark-main-fdc61f26 --warehouse <warehouse> --out raw/timestamp9-repark-facade-base.jsonl --wheel <main-wheel>
+<venv-main-fdc61f26>/bin/python -I <runner> --probe <probe> --engine facade --phase v3 --label repark-main-fdc61f26 --warehouse <warehouse> --out raw/timestamp9-repark-facade-v3.jsonl --wheel <main-wheel>
+<venv-main-fdc61f26>/bin/python -I <runner> --probe <probe> --engine native --phase base --label repark-main-fdc61f26 --warehouse <warehouse> --out raw/timestamp9-repark-native-base.jsonl --wheel <main-wheel>
+<venv-main-fdc61f26>/bin/python -I <runner> --probe <probe> --engine native --native-allow-v3 --phase base --label repark-main-fdc61f26-native-flag-control --warehouse <warehouse> --out raw/timestamp9-repark-native-flag-control.jsonl --wheel <main-wheel>
+```
+
+Deviations and choices. The probe's facade and native sessions always carry the v3 flag. The base legs here run without
+it, so the base rows are the no-flag results. The Spark catalog is named `ice`, not the probe's `probe_ice`, so that the
+statement text matches the brief. The Spark v3 variants were refused at the column type before the property is read.
+The `<tmp>` tokens in the raw headers replace the temporary directory of the wheel's import path.
