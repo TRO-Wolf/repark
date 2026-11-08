@@ -298,3 +298,9 @@ fn sql_text_levels_count_no_df_depth() {
         .expect("an aggregate over sql builds");
     assert_eq!(summed.df_depth(), 1, "one df level over sql text");
 }
+
+#[test]
+fn the_expression_context_plans_an_empty_dml_as_a_no_op() {
+    let context = super::expr_build::build_expr_context().expect("expression context");
+    crate::session_tests::assert_the_context_plans_an_empty_dml_as_a_no_op(&context, "F.expr");
+}
