@@ -1,6 +1,6 @@
 # v1.5.6 qualification record (Master Plan Step 1.4)
 
-**Status:** prepared 2026-11-08 on branch `release/v1.5.6-prep` by the release-prep clerk (`claude-haiku-5-5`). This record tags nothing, publishes nothing and triggers no workflow. The merge, the tag and the deployment approval are the owner's actions (section 9).
+**Status:** prepared 2026-11-08 on branch `release/v1.5.6-prep` by the release-prep clerk (`claude-haiku-5-5`). This record tags nothing, publishes nothing and triggers no workflow. Section 4's conclusions were filled by the orchestrator (`claude-opus-5-5`) from the completed runs. The owner delegated the merge, the tag and the deployment approval (section 9).
 
 ## 1. Source revision
 
@@ -28,19 +28,19 @@
 
 ## 4. CI on the merged-main commit
 
-Runs on `03f925c5` (PR #1277 merged), read with `gh run view <id>` at the time of writing. Still in progress when this record was written; the conclusions are to be filled from the completed runs before the tag.
+Runs on `03f925c5` (PR #1277 merged), read with `gh run view <id>` after both completed on 2026-11-08.
 
-| Run id | Workflow | State at the time of writing |
+| Run id | Workflow | Conclusion |
 |---|---|---|
-| 42511828130 | CI | in progress; jobs `Python`, `Repo guards`, `Rust lint run`, `Rust lint`, `Rust test (cluster feature)` and `code changed (ci)` succeeded; `Rust test run (workspace)` in progress |
-| 42511828152 | smoke | in progress; `code changed` succeeded; `build debug wheel (profile ci)` in progress |
+| 42511828130 | CI | success; every job succeeded: `Python`, `Repo guards (map.md + workflow parse + crate-DAG + lib.rs)`, `Rust lint run (fmt + clippy + check)`, `Rust lint (fmt + clippy + check)`, `Rust test (cluster feature)`, `Rust test run (workspace)`, `Rust test (workspace)`, `code changed (ci)` |
+| 42511828152 | smoke | success; every job succeeded: `code changed`, `build debug wheel (profile ci)`, `build + import smoke (debug, host)`, `facade shard 0` to `facade shard 6`, `dbt-adapter tests`, `example-coverage execute` |
 | 42511828149 | typos | success |
 | 42511828197 | wheels | skipped (push to main) |
 | 42511828201 | Cache warm | success |
 
 The previous main head, `bd9c5437` (PR #1272, docs only), was green on the same jobs: CI run 42501593565 and smoke run 42501593548 succeeded, and typos succeeded.
 
-Executed suites, by CI job name, on `03f925c5`: `Python`, `Repo guards (map.md + workflow parse + crate-DAG + lib.rs)`, `Rust lint run (fmt + clippy + check)`, `Rust test (cluster feature)`, `Rust test run (workspace)`, `build debug wheel (profile ci)` (smoke). Results per job are as listed in the table above until the runs complete.
+Executed suites, by CI job name, on `03f925c5`: `Python`, `Repo guards (map.md + workflow parse + crate-DAG + lib.rs)`, `Rust lint run (fmt + clippy + check)`, `Rust test (cluster feature)`, `Rust test run (workspace)`, `build debug wheel (profile ci)` (smoke). All succeeded.
 
 ## 5. Guard verifier verdicts (EMPTY-DML-SHARED-GUARD-1, both PASS)
 
@@ -77,9 +77,11 @@ Exit codes are the real codes from the run on the release branch, on the tree th
 
 The runbook (`.agents/skills/publish-pypi/SKILL.md` and `docs/release.md`) names no merged-main cloud acceptance or live-Spark run before the tag, so none is listed. The scheduled `aws-acceptance` nightly is not triggered by this record.
 
-1. Merge word for the release PR. The owner squash-merges; no agent merges.
+The owner delegated items 1 to 4 to the orchestrator on 2026-11-08, verbatim: "Tag it and publish it when ready". The orchestrator merges after the section 4 conclusions are green, checks the tree, tags and approves the deployment; the go/no-go stays the owner's.
+
+1. Merge word for the release PR (given, above). Squash-merge on green required checks.
 2. Tree equality (runbook step 2.1): `git rev-parse <reviewed-sha>^{tree}` must equal `gh api repos/TRO-Wolf/repark/commits/<squash-sha> --jq .commit.tree.sha`.
 3. Tag (runbook step 2.2): `git tag -a v1.5.6 -m "RePark v1.5.6" <squash-sha>`, then `git push origin v1.5.6`.
-4. Approve the `release` deployment in the GitHub UI when `release.yml` pauses.
+4. Approve the `release` deployment when `release.yml` pauses.
 5. Registry check (runbook step 4.1): `https://pypi.org/pypi/repark/json` reports 1.5.6, and the wheel filename is `repark-1.5.6-cp312-abi3-manylinux...`.
 6. Close-out: run the compact-context-docs ritual so STATUS.md and the release-state documents show the shipped tag.
