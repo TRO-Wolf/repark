@@ -168,3 +168,5 @@ the project memory directory under `handoff-2026-11-07-paths.md` and `ansisub-pa
 3. Are the fifteen-plus unit-2 cards accepted as one residue card, or do any of them block the label (none is a
    wrong write; two are refusals of statements Spark answers in DML)?
 4. v1.5.6 timing once the re-audit passes.
+
+- **Reboot record (2026-11-08):** the 2026-11-07 reboot erased every session scratch tree this hand-off cites (lane and verifier clones, briefs, verdicts, probe directories); the branch `fix/ansi-subscript-and-ambiguous-field-1` at `8e929978` and the PR comments hold the record.
