@@ -3,7 +3,7 @@
 Measurement only. Model `claude-haiku-5-5`. Part 2 of the 2026-11-08 extension, on the same branch as Table B. The
 oracle is Spark 4.1.2 (Iceberg 1.11.0 runtime). The RePark leg is the release wheel built from `fdc61f26`
 (repark 1.5.5). Same seeds as Table B: `t` (eight rows; `-0.0` at id 4, `0.0` at id 6, NULL rows at ids 2 and 7, a NaN
-at id 3, Infinity at id 5) and `u` (`(10, 0.0)`, `(11, -0.0)`). The two-file table `x_two_*` is two single-row INSERTs,
+at id 3, Infinity at id 5) and `u` (`(10, 0.0)`, `(11, -0.0)`). The two-file table `x_two_*` is two single-row INSERT statements,
 id 4 (`-0.0`) first and id 6 (`0.0`) second, so one data file holds only `-0.0` and the other only `0.0`. Parquet
 statistics read with pyarrow: the `-0.0` file has min = max = `-0.0`; the `0.0` file has min = max = `0.0`.
 
