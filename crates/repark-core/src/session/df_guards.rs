@@ -25,6 +25,7 @@ mod predicate_names;
 pub(crate) mod self_join;
 pub(crate) mod skipping_limit;
 pub(crate) mod sort_names;
+mod struct_setop;
 pub(super) mod subquery;
 mod window_rescan;
 mod written_names;
@@ -71,7 +72,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
     dialect: &Arc<dyn SqlDialect>,
 ) -> DataFusionResult<SessionContext> {
     let analyzer_rules =
-        extension.configure_analyzer_rules(analyzer_rules_with_df_54_1_rule_guards())?;
+        extension.configure_analyzer_rules(analyzer_rules_with_df_54_1_rule_guards()?)?;
     let analyzer_rules = dialect.configure_analyzer_rules(analyzer_rules)?;
     let mut builder = SessionStateBuilder::new();
     if let Some(type_planner) = extension.type_planner().or_else(|| dialect.type_planner()) {
@@ -97,9 +98,10 @@ pub(super) fn context_with_df_54_1_rule_guards(
     Ok(context)
 }
 
-pub(super) fn analyzer_rules_with_df_54_1_rule_guards() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>>
-{
-    window_rescan::analyzer_rules_with_sliding_rescan()
+pub(super) fn analyzer_rules_with_df_54_1_rule_guards()
+-> DataFusionResult<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+    let rules = window_rescan::analyzer_rules_with_sliding_rescan();
+    struct_setop::insert_struct_setop_before_coercion(rules)
 }
 
 /// DataFusion's recommended rule list with `push_down_leaf_projections` wrapped.

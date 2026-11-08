@@ -8,6 +8,7 @@ wrapped optimizer rule) and declares this directory.
 
 ## Contents
 
+- [struct_setop.rs](struct_setop.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** the `struct_setop_names` analyzer rule refuses a set operation whose struct operands differ in field-name order or set at any depth. It sits before `type_coercion`: DataFusion's struct coercion pairs fields by name, so after it the `Cast` has already chosen names.
 - `skipping_limit.rs` — **OFFSET-NESTED-SORT-1 (2026-10-08):** a guard for a DataFusion 54.1.0
   defect. DataFusion's `EnforceSorting` rule (its sort pushdown,
   `datafusion-physical-optimizer` `enforce_sorting/sort_pushdown.rs`) treats a
@@ -40,15 +41,14 @@ wrapped optimizer rule) and declares this directory.
   `ORDER BY v`) into the sort below the limit, and stock's one-sort plan for that shape answered
   rightly. The guard's plan is two sorts, the inner `SortExec` and a second `SortExec` above the
   `GlobalLimitExec`; with a small `OFFSET` the second one sorts nearly the whole relation again.
-  Measured by the verifier (2026-10-08, `ci` profile, 11 rounds, guard against stock):
+  Verifier-measured (2026-10-08, `ci` profile, 11 rounds, guard vs stock):
   `SELECT s, j FROM (SELECT s, j FROM big ORDER BY j OFFSET 10) ORDER BY j, s` over a 1M-row
-  memory table at 8 partitions ran 136.3 ms guarded against 76.3 ms stock, +78.4% (a second run
-  +83.7%; the stock-against-stock floor +2.3%). **OPEN for the owner:** accept the cost, or a
+  memory table at 8 partitions ran 136.3 ms guarded vs 76.3 ms stock, +78.4% (second run
+  +83.7%; stock-vs-stock floor +2.3%). **OPEN for the owner:** accept the cost, or a
   follow-up that lets the rule merge the two sorts when the outer sort refines the inner one.
-  A statement without an `OFFSET` pays none of this: the verifier's `ci`-profile measurements
-  (not the thin-LTO release profile) found no statement without an `OFFSET` 2% outside the
-  floor, for example `SELECT 1` run +0.17% (floor -0.21%) and a TopK over 1M rows run +0.58% (floor +0.22%);
-  the table is in the unit ledger, section 9.
+  Statements without an `OFFSET` pay none of it: none ran 2% outside the floor (`SELECT 1`
+  +0.17%, floor -0.21%; TopK over 1M rows +0.58%, floor +0.22%; `ci` profile, table in the
+  unit ledger, section 9).
   Routes not taken: a repair after the rule (the original `fetch` is gone by then); splitting
   the limit into `skip` over `fetch` (the rule then pushes the sort through the skip-only half).
   **Retire** at the DataFusion bump that fixes the pushdown: the two
@@ -60,9 +60,9 @@ wrapped optimizer rule) and declares this directory.
   `SkipSafeEnforceSorting` does not forward it (the default calls the wrapper's own `optimize`),
   so an override in the new version would be dropped silently. In 54.1.0 only `JoinSelection`
   overrides it, so nothing is lost today.
-  The boundary `skip > 0` is pinned by the grid cell `offset_one`: with `is_skipping_limit` moved
-  to `skip > 1` (verifier mutation A, repeated on the pins as committed) `offset_one` answers
-  4 rows `[2,3,4,5]` where Spark answers `[2,3,4,5,6]`, and 3 of the 16 pins go red:
+  The `skip > 0` boundary is pinned by grid cell `offset_one`: with `is_skipping_limit` at
+  `skip > 1` (verifier mutation A, repeated on the committed pins) it answers `[2,3,4,5]`
+  for Spark's `[2,3,4,5,6]`, and 3 of the 16 pins go red:
   `one_partition_family_answers_spark_rows_at_one_partition` (on `m`, one partition) and the parquet
   and Iceberg grids (at 1, 2 and 16); the other 13 stay green. Before the cell, all 16 passed.
 - [window_rescan.rs](window_rescan.rs) — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer rule.
@@ -149,47 +149,44 @@ wrapped optimizer rule) and declares this directory.
   `strip_record_batches` now uses it. The binding applies it to the analyzed export schema, so a
   provider schema that carries ids (a SQL-defined temp view, which neither the backstop nor
   `drop_node_ids` can clean) never reaches an export.
-  **ATTR-ID-1 S1b (2026-09-30):** identity is decided by structure, never by copied metadata
-  (DataFusion copies the argument's metadata onto `first_value`, `last_value`, `lag`, `lead`,
-  `nth_value`, a cast and a negation). `computed_outputs(node)` answers, by position, which
-  outputs a same-op node computed: it skips a Filter/Sort/Limit chain (HAVING, ORDER BY), then
-  a Window's outputs past its input width are computed and its input positions take the
-  input's answer, and an Aggregate's group keys are computed unless the key (aliases stripped)
-  is a `Column` over a non-computed input position, while the grouping id and every aggregate
-  value are computed; any other node computes nothing. An Aggregate or Window root (or a
-  Filter/Sort/Limit root over one) mints every computed position; a Projection root keeps a
-  column only when it references a non-computed input position. The classification reads a
-  same-op node below the root but never rewrites it: the ids are set on the root Projection or
-  the pass-through Projection `stamp` adds. It needs no metadata: a Window or Aggregate that
-  was itself a stamped frame's root sits under that stamp's pass-through Projection, except an
-  Aggregate with no computed output, where both readings agree. A second `stamp` keeps every
-  alias whose own metadata carries a native id, so the stamp stays idempotent. Ids are
-  `a` + a 16-hex per-process prefix (a `RandomState` hash of the process id) + a 12-hex
-  counter; `AttrId::is_native` tells them from ids another process wrote, and `stamp` never
-  keeps a foreign id: a source that carries one is re-minted once. Pins:
-  `../tests/attr_id_fresh.rs`, `../tests/attr_id_verify.rs`.
+  **ATTR-ID-1 S1b (2026-09-30):** identity is decided by structure, never copied metadata
+  (DataFusion copies argument metadata onto `first_value`, `last_value`, `lag`, `lead`,
+  `nth_value`, casts and negations). `computed_outputs(node)` answers per position which
+  outputs a same-op node computed: past a Filter/Sort/Limit chain (HAVING, ORDER BY), a
+  Window's outputs past its input width are computed and its input positions take the input's
+  answer; an Aggregate's group keys are computed unless the key (aliases stripped) is a
+  `Column` over a non-computed input position, and the grouping id and every aggregate value
+  are computed; any other node computes nothing. An Aggregate or Window root, or a
+  Filter/Sort/Limit root over one, mints every computed position; a Projection root keeps a
+  column only over a non-computed input position. The classification reads but never rewrites
+  the same-op node below the root: ids land on the root Projection or the pass-through
+  `stamp` adds. It needs no metadata: a Window or Aggregate that was itself a stamped frame's
+  root sits under that stamp's pass-through Projection, except one with no computed output,
+  where both readings agree. A second `stamp` keeps every alias carrying a native id, so the
+  stamp stays idempotent. Ids are `a` + a 16-hex per-process prefix (a `RandomState` hash of
+  the pid) + a 12-hex counter; `AttrId::is_native` tells native from foreign ids, and `stamp`
+  re-mints a foreign id once, never keeps it. Pins: `../tests/attr_id_fresh.rs`,
+  `../tests/attr_id_verify.rs`.
   **ATTR-ID-1 S3a timing cut (2026-09-30):** `plan_is_stamped(plan)` answers by reference
-  whether `stamp` would return the plan unchanged, so the binding can keep an already-stamped
-  `PyDataFrame` handle (and its cached analyzed schema) instead of cloning the plan on every
-  spawn. It mirrors the mint conditions exactly: a Projection root whose every expression
-  carries its own native id or inherits one over a non-computed input position, a Union root
-  whose every position already carries the first input's id, any other relation root with no
-  computed position and no missing or foreign id; a statement root reads stamped, and a
-  classification error reads unstamped so `stamp` surfaces it. A bare presence check would
-  misread a fresh computed node whose copied ids are all native (a `lag` output keeps its
-  argument's native id until `stamp` mints it), so the predicate reuses `computed_outputs`,
-  `own_id` and `first_input_ids` rather than re-deciding. Pins: `../tests/attr_id.rs`.
-  **ATTR-ID-1 S3a (2026-09-30):** `alias_with_fresh_id(expr, name)` builds the `Alias`
-  with a freshly minted id in its own metadata, the constructor a user `alias()` uses;
-  a second stamp keeps it (the S1b idempotence rule). It joins the `frame_names`
-  re-export. `first_input_ids` reads a Projection input's ids through `chain_id`
-  (outermost-with-metadata down the alias chain): a user alias under a plain machinery
-  alias keeps its own id instead of the source column's, so a union of aliased twins
-  keeps distinct ids. The output schema is not the source: DataFusion's `union_by_name`
-  pad projection grafts the other side's field (with its id) into the padded side's
-  schema. Pins: `../tests/attr_id.rs` `union_reads_inner_alias_ids_through_plain_machinery_aliases`.
+  whether `stamp` would return the plan unchanged, so the binding keeps an already-stamped
+  `PyDataFrame` handle (and cached analyzed schema) instead of cloning the plan per spawn. It
+  mirrors the mint conditions exactly: a fully native Projection root, a Union root already
+  carrying the first input's ids, any other relation root with no computed position and no
+  missing or foreign id; a statement root reads stamped, a classification error unstamped so
+  `stamp` surfaces it. A bare presence check would misread a fresh computed node with
+  all-native copied ids (a `lag` output keeps its argument's id until `stamp` mints it), so
+  the predicate reuses `computed_outputs`, `own_id` and `first_input_ids`. Pins:
+  `../tests/attr_id.rs`.
+  **ATTR-ID-1 S3a (2026-09-30):** `alias_with_fresh_id(expr, name)` is the `Alias`
+  constructor a user `alias()` uses, with a freshly minted id a second stamp keeps (S1b
+  idempotence); it joins the `frame_names` re-export. `first_input_ids` reads a Projection
+  input's ids through `chain_id` (outermost-with-metadata down the chain): a user alias
+  under a plain machinery alias keeps its own id, so a union of aliased twins keeps distinct
+  ids. Not the output schema: `union_by_name`'s pad projection grafts the other side's field
+  (with its id) into the padded side's schema. Pins: `../tests/attr_id.rs`
+  `union_reads_inner_alias_ids_through_plain_machinery_aliases`.
   **ATTR-ID-1 S3e (2026-10-01):** `resolve` takes the facade-held qualifiers
-  (attribute id to qualifier names) and matches a written qualifier against the
+  (id to qualifier names) and matches a written qualifier against the
   plan relation or a facade entry under the live rule, so join sides and
   `alias()` frames bind through the one id rule; a using-key union binds
   either side. Pins: `../tests/attr_id_s3e.rs`.
