@@ -35,8 +35,9 @@ uvx ruff@0.15.22 format probe_setop.py && uvx ruff@0.15.22 check probe_setop.py
 Each leg runs against an empty warehouse. The committed raw files come from the last full run of each
 leg, after the final edit to `probe_setop.py`. Before that run the by-name reading was drafted to
 refuse on any missing field; the RePark leg showed NULL-filled by-name pairing for `partial-overlap`,
-so the reading was corrected and both legs were run again. The outcome counts did not change; only the
-predicted column moved.
+so the reading was corrected and both legs were run again. The by-name reading was then made to ignore
+case, as Spark does by default, and both legs were run a last time. The outcome counts did not change
+across these runs; only the predicted column and the pairing columns moved.
 
 Cell counts per leg (each leg: 200 cells = 80 `sql` door + 80 `native` door + 40 `df` door):
 
@@ -70,8 +71,8 @@ uses `MAP(ARRAY['k'], ARRAY[named_struct(...)])`; the other shapes are spelled a
 ## Readings and the set-right operands
 
 - `by-position`: the i-th right field is paired with the i-th left field, at every struct level.
-- `by-name`: fields are paired by exact name; a left field with no right field of that name is NULL;
-  when no name of a struct matches, the reading is a refusal.
+- `by-name`: fields are paired by name, ignoring case as Spark does by default; a left field with no
+  right field of that name is NULL; when no name of a struct matches, the reading is a refusal.
 - The set-right operands make the two readings differ for INTERSECT and EXCEPT wherever the shape
   allows it: the right row matches the left row under one reading and not under the other. For
   `same-order` no reading can differ, so the set-right operand matches the left row (a control that
@@ -91,9 +92,9 @@ uses `MAP(ARRAY['k'], ARRAY[named_struct(...)])`; the other shapes are spelled a
 2. The DataFrame routes build their operands with `SELECT <x> AS s` through the same session's SQL,
    then call `DataFrame.union` or `DataFrame.unionByName`, and for the INSERT form
    `write.insertInto`. The native door has no DataFrame route, so it runs only the four SQL operations.
-3. The `case-reordered` shape ran under the default case setting only (Spark `caseSensitive` false). The
-   RePark reading that was measured is exact-name, so it refuses when no name matches exactly; the
-   Spark `unionByName` cell for the same shape matches the fields case-insensitively.
+3. The `case-reordered` shape ran under the default case setting only (Spark `caseSensitive` false). Its
+   by-name reading ignores case, so it predicts an answer; RePark refuses that shape, so RePark is
+   case-sensitive here, while Spark's `unionByName` pairs the fields case-insensitively.
 4. The RePark native session and the facade were both built with `repark.sql.allowCreateFormatVersion3`
    set to true, as in the step-0.3 probe. No other RePark setting was changed, and the header does not
    record a RePark ANSI or case setting.

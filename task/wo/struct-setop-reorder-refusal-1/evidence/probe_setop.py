@@ -189,13 +189,13 @@ def reading(left: Any, right: Any, mode: str) -> Any:
                 "s",
                 [(name, reading(child, rchild, mode)) for (name, child), (_, rchild) in pairs],
             )
-        lookup = dict(right_fields)
-        if not any(name in lookup for name, _ in body):
+        lookup = {rname.lower(): rchild for rname, rchild in right_fields}
+        if not any(name.lower() in lookup for name, _ in body):
             raise NoPairingError(left)
         fields = []
         for name, child in body:
-            if name in lookup:
-                fields.append((name, reading(child, lookup[name], mode)))
+            if name.lower() in lookup:
+                fields.append((name, reading(child, lookup[name.lower()], mode)))
             else:
                 fields.append((name, None))
         return ("s", fields)
@@ -816,8 +816,9 @@ def render(arguments: argparse.Namespace) -> int:
         "door and form. Struct values are listed in the left operand's field order, so `[1,2]` "
         "is `(a=1, b=2)` for shape `reordered`; a map is listed as `[key, value]` pairs. "
         "The two readings: `by-position` pairs the i-th right field with the i-th left field; "
-        "`by-name` pairs fields by exact name, puts NULL where the right operand has no field "
-        "of that name, and refuses when no name matches. The right operand of INTERSECT and "
+        "`by-name` pairs fields by name, ignoring case as Spark does by default, puts NULL where "
+        "the right operand has no field of that name, and refuses when no name matches. The "
+        "right operand of INTERSECT and "
         "EXCEPT is the set-right variant (see provenance.md). `by-position` and `by-name` in the "
         "pairing columns name the reading whose predicted rows equal the measured rows; `n/a` "
         "means no reading matched, both matched, or the cell refused or was not measured. A "
