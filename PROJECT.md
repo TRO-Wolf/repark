@@ -147,8 +147,8 @@ goal.
 | Analytics | grouped aggregation and windows at 1e6–1e7 rows against DuckDB on the same data |
 | TA serving | many-symbol windows, wide multi-indicator SELECT, last-row serving against `polars_talib` |
 | dbt-repark | the reference dbt project end to end |
-| ETL job vs Spark | the reference ETL shapes (read Iceberg, join, aggregate, write Iceberg; read Postgres, transform, write Iceberg) measured against Spark 4.1.2 local mode on the same box and data; **gate: at or better than Spark 4.1.2 local mode**; **published targets: Polars and DuckDB published targets at 2.0× for the first baseline, tightened each release; a target is published and re-measured, a gate blocks a merge** (where the shape has an equivalent) |
-| Connector read | partitioned parallel read of one table straight into Arrow against ConnectorX, within 1.25× ConnectorX on the same query and data (gate; the 1.6 and 1.10 read bar, moved into the intent table) |
+| ETL job vs Spark | the reference ETL shapes (read Iceberg, join, aggregate, write Iceberg; read Postgres, transform, write Iceberg) measured against Spark 4.1.2 local mode on the same box and data; the gate and the published targets are on the [PERF-BASELINE-2 card](task/roadmap/mid-term/perf-baseline-2-card-2026-11-08.md) |
+| Connector read | partitioned parallel read of one table straight into Arrow against ConnectorX; the gate is on the [C-3 work order](task/wo/c-3-partitioned-reads.md) (the 1.6 and 1.10 read bar, moved into the intent table) |
 
 ## Differentiators
 

@@ -19,8 +19,8 @@ the factor recorded (card 1.6). Out: writes (C-4), SQL Server (C-5), convenience
   Arrow (card 1.6; the 1.10 row carries the same bar for Trino later).
 - R-3 (benchmark): the same query vs ConnectorX and pandas+SQLAlchemy; the factor
   is recorded (card 1.6). The pins require "the benchmark within the stated
-  factor" (card 1.6 pins) but no factor is stated in any source: the acceptance
-  factor is **PENDING** — C-3 records the measured factor and the ruling follows.
+  factor" (card 1.6 pins); the acceptance factor is **within 1.25× ConnectorX on the same
+  query and data (owner, 2026-11-08)**. C-3 records the measured factor against it.
 - R-4 (ledger): cites ConnectorX (the partitioned-read design and the benchmark
   bar) and ADBC per the 1.6 row's standing instruction (owner, 2026-09-13).
 
@@ -42,8 +42,9 @@ benchmark queries.
 
 `cargo test -p` on touched crates; live cells on the C-0 container; DIFF-PROBE
 (R-1); `bash scripts/check_map_md.sh --base origin/main`; clippy/fmt clean. Pin:
-partitioned results equal the unpartitioned C-2 answers row for row. **PENDING**:
-the benchmark-acceptance factor (R-3).
+partitioned results equal the unpartitioned C-2 answers row for row. The
+benchmark-acceptance factor is within 1.25× ConnectorX on the same query and data (owner,
+2026-11-08) (R-3).
 
 ## 6. Halt rules
 
