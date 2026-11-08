@@ -121,11 +121,10 @@ repark-parity slice.
   `ledger_lifecycle.py compact` and `check_docs_compaction.py`.
 - `check_owner_ruling.py` — the **PR #247 owner-ruling preservation gate**. It requires the
   complete ruling block in a regular file at the start of both `AGENTS.md` and `CLAUDE.md`,
-  byte-for-byte, and the adjacent enforcement boundary in `AGENTS.md`. Each protected block must
-  appear exactly once. It rejects symlink redirection and makes no model-attribution claim.
-  The expected text moved once (2026-09-07, owner-ruled): the adjustment's enforcement sentence
-  now says review holds condensation and the file-size ratchets are the gates, replacing the
-  `make check-comment-density` claim PR #247 had already retired.
+  byte-for-byte, the adjacent enforcement boundary, and the semantic-precedence pointer bullet in
+  `AGENTS.md`. Each protected block must appear exactly once. It rejects symlink redirection and
+  makes no model-attribution claim.
+  The expected text moved once (2026-09-07, owner-ruled); the dated record is in git history.
   Dual-wired through `make check-owner-ruling` in `make ci` and a raw guard step in ci.yml.
   Provocations:
   `python/repark-parity/tests/test_pr_247_owner_ruling.py`.
