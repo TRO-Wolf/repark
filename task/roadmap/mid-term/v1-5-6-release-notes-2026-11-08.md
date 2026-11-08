@@ -1,17 +1,16 @@
-# v1.5.6 release notes (draft)
+# v1.5.6 release notes (2026-11-08)
 
-This draft collects one line per stored-value change as each unit of the 1.5.6 cycle lands, for
-the release PR to edit into the notes.
+Every change on `origin/main` after the `v1.5.5` tag (`7fb5f6b2`), one line per user-visible change.
+The units merged between `293896ce` (the original v1.5.5 commit) and `7fb5f6b2` shipped in v1.5.5;
+their lines are in [the v1.5.5 notes](v1-5-5-release-notes-2026-10-13.md) under "Added by the re-pointed tag".
 
-Reconciled 2026-10-22: the `v1.5.5` tag was re-pointed on 2026-10-20 from the 2026-10-13 release
-commit `293896ce` to `7fb5f6b2`, so every unit merged between those two commits shipped in v1.5.5
-(ICE-TSNS-FLOOR-DOORS-1, ICE-TSNS-TYPE-PLANNER-1, ICE-STRUCT-PAIRING-1 and the SET walk,
-REPARK-SQL-UPDATE-SUBQUERY-WHERE-1, PA-LOCAL-FS-POLICY-1, PA-DBT-MISMATCH-REDACT-1,
-WRITE-BODY-CARRIERS-1, the fork repins RP-58 and RP-59). Their lines moved to
-[the v1.5.5 notes](v1-5-5-release-notes-2026-10-13.md) under "Added by the re-pointed tag". What
-stays here merged after `7fb5f6b2`.
+## Data-safety fix
 
-WRITE-SPINE-1 step (3b) (PR #1185, awaiting verification) is test-only: it changes no stored value, so it adds no bullet below.
+A DELETE or UPDATE whose condition the optimizer folds to "matches nothing" (for example `WHERE false`, `WHERE NULL`, a comparison with a NULL struct, and on `repark.sql()` also `WHERE 1 = 0`, `WHERE col = NULL`, `WHERE required_col IS NULL`) deleted every row, or rewrote every file and on format v3 marked every row updated. Measured on 1.5.5; earlier releases were not measured. Fixed in 1.5.6: such statements now change no rows and report zero rows; one route, a DELETE on `required_col IS NULL` through the metadata-delete path, still records an empty snapshot (see Known issues) (EMPTY-DML-SHARED-GUARD-1, PR #1277).
+
+Declared divergences from Spark (ruling D, 2026-11-08): on a DELETE or UPDATE whose `WHERE` is NULL, Spark refuses (`FILTER_NOT_BOOLEAN` on DELETE and on UPDATE for format-v2 merge-on-read, `INTERNAL_ERROR` on UPDATE for format-v2 copy-on-write and format v3), on an empty no-op Spark commits an empty snapshot, which RePark does not, and Spark's errors raised from the `SET` expression of a no-op UPDATE are declared the same way (the owner's 2026-11-08 ruling "All recommendations" extends ruling D to them; the cell is `UPDATE t SET prim_col = 1 / 0 WHERE false` on format-v2 merge-on-read, where Spark refuses with `CAST_OVERFLOW_IN_TABLE_INSERT` and RePark writes nothing).
+
+The v2 production label is not part of this release. Its open label items (AUD-022, AUD-023 and CTAS) move to a later release, as ruling A of 2026-11-08 sets, and the format-v3 label moves to a later release (owner ruling 2026-11-02).
 
 ## Stored values that change
 
@@ -92,11 +91,27 @@ Tables already written keep the values they hold; this release ships no migratio
 
 - **Ordered writes, merge-on-read MERGE and changelog reads refuse above a stated memory bound (ICE-RESOURCE-BOUND-1, U-11).** Each path has a key, read at build: `repark.write.ordered.max-input-fraction` (0.10), `repark.merge.mor.max-updated-fraction` (0.05) and `repark.changelog.max-source-fraction` (0.0625), times the live memory pool. Above it the statement refuses with the pool's `ResourcesExhausted` class (`PySparkException`) before any file is staged. The value 0 means no bound. Default pool detection is closed for cgroup v2 (the leaf-and-ancestors minimum of `memory.max`, capped by `MemTotal`); cgroup v1, macOS and Windows need an explicit pool budget.
 
-- **Format-v2 Iceberg reads and writes carry the PRODUCTION label as of this release
-  (ICE-V2-LABEL-1).** Three carve-outs stay named on the label: ENC-1 items 1 and 5 (ruling 121 (b))
-  and ENC-CTAS-REPLACE-1 (ruling 98 (a)); the text-leaf row NESTED-TEXT-LEAF-STORE-1 is carried by
-  owner ruling 2026-10-26 and fixed in 1.5.7. The label itself changes no stored value; the stored-
-  value changes of this release are the bullets above. The format-v3 label moves to a later release (owner ruling 2026-11-02).
+- **Plain `EXPLAIN` of an empty `DELETE` or `UPDATE` shows the rewritten plan (EMPTY-DML-SHARED-GUARD-1).** `EXPLAIN DELETE FROM t WHERE false` shows a one-row `Values` plan and the source that answers it, where v1.5.5 showed the `Dml` node and the Iceberg delete operator. The plan text is DataFusion's, as on every plain `EXPLAIN`; what runs is the rewritten plan.
+
+- **A table identifier follows Spark 4.1.2's grammar on every statement head and on both doors (IDENT-DIALECT-1, IDENT-DIALECT-1B).** The statements are `DROP`, `TRUNCATE`, `DELETE`, `SELECT`, `INSERT`, `UPDATE`, `ALTER` and `MERGE`, including their end-of-input and second-target spellings.
+
+- **`spark.sql.ansi.doubleQuotedIdentifiers=true` refuses instead of being ignored (DQ-IDENTIFIERS-CONFIG-REFUSE-1, AUD-021).** The runtime setter and the Spark-door session build raise `UnsupportedOperationException` naming the config; `false` is accepted as a no-op, and a non-boolean value answers `INVALID_CONF_VALUE.TYPE_MISMATCH`. v1.5.5 accepted the true value and ignored it.
+
+- **A field access after a subscript, a call or a parenthesis answers on the Spark door (SUBSCRIPT-DOT-ACCESS-1).** `m['k'].f`, `f(x).y`, `(e).y` and `map_keys(mk)[0].a` answer the field's value, where DataFusion refused them with `Dot access not supported for non-string expr`. A leading column path keeps its identifier resolution.
+
+- **An `ALTER` of a field inside a map key refuses as Spark does (MAP-KEY-ALTER-1).** A nested `DROP`, `RENAME` or `ADD` under a map key refuses with `Unsupported table change: Cannot alter map keys: <map>` (an add under a struct key: `Cannot add fields to map keys: <map>`), and the table metadata is unchanged. Moving a key-struct child succeeds and leaves the key unchanged.
+
+- **A temporary view's name never resolves to the same-named table on a write (SPARK-DOOR-TEMP-VIEW-TARGET-1, AUD-006).** A write that names a temporary view refuses as Spark does and leaves the table unchanged, and `writeTo` refuses a view name.
+
+- **On `type=hadoop` tables, metadata discovery follows Iceberg Java's rule (HADOOP-DISCOVERY-RULE-1).** The version hint is read as Java reads it, and a hint that cannot be read falls to the listing. A negative, past or removed hinted version refuses with Java's missing-version text; a zero hint with no `v0` is a missing table; and the listing keeps the highest `v` file whose canonical name is listed, so a catalog-style name never beats a `v` name.
+
+- **The hadoop path read follows Java's gzip metadata names (ICE-HADOOP-GZIP-METADATA-1).** The hint walk and the listing see gzip-named metadata files, as Java's reader does.
+
+- **A rejected CTAS, RTAS or `CREATE TABLE` removes the files it staged (STAGED-PUBLISH-CLEANUP-1).** When the catalog rejects the publish, the staged metadata file, the new snapshot's manifest list and manifests, and the data files the statement wrote are deleted, so a reader no longer takes the rejected change for a commit. An unknown commit outcome keeps every file.
+
+- **RePark reads the top-level columns of an id-less Parquet file on a route with no name mapping as Spark does (RP-65, fork F-IDLESS-TOPLEVEL-POSITIONAL-1 `#381`).** A string column read as binary keeps its bytes, a binary column read as string answers Spark's predicate results on the pinned cells, an overflowing narrowed decimal is loud on read, and a reordered file refuses by position without the mapping. With the mapping the pair reads by name. The fork pin moves to `66901f02`.
+
+- **Lock-only security bumps.** tokio 1.54.1 (RUSTSEC-2026-0386), ctutils 0.4.5 (RUSTSEC-2026-0385), pulldown-cmark 0.13.6 (RUSTSEC-2026-0414 and RUSTSEC-2026-0433), the zstd advisory exception (DEPS-1) and four advisory ignores retired (#1239).
 
 - **A bulk merge-on-read `DELETE` that panicked past one position-delete batch now completes (RP-60, fork F-POSDEL-BATCH-1 `#374`).**
   A `DELETE` on a format-v2 merge-on-read table whose matched rows held more than 2 GiB of data-file path text in one partition
@@ -112,11 +127,11 @@ Tables already written keep the values they hold; this release ships no migratio
 
 - **RePark reads a dropped equality-delete key on Parquet data files (RP-62, fork F-EQDEL-DROPPED-KEY-1 `#377`).** An equality delete whose key column a later `ALTER TABLE … DROP COLUMN` removed used to fail the read with `field not found`; on Parquet data files the surviving rows now read back through the Spark door and the native door, including after the column is re-added. Avro and ORC data files still refuse the read with an error that names the data file (F-EQDEL-DROPPED-KEY-2). The fork pin moves to `935cc55c`.
 
-- **RePark reads a struct that a column drop emptied, with no panic (RP-63, fork F-STRUCT-EMPTY-CHILD-PANIC-1 `#378`).** A struct whose every field an `ALTER TABLE … DROP COLUMN` removed used to fail the read with an internal error (AUD-008). Now the Spark door answers it, and the emptied struct's validity is read per row: a non-null row reads a non-null empty struct, and a NULL row reads NULL. Spark's NULL collapse covers every data file that one write produced when that write held a NULL struct row, and Spark reads NULL on those rows; RePark keeps the per-row answer, a recorded divergence by owner ruling of 2026-10-31. Three id-less Parquet file shapes and a map-key drop stay open (F-IDLESS-STRUCT-CHILD-REMAP-1, grade A: two of the three read a silent wrong value reachable through RePark's own frame writer and `add_files`, and the third refuses loud; F-MAP-KEY-DROP-ALTER-1). The fork pin moves to `14a93602`. (the id-less shapes closed 2026-11-01 by RP-64, the next bullet; F-MAP-KEY-DROP-ALTER-1 stays open)
+- **RePark reads a struct that a column drop emptied, with no panic (RP-63, fork F-STRUCT-EMPTY-CHILD-PANIC-1 `#378`).** A struct whose every field an `ALTER TABLE … DROP COLUMN` removed used to fail the read with an internal error (AUD-008). Now the Spark door answers it, and the emptied struct's validity is read per row: a non-null row reads a non-null empty struct, and a NULL row reads NULL. Spark's NULL collapse covers every data file that one write produced when that write held a NULL struct row, and Spark reads NULL on those rows; RePark keeps the per-row answer, a recorded divergence by owner ruling of 2026-10-31. Three id-less Parquet file shapes that this bullet left open (F-IDLESS-STRUCT-CHILD-REMAP-1, grade A) are closed by RP-64, the next bullet. The fork pin moves to `14a93602`.
 
-- **RePark reads the struct children of an id-less Parquet file by id, and keeps the name mapping through an ALTER (RP-64, fork F-IDLESS-STRUCT-CHILD-REMAP-1 `#379` and F-NAME-MAPPING-SCHEMA-UPDATE-1 `#380`).** An id-less Parquet file admitted by `add_files` (the output of RePark's own frame writer) used to read a dropped struct child's value under a new child, or refuse the read. Now a child absent from the file reads NULL per row, and a rename, a file with its children in another order and an extra file child read as Spark reads them. A file admitted after a rename, an added column or a drop and re-add by the same name reads its values as Spark does; before the second pin the schema update did not keep the name mapping, so those values read NULL silently. A NULL struct row on a write that holds one stays NULL per row where Spark collapses that write's struct to NULL: the owner's ruling of 2026-10-31, a recorded divergence. Three residues stay open as cards: a top-level column on a route with no name mapping, which RePark's own `ALTER TABLE … UNSET TBLPROPERTIES` of the mapping property reaches and which gives rows that differ from Spark for a re-added name, a partial mapping and a type-changing positional reorder (the last one casts the values silently where Spark refuses) (F-IDLESS-TOPLEVEL-POSITIONAL-1, grade B, P2); an incompatible nested type on a file with embedded field ids (F-NESTED-TYPE-MISMATCH-EMBEDDED-IDS-1); and a promotable top-level or nested type that `add_files` refuses with an internal message (ADD-FILES-IDLESS-PROMOTION-1, grade C, P3). The fork pin moves to `ee592dcf`, then to `56ff5545`.
+- **RePark reads the struct children of an id-less Parquet file by id, and keeps the name mapping through an ALTER (RP-64, fork F-IDLESS-STRUCT-CHILD-REMAP-1 `#379` and F-NAME-MAPPING-SCHEMA-UPDATE-1 `#380`).** An id-less Parquet file admitted by `add_files` (the output of RePark's own frame writer) used to read a dropped struct child's value under a new child, or refuse the read. Now a child absent from the file reads NULL per row, and a rename, a file with its children in another order and an extra file child read as Spark reads them. A file admitted after a rename, an added column or a drop and re-add by the same name reads its values as Spark does; before the second pin the schema update did not keep the name mapping, so those values read NULL silently. A NULL struct row on a write that holds one stays NULL per row where Spark collapses that write's struct to NULL: the owner's ruling of 2026-10-31, a recorded divergence. Two residues stay open as cards: an incompatible nested type on a file with embedded field ids (F-NESTED-TYPE-MISMATCH-EMBEDDED-IDS-1); and a promotable top-level or nested type that `add_files` refuses with an internal message (ADD-FILES-IDLESS-PROMOTION-1, grade C, P3). The top-level residue (F-IDLESS-TOPLEVEL-POSITIONAL-1) is closed by RP-65 below. The fork pin moves to `ee592dcf`, then to `56ff5545`, then to `66901f02`.
 
-- **A struct-key map subscript answers Spark's value, with no internal error (MAP-STRUCT-KEY-SUBSCRIPT-1, AUD-016, merge pending).** `m[named_struct(...)]` on a map whose key is a struct used to fail with an internal error (a sliced-buffer panic inside DataFusion's `get_field`). Now it answers Spark's value: the key is matched by position at every depth, each leaf is cast as the Spark door's CAST, the session zone included, floating leaves compare as Spark compares them (`-0.0` equals `0.0`, NaN equals NaN), the array, large-array and fixed-size-array key kinds match alike, and a `NULL` leaf for a required key field matches nothing. The DOUBLE-to-DECIMAL rounding and `F.expr` subscripts in an aggregate or a scalar-key filter are not yet fixed. A key whose field count or leaf pair Spark refuses refuses with Spark's `DATATYPE_MISMATCH` class, and `F.expr` map subscripts in a select answer. With `spark.sql.ansi.enabled=false` a key of another type refuses as Spark does, and struct field names match case-insensitively unless `spark.sql.caseSensitive` is true; an array element of the key keeps RePark's ANSI-on cast under ANSI off, a carded divergence (ANSI-OFF-LEGACY-CAST-1).
+- **A struct-key map subscript answers Spark's value, with no internal error (MAP-STRUCT-KEY-SUBSCRIPT-1, AUD-016, PR #1232).** `m[named_struct(...)]` on a map whose key is a struct used to fail with an internal error (a sliced-buffer panic inside DataFusion's `get_field`). Now it answers Spark's value: the key is matched by position at every depth, each leaf is cast as the Spark door's CAST, the session zone included, floating leaves compare as Spark compares them (`-0.0` equals `0.0`, NaN equals NaN), the array, large-array and fixed-size-array key kinds match alike, and a `NULL` leaf for a required key field matches nothing. The DOUBLE-to-DECIMAL rounding and `F.expr` subscripts in an aggregate or a scalar-key filter are not yet fixed. A key whose field count or leaf pair Spark refuses refuses with Spark's `DATATYPE_MISMATCH` class, and `F.expr` map subscripts in a select answer. With `spark.sql.ansi.enabled=false` a key of another type refuses as Spark does, and struct field names match case-insensitively unless `spark.sql.caseSensitive` is true; an array element of the key keeps RePark's ANSI-on cast under ANSI off, a carded divergence (ANSI-OFF-LEGACY-CAST-1).
 
 - **The hadoop path read answers the newest committed metadata file past a stale
   `version-hint.text` (ICE-HADOOP-HINT-WINDOW-1, PR #1205).** It answered the hinted version, so a
@@ -139,7 +154,7 @@ Tables already written keep the values they hold; this release ships no migratio
   drilled by the live legs once the workflow is wired (#1070).
 - **An unknown commit outcome and a cross-release read are pinned (ICE-INTEGRITY-PINS-1, pins U
   and X).** Pin U pins the unknown commit outcome locally on three write doors, with live legs on
-  Glue and S3 Tables. Pin X shows that 1.5.5 and the head (the pre-bump build, which still reports 1.5.5) read each other's tables equal on the local
+  Glue and S3 Tables. Pin X shows that 1.5.5 and this release read each other's tables equal on the local
   catalog. Both legs hold live (2026-10-23, run 40025222296): leg U 96 of 96 cells and leg X 40 of 40 on Glue and S3 Tables, v2 and v3. The cross-read module of U-10 remains open (ledger C-060): run 4 timed out in Glue RePark row collection and S3 Tables PyArrow metadata-file I/O. Native diagnostics are the next measurement.
 
 - **An unfiltered `UPDATE` of an out-of-range `TIMESTAMP` literal reports INSERT's overflow (ICE-TSNS-UPDATE-RANGE-CLASS-1, R-012).** Under ANSI the statement refuses with `[CAST_OVERFLOW]` and INSERT's text, as ICE-TSNS-TYPE-PLANNER-1 left it in v1.5.5; this release pins the 16 cells and changes no stored value or refusal.
@@ -152,7 +167,11 @@ Tables already written keep the values they hold; this release ships no migratio
 
 ## Known issues
 
-- **Avro and ORC delete files are excluded from the format-v2 label this round (owner ruling 2026-11-02).** Maintenance on an Avro or ORC merge-on-read table leaves delete files that Spark removes (AUD-013, card [F-MAINT-AVRO-ORC-DELETE-RESIDUE-1](f-maint-avro-orc-delete-residue-1-card-2026-10-29.md)); the AUD-003 write side and that residue are the immediate follow-up units after the label.
+- **Maintenance on an Avro or ORC merge-on-read table leaves delete files that Spark removes (AUD-013, card [F-MAINT-AVRO-ORC-DELETE-RESIDUE-1](f-maint-avro-orc-delete-residue-1-card-2026-10-29.md)).** The residue is a follow-up unit. The Avro and ORC delete write side is fixed in this release (ICE-DELETE-FORMAT-GUARD-1).
+
+- **A facade `DELETE` whose predicate is `id IS NULL` on a required column still commits an empty snapshot (EMPTY-DML-SHARED-GUARD-1 residue).** The metadata-delete door runs before planning, so the guard does not reach it. Rows and data files are unchanged; Spark commits no snapshot for that statement.
+
+- **`UPDATE t SET prim_col = 1 / 0 WHERE false` on a format-v2 merge-on-read table answers zero rows.** Spark 4.1.2 refuses it with `CAST_OVERFLOW_IN_TABLE_INSERT`. This is a declared divergence under ruling D, as the owner extended it on 2026-11-08 (see Data-safety fix).
 
 - **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (known issue, updated 2026-10-17):** `repark.sql()` refuses
   every `UPDATE` and `DELETE` whose `WHERE` holds a subquery, including the `IN`, `NOT IN` and
