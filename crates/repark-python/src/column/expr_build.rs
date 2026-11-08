@@ -272,7 +272,7 @@ pub(super) fn sql_context(
     Ok(context)
 }
 
-fn build_expr_context() -> datafusion::error::Result<SessionContext> {
+pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> {
     let mut config = SessionConfig::new();
     config.options_mut().sql_parser.dialect = datafusion::config::Dialect::Databricks;
     config.options_mut().sql_parser.enable_ident_normalization = false;
@@ -288,6 +288,7 @@ fn build_expr_context() -> datafusion::error::Result<SessionContext> {
         .with_type_planner(repark_functions::spark_type_planner())
         .with_config(config)
         .with_default_features()
+        .with_query_planner(std::sync::Arc::new(repark_core::StackQueryPlanner))
         .with_analyzer_rules(rules)
         .build();
     let context = SessionContext::new_with_state(state);
