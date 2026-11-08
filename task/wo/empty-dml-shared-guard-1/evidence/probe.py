@@ -60,10 +60,12 @@ PREDICATES = (
     ("u-required-is-null", "id IS NULL"),
     ("c-one-eq-zero", "1 = 0"),
     ("c-prim-eq-null", "prim_col = NULL"),
+    ("c-selective", "id = 1"),
     ("c-true", "true"),
     ("c-no-where", None),
 )
 UUID_PREDICATE = ("b-uuid-null", "uuid_col = NULL")
+SELECTIVE_CELL = "c-selective"
 IDENTITY_CELL = "c-identity-update"
 IDENTITY_TEMPLATE = "UPDATE {table} SET flag = flag WHERE id = 1"
 WRONG_WRITE = frozenset({"a-false", "a-null", "b-struct-null", "b-arr-and-false", "b-uuid-null"})
@@ -149,6 +151,7 @@ UNION_PREDICTION = {
         ),
     ),
 }
+NATIVE_CONFIG = {"repark.sql.allowCreateFormatVersion3": "true"}
 DOOR_ORDER = ("native", "facade", "sql")
 STRUCT_ROUTE_ORDER = ("sql", "filter-str", "f-expr", "typed", "native")
 DETAIL_LABELS = frozenset(
@@ -156,6 +159,7 @@ DETAIL_LABELS = frozenset(
         "ROWS-DIFFER",
         "EXTRA-COMMIT",
         "LINEAGE-DIFFER",
+        "RESULT-ROWS-DIFFER",
         "ACCEPTED-WHERE-SPARK-REFUSED",
         "REFUSED-WHERE-SPARK-ACCEPTED",
         "PANIC",
@@ -362,6 +366,10 @@ def classify_rows(before: list[dict[str, Any]], after: list[dict[str, Any]]) -> 
         and all(strip_flag(b) == strip_flag(a) for b, a in zip(before, after, strict=True))
     ):
         return "all-flag-z"
+    if after == [row for row in before if row["id"] != 1]:
+        return "one-deleted"
+    if after == [{**row, "flag": "z"} if row["id"] == 1 else row for row in before]:
+        return "one-flag-z"
     return "other"
 
 
@@ -428,6 +436,8 @@ def base_record(ctx: dict[str, Any], spec: dict[str, Any], qualified: str) -> di
         "join": spec["join"],
         "table": qualified,
         "ddl": None,
+        "setup": None,
+        "setup_properties": None,
         "seed": None,
         "statement": None,
         "outcome": None,
@@ -490,6 +500,10 @@ def empty_dml_repark(
     """Return the RePark prediction for a matrix-1 cell."""
     if cell == IDENTITY_CELL:
         return "unknown", None
+    if cell == SELECTIVE_CELL:
+        if verb == "DELETE":
+            return "exactly one row deleted (id 1)", {"outcome": ANSWERED, "rows": "one-deleted"}
+        return "exactly one flag set to 'z' (id 1)", {"outcome": ANSWERED, "rows": "one-flag-z"}
     if cell == "u-required-is-null" and verb == "DELETE":
         if place == "native":
             return "no change (metadata-delete route)", {
@@ -532,7 +546,7 @@ def empty_dml_repark(
 
 def empty_dml_prediction(engine: str, spec: dict[str, Any]) -> dict[str, Any]:
     """Return the prediction record of a matrix-1 cell on the given engine."""
-    if engine == "spark" and spec["cell"] not in WHERE_ALL:
+    if engine == "spark" and spec["cell"] not in WHERE_ALL and spec["cell"] != SELECTIVE_CELL:
         text, expect = empty_dml_spark(spec["cell"], spec["verb"], spec["kind"])
     else:
         text, expect = empty_dml_repark(spec["cell"], spec["verb"], spec["kind"], spec["place"])
@@ -576,13 +590,14 @@ def empty_dml_specs(engine: str, only: str | None) -> list[dict[str, Any]]:
             specs.append(
                 empty_dml_spec(kind, place, IDENTITY_CELL, "UPDATE", False, IDENTITY_TEMPLATE)
             )
-            for verb in ("DELETE", "UPDATE"):
-                clause = f" WHERE {UUID_PREDICATE[1]}"
-                if verb == "DELETE":
-                    template = f"DELETE FROM {{table}}{clause}"
-                else:
-                    template = f"UPDATE {{table}} SET flag = 'z'{clause}"
-                specs.append(empty_dml_spec(kind, place, UUID_PREDICATE[0], verb, True, template))
+            for cell, predicate in (UUID_PREDICATE, (SELECTIVE_CELL, "id = 1")):
+                for verb in ("DELETE", "UPDATE"):
+                    clause = f" WHERE {predicate}"
+                    if verb == "DELETE":
+                        template = f"DELETE FROM {{table}}{clause}"
+                    else:
+                        template = f"UPDATE {{table}} SET flag = 'z'{clause}"
+                    specs.append(empty_dml_spec(kind, place, cell, verb, True, template))
     return specs
 
 
@@ -605,6 +620,124 @@ def empty_dml_spec(
     }
 
 
+def run_statement(
+    ctx: dict[str, Any], door: dict[str, Any], text: str, stage: str
+) -> tuple[Any, dict[str, Any] | None]:
+    """Run one statement on a door and capture any error."""
+    return attempt(ctx, lambda: execute_sql(door, text), stage)
+
+
+def creation_path(door: dict[str, Any], kind: str) -> str:
+    """Describe how a door creates a table of the given kind."""
+    if door["name"] != "native":
+        return "CREATE with TBLPROPERTIES"
+    if kind == "v2-cow":
+        return "native: CREATE without properties (door default: format 2, copy-on-write)"
+    return "native: CREATE without properties, then ALTER before seeding"
+
+
+def native_alter_spellings(qualified: str, kind: str) -> list[str]:
+    """Return the ALTER spellings tried on the native door for a table kind."""
+    if kind == "v3":
+        return [
+            f"ALTER TABLE {qualified} SET PROPERTIES (format_version = '3')",
+            f"ALTER TABLE {qualified} SET TBLPROPERTIES ('format-version' = '3')",
+            f"ALTER TABLE {qualified} SET (format_version = '3')",
+        ]
+    modes = "'write.delete.mode', 'write.update.mode'"
+    return [
+        f"ALTER TABLE {qualified} SET PROPERTIES (extra_properties = MAP(ARRAY[{modes}], "
+        "ARRAY['merge-on-read', 'merge-on-read']))",
+        f"ALTER TABLE {qualified} SET TBLPROPERTIES ('write.delete.mode' = 'merge-on-read', "
+        "'write.update.mode' = 'merge-on-read')",
+        f"ALTER TABLE {qualified} SET (\"write.delete.mode\" = 'merge-on-read', "
+        "\"write.update.mode\" = 'merge-on-read')",
+    ]
+
+
+def properties_match(state: dict[str, Any], kind: str) -> bool:
+    """Whether the metadata shows the format version and write modes of a table kind."""
+    version, _ = TABLE_MODES[kind]
+    if str(state["format_version"]) != version:
+        return False
+    if kind == "v2-mor":
+        return state["write_properties"] == dict.fromkeys(WRITE_KEYS, "merge-on-read")
+    return True
+
+
+def native_with_spellings(qualified: str, columns: str, kind: str) -> list[str]:
+    """Return the CREATE TABLE ... WITH spellings tried on the native door for a table kind."""
+    head = f"CREATE TABLE {qualified} ({columns}) WITH ("
+    if kind == "v3":
+        return [f"{head}format_version = '3')", f"{head}format_version = 3)"]
+    modes = (
+        "ARRAY['write.delete.mode', 'write.update.mode'], ARRAY['merge-on-read', 'merge-on-read']"
+    )
+    return [f"{head}extra_properties = MAP({modes}))"]
+
+
+def verify_table(
+    setup: dict[str, Any], table_dir: Path, kind: str
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """Check the metadata of a native table against its kind; a mismatch is a setup refusal."""
+    state = read_metadata(table_dir)
+    setup["verified"] = properties_match(state, kind)
+    if setup["verified"]:
+        return setup, None
+    mismatch = {
+        "class": "PropertyMismatch",
+        "stage": "verify",
+        "message": f"metadata reports format {state['format_version']} and write modes "
+        f"{state['write_properties']}",
+        "panic": False,
+    }
+    return setup, mismatch
+
+
+def create_matrix1_table(
+    ctx: dict[str, Any],
+    door: dict[str, Any],
+    qualified: str,
+    table_dir: Path,
+    spec: dict[str, Any],
+    columns: str,
+) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """Create one matrix-1 table of the cell's kind, trying each native spelling in turn."""
+    kind = spec["kind"]
+    native_altered = door["name"] == "native" and kind != "v2-cow"
+    setup: dict[str, Any] = {
+        "path": None,
+        "ddl": None,
+        "attempts": [],
+        "worked": None,
+        "verified": None,
+    }
+    if native_altered:
+        for statement in native_with_spellings(qualified, columns, kind):
+            _, error = run_statement(ctx, door, statement, "create")
+            setup["attempts"].append({"statement": statement, "error": error})
+            if error is None:
+                setup["worked"] = statement
+                setup["path"] = "native: CREATE TABLE ... WITH (...)"
+                setup["ddl"] = statement
+                return verify_table(setup, table_dir, kind)
+    ddl = create_sql(door, qualified, columns, "v2-cow" if native_altered else kind)
+    setup["ddl"] = ddl
+    setup["path"] = creation_path(door, kind)
+    _, error = run_statement(ctx, door, ddl, "create")
+    setup["attempts"].append({"statement": ddl, "error": error})
+    if error is not None or not native_altered:
+        return setup, error
+    for statement in native_alter_spellings(qualified, kind):
+        _, alter_error = run_statement(ctx, door, statement, "alter")
+        setup["attempts"].append({"statement": statement, "error": alter_error})
+        if alter_error is None:
+            setup["worked"] = statement
+            return verify_table(setup, table_dir, kind)
+    setup["verified"] = False
+    return setup, setup["attempts"][-1]["error"]
+
+
 def run_empty_dml(ctx: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     """Run one matrix-1 cell on a fresh table and return its record."""
     door = ctx["doors"][spec["door"]]
@@ -619,13 +752,18 @@ def run_empty_dml(ctx: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
         f"SELECT {UUID_SELECT if spec['uuid'] else MAIN_SELECT} FROM {qualified} ORDER BY id"
     )
     table_dir = door["root"] / NAMESPACE / spec["table"]
-    ddl = create_sql(door, qualified, columns, spec["kind"])
-    record["ddl"] = ddl
-    _, error = attempt(ctx, lambda: execute_sql(door, ddl), "create")
+    setup, error = create_matrix1_table(ctx, door, qualified, table_dir, spec, columns)
+    record["setup"] = setup
+    record["ddl"] = setup["ddl"]
     if error is None:
+        state = read_metadata(table_dir)
+        record["setup_properties"] = {
+            "format_version": state["format_version"],
+            "write_properties": state["write_properties"],
+        }
         seed = seed_sql(door, qualified, spec["uuid"])
         record["seed"] = seed
-        _, error = attempt(ctx, lambda: execute_sql(door, seed), "seed")
+        _, error = run_statement(ctx, door, seed, "seed")
     if error is not None:
         return finish_setup(record, error)
     with_lineage = spec["kind"] == "v3"
@@ -794,6 +932,12 @@ def run_struct(ctx: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     columns = "s STRUCT<a: INT, b: INT>" if spec["cell"] == "u-insert" else "id BIGINT, v STRING"
     ddl = create_sql(door, qualified, columns, "v2-cow")
     record["ddl"] = ddl
+    record["setup"] = {
+        "path": creation_path(door, "v2-cow"),
+        "ddl": ddl,
+        "alter_attempts": [],
+        "verified": None,
+    }
     _, error = attempt(ctx, lambda: execute_sql(door, ddl), "create")
     if error is None and spec["cell"] != "u-insert":
         seed = f"INSERT INTO {qualified} VALUES {STRUCT_SEED}"
@@ -946,7 +1090,7 @@ def build_repark_context(arguments: argparse.Namespace, warehouse: Path) -> dict
     facade_root = warehouse / "facade"
     native_root.mkdir(parents=True)
     facade_root.mkdir(parents=True)
-    native = PyReparkSession.native()
+    native = PyReparkSession.native(config=NATIVE_CONFIG)
     native.register_memory_catalog(REPARK_CATALOG, str(native_root))
     native.create_namespace(REPARK_CATALOG, NAMESPACE, str(native_root / NAMESPACE))
     repark._ANSI_NATIVE = native
@@ -994,6 +1138,7 @@ def build_repark_context(arguments: argparse.Namespace, warehouse: Path) -> dict
         "repark_file": repark.__file__,
         "repark_version": importlib.metadata.version("repark"),
         "pyarrow_version": pyarrow.__version__,
+        "native_config": NATIVE_CONFIG,
         "python": sys.version.split()[0],
         "venv": sys.prefix,
     }
@@ -1071,7 +1216,7 @@ def core_labels(spark: dict[str, Any] | None, repark: dict[str, Any] | None) -> 
     repark_rows = (repark["result"] or {}).get("rows")
     spark_rows = (spark["result"] or {}).get("rows")
     if persisted_equal and canon(repark_rows) != canon(spark_rows):
-        labels.append("REPORT-DIFFERS")
+        labels.append("RESULT-ROWS-DIFFER" if repark["verb"] == "SELECT" else "REPORT-SHAPE")
     if labels:
         return labels
     if bool(repark_facts.get("snapshot_changed")) == bool(spark_facts.get("snapshot_changed")):

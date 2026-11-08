@@ -16,12 +16,12 @@ Zulu 17 JDK.
 
 The two RePark legs report the same version string, so they are told apart by wheel sha256 and venv
 path. The first JSONL line of each RePark leg (`"record": "leg"`) records `wheel_file`, `wheel_sha256`,
-`repark_file` and `venv`. The first line of `raw/spark.jsonl` records the jar and the JDK.
+`repark_file`, `venv` and `native_config`. The first line of `raw/spark.jsonl` records the jar and the JDK.
 
 - Cargo.lock at `fdc61f26` (sha256): `d3defbf391c1d195d52eb150adb6dca14603a2a4da386d3d967a85ae019ca590`
 - Build profile: release (`Finished \`release\` profile [optimized]` in the build log, 12 m 08 s).
-- `uv` 0.11.16. PyPI leg installed with `uv pip install --python <venv>/bin/python repark==1.5.5`, then
-  reinstalled from the downloaded file so that the installed wheel is the hashed one.
+- `uv` 0.11.16. The PyPI leg was installed with `uv pip install --python <venv>/bin/python repark==1.5.5`,
+  then reinstalled from the downloaded file so the installed wheel is the hashed one.
 
 ## Commands run (placeholders for paths)
 
@@ -44,47 +44,91 @@ python3 -I probe.py --render --spark raw/spark.jsonl --main raw/repark-main-fdc6
 uvx ruff@0.15.22 format probe.py && uvx ruff@0.15.22 check probe.py
 ```
 
-Each leg ran in a fresh warehouse directory, from a scratch working directory (so the Spark metastore
-and any logs stay out of the clone). The committed raw files come from the last full run of each leg,
-after the final edit to `probe.py`. Earlier runs were superseded and their warehouses removed.
+Cell counts per leg: Spark 99 (answered 73, oracle-missing 18, refused 8); each RePark leg 174 (answered
+118, refused 2, setup-refused 54). Each leg ran in a fresh warehouse directory, from a scratch working
+directory. The committed raw files come from the last full run of each leg, after the final edit to
+`probe.py`.
 
-## Measurement facts
+## Native door: what was tried for v2-mor, v3 and UUID (the `setup` field records this per cell)
 
-- Native door (PyPI 1.5.5 and main, identical behaviour): `CREATE TABLE ... TBLPROPERTIES` is refused
-  (`Unsupported SQL statement`). Native v2-mor and v3 tables therefore never exist (44 `SETUP-REFUSED`
-  cells per RePark leg: all native v2-mor and v3 cells, and the native UUID cells). Native v2-cow is
-  created without the clause, which is the door's default: a table created that way reports
-  `format-version` 2 and no `write.delete.mode` property, so the Iceberg default copy-on-write applies
-  (checked on the PyPI venv).
-- Native door has no `UUID` type (`Unsupported SQL type UUID`). The facade door creates a v3 UUID table
-  and accepts a quoted UUID string literal as the seed.
-- Spark cannot declare an Iceberg uuid column, so all six Spark UUID cells are `ORACLE-MISSING`. The
-  Spark native-route struct cells are `ORACLE-MISSING` too (the native door's reference is Trino).
-- Seeds: the native door takes `named_struct('x', n)` and `ARRAY[n]`; the facade door and Spark take
-  `named_struct` and `array(n)`.
+The orchestrator's tip asked for `CREATE TABLE … WITH (…)` first, then ALTER. Every spelling below was run
+on both wheels. Each refusal is the door's own error text, quoted here in short.
 
-## Deviations from the brief (all recorded here so the reviewer can rule on them)
+| Route | Spelling | Main | 1.5.5 |
+|---|---|---|---|
+| WITH, v3 | `CREATE TABLE … WITH (format_version = '3')` | Unsupported SQL statement | Unsupported SQL statement |
+| WITH, v3 | `CREATE TABLE … WITH (format_version = 3)` | Unsupported SQL statement | Unsupported SQL statement |
+| WITH, mor | `CREATE TABLE … WITH (extra_properties = MAP(ARRAY['write.delete.mode', 'write.update.mode'], ARRAY['merge-on-read', 'merge-on-read']))` | Unsupported SQL statement | Unsupported SQL statement |
+| ALTER, v3 | `ALTER TABLE … SET PROPERTIES (format_version = '3')` | ParseException (expected `(`, found PROPERTIES) | ParseException (same) |
+| ALTER, v3 | `ALTER TABLE … SET TBLPROPERTIES ('format-version' = '3')` | Unsupported SQL statement | Unsupported SQL statement |
+| ALTER, v3 | `ALTER TABLE … SET (format_version = '3')` | Unsupported SQL statement | Unsupported SQL statement |
+| ALTER, mor | `ALTER TABLE … SET PROPERTIES (extra_properties = MAP(…))` | Unsupported SQL statement | Unsupported SQL statement |
+| ALTER, mor | `ALTER TABLE … SET TBLPROPERTIES ('write.delete.mode' = 'merge-on-read', …)` | Unsupported SQL statement | Unsupported SQL statement |
+| ALTER, mor | `ALTER TABLE … SET ("write.delete.mode" = 'merge-on-read', …)` | Unsupported SQL statement | Unsupported SQL statement |
+| UUID | `CREATE TABLE … (uuid_col UUID)` | Unsupported SQL type UUID | Unsupported SQL type UUID |
 
-1. Two labels are added for bookkeeping, not in the brief's list: `SETUP-REFUSED` (table creation or
-   seed refused; the statement never runs) and `UNPREDICTED` (the prediction is `unknown`, `measure`,
-   an unprobed inference, or the statement did not run). A cell whose prediction is `unknown` cannot be
-   labelled MATCHES or DIFFERS, so it carries `UNPREDICTED`. The brief's label list is otherwise
-   applied as written.
-2. Struct readbacks (`SELECT * FROM S` and `U`) are sorted in Python by canonical JSON, not by
+The native door refuses the v3 allow-flag route too: the constructor accepts
+`config={"repark.sql.allowCreateFormatVersion3": "true"}` (the facade's key) and the probe passes it, but
+the flag cannot change the outcome above.
+
+Why the spellings are unreachable from Python: `crates/repark-python/Cargo.toml` states that
+`repark-sql` has no edge to the Python binding ("no ANSI door from Python"). The WITH options and the ALTER
+spellings are parsed by `crates/repark-sql/src/properties.rs` and `crates/repark-sql/src/alter.rs`, which
+only the Rust-embedded router uses. The native Python session plans through `plan_session_sql`
+(DataFusion), which refuses these statements with the message above. No crate outside `repark-sql`
+depends on it.
+
+Cross-session check (the coordinator's second route): a facade session (main wheel) created and seeded a
+v3 merge-on-read table `ice.ns.shared` in a catalog root. A separate native process registered the same
+root and queried it: `Error during planning: table 'ice.ns.shared' not found`. The memory catalog is per
+session, so the native door cannot see a facade-created table.
+
+Consequence: the native v2-mor, native v3 and native UUID cells are `SETUP-REFUSED` with every attempt
+listed in their `setup` field, and they carry no measured outcome. The native door's v2-cow cells are
+created without properties and take the door default (format 2, copy-on-write; checked directly: the
+metadata reports `format-version` 2 and no `write.delete.mode` property).
+
+Facade and Spark create the three table kinds with `TBLPROPERTIES` and verify them from the metadata
+(`setup_properties` in each record).
+
+## Measurement facts (unchanged from the first round)
+
+- Native `CREATE TABLE` with `STRUCT`/`ARRAY` columns and `named_struct` / `ARRAY[n]` seeds works; the
+  facade and Spark take `named_struct` and `array(n)`.
+- The facade door creates a v3 UUID table and accepts a quoted UUID string literal as the seed.
+- Spark cannot declare an Iceberg uuid column, so the Spark UUID cells are `ORACLE-MISSING`. The Spark
+  native-route struct cells are `ORACLE-MISSING` too (the native door's reference is Trino, not Spark).
+
+## Deviations from the brief (all recorded so the reviewer can rule on them)
+
+1. Bookkeeping labels, not in the brief's list: `SETUP-REFUSED` (table creation, seed or property setup
+   refused; the statement never runs) and `UNPREDICTED` (the prediction is `unknown`, `measure`, an
+   unprobed inference, or the statement did not run). The orchestrator confirmed `SETUP-REFUSED` as a
+   bookkeeping label.
+2. `REPORT-DIFFERS` is split (orchestrator ruling). `REPORT-SHAPE` means only the returned affected-row
+   report differs, while the persisted state and the read rows are equal; it is the DML return-shape
+   difference (RePark returns an affected-row `count` or an empty row, Spark returns no rows).
+   `RESULT-ROWS-DIFFER` means a read's returned rows differ from Spark's (the `u-read` cell).
+3. Struct readbacks (`SELECT * FROM S` and `U`) are sorted in Python by canonical JSON, not by
    `ORDER BY` every column. This gives the same content and avoids engine-specific `ORDER BY` on struct
    columns. Matrix-1 readbacks use `ORDER BY id` as the brief says.
-3. Table properties are written as quoted strings (`'format-version' = '2'`), the form the brief names.
-4. `spark.local.dir` is set to a directory under the leg's warehouse so Spark scratch stays out of the
+4. Table properties are written as quoted strings (`'format-version' = '2'`), the form the brief names.
+5. `spark.local.dir` is set to a directory under the leg's warehouse so Spark scratch stays out of the
    system temp directory. No other Spark setting is changed.
-5. `REPORT-DIFFERS` is a return-shape difference, not a result difference. RePark's DML returns an
-   affected-row count (`count`) or an empty row, and Spark's DML returns no rows. The label fires on every
-   answered statement whose persisted rows match. The raw JSON carries the returned rows for each cell.
 6. The Spark side of each cell is also checked against its own prediction. Those results are reported in
    the hand-back and are not in the labels.
 7. The scrub replaces the warehouse root, the temporary directory and the home directory with
    `<warehouse>`, `<tmp>` and `<home>`. The raw files carry those placeholders and no real path.
-8. Error excerpts are the first 300 characters of the scrubbed message, cut back to a word boundary,
-   so no word is left half-written in the raw files (a half-written word failed the spell gate).
+8. Error excerpts are the first 300 characters of the scrubbed message, cut back to a word boundary, so
+   no word is left half-written in the raw files (a half-written word failed the spell gate).
+9. The native constructor is given the facade's v3 allow key (`native(config=...)`), on both wheels. It
+   changes no outcome in this round (see the native section above).
+10. `c-selective` (`id = 1`, DELETE and `SET flag = 'z'`) is added as a control on every door, table kind
+    and leg, on the main table and on the UUID table (orchestrator delta item 1). It is the only added
+    axis.
+11. A refusal at write time (the typed struct routes) keeps the post-refusal state in the record:
+    `persisted_after` and `snapshot_after` are read after the refusal, so a partial write would show.
+    Both typed cells show no change (`snap` same, `files` same).
 
 ## Gates
 
