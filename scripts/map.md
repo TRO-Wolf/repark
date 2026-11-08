@@ -138,16 +138,13 @@ repark-parity slice.
   run time so the script never contains one, and fails closed if the pattern misses any.
   Dual-wired through `make check-model-ban` in `make ci` and a raw guard step in ci.yml.
   Provocations: `python/repark-parity/tests/test_model_ban.py`.
-- `check_docs_compaction.py` (AGENTS.md ceiling 27,816 B, ratcheted 2026-09-27 by READ-PATH-1) — the **live-document gate** (DL-4, `make check-docs-compaction`, in
+- `check_docs_compaction.py` (AGENTS.md ceiling 28,858 B: owner rulings P1/P2 of 2026-11-08 add the Sail split and the semantic-precedence pointer) — the **live-document gate** (DL-4, `make check-docs-compaction`, in
   `make ci`, `make install-hooks`, `.pre-commit-config.yaml` and `ci.yml`'s guards job (wired under a
   one-time owner grant, 2026-08-25) at n=5 median 0.05 s: no closed campaign still in STATUS, no
   merged unit still on the slate, every workstream bullet inside a `ws` block, and the byte
   ceilings (`CEILINGS`: STATUS.md, the slate, AGENTS.md, engineering-method, the SEPMO
-  unit-runbook; (a)–(c) still only the two live documents; (d) every key). Seeded DL-4
-  2026-08-25 at 31,000 / 6,000 B; ratcheted DL-5 2026-08-25 to 25,000 / 6,000 /
-  31,000 / 35,000 B from the unit's final measurement; PROC-1 2026-08-25 added
-  `.agents/skills/sepmo/unit-runbook.md` at 5,000 B (pointer-only, cannot become a second
-  spine). Raised only in the PR that needs it. Tests:
+  unit-runbook; (a)–(c) still only the two live documents; (d) every key). Seeds and ratchets
+  are dated in git history. Raised only in the PR that needs it. Tests:
   `python/repark-parity/tests/test_dl_4_live_doc_compaction.py`,
   `python/repark-parity/tests/test_dl_5_contract_compaction.py`,
   `python/repark-parity/tests/test_proc_1_tiered_review.py`.

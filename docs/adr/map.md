@@ -22,7 +22,9 @@ decision, numbered `NNNN-slug.md`. Supersede with a new ADR rather than rewritin
   bindings-as-thin-adapter; the three deferred server problems (credential vending, Python UDFs,
   resource policy); distribution deferred behind the `ExecutionBackend` seam. 2026-10-21 amendment:
   a read at process start into a static is the allowed class, the query path stays free of
-  environment reads, and `REPARK_PANIC_FATAL` is the first such switch.
+  environment reads, and `REPARK_PANIC_FATAL` is the first such switch. 2026-11-08 addendum:
+  distribution is a planned shape after the server core; the coordinator-side commit constraint
+  stands.
 - [0005-defer-session-decomposition.md](0005-defer-session-decomposition.md) — **Deferred**: the
   internal `ReparkSession` decomposition into named services is driver-gated (PyO3 pressure, a
   second `ExecutionBackend`, cancellation / per-query resource policy, server-protocol needs),

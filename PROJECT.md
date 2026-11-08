@@ -9,23 +9,26 @@
 
 ## What RePark is
 
-A pure-Rust, **no-JVM** single-node data engine with the deepest Apache Iceberg support of any
-single-node engine. Positioning: **"Trino's SQL, DuckDB's deployment model, deepest Iceberg
-support"** — a combination no current engine occupies. One `pip install`, no cluster, no daemon.
+A pure-Rust, **no-JVM** data engine that **replaces Apache Spark in production ETL**: embedded in
+one process by default, a server when jobs are submitted from elsewhere, a cluster when one box is
+not enough. Positioning: **"Spark's surface and deployment shapes without the JVM, Polars's
+DataFrame API, Trino's SQL, the deepest Iceberg support."** One `pip install`; no cluster and no
+daemon **required**.
 Built **on** Apache DataFusion + Arrow + our **owned iceberg-rust fork** (all pure-Rust and
 JVM-free) with native PyO3 bindings. Compute runs in Rust; data crosses the Python boundary as
 Apache Arrow, zero-copy.
 
-Two user-facing **doors**, no blended parser:
+Three doors over one plan layer:
 
-- **Native door** — a lazy DataFrame API with an inspectable optimizer, plus `repark.sql()`
-  speaking an **ANSI, Trino-style** dialect (catalog-determines-format CTAS, `WITH (…)` table
-  properties, `FOR VERSION AS OF` time travel, maintenance as callable ops).
-- **Spark facade door** — a near-drop-in PySpark facade whose `.sql()` keeps the **Spark dialect**
-  unchanged, so existing PySpark pipelines migrate with only the import line changed.
+- **Native DataFrame door** (Polars's standard surface as the contract).
+- **Native SQL door** (ANSI, Trino-style, DuckDB as the second reference).
+- **Spark door** (the in-process PySpark facade today; the Spark Connect server at 1.12 is the same
+  door reached over the wire, so an unmodified `pyspark` client submits jobs with
+  `spark.remote(...)`).
 
 The Iceberg machinery (commit semantics, MERGE, snapshots, evolution) is shared beneath both doors;
-the dialect layers are thin translators.
+the dialect layers are thin translators. Every door produces the same DataFusion logical plan;
+semantics live in plan rules, never in a door.
 
 ## Goals
 
@@ -42,7 +45,16 @@ the dialect layers are thin translators.
   Tables** — defined as a measurable claim in
   [task/roadmap/epic-term/s3-tables-fastest-north-star-2026-10-12.md](task/roadmap/epic-term/s3-tables-fastest-north-star-2026-10-12.md);
   no lane runs on it until the owner schedules it.
-- Single binary / single `pip install` — no JVM, no cluster, no daemon; cold start under a second.
+- Single binary / single `pip install` — no JVM; no cluster or daemon required; cold start under a
+  second embedded. The same engine runs as `repark serve` (Spark Connect at 1.12, Flight SQL at
+  2.0) and, when a query outgrows one box, distributed behind the `ExecutionBackend` seam.
+- **Spark surface parity as an inventory.** Every `pyspark.sql.functions` function, DataFrame
+  method and transformation in Spark 4.1.2 is either equal (measured), a named refusal, or a dated
+  divergence row. The remaining count is published in STATUS.md and falls; it is never described in
+  prose.
+- **Polars surface parity on the native DataFrame door**, limited to Polars's own API: expressions,
+  lazy frame methods, I/O for the formats Polars reads natively. Polars's Iceberg, Delta, Unity,
+  Hive-metastore and HuggingFace integrations are out. Same inventory discipline as Spark.
 - Predictable memory via spill-to-disk by default. (*The "never OOM on data larger than RAM"
   claim is measured, not assumed: DataFusion's operator spill coverage is partial, so the honest
   goal is "spills where the engine can, documented where it cannot", and the document is the
@@ -128,6 +140,8 @@ goal.
 | Analytics | grouped aggregation and windows at 1e6–1e7 rows against DuckDB on the same data |
 | TA serving | many-symbol windows, wide multi-indicator SELECT, last-row serving against `polars_talib` |
 | dbt-repark | the reference dbt project end to end |
+| ETL job vs Spark | the reference ETL shapes (read Iceberg, join, aggregate, write Iceberg; read Postgres, transform, write Iceberg) measured against Spark 4.1.2 local mode on the same box and data; **gate: at or better than Spark**; published target: within a stated factor of Polars and DuckDB where the shape has an equivalent |
+| Connector read | partitioned parallel read of one table straight into Arrow against ConnectorX, within a stated factor (the 1.6 and 1.10 read bar, moved into the intent table) |
 
 ## Differentiators
 
@@ -166,17 +180,50 @@ names its evidence; a differentiator without a pointer is aspirational and says 
   [docs/adr/0002-two-sql-doors.md](docs/adr/0002-two-sql-doors.md).
 - **Server-prep disciplines from day one** (everything-through-Session, bindings-as-thin-adapter) —
   [docs/adr/0004-server-prep-disciplines.md](docs/adr/0004-server-prep-disciplines.md).
-- **No PyIceberg in any form**; **no Sail / pysail**. Own-the-stack.
+- **No PyIceberg in any form.** **No Sail / PySail dependency, in code or build, ever**; own-the-stack.
+  **Reading Sail's design and source as a reference is allowed and encouraged** for the Spark Connect
+  server, the plan and execution split, and the compatibility-surface crate shape, each borrowed idea
+  cited in the unit's `map.md`.
 - **`unsafe_code = "forbid"`** workspace-wide EXCEPT `crates/repark-python` (landed phase-3 PR-3;
   the crate sets a local `unsafe_code = "allow"` because PyO3 macros expand to `unsafe`).
 - **Tests land with the code** (same commit); `cargo test --workspace` is the test command.
 - **`map.md` where the architecture needs one**, kept honest by the sync and size gates; lockstep with code is a warning, not a gate.
 - **Pin one DataFusion family** across all DF-touching crates; `Cargo.toml` is the SSOT;
   `Cargo.lock` checked in.
-- **Distribution is deferred** behind the `ExecutionBackend` seam.
+- **Distribution is a planned shape, reached behind the `ExecutionBackend` seam**, after the server
+  core. The seam is the commitment; the substrate is chosen by a sketch unit, not by default. Until
+  then no unit introduces process-global state, places semantics in Python or pre-parse text rewrites
+  where a plan rule can carry them, or adds a physical operator without a stated serialization story.
 - **[AGENTS.md](AGENTS.md) is the single authoritative contract** (it holds the precedence chain);
   tool adapters ([CLAUDE.md](CLAUDE.md), [.agents/](.agents/map.md)) carry no authoritative facts and
   cannot drift.
+
+## Semantic precedence
+
+*Owner ruling, 2026-11-08.*
+
+> When a brief or ruling does not settle a behaviour question, the lane applies the door's reference order and records the measured cell it used. **Spark door** (facade and Connect server): Spark 4.1.2 measured on the box, else refuse by name. **Native SQL door**: ANSI SQL as Trino implements it, else DuckDB measured, else refuse by name. **Native DataFrame door**: Polars measured, else DuckDB measured where the operation has a SQL equivalent, else refuse by name. **Connectors**: the source system's own result is the oracle; ConnectorX and ADBC define the read style. **CDC**: Flink's guarantees are the rubric (the CDC north-star card). A reference answer is adopted only from a measured cell in the unit's domain table; an unmeasured cell refuses. The behaviour is implemented in Rust at the owning layer. This order settles semantics only; it never authorizes an engine-wide change without a sketch, nor a merge, release, label or outward-facing action.
+
+Two choices inside that text. **Ruled 2026-11-08: Trino is the first word on the native SQL door** when it and the ANSI standard differ, because Trino is a runnable oracle and the standard is not. **Ruled 2026-11-08: DuckDB is the second reference on the native DataFrame door**, for operations that have a SQL equivalent and no Polars answer; each such cell is a dated registry row.
+
+## Legibility
+
+*Owner ruling, 2026-11-08.*
+
+> A file is read by a person before it is read by a gate. **Code:** the existing ceilings stand (Rust default 1,000 lines with exact-baseline exceptions that ratchet down; Python ceilings in `check_lib_py`). **Markdown:** every tracked markdown file has a line ceiling of **2,000 lines** (owner, 2026-11-08) with the same exact-baseline exception table and ratchet as `check_map_size.py`, extended from `map.md` files to all of `docs/`, `task/` and crate prose. The mechanism is the clerk unit `DOCS-SHARD-1`; no gate enforces this ceiling before it lands. **Named exemptions**, each with a reason and a split seam: the native and facade DataFrame definition files (`python/repark/src/repark/spark/dataframe/core.py` and its native counterpart), and nothing else without a ruling. **Existing offenders** are split by area with an index in a clerk unit (`DOCS-SHARD-1`), the parity registry first (18,680 lines today), then the test maps and ledgers above the ceiling. A split never changes a gate's semantics: the ledger-grammar gate and the map lockstep hooks are re-pointed in the same PR.
+
+Current offenders for the owner's reference, from `origin/main`:
+
+| File | Lines |
+|---|---|
+| `docs/spark-sql-iceberg-parity.md` | 18,680 |
+| `docs/history/facade-tests/tests-map-2026-10-30.md` | 10,118 |
+| `task/wo/ice-tsns-coercion-1/evidence/twins-summary.md` | 4,876 |
+| `crates/repark-spark/src/tests/map.md` | 2,800 |
+| `crates/repark-spark/src/map.md` | 2,524 |
+| `crates/repark-iceberg/src/write/map.md` | 2,064 |
+| `python/repark/src/repark/spark/dataframe/core.py` | 3,461 (proposed exemption) |
+| `crates/repark-iceberg/src/write/merge/tests/streaming_scan.rs` | 3,018 (already an exact-baseline exception) |
 
 ## Target architecture
 
@@ -193,24 +240,26 @@ under everything.
 
 Declined or deferred on purpose; each line is dated so it is not re-litigated by inference.
 
-- **Distributed single-query execution** — behind the `ExecutionBackend` seam; no query has
-  outgrown one box (standing).
-- **Server mode** (Arrow Flight SQL) — an adapter later; the server-prep disciplines keep it
-  cheap (standing).
+- **Distributed single-query execution** — **sequenced, not declined**: after the 1.12 server core,
+  substrate chosen by `DISTRIBUTED-SKETCH-1`; coordinator-side Iceberg commit is the known debt
+  (ADR-0004).
+- **Server mode** (Arrow Flight SQL) — **sequenced**: Spark Connect 1.12, Flight SQL 2.0.
 - **Continuous streaming** — micro-batch only, bronze→silver (1.7); the open decisions are
   owner-held (2026-10-11).
-- **A Trino connector** — struck from the 1.6 charter (2026-10-01).
-- **PyIceberg, Sail** — own-the-stack (standing).
+- **A Trino connector** — **1.10**, not 1.6; the 2026-10-01 strike applied to the 1.6 charter only.
+- **PyIceberg** — own-the-stack (standing).
+- **Sail** — **no dependency**; reference allowed (2026-11-08).
 - **External code contributions** — issues welcome, patches gated; revisited at the second-user
   review (see "Year one").
 
 ## Distributed posture
 
-**Fleet-parallel → server mode → distributed-if-needed.** Fleet-parallel (many embedded engines
-against one Iceberg catalog; the catalog's commit protocol is the coordinator) covers
-backtest/parameter-sweep scale-out with zero engine work. Server mode (an Arrow Flight SQL
-endpoint) is later an adapter, not a rewrite, because of the server-prep disciplines. Distributed
-single-query execution comes only if a query outgrows one box, behind the `ExecutionBackend` seam.
+**Fleet-parallel → server → distributed.** Fleet-parallel (many embedded engines, one Iceberg catalog
+as coordinator) is free today. The server core (1.12) carries Spark Connect first and Flight SQL
+second. Distributed single-query execution follows the server core and is a destination, not a
+contingency; its substrate (library-style over DataFusion, Ballista-style cluster, or owned) is
+chosen by a sketch with the Iceberg write path's coordinator commit as the first constraint
+(ADR-0004: do not build Ballista-for-writes).
 
 ## Year one
 
