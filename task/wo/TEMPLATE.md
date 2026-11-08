@@ -36,4 +36,7 @@ first ambiguity. If the first run fails that test, the fix is in the order, not 
 Standing rules every order inherits: no code comments from Anthropic models (docstrings are not
 comments); relocated code sheds its comments; map.md lockstep for every `.rs` / `.py` / `.toml`;
 commit-first briefs with a provisional hand-back for engines that cannot see their step budget;
-the scratch clone, never the live worktree; the TRO-Wolf identity and the `Authored-By:` trailer.
+the scratch clone, never the live worktree; the TRO-Wolf identity and the `Authored-By:` trailer;
+the evidence home is `task/wo/<unit>/evidence/`, which holds a unit's briefs, verdicts, probe tables
+and replay inputs durably under version control, while `/tmp` holds only Cargo targets (Master Plan
+2026-11-08 §1.4).

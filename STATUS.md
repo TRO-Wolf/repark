@@ -7,7 +7,7 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-09-12._
+_Last updated: 2026-11-08._
 
 ## Release state
 
@@ -107,10 +107,8 @@ in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit
   - **Next:** lineage carry and merge-on-read hold on the statement matrix's DML shapes (`V3-COW-1`,
     `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, the three `V3-UPGRADE-DV` rows and
     `F-v3-10-partition-file-order` FIXED), not yet after schema evolution; open v3 residuals are
-    `V3-COV-3` (#666), `V3-FILEORDER-1`, `V3-COV-4`
-    / `V3-COV-5` / `V3-COV-6`, `V3-UPGRADE-V4-1`, `G3-E8`. RP-10 (F-25,
-    `PERF-DVCLOSE-STMT-1`), PERF-SCAN-1, SQL-HARDEN-1 and RP-11 (F-24, `B-MOR-3-FLOOR-1`)
-    landed 2026-09-04.
+    `V3-FILEORDER-1`, `V3-UPGRADE-V4-1`, `G3-E8`; `V3-COV-3` (RP-31, 2026-09-18, Spark's where the
+    orders coincide) and `V3-COV-4`/`-5`/`-6` are FIXED per the registry.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
