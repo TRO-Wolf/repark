@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
+from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark.session import _reset_active_session_for_tests
 
 A1B2 = "named_struct('a', 1, 'b', 2)"
@@ -352,6 +353,36 @@ def combine(spark: ReparkSession, shape: dict[str, Any], op: str) -> Any:
     return left.subtract(right)
 
 
+EXPR_FRAGMENT = (
+    "(SELECT sum(x.s.a) FROM (SELECT named_struct('a', 1, 'b', 2) AS s "
+    "UNION ALL SELECT named_struct('b', 3, 'a', 4) AS s) x)"
+)
+EXPR_INT_FRAGMENT = "(SELECT sum(x.v) FROM (SELECT 1 AS v UNION ALL SELECT 2 AS v) x)"
+EXPR_STRUCT_FRAGMENT = (
+    "(SELECT sum(x.s.a) FROM (SELECT named_struct('a', 1, 'b', 2) AS s "
+    "UNION ALL SELECT named_struct('a', 3, 'b', 4) AS s) x)"
+)
+EXPR_CASES = ["f1-select", "f1-withcolumn", "f1-filter", "f1-control-int", "f1-control-struct"]
+
+
+def run_expr_case(spark: ReparkSession, case: str) -> dict[str, Any]:
+    base = spark.sql("SELECT 1 AS one")
+    try:
+        if case == "f1-select":
+            rows = base.select(F.expr(EXPR_FRAGMENT).alias("total")).toArrow().to_pylist()
+        elif case == "f1-withcolumn":
+            rows = base.withColumn("total", F.expr(EXPR_FRAGMENT)).toArrow().to_pylist()
+        elif case == "f1-filter":
+            rows = base.filter(F.expr(f"{EXPR_FRAGMENT} > 0")).toArrow().to_pylist()
+        elif case == "f1-control-int":
+            rows = base.select(F.expr(EXPR_INT_FRAGMENT).alias("total")).toArrow().to_pylist()
+        else:
+            rows = base.select(F.expr(EXPR_STRUCT_FRAGMENT).alias("total")).toArrow().to_pylist()
+    except Exception as error:
+        return {"kind": "refused", "class": type(error).__name__, "text": str(error)}
+    return {"kind": "rows", "rows": rows}
+
+
 CASES = [
     ("sql", op, shape["id"], form)
     for op in SQL_OPS
@@ -437,6 +468,8 @@ def measured(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, dic
     spark.register_memory_catalog("ice", str(root))
     spark.sql("CREATE NAMESPACE ice.ns").collect()
     outcomes = {}
+    for case in EXPR_CASES:
+        outcomes[f"spark-{case}"] = run_expr_case(spark, case)
     for kind, op, shape_id, form in CASES:
         shape = BY_ID[shape_id]
         if kind == "sql":
@@ -478,3 +511,15 @@ def test_dataframe_cells(
     measured: dict[str, dict[str, Any]], op: str, shape_id: str, form: str
 ) -> None:
     check_outcome(measured[case_id("df", op, shape_id, form)], BY_ID[shape_id], op)
+
+
+@pytest.mark.parametrize("case", EXPR_CASES, ids=[f"spark-{case}" for case in EXPR_CASES])
+def test_f_expr_fragment_cells(measured: dict[str, dict[str, Any]], case: str) -> None:
+    outcome = measured[f"spark-{case}"]
+    if case in ("f1-select", "f1-withcolumn", "f1-filter"):
+        assert outcome["kind"] == "refused", outcome
+        assert outcome["class"] == "AnalysisException", outcome
+        assert "[INCOMPATIBLE_COLUMN_TYPE]" in outcome["text"], outcome["text"]
+    else:
+        expected = 3 if case == "f1-control-int" else 4
+        assert outcome == {"kind": "rows", "rows": [{"total": expected}]}, outcome

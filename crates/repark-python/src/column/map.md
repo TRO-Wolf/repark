@@ -199,50 +199,47 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   argument as `arg * lit(1.0f64)` — Spark's `cbrt` is a UnaryMathExpression (always
   DoubleType, computed in f64); the multiply coerces f32/int/decimal to f64 while
   bool/string still refuse (no numeric coercion).
-- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection. **ATTR-ID-1 SJ-1b (2026-10-02):** `register(module)` adds the `grouping_id_column` pyfunction, which `lib.rs` used to register inline; the move pays for `lib.rs`'s two `frame_lineage` lines. **R-CS2P-1 (2026-10-03):** `parse_canonical_predicate` (the insensitive filter door) keeps its plan when every parsed column is in the frame schema; otherwise `folded_qualifier_predicate` re-parses the canonical text to a SQL AST, runs `frame_names::fold_frame_qualifiers` under `IgnoreCase`, and plans the rewritten tree when a qualifier folded, so an alias qualifier binds in any case now that `subquery_alias` keeps the alias spelling.
+- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection. **ATTR-ID-1 SJ-1b (2026-10-02):** `register(module)` adds the `grouping_id_column` pyfunction, moved from `lib.rs`, paying for its two `frame_lineage` lines. **R-CS2P-1 (2026-10-03):** `parse_canonical_predicate` (the insensitive filter door) keeps its plan over in-schema columns; otherwise `folded_qualifier_predicate` re-parses to a SQL AST, folds qualifiers via `frame_names::fold_frame_qualifiers` under `IgnoreCase`, and plans the rewritten tree when one folded, so an alias qualifier binds in any case now that `subquery_alias` keeps the alias spelling.
   **POLARS-IS-DUPLICATED-1 (2026-09-28):** `is_duplicated_expr` builds
-  `count(1) OVER (PARTITION BY dup_key(receiver)) > 1` through the same
-  `count_aggregate` + `build_over_expression` path a user-written window takes
-  (so the unordered full-partition frame matches), wrapped in the
+  `count(1) OVER (PARTITION BY dup_key(receiver)) > 1` via the same
+  `count_aggregate` + `build_over_expression` path a user window takes
+  (matching the unordered full-partition frame), wrapped in the
   `dup_mask_udf` marker the `filter_frame` / `select_frame` rewrite keys on.
   **CAST-MAP-SPELL-1 (2026-09-19):** `cast_to` sends a map-bearing type string to
-  `repark_functions::cast_map::cast_map_expr` and every other one to `parse_data_type`;
-  `plan_expr_column` runs the shared map-cast rewrite, so `F.expr` spells it too.
+  `repark_functions::cast_map::cast_map_expr`, every other one to `parse_data_type`;
+  `plan_expr_column` runs the shared map-cast rewrite, so `F.expr` spells it.
   **WO NTZ-1 slice 1 (2026-09-26):** `cast_to` routes `timestamp_ntz` to the embedded
-  `timestamp_ntz_cast_expr`, so the DataFrame door answers as the SQL cast.
+  `timestamp_ntz_cast_expr`: the DataFrame door answers as the SQL cast.
   **SQL-LITERAL-TYPING-1 remediation round 1 (2026-09-16):** `build_expr_context`
-  seats the early integral-literal rule through the shared
-  `insert_literal_rule_before_coercion` and installs the post-coercion rules
-  minus the subsumed late integer rule, so the `F.expr` door types mixed-width
-  SQL exactly like the session door.
-  pins: sql-literal-typing-1/L-001
+  seats the early integral-literal rule via `insert_literal_rule_before_coercion` and the
+  post-coercion rules minus the subsumed late integer rule, so `F.expr` types mixed-width
+  SQL like the session door. Pins: sql-literal-typing-1/L-001.
   **FN-FIX-1:** `window_from_aggregate` copies `IGNORE NULLS`.
   **FNP-AGG-1 slice (d) (2026-09-21):** `cast_unsigned_count_to_signed` moved here
   from `function_dispatch.rs` (same body, re-exported there) so `grouping_id_call`
   builds beside it.
   **WIN-SLIDE-1 (2026-09-04):** `single_wrapped_aggregate` / `replace_wrapped_aggregate` let
-  `Column.over` push a window spec INTO the one aggregate inside a scalar wrapper. `F.collect_list`
-  and `F.collect_set` build Spark's empty-group semantics as
-  `coalesce(array_agg(x) IGNORE NULLS, make_array())`, so `over()` used to refuse them outright;
-  the group-by spelling is untouched, and two aggregates in one expression still refuse (there is
-  no single window to push).
+  `Column.over` push a window spec INTO the one aggregate inside a scalar wrapper, so `over()`
+  stops refusing `F.collect_list` / `F.collect_set` (Spark's empty-group semantics as
+  `coalesce(array_agg(x) IGNORE NULLS, make_array())`). The group-by spelling is untouched,
+  and two aggregates in one expression still refuse (no single window to push).
   **CASESENS-2 S1 (2026-09-28), ported 2026-10-03:** `parse_canonical_predicate_exact`
-  refuses a total-miss filter field with `frame_names::unresolved_column` (Spark's
+  refuses an unknown filter field with `frame_names::unresolved_column` (Spark's
   `UNRESOLVED_COLUMN` text, every frame field suggested) once the case-only probe
-  passes; the charter's `resolve_df_names` route retired with the matcher.
+  passes; the charter's `resolve_df_names` route retired.
   `unresolved_sort_key(error, schema)` maps the engine's `FieldNotFound` from
-  `PyDataFrame.sort` the same way over an unqualified copy of the frame schema, so
+  `PyDataFrame.sort` the same way over an unqualified frame-schema copy, so
   `orderBy("nope")` refuses as Spark does after the S3b fall-through.
   **PERF-APPROXPCT-1 (2026-09-05):** `percentile_approx_scalar_expr` (new) and
   `percentile_approx_list_expr` take `Option<i64>` accuracy and build the two- or three-arg
   UDAF call.
   **FNP-8 (2026-09-06):** `sql_context` builds the `PyColumn.sql` throwaway
-  context with `repark_spark::dialect_for_executing_parse`, so column-free `F.expr` with
-  `x -> y` parses as a lambda. `mod.rs` stays at its exact baseline — the call site
+  context via `repark_spark::dialect_for_executing_parse`, so column-free `F.expr` with
+  `x -> y` parses as a lambda. `mod.rs` holds its exact baseline — the call site
   is a one-line swap.
   **FNP-4B (2026-09-15):** `plan_expr_column` analyzes eagerly, then falls back on an
-  unresolved-column failure (`Diagnostic`-wrapped included) to `parse_unresolved_expr`,
-  which discovers referenced names through typed errors on a normalization-off context and
+  unresolved-column failure (`Diagnostic`-wrapped too) to `parse_unresolved_expr`,
+  which discovers referenced names via typed errors on a normalization-off context and
   returns the unresolved tree for the consumer frame to bind (exact-case `Column`
   contract). `PyColumn.sql` canonicalizes fragments first (struct-at-EOF included).
   **FNP-4B critic (2026-09-15):** `parse_unresolved_expr` reuses the eager `SessionContext`
@@ -411,13 +408,16 @@ sync after changes.
 
 - Up: [src map](../map.md)
 - Crate: [repark-python map](../../map.md)
-- **FNP-4B remediation (2026-09-15):** `expr_build.rs` / `mod.rs` added code comments removed (ruling 2026-08-26); `mod.rs` ceiling ratcheted 1040 → 1038.
+- **FNP-4B (2026-09-15):** added `expr_build.rs` / `mod.rs` code comments removed (ruling 2026-08-26); `mod.rs` ceiling 1040 → 1038.
 - **FNP-AGG-1 slice (d) (2026-09-21):** `function_dispatch.rs` renames
-  `binary_aggregate_udaf` to `nary_aggregate_udaf` (value column plus N argument
-  columns; arity from the built args) and adds the `grouping_id` arm (n-ary,
-  possibly zero columns); `expr_build.rs` gains the `grouping_id_column`
+  `binary_aggregate_udaf` to `nary_aggregate_udaf` (value column plus N args;
+  arity from the built args) and adds the `grouping_id` arm (n-ary, maybe
+  zero columns); `expr_build.rs` gains the `grouping_id_column`
   binding behind the unsigned-to-signed cast; `mod.rs` `aggregate_binary`
-  takes the trailing columns as a vector (exact baseline 1012).
+  takes trailing columns as a vector (exact baseline 1012).
 - **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `expr_build.rs` `build_expr_context` registers
   `repark_functions::SparkTypePlanner` on the expression-string session, so
   `F.expr("CAST(x AS TIMESTAMP)")` and `selectExpr` take the same types as `spark.sql`.
+- **STRUCT-SETOP-REORDER-REFUSAL-1 delta 1 (2026-11-08):** `build_expr_context`
+  seats `insert_struct_setop_before_coercion` ahead of `type_coercion`, so `F.expr`
+  fragments refuse name-differing struct set operations; a unit test pins that seat.

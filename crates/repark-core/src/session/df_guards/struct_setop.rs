@@ -101,7 +101,7 @@ impl AnalyzerRule for StructSetopNames {
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub(super) fn insert_struct_setop_before_coercion(
+pub fn insert_struct_setop_before_coercion(
     mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
 ) -> DataFusionResult<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
     let Some(position) = rules.iter().position(|rule| rule.name() == "type_coercion") else {

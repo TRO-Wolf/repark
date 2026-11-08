@@ -49,12 +49,12 @@ pub mod write_postgres;
 pub mod writer_layout;
 pub(crate) mod zone_localiser;
 
-pub use df_guards::case_bind as frame_names;
 pub use df_guards::subquery::{resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan};
 use df_guards::{
     DEAD_DATAFUSION_54_1_KEYS, apply_df_54_1_config_guards, context_with_df_54_1_rule_guards,
     dead_datafusion_54_1_refusal,
 };
+pub use df_guards::{case_bind as frame_names, insert_struct_setop_before_coercion};
 
 pub(crate) use spill::BYTES_PER_GB;
 pub use spill::REPARK_OWNED_DATAFUSION_PSEUDO_KEYS;

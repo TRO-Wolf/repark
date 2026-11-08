@@ -26,6 +26,7 @@ pub(crate) mod self_join;
 pub(crate) mod skipping_limit;
 pub(crate) mod sort_names;
 mod struct_setop;
+pub use struct_setop::insert_struct_setop_before_coercion;
 pub(super) mod subquery;
 mod window_rescan;
 mod written_names;

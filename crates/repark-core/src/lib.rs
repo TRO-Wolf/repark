@@ -61,7 +61,8 @@ pub use session::read_postgres::{PostgresRead, PostgresTarget, READ_POSTGRES_SOU
 pub use session::write_postgres;
 pub use session::{
     DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSession as Session, ReparkSessionBuilder,
-    frame_names, resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan, writer_layout,
+    frame_names, insert_struct_setop_before_coercion, resolve_bound_expr, resolve_scoped_expr,
+    resolve_subquery_plan, writer_layout,
 };
 
 // === Session timezone ===
@@ -99,7 +100,6 @@ pub use partition_overwrite_mode::{
 };
 pub use session_owner::{DescribeOwnerConfig, session_owner_snapshot, with_session_owner};
 
-// === Time travel ===
 pub use time_travel::{
     ReaderTimeTravel, branch_time_travel_refusal, invalid_version_pin, parse_version_value,
     resolve_reader_spec, resolve_snapshot_id,

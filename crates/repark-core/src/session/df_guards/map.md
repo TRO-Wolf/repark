@@ -9,6 +9,7 @@ wrapped optimizer rule) and declares this directory.
 ## Contents
 
 - [struct_setop.rs](struct_setop.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** the `struct_setop_names` analyzer rule refuses a set operation whose struct operands differ in field-name order or set at any depth. It sits before `type_coercion`: DataFusion's struct coercion pairs fields by name, so after it the `Cast` has already chosen names.
+  **Delta 1 (2026-11-08):** `insert_struct_setop_before_coercion` is `pub` to the crate root so the Python expression context seats the same rule ahead of `type_coercion` too.
 - `skipping_limit.rs` — **OFFSET-NESTED-SORT-1 (2026-10-08):** a guard for a DataFusion 54.1.0
   defect. DataFusion's `EnforceSorting` rule (its sort pushdown,
   `datafusion-physical-optimizer` `enforce_sorting/sort_pushdown.rs`) treats a
@@ -34,13 +35,12 @@ wrapped optimizer rule) and declares this directory.
   holds (`OutputRequirements` puts its marker node below a top-level limit, so the marker would
   stay), so `execute` on a seal is an internal error and `no_seal_survives_into_a_final_plan`
   pins the removal.
-  Why this is correct: a `GlobalLimitExec` has no ordering requirement on its input and its
-  one-partition requirement is met before this rule (EnforceDistribution runs first), so the
-  input of a skipping limit is a complete plan the rule can optimize alone. What the guard gives
-  up: DataFusion could merge an outer sort that refines the inner one (`ORDER BY v, k` over
-  `ORDER BY v`) into the sort below the limit, and stock's one-sort plan for that shape answered
-  rightly. The guard's plan is two sorts, the inner `SortExec` and a second `SortExec` above the
-  `GlobalLimitExec`; with a small `OFFSET` the second one sorts nearly the whole relation again.
+  Why this is correct: a `GlobalLimitExec` wants no input ordering, and EnforceDistribution
+  already met its one-partition requirement, so a skipping limit's input is a complete plan
+  the rule optimizes alone. What the guard gives up: DataFusion could merge a refining
+  outer sort (`ORDER BY v, k` over `ORDER BY v`) into the sort below the limit, as stock's
+  one-sort plan did; the guard's plan is two sorts, and with a small `OFFSET` the second
+  re-sorts nearly the whole relation.
   Verifier-measured (2026-10-08, `ci` profile, 11 rounds, guard vs stock):
   `SELECT s, j FROM (SELECT s, j FROM big ORDER BY j OFFSET 10) ORDER BY j, s` over a 1M-row
   memory table at 8 partitions ran 136.3 ms guarded vs 76.3 ms stock, +78.4% (second run
