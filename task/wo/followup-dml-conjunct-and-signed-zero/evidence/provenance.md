@@ -186,3 +186,45 @@ Deviations and choices. The probe's facade and native sessions always carry the 
 it, so the base rows are the no-flag results. The Spark catalog is named `ice`, not the probe's `probe_ice`, so that the
 statement text matches the brief. The Spark v3 variants were refused at the column type before the property is read.
 The `<tmp>` tokens in the raw headers replace the temporary directory of the wheel's import path.
+
+## Signed-zero extension (Part 2 of the 2026-11-08 extension)
+
+Settings are those of Table B: the Spark 4.1.2 oracle on the Iceberg 1.11.0 runtime (JDK 17.0.15, session zone
+`America/New_York`) and the release wheel built from `fdc61f26` (repark 1.5.5) with the v3 create flag on both RePark
+doors, as in the probe. The runner is a session script that imports the probe's context builders and seed strings; it
+is not committed. The plan is 78 cells and 128 routes (99 of them on Spark). Four raw legs, with the file names in
+`signed-zero-extension-table.md`: `spark-signed-zero-extension.jsonl`, `repark-main-signed-zero-extension.jsonl`,
+`spark-signed-zero-spill.jsonl`, `repark-main-signed-zero-spill.jsonl`. The first run and the first spill run carried
+defects; the legs were rerun in full, and only the rerun raw files are kept.
+
+Commands (placeholders for paths):
+
+```
+JAVA_HOME=<jdk-17> <oracle-python> -I <runner> --probe <probe> --leg spark --label spark-4.1.2 --warehouse <warehouse> --out raw/spark-signed-zero-extension.jsonl --ivy-jar <ivy-jar>
+<venv-main-fdc61f26>/bin/python -I <runner> --probe <probe> --leg repark --label repark-main-fdc61f26 --warehouse <warehouse> --out raw/repark-main-signed-zero-extension.jsonl --wheel <main-wheel> --spark-warehouse <spark-warehouse>
+JAVA_HOME=<jdk-17> <oracle-python> -I <runner> --probe <probe> --leg spill-spark --label spark-4.1.2 --warehouse <warehouse> --out raw/spark-signed-zero-spill.jsonl --ivy-jar <ivy-jar>
+<venv-main-fdc61f26>/bin/python -I <runner> --probe <probe> --leg spill-repark --label repark-main-fdc61f26 --warehouse <warehouse> --out raw/repark-main-signed-zero-spill.jsonl --wheel <main-wheel>
+```
+
+Deviations and choices the brief left open:
+
+- The oracle for E1, E2, E3 and R1 is Spark's own Iceberg read, as the brief sets. The `truth` column is an IEEE
+  computation from the seed values (NaN ordered above every number, as Spark orders it). It is not read from a Parquet
+  reader. Spark's Iceberg read is wrong on the zero-only file (see the table); E4 (Spark's direct Parquet read) agrees
+  with the truth.
+- E2 is not measured. The RePark memory catalog registered on Spark's warehouse root does not list the Spark-written
+  table (`table 'ice_sp.ns.x_sp' not found`); the copies return `NamespaceNotFound`.
+- E3's oracle is a Spark-written table with the same page settings, not the RePark-written files. The RePark table is
+  RePark-written. Page settings: `write.parquet.page-row-limit = 1000`, `write.parquet.page-size-bytes = 2048`.
+- E4's RePark side is refused (`UNRESOLVABLE_TABLE_VALUED_FUNCTION`) on the native door. Not measured.
+- E5 reads the brief as a 10,000,000-row table (`x_big`) joined with `u`, with `count(*)` for the join (the pairs are
+  not materialised). Spark is not timed. The load average was 12.0 during the runs.
+- E8 spill evidence is not captured: no spill counter was read. The Spark session sets `spark.memory.fraction` to
+  0.01 and turns broadcast joins off; the native door runs with `memory_limit_gb=1`; the facade has no memory knob in
+  this harness. Results are recorded, spill is not claimed.
+- E9: `docker image ls` under rootless Docker listed no Trino image, so the oracle is ORACLE-MISSING and no image was
+  pulled. The native answers are recorded.
+- R5's Spark result is the reference. The positional-versus-by-name reading of struct equality is an inference from
+  the two answers; neither the Spark source nor the RePark source was checked.
+- PRUNED-WRONG is applied as the brief defines it: a row present in the data is missing from the answer and its
+  file's statistics (min = max = `-0.0`) explain it. The E3 page-level case is inferred, not read from the page index.
