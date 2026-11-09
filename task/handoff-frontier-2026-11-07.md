@@ -132,6 +132,7 @@ the project memory directory under `handoff-2026-11-07-paths.md` and `ansisub-pa
 4. **The narrow second re-audit** (the five findings plus DML-reach probes on their classes), then the records
    pass that re-dates the label (status PRODUCTION, maturity line), then **v1.5.6** (the v2 label only).
 5. Dependabot PRs #1264 and #1240 and the older parked product PRs (#1071, #1048, #1038, #1037, #1014, #1011,
+6. **2026-11-09, STRUCT-COMPARE-BY-POSITION-1 (S1, wrong write; ledger C-116).** Queued after unit C's Opus re-check, ruled 2026-11-09. Card: `task/roadmap/mid-term/struct-compare-by-position-1-card-2026-11-09.md`; the measured table is section 1 of the Fable evaluation of 2026-11-09. Not dispatched.
    #1000) are untouched by this cycle and keep their earlier rulings.
 
 ## 4. Mechanics the repo does not carry

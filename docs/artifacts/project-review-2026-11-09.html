@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RePark Project Review</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #F2F5F7;
+  --surface: #FFFFFF;
+  --fg: #16212A;
+  --muted: #55646F;
+  --line: #CFD8DE;
+  --accent: #0E6C88;
+  --accent-soft: #DCEBF0;
+  --ok: #1F7A4D;
+  --ok-soft: #DDEFE5;
+  --warn: #8A5A00;
+  --warn-soft: #F6E8C8;
+  --stop: #A3312B;
+  --stop-soft: #F5DEDC;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", Arial, sans-serif;
+  --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1418;
+    --surface: #162027;
+    --fg: #E4EBEF;
+    --muted: #9AAAB5;
+    --line: #2A3842;
+    --accent: #4DB1CF;
+    --accent-soft: #15323D;
+    --ok: #6FCF9A;
+    --ok-soft: #153325;
+    --warn: #E5B95C;
+    --warn-soft: #3A2E12;
+    --stop: #F08D86;
+    --stop-soft: #3D1B19;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1418;
+  --surface: #162027;
+  --fg: #E4EBEF;
+  --muted: #9AAAB5;
+  --line: #2A3842;
+  --accent: #4DB1CF;
+  --accent-soft: #15323D;
+  --ok: #6FCF9A;
+  --ok-soft: #153325;
+  --warn: #E5B95C;
+  --warn-soft: #3A2E12;
+  --stop: #F08D86;
+  --stop-soft: #3D1B19;
+  color-scheme: dark;
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.55;
+}
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding-block: 36px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+header { display: flex; flex-direction: column; gap: 10px; border-bottom: 2px solid var(--accent); padding-bottom: 20px; }
+.eyebrow { font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 6vw, 44px); line-height: 1.08; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 25px; line-height: 1.2; margin: 0; text-wrap: balance; }
+h3 { font-family: var(--display); font-weight: 600; font-size: 18.5px; margin: 0; }
+p { margin: 0; max-width: 68ch; }
+section { display: flex; flex-direction: column; gap: 16px; }
+.lead { font-size: 18.5px; line-height: 1.5; max-width: 62ch; }
+.meta { color: var(--muted); font-size: 14px; }
+code, .id { font-family: var(--mono); font-size: 0.88em; }
+.chip { display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 500; padding: 2px 8px; border-radius: 3px; white-space: nowrap; }
+.chip.ok { background: var(--ok-soft); color: var(--ok); }
+.chip.wait { background: var(--warn-soft); color: var(--warn); }
+.chip.stop { background: var(--stop-soft); color: var(--stop); }
+.chip.info { background: var(--accent-soft); color: var(--accent); }
+.board { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.row { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.row > div { min-width: 0; }
+.row strong { font-weight: 600; }
+.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.figure { background: var(--surface); padding: 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.figure .n { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.figure .n small { font-size: 16px; font-weight: 500; color: var(--muted); }
+.figure .l { font-size: 14px; color: var(--muted); }
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar { display: grid; grid-template-columns: 170px minmax(0, 1fr) 40px; gap: 12px; align-items: center; font-size: 14.5px; }
+.bar .track { height: 12px; background: var(--accent-soft); }
+.bar .fill { height: 12px; background: var(--accent); }
+.bar .v { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); }
+th { font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+td:first-child, th:first-child { white-space: nowrap; }
+ol.steps { margin: 0; padding-left: 0; list-style: none; counter-reset: s; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+ol.steps > li { counter-increment: s; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+ol.steps > li::before { content: counter(s); font-family: var(--display); font-weight: 700; font-size: 22px; color: var(--accent); line-height: 1.15; }
+ol.steps > li > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; max-width: 68ch; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 28px; }
+.two > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.note { background: var(--accent-soft); padding: 14px 16px; border-left: 3px solid var(--accent); }
+footer { border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 13.5px; display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 520px) {
+  .row { grid-template-columns: 1fr; gap: 6px; }
+  .bar { grid-template-columns: 110px minmax(0, 1fr) 34px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div class="eyebrow">RePark · project review · 9 November 2026</div>
+  <h1>The measurement works. The plan does not yet predict the next defect.</h1>
+  <p class="lead">RePark's live Spark oracle and domain tables find real defects, including two that would have written wrong data. The project still finds each Spark difference one family at a time, after release, and spends more on review rounds and records than on fixes.</p>
+  <p class="meta">Written by Claude Fable 5.2 at the owner's request. Counts are from GitHub and from main at <span class="id">bdd2b69</span>, read on 2026-11-09.</p>
+</header>
+
+<section>
+  <h2>Where things stand</h2>
+  <div class="board">
+    <div class="row"><div><span class="chip ok">shipped</span></div><div><strong>v1.5.6</strong>, tagged at <span class="id">ae60c359</span> on 2026-11-08, five wheels on PyPI. Its payload is the empty-DML guard alone.</div></div>
+    <div class="row"><div><span class="chip stop">S1 open</span></div><div><strong>Struct comparison pairs fields by name.</strong> Spark pairs by position. On 1.5.6 a <code>DELETE</code>, <code>UPDATE</code> or <code>MERGE</code> whose predicate compares reordered structs acts on the wrong rows. The defect is inherited from the engine's coercion and predates this release. Recorded as C-116 with three cards (#1285).</div></div>
+    <div class="row"><div><span class="chip wait">re-check</span></div><div><strong>Unit C, #1283</strong> (set operations refuse reordered struct operands). Head <span class="id">b8ad7a9c</span>, CI green. It waits on one Opus 5.5 re-check; a FAIL parks the unit.</div></div>
+    <div class="row"><div><span class="chip wait">queued</span></div><div><strong>STRUCT-COMPARE-BY-POSITION-1.</strong> The step-0 table is measured (4,389 cells). The build carves the parked rule from #1267 onto a new branch after unit C. No build branch is pushed yet.</div></div>
+    <div class="row"><div><span class="chip info">ruled</span></div><div><strong>v1.5.7</strong> = unit C + signed zero + the struct comparison fix. The 72 struct-literal <code>DELETE</code> cells that Spark on Iceberg cannot run are held to the answer derived from Spark's <code>SELECT</code>.</div></div>
+    <div class="row"><div><span class="chip stop">withdrawn</span></div><div><strong>The format-v2 production label</strong> stays withdrawn. STATUS.md rates format-v3 core HARDENED-NARROW and nanosecond columns EXPERIMENTAL.</div></div>
+  </div>
+</section>
+
+<section>
+  <h2>The figures behind the evaluation</h2>
+  <div class="figures">
+    <div class="figure"><div class="n">1,217 <small>of 4,389</small></div><div class="l">struct-comparison cells where main equals Spark. 1,003 are wrong answers and 320 are wrong writes.</div></div>
+    <div class="figure"><div class="n">+5,388 <small>lines</small></div><div class="l">in unit C's pull request, for a rule of 268 lines. 14 commits and two delta rounds so far.</div></div>
+    <div class="figure"><div class="n">356k <small>vs 526k</small></div><div class="l">lines of markdown against lines of Rust on main. 233k of the markdown is under <code>task/</code>.</div></div>
+    <div class="figure"><div class="n">270 <small>cards</small></div><div class="l">in the mid-term roadmap folder. 175 were filed in October and 80 in the first nine days of November.</div></div>
+    <div class="figure"><div class="n">15 <small>open PRs</small></div><div class="l">of which 8 are drafts. The oldest dates from 8 September.</div></div>
+    <div class="figure"><div class="n">7 <small>releases</small></div><div class="l">on the 1.5 line in six weeks, v1.5.0 on 27 September to v1.5.6 on 8 November.</div></div>
+  </div>
+  <h3>The last 200 merged pull requests, 15 October to 9 November</h3>
+  <div class="bars">
+    <div class="bar"><div>Docs and records</div><div class="track"><div class="fill" style="width:57%"></div></div><div class="v">114</div></div>
+    <div class="bar"><div>Fix, feature, perf</div><div class="track"><div class="fill" style="width:18%"></div></div><div class="v">36</div></div>
+    <div class="bar"><div>Chore</div><div class="track"><div class="fill" style="width:11%"></div></div><div class="v">22</div></div>
+    <div class="bar"><div>Titled by unit id</div><div class="track"><div class="fill" style="width:8%"></div></div><div class="v">16</div></div>
+    <div class="bar"><div>CI, test, build, release</div><div class="track"><div class="fill" style="width:6%"></div></div><div class="v">12</div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Evaluation</h2>
+  <div class="two">
+    <div>
+      <h3>What is working</h3>
+      <ul class="plain">
+        <li>The live Spark 4.1.2 oracle and the domain tables find defects that review alone missed: the empty-DML wipe and the struct comparison.</li>
+        <li>An independent clerk table corrected the planner's own probe within hours. The table-first rule did its job.</li>
+        <li>Owner rulings are recorded verbatim and briefs carry them.</li>
+        <li>Mechanical work goes to cheap tiers, and scratch clones keep the live tree safe.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What is not</h3>
+      <ul class="plain">
+        <li><strong>Discovery is bottom-up.</strong> Each Spark difference is found by probing cells, one family at a time, usually after a release.</li>
+        <li><strong>Review costs more than building.</strong> Unit C and #1267 both failed review because rule seats and entry doors were found after the build.</li>
+        <li><strong>Records outweigh fixes</strong> by about three to one in merged pull requests.</li>
+        <li><strong>The owner's decisions are mostly latency.</strong> Tables of six to twelve questions are answered "defaults" several times a day.</li>
+        <li><strong>Parked work accumulates</strong> and drifts from main.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="note">
+    <p><strong>On the planning session itself.</strong> The Step 4.1/4.2 evaluation found the shipped defect and the fix shape held up. Two cells in its defect table were wrong: one result came from running three DML statements in sequence on one table, and one Spark result was derived from a <code>SELECT</code> and written as if it had been run. The probe rules from now on: one fresh table per DML cell, and any Spark column not run on Spark is labelled as derived.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Seven changes to how the work runs, in order</h2>
+  <ol class="steps">
+    <li><div><h3>Audit the coercion seam from the top down</h3><p>List every entry point in DataFusion's type coercion (comparison, struct, set operation, CASE, function signature) and classify each against Spark's rule once. The result is a finite list of the next defects, known before they ship.</p></div></li>
+    <li><div><h3>Give the analyzer rule list one home</h3><p>Rules are seated in three places today. One seating function, and a test that every session context is built through it, turns the insertion inventory from a duty in each brief into a gate.</p></div></li>
+    <li><div><h3>Gate releases on wrong writes</h3><p>No tag while a card rated S1 with DML reach is open, unless the release notes name it. This gate would have caught 1.5.6.</p></div></li>
+    <li><div><h3>Replay every domain table nightly as one number</h3><p>A count of cells that differ from Spark, by class, that trends over time. It tells the owner where the product stands without reading a ledger.</p></div></li>
+    <li><div><h3>Delegate the decisions that are not decisions</h3><p>Standing authority for green docs-only merges, card filing and severity ratings. The owner keeps release go or no-go, semantic divergences and spend.</p></div></li>
+    <li><div><h3>Triage the parked pull requests</h3><p>Close each with a pointer card, as on 19 October. #1267 closes when the comparison carve lands.</p></div></li>
+    <li><div><h3>Prune the shared agent memory index</h3><p>It is over its size limit, so the newest entry is dropped when a session loads it. Old rulings move to the archive file.</p></div></li>
+  </ol>
+</section>
+
+<section>
+  <h2>The guidance documents</h2>
+  <p>PROJECT.md is the strongest of the set. Its priority order, its semantic precedence and its definition of production-grade are clear and usable. The problems are around it: the documents disagree with each other, STATUS.md does not show the present, and the plan the agents follow is not in the repository.</p>
+
+  <h3>The release lines are stated twice and differ</h3>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Line</th><th>PROJECT.md</th><th>Release roadmap of 2026-08-29</th></tr></thead>
+      <tbody>
+        <tr><td>1.5</td><td>One-to-one Spark–Iceberg parity on the Spark door</td><td>FNP and TA fixes, the Rust-backed facade, named sources</td></tr>
+        <tr><td>1.6</td><td>Postgres connectivity</td><td>Postgres and SQL Server connectors, plus platform wheels</td></tr>
+        <tr><td>1.7</td><td>Micro-batch CDC from bronze to silver</td><td>The medallion release: bronze ingestion, CDC, silver execution and publication</td></tr>
+        <tr><td>1.8</td><td>The inference readers as <code>repark-io</code></td><td>One-to-one I/O parity with Polars</td></tr>
+        <tr><td>Distributed</td><td>Sequenced after the 1.12 server core, "a destination, not a contingency"</td><td>"Explicitly not planned"</td></tr>
+        <tr><td>Open rulings</td><td>The streaming decisions OD-1 to OD-8 are open in the repository; the planning record also owes a roadmap number for WAREHOUSE-READS-1</td><td>"None as of 2026-08-29"</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="meta">The roadmap column quotes each row's headline. The 1.5 row's notes also carry PySpark functions parity, added on 2026-09-14, so that difference is narrower than the headlines suggest. The Iceberg parity outcome is not in the row. The hard contradictions are the distributed line, the open rulings and four cross-references that still carry the numbering of 2026-09-13.</p>
+
+  <h3>Seven changes to the documents, in order</h3>
+  <ol class="steps">
+    <li><div><h3>One release table in one home</h3><p>Rewrite the release roadmap as a single table: release, its one outcome, the card that defines acceptance, and its state. Move the renumbering history to an archive file. PROJECT.md then points at the table and drops its own copy.</p></div></li>
+    <li><div><h3>STATUS.md opens with the present</h3><p>Today it says "Release blockers: None", its correctness section opens with debt carried from the August port, and the shipped struct-comparison defect is not in it. Open the file with a short board: the shipped version, every open S1 and S2 with write reach, the label states, the unit in flight and the next three. Move the history below or out.</p></div></li>
+    <li><div><h3>Bring the plan and the rulings into the repository</h3><p>The step sequence and the owner's rulings live in planning files outside the repository and in one tool's agent memory. Agents on other tools cannot read them. Keep one tracked plan file of the current sequence, and one tracked rulings ledger with a row per ruling: date, id and the owner's words. The sequence file in <code>briefs/</code> was opened on 21 August and can retire into it.</p></div></li>
+    <li><div><h3>Give the 1.5 line an exit</h3><p>Its outcome was met on 27 September at 705 equal cells and none different. Six patch releases followed and the format-v2 label was withdrawn, because the 842-cell matrix does not measure expression semantics inside DML, which is where the defects are. Define the label as a finite checklist: the coercion seam classified, the domain tables replayed with no wrong write and no wrong answer, and the real-workload run. Set a budget, after which what remains becomes a declared divergence and the line closes.</p></div></li>
+    <li><div><h3>Put a meter on the headline claim</h3><p>PROJECT.md says RePark replaces Spark in production ETL, and year one serves the operator's Airflow, Iceberg and dbt workloads. The cutover inventory was filed on 4 September. STATUS.md reports cells and labels, not pipelines. Add a cutover scoreboard: of the inventory's workloads, how many run on RePark in shadow, in canary and in production. Among defects of equal severity, the one that blocks a listed workload goes first.</p></div></li>
+    <li><div><h3>Give cards fixed fields and a generated index</h3><p>Status lines are free text and the folder also holds day reports and release notes. Fixed fields on each card (severity, write reach, door, release line, state) let a script print the open backlog by release and feed the release gate.</p></div></li>
+    <li><div><h3>Add one principle to PROJECT.md, and trim three passages</h3><p>The principle: behaviour inherited from DataFusion is unmeasured until it is classified against the door's reference. It would have predicted the struct defect. The trims: the release history inside the first goal, the table of current offenders in the legibility section, and the 16 August validation roadmap, which has no release mapping. Add outcome lines for 1.9 to 1.13 so the server and the distributed destination have a stated path.</p></div></li>
+  </ol>
+</section>
+
+<footer>
+  <div>Sources: GitHub pull requests and CI runs for the repository; PROJECT.md, STATUS.md, AGENTS.md, <code>briefs/next-sequence.md</code>, <code>docs/cutover/inventory.md</code> and <code>task/roadmap/</code> on main at <span class="id">bdd2b69</span>; the step-0 comparison table for STRUCT-COMPARE-BY-POSITION-1 as reported by its clerk.</div>
+  <div>The seating of analyzer rules in three places was read on a scratch clone at an earlier head. The search of STATUS.md for the struct-comparison defect looked for the unit name, the ledger row C-116 and the phrase "by-name pairing".</div>
+</footer>
+
+</div>
+</body>
+</html>
