@@ -1,6 +1,6 @@
 # map — repark-sql/tests
 
-WO U5 PR3 (2026-09-25): `cross_door.rs` renames with each door's own target spelling — ANSI `ice.sales.orders_v2`, Spark `sales.orders_v2` — because the Spark door reads a `RENAME TO` target inside the source catalog (D-RENAME-TABLE).
+WO U5 PR3 (2026-09-25): `cross_door.rs` renames with each door's own target spelling (ANSI `ice.sales.orders_v2`, Spark `sales.orders_v2`): the Spark door reads a `RENAME TO` target inside the source catalog (D-RENAME-TABLE).
 
 ICE-MIXED-CASE-1 (2026-09-17): `cross_door.rs` ROW 8 pins the identifier-case-folding split — ANSI refuses, Spark resolves.
 
@@ -8,12 +8,14 @@ CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
 
 ## Purpose
 
-Integration tests for the ANSI door. The end-to-end battery is in `../src/tests.rs`; this directory
-holds behavior observed from outside the crate.
+Integration tests for the ANSI door: behavior observed from outside the crate. The
+end-to-end battery is in `../src/tests.rs`.
 
 ## Contents
 
-- [struct_setop_reorder_refusal.rs](struct_setop_reorder_refusal.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** the set-operation domain table on the ANSI, DataFusion, Spark doors over v2-cow: reordered struct operands refuse with the unit text, identical-struct controls answer the measured rows, refusals write nothing. Item #5 names `INTERSECT ALL` / `EXCEPT ALL` for join refusals.
+- [struct_setop_reorder_refusal.rs](struct_setop_reorder_refusal.rs), [setop_reorder_common/mod.rs](setop_reorder_common/mod.rs), [struct_setop_reorder_refusal_delta2.rs](struct_setop_reorder_refusal_delta2.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** the domain-table suite on ANSI, DataFusion, Spark over v2-cow (reordered operands refuse, controls answer, refusals persist nothing): four tests over shared harness (doors, shapes, renders, refusal checks, drivers; subset use per target, hence the module-level `dead_code` allow).
+  Delta #2 (2026-11-09): delta2 rows on native+ANSI, read and insert — NULL-first unions, views, PREPARE, recursive CTE, row 12 (`STRUCT-SETOP-USER-CAST-OVERREFUSAL-1`), join-cast control, `STRUCT-USER-CAST-POSITIONAL-1_divergence`.
+  Item #5 names `INTERSECT ALL` / `EXCEPT ALL` for join refusals.
 - [empty_dml_shared_guard.rs](empty_dml_shared_guard.rs) — **EMPTY-DML-SHARED-GUARD-1 (2026-11-08):** the Step 0.3 empty-DML table on the ANSI, DataFusion and Spark doors over v2-cow, v2-mor and v3: rows, snapshot, files, v3 lineage, the `count` report; `RESIDUES` lists the measured cells outside the clause.
 - [map_struct_key_subscript.rs](map_struct_key_subscript.rs) and [map_struct_key_subscript_2.rs](map_struct_key_subscript_2.rs) — **MAP-STRUCT-KEY-SUBSCRIPT-1 (2026-11-01, AUD-016; rounds 1 to 4):** struct-key subscripts on each door against Spark 4.1.2: 29 tests first file, 9 second (signed zero and NaN, session zone, element casts, the ANSI gate).
 - `write_door_native.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** pins 1-4 and the WS2-20 pin: `every_value_writing_door_passes_the_stage`, `a_missing_kernel_refuses_on_every_routed_door`, `the_sink_guard_never_fires_on_a_routed_door`, `a_plain_update_from_add_months_stores_session_midnight` and `a_partition_overwrite_guards_an_integer_overflow_at_plan_time`.
@@ -39,7 +41,7 @@ holds behavior observed from outside the crate.
   conf reader never matched the real extension's key.
   **Fix round (2026-10-15, owner ruling 103):** the ANSI twins of the Spark door's `v01_*`,
   `v02_*`, `v03_*`, leading-space, symlinked-root and metadata-error pins, each outside pin
-  named "writes outside on today's head", each asserting no file in the sibling `out/`; the cwd
+  named "writes outside on today's head" asserting no file in the sibling `out/`; the cwd
   pins run in a child process of the test binary and restore the cwd.
   **Fix round 2 (2026-10-16, ruling 114 (b)):** the ANSI twins `rv01_ansi_*`, `rv02_ansi_*`, `rv03_ansi_*`
   and `ansi_the_cells_of_ruling_114_write_where_the_written_path_lands`: the file at its computed path on a write, none under the base on a refusal.
@@ -97,8 +99,8 @@ holds behavior observed from outside the crate.
   Round 5, ruling Q-21b-4: `DEFAULT` as a value on the ANSI PARTITION overwrite fills
   (the ANSI router runs the marker pass before dispatch; whole-table overwrite stays
   the Q9 refusal, row DML-1).
-  **Round 2 (2026-09-18, run 21b, ruling Q-21b-9):** `DEFAULT` in the outer SELECT of an
-  INSERT whose query carries `WITH` refuses `UNRESOLVED_COLUMN` 42703 on `INSERT INTO` and on the
+  **Round 2 (2026-09-18, run 21b, ruling Q-21b-9):** `DEFAULT` in the outer SELECT of a
+  WITH-carrying INSERT query refuses `UNRESOLVED_COLUMN` 42703 on `INSERT INTO` and the
   PARTITION overwrite arm, as Spark 4.1.2 does, and writes nothing.
   Branch pins (AT-10): a static partition value wins over that column's own
   write-default (table `q`, partitioned on the defaulted `c`); a listed static column
@@ -118,21 +120,21 @@ holds behavior observed from outside the crate.
 - `ice_tsns_type_planner_1_lattice.rs` — **ICE-TSNS-TYPE-PLANNER-1 step 1 (2026-10-13):** planner and lattice pins on a Spark-door and an `AnsiDialect` session over one four-column batch: `written_type_names_plan_to_the_spark_types_on_both_doors`, `mixed_unit_positions_take_the_finest_unit_on_both_doors`, `join_keys_share_the_finest_unit_in_the_optimized_plan`, `equal_units_plan_no_cast_on_both_doors`, `the_ansi_door_plans_timestamp_as_the_wall_and_timestamptz_as_the_instant` (ruling 94), `an_aggregate_zero_takes_the_unit_of_its_array_elements` (M3), `a_union_distinct_over_tagged_fields_takes_the_finest_unit_on_both_doors` (M3), `a_widened_position_equals_its_written_nanosecond_cast_on_both_doors` (H7).
 - `ansi_store_kernel_registry.rs` — **ICE-STRUCT-PAIRING-1 build round 2 (2026-10-14), parity
   row R-013:** at session build the ANSI door resolves every name of
-  `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table
+  `store_cast::BY_NAME_STORE_KERNELS` and `store_cast::NS_WALL_KERNEL_NAMES`; each table
   entry names its own kernel, and the wall names equal `repark-functions`' constants. The
   Spark door's twin is `repark-spark/tests/store_kernel_registry.rs`.
 - `ansi_update_subquery_refusal.rs` — **ICE-STRUCT-PAIRING-1 exception round (2026-10-15),
   owner rulings 74(a) and 90(a):** the ANSI door's twin of
-  `repark-spark/tests/update_subquery_refusal.rs`. Tables seeded by CTAS; `UPDATE … SET col =
+  `repark-spark/tests/update_subquery_refusal.rs`. CTAS-seeded tables; `UPDATE … SET col =
   (SELECT …)` and the subquery with its own `WHERE`, under `WHERE true`, an `IN` list and no
   `WHERE`, refuse with the ruling 90 text for a flat INT column and a struct column fed
   reordered and in order, the rows unchanged. **Owner ruling 95 (2026-10-15):** every refused
-  cell also holds the table's current snapshot id and count, metadata location and `metadata/`
+  cell also holds snapshot id and count, metadata location and `metadata/`
   file names unchanged, read through the session's own catalog;
   `ruling_95_an_update_from_a_subquery_that_matches_no_row_refuses_on_the_ansi_door` adds
   `WHERE false` and `WHERE id BETWEEN 100 AND 200` for both columns (12 cells);
-  `ruling_95_the_whole_refused_family_answers_one_text_on_both_doors` runs the file's 30-cell
-  family on this door and on a Spark SQL door session and holds both text sets, minus the
+  `ruling_95_the_whole_refused_family_answers_one_text_on_both_doors` runs the 30-cell
+  family on this door and a Spark SQL door session and holds both text sets, minus the
   `Error during planning: ` prefix, to the one ruling 90 text;
   `ruling_95_the_refusal_names_no_data_deleting_action_on_the_ansi_door` holds that the text
   names no data-deleting action.
@@ -156,8 +158,8 @@ holds behavior observed from outside the crate.
   `EXECUTE p` finds nothing, rows and snapshots hold. On main each ran.
   `the_ansi_door_still_answers_a_prepared_query_and_a_plain_explain` is the control.
   **Fix round 1 (2026-10-21, verifier S1-1):** `the_ansi_door_refuses_every_spelling_of_a_wrapped_write`:
-  trailing `;`, leading `--` comment line and lower case under both wrappers; red when the
-  refusal is skipped on a trailing `;`.
+  trailing `;`, leading `--` comment line and lower case under both wrappers; reds if
+  a trailing `;` skips the refusal.
 - `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
   resolves the NTZ wall-cast UDF UPDATE/MERGE wrap sites emit: UPDATE and MERGE
   into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched, inserted
@@ -194,8 +196,8 @@ holds behavior observed from outside the crate.
   Iceberg `timestamptz` is documented, not changed. CTAS / ALTER stay out of
   this unit.
 
-- `introspection.rs` — `SHOW TABLES` / `DESCRIBE` / `information_schema` delegate through a RP-5: fork `table_names` lists catalog entries only (F-8 / R169); mutation — make `SHOW TABLES` expect a `$snapshots` twin and the pin reds.
-  configured session. Metadata tables stay queryable but remain hidden from enumeration (RP-5
+- `introspection.rs` — `SHOW TABLES` / `DESCRIBE` / `information_schema` delegate through a configured session. RP-5: fork `table_names` lists catalog entries only (F-8 / R169); mutation — make `SHOW TABLES` expect a `$snapshots` twin and the pin reds.
+  Metadata tables stay queryable but hidden from enumeration (RP-5
   F-8: fork `table_names`, no engine shim). The
   time-travel test checks cleanup of both `__repark_ansi_tt_*` and `__repark_tt_*` names.
 
@@ -213,8 +215,8 @@ holds behavior observed from outside the crate.
   `AnsiDialect` session and a Spark-extended `SparkDialect` session, each over its OWN in-memory
   catalog, compared on the Arrow path (value AND type). Rows: CTAS, INSERT, ALTER (schema
   evolution + table rename), MERGE, time travel, identifier case folding, the single-session
-  legality boundary (pure catalog DDL), the session-scope guard rail that explains why one
-  session cannot do this job, **G-7b decimal128** (`cross_door_decimal_add_same_precision_scale_bit_exact`,
+  legality boundary (pure catalog DDL), the session-scope guard rail (why one session
+  cannot do this job), **G-7b decimal128** (`cross_door_decimal_add_same_precision_scale_bit_exact`,
   `cross_door_decimal_mul_money_by_quantity_bit_exact` — same SQL through both doors, schema +
   nullability + raw i128 equal; corpus rows `add_same_precision_scale` /
   `mul_money_by_quantity`), **G12 three-valued logic** (`cross_door_tvl_true_and_null_is_null`,
@@ -230,51 +232,49 @@ holds behavior observed from outside the crate.
   `cross_door_g3e8_correlated_in_delete_executes_identically`,
   `cross_door_g3e8_update_in_executes_identically`, which compares a
   **rendered refusal string** rather than a result: the G3-E8 valve is implemented twice (no
-  door→door product edge), and this is the only pin that can see the two copies drift, including
-  the rendered TARGET that the per-door message pins cannot. **G11:** six **INTENDED** door-vs-door value
+  door→door product edge), the only pin that can see the two copies drift, including
+  the rendered TARGET the per-door message pins cannot. **G11:** six **INTENDED** door-vs-door value
   divergences (correctness, not parity — Spark is not the ANSI oracle): integer `/` (truncate
   vs float), integer `/ 0` (**U5:** both raise; names kept), float `/ 0` (**U5:** IEEE +Inf vs
   Spark `DIVIDE_BY_ZERO`; names kept), decimal `/ 0` (**U5:** both raise; names kept), default
   `ORDER BY ASC` (NULLS LAST vs FIRST), default `ORDER BY DESC`
-  (NULLS FIRST vs LAST). Each row asserts both doors' actual Arrow outputs side by side; the
-  one-sentence reason is the test's doc comment. Needs the `repark-spark` dev-dep — the only
-  place either door may name the other, and legal because the crate-DAG guard scopes layering
+  (NULLS FIRST vs LAST). Each row asserts both doors' Arrow outputs side by side; the
+  reason is the test's doc comment. Needs the `repark-spark` dev-dep — the only
+  place either door may name the other; legal because the crate-DAG guard scopes layering
   to normal edges.
   **TYPES-1 (2026-09-05):** the INSERT / ALTER / case-folding / time-travel setups declare
   `CAST(1 AS BIGINT)` so the chartered literal-width split (Spark `Int32`, ANSI `Int64`)
   does not move these catalog-behavior rows.
-  **SQL-LITERAL-TYPING-1 (2026-09-16):** ROW 1 (CTAS content+schema) and ROW 6 (MERGE
-  result) join that spelling — their bodies declare `CAST(... AS BIGINT)` so they keep
+  **SQL-LITERAL-TYPING-1 (2026-09-16):** ROWs 1 (CTAS content+schema) and 6 (MERGE
+  result) join that spelling — their bodies declare `CAST(... AS BIGINT)` to keep
   testing CTAS/MERGE mechanics, not literal widths.
 
   Its case-folding row (`cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`)
   is a **declared-divergence test**: it names the registry row it defends
   — [`../../../docs/spark-sql-iceberg-parity.md`](../../../docs/spark-sql-iceberg-parity.md) §3
-  row ID-1, the registry's first declared row (decision D3) — and asserts the refusal *text*, not
-  merely that an error occurred (`No field named` **and** the quoted `"ID"`: the class of failure
-  and the identifier, because a bare `contains("ID")` also matches `INVALID` / `UUID` and would
-  attribute nothing), so the row stays attributable to identifier resolution. It reds
-  if the divergence silently disappears, which is the point: the registry holds the semantics and
-  this test holds the registry honest.
+  row ID-1, the registry's first declared row (decision D3) — and asserts the refusal *text*
+  (`No field named` **and** the quoted `"ID"` — class and identifier, since bare `contains("ID")`
+  also matches `INVALID`/`UUID`), so the row stays attributable to identifier resolution. It reds
+  if the divergence silently disappears: the registry holds the semantics, the test holds it honest.
 
 - `session_timezone_ansi_door.rs` — the ANSI-door cell of the
   session-timezone matrix. On ONE Spark-extended session at a non-UTC zone, `sql_with(AnsiDialect)`
   and the Spark door return the same calendar fields, value AND Arrow type — a legal
-  single-session row, because what is measured is that the DOOR does not change the answer
+  single-session row: the DOOR must not change the answer
   (extensions are session-scoped). It also pins the honest negative: an extension-free session is
-  stock DataFusion and reads the stored zone, which is a property of that profile rather than a
-  Spark divergence. Needs the same `repark-spark` dev-dep as `cross_door.rs`, for the same
-  reason — the reverse edge does not exist, so this cell can only be built here.
+  stock DataFusion reading the stored zone — a profile property, not a
+  Spark divergence. Needs `cross_door.rs`'s `repark-spark` dev-dep:
+  no reverse edge exists, so this cell can only be built here.
 
 - `timestamp_cast_ansi_door.rs` — the ANSI-door cell of the
-  `CAST(TIMESTAMP AS <numeric>)` epoch-seconds matrix, built here for the same crate-DAG reason as
-  `session_timezone_ansi_door.rs`. On ONE Spark-extended session both doors scale a timestamp cast
+  `CAST(TIMESTAMP AS <numeric>)` epoch-seconds matrix, built here for
+  `session_timezone_ansi_door.rs`'s crate-DAG reason. On ONE Spark-extended session both doors scale a timestamp cast
   to epoch SECONDS, value AND Arrow type, including the negative FRACTIONAL second where Spark
-  floors (`-0.5 s → -1`). Its second pin is the honest negative profile control
-  evidence: a bare, extension-free session still returns the raw nanosecond tick
-  (`-1800000000000`), which is correct for that profile.
+  floors (`-0.5 s → -1`). Its second pin is the honest negative:
+  a bare session still returns the raw nanosecond tick
+  (`-1800000000000`), correct for that profile.
 
-- `ansi_door_map_column.rs` — **MAP-COLUMN-PANIC-NATIVE-DOOR-1 (2026-10-21, commit 4):** the ANSI door answers `map(<key>, <column>)`: `SELECT map('a', id) AS m FROM range(1)` answers one row (`{a: 0}`; the collect runs on a spawned task, so a panic is a failure and not an abort), a two-pair `map('a', id, 'b', id + 1)` over three rows answers its three maps, and a constant map keeps DataFusion's constructor. Two of the three are red on the head without the rule push in `AnsiDialect` (the panic and the same-length error).
+- `ansi_door_map_column.rs` — **MAP-COLUMN-PANIC-NATIVE-DOOR-1 (2026-10-21, commit 4):** the ANSI door answers `map(<key>, <column>)`: `SELECT map('a', id) AS m FROM range(1)` answers one row (`{a: 0}`; the collect runs on a spawned task, so a panic fails instead of aborting), a two-pair `map('a', id, 'b', id + 1)` over three rows answers its three maps, and a constant map keeps DataFusion's constructor. Two of the three are red on the head without the rule push in `AnsiDialect` (the panic and the same-length error).
 - `ansi_door_values.rs` — ANSI-door-only value pins. Standard SQL
   is the oracle (ruling: correctness, not Spark parity). Rows on a native `AnsiDialect`
   session, Arrow path, value AND type: CAST overflow raises, integer `/` truncates, integer
