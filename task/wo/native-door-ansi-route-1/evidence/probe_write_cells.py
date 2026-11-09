@@ -6,9 +6,9 @@ import re
 import shutil
 import sys
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Callable
 from typing import Any
 
 W_INSERT_T = "INSERT INTO ice.ns.t VALUES (1, 10), (2, 20), (3, 30), (4, 40)"
@@ -329,9 +329,7 @@ def run_dml_cell(
     return record
 
 
-def run_r1(
-    leg: str, door: str, opener: Callable[[Path], Handle], root: Path
-) -> dict[str, Any]:
+def run_r1(leg: str, door: str, opener: Callable[[Path], Handle], root: Path) -> dict[str, Any]:
     record = cell_record(leg, door, "R", "R1-ctas-unqualified", "-", R_CTAS)
     try:
         handle = opener(root)
@@ -385,9 +383,7 @@ def run_r2(
     return record
 
 
-def run_r3(
-    leg: str, door: str, opener: Callable[[Path], Handle], root: Path
-) -> dict[str, Any]:
+def run_r3(leg: str, door: str, opener: Callable[[Path], Handle], root: Path) -> dict[str, Any]:
     record = cell_record(leg, door, "R", "R3-kernel-by-name", "-", R_KERNEL)
     try:
         handle = opener(root)
@@ -459,9 +455,7 @@ def run_leg(leg: str, scratch: Path, raw_dir: Path, spark_jar: str) -> None:
                         if shared
                         else scratch / f"{leg}-{door}-{group}-{cell}-{kind}"
                     )
-                    records.append(
-                        run_dml_cell(record, opener, root, tables, kind, door, sql)
-                    )
+                    records.append(run_dml_cell(record, opener, root, tables, kind, door, sql))
     for door, opener, shared in doors:
         if door == "facade":
             continue
@@ -535,9 +529,7 @@ def outcome_text(record: dict[str, Any]) -> str:
 
 def cell_line(record: dict[str, Any], label: str) -> str:
     files = (
-        f"{record['files_before']} -> {record['files_after']}"
-        if "files_before" in record
-        else "-"
+        f"{record['files_before']} -> {record['files_after']}" if "files_before" in record else "-"
     )
     snapshot = record.get("snapshot_changed")
     snapshot_text = "-" if snapshot is None else ("yes" if snapshot else "no")
