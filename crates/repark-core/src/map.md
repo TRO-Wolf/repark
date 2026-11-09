@@ -921,16 +921,16 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   load-bearing part, not the surface, which would have to widen (with its call sites) before a
   distributed backend could exist. Distribution is deferred by decision
   ([../../../docs/adr/0004-server-prep-disciplines.md](../../../docs/adr/0004-server-prep-disciplines.md)).
-- `pre_execute.rs` (+ `pre_execute/tests.rs`) — **the shared pre-execute belt (round 5, Z-2):**
+- `pre_execute.rs` (+ `pre_execute/tests.rs`) — **the shared pre-execute belt (round 5, Z-2):** Delta #2 analyzes each `PREPARE` body.
   `PreExecute` = plan (`create_logical_plan`, no execution) → `guard` (the ONE choke point for
   pre-execute refusals; today the tighten DDL-sink refuse and CFG-2's `refuse_source_ddl`,
-  which refuses `LogicalPlan::Ddl` naming a registered database source — DataFusion's
+  refusing `LogicalPlan::Ddl` naming a registered database source — DataFusion's
   `drop_table`/`drop_view` swallow provider errors into "doesn't exist", and `CREATE CATALOG`
-  would silently replace the source's provider, so the guard is the seam that refuses loud)
+  would silently replace the source's provider, so the guard-seam refuses loud)
   → `execute`. The native door
   (`DataFusionDialect`) runs the whole belt; `repark_sql::router::delegate`,
   `repark_sql::create_table` (CTAS derivation) and `repark_spark::spark_ast::execute_passthrough`
-  call `guard` on their own planned statement. Door-specific guards (SEC-02 local-fs, the Spark
+  call `guard` on their own planned statement. Door-specific guards (SEC-02 local-fs, Spark
   AST rewrites) deliberately stay at the doors. New pre-execute refusals land in `guard`, never
   at a door — per-door wiring missed the native door twice (measured).
 - `dialect.rs`, `extension.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** both seams gain
@@ -951,10 +951,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `execute_identity_or_delegate`); `repark.sql()` has none. Before, the fork provider's
   `update` received the decorrelated subquery as a column of the target's own name and wrote
   nothing. **UPDATE-SET-SUBQUERY-WALK-1 (2026-10-15, owner rulings 99 (c) and 110):**
-  `assigns_a_subquery` walks the whole assigned expression (`Expr::contains_scalar_subquery`),
-  so any scalar subquery in the `SET` value refuses with that same text, including
+  `assigns_a_subquery` walks the whole assigned expression (`contains_scalar_subquery`),
+  so any scalar subquery in the `SET` value refuses with that text including
   `1 + (SELECT …)`, `(SELECT …) + 1`, `-(SELECT …)`, `abs((SELECT …))`,
-  `CASE … THEN (SELECT …) END`, `COALESCE((SELECT …), 0)` and a struct built around
+  `CASE … THEN (SELECT …) END`, `COALESCE((SELECT …), 0)` and a struct around
   `(SELECT …)`. A subquery in the `WHERE` only stays silent. The identity path still runs
   first and is unchanged. Storing the value is card `update-subquery-store-1`.
 - `dialect.rs` (+ `dialect/tests.rs`) — the SQL dialect seam (design §3): `EngineContext`

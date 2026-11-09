@@ -1,7 +1,7 @@
 //! Shared pre-execute sequencing for every SQL door: plan, guard, then execute.
 
 use datafusion::error::{DataFusionError, Result as DfResult};
-use datafusion::logical_expr::{Expr, LogicalPlan, WriteOp};
+use datafusion::logical_expr::{Expr, LogicalPlan, Statement, WriteOp};
 use datafusion::prelude::{DataFrame, SessionContext};
 
 use crate::catalog_state::CatalogRegistry;
@@ -43,7 +43,8 @@ impl<'a> PreExecute<'a> {
         refuse_iceberg_create_of_tightened_ddl(plan, self.ctx, self.catalogs)
             .map_err(|error| DataFusionError::Plan(error.to_string()))?;
         refuse_update_from_subquery(plan)?;
-        crate::named_sources::refuse_source_ddl(plan, self.ctx, self.catalogs)
+        crate::named_sources::refuse_source_ddl(plan, self.ctx, self.catalogs)?;
+        refuse_unanalyzed_prepare(plan, self.ctx)
     }
 
     /// Execute an already-guarded plan.
@@ -85,6 +86,19 @@ fn refuse_update_from_subquery(plan: &LogicalPlan) -> DfResult<()> {
 
 fn assigns_a_subquery(expr: &Expr) -> bool {
     expr.contains_scalar_subquery()
+}
+
+fn refuse_unanalyzed_prepare(plan: &LogicalPlan, ctx: &SessionContext) -> DfResult<()> {
+    let LogicalPlan::Statement(Statement::Prepare(prepare)) = plan else {
+        return Ok(());
+    };
+    let state = ctx.state();
+    state.analyzer().execute_and_check(
+        prepare.input.as_ref().clone(),
+        state.config_options(),
+        |_, _| {},
+    )?;
+    Ok(())
 }
 
 #[cfg(test)]
