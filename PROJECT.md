@@ -84,19 +84,11 @@ are Spark only and refuse the key; the native session defaults to Trino; no sess
 
 ## Primary outcome by release line
 
-One organising outcome per active line, owner-set, pointing at the card that defines its
-acceptance; a line may carry several acceptance checks, but one outcome.
-
-- **1.5.x** — one-to-one Spark–Iceberg parity on the Spark door over the inventory in
-  [task/roadmap/mid-term/ice-parity-inventory-2026-09-19.md](task/roadmap/mid-term/ice-parity-inventory-2026-09-19.md).
-- **1.6** — Postgres connectivity (`repark-connect`) as a chartered seam; no Trino connector.
-- **1.7** — micro-batch CDC from bronze to silver, with the durability, recovery and replay
-  guarantees defined in
-  [task/roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md](task/roadmap/epic-term/cdc-microbatch-north-star-2026-10-05.md).
-- **1.8** — the inference readers (smart CSV, Excel, JSON) as their own crate, `repark-io`; the
-  crate layout in
-  [task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md](task/roadmap/epic-term/crate-layout-1-8-2026-10-01.md)
-  is the means, not the outcome.
+One organising outcome per release line, owner-set, with the card that defines its acceptance; a
+line may carry several acceptance checks, but one outcome. The outcomes have one home, the table
+"Release lines, one outcome each" in
+[task/roadmap/epic-term/release-roadmap-2026-08-29.md](task/roadmap/epic-term/release-roadmap-2026-08-29.md#release-lines-one-outcome-each).
+This file does not restate them.
 
 ## Priority order when goals collide
 
