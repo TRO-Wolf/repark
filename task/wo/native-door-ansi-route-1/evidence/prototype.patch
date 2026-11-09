@@ -1,0 +1,36 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 1ff17eae3..bcef9d9f0 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -5255,6 +5255,7 @@ dependencies = [
+  "repark-functions",
+  "repark-ml",
+  "repark-spark",
++ "repark-sql",
+  "repark-ta",
+  "tokio",
+  "tracing",
+diff --git a/crates/repark-python/Cargo.toml b/crates/repark-python/Cargo.toml
+index 709dba931..05b05731c 100644
+--- a/crates/repark-python/Cargo.toml
++++ b/crates/repark-python/Cargo.toml
+@@ -56,6 +56,7 @@ repark-ml.workspace = true
+ # NON-edges (design §2.2): `repark-sql` (no ANSI door from Python — §4 Q2) and `repark-iceberg`
+ # (the binding reaches Iceberg only through `ReparkSession` and SQL text).
+ repark-spark.workspace = true
++repark-sql.workspace = true
+ # A multi-thread tokio runtime owned by `PyReparkSession`, so the synchronous Python API can
+ # `block_on` the engine's async `sql` / `read_parquet`.
+ tokio = { workspace = true }
+diff --git a/crates/repark-python/src/session.rs b/crates/repark-python/src/session.rs
+index cf62ae0d1..ef683055e 100644
+--- a/crates/repark-python/src/session.rs
++++ b/crates/repark-python/src/session.rs
+@@ -157,6 +157,7 @@ impl PyReparkSession {
+         fenced_span!("py.session", "PyReparkSession.native", {
+             let builder =
+                 apply_session_knobs(memory_limit_gb, batch_size, target_partitions, config)?
++                    .with_sql_dialect(Arc::new(repark_sql::AnsiDialect))
+                     .with_extension(Arc::new(crate::session_runtime::NativeDoorTypes))
+                     .with_local_fs_guard();
+             let handle = finish_session(py, builder)?;

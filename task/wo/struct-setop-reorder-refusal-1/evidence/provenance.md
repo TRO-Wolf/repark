@@ -102,4 +102,71 @@ uses `MAP(ARRAY['k'], ARRAY[named_struct(...)])`; the other shapes are spelled a
    same DDL on each door (`USING iceberg` and `TBLPROPERTIES` on the Spark and facade doors; plain
    `CREATE TABLE` on the native door, as the native door cannot take either).
 
+## Unit C control rows, explicit UNION DISTINCT and the comparison cells
+
+Base: `origin/main` at `03f925c51` when the lane was cut. The two legs below reuse the artifacts of the
+section above: the same Spark 4.1.2 with jar `d6ea6c5d…`, and the same release wheel `07f94d4d…`
+(`fdc61f26`). The shared helpers are imported by path from `probe_setop.py`; the seed rows and the
+four-route struct spelling come from `task/wo/empty-dml-shared-guard-1/evidence/probe.py`.
+
+Commands run (placeholders for paths as above; `<scratch>` is the measurement scratch directory):
+
+```
+JAVA_HOME=<jdk-17> <oracle-python> -I probe_setop_controls.py --engine spark --label spark \
+    --warehouse <scratch>/spark-warehouse --out raw/controls-spark.jsonl --ivy-jar <ivy-jar>
+<venv-main-fdc61f26>/bin/python -I probe_setop_controls.py --engine repark \
+    --label repark-main-fdc61f26 --warehouse <scratch>/repark-warehouse \
+    --out raw/controls-repark-main-fdc61f26.jsonl --wheel <main-wheel>
+<oracle-python> -I probe_setop_controls.py --render
+uvx ruff@0.15.22 format probe_setop_controls.py && uvx ruff@0.15.22 check probe_setop_controls.py
+```
+
+Each leg runs against an empty warehouse, one Spark JVM at a time. Each raw file has 253 lines: one
+leg header and 252 cells, which are 200 identical-struct controls, 40 explicit `UNION DISTINCT` cells and
+12 comparison cells (3 predicates on 4 routes). `controls-table.md` is rendered from the two raw files,
+and the existing UNION cells are read from the two precedent raw files.
+
+Cell outcomes per leg:
+
+- Spark: 134 answered, 18 refused, 100 `ORACLE-MISSING` (the native door: 80 controls and 20
+  `UNION DISTINCT` cells), 0 panics.
+- RePark (release wheel): 227 answered, 20 refused, 5 `SETUP-REFUSED` (the native `map-value-reordered`
+  inserts: 4 controls and 1 `UNION DISTINCT` cell, the native CREATE of a map type), 0 panics.
+
+Decisions and deviations from the brief:
+
+1. The identical-struct control right operand is the left operand's structure (same field names, order
+   and types) with different values: each integer plus two, each string `y`. The same right operand is
+   used for `INTERSECT` and `EXCEPT`, not the set-right variant of the existing table, because a control
+   must hold the structure fixed and the values distinct. Both readings predict the same rows, so the
+   pairing columns read `n/a`.
+2. Explicit `UNION DISTINCT` runs on the sql and native doors, read and insert, for the ten existing
+   shapes with their existing right operands. The `UNION` column beside it is the existing table's cell,
+   read from the precedent raw files and not re-run. The column "RePark UNION DISTINCT same as RePark
+   UNION" compares the outcome and rows (read: schema too; insert: snapshot change too).
+3. The three audit comparison cells are the WHERE predicate of `INSERT INTO t SELECT * FROM t WHERE
+   <predicate>`, the brief's statement for the first. The other two are treated the same way. The table
+   is `id BIGINT, v STRING`, seeded with `(1, 'a'), (2, 'b')` (the empty-dml probe's seed and columns).
+   The routes are `sql` (the SQL statement), `filter-str` (`filter("<predicate>")`), `f-expr`
+   (`filter(F.expr("<predicate>"))`) and `typed` (`F.struct` with aliased fields, the typed spelling of
+   `named_struct`). Both engines run the same routes; the RePark native door is not used here.
+4. The native-door controls and `UNION DISTINCT` cells have no Spark reference and read `ORACLE-MISSING`;
+   they are measured on RePark only.
+5. The release wheel is measured, so a debug assertion is unmeasured. No cell on either leg panicked.
+
+Results, as labels for the RePark cell against the Spark cell:
+
+- Controls: 114 `EQUAL`, 6 `BOTH-REFUSED`, 80 `ORACLE-MISSING`. The six `BOTH-REFUSED` cells are the
+  sql-door `ctl-map-value-reordered` cells for `UNION`, `INTERSECT` and `EXCEPT` (read and insert). Spark
+  refuses every set operation on a `MAP` column (`SET_OPERATION_ON_MAP_TYPE`), and RePark refuses them
+  too. No control on the df door or the sql door for the other nine shapes diverges.
+- `UNION DISTINCT`: 2 `EQUAL` (`same-order`, sql door), 18 non-EQUAL (sql door), 20 `ORACLE-MISSING`
+  (native door). Each of the 40 cells carries the same label set as the existing `UNION` cell for its
+  shape, door and form (checked against the precedent raw files), and each RePark `UNION DISTINCT` cell
+  matches its RePark `UNION` twin on outcome and rows.
+- Comparison cells: `c3` (duplicate names) is `EQUAL` on all four routes, both engines persisting the
+  seed rows. `c1` and `c2` are `ACCEPTED-WHERE-SPARK-REFUSED` on all four routes: Spark refuses with
+  `DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES` because the struct field names differ in order or set, while
+  RePark accepts and inserts a second copy of the `(1, 'a')` row in both `c1` and `c2`.
+
 Up: [../map.md](../map.md).
