@@ -1,5 +1,3 @@
-"""EMPTY-DML-SHARED-GUARD-1: a DELETE or UPDATE whose input folds to no rows writes nothing."""
-
 from __future__ import annotations
 
 import json
