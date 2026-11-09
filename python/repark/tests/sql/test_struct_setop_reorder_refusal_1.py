@@ -298,9 +298,9 @@ def op_word(op: str) -> str:
     return "EXCEPT"
 
 
-def check_refusal_text(error: str, op: str, path: str, right: str, left: str) -> None:
+def check_refusal_text(error: str, word: str, path: str, right: str, left: str) -> None:
     assert "[INCOMPATIBLE_COLUMN_TYPE]" in error, error
-    assert f"{op_word(op)} can only be performed" in error, error
+    assert f"{word} can only be performed" in error, error
     marker = "Struct field names differ at "
     assert marker in error, error
     rest = error.split(marker, 1)[1].split(";", 1)[0]
@@ -315,7 +315,7 @@ def check_refusal(shape: dict[str, Any], op: str, error: str) -> None:
         assert "Struct field names differ" not in error, error
     elif kind == "refuse" or op in ("UNION ALL", "union", "unionByName"):
         _, path, right, left = shape["expect"]
-        check_refusal_text(error, op, path, right, left)
+        check_refusal_text(error, op_word(op), path, right, left)
 
 
 def table_name(kind: str, shape_id: str, op: str) -> str:
@@ -482,6 +482,22 @@ def measured(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, dic
         else:
             key = case_id("df", op, shape_id, form)
             outcomes[key] = run_df_case(spark, root, op, shape, form)
+    for rowid, select, ddl, _ in D2_SQL_ROWS:
+        for form in ("read", "insert"):
+            outcomes[f"spark-{rowid}-{form}"] = run_d2_sql_case(
+                spark, root, rowid, select, ddl, form
+            )
+    for rowid, tree, ddl, _ in D2_DF_ROWS:
+        for form in ("read", "insert"):
+            outcomes[f"spark-{rowid}-{form}"] = run_d2_df_case(spark, root, rowid, tree, ddl, form)
+    for case, shape, fragment, _ in D2_EXPR_CASES:
+        for form in ("read", "insert"):
+            outcomes[f"spark-{case}-{form}"] = run_d2_expr_case(
+                spark, root, case, shape, fragment, form
+            )
+    for case, kind, _ in D2_VIEW_CASES:
+        for form in ("read", "insert"):
+            outcomes[f"spark-{case}-{form}"] = run_d2_view_case(spark, root, case, kind, form)
     yield outcomes
     spark.stop()
     _reset_active_session_for_tests()
@@ -527,3 +543,392 @@ def test_f_expr_fragment_cells(measured: dict[str, dict[str, Any]], case: str) -
     else:
         expected = 3 if case == "f1-control-int" else 4
         assert outcome == {"kind": "rows", "rows": [{"total": expected}]}, outcome
+
+
+D2_L = "named_struct('a', 1, 'b', 2)"
+D2_R = "named_struct('b', 3, 'a', 4)"
+D2_RS = "named_struct('a', 3, 'b', 4)"
+D2_NESTED_DDL = "STRUCT<x: STRUCT<a: INT, b: INT>>"
+D2_REFUSE_UNION = ("refuse", "UNION", "s", "b, a", "a, b")
+D2_UNION = f"SELECT {D2_L} AS s UNION ALL SELECT {D2_R} AS s"
+
+D2_SQL_ROWS = [
+    ("d2-row1-union-all", f"SELECT NULL AS s UNION ALL {D2_UNION}", STRUCT2, D2_REFUSE_UNION),
+    (
+        "d2-row1-union",
+        f"SELECT NULL AS s UNION SELECT {D2_L} AS s UNION SELECT {D2_R} AS s",
+        STRUCT2,
+        D2_REFUSE_UNION,
+    ),
+    (
+        "d2-row2-union-all",
+        "SELECT named_struct('x', NULL) AS s UNION ALL "
+        "SELECT named_struct('x', named_struct('a', 1, 'b', 2)) AS s UNION ALL "
+        "SELECT named_struct('x', named_struct('b', 3, 'a', 4)) AS s",
+        D2_NESTED_DDL,
+        ("refuse", "UNION", "s.x", "b, a", "a, b"),
+    ),
+    (
+        "d2-row3-union-all",
+        f"SELECT CASE WHEN true THEN NULL END AS s UNION ALL {D2_UNION}",
+        STRUCT2,
+        D2_REFUSE_UNION,
+    ),
+    (
+        "d2-row4-intersect",
+        f"(SELECT NULL AS s UNION ALL SELECT {D2_L} AS s) INTERSECT SELECT {D2_R} AS s",
+        STRUCT2,
+        ("refuse", "INTERSECT", "s", "b, a", "a, b"),
+    ),
+    (
+        "d2-row4-except",
+        f"(SELECT NULL AS s UNION ALL SELECT {D2_L} AS s) EXCEPT SELECT {D2_R} AS s",
+        STRUCT2,
+        ("refuse", "EXCEPT", "s", "b, a", "a, b"),
+    ),
+    (
+        "d2-row5-union-all",
+        f"SELECT CAST(NULL AS STRUCT<a: INT, b: INT>) AS s UNION ALL {D2_UNION}",
+        STRUCT2,
+        D2_REFUSE_UNION,
+    ),
+    (
+        "d2-row6-ctl-null-middle",
+        f"SELECT {D2_L} AS s UNION ALL SELECT NULL AS s UNION ALL SELECT {D2_R} AS s",
+        STRUCT2,
+        D2_REFUSE_UNION,
+    ),
+    (
+        "d2-row6-ctl-null-nested",
+        f"SELECT NULL AS s UNION ALL (SELECT {D2_L} AS s UNION ALL SELECT {D2_R} AS s)",
+        STRUCT2,
+        D2_REFUSE_UNION,
+    ),
+    (
+        "d2-row6-ctl-same-names",
+        f"SELECT NULL AS s UNION ALL SELECT {D2_L} AS s UNION ALL SELECT {D2_RS} AS s",
+        STRUCT2,
+        ("answer", "[1,2]|[3,4]|null"),
+    ),
+    (
+        "d2-row12-cast-STRUCT-SETOP-USER-CAST-OVERREFUSAL-1",
+        f"SELECT CAST({D2_R} AS STRUCT<a: INT, b: INT>) AS s UNION ALL SELECT {D2_L} AS s",
+        STRUCT2,
+        D2_REFUSE_UNION,
+    ),
+]
+D2_SQL_BY_ID = {row[0]: row for row in D2_SQL_ROWS}
+
+D2_N0 = ("S", "SELECT NULL AS s")
+D2_NL = ("S", f"SELECT {D2_L} AS s")
+D2_NR = ("S", f"SELECT {D2_R} AS s")
+D2_NRS = ("S", f"SELECT {D2_RS} AS s")
+D2_X0 = ("S", "SELECT named_struct('x', NULL) AS s")
+D2_X1 = ("S", "SELECT named_struct('x', named_struct('a', 1, 'b', 2)) AS s")
+D2_X2 = ("S", "SELECT named_struct('x', named_struct('b', 3, 'a', 4)) AS s")
+D2_C0 = ("S", "SELECT CASE WHEN true THEN NULL END AS s")
+D2_K0 = ("S", "SELECT CAST(NULL AS STRUCT<a: INT, b: INT>) AS s")
+D2_CAST = ("S", f"SELECT CAST({D2_R} AS STRUCT<a: INT, b: INT>) AS s")
+D2_DF_ROWS = [
+    ("d2-df-row1-union-all", ("U", ("U", D2_N0, D2_NL), D2_NR), STRUCT2, D2_REFUSE_UNION),
+    ("d2-df-row1-union", ("UD", ("UD", D2_N0, D2_NL), D2_NR), STRUCT2, D2_REFUSE_UNION),
+    (
+        "d2-df-row2-union-all",
+        ("U", ("U", D2_X0, D2_X1), D2_X2),
+        D2_NESTED_DDL,
+        ("refuse", "UNION", "s.x", "b, a", "a, b"),
+    ),
+    ("d2-df-row3-union-all", ("U", ("U", D2_C0, D2_NL), D2_NR), STRUCT2, D2_REFUSE_UNION),
+    (
+        "d2-df-row4-intersect",
+        ("I", ("U", D2_N0, D2_NL), D2_NR),
+        STRUCT2,
+        ("refuse", "INTERSECT", "s", "b, a", "a, b"),
+    ),
+    (
+        "d2-df-row4-except",
+        ("E", ("U", D2_N0, D2_NL), D2_NR),
+        STRUCT2,
+        ("refuse", "EXCEPT", "s", "b, a", "a, b"),
+    ),
+    ("d2-df-row5-union-all", ("U", ("U", D2_K0, D2_NL), D2_NR), STRUCT2, D2_REFUSE_UNION),
+    ("d2-df-row6-ctl-null-middle", ("U", ("U", D2_NL, D2_N0), D2_NR), STRUCT2, D2_REFUSE_UNION),
+    ("d2-df-row6-ctl-null-nested", ("U", D2_N0, ("U", D2_NL, D2_NR)), STRUCT2, D2_REFUSE_UNION),
+    (
+        "d2-df-row6-ctl-same-names",
+        ("U", ("U", D2_N0, D2_NL), D2_NRS),
+        STRUCT2,
+        ("answer", "[1,2]|[3,4]|null"),
+    ),
+    (
+        "d2-df-row12-cast-STRUCT-SETOP-USER-CAST-OVERREFUSAL-1",
+        ("U", D2_CAST, D2_NL),
+        STRUCT2,
+        D2_REFUSE_UNION,
+    ),
+]
+D2_DF_BY_ID = {row[0]: row for row in D2_DF_ROWS}
+
+D2_EXPR_MAX = (
+    "(SELECT max(s.a) FROM (SELECT named_struct('a', 1, 'b', 2) AS s "
+    "UNION ALL SELECT named_struct('b', 3, 'a', 4) AS s))"
+)
+D2_EXPR_MAX_INT = "(SELECT max(x) FROM (SELECT 3 AS x UNION ALL SELECT 2 AS x))"
+D2_EXPR_MAX_STRUCT = (
+    "(SELECT max(s.a) FROM (SELECT named_struct('a', 1, 'b', 2) AS s "
+    "UNION ALL SELECT named_struct('a', 4, 'b', 5) AS s))"
+)
+D2_EXPR_CASES = [
+    ("d2-expr-max-select", "select", D2_EXPR_MAX, D2_REFUSE_UNION),
+    ("d2-expr-max-withcolumn", "withcolumn", D2_EXPR_MAX, D2_REFUSE_UNION),
+    ("d2-expr-max-filter", "filter", D2_EXPR_MAX, D2_REFUSE_UNION),
+    ("d2-expr-max-control-int", "select", D2_EXPR_MAX_INT, ("answer", 3)),
+    ("d2-expr-max-control-struct", "select", D2_EXPR_MAX_STRUCT, ("answer", 4)),
+]
+D2_EXPR_BY_ID = {row[0]: row for row in D2_EXPR_CASES}
+
+D2_VIEW_CASES = [
+    ("d2-row11-create-view", "create", D2_REFUSE_UNION),
+    ("d2-row11-create-temp-view", "create-temp", D2_REFUSE_UNION),
+    ("d2-row11-dataframe-temp-view", "df", D2_REFUSE_UNION),
+]
+D2_VIEW_BY_ID = {row[0]: row for row in D2_VIEW_CASES}
+
+
+def d2_build(spark: ReparkSession, tree: tuple[Any, ...]) -> Any:
+    if tree[0] == "S":
+        return spark.sql(tree[1])
+    left = d2_build(spark, tree[1])
+    right = d2_build(spark, tree[2])
+    if tree[0] == "U":
+        return left.union(right)
+    if tree[0] == "UD":
+        return left.union(right).distinct()
+    if tree[0] == "I":
+        return left.intersect(right)
+    return left.subtract(right)
+
+
+def d2_table(rowid: str) -> str:
+    return f"d2t_{rowid.replace('-', '_').lower()}_insert"
+
+
+def d2_create_v_table(spark: ReparkSession, table: str) -> None:
+    spark.sql(
+        f"CREATE TABLE ice.ns.{table} (v INT) USING iceberg TBLPROPERTIES "
+        "('format-version' = '2', 'write.delete.mode' = 'copy-on-write', "
+        "'write.update.mode' = 'copy-on-write')"
+    ).collect()
+
+
+def d2_rows_of_v(spark: ReparkSession, table: str) -> str:
+    pylist = spark.sql(f"SELECT v FROM ice.ns.{table}").toArrow().to_pylist()
+    return "|".join(sorted(render(row["v"]) for row in pylist))
+
+
+def d2_expr_frame(spark: ReparkSession, shape: str, fragment: str) -> Any:
+    base = spark.sql("SELECT 1 AS one")
+    if shape == "select":
+        return base.select(F.expr(fragment).alias("v"))
+    if shape == "withcolumn":
+        return base.withColumn("v", F.expr(fragment)).select("v")
+    return base.filter(F.expr(f"{fragment} IS NOT NULL")).select(F.expr(fragment).alias("v"))
+
+
+def d2_refused(error: Exception, extra: dict[str, Any] | None = None) -> dict[str, Any]:
+    outcome: dict[str, Any] = {"kind": "refused", "class": type(error).__name__, "text": str(error)}
+    if extra:
+        outcome.update(extra)
+    return outcome
+
+
+def run_d2_sql_case(
+    spark: ReparkSession, root: Path, rowid: str, select: str, ddl: str, form: str
+) -> dict[str, Any]:
+    if form == "read":
+        try:
+            return {"kind": "rows", "rows": run_sql(spark, select)}
+        except Exception as error:
+            return d2_refused(error)
+    table = d2_table(rowid)
+    create_table(spark, table, ddl)
+    assert rows_of(spark, table) == ""
+    before = snapshot_of(root, table)
+    try:
+        spark.sql(f"INSERT INTO ice.ns.{table} {select}").collect()
+    except Exception as error:
+        return d2_refused(
+            error,
+            {"rows": rows_of(spark, table), "snapshot": snapshot_of(root, table), "before": before},
+        )
+    return {
+        "kind": "rows",
+        "rows": rows_of(spark, table),
+        "snapshot": snapshot_of(root, table),
+        "before": before,
+    }
+
+
+def run_d2_df_case(
+    spark: ReparkSession, root: Path, rowid: str, tree: tuple[Any, ...], ddl: str, form: str
+) -> dict[str, Any]:
+    if form == "read":
+        try:
+            rows = render_rows(d2_build(spark, tree).toArrow().to_pylist())
+        except Exception as error:
+            return d2_refused(error)
+        return {"kind": "rows", "rows": rows}
+    table = d2_table(rowid)
+    create_table(spark, table, ddl)
+    assert rows_of(spark, table) == ""
+    before = snapshot_of(root, table)
+    try:
+        d2_build(spark, tree).write.insertInto(f"ice.ns.{table}")
+    except Exception as error:
+        return d2_refused(
+            error,
+            {"rows": rows_of(spark, table), "snapshot": snapshot_of(root, table), "before": before},
+        )
+    return {
+        "kind": "rows",
+        "rows": rows_of(spark, table),
+        "snapshot": snapshot_of(root, table),
+        "before": before,
+    }
+
+
+def run_d2_expr_case(
+    spark: ReparkSession, root: Path, case: str, shape: str, fragment: str, form: str
+) -> dict[str, Any]:
+    if form == "read":
+        try:
+            rows = d2_expr_frame(spark, shape, fragment).toArrow().to_pylist()
+        except Exception as error:
+            return d2_refused(error)
+        return {"kind": "rows", "rows": rows}
+    table = d2_table(case)
+    d2_create_v_table(spark, table)
+    assert d2_rows_of_v(spark, table) == ""
+    before = snapshot_of(root, table)
+    try:
+        frame = d2_expr_frame(spark, shape, fragment)
+        frame.write.insertInto(f"ice.ns.{table}")
+    except Exception as error:
+        return d2_refused(
+            error,
+            {
+                "rows": d2_rows_of_v(spark, table),
+                "snapshot": snapshot_of(root, table),
+                "before": before,
+            },
+        )
+    return {
+        "kind": "rows",
+        "rows": d2_rows_of_v(spark, table),
+        "snapshot": snapshot_of(root, table),
+        "before": before,
+    }
+
+
+def run_d2_view_case(
+    spark: ReparkSession, root: Path, case: str, kind: str, form: str
+) -> dict[str, Any]:
+    view = f"d2v_{case.replace('-', '_')}"
+    if kind in ("create", "create-temp"):
+        verb = "CREATE VIEW" if kind == "create" else "CREATE TEMPORARY VIEW"
+        try:
+            spark.sql(f"{verb} {view} AS {D2_UNION}").collect()
+        except Exception as error:
+            return d2_refused(error)
+        return {"kind": "rows", "rows": "created"}
+    df = spark.sql(f"SELECT {D2_L} AS s").union(spark.sql(f"SELECT {D2_R} AS s"))
+    try:
+        df.createOrReplaceTempView(view)
+    except Exception as error:
+        return d2_refused(error, {"stage": "create"})
+    if form == "read":
+        try:
+            return {"kind": "rows", "rows": run_sql(spark, f"SELECT * FROM {view}")}
+        except Exception as error:
+            return d2_refused(error)
+    table = d2_table(case)
+    create_table(spark, table, STRUCT2)
+    assert rows_of(spark, table) == ""
+    before = snapshot_of(root, table)
+    try:
+        spark.sql(f"INSERT INTO ice.ns.{table} SELECT * FROM {view}").collect()
+    except Exception as error:
+        return d2_refused(
+            error,
+            {"rows": rows_of(spark, table), "snapshot": snapshot_of(root, table), "before": before},
+        )
+    return {
+        "kind": "rows",
+        "rows": rows_of(spark, table),
+        "snapshot": snapshot_of(root, table),
+        "before": before,
+    }
+
+
+def check_d2_refusal(outcome: dict[str, Any], expect: tuple[Any, ...]) -> None:
+    assert outcome["kind"] == "refused", outcome
+    assert outcome.get("stage", "read") != "create", outcome
+    assert outcome["class"] == "AnalysisException", outcome
+    _, word, path, right, left = expect
+    check_refusal_text(outcome["text"], word, path, right, left)
+
+
+def check_d2_outcome(outcome: dict[str, Any], expect: tuple[Any, ...], form: str) -> None:
+    if expect[0] == "answer":
+        assert outcome["kind"] == "rows", outcome
+        assert outcome["rows"] == expect[1], outcome
+        if form == "insert":
+            assert outcome["snapshot"] != outcome["before"], outcome
+        return
+    check_d2_refusal(outcome, expect)
+    if form == "insert" and "before" in outcome:
+        assert outcome["rows"] == "", outcome
+        assert outcome["snapshot"] == outcome["before"], outcome
+
+
+def check_d2_expr_outcome(outcome: dict[str, Any], expect: tuple[Any, ...], form: str) -> None:
+    if expect[0] == "answer":
+        if form == "read":
+            assert outcome == {"kind": "rows", "rows": [{"v": expect[1]}]}, outcome
+        else:
+            assert outcome["kind"] == "rows", outcome
+            assert outcome["rows"] == str(expect[1]), outcome
+            assert outcome["snapshot"] != outcome["before"], outcome
+        return
+    check_d2_refusal(outcome, expect)
+    if form == "insert":
+        assert outcome["rows"] == "", outcome
+        assert outcome["snapshot"] == outcome["before"], outcome
+
+
+def d2_params(rows: list[tuple[Any, ...]]) -> list[pytest.ParamSet]:
+    return [
+        pytest.param(row[0], form, id=f"spark-{row[0]}-{form}")
+        for row in rows
+        for form in ("read", "insert")
+    ]
+
+
+@pytest.mark.parametrize(("rowid", "form"), d2_params(D2_SQL_ROWS))
+def test_d2_sql_cells(measured: dict[str, dict[str, Any]], rowid: str, form: str) -> None:
+    check_d2_outcome(measured[f"spark-{rowid}-{form}"], D2_SQL_BY_ID[rowid][3], form)
+
+
+@pytest.mark.parametrize(("rowid", "form"), d2_params(D2_DF_ROWS))
+def test_d2_dataframe_cells(measured: dict[str, dict[str, Any]], rowid: str, form: str) -> None:
+    check_d2_outcome(measured[f"spark-{rowid}-{form}"], D2_DF_BY_ID[rowid][3], form)
+
+
+@pytest.mark.parametrize(("case", "form"), d2_params(D2_EXPR_CASES))
+def test_d2_expr_cells(measured: dict[str, dict[str, Any]], case: str, form: str) -> None:
+    check_d2_expr_outcome(measured[f"spark-{case}-{form}"], D2_EXPR_BY_ID[case][3], form)
+
+
+@pytest.mark.parametrize(("case", "form"), d2_params(D2_VIEW_CASES))
+def test_d2_view_cells(measured: dict[str, dict[str, Any]], case: str, form: str) -> None:
+    check_d2_outcome(measured[f"spark-{case}-{form}"], D2_VIEW_BY_ID[case][2], form)
