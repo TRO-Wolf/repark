@@ -4,7 +4,9 @@ use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::TreeNodeRecursion;
 use datafusion::common::{DataFusionError, NullEquality, Result as DataFusionResult};
-use datafusion::logical_expr::{Expr, ExprSchemable, Join, JoinType, LogicalPlan, Union};
+use datafusion::logical_expr::{
+    Expr, ExprSchemable, Join, JoinType, LogicalPlan, RecursiveQuery, Union,
+};
 use datafusion::optimizer::AnalyzerRule;
 
 pub(crate) struct StructNameMismatch {
@@ -101,7 +103,7 @@ impl AnalyzerRule for StructSetopNames {
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn insert_struct_setop_before_coercion(
+pub fn insert_struct_setop_after_coercion(
     mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
 ) -> DataFusionResult<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
     let Some(position) = rules.iter().position(|rule| rule.name() == "type_coercion") else {
@@ -110,7 +112,7 @@ pub fn insert_struct_setop_before_coercion(
                 .to_string(),
         ));
     };
-    rules.insert(position, Arc::new(StructSetopNames));
+    rules.insert(position + 1, Arc::new(StructSetopNames));
     Ok(rules)
 }
 
@@ -118,34 +120,26 @@ fn refuse_in_node(node: &LogicalPlan) -> DataFusionResult<()> {
     match node {
         LogicalPlan::Union(union) => refuse_in_union(union),
         LogicalPlan::Join(join) => refuse_in_join(join),
+        LogicalPlan::RecursiveQuery(recursive) => refuse_in_recursive(recursive),
         _ => Ok(()),
     }
 }
 
 fn refuse_in_union(union: &Union) -> DataFusionResult<()> {
-    let width = union.schema.fields().len();
-    let Some(first) = union.inputs.first() else {
-        return Ok(());
-    };
-    for (input_index, input) in union.inputs.iter().enumerate().skip(1) {
-        for position in 0..width {
-            let (Some(left), Some(right)) = (
-                union_input_type(first, position),
-                union_input_type(input, position),
-            ) else {
+    for (input_index, input) in union.inputs.iter().enumerate() {
+        for (position, target) in union.schema.fields().iter().enumerate() {
+            let Some(source) = source_type_at(input, position) else {
                 continue;
             };
-            if let Some(mismatch) = first_struct_name_mismatch(&left, &right) {
-                let Some(column) = union.schema.fields().get(position) else {
-                    continue;
-                };
+            if let Some(mismatch) = first_struct_name_mismatch(target.data_type(), &source) {
+                let table = table_ordinal(input_index);
                 return Err(refusal(
                     "UNION",
                     position,
-                    input_index,
-                    column.name(),
-                    &left,
-                    &right,
+                    &table,
+                    target.name(),
+                    target.data_type(),
+                    &source,
                     &mismatch,
                 ));
             }
@@ -154,10 +148,19 @@ fn refuse_in_union(union: &Union) -> DataFusionResult<()> {
     Ok(())
 }
 
-fn union_input_type(input: &LogicalPlan, position: usize) -> Option<DataType> {
+fn source_type_at(input: &LogicalPlan, position: usize) -> Option<DataType> {
     if let LogicalPlan::Projection(projection) = input {
         let expr = projection.expr.get(position)?;
-        expr.get_type(projection.input.schema()).ok()
+        let unaliased = match expr {
+            Expr::Alias(alias) => alias.expr.as_ref(),
+            other => other,
+        };
+        let inner = match unaliased {
+            Expr::Cast(cast) => cast.expr.as_ref(),
+            Expr::TryCast(cast) => cast.expr.as_ref(),
+            other => other,
+        };
+        inner.get_type(projection.input.schema()).ok()
     } else {
         input
             .schema()
@@ -165,6 +168,31 @@ fn union_input_type(input: &LogicalPlan, position: usize) -> Option<DataType> {
             .get(position)
             .map(|field| field.data_type().clone())
     }
+}
+
+fn refuse_in_recursive(recursive: &RecursiveQuery) -> DataFusionResult<()> {
+    let operation = if recursive.is_distinct {
+        "UNION"
+    } else {
+        "UNION ALL"
+    };
+    for (position, static_field) in recursive.static_term.schema().fields().iter().enumerate() {
+        let Some(source) = source_type_at(&recursive.recursive_term, position) else {
+            continue;
+        };
+        if let Some(mismatch) = first_struct_name_mismatch(static_field.data_type(), &source) {
+            return Err(refusal(
+                operation,
+                position,
+                "recursive term",
+                static_field.name(),
+                static_field.data_type(),
+                &source,
+                &mismatch,
+            ));
+        }
+    }
+    Ok(())
 }
 
 fn refuse_in_join(join: &Join) -> DataFusionResult<()> {
@@ -190,16 +218,16 @@ fn refuse_in_join(join: &Join) -> DataFusionResult<()> {
         else {
             return Ok(());
         };
-        if !is_bare_column(left_expr, left_field.name())
-            || !is_bare_column(right_expr, right_field.name())
+        if !is_key_column(left_expr, left_field.name())
+            || !is_key_column(right_expr, right_field.name())
         {
             return Ok(());
         }
     }
     for (position, (left_expr, right_expr)) in join.on.iter().enumerate() {
         let (Ok(left), Ok(right)) = (
-            left_expr.get_type(join.left.schema()),
-            right_expr.get_type(join.right.schema()),
+            beneath_cast(left_expr).get_type(join.left.schema()),
+            beneath_cast(right_expr).get_type(join.right.schema()),
         ) else {
             continue;
         };
@@ -207,10 +235,11 @@ fn refuse_in_join(join: &Join) -> DataFusionResult<()> {
             let Some(column) = left_fields.get(position) else {
                 continue;
             };
+            let table = table_ordinal(1);
             return Err(refusal(
                 operation,
                 position,
-                1,
+                &table,
                 column.name(),
                 &left,
                 &right,
@@ -221,8 +250,20 @@ fn refuse_in_join(join: &Join) -> DataFusionResult<()> {
     Ok(())
 }
 
-fn is_bare_column(expr: &Expr, name: &str) -> bool {
-    matches!(expr, Expr::Column(column) if column.name == name)
+fn beneath_cast(expr: &Expr) -> &Expr {
+    match expr {
+        Expr::Cast(cast) => cast.expr.as_ref(),
+        Expr::TryCast(cast) => cast.expr.as_ref(),
+        other => other,
+    }
+}
+
+fn is_key_column(expr: &Expr, name: &str) -> bool {
+    matches!(beneath_cast(expr), Expr::Column(column) if column.name == name)
+}
+
+fn table_ordinal(input_index: usize) -> String {
+    format!("{} table", ordinal(input_index + 1))
 }
 
 fn ordinal(one_based: usize) -> String {
@@ -246,7 +287,7 @@ fn ordinal(one_based: usize) -> String {
 fn refusal(
     operation: &str,
     position: usize,
-    input_index: usize,
+    table: &str,
     column: &str,
     left: &DataType,
     right: &DataType,
@@ -254,12 +295,12 @@ fn refusal(
 ) -> DataFusionError {
     DataFusionError::Plan(format!(
         "[INCOMPATIBLE_COLUMN_TYPE] {operation} can only be performed on tables with \
-         compatible column types. The {} column of the {} table is \"{right}\" type which is \
+         compatible column types. The {} column of the {} is \"{right}\" type which is \
          not compatible with \"{left}\" at the same column of the first table. Struct field \
          names differ at {}{}: [{}] versus [{}]; RePark pairs struct fields by name in set \
          operations, so it refuses field names that differ in order or set.",
         ordinal(position + 1),
-        ordinal(input_index + 1),
+        table,
         column,
         mismatch.path,
         mismatch.right_names.join(", "),

@@ -308,7 +308,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   lines).
   **SOURCE-URL-REDACT-1 (2026-10-06):** re-exports `repark_common::redaction` as `repark_core::redaction`, the
   binding's path to the redactor (no new crate edge).
-  **STRUCT-SETOP-REORDER-REFUSAL-1 delta 1 (2026-11-08):** `insert_struct_setop_before_coercion` joins the `session` list; shed line: the `// === Time travel ===` header (still 156).
+  **STRUCT-SETOP-REORDER-REFUSAL-1 delta #2 (2026-11-09):** `insert_struct_setop_after_coercion` joins the `session` list; shed line: the `// === Time travel ===` header (still 156).
 - `iceberg_path.rs` (+ [iceberg_path/](iceberg_path/map.md)) — **U10 / R-DF-LOAD-PATH +
   R-DF-LOAD-METADATA-JSON (2026-09-23):** `ReparkSession::read_iceberg_path`, the
   `format("iceberg").load(<path>)` arm — Spark's `IcebergSource` rule applied at the

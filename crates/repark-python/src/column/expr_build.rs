@@ -276,7 +276,7 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
     let mut config = SessionConfig::new();
     config.options_mut().sql_parser.dialect = datafusion::config::Dialect::Databricks;
     config.options_mut().sql_parser.enable_ident_normalization = false;
-    let rules = repark_core::insert_struct_setop_before_coercion(
+    let rules = repark_core::insert_struct_setop_after_coercion(
         datafusion::optimizer::Analyzer::new().rules,
     )?;
     let rules = repark_functions::analyzer_rules_with_higher_order_preparation(rules)?;
@@ -813,7 +813,7 @@ mod tests {
     }
 
     #[test]
-    fn expr_context_seats_struct_setop_names_before_coercion() {
+    fn expr_context_seats_struct_setop_names_after_coercion() {
         let names: Vec<String> = build_expr_context()
             .unwrap()
             .state()
@@ -830,11 +830,6 @@ mod tests {
             .iter()
             .position(|name| name == "type_coercion")
             .unwrap();
-        let subscript = names
-            .iter()
-            .position(|name| name == "spark_map_subscript")
-            .unwrap();
-        assert!(seat < coercion);
-        assert!(seat < subscript);
+        assert_eq!(seat, coercion + 1);
     }
 }

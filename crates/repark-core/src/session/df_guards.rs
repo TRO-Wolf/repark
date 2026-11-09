@@ -26,7 +26,7 @@ pub(crate) mod self_join;
 pub(crate) mod skipping_limit;
 pub(crate) mod sort_names;
 mod struct_setop;
-pub use struct_setop::insert_struct_setop_before_coercion;
+pub use struct_setop::insert_struct_setop_after_coercion;
 pub(super) mod subquery;
 mod window_rescan;
 mod written_names;
@@ -102,7 +102,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
 pub(super) fn analyzer_rules_with_df_54_1_rule_guards()
 -> DataFusionResult<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
     let rules = window_rescan::analyzer_rules_with_sliding_rescan();
-    struct_setop::insert_struct_setop_before_coercion(rules)
+    struct_setop::insert_struct_setop_after_coercion(rules)
 }
 
 /// DataFusion's recommended rule list with `push_down_leaf_projections` wrapped.

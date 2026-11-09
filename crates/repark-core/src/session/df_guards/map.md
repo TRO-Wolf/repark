@@ -8,8 +8,8 @@ wrapped optimizer rule) and declares this directory.
 
 ## Contents
 
-- [struct_setop.rs](struct_setop.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** the `struct_setop_names` analyzer rule refuses a set operation whose struct operands differ in field-name order or set at any depth. It sits before `type_coercion`: DataFusion's struct coercion pairs fields by name, so after it the `Cast` has already chosen names.  **Item 5:** join refusals name `INTERSECT ALL` / `EXCEPT ALL` from any non-`Distinct` left side.
-  **Delta 1 (2026-11-08):** `insert_struct_setop_before_coercion` is `pub` to the crate root so the Python expression context seats the same rule ahead of `type_coercion` too.
+- [struct_setop.rs](struct_setop.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** the `struct_setop_names` analyzer rule refuses struct operands differing in field-name order or set at any depth. Delta #2 seats it after `type_coercion`, reading every operand beneath one cast against the union schema; a `RecursiveQuery` arm compares the recursive term source types against the static term.
+  **Delta 1 (2026-11-08):** `insert_struct_setop_after_coercion` is `pub` to the crate root for the Python expression context seat. **Item #5:** join refusals name `INTERSECT ALL` / `EXCEPT ALL` from any non-`Distinct` left side.
 - `skipping_limit.rs` — **OFFSET-NESTED-SORT-1 (2026-10-08):** a guard for a DataFusion 54.1.0
   defect. DataFusion's `EnforceSorting` rule (its sort pushdown,
   `datafusion-physical-optimizer` `enforce_sorting/sort_pushdown.rs`) treats a
