@@ -37,7 +37,7 @@ agent prepares and verifies; it does not merge and it does not self-approve.
 1. **`Cargo.toml`** — bump `[workspace.package] version`. This is the single version SSOT;
    maturin injects it into the wheel (pyproject `dynamic = ["version"]`). Bump nowhere else.
 2. **`Cargo.lock`** — regenerate with
-   `cargo update --workspace --offline`. The diff must be exactly the nine `repark-*`
+   `cargo update --workspace --offline`. The diff must be exactly the eleven `repark-*`
    workspace members' `version` lines and nothing more. (This is the one sanctioned lockfile
    edit; outside a release PR the lockfiles are untouchable — AGENTS.md.)
 3. **`STATUS.md`** — rewrite "Release state" and "Release blockers" to the new truth; update
@@ -89,5 +89,5 @@ docs/release.md. The pipeline publishes the wheel only.
 - The `release` environment approval can race: if the owner approves in the UI while an agent
   is polling, the agent's approval call 422s ("no pending deployment"). Harmless — confirm the
   run finished instead of retrying.
-- The lock delta drifting beyond the nine member lines means `cargo update` pulled dependency
+- The lock delta drifting beyond the eleven member lines means `cargo update` pulled dependency
   churn — regenerate offline, never ship extra churn in a release PR.
