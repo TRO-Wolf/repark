@@ -3,8 +3,8 @@
 > **ARCHIVED 2026-11-09** — the text below stood in [STATUS.md](../../../STATUS.md) under
 > "Current milestone" until that date and is kept for provenance, **not as a source of live
 > rules or state**. It was moved word for word; relative links were repaired for this location and
-> nothing else changed. The standing decision it names (the v1 predecessor is bugfix-only) stays in
-> STATUS.md. Current state: [STATUS.md](../../../STATUS.md).
+> nothing else changed. The standing decision (the v1 predecessor is bugfix-only) and the API-freeze
+> sentence stay in STATUS.md. Current state: [STATUS.md](../../../STATUS.md).
 
 **Milestone one is COMPLETE** and there is no in-flight *port* work; its record is under
 [Delivered capabilities](../../../STATUS.md#delivered-capabilities) above.

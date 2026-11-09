@@ -19,7 +19,7 @@ As of 2026-11-09.
   the wrong rows ([Known correctness issues](#known-correctness-issues)).
 - **Labels:** format-v2 WITHDRAWN; format-v3 core HARDENED-NARROW; nanosecond columns and struct
   writes EXPERIMENTAL ([Iceberg maturity](#iceberg-maturity-2026-10-27)).
-- **In flight:** STRUCT-SETOP-REORDER-REFUSAL-1 (#1283), waiting on its verifier re-check.
+- **In flight:** STRUCT-SETOP-REORDER-REFUSAL-1 (#1283), awaiting its verifier re-check.
 - **Next:** the rest of v1.5.7 ([Release blockers](#release-blockers)).
 
 ## Release state
@@ -66,9 +66,10 @@ Levels: the [2026-10-13 re-rating](docs/artifacts/iceberg-rerating-2026-10-13.ht
 forward target.** New engine work happens here; a defect both engines share is fixed there and
 re-ported rather than patched only here.
 
-**Milestone one is COMPLETE**; what followed it, through the first tagged release, is
-[recorded](docs/history/port-v2/status-sequence-after-milestone-one.md). The production cutover
-inventory: [docs/cutover/inventory.md](docs/cutover/inventory.md) (2026-09-04, single-writer-per-table).
+**Milestone one is COMPLETE**; what followed is
+[recorded](docs/history/port-v2/status-sequence-after-milestone-one.md). The API freeze is pinned
+at 888 names; v1.0.0 was cut on the north-star gate line V1-GATE wrote the same day. The production
+cutover [inventory](docs/cutover/inventory.md): 2026-09-04, single-writer-per-table.
 
 ## Active workstreams
 
@@ -200,7 +201,7 @@ entry rather than moving it. Nothing is described in both places.
 - **Struct comparison pairs fields by name (S1, write reach; fix scheduled for v1.5.7)** —
   STRUCT-COMPARE-BY-POSITION-1,
   [card](task/roadmap/mid-term/struct-compare-by-position-1-card-2026-11-09.md); measured on the
-  1.5.6 wheel 2026-11-09; the workaround is in the
+  1.5.6 wheel 2026-11-09; workaround:
   [1.5.6 notes](task/roadmap/mid-term/v1-5-6-release-notes-2026-11-08.md#known-issues).
 - **FNP-8 residuals** — **BACKLOG (2026-09-07)**: [FNP8-NULLABILITY and following rows](docs/spark-sql-iceberg-parity.md#fnp8-nullability--higher-order-result-metadata-retains-inherited-nullable-fields).
 - **Identifier case folding** — **DECLARED (2026-08-10)**: registry
