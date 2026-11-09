@@ -58,11 +58,10 @@ mod update_fields;
 // --- The Session surface (v1 names, courtesy `Session` alias).
 pub use repark_common::java_case::{fold_b_equal, string_lower_equal};
 pub use session::read_postgres::{PostgresRead, PostgresTarget, READ_POSTGRES_SOURCE};
-pub use session::write_postgres;
 pub use session::{
     DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSession as Session, ReparkSessionBuilder,
     frame_names, insert_struct_setop_after_coercion, resolve_bound_expr, resolve_scoped_expr,
-    resolve_subquery_plan, writer_layout,
+    resolve_subquery_plan, write_postgres, writer_layout,
 };
 
 // === Session timezone ===
@@ -100,6 +99,7 @@ pub use partition_overwrite_mode::{
 };
 pub use session_owner::{DescribeOwnerConfig, session_owner_snapshot, with_session_owner};
 
+// === Time travel ===
 pub use time_travel::{
     ReaderTimeTravel, branch_time_travel_refusal, invalid_version_pin, parse_version_value,
     resolve_reader_spec, resolve_snapshot_id,

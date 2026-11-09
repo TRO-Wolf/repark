@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 
 from repark import ReparkSession
-from repark.spark import functions as F  # noqa: N812 — PySpark idiom
+from repark.spark import functions as F  # noqa: N812
 from repark.spark.session import _reset_active_session_for_tests
 
 A1B2 = "named_struct('a', 1, 'b', 2)"

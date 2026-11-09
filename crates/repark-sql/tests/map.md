@@ -13,7 +13,7 @@ holds behavior observed from outside the crate.
 
 ## Contents
 
-- [struct_setop_reorder_refusal.rs](struct_setop_reorder_refusal.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** the set-operation domain table on the ANSI, DataFusion and Spark doors over v2-cow: reordered struct operands refuse with the unit text, identical-struct controls answer the measured rows, refusals write nothing. Item 5 names `INTERSECT ALL` / `EXCEPT ALL` for join refusals.
+- [struct_setop_reorder_refusal.rs](struct_setop_reorder_refusal.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** the set-operation domain table on the ANSI, DataFusion, Spark doors over v2-cow: reordered struct operands refuse with the unit text, identical-struct controls answer the measured rows, refusals write nothing. Item #5 names `INTERSECT ALL` / `EXCEPT ALL` for join refusals.
 - [empty_dml_shared_guard.rs](empty_dml_shared_guard.rs) — **EMPTY-DML-SHARED-GUARD-1 (2026-11-08):** the Step 0.3 empty-DML table on the ANSI, DataFusion and Spark doors over v2-cow, v2-mor and v3: rows, snapshot, files, v3 lineage, the `count` report; `RESIDUES` lists the measured cells outside the clause.
 - [map_struct_key_subscript.rs](map_struct_key_subscript.rs) and [map_struct_key_subscript_2.rs](map_struct_key_subscript_2.rs) — **MAP-STRUCT-KEY-SUBSCRIPT-1 (2026-11-01, AUD-016; rounds 1 to 4):** struct-key subscripts on each door against Spark 4.1.2: 29 tests first file, 9 second (signed zero and NaN, session zone, element casts, the ANSI gate).
 - `write_door_native.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** pins 1-4 and the WS2-20 pin: `every_value_writing_door_passes_the_stage`, `a_missing_kernel_refuses_on_every_routed_door`, `the_sink_guard_never_fires_on_a_routed_door`, `a_plain_update_from_add_months_stores_session_midnight` and `a_partition_overwrite_guards_an_integer_overflow_at_plan_time`.
@@ -51,8 +51,8 @@ holds behavior observed from outside the crate.
   metadata delete. A whole-file `DELETE` removes the file in ONE `delete` snapshot with no delete file,
   under both delete modes; a no-match commits the empty `delete` snapshot; a partial
   `DELETE` writes a position delete; `DELETE FROM t` with no predicate empties the table;
-  and the case pins hold the door's rule — an UNQUOTED wrong-cased column folds, a QUOTED
-  one keeps the refusal and touches no file.
+  and the case pins hold the door's rule — an UNQUOTED wrong-cased column folds (its
+  planner lower-cases it), a QUOTED one keeps the refusal and touches no file.
   Its `ident` helper is an associated function: `unused_self` fires on a method under `--all-targets` (2026-09-20).
   **ICE-META-DELETE-1 step 6 (2026-09-19):** this unit's clause citations live in this map, not the source — the comment ban covers doc comments too.
 - `ansi_nested_ddl_oracle.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the ANSI
@@ -73,7 +73,7 @@ holds behavior observed from outside the crate.
   Already green here before the V-001 fix (no double-quote refusal), so they pin behaviour,
   not the fix. `ctas_filtering_a_type_keyword_column_answers_spark_rows_on_the_ansi_door`
   replays the two CTAS cells with their inserts and compares Spark's rows. The `map` cell was
-  red before V-002 (`map ( 5 AND map ) 0`). The `struct` cell still refuses with sqlparser's STRUCT-literal parse error (IDENT-STRUCT-KW-1).
+  red before V-002 (`map ( 5 AND map ) 0`). The `struct` cell must still refuse with sqlparser's STRUCT-literal parse error (IDENT-STRUCT-KW-1), and it reports a mismatch the day it answers.
 - `alter_nested_column.rs` — **ICE-NESTED-EVO-1 (2026-09-17):**
   `nested_add_rename_and_drop_on_the_ansi_door` pins the nested DDL end to end:
   `CREATE TABLE … (s STRUCT<a INT, b VARCHAR>)`, `ADD COLUMN s.c BIGINT`,
@@ -82,17 +82,17 @@ holds behavior observed from outside the crate.
 - `alter_column_move.rs` — **ICE-COLUMN-REORDER-1 (2026-09-17, round 2 Q-20b-5):**
   `alter_column_move_reorders_and_noop_writes_no_metadata` pins the ANSI-door move
   (reorder, no-op commits nothing (R-001), unknown and dotted `AFTER` refuse Spark-style).
-- `alter_map_key.rs` — **MAP-KEY-ALTER-1 (2026-11-03):** the ANSI door refuses a drop, rename or add under a map key in Spark's text; a key-child move no-ops unless after itself.
+- `alter_map_key.rs` — **MAP-KEY-ALTER-1 (2026-11-03):** the ANSI door refuses map-key drop, rename or add in Spark's text; a key-child move no-ops unless after itself.
 - `ansi_door_string_literals.rs` — **SQP-1 control (C-006):** the native/ANSI door keeps generic literal semantics (backslash literal, `\'` does not lex, raw strings refuse) — Spark-only (ADR-0002).
-- `parser_productions.rs` — pins stock-parser support and the productions that still require pre-parse recognition (`ALTER … SET PROPERTIES`, `ALTER … EXECUTE`, `FOR … AS OF`).
+- `parser_productions.rs` — pins stock-parser support and productions still needing pre-parse recognition (`ALTER … SET PROPERTIES`, `ALTER … EXECUTE`, `FOR … AS OF`).
 - `ansi_write_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** ANSI-door
-  `INSERT` with a column list fills an omitted `write_default` column through the
+  `INSERT` with a column list fills an omitted `write_default` column via the
   shared `insert_defaults` step, and a missing required column refuses with the
   same nullability text as the Spark door.
   **Round 5 (2026-09-17, run 21b, ruling Q-21b-3):** the ANSI door's PARTITION
   arms too — `INSERT OVERWRITE t (cols) PARTITION (k)` and
-  `… (cols) PARTITION (k = v)` fill an omitted defaulted column instead of
-  writing NULL (dynamic, the V3-03b silent-wrong) or refusing
+  `… (cols) PARTITION (k = v)` fill an omitted defaulted column rather than
+  NULL (dynamic, the V3-03b silent-wrong) or refusing
   `NOT_ENOUGH_DATA_COLUMNS` (static).
   Round 5, ruling Q-21b-4: `DEFAULT` as a value on the ANSI PARTITION overwrite fills
   (the ANSI router runs the marker pass before dispatch; whole-table overwrite stays
@@ -105,14 +105,14 @@ holds behavior observed from outside the crate.
   refuses `STATIC_PARTITION_COLUMN_IN_INSERT_COLUMN_LIST`; arity and duplicate-name
   refusals write nothing.
   **IPI-51 PR9 (2026-09-21):** short positional `VALUES` refuses
-  `INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS` / `21S01` with the backticked
+  `INSERT_COLUMN_ARITY_MISMATCH.NOT_ENOUGH_DATA_COLUMNS` / `21S01` with backticked
   table, table-column and synthetic `col1`/`col2` params and writes nothing; correct-arity
-  VALUES and the named-list fill still succeed, and SELECT-short / wide / mixed / overwrite /
-  missing-table shapes carry no such condition.
+  VALUES and named-list fills still succeed, and SELECT-short / wide / mixed / overwrite /
+  missing-table shapes lack it.
 - `ansi_update_cast.rs` — **IPI-51 PR10 (2026-09-22):** the ANSI door's
   `W-UPDATE-TYPE-ERR` pins over `ice.sales.t (id BIGINT, data STRING)`: a string literal
-  into BIGINT stamps `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000` with
-  the backticked column and `"STRING"`/`"BIGINT"`; numeric and string-to-string UPDATE
+  into BIGINT stamps `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000`,
+  backticked column and `"STRING"`/`"BIGINT"`; numeric and string-to-string UPDATE
   statements succeed; a missing table keeps its own error.
   pins: ipi-51/W-UPDATE-TYPE-ERR
 - `ice_tsns_type_planner_1_lattice.rs` — **ICE-TSNS-TYPE-PLANNER-1 step 1 (2026-10-13):** planner and lattice pins on a Spark-door and an `AnsiDialect` session over one four-column batch: `written_type_names_plan_to_the_spark_types_on_both_doors`, `mixed_unit_positions_take_the_finest_unit_on_both_doors`, `join_keys_share_the_finest_unit_in_the_optimized_plan`, `equal_units_plan_no_cast_on_both_doors`, `the_ansi_door_plans_timestamp_as_the_wall_and_timestamptz_as_the_instant` (ruling 94), `an_aggregate_zero_takes_the_unit_of_its_array_elements` (M3), `a_union_distinct_over_tagged_fields_takes_the_finest_unit_on_both_doors` (M3), `a_widened_position_equals_its_written_nanosecond_cast_on_both_doors` (H7).
@@ -142,29 +142,29 @@ holds behavior observed from outside the crate.
   `WHERE true` to the ruling-90 text, seeded rows unchanged.
 - `ansi_subquery_where_identity.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16, owner
   ruling 106 (a)):** the ANSI door answers its five identity forms with Spark 4.1.2's rows:
-  `UPDATE … WHERE id IN (SELECT …)` and `DELETE … WHERE` with `id IN (SELECT …)`, a correlated
-  `EXISTS`, `id NOT IN (SELECT …)` and an `EXISTS` that matches no row. The router passes the
-  identity exemption to the shared G3-E8 refusal; without it these five statements refuse.
-  Green on main and head.
+  `UPDATE … WHERE id IN (SELECT …)` and `DELETE … WHERE id IN (SELECT …)`, a correlated
+  `EXISTS`, `id NOT IN (SELECT …)` and a match-nothing `EXISTS`. The router passes the
+  identity exemption to the shared G3-E8 refusal; these five refuse without it. Green on
+  main and head.
 - `ansi_explain_dml_write.rs` — **EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 138, 140 to 142):**
-  the ANSI door's twin of the wrapper pins, seeded as `ansi_subquery_where_identity.rs` is,
+  the ANSI door's twin of the wrapper pins, seeded as `ansi_subquery_where_identity.rs`,
   each seed guarded by an `IcebergTableScan` check (106 P2 finding VF-1).
   `the_ansi_door_refuses_an_explain_analyze_of_a_write` and
   `the_ansi_door_refuses_a_prepared_write_and_leaves_nothing_to_execute`: `DELETE`, `UPDATE`,
-  `INSERT` and `MERGE`, plain and `IN (SELECT …)`, plus `VERBOSE`, `PREPARE` around
+  `INSERT`, `MERGE`, plain and `IN (SELECT …)`, plus `VERBOSE`, `PREPARE` around
   `EXPLAIN ANALYZE` and a parameterised `PREPARE`, each refuse with the wrapper's ruled text,
   `EXECUTE p` finds nothing, rows and snapshots hold. On main each ran.
   `the_ansi_door_still_answers_a_prepared_query_and_a_plain_explain` is the control.
   **Fix round 1 (2026-10-21, verifier S1-1):** `the_ansi_door_refuses_every_spelling_of_a_wrapped_write`:
-  a trailing `;`, a leading `--` comment line and lower case under both wrappers; red when the
+  trailing `;`, leading `--` comment line and lower case under both wrappers; red when the
   refusal is skipped on a trailing `;`.
 - `ansi_ntz_wall_cast.rs` — **WO NTZ-1 verifier fold (2026-09-28):** the ANSI door
-  resolves the NTZ wall-cast UDF its UPDATE/MERGE wrap sites emit: UPDATE and MERGE
-  into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched and inserted
-  rows) and the column stays naive; both pins red without the `on_session_built`
+  resolves the NTZ wall-cast UDF UPDATE/MERGE wrap sites emit: UPDATE and MERGE
+  into a naive `TIMESTAMP(6)` column store the walls (matched, unmatched, inserted
+  rows) and the column stays naive; both pins red without `on_session_built`
   registration (`UNRESOLVED_ROUTINE`).
   **WO NTZ-STORE-DOORS-1 (2026-09-28):**
-  `ansi_merge_into_an_instant_column_keeps_the_utc_reading` pins the ANSI door's MERGE
+  `ansi_merge_into_an_instant_column_keeps_the_utc_reading` pins ANSI-door MERGE
   UPDATE and INSERT of a naive wall into a `TIMESTAMP(6) WITH TIME ZONE` column at the
   UTC reading, green before and after the store-cast change.
 
@@ -180,10 +180,10 @@ holds behavior observed from outside the crate.
 - `ctas_nullable.rs` — **CUTOVER-SCHEMA-1 (2026-09-04):** CTAS over a non-null parquet read
   commits every Iceberg field optional and reads every Arrow field nullable, Spark-equal;
   the tighten-derived refusal still fires on a genuinely non-nullable source.
-- `session_wiring.rs` — the door's REACHABILITY: `AnsiDialect` on a real
-  `ReparkSession` through `with_sql_dialect`, driving schema DDL, CTAS,
-  INSERT and a typed read through `session.sql`, plus a refusal that survives the session
-  boundary. It lives out here because "reachable through a session" is what a unit
+- `session_wiring.rs` — the door's REACHABILITY: `AnsiDialect` installed on a real
+  `ReparkSession` through `ReparkSessionBuilder::with_sql_dialect`, driving schema DDL, CTAS,
+  INSERT and a typed read through `session.sql`, plus a refusal that must survive the
+  session boundary. It lives out here because "reachable through a session" is what a unit
   test calling `AnsiDialect.execute(...)` on a bare `SessionContext` cannot show
   (`surfaces::SQL_DIALECT_SEAM`). **A11:**
   `ansi_column_def_nanosecond_timestamp_shapes_refuse` — native ANSI column-def
