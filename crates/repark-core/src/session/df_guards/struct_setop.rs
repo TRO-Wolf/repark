@@ -9,80 +9,7 @@ use datafusion::logical_expr::{
 };
 use datafusion::optimizer::AnalyzerRule;
 
-pub(crate) struct StructNameMismatch {
-    pub(crate) path: String,
-    pub(crate) left_names: Vec<String>,
-    pub(crate) right_names: Vec<String>,
-}
-
-pub(crate) fn first_struct_name_mismatch(
-    left: &DataType,
-    right: &DataType,
-) -> Option<StructNameMismatch> {
-    mismatch_at(left, right, String::new())
-}
-
-fn mismatch_at(left: &DataType, right: &DataType, path: String) -> Option<StructNameMismatch> {
-    match (left, right) {
-        (DataType::Struct(left_fields), DataType::Struct(right_fields)) => {
-            let left_names: Vec<&str> = left_fields
-                .iter()
-                .map(|field| field.name().as_str())
-                .collect();
-            let right_names: Vec<&str> = right_fields
-                .iter()
-                .map(|field| field.name().as_str())
-                .collect();
-            if left_names != right_names {
-                return Some(StructNameMismatch {
-                    path,
-                    left_names: left_names.iter().map(ToString::to_string).collect(),
-                    right_names: right_names.iter().map(ToString::to_string).collect(),
-                });
-            }
-            for (left_field, right_field) in left_fields.iter().zip(right_fields.iter()) {
-                let mut child = path.clone();
-                child.push('.');
-                child.push_str(left_field.name());
-                if let Some(found) =
-                    mismatch_at(left_field.data_type(), right_field.data_type(), child)
-                {
-                    return Some(found);
-                }
-            }
-            None
-        }
-        (DataType::List(left), DataType::List(right))
-        | (DataType::LargeList(left), DataType::LargeList(right))
-        | (DataType::FixedSizeList(left, _), DataType::FixedSizeList(right, _))
-        | (DataType::ListView(left), DataType::ListView(right)) => {
-            mismatch_at(left.data_type(), right.data_type(), format!("{path}[]"))
-        }
-        (DataType::Map(left_entries, _), DataType::Map(right_entries, _)) => {
-            let (Some((left_key, left_value)), Some((right_key, right_value))) = (
-                map_key_and_value(left_entries.data_type()),
-                map_key_and_value(right_entries.data_type()),
-            ) else {
-                return None;
-            };
-            mismatch_at(left_key, right_key, format!("{path}{{key}}"))
-                .or_else(|| mismatch_at(left_value, right_value, format!("{path}{{value}}")))
-        }
-        (DataType::Dictionary(_, left_value), DataType::Dictionary(_, right_value)) => {
-            mismatch_at(left_value, right_value, path)
-        }
-        _ => None,
-    }
-}
-
-fn map_key_and_value(entries: &DataType) -> Option<(&DataType, &DataType)> {
-    if let DataType::Struct(fields) = entries
-        && let [key, value] = &fields[..]
-    {
-        return Some((key.data_type(), value.data_type()));
-    }
-    None
-}
+use super::struct_walk::{StructNameMismatch, first_struct_name_mismatch};
 
 #[derive(Debug, Default)]
 pub struct StructSetopNames;
@@ -292,17 +219,32 @@ fn refusal(
     right: &DataType,
     mismatch: &StructNameMismatch,
 ) -> DataFusionError {
+    let detail = match mismatch {
+        StructNameMismatch::Names {
+            path,
+            left_names,
+            right_names,
+        } => format!(
+            "Struct field names differ at {column}{path}: [{}] versus [{}]",
+            right_names.join(", "),
+            left_names.join(", ")
+        ),
+        StructNameMismatch::Unpaired {
+            path,
+            left: left_nested,
+            right: right_nested,
+        } => format!(
+            "Struct field names differ at {column}{path}: [{}] versus [{}]",
+            right_nested, left_nested
+        ),
+    };
     DataFusionError::Plan(format!(
         "[INCOMPATIBLE_COLUMN_TYPE] {operation} can only be performed on tables with \
          compatible column types. The {} column of the {} is \"{right}\" type which is \
-         not compatible with \"{left}\" at the same column of the first table. Struct field \
-         names differ at {}{}: [{}] versus [{}]; RePark pairs struct fields by name in set \
-         operations, so it refuses field names that differ in order or set.",
+         not compatible with \"{left}\" at the same column of the first table. {detail}; RePark \
+         pairs struct fields by name in set operations, so it refuses field names that differ in \
+         order or set.",
         ordinal(position + 1),
         table,
-        column,
-        mismatch.path,
-        mismatch.right_names.join(", "),
-        mismatch.left_names.join(", "),
     ))
 }

@@ -8,7 +8,7 @@ wrapped optimizer rule) and declares this directory.
 
 ## Contents
 
-- [struct_setop.rs](struct_setop.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** `struct_setop_names` refuses struct operands differing in field-name order or set, any depth. Delta #2 seats it post `type_coercion`: operands read beneath every stacked cast against the union schema; the `RecursiveQuery` arm checks recursive-term source types against the static term.
+- [struct_setop.rs](struct_setop.rs), [struct_walk.rs](struct_walk.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** `struct_setop_names` refuses struct operands differing in field-name order or set, any depth. Delta #2 seats it post `type_coercion`: operands read beneath stacked casts against the union schema; the `RecursiveQuery` arm checks recursive-term source types against the static term. **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** the comparison is the shared `struct_walk` walker (peel encodings, recurse list kinds freely, refuse unpaired struct pairs), called by all three arms.
   **Delta 1 (2026-11-08):** `insert_struct_setop_after_coercion` reaches the crate root for Python's expression context. **Item #5:** refusals name `INTERSECT ALL` / `EXCEPT ALL` without `Distinct` left.
 - `skipping_limit.rs` — **OFFSET-NESTED-SORT-1 (2026-10-08):** a guard for a DataFusion 54.1.0
   defect. DataFusion's `EnforceSorting` rule (its sort pushdown,
@@ -40,14 +40,11 @@ wrapped optimizer rule) and declares this directory.
   the rule optimizes alone. What the guard gives up: DataFusion could merge a refining
   outer sort (`ORDER BY v, k` over `ORDER BY v`) into the sort below the limit; stock's one-sort plan for that shape answered rightly.
   The guard's plan is two sorts, the inner `SortExec` and a second `SortExec` above the `GlobalLimitExec`; with a small `OFFSET` the second re-sorts nearly the whole relation.
-  Verifier-measured (2026-10-08, `ci` profile, 11 rounds, guard vs stock):
-  `SELECT s, j FROM (SELECT s, j FROM big ORDER BY j OFFSET 10) ORDER BY j, s` over a 1M-row
-  memory table at 8 partitions ran 136.3 ms guarded vs 76.3 ms stock, +78.4% (second run
+  Verifier-measured (2026-10-08, `ci` profile, 11 rounds, guard vs stock): over a 1M-row
+  memory table at 8 partitions the refining outer sort ran +78.4% guarded (second run
   +83.7%; stock-vs-stock floor +2.3%). **OPEN for the owner:** accept the cost, or a
-  follow-up that lets the rule merge the two sorts when the outer sort refines the inner one.
-  Statements without an `OFFSET` pay none of it: the verifier's `ci`-profile measurements
-  (not the thin-LTO release profile) found none 2% outside the floor (`SELECT 1` +0.17%,
-  floor -0.21%; TopK over 1M rows +0.58%, floor +0.22%; table in the unit ledger, section 9).
+  follow-up that merges the two sorts when the outer refines the inner. Statements without
+  an `OFFSET` pay none of it (full table in the unit ledger, section 9).
   Routes not taken: a repair after the rule (the original `fetch` is gone by then); splitting
   the limit into `skip` over `fetch` (the rule then pushes the sort through the skip-only half).
   **Retire** at the DataFusion bump that fixes the pushdown: the two

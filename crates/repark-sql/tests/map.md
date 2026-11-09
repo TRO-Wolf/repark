@@ -1,10 +1,8 @@
 # map — repark-sql/tests
 
-WO U5 PR3 (2026-09-25): `cross_door.rs` renames with each door's own target spelling (ANSI `ice.sales.orders_v2`, Spark `sales.orders_v2`): the Spark door reads a `RENAME TO` target inside the source catalog (D-RENAME-TABLE).
+WO U5 PR3 (2026-09-25): `cross_door.rs` renames with each door's target spelling (ANSI `ice.sales.orders_v2`, Spark `sales.orders_v2`); the Spark door reads a `RENAME TO` target inside the source catalog (D-RENAME-TABLE).
 
-ICE-MIXED-CASE-1 (2026-09-17): `cross_door.rs` ROW 8 pins the identifier-case-folding split — ANSI refuses, Spark resolves.
-
-CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
+ICE-MIXED-CASE-1 (2026-09-17): `cross_door.rs` ROW 8 pins the identifier-case split — ANSI refuses, Spark resolves.
 
 ## Purpose
 
@@ -13,16 +11,16 @@ end-to-end battery is in `../src/tests.rs`.
 
 ## Contents
 
-- [struct_setop_reorder_refusal.rs](struct_setop_reorder_refusal.rs), [setop_reorder_common/mod.rs](setop_reorder_common/mod.rs), [struct_setop_reorder_refusal_delta2.rs](struct_setop_reorder_refusal_delta2.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** the domain-table suite on ANSI, DataFusion, Spark over v2-cow (reordered operands refuse, controls answer, refusals persist nothing): four tests over shared harness (doors, shapes, renders, refusal checks, drivers; subset use per target, hence the module-level `dead_code` allow).
+- [struct_setop_reorder_refusal.rs](struct_setop_reorder_refusal.rs), [setop_reorder_common/mod.rs](setop_reorder_common/mod.rs), [struct_setop_reorder_refusal_delta2.rs](struct_setop_reorder_refusal_delta2.rs), [struct_setop_type_family_1.rs](struct_setop_type_family_1.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** the domain-table suite on ANSI, DataFusion, Spark over v2-cow (reordered operands refuse, controls answer, refusals persist nothing): four tests over shared harness (doors, shapes, renders, refusal checks, drivers; subset use per target, hence the module-level `dead_code` allow).
   Delta #2 (2026-11-09): delta2 rows on native+ANSI, read and insert — NULL-first unions, views, PREPARE, recursive CTE, row 12 (`STRUCT-SETOP-USER-CAST-OVERREFUSAL-1`), join-cast control, `STRUCT-USER-CAST-POSITIONAL-1_divergence`.
-  Item #5 names `INTERSECT ALL` / `EXCEPT ALL` for join refusals.
-- [empty_dml_shared_guard.rs](empty_dml_shared_guard.rs) — **EMPTY-DML-SHARED-GUARD-1 (2026-11-08):** the Step 0.3 empty-DML table on the ANSI, DataFusion and Spark doors over v2-cow, v2-mor and v3: rows, snapshot, files, v3 lineage, the `count` report; `RESIDUES` lists the measured cells outside the clause.
-- [map_struct_key_subscript.rs](map_struct_key_subscript.rs) and [map_struct_key_subscript_2.rs](map_struct_key_subscript_2.rs) — **MAP-STRUCT-KEY-SUBSCRIPT-1 (2026-11-01, AUD-016; rounds 1 to 4):** struct-key subscripts on each door against Spark 4.1.2: 29 tests first file, 9 second (signed zero and NaN, session zone, element casts, the ANSI gate).
+  Item #5 names `INTERSECT ALL` / `EXCEPT ALL` for join refusals; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** the native `arrow_cast` pairs and recursive row, both forms.
+- [empty_dml_shared_guard.rs](empty_dml_shared_guard.rs) — **EMPTY-DML-SHARED-GUARD-1 (2026-11-08):** the Step 0.3 empty-DML table on the ANSI, DataFusion and Spark doors over v2-cow, v2-mor and v3: rows, snapshot, files, v3 lineage, the `count` report; `RESIDUES` lists the cells outside the clause.
+- [map_struct_key_subscript.rs](map_struct_key_subscript.rs) and [map_struct_key_subscript_2.rs](map_struct_key_subscript_2.rs) — **MAP-STRUCT-KEY-SUBSCRIPT-1 (2026-11-01, AUD-016; rounds 1 to 4):** struct-key subscripts on each door against Spark 4.1.2: 29 tests first file, 9 second (signed zero and NaN, session zone, element casts, ANSI gate).
 - `write_door_native.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** pins 1-4 and the WS2-20 pin: `every_value_writing_door_passes_the_stage`, `a_missing_kernel_refuses_on_every_routed_door`, `the_sink_guard_never_fires_on_a_routed_door`, `a_plain_update_from_add_months_stores_session_midnight` and `a_partition_overwrite_guards_an_integer_overflow_at_plan_time`.
 - `write_door_native.rs` — **WRITE-SPINE-1 step 2 fix round 2 (2026-10-25):** the two by-name resolution pins: `a_by_name_column_that_differs_only_in_case_resolves_to_its_target` (case-insensitive `resolve_target` fallback, mutant C2) and `a_by_name_frame_in_another_order_resolves_by_name_not_position` (by-name order, mutant C7); both drive `conform_table_frame` on a New York Spark session.
 - [eqdel_dropped_key_door.rs](eqdel_dropped_key_door.rs) — **RP-62-EQDEL-REPIN-1 (2026-10-29, F-EQDEL-DROPPED-KEY-1 at fork `935cc55c`):** the dropped equality-delete key through both doors. Parquet survivors read back in the same and fresh Spark and native sessions (`a_dropped_equality_delete_key_on_parquet_data_reads_back_the_survivors`, `a_dropped_and_re_added_equality_delete_key_on_parquet_data_reads_back_the_survivors`; red at `56aa8913`); Avro and ORC accept the survivors or a `DataInvalid` refusal (`..._on_avro_data_is_loud_or_correct`, `..._on_orc_data_is_loud_or_correct`).
 - [idless_toplevel_door.rs](idless_toplevel_door.rs) — **RP-65-IDLESS-REPIN-1 (2026-11-03, fork `66901f02`):** an id-less arrow-written Parquet file admitted via `add_files`, mapping unset, through the Spark door and an adopted native session: the string/binary pair's reads, answered filters and refusals (`IN` names `=`), the loud narrowed decimal, mapped reads. Red at `56ff5545` except the reordered same-type mapping control.
-- [native_door_delete_format.rs](native_door_delete_format.rs) — **NATIVE-DOOR-DELETE-FORMAT-1 (2026-10-29, closes its card, cites RP-61 C-017):** the native door runs five DML and MERGE shapes on inherited Avro, inherited ORC and explicit-Parquet-delete-format-over-Avro tables; each checks one live position-delete file in the expected format and record count, and the survivors read back in the same and a fresh native session (`native_dml_and_merge_on_inherited_avro_write_and_read_back_an_avro_delete` and its ORC and explicit-Parquet siblings).
+- [native_door_delete_format.rs](native_door_delete_format.rs) — **NATIVE-DOOR-DELETE-FORMAT-1 (2026-10-29, closes its card, cites RP-61 C-017):** the native door runs five DML and MERGE shapes on inherited Avro/ORC and explicit-Parquet-delete-format-over-Avro tables; each checks one live position-delete file in the expected format and record count, and the survivors read back in the same and a fresh native session (`native_dml_and_merge_on_inherited_avro_write_and_read_back_an_avro_delete` and its ORC and explicit-Parquet siblings).
 - [staged_publish_cleanup.rs](staged_publish_cleanup.rs) — **STAGED-PUBLISH-CLEANUP-1:** the native door's staged publishes (`pins: staged-publish-cleanup-1/C-001`).
 - [write_door_native.rs](write_door_native.rs) — **WRITE-SPINE-1 step 3a round 2 (2026-10-24, ruling C-009):** the doors no Python spelling executes, one test each, on an ANSI session
   over a memory catalog with a table partitioned by `k`: D15 `INSERT` under a session write
@@ -31,20 +29,15 @@ end-to-end battery is in `../src/tests.rs`.
   rows back. `_write_spine_1_doors.RUST_TESTS` names these functions and the Python
   enumeration test checks each name exists here.
 
-- `pa_local_fs_policy.rs` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04):**
-  the ANSI door's twin of the Spark pins, through `AnsiDialect` on a `ReparkSession` with
-  `SparkExtension` (the opt-in session sets `repark.sql.allowLocalFilesystemDDL=true` at
-  build): the wrapped `COPY`, the symlink escapes, the `..` and dangling-symlink destinations
-  and the byte-5/7/9 locations refuse with the policy error and write nothing; plain
-  `EXPLAIN` answers; the warehouse, in-warehouse-symlink and opt-in controls write. Red on
-  main 5 of 8; the opt-in control of the PA-04 test is red on main because the ANSI door's
-  conf reader never matched the real extension's key.
-  **Fix round (2026-10-15, owner ruling 103):** the ANSI twins of the Spark door's `v01_*`,
-  `v02_*`, `v03_*`, leading-space, symlinked-root and metadata-error pins, each outside pin
-  named "writes outside on today's head" asserting no file in the sibling `out/`; the cwd
-  pins run in a child process of the test binary and restore the cwd.
-  **Fix round 2 (2026-10-16, ruling 114 (b)):** the ANSI twins `rv01_ansi_*`, `rv02_ansi_*`, `rv03_ansi_*`
-  and `ansi_the_cells_of_ruling_114_write_where_the_written_path_lands`: the file at its computed path on a write, none under the base on a refusal.
+- `pa_local_fs_policy.rs` — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04):** the ANSI door's twin of the Spark pins
+  (`AnsiDialect` on a `ReparkSession` with `SparkExtension`; opt-in sets `repark.sql.allowLocalFilesystemDDL=true` at build):
+  wrapped `COPY`, symlink escapes, `..` and dangling-symlink destinations and byte-5/7/9 locations refuse with the policy
+  error and write nothing; plain `EXPLAIN` answers; warehouse, in-warehouse-symlink and opt-in controls write. Red on
+  main 5 of 8; the PA-04 opt-in control is red because the ANSI door's conf reader never matched the extension's key.
+  **Fix round (2026-10-15, owner ruling 103):** the ANSI twins of the Spark door's `v01_*`, `v02_*`, `v03_*`,
+  leading-space, symlinked-root and metadata-error pins, each outside pin named "writes outside on today's head"
+  asserting no file in the sibling `out/`; the cwd pins run in a child process of the test binary and restore the cwd.
+  **Fix round 2 (2026-10-16, ruling 114 (b)):** the ANSI twins `rv01_ansi_*`, `rv02_ansi_*`, `rv03_ansi_*` and `ansi_the_cells_of_ruling_114_write_where_the_written_path_lands`: the file at its computed path on a write, none under the base on a refusal.
 - `ansi_door_u9_types.rs` — **WO U9-TYPES-1 (2026-09-25):** the native door's row for the
   Spark door's new type spellings: `TIMESTAMP_LTZ` in a column definition refuses
   `Unsupported SQL type TIMESTAMP_LTZ` and creates nothing; the empty map is
