@@ -376,11 +376,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   refusal as `false`; the plural path reports refused names in neither list.
   **CSV-INFER-PERF-1 (2026-09-06):** `read_csv` body moved to `read_options.rs`;
   `session.rs` 1002 → 988 and the CAP-1 exception retired (under the default ceiling).
-- `df_guards.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):**
-  `context_with_df_54_1_rule_guards` takes the dialect beside the extension and registers
-  the door's `TypePlanner` (`with_type_planner`) when one of them hands one in; the
-  dialect's `configure_analyzer_rules` runs after the extension's. A session with neither
-  keeps DataFusion's type mapping.
+- `df_guards.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `context_with_df_54_1_rule_guards`
+  takes the dialect beside the extension: it registers a handed-in `TypePlanner` (`with_type_planner`)
+  and runs the dialect's `configure_analyzer_rules` after the extension's. With neither in, DataFusion's type mapping stands.
+- `df_guards.rs` — **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** now re-exports:
+  `insert_struct_setop_after_coercion` up toward the crate root.
 - `df_guards.rs` — the DataFusion **54.1 regression guards**, owned and constructed by CORE
   (design G8). Guard 1 is a configurable scalar-subquery default; guard 2 wraps
   `push_down_leaf_projections`, declining failed rewrites only on an `Unnest` path while keeping
@@ -395,7 +395,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   because the two bugs are:
   * **Guard 1, a config default:** `optimizer.enable_physical_uncorrelated_scalar_subquery =
     false` — the 54.1 physical scalar-subquery path drops a top-level Sort (fuzz-42-1/2). The
-    whole planning mode is bad, so the flag is the switch; it stays a *default*, not a lock (the
+    mode is bad, so the flag is the switch; it stays a *default*, not a lock (the
     builder's `datafusion.*` keys apply after it).
   * **Guard 2, a scoped optimizer RULE** (since **DEFECT-2, 2026-08-18**):
     `unnest_safe_optimizer_rules()` hands `SessionStateBuilder` DataFusion's own rule list with
@@ -409,7 +409,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
     `Unnest` ancestor, or `carries_unnest` in this subtree — a mixed plan's
     non-`Unnest` sibling stays loud. `enable_leaf_expression_pushdown` therefore
     stays at DataFusion's default: the flag
-    would have cost every nested-column query in the engine (measured up to ~8x in one run, load-sensitive ratio, on a filtered
+    would have cost every nested-column query (measured up to ~8x in one run, load-sensitive on a filtered
     wide-struct parquet scan), and declining by shape alone would have cost 11.8x on a
     wide-struct scan that merely has an unnest nearby. Recorded trade: within an
     `Unnest`-carrying subtree the rule's error is swallowed (repark-core has no logging dep), so
@@ -421,18 +421,18 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
     `get_field` over a `SubqueryAlias` of a LEFT JOIN under a filter, which a MERGE insert query
     over a derived source builds; stock 54.1 fails it outright. Only a `Projection` is cloned
     for the decline, and every other inner error stays loud.
-  Pins: all nine live in `tests/df_guard.rs` (below), not in `tests/session.rs`;
+  Pins: all nine live in `tests/df_guard.rs`, not `tests/session.rs`;
   ledger `task/c25-bugfix-ledger.md` → DEFECT-2; the eighth,
-  `a_left_join_projection_the_rule_cannot_rewrite_keeps_its_field_access`, and the ninth,
+  `a_left_join_projection_the_rule_cannot_rewrite_keeps_its_field_access`, and ninth,
   `a_projection_inner_error_that_is_not_an_extraction_collision_stays_loud`.
-  **NEVER-OOM-PANIC-1 (2026-09-16):** `context_with_df_54_1_rule_guards` also appends the
-  `NljBuildSideReset` physical-optimizer rule (guard 3, same 54.1-defect family as the two
-  above): it runs after DataFusion's own physical rules and wraps each nested-loop-join
+  **NEVER-OOM-PANIC-1 (2026-09-16):** `context_with_df_54_1_rule_guards` appends
+  `NljBuildSideReset` physical-optimizer rule (guard 3, same family as two
+  above): after DataFusion's own physical rules it wraps each nested-loop-join
   build side so the OOM fallback's second `execute(0)` meets fresh `RepartitionExec`
   channels. Full design in `../map.md` (`nlj_build_reset.rs`).
-  **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** one more appended physical rule,
-  `ParallelWindowRule`, right after `NljBuildSideReset`. It reads the session's
-  `repark.parallel` carrier and is a no-op when the session was built with
+  **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** one more physical rule,
+  `ParallelWindowRule` after `NljBuildSideReset`, reading the session's
+  `repark.parallel` carrier; a no-op when built with
   `parallel_single_partition(false)`. Full design in `../parallel_window/map.md`.
   **S3 (2026-10-04):** `ParallelProjectionRule` is appended right after `ParallelWindowRule`
   and reads the same carrier.

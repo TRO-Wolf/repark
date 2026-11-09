@@ -296,18 +296,19 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `lib.rs` — **IPI-40 PR6 (2026-09-24):** re-exports `TempViewSession` beside
   `EngineContext` / `SqlDialect`.
   **PERF-DYNFLATTEN-1:** `built_with_debug_assertions()` returns
-  `cfg!(debug_assertions)`. The measurement runner refuses to write a report unless it is
-  false, so an H-3 number can never come from a debug build.
+  `cfg!(debug_assertions)`; the measurement runner writes no report unless it is
+  false, so an H-3 number never comes from a debug build.
   **U10 / R-DF-LOAD-PATH (2026-09-23):** `mod iceberg_path;` joined the module list at
   the exact 155-line baseline; the stale half-comment above the `error_map` re-export
-  (its note is already carried by `session.rs`'s own line) was the line shed for it.
+  (already noted in `session.rs`) was the shed line.
   **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** `fold_a_equal` / `fold_b_equal`
-  join the `session` re-export list (reflowed in place: still 155 lines).
+  join the `session` list (reflowed in place: still 155 lines).
   **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** `fold_a_equal` is
-  `string_lower_equal` (the `Session` alias merged into the list: still 155
+  `string_lower_equal` (alias merged: still 155
   lines).
   **SOURCE-URL-REDACT-1 (2026-10-06):** re-exports `repark_common::redaction` as `repark_core::redaction`, the
   binding's path to the redactor (no new crate edge).
+  **STRUCT-SETOP-REORDER-REFUSAL-1 delta #2 (2026-11-09):** `insert_struct_setop_after_coercion` joins the `session` list, and the `write_postgres` fold into that block holds at 156.
 - `iceberg_path.rs` (+ [iceberg_path/](iceberg_path/map.md)) — **U10 / R-DF-LOAD-PATH +
   R-DF-LOAD-METADATA-JSON (2026-09-23):** `ReparkSession::read_iceberg_path`, the
   `format("iceberg").load(<path>)` arm — Spark's `IcebergSource` rule applied at the
@@ -463,18 +464,17 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `metrics` is `None` (per-execute clones own theirs). A child count other than one is an
   `Internal` error, pinned. Wired in
   `session/df_guards.rs::context_with_df_54_1_rule_guards`.
-  **Round 2 (2026-09-16):** the wrapper carries a `BuildSidePolicy` the rule reads off the
-  join (`NljBuildSideExec` counts its executes; only the first is the in-memory load, the
-  second is always the fallback re-execute). `BuildSidePolicy::for_join` refuses the
-  fallback for DataFusion 54.1's documented unsafe set (LEFT, LEFT SEMI, LEFT ANTI, LEFT
-  MARK with more than one right partition): the second execute returns `ResourcesExhausted`
-  built from the session's own recorded pool text plus `REFUSAL_CONTAINMENT_NOTE` (moved to
-  `pool_refusals.rs` so the export reader reuses the one string), never a row. Every other
-  shape spills, including single-right-partition left-family joins. With no recorded refusal
-  the wrapper spills rather than fabricate. `metrics()` stays `None` (residue R-02). The
-  execute counter is an `AcqRel` atomic with no lock (the two executes are sequential: the
-  fallback runs only after the load resolves); `for_join` takes the one-byte `JoinType` by
-  value and the test-only `policy()` getter is `#[cfg(test)]`.
+  **Round 2 (2026-09-16):** the wrapper carries a `BuildSidePolicy` read off the join
+  (`NljBuildSideExec` counts executes: first is the in-memory load, second always the
+  fallback re-execute). `BuildSidePolicy::for_join` refuses the fallback for 54.1's
+  documented unsafe set (LEFT, LEFT SEMI, LEFT ANTI, LEFT MARK past one right partition):
+  the second execute returns `ResourcesExhausted` from the session's recorded pool text
+  plus `REFUSAL_CONTAINMENT_NOTE` (in `pool_refusals.rs`, shared with the export reader),
+  never a row. Every other shape spills, including single-right-partition left-family
+  joins; with no recorded refusal the wrapper spills rather than fabricate. `metrics()`
+  stays `None` (residue R-02). The counter is a lock-free `AcqRel` atomic (executes are
+  sequential: the fallback runs only after the load resolves); `for_join` takes the
+  one-byte `JoinType` by value and the test-only `policy()` getter is `#[cfg(test)]`.
 - `catalog_config.rs` — the `spark.sql.catalog.<name>.*` → `Vec<CatalogSpec { name, kind,
   props }>` parser (`parse_catalog_specs`, pure/AWS-free). Both prefixes share one keyspace
   (cross-spelling duplicates collapse when identical, fail loud otherwise). Rules: bare
@@ -921,16 +921,16 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   load-bearing part, not the surface, which would have to widen (with its call sites) before a
   distributed backend could exist. Distribution is deferred by decision
   ([../../../docs/adr/0004-server-prep-disciplines.md](../../../docs/adr/0004-server-prep-disciplines.md)).
-- `pre_execute.rs` (+ `pre_execute/tests.rs`) — **the shared pre-execute belt (round 5, Z-2):**
+- `pre_execute.rs` (+ `pre_execute/tests.rs`) — **the shared pre-execute belt (round 5, Z-2):** Delta #2 analyzes each `PREPARE` body.
   `PreExecute` = plan (`create_logical_plan`, no execution) → `guard` (the ONE choke point for
   pre-execute refusals; today the tighten DDL-sink refuse and CFG-2's `refuse_source_ddl`,
-  which refuses `LogicalPlan::Ddl` naming a registered database source — DataFusion's
+  refusing `LogicalPlan::Ddl` naming a registered database source — DataFusion's
   `drop_table`/`drop_view` swallow provider errors into "doesn't exist", and `CREATE CATALOG`
-  would silently replace the source's provider, so the guard is the seam that refuses loud)
+  would silently replace the source's provider, so the guard-seam refuses loud)
   → `execute`. The native door
   (`DataFusionDialect`) runs the whole belt; `repark_sql::router::delegate`,
   `repark_sql::create_table` (CTAS derivation) and `repark_spark::spark_ast::execute_passthrough`
-  call `guard` on their own planned statement. Door-specific guards (SEC-02 local-fs, the Spark
+  call `guard` on their own planned statement. Door-specific guards (SEC-02 local-fs, Spark
   AST rewrites) deliberately stay at the doors. New pre-execute refusals land in `guard`, never
   at a door — per-door wiring missed the native door twice (measured).
 - `dialect.rs`, `extension.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** both seams gain
@@ -951,10 +951,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `execute_identity_or_delegate`); `repark.sql()` has none. Before, the fork provider's
   `update` received the decorrelated subquery as a column of the target's own name and wrote
   nothing. **UPDATE-SET-SUBQUERY-WALK-1 (2026-10-15, owner rulings 99 (c) and 110):**
-  `assigns_a_subquery` walks the whole assigned expression (`Expr::contains_scalar_subquery`),
-  so any scalar subquery in the `SET` value refuses with that same text, including
+  `assigns_a_subquery` walks the whole assigned expression (`contains_scalar_subquery`),
+  so any scalar subquery in the `SET` value refuses with that text including
   `1 + (SELECT …)`, `(SELECT …) + 1`, `-(SELECT …)`, `abs((SELECT …))`,
-  `CASE … THEN (SELECT …) END`, `COALESCE((SELECT …), 0)` and a struct built around
+  `CASE … THEN (SELECT …) END`, `COALESCE((SELECT …), 0)` and a struct around
   `(SELECT …)`. A subquery in the `WHERE` only stays silent. The identity path still runs
   first and is unchanged. Storing the value is card `update-subquery-store-1`.
 - `dialect.rs` (+ `dialect/tests.rs`) — the SQL dialect seam (design §3): `EngineContext`

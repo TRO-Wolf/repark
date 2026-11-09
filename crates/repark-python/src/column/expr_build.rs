@@ -276,9 +276,10 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
     let mut config = SessionConfig::new();
     config.options_mut().sql_parser.dialect = datafusion::config::Dialect::Databricks;
     config.options_mut().sql_parser.enable_ident_normalization = false;
-    let rules = repark_functions::analyzer_rules_with_higher_order_preparation(
+    let rules = repark_core::insert_struct_setop_after_coercion(
         datafusion::optimizer::Analyzer::new().rules,
     )?;
+    let rules = repark_functions::analyzer_rules_with_higher_order_preparation(rules)?;
     let rules = repark_spark::spark_literal_typing::insert_literal_rule_before_coercion(rules)?;
     let mut rules = repark_functions::collection::insert_map_subscript_before_coercion(rules)?;
     rules.push(std::sync::Arc::new(repark_spark::FoldSparkNumericCasts));
@@ -809,5 +810,26 @@ mod tests {
             comparison_literal(&parse_canonical_predicate_exact(&default, "v = 'it''s'").unwrap()),
             "it's"
         );
+    }
+
+    #[test]
+    fn expr_context_seats_struct_setop_names_after_coercion() {
+        let names: Vec<String> = build_expr_context()
+            .unwrap()
+            .state()
+            .analyzer()
+            .rules
+            .iter()
+            .map(|rule| rule.name().to_string())
+            .collect();
+        let seat = names
+            .iter()
+            .position(|name| name == "struct_setop_names")
+            .unwrap();
+        let coercion = names
+            .iter()
+            .position(|name| name == "type_coercion")
+            .unwrap();
+        assert_eq!(seat, coercion + 1);
     }
 }
