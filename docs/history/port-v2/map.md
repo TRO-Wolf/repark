@@ -20,6 +20,9 @@ and dated corrections (see [README.md](README.md) "Rules for this directory").
   plus the thirteen promotions FD-4 landed — eleven before the `git mv`, two more found at its
   adversarial review — and the recorded residue. *(Count corrected 2026-08-10; it read "eleven",
   which is the pre-move subset, not the total the ledger states.)*
+- [status-sequence-after-milestone-one.md](status-sequence-after-milestone-one.md) — the
+  "What happens next" sequence that stood in STATUS.md under "Current milestone" until 2026-11-09
+  (front door, hardening, the cutover inventory, the first tagged release), moved word for word.
 - **Execution briefs** (what a phase was asked to do): [phase-0-bootstrap.md](phase-0-bootstrap.md),
   [phase-1-engine-core.md](phase-1-engine-core.md), [phase-2-sql-doors.md](phase-2-sql-doors.md),
   [phase-3-python-facade.md](phase-3-python-facade.md).

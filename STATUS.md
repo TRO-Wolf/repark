@@ -9,6 +9,19 @@
 
 _Last updated: 2026-11-09._
 
+## Now
+
+As of 2026-11-09.
+
+- **Shipped:** v1.5.6 ([Release state](#release-state)).
+- **Open S1 with write reach on the shipped wheel:** struct comparisons pair fields by name where
+  Spark pairs by position, so a `DELETE`, `UPDATE` or `MERGE` comparing reordered structs acts on
+  the wrong rows ([Known correctness issues](#known-correctness-issues)).
+- **Labels:** format-v2 WITHDRAWN; format-v3 core HARDENED-NARROW; nanosecond columns and struct
+  writes EXPERIMENTAL ([Iceberg maturity](#iceberg-maturity-2026-10-27)).
+- **In flight:** STRUCT-SETOP-REORDER-REFUSAL-1 (#1283), waiting on its verifier re-check.
+- **Next:** the rest of v1.5.7 ([Release blockers](#release-blockers)).
+
 ## Release state
 
 **v1.5.6 (2026-11-08):** the empty-DML guard (EMPTY-DML-SHARED-GUARD-1, #1277: a DELETE or UPDATE whose condition folds to no rows writes nothing and reports zero rows), and the rest of the cycle, listed in the [notes](task/roadmap/mid-term/v1-5-6-release-notes-2026-11-08.md). Tagged `v1.5.6` at `ae60c359`; on PyPI with five wheels. The v2 production label is not part of this release (ruling A, 2026-11-08); the v3 label moves to a later release. Qualification: [record](task/roadmap/mid-term/v1-5-6-qualification-record.md).
@@ -49,24 +62,13 @@ Levels: the [2026-10-13 re-rating](docs/artifacts/iceberg-rerating-2026-10-13.ht
 
 ## Current milestone
 
-**Milestone one is COMPLETE** and there is no in-flight *port* work; its record is under
-[Delivered capabilities](#delivered-capabilities) above.
-
 **Standing decision: the private v1 predecessor is bugfix-only, and this repository is the sole
 forward target.** New engine work happens here; a defect both engines share is fixed there and
 re-ported rather than patched only here.
 
-What happens next, in order:
-
-1. **Agent-Agnostic Front-Door** — **DONE (2026-08-10):** [docs/history/frontdoor/](docs/history/frontdoor/README.md), [task/metrics.md](task/metrics.md).
-2. **V2 Engine Hardening** — the active engine campaign; its state is the H-2 entry in [Active workstreams](#active-workstreams). The Y/Z/W/V/S wave records are indexed in [task/ledgers/archive/2026-08/map.md](task/ledgers/archive/2026-08/map.md).
-3. **Production-pipeline cutover inventory** — **Filed 2026-09-04:** [docs/cutover/inventory.md](docs/cutover/inventory.md), under **single-writer-per-table**, with each rollback story; its §7 carries the four owner rulings of the same day.
-4. **The first tagged release** — **DONE**: see [Release state](#release-state). The API freeze is pinned at 888 names in [docs/design/v1-0-api-freeze.json](docs/design/v1-0-api-freeze.json) (policy: [docs/release.md](docs/release.md) "Versioning policy"); v1.0.0 was cut on the north-star gate line V1-GATE wrote the same day.
-
-Owner-side actions that rode this sequence are **DISCHARGED — no owner-side tier-2 action
-remains** (aws-acceptance green 2026-08-10; the parity-live half on first-run evidence; three
-stale always-PASS Apache smoke pins are known-FAIL meta pins). Pre-scrub content stays reachable
-in [p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md) by explicit decision.
+**Milestone one is COMPLETE**; what followed it, through the first tagged release, is
+[recorded](docs/history/port-v2/status-sequence-after-milestone-one.md). The production cutover
+inventory: [docs/cutover/inventory.md](docs/cutover/inventory.md) (2026-09-04, single-writer-per-table).
 
 ## Active workstreams
 
@@ -184,8 +186,8 @@ written by `scripts/ledger_lifecycle.py compact` when a workstream's marker says
 
 ## Known correctness issues
 
-Carried debt from the port; each is a real defect, honestly tracked, not a blocker for the state
-above.
+A defect with its fix scheduled comes first. Debt carried from the port follows; each is a real
+defect, honestly tracked, not a blocker for the state above.
 
 **Where each fact lives.** This section is the authoritative home for an issue with **no
 disposition yet** — its state *and* enough description to be understood. Once an issue is disposed
@@ -195,6 +197,11 @@ this file keeps one line of state plus a link. A known **defect with its fix sch
 divergence and gets no row: it stays here until the fix lands, and the fixing unit deletes the
 entry rather than moving it. Nothing is described in both places.
 
+- **Struct comparison pairs fields by name (S1, write reach; fix scheduled for v1.5.7)** —
+  STRUCT-COMPARE-BY-POSITION-1,
+  [card](task/roadmap/mid-term/struct-compare-by-position-1-card-2026-11-09.md); measured on the
+  1.5.6 wheel 2026-11-09; the workaround is in the
+  [1.5.6 notes](task/roadmap/mid-term/v1-5-6-release-notes-2026-11-08.md#known-issues).
 - **FNP-8 residuals** — **BACKLOG (2026-09-07)**: [FNP8-NULLABILITY and following rows](docs/spark-sql-iceberg-parity.md#fnp8-nullability--higher-order-result-metadata-retains-inherited-nullable-fields).
 - **Identifier case folding** — **DECLARED (2026-08-10)**: registry
   [ID-1](docs/spark-sql-iceberg-parity.md); revisiting it needs a new dated decision.
@@ -264,6 +271,9 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**None.** v1.5.0 cut 2026-09-27; the tag history is in [Release state](#release-state).
+**For v1.5.7** (content: owner, 2026-11-08 and 2026-11-09): STRUCT-SETOP-REORDER-REFUSAL-1
+(#1283), STRUCT-COMPARE-BY-POSITION-1 and SIGNED-ZERO-NORMALIZE-1
+([sketch](task/wo/signed-zero-normalize-1/sketch.md)). **For the format-v2 label:**
+[Iceberg maturity](#iceberg-maturity-2026-10-27). Tag history: [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).
