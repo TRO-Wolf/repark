@@ -1912,6 +1912,8 @@ A unit's pin binding is its `<unit>-pins.md` beside its ledger (one `C-NNN: <pat
 
 - [dq-identifiers-config-refuse-1-ledger.md](dq-identifiers-config-refuse-1-ledger.md) — **DQ-IDENTIFIERS-CONFIG-REFUSE-1 (completed 2026-11-05, PR #1266, `6a8e4c33`):** the double-quoted-identifiers configuration is refused loudly on every set path (AUD-021); clauses C-001 to C-008 PROVEN or records, C-009 to C-018 OPEN as the residue card's cells; pins in [dq-identifiers-config-refuse-1-pins.md](dq-identifiers-config-refuse-1-pins.md).
 
+- [empty-dml-shared-guard-1-ledger.md](empty-dml-shared-guard-1-ledger.md) — **EMPTY-DML-SHARED-GUARD-1 (completed 2026-11-08, PR #1277, `03f925c5`):** a DELETE or UPDATE whose input folds to no rows plans as a zero-count no-op before the provider runs; clauses C-001 to C-005, C-007 to C-010 and C-017 PROVEN, C-006 and C-011 to C-016 OPEN as the cards of this unit; pins in [empty-dml-shared-guard-1-pins.md](empty-dml-shared-guard-1-pins.md).
+
 ## Pointers
 - Up: [../map.md](../map.md)
 - Policy: [../../../AGENTS.md](../../../AGENTS.md) "Markdown document lifecycle"

@@ -1542,6 +1542,22 @@ perfectly good read.
   `UNRESOLVED_COLUMN` for the field name (UPDATE) retire on the Spark door. The native ANSI
   door keeps its nested-assignment refusal (`crates/repark-sql/src/merge.rs`).
 
+#### EMPTY-DML-SHARED-GUARD-1-D1 — a no-op UPDATE, and `DELETE … WHERE NULL` on v2-cow and v3, commit an empty snapshot on Spark and nothing on RePark — **DECLARED 2026-11-08**
+
+- **repark** — a DELETE or UPDATE whose WHERE folds to no rows answers count 0, commits no snapshot and writes no data file, on v2-cow, v2-mor and v3, on the SQL doors and the facade. The predicates are those of the Step 0.3 table: `WHERE false`, `NULL`, `arr[1] = 1 AND 1 = 0`, the struct spelling, `1 = 0`, `prim_col = NULL` and `id IS NULL` on a required column. The metadata-delete residue of `DELETE … WHERE id IS NULL` on the facade is not this row.
+- **Apache Spark** — commits an empty snapshot (the snapshot count goes up by one, with no data file added or changed) for a no-op UPDATE with each predicate above on v2-cow, v2-mor and v3, and for `DELETE … WHERE NULL` on v2-cow and v3. *(oracle: recorded, Spark 4.1.2 + Iceberg 1.11.0, 2026-11-08; cells `a-false`, `b-arr-and-false`, `b-struct-null`, `c-one-eq-zero`, `c-prim-eq-null` and `u-required-is-null` for UPDATE, and `a-null` for DELETE, in [spark.jsonl](../task/wo/empty-dml-shared-guard-1/evidence/raw/spark.jsonl).)*
+- **Pin** — `python/repark/tests/writes/test_empty_dml_shared_guard_1.py::test_an_empty_dml_writes_and_commits_nothing`, the snapshot expectation over the same cells on every kind.
+  pins: empty-dml-shared-guard-1/C-009
+- **Rationale** — DECLARED under ruling D of 2026-11-08 ("A-D defaults"): the guard writes and commits nothing, and Spark's empty-snapshot commits are the declared difference. The ruling names no table kind; the measured cells show the empty commit on v2-mor for UPDATE as well, and this row covers it.
+
+#### EMPTY-DML-SHARED-GUARD-1-D2 — `UPDATE … WHERE NULL` and `DELETE … WHERE NULL` on v2 are refused by Spark, and answer count 0 on RePark — **DECLARED 2026-11-08**
+
+- **repark** — `UPDATE … WHERE NULL` on v2-cow, v2-mor and v3, and `DELETE … WHERE NULL` on v2-mor, answer count 0 and commit nothing.
+- **Apache Spark** — refuses `UPDATE … WHERE NULL` on v2-cow and v3 with `[INTERNAL_ERROR] Invalid call to nullable on unresolved object` (SQLSTATE XX000), and both `DELETE … WHERE NULL` and `UPDATE … WHERE NULL` on v2-mor with `[DATATYPE_MISMATCH.FILTER_NOT_BOOLEAN]` (SQLSTATE 42K09; the filter's type is VOID). *(oracle: recorded, Spark 4.1.2 + Iceberg 1.11.0, 2026-11-08; cells `a-null` in [spark.jsonl](../task/wo/empty-dml-shared-guard-1/evidence/raw/spark.jsonl).)*
+- **Pin** — `python/repark/tests/writes/test_empty_dml_shared_guard_1.py::test_an_empty_dml_writes_and_commits_nothing`, the `a-null` cells of both verbs on every kind.
+  pins: empty-dml-shared-guard-1/C-010
+- **Rationale** — DECLARED under ruling D of 2026-11-08 ("A-D defaults"), which names Spark's INTERNAL_ERROR and FILTER_NOT_BOOLEAN cells. The guard answers the statement as a zero-count no-op; Spark's refusal class is the declared difference, not a parity claim.
+
 #### RTAS-OPS-1 — `[CREATE OR ]REPLACE TABLE [… AS SELECT]` snapshot operation stamps
 
 - **repark** — **both spellings reach the same paths (IPI-25, 2026-09-20):** `REPLACE TABLE …`
