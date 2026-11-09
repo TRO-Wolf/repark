@@ -7,11 +7,11 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-11-08._
+_Last updated: 2026-11-09._
 
 ## Release state
 
-**v1.5.6 (release prep 2026-11-08, untagged):** the empty-DML guard (EMPTY-DML-SHARED-GUARD-1, #1277: a DELETE or UPDATE whose condition folds to no rows writes nothing and reports zero rows), and the rest of the cycle, listed in the [notes](task/roadmap/mid-term/v1-5-6-release-notes-2026-11-08.md). The v2 production label is not part of this release (ruling A, 2026-11-08); the v3 label moves to a later release. Qualification: [record](task/roadmap/mid-term/v1-5-6-qualification-record.md).
+**v1.5.6 (2026-11-08):** the empty-DML guard (EMPTY-DML-SHARED-GUARD-1, #1277: a DELETE or UPDATE whose condition folds to no rows writes nothing and reports zero rows), and the rest of the cycle, listed in the [notes](task/roadmap/mid-term/v1-5-6-release-notes-2026-11-08.md). Tagged `v1.5.6` at `ae60c359`; on PyPI with five wheels. The v2 production label is not part of this release (ruling A, 2026-11-08); the v3 label moves to a later release. Qualification: [record](task/roadmap/mid-term/v1-5-6-qualification-record.md).
 
 **v1.5.5 (2026-10-13):** R-008 (every write door stores INSERT's instant into `timestamptz_ns`), the frame door (R-019), `current_date` in the session zone, the Postgres write core and routing, the merge module split. Matrix 705/132/5/0 (2026-10-13). Tagged `v1.5.5` at `7fb5f6b2` (re-tag, #1127). [Notes](task/roadmap/mid-term/v1-5-5-release-notes-2026-10-13.md). The re-tag also ships U-1, U-3, U-5, U-6, U-7 (reconciled 2026-10-22).
 
