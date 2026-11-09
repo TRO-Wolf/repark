@@ -151,16 +151,7 @@ fn refuse_in_union(union: &Union) -> DataFusionResult<()> {
 fn source_type_at(input: &LogicalPlan, position: usize) -> Option<DataType> {
     if let LogicalPlan::Projection(projection) = input {
         let expr = projection.expr.get(position)?;
-        let unaliased = match expr {
-            Expr::Alias(alias) => alias.expr.as_ref(),
-            other => other,
-        };
-        let inner = match unaliased {
-            Expr::Cast(cast) => cast.expr.as_ref(),
-            Expr::TryCast(cast) => cast.expr.as_ref(),
-            other => other,
-        };
-        inner.get_type(projection.input.schema()).ok()
+        beneath_casts(expr).get_type(projection.input.schema()).ok()
     } else {
         input
             .schema()
@@ -226,8 +217,8 @@ fn refuse_in_join(join: &Join) -> DataFusionResult<()> {
     }
     for (position, (left_expr, right_expr)) in join.on.iter().enumerate() {
         let (Ok(left), Ok(right)) = (
-            beneath_cast(left_expr).get_type(join.left.schema()),
-            beneath_cast(right_expr).get_type(join.right.schema()),
+            beneath_casts(left_expr).get_type(join.left.schema()),
+            beneath_casts(right_expr).get_type(join.right.schema()),
         ) else {
             continue;
         };
@@ -250,16 +241,24 @@ fn refuse_in_join(join: &Join) -> DataFusionResult<()> {
     Ok(())
 }
 
-fn beneath_cast(expr: &Expr) -> &Expr {
-    match expr {
-        Expr::Cast(cast) => cast.expr.as_ref(),
-        Expr::TryCast(cast) => cast.expr.as_ref(),
+fn beneath_casts(expr: &Expr) -> &Expr {
+    let mut current = match expr {
+        Expr::Alias(alias) => alias.expr.as_ref(),
         other => other,
+    };
+    loop {
+        if let Expr::Cast(cast) = current {
+            current = cast.expr.as_ref();
+        } else if let Expr::TryCast(cast) = current {
+            current = cast.expr.as_ref();
+        } else {
+            return current;
+        }
     }
 }
 
 fn is_key_column(expr: &Expr, name: &str) -> bool {
-    matches!(beneath_cast(expr), Expr::Column(column) if column.name == name)
+    matches!(beneath_casts(expr), Expr::Column(column) if column.name == name)
 }
 
 fn table_ordinal(input_index: usize) -> String {
