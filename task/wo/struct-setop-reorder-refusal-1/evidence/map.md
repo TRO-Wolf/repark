@@ -5,5 +5,9 @@
 - [raw/repark-main-fdc61f26.jsonl](raw/repark-main-fdc61f26.jsonl) — the release wheel built from `fdc61f26` (200 cells).
 - [setop-table.md](setop-table.md) — the domain table: one row per shape, operation, door and form, with each engine's pairing and the labels for the RePark cell.
 - [provenance.md](provenance.md) — the wheel and jar hashes, the versions, the commands run, the shapes and their spellings, and the deviations from the brief.
+- [probe_setop_controls.py](probe_setop_controls.py) — the unit C probe: identical-struct controls, explicit `UNION DISTINCT`, and the three shared-helper comparison cells on four routes. It loads `probe_setop.py` by path for the shared helpers; `--render` writes the control table. Measurement only.
+- [raw/controls-spark.jsonl](raw/controls-spark.jsonl) — the Spark 4.1.2 leg of the unit C probe (252 cells; the 100 native-door cells are ORACLE-MISSING).
+- [raw/controls-repark-main-fdc61f26.jsonl](raw/controls-repark-main-fdc61f26.jsonl) — the release wheel built from `fdc61f26`, the same probe (252 cells).
+- [controls-table.md](controls-table.md) — the unit C tables: the control rows, the `UNION DISTINCT` rows beside the existing `UNION` cells, the comparison cells, and the label counts.
 
 Up: [../map.md](../map.md).
