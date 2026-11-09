@@ -221,10 +221,12 @@ footer { border-top: 1px solid var(--line); padding-top: 16px; color: var(--mute
         <tr><td>1.7</td><td>Micro-batch CDC from bronze to silver</td><td>The medallion release: bronze ingestion, CDC, silver execution and publication</td></tr>
         <tr><td>1.8</td><td>The inference readers as <code>repark-io</code></td><td>One-to-one I/O parity with Polars</td></tr>
         <tr><td>Distributed</td><td>Sequenced after the 1.12 server core, "a destination, not a contingency"</td><td>"Explicitly not planned"</td></tr>
-        <tr><td>Open rulings</td><td>Two sets are owed: the WAREHOUSE-READS-1 roadmap number and the streaming decisions OD-1 to OD-8</td><td>"None as of 2026-08-29"</td></tr>
+        <tr><td>Open rulings</td><td>The streaming decisions OD-1 to OD-8 are open in the repository; the planning record also owes a roadmap number for WAREHOUSE-READS-1</td><td>"None as of 2026-08-29"</td></tr>
       </tbody>
     </table>
   </div>
+
+  <p class="meta">The roadmap column quotes each row's headline. The 1.5 row's notes also carry PySpark functions parity, added on 2026-09-14, so that difference is narrower than the headlines suggest. The Iceberg parity outcome is not in the row. The hard contradictions are the distributed line, the open rulings and four cross-references that still carry the numbering of 2026-09-13.</p>
 
   <h3>Seven changes to the documents, in order</h3>
   <ol class="steps">
