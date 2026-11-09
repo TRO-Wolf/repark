@@ -834,8 +834,7 @@ def test_element_at_and_get_column_name_direction(spark: ReparkSession) -> None:
 
 
 def test_ansi_pair_is_null_not_a_raise(spark: ReparkSession) -> None:
-    """X9: ``element_at`` out-of-range and ``make_date`` invalid-Y-M-D are NULL
-    here; Spark under ANSI raises.
+    """X9: ``make_date`` invalid-Y-M-D is NULL here; Spark under ANSI raises.
 
     The documented ANSI scope is division / modulo by zero only
     (``docs/guide/session-and-conf.md``); other classes are §7 registry rows.
@@ -844,22 +843,20 @@ def test_ansi_pair_is_null_not_a_raise(spark: ReparkSession) -> None:
     frame = spark.range(1)
     facade = _table(
         frame.select(
-            F.element_at(F.array(F.lit(1), F.lit(2)), 5).alias("oob"),
-            F.element_at(F.array(F.lit(1), F.lit(2)), -5).alias("neg_oob"),
             F.make_date(F.lit(2024), F.lit(2), F.lit(31)).alias("bad_date"),
             F.make_date(F.lit(2024), F.lit(13), F.lit(1)).alias("bad_month"),
         )
     )
-    assert facade.column("oob").to_pylist() == [None]
-    assert facade.column("neg_oob").to_pylist() == [None]
     assert facade.column("bad_date").to_pylist() == [None]
     assert facade.column("bad_month").to_pylist() == [None]
+    for index in (5, -5):
+        with pytest.raises(PySparkException, match="INVALID_ARRAY_INDEX_IN_ELEMENT_AT"):
+            _table(frame.select(F.element_at(F.array(F.lit(1), F.lit(2)), index).alias("oob")))
 
-    door = _table(
-        spark.sql("SELECT element_at(array(1, 2), 5) AS oob, make_date(2024, 2, 31) AS bad_date")
-    )
-    assert door.column("oob").to_pylist() == [None]
+    door = _table(spark.sql("SELECT make_date(2024, 2, 31) AS bad_date"))
     assert door.column("bad_date").to_pylist() == [None]
+    with pytest.raises(PySparkException, match="INVALID_ARRAY_INDEX_IN_ELEMENT_AT"):
+        spark.sql("SELECT element_at(array(1, 2), 5) AS oob").to_arrow()
 
     # The ANSI class that IS implemented still raises — so this is a scoped
     # divergence, not "ANSI is off".

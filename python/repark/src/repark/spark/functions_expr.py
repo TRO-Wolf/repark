@@ -609,13 +609,12 @@ def struct(*cols: Column | str) -> Column:
 
     Lowers to the engine ``struct`` expression over the child columns so ``df.select`` can
     bind field references (free-SQL ``named_struct`` cannot — no FROM schema at construct
-    time). Field names follow argument names; structural ``sql_expr`` still emits
+    time). Field names follow Spark's ``CreateStruct``; structural ``sql_expr`` still emits
     ``named_struct`` for free-SQL surfaces.
     """
     if not cols:
         raise PySparkTypeError("struct() requires at least one column")
     columns: list[Column] = []
-    named_parts: list[str] = []
     display_parts: list[str] = []
     free = False
     for index, item in enumerate(cols):
@@ -636,13 +635,13 @@ def struct(*cols: Column | str) -> Column:
                 },
             )
         columns.append(column)
-        named_parts.append(f"{sql_string_literal(str(field_name))}, {column.sql_expr_part()}")
         display_parts.append(str(field_name))
-    sql = f"named_struct({', '.join(named_parts)})"
+    names = _native.PyColumnParts.struct_field_names([column._inner for column in columns])
+    pairs = list(zip(columns, names, strict=True))
+    sql_parts = [f"{sql_string_literal(name)}, {column.sql_expr_part()}" for column, name in pairs]
+    sql = f"named_struct({', '.join(sql_parts)})"
     display = f"struct({', '.join(display_parts)})"
-    named_natives = [
-        column._inner.alias(str(name)) for column, name in zip(columns, display_parts, strict=True)
-    ]
+    named_natives = [column._inner.alias(name) for column, name in pairs]
     return Column(
         _native.PyColumn.make_struct(named_natives),
         spark_display=display,

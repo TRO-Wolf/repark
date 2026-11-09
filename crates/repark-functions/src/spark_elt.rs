@@ -65,7 +65,7 @@ fn value_type(arg_types: &[DataType]) -> DataType {
         .unwrap_or(DataType::Utf8)
 }
 
-fn invalid_array_index(index: i64, count: usize) -> datafusion::common::DataFusionError {
+pub(crate) fn invalid_array_index(index: i64, count: usize) -> datafusion::common::DataFusionError {
     datafusion::common::DataFusionError::Execution(format!(
         "[INVALID_ARRAY_INDEX] The index {index} is out of bounds. The array has {count} \
          elements. Use the SQL function `get()` to tolerate accessing element at invalid index \

@@ -12,7 +12,12 @@ use datafusion::optimizer::AnalyzerRule;
 use super::key_by_position::{KeyPlan, LeafCaster, key_by_position_udf};
 use super::{element_at_udf, spark_type_name};
 
-const SUBSCRIPT_FUNCTIONS: [&str; 3] = ["get_field", "array_element", "__repark_get_item__"];
+const SUBSCRIPT_FUNCTIONS: [&str; 4] = [
+    "get_field",
+    "array_element",
+    super::GET_ITEM_NAME,
+    super::COLUMN_GET_ITEM_NAME,
+];
 
 #[derive(Debug, Default)]
 pub struct SparkMapSubscript;

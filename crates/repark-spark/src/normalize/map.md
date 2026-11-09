@@ -114,6 +114,22 @@ here and is re-exported in one line.
   holds `strip_create_table_using`, moved here from `../normalize.rs` (comments shed
   in the move) to keep that file at its ceiling. Unit pins are inline in the module;
   the parse-level pins sit beside round 1's in `../tests/ice_ddl_clauses_1.rs`.
+- `struct_position.rs` — **ANSI-SUBSCRIPT-AND-AMBIGUOUS-FIELD-1 delta 2 (2026-11-06):**
+  `StructOperandsByPosition`, seated directly before `type_coercion`: when two struct operands
+  of a comparison or `IN`, or a later `UNION` branch, have the same arity and the same field
+  types by position, the second takes the first's field names through
+  `__repark_struct_by_position__`, so Spark 4.1.2's positional answer holds. Field names that match by
+  the session case rule may widen field types as Spark's tightest common type does (an `IN`
+  list or a `UNION` branch also promotes strings); two same-arity structs that cannot pair refuse
+  with Spark's class for the seat (`BINARY_OP_DIFF_TYPES`, `DATA_DIFF_TYPES`,
+  `INCOMPATIBLE_COLUMN_TYPE`) and both struct types. Delta 3: the rule descends into list
+  elements and map keys and values with the same rules, refuses a map comparison in every seat
+  (`INVALID_ORDERING_TYPE`, through `map_ordering::refuse_in_expr`), and refuses an `IN` subquery
+  whose struct column does not pair (`IN_SUBQUERY_DATA_TYPE_MISMATCH`). `DuplicateFieldOperands`,
+  an expression planner registered by `SparkExtension`, renames a compared struct with duplicate
+  field names to positional names while the SQL is planned, so DataFusion's name-based struct
+  coercion (which asserts on duplicates) never sees it; the rule then pairs or refuses it on the
+  Spark-typed operands. Other shapes are left to `type_coercion`.
 - `statement_guard.rs` — **WO-C10 (2026-09-23):** shared multi-statement refusal plus the
   front-door unclosed bracketed-comment guard. The guard tokenizes with `DatabricksDialect`,
   then scans outer unclosed comments while ignoring quoted text and line comments. It keeps an

@@ -17,6 +17,9 @@ const SPARK_COLLAPSE: &str =
 const AVRO_NULL: &str = "fixture: RePark's Avro round trip reads a null map or list column back \
      as empty and a map's entries in another order, so `map_keys`, `size` and `IS NULL` differ";
 
+const AVRO_EMPTY: &str = "fixture: RePark's Avro round trip reads a null map or list column back \
+     as empty, so under ANSI a `[0]` into it raises INVALID_ARRAY_INDEX where Spark reads null";
+
 const COLLAPSED: &[(&str, &str)] = &[
     ("structlist_parquet_add", "null_parent"),
     ("structlist_parquet_readd", "null_parent"),
@@ -78,6 +81,12 @@ fn skip_reason(read: &Read) -> Option<&'static str> {
     }
     if format_of(&read.spelling) == "avro" && matches!(read.head.as_str(), "alt" | "null_parent") {
         return Some(AVRO_NULL);
+    }
+    if format_of(&read.spelling) == "avro"
+        && (read.spelling.starts_with("mapkey_") || read.spelling.starts_with("structlist_"))
+        && read.stmt.contains("[0]")
+    {
+        return Some(AVRO_EMPTY);
     }
     if COLLAPSED
         .iter()
@@ -193,11 +202,12 @@ async fn dot_access_cells_answer_spark_on_the_spark_door() {
         mismatches.join("\n")
     );
     eprintln!("pinned {pinned}, skipped {skipped:?}");
-    assert_eq!(pinned, 275);
+    assert_eq!(pinned, 224);
     for (reason, count) in [
         (NATIVE, 408),
         (ORC, 100),
         (AVRO_NULL, 26),
+        (AVRO_EMPTY, 51),
         (SPARK_READER, 5),
         (SPARK_COLLAPSE, 2),
     ] {

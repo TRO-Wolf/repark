@@ -30,6 +30,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
+from repark.errors import PySparkException
 from repark_parity import assert_frames_equal
 
 
@@ -154,17 +155,22 @@ def test_array_subscript_is_zero_based(spark: ReparkSession) -> None:
     # The audit's live proof: array(10,20,30)[0] was NULL and [1] was 10 (1-based DataFusion).
     table = spark.sql(
         "SELECT array(10,20,30)[0] AS a, array(10,20,30)[1] AS b, array(10,20,30)[2] AS c, "
-        "array(10,20,30)[3] AS oob, array(10,20,30)[-1] AS neg"
+        "try_element_at(array(10,20,30), 4) AS oob, try_element_at(array(10,20,30), -4) AS neg"
     ).to_arrow()
     assert [column.to_pylist() for column in table.columns] == [[10], [20], [30], [None], [None]]
+    for index in (3, -1):
+        with pytest.raises(PySparkException, match="INVALID_ARRAY_INDEX"):
+            spark.sql(f"SELECT array(10,20,30)[{index}]").to_arrow()
 
 
 def test_element_at_array_is_one_based(spark: ReparkSession) -> None:
     table = spark.sql(
         "SELECT element_at(array(10,20,30), 1) AS first, "
-        "element_at(array(10,20,30), -1) AS last, element_at(array(10,20,30), 4) AS oob"
+        "element_at(array(10,20,30), -1) AS last, try_element_at(array(10,20,30), 4) AS oob"
     ).to_arrow()
     assert [column.to_pylist() for column in table.columns] == [[10], [30], [None]]
+    with pytest.raises(PySparkException, match="INVALID_ARRAY_INDEX_IN_ELEMENT_AT"):
+        spark.sql("SELECT element_at(array(10,20,30), 4)").to_arrow()
 
 
 def test_element_at_zero_index_raises(spark: ReparkSession) -> None:

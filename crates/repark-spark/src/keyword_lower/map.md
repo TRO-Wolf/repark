@@ -11,6 +11,7 @@ lowering it calls first.
 
 ## Contents
 
+- `struct_names.rs` — **ANSI-SUBSCRIPT-AND-AMBIGUOUS-FIELD-1 (2026-11-05; delta 3 2026-11-06):** `name_struct_fields_in_sql` names every unnamed `struct(...)` value as Spark's `CreateStruct` does (the column name for a bare or qualified reference, the string key of a subscript or the last field of a dot access, else `col{i+1}`; an alias keeps its name) by inserting `` AS `name` `` into the statement text. `router::execute_in_session` calls it once on every Spark-door statement, so SELECT, DML, MERGE, CTEs, subqueries, views and EXPLAIN all plan named fields; colliding names then refuse through `SparkFieldAmbiguity`.
 - `ntz_cast_lower.rs` — `lower_timestamp_ntz_cast` rewrites `CAST` / `::` to `TIMESTAMP_NTZ`
   into `__repark_cast_timestamp_ntz__`, `TRY_CAST` / `SAFE_CAST` into
   `__repark_try_cast_timestamp_ntz__`, and a `TIMESTAMP_NTZ` typed string that escaped the

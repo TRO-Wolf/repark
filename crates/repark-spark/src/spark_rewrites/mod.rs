@@ -688,6 +688,12 @@ fn extract_named_struct_value(
     let mut remaining = found.fields.as_slice();
     loop {
         let field = remaining.first()?;
+        let mut named = args
+            .iter()
+            .filter(|(name, _, _)| name.eq_ignore_ascii_case(field));
+        if named.nth(1).is_some() {
+            return None;
+        }
         let (_name, value_start, value_end) =
             args.iter().find(|(name, _, _)| name == field).cloned()?;
         if remaining.len() == 1 {

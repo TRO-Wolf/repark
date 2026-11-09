@@ -27,7 +27,6 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-functions/src/analyzer.rs", 1150),
     ("crates/repark-functions/src/analyzer/time_window/mod.rs", 1416),
     ("crates/repark-functions/src/datetime.rs", 1655),
-    ("crates/repark-functions/src/expr_fn.rs", 1001),
     ("crates/repark-functions/src/spark_time_window.rs", 1125),
     ("crates/repark-iceberg/src/catalog/tests/catalog.rs", 1843),
     ("crates/repark-iceberg/src/write/alter.rs", 1556),
@@ -62,7 +61,7 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark/src/repark/spark/column.py", 1331),
     ("python/repark/src/repark/spark/dataframe/core.py", 3461),
     ("python/repark/src/repark/spark/functions.py", 1908),
-    ("python/repark/src/repark/spark/functions_expr.py", 2171),
+    ("python/repark/src/repark/spark/functions_expr.py", 2170),
     ("python/repark/src/repark/spark/functions_udf.py", 1287),
     ("python/repark/src/repark/spark/ml/feature/_transformers.py", 2717),
     ("python/repark/src/repark/spark/session/session_core.py", 2274),
@@ -171,7 +170,7 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     assert _baselines(python_gate) == python_approved
     assert rust_debt == rust_approved
     assert python_debt == python_approved
-    assert len(rust_approved) == 32
+    assert len(rust_approved) == 31
     assert len(python_approved) == 29
 
 

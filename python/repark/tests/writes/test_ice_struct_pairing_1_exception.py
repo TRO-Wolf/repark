@@ -23,7 +23,6 @@ ROWS_REFUSED_ELSEWHERE = (
     "nocol|field_count_differs",
     "nocol|leaf_types_differ",
     "overwrite_nocol|names_differ",
-    "select_union|names_differ",
 )
 ROWS_CELLS = [("x_rows", key) for key in sorted(ORACLE["x_rows"])]
 ROWS_SPARK_CELLS = [cell for cell in ROWS_CELLS if cell[1] not in ROWS_REFUSED_ELSEWHERE]
