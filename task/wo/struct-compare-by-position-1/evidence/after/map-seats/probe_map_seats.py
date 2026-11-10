@@ -1,0 +1,159 @@
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+HERE = Path(__file__).resolve().parent
+STEP0 = HERE.parents[1] / "step0"
+CLASS = re.compile(r"\[([A-Z][A-Z0-9_]*(?:\.[A-Z0-9_]+)*)\]")
+CREATE = (
+    "CREATE TABLE {t} (id INT, c MAP<STRING, INT>, d MAP<STRING, INT>, note STRING) USING iceberg"
+)
+SEED = "INSERT INTO {t} VALUES (0, map('a', 1), map('a', 1), 'n'), (1, map(), map(), 'n')"
+SOURCE = "(SELECT 0 AS id, map('a', 1) AS m)"
+SQL_CELLS = [
+    ("select", "SELECT id, c = d AS e FROM {t}"),
+    ("where", "SELECT id FROM {t} WHERE c = d"),
+    ("where_ne", "SELECT id FROM {t} WHERE c <> map('a', 1)"),
+    ("where_null_safe", "SELECT id FROM {t} WHERE c <=> d"),
+    ("case_when", "SELECT id, CASE WHEN c = d THEN 1 ELSE 0 END AS e FROM {t}"),
+    ("in_list", "SELECT id FROM {t} WHERE c IN (map('a', 1))"),
+    ("in_subquery", "SELECT id FROM {t} WHERE c IN (SELECT m FROM " + SOURCE + ")"),
+    ("join_on", "SELECT x.id FROM {t} x JOIN " + SOURCE + " y ON x.c = y.m"),
+    ("struct_of_map", "SELECT id FROM {t} WHERE named_struct('k', c) = named_struct('k', d)"),
+    ("update_where", "UPDATE {t} SET note = 'hit' WHERE c = map()"),
+    ("delete_where", "DELETE FROM {t} WHERE c = d"),
+    (
+        "merge_on",
+        "MERGE INTO {t} x USING " + SOURCE + " y ON x.c = y.m "
+        "WHEN MATCHED THEN UPDATE SET note = 'hit'",
+    ),
+    (
+        "merge_matched_and",
+        "MERGE INTO {t} x USING " + SOURCE + " y ON x.id = y.id "
+        "WHEN MATCHED AND x.c = y.m THEN UPDATE SET note = 'hit'",
+    ),
+]
+FRAME_CELLS = [
+    ("df_typed_filter", "w.filter(F.col('c') == F.col('d')).select('id')"),
+    ("df_typed_select", "w.select('id', (F.col('c') == F.col('d')).alias('e'))"),
+    ("df_typed_join", "w.join(spark.sql('SELECT map(\\'a\\', 1) AS m'), F.col('c') == F.col('m'))"),
+    ("df_string_filter", "w.filter(F.expr('c = d')).select('id')"),
+    ("df_string_select", "w.selectExpr('id', 'c = d AS e')"),
+]
+
+
+def value_of(value: Any) -> Any:
+    if hasattr(value, "asDict"):
+        return {key: value_of(item) for key, item in value.asDict().items()}
+    if isinstance(value, dict):
+        return {str(key): value_of(item) for key, item in sorted(value.items())}
+    if isinstance(value, (list, tuple)):
+        return [value_of(item) for item in value]
+    return value
+
+
+def rows_of(frame: Any) -> list[Any]:
+    return sorted(([value_of(item) for item in row] for row in frame.collect()), key=json.dumps)
+
+
+def refusal(error: BaseException) -> dict[str, Any]:
+    text = str(error)
+    found = CLASS.search(text)
+    head = text.strip().splitlines()[0] if text.strip() else ""
+    return {
+        "kind": "error",
+        "type": type(error).__name__,
+        "class": found.group(1) if found else None,
+        "head": head[:160],
+    }
+
+
+def attempt(run: Any) -> dict[str, Any]:
+    try:
+        return {"kind": "rows", "rows": rows_of(run())}
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except BaseException as error:
+        return refusal(error)
+
+
+def run_leg(leg: str, warehouse: str, out: Path) -> None:
+    sys.path.insert(0, str(STEP0))
+    import drive_cmp
+
+    if leg == "spark":
+        spark = drive_cmp.spark_session(warehouse)
+        from pyspark.sql import functions
+    else:
+        spark = drive_cmp.repark_session(warehouse)
+        from repark.spark import functions
+    spark.sql("CREATE NAMESPACE IF NOT EXISTS hd.mp").collect()
+    records = []
+    for index, (seat, stmt) in enumerate(SQL_CELLS + FRAME_CELLS, start=1):
+        table = f"hd.mp.t{index}"
+        spark.sql(CREATE.replace("{t}", table)).collect()
+        spark.sql(SEED.replace("{t}", table)).collect()
+        if seat.startswith("df_"):
+            scope = {"F": functions, "w": spark.table(table), "spark": spark}
+            result = attempt(lambda stmt=stmt, scope=scope: eval(stmt, scope))
+        else:
+            result = attempt(lambda stmt=stmt, table=table: spark.sql(stmt.replace("{t}", table)))
+        after = rows_of(spark.sql(f"SELECT id, note FROM {table}"))
+        records.append({"seat": seat, "stmt": stmt, "leg": leg, "after": after, **result})
+    out.write_text("".join(json.dumps(record, sort_keys=True) + "\n" for record in records))
+    if leg == "spark":
+        spark.stop()
+
+
+def outcome(record: dict[str, Any]) -> str:
+    if record["kind"] == "rows":
+        return f"rows {json.dumps(record['rows'])}"
+    return f"refused {record['class'] or record['type']}"
+
+
+def render(legs: list[str]) -> None:
+    raw = {
+        leg: {
+            record["seat"]: record
+            for record in map(json.loads, (HERE / "raw" / f"{leg}.jsonl").read_text().splitlines())
+        }
+        for leg in legs
+    }
+    header = " | ".join(legs)
+    lines = [
+        "# Map-only comparison seats: Spark 4.1.2, main and head",
+        "",
+        "Generated by `probe_map_seats.py --render` from `raw/<leg>.jsonl`.",
+        "",
+        f"| seat | statement | {header} | after (id, note) per leg | head moved |",
+        "|" + "---|" * (len(legs) + 4),
+    ]
+    for seat, _ in SQL_CELLS + FRAME_CELLS:
+        cells = [outcome(raw[leg][seat]) for leg in legs]
+        after = "; ".join(json.dumps(raw[leg][seat]["after"]) for leg in legs)
+        moved = "yes" if outcome(raw["main"][seat]) != outcome(raw["head"][seat]) else "no"
+        stmt = raw[legs[0]][seat]["stmt"].replace("|", "\\|")
+        lines.append(f"| {seat} | `{stmt}` | {' | '.join(cells)} | {after} | {moved} |")
+    (HERE / "table.md").write_text("\n".join(lines) + "\n")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--leg", choices=("spark", "main", "head"))
+    parser.add_argument("--warehouse")
+    parser.add_argument("--render", action="store_true")
+    arguments = parser.parse_args()
+    if arguments.render:
+        render(["spark", "main", "head"])
+        return
+    (HERE / "raw").mkdir(exist_ok=True)
+    run_leg(arguments.leg, arguments.warehouse, HERE / "raw" / f"{arguments.leg}.jsonl")
+
+
+if __name__ == "__main__":
+    main()

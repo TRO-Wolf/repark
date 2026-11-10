@@ -1,4 +1,4 @@
-# After-table moves by label (head `adaa27494`, release build)
+# After-table moves by label (release build of the item-6 head)
 
 Each table's before leg is RePark 1.5.6, the branch point's product. Each after leg is this head. A move is a cell whose
 label changed between the two legs, both labelled against the same Spark 4.1.2 leg (or the derived oracle). Counts come
@@ -115,3 +115,58 @@ not unit C's. Eight of them moved, and all eight now match Spark:
 - head refuses with `BINARY_OP_DIFF_TYPES` and persists the two seed rows, as Spark 4.1.2 does.
 
 `c3`, the duplicate-name pair, still answers on all four routes, the same as main and Spark.
+
+## Out of clause: map-only comparisons move toward Spark (named for review)
+
+The full facade gate surfaced a map-only comparison that this unit moved:
+
+- **The case.** `test_u9_types_1.py[map]`, step `map/cmp/merge-on`:
+  `MERGE INTO t x USING (SELECT map('a', 1) AS m) y ON x.c = y.m ...` over `MAP<STRING, INT>`.
+- **Before.** On main, RePark committed the update. Residue R-19 recorded that wrong write, and `map/cmp/rows` read
+  `[[0, 'hit'], [1, 'n']]`.
+- **On head.** RePark refuses with Spark's `DATATYPE_MISMATCH.INVALID_ORDERING_TYPE`, and the rows read Spark's
+  `[[0, 'n'], [1, 'n']]`.
+
+The orchestrator ruled to accept the move.
+
+**Why a MAP = MAP comparison reaches this rule.** The orchestrator guessed that a map's entries struct makes
+`holds_struct` true. That is not the path:
+
+- `align_expr` returns at `struct_pair`, because both sides are the same map type (`left != right` fails).
+- The refusal comes from `align_node`. It runs at every plan node that holds a comparison (`has_struct_candidate`
+  matches any comparison operator, `IN` or `element_at`), and it calls `map_ordering::refuse_in_expr` on every leaf
+  expression before `align_expr` runs. That is the carved slice's map-ordering guard.
+- The other doors met `map_ordering`'s check already, through its eager pass over built SQL plans
+  (`analyze_built_plan`). That pass misses two kinds of plan:
+  - the MERGE join, which the Iceberg MERGE path plans outside it;
+  - the DataFrame expression context.
+- This rule sits in the session analyzer and in `build_expr_context`, so it now reaches both.
+
+**Measured against main and Spark.** `map-seats/` holds the probe, three legs and `table.md`. It covers 18 map-only
+seats over `MAP<STRING, INT>`: 13 SQL and 5 DataFrame.
+
+- **Spark 4.1.2** refuses all 18 with `INVALID_ORDERING_TYPE`, and no row changes.
+- **Head moved five seats against main, each to Spark's class:**
+  - `MERGE ... ON x.c = y.m` and `MERGE ... WHEN MATCHED AND x.c = y.m` (main wrote `note = 'hit'` on both, a wrong
+    write);
+  - the typed DataFrame `filter(F.col('c') == F.col('d'))` and `select((F.col('c') == F.col('d')))`;
+  - the string-door `filter(F.expr('c = d'))`.
+- **Unchanged and already refused on main (11):** `select`, `where`, `<>`, `<=>`, `CASE WHEN`, `IN` list, join `ON`,
+  `UPDATE ... WHERE`, `DELETE ... WHERE`, the typed DataFrame join, and `selectExpr`.
+- **Unchanged and still answered where Spark refuses (2), both pre-existing:**
+  - `c IN (SELECT m ...)` answers `[[0]]`;
+  - `named_struct('k', c) = named_struct('k', d)` answers `[[0], [1]]`.
+
+  Both are proposed cards in the hand-back.
+
+**The refusal text.** An analyzer-rule refusal reached the facade wrapped as
+`struct_operands_by_position\ncaused by\nError during planning: [...]`, so the facade parsed no condition.
+
+- `repark-core`'s `error_map` now peels that wrapper to the bare bracketed refusal, as it already does for
+  `join_condition_refusals`. This applies to every refusal of this rule, not only map ones, so each carries its
+  condition and SQLSTATE.
+- `map/cmp/merge-on` now matches Spark's condition, error class and SQLSTATE. Its message is Spark's message without
+  Spark's `; line 1 pos N;` and analyzed-plan tail.
+- That is R-6's text-only difference, so the step moves from R-19 to R-6, recorded exactly.
+- `map/cmp/rows` drops its residue and asserts Spark's rows.
+- `map/cmp/group` keeps R-19. The u9 ledger's R-6 and R-19 rows say so.

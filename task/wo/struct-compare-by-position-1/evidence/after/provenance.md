@@ -1,8 +1,13 @@
 # Provenance: the after-tables
 
-**Build.** The head leg is the release build of `adaa27494` (item 2), made with `maturin develop --release` from a
-tree with no tracked change. `_native.abi3.so` sha256 `65adf5915890e623eb657ea9217d490f59316499d6c722e0affe4ede8276530e`. Interpreter:
-the branch's own venv (CPython 3.12.3). Spark was not re-run: every Spark leg is the before-table's.
+**Build.** The head leg is the release build of the item-6 head (run r6), made with `maturin develop --release`
+from a tree with no uncommitted product change. That build holds:
+
+- the `udf.rs` split;
+- the `error_map` peel of this rule's refusal wrapper.
+
+`_native.abi3.so` sha256 `bc3ad71f8a849e861fe6985e6b78f4391aeb5a4e541c1f5e1e932634fb4cabde`. Interpreter: the branch's
+own venv (CPython 3.12.3). Spark was not re-run: every Spark leg is the before-table's.
 
 **Runs.** Each leg ran as a `repark.slice` unit, from a scratch copy of the committed probe, with a fresh warehouse:
 
@@ -16,9 +21,16 @@ the branch's own venv (CPython 3.12.3). Spark was not re-run: every Spark leg is
 build ran in the probe's `base` slot. The records therefore carry `"leg": "base"`, and the rendered variant tables call
 the head leg `base`.
 
-**Reproducibility.** The same legs were measured on the uncommitted item-2 tree (run r4, the predecessor's) and again
-here on the committed build (run r5). The step-0 records are byte-identical, and the two variant renders are
-byte-identical. The variant records differ only in each cell's `seconds` field.
+**Reproducibility.** Three runs give the same labels:
+
+- r4: the predecessor's run, on the uncommitted item-2 tree;
+- r5: on the release build of `adaa27494` (`_native.abi3.so` sha256 `65adf591…`);
+- r6: on this build.
+
+r5 reproduces r4 exactly: the step-0 records are byte-identical, and the two variant renders are byte-identical. r6
+gives every cell the same label and the same Spark class as r5. The cells that differ are 1196 step-0 records, 21 ext
+rows and 12 seat C rows. They differ only in this rule's refusal text, which now starts at the bracketed class: the
+`struct_operands_by_position` / `caused by` / `Error during planning: ` wrapper is peeled. The committed legs are r6.
 
 **Renders.**
 

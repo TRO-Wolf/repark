@@ -136,7 +136,11 @@ here and is re-exported in one line.
   struct key is reordered against the lookup key refuses with Spark's `MAP_FUNCTION_DIFF_TYPES`
   (step-0 cell 04381). Second, a map-value read (`get_field` over a map) renames the map column
   beneath the field access, so a join key stays a plain expression (ext P33 map-value depth).
-  `map_ordering::refuse_in_expr` widens to `pub(super)` for it. Pins:
+  `map_ordering::refuse_in_expr` widens to `pub(super)` for it: `align_node` runs it on every
+  leaf of a node holding a comparison. Out of clause and named for review, that guard reaches
+  seats `map_ordering`'s eager pass misses (the MERGE join, the DataFrame expression context). A
+  map-only comparison there now refuses with Spark's `INVALID_ORDERING_TYPE`, a move toward Spark
+  (u9 `map/cmp/merge-on`; five seats in `evidence/after/map-seats/`). Pins:
   `struct_position/tests.rs`, `../../tests/struct_compare_by_position.rs`.
 
 ## Pointers
