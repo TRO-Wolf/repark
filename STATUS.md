@@ -19,7 +19,7 @@ As of 2026-11-09.
   the wrong rows ([Known correctness issues](#known-correctness-issues)).
 - **Labels:** format-v2 WITHDRAWN; format-v3 core HARDENED-NARROW; nanosecond columns and struct
   writes EXPERIMENTAL ([Iceberg maturity](#iceberg-maturity-2026-10-27)).
-- **In flight:** none. #1283 merged with F-I open (C-117; blocks v1.5.7).
+- **In flight:** STRUCT-COMPARE-BY-POSITION-1. F-I closed by #1290.
 - **Next:** the rest of v1.5.7 ([Release blockers](#release-blockers)).
 
 ## Release state
