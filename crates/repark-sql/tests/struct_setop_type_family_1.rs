@@ -220,9 +220,7 @@ async fn type_family_recursive_row_refuses_on_native() {
     )
     .await;
     let before = observe(&doors, Door::NativeDataFusion, table).await;
-    if !before.rows.is_empty() {
-        failures.push(format!("read: table not empty {}", before.rows));
-    } else {
+    if before.rows.is_empty() {
         let insert = format!("INSERT INTO ice.ns.{table} {select}");
         let outcome = attempt(session, Door::NativeDataFusion, &insert).await;
         tf1_check_insert(
@@ -235,6 +233,8 @@ async fn type_family_recursive_row_refuses_on_native() {
             &before,
         )
         .await;
+    } else {
+        failures.push(format!("read: table not empty {}", before.rows));
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }

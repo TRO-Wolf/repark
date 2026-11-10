@@ -14,6 +14,7 @@ pub enum StructNameMismatch {
     },
 }
 
+#[must_use]
 pub fn peel_encoding(data_type: &DataType) -> &DataType {
     let mut current = data_type;
     loop {
@@ -25,6 +26,7 @@ pub fn peel_encoding(data_type: &DataType) -> &DataType {
     }
 }
 
+#[must_use]
 pub fn list_element(data_type: &DataType) -> Option<&FieldRef> {
     match data_type {
         DataType::List(field)
@@ -36,6 +38,7 @@ pub fn list_element(data_type: &DataType) -> Option<&FieldRef> {
     }
 }
 
+#[must_use]
 pub fn holds_struct(data_type: &DataType) -> bool {
     match peel_encoding(data_type) {
         DataType::Struct(_) => true,
@@ -50,6 +53,7 @@ pub fn holds_struct(data_type: &DataType) -> bool {
     }
 }
 
+#[must_use]
 pub fn first_struct_name_mismatch(left: &DataType, right: &DataType) -> Option<StructNameMismatch> {
     mismatch_at(left, right, String::new())
 }
@@ -204,12 +208,12 @@ mod tests {
         DataType::Union(fields, UnionMode::Dense)
     }
 
-    fn names(path: &str, left: &[&str], right: &[&str]) -> Option<StructNameMismatch> {
-        Some(StructNameMismatch::Names {
+    fn names(path: &str, left: &[&str], right: &[&str]) -> StructNameMismatch {
+        StructNameMismatch::Names {
             path: path.to_string(),
             left_names: left.iter().map(ToString::to_string).collect(),
             right_names: right.iter().map(ToString::to_string).collect(),
-        })
+        }
     }
 
     #[test]
@@ -220,7 +224,7 @@ mod tests {
                 let right = list_of(right_kind, struct_ba());
                 assert_eq!(
                     first_struct_name_mismatch(&left, &right),
-                    names("[]", &["a", "b"], &["b", "a"]),
+                    Some(names("[]", &["a", "b"], &["b", "a"])),
                     "{left_kind} against {right_kind}"
                 );
                 let same = list_of(right_kind, struct_ab());
@@ -245,7 +249,7 @@ mod tests {
             let right = list_of(right_kind, struct_ba());
             assert_eq!(
                 first_struct_name_mismatch(&left, &right),
-                names("[]", &["a", "b"], &["b", "a"]),
+                Some(names("[]", &["a", "b"], &["b", "a"])),
                 "{left_kind} against {right_kind}"
             );
         }
@@ -276,7 +280,7 @@ mod tests {
         for (left, right) in reordered {
             assert_eq!(
                 first_struct_name_mismatch(&left, &right),
-                names("[]", &["a", "b"], &["b", "a"])
+                Some(names("[]", &["a", "b"], &["b", "a"]))
             );
         }
         let same_ba = list_of("large", struct_ab());
@@ -298,7 +302,7 @@ mod tests {
         let reordered = map_of(("k", "v"), list_of("large", struct_ba()));
         assert_eq!(
             first_struct_name_mismatch(&left, &reordered),
-            names("{value}[]", &["a", "b"], &["b", "a"])
+            Some(names("{value}[]", &["a", "b"], &["b", "a"]))
         );
     }
 
@@ -369,13 +373,13 @@ mod tests {
         let right = list_of("list", list_of("fsl1", list_of("largeview", struct_ba())));
         assert_eq!(
             first_struct_name_mismatch(&left, &right),
-            names("[][][]", &["a", "b"], &["b", "a"])
+            Some(names("[][][]", &["a", "b"], &["b", "a"]))
         );
         let map_left = map_of(("key", "value"), list_of("fsl1", struct_ab()));
         let map_right = map_of(("key", "value"), list_of("fsl2", struct_ba()));
         assert_eq!(
             first_struct_name_mismatch(&map_left, &map_right),
-            names("{value}[]", &["a", "b"], &["b", "a"])
+            Some(names("{value}[]", &["a", "b"], &["b", "a"]))
         );
     }
 }
