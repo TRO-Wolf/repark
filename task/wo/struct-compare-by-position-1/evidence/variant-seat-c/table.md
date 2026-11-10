@@ -1,0 +1,471 @@
+# Variant table, seat C (comparisons)
+
+Extracted verbatim from the variant table rendered by `variant_probe.py --render`: the seat C group section, the seat C DML rows, and the per-cell rows of plans P10 and P10dml.
+
+## Seat C (comparisons): non-EQUAL and VARIANT-DIFFERS groups
+
+| leg | op | payload | label | twin label | count | kind pairs |
+|---|---|---|---|---|---|---|
+| base | dml | lstruct | ACCEPTED-WHERE-SPARK-REFUSED | INVARIANT | 1 | list-list |
+| base | dml | struct | ACCEPTED-WHERE-SPARK-REFUSED | INVARIANT | 1 | list-list |
+| base | eq | lstruct | EQUAL | VARIANT-DIFFERS | 6 | list-fsl2, large-fsl2, fsl1-fsl2, fsl2-list, fsl2-large, fsl2-fsl1 |
+| base | eq | lstruct | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | 18 | list-view, list-largeview, large-view, large-largeview, fsl1-view, fsl1-largeview, fsl2-view, fsl2-largeview, view-list, view-large, view-fsl1, view-fsl2 ... |
+| base | eq | lstruct | RESULT-ROWS-DIFFER | INVARIANT | 12 | list-list, list-large, list-fsl1, large-list, large-large, large-fsl1, fsl1-list, fsl1-large, fsl1-fsl1, fsl2-fsl2, view-view, largeview-largeview |
+| base | eq | struct | EQUAL | VARIANT-DIFFERS | 6 | list-fsl2, large-fsl2, fsl1-fsl2, fsl2-list, fsl2-large, fsl2-fsl1 |
+| base | eq | struct | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | 18 | list-view, list-largeview, large-view, large-largeview, fsl1-view, fsl1-largeview, fsl2-view, fsl2-largeview, view-list, view-large, view-fsl1, view-fsl2 ... |
+| base | eq | struct | RESULT-ROWS-DIFFER | INVARIANT | 12 | list-list, list-large, list-fsl1, large-list, large-large, large-fsl1, fsl1-list, fsl1-large, fsl1-fsl1, fsl2-fsl2, view-view, largeview-largeview |
+| base | in | lstruct | EQUAL | VARIANT-DIFFERS | 6 | list-fsl2, large-fsl2, fsl1-fsl2, fsl2-list, fsl2-large, fsl2-fsl1 |
+| base | in | lstruct | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | 18 | list-view, list-largeview, large-view, large-largeview, fsl1-view, fsl1-largeview, fsl2-view, fsl2-largeview, view-list, view-large, view-fsl1, view-fsl2 ... |
+| base | in | lstruct | RESULT-ROWS-DIFFER | INVARIANT | 12 | list-list, list-large, list-fsl1, large-list, large-large, large-fsl1, fsl1-list, fsl1-large, fsl1-fsl1, fsl2-fsl2, view-view, largeview-largeview |
+| base | in | struct | EQUAL | VARIANT-DIFFERS | 6 | list-fsl2, large-fsl2, fsl1-fsl2, fsl2-list, fsl2-large, fsl2-fsl1 |
+| base | in | struct | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | 18 | list-view, list-largeview, large-view, large-largeview, fsl1-view, fsl1-largeview, fsl2-view, fsl2-largeview, view-list, view-large, view-fsl1, view-fsl2 ... |
+| base | in | struct | RESULT-ROWS-DIFFER | INVARIANT | 12 | list-list, list-large, list-fsl1, large-list, large-large, large-fsl1, fsl1-list, fsl1-large, fsl1-fsl1, fsl2-fsl2, view-view, largeview-largeview |
+| base | join | lstruct | EQUAL | VARIANT-DIFFERS | 6 | list-fsl2, large-fsl2, fsl1-fsl2, fsl2-list, fsl2-large, fsl2-fsl1 |
+| base | join | lstruct | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | 18 | list-view, list-largeview, large-view, large-largeview, fsl1-view, fsl1-largeview, fsl2-view, fsl2-largeview, view-list, view-large, view-fsl1, view-fsl2 ... |
+| base | join | lstruct | ROWS-DIFFER | INVARIANT | 11 | list-list, list-large, list-fsl1, large-list, large-large, large-fsl1, fsl1-list, fsl1-large, fsl1-fsl1, view-view, largeview-largeview |
+| base | join | lstruct | ROWS-DIFFER | VARIANT-DIFFERS | 1 | fsl2-fsl2 |
+| base | join | struct | EQUAL | VARIANT-DIFFERS | 6 | list-fsl2, large-fsl2, fsl1-fsl2, fsl2-list, fsl2-large, fsl2-fsl1 |
+| base | join | struct | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | 18 | list-view, list-largeview, large-view, large-largeview, fsl1-view, fsl1-largeview, fsl2-view, fsl2-largeview, view-list, view-large, view-fsl1, view-fsl2 ... |
+| base | join | struct | ROWS-DIFFER | INVARIANT | 11 | list-list, list-large, list-fsl1, large-list, large-large, large-fsl1, fsl1-list, fsl1-large, fsl1-fsl1, view-view, largeview-largeview |
+| base | join | struct | ROWS-DIFFER | VARIANT-DIFFERS | 1 | fsl2-fsl2 |
+
+## Per-cell rows (P10, P10dml)
+
+| cell | plan | seat | leg | door | source | op | effect | payload | shape | left | right | outcome | label vs Spark | kind-invariance label | types L | types R |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| P10-01396 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01398 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01400 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01402 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01404 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01406 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01408 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01410 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01412 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01414 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01416 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01418 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01420 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01422 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01424 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01426 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01428 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01430 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01432 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01434 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01436 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01438 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01440 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01442 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01444 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01446 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01448 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01450 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01452 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01454 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01456 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01458 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01460 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01462 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01464 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01466 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01468 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01470 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01472 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01474 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01476 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01478 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01480 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01482 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01484 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01486 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01488 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01490 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01492 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01494 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01496 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01498 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01500 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01502 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01504 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01506 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01508 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01510 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01512 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01514 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01516 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01518 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01520 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01522 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01524 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01526 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01528 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01530 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01532 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01534 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01536 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01538 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01540 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01542 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01544 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01546 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01548 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01550 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01552 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01554 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01556 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01558 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01560 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01562 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01564 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01566 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01568 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01570 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01572 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01574 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01576 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01578 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01580 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01582 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01584 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01586 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01588 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01590 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01592 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01594 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01596 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01598 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01600 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01602 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01604 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01606 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01608 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01610 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01612 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01614 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01616 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01618 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01620 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01622 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01624 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01626 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01628 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01630 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01632 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01634 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01636 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01638 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01640 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01642 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01644 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01646 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01648 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01650 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01652 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01654 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01656 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01658 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01660 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01662 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01664 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01666 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01668 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01670 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01672 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01674 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01676 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01678 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01680 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01682 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01684 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01686 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01688 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01690 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01692 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01694 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01696 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01698 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01700 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01702 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01704 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01706 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01708 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01710 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01712 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01714 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01716 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01718 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01720 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01722 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01724 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01726 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01728 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01730 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01732 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01734 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01736 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01738 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01740 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01742 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01744 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01746 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01748 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01750 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01752 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01754 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01756 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01758 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01760 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01762 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01764 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01766 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01768 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01770 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01772 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01774 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01776 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01778 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01780 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01782 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01784 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01786 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01788 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01790 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01792 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01794 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01796 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01798 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01800 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01802 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01804 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01806 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01808 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01810 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01812 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01814 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01816 | P10 | C | spark | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01818 | P10 | C | spark | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01820 | P10 | C | spark | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01822 | P10 | C | spark | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | SELF | INVARIANT | - | - |
+| P10-01824 | P10 | C | spark | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10-01826 | P10 | C | spark | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | SELF | INVARIANT | - | - |
+| P10dml-01828 | P10dml | C | spark | sql_view | pandas | dml | read | struct | top | - | - | REFUSED op IllegalArgumentException: Cannot create expression literal from org.apache.spark.sql.catalyst.util.GenericArrayData: [[2,1]] | SELF | INVARIANT | - | - |
+| P10dml-01830 | P10dml | C | spark | sql_view | pandas | dml | read | lstruct | top | - | - | REFUSED op IllegalArgumentException: Cannot create expression literal from org.apache.spark.sql.catalyst.util.GenericArrayData: [[[2,1]]] | SELF | INVARIANT | - | - |
+| P10-01397 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01399 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01401 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01403 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01405 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01407 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01409 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01411 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01413 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01415 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01417 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01419 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01421 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01423 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01425 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01427 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01429 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01431 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01433 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01435 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01437 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01439 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01441 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01443 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01445 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation List(Struct("a": Int64, "b": Int64)) = ListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01447 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation List(List(Struct("a": Int64, "b": Int64))) = ListView(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01449 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare List(Struct("a": Int64, "b": Int64)) with [ListView(Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01451 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare List(List(Struct("a": Int64, "b": Int64))) with [ListView(List(Struct("b": Int64, "a": Int64)))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01453 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation List(Struct("a": Int64, "b": Int64)) = ListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01455 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation List(List(Struct("a": Int64, "b": Int64))) = ListView(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01457 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation List(Struct("a": Int64, "b": Int64)) = LargeListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01459 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation List(List(Struct("a": Int64, "b": Int64))) = LargeListView(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01461 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare List(Struct("a": Int64, "b": Int64)) with [LargeListView(Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01463 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare List(List(Struct("a": Int64, "b": Int64))) with [LargeListView(List(Struct("b": Int64, "a": Int64)))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01465 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation List(Struct("a": Int64, "b": Int64)) = LargeListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01467 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation List(List(Struct("a": Int64, "b": Int64))) = LargeListView(List(Struct("b": Int64, "a": Int64) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01469 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01471 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01473 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01475 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01477 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01479 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01481 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01483 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01485 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01487 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01489 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01491 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01493 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01495 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01497 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01499 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01501 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01503 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01505 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01507 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01509 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01511 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01513 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01515 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01517 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation LargeList(Struct("a": Int64, "b": Int64)) = ListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01519 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation LargeList(List(Struct("a": Int64, "b": Int64))) = ListView(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01521 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare LargeList(Struct("a": Int64, "b": Int64)) with [ListView(Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01523 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare LargeList(List(Struct("a": Int64, "b": Int64))) with [ListView(List(Struct("b": Int64, "a": Int64)))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01525 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation LargeList(Struct("a": Int64, "b": Int64)) = ListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01527 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation LargeList(List(Struct("a": Int64, "b": Int64))) = ListView(List(Struct("b": Int64, "a": Int64) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01529 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation LargeList(Struct("a": Int64, "b": Int64)) = LargeListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01531 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation LargeList(List(Struct("a": Int64, "b": Int64))) = LargeListView(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01533 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare LargeList(Struct("a": Int64, "b": Int64)) with [LargeListView(Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01535 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare LargeList(List(Struct("a": Int64, "b": Int64))) with [LargeListView(List(Struct("b": Int64, "a": Int64)))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01537 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation LargeList(Struct("a": Int64, "b": Int64)) = LargeListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01539 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation LargeList(List(Struct("a": Int64, "b": Int64))) = LargeListView(List(Struct("b": Int64, "a": I | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01541 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01543 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01545 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01547 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01549 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01551 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01553 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01555 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01557 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01559 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01561 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01563 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01565 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01567 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01569 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01571 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01573 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01575 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01577 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01579 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01581 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01583 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01585 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01587 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01589 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(1 x Struct("a": Int64, "b": Int64)) = ListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01591 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(1 x List(Struct("a": Int64, "b": Int64))) = ListView(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01593 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare FixedSizeList(1 x Struct("a": Int64, "b": Int64)) with [ListView(Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01595 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare FixedSizeList(1 x List(Struct("a": Int64, "b": Int64))) with [ListView(List(Struct("b": Int64, "a": Int64)))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01597 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(1 x Struct("a": Int64, "b": Int64)) = ListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01599 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(1 x List(Struct("a": Int64, "b": Int64))) = ListView(List(Struct("b": Int64, "a" | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01601 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(1 x Struct("a": Int64, "b": Int64)) = LargeListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01603 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(1 x List(Struct("a": Int64, "b": Int64))) = LargeListView(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01605 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare FixedSizeList(1 x Struct("a": Int64, "b": Int64)) with [LargeListView(Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01607 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare FixedSizeList(1 x List(Struct("a": Int64, "b": Int64))) with [LargeListView(List(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01609 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(1 x Struct("a": Int64, "b": Int64)) = LargeListView(Struct("b": Int64, "a": Int6 | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01611 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(1 x List(Struct("a": Int64, "b": Int64))) = LargeListView(List(Struct("b": Int64 | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01613 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01615 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01617 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01619 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01621 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01623 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01625 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01627 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01629 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01631 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01633 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01635 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01637 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01639 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01641 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01643 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01645 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=0 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01647 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=0 | EQUAL | VARIANT-DIFFERS | - | - |
+| P10-01649 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01651 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01653 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01655 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01657 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | VARIANT-DIFFERS | - | - |
+| P10-01659 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | VARIANT-DIFFERS | - | - |
+| P10-01661 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(2 x Struct("a": Int64, "b": Int64)) = ListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01663 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(2 x List(Struct("a": Int64, "b": Int64))) = ListView(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01665 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare FixedSizeList(2 x Struct("a": Int64, "b": Int64)) with [ListView(Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01667 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare FixedSizeList(2 x List(Struct("a": Int64, "b": Int64))) with [ListView(List(Struct("b": Int64, "a": Int64)))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01669 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(2 x Struct("a": Int64, "b": Int64)) = ListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01671 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(2 x List(Struct("a": Int64, "b": Int64))) = ListView(List(Struct("b": Int64, "a" | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01673 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(2 x Struct("a": Int64, "b": Int64)) = LargeListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01675 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(2 x List(Struct("a": Int64, "b": Int64))) = LargeListView(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01677 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare FixedSizeList(2 x Struct("a": Int64, "b": Int64)) with [LargeListView(Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01679 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare FixedSizeList(2 x List(Struct("a": Int64, "b": Int64))) with [LargeListView(List(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01681 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(2 x Struct("a": Int64, "b": Int64)) = LargeListView(Struct("b": Int64, "a": Int6 | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01683 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation FixedSizeList(2 x List(Struct("a": Int64, "b": Int64))) = LargeListView(List(Struct("b": Int64 | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01685 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation ListView(Struct("a": Int64, "b": Int64)) = List(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01687 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation ListView(List(Struct("a": Int64, "b": Int64))) = List(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01689 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare ListView(Struct("a": Int64, "b": Int64)) with [List(Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01691 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare ListView(List(Struct("a": Int64, "b": Int64))) with [List(List(Struct("b": Int64, "a": Int64)))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01693 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation ListView(Struct("a": Int64, "b": Int64)) = List(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01695 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation ListView(List(Struct("a": Int64, "b": Int64))) = List(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01697 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation ListView(Struct("a": Int64, "b": Int64)) = LargeList(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01699 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation ListView(List(Struct("a": Int64, "b": Int64))) = LargeList(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01701 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare ListView(Struct("a": Int64, "b": Int64)) with [LargeList(Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01703 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare ListView(List(Struct("a": Int64, "b": Int64))) with [LargeList(List(Struct("b": Int64, "a": Int64)))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01705 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation ListView(Struct("a": Int64, "b": Int64)) = LargeList(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01707 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation ListView(List(Struct("a": Int64, "b": Int64))) = LargeList(List(Struct("b": Int64, "a": Int64) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01709 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation ListView(Struct("a": Int64, "b": Int64)) = FixedSizeList(1 x Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01711 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation ListView(List(Struct("a": Int64, "b": Int64))) = FixedSizeList(1 x List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01713 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare ListView(Struct("a": Int64, "b": Int64)) with [FixedSizeList(1 x Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01715 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare ListView(List(Struct("a": Int64, "b": Int64))) with [FixedSizeList(1 x List(Struct("b": Int64, "a": Int64)))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01717 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation ListView(Struct("a": Int64, "b": Int64)) = FixedSizeList(1 x Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01719 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation ListView(List(Struct("a": Int64, "b": Int64))) = FixedSizeList(1 x List(Struct("b": Int64, "a" | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01721 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation ListView(Struct("a": Int64, "b": Int64)) = FixedSizeList(2 x Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01723 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation ListView(List(Struct("a": Int64, "b": Int64))) = FixedSizeList(2 x List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01725 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare ListView(Struct("a": Int64, "b": Int64)) with [FixedSizeList(2 x Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01727 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare ListView(List(Struct("a": Int64, "b": Int64))) with [FixedSizeList(2 x List(Struct("b": Int64, "a": Int64)))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01729 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation ListView(Struct("a": Int64, "b": Int64)) = FixedSizeList(2 x Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01731 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation ListView(List(Struct("a": Int64, "b": Int64))) = FixedSizeList(2 x List(Struct("b": Int64, "a" | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01733 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01735 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01737 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01739 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01741 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01743 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01745 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation ListView(Struct("a": Int64, "b": Int64)) = LargeListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01747 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation ListView(List(Struct("a": Int64, "b": Int64))) = LargeListView(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01749 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare ListView(Struct("a": Int64, "b": Int64)) with [LargeListView(Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01751 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare ListView(List(Struct("a": Int64, "b": Int64))) with [LargeListView(List(Struct("b": Int64, "a": Int64)))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01753 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation ListView(Struct("a": Int64, "b": Int64)) = LargeListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01755 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation ListView(List(Struct("a": Int64, "b": Int64))) = LargeListView(List(Struct("b": Int64, "a": In | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01757 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation LargeListView(Struct("a": Int64, "b": Int64)) = List(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01759 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation LargeListView(List(Struct("a": Int64, "b": Int64))) = List(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01761 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare LargeListView(Struct("a": Int64, "b": Int64)) with [List(Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01763 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare LargeListView(List(Struct("a": Int64, "b": Int64))) with [List(List(Struct("b": Int64, "a": Int64)))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01765 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation LargeListView(Struct("a": Int64, "b": Int64)) = List(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01767 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation LargeListView(List(Struct("a": Int64, "b": Int64))) = List(List(Struct("b": Int64, "a": Int64) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01769 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation LargeListView(Struct("a": Int64, "b": Int64)) = LargeList(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01771 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation LargeListView(List(Struct("a": Int64, "b": Int64))) = LargeList(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01773 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare LargeListView(Struct("a": Int64, "b": Int64)) with [LargeList(Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01775 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare LargeListView(List(Struct("a": Int64, "b": Int64))) with [LargeList(List(Struct("b": Int64, "a": Int64)))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01777 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation LargeListView(Struct("a": Int64, "b": Int64)) = LargeList(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01779 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation LargeListView(List(Struct("a": Int64, "b": Int64))) = LargeList(List(Struct("b": Int64, "a": I | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01781 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation LargeListView(Struct("a": Int64, "b": Int64)) = FixedSizeList(1 x Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01783 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation LargeListView(List(Struct("a": Int64, "b": Int64))) = FixedSizeList(1 x List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01785 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare LargeListView(Struct("a": Int64, "b": Int64)) with [FixedSizeList(1 x Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01787 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare LargeListView(List(Struct("a": Int64, "b": Int64))) with [FixedSizeList(1 x List(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01789 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation LargeListView(Struct("a": Int64, "b": Int64)) = FixedSizeList(1 x Struct("b": Int64, "a": Int6 | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01791 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation LargeListView(List(Struct("a": Int64, "b": Int64))) = FixedSizeList(1 x List(Struct("b": Int64 | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01793 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation LargeListView(Struct("a": Int64, "b": Int64)) = FixedSizeList(2 x Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01795 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation LargeListView(List(Struct("a": Int64, "b": Int64))) = FixedSizeList(2 x List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01797 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare LargeListView(Struct("a": Int64, "b": Int64)) with [FixedSizeList(2 x Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01799 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare LargeListView(List(Struct("a": Int64, "b": Int64))) with [FixedSizeList(2 x List(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01801 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation LargeListView(Struct("a": Int64, "b": Int64)) = FixedSizeList(2 x Struct("b": Int64, "a": Int6 | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01803 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation LargeListView(List(Struct("a": Int64, "b": Int64))) = FixedSizeList(2 x List(Struct("b": Int64 | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01805 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation LargeListView(Struct("a": Int64, "b": Int64)) = ListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01807 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | REFUSED op AnalysisException: Error during planning: Cannot infer common argument type for comparison operation LargeListView(List(Struct("a": Int64, "b": Int64))) = ListView(List(Struct("b": Int64, "a": Int64))) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01809 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare LargeListView(Struct("a": Int64, "b": Int64)) with [ListView(Struct("b": Int64, "a": Int64))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01811 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Can not find compatible types to compare LargeListView(List(Struct("a": Int64, "b": Int64))) with [ListView(List(Struct("b": Int64, "a": Int64)))] | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01813 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation LargeListView(Struct("a": Int64, "b": Int64)) = ListView(Struct("b": Int64, "a": Int64)) | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01815 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | REFUSED op AnalysisException: type_coercion caused by Error during planning: Cannot infer common argument type for comparison operation LargeListView(List(Struct("a": Int64, "b": Int64))) = ListView(List(Struct("b": Int64, "a": In | REFUSED-WHERE-SPARK-ACCEPTED | VARIANT-DIFFERS | - | - |
+| P10-01817 | P10 | C | base | sql_view | pandas | eq | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01819 | P10 | C | base | sql_view | pandas | eq | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01821 | P10 | C | base | sql_view | pandas | in | read | struct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01823 | P10 | C | base | sql_view | pandas | in | read | lstruct | top | - | - | ANSWERED rows=1 | RESULT-ROWS-DIFFER | INVARIANT | - | - |
+| P10-01825 | P10 | C | base | sql_view | pandas | join | read | struct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10-01827 | P10 | C | base | sql_view | pandas | join | read | lstruct | top | - | - | ANSWERED rows=1 | ROWS-DIFFER | INVARIANT | - | - |
+| P10dml-01829 | P10dml | C | base | sql_view | pandas | dml | read | struct | top | - | - | ANSWERED rows=1 | ACCEPTED-WHERE-SPARK-REFUSED | INVARIANT | - | - |
+| P10dml-01831 | P10dml | C | base | sql_view | pandas | dml | read | lstruct | top | - | - | ANSWERED rows=1 | ACCEPTED-WHERE-SPARK-REFUSED | INVARIANT | - | - |
