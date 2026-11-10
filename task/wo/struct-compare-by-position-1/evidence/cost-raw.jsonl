@@ -1,0 +1,12 @@
+{"case": "a", "cells": 2796, "kinds": {"error": 702, "ok": 854, "rows": 1240}, "label": "main-45018a2c-run1", "seconds": 24.19656687573297}
+{"case": "a", "cells": 2796, "kinds": {"error": 835, "ok": 799, "rows": 1162}, "label": "head-adaa2749-run1", "seconds": 23.309006401046645}
+{"case": "b", "explains": 200, "label": "main-45018a2c-run1", "output_columns": 300, "seconds": 24.041075307002757}
+{"case": "b", "explains": 200, "label": "head-adaa2749-run1", "output_columns": 300, "seconds": 24.356506157986587}
+{"case": "a", "cells": 2796, "kinds": {"error": 702, "ok": 854, "rows": 1240}, "label": "main-45018a2c-run2", "seconds": 24.07672301036655}
+{"case": "a", "cells": 2796, "kinds": {"error": 835, "ok": 799, "rows": 1162}, "label": "head-adaa2749-run2", "seconds": 23.050440996768884}
+{"case": "b", "explains": 200, "label": "main-45018a2c-run2", "output_columns": 300, "seconds": 23.983096928015584}
+{"case": "b", "explains": 200, "label": "head-adaa2749-run2", "output_columns": 300, "seconds": 24.31535151900607}
+{"case": "a", "cells": 2796, "kinds": {"error": 702, "ok": 854, "rows": 1240}, "label": "main-45018a2c-run3", "seconds": 24.519522692629835}
+{"case": "a", "cells": 2796, "kinds": {"error": 835, "ok": 799, "rows": 1162}, "label": "head-adaa2749-run3", "seconds": 22.93620063032722}
+{"case": "b", "explains": 200, "label": "main-45018a2c-run3", "output_columns": 300, "seconds": 23.969562465994386}
+{"case": "b", "explains": 200, "label": "head-adaa2749-run3", "output_columns": 300, "seconds": 23.980521618010243}

@@ -1,6 +1,7 @@
 # task/wo/struct-compare-by-position-1/evidence/
 
 - [after/](after/map.md) — the after-tables: the three tables re-run on this head's release build, with the moves by label, the residual cards and the unit C re-run.
+- [cost.md](cost.md) — item 5: plan and run cost on main `45018a2c` against this head, median of three per case; (a) 0.9526x, (b) 1.0139x against the 1.05x gate. [cost_probe.py](cost_probe.py) is the probe; [cost-raw.jsonl](cost-raw.jsonl) holds one record per process.
 - [fable-brief-2026-11-09.md](fable-brief-2026-11-09.md) — Fable 5.1's brief for this unit, the design source; the order amends it.
 - [fable-evaluation-2026-11-09.md](fable-evaluation-2026-11-09.md) — the Step 4.1–4.2 evaluation: the mechanism trace and the parked branch; its §1 cells 16, 22, 38 and 39 are superseded by the measured tables.
 - [inventory.md](inventory.md) — the insertion inventory (brief §6, each row answered at the seat) and the type-variant inventory.
