@@ -596,12 +596,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   PR #991):** the neighbouring Spark-door catalog and DDL doors answer a mounted source with
   misleading text (`getTable`, `listColumns`, `SHOW VIEWS`, `SHOW COLUMNS`, `DESCRIBE TABLE`,
   `TRUNCATE TABLE`, `USE`); none writes; each door gives the declared listing or names its registry row.
-- [offset-nested-sort-1-card-2026-10-08.md](offset-nested-sort-1-card-2026-10-08.md) — **card
-  OFFSET-NESTED-SORT-1 (2026-10-08, closed 2026-10-08 by its unit, pending the product PR's
-  verifier; a DataFusion 54.1.0 `EnforceSorting` defect, guarded in `repark-core`; filed from the C-3 hand-back, PR #998):** an
-  `OFFSET` under a nested `ORDER BY` answers 0 rows at one input partition where 16 partitions answer
-  5, a wrong answer reproduced with no Postgres scan in the plan; the ask is to reproduce it on main,
-  find whether it is the pinned DataFusion version's defect or RePark's planning, and add a parity cell.
+- [offset-nested-sort-1-card-2026-10-08.md](offset-nested-sort-1-card-2026-10-08.md) — **card OFFSET-NESTED-SORT-1 (closed 2026-10-08 by its unit, pending the product PR's verifier):** an `OFFSET` under a nested `ORDER BY` answered 0 rows where 16 partitions answer 5; a DataFusion 54.1.0 `EnforceSorting` defect, guarded in `repark-core`.
 - [threaded-collect-segv-1-card-2026-10-08.md](threaded-collect-segv-1-card-2026-10-08.md) — **card
   THREADED-COLLECT-SEGV-1 (2026-10-08, filed, not scheduled, from the orchestrator's measurements, PR #998):**
   `collect()` on a second thread segfaults with pyarrow 25.0.0 and survives with 25.0.1, in 1.5.1 through
@@ -609,11 +604,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   threaded test, and decide the dependency floor, an owner ruling. **Cause found 2026-10-08:** pyarrow
   25.0.0's bundled mimalloc (apache/arrow GH-50471, fixed in 25.0.1), reproduced without RePark; the
   threaded test is in the facade suite and the floor awaits the owner.
-- [cross-join-condition-1-card-2026-10-08.md](cross-join-condition-1-card-2026-10-08.md) — **card
-  CROSS-JOIN-CONDITION-1 (2026-10-08, closed 2026-10-08 by its unit, from the STAMP-2-R5P6-2 hand-back, PR #997):**
-  `df.join(other, condition, "cross")` ignores the condition (12 rows where live Spark 4.1 answers 2),
-  on main and on the PR branch alike, because the H1 door emits `CROSS JOIN` with no `ON`; sequenced
-  after PR #997 merges, as both touch the same door. The unit routes a cross with a condition onto the
+- [cross-join-condition-1-card-2026-10-08.md](cross-join-condition-1-card-2026-10-08.md) — **card CROSS-JOIN-CONDITION-1 (closed 2026-10-08 by its unit, sequenced after PR #997):** `df.join(other, condition, "cross")` ignored the condition; a cross with a condition now takes the inner path on both routes.
   inner path on both routes; `crossJoin` and shared-name/list refusals are unmoved.
 - [join-condition-refusals-1-card-2026-10-08.md](join-condition-refusals-1-card-2026-10-08.md) — **card
   JOIN-CONDITION-REFUSALS-1 (2026-10-08, closed 2026-10-08 by CROSS-JOIN-CONDITION-1 fold 2,
@@ -1060,3 +1051,4 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [struct-setop-type-family-1-card-2026-11-09.md](struct-setop-type-family-1-card-2026-11-09.md) — **card STRUCT-SETOP-TYPE-FAMILY-1 (filed 2026-11-09, S1 with write reach, blocks v1.5.7, not dispatched):** a set operation pairs a reordered struct by name when the list kinds differ (F-I). Ledger C-117. Leaves when the variant table's pins pass on Spark, 1.5.6 and head.
 - [struct-user-cast-positional-1-card-2026-11-09.md](struct-user-cast-positional-1-card-2026-11-09.md) — **card STRUCT-USER-CAST-POSITIONAL-1 (filed 2026-11-09, S2, not dispatched):** an explicit struct cast pairs fields by name where Spark pairs by position. Leaves when fixed or declined.
 - [struct-type-union-accepts-reorder-1-card-2026-11-09.md](struct-type-union-accepts-reorder-1-card-2026-11-09.md) — **card STRUCT-TYPE-UNION-ACCEPTS-REORDER-1 (filed 2026-11-09, S3, not dispatched):** `CASE`, `IF`, `coalesce` and `array` accept a reordered struct pair that Spark refuses; no wrong value measured. Leaves when pinned or declined.
+- [facade-ingest-arrow-normalize-1-card-2026-11-09.md](facade-ingest-arrow-normalize-1-card-2026-11-09.md) — **card FACADE-INGEST-ARROW-NORMALIZE-1 (filed 2026-11-09, unscheduled):** narrow the Arrow list kinds and run-end encoding at `createDataFrame` to Spark's plain types; costs offset narrowing and the 2^31 limit; needs a sketch and a measurement.
