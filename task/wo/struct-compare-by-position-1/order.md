@@ -115,7 +115,10 @@ Tests go in the **same commit** as the code they pin.
 - A base-EQUAL cell newly refused, outside a measured over-refusal the builder cards in the hand-back.
 - Any change to unit C's or #1290's pins.
 - A `struct_pairing_doors.rs` change.
-- The cost bar exceeded: ≤ 1.05x median on the C-012 set.
+- The cost bar exceeded: ≤ 1.05x median on each of `evidence/cost.md`'s cases (a) and (b). *Amended 2026-11-10
+  (orchestrator):* this line named "the C-012 set", carried from Fable's brief. The build brief defined the set as
+  cases (a) and (b), and case (b) is the planning-only walk over every expression that Fable's brief asked to be
+  measured.
 
 ## Not in this unit
 
