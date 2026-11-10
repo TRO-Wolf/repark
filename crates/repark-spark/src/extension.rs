@@ -10,6 +10,8 @@ use repark_ta::TaExtension;
 
 pub mod session_catalog;
 
+pub use crate::normalize::struct_position;
+
 /// The Spark door's session extension: build-time registrations as one unit.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SparkExtension;
@@ -140,7 +142,8 @@ impl SessionExtension for SparkExtension {
         let rules = crate::spark_literal_typing::insert_literal_rule_before_coercion(rules)?;
         let rules =
             crate::normalize::join_condition::insert_join_condition_rule_before_coercion(rules)?;
-        repark_functions::collection::insert_map_subscript_before_coercion(rules)
+        let rules = repark_functions::collection::insert_map_subscript_before_coercion(rules)?;
+        crate::normalize::struct_position::insert_struct_position_rule_before_coercion(rules)
     }
 
     /// Register Spark functions and analyzer rules, then compose the TA window extension.
@@ -148,6 +151,10 @@ impl SessionExtension for SparkExtension {
     /// # Errors Whatever the composed [`TaExtension`] returns.
     fn register(&self, ctx: &SessionContext) -> datafusion::error::Result<()> {
         repark_functions::register_all(ctx);
+        datafusion::execution::FunctionRegistry::register_expr_planner(
+            &mut *ctx.state_ref().write(),
+            crate::normalize::struct_position::duplicate_field_operands(),
+        )?;
         ctx.register_udf(crate::spark_typed::spark_as_udf().as_ref().clone());
         ctx.register_udf(crate::spark_typed::suffix_literal_udf().as_ref().clone());
         // WI-2: the plain-INSERT ANSI store-assignment gate, BEFORE the Spark expression semantics.

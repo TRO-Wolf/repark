@@ -281,7 +281,9 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
     )?;
     let rules = repark_functions::analyzer_rules_with_higher_order_preparation(rules)?;
     let rules = repark_spark::spark_literal_typing::insert_literal_rule_before_coercion(rules)?;
-    let mut rules = repark_functions::collection::insert_map_subscript_before_coercion(rules)?;
+    let rules = repark_functions::collection::insert_map_subscript_before_coercion(rules)?;
+    let mut rules =
+        repark_spark::struct_position::insert_struct_position_rule_before_coercion(rules)?;
     rules.push(std::sync::Arc::new(repark_spark::FoldSparkNumericCasts));
     rules.push(std::sync::Arc::new(repark_spark::SparkProjectionDisplay));
     rules.extend(repark_spark::spark_literal_typing::spark_door_post_coercion_rules());
@@ -296,6 +298,10 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
     context.register_udf(repark_spark::spark_as_udf().as_ref().clone());
     context.register_udf(repark_spark::suffix_literal_udf().as_ref().clone());
     repark_functions::register_all(&context);
+    datafusion::execution::FunctionRegistry::register_expr_planner(
+        &mut *context.state_ref().write(),
+        repark_spark::struct_position::duplicate_field_operands(),
+    )?;
     Ok(context)
 }
 
@@ -831,5 +837,30 @@ mod tests {
             .position(|name| name == "type_coercion")
             .unwrap();
         assert_eq!(seat, coercion + 1);
+    }
+
+    #[test]
+    fn expr_context_seats_struct_operands_by_position_before_coercion() {
+        let context = build_expr_context().unwrap();
+        let names: Vec<String> = context
+            .state()
+            .analyzer()
+            .rules
+            .iter()
+            .map(|rule| rule.name().to_string())
+            .collect();
+        let seat = names
+            .iter()
+            .position(|name| name == "struct_operands_by_position")
+            .unwrap();
+        let coercion = names
+            .iter()
+            .position(|name| name == "type_coercion")
+            .unwrap();
+        assert_eq!(seat + 1, coercion);
+        assert_eq!(names[seat - 1], "spark_map_subscript");
+        let planners = context.state().expr_planners().len();
+        let bare = SessionContext::new().state().expr_planners().len();
+        assert!(planners > bare);
     }
 }

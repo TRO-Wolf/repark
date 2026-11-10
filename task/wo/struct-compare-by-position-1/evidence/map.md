@@ -4,6 +4,7 @@
 - [fable-evaluation-2026-11-09.md](fable-evaluation-2026-11-09.md) — the Step 4.1–4.2 evaluation: the mechanism trace and the parked branch; its §1 cells 16, 22, 38 and 39 are superseded by the measured tables.
 - [inventory.md](inventory.md) — the insertion inventory (brief §6, each row answered at the seat) and the type-variant inventory.
 - [step0/](step0/) — the 4393-cell step-0 table on Spark 4.1.2 and 1.5.6: `table.md`, `groups.txt`, `notes.md` (with the derived-oracle section), `provenance.md`, the generator `gen_cmp.py`, the driver `drive_cmp.py`, the pass-2 cells `pass2_cmp.py`, the renderer `render2.py`, the oracle repro `probe_delete_literal.py`, `cells.jsonl`, `derive-cells.jsonl` and `raw/`.
+- [pin_cells.py](pin_cells.py) — writes `python/repark/tests/sql/data/struct_compare_by_position_cells.jsonl` from `step0/cells.jsonl` and `step0/raw/spark.jsonl`: Spark's outcome per cell, or the derived oracle for struct-literal DELETE statements, so every pin value is a table cell.
 - [variant-seat-c/](variant-seat-c/) — the variant table's seat C (P10, P10dml: 218 cells per leg): the extracted `table.md` section, `notes.md`, `provenance.md`, the probe and the seat C records of `raw/`. The full variant table is committed under `../../struct-setop-type-family-1/evidence/`; the probe here is that lint-clean copy.
 - [variant-ext/](variant-ext/) — the 473-cell variant extension (orientation, encodings, depth, same-order control, typed and native doors, DML): `table.md`, `notes.md`, `provenance.md`, `probe_cmp_variant.py` and `raw/`.
 

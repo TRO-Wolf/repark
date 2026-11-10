@@ -61,7 +61,7 @@ pub fn first_struct_name_mismatch(left: &DataType, right: &DataType) -> Option<S
 fn mismatch_at(left: &DataType, right: &DataType, path: String) -> Option<StructNameMismatch> {
     let left = peel_encoding(left);
     let right = peel_encoding(right);
-    if matches!(left, DataType::Null) || matches!(right, DataType::Null) {
+    if left == right || matches!(left, DataType::Null) || matches!(right, DataType::Null) {
         return None;
     }
     if let (DataType::Struct(left_fields), DataType::Struct(right_fields)) = (left, right) {
@@ -318,6 +318,21 @@ mod tests {
                 right: right.clone(),
             })
         );
+    }
+
+    #[test]
+    fn identical_types_never_mismatch_even_through_a_union() {
+        let union = union_with(struct_ab(), struct_ba());
+        assert_eq!(first_struct_name_mismatch(&union, &union.clone()), None);
+        let listed = list_of("largeview", union_with(struct_ba(), DataType::Int32));
+        assert_eq!(first_struct_name_mismatch(&listed, &listed.clone()), None);
+        let encoded = dictionary_of(map_of(("key", "value"), union.clone()));
+        assert_eq!(first_struct_name_mismatch(&encoded, &encoded.clone()), None);
+        let other = union_with(struct_ab(), struct_ab());
+        assert!(matches!(
+            first_struct_name_mismatch(&union, &other),
+            Some(StructNameMismatch::Unpaired { .. })
+        ));
     }
 
     #[test]

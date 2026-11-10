@@ -123,6 +123,18 @@ here and is re-exported in one line.
   escape form, line break, nesting push or pop fails a test. The doubled-quote escape and the
   end-of-input escape guard only change `skip_quoted_text`'s resume index.
 
+- `struct_position.rs`, `struct_position/udf.rs`, `struct_position/tests.rs` —
+  **STRUCT-COMPARE-BY-POSITION-1 (2026-11-10):** `struct_operands_by_position`, seated just
+  before `type_coercion` by `insert_struct_position_rule_before_coercion` from the session
+  (`../extension.rs`) and the expression context (repark-python `expr_build.rs`). It renames the
+  right operand of a struct comparison, `IN` list, `IN (subquery)` or join key to the left
+  operand's names by position (the `__repark_struct_by_position__` UDF relabels without
+  copying), refuses clashes with Spark's class, and reads beneath one `Alias` and one cast. Type
+  classification is `repark_core::struct_walk`; every list kind, `RunEndEncoded` and
+  `Dictionary` carry the rename. `DuplicateFieldOperands` (planner) and the positional path cover
+  duplicate names. `map_ordering::refuse_in_expr` widens to `pub(super)` for it. Pins:
+  `struct_position/tests.rs`, `../../tests/struct_compare_by_position.rs`.
+
 ## Pointers
 
 - Up: [../map.md](../map.md). Caller: [../normalize.rs](../normalize.rs) `parse_single_normalized`.
