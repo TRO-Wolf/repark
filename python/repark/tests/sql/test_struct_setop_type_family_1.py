@@ -32,7 +32,15 @@ REPS = [
 DF_OPS = ("union", "subtract", "intersect")
 FORMS = ("read", "insert")
 OP_SQL = {"union": "UNION ALL", "subtract": "EXCEPT", "intersect": "INTERSECT"}
-OP_WORD = {"union": "UNION", "subtract": "EXCEPT", "intersect": "INTERSECT"}
+OP_WORD = {
+    "union": "UNION",
+    "subtract": "EXCEPT",
+    "intersect": "INTERSECT",
+    "union_by_name": "UNION",
+}
+
+UNIONBYNAME_PAIRS = (("large", "list"), ("list", "fsl1"), ("largeview", "largeview"))
+UNIONBYNAME_CARD = "STRUCT-SETOP-UNIONBYNAME-OVERREFUSAL-1"
 
 DDL_TOP = "ARRAY<STRUCT<a: BIGINT, b: BIGINT>>"
 DDL_STRUCT = "STRUCT<x: ARRAY<STRUCT<a: BIGINT, b: BIGINT>>>"
@@ -478,6 +486,29 @@ def tempview_cells() -> list[dict[str, Any]]:
     return cells
 
 
+def unionbyname_cells() -> list[dict[str, Any]]:
+    cells = []
+    for left_kind, right_kind in UNIONBYNAME_PAIRS:
+        for form in FORMS:
+            pair = f"{left_kind}-plain-{right_kind}-plain"
+            cells.append(
+                {
+                    "id": f"tf1-pandas-{pair}-fwd-union_by_name-{form}-{UNIONBYNAME_CARD}",
+                    "source": "pandas",
+                    "left": side(left_kind, "plain", "AB"),
+                    "right": side(right_kind, "plain", "BA"),
+                    "payload": "struct",
+                    "shape": "top",
+                    "op": "union_by_name",
+                    "form": form,
+                    "orient": "fwd",
+                    "ddl": DDL_TOP,
+                    "expect": refuse_for("union_by_name", "s[]", "fwd"),
+                }
+            )
+    return cells
+
+
 TF1_CELLS = (
     pandas_top_cells()
     + pandas_ree_cells()
@@ -485,6 +516,7 @@ TF1_CELLS = (
     + polars_cells()
     + iceberg_cells()
     + tempview_cells()
+    + unionbyname_cells()
 )
 TF1_BY_ID = {cell["id"]: cell for cell in TF1_CELLS}
 
@@ -545,6 +577,8 @@ def combine_frames(left: Any, right: Any, op: str) -> Any:
         return left.union(right)
     if op == "subtract":
         return left.subtract(right)
+    if op == "union_by_name":
+        return left.unionByName(right)
     return left.intersect(right)
 
 
