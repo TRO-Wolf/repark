@@ -8,6 +8,7 @@ The three measured tables re-run on the release build of the item-6 head (r6; r5
 - `variant-seat-c/` — `table.md` (the seat C after-table, P10 and P10dml) and `raw/head.jsonl` (218 records, written in the probe's `base` slot).
 - `variant-ext/` — `table.md` (the extension after-table) and `raw/head.jsonl` (246 records, written in the probe's `base` slot).
 - `unit-c/` — unit C's domain and control probes re-run on this head (`*-head.jsonl`) and on main `45018a2c` (`*-main.jsonl`), the probes' own path scrub applied.
+- [debug-profile.md](debug-profile.md) — the ci-profile red on #1292 (r4): DataFusion's duplicate-name debug assertion on the DataFrame binders, the seven cells against main in both profiles, the binder seat, the pins and the unchanged release tables.
 - `map-seats/` — the out-of-clause map-only comparison probe (`probe_map_seats.py`, 18 seats), its Spark 4.1.2, main and head legs in `raw/`, and `table.md`: head moves five seats to Spark's refusal and changes no other.
 
 Up: [../map.md](../map.md).

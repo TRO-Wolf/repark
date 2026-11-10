@@ -68,6 +68,9 @@ Brief §2 and §4.4 to §4.5 apply, with these bindings:
      - `build_expr_context` (`crates/repark-python/src/column/expr_build.rs`).
    - Each site has its own order pin.
    - `DuplicateFieldOperands` is registered as an ExprPlanner on both contexts.
+   - *Amended 2026-11-10 (orchestrator, r4):* a third seat, the repark-python DataFrame binders
+     (`bound_column`, `bound_projection`), pairs a duplicate-named struct comparison by position before DataFusion
+     types it. It is inventory row 15, and `evidence/after/debug-profile.md` has the measurement.
 2. **Type classification goes through `repark_core::struct_walk`:** `peel_encoding`, `list_element`, `holds_struct`.
    - `renamed_type` and `renamed_array` carry the rename through every list kind and through `RunEndEncoded` and
      `Dictionary` values.

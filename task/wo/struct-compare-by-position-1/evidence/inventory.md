@@ -22,6 +22,7 @@ seat is the analyzer rule `struct_operands_by_position`, inserted immediately be
 | 12 | `repark-spark/src/merge/nested_assign.rs` renders assignment SQL | **no** | It is not a comparison. |
 | 13 | Optimizer `PushDownFilter` into `TableScan.filters` | **yes, already rewritten** | It runs after the analyzer. The renamed operand travels as a call to the immutable `__repark_struct_by_position__` UDF, which no Iceberg pushdown translates, so the predicate stays a residual filter. The `where` and DML seats measure it. |
 | 14 | Native door `PreExecute` (`repark.sql()`, `AnsiDialect`) | **no** | It is a separate session with no Spark extension, by design. The native-door pin records that it still pairs by name. |
+| 15 | DataFrame binders `bound_column` / `bound_projection` (`repark-python/src/dataframe_names.rs`): the last step before DataFusion types an expression for `select`, `withColumn`, `filter`, `sort`, `aggregate` and a join condition | **yes, third seat (r4)** | `F.expr` text planned by `parse_unresolved_expr` types an unknown column as a `Utf8` placeholder, so the planner (row 9) sees no struct pair, and the analyzer never runs before the frame types the comparison. A duplicate-named struct pair then reached `struct_coercion`, whose debug assertion panics in the ci profile, pre-existing on main. `duplicate_field_operands_by_position` pairs it by position at the binder, or refuses with `BINARY_OP_DIFF_TYPES`. `after/debug-profile.md` holds the cells. |
 
 ## Type-variant inventory (the 2026-11-09 rule)
 
