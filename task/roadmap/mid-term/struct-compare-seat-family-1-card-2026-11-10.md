@@ -6,14 +6,14 @@
 
 **Clause:** four forms pair struct fields by name where Spark pairs them by position, on the Spark SQL door, the DataFrame typed door and the DataFrame string doors: key-list joins (`USING`, `NATURAL JOIN`, DataFrame `join(other, "s")` and `join(other, ["s"])`, and lateral key names), `BETWEEN`, simple `CASE x WHEN y`, and `nullif`.
 
-**Why:** A `DELETE` through `BETWEEN`, `nullif` or simple `CASE` removes the wrong row on head, on main and on 1.5.6. Key-list joins return wrong rows on every join type, and `INSERT ... SELECT` gives them write reach. The oracle is the derived one the owner ruled on 2026-11-09: the rows Spark's `SELECT` with the same predicate selects.
+**Why:** A `DELETE` through `BETWEEN`, `nullif` or simple `CASE` removes the wrong row on head, on main and on 1.5.6. Key-list joins return wrong rows on inner, left, right, semi and anti joins, and a `FULL` key-list join answers where Spark refuses. `INSERT ... SELECT` and `MERGE` over a key-list join write wrong rows on v2 copy-on-write, v2 merge-on-read and v3. The oracle is the derived one the owner ruled on 2026-11-09: the rows Spark's `SELECT` with the same predicate selects.
 
-**Measured so far** (the frontier review memo of 2026-11-10, sections 1.2 and 1.3; the clerk did not re-run them):
+**Measured so far** (the frontier review memo of 2026-11-10, sections 1.2 and 1.3):
 
 - Key-list joins: inner, left, semi and anti joins pair by name where Spark pairs by position. A `FULL` join with reordered names refuses on Spark and answers on head. Right and full shown keys are out of this unit.
 - `BETWEEN`, `nullif` and simple `CASE` on a column: head returns the wrong row where Spark answers from the other one. On a local v2 table, `DELETE` through each removes id 2 where Spark's `SELECT` twin selects id 1, on head, main and 1.5.6.
 
-**Step 0:** a measured table comes first, on each of the three doors. The table is being measured now and is not committed. The order does not start until the table is filed.
+**Step 0:** measured 2026-11-10, 2274 cells per leg on Spark 4.1.2, head and main, across the three doors, six join types, both case settings, `PREPARE ... AS` / `EXECUTE`, and DML on v2 copy-on-write, v2 merge-on-read and v3. It reproduces the memo's cells. On head it finds 280 wrong key-list join cells, 104 for `nullif`, 53 for simple `CASE` and 48 for `BETWEEN` / `NOT BETWEEN`, plus per format 17 predicate, 2 `INSERT ... SELECT` and 2 `MERGE` wrong writes. The typed `Column.between` already pairs by position on head. The unit's build commits the table as evidence, and the order binds it as the clause.
 
 **Design notes from the memo, for the unit's order to bind** (memo sections 3.3, 3.4 and 6):
 
