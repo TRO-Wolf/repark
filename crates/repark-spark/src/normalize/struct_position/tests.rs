@@ -2,10 +2,15 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, ArrayRef, Int32Array, ListArray, StructArray};
 use datafusion::arrow::buffer::OffsetBuffer;
-use datafusion::arrow::datatypes::{DataType, Field, Fields};
+use datafusion::arrow::datatypes::{DataType, Field, Fields, Schema};
+use datafusion::common::DFSchema;
+use datafusion::logical_expr::{BinaryExpr, Expr, ExprSchemable, col, lit};
 
 use super::udf::renamed_array;
-use super::{Pairing, Seat, has_duplicate_names, pairing, positional_type, renamed_type};
+use super::{
+    PLANNED_BY_POSITION, Pairing, Seat, duplicate_field_operands_by_position, has_duplicate_names,
+    pairing, positional_type, renamed_type,
+};
 
 const KINDS: [&str; 6] = ["list", "large", "fsl1", "fsl2", "view", "largeview"];
 
@@ -179,4 +184,88 @@ fn renamed_array_relabels_without_moving_values() {
         .downcast_ref::<Int32Array>()
         .expect("ints");
     assert_eq!(first.value(0), 4);
+}
+
+fn bound_schema() -> DFSchema {
+    let duplicate = fields(["a", "a"], [DataType::Int64, DataType::Int64]);
+    let clashing = fields(["a", "a"], [DataType::Boolean, DataType::Boolean]);
+    DFSchema::try_from(Schema::new(vec![
+        Field::new("p", ab(), true),
+        Field::new("q", ba(), true),
+        Field::new("d", duplicate, true),
+        Field::new("c", clashing, true),
+        Field::new("id", DataType::Int32, true),
+    ]))
+    .expect("schema")
+}
+
+fn planned_operand_type(operand: &Expr, schema: &DFSchema) -> DataType {
+    let Expr::ScalarFunction(function) = operand else {
+        panic!("operand is not planned: {operand}");
+    };
+    assert_eq!(function.func.name(), PLANNED_BY_POSITION);
+    operand.get_type(schema).expect("planned type")
+}
+
+#[test]
+fn bound_comparison_with_a_duplicate_named_operand_pairs_by_position() {
+    let schema = bound_schema();
+    let planned =
+        duplicate_field_operands_by_position(col("p").eq(col("d")), &schema).expect("planned");
+    let Expr::BinaryExpr(BinaryExpr { left, right, .. }) = &planned else {
+        panic!("not a comparison: {planned}");
+    };
+    assert_eq!(planned_operand_type(left, &schema), positional_type(&ab()));
+    assert_eq!(
+        planned_operand_type(right, &schema),
+        fields(["_1", "_2"], [DataType::Int64, DataType::Int64])
+    );
+    assert_eq!(planned.get_type(&schema).expect("typed"), DataType::Boolean);
+}
+
+#[test]
+fn bound_comparison_nested_under_a_conjunction_pairs_by_position() {
+    let schema = bound_schema();
+    let expr = col("d").gt_eq(col("p")).and(col("id").eq(lit(1)));
+    let planned = duplicate_field_operands_by_position(expr, &schema).expect("planned");
+    let Expr::BinaryExpr(BinaryExpr { left, right, .. }) = &planned else {
+        panic!("not a conjunction: {planned}");
+    };
+    let Expr::BinaryExpr(BinaryExpr {
+        left: first,
+        right: second,
+        ..
+    }) = left.as_ref()
+    else {
+        panic!("not a comparison: {left}");
+    };
+    planned_operand_type(first, &schema);
+    planned_operand_type(second, &schema);
+    assert_eq!(right.as_ref(), &col("id").eq(lit(1)));
+}
+
+#[test]
+fn bound_comparison_without_duplicates_or_with_an_unknown_side_is_unchanged() {
+    let schema = bound_schema();
+    for expr in [
+        col("p").eq(col("q")),
+        col("p").eq(col("p")),
+        col("d").eq(col("missing")),
+    ] {
+        let kept = duplicate_field_operands_by_position(expr.clone(), &schema).expect("kept");
+        assert_eq!(kept, expr);
+    }
+}
+
+#[test]
+fn bound_comparison_whose_positional_types_clash_refuses_with_spark_class() {
+    let schema = bound_schema();
+    let error = duplicate_field_operands_by_position(col("p").eq(col("c")), &schema)
+        .expect_err("clash refuses");
+    assert!(
+        error
+            .to_string()
+            .contains("[DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES]"),
+        "{error}"
+    );
 }

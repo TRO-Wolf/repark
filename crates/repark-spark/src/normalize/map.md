@@ -132,7 +132,10 @@ here and is re-exported in one line.
   copying; `udf.rs` splits the relabel into encodings, list kinds and maps, and structs), refuses clashes with Spark's class, and reads beneath one `Alias` and one cast. Type
   classification is `repark_core::struct_walk`; every list kind, `RunEndEncoded` and
   `Dictionary` carry the rename. `DuplicateFieldOperands` (planner) and the positional path cover
-  duplicate names. Two arms reach beyond the order's seat list. First, `element_at` on a map whose
+  duplicate names. The DataFrame door builds its schema before any analyzer, so
+  `duplicate_field_operands_by_position` runs the planner's pairing at repark-python's binders
+  (`dataframe_names.rs`): an `F.expr` comparison whose column type was unknown at parse time
+  would otherwise reach DataFusion's debug assertion against duplicate struct names. Two arms reach beyond the order's seat list. First, `element_at` on a map whose
   struct key is reordered against the lookup key refuses with Spark's `MAP_FUNCTION_DIFF_TYPES`
   (step-0 cell 04381). Second, a map-value read (`get_field` over a map) renames the map column
   beneath the field access, so a join key stays a plain expression (ext P33 map-value depth).

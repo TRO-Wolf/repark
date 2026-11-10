@@ -102,6 +102,27 @@ KNOWN: dict[str, str] = {
     "04389": UNIT_C,
 }
 NATIVE_REORDERED = "SELECT named_struct('a', 1, 'b', 2) = named_struct('b', 2, 'a', 1) AS r"
+DUPLICATE = "named_struct('a', 3, 'a', 4)"
+WIDENED = "named_struct('a', CAST(3 AS BIGINT), 'a', 4)"
+NO_PANIC_SHAPES = (
+    f"w.where(F.expr(\"p = {DUPLICATE}\")).select('id')",
+    f"w.filter(F.expr(\"p = {DUPLICATE}\")).select('id')",
+    f"w.where(F.col('id') == 1).withColumn('r', F.expr(\"p = {DUPLICATE}\")).select('r')",
+    f"w.where(F.col('id') == 1).select(F.expr(\"{DUPLICATE} = p\").alias('r'))",
+    f"w.where(F.col('id') == 1).select(F.expr(\"q = {DUPLICATE}\").alias('r'))",
+    f"w.where(F.col('id') == 1).select((F.expr(\"p = {DUPLICATE}\") & F.lit(True)).alias('r'))",
+    f"w.where(F.col('id') == 1).select(F.expr(\"p = {DUPLICATE} AND id = 1\").alias('r'))",
+    "w.where(F.col('id') == 1).select(F.expr(\"n = named_struct('a', 3, 'b', "
+    "named_struct('c', 1, 'c', 2))\").alias('r'))",
+    f"w.where(F.col('id') == 1).select(F.expr(\"ap = array({DUPLICATE})\").alias('r'))",
+    f"w.groupBy(F.expr(\"p = {DUPLICATE}\").alias('g')).count()",
+    f"w.agg(F.max(F.expr(\"p = {DUPLICATE}\")).alias('r'))",
+    f"w.where(F.col('id') == 1).select((F.col('p') == F.expr(\"{WIDENED}\")).alias('r'))",
+    f"w.where(F.col('id') == 1).select((F.col('p') < F.expr(\"{WIDENED}\")).alias('r'))",
+    f"w.where(F.col('p') == F.expr(\"{WIDENED}\")).select('id')",
+    "w.select('id', 'p', F.expr(\"named_struct('a', CAST(v AS BIGINT), 'a', v)\").alias('d'))"
+    ".where(F.col('p') != F.col('d')).select('id')",
+)
 
 
 def load() -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -137,14 +158,21 @@ def rows_of(frame: Any) -> list[Any]:
     return sorted(([value_of(item) for item in row] for row in frame.collect()), key=json.dumps)
 
 
+def is_panic(error: BaseException) -> bool:
+    return type(error).__name__ == "PanicException"
+
+
 def outcome(spark: Any, wide: str, cell: dict[str, Any]) -> tuple[str, Any]:
     scope = {"F": functions, "w": spark.table(wide), "spark": spark}
     try:
         return "rows", rows_of(eval(cell["stmt"], scope))
-    except Exception as error:
+    except BaseException as error:
+        if is_panic(error):
+            return "error", "PANIC"
+        if not isinstance(error, Exception):
+            raise
         found = CLASS.search(str(error))
-        name = type(error).__name__
-        return "error", "PANIC" if name == "PanicException" else (found.group(1) if found else name)
+        return "error", found.group(1) if found else type(error).__name__
 
 
 def matches(expect: dict[str, Any], got: tuple[str, Any]) -> bool:
@@ -187,7 +215,8 @@ def measured_doors(tmp_path_factory: pytest.TempPathFactory) -> dict[str, dict[s
         kinds = {
             f"{cell['cell']}-{door}": kind_outcome(spark, cell, door) for cell, door in KIND_RUNS
         }
-        return {"df": dataframe_outcomes(spark), "kind": kinds}
+        shapes = {stmt: outcome(spark, WIDE, {"stmt": stmt}) for stmt in NO_PANIC_SHAPES}
+        return {"df": dataframe_outcomes(spark), "kind": kinds, "shapes": shapes}
     finally:
         spark.stop()
         if previous is not None:
@@ -290,8 +319,12 @@ def kind_frame(spark: Any, cell: dict[str, Any], door: str) -> Any:
 def kind_outcome(spark: Any, cell: dict[str, Any], door: str) -> tuple[str, Any]:
     try:
         rows = kind_frame(spark, cell, door).toArrow().to_pylist()
-    except Exception as error:
-        return "refused", "PANIC" if type(error).__name__ == "PanicException" else str(error)
+    except BaseException as error:
+        if is_panic(error):
+            return "refused", "PANIC"
+        if not isinstance(error, Exception):
+            raise
+        return "refused", str(error)
     return "rows", sorted(json.dumps(canon(row), sort_keys=True, default=str) for row in rows)
 
 
@@ -313,6 +346,13 @@ def test_every_list_kind_and_encoding_answers_as_its_plain_list_twin_on_spark(
         assert kind == "refused", (cell["cell"], expect["card"], value)
         return
     assert (kind, value) == ("rows", expect["rows"]), (cell["cell"], cell["stmt"], value)
+
+
+@pytest.mark.parametrize("stmt", NO_PANIC_SHAPES)
+def test_no_dataframe_door_shape_beyond_the_table_panics(
+    measured_doors: dict[str, dict[str, Any]], stmt: str
+) -> None:
+    assert measured_doors["shapes"][stmt] != ("error", "PANIC"), stmt
 
 
 def test_native_door_still_pairs_by_name() -> None:

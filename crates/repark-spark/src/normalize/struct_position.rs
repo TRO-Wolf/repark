@@ -853,33 +853,66 @@ impl ExprPlanner for DuplicateFieldOperands {
         let Some(op) = comparison_operator(&expr.op) else {
             return Ok(PlannerResult::Original(expr));
         };
-        let (Ok(left_type), Ok(right_type)) =
-            (expr.left.get_type(schema), expr.right.get_type(schema))
-        else {
-            return Ok(PlannerResult::Original(expr));
-        };
-        if !struct_pair(&left_type, &right_type)
-            || !(has_duplicate_names(&left_type) || has_duplicate_names(&right_type))
-        {
-            return Ok(PlannerResult::Original(expr));
-        }
-        let left_positional = positional_type(&left_type);
-        let right_positional = positional_type(&right_type);
-        if comparison_coercion(&left_positional, &right_positional).is_none() {
-            return Err(binary_op_diff_types(
-                &expr.left,
-                op,
-                &expr.right,
-                &left_type,
-                &right_type,
-            ));
-        }
-        Ok(PlannerResult::Planned(binary(
-            by_position_named(PLANNED_BY_POSITION, expr.left, left_positional),
-            op,
-            by_position_named(PLANNED_BY_POSITION, expr.right, right_positional),
-        )))
+        let RawBinaryExpr {
+            op: raw,
+            left,
+            right,
+        } = expr;
+        Ok(match planned_pair(left, op, right, schema)? {
+            PlannerResult::Planned(planned) => PlannerResult::Planned(planned),
+            PlannerResult::Original((left, right)) => PlannerResult::Original(RawBinaryExpr {
+                op: raw,
+                left,
+                right,
+            }),
+        })
     }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn duplicate_field_operands_by_position(expr: Expr, schema: &DFSchema) -> Result<Expr> {
+    expr.transform_up(|leaf| match leaf {
+        Expr::BinaryExpr(BinaryExpr { left, op, right }) if is_comparison(op) => {
+            Ok(match planned_pair(*left, op, *right, schema)? {
+                PlannerResult::Planned(planned) => Transformed::yes(planned),
+                PlannerResult::Original((left, right)) => Transformed::no(binary(left, op, right)),
+            })
+        }
+        other => Ok(Transformed::no(other)),
+    })
+    .data()
+}
+
+fn planned_pair(
+    left: Expr,
+    op: Operator,
+    right: Expr,
+    schema: &DFSchema,
+) -> Result<PlannerResult<(Expr, Expr)>> {
+    let (Ok(left_type), Ok(right_type)) = (left.get_type(schema), right.get_type(schema)) else {
+        return Ok(PlannerResult::Original((left, right)));
+    };
+    if !struct_pair(&left_type, &right_type)
+        || !(has_duplicate_names(&left_type) || has_duplicate_names(&right_type))
+    {
+        return Ok(PlannerResult::Original((left, right)));
+    }
+    let left_positional = positional_type(&left_type);
+    let right_positional = positional_type(&right_type);
+    if comparison_coercion(&left_positional, &right_positional).is_none() {
+        return Err(binary_op_diff_types(
+            &left,
+            op,
+            &right,
+            &left_type,
+            &right_type,
+        ));
+    }
+    Ok(PlannerResult::Planned(binary(
+        by_position_named(PLANNED_BY_POSITION, left, left_positional),
+        op,
+        by_position_named(PLANNED_BY_POSITION, right, right_positional),
+    )))
 }
 
 fn comparison_operator(op: &BinaryOperator) -> Option<Operator> {
