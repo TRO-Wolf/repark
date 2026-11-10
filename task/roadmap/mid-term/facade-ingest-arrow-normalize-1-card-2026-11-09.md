@@ -11,3 +11,7 @@
 **Why it does not replace the rule-level fix:** the native door has `arrow_cast`, so a frame built there reaches a rule with its own types. Each rule still needs its type-variant inventory (the 2026-11-09 rule in `task/lessons.md`).
 
 **Close:** a sketch that measures the offset-narrowing cost and the 2^31 limit, then an owner ruling on whether the door narrows.
+
+**2026-11-10, measured reach** (from the scoped review of STRUCT-SETOP-TYPE-FAMILY-1, PR #1290, findings F-5 and F-6; both pre-existing, on `b8ad7a9c` and on #1290's head; Spark answers both):
+- F-5: a SQL array union a polars `Array` fails at execution on a list field-name mismatch (`element` against `item`). `union`, `unionByName`, `subtract` and `intersect` refuse with "column types must match schema types" when the polars `Array` is second; the `Array`-first orientation answers.
+- F-6: a conforming INSERT of a SQL array union a polars list hits a DataFusion internal error, "cannot convert LargeList into List", on v2 copy-on-write, v2 merge-on-read and v3. The polars-first orientation inserts correctly.
