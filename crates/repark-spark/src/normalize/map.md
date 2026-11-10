@@ -129,7 +129,7 @@ here and is re-exported in one line.
   (`../extension.rs`) and the expression context (repark-python `expr_build.rs`). It renames the
   right operand of a struct comparison, `IN` list, `IN (subquery)` or join key to the left
   operand's names by position (the `__repark_struct_by_position__` UDF relabels without
-  copying), refuses clashes with Spark's class, and reads beneath one `Alias` and one cast. Type
+  copying; `udf.rs` splits the relabel into encodings, list kinds and maps, and structs), refuses clashes with Spark's class, and reads beneath one `Alias` and one cast. Type
   classification is `repark_core::struct_walk`; every list kind, `RunEndEncoded` and
   `Dictionary` carry the rename. `DuplicateFieldOperands` (planner) and the positional path cover
   duplicate names. Two arms reach beyond the order's seat list. First, `element_at` on a map whose
