@@ -65,3 +65,15 @@ then finds equal names in equal order.
   clash and refuses with Spark's class for the seat.
 - A struct-bearing pair whose rename returns nothing refuses; it never passes through to by-name coercion.
 - Identical types never reach either path (F-1): equal types need no rename and are never refused.
+
+## Seats beyond the order's list (built in item 2, named for review)
+
+The order lists these comparison seats: `=` and the other comparison operators, an `IN` list, `IN (subquery)` and
+join keys. The rule also has two arms that sit outside that list:
+
+| arm | what it does | cells |
+|---|---|---|
+| `element_at(map, key)` with a struct key reordered against the map's key type | refuses with Spark's `DATATYPE_MISMATCH.MAP_FUNCTION_DIFF_TYPES`. 1.5.6 answered here, where Spark refuses, and `KNOWN` may not hold an acceptance (orchestrator ruling, r3 ruling 1). | step-0 04381 (ACCEPTED-WHERE-SPARK-REFUSED on 1.5.6, BOTH-REFUSED on head) |
+| a map-value read (`get_field` over a map) as a comparison operand | the rename goes beneath the field access, onto the map column, so a projected join key stays a plain expression | ext P33, the map-value depth rows (P33-00270, P33-00276 join keys) |
+
+Neither arm reads beneath more than one cast.

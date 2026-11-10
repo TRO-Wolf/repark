@@ -132,7 +132,11 @@ here and is re-exported in one line.
   copying), refuses clashes with Spark's class, and reads beneath one `Alias` and one cast. Type
   classification is `repark_core::struct_walk`; every list kind, `RunEndEncoded` and
   `Dictionary` carry the rename. `DuplicateFieldOperands` (planner) and the positional path cover
-  duplicate names. `map_ordering::refuse_in_expr` widens to `pub(super)` for it. Pins:
+  duplicate names. Two arms reach beyond the order's seat list. First, `element_at` on a map whose
+  struct key is reordered against the lookup key refuses with Spark's `MAP_FUNCTION_DIFF_TYPES`
+  (step-0 cell 04381). Second, a map-value read (`get_field` over a map) renames the map column
+  beneath the field access, so a join key stays a plain expression (ext P33 map-value depth).
+  `map_ordering::refuse_in_expr` widens to `pub(super)` for it. Pins:
   `struct_position/tests.rs`, `../../tests/struct_compare_by_position.rs`.
 
 ## Pointers
