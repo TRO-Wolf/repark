@@ -6,7 +6,6 @@ import datetime
 import decimal
 import json
 import re
-from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -17,10 +16,14 @@ import pytest
 import repark
 from repark import ReparkSession
 from repark.spark import functions
-from repark.spark.session import _reset_active_session_for_tests
+from repark.spark.session.session_state import _promote_active
+
+pytestmark = pytest.mark.xdist_group("test_struct_compare_by_position_1")
 
 CELLS_PATH = Path(__file__).parent / "data" / "struct_compare_by_position_cells.jsonl"
 KIND_PATH = Path(__file__).parent / "data" / "struct_compare_kind_cells.jsonl"
+CATALOG = "scbp_cat"
+WIDE = f"{CATALOG}.sd.w"
 CLASS = re.compile(r"\[([A-Z][A-Z0-9_]*(?:\.[A-Z0-9_]+)*)\]")
 PLANNER_CLASS = (
     "a SELECT-list struct clash refuses without Spark's class (STRUCT-COMPARE-PLANNER-CLASS-1)"
@@ -151,33 +154,49 @@ def matches(expect: dict[str, Any], got: tuple[str, Any]) -> bool:
     return kind == "error" and value == expect["class"]
 
 
-@pytest.fixture(scope="module")
-def session(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Any]:
-    _reset_active_session_for_tests()
-    root = tmp_path_factory.mktemp("warehouse")
-    spark = ReparkSession.builder.appName("struct-compare-by-position-1").getOrCreate()
-    spark.register_memory_catalog("hd", str(root))
-    spark.sql("CREATE NAMESPACE hd.sd").collect()
-    create, seed, _ = FIXTURES["W"]
-    spark.sql(create.replace("{t}", "hd.sd.w")).collect()
-    spark.sql(seed.replace("{t}", "hd.sd.w")).collect()
-    yield spark
-    spark.stop()
-    _reset_active_session_for_tests()
-
-
-@pytest.fixture(scope="module")
-def measured(session: Any) -> dict[str, tuple[str, Any]]:
+def dataframe_outcomes(spark: Any) -> dict[str, tuple[str, Any]]:
     outcomes = {}
     for cell in DF_CELLS:
-        session.conf.set("spark.sql.caseSensitive", str(cell["case"] == "sensitive").lower())
-        session.conf.set("spark.sql.ansi.enabled", str(cell["ansi"] != "off").lower())
+        spark.conf.set("spark.sql.caseSensitive", str(cell["case"] == "sensitive").lower())
+        spark.conf.set("spark.sql.ansi.enabled", str(cell["ansi"] != "off").lower())
         try:
-            outcomes[cell["key"]] = outcome(session, "hd.sd.w", cell)
+            outcomes[cell["key"]] = outcome(spark, WIDE, cell)
         finally:
-            session.conf.set("spark.sql.caseSensitive", "false")
-            session.conf.set("spark.sql.ansi.enabled", "true")
+            spark.conf.set("spark.sql.caseSensitive", "false")
+            spark.conf.set("spark.sql.ansi.enabled", "true")
     return outcomes
+
+
+def own_session(previous: Any) -> Any:
+    if previous is None:
+        return ReparkSession.builder.appName("struct-compare-by-position-1").getOrCreate()
+    return previous.newSession()
+
+
+@pytest.fixture(scope="module")
+def measured_doors(tmp_path_factory: pytest.TempPathFactory) -> dict[str, dict[str, Any]]:
+    previous = ReparkSession.getActiveSession()
+    spark = own_session(previous)
+    assert spark is not previous
+    try:
+        spark.register_memory_catalog(CATALOG, str(tmp_path_factory.mktemp("warehouse")))
+        spark.sql(f"CREATE NAMESPACE {CATALOG}.sd").collect()
+        create, seed, _ = FIXTURES["W"]
+        spark.sql(create.replace("{t}", WIDE)).collect()
+        spark.sql(seed.replace("{t}", WIDE)).collect()
+        kinds = {
+            f"{cell['cell']}-{door}": kind_outcome(spark, cell, door) for cell, door in KIND_RUNS
+        }
+        return {"df": dataframe_outcomes(spark), "kind": kinds}
+    finally:
+        spark.stop()
+        if previous is not None:
+            _promote_active(previous)
+
+
+@pytest.fixture(scope="module")
+def measured(measured_doors: dict[str, dict[str, Any]]) -> dict[str, tuple[str, Any]]:
+    return measured_doors["df"]
 
 
 def test_the_cells_file_carries_every_dataframe_door_cell() -> None:
@@ -277,8 +296,8 @@ def kind_outcome(spark: Any, cell: dict[str, Any], door: str) -> tuple[str, Any]
 
 
 @pytest.fixture(scope="module")
-def kind_measured(session: Any) -> dict[str, tuple[str, Any]]:
-    return {f"{cell['cell']}-{door}": kind_outcome(session, cell, door) for cell, door in KIND_RUNS}
+def kind_measured(measured_doors: dict[str, dict[str, Any]]) -> dict[str, tuple[str, Any]]:
+    return measured_doors["kind"]
 
 
 @pytest.mark.parametrize(
