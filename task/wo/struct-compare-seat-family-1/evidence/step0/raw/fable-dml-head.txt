@@ -1,0 +1,1 @@
+RESULT head {"between": {"selected": [2], "left_after_delete": [1]}, "nullif": {"selected": [2], "left_after_delete": [1]}, "case_simple": {"selected": [2], "left_after_delete": [1]}, "eq_control": {"selected": [1], "left_after_delete": [2]}, "values_schema": "struct<lid:int,s:struct<a:int,b:int>>"}

@@ -1,0 +1,1 @@
+RESULT spark {"between": [1], "nullif": [1], "case_simple": [1], "eq_control": [1], "values_schema": "struct<lid:int,s:struct<a:int,b:int>>"}
