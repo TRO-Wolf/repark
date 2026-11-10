@@ -141,14 +141,14 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   `store_cast::BY_NAME_STORE_KERNELS` and of `store_cast::NS_WALL_KERNEL_NAMES`; each table
   entry names its own kernel, and the wall names equal `repark-functions`' constants. The ANSI
   door's twin is `repark-sql/tests/ansi_store_kernel_registry.rs`.
-  **WRITE-SPINE-1 step 1b (2026-10-24):** `missing_wall_kernel_refuses_instead_of_storing_utc`.
-  In New York, a session that holds `__repark_cast_timestamp_ntz__` stores the instant
-  `2026-01-02 03:04:05.123456+00:00` written `BY NAME` into a `TIMESTAMP_NTZ` column as the
-  session wall `1767305045123456`. The same session with that kernel deregistered refuses the
-  write with the internal error that names the kernel, and the table stays empty. Main stored
-  the UTC wall. Risk: a session built without the kernel stores a wall shifted by the zone
-  offset with no error.
-- `struct_pairing_doors.rs` — **WRITE-SPINE-1 step 2 fix round 1 (2026-10-25):** `the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1` pins the PARTITION carve-out of ice-struct-pairing-1 C-031 on the stage's PartitionOverwrite site.
+  **WRITE-SPINE-1 step 1b (2026-10-24):**
+  `missing_wall_kernel_refuses_instead_of_storing_utc`. In New York a session
+  holding `__repark_cast_timestamp_ntz__` stores `2026-01-02 03:04:05.123456+00:00`
+  written `BY NAME` into a `TIMESTAMP_NTZ` column as wall `1767305045123456`.
+  Deregistered, it refuses with an internal error naming the kernel, leaving the
+  table empty. Main stored the UTC wall. Risk: without the kernel a session stores
+  a wall shifted by the zone offset, silently.
+- `struct_compare_by_position.rs` — **STRUCT-COMPARE-BY-POSITION-1 (2026-11-10):** every step-0 `sql` cell on the Spark door, by case and ANSI flag: Spark's rows, class or read-back; no panic.
 - [struct_pairing_doors.rs](struct_pairing_doors.rs) —
   **ICE-STRUCT-PAIRING-1 step 1 (2026-10-14), parity row R-016:** the sixteen write doors at
   the Rust door (`ReparkSession::sql`, and `sql_built_with_write_options` with the DataFrame
@@ -161,7 +161,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   surplus or a missing field keeps main's raw planner refusal (list L1, parity row R-018), as
   the facade fixture holds it; red on main is 32 of 64 cells. Build round 2: the count of
   written rows is `i32::from`, for clippy's `bool_to_int_with_if`; and
-  `the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1` pins hint H-1 on
+  **WRITE-SPINE-1 step 2 fix round 1 (2026-10-25):** the PARTITION carve-out of C-031: `the_partition_overwrite_route_refuses_an_unpaired_struct_with_hint_h1` pins hint H-1 on
   the partition overwrite route: `PARTITION (p = 1)` (S3, `strict_partition_store_cast`)
   refuses with the static-partition hint and `PARTITION (p)` (S2 through
   `write_overwrite_staged_files_from_stream`) with the batch hint, the seeded row kept; the

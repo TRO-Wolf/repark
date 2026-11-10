@@ -49,6 +49,7 @@ const JOIN_RULE_HEADER: &str = "join_condition_refusals\ncaused by\n";
 const PLAN_DISPLAY_PREFIX: &str = "Error during planning: ";
 const SQLSTATE_MARKER: &str = "SQLSTATE: ";
 const SQLSTATE_LEN: usize = 5;
+const STRUCT_RULE_HEADER: &str = "struct_operands_by_position\ncaused by\n";
 
 fn coercion_refusal_message(display: &str) -> Option<String> {
     let rest = display.split(COERCION_FAILED_MARKER).nth(1)?;
@@ -84,6 +85,20 @@ fn join_refusal_message(display: &str) -> Option<String> {
     let rest = display.strip_prefix(JOIN_RULE_HEADER)?;
     let rest = rest.strip_prefix(PLAN_DISPLAY_PREFIX).unwrap_or(rest);
     if !rest.starts_with(JOIN_NONDET_HEAD) && !rest.starts_with(JOIN_NOT_BOOLEAN_HEAD) {
+        return None;
+    }
+    let state_start = rest.find(SQLSTATE_MARKER)? + SQLSTATE_MARKER.len();
+    let state = rest.get(state_start..state_start + SQLSTATE_LEN)?;
+    if !state.bytes().all(|byte| byte.is_ascii_alphanumeric()) {
+        return None;
+    }
+    rest.get(..state_start + SQLSTATE_LEN).map(str::to_string)
+}
+
+fn struct_refusal_message(display: &str) -> Option<String> {
+    let rest = display.strip_prefix(STRUCT_RULE_HEADER)?;
+    let rest = rest.strip_prefix(PLAN_DISPLAY_PREFIX).unwrap_or(rest);
+    if !rest.starts_with('[') {
         return None;
     }
     let state_start = rest.find(SQLSTATE_MARKER)? + SQLSTATE_MARKER.len();
@@ -223,6 +238,7 @@ pub fn engine_err(err: DataFusionError) -> Error {
                 grouping_refusal_message(&display)
                     .or_else(|| coercion_refusal_message(&display))
                     .or_else(|| join_refusal_message(&display))
+                    .or_else(|| struct_refusal_message(&display))
                     .unwrap_or(display),
             )
         }
@@ -460,6 +476,25 @@ mod tests {
              used with GroupingSets/Cube/Rollup. SQLSTATE: 42K0E";
         let error = engine_err(DataFusionError::Plan(payload.to_string()));
         assert!(matches!(error, Error::Analysis(text) if text == payload));
+    }
+
+    #[test]
+    fn struct_position_rule_wrap_peels_to_the_bare_refusal() {
+        let payload = "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = m)\" due \
+             to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". \
+             SQLSTATE: 42K09";
+        let wrapped = DataFusionError::Context(
+            "struct_operands_by_position".to_string(),
+            Box::new(DataFusionError::Plan(payload.to_string())),
+        );
+        let error = engine_err(wrapped);
+        assert!(matches!(error, Error::Analysis(text) if text == payload));
+        let unclassed = DataFusionError::Context(
+            "struct_operands_by_position".to_string(),
+            Box::new(DataFusionError::Plan("no class here".to_string())),
+        );
+        let error = engine_err(unclassed);
+        assert!(matches!(error, Error::Analysis(text) if text.contains("no class here")));
     }
 
     #[test]

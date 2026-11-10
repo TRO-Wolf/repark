@@ -73,6 +73,11 @@ function-registry + analyzer-rule installation + the composed
   `USE` / `SHOW … IN|FROM` operand position, or as the first part of a two- or three-part
   dotted name, raises its refusal first (skipped entirely when no refusal is stored).
 
+- `../extension.rs` — **STRUCT-COMPARE-BY-POSITION-1 (2026-11-10):** seats
+  `struct_operands_by_position` after `spark_map_subscript`, registers `DuplicateFieldOperands`
+  in `register`, and re-exports `struct_position` toward the root (`lib.rs` holds at 156).
+  `tests.rs` pins the seat index.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

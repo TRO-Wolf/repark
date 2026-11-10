@@ -422,9 +422,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `[CAST_OVERFLOW_IN_TABLE_INSERT]` classifies `Arithmetic` and renders verbatim, beside
   `ARITHMETIC_OVERFLOW`.
   **CROSS-JOIN-CONDITION-1 fold 3 (2026-10-09):** `join_refusal_message` peels the
-  `join_condition_refusals` rule wrap to the bare `[CONDITION] … SQLSTATE: 42K0E` payload, gated
-  on the rule name and the two join heads, so the facade accessors answer Spark's condition;
-  foreign rule wraps and bare heads keep the full display.
+  `join_condition_refusals` wrap to the bare `[CONDITION] … SQLSTATE: 42K0E` payload (gated on
+  the rule name and the join heads), so the facade answers Spark's class.
+  `struct_refusal_message` (2026-11-10) peels `struct_operands_by_position`.
 - [unknown_routine.rs](unknown_routine.rs) — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
   (see [../map.md](../map.md)).
   **Remediation round 1 (2026-09-16):** token-based call-site matching (see

@@ -418,6 +418,6 @@ sync after changes.
 - **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `expr_build.rs` `build_expr_context` registers
   `repark_functions::SparkTypePlanner` on the expression-string session, so
   `F.expr("CAST(x AS TIMESTAMP)")` and `selectExpr` take the same types as `spark.sql`.
-- **STRUCT-SETOP-REORDER-REFUSAL-1 delta #2 (2026-11-09):** `build_expr_context`
-  seats `insert_struct_setop_after_coercion` right after `type_coercion`, so `F.expr`
-  fragments refuse name-differing struct set-op rows; a unit test pins that seat.
+- **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-09):** `build_expr_context` seats the set-op
+  name check after `type_coercion`; **STRUCT-COMPARE-BY-POSITION-1:** struct operands by
+  position before it. Unit tests pin both.

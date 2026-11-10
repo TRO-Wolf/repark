@@ -77,10 +77,18 @@ pub(crate) fn bound_column(
         .and_then(|expr| {
             repark_core::frame_names::resolve_bound_expr_with(expr.data, frame.schema(), rule)
         })
+        .and_then(|expr| duplicate_operands_by_position(expr, frame))
         .map_err(datafusion_to_py_err)?;
     let bound = crate::column::series::bind_series(frame, bound)?;
     let depth = crate::deep_stack::expression_depth(&bound);
     Ok((bound, depth))
+}
+
+fn duplicate_operands_by_position(
+    expr: Expr,
+    frame: &DataFrame,
+) -> datafusion::error::Result<Expr> {
+    repark_spark::struct_position::duplicate_field_operands_by_position(expr, frame.schema())
 }
 
 pub(crate) fn bound_projection(
@@ -97,6 +105,7 @@ pub(crate) fn bound_projection(
         .and_then(|expr| {
             repark_functions::collection::map_array_subscripts_as_lookups(expr, frame.schema())
         })
+        .and_then(|expr| duplicate_operands_by_position(expr, frame))
         .map_err(datafusion_to_py_err)?;
     let bound = crate::column::series::bind_series(frame, bound)?;
     let depth = crate::deep_stack::expression_depth(&bound);

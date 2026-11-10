@@ -29,6 +29,7 @@ pub(crate) mod map_ordering;
 pub(crate) mod replace_table;
 pub(crate) mod sort_key_projection;
 pub(crate) mod statement_guard;
+pub mod struct_position;
 
 pub(crate) use statement_guard::{
     multi_statement_parse_error, refuse_multi_statement_sql, refuse_unclosed_bracketed_comment,

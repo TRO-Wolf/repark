@@ -235,7 +235,7 @@ fn refusal(
             right: right_nested,
         } => {
             let pair = format!("[{right_nested}] versus [{left_nested}]");
-            format!("Struct field names differ at {column}{path}: {pair}")
+            format!("Struct fields cannot be paired at {column}{path}: {pair}")
         }
     };
     DataFusionError::Plan(format!(

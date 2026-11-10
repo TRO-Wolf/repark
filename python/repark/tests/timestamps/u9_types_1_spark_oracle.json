@@ -5717,8 +5717,25 @@
     ]
    ],
    "residue": {
-    "id": "R-19",
-    "repark": "ok"
+    "id": "R-6",
+    "repark": [
+     [
+      "cond",
+      "DATATYPE_MISMATCH.INVALID_ORDERING_TYPE"
+     ],
+     [
+      "error",
+      "AnalysisException"
+     ],
+     [
+      "msg",
+      "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"(c = m)\" due to data type mismatch: The `=` does not support ordering on type \"MAP<STRING, INT>\". SQLSTATE: 42K09"
+     ],
+     [
+      "state",
+      "42K09"
+     ]
+    ]
    }
   },
   {
@@ -5735,20 +5752,7 @@
      1,
      "n"
     ]
-   ],
-   "residue": {
-    "id": "R-19",
-    "repark": [
-     [
-      0,
-      "hit"
-     ],
-     [
-      1,
-      "n"
-     ]
-    ]
-   }
+   ]
   },
   {
    "group": "void",

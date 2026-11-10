@@ -123,6 +123,29 @@ here and is re-exported in one line.
   escape form, line break, nesting push or pop fails a test. The doubled-quote escape and the
   end-of-input escape guard only change `skip_quoted_text`'s resume index.
 
+- `struct_position.rs`, `struct_position/udf.rs`, `struct_position/tests.rs` —
+  **STRUCT-COMPARE-BY-POSITION-1 (2026-11-10):** `struct_operands_by_position`, seated just
+  before `type_coercion` by `insert_struct_position_rule_before_coercion` from the session
+  (`../extension.rs`) and the expression context (repark-python `expr_build.rs`). It renames the
+  right operand of a struct comparison, `IN` list, `IN (subquery)` or join key to the left
+  operand's names by position (the `__repark_struct_by_position__` UDF relabels without
+  copying; `udf.rs` splits the relabel into encodings, list kinds and maps, and structs), refuses clashes with Spark's class, and reads beneath one `Alias` and one cast. Type
+  classification is `repark_core::struct_walk`; every list kind, `RunEndEncoded` and
+  `Dictionary` carry the rename. `DuplicateFieldOperands` (planner) and the positional path cover
+  duplicate names. The DataFrame door builds its schema before any analyzer, so
+  `duplicate_field_operands_by_position` runs the planner's pairing at repark-python's binders
+  (`dataframe_names.rs`): an `F.expr` comparison whose column type was unknown at parse time
+  would otherwise reach DataFusion's debug assertion against duplicate struct names. Two arms reach beyond the order's seat list. First, `element_at` on a map whose
+  struct key is reordered against the lookup key refuses with Spark's `MAP_FUNCTION_DIFF_TYPES`
+  (step-0 cell 04381). Second, a map-value read (`get_field` over a map) renames the map column
+  beneath the field access, so a join key stays a plain expression (ext P33 map-value depth).
+  `map_ordering::refuse_in_expr` widens to `pub(super)` for it: `align_node` runs it on every
+  leaf of a node holding a comparison. Out of clause and named for review, that guard reaches
+  seats `map_ordering`'s eager pass misses (the MERGE join, the DataFrame expression context). A
+  map-only comparison there now refuses with Spark's `INVALID_ORDERING_TYPE`, a move toward Spark
+  (u9 `map/cmp/merge-on`; five seats in `evidence/after/map-seats/`). Pins:
+  `struct_position/tests.rs`, `../../tests/struct_compare_by_position.rs`.
+
 ## Pointers
 
 - Up: [../map.md](../map.md). Caller: [../normalize.rs](../normalize.rs) `parse_single_normalized`.

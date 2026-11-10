@@ -8,7 +8,7 @@ wrapped optimizer rule) and declares this directory.
 
 ## Contents
 
-- [struct_setop.rs](struct_setop.rs), [struct_walk.rs](struct_walk.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** `struct_setop_names` refuses struct operands differing in field-name order or set, any depth. Delta #2 seats it post `type_coercion`: operands read beneath stacked casts against the union schema; the `RecursiveQuery` arm checks recursive-term source types against the static term. **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** the comparison is the shared `struct_walk` walker (peel encodings, recurse list kinds freely, refuse unpaired struct pairs), called by all three arms.
+- [struct_setop.rs](struct_setop.rs), [struct_walk.rs](struct_walk.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** `struct_setop_names` refuses struct operands differing in field-name order or set, any depth. Delta #2 seats it after `type_coercion`, reading beneath stacked casts; the `RecursiveQuery` arm checks recursive-term types against the static term. **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** all three arms call the shared `struct_walk` (peel encodings, recurse list kinds, refuse unpaired pairs). **STRUCT-COMPARE-BY-POSITION-1:** equal types never mismatch (F-1).
   **Delta 1 (2026-11-08):** `insert_struct_setop_after_coercion` reaches the crate root for Python's expression context. **Item #5:** refusals name `INTERSECT ALL` / `EXCEPT ALL` without `Distinct` left.
 - `skipping_limit.rs` — **OFFSET-NESTED-SORT-1 (2026-10-08):** a guard for a DataFusion 54.1.0
   defect. DataFusion's `EnforceSorting` rule (its sort pushdown,
