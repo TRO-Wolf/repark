@@ -54,7 +54,7 @@ use df_guards::{
     DEAD_DATAFUSION_54_1_KEYS, apply_df_54_1_config_guards, context_with_df_54_1_rule_guards,
     dead_datafusion_54_1_refusal,
 };
-pub use df_guards::{case_bind as frame_names, insert_struct_setop_after_coercion};
+pub use df_guards::{case_bind as frame_names, insert_struct_setop_after_coercion, struct_walk};
 
 pub(crate) use spill::BYTES_PER_GB;
 pub use spill::REPARK_OWNED_DATAFUSION_PSEUDO_KEYS;

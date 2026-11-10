@@ -27,6 +27,7 @@ pub(crate) mod skipping_limit;
 pub(crate) mod sort_names;
 mod struct_setop;
 pub use struct_setop::insert_struct_setop_after_coercion;
+pub mod struct_walk;
 pub(super) mod subquery;
 mod window_rescan;
 mod written_names;

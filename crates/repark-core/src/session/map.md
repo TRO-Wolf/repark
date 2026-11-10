@@ -369,18 +369,16 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   the side map; register failures propagate, so the postgres S-6 refusal stays), and
   `note_catalog_table_props` folds spec props into the side map (called from the builder
   loop too, one line).
-  S7 strips the `///` docs (comment-ban zero); the semantics above stand.
   **CATALOG-1 (2026-09-26):** `note_catalog_refusal` / `check_catalog_refusal`
   (the refused-kind placeholder: stored beside the entries, never listed, every use raises
   its refusal; a later long-form block replaces it). The singular late path reports a
   refusal as `false`; the plural path reports refused names in neither list.
   **CSV-INFER-PERF-1 (2026-09-06):** `read_csv` body moved to `read_options.rs`;
-  `session.rs` 1002 → 988 and the CAP-1 exception retired (under the default ceiling).
+  `session.rs` 1002 → 988 and the CAP-1 exception retired.
 - `df_guards.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `context_with_df_54_1_rule_guards`
   takes the dialect beside the extension: it registers a handed-in `TypePlanner` (`with_type_planner`)
   and runs the dialect's `configure_analyzer_rules` after the extension's. With neither in, DataFusion's type mapping stands.
-- `df_guards.rs` — **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** now re-exports:
-  `insert_struct_setop_after_coercion` up toward the crate root.
+- `df_guards.rs` — **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** re-exports `insert_struct_setop_after_coercion` toward the root; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** the `struct_walk` module joins the same list.
 - `df_guards.rs` — the DataFusion **54.1 regression guards**, owned and constructed by CORE
   (design G8). Guard 1 is a configurable scalar-subquery default; guard 2 wraps
   `push_down_leaf_projections`, declining failed rewrites only on an `Unnest` path while keeping
