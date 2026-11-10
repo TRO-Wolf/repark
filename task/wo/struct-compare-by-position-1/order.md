@@ -129,3 +129,10 @@ Brief §4.6, plus:
 - facade ingest normalisation (`FACADE-INGEST-ARROW-NORMALIZE-1`);
 - the view-against-non-view coercion (`STRUCT-SETOP-LISTVIEW-COERCION-1`);
 - recursive-CTE column pruning (`RCTE-PROJECTION-PRUNE-1`).
+
+## Review outcome (2026-11-10)
+
+- Verdicts on PR #1292 at `647fd64a`: Opus 5.5 FAIL on F-1 only (pre-existing, outside the three tables); Muse MAX PASS.
+- The owner's Q1 ruling, verbatim: "on 1 lets go with Fables recommendation".
+- F-1 and its family are carded as `STRUCT-COMPARE-SEAT-FAMILY-1` (C-118): S1 with write reach, blocks v1.5.7.
+- C-116 is narrowed to the four forms of C-118 and stays open until that unit merges.
