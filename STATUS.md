@@ -272,9 +272,9 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**For v1.5.7** (owner, 2026-11-08 and 2026-11-09): STRUCT-SETOP-REORDER-REFUSAL-1
-(#1283), STRUCT-COMPARE-BY-POSITION-1 and SIGNED-ZERO-NORMALIZE-1
-([sketch](task/wo/signed-zero-normalize-1/sketch.md)). **For the format-v2 label:**
+**For v1.5.7** (owner, 11-08 to 11-11): SIGNED-ZERO-NORMALIZE-1
+([sketch](task/wo/signed-zero-normalize-1/sketch.md)) and LISTVIEW-INNER-JOIN-KEY-1; done: #1283,
+#1290, #1292, #1295. **For the format-v2 label:**
 [Iceberg maturity](#iceberg-maturity-2026-10-27). Tag history: [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).
