@@ -132,3 +132,42 @@ them where Spark answers. Item 1 re-measures them on main and puts them in the t
 
 **Scoped-label note (owner "Go", 2026-11-11):** this unit is gate G2 of ICE-V2-FLAT-AWS-LABEL-1. It does not block that
 label, but it ships in v1.5.7, the wheel the label names.
+
+## Rulings after item 1 (orchestrator, as the order's author, 2026-11-11)
+
+Item 1, at `2e3cd8cc`, confirmed the cause on main and completed the table: 251 cells on main and on Spark 4.1.2,
+plus 45 plan records (`evidence/item1/cause.md`, `table.md`).
+
+1. **Shape B is ruled. A non-hashable key is cast to its hashable kind for the join, on every join type.**
+   - One helper in repark-core, next to `join_on_named_keys` (`df_guards/case_bind.rs`). It casts a key only when
+     `can_hash` is false for its type, at any depth: ListView and LargeListView to their List kinds, RunEndEncoded
+     to its value type, and the containers recursively.
+   - When every key is hashable, the existing `LogicalPlanBuilder::join` call stays byte for byte. Otherwise the keys
+     go through `join_with_expr_keys`.
+   - Output columns keep their original types; only the key expressions are cast.
+   - Shape A, the keys in the join filter, is rejected: it falls back to a nested-loop join and works only for inner
+     joins.
+2. **A Union key is refused** with a named RePark error. No route can produce one, so the refusal is pinned at the
+   Rust layer only.
+3. **The lateral seat (`crates/repark-python/src/subquery.rs`, the `on_names` join) is in this unit.** Binding 1 covers
+   every key-name join. The same helper applies there.
+   - The lateral over-acceptance, where Spark refuses key-name `lateralJoin`, is not changed. Refusing it would move
+     the plain List lateral cells, which binding 2 forbids. Card LATERAL-USING-ACCEPT-1.
+4. **SQL `USING` and `NATURAL` on these keys: the cause is DataFusion's `join_using`.** The right key is looked up in
+   the left schema, and the fallback ignores the join type. Under binding 3:
+   - the refusal is pinned as it stands;
+   - card LISTVIEW-SQL-USING-1;
+   - the records clerk drafts an upstream DataFusion report on both `join_using` defects. Its text goes to the owner
+     for approval before filing (as with R5). This unit files nothing outward.
+5. **The facade's `string` schema for ListView, LargeListView and RunEndEncoded columns** (`types.py`) is not the
+   cause. Card FACADE-LISTVIEW-SCHEMA-1 (binding 4).
+6. **`crossJoin().where(l.k == r.k)`** refuses for every key kind, List included (`No field named l.k`). It is outside
+   the clause: card CROSSJOIN-WHERE-QUALIFIED-1.
+7. **The new failing variants are in the pins:** RunEndEncoded keys (Int64 and Utf8); List, LargeList and
+   FixedSizeList of ListView; a struct holding a RunEndEncoded field; a List of RunEndEncoded.
+8. **Cost.** The plain List key-name join, the unchanged path, must cost at most 1.05x: median of 3, interleaved, base
+   against head, inside `flock -x` on the measure lock. The cast path's time is reported beside it with no bar,
+   because on base that path returned a cross product.
+9. **The 24 mixed-kind cells** become EQUAL under shape B and are pinned as fixed (owner, question 8). Their `known`
+   markers in the struct units' pin files change to the measured Spark rows; that is the only change allowed in those
+   files.
