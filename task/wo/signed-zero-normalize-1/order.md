@@ -159,3 +159,26 @@ Sketch §1, §2, §4 (as far as part A uses it), §5 and §6 apply, with these b
 - The cost bar exceeded: ≤ 1.05x median of 3 for the plan-time rule, the standing coercion bar.
   - (a): the domain table's `spark.sql` statements on the facade;
   - (b): a planning-only probe of 300 float columns and 50 comparisons against zero.
+
+## Rulings after item 1 (orchestrator, as the order's author, 2026-11-11)
+
+- **F1: design point 4's premise does not hold, and the guard becomes explicit.** On `68b09d18`, as on `bd9c5437`,
+  `literal_datum` already refuses every float-zero spelling. `Decimal::parse` returns `None` for a literal with no
+  significant digit (`conflict_filter.rs:368`), and `a_zero_float_literal_leaves_the_filter_unscoped` pins it. So
+  the metadata-only DELETE already falls back, and D1's wrong rows are row-level misses that seat 1 fixes.
+  - Make the guard a named float-zero check in `literal_datum`, so it no longer rests on the parser's side effect.
+  - Add the sketch §5 hand-built-bounds `meta_delete` test.
+  - The mutation is "remove the named check and let the parser accept zero".
+- **F2: simple `CASE` over a float operand, Spark door.** Add a `Case` arm to `widen_decimal_against_float`
+  (`spark_literal_typing.rs`), beside the `<=>` arms. It casts decimal `WHEN` operands to the float type when the
+  `CASE` operand is a float, so seat 1 sees float comparisons.
+  - The A3 rows are inside the clause: the order named the seat.
+- **F3: the legacy division guard is carded.** With ANSI off, `guard_zero_divisor` builds `nullif(divisor, 0.0)`,
+  which `FUNC-FLOAT-EQ-1` covers (ruling G, default 12). The cells are `X-div-1`, `-2` and `-4`.
+  - Do not change `repark-functions` in this unit.
+- **F4: design point 7 means names.** Pin output column names, `printSchema` and the aliases `EXPLAIN` prints. The
+  `EXPLAIN` text of `Filter` lines may show the bound form.
+- **F5:** D6-3 to D6-6 (`GROUP BY` / `DISTINCT`) pin names only in part A, and their values in part B.
+- **Cards** for the records clerk:
+  - `FLOAT16-DECIMAL-COERCION-1`, S3: a pandas `float16` column refuses `d = 0.0` at type coercion;
+  - `ANSI-REMAINDER-CLASS-1`, S3: `%` by zero raises `DIVIDE_BY_ZERO` where Spark raises `REMAINDER_BY_ZERO`.
