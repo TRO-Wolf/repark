@@ -1,0 +1,14 @@
+ext cells 58 changed 56
+  ('E1', 'ANSWERED', 'ANSWERED', 'answer') 42
+  ('E1', 'ANSWERED', 'REFUSED', 'outcome,answer') 3
+  ('E3', 'ANSWERED', 'ANSWERED', 'answer') 1
+  ('E6', 'REFUSED', 'ANSWERED', 'outcome,answer') 1
+  ('E7', 'ANSWERED', 'ANSWERED', 'answer') 3
+  ('R1', 'ANSWERED', 'ANSWERED', 'answer') 1
+  ('R2', 'ANSWERED', 'ANSWERED', 'answer') 3
+  ('R3', 'ANSWERED', 'ANSWERED', 'answer') 2
+env cells 6 changed 6
+  ('p15', 'ANSWERED', 'ANSWERED', 'ids,leg,lineage_advanced,lineage_after,pre_select,rows_after') 1
+  ('p15', 'ANSWERED', 'ANSWERED', 'ids,leg,pre_select,rows_after,snapshot_after,snapshot_before') 2
+  ('p15', 'ANSWERED', 'ANSWERED', 'ids,leg,pre_select,snapshot_after,snapshot_before,target') 2
+  ('p15', 'REFUSED', 'REFUSED', 'leg,pre_select,snapshot_after,snapshot_before') 1
