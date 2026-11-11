@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import time
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -149,6 +150,11 @@ def _read(spark: Any, table: str) -> dict[str, Any]:
             "max": None,
             "error": f"{type(failure).__name__}: {failure}"[:500],
         }
+
+
+@pytest.fixture(autouse=True)
+def _isolate_active_session() -> Iterator[None]:
+    yield
 
 
 @pytest.fixture(scope="module")

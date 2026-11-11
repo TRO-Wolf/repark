@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -248,6 +249,11 @@ def _names(cell: Cell, prefix: str) -> dict[str, str]:
 
 def _oracle_names(names: dict[str, str]) -> dict[str, str]:
     return {"t": names["o"], "t2": names["o2"], "t3": names["o3"], "u": names["uo"]}
+
+
+@pytest.fixture(autouse=True)
+def _isolate_active_session() -> Iterator[None]:
+    yield
 
 
 @pytest.fixture(scope="module")
