@@ -105,13 +105,12 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "python/repark/src/repark/spark/session/map.md": (147, 86244),
     "python/repark/tests/functions/map.md": (145, 18709),
     "python/repark/tests/iceberg/map.md": (162, 22221),
-    "python/repark/tests/parity/map.md": (112, 16602),
     "python/repark/tests/timestamps/map.md": (221, 39701),
     "python/repark/tests/writes/map.md": (213, 32084),
     "scripts/map.md": (528, 56026),
     "task/map.md": (224, 24514),
     "task/roadmap/mid-term/map.md": (1007, 151948),
-    "task/wo/map.md": (60, 16956),
+    "task/wo/map.md": (60, 16689),
 }
 
 
