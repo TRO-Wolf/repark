@@ -9,9 +9,10 @@ use datafusion::logical_expr::type_coercion::binary::comparison_coercion;
 use datafusion::logical_expr::{Expr, ExprSchemable, Operator, ScalarUDF};
 use repark_functions::cast_map::spark_sql_name;
 
+use super::join::{holds_map, invalid_ordering};
 use super::{
-    PLANNED_BY_POSITION, Seat, aligned_operand, binary_op_diff_types, by_position,
-    by_position_named, changed, clashes, has_duplicate_names, positional_type, read_type,
+    PLANNED_BY_POSITION, Pairing, Seat, aligned_operand, binary_op_diff_types, by_position,
+    by_position_named, changed, clashes, has_duplicate_names, pairing, positional_type, read_type,
     renamed_type, render, struct_pair,
 };
 
@@ -147,18 +148,23 @@ pub(super) fn align_case(
         return Ok(Transformed::no(rebuild(*operand, when_then_expr)));
     };
     let mut partners = Partners::new(target);
+    let mut ordered: Option<&Expr> = None;
     for (when, _) in &when_then_expr {
         let Ok(current) = read_type(when, schema) else {
             continue;
         };
         if partners.meet(&current, case_sensitive).is_none() {
-            return Err(binary_op_diff_types(
-                &operand,
-                Operator::Eq,
-                when,
-                &partners.target,
-                &current,
-            ));
+            return Err(match ordered {
+                Some(earlier) => {
+                    invalid_ordering(&shown(&operand), &shown(earlier), &partners.target)
+                }
+                None => {
+                    binary_op_diff_types(&operand, Operator::Eq, when, &partners.target, &current)
+                }
+            });
+        }
+        if ordered.is_none() && orders_map(&partners.target, &current, case_sensitive) {
+            ordered = Some(when);
         }
     }
     if !partners.paired {
@@ -173,6 +179,41 @@ pub(super) fn align_case(
         pairs.push((Box::new(when), then));
     }
     Ok(changed(rebuild(operand, pairs), renamed))
+}
+
+fn orders_map(target: &DataType, current: &DataType, case_sensitive: bool) -> bool {
+    holds_map(target)
+        && holds_map(current)
+        && pairing(target, current, Seat::Comparison, case_sensitive) != Pairing::Clash
+}
+
+fn shown(expr: &Expr) -> String {
+    match expr {
+        Expr::Column(column) => visible(&column.name).to_string(),
+        other => render(other),
+    }
+}
+
+fn visible(name: &str) -> &str {
+    let Some(rest) = name
+        .strip_prefix("__repark_")
+        .and_then(|rest| rest.strip_prefix("l_").or_else(|| rest.strip_prefix("r_")))
+    else {
+        return name;
+    };
+    let mut parts = rest.splitn(3, '_');
+    match (parts.next(), parts.next(), parts.next()) {
+        (Some(plan), Some(index), Some(display))
+            if !plan.is_empty()
+                && plan.bytes().all(|byte| byte.is_ascii_alphanumeric())
+                && !index.is_empty()
+                && index.bytes().all(|byte| byte.is_ascii_digit())
+                && !display.is_empty() =>
+        {
+            display
+        }
+        _ => name,
+    }
 }
 
 pub(super) fn align_nullif(

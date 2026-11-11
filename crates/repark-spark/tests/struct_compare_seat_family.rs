@@ -198,7 +198,13 @@ fn query_verdict(cell: &Value, outcome: &Result<Vec<RecordBatch>, String>) -> bo
                 .collect();
             projected(batches, &columns) == Some(expected_rows(expect, "rows"))
         }
-        (Some("error"), Err(_)) => true,
+        (Some("error"), Err(error)) => {
+            let class = expect["class"].as_str().unwrap_or_default();
+            let resolved = expect["resolve"]
+                .as_str()
+                .is_none_or(|text| error.contains(&format!("Cannot resolve \"{text}\"")));
+            resolved && (expect["gap"] == true || error.contains(&format!("[{class}]")))
+        }
         _ => false,
     }
 }
@@ -210,7 +216,7 @@ async fn every_sql_door_family_cell_pairs_struct_fields_by_position_as_spark_doe
     let cells: Vec<Value> = lines
         .map(|line| serde_json::from_str(line).expect("cell"))
         .collect();
-    assert_eq!(cells.len(), 2426);
+    assert_eq!(cells.len(), 2448);
     let mut failures = Vec::new();
     let mut seen = 0;
     for case_sensitive in [false, true] {
@@ -246,13 +252,14 @@ async fn every_sql_door_family_cell_pairs_struct_fields_by_position_as_spark_doe
             seen += 1;
             let outcome = door.query(cell).await;
             let both_rows = outcome.is_ok() && cell["expect"]["kind"] == "rows";
+            let gap = cell["expect"]["gap"] == true;
             if outcome
                 .as_ref()
                 .err()
                 .is_some_and(|error| error == PANICKED)
             {
                 failures.push(format!("{id}: {PANICKED}"));
-            } else if (known.is_empty() || both_rows) && !query_verdict(cell, &outcome) {
+            } else if (known.is_empty() || both_rows || gap) && !query_verdict(cell, &outcome) {
                 failures.push(format!(
                     "{id} [{} {} {}]: got {:?}, want {}",
                     cell["seat"],
@@ -275,6 +282,6 @@ async fn every_sql_door_family_cell_pairs_struct_fields_by_position_as_spark_doe
             }
         }
     }
-    assert_eq!(seen, 1231);
+    assert_eq!(seen, 1249);
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }

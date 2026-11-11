@@ -8,22 +8,25 @@ use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
     Expr, ExprSchemable, Join, JoinConstraint, JoinType, Operator, ScalarUDF,
 };
-use repark_core::struct_walk::{holds_struct, peel_encoding};
+use repark_core::struct_walk::{holds_struct, list_element, peel_encoding};
 use repark_functions::cast_map::spark_sql_name;
 
 use super::udf::StructByPosition;
 use super::{
-    Seat, aligned_operand, binary_op_diff_types, by_position, clashes, has_duplicate_names,
-    names_match, positional_type, read_type, render, struct_pair,
+    Pairing, Seat, aligned_operand, binary_op_diff_types, by_position, clashes,
+    has_duplicate_names, names_match, pairing, positional_type, read_type, render, struct_pair,
 };
 
 pub(super) fn keyed(join: &Join) -> bool {
     join.null_equality == NullEquality::NullEqualsNothing
         && join.on.iter().any(|(first, second)| {
-            [first, second].into_iter().any(|key| {
-                key.get_type(join.left.schema())
-                    .is_ok_and(|key_type| holds_struct(&key_type) || is_map(&key_type))
-            })
+            resolved(first, second, join.left.schema(), join.right.schema()).is_some_and(
+                |(_, (target, current))| {
+                    [target, current]
+                        .iter()
+                        .any(|key| holds_struct(key) || holds_map(key))
+                },
+            )
         })
 }
 
@@ -60,6 +63,17 @@ fn key_types(
     ))
 }
 
+fn resolved(
+    first: &Expr,
+    second: &Expr,
+    left: &DFSchema,
+    right: &DFSchema,
+) -> Option<(bool, (DataType, DataType))> {
+    key_types(first, second, left, right)
+        .map(|types| (false, types))
+        .or_else(|| key_types(second, first, left, right).map(|types| (true, types)))
+}
+
 fn align_key(
     first: Expr,
     second: Expr,
@@ -68,12 +82,8 @@ fn align_key(
     full: bool,
     case_sensitive: bool,
 ) -> Result<((Expr, Expr), bool)> {
-    let (swapped, (target, current)) = match key_types(&first, &second, left, right) {
-        Some(types) => (false, types),
-        None => match key_types(&second, &first, left, right) {
-            Some(types) => (true, types),
-            None => return Ok(((first, second), false)),
-        },
+    let Some((swapped, (target, current))) = resolved(&first, &second, left, right) else {
+        return Ok(((first, second), false));
     };
     let (left_key, right_key) = if swapped {
         (second, first)
@@ -107,8 +117,21 @@ struct Key<'a> {
 impl Key<'_> {
     fn align(&self, left_key: Expr, right_key: Expr) -> Result<(Expr, Expr, bool)> {
         let (target, current) = (self.target, self.current);
-        if let Some(map_type) = [target, current].into_iter().find(|key| is_map(key)) {
-            return Err(invalid_ordering(&left_key, &right_key, map_type));
+        if let Some(map_type) = [target, current].into_iter().find(|key| holds_map(key)) {
+            if pairing(target, current, Seat::Comparison, self.case_sensitive) == Pairing::Clash {
+                return Err(binary_op_diff_types(
+                    &left_key,
+                    Operator::Eq,
+                    &right_key,
+                    target,
+                    current,
+                ));
+            }
+            return Err(invalid_ordering(
+                &render(&left_key),
+                &render(&right_key),
+                map_type,
+            ));
         }
         if !struct_pair(target, current) {
             return Ok((left_key, right_key, false));
@@ -137,16 +160,18 @@ impl Key<'_> {
     }
 }
 
-fn is_map(data_type: &DataType) -> bool {
-    matches!(peel_encoding(data_type), DataType::Map(_, _))
+pub(super) fn holds_map(data_type: &DataType) -> bool {
+    match peel_encoding(data_type) {
+        DataType::Map(_, _) => true,
+        DataType::Struct(fields) => fields.iter().any(|field| holds_map(field.data_type())),
+        peeled => list_element(peeled).is_some_and(|element| holds_map(element.data_type())),
+    }
 }
 
-fn invalid_ordering(left_key: &Expr, right_key: &Expr, map_type: &DataType) -> DataFusionError {
+pub(super) fn invalid_ordering(left: &str, right: &str, map_type: &DataType) -> DataFusionError {
     DataFusionError::Plan(format!(
-        "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"({} = {})\" due to data type \
-         mismatch: The `=` does not support ordering on type \"{}\". SQLSTATE: 42K09",
-        render(left_key),
-        render(right_key),
+        "[DATATYPE_MISMATCH.INVALID_ORDERING_TYPE] Cannot resolve \"({left} = {right})\" due to \
+         data type mismatch: The `=` does not support ordering on type \"{}\". SQLSTATE: 42K09",
         spark_sql_name(map_type)
     ))
 }

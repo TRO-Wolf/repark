@@ -148,12 +148,15 @@ here and is re-exported in one line.
   `struct_position/tests.rs`, `../../tests/struct_compare_by_position.rs`.
   **STRUCT-COMPARE-SEAT-FAMILY-1 (2026-11-10):** `join.rs` renames a key-list join's right key
   (`NullEqualsNothing` only; each key typed against its own side, then swapped, else left
-  alone) and sets `JoinConstraint::On`. Every map key refuses with `INVALID_ORDERING_TYPE`,
-  plain `MAP<STRING, INT>` included: out of clause, a move from accepted to Spark's measured
-  refusal (`evidence/after/`). A `FULL` join whose key names differ refuses with
+  alone) and sets `JoinConstraint::On`. A key holding a map anywhere (`holds_map`: a struct
+  field, an array element, deeper) refuses in Spark's order: a clash (`MAP` against `INT` or a
+  struct) with `BINARY_OP_DIFF_TYPES`, else `INVALID_ORDERING_TYPE`, plain `MAP<STRING, INT>`
+  included: out of clause, a move from accepted to Spark's measured refusal (`evidence/after/`,
+  `evidence/delta/`). A `FULL` join whose key names differ refuses with
   `DATA_DIFF_TYPES` on `coalesce(s, s)`. `forms.rs` renames `BETWEEN` bounds (the node stays),
   simple-`CASE` `WHEN` operands and `nullif`'s second argument, and pairs a bound `nullif` at the
-  binder. The relabel's schema name is the argument alone at the expression seat
+  binder. A simple `CASE` that clashes names an earlier map-ordering `WHEN` first, as Spark
+  does, with the crossJoin column's visible name. The relabel's schema name is the argument alone at the expression seat
   (`insert_expression_struct_position_rule_before_coercion`) and stays opaque at the session
   seat, where `NamePreserver` keeps top-level names: transparent there, it collided with its
   own column in a filter over a join. `udf.rs`'s `without_relabels` strips every relabel before

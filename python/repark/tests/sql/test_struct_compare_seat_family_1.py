@@ -202,14 +202,13 @@ def measured_names(spark: Any, cell: dict[str, Any]) -> list[str]:
 
 def outcome_of_duplicate_nullif(spark: Any) -> list[Any]:
     frame = spark.table("ldup").alias("l").crossJoin(spark.table("rrev").alias("r"))
-    text = "nullif(l.s, r.s) IS NULL"
-    selected = frame.select("l.lid", "r.rid", functions.expr(text).alias("x"))
+    selected = frame.select("l.lid", "r.rid", functions.expr(HEADER["dup"]["text"]).alias("x"))
     return sorted((list(row) for row in selected.collect()), key=json.dumps)
 
 
 def test_the_cells_file_carries_every_dataframe_door_cell() -> None:
-    assert len(CELLS) == 2426
-    assert len(FRAME_CELLS) == 1195
+    assert len(CELLS) == 2448
+    assert len(FRAME_CELLS) == 1199
     assert len(NAME_CELLS) == 24
 
 
@@ -220,8 +219,14 @@ def test_dataframe_door_cell_matches_spark(doors: dict[str, Any], cell: dict[str
     expect = cell["expect"]
     if kind == "rows" and expect["kind"] == "rows":
         assert got == sorted(expect["rows"], key=json.dumps)
+    elif expect.get("gap"):
+        assert kind == "error", got
     elif not cell["known"]:
         assert kind == expect["kind"], got
+        if kind == "error":
+            assert f"[{expect['class']}]" in got, got
+            if "resolve" in expect:
+                assert f'Cannot resolve "{expect["resolve"]}"' in got, got
 
 
 @pytest.mark.parametrize("text", NAMED_FORMS)
@@ -245,6 +250,4 @@ def test_generated_name_is_spark_exact_where_base_was(
 def test_bound_nullif_with_duplicate_names_pairs_by_position_without_a_panic(
     doors: dict[str, Any],
 ) -> None:
-    rows = doors["dup"]
-    assert [1, 10, True] in rows
-    assert [2, 10, False] in rows
+    assert doors["dup"] == sorted(HEADER["dup"]["rows"], key=json.dumps)
