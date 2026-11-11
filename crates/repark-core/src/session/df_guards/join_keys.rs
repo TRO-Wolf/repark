@@ -48,13 +48,14 @@ fn side_exprs(keys: &[Column], types: &[DataType]) -> Result<Vec<Expr>> {
             if can_hash(data_type) {
                 return Ok(column);
             }
-            match hashable_kind(data_type) {
-                Some(hashable) => Ok(cast(column, hashable)),
-                None => plan_err!(
+            if let Some(hashable) = hashable_kind(data_type) {
+                Ok(cast(column, hashable))
+            } else {
+                plan_err!(
                     "[{UNHASHABLE_JOIN_KEY}] The join key {} has type {data_type}, which has no \
                      hashable form, so a key-name join cannot use it.",
                     key.name
-                ),
+                )
             }
         })
         .collect()

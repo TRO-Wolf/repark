@@ -348,7 +348,7 @@ wrapped optimizer rule) and declares this directory.
   analysis on the result and coercion happens there. It leaves through `frame_names` as
   `ExactJoin`, `ExactKeys` and `join_exact_sides`. Pins: the binding's
   `crates/repark-python/src/join_exact_tests.rs` (plan equality against `sql_built`).
-- [join_keys.rs](join_keys.rs) — **LISTVIEW-INNER-JOIN-KEY-1 (2026-11-11):** `hashable_join_keys` casts each key-name join key failing DataFusion's `can_hash` (ListView, LargeListView, RunEndEncoded, a container of one) to its hashable kind, which `eliminate_cross_join` keeps; all-hashable keys answer `None` (main's `join` call stays), a Union refuses `REPARK_UNHASHABLE_JOIN_KEY`. Leaves as `repark_core::join_keys`; seats `join_on_named_keys` and repark-python's `lateral_join`. Pins: its test module.
+- [join_keys.rs](join_keys.rs) — **LISTVIEW-INNER-JOIN-KEY-1 (2026-11-11):** `hashable_join_keys` casts each key-name join key failing DataFusion's `can_hash` (ListView, LargeListView, RunEndEncoded, a container of one) to its hashable kind, which `eliminate_cross_join` keeps; all-hashable keys answer `None` (main's `join` call stays), a Union refuses `REPARK_UNHASHABLE_JOIN_KEY`. Leaves via `frame_names`; seats `join_on_named_keys` and repark-python's `lateral_join`. Pins: its test module.
 - `predicate_names.rs` — **CASESENS-2 port (2026-10-03):** the join-condition
   half of #881's `predicate_names.rs` (folds `15a7bb9d`, `b89a7d7f`, `3ac80920`),
   re-pointed at `attr_id::resolve`. `bind_condition_qualifiers(condition, left,

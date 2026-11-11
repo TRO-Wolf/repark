@@ -301,7 +301,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `fold_b_equal`, follow-up 3 merged the alias).
   **SOURCE-URL-REDACT-1 (2026-10-06):** re-exports `repark_common::redaction` as `repark_core::redaction`, the binding's path to the redactor (no new crate edge).
   **STRUCT-SETOP-REORDER-REFUSAL-1 delta #2 (2026-11-09):** `insert_struct_setop_after_coercion` joins the `session` list; the `write_postgres` fold holds at 156.
-  **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the `session` list; **LISTVIEW-INNER-JOIN-KEY-1 (2026-11-11):** so does `join_keys`.
+  **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the `session` list.
 - `iceberg_path.rs` (+ [iceberg_path/](iceberg_path/map.md)) — **U10 / R-DF-LOAD-PATH +
   R-DF-LOAD-METADATA-JSON (2026-09-23):** `ReparkSession::read_iceberg_path`, the
   `format("iceberg").load(<path>)` arm — Spark's `IcebergSource` rule applied at the

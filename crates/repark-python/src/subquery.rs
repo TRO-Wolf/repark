@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType, Field};
 use datafusion::common::tree_node::{Transformed, TreeNode};
-use datafusion::common::{Column, JoinConstraint, NullEquality, Spans, TableReference};
+use datafusion::common::{Column, DFSchema, JoinConstraint, NullEquality, Spans, TableReference};
 use datafusion::dataframe::DataFrame;
 use datafusion::logical_expr::expr::Exists;
 use datafusion::logical_expr::{
@@ -109,6 +109,32 @@ pub(crate) fn subquery_alias(frame: &PyDataFrame, alias: &str) -> PyResult<PyDat
     })
 }
 
+fn lateral_key_pairs(
+    left_schema: &DFSchema,
+    right_schema: &DFSchema,
+    on_names: Option<&[String]>,
+) -> PyResult<Vec<(Expr, Expr)>> {
+    let on_columns: Vec<Column> = on_names
+        .unwrap_or(&[])
+        .iter()
+        .map(Column::from_name)
+        .collect();
+    let hashable = repark_core::frame_names::hashable_join_keys(
+        left_schema,
+        right_schema,
+        &on_columns,
+        &on_columns,
+    )
+    .map_err(datafusion_to_py_err)?;
+    Ok(match hashable {
+        Some((left_keys, right_keys)) => left_keys.into_iter().zip(right_keys).collect(),
+        None => on_columns
+            .iter()
+            .map(|column| (Expr::Column(column.clone()), Expr::Column(column.clone())))
+            .collect(),
+    })
+}
+
 #[allow(clippy::missing_errors_doc, clippy::missing_panics_doc)]
 #[pyfunction]
 pub(crate) fn lateral_join(
@@ -154,26 +180,8 @@ pub(crate) fn lateral_join(
                 subquery: Arc::new(resolved_right),
                 spans: Spans::new(),
             });
-            let on_columns: Vec<Column> = on_names
-                .as_deref()
-                .unwrap_or(&[])
-                .iter()
-                .map(Column::from_name)
-                .collect();
-            let on_pairs = match repark_core::join_keys::hashable_join_keys(
-                &left_schema,
-                right_wrapped.schema(),
-                &on_columns,
-                &on_columns,
-            )
-            .map_err(datafusion_to_py_err)?
-            {
-                Some((left_keys, right_keys)) => left_keys.into_iter().zip(right_keys).collect(),
-                None => on_columns
-                    .iter()
-                    .map(|column| (Expr::Column(column.clone()), Expr::Column(column.clone())))
-                    .collect(),
-            };
+            let on_pairs =
+                lateral_key_pairs(&left_schema, right_wrapped.schema(), on_names.as_deref())?;
             let filter = match on {
                 Some(condition) => Some(
                     repark_core::resolve_scoped_expr(

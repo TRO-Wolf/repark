@@ -18,7 +18,7 @@ use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::spark_error;
 
 use super::attr_id::same_relation;
-use super::join_keys::hashable_join_keys;
+pub use super::join_keys::hashable_join_keys;
 
 pub use super::attr_id::{
     AttrId, Resolution, alias_with_fresh_id, attribute_ids, copy_attribute_ids, stamp, strip,
