@@ -11,7 +11,7 @@ _Last updated: 2026-11-09._
 
 ## Now
 
-As of 2026-11-09.
+As of 2026-11-10.
 
 - **Shipped:** v1.5.6 ([Release state](#release-state)).
 - **Open S1 with write reach on the shipped wheel:** struct comparisons pair fields by name where
