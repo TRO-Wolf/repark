@@ -4,4 +4,5 @@
 
 - [moves.md](moves.md) — the after-table moves and the 50-repeat check.
 - [schema_batch_repeat.py](schema_batch_repeat.py) — the 50-repeat `UPDATE-SCHEMA-BATCH-MISMATCH-1` probe.
-- `raw/` — head legs (`repark-015fda5ae-*.jsonl`), label outputs, repeat results.
+- `raw/` — head legs (`repark-015fda5ae-*.jsonl`), label outputs, repeat results, and `domain-moves.json` (the domain
+  label moves that `../item4/cost_a_split.py` reads).

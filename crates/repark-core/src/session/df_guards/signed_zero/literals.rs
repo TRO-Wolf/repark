@@ -9,6 +9,7 @@ use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
     Between, BinaryExpr, Cast, Expr, LogicalPlan, Operator, and, lit, or,
 };
+use datafusion::optimizer::simplify_expressions::SimplifyExpressions;
 use datafusion::optimizer::{AnalyzerRule, ApplyOrder, OptimizerConfig, OptimizerRule};
 
 const RULE_NAME: &str = "signed_zero_literals";
@@ -38,9 +39,14 @@ impl OptimizerRule for SignedZeroLiterals {
     fn rewrite(
         &self,
         plan: LogicalPlan,
-        _config: &dyn OptimizerConfig,
+        config: &dyn OptimizerConfig,
     ) -> Result<Transformed<LogicalPlan>> {
-        rewrite_node(plan)
+        let rewritten = rewrite_node(plan)?;
+        if !rewritten.transformed {
+            return Ok(rewritten);
+        }
+        let simplified = SimplifyExpressions::default().rewrite(rewritten.data, config)?;
+        Ok(Transformed::yes(simplified.data))
     }
 }
 

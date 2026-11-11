@@ -28,10 +28,12 @@ under `task/wo/signed-zero-normalize-1/`.
   totalOrder. Rules: `NamePreserver` keeps every output name; a node with no candidate is not
   rebuilt; a rewrite that would repeat a volatile operand is skipped; a `GroupingSet` is left
   alone (key sites are part B). It visits `Filter`, `TableScan.filters` (prepared plans), join
-  filters, projections and subqueries.
+  filters, projections and subqueries. As seat 1b it re-runs `SimplifyExpressions` on each node it
+  rewrites, so a fold-made zero leaves nothing for the next pass: an `IS NOT NULL` on a non-null
+  operand used to cost a third optimizer pass (cost case (b), `evidence/item4/cost.md`).
 - [tests.rs](tests.rs) — P1 on a core session over an eight-row MemTable (±0, NULL, NaN, ±Inf,
   1.5, -2.5): eight operators × nine zero shapes (float, signed, integer, exponent, string and
   integer casts, two folded) × `DOUBLE`/`FLOAT` × side × `NOT`, against the Spark truth (zeros
   equal, NaN greatest and equal to itself, NULL rules of each operator); lists, ranges, simple
   `CASE`, computed operands, literal against literal; native `PREPARE`/`EXECUTE`; names; the
-  fixpoint of both seats; seat 1b on a folded zero.
+  fixpoint of both seats; seat 1b on a folded zero; seat 1b's output costs no further pass.

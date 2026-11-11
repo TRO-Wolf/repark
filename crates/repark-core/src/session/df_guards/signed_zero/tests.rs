@@ -337,3 +337,45 @@ async fn seat_1b_rewrites_a_zero_made_by_constant_folding() {
         "{rendered}"
     );
 }
+
+#[tokio::test]
+async fn seat_1b_hands_the_next_pass_a_simplified_plan() {
+    let session = seeded_session();
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("k", DataType::Float64, false),
+    ]));
+    let batch = RecordBatch::try_new(
+        Arc::clone(&schema),
+        vec![
+            Arc::new(Int64Array::from_iter_values(1..=3)),
+            Arc::new(Float64Array::from(vec![-0.0, 0.0, 1.5])),
+        ],
+    )
+    .expect("non-null batch");
+    let table = MemTable::try_new(schema, vec![vec![batch]]).expect("non-null table");
+    session
+        .context()
+        .register_table("nn", Arc::new(table))
+        .expect("register non-null table");
+    let sql = "SELECT id FROM nn WHERE k <=> 1.0 - 1.0";
+    assert_eq!(ids(&session, sql).await, vec![1, 2]);
+    let state = session.context().state();
+    let logical = state.create_logical_plan(sql).await.expect("plan");
+    let analyzed = state
+        .analyzer()
+        .execute_and_check(logical, state.config_options(), |_, _| {})
+        .expect("analyze");
+    let mut passes = 0;
+    let optimized = state
+        .optimizer()
+        .optimize(analyzed, &state, |_, rule| {
+            if rule.name() == "signed_zero_literals" {
+                passes += 1;
+            }
+        })
+        .expect("optimize");
+    let rendered = format!("{}", optimized.display_indent());
+    assert!(!rendered.contains("IS NOT NULL"), "{rendered}");
+    assert_eq!(passes, 2, "{rendered}");
+}
