@@ -11,7 +11,7 @@ _Last updated: 2026-11-09._
 
 ## Now
 
-As of 2026-11-09.
+As of 2026-11-10.
 
 - **Shipped:** v1.5.6 ([Release state](#release-state)).
 - **Open S1 with write reach on the shipped wheel:** struct comparisons pair fields by name where
@@ -19,7 +19,7 @@ As of 2026-11-09.
   the wrong rows ([Known correctness issues](#known-correctness-issues)).
 - **Labels:** format-v2 WITHDRAWN; format-v3 core HARDENED-NARROW; nanosecond columns and struct
   writes EXPERIMENTAL ([Iceberg maturity](#iceberg-maturity-2026-10-27)).
-- **In flight:** STRUCT-COMPARE-BY-POSITION-1. F-I closed by #1290.
+- **In flight:** STRUCT-COMPARE-SEAT-FAMILY-1 (C-118; blocks v1.5.7). #1292 merged.
 - **Next:** the rest of v1.5.7 ([Release blockers](#release-blockers)).
 
 ## Release state
