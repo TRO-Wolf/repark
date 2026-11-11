@@ -29,7 +29,8 @@ SHA-256 of the AUD-015 cells file:
 
 - [signed_zero_normalize_1_cells.jsonl](signed_zero_normalize_1_cells.jsonl) — SIGNED-ZERO-NORMALIZE-1: one cell per
   line (cid, route, executed text, Spark truth, base label, base names for D6, residue card), written by the unit's
-  `evidence/item2/pin_cells.py` from the measured legs.
+  `evidence/item2/pin_cells.py` from the measured legs; the delta's 10 V-B1 / V-A3 cells come from
+  `evidence/item3/raw/delta-*.jsonl`, with Spark's names as `cols`.
 - [struct_compare_seat_family_cells.jsonl](struct_compare_seat_family_cells.jsonl) —
   STRUCT-COMPARE-SEAT-FAMILY-1: the 2448 family cells (the delta's 22 `DK` cells included) with
   Spark's outcome (rows by column, class, or the write's read-back), a card for each measured

@@ -158,11 +158,10 @@ repark-core's error map.
     concurrent stamp's run if it is another run; otherwise `Catalog` with the message. A
     durable refusal latches on the scope (`latch_refusal`), as a refused epoch check does
     (fold 1, K3), so a later claim in the scope returns it and not `SinkCommittedTwice`.
-  - **Everything else passes through.** Each of the trait's other methods forwards to the
-    inner catalog, the provided ones too (`name`, `properties`, the view calls, the namespace
-    property calls, `publish_*`, `invalidate_*`), so a catalog's own overrides are kept. An
-    unstamped commit never meets the wrapper: `SiteStamp::fenced` returns the caller's own
-    `Arc`.
+  - **Everything else passes through.** Each of the trait's other methods forwards to the inner
+    catalog, the provided ones too (`name`, `properties`, the view calls, the namespace property
+    calls, `publish_*`, `invalidate_*`), so a catalog's own overrides are kept. An unstamped commit
+    never meets the wrapper: `SiteStamp::fenced` returns the caller's own `Arc`.
   - **Pins.** `sink_offsets_append_fence_tests.rs` (a `#[path]` child of the probe module):
     the race on the append arm and on the stamp-only door (`Fenced` naming the racer, one
     `update_table` seen, two loads, the scope latched); the empty base (`AlreadyCommitted` for
@@ -177,20 +176,18 @@ repark-core's error map.
     tokenless stamp-only refusal that leaves another stamp's scope claimed (C-014). Fold 2 adds the expired stamp below a live base on both
     doors (C-015).
   - **Retirement.** This is a stopgap for
-    [F-APPEND-PIN-BASE-1](../../../../task/roadmap/mid-term/f-append-pin-base-1-2026-10-07.md).
-    When the fork lands it and RP-N repins, delete: `sink_offsets/append_fence.rs` (and
-    `sink_offsets/map.md`); the
-    `mod append_fence;` line and the `AppendFence` import in `sink_offsets.rs`;
-    `SiteStamp::fenced`; the `AppendFence::install` line in `commit_stamp_only`; the pins
-    `the_fence_forwards_every_other_catalog_call` and
-    `an_unstamped_append_commits_through_the_callers_own_catalog`'s two `fenced` assertions;
-    the `Fence::Catalog` arm of `sink_offsets_fence_tests.rs`. In their place
-    `SiteStamp::commit_append` and `commit_stamp_only` set
-    `validate_from_snapshot(ClaimedStamp::base)` and
-    `validate_no_concurrent_snapshot_with_summary("repark.cdc.query-id", <query>)` on the
-    append action and map the fork's validation error to the same typed refusal (`typed` and
-    `latch_refusal` move to that mapping). Every other pin stays as written and must stay
-    green; the two-loads assertions are re-measured.
+    [F-APPEND-PIN-BASE-1](../../../../task/roadmap/mid-term/f-append-pin-base-1-2026-10-07.md). When
+    the fork lands it and RP-N repins, delete: `sink_offsets/append_fence.rs` (and
+    `sink_offsets/map.md`); the `mod append_fence;` line and the `AppendFence` import in
+    `sink_offsets.rs`; `SiteStamp::fenced`; the `AppendFence::install` line in `commit_stamp_only`;
+    the pins `the_fence_forwards_every_other_catalog_call` and
+    `an_unstamped_append_commits_through_the_callers_own_catalog`'s two `fenced` assertions; the
+    `Fence::Catalog` arm of `sink_offsets_fence_tests.rs`. In their place `SiteStamp::commit_append`
+    and `commit_stamp_only` set `validate_from_snapshot(ClaimedStamp::base)` and
+    `validate_no_concurrent_snapshot_with_summary("repark.cdc.query-id", <query>)` on the append
+    action and map the fork's validation error to the same typed refusal (`typed` and
+    `latch_refusal` move to that mapping). Every other pin stays as written and must stay green; the
+    two-loads assertions are re-measured.
 - `predicate_dml.rs` — **ICE-TSNS-TYPE-PLANNER-1, ruling 91 (2026-10-15):**
   `collect_identity_update_rows` takes its analyzed identity `UPDATE … WHERE` projection from
   the child `lineage::analyzed_identity_update`, which plans it again with the MERGE insert
@@ -876,7 +873,7 @@ repark-core's error map.
   A FLOAT / DOUBLE literal converts only when it is EXACT: its decimal text and the parsed value's
   full `{:.800e}` expansion normalize to the same digits and exponent, so an underflow
   (`f < 1e-50` → `0.0`), an overflow, a rounding (`0.1`) and a zero (`is_float_zero`,
-  SIGNED-ZERO-NORMALIZE-1; the fork orders `-0.0 < 0.0`) leave the node unconverted. A float column
+  SIGNED-ZERO-NORMALIZE-1; the fork orders floats by `total_cmp`, `-0.0 < 0.0`, while SQL equates them) leave the node unconverted. A float column
   also converts only under `=`, `<>`, `IN` and `NOT IN`: the fork's metrics evaluator skips a
   nans-only file (and bounds exclude NaN) under `<` / `>` / `BETWEEN`, while SQL ranges order NaN
   as a value, so a float range stays unscoped (ruling Q-21a-OCC-1).
@@ -1301,24 +1298,21 @@ repark-core's error map.
   plans through `analyzed_store_source` and the conform stage (formerly `wrap_store_outputs`), so per-row fractional
   overflow refuses with the column named. Re-verify VO3-1 (2026-09-29): passes `None`
   for the wrap's gate label — the UPDATE SET gates judge before the rewrite is built.
-- `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for
-  filling omitted columns from `write_default` on every write path: `column_defaults`
-  reads the table defaults, `fill_insert_plan` rewrites a short INSERT plan, an
-  explicit NULL stays NULL, and a missing required column keeps Spark's error.
-  `rewrite_insert_markers` passes a missing table through unloaded, so the door's
-  standard missing-table error fires instead of a leaked `TableNotFound`. An unloadable
-  table, an unrenderable default literal, and a default that does not fit its column type
-  all surface as plan errors. Its entry points carry
-  `#[allow(clippy::missing_errors_doc)]` in place of the `# Errors` doc comment the
-  no-code-comments ruling forbids. The marker pass probes the AST for `DEFAULT`
-  first and loads nothing without one; the loaded table travels in `MarkerRewrite`
-  into `fill_insert_plan`, so an INSERT pays at most one catalog load. Unit tests
-  (including the load-count pins over a counting test catalog) live in
-  `insert_defaults/tests/mod.rs` — a `tests/` directory so the C-009 setter guard
-  (`test_rp3_c009_write_default.py`, needles `with_write_default` / `write_default(`,
-  `tests` path parts exempt) reads the test-only `with_write_default` builder as test
-  code; the pre-scan is named `schema_has_primitive_fill` for the same guard (run 21b
-  round 2, 2026-09-18).
+- `insert_defaults.rs` — **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the ONE home for filling omitted
+  columns from `write_default` on every write path: `column_defaults` reads the table defaults,
+  `fill_insert_plan` rewrites a short INSERT plan, an explicit NULL stays NULL, and a missing
+  required column keeps Spark's error. `rewrite_insert_markers` passes a missing table through
+  unloaded, so the door's standard missing-table error fires instead of a leaked `TableNotFound`. An
+  unloadable table, an unrenderable default literal, and a default that does not fit its column type
+  all surface as plan errors. Its entry points carry `#[allow(clippy::missing_errors_doc)]` in place
+  of the `# Errors` doc comment the no-code-comments ruling forbids. The marker pass probes the AST
+  for `DEFAULT` first and loads nothing without one; the loaded table travels in `MarkerRewrite`
+  into `fill_insert_plan`, so an INSERT pays at most one catalog load. Unit tests (including the
+  load-count pins over a counting test catalog) live in `insert_defaults/tests/mod.rs` — a `tests/`
+  directory so the C-009 setter guard (`test_rp3_c009_write_default.py`, needles
+  `with_write_default` / `write_default(`, `tests` path parts exempt) reads the test-only
+  `with_write_default` builder as test code; the pre-scan is named `schema_has_primitive_fill` for
+  the same guard (run 21b round 2, 2026-09-18).
   **Run 21b round 2 (2026-09-18, ruling Q-21b-9):** `refuse_default_marker_under_with`
   refuses a `DEFAULT` marker in the outer VALUES / SELECT list of an INSERT whose query
   carries `WITH` — `UNRESOLVED_COLUMN.WITHOUT_SUGGESTION` naming `DEFAULT`, SQLSTATE
@@ -1711,41 +1705,35 @@ repark-core's error map.
   fork-derived defaults hold where it did not.
   **RP-56 DIFF-PROBE fold (2026-09-29):** `WriterStagingOverrides` gains the
   `case_sensitive` bit (default false, the old behavior); every stage conform call reads it.
-- `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** per-statement DataFrame
-  write-option staging and commits. `WriterStagingOverrides` (codec/level/target-size,
-  option over table property) feeds override-capable builders that mirror the
-  `merge/mod.rs` unpartitioned and `append.rs` fanout constructions against the same
-  fork actions; the four `*_with_summary` commits merge validated `snapshot-property.*`
-  extras into the summary (empty extras are behaviour-identical to the `_to`
-  canonicals, so the overwrite family commits through them unconditionally);
-  `isolation_with_override` shares the table-property grammar. The mirror exists
-  because the canonicals live in size-capped files the gate holds exact — a fork bump
-  re-verifies both copies (see `writer_props.rs` duties). Only option-carrying
-  statements reach the override staging; option-free staging keeps the canonicals.
-  Fallible fns carry `#[allow(clippy::missing_errors_doc)]`, never `# Errors` sections
-  (owner comment ban; round-2 purge 2026-09-17). Round 3 (2026-09-17): staging
-  is stream-in with session concurrency (the override threads through the
-  canonical concurrent fanout; canonical callers pass `none()`); gzip refuses
-  on the merged level whatever side it came from (Q-20c-6); `summary_with_extras`
-  drops user `operation`/`engine.operation-id` and refuses engine metric keys
-  as Spark does (Q-20c-5). Round 4 (2026-09-17): the metric-key prefix sweep is
-  gone; `summary_with_extras` takes the `EngineSummary` of the commit in hand
-  (`summary_collision.rs`) and refuses only a key that summary contains (V-04).
-  Round 5 (2026-09-18, Q-21c-7): the target-size override takes effect at the
-  RP-23 fork granularity, 1000-row slices once the bytes reach the target, not
-  per batch. The `writer_props.rs` units stage 3,500 rows: exactly 4 files at a
-  1-byte option or table property, and 1 at the default or a 512 MB option over
-  the property.
-  Run 22b rebase (2026-09-18): the unpartitioned mirror builder takes main's
-  `distribution::stamp` like `merge/mod.rs` (C-017); `commit_replace_write_with_summary`
-  is the options twin of main's RTAS `commit_replace_write` (overwrite by `AlwaysTrue`,
-  empty allowed, collision rule against `EngineSummary::for_overwrite`, C-016);
-  `stage_static_partition_overwrite_files_with` moves here from `partition_overwrite.rs`
-  (which only exposes `static_injected_stream`), takes main's column list and an
-  `Option` of the overrides, and hands `None` to the canonical untouched.
-  IPI-05 (2026-09-21): `append_staged_with_options` stages a plain INSERT
-  carrying only session snapshot properties under `wap.id` instead of
-  committing on main; re-exported through `write/mod.rs`.
+- `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** per-statement DataFrame write-option
+  staging and commits. `WriterStagingOverrides` (codec/level/target-size, option over table
+  property) feeds override-capable builders that mirror the `merge/mod.rs` unpartitioned and
+  `append.rs` fanout constructions against the same fork actions; the four `*_with_summary` commits
+  merge validated `snapshot-property.*` extras into the summary (empty extras are
+  behaviour-identical to the `_to` canonicals, so the overwrite family commits through them
+  unconditionally); `isolation_with_override` shares the table-property grammar. The mirror exists
+  because the canonicals live in size-capped files the gate holds exact — a fork bump re-verifies
+  both copies (see `writer_props.rs` duties). Only option-carrying statements reach the override
+  staging; option-free staging keeps the canonicals. Fallible fns carry
+  `#[allow(clippy::missing_errors_doc)]`, never `# Errors` sections (owner comment ban; round-2
+  purge 2026-09-17). Round 3 (2026-09-17): staging is stream-in with session concurrency (the
+  override threads through the canonical concurrent fanout; canonical callers pass `none()`); gzip
+  refuses on the merged level whatever side it came from (Q-20c-6); `summary_with_extras` drops user
+  `operation`/`engine.operation-id` and refuses engine metric keys as Spark does (Q-20c-5). Round 4
+  (2026-09-17): the metric-key prefix sweep is gone; `summary_with_extras` takes the `EngineSummary`
+  of the commit in hand (`summary_collision.rs`) and refuses only a key that summary contains
+  (V-04). Round 5 (2026-09-18, Q-21c-7): the target-size override takes effect at the RP-23 fork
+  granularity, 1000-row slices once the bytes reach the target, not per batch. The `writer_props.rs`
+  units stage 3,500 rows: exactly 4 files at a 1-byte option or table property, and 1 at the default
+  or a 512 MB option over the property. Run 22b rebase (2026-09-18): the unpartitioned mirror
+  builder takes main's `distribution::stamp` like `merge/mod.rs` (C-017);
+  `commit_replace_write_with_summary` is the options twin of main's RTAS `commit_replace_write`
+  (overwrite by `AlwaysTrue`, empty allowed, collision rule against `EngineSummary::for_overwrite`,
+  C-016); `stage_static_partition_overwrite_files_with` moves here from `partition_overwrite.rs`
+  (which only exposes `static_injected_stream`), takes main's column list and an `Option` of the
+  overrides, and hands `None` to the canonical untouched. IPI-05 (2026-09-21):
+  `append_staged_with_options` stages a plain INSERT carrying only session snapshot properties under
+  `wap.id` instead of committing on main; re-exported through `write/mod.rs`.
 - `store_assign.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `struct_fields_store_assignable` and `map_entries_store_assignable`
   are replaced by the seam: two structs, two maps or two lists are store-assignable when they
   pair by name and every leaf pair is (`nested_store_assignable`), through lists too.
@@ -1814,19 +1802,16 @@ repark-core's error map.
   INSERT; `statement_pairing` reads it (absent: by position for an INSERT, by name for an
   UPDATE). The table test in `struct_pairing/tests.rs` runs three modes × eight field shapes ×
   ten layouts with NULL structs and NULL elements, and the idempotence property.
-- `summary_collision.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
-  `for_changes(table, added, removed, branch)` is the general shape — the fork's
-  collector over BOTH sides plus the fork's own total arithmetic
-  (`previous + added - removed`, dropped when it cannot resolve or goes negative) —
-  and `for_append` is its add-only case. The MERGE / DML commit sites build it from
-  the files they already hold, so the ONE rule (refuse an actual collision, stamp
-  otherwise) is now shared by the writer option and the session conf on every
-  owned commit site. `extras_need_removed_files` + `live_data_files` let a
-  whole-table overwrite resolve its removal set when an extra names a
-  removal-fed key, so the refusal names Spark's value instead of
-  `<resolved at commit>`. The refusal is raised through
-  `illegal_argument.rs`, so it reaches Python as `IllegalArgumentException`
-  carrying Spark's message verbatim — the class Spark 4.1.2 raises
+- `summary_collision.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** `for_changes(table,
+  added, removed, branch)` is the general shape — the fork's collector over BOTH sides plus the
+  fork's own total arithmetic (`previous + added - removed`, dropped when it cannot resolve or goes
+  negative) — and `for_append` is its add-only case. The MERGE / DML commit sites build it from the
+  files they already hold, so the ONE rule (refuse an actual collision, stamp otherwise) is now
+  shared by the writer option and the session conf on every owned commit site.
+  `extras_need_removed_files` + `live_data_files` let a whole-table overwrite resolve its removal
+  set when an extra names a removal-fed key, so the refusal names Spark's value instead of
+  `<resolved at commit>`. The refusal is raised through `illegal_argument.rs`, so it reaches Python
+  as `IllegalArgumentException` carrying Spark's message verbatim — the class Spark 4.1.2 raises
   (`QR-*`, and ICE-WRITE-OPTIONS-1's `COLL-*` cells record the same).
   **Round 5 (2026-09-20):** `live_files` is the one manifest walk and `live_delete_files` its
   delete-manifest case, so `row_filter_removed_files` resolves BOTH sides of what a static
@@ -1886,21 +1871,18 @@ repark-core's error map.
   `Unexpected`, `TableNotFound` and `TableAlreadyExists` stay an `External` `iceberg::Error`
   with kind and message kept, never an `UnsupportedMarker`. Mutation: map every error to
   `unsupported_error(error.to_string())` and both pins go red.
-- `summary_collision.rs` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):**
-  `EngineSummary`, the snapshot-summary keys the engine computes for the commit
-  in hand, which a user `snapshot-property.<k>` may not collide with (Spark's
-  measured rule: refuse iff the engine computed that exact key, message
-  `Multiple entries with same key: <k>=<engine> and <k>=<user>`). The fork merges
-  extras inside its own `SnapshotProducer::summary`, where a user value would
-  silently win, so the map is rebuilt ahead of the commit: `for_append`
-  runs the fork's public `SnapshotSummaryCollector` over the staged files and
-  applies the fork's add-only total arithmetic to the branch head (exact
-  values); `for_overwrite` keeps the exact added side and marks totals,
-  `changed-partition-count` and — with a parent — the data-removal keys as
-  `<resolved at commit>`, since the fork resolves the removal set inside the
-  commit. `engine-name` / `engine-version` are reserved (Spark stamps both on
-  every write; RePark writes neither): they refuse with `<engine-reserved>` as
-  the engine half (R-21c-1).
+- `summary_collision.rs` — **ICE-WRITE-OPTIONS-1 round 4 (2026-09-17):** `EngineSummary`, the
+  snapshot-summary keys the engine computes for the commit in hand, which a user
+  `snapshot-property.<k>` may not collide with (Spark's measured rule: refuse iff the engine
+  computed that exact key, message `Multiple entries with same key: <k>=<engine> and <k>=<user>`).
+  The fork merges extras inside its own `SnapshotProducer::summary`, where a user value would
+  silently win, so the map is rebuilt ahead of the commit: `for_append` runs the fork's public
+  `SnapshotSummaryCollector` over the staged files and applies the fork's add-only total arithmetic
+  to the branch head (exact values); `for_overwrite` keeps the exact added side and marks totals,
+  `changed-partition-count` and — with a parent — the data-removal keys as `<resolved at commit>`,
+  since the fork resolves the removal set inside the commit. `engine-name` / `engine-version` are
+  reserved (Spark stamps both on every write; RePark writes neither): they refuse with
+  `<engine-reserved>` as the engine half (R-21c-1).
 - [conform_stage.rs](conform_stage.rs) — **WRITE-SPINE-1 step 2 (2026-10-25):** the one plan-time conform stage (`conform_stage`, `conform_frame`, `conform_table_frame`, `table_targets`, the stage record). Every routed Iceberg write door passes it, and it applies the leaf zone rule, the floor, pairing, overflow and the nested zone seam, refusing when a kernel is missing. The seam rewrites only an `arrow_cast` whose argument reads a column (findings F-2, F-3). **NESTED-LITERAL-SEAM-1 (2026-10-27):** the zone half of the stage is `zone_partial_for`, rules R1 to R12: a date literal under the row-merge CASE (a wall literal under it, or in a constant, stays refused, R3), the date leaves of a constant nested value (partitioned or not), a date literal or column into a MAP timestamp key on D3, D8 and D10, and, on D10, the `TRY_CAST` date and wall leaves convert through the seam, with a per-leaf exclusion for an instant `TRY_CAST` to a wall leaf; the read-path CAST of a map with a timestamp key reads the same key arm (C-015). The CASE that holds a scalar-foldable seamed argument is wrapped in a CAST to the metadata-free container type (`wrap_scalar_seam_case`, ruling NLS-2). The file is 827 lines; its pins are in [conform_stage/seam_pins.rs](conform_stage/seam_pins.rs).
 
 ## I want to...
@@ -2024,24 +2006,21 @@ First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). E
   `>= ceil`; round 5, verifier V-001); `<=>` against any of them is FALSE; an `IN` drops them. A string literal is coerced to the column
   type. A column reference binds by its exact name; another case refuses Iceberg's
   `Cannot find field '<name>' in struct: …`.
-  **Round 4 (2026-09-25, critic r3):** `number_literal` types a decimal literal on an INT
-  column as Spark does: outside the INT range but inside i64 it is `OutOfRange` with the INT
-  folds (never a constant), and a `.0` literal exactly at the INT maximum or minimum is a
-  `Boundary`, which `boundary` folds by Spark's rules (`> max` → `null`, `<= max` →
-  `(c IS NOT NULL) OR (null)`, `< max` → `NOT (c = max)`, `>= max` → `c = max`, mirrored at the
-  minimum).
-  `commit_overwrite_by_filter_with_summary` commits `overwrite_files().overwrite_by_row_filter`
-  with the staged files and no added-file validation (Spark adds none), with the isolation,
+  **Round 4 (2026-09-25, critic r3):** `number_literal` types a decimal literal on an INT column as
+  Spark does: outside the INT range but inside i64 it is `OutOfRange` with the INT folds (never a
+  constant), and a `.0` literal exactly at the INT maximum or minimum is a `Boundary`, which
+  `boundary` folds by Spark's rules (`> max` → `null`, `<= max` → `(c IS NOT NULL) OR (null)`, `<
+  max` → `NOT (c = max)`, `>= max` → `c = max`, mirrored at the minimum).
+  `commit_overwrite_by_filter_with_summary` commits `overwrite_files().overwrite_by_row_filter` with
+  the staged files and no added-file validation (Spark adds none), with the isolation,
   `validate_from_snapshot` and branch handling of its siblings in `write_options.rs` (U7 PR2,
   2026-09-24: the level and the start come from `commit_target::FilterValidation`, so a
-  `validate-from-snapshot-id` writer option beside an `isolation-level` starts the
-  validation there). A set
-  row filter already counts as a change in the fork, so an empty source commits `delete`
-  without `allow_empty_commit`. A snapshot property that names an engine summary field
-  refuses, because the removed-file set of a general filter is not computed.
-  Tests: [overwrite_filter/](overwrite_filter/map.md).
-  U7's `writeTo(t).overwrite(condition)` reuses these two entry points (the claims line is in
-  `task/ledgers/staging/u8-write-sql-ledger.md`).
+  `validate-from-snapshot-id` writer option beside an `isolation-level` starts the validation
+  there). A set row filter already counts as a change in the fork, so an empty source commits
+  `delete` without `allow_empty_commit`. A snapshot property that names an engine summary field
+  refuses, because the removed-file set of a general filter is not computed. Tests:
+  [overwrite_filter/](overwrite_filter/map.md). U7's `writeTo(t).overwrite(condition)` reuses these
+  two entry points (the claims line is in `task/ledgers/staging/u8-write-sql-ledger.md`).
 - `mod.rs` — declares `overwrite_filter` and re-exports its two entry points.
 
 **ICE-RESOURCE-BOUND-1 (U-11, 2026-10-26) — a stated bound on the three paths that hold their input outside the session pool.** Above the bound the statement refuses before any file is staged. The keys and their defaults are read at build; the live pool is read per statement. The owner ruled the keys, the defaults and the refusal text (order, Q1 and Q2).

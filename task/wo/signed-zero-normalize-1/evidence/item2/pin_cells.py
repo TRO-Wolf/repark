@@ -22,6 +22,20 @@ SOURCES = (
     (DE / "item1/raw/repark-68b09d18-reads.jsonl", DE / "raw/spark-signed-zero-reads.jsonl"),
     (DE / "item1/raw/repark-68b09d18-add.jsonl", DE / "item1/raw/spark-add.jsonl"),
 )
+DELTA_BASE = DE / "item3/raw/delta-repark-68b09d18.jsonl"
+DELTA_SPARK = DE / "item3/raw/delta-spark.jsonl"
+DELTA_PINNED = (
+    "V-B1-rollup",
+    "V-B1-cube",
+    "V-B1-gsets",
+    "V-A3-sx",
+    "V-A3-fx",
+    "V-A3-sx-int",
+    "V-A3-fx-int",
+    "V-A3-sx-isnd",
+    "V-A3-sx-isd",
+    "V-A3-sx-and",
+)
 
 
 def load_probe() -> ModuleType:
@@ -34,6 +48,44 @@ def load_probe() -> ModuleType:
 
 def read(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+def rows_key(rows: list[list[Any]]) -> list[str]:
+    return sorted(json.dumps(row, sort_keys=True, default=str) for row in rows)
+
+
+def delta_label(base: dict[str, Any], truth: dict[str, Any]) -> str:
+    if base["outcome"] != "ANSWERED":
+        return "REFUSED-WHERE-SPARK-ACCEPTED"
+    if base["names"] == truth["names"] and rows_key(base["rows"]) == rows_key(truth["rows"]):
+        return "EQUAL"
+    return "WRONG-READ"
+
+
+def delta_cells() -> list[dict[str, Any]]:
+    spark = {record["cid"]: record for record in read(DELTA_SPARK)}
+    base = {
+        record["cid"]: record
+        for record in read(DELTA_BASE)
+        if record["route"] in ("native", "typed")
+    }
+    cells = []
+    for cid in DELTA_PINNED:
+        truth = spark[cid]
+        cells.append(
+            {
+                "residue": None,
+                "cid": cid,
+                "group": cid[:4],
+                "route": base[cid]["route"],
+                "text": base[cid]["text"],
+                "ordered": False,
+                "cols": truth["names"],
+                "truth": truth["rows"],
+                "base": delta_label(base[cid], truth),
+            }
+        )
+    return cells
 
 
 def main() -> None:
@@ -77,6 +129,7 @@ def main() -> None:
                 }
             )
             counts[(record["group"], label.split("+")[0])] += 1
+    out.extend(delta_cells())
     OUT.write_text("".join(json.dumps(cell, sort_keys=True) + "\n" for cell in out))
     print(len(out), "cells")
     for key, value in sorted(counts.items(), key=str):

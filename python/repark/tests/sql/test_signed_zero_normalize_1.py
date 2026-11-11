@@ -143,9 +143,9 @@ def test_every_part_a_cell_reaches_the_spark_truth(
 
 def test_the_pins_cover_the_moved_rows() -> None:
     groups = {cell["group"] for cell in CELLS}
-    assert groups == {"A1", "A2", "A3", "D2", "D3", "D4", "D5", "D6", "D13"}
+    assert groups == {"A1", "A2", "A3", "D2", "D3", "D4", "D5", "D6", "D13", "V-A3", "V-B1"}
     assert {cell["route"] for cell in CELLS} == set(ROUTES)
-    assert sum(cell["base"] != "EQUAL" for cell in CELLS) == 245
+    assert sum(cell["base"] != "EQUAL" for cell in CELLS) == 255
     residues = {cell["residue"] for cell in CELLS if cell["residue"] is not None}
     assert residues == {"DECIMAL-EXPR-FLOAT-COMPARE-1"}
     assert sum(cell["residue"] is not None for cell in CELLS) == 8

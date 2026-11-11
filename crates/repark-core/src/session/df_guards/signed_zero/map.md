@@ -26,8 +26,9 @@ under `task/wo/signed-zero-normalize-1/`.
   operand or a `WHEN` is a zero, expand first. The output is canonical, so a second pass is the
   identity (`Transformed::no`). NaN results do not move: NaN sits outside `[-0.0, +0.0]` under
   totalOrder. Rules: `NamePreserver` keeps every output name; a node with no candidate is not
-  rebuilt; a rewrite that would repeat a volatile operand is skipped; a `GroupingSet` is left
-  alone (key sites are part B). It visits `Filter`, `TableScan.filters` (prepared plans), join
+  rebuilt; a rewrite that would repeat a volatile operand is skipped; a `GroupingSet` (`ROLLUP`, `CUBE`,
+  `GROUPING SETS`) has each member rewritten under that member's own saved name, since an alias on
+  the set itself is invalid (delta, verifier B1); a bare float key stays part B's. It visits `Filter`, `TableScan.filters` (prepared plans), join
   filters, projections and subqueries. As seat 1b it re-runs `SimplifyExpressions` on each node it
   rewrites, so a fold-made zero leaves nothing for the next pass: an `IS NOT NULL` on a non-null
   operand used to cost a third optimizer pass (cost case (b), `evidence/item4/cost.md`).
@@ -36,4 +37,7 @@ under `task/wo/signed-zero-normalize-1/`.
   integer casts, two folded) × `DOUBLE`/`FLOAT` × side × `NOT`, against the Spark truth (zeros
   equal, NaN greatest and equal to itself, NULL rules of each operator); lists, ranges, simple
   `CASE`, computed operands, literal against literal; native `PREPARE`/`EXECUTE`; names; the
-  fixpoint of both seats; seat 1b on a folded zero; seat 1b's output costs no further pass.
+  fixpoint of both seats; seat 1b on a folded zero; seat 1b's output costs no further pass; one
+  pin per grouping-set kind against the Spark truth, and their names; a volatile operand
+  (`random()`) under `=`, `<>`, `<=>`, `IN`, `BETWEEN` and simple `CASE` stays unrewritten while
+  `random() < 0.0` rewrites, so the operand is never repeated.

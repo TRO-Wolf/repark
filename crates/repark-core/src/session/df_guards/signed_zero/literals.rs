@@ -2,9 +2,11 @@ use std::num::FpCategory;
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
-use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
+use datafusion::common::tree_node::{
+    Transformed, TransformedResult, TreeNode, TreeNodeIterator, TreeNodeRecursion,
+};
 use datafusion::common::{Result, ScalarValue};
-use datafusion::logical_expr::expr::{Case, InList, TryCast};
+use datafusion::logical_expr::expr::{Case, GroupingSet, InList, TryCast};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
     Between, BinaryExpr, Cast, Expr, LogicalPlan, Operator, and, lit, or,
@@ -118,15 +120,46 @@ fn rewrite_node(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         return Ok(Transformed::no(plan));
     }
     let preserver = NamePreserver::new(&plan);
-    plan.map_expressions(|expr| {
-        if matches!(expr, Expr::GroupingSet(_)) || !carries_rewrite(&expr)? {
-            return Ok(Transformed::no(expr));
+    plan.map_expressions(|expr| match expr {
+        Expr::GroupingSet(set) => {
+            Ok(rewrite_grouping_set(set, &preserver)?.update_data(Expr::GroupingSet))
         }
-        let saved = preserver.save(&expr);
-        Ok(expr
-            .transform_up(|node| Ok(rewrite_expr(node)))?
-            .update_data(|node| saved.restore(node)))
+        other => rewrite_named(other, &preserver),
     })
+}
+
+fn rewrite_named(expr: Expr, preserver: &NamePreserver) -> Result<Transformed<Expr>> {
+    if !carries_rewrite(&expr)? {
+        return Ok(Transformed::no(expr));
+    }
+    let saved = preserver.save(&expr);
+    Ok(expr
+        .transform_up(|node| Ok(rewrite_expr(node)))?
+        .update_data(|node| saved.restore(node)))
+}
+
+fn rewrite_grouping_set(
+    set: GroupingSet,
+    preserver: &NamePreserver,
+) -> Result<Transformed<GroupingSet>> {
+    Ok(match set {
+        GroupingSet::Rollup(exprs) => {
+            rewrite_members(exprs, preserver)?.update_data(GroupingSet::Rollup)
+        }
+        GroupingSet::Cube(exprs) => {
+            rewrite_members(exprs, preserver)?.update_data(GroupingSet::Cube)
+        }
+        GroupingSet::GroupingSets(sets) => sets
+            .into_iter()
+            .map_until_stop_and_collect(|exprs| rewrite_members(exprs, preserver))?
+            .update_data(GroupingSet::GroupingSets),
+    })
+}
+
+fn rewrite_members(exprs: Vec<Expr>, preserver: &NamePreserver) -> Result<Transformed<Vec<Expr>>> {
+    exprs
+        .into_iter()
+        .map_until_stop_and_collect(|expr| rewrite_named(expr, preserver))
 }
 
 fn carries_rewrite(expr: &Expr) -> Result<bool> {

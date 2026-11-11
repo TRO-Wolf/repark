@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Float32Array, Float64Array, Int64Array, RecordBatch};
+use datafusion::arrow::array::{BooleanArray, Float32Array, Float64Array, Int64Array, RecordBatch};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::datasource::MemTable;
 use datafusion::optimizer::{AnalyzerRule, OptimizerContext, OptimizerRule};
@@ -271,6 +271,10 @@ async fn the_rewrite_keeps_every_output_name() {
         "SELECT d IN (0.0, 1.5), d BETWEEN -0.0 AND 1.0, f = 0 FROM t",
         "SELECT CASE d WHEN 0.0 THEN 'z' ELSE 'n' END FROM t",
         "SELECT d = 1.0 - 1.0 AS computed, count(*) FILTER (WHERE d = 0.0) FROM t GROUP BY d = 1.0 - 1.0",
+        "SELECT d = 0.0, count(*) FROM t GROUP BY ROLLUP(d = 0.0)",
+        "SELECT d >= 0.0, f = -0.0 FROM t GROUP BY CUBE(d >= 0.0, f = -0.0)",
+        "SELECT d IS NOT DISTINCT FROM -0.0 FROM t \
+         GROUP BY GROUPING SETS ((d IS NOT DISTINCT FROM -0.0), ())",
     ] {
         let state = session.context().state();
         let logical = state.create_logical_plan(sql).await.expect("plan");
@@ -378,4 +382,90 @@ async fn seat_1b_hands_the_next_pass_a_simplified_plan() {
     let rendered = format!("{}", optimized.display_indent());
     assert!(!rendered.contains("IS NOT NULL"), "{rendered}");
     assert_eq!(passes, 2, "{rendered}");
+}
+
+async fn grouped(session: &ReparkSession, sql: &str) -> Vec<(Option<bool>, i64)> {
+    let batches = session
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("{sql}: {error}"))
+        .collect()
+        .await
+        .unwrap_or_else(|error| panic!("{sql}: {error}"));
+    let mut rows = Vec::new();
+    for batch in &batches {
+        let keys = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<BooleanArray>()
+            .expect("key column");
+        let counts = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("count column");
+        rows.extend(keys.iter().zip(counts.values().iter().copied()));
+    }
+    rows.sort_unstable();
+    rows
+}
+
+#[tokio::test]
+async fn a_rollup_member_compares_with_ieee_zero_under_its_own_name() {
+    let session = seeded_session();
+    let sql = "SELECT d = 0.0 AS z, count(*) AS c FROM t GROUP BY ROLLUP(d = 0.0)";
+    assert_eq!(
+        grouped(&session, sql).await,
+        vec![(None, 1), (None, 8), (Some(false), 5), (Some(true), 2)]
+    );
+}
+
+#[tokio::test]
+async fn a_cube_member_compares_with_ieee_zero_under_its_own_name() {
+    let session = seeded_session();
+    let sql = "SELECT d >= 0.0 AS z, count(*) AS c FROM t GROUP BY CUBE(d >= 0.0)";
+    assert_eq!(
+        grouped(&session, sql).await,
+        vec![(None, 1), (None, 8), (Some(false), 2), (Some(true), 5)]
+    );
+}
+
+#[tokio::test]
+async fn a_grouping_sets_member_compares_with_ieee_zero_under_its_own_name() {
+    let session = seeded_session();
+    let sql = "SELECT d IS NOT DISTINCT FROM -0.0 AS z, count(*) AS c FROM t \
+               GROUP BY GROUPING SETS ((d IS NOT DISTINCT FROM -0.0), ())";
+    assert_eq!(
+        grouped(&session, sql).await,
+        vec![(None, 8), (Some(false), 6), (Some(true), 2)]
+    );
+}
+
+#[tokio::test]
+async fn a_volatile_operand_is_never_repeated() {
+    let session = seeded_session();
+    let state = session.context().state();
+    for (pred, rewritten) in [
+        ("random() = 0.0", false),
+        ("random() <> 0.0", false),
+        ("random() IS NOT DISTINCT FROM 0.0", false),
+        ("random() IN (0.0, 1.5)", false),
+        ("random() BETWEEN 0.0 AND 1.0", false),
+        ("CASE random() WHEN 0.0 THEN true END", false),
+        ("random() < 0.0", true),
+    ] {
+        let sql = format!("SELECT id FROM t WHERE {pred}");
+        let logical = state.create_logical_plan(&sql).await.expect("plan");
+        let analyzed = state
+            .analyzer()
+            .execute_and_check(logical, state.config_options(), |_, _| {})
+            .expect("analyze");
+        let rendered = format!("{}", analyzed.display_indent());
+        assert_eq!(
+            rendered.contains("Float64(-0)"),
+            rewritten,
+            "{sql}\n{rendered}"
+        );
+        assert_eq!(rendered.matches("random()").count(), 1, "{sql}\n{rendered}");
+    }
 }
