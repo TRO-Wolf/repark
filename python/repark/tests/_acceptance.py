@@ -112,7 +112,7 @@ RUN_ATTEMPT_ENV = "REPARK_ACCEPT_RUN_ATTEMPT"
 LOCAL_RUN_ATTEMPT = "0"
 LEG_ENV = "REPARK_ACCEPT_LEG"
 LOCAL_LEG = "acc"
-LEGS = ("acc", "u", "x")
+LEGS = ("acc", "u", "x", "fm", "cf")
 _RUN_ID = re.compile(r"[0-9]+")
 _TABLE_BUCKET_ARN = re.compile(
     r"arn:(?P<partition>[a-z-]+):s3tables:(?P<region>[a-z0-9-]+):[0-9]{12}:bucket/[^/]+"

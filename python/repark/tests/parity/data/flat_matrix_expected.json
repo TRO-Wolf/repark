@@ -1,0 +1,8923 @@
+{
+ "source": "task/wo/write-path-envelope-matrix-1/evidence/raw (Spark 4.1.2 legs)",
+ "generator": "python/repark/tests/parity/data/build_flat_matrix_expected.py",
+ "cells": {
+  "f-expr|insert|v2-cow|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p08": {
+   "outcome": "REFUSED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "ArithmeticException",
+    "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003\n== SQL (line 1, position 1) ==\ni + 1 > 0\n^^^^^\n",
+    "panic": false,
+    "stage": "write"
+   }
+  },
+  "f-expr|insert|v2-cow|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|insert|v2-cow|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p08": {
+   "outcome": "REFUSED",
+   "ids": null,
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "ArithmeticException",
+    "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003\n== SQL (line 1, position 1) ==\ni + 1 > 0\n^^^^^\n",
+    "panic": false,
+    "stage": "collect"
+   }
+  },
+  "f-expr|select|v2-cow|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "f-expr|select|v2-cow|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p08": {
+   "outcome": "REFUSED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "ArithmeticException",
+    "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003\n== SQL (line 1, position 1) ==\ni + 1 > 0\n^^^^^\n",
+    "panic": false,
+    "stage": "write"
+   }
+  },
+  "filter-str|insert|v2-cow|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|insert|v2-cow|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p08": {
+   "outcome": "REFUSED",
+   "ids": null,
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "ArithmeticException",
+    "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003\n== SQL (line 1, position 1) ==\ni + 1 > 0\n^^^^^\n",
+    "panic": false,
+    "stage": "collect"
+   }
+  },
+  "filter-str|select|v2-cow|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "filter-str|select|v2-cow|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p08": {
+   "outcome": "REFUSED",
+   "ids": null,
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "ArithmeticException",
+    "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003\n== SQL (line 1, position 120) ==\n...ark_sql_ctas_v2_cow_p08_t WHERE i + 1 > 0\n                              ",
+    "panic": false,
+    "stage": "sql"
+   }
+  },
+  "spark-sql|ctas|v2-cow|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-cow|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p08": {
+   "outcome": "REFUSED",
+   "ids": null,
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "ArithmeticException",
+    "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003\n== SQL (line 1, position 120) ==\n...ark_sql_ctas_v2_mor_p08_t WHERE i + 1 > 0\n                              ",
+    "panic": false,
+    "stage": "sql"
+   }
+  },
+  "spark-sql|ctas|v2-mor|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|ctas|v2-mor|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [
+    1,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [
+    5,
+    6
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [
+    1,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    5,
+    6,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [
+    1,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    5,
+    6,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p08": {
+   "outcome": "REFUSED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "Py4JJavaError",
+    "message": "An error occurred while calling o47.sql.\n: org.apache.spark.SparkException: Exception thrown in awaitResult: \n\tat org.apache.spark.util.ThreadUtils$.awaitResult(ThreadUtils.scala:375)\n\tat org.apache.spark.sql.execution.SubqueryExec.executeCollect(basicPhysicalOperators.scala:938)\n\tat",
+    "panic": false,
+    "stage": "sql"
+   }
+  },
+  "spark-sql|delete|v2-cow|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [
+    1,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [
+    5
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [
+    1,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [
+    5
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [
+    3
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [
+    3
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [
+    4,
+    6
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    5,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    4,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [
+    3
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [
+    4
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [
+    1,
+    4,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [
+    1,
+    6,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [
+    3
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [
+    1,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [
+    7
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [
+    7
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [
+    7
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    5,
+    6,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-cow|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [
+    1,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [
+    1,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [
+    5,
+    6
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [
+    1,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    5,
+    6,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [
+    1,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    5,
+    6,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p08": {
+   "outcome": "REFUSED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "ArithmeticException",
+    "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003\n== SQL (line 1, position 62) ==\n...k_sql_delete_v2_mor_p08_t WHERE i + 1 > 0\n                               ",
+    "panic": false,
+    "stage": "sql"
+   }
+  },
+  "spark-sql|delete|v2-mor|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [
+    1,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [
+    5
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [
+    1,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [
+    5
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [
+    3
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [
+    3
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [
+    4,
+    6
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    5,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    4,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [
+    3
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [
+    4
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [
+    1,
+    4,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [
+    1,
+    6,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [
+    3
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [
+    1,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [
+    7
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [
+    7
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [
+    7
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "damaged": [],
+   "after_ids": [
+    1,
+    5,
+    6,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|delete|v2-mor|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [
+    1,
+    8
+   ],
+   "damaged": [],
+   "after_ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p08": {
+   "outcome": "REFUSED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "ArithmeticException",
+    "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003\n== SQL (line 1, position 120) ==\n...k_sql_insert_v2_cow_p08_t WHERE i + 1 > 0\n                              ",
+    "panic": false,
+    "stage": "sql"
+   }
+  },
+  "spark-sql|insert|v2-cow|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-cow|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p08": {
+   "outcome": "REFUSED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "ArithmeticException",
+    "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003\n== SQL (line 1, position 120) ==\n...k_sql_insert_v2_mor_p08_t WHERE i + 1 > 0\n                              ",
+    "panic": false,
+    "stage": "sql"
+   }
+  },
+  "spark-sql|insert|v2-mor|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|insert|v2-mor|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p08": {
+   "outcome": "REFUSED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "ArithmeticException",
+    "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003\n== SQL (line 1, position 158) ==\n...ON t.id = s.id WHEN MATCHED AND i + 1 > 0 THEN UPDATE SET flag = 'z'\n   ",
+    "panic": false,
+    "stage": "sql"
+   }
+  },
+  "spark-sql|merge|v2-cow|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-cow|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p08": {
+   "outcome": "REFUSED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "ArithmeticException",
+    "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003\n== SQL (line 1, position 158) ==\n...ON t.id = s.id WHEN MATCHED AND i + 1 > 0 THEN UPDATE SET flag = 'z'\n   ",
+    "panic": false,
+    "stage": "sql"
+   }
+  },
+  "spark-sql|merge|v2-mor|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|merge|v2-mor|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p08": {
+   "outcome": "REFUSED",
+   "ids": null,
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "ArithmeticException",
+    "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003\n== SQL (line 1, position 65) ==\n...k_sql_select_v2_cow_p08_t WHERE i + 1 > 0\n                               ",
+    "panic": false,
+    "stage": "sql"
+   }
+  },
+  "spark-sql|select|v2-cow|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|select|v2-cow|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p08": {
+   "outcome": "REFUSED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "Py4JJavaError",
+    "message": "An error occurred while calling o47.sql.\n: org.apache.spark.SparkException: Exception thrown in awaitResult: \n\tat org.apache.spark.util.ThreadUtils$.awaitResult(ThreadUtils.scala:375)\n\tat org.apache.spark.sql.execution.SubqueryExec.executeCollect(basicPhysicalOperators.scala:938)\n\tat",
+    "panic": false,
+    "stage": "sql"
+   }
+  },
+  "spark-sql|update|v2-cow|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-cow|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p01": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p02": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p03": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p04": {
+   "outcome": "ANSWERED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p05": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p06": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p07": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p08": {
+   "outcome": "REFUSED",
+   "ids": [],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 0,
+   "error": {
+    "class": "ArithmeticException",
+    "message": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003\n== SQL (line 1, position 72) ==\n..._mor_p08_t SET flag = 'z' WHERE i + 1 > 0\n                               ",
+    "panic": false,
+    "stage": "sql"
+   }
+  },
+  "spark-sql|update|v2-mor|p09": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p10": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p11": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p12": {
+   "outcome": "ANSWERED",
+   "ids": [
+    5
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p13": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p14": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p15": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4,
+    6
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p16": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    3,
+    5,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p17": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p18": {
+   "outcome": "ANSWERED",
+   "ids": [
+    4
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p19": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    4,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p20": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    6,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p21": {
+   "outcome": "ANSWERED",
+   "ids": [
+    3
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p22": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p23": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p24": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p25": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p26": {
+   "outcome": "ANSWERED",
+   "ids": [
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p35": {
+   "outcome": "ANSWERED",
+   "ids": [
+    2,
+    3,
+    4,
+    7
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  },
+  "spark-sql|update|v2-mor|p36": {
+   "outcome": "ANSWERED",
+   "ids": [
+    1,
+    8
+   ],
+   "lost": [],
+   "damaged": [],
+   "after_ids": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "commits": 1,
+   "error": null
+  }
+ }
+}
