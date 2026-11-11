@@ -154,6 +154,26 @@ pub(crate) fn lateral_join(
                 subquery: Arc::new(resolved_right),
                 spans: Spans::new(),
             });
+            let on_columns: Vec<Column> = on_names
+                .as_deref()
+                .unwrap_or(&[])
+                .iter()
+                .map(Column::from_name)
+                .collect();
+            let on_pairs = match repark_core::join_keys::hashable_join_keys(
+                &left_schema,
+                right_wrapped.schema(),
+                &on_columns,
+                &on_columns,
+            )
+            .map_err(datafusion_to_py_err)?
+            {
+                Some((left_keys, right_keys)) => left_keys.into_iter().zip(right_keys).collect(),
+                None => on_columns
+                    .iter()
+                    .map(|column| (Expr::Column(column.clone()), Expr::Column(column.clone())))
+                    .collect(),
+            };
             let filter = match on {
                 Some(condition) => Some(
                     repark_core::resolve_scoped_expr(
@@ -164,17 +184,6 @@ pub(crate) fn lateral_join(
                 ),
                 None => None,
             };
-            let on_pairs = on_names
-                .as_deref()
-                .unwrap_or(&[])
-                .iter()
-                .map(|name| {
-                    (
-                        Expr::Column(Column::from_name(name)),
-                        Expr::Column(Column::from_name(name)),
-                    )
-                })
-                .collect();
             let join = Join::try_new(
                 Arc::new(left_plan),
                 Arc::new(right_wrapped),

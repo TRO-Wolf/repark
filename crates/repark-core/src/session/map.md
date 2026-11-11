@@ -54,8 +54,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `ValueRefusal::WallClockGap` and an overlap `WallClockOverlap` (both
   `CONNECT-DIV-pg-timestamp-zone`, naming `prefer_timestamp_ntz`). A wall clock whose instant
   falls past chrono's calendar refuses `TimestampPastCalendar` (`CONNECT-DECL-pg-out-of-range`).
-  H-TZ did not fire. `session.rs` holds 1000 lines: its two new `mod` lines are paid for by two
-  shed comments. Pins: [zone_localiser/map.md](zone_localiser/map.md).
+  H-TZ did not fire. Pins: [zone_localiser/map.md](zone_localiser/map.md).
   **C-4 fold 3 item 2 (2026-10-11):** `zone_of` is `pub(crate)` so the text renderer
   parses the session zone through the same canonicalisation.
   **C-4 fold 3 S3 (2026-10-11):** `localise_at`, `unlocalise`, `place` and
@@ -362,8 +361,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `source_catalog_refusal` first, so an Iceberg-handle lookup of a mounted source's name refuses
   with that source's text.
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
-  CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
-  `session.rs` baseline ratcheted 1039 → 1002.
+  CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical.
   **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** `register_late_catalog_block` registers one
   runtime block tolerantly (incomplete parses stay silent; registered names only update
   the side map; register failures propagate, so the postgres S-6 refusal stays), and
@@ -378,7 +376,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `df_guards.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `context_with_df_54_1_rule_guards`
   takes the dialect beside the extension: it registers a handed-in `TypePlanner` (`with_type_planner`)
   and runs the dialect's `configure_analyzer_rules` after the extension's. With neither in, DataFusion's type mapping stands.
-- `df_guards.rs` — **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** re-exports `insert_struct_setop_after_coercion` toward the root; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** the `struct_walk` module joins the same list.
+- `df_guards.rs` — **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** re-exports `insert_struct_setop_after_coercion` toward the root; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** the `struct_walk` module joins the same list. **LISTVIEW-INNER-JOIN-KEY-1 (2026-11-11):** so does `join_keys`.
 - `df_guards.rs` — the DataFusion **54.1 regression guards**, owned and constructed by CORE
   (design G8). Guard 1 is a configurable scalar-subquery default; guard 2 wraps
   `push_down_leaf_projections`, declining failed rewrites only on an `Unnest` path while keeping

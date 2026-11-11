@@ -18,6 +18,7 @@ use datafusion::sql::sqlparser::parser::Parser;
 use repark_common::spark_error;
 
 use super::attr_id::same_relation;
+use super::join_keys::hashable_join_keys;
 
 pub use super::attr_id::{
     AttrId, Resolution, alias_with_fresh_id, attribute_ids, copy_attribute_ids, stamp, strip,
@@ -648,15 +649,21 @@ pub fn join_on_named_keys(
         .flatten()
         .collect::<Vec<_>>();
     let shared = shared_ids(&left_node, &right_outputs);
+    let hashable = hashable_join_keys(left.schema(), right.schema(), &left_keys, &right_keys)?;
     let (state, left_plan) = left.into_parts();
-    let plan = LogicalPlanBuilder::from(left_plan)
-        .join(
+    let builder = LogicalPlanBuilder::from(left_plan);
+    let plan = match hashable {
+        None => builder.join(
             right.into_unoptimized_plan(),
             join_type,
             (left_keys, right_keys),
             None,
-        )?
-        .build()?;
+        )?,
+        Some(keys) => {
+            builder.join_with_expr_keys(right.into_unoptimized_plan(), join_type, keys, None)?
+        }
+    }
+    .build()?;
     let joined = DataFrame::new(state, plan);
     if matches!(join_type, JoinType::LeftSemi | JoinType::LeftAnti) {
         let remint = shared

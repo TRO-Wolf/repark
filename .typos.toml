@@ -24,6 +24,7 @@ extend-exclude = [
   "task/wo/listview-inner-join-key-1/evidence/",
   "python/repark/tests/sql/data/struct_compare_by_position_cells.jsonl",
   "python/repark/tests/sql/data/struct_compare_kind_cells.jsonl",
+  "python/repark/tests/sql/data/listview_inner_join_key_1_cells.jsonl",
   "python/repark/tests/functions/fnp11a_r2_spark_oracle.json",
   "python/repark/tests/functions/fnp_math_1_spark_oracle.json",
   "python/repark/tests/functions/fnp_math_1_q12_q15_oracle.json",
