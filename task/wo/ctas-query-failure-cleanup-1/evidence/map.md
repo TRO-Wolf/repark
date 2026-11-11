@@ -15,5 +15,7 @@ lane logs; the committed `table.md` files are the record.
   [step0/cancel_worker.py](step0/cancel_worker.py) — the kill-mid-write cell.
 - [step0/cells_spark.py](step0/cells_spark.py) — the Spark oracle columns.
 - [step0/provenance.md](step0/provenance.md) — head SHA, profile, versions.
+- [after-table.md](after-table.md) — the step-0 scripts re-run on the branch
+  head: every F cell leaves no metadata, every K cell matches step-0.
 
 Up: [../map.md](../map.md).
