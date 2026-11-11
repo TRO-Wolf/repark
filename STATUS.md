@@ -11,16 +11,16 @@ _Last updated: 2026-11-09._
 
 ## Now
 
-As of 2026-11-10.
+As of 2026-11-11.
 
 - **Shipped:** v1.5.6 ([Release state](#release-state)).
 - **Open S1 with write reach on the shipped wheel:** struct comparisons pair fields by name where
   Spark pairs by position, so a `DELETE`, `UPDATE` or `MERGE` comparing reordered structs acts on
-  the wrong rows ([Known correctness issues](#known-correctness-issues)).
+  wrong rows ([Known correctness issues](#known-correctness-issues)).
 - **Labels:** format-v2 WITHDRAWN; format-v3 core HARDENED-NARROW; nanosecond columns and struct
   writes EXPERIMENTAL ([Iceberg maturity](#iceberg-maturity-2026-10-27)).
-- **In flight:** STRUCT-COMPARE-SEAT-FAMILY-1 (C-118; blocks v1.5.7). #1292 merged.
-- **Next:** the rest of v1.5.7 ([Release blockers](#release-blockers)).
+- **In flight:** SIGNED-ZERO-NORMALIZE-1 and LISTVIEW-INNER-JOIN-KEY-1 (blocks v1.5.7). #1295 merged; C-116 and C-118 closed.
+- **Next:** rest of v1.5.7 ([blockers](#release-blockers)).
 
 ## Release state
 
@@ -198,7 +198,7 @@ this file keeps one line of state plus a link. A known **defect with its fix sch
 divergence and gets no row: it stays here until the fix lands, and the fixing unit deletes the
 entry rather than moving it. Nothing is described in both places.
 
-- **Struct comparison pairs fields by name (S1, write reach; fix scheduled for v1.5.7)** —
+- **Struct comparison pairs fields by name (S1, write reach; fix for v1.5.7)** —
   STRUCT-COMPARE-BY-POSITION-1,
   [card](task/roadmap/mid-term/struct-compare-by-position-1-card-2026-11-09.md); measured on the
   1.5.6 wheel 2026-11-09; workaround:
@@ -272,9 +272,9 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**For v1.5.7** (content: owner, 2026-11-08 and 2026-11-09): STRUCT-SETOP-REORDER-REFUSAL-1
-(#1283), STRUCT-COMPARE-BY-POSITION-1 and SIGNED-ZERO-NORMALIZE-1
-([sketch](task/wo/signed-zero-normalize-1/sketch.md)). **For the format-v2 label:**
+**For v1.5.7** (owner, 11-08 to 11-11): SIGNED-ZERO-NORMALIZE-1
+([sketch](task/wo/signed-zero-normalize-1/sketch.md)) and LISTVIEW-INNER-JOIN-KEY-1; done: #1283,
+#1290, #1292, #1295. **For the format-v2 label:**
 [Iceberg maturity](#iceberg-maturity-2026-10-27). Tag history: [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).
