@@ -67,8 +67,8 @@ concurrency:
 jobs:
   build:
     name: build the native wheel (no credentials)
-    if: github.event_name == 'schedule' || inputs.leg == 'acceptance'
     if: github.event_name == 'schedule' || inputs.leg == 'acceptance' || inputs.leg == 'flat-matrix' || inputs.leg == 'ctas-failure'
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
       contents: read
