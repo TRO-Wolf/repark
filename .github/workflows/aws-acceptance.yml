@@ -21,7 +21,32 @@ on:
         options:
           - acceptance
           - ice-read-perf-bench
+          - flat-matrix
+          - ctas-failure
         default: acceptance
+      group:
+        description: "flat-matrix cell group (pilot, floatkeys, J1 to J5b, or all); ignored by ctas-failure"
+        type: choice
+        options:
+          - pilot
+          - floatkeys
+          - J1
+          - J2
+          - J3a
+          - J3b
+          - J4a
+          - J4b
+          - J5a
+          - J5b
+          - all
+        default: pilot
+      catalog:
+        description: "catalog the flat-matrix or ctas-failure cells run on"
+        type: choice
+        options:
+          - glue
+          - s3tables
+        default: glue
       purpose:
         description: "why this dispatch runs (the unit it measures), echoed into the job summary"
         type: string
@@ -43,7 +68,7 @@ jobs:
   build:
     name: build the native wheel (no credentials)
     if: github.event_name == 'schedule' || inputs.leg == 'acceptance'
-    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || inputs.leg == 'acceptance' || inputs.leg == 'flat-matrix' || inputs.leg == 'ctas-failure'
     timeout-minutes: 60
     permissions:
       contents: read
@@ -472,6 +497,95 @@ jobs:
         if: ${{ always() && github.ref == 'refs/heads/main' }}
         env:
           RUN_PREFIX: testing_r${{ github.run_id }}a${{ github.run_attempt }}_x_
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+        run: .venv/bin/python scripts/aws_acceptance_cleanup.py --run-prefix "${RUN_PREFIX}" --execute
+
+  flat-matrix:
+    name: flat-matrix and CTAS-failure cells (dispatch only, scratch-only)
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && (inputs.leg == 'flat-matrix' || inputs.leg == 'ctas-failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: aws-acceptance
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      REPARK_ACCEPT_RUN_ID: ${{ github.run_id }}
+      REPARK_ACCEPT_RUN_ATTEMPT: ${{ github.run_attempt }}
+      REPARK_ACCEPT_LEG: ${{ inputs.leg == 'flat-matrix' && 'fm' || 'cf' }}
+    steps:
+      - name: refuse non-default-branch refs (defence in depth; the branch gate is the environment)
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "tier-2 runs against merged code only; refusing ref '${GITHUB_REF}'" >&2
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e
+        with:
+          version: "0.9.5"
+          python-version: "3.12"
+          enable-cache: true
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: acceptance-wheel
+          path: wheel
+      - name: sync, install the wheel, profiler and boto3
+        run: |
+          uv sync --locked --extra record --no-install-package repark
+          uv pip install --python .venv/bin/python --no-deps wheel/repark-*.whl
+          uv pip install --python .venv/bin/python --only-binary :all: py-spy==0.4.1 boto3==1.43.111
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        with:
+          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-tier2-flat-matrix
+          mask-aws-account-id: true
+      - name: flat-matrix or CTAS-failure cells (REPARK_AWS_ACCEPTANCE=1, scratch-only)
+        env:
+          REPARK_AWS_ACCEPTANCE: "1"
+          LEG: ${{ inputs.leg }}
+          REPARK_FLAT_GROUP: ${{ inputs.group }}
+          REPARK_FLAT_CATALOG: ${{ inputs.catalog }}
+          REPARK_CTAS_CATALOG: ${{ inputs.catalog }}
+          REPARK_ACCEPT_BRONZE_BUCKET: ${{ vars.REPARK_ACCEPT_BRONZE_BUCKET }}
+          REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+        run: |
+          if [ "$LEG" = "flat-matrix" ]; then
+            module=python/repark/tests/parity/test_aws_acceptance_flat_matrix.py
+          else
+            module=python/repark/tests/parity/test_aws_acceptance_ctas_failure.py
+          fi
+          VIRTUAL_ENV="$PWD/.venv" uv run --no-project python -m pytest "$module" -q -rA --basetemp="$RUNNER_TEMP/flat-matrix"
+      - name: upload the JSON-lines records
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: flat-matrix-records-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/flat-matrix/*.jsonl
+          if-no-files-found: warn
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
+        if: ${{ always() && github.ref == 'refs/heads/main' }}
+        with:
+          role-to-assume: ${{ secrets.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-tier2-flat-matrix-cleanup
+          mask-aws-account-id: true
+      - name: remove this leg's scratch tables
+        if: ${{ always() && github.ref == 'refs/heads/main' }}
+        env:
+          RUN_PREFIX: testing_r${{ github.run_id }}a${{ github.run_attempt }}_${{ inputs.leg == 'flat-matrix' && 'fm' || 'cf' }}_
           REPARK_ACCEPT_WAREHOUSE: ${{ vars.REPARK_ACCEPT_WAREHOUSE }}
           TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
         run: .venv/bin/python scripts/aws_acceptance_cleanup.py --run-prefix "${RUN_PREFIX}" --execute
