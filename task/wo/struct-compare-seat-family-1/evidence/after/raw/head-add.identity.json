@@ -1,0 +1,7 @@
+{
+ "leg": "head",
+ "repark_file": "<clone>/python/repark/src/repark/__init__.py",
+ "debug_assertions": false,
+ "python": "<clone>/.venv/bin/python",
+ "flags_I": 1
+}
