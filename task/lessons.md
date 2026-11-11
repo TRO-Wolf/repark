@@ -4,6 +4,19 @@ DO / DO-NOT rules in force. Append date-stamped entries; supersede, don't delete
 2026-08-06 with sanitized lessons carried from the private v1 repository — these were learned
 there the hard way and bind here from day one.
 
+## 2026-11-10 — the table-completeness check and the named-seat rule bind from the next unit on
+
+- **Table-completeness check.** Before a build opens, the orchestrator lists every seat and door the order names and marks each against the step-0 table's seat axis. A named seat with no cells is added to the table, or struck from the order in writing. A verifier's first step repeats the check.
+- **Named-seat rule.** A seat the order names is inside the clause whether or not the table carries it. A wrong cell on a named seat found at review is class (b) for that seat and is fixed in the unit's one delta. Other spellings that share its mechanism but that the order does not name stay class (c).
+- *Why (2026-11-10):* the order of STRUCT-COMPARE-BY-POSITION-1 named the join-key seat, the step-0 table missed it, and review found wrong rows there. The check costs one read and would have caught it before the build. The rules bind from the next unit on; the first unit they bind is STRUCT-COMPARE-SEAT-FAMILY-1, and #1292 is not re-judged under them. *Owner, 2026-11-10, verbatim: "Q2–Q7 as pasted but they have my full go ahead and sign off, merge when CI is green".*
+
+## 2026-11-10 — the consumers-of-the-pairing inventory row
+
+- **Consumers of the pairing.** Every brief for a rule that pre-empts an engine coercion lists, from the pinned source and before the build: (1) every caller of that coercion in the analyzer (for DataFusion 54.1 comparison coercion: the `BinaryExpr`, `InList`, `InSubquery`, `SetComparison`, `Between` and `Case` arms and `coerce_join`); (2) every function whose signature reaches it; (3) every plan node that stores operand pairs outside an expression (`Join.on`, set-operation inputs, recursive terms). Each entry is a seat in the step-0 table or is named out of clause with its card.
+- *Why (2026-11-10):* the existing inventory asks where evidence is created, moved or destroyed before the seat; this row asks who consumes the pairing after it. Both parks that week came from the second question, answered from memory.
+- *Lesson (2026-11-10):* a claim that a door does not reach something needs more than one spelling. The absence claim for PREPARE rested on a single statement that was a syntax error for an unrelated reason.
+- *Owner, 2026-11-10, verbatim: "Q2–Q7 as pasted but they have my full go ahead and sign off, merge when CI is green".*
+
 ## 2026-11-09 — an analyzer-seat brief inventories where its evidence is created, moved or destroyed
 
 - **DO inventory, for every analyzer-seat or planner-seat brief, where its evidence is created, moved or destroyed before the seat sees it, and answer each row "seen at the seat: yes / no, because" before the build.** The rows: (1) the session analyzer list and the rule's index in it; (2) every other analyzer list built in production (`build_expr_context`; any `Analyzer::with_rules`); (3) DataFusion's off-list runs (`apply_type_coercion` in `create_view`; the PREPARE arm's bare optimizer); (4) SQL-planner-time coercions (`to_recursive_query`; INSERT planning); (5) the optimizer rules that fold or move evidence (`SimplifyExpressions`, `OptimizeUnions`, `PushDownFilter`, `OptimizeProjections`); (6) stored plans that re-enter (views inlined at scan build, prepared plans, cached tables, DataFrame temp views). *Why (2026-11-09):* the Unit C brief listed sessions only. Muse found a second analyzer list, and Opus found two runs that use no list and one coercion that runs before any list; each was found by a review round rather than by the brief. The reach probes then fall out of the inventory instead of being guessed. *Owner ruling, 2026-11-09, verbatim: "Go with defaults."*
