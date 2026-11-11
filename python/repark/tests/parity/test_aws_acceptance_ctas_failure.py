@@ -78,7 +78,10 @@ def _statement(cell: str, src: str, target: str) -> str:
             f"CREATE OR REPLACE TABLE {target} AS SELECT id, CAST('1' AS INT) AS n FROM {src} "
             "WHERE id BETWEEN 2 AND 6"
         ),
-        "K": (f"CREATE TABLE {target} AS SELECT id, CAST(s AS INT) AS n FROM {src} WHERE s = '1'"),
+        "K": (
+            f"CREATE TABLE {target} AS SELECT a.id, CAST(a.s AS INT) AS n "
+            f"FROM {src} a CROSS JOIN {src} b WHERE a.s = '1' AND b.id <= 2000"
+        ),
     }
     return texts[cell]
 
