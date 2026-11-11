@@ -14,6 +14,7 @@ end-to-end battery is in `../src/tests.rs`.
 - [struct_setop_reorder_refusal.rs](struct_setop_reorder_refusal.rs), [setop_reorder_common/mod.rs](setop_reorder_common/mod.rs), [struct_setop_reorder_refusal_delta2.rs](struct_setop_reorder_refusal_delta2.rs), [struct_setop_type_family_1.rs](struct_setop_type_family_1.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** the domain-table suite, ANSI/DataFusion/Spark on v2-cow (reordered operands refuse, controls answer, refusals persist nothing): four tests, shared harness (module-level `dead_code` allow: subset use per target).
   Delta #2 (2026-11-09), native+ANSI read/insert: NULL-first unions, views, PREPARE, recursive CTE, row 12 (`STRUCT-SETOP-USER-CAST-OVERREFUSAL-1`), join-cast control, `STRUCT-USER-CAST-POSITIONAL-1_divergence`.
   Item #5: `INTERSECT ALL` / `EXCEPT ALL` join refusals; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** the native `arrow_cast` pairs and recursive row, both forms. F-4: [struct_setop_recursive_kind.rs](struct_setop_recursive_kind.rs) (recursive `LargeListView`).
+- [signed_zero_dml.rs](signed_zero_dml.rs) — **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** P3/D1, Spark and DataFusion doors × three kinds: float-zero `DELETE` (five forms), `UPDATE`, `INSERT … SELECT`, CTAS, MERGE touch both zeros.
 - [empty_dml_shared_guard.rs](empty_dml_shared_guard.rs) — **EMPTY-DML-SHARED-GUARD-1 (2026-11-08):** the Step 0.3 empty-DML table on the ANSI, DataFusion and Spark doors over v2-cow, v2-mor and v3: rows, snapshot, files, v3 lineage, the `count` report; `RESIDUES` lists the cells outside the clause.
 - [map_struct_key_subscript.rs](map_struct_key_subscript.rs) and [map_struct_key_subscript_2.rs](map_struct_key_subscript_2.rs) — **MAP-STRUCT-KEY-SUBSCRIPT-1 (2026-11-01, AUD-016; rounds 1 to 4):** struct-key subscripts on each door against Spark 4.1.2: 29 tests first file, 9 second (signed zero and NaN, session zone, element casts, ANSI gate).
 - `write_door_native.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** pins 1-4 and the WS2-20 pin: `every_value_writing_door_passes_the_stage`, `a_missing_kernel_refuses_on_every_routed_door`, `the_sink_guard_never_fires_on_a_routed_door`, `a_plain_update_from_add_months_stores_session_midnight` and `a_partition_overwrite_guards_an_integer_overflow_at_plan_time`.
@@ -43,13 +44,12 @@ end-to-end battery is in `../src/tests.rs`.
   `Unsupported SQL type TIMESTAMP_LTZ` and creates nothing; the empty map is
   `MAP(ARRAY[], ARRAY[])` here and Spark's `MAP()` refuses.
 - `ansi_meta_delete.rs` — **ICE-META-DELETE-1 (2026-09-19):** the native door's end of Spark's
-  metadata delete. A whole-file `DELETE` removes the file in ONE `delete` snapshot with no delete file,
-  under both delete modes; a no-match commits the empty `delete` snapshot; a partial
-  `DELETE` writes a position delete; `DELETE FROM t` with no predicate empties the table;
-  and the case pins hold the door's rule — an UNQUOTED wrong-cased column folds (its
-  planner lower-cases it), a QUOTED one keeps the refusal and touches no file.
-  Its `ident` helper is an associated function: `unused_self` fires on a method under `--all-targets` (2026-09-20).
-  **ICE-META-DELETE-1 step 6 (2026-09-19):** this unit's clause citations live in this map, not the source — the comment ban covers doc comments too.
+  metadata delete. A whole-file `DELETE` removes the file in ONE `delete` snapshot, no delete file,
+  both modes; a no-match commits the empty `delete` snapshot; a partial
+  `DELETE` writes a position delete; `DELETE FROM t` empties the table;
+  and the case pins: an UNQUOTED wrong-cased column folds (the planner lower-cases it),
+  a QUOTED one refuses and touches no file.
+  `ident` is associated (`unused_self`, `--all-targets`, 2026-09-20); citations live here (step 6).
 - `ansi_nested_ddl_oracle.rs` — **ICE-NESTED-EVO-1 round 2 (2026-09-18, run 22b):** the ANSI
   door's twin of every recorded nested DDL cell, reading Spark's answers from
   `python/repark-parity/fixtures/torture/data/ice_nested_evo_1/oracle.json`. The `cells`

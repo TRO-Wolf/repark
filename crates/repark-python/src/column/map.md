@@ -199,12 +199,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   argument as `arg * lit(1.0f64)` — Spark's `cbrt` is a UnaryMathExpression (always
   DoubleType, computed in f64); the multiply coerces f32/int/decimal to f64 while
   bool/string still refuse (no numeric coercion).
-- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection. **ATTR-ID-1 SJ-1b (2026-10-02):** `register(module)` adds the `grouping_id_column` pyfunction, moved from `lib.rs`, paying for its two `frame_lineage` lines. **R-CS2P-1 (2026-10-03):** `parse_canonical_predicate` (the insensitive filter door) keeps its plan over in-schema columns; otherwise `folded_qualifier_predicate` re-parses to a SQL AST, folds qualifiers via `frame_names::fold_frame_qualifiers` under `IgnoreCase`, and plans the rewritten tree when one folded, so an alias qualifier binds in any case now that `subquery_alias` keeps the alias spelling.
+- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection. **ATTR-ID-1 SJ-1b (2026-10-02):** `register(module)` adds the `grouping_id_column` pyfunction. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `reciprocal_trig_or_inf` maps a zero divisor to `cot(divisor)` (±Inf). **R-CS2P-1 (2026-10-03):** `parse_canonical_predicate` (the insensitive filter door) keeps its plan over in-schema columns, else `folded_qualifier_predicate` re-parses to a SQL AST, folds qualifiers via `frame_names::fold_frame_qualifiers` under `IgnoreCase`, and plans the rewritten tree when one folded, so an alias qualifier binds in any case now that `subquery_alias` keeps the alias spelling.
   **POLARS-IS-DUPLICATED-1 (2026-09-28):** `is_duplicated_expr` builds
-  `count(1) OVER (PARTITION BY dup_key(receiver)) > 1` via the same
-  `count_aggregate` + `build_over_expression` path a user window takes
-  (matching the unordered full-partition frame), wrapped in the
-  `dup_mask_udf` marker the `filter_frame` / `select_frame` rewrite keys on.
+  `count(1) OVER (PARTITION BY dup_key(receiver)) > 1` on a user window's path
+  (`count_aggregate` + `build_over_expression`), wrapped in the `dup_mask_udf`
+  marker the `filter_frame` / `select_frame` rewrite keys on.
   **CAST-MAP-SPELL-1 (2026-09-19):** `cast_to` sends a map-bearing type string to
   `repark_functions::cast_map::cast_map_expr`, every other one to `parse_data_type`;
   `plan_expr_column` runs the shared map-cast rewrite, so `F.expr` spells it.

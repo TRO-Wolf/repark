@@ -531,11 +531,9 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   and DECIMAL(6,2) fixture: 26 match Spark (six comparison operators, IN/NOT IN,
   BETWEEN/NOT BETWEEN, negatives, reversed sides, FLOAT with the 0.1f32
   double-widening discriminator, decimal-vs-decimal/decimal-vs-integral
-  near-miss controls) and 17 pin the separate pre-existing signed-zero kernel
-  divergence (the float eq kernel keeps `-0.0` distinct from `0.0`, so zero-bound
-  `=`/`<>`/`<`/`>=`/IN/BETWEEN cases differ from Spark by exactly the `-0.0`
-  row), each with Spark's answer in the assertion message. One logical-plan
-  shape pin proves no decimal cast remains.
+  near-miss controls) and 17 zero-bound `=`/`<>`/`<`/`>=`/IN/BETWEEN cases now answer
+  Spark's rows (SIGNED-ZERO-NORMALIZE-1; the message keeps the kernel's totalOrder answer).
+  One logical-plan pin: no decimal cast remains, and `d = 0.0` reaches the bound form.
 - [ta_window.rs](ta_window.rs) — seven
   `sql_route_*` cases prove the TA window
   UDFs the composed `repark_ta::TaExtension` registers are `f64::to_bits`-identical to the

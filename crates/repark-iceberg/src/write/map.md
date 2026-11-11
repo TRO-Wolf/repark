@@ -875,8 +875,8 @@ repark-core's error map.
   unifying them is left to a later unit (hand-back of run 21a).
   A FLOAT / DOUBLE literal converts only when it is EXACT: its decimal text and the parsed value's
   full `{:.800e}` expansion normalize to the same digits and exponent, so an underflow
-  (`f < 1e-50` → `0.0`), an overflow, a rounding (`0.1`) and a zero (the fork orders floats by
-  `total_cmp`, `-0.0 < 0.0`, while SQL equates them) leave the node unconverted. A float column
+  (`f < 1e-50` → `0.0`), an overflow, a rounding (`0.1`) and a zero (`is_float_zero`,
+  SIGNED-ZERO-NORMALIZE-1; the fork orders `-0.0 < 0.0`) leave the node unconverted. A float column
   also converts only under `=`, `<>`, `IN` and `NOT IN`: the fork's metrics evaluator skips a
   nans-only file (and bounds exclude NaN) under `<` / `>` / `BETWEEN`, while SQL ranges order NaN
   as a value, so a float range stays unscoped (ruling Q-21a-OCC-1).

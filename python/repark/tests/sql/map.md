@@ -31,6 +31,10 @@ pins.
 - [test_sql_set_door_1.py](test_sql_set_door_1.py) — SQL ``SET`` / ``RESET`` door pins — SQL-SET-DOOR-1 (oracle ``fixtures-batch1.json`` BTZ5-0..19).
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — SQP-1 facade controls — Spark string-literal escapes and ``CAST … AS BINARY``.
 - [test_string_literal_escape_1.py](test_string_literal_escape_1.py) — STRING-LITERAL-ESCAPE-1 facade pins — SQL string literals unescape as Spark does.
+- [test_signed_zero_normalize_1.py](test_signed_zero_normalize_1.py) — SIGNED-ZERO-NORMALIZE-1 part A (P2, P6): replays the 301 clause cells of
+  `data/signed_zero_normalize_1_cells.jsonl` (D2–D6, D13, A1–A3) on the five routes over the one-row-per-file
+  seed, against Spark's truth; D6 pins the base names (D6-3…6 names only, values are part B). The 8 Spark-door
+  `DECIMAL-EXPR-FLOAT-COMPARE-1` residues may refuse but never answer wrong.
 - [test_struct_compare_seat_family_1.py](test_struct_compare_seat_family_1.py) — STRUCT-COMPARE-SEAT-FAMILY-1 — every
   DataFrame typed and string door cell of the family table matches Spark: its rows, or Spark's class on a
   refusal (a carded class gap: a refusal; other known cells: no panic). Generated names never show the

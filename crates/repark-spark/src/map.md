@@ -1194,17 +1194,16 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `int32_count_of_one_widens_without_an_int64_literal`.
   **WO-2 xo-muse8 UNIT1 fix-b (2026-09-21):** the same pre-coercion seat now also
   widens a decimal literal compared against a FLOAT/DOUBLE expression to DOUBLE
-  (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape — the float side keeps its
-  type and DataFusion's coercion then promotes a FLOAT column to double, exactly
-  like Spark). DataFusion prefers decimal over float and used to cast the column
+  (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape; coercion then promotes a FLOAT
+  column to double). DataFusion prefers decimal over float and used to cast the column
   (`CAST(d AS Decimal128(30,15))`), which dies with `Overflowing on NaN`. Covers
   the six comparison operators, `IN`/`NOT IN`, `BETWEEN`/`NOT BETWEEN`, either
   side, and `Negative`-wrapped literals; decimal-vs-decimal and
   decimal-vs-integral comparisons are untouched, as are unresolvable sides
   (conservative no-op). The post-coercion `FoldSparkNumericCasts` folds the new
-  cast into a double literal on full sessions. Signed-zero `=`/`<>`/`<`/`>=`
-  outcomes still follow the float eq kernel (total order: `-0.0` distinct from
-  `0.0`), a separate pre-existing divergence pinned beside the sweep.
+  cast into a double literal on full sessions. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `<=>`,
+  `IS DISTINCT FROM` and a simple `CASE` over a float operand (`widen_case`) widen too; the
+  core's `signed_zero_literals` then gives zero comparisons IEEE equality.
 - `spark_rewrites/` — the token-rewrite planners of the canonicalize layer;
   `mod.rs` carries the shared span helpers and the families below.
   **D-5 (2026-09-21):** `create_options.rs` (wired last in `spark_literals.rs`

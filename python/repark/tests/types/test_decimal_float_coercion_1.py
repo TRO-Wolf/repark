@@ -15,10 +15,9 @@ the sign bit that a bare ``-0.0`` literal loses at parse): the SQL door
 carries 46 legs, the DataFrame door 18 legs (``F.col`` comparisons, ``isin``,
 ``between``, string predicates, ``F.lit``). The R-NAN-FILTER replica runs the
 scoreboard cell's exact SQL and asserts the orchestrator-recorded Spark
-targets. Seventeen zero-bound legs pin the separate pre-existing signed-zero
-kernel divergence (the float eq kernel keeps ``-0.0`` distinct from ``0.0``)
-with Spark's answer beside RePark's; every other leg equals Spark, value and
-Arrow type.
+targets. Seventeen zero-bound legs keep the float kernel's totalOrder answer
+beside Spark's; since SIGNED-ZERO-NORMALIZE-1 they answer Spark's rows. Every leg
+equals Spark, value and Arrow type.
 """
 
 from __future__ import annotations
@@ -192,37 +191,28 @@ def _df_condition(key: str) -> Any:
 
 
 def test_sql_door_sweep_matches_spark(seeded: Any) -> None:
-    """SQL-door match legs equal Spark; zero-bound legs pin the totalOrder divergence."""
+    """SQL-door legs equal Spark, the zero-bound legs included."""
     session, table = seeded
     for key, predicate in _MATCH_SQL.items():
         got = _ids(session.sql(f"SELECT id FROM {table} WHERE {predicate} ORDER BY id").to_arrow())
         assert got == _oracle_ids(key), key
     assert _oracle_ids("f_gte_0") == [1, 2, 3, 4, 6, 8, 9, 10], _ORACLE["cells"]["f_gte_0"]
-    for key, (predicate, repark) in _DIVERGE_SQL.items():
+    for key, (predicate, total_order) in _DIVERGE_SQL.items():
         got = _ids(session.sql(f"SELECT id FROM {table} WHERE {predicate} ORDER BY id").to_arrow())
-        assert got == repark, (
-            f"{key}: spark answers {_oracle_ids(key)}; "
-            "the float eq kernel keeps -0.0 distinct from 0.0"
-        )
+        assert got == _oracle_ids(key), f"{key}: the float kernel alone answers {total_order}"
 
 
 def test_df_door_sweep_matches_spark(seeded: Any) -> None:
-    """DataFrame-door match legs equal Spark; zero-bound legs pin the totalOrder divergence."""
+    """DataFrame-door legs equal Spark, the zero-bound legs included."""
     session, table = seeded
     frame = session.table(table)
     for key in _MATCH_DF:
         got = _ids(frame.filter(_df_condition(key)).select("id").to_arrow())
         assert got == _oracle_ids(key), key
-    for key, repark in _DIVERGE_DF.items():
+    for key, total_order in _DIVERGE_DF.items():
         got = _ids(frame.filter(_df_condition(key)).select("id").to_arrow())
-        assert got == repark, (
-            f"{key}: spark answers {_oracle_ids(key)}; "
-            "the float eq kernel keeps -0.0 distinct from 0.0"
-        )
-    assert _ids(frame.filter("d = 0.0").select("id").to_arrow()) == [3], (
-        f"df_d_str: spark answers {_oracle_ids('df_d_str')}; "
-        "the float eq kernel keeps -0.0 distinct from 0.0"
-    )
+        assert got == _oracle_ids(key), f"{key}: the float kernel alone answers {total_order}"
+    assert _ids(frame.filter("d = 0.0").select("id").to_arrow()) == _oracle_ids("df_d_str")
     assert _ids(frame.filter("f = 0.1").select("id").to_arrow()) == _oracle_ids("df_f_str")
 
 

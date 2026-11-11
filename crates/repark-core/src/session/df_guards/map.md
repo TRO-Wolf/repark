@@ -10,6 +10,7 @@ wrapped optimizer rule) and declares this directory.
 
 - [struct_setop.rs](struct_setop.rs), [struct_walk.rs](struct_walk.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** `struct_setop_names` refuses struct operands differing in field-name order or set, any depth. Delta #2 seats it after `type_coercion`, reading beneath stacked casts; the `RecursiveQuery` arm checks recursive-term types against the static term. **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** all three arms call the shared `struct_walk` (peel encodings, recurse list kinds, refuse unpaired pairs). **STRUCT-COMPARE-BY-POSITION-1:** equal types never mismatch (F-1).
   **Delta 1 (2026-11-08):** `insert_struct_setop_after_coercion` reaches the crate root for Python's expression context. **Item #5:** refusals name `INTERSECT ALL` / `EXCEPT ALL` without `Distinct` left.
+- [signed_zero.rs](signed_zero.rs), [signed_zero/](signed_zero/map.md) — **SIGNED-ZERO-NORMALIZE-1 part A (2026-11-11):** seats 1 and 1b.
 - `skipping_limit.rs` — **OFFSET-NESTED-SORT-1 (2026-10-08):** a guard for a DataFusion 54.1.0
   defect. DataFusion's `EnforceSorting` rule (its sort pushdown,
   `datafusion-physical-optimizer` `enforce_sorting/sort_pushdown.rs`) treats a
@@ -27,10 +28,8 @@ wrapped optimizer rule) and declares this directory.
   of its own; the limit is rebuilt over the result and replaced with
   `SealedSkippingLimitExec`, a leaf reporting the limit's own properties (ordering,
   one partition) with no children, so the rule has nothing below the seal to push a row cap
-  or a sort into: the seal is a leaf. (Verifier mutation D made
-  the seal report the limit's `fetch`; the lane pins, 1356 answered cells and every plan of a
-  statement without an `OFFSET` stood still, so the missing `fetch` is not what holds the
-  cap back.) The wrapper then runs the inner rule on the sealed plan and puts every limit
+  or a sort into: the seal is a leaf (verifier mutation D: a seal reporting `fetch` moved no pin
+  or cell). The wrapper then runs the inner rule on the sealed plan and puts every limit
   back top-down. A seal never leaves the rule: later rules cannot see the plan a seal
   holds (`OutputRequirements` puts its marker node below a top-level limit, so the marker would
   stay), so `execute` on a seal is an internal error and `no_seal_survives_into_a_final_plan`
