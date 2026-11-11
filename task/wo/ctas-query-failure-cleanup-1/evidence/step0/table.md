@@ -258,3 +258,24 @@ One row per cell. `meta` condenses metadata file names with uuid stems folded to
 ## Seed errors
 
 None: every seed ran clean.
+
+## Struck seats (ruling 1 after item 1)
+
+The 18 `saveAsTable` × v3 F seats are struck with the measured cause:
+`saveAsTable` has no public channel to request format version 3 on main. The
+table rows for these ids ran the `.option("format-version", "3")` probe
+instead and each created version 2 on the options path; the rows stay as the
+probe record and never enter the pin matrix.
+
+Struck cell ids: `f1-savedef-hr-v3`, `f1-savedef-mm-v3`, `f1-saveapp-hr-v3`,
+`f1-saveapp-mm-v3`, `f1-saveovr-hr-v3`, `f1-saveovr-mm-v3`,
+`f3-savedef-hr-v3`, `f3-savedef-mm-v3`, `f3-saveapp-hr-v3`,
+`f3-saveapp-mm-v3`, `f3-saveovr-hr-v3`, `f3-saveovr-mm-v3`,
+`f6-savedef-hr-v3`, `f6-savedef-mm-v3`, `f6-saveapp-hr-v3`,
+`f6-saveapp-mm-v3`, `f6-saveovr-hr-v3`, `f6-saveovr-mm-v3`.
+
+Measured three ways: the write option is ignored for creation (the leftover
+and success files declare version 2); the catalog `table-default`
+`format-version` is refused as a reserved property; there is no
+`tableProperty` API on the v1 writer. K4 keeps its `saveAsTable` × v3
+control: a v3 seed plus an overwrite keeps v3, measured intact.

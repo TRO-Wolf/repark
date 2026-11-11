@@ -334,62 +334,85 @@ async fn finish_ctas_staged_commit(
 ) -> Result<()> {
     let session = repark_iceberg::write::session_write_conf_from_ctx(ctx);
     if options.is_empty() && session.is_empty() {
-        let data_files = write_ctas_query(ctx, staged.table(), query).await?;
+        let data_files = match write_ctas_query(ctx, staged.table(), query).await {
+            Ok(data_files) => data_files,
+            Err(error) => {
+                repark_iceberg::write::discard_unpublished_create(&staged).await;
+                return Err(error);
+            }
+        };
         repark_iceberg::write::commit_staged(staged, data_files, catalog.as_ref())
             .await
             .map_err(iceberg_err)?;
         return Ok(());
     }
-    let (snapshot_extra, mut staging) = options.resolve_with_session(ctx)?;
-    staging.case_sensitive = !crate::spark_door_case_insensitive(ctx.state().config().options());
-    let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
-    let stream = query.execute_stream().await?;
-    let staged_table = staged.table().clone();
-    let mode = staged.mode();
-    let data_files = if staged_table
-        .metadata()
-        .default_partition_spec()
-        .is_unpartitioned()
-    {
-        repark_iceberg::write::stage_unpartitioned_stream_with_overrides(
-            &staged_table,
-            stream,
-            concurrency,
-            &staging,
-        )
-        .await?
-    } else {
-        repark_iceberg::write::stage_partitioned_stream_with_overrides(
-            &staged_table,
-            stream,
-            &staging,
-            concurrency,
-        )
-        .await?
-    };
-    let written = repark_iceberg::write::written_paths(&data_files);
-    let tx = Transaction::new(&staged_table);
-    let tx = if replace_write {
-        let engine =
-            repark_iceberg::write::EngineSummary::for_overwrite(&staged_table, &data_files, None);
-        let (_, summary) = repark_iceberg::write::summary_with_extras(&snapshot_extra, &engine)?;
-        tx.overwrite_files()
-            .overwrite_by_row_filter(iceberg::expr::Predicate::AlwaysTrue)
-            .add_files(data_files)
-            .allow_empty_commit()
-            .set_snapshot_properties(summary)
-            .apply(tx)
-    } else {
-        let engine =
-            repark_iceberg::write::EngineSummary::for_append(&staged_table, &data_files, None);
-        let (_, summary) = repark_iceberg::write::summary_with_extras(&snapshot_extra, &engine)?;
-        tx.merge_append()
-            .add_data_files(data_files)
-            .set_snapshot_properties(summary)
-            .apply(tx)
+    let outcome = async {
+        let (snapshot_extra, mut staging) = options.resolve_with_session(ctx)?;
+        staging.case_sensitive =
+            !crate::spark_door_case_insensitive(ctx.state().config().options());
+        let concurrency = repark_iceberg::write::concurrency_from_ctx(ctx);
+        let stream = query.execute_stream().await?;
+        let staged_table = staged.table().clone();
+        let mode = staged.mode();
+        let data_files = if staged_table
+            .metadata()
+            .default_partition_spec()
+            .is_unpartitioned()
+        {
+            repark_iceberg::write::stage_unpartitioned_stream_with_overrides(
+                &staged_table,
+                stream,
+                concurrency,
+                &staging,
+            )
+            .await?
+        } else {
+            repark_iceberg::write::stage_partitioned_stream_with_overrides(
+                &staged_table,
+                stream,
+                &staging,
+                concurrency,
+            )
+            .await?
+        };
+        let written = repark_iceberg::write::written_paths(&data_files);
+        let tx = Transaction::new(&staged_table);
+        let tx = if replace_write {
+            let engine = repark_iceberg::write::EngineSummary::for_overwrite(
+                &staged_table,
+                &data_files,
+                None,
+            );
+            let (_, summary) =
+                repark_iceberg::write::summary_with_extras(&snapshot_extra, &engine)?;
+            tx.overwrite_files()
+                .overwrite_by_row_filter(iceberg::expr::Predicate::AlwaysTrue)
+                .add_files(data_files)
+                .allow_empty_commit()
+                .set_snapshot_properties(summary)
+                .apply(tx)
+        } else {
+            let engine =
+                repark_iceberg::write::EngineSummary::for_append(&staged_table, &data_files, None);
+            let (_, summary) =
+                repark_iceberg::write::summary_with_extras(&snapshot_extra, &engine)?;
+            tx.merge_append()
+                .add_data_files(data_files)
+                .set_snapshot_properties(summary)
+                .apply(tx)
+        }
+        .map_err(iceberg_err)?;
+        let table = tx.apply_locally().await.map_err(iceberg_err)?;
+        Ok::<_, DataFusionError>((staged_table, mode, table, written))
     }
-    .map_err(iceberg_err)?;
-    let table = tx.apply_locally().await.map_err(iceberg_err)?;
+    .await;
+    let (staged_table, mode, table, written) = match outcome {
+        Ok(staged) => staged,
+        Err(error) => {
+            repark_iceberg::write::discard_unpublished_create(&staged).await;
+            return Err(error);
+        }
+    };
     repark_iceberg::write::publish_applied(
         catalog.as_ref(),
         &staged_table,
