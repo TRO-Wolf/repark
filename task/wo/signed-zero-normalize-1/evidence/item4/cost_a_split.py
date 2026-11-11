@@ -4,7 +4,7 @@ import json
 import statistics
 from pathlib import Path
 
-LABELS = ("base", "oldhead", "head")
+ORDER = ("base", "oldhead", "head")
 
 
 def main() -> None:
@@ -31,9 +31,10 @@ def main() -> None:
         move = moves.get(f"{cell['cid']}|{cell['route']}|{cell['layout']}")
         groups["all"].add(index)
         groups["unchanged-label" if move is None else f"{move[0]}->{move[1]}"].add(index)
+    labels = [label for label in ORDER if any(r["label"] == label for r in runs)]
     for group, members in sorted(groups.items()):
         medians = {}
-        for label in LABELS:
+        for label in labels:
             totals = [
                 sum(c[2] for c in r["cells"] if c[0] in members)
                 for r in runs
@@ -42,7 +43,7 @@ def main() -> None:
             medians[label] = statistics.median(totals)
         ratios = " ".join(
             f"{label}={medians[label] * 1000:.1f}ms ({medians[label] / medians['base']:.4f})"
-            for label in LABELS
+            for label in labels
         )
         print(f"{group} n={len(members)} {ratios}")
 

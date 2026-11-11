@@ -60,3 +60,26 @@ by their item 3 label move.
 Case (a) sits at the bar on both heads; item 4's 1.0256 and this round's 1.0715 are draws around it. The plan-time
 cost, on the cells whose answer does not move, is 1.0189. The excess is in the 43 cells that now answer like Spark:
 they read the file base pruned, or run where base refused.
+
+## Round r4 (orchestrator's clean re-measure, after item 5's gates)
+
+- **Builds:** base `68b09d18` against head `22bae1d9d`'s product code, the same as `093585b0d`.
+- **Conditions:** nothing else running. The run held the exclusive measure lock from 11:01:37 to 11:04:58 EST
+  (load average 7.8 at the start).
+- **Procedure:** the same probe, interleaved, three runs ([cost-raw-r4.jsonl](cost-raw-r4.jsonl)). One per-cell base and
+  head pass ran inside each run ([cost-a-cells-r4.jsonl](cost-a-cells-r4.jsonl)).
+
+| Case | Base runs (s) | Head runs (s) | Base median | Head median | Head / base |
+|---|---|---|---|---|---|
+| (a) | 0.810, 0.795, 0.765 | 0.889, 0.829, 0.855 | 0.795 | 0.855 | **1.0754** |
+| (b) | 28.784, 28.177, 27.793 | 29.738, 28.722, 28.572 | 28.177 | 28.722 | **1.0193** |
+
+**Case (a) per-cell split, r4** (median of 3, `cost_a_split.py`):
+
+| Cells | n | Base (ms) | Head (ms) | Head / base |
+|---|---|---|---|---|
+| all | 207 | 796.1 | 850.2 | 1.0679 |
+| label unchanged | 164 | 684.5 | 712.8 | 1.0413 |
+| WRONG-READ → EQUAL | 24 | 66.4 | 81.6 | 1.2286 |
+| PRUNED-WRONG → EQUAL | 10 | 23.1 | 29.7 | 1.2877 |
+| refused → answered | 8 | 19.4 | 24.0 | 1.24 |
