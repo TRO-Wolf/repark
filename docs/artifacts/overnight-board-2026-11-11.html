@@ -1,0 +1,185 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overnight Board 11-11</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F2F5F7; --panel:#FFFFFF; --fg:#16232B; --muted:#55666F; --line:#D6DEE3;
+  --accent:#0E6C88; --accent-soft:#DCEDF3;
+  --ok:#1E7A4C; --ok-soft:#DDF1E6; --warn:#9A6200; --warn-soft:#F7ECD6; --crit:#A3302A; --crit-soft:#F6E0DE;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1418; --panel:#152027; --fg:#E3ECF0; --muted:#97A9B2; --line:#26353E;
+  --accent:#4DB1CF; --accent-soft:#16323D;
+  --ok:#5CC48E; --ok-soft:#173226; --warn:#E0A84A; --warn-soft:#352914; --crit:#E8817A; --crit-soft:#3A1E1C; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --panel:#152027; --fg:#E3ECF0; --muted:#97A9B2; --line:#26353E;
+  --accent:#4DB1CF; --accent-soft:#16323D;
+  --ok:#5CC48E; --ok-soft:#173226; --warn:#E0A84A; --warn-soft:#352914; --crit:#E8817A; --crit-soft:#3A1E1C; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);padding-inline:16px;padding-block:28px 56px}
+.wrap{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:2rem;font-weight:700;letter-spacing:.01em}
+h2{font-size:1.25rem;font-weight:600;color:var(--accent)}
+h3{font-size:1.02rem;font-weight:600}
+.eyebrow{font:500 .74rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{color:var(--muted);max-width:68ch;margin:0}
+.mono,code{font-family:var(--mono);font-size:.86em}
+code{background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+section{display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.pr{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pr .num{font:600 1.1rem var(--display)}
+.pr p{margin:0;color:var(--muted);font-size:.9rem}
+.chip{display:inline-block;font:500 .72rem/1.6 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:0 8px;border-radius:999px;white-space:nowrap}
+.ok{background:var(--ok-soft);color:var(--ok)} .warn{background:var(--warn-soft);color:var(--warn)} .crit{background:var(--crit-soft);color:var(--crit)} .info{background:var(--accent-soft);color:var(--accent)}
+.decisions{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.decision{border-left:3px solid var(--warn);background:var(--panel);border-radius:0 10px 10px 0;padding:12px 16px;border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.decision.crit{border-left-color:var(--crit)}
+.decision p{margin:6px 0 0;color:var(--fg)}
+.decision .def{color:var(--muted);font-size:.9rem}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 .78rem var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.n{text-align:right;white-space:nowrap}
+ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.timeline{display:flex;flex-direction:column;gap:0;margin:0;padding:0;list-style:none}
+.timeline li{display:grid;grid-template-columns:96px 1fr;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.timeline li:last-child{border-bottom:0}
+.timeline .t{font-family:var(--mono);font-size:.8rem;color:var(--muted);padding-top:2px}
+.foot{color:var(--muted);font-size:.84rem}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:520px){h1{font-size:1.6rem}.timeline li{grid-template-columns:1fr;gap:2px}}
+</style>
+</head><body>
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <span class="eyebrow">RePark · 2026-11-10 to 11-11 · the overnight run began 21:30 EST</span>
+    <h1>Overnight board, 11-11</h1>
+    <p class="lede">The struct-pairing track finished its last unit. C-116, the wrong write shipped in 1.5.6, is fixed on every form the review found. The last pull request, #1295, is reviewed and green, and waits for your merge word.</p>
+  </header>
+
+  <section>
+    <h2>Decisions owed to you</h2>
+    <ul class="decisions">
+      <li class="decision">
+        <h3>1. Merge #1295 (STRUCT-COMPARE-SEAT-FAMILY-1)?</h3>
+        <p>Four PASS verdicts: Opus 5.5 and Muse MAX on round 1, then both again on the delta re-check. No finding is a wrong answer or a wrong write. CI is green at <span class="mono">1249f3d4</span>.</p>
+        <p class="def">Default: merge. The records PR that closes C-118 and C-116 and files the cards is briefed and starts on the merge SHA.</p>
+      </li>
+      <li class="decision crit">
+        <h3>2. Does LISTVIEW-INNER-JOIN-KEY-1 block v1.5.7?</h3>
+        <p>A DataFrame <code>join(other, "k")</code> on a <code>ListView</code> or <code>LargeListView</code> key returns the full cross product. That is wrong rows (S1). It does not depend on structs, and main and 1.5.6 do the same. <code>ON</code> joins and plain <code>List</code> keys are correct. Only frames built from pandas' Arrow list-view type reach it.</p>
+        <p class="def">Default: yes, block v1.5.7, as a small unit with its table first. The scoped-review rule cards pre-existing findings, and an S1 card still blocks the release.</p>
+      </li>
+      <li class="decision">
+        <h3>3. Start SIGNED-ZERO-NORMALIZE-1 next?</h3>
+        <p>Its domain table (cells D1–D17, ruling G) sits on a local branch from earlier in the session, and has not been pushed. One implementation lane runs at a time, so I did not start it while #1295 was under review.</p>
+        <p class="def">Default: yes, once #1295 merges. Plan order: signed zero, then STRUCT-SETOP-BY-POSITION-1, STRUCT-NAMING-1, EXPR-DOOR-UNIFY-1, then v1.5.7.</p>
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Pull requests</h2>
+    <div class="grid">
+      <div class="panel pr"><span class="num">#1292 <span class="chip ok">merged</span></span><p>STRUCT-COMPARE-BY-POSITION-1, squash <span class="mono">68f70b0f</span>. Comparisons, <code>IN</code>, <code>ON</code> joins: 1,001 wrong answers and 250 wrong writes fixed.</p></div>
+      <div class="panel pr"><span class="num">#1293 <span class="chip ok">merged</span></span><p>Records <span class="mono">2d5c2dd9</span>: your Q3 and Q4 rules in lessons, 15 cards, D4 rows.</p></div>
+      <div class="panel pr"><span class="num">#1294 <span class="chip ok">merged</span></span><p>Records <span class="mono">a4ef6ea0</span>: PREPARE ruling A, the parameterized-SQL card, the exact PR lists restored.</p></div>
+      <div class="panel pr"><span class="num">#1295 <span class="chip warn">awaiting word</span></span><p>STRUCT-COMPARE-SEAT-FAMILY-1 at <span class="mono">1249f3d4</span>: key-list joins, <code>BETWEEN</code>, simple <code>CASE</code>, <code>nullif</code>.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>#1295, measured against Spark 4.1.2</h2>
+    <p class="lede">The clause is the 2,274-cell family table plus 154 completeness additions, on three doors, six join types and three table formats. The moves below run from main to the PR head.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Seat</th><th>Wrong → Spark's answer</th><th>Refused → Spark's answer</th><th>Accepted → refused as Spark does</th></tr></thead>
+      <tbody>
+        <tr><td>Key-list joins (<code>USING</code>, <code>NATURAL</code>, DataFrame key names)</td><td class="n">108</td><td class="n">60</td><td class="n">202</td></tr>
+        <tr><td><code>nullif</code></td><td class="n">104</td><td class="n">32</td><td class="n">16</td></tr>
+        <tr><td>Simple <code>CASE x WHEN y</code></td><td class="n">53</td><td class="n">20</td><td class="n">10</td></tr>
+        <tr><td><code>BETWEEN</code> / <code>NOT BETWEEN</code></td><td class="n">66</td><td class="n">22</td><td class="n">11</td></tr>
+        <tr><td><code>EXECUTE</code> of a prepared statement</td><td class="n">20</td><td class="n">—</td><td class="n">3</td></tr>
+        <tr><td>Wrong writes (DELETE, UPDATE, MERGE, <code>INSERT … SELECT</code>; v2 copy-on-write, v2 merge-on-read, v3)</td><td class="n">63 + 3 derived</td><td class="n">—</td><td class="n">—</td></tr>
+      </tbody>
+    </table></div>
+    <ul class="plain">
+      <li><strong>No wrong write is left.</strong></li>
+      <li><strong>Still wrong, by your Q6:</strong> 214 key-list cells, each checked to differ the same way as its plain-<code>INT</code> twin. They are column order after <code>USING</code> and the shown key on right and full joins (PR #1000's card).</li>
+      <li><strong>Cost:</strong> 0.954x, 1.011x and 1.001x against the 1.05x bar.</li>
+      <li><strong>Unchanged:</strong> #1292's tables are cell for cell the same, as are unit C's, #1290's and #1292's tests.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Review, round by round</h2>
+    <ol class="timeline">
+      <li><span class="t">round 1</span><div>Opus 5.5 <span class="chip ok">pass</span> and Muse MAX <span class="chip ok">pass</span> on <span class="mono">a30aa5e2</span>. No finding was blocking. Two were in scope: maps nested inside struct or array join keys were accepted where Spark refuses, and <code>CASE</code> over a map gave the wrong refusal class.</div></li>
+      <li><span class="t">delta</span><div>Opus 5.5 fixed both, plus Spark's check order, tests that assert Spark's refusal class, and the dropped <code>map.md</code> facts. That exposed 32 test cells that had been passing on "table not found"; they are now real.</div></li>
+      <li><span class="t">re-check</span><div>Opus 5.5 <span class="chip ok">pass</span> and Muse MAX <span class="chip ok">pass</span> on <span class="mono">1249f3d4</span>. Opus measured 34 new map-key cells of its own. Only the intended cells moved.</div></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Rulings I made as the orders' author</h2>
+    <div class="panel"><ul class="plain">
+      <li><strong>The table-completeness check (your Q3), run for the first time:</strong>
+        <ul class="plain">
+          <li>added before the build: <code>NATURAL</code> semi/anti, string-door <code>NOT BETWEEN</code>, map keys in <code>USING</code>, and <code>EXECUTE</code> per seat;</li>
+          <li>struck: lateral key names (an acceptance, already carded) and typed simple <code>CASE</code> (no API).</li>
+        </ul>
+      </li>
+      <li><code>BETWEEN</code> renames its bounds instead of expanding into <code>&gt;=</code>/<code>&lt;=</code>, so the generated column name stays Spark's. This amends Fable's memo §6.</li>
+      <li>Map join keys refuse as Spark does, including plain <code>MAP&lt;STRING,INT&gt;</code>. That move is named in the evidence.</li>
+      <li>Eight <code>NATURAL</code> semi/anti cells, four FixedSizeList cells, and the <code>GROUPING SETS</code> refusal are carded rather than fixed. Each is named with its cell ids.</li>
+      <li><code>NOT BETWEEN</code> inside a DML condition is carded too, as pre-existing: the plain-<code>INT</code> version fails the same way, and the order does not name that seat.</li>
+      <li>The builder went past its context budget twice. Each time I stopped it and briefed a fresh successor rather than letting it run on.</li>
+    </ul></div>
+  </section>
+
+  <section>
+    <h2>Cards from #1295 (filed when it merges)</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Card</th><th>Severity</th><th>What</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">LISTVIEW-INNER-JOIN-KEY-1</td><td><span class="chip crit">S1</span></td><td>A key-name join on a <code>ListView</code> key returns the cross product (decision 2).</td></tr>
+        <tr><td class="mono">STRUCT-POSITION-GROUPING-SETS-1</td><td><span class="chip warn">S3</span></td><td>The four forms inside <code>ROLLUP</code>/<code>CUBE</code>/<code>GROUPING SETS</code> refuse. #1292's <code>=</code> fails the same way on main.</td></tr>
+        <tr><td class="mono">MAP-ORDERING-FORMS-1</td><td><span class="chip warn">S3</span></td><td>Map operands in the four forms are accepted, or refused without Spark's class.</td></tr>
+        <tr><td class="mono">MAP-NESTED-ORDERING-ON-1</td><td><span class="chip warn">S3</span></td><td>A map nested in an <code>ON</code> or <code>=</code> struct operand is accepted where Spark refuses.</td></tr>
+        <tr><td class="mono">NOT-BETWEEN-DML-CSE-1</td><td><span class="chip warn">S3</span></td><td>A DML <code>NOT BETWEEN</code> refuses on a common-subexpression name; <code>INT</code> keys do too.</td></tr>
+        <tr><td class="mono">USING-SCALAR-STRUCT-KEY-CLASS-1 · USING-CHAIN-AMBIGUOUS-1 · STRUCT-SETOP-CONTROL-CLASS-1 · NATURAL-EXISTENCE-JOIN-ACCEPT-1</td><td><span class="chip warn">S3</span></td><td>Refusal classes, a four-table <code>USING</code> chain, and <code>NATURAL</code> semi/anti acceptance.</td></tr>
+        <tr><td class="mono">STRUCT-POSITION-ERROR-NAMES-1</td><td><span class="chip info">S4</span></td><td>Some string-door error messages show internal column names.</td></tr>
+        <tr><td class="mono">STRUCT-COMPARE-FAMILY-RESIDUE-1</td><td><span class="chip warn">S3</span></td><td>Eight small pre-existing items from round 1, one line each.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Use and housekeeping</h2>
+    <div class="panel"><ul class="plain">
+      <li><strong>Fable:</strong> not used. No blocker came up.</li>
+      <li><strong>Agents:</strong> Opus 5.5 builders and verifiers, each confirmed as <code>claude-opus-5-5</code> from its transcript; Muse MAX verifiers; Haiku 5.5 clerks for tables and records.</li>
+      <li><strong>Disk:</strong> about 150 GB of finished reviewer worktrees removed.</li>
+      <li><strong>Lessons now in every brief:</strong>
+        <ul class="plain">
+          <li>run the facade gate in CI's debug build as well as release;</li>
+          <li>never share a <code>target/</code> directory between two builds.</li>
+        </ul>
+      </li>
+    </ul></div>
+  </section>
+
+  <p class="foot">Sources: the verdict files of the four review runs, each unit's <code>evidence/after/moves.md</code> and <code>cost.md</code>, and the GitHub PR state, read 2026-11-11 about 09:00 UTC.</p>
+</div>
+</body></html>

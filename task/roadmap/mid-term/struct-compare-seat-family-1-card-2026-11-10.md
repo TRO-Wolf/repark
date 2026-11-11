@@ -37,3 +37,5 @@
 **Gates:** the builder's facade gate runs in both the ci and release profiles. Every new seat gets a `PREPARE ... AS` and `EXECUTE` cell (memo section 7).
 
 **Close:** the Status line of this card and ledger row C-118 are updated on merge, and C-116 closes with them.
+
+**2026-11-11, closed by PR #1295** (squash `68b09d18`). The round 1 verifiers (Opus 5.5 and Muse MAX) returned PASS, and the delta re-check returned PASS from both, with no blocking finding. C-118 and C-116 are closed. The non-blocking findings are carded on 2026-11-11: STRUCT-POSITION-GROUPING-SETS-1, NOT-BETWEEN-DML-CSE-1, STRUCT-COMPARE-FAMILY-RESIDUE-1, MAP-NESTED-ORDERING-ON-1, USING-SCALAR-STRUCT-KEY-CLASS-1, STRUCT-SETOP-CONTROL-CLASS-1, USING-CHAIN-AMBIGUOUS-1, NATURAL-EXISTENCE-JOIN-ACCEPT-1, MAP-ORDERING-FORMS-1, STRUCT-POSITION-ERROR-NAMES-1, STRUCT-CASE-NAME-CAST-1, STRUCT-TYPED-FORM-SCHEMA-1 and FACADE-DUP-FIELD-ROW-1. LISTVIEW-INNER-JOIN-KEY-1 is carded as S1 and ruled to fix by the owner on 2026-11-11.
