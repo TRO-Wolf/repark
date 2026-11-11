@@ -30,7 +30,6 @@ struct FailRow {
     partition: bool,
     target_size: bool,
     options_path: bool,
-    assert_no_data: bool,
     failure_mark: &'static str,
 }
 
@@ -41,7 +40,6 @@ const FAIL_ROWS: [FailRow; 6] = [
         partition: false,
         target_size: false,
         options_path: false,
-        assert_no_data: true,
         failure_mark: "simplify_expressions",
     },
     FailRow {
@@ -50,7 +48,6 @@ const FAIL_ROWS: [FailRow; 6] = [
         partition: false,
         target_size: false,
         options_path: false,
-        assert_no_data: true,
         failure_mark: "DIVIDE_BY_ZERO",
     },
     FailRow {
@@ -59,7 +56,6 @@ const FAIL_ROWS: [FailRow; 6] = [
         partition: false,
         target_size: false,
         options_path: false,
-        assert_no_data: true,
         failure_mark: "DIVIDE_BY_ZERO",
     },
     FailRow {
@@ -68,7 +64,6 @@ const FAIL_ROWS: [FailRow; 6] = [
         partition: true,
         target_size: false,
         options_path: false,
-        assert_no_data: true,
         failure_mark: "DIVIDE_BY_ZERO",
     },
     FailRow {
@@ -77,7 +72,6 @@ const FAIL_ROWS: [FailRow; 6] = [
         partition: false,
         target_size: true,
         options_path: false,
-        assert_no_data: true,
         failure_mark: "DIVIDE_BY_ZERO",
     },
     FailRow {
@@ -86,7 +80,6 @@ const FAIL_ROWS: [FailRow; 6] = [
         partition: false,
         target_size: false,
         options_path: true,
-        assert_no_data: false,
         failure_mark: "DIVIDE_BY_ZERO",
     },
 ];
@@ -238,7 +231,7 @@ async fn fail_cell(row: &FailRow, spelling: &str, kind: &str, version: &str) {
     let table_dir: PathBuf = root.join("ns").join("c");
     let meta = metadata_files(&table_dir);
     assert!(meta.is_empty(), "{cell}: {meta:?}");
-    if row.assert_no_data {
+    if !row.options_path {
         let data = data_files(&table_dir);
         assert!(data.is_empty(), "{cell}: {data:?}");
     }
