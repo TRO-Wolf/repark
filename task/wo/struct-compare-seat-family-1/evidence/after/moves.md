@@ -102,3 +102,44 @@ N0019–N0024 compare a duplicate-named operand (`d = t`, `d < t`). Base shows t
 (`__repark_struct_by_position_planned__(…)`, the binder's) and on `selectExpr`; head shows none, and its `selectExpr`
 names equal Spark's `(d = t)` and `(d < t)`. They pin the transparent relabel (F-2): with it reverted, the SQL-door
 names show the binder's relabel again (item 5's revert check).
+
+## The review delta (PR #1295)
+
+The legs in `raw/` are now the delta head's release build (`__debug_assertions__` False), run as before
+(`probe_family.py --leg head`, `rerun_v3.py head`, `probe_family_add.py --leg head`, v3 records merged), and
+`table.md` is re-rendered the same way. Against the item-3 legs, 5 of 2428 records change outcome, and no other
+record changes once the random crossJoin alias ids are masked:
+
+| Cells | Before | After | Spark |
+|---|---|---|---|
+| Q1213–Q1217 (simple `CASE` over a `MAP` operand, item 2) | BOTH-REFUSED, `BINARY_OP_DIFF_TYPES` | BOTH-REFUSED, `INVALID_ORDERING_TYPE` on `(s = s)` | `INVALID_ORDERING_TYPE` on `(s = s)` |
+
+The string door (Q1215–Q1217) no longer shows the crossJoin's internal column name. No label moves.
+
+**The delta cells** (`../delta/`, 23 cells on `spark`, `pr` = PR #1295's head and `head` = the delta):
+
+| Cells | `pr` | `head` = Spark |
+|---|---|---|
+| DK01, DK02, DK04–DK11: a map in a struct key (same and reordered names), under an array, deeper, `NATURAL`, DataFrame (item 1) | answered | `INVALID_ORDERING_TYPE` |
+| DK03: the same key under `FULL` (item 1) | `DATA_DIFF_TYPES` | `INVALID_ORDERING_TYPE` |
+| DK12–DK14, DK18: `MAP` against `INT` or a struct (Muse F2, item 6) | `INVALID_ORDERING_TYPE` | `BINARY_OP_DIFF_TYPES` |
+| DK15–DK17: `INT` against `MAP` (Muse F4; recorded move: each key typed against its own side reaches the arm) | classless | `BINARY_OP_DIFF_TYPES` |
+| DK19, DK21: controls (positional map-against-`INT` clash; plain map key) | Spark's class | unchanged |
+| DK20: control, `INT` against a struct key | classless | unchanged, classless (`USING-SCALAR-STRUCT-KEY-CLASS-1`) |
+| DK22, DK23: the duplicate-name `nullif` frame and its SQL twin (F6) | Spark's 9 rows | unchanged |
+
+**#1292's three tables**, re-run on the delta build as item 3 did: step 0 is 4393 of 4393 records byte-identical
+to `after/` there; variant seat C (218) and variant extension (246) are identical once the timing field and the
+random alias ids are masked.
+
+**Out of the delta, carded by the records clerk (Opus verdict F1).** Forms inside `GROUPING SETS`, `ROLLUP` and
+`CUBE` refuse with a classless schema error (`STRUCT-POSITION-GROUPING-SETS-1`, S3, cells G01–G18 and P11 of the
+verifier's probes). P11 is a base-EQUAL cell newly refused by this unit's arms; G02 (`CUBE (nullif(…))`) is its
+reordered twin. #1292's `=` and `IN` arms fail the same way on main (G01, G05, G08, G12).
+
+**Pins.** Both family pins now assert Spark's class on every refusal. 56 refusals that carry a measured class gap
+hold a card and `expect.gap` (a refusal still required): `NATURAL-EXISTENCE-JOIN-ACCEPT-1` 16,
+`STRUCT-TYPED-FORM-SCHEMA-1` 15, `LATERAL-USING-ACCEPT-1` 10, `STRUCT-COMPARE-PLANNER-CLASS-1` 9,
+`STRUCT-SETOP-CONTROL-CLASS-1` 5, `USING-SCALAR-STRUCT-KEY-CLASS-1` 1. The class check showed that the pins never
+registered `probe_family_add.py`'s four fixtures, so X0112–X0143 had passed on "table not found"; the header now
+registers them.
