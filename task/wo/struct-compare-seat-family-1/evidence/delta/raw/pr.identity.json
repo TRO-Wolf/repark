@@ -1,0 +1,7 @@
+{
+ "leg": "pr",
+ "repark_file": "<pr-ci-site>/repark/__init__.py",
+ "debug_assertions": true,
+ "python": "<clone>/.venv/bin/python",
+ "flags_I": 0
+}

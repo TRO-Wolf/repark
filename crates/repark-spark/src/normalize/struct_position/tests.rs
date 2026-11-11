@@ -269,3 +269,34 @@ fn bound_comparison_whose_positional_types_clash_refuses_with_spark_class() {
         "{error}"
     );
 }
+
+#[test]
+fn bound_nullif_with_a_duplicate_named_operand_pairs_by_position_and_keeps_the_left_names() {
+    let schema = bound_schema();
+    let expr = datafusion::functions::expr_fn::nullif(col("p"), col("d"));
+    let planned = duplicate_field_operands_by_position(expr, &schema).expect("planned");
+    assert_ne!(
+        planned,
+        datafusion::functions::expr_fn::nullif(col("p"), col("d"))
+    );
+    assert_eq!(
+        planned.get_type(&schema).expect("typed"),
+        fields(["a", "b"], [DataType::Int64, DataType::Int64])
+    );
+    let kept = datafusion::functions::expr_fn::nullif(col("p"), col("q"));
+    assert_eq!(
+        duplicate_field_operands_by_position(kept.clone(), &schema).expect("kept"),
+        kept
+    );
+    let error = duplicate_field_operands_by_position(
+        datafusion::functions::expr_fn::nullif(col("p"), col("c")),
+        &schema,
+    )
+    .expect_err("clash refuses");
+    assert!(
+        error
+            .to_string()
+            .contains("[DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES]"),
+        "{error}"
+    );
+}

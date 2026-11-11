@@ -454,6 +454,21 @@ async fn register_makes_spark_shim_functions_callable() {
     assert_eq!(weeks.value(0), 11);
 }
 
+#[test]
+fn register_installs_the_duplicate_field_operands_planner() {
+    let ctx = SessionContext::new();
+    let named = |ctx: &SessionContext| {
+        ctx.state()
+            .expr_planners()
+            .iter()
+            .filter(|planner| format!("{planner:?}") == "DuplicateFieldOperands")
+            .count()
+    };
+    assert_eq!(named(&ctx), 0);
+    SparkExtension.register(&ctx).unwrap();
+    assert_eq!(named(&ctx), 1);
+}
+
 /// `register` appends the Spark expression-semantics analyzer rules.
 #[tokio::test]
 async fn register_installs_spark_integer_division_semantics() {

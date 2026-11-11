@@ -415,7 +415,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `[ARITHMETIC_OVERFLOW]` routes to `Error::Arithmetic` carrying the inner message
   verbatim (never the `Execution error: ` display); `Analysis` peels DataFusion's
   `user-defined coercion failed with: ` wrap to the `[CONDITION] … SQLSTATE: XXXXX`
-  refusal payload when one is present, else keeps the full display.
+  refusal payload where present, else keeps the full display.
   **WO-A4 (2026-09-23):** a bracketed `ParserError::ParserError` payload stays a `Parse` error
   and renders verbatim; unbracketed payloads and other parser variants keep the DataFusion display.
   **CAST-OVERFLOW-INSERT-1 (2026-09-29):** an `Execution` message headed
@@ -423,8 +423,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `ARITHMETIC_OVERFLOW`.
   **CROSS-JOIN-CONDITION-1 fold 3 (2026-10-09):** `join_refusal_message` peels the
   `join_condition_refusals` wrap to the bare `[CONDITION] … SQLSTATE: 42K0E` payload (gated on
-  the rule name and the join heads), so the facade answers Spark's class.
-  `struct_refusal_message` (2026-11-10) peels `struct_operands_by_position`.
+  the rule name and join heads): the facade answers Spark's class.
+  `struct_refusal_message` (2026-11-10) peels the struct rule schema wrap, plan prefixes.
 - [unknown_routine.rs](unknown_routine.rs) — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
   (see [../map.md](../map.md)).
   **Remediation round 1 (2026-09-16):** token-based call-site matching (see

@@ -1,0 +1,24 @@
+{"columns": ["datafusion.public.nm.s BETWEEN datafusion.public.nm.t AND datafusion.public.nm.t"], "door": "sql", "form": "between", "id": "N0001", "status": "ok", "text": "s BETWEEN t AND t"}
+{"columns": ["s BETWEEN t AND t"], "door": "select_expr", "form": "between", "id": "N0002", "status": "ok", "text": "s BETWEEN t AND t"}
+{"columns": ["s BETWEEN t AND t"], "door": "f_expr", "form": "between", "id": "N0003", "status": "ok", "text": "s BETWEEN t AND t"}
+{"columns": ["((s >= t) AND (s <= t))"], "door": "typed", "form": "between", "id": "N0004", "status": "ok", "text": "s BETWEEN t AND t"}
+{"columns": ["datafusion.public.nm.s NOT BETWEEN datafusion.public.nm.t AND datafusion.public.nm.t"], "door": "sql", "form": "not_between", "id": "N0005", "status": "ok", "text": "s NOT BETWEEN t AND t"}
+{"columns": ["s NOT BETWEEN t AND t"], "door": "select_expr", "form": "not_between", "id": "N0006", "status": "ok", "text": "s NOT BETWEEN t AND t"}
+{"columns": ["s NOT BETWEEN t AND t"], "door": "f_expr", "form": "not_between", "id": "N0007", "status": "ok", "text": "s NOT BETWEEN t AND t"}
+{"columns": ["(NOT ((s >= t) AND (s <= t)))"], "door": "typed", "form": "not_between", "id": "N0008", "status": "ok", "text": "s NOT BETWEEN t AND t"}
+{"columns": ["CASE datafusion.public.nm.s WHEN datafusion.public.nm.t THEN Int64(1) ELSE Int64(0) END"], "door": "sql", "form": "case", "id": "N0009", "status": "ok", "text": "CASE s WHEN t THEN 1 ELSE 0 END"}
+{"columns": ["CASE s WHEN t THEN 1 ELSE 0 END"], "door": "select_expr", "form": "case", "id": "N0010", "status": "ok", "text": "CASE s WHEN t THEN 1 ELSE 0 END"}
+{"columns": ["CASE s WHEN t THEN 1 ELSE 0 END"], "door": "f_expr", "form": "case", "id": "N0011", "status": "ok", "text": "CASE s WHEN t THEN 1 ELSE 0 END"}
+{"columns": ["nullif(datafusion.public.nm.s,datafusion.public.nm.t)"], "door": "sql", "form": "nullif", "id": "N0012", "status": "ok", "text": "nullif(s, t)"}
+{"columns": ["nullif(s,t)"], "door": "select_expr", "form": "nullif", "id": "N0013", "status": "ok", "text": "nullif(s, t)"}
+{"columns": ["nullif(s, t)"], "door": "f_expr", "form": "nullif", "id": "N0014", "status": "ok", "text": "nullif(s, t)"}
+{"columns": ["nullif(s, t)"], "door": "typed", "form": "nullif", "id": "N0015", "status": "ok", "text": "nullif(s, t)"}
+{"columns": ["nullif(datafusion.public.nm.t,datafusion.public.nm.s)"], "door": "sql", "form": "nullif_rev", "id": "N0016", "status": "ok", "text": "nullif(t, s)"}
+{"columns": ["nullif(t,s)"], "door": "select_expr", "form": "nullif_rev", "id": "N0017", "status": "ok", "text": "nullif(t, s)"}
+{"columns": ["nullif(t, s)"], "door": "f_expr", "form": "nullif_rev", "id": "N0018", "status": "ok", "text": "nullif(t, s)"}
+{"columns": ["datafusion.public.nm.d = datafusion.public.nm.t"], "door": "sql", "form": "eq_dup", "id": "N0019", "status": "ok", "text": "d = t"}
+{"columns": ["(d = t)"], "door": "select_expr", "form": "eq_dup", "id": "N0020", "status": "ok", "text": "d = t"}
+{"columns": ["d = t"], "door": "f_expr", "form": "eq_dup", "id": "N0021", "status": "ok", "text": "d = t"}
+{"columns": ["datafusion.public.nm.d < datafusion.public.nm.t"], "door": "sql", "form": "lt_dup", "id": "N0022", "status": "ok", "text": "d < t"}
+{"columns": ["(d < t)"], "door": "select_expr", "form": "lt_dup", "id": "N0023", "status": "ok", "text": "d < t"}
+{"columns": ["d < t"], "door": "f_expr", "form": "lt_dup", "id": "N0024", "status": "ok", "text": "d < t"}

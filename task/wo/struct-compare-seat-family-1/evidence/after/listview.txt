@@ -1,0 +1,13 @@
+probe_listview.py on this head (release); main 68f70b0f prints the same.
+ListView(Int64) df_key_name: [[1, 10], [1, 30], [2, 10], [2, 30]]
+ListView(Int64) df_on: [[2, 10]]
+ListView(Int64) sql_using: AnalysisException: Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function
+ListView(Int64) sql_on: [[2, 10]]
+LargeListView(Int64) df_key_name: [[1, 10], [1, 30], [2, 10], [2, 30]]
+LargeListView(Int64) df_on: [[2, 10]]
+LargeListView(Int64) sql_using: AnalysisException: Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function
+LargeListView(Int64) sql_on: [[2, 10]]
+List(Int64) df_key_name: [[2, 10]]
+List(Int64) df_on: [[2, 10]]
+List(Int64) sql_using: [[2, 10]]
+List(Int64) sql_on: [[2, 10]]

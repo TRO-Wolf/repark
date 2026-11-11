@@ -123,7 +123,8 @@ here and is re-exported in one line.
   escape form, line break, nesting push or pop fails a test. The doubled-quote escape and the
   end-of-input escape guard only change `skip_quoted_text`'s resume index.
 
-- `struct_position.rs`, `struct_position/udf.rs`, `struct_position/tests.rs` —
+- `struct_position.rs`, `struct_position/udf.rs`, `struct_position/tests.rs`,
+  `struct_position/join.rs`, `struct_position/forms.rs` —
   **STRUCT-COMPARE-BY-POSITION-1 (2026-11-10):** `struct_operands_by_position`, seated just
   before `type_coercion` by `insert_struct_position_rule_before_coercion` from the session
   (`../extension.rs`) and the expression context (repark-python `expr_build.rs`). It renames the
@@ -145,6 +146,23 @@ here and is re-exported in one line.
   map-only comparison there now refuses with Spark's `INVALID_ORDERING_TYPE`, a move toward Spark
   (u9 `map/cmp/merge-on`; five seats in `evidence/after/map-seats/`). Pins:
   `struct_position/tests.rs`, `../../tests/struct_compare_by_position.rs`.
+  **STRUCT-COMPARE-SEAT-FAMILY-1 (2026-11-10):** `join.rs` renames a key-list join's right key
+  (`NullEqualsNothing` only; each key typed against its own side, then swapped, else left
+  alone) and sets `JoinConstraint::On`. A key holding a map anywhere (`holds_map`: a struct
+  field, an array element, deeper) refuses in Spark's order: a clash (`MAP` against `INT` or a
+  struct) with `BINARY_OP_DIFF_TYPES`, else `INVALID_ORDERING_TYPE`, plain `MAP<STRING, INT>`
+  included: out of clause, a move from accepted to Spark's measured refusal (`evidence/after/`,
+  `evidence/delta/`). A `FULL` join whose key names differ refuses with
+  `DATA_DIFF_TYPES` on `coalesce(s, s)`. `forms.rs` renames `BETWEEN` bounds (the node stays),
+  simple-`CASE` `WHEN` operands and `nullif`'s second argument, and pairs a bound `nullif` at the
+  binder. A simple `CASE` that clashes names an earlier map-ordering `WHEN` first, as Spark
+  does, with the crossJoin column's visible name. The relabel's schema name is the argument alone at the expression seat
+  (`insert_expression_struct_position_rule_before_coercion`) and stays opaque at the session
+  seat, where `NamePreserver` keeps top-level names: transparent there, it collided with its
+  own column in a filter over a join. `udf.rs`'s `without_relabels` strips every relabel before
+  `SparkProjectionDisplay` names a `selectExpr` item, so no door shows the relabel (#1292's `=`
+  arms included). Pins: `struct_position/tests.rs`, `../../tests/struct_compare_seat_family.rs`,
+  the facade's `test_struct_compare_seat_family_1.py`.
 
 ## Pointers
 

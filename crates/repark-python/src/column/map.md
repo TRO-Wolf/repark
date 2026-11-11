@@ -419,5 +419,5 @@ sync after changes.
   `repark_functions::SparkTypePlanner` on the expression-string session, so
   `F.expr("CAST(x AS TIMESTAMP)")` and `selectExpr` take the same types as `spark.sql`.
 - **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-09):** `build_expr_context` seats the set-op
-  name check after `type_coercion`; **STRUCT-COMPARE-BY-POSITION-1:** struct operands by
-  position before it. Unit tests pin both.
+  name check after `type_coercion`; STRUCT-COMPARE-BY-POSITION-1: struct operands by position
+  before it, names bare; both pinned.

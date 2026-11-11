@@ -1,0 +1,120 @@
+{"key": "J-using-inner-star", "status": "ok", "rows": [[[1, 2], 1, 10]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "J-on-inner-star", "status": "ok", "rows": [[1, [1, 2], 10, [1, 2]]], "schema": "struct<lid:int,s:struct<a:int,b:int>,rid:int,s:struct<b:int,a:int>>"}
+{"key": "J-using-left-star", "status": "ok", "rows": [[null, 3, null], [[1, 2], 1, 10], [[2, 1], 2, null]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "J-on-left-star", "status": "ok", "rows": [[1, [1, 2], 10, [1, 2]], [2, [2, 1], null, null], [3, null, null, null]], "schema": "struct<lid:int,s:struct<a:int,b:int>,rid:int,s:struct<b:int,a:int>>"}
+{"key": "J-using-right-star", "status": "ok", "rows": [[null, null, 40], [[1, 2], 1, 10], [[7, 7], null, 30]], "schema": "struct<s:struct<b:int,a:int>,lid:int,rid:int>"}
+{"key": "J-on-right-star", "status": "ok", "rows": [[1, [1, 2], 10, [1, 2]], [null, null, 30, [7, 7]], [null, null, 40, null]], "schema": "struct<lid:int,s:struct<a:int,b:int>,rid:int,s:struct<b:int,a:int>>"}
+{"key": "J-using-full-star", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"coalesce(s, s)\" due to data type mismatch: Input to `coalesce` should all be the same type, but it's (\"STRUCT<a: INT, b: INT>\" or \"STRUCT<b: INT, a: INT>\"). SQLSTATE: 4"}
+{"key": "J-on-full-star", "status": "ok", "rows": [[1, [1, 2], 10, [1, 2]], [2, [2, 1], null, null], [3, null, null, null], [null, null, 30, [7, 7]], [null, null, 40, null]], "schema": "struct<lid:int,s:struct<a:int,b:int>,rid:int,s:struct<b:int,a:int>>"}
+{"key": "J-using-semi-star", "status": "ok", "rows": [[[1, 2], 1]], "schema": "struct<s:struct<a:int,b:int>,lid:int>"}
+{"key": "J-on-semi-star", "status": "ok", "rows": [[1, [1, 2]]], "schema": "struct<lid:int,s:struct<a:int,b:int>>"}
+{"key": "J-using-anti-star", "status": "ok", "rows": [[null, 3], [[2, 1], 2]], "schema": "struct<s:struct<a:int,b:int>,lid:int>"}
+{"key": "J-on-anti-star", "status": "ok", "rows": [[2, [2, 1]], [3, null]], "schema": "struct<lid:int,s:struct<a:int,b:int>>"}
+{"key": "J-natural-inner-star", "status": "ok", "rows": [[[1, 2], 1, 10]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "J-using-inner-key", "status": "ok", "rows": [[[1, 2], 1, 10]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "J-natural-left-star", "status": "ok", "rows": [[null, 3, null], [[1, 2], 1, 10], [[2, 1], 2, null]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "J-using-left-key", "status": "ok", "rows": [[null, 3, null], [[1, 2], 1, 10], [[2, 1], 2, null]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "J-natural-right-star", "status": "ok", "rows": [[null, null, 40], [[1, 2], 1, 10], [[7, 7], null, 30]], "schema": "struct<s:struct<b:int,a:int>,lid:int,rid:int>"}
+{"key": "J-using-right-key", "status": "ok", "rows": [[null, null, 40], [[1, 2], 1, 10], [[7, 7], null, 30]], "schema": "struct<s:struct<b:int,a:int>,lid:int,rid:int>"}
+{"key": "J-natural-full-star", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"coalesce(s, s)\" due to data type mismatch: Input to `coalesce` should all be the same type, but it's (\"STRUCT<a: INT, b: INT>\" or \"STRUCT<b: INT, a: INT>\"). SQLSTATE: 4"}
+{"key": "J-using-full-key", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"coalesce(s, s)\" due to data type mismatch: Input to `coalesce` should all be the same type, but it's (\"STRUCT<a: INT, b: INT>\" or \"STRUCT<b: INT, a: INT>\"). SQLSTATE: 4"}
+{"key": "J-using-inner-both", "status": "ok", "rows": [[[1, 2], [1, 2]]], "schema": "struct<ls:struct<a:int,b:int>,rs:struct<b:int,a:int>>"}
+{"key": "J-using-full-both", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"coalesce(s, s)\" due to data type mismatch: Input to `coalesce` should all be the same type, but it's (\"STRUCT<a: INT, b: INT>\" or \"STRUCT<b: INT, a: INT>\"). SQLSTATE: 4"}
+{"key": "J-using-two", "status": "ok", "rows": [[[1, 2], [5, 6], 1, 10]], "schema": "struct<s:struct<a:int,b:int>,u:struct<c:int,d:int>,lid:int,rid:int>"}
+{"key": "J-natural-two", "status": "ok", "rows": [[[1, 2], [5, 6], 1, 10]], "schema": "struct<s:struct<a:int,b:int>,u:struct<c:int,d:int>,lid:int,rid:int>"}
+{"key": "J-using-mixed", "status": "ok", "rows": [[7, [1, 2], 1, 10]], "schema": "struct<k:int,s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "J-natural-mixed", "status": "ok", "rows": [[7, [1, 2], 1, 10]], "schema": "struct<k:int,s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "J-using-widen", "status": "error", "class": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES] Cannot resolve \"(s = s)\" due to data type mismatch: the left and right operands of the binary operator have incompatible types (\"STRUCT<a: INT, b: INT>\" and \"STRUCT<b: BIGINT NOT "}
+{"key": "J-on-widen", "status": "error", "class": "DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES] Cannot resolve \"(s = s)\" due to data type mismatch: the left and right operands of the binary operator have incompatible types (\"STRUCT<a: INT, b: INT>\" and \"STRUCT<b: BIGINT NOT "}
+{"key": "J-using-othernames", "status": "ok", "rows": [[[1, 2], 1, 10]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "J-using-othernames-full", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"coalesce(s, s)\" due to data type mismatch: Input to `coalesce` should all be the same type, but it's (\"STRUCT<a: INT, b: INT>\" or \"STRUCT<x: INT NOT NULL, y: INT NOT NU"}
+{"key": "J-using-samenames-full", "status": "ok", "rows": [[null, 3, null], [[1, 2], 1, 10], [[2, 1], 2, null], [[7, 7], null, 30]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "J-using-samenames", "status": "ok", "rows": [[[1, 2], 1, 10]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "J-using-list", "status": "ok", "rows": [[[[1, 2]], 1, 10]], "schema": "struct<s:array<struct<a:int,b:int>>,lid:int,rid:int>"}
+{"key": "J-on-list", "status": "ok", "rows": [[1, 10]], "schema": "struct<lid:int,rid:int>"}
+{"key": "J-using-int-full", "status": "ok", "rows": [[1, 1, 10], [2, 2, null], [3, null, 30]], "schema": "struct<k:int,lid:int,rid:int>"}
+{"key": "J-using-sub", "status": "ok", "rows": [[1, 10]], "schema": "struct<lid:int,rid:int>"}
+{"key": "J-using-where", "status": "ok", "rows": [[1, 10]], "schema": "struct<lid:int,rid:int>"}
+{"key": "J-using-group", "status": "ok", "rows": [[[1, 2], 1]], "schema": "struct<s:struct<a:int,b:int>,n:bigint>"}
+{"key": "J-using-three", "status": "ok", "rows": [[[1, 2], 1, 10, 10]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int,rid:int>"}
+{"key": "J-lateral-using", "status": "error", "class": "UNSUPPORTED_FEATURE.LATERAL_JOIN_USING", "text": "[UNSUPPORTED_FEATURE.LATERAL_JOIN_USING] The feature is not supported: JOIN USING with LATERAL correlation. SQLSTATE: 0A000 == SQL (line 1, position 25) == SELECT lid, rid FROM lk JOIN LATERAL (SELECT * FROM rk) y USING "}
+{"key": "J-setop-intersect", "status": "error", "class": "INCOMPATIBLE_COLUMN_TYPE", "text": "[INCOMPATIBLE_COLUMN_TYPE] INTERSECT can only be performed on tables with compatible column types. The first column of the second table is \"STRUCT<b: INT, a: INT>\" type which is not compatible with \"STRUCT<a: INT, b: INT"}
+{"key": "J-setop-except", "status": "error", "class": "INCOMPATIBLE_COLUMN_TYPE", "text": "[INCOMPATIBLE_COLUMN_TYPE] EXCEPT can only be performed on tables with compatible column types. The first column of the second table is \"STRUCT<b: INT, a: INT>\" type which is not compatible with \"STRUCT<a: INT, b: INT>\" "}
+{"key": "F-nullif-AB", "status": "ok", "rows": [[null]], "schema": "struct<x:struct<a:int,b:int>>"}
+{"key": "F-nullif-AC", "status": "ok", "rows": [[[1, 2]]], "schema": "struct<x:struct<a:int,b:int>>"}
+{"key": "F-nullif-col", "status": "ok", "rows": [[1, 10]], "schema": "struct<lid:int,rid:int>"}
+{"key": "F-greatest", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"greatest(named_struct(a, 1, b, 2), named_struct(b, 1, a, 2))\" due to data type mismatch: Input to `greatest` should all be the same type, but it's [\"STRUCT<a: INT NOT N"}
+{"key": "F-least", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"least(named_struct(a, 1, b, 2), named_struct(b, 1, a, 2))\" due to data type mismatch: Input to `least` should all be the same type, but it's [\"STRUCT<a: INT NOT NULL, b"}
+{"key": "F-greatest-col", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"greatest(s, s)\" due to data type mismatch: Input to `greatest` should all be the same type, but it's [\"STRUCT<a: INT, b: INT>\", \"STRUCT<b: INT, a: INT>\"]. SQLSTATE: 42K"}
+{"key": "F-case-simple-AB", "status": "ok", "rows": [["hit"]], "schema": "struct<x:string>"}
+{"key": "F-case-simple-AC", "status": "ok", "rows": [["miss"]], "schema": "struct<x:string>"}
+{"key": "F-case-simple-col", "status": "ok", "rows": [[1, 10]], "schema": "struct<lid:int,rid:int>"}
+{"key": "F-between-AB", "status": "ok", "rows": [[true]], "schema": "struct<x:boolean>"}
+{"key": "F-between-AC", "status": "ok", "rows": [[false]], "schema": "struct<x:boolean>"}
+{"key": "F-between-col", "status": "ok", "rows": [[1, 10]], "schema": "struct<lid:int,rid:int>"}
+{"key": "F-equal-null", "status": "ok", "rows": [[true, false]], "schema": "struct<x:boolean,y:boolean>"}
+{"key": "F-decode", "status": "ok", "rows": [["hit", "miss"]], "schema": "struct<x:string,y:string>"}
+{"key": "F-array-contains-AB", "status": "error", "class": "DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES] Cannot resolve \"array_contains(array(named_struct(a, 1, b, 2)), named_struct(b, 1, a, 2))\" due to data type mismatch: Input to `array_contains` should have been \"ARRAY\" follo"}
+{"key": "F-array-contains-AC", "status": "error", "class": "DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES] Cannot resolve \"array_contains(array(named_struct(a, 1, b, 2)), named_struct(b, 2, a, 1))\" due to data type mismatch: Input to `array_contains` should have been \"ARRAY\" follo"}
+{"key": "F-array-contains-col", "status": "error", "class": "DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES] Cannot resolve \"array_contains(s, s)\" due to data type mismatch: Input to `array_contains` should have been \"ARRAY\" followed by a value with same element type, but it's [\"ARR"}
+{"key": "F-array-position", "status": "error", "class": "DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES] Cannot resolve \"array_position(array(named_struct(a, 1, b, 2)), named_struct(b, 1, a, 2))\" due to data type mismatch: Input to `array_position` should have been \"ARRAY\" follo"}
+{"key": "F-array-remove", "status": "error", "class": "DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES] Cannot resolve \"array_remove(array(named_struct(a, 1, b, 2)), named_struct(b, 1, a, 2))\" due to data type mismatch: Input to `array_remove` should have been \"ARRAY\" followed "}
+{"key": "F-arrays-overlap", "status": "error", "class": "DATATYPE_MISMATCH.BINARY_ARRAY_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.BINARY_ARRAY_DIFF_TYPES] Cannot resolve \"arrays_overlap(array(named_struct(a, 1, b, 2)), array(named_struct(b, 1, a, 2)))\" due to data type mismatch: Input to function `arrays_overlap` should have been"}
+{"key": "F-arrays-overlap-col", "status": "error", "class": "DATATYPE_MISMATCH.BINARY_ARRAY_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.BINARY_ARRAY_DIFF_TYPES] Cannot resolve \"arrays_overlap(s, s)\" due to data type mismatch: Input to function `arrays_overlap` should have been two \"ARRAY\" with same element type, but it's [\"ARRAY<STRUCT"}
+{"key": "F-array-union", "status": "error", "class": "DATATYPE_MISMATCH.BINARY_ARRAY_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.BINARY_ARRAY_DIFF_TYPES] Cannot resolve \"array_union(array(named_struct(a, 1, b, 2)), array(named_struct(b, 1, a, 2)))\" due to data type mismatch: Input to function `array_union` should have been two \""}
+{"key": "F-array-intersect", "status": "error", "class": "DATATYPE_MISMATCH.BINARY_ARRAY_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.BINARY_ARRAY_DIFF_TYPES] Cannot resolve \"array_intersect(array(named_struct(a, 1, b, 2)), array(named_struct(b, 1, a, 2)))\" due to data type mismatch: Input to function `array_intersect` should have be"}
+{"key": "F-array-except", "status": "error", "class": "DATATYPE_MISMATCH.BINARY_ARRAY_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.BINARY_ARRAY_DIFF_TYPES] Cannot resolve \"array_except(array(named_struct(a, 1, b, 2)), array(named_struct(b, 1, a, 2)))\" due to data type mismatch: Input to function `array_except` should have been two"}
+{"key": "F-array-intersect-col", "status": "error", "class": "DATATYPE_MISMATCH.BINARY_ARRAY_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.BINARY_ARRAY_DIFF_TYPES] Cannot resolve \"array_intersect(s, s)\" due to data type mismatch: Input to function `array_intersect` should have been two \"ARRAY\" with same element type, but it's [\"ARRAY<STRU"}
+{"key": "F-map-contains-key", "status": "error", "class": "DATATYPE_MISMATCH.MAP_FUNCTION_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.MAP_FUNCTION_DIFF_TYPES] Cannot resolve \"map_contains_key(map(named_struct(a, 1, b, 2), 1), named_struct(b, 1, a, 2))\" due to data type mismatch: Input to `map_contains_key` should have been \"MAP\" foll"}
+{"key": "F-map-subscript", "status": "ok", "rows": [[1]], "schema": "struct<x:int>"}
+{"key": "F-array-append", "status": "error", "class": "DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES] Cannot resolve \"array_append(array(named_struct(a, 1, b, 2)), named_struct(b, 1, a, 2))\" due to data type mismatch: Input to `array_append` should have been \"ARRAY\" followed "}
+{"key": "F-array-prepend", "status": "error", "class": "DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES] Cannot resolve \"array_prepend(array(named_struct(a, 1, b, 2)), named_struct(b, 1, a, 2))\" due to data type mismatch: Input to `array_prepend` should have been \"ARRAY\" followe"}
+{"key": "F-array-insert", "status": "error", "class": "DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.ARRAY_FUNCTION_DIFF_TYPES] Cannot resolve \"array_insert(array(named_struct(a, 1, b, 2)), 1, named_struct(b, 1, a, 2))\" due to data type mismatch: Input to `array_insert` should have been \"ARRAY\" follow"}
+{"key": "F-concat-arrays", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"concat(array(named_struct(a, 1, b, 2)), array(named_struct(b, 1, a, 2)))\" due to data type mismatch: Input to `concat` should all be the same type, but it's (\"ARRAY<STR"}
+{"key": "F-map-concat", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"map_concat(map(named_struct(a, 1, b, 2), 1), map(named_struct(b, 1, a, 2), 2))\" due to data type mismatch: Input to `map_concat` should all be the same type, but it's ("}
+{"key": "U-coalesce", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"coalesce(named_struct(a, 1, b, 2), named_struct(b, 1, a, 2))\" due to data type mismatch: Input to `coalesce` should all be the same type, but it's (\"STRUCT<a: INT NOT N"}
+{"key": "U-coalesce-col", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"coalesce(s, s)\" due to data type mismatch: Input to `coalesce` should all be the same type, but it's (\"STRUCT<a: INT, b: INT>\" or \"STRUCT<b: INT, a: INT>\"). SQLSTATE: 4"}
+{"key": "U-if", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"(IF(true, named_struct(a, 1, b, 2), named_struct(b, 1, a, 2)))\" due to data type mismatch: Input to `if` should all be the same type, but it's [\"STRUCT<a: INT NOT NULL,"}
+{"key": "U-nvl", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"coalesce(named_struct(a, 1, b, 2), named_struct(b, 1, a, 2))\" due to data type mismatch: Input to `coalesce` should all be the same type, but it's (\"STRUCT<a: INT NOT N"}
+{"key": "U-nvl2", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"(IF((1 IS NOT NULL), named_struct(a, 1, b, 2), named_struct(b, 1, a, 2)))\" due to data type mismatch: Input to `if` should all be the same type, but it's [\"STRUCT<a: IN"}
+{"key": "U-case-branches", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"CASE WHEN true THEN named_struct(a, 1, b, 2) ELSE named_struct(b, 1, a, 2) END\" due to data type mismatch: Input to `casewhen` should all be the same type, but it's [\"S"}
+{"key": "U-array-ctor", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"array(named_struct(a, 1, b, 2), named_struct(b, 1, a, 2))\" due to data type mismatch: Input to `array` should all be the same type, but it's (\"STRUCT<a: INT NOT NULL, b"}
+{"key": "U-map-ctor", "status": "error", "class": "DATATYPE_MISMATCH.CREATE_MAP_KEY_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.CREATE_MAP_KEY_DIFF_TYPES] Cannot resolve \"map(named_struct(a, 1, b, 2), 1, named_struct(b, 1, a, 2), 2)\" due to data type mismatch: The given keys of function `map` should all be the same type, but th"}
+{"key": "U-values", "status": "error", "class": "INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE", "text": "[INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE] Invalid inline table. Found incompatible types in the column `x` for inline table. SQLSTATE: 42000; line 1 pos 14"}
+{"key": "P-pivot", "status": "error", "class": "Py4JJavaError", "text": "An error occurred while calling o651.collectToPython. : org.apache.spark.SparkException: Job aborted due to stage failure: Task 0 in stage 93.0 failed 1 times, most recent failure: Lost task 0.0 in stage 93.0 (TID 124) ("}
+{"key": "P-any-subquery", "status": "error", "class": "PARSE_SYNTAX_ERROR", "text": "[PARSE_SYNTAX_ERROR] Syntax error at or near '('. SQLSTATE: 42601 (line 1, pos 33) == SQL == SELECT lid FROM lk WHERE s = ANY (SELECT s FROM rk) ---------------------------------^^^"}
+{"key": "P-agg-filter", "status": "ok", "rows": [[1]], "schema": "struct<n:bigint>"}
+{"key": "P-window-when", "status": "ok", "rows": [[1, 1], [2, 1], [3, 1]], "schema": "struct<lid:int,n:bigint>"}
+{"key": "P-max-by", "status": "ok", "rows": [[1]], "schema": "struct<x:int>"}
+{"key": "P-orderby-cmp", "status": "ok", "rows": [[1], [2]], "schema": "struct<lid:int>"}
+{"key": "P-groupby-cmp", "status": "ok", "rows": [[false, 1], [true, 1]], "schema": "struct<k:boolean,n:bigint>"}
+{"key": "P-array-sort-lambda", "status": "ok", "rows": [[[[1, 2]]]], "schema": "struct<x:array<struct<a:int,b:int>>>"}
+{"key": "P-distinct-union", "status": "ok", "rows": [[1]], "schema": "struct<n:bigint>"}
+{"key": "I-using-where", "status": "ok", "rows": [[1, 10]], "schema": "struct<lid:int,rid:int>"}
+{"key": "I-using-group", "status": "ok", "rows": [[1, 1]], "schema": "struct<k:int,n:bigint>"}
+{"key": "I-using-right-star", "status": "ok", "rows": [[1, 1, 10], [3, null, 30]], "schema": "struct<k:int,lid:int,rid:int>"}
+{"key": "I-natural-full-star", "status": "ok", "rows": [[1, 1, 10], [2, 2, null], [3, null, 30]], "schema": "struct<k:int,lid:int,rid:int>"}
+{"key": "I-using-full-key", "status": "ok", "rows": [[1], [2], [3]], "schema": "struct<k:int>"}
+{"key": "I-using-inner-star", "status": "ok", "rows": [[1, 1, 10]], "schema": "struct<k:int,lid:int,rid:int>"}
+{"key": "T-values-typing", "status": "ok", "rows": [[1, [1, 2]]], "schema": "struct<lid:int,s:struct<a:int,b:int>>"}
+{"key": "V-view-using-star", "status": "ok", "rows": [[[1, 2], 1, 10]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "V-view-using-key", "status": "ok", "rows": [[[1, 2]]], "schema": "struct<s:struct<a:int,b:int>>"}
+{"key": "D-str-inner", "status": "ok", "rows": [[[1, 2], 1, 10]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "D-str-left", "status": "ok", "rows": [[null, 3, null], [[1, 2], 1, 10], [[2, 1], 2, null]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "D-str-right", "status": "ok", "rows": [[null, null, 40], [[1, 2], 1, 10], [[7, 7], null, 30]], "schema": "struct<s:struct<b:int,a:int>,lid:int,rid:int>"}
+{"key": "D-str-full", "status": "error", "class": "DATATYPE_MISMATCH.DATA_DIFF_TYPES", "text": "[DATATYPE_MISMATCH.DATA_DIFF_TYPES] Cannot resolve \"coalesce(s, s)\" due to data type mismatch: Input to `coalesce` should all be the same type, but it's (\"STRUCT<a: INT, b: INT>\" or \"STRUCT<b: INT, a: INT>\"). SQLSTATE: 4"}
+{"key": "D-str-left_semi", "status": "ok", "rows": [[[1, 2], 1]], "schema": "struct<s:struct<a:int,b:int>,lid:int>"}
+{"key": "D-str-left_anti", "status": "ok", "rows": [[null, 3], [[2, 1], 2]], "schema": "struct<s:struct<a:int,b:int>,lid:int>"}
+{"key": "D-list-inner", "status": "ok", "rows": [[[1, 2], 1, 10]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "D-list-mixed", "status": "ok", "rows": [[7, [1, 2], 1, 10]], "schema": "struct<k:int,s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "D-list-two", "status": "ok", "rows": [[[1, 2], [5, 6], 1, 10]], "schema": "struct<s:struct<a:int,b:int>,u:struct<c:int,d:int>,lid:int,rid:int>"}
+{"key": "D-cond-inner", "status": "ok", "rows": [[1, [1, 2], 10, [1, 2]]], "schema": "struct<lid:int,s:struct<a:int,b:int>,rid:int,s:struct<b:int,a:int>>"}
+{"key": "D-cond-full", "status": "ok", "rows": [[1, [1, 2], 10, [1, 2]], [2, [2, 1], null, null], [3, null, null, null], [null, null, 30, [7, 7]], [null, null, 40, null]], "schema": "struct<lid:int,s:struct<a:int,b:int>,rid:int,s:struct<b:int,a:int>>"}
+{"key": "D-str-inner-select-key", "status": "ok", "rows": [[[1, 2]]], "schema": "struct<s:struct<a:int,b:int>>"}
+{"key": "D-str-inner-filter", "status": "ok", "rows": [[1, 10]], "schema": "struct<lid:int,rid:int>"}
+{"key": "D-str-int-full", "status": "ok", "rows": [[1, 1, 10], [2, 2, null], [3, null, 30]], "schema": "struct<k:int,lid:int,rid:int>"}
+{"key": "D-str-int-right", "status": "ok", "rows": [[1, 1, 10], [3, null, 30]], "schema": "struct<k:int,lid:int,rid:int>"}
+{"key": "D-sql-using-then-select", "status": "ok", "rows": [[[1, 2], 1]], "schema": "struct<s:struct<a:int,b:int>,lid:int>"}
+{"key": "D-sql-using-then-filter", "status": "ok", "rows": [[[1, 2], 1, 10]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int>"}
+{"key": "D-sql-using-cache", "status": "ok", "rows": [[[1, 2], 1]], "schema": "struct<s:struct<a:int,b:int>,lid:int>"}
+{"key": "D-str-then-join-again", "status": "ok", "rows": [[[1, 2], 1, 10, 10]], "schema": "struct<s:struct<a:int,b:int>,lid:int,rid:int,rid2:int>"}

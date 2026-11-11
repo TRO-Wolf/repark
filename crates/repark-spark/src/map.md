@@ -1245,18 +1245,17 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `CAST('1e200' AS DOUBLE)` to a non-null Float64 literal; `SparkProjectionDisplay`
   aliases unaliased projections whose DataFusion names carry `Int64(` /
   `datafusion.public` / backticks to Spark display (`(my col + 1)`); `__repark_spark_as__`
-  is the identity UDF that carries a Spark display name.
+  is the identity UDF of a Spark display name.
   **Round 5 (2026-09-15):** `__repark_suffix_literal__` is the companion
   provenance-marker UDF with fold-through and display unwrapping, registered in
   `extension.rs` and the binding `sql_context`.
   **JAVA-DOUBLE-FD-1 fix round 1 (2026-09-15, R-17c-2):** `SUFFIX_LITERAL_NAME`
-  is a re-export of `repark_functions::java_double::SUFFIX_LITERAL_NAME` — the
-  marker's single source lives in the capability crate because
-  `SparkFloatStringify` must recognize the token and the DAG forbids a
-  functions→spark edge.
+  re-exports `repark_functions::java_double::SUFFIX_LITERAL_NAME`, the marker's single
+  source in the capability crate, as `SparkFloatStringify` reads it and the DAG
+  forbids a functions→spark edge.
   **Round 5 (2026-09-15):** `SparkProjectionDisplay` rewrites only the root
-  projection and keeps explicit non-marker aliases.
-  **Round 6 (2026-09-15):** `cargo fmt` applied.
+  projection and keeps explicit non-marker aliases. **Round 6 (2026-09-15):** `cargo fmt`
+  applied. The display reads through struct relabels (`without_relabels`, 2026-11-10).
   **Round 8 (2026-09-15):** `SuffixLiteral` schema/display names come from the
   value text (Java double/float text, scale-exact decimals), so nested columns never
   carry the marker; the fold covers numeric targets except `Int64` (whose CAST anchor
@@ -1264,8 +1263,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   names only (balanced `Int64(1)`, table-qualified `t.Int64(1)`, negated
   `(- 0.0)`; composites like `a + Int64(1)` or `getbit(Int64(6),Int64(1))`
   keep their plan names) and names unfolded integer `CAST`s from the literal
-  inner. Inner renames are out of scope:
-  analysis runs twice and outer references would go stale.
+  inner. Inner renames are out of scope: analysis runs twice and outer references would go stale.
 - `spark_ast.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** the passthrough runs every planned
   statement through `normalize/map_ordering.rs`'s `refuse_map_ordering` before analysis, so a
   map comparison, `ORDER BY` or `DISTINCT` refuses as Spark does (verifier V-003).
@@ -1328,11 +1326,11 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   NTZ probe position is aliased `p{n}`, so a row with two equal cells (`(1, 1, 1,
   ts)`, `(3, NULL, NULL, ts)`, two equal NTZ literals, `7` beside `CAST(7 AS INT)`)
   no longer trips DataFusion's unique-projection check; a `DEFAULT` cell probes as
-  `NULL` through `insert_defaults::is_default_marker`, because the probe runs
+  `NULL` through `insert_defaults::is_default_marker`, as the probe runs
   before marker substitution and a declared write-default fits its column by
   construction. The fail-closed probe stays: with its own failure causes gone,
   `(10, 1, 1, '2024-…')` and `(11, 1, 1, - -1)` refuse `CANNOT_SAFELY_CAST` as
-  Spark does, where base stored them because the duplicate-name error skipped the
+  Spark does, where base stored them as the duplicate-name error skipped the
   check. The sign-led `starts_with('-')` disjunct is removed: every tree the
   parser produces with a sign-led operand is a unary-under-unary the match
   already wraps.
@@ -1465,7 +1463,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   transaction (so it is never persisted), resolves it against the table's current version and the
   session opt-in against the table it loads ONCE, and hands that loaded table to the transaction.
   It does NOT re-register the namespace: measured, the version-only dirty bit cost one
-  `list_tables` and two `namespace_exists` per upgrade and bought nothing, because the DF
+  `list_tables` and two `namespace_exists` per upgrade and bought nothing, as the DF
   provider reloads table metadata per plan. `tests/v3_upgrade_calls.rs` is the guard — it pins
   the call counts AND reads the v3 lineage columns through the same session afterwards.
   **WO U5 PR2b round 2 (2026-09-25):** an integer target below the current version answers
@@ -1713,7 +1711,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
 - `namespace_ddl/` — the table-lifecycle work `namespace_ddl.rs` delegates; see
   [namespace_ddl/map.md](namespace_ddl/map.md). `purge.rs` holds the `DROP TABLE … PURGE`
   reachable-file sweep and the `gc.enabled` gate (**IPI-21**, 2026-09-20); `execute_drop_table`
-  runs the sweep before `Catalog::drop_table` because the metadata location must still be
+  runs the sweep before `Catalog::drop_table`: the metadata location must still be
   resolvable when the action reads it. A non-empty `delete_failures` logs once — one
   `tracing::warn` naming the table and the count — and the `DROP` still succeeds (Java's
   log-only suppression, owner ruling 2026-09-20).
@@ -1753,7 +1751,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   new `Sig::Hex`. `quote_if_needed`, `quote_constant` and `hex_constant` hold Spark's
   renderings for the ALTER door's messages.
   **WO U5 PR2b round 4 (2026-09-25):** the tokenizer runs on `SparkOrderDialect`, Databricks
-  with `supports_string_literal_backslash_escape`, because the Databricks dialect could not
+  with `supports_string_literal_backslash_escape`, as the Databricks dialect could not
   tokenize `'a\'b'` and the failure sent the statement through `router.rs`'s literal
   canonicalizer, whose re-quoted output was then unescaped a second time. A string token is
   read back from its source span and `unescape_spark_string` applies Spark's
@@ -2011,10 +2009,10 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   aliasing. A top-level `GROUP BY window(...)` stages the query over
   `SELECT *, window(...) AS window` so `window.start` / `window.end` resolve to
   a real column; the group and bare projection calls resolve to that column.
-  Sliding values stay correct because the analyzer rule expands the staged
+  Sliding values stay correct: the analyzer rule expands the staged
   projection. A second window specification refuses loud. Step 3 refuses a
   `window_time(...)` call in the staged projection / having / order-by with
-  the oracle `[MISSING_AGGREGATION]` text, because the planner lifts it into a
+  the oracle `[MISSING_AGGREGATION]` text, as the planner lifts it into a
   projection where the analyzer can no longer tell it apart from the legal
   post-aggregation use. Step 4 stages `GROUP BY session_window(...)` the same
   way (`SELECT *, session_window(...) AS session_window`); the analyzer rule
@@ -2449,8 +2447,8 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   reads it). `StatementWriteOptions::merge_schema(ctx)` is the precedence:
   **per-write option > session conf `spark.sql.iceberg.merge-schema` > false**,
   matching Java `SparkWriteConf.mergeSchema()`'s `confParser` order.
-  `refuse_if_non_empty` now skips those two keys, because the by-name append
-  honours them — every other unrecognised key is still ignored, which is
+  `refuse_if_non_empty` now skips those two keys, as the by-name append
+  honors them — every other unrecognised key is still ignored, which is
   Spark's measured behaviour and registry row `ICE-WRITE-OPTIONS-1`; this unit
   does not reopen it.
 - `insert_by_name.rs` + [`insert_by_name/evolution.rs`](insert_by_name/evolution.rs)
@@ -2497,7 +2495,7 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   without the property keeps the positional path unchanged.
 - `write_options.rs` — `carries_only_merge_schema` says whether the statement's
   options are all merge-schema keys. A positional INSERT with any other option
-  stays positional, because the by-name append refuses those options.
+  stays positional, as the by-name append refuses those options.
 - Critic r1 remediation (2026-09-24): `routes_positional_by_name` now returns
   `Result<bool>`, and `execute_insert_routed` propagates it with `?`. A failed
   table load now surfaces as the error instead of reading as "no property".

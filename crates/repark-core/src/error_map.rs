@@ -50,6 +50,8 @@ const PLAN_DISPLAY_PREFIX: &str = "Error during planning: ";
 const SQLSTATE_MARKER: &str = "SQLSTATE: ";
 const SQLSTATE_LEN: usize = 5;
 const STRUCT_RULE_HEADER: &str = "struct_operands_by_position\ncaused by\n";
+const STRUCT_PLANNER_HEAD: &str = "[DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES]";
+const SCHEMA_ERROR_PREFIX: &str = "Schema error: ";
 
 fn coercion_refusal_message(display: &str) -> Option<String> {
     let rest = display.split(COERCION_FAILED_MARKER).nth(1)?;
@@ -96,8 +98,13 @@ fn join_refusal_message(display: &str) -> Option<String> {
 }
 
 fn struct_refusal_message(display: &str) -> Option<String> {
-    let rest = display.strip_prefix(STRUCT_RULE_HEADER)?;
-    let rest = rest.strip_prefix(PLAN_DISPLAY_PREFIX).unwrap_or(rest);
+    let rest = match display.strip_prefix(STRUCT_RULE_HEADER) {
+        Some(rest) if rest.starts_with(SCHEMA_ERROR_PREFIX) => return Some(rest.to_string()),
+        Some(rest) => rest.strip_prefix(PLAN_DISPLAY_PREFIX).unwrap_or(rest),
+        None => display
+            .strip_prefix(PLAN_DISPLAY_PREFIX)
+            .filter(|rest| rest.starts_with(STRUCT_PLANNER_HEAD))?,
+    };
     if !rest.starts_with('[') {
         return None;
     }
@@ -495,6 +502,37 @@ mod tests {
         );
         let error = engine_err(unclassed);
         assert!(matches!(error, Error::Analysis(text) if text.contains("no class here")));
+    }
+
+    #[test]
+    fn struct_planner_refusal_and_rule_wrapped_schema_error_drop_their_wraps() {
+        let payload = "[DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES] Cannot resolve \"(p = d)\" due to \
+             data type mismatch: the left and right operands of the binary operator have \
+             incompatible types (\"STRUCT<a: INT, b: INT>\" and \"STRUCT<a: BOOLEAN, a: BOOLEAN>\"). \
+             SQLSTATE: 42K09";
+        let planned = engine_err(DataFusionError::Plan(payload.to_string()));
+        assert!(matches!(planned, Error::Analysis(text) if text == payload));
+        let other = engine_err(DataFusionError::Plan(
+            "[OTHER_CLASS] x SQLSTATE: 42K09".to_string(),
+        ));
+        assert!(
+            matches!(other, Error::Analysis(text) if text.starts_with("Error during planning: "))
+        );
+        let schema = DataFusionError::Context(
+            "struct_operands_by_position".to_string(),
+            Box::new(DataFusionError::SchemaError(
+                Box::new(datafusion::common::SchemaError::FieldNotFound {
+                    field: Box::new(datafusion::common::Column::from_name("x")),
+                    valid_fields: Vec::new(),
+                }),
+                Box::new(None),
+            )),
+        );
+        let peeled = engine_err(schema);
+        assert!(
+            matches!(&peeled, Error::Analysis(text) if text.starts_with("Schema error: ")),
+            "{peeled:?}"
+        );
     }
 
     #[test]
