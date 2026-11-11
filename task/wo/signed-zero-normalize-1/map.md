@@ -7,6 +7,6 @@ only; no product code.
 
 - [order.md](order.md) — the build order for part A (SIGNED-ZERO-LITERALS): the rulings, the rebase onto today's main, the clause and its completeness check, the design bindings, the inventories, the pins and the halts.
 - [sketch.md](sketch.md) — the design sketch of 2026-11-08: the seats, the UDF, the doors, the domain table in section 9, the pins, the split and the owner questions with defaults.
-- [evidence/](evidence/map.md) — the domain table measurement (D1 to D17 as written in sketch section 9) on the Spark 4.1.2 oracle and the release wheel built from `fdc61f26`: the probe, the raw legs, the generated table and summary, and the provenance.
+- [evidence/](evidence/map.md) — the domain table measurement (D1 to D17 as written in sketch section 9) on the Spark 4.1.2 oracle and the release wheel built from `fdc61f26`: the probe, the raw legs, the generated table and summary, and the provenance; build item 1's inventories and re-measured legs on main `68b09d18`.
 
 Up: [../map.md](../map.md).
