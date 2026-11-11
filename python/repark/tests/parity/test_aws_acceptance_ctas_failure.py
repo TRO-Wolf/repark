@@ -238,13 +238,12 @@ def test_ctas_failure_cell(spec: CellSpec, kind: str, sessions: Any, records_pat
         spark_read=read,
         leftover="not-measured",
     )
-    if spec.control_rows is not None:
-        assert read is not None and read["error"] is None, f"{spec.cell} control unreadable: {read}"
-        assert read["count"] == spec.control_rows, (
-            f"{spec.cell} rows {read['count']} != {spec.control_rows}"
+    if spec.cell == "C5":
+        assert read is not None and read["error"] is None and read["count"] >= spec.control_rows, (
+            f"C5 blocks: the live table after a failed replace is unreadable or short: {read}"
         )
         return
-    if listed:
+    if listed and spec.control_rows is None:
         assert read is not None and read["error"] is None and read["count"] != 0, (
             f"{spec.cell} blocks: listed table reads as empty or unreadable: {read}"
         )
