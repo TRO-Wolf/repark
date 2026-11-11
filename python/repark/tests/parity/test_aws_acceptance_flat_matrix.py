@@ -31,6 +31,8 @@ from _flat_matrix_cells import (
     Cell,
     cells_for_group,
     classify,
+    committed_commits,
+    committed_ids,
     expected_for,
     load_expected,
     passes,
@@ -74,6 +76,7 @@ class Observed:
     answer: list[tuple[Any, ...]] | None
     commits: int | None
     error: str | None
+    probe_error: str | None = None
 
 
 def _slug(text: str) -> str:
@@ -183,10 +186,11 @@ def _observe_matrix(
     target = target_for(combo)
     before = None
     error = None
+    probe_error = None
     try:
         before = _commit_count(session, names[target])
     except Exception as failure:
-        error = f"{type(failure).__name__}: {failure}"[:500]
+        probe_error = f"{type(failure).__name__}: {failure}"[:500]
     try:
         if combo.door == "spark-sql":
             result = session.sql(_matrix_sql(seat, names, predicate))
@@ -209,9 +213,10 @@ def _observe_matrix(
     if before is not None:
         try:
             commits = _commit_count(session, names[target]) - before
-        except Exception:
+        except Exception as failure:
+            probe_error = f"{type(failure).__name__}: {failure}"[:500]
             commits = None
-    return Observed(outcome, answer, commits, error)
+    return Observed(outcome, answer, commits, error, probe_error)
 
 
 def _observe_float(session: Any, cell: Cell, names: dict[str, str]) -> Observed:
@@ -341,12 +346,12 @@ def test_flat_matrix_cell(cell: Cell, sessions: Any, records_path: Path) -> None
         expected_entry = expected_for(cell, EXPECTED)
         if expected_entry is not None:
             source = "committed-spark"
-            ids = expected_entry["ids"] if combo.is_read else expected_entry["after_ids"] or []
+            ids = committed_ids(combo, expected_entry)
             expected_answer = _rows([(value,) for value in ids])
             oracle = Observed(
                 expected_entry["outcome"],
                 expected_answer if expected_entry["outcome"] == "ANSWERED" else None,
-                expected_entry["commits"] if glue else None,
+                committed_commits(combo, expected_entry) if glue else None,
                 None,
             )
         else:
@@ -383,9 +388,12 @@ def test_flat_matrix_cell(cell: Cell, sessions: Any, records_path: Path) -> None
         repark_answer=repr(mine.answer),
         repark_commits=mine.commits,
         repark_error=mine.error,
+        repark_probe_error=mine.probe_error,
         oracle_outcome=oracle.outcome,
         oracle_answer=repr(oracle.answer),
         oracle_commits=oracle.commits,
+        oracle_error=oracle.error,
+        oracle_probe_error=oracle.probe_error,
         label=label,
     )
     assert passes(label), f"{cell.cell_id}: label {label}"

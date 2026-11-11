@@ -11,6 +11,8 @@ from _flat_matrix_cells import (
     cells_for_group,
     class_a_key,
     classify,
+    committed_commits,
+    committed_ids,
     expected_for,
     float_cells,
     load_expected,
@@ -189,3 +191,40 @@ def test_classifier_declared_empty_dml_and_commit_labels() -> None:
     )
     assert declared == "KNOWN-EMPTY-DML"
     assert fewer == "FEWER-COMMIT"
+
+
+def test_copy_seats_compare_the_target_ids_and_skip_the_source_commits() -> None:
+    table = load_expected()
+    copies = [
+        cell
+        for cell in matrix_cells()
+        if class_a_key(cell) is not None
+        and cell.combo is not None
+        and cell.combo.seat in {"insert", "ctas"}
+    ]
+    assert copies
+    for cell in copies:
+        entry = expected_for(cell, table)
+        assert entry is not None
+        assert cell.combo is not None
+        assert committed_ids(cell.combo, entry) == [int(value) for value in entry["ids"] or []]
+        assert committed_commits(cell.combo, entry) is None
+
+
+def test_p01_insert_expects_the_two_copied_rows() -> None:
+    table = load_expected()
+    cell = next(cell for cell in matrix_cells() if cell.cell_id == "spark-sql|insert|v2-cow|p01")
+    entry = expected_for(cell, table)
+    assert entry is not None
+    assert cell.combo is not None
+    assert committed_ids(cell.combo, entry) == [1, 8]
+
+
+def test_dml_seats_compare_the_table_after_the_statement() -> None:
+    table = load_expected()
+    cell = next(cell for cell in matrix_cells() if cell.cell_id == "spark-sql|delete|v2-cow|p01")
+    entry = expected_for(cell, table)
+    assert entry is not None
+    assert cell.combo is not None
+    assert committed_ids(cell.combo, entry) == [int(value) for value in entry["after_ids"] or []]
+    assert committed_commits(cell.combo, entry) == entry["commits"]
