@@ -31,6 +31,8 @@ from _flat_matrix_cells import (
     Cell,
     cells_for_group,
     classify,
+    committed_commits,
+    committed_ids,
     expected_for,
     load_expected,
     passes,
@@ -341,12 +343,12 @@ def test_flat_matrix_cell(cell: Cell, sessions: Any, records_path: Path) -> None
         expected_entry = expected_for(cell, EXPECTED)
         if expected_entry is not None:
             source = "committed-spark"
-            ids = expected_entry["ids"] if combo.is_read else expected_entry["after_ids"] or []
+            ids = committed_ids(combo, expected_entry)
             expected_answer = _rows([(value,) for value in ids])
             oracle = Observed(
                 expected_entry["outcome"],
                 expected_answer if expected_entry["outcome"] == "ANSWERED" else None,
-                expected_entry["commits"] if glue else None,
+                committed_commits(combo, expected_entry) if glue else None,
                 None,
             )
         else:
