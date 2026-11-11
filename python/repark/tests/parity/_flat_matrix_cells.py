@@ -282,6 +282,18 @@ def target_for(combo: Combo) -> str:
     return "t"
 
 
+def committed_ids(combo: Combo, entry: dict[str, Any]) -> list[int]:
+    if combo.is_read or target_for(combo) != "t":
+        return [int(value) for value in entry["ids"] or []]
+    return [int(value) for value in entry["after_ids"] or []]
+
+
+def committed_commits(combo: Combo, entry: dict[str, Any]) -> int | None:
+    if target_for(combo) != "t":
+        return None
+    return entry["commits"]
+
+
 def answer_rows(ids: list[int] | None) -> list[tuple[int, ...]] | None:
     if ids is None:
         return None
