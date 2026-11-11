@@ -831,7 +831,9 @@ async fn check_insert_outcome(
 
 fn check_refusal_cell(label: &str, failures: &mut Vec<String>, error: &str, op: Op, shape: &Shape) {
     if matches!(shape.expect, Expect::MapAnswer(_)) {
-        if error.contains("Struct field names differ") {
+        if error.contains("Struct field names differ")
+            || error.contains("Struct fields cannot be paired")
+        {
             failures.push(format!("{label}: fired on identical names {error}"));
         }
     } else if matches!(shape.expect, Expect::Refuse(_))

@@ -148,7 +148,7 @@ Integration tests of the assembled Spark door: a real `repark_core::ReparkSessio
   Deregistered, it refuses with an internal error naming the kernel, leaving the
   table empty. Main stored the UTC wall. Risk: without the kernel a session stores
   a wall shifted by the zone offset, silently.
-- `struct_compare_by_position.rs` — **STRUCT-COMPARE-BY-POSITION-1 (2026-11-10):** every step-0 `sql` cell on the Spark door, by case and ANSI flag: Spark's rows, class or read-back; no panic.
+- `struct_compare_by_position.rs`, `struct_compare_seat_family.rs` — STRUCT-COMPARE-BY-POSITION-1 and -SEAT-FAMILY-1: every `sql` cell in its table: Spark's rows, class or read-back; no panic.
 - [struct_pairing_doors.rs](struct_pairing_doors.rs) —
   **ICE-STRUCT-PAIRING-1 step 1 (2026-10-14), parity row R-016:** the sixteen write doors at
   the Rust door (`ReparkSession::sql`, and `sql_built_with_write_options` with the DataFrame

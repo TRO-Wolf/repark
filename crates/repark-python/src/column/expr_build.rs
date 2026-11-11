@@ -283,7 +283,9 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
     let rules = repark_spark::spark_literal_typing::insert_literal_rule_before_coercion(rules)?;
     let rules = repark_functions::collection::insert_map_subscript_before_coercion(rules)?;
     let mut rules =
-        repark_spark::struct_position::insert_struct_position_rule_before_coercion(rules)?;
+        repark_spark::struct_position::insert_expression_struct_position_rule_before_coercion(
+            rules,
+        )?;
     rules.push(std::sync::Arc::new(repark_spark::FoldSparkNumericCasts));
     rules.push(std::sync::Arc::new(repark_spark::SparkProjectionDisplay));
     rules.extend(repark_spark::spark_literal_typing::spark_door_post_coercion_rules());
@@ -862,5 +864,12 @@ mod tests {
         let planners = context.state().expr_planners().len();
         let bare = SessionContext::new().state().expr_planners().len();
         assert!(planners > bare);
+        let duplicate_planners = context
+            .state()
+            .expr_planners()
+            .iter()
+            .filter(|planner| format!("{planner:?}") == "DuplicateFieldOperands")
+            .count();
+        assert_eq!(duplicate_planners, 1);
     }
 }

@@ -6,8 +6,10 @@ use datafusion::arrow::array::{
     MapArray, StructArray, make_array,
 };
 use datafusion::arrow::datatypes::DataType;
+use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::common::{Result, ScalarValue};
 use datafusion::error::DataFusionError;
+use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
     ColumnarValue, Expr, ScalarFunctionArgs, ScalarUDFImpl, Signature, Volatility,
 };
@@ -18,6 +20,7 @@ use super::STRUCT_BY_POSITION;
 pub(super) struct StructByPosition {
     name: &'static str,
     target: DataType,
+    transparent: bool,
     signature: Signature,
 }
 
@@ -26,14 +29,26 @@ impl StructByPosition {
         Self {
             name,
             target,
+            transparent: true,
             signature: Signature::any(1, Volatility::Immutable),
         }
+    }
+
+    pub(super) fn opaque(self) -> Self {
+        Self {
+            transparent: false,
+            ..self
+        }
+    }
+
+    pub(super) fn parts(&self) -> (&'static str, &DataType, bool) {
+        (self.name, &self.target, self.transparent)
     }
 }
 
 impl PartialEq for StructByPosition {
     fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.target == other.target
+        self.parts() == other.parts()
     }
 }
 
@@ -43,6 +58,7 @@ impl Hash for StructByPosition {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.name.hash(state);
         self.target.hash(state);
+        self.transparent.hash(state);
     }
 }
 
@@ -63,6 +79,18 @@ impl ScalarUDFImpl for StructByPosition {
         Ok(args.first().map(ToString::to_string).unwrap_or_default())
     }
 
+    fn schema_name(&self, args: &[Expr]) -> Result<String> {
+        let argument = match args.first() {
+            Some(argument) => argument.schema_name().to_string(),
+            None => String::new(),
+        };
+        Ok(if self.transparent {
+            argument
+        } else {
+            format!("{}({argument})", self.name)
+        })
+    }
+
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let [value] = args.args.as_slice() else {
             return Err(DataFusionError::Execution(format!(
@@ -81,6 +109,34 @@ impl ScalarUDFImpl for StructByPosition {
             }
         }
     }
+}
+
+#[must_use]
+pub fn without_relabels(expr: &Expr) -> Expr {
+    expr.clone()
+        .transform_up(|node| {
+            let Expr::ScalarFunction(function) = node else {
+                return Ok(Transformed::no(node));
+            };
+            let relabel = function.args.len() == 1
+                && function
+                    .func
+                    .inner()
+                    .downcast_ref::<StructByPosition>()
+                    .is_some();
+            let ScalarFunction { func, mut args } = function;
+            match args.pop() {
+                Some(operand) if relabel => Ok(Transformed::yes(operand)),
+                popped => {
+                    args.extend(popped);
+                    Ok(Transformed::no(Expr::ScalarFunction(ScalarFunction {
+                        func,
+                        args,
+                    })))
+                }
+            }
+        })
+        .map_or_else(|_| expr.clone(), |stripped| stripped.data)
 }
 
 pub(super) fn renamed_array(array: &ArrayRef, target: &DataType) -> Result<ArrayRef> {

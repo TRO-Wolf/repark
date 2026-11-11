@@ -313,6 +313,7 @@ def check_refusal(shape: dict[str, Any], op: str, error: str) -> None:
     kind = shape["expect"][0]
     if kind == "map-answer":
         assert "Struct field names differ" not in error, error
+        assert "Struct fields cannot be paired" not in error, error
     elif kind == "refuse" or op in ("UNION ALL", "union", "unionByName"):
         _, path, right, left = shape["expect"]
         check_refusal_text(error, op_word(op), path, right, left)

@@ -424,7 +424,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **CROSS-JOIN-CONDITION-1 fold 3 (2026-10-09):** `join_refusal_message` peels the
   `join_condition_refusals` wrap to the bare `[CONDITION] … SQLSTATE: 42K0E` payload (gated on
   the rule name and the join heads), so the facade answers Spark's class.
-  `struct_refusal_message` (2026-11-10) peels `struct_operands_by_position`.
+  `struct_refusal_message` peels the struct rule schema wrap, plan prefixes.
 - [unknown_routine.rs](unknown_routine.rs) — **UNRESOLVED-ROUTINE-1 (2026-09-16):** the blanket reshape
   (see [../map.md](../map.md)).
   **Remediation round 1 (2026-09-16):** token-based call-site matching (see

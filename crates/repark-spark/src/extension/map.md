@@ -76,7 +76,7 @@ function-registry + analyzer-rule installation + the composed
 - `../extension.rs` — **STRUCT-COMPARE-BY-POSITION-1 (2026-11-10):** seats
   `struct_operands_by_position` after `spark_map_subscript`, registers `DuplicateFieldOperands`
   in `register`, and re-exports `struct_position` toward the root (`lib.rs` holds at 156).
-  `tests.rs` pins the seat index.
+  `tests.rs` pins the seat index and, by name, the `DuplicateFieldOperands` registration.
 
 ## Pointers
 

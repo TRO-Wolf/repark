@@ -19,7 +19,10 @@ use repark_functions::cast_map::spark_sql_name;
 
 use super::map_ordering::{refuse_in_expr, render};
 use udf::StructByPosition;
+pub use udf::without_relabels;
 
+mod forms;
+mod join;
 mod udf;
 
 const STRUCT_BY_POSITION: &str = "__repark_struct_by_position__";
@@ -27,13 +30,15 @@ const PLANNED_BY_POSITION: &str = "__repark_struct_by_position_planned__";
 const ELEMENT_AT: &str = "element_at";
 
 #[derive(Debug, Default)]
-pub struct StructOperandsByPosition;
+pub struct StructOperandsByPosition {
+    transparent: bool,
+}
 
 impl AnalyzerRule for StructOperandsByPosition {
     fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
         let case_sensitive =
             repark_functions::case_sensitive::spark_case_sensitive_from_options(config);
-        plan.transform_up_with_subqueries(|node| align_node(node, case_sensitive))
+        plan.transform_up_with_subqueries(|node| align_node(node, case_sensitive, self.transparent))
             .data()
     }
 
@@ -44,7 +49,21 @@ impl AnalyzerRule for StructOperandsByPosition {
 
 #[allow(clippy::missing_errors_doc)]
 pub fn insert_struct_position_rule_before_coercion(
+    rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+) -> Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+    insert_rule(rules, StructOperandsByPosition::default())
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn insert_expression_struct_position_rule_before_coercion(
+    rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+) -> Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+    insert_rule(rules, StructOperandsByPosition { transparent: true })
+}
+
+fn insert_rule(
     mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+    rule: StructOperandsByPosition,
 ) -> Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
     let Some(position) = rules.iter().position(|rule| rule.name() == "type_coercion") else {
         return Err(DataFusionError::Plan(
@@ -52,7 +71,7 @@ pub fn insert_struct_position_rule_before_coercion(
                 .to_string(),
         ));
     };
-    rules.insert(position, Arc::new(StructOperandsByPosition));
+    rules.insert(position, Arc::new(rule));
     Ok(rules)
 }
 
@@ -189,26 +208,47 @@ fn clashes(target: &DataType, current: &DataType, seat: Seat, case_sensitive: bo
     struct_pair(target, current) && pairing(target, current, seat, case_sensitive) == Pairing::Clash
 }
 
-fn align_node(node: LogicalPlan, case_sensitive: bool) -> Result<Transformed<LogicalPlan>> {
+fn align_node(
+    node: LogicalPlan,
+    case_sensitive: bool,
+    transparent: bool,
+) -> Result<Transformed<LogicalPlan>> {
     if !has_struct_candidate(&node) {
         return Ok(Transformed::no(node));
     }
+    let (node, keys_moved) = match node {
+        LogicalPlan::Join(join) => {
+            let (join, moved) = join::align_join(join, case_sensitive)?;
+            (LogicalPlan::Join(join), moved)
+        }
+        other => (other, false),
+    };
     let mut schema = DFSchema::empty();
     for input in node.inputs() {
         schema.merge(input.schema());
     }
     let preserver = NamePreserver::new(&node);
-    node.map_expressions(|expr| {
+    let mut aligned = node.map_expressions(|expr| {
         let name = preserver.save(&expr);
-        expr.transform_up(|leaf| {
+        let aligned = expr.transform_up(|leaf| {
             refuse_in_expr(&leaf, &schema)?;
             align_expr(leaf, &schema, case_sensitive)
-        })
-        .map(|aligned| aligned.update_data(|expr| name.restore(expr)))
-    })
+        })?;
+        let aligned = if transparent {
+            aligned
+        } else {
+            aligned.transform_data(join::opaque)?
+        };
+        Ok(aligned.update_data(|expr| name.restore(expr)))
+    })?;
+    aligned.transformed |= keys_moved;
+    Ok(aligned)
 }
 
 fn has_struct_candidate(node: &LogicalPlan) -> bool {
+    if matches!(node, LogicalPlan::Join(join) if join::keyed(join)) {
+        return true;
+    }
     let mut found = false;
     let _ = node.apply_expressions(|expr| {
         found = expr
@@ -216,8 +256,12 @@ fn has_struct_candidate(node: &LogicalPlan) -> bool {
                 Ok(matches!(
                     leaf,
                     Expr::BinaryExpr(BinaryExpr { op, .. }) if is_comparison(*op)
-                ) || matches!(leaf, Expr::InList(_) | Expr::InSubquery(_))
-                    || matches!(leaf, Expr::ScalarFunction(function) if function.func.name() == ELEMENT_AT))
+                ) || matches!(
+                    leaf,
+                    Expr::InList(_) | Expr::InSubquery(_) | Expr::Between(_)
+                ) || matches!(leaf, Expr::Case(case) if case.expr.is_some())
+                    || matches!(leaf, Expr::ScalarFunction(function)
+                        if matches!(function.func.name(), ELEMENT_AT | forms::NULLIF)))
             })
             .unwrap_or(false);
         Ok(if found {
@@ -300,6 +344,11 @@ fn align_expr(expr: Expr, schema: &DFSchema, case_sensitive: bool) -> Result<Tra
             refuse_reordered_map_key(&function, schema, case_sensitive)?;
             Ok(Transformed::no(Expr::ScalarFunction(function)))
         }
+        Expr::ScalarFunction(function) if function.func.name() == forms::NULLIF => {
+            forms::align_nullif(function, schema, case_sensitive)
+        }
+        Expr::Between(between) => forms::align_between(between, schema, case_sensitive),
+        Expr::Case(case) => forms::align_case(case, schema, case_sensitive),
         other => Ok(Transformed::no(other)),
     }
 }
@@ -877,6 +926,9 @@ pub fn duplicate_field_operands_by_position(expr: Expr, schema: &DFSchema) -> Re
                 PlannerResult::Planned(planned) => Transformed::yes(planned),
                 PlannerResult::Original((left, right)) => Transformed::no(binary(left, op, right)),
             })
+        }
+        Expr::ScalarFunction(function) if function.func.name() == forms::NULLIF => {
+            forms::planned_nullif(function, schema)
         }
         other => Ok(Transformed::no(other)),
     })

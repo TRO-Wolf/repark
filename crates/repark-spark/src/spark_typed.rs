@@ -115,7 +115,7 @@ fn rewrite_projection_display(plan: LogicalPlan) -> Result<LogicalPlan> {
             Expr::Alias(alias) => alias.expr.as_ref(),
             other => other,
         };
-        let display = spark_display(inner);
+        let display = spark_display(&crate::struct_position::without_relabels(inner));
         if display == name {
             continue;
         }

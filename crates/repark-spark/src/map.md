@@ -1245,18 +1245,17 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `CAST('1e200' AS DOUBLE)` to a non-null Float64 literal; `SparkProjectionDisplay`
   aliases unaliased projections whose DataFusion names carry `Int64(` /
   `datafusion.public` / backticks to Spark display (`(my col + 1)`); `__repark_spark_as__`
-  is the identity UDF that carries a Spark display name.
+  is the identity UDF of a Spark display name.
   **Round 5 (2026-09-15):** `__repark_suffix_literal__` is the companion
   provenance-marker UDF with fold-through and display unwrapping, registered in
   `extension.rs` and the binding `sql_context`.
   **JAVA-DOUBLE-FD-1 fix round 1 (2026-09-15, R-17c-2):** `SUFFIX_LITERAL_NAME`
-  is a re-export of `repark_functions::java_double::SUFFIX_LITERAL_NAME` — the
-  marker's single source lives in the capability crate because
-  `SparkFloatStringify` must recognize the token and the DAG forbids a
-  functions→spark edge.
+  is a re-export of `repark_functions::java_double::SUFFIX_LITERAL_NAME`: the
+  marker lives in the capability crate, as `SparkFloatStringify` reads it and the DAG
+  forbids a functions→spark edge.
   **Round 5 (2026-09-15):** `SparkProjectionDisplay` rewrites only the root
   projection and keeps explicit non-marker aliases.
-  **Round 6 (2026-09-15):** `cargo fmt` applied.
+  The display reads through struct relabels (`without_relabels`, 2026-11-10).
   **Round 8 (2026-09-15):** `SuffixLiteral` schema/display names come from the
   value text (Java double/float text, scale-exact decimals), so nested columns never
   carry the marker; the fold covers numeric targets except `Int64` (whose CAST anchor
@@ -1264,8 +1263,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   names only (balanced `Int64(1)`, table-qualified `t.Int64(1)`, negated
   `(- 0.0)`; composites like `a + Int64(1)` or `getbit(Int64(6),Int64(1))`
   keep their plan names) and names unfolded integer `CAST`s from the literal
-  inner. Inner renames are out of scope:
-  analysis runs twice and outer references would go stale.
+  inner. Inner renames are out of scope: analysis runs twice and outer references would go stale.
 - `spark_ast.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** the passthrough runs every planned
   statement through `normalize/map_ordering.rs`'s `refuse_map_ordering` before analysis, so a
   map comparison, `ORDER BY` or `DISTINCT` refuses as Spark does (verifier V-003).
