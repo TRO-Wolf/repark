@@ -8,7 +8,8 @@ from typing import Any
 
 VIEW = (
     "CREATE OR REPLACE TEMPORARY VIEW nm AS "
-    "SELECT named_struct('a', 1, 'b', 2) AS s, named_struct('b', 2, 'a', 1) AS t"
+    "SELECT named_struct('a', 1, 'b', 2) AS s, named_struct('b', 2, 'a', 1) AS t, "
+    "named_struct('a', 1, 'a', 2) AS d"
 )
 FORMS = {
     "between": "s BETWEEN t AND t",
@@ -17,6 +18,7 @@ FORMS = {
     "nullif": "nullif(s, t)",
     "nullif_rev": "nullif(t, s)",
 }
+DUPLICATE_FORMS = {"eq_dup": "d = t", "lt_dup": "d < t"}
 STRING_DOORS = ("sql", "select_expr", "f_expr")
 TYPED_FORMS = ("between", "not_between", "nullif")
 
@@ -31,6 +33,11 @@ def gen_name_cells() -> list[dict[str, str]]:
     ]
     cells += [
         {"form": "nullif_rev", "door": door, "text": FORMS["nullif_rev"]} for door in STRING_DOORS
+    ]
+    cells += [
+        {"form": form, "door": door, "text": text}
+        for form, text in DUPLICATE_FORMS.items()
+        for door in STRING_DOORS
     ]
     return [{"id": f"N{index:04d}", **cell} for index, cell in enumerate(cells, start=1)]
 

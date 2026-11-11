@@ -210,7 +210,7 @@ def outcome_of_duplicate_nullif(spark: Any) -> list[Any]:
 def test_the_cells_file_carries_every_dataframe_door_cell() -> None:
     assert len(CELLS) == 2426
     assert len(FRAME_CELLS) == 1195
-    assert len(NAME_CELLS) == 18
+    assert len(NAME_CELLS) == 24
 
 
 @pytest.mark.parametrize("cell", FRAME_CELLS, ids=[cell["id"] for cell in FRAME_CELLS])

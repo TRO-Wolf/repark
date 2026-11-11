@@ -90,9 +90,15 @@ only. Both cells are left out of the pins under the card.
 
 ## Name preservation (ruling 4)
 
-`../names/` holds 18 unaliased cells on `spark`, `base` (main `68f70b0f`) and `head`. Head equals base on all 18.
-Five match Spark exactly and are pinned to Spark's name: N0004 and N0008 (typed `between`, `~between`), N0014 and
-N0018 (`F.expr` `nullif`), N0015 (typed `nullif`). On the other 13, DataFusion's rendering differs from Spark's on
-base already (`s BETWEEN t AND t` for `between(s, t, t)`), and the pin holds that no name shows the relabel. Before
-`without_relabels`, `selectExpr` showed `__repark_struct_by_position__(t)` on N0002, N0006, N0010, N0013 and N0017,
-as main still does for #1292's `=`, `<` and `IN`.
+`../names/` holds 24 unaliased cells on `spark`, `base` (main `68f70b0f`) and `head` (this head; the six cells
+N0019–N0024 were added in item 5 and measured on its ci-profile build, where the first 18 give the release names).
+Head equals base on N0001–N0018. Five match Spark exactly and are pinned to Spark's name: N0004 and N0008 (typed
+`between`, `~between`), N0014 and N0018 (`F.expr` `nullif`), N0015 (typed `nullif`). On the other 13, DataFusion's
+rendering differs from Spark's on base already (`s BETWEEN t AND t` for `between(s, t, t)`), and the pin holds that
+no name shows the relabel. Before `without_relabels`, `selectExpr` showed `__repark_struct_by_position__(t)` on
+N0002, N0006, N0010, N0013 and N0017, as main still does for #1292's `=`, `<` and `IN`.
+
+N0019–N0024 compare a duplicate-named operand (`d = t`, `d < t`). Base shows the relabel on the SQL door
+(`__repark_struct_by_position_planned__(…)`, the binder's) and on `selectExpr`; head shows none, and its `selectExpr`
+names equal Spark's `(d = t)` and `(d < t)`. They pin the transparent relabel (F-2): with it reverted, the SQL-door
+names show the binder's relabel again (item 5's revert check).

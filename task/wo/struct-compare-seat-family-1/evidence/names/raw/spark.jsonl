@@ -16,3 +16,9 @@
 {"columns": ["nullif(t, s)"], "door": "sql", "form": "nullif_rev", "id": "N0016", "status": "ok", "text": "nullif(t, s)"}
 {"columns": ["nullif(t, s)"], "door": "select_expr", "form": "nullif_rev", "id": "N0017", "status": "ok", "text": "nullif(t, s)"}
 {"columns": ["nullif(t, s)"], "door": "f_expr", "form": "nullif_rev", "id": "N0018", "status": "ok", "text": "nullif(t, s)"}
+{"columns": ["(d = t)"], "door": "sql", "form": "eq_dup", "id": "N0019", "status": "ok", "text": "d = t"}
+{"columns": ["(d = t)"], "door": "select_expr", "form": "eq_dup", "id": "N0020", "status": "ok", "text": "d = t"}
+{"columns": ["(d = t)"], "door": "f_expr", "form": "eq_dup", "id": "N0021", "status": "ok", "text": "d = t"}
+{"columns": ["(d < t)"], "door": "sql", "form": "lt_dup", "id": "N0022", "status": "ok", "text": "d < t"}
+{"columns": ["(d < t)"], "door": "select_expr", "form": "lt_dup", "id": "N0023", "status": "ok", "text": "d < t"}
+{"columns": ["(d < t)"], "door": "f_expr", "form": "lt_dup", "id": "N0024", "status": "ok", "text": "d < t"}
