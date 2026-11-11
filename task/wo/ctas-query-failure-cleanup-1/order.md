@@ -171,3 +171,40 @@ table with the CTAS schema, where Spark refuses.
 - CTAS-CANCEL-CLEANUP-1 (S2, with the measured leftover);
 - NATIVE-CTAS-FAILURE-CLEANUP-1 (with a native gap-list row);
 - S3T-CTAS-FAILED-DROP-1.
+
+## Rulings after item 1 (orchestrator, as the order's author, 2026-11-11)
+
+Item 1, at `a6178288`, re-measured the 228-cell table on main. Every class matches the 1.5.6 table.
+
+1. **The 18 `saveAsTable` × v3 F-pin seats are struck, with the measured cause.**
+   - `saveAsTable` has no public way to request format version 3 on main, measured three ways:
+     - `.option` is ignored for creation;
+     - the catalog `table-default.format-version` is refused as reserved;
+     - there is no `tableProperty` API.
+   - The facade pins keep `saveAsTable` × v2 for F1, F3 and F6, and SQL and `writeTo` on v2 and v3. K4's `saveAsTable`
+     × v3 control stays: a v3 seed plus an overwrite keeps v3, measured intact.
+   - No product change: adding a properties channel to `saveAsTable` is outside this unit. Card
+     SAVEASTABLE-FORMAT-VERSION-1 (S3) at merge. Its first step is to measure whether Spark 4.1.2 offers a channel.
+2. **The S3 Tables row of the completeness check changes from "out" to "measured live".**
+   - This follows the owner's 2026-11-11 "Go" on the scoped label, ICE-V2-FLAT-AWS-LABEL-1, and its gate G5.
+   - The cells are the G5 module of that unit's test-only PR, `python/repark/tests/parity/test_aws_acceptance_ctas_failure.py`.
+     It runs from main on Glue and S3 Tables, before this unit merges (the baseline) and after it.
+   - **The reading rule:**
+     - a leftover that no catalog reader can see is a card;
+     - a catalog entry that reads as an empty table blocks;
+     - a catalog entry that lists the table but cannot be read also blocks (the orchestrator's reading).
+   - **Coverage, READ:**
+     - Glue takes `begin_staged_create` (`ctas.rs:272`), so this unit's helper covers it.
+     - S3 Tables takes the service-managed create-first and drop-on-failure path (`ctas.rs:646-649`, `707-724`), which
+       this unit does not change.
+     - If the G5 run shows a blocking S3 Tables entry, the fix is a delta on this unit or its own unit, ruled then.
+   - The builder runs nothing on AWS. The launcher has no AWS credentials, and the workflow runs only from main.
+3. **The F6 orphan data files are smaller on main than the order said.**
+   - On 1.5.6, OPT3 left `00000` plus 66 Parquet files. On main it leaves `00000` plus 0, with two nondeterministic
+     single orphans across 28 F6 cells.
+   - The metadata class is unchanged. The card CTAS-OPTIONS-ORPHAN-DATA-1 records the main numbers.
+4. **Recorded for the records clerk, not this unit:**
+   - `DROP TABLE` on the hadoop catalog leaves every file behind (the cancel rerun kept `v1` and 12 Parquet files). Spark's
+     behaviour on the same drop is to be measured before any card says it differs.
+   - The `saveAsTable` F5 seats run on the options path, because the target size arrives as a write option. They are
+     recorded as options-path cells.
