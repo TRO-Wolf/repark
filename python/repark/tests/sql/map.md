@@ -44,6 +44,9 @@ pins.
   `DECIMAL-EXPR-FLOAT-COMPARE-1` residues may refuse but never answer wrong. The delta adds 10 cells: V-B1, native
   `ROLLUP` / `CUBE` / `GROUPING SETS` over a zero comparison; V-A3, `selectExpr` and `F.expr` names of `<=>`
   (`(d <=> 0.0)`, never `__repark_spark_nonnull__`).
+- [test_signed_zero_keys_1.py](test_signed_zero_keys_1.py) — SIGNED-ZERO-NORMALIZE-1 part B part 1 (P5): replays the 780 read cells of
+  `data/signed_zero_keys_1_cells.jsonl` (470 key rows WRONG on `276dc503`, 310 controls) on `spark-sql`, `f-expr`,
+  `typed` and native against Spark 4.1.2's view answers, and pins that a `SET` on either door cannot turn the key wrap off.
 - [test_struct_compare_seat_family_1.py](test_struct_compare_seat_family_1.py) — STRUCT-COMPARE-SEAT-FAMILY-1 — every
   DataFrame typed and string door cell of the family table matches Spark: its rows, or Spark's class on a
   refusal (a carded class gap: a refusal; other known cells: no panic). Generated names never show the

@@ -16,7 +16,6 @@ from _flat_matrix_cells import (
     NEGATIVE_ZERO,
     PREDICATES,
     SIGNED_ZERO_PR_A,
-    SIGNED_ZERO_PR_B,
     TYPED_BUILDERS,
     cells_for_group,
     class_a_key,
@@ -116,14 +115,12 @@ def test_class_b_cells_have_no_committed_key() -> None:
     assert all(class_a_key(cell) is None for cell in class_b)
 
 
-def test_known_open_dict_covers_p15_and_float_cells_only() -> None:
-    assert len(KNOWN_OPEN) == 58
+def test_known_open_dict_covers_p15_only() -> None:
+    assert len(KNOWN_OPEN) == 30
     p15 = [cell_id for cell_id, unit in KNOWN_OPEN.items() if unit == SIGNED_ZERO_PR_A]
-    floats = [cell_id for cell_id, unit in KNOWN_OPEN.items() if unit == SIGNED_ZERO_PR_B]
     assert len(p15) == 30
     assert all(cell_id.endswith("|p15") for cell_id in p15)
-    assert len(floats) == 28
-    assert all(cell_id.startswith("float|") for cell_id in floats)
+    assert not any(cell_id.startswith("float|") for cell_id in KNOWN_OPEN)
 
 
 def test_classifier_equal_when_answers_match() -> None:
