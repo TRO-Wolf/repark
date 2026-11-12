@@ -1208,6 +1208,25 @@ perfectly good read.
   read is aws-ephemeral-runs-1 C-017 and C-030.
 - **Dated 2026-10-28, AUD-005 (independent audit; a gate defect, not a product result; CLOSED 2026-10-29):** the nightly cross-read helper (`python/repark/tests/parity/_acceptance_cross_read.py`, lines 298–314 and 376–384) classifies every Spark exception as `SPARK-CANNOT-READ`, and accepts that outcome whenever the table has nanosecond columns. A connection failure therefore passes as the expected nanosecond limitation: the audit's probe simulates a `ConnectionError` on a nanosecond table and the gate accepts it, while a non-nanosecond control is rejected. The narrowing (accept only the unsupported-type condition) is CROSS-READ-GATE-CLASS-1, filed and not dispatched (P3; card [cross-read-gate-class-1](../task/roadmap/mid-term/cross-read-gate-class-1-card-2026-10-28.md)). This row also says nothing about the green cross-read runs; the audit makes no claim that one met the simulated failure. Narrowed by CROSS-READ-GATE-CLASS-1 on 2026-10-29 (branch `fix/cross-read-gate-class-1`), merged 2026-10-29 as `7ef6bcf4` (PR #1211).
 
+#### LOCAL-DROP-RECREATE-STALE-WRITE-1 — DATED ROW 2026-11-12: a Hadoop drop and recreate can write on the dropped table's metadata
+
+- **repark** — **OPEN 2026-11-12.** On a `type=hadoop` catalog, in one session, take a table
+  whose history holds a `CREATE OR REPLACE`. If it is dropped and recreated under the same name,
+  and the recreated table's next commit at a reused version number is also a replace, then later
+  reads and writes use the dropped table's metadata. Spark reads the wrong rows from disk
+  afterwards. The cause: the memory catalog's staged replace publish neither caches what it wrote
+  nor invalidates the location it replaced, and Hadoop metadata names (`v1`, `v2`, …) are reused
+  after a drop.
+- **Apache Spark** — returns the recreated table's rows.
+- **Workaround for 1.5.6** — set `repark.iceberg.metadataCache=false` on Hadoop catalogs; the
+  probes measured the right answer with the cache off.
+- **Not affected** — Glue and S3 Tables, whose metadata file names carry a UUID, and a fresh
+  session.
+- **Evidence** — the 2026-11-12 probes, filed with the fix.
+- **Rationale** — DATED ROW 2026-11-12, owner ruling 2026-11-12 ("Go with the defaults"): an S1
+  wrong write. It blocks the full format-v2 label, not the scoped label (ICE-V2-FLAT-AWS-LABEL-1).
+  The fix rides v1.5.7; its card is filed by the fix lane.
+
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
 
 - **repark** — the local catalog keeps its table pointer in process memory. That is the
