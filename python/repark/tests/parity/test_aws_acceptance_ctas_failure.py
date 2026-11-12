@@ -37,6 +37,8 @@ SHELL_CELL = "S1"
 RETRY_CELL = "R1"
 RETRY_VIEW = "g5_retry_source"
 RETRY_JOIN_ROWS = 100_000
+EMPTY_READ = {"count": 0, "min": None, "max": None, "error": None}
+RECOVERED_READ = {"count": 3, "min": 2, "max": 4, "error": None}
 PARITY_DIR = Path(__file__).resolve().parent
 
 pytestmark = pytest.mark.skipif(
@@ -243,6 +245,8 @@ def test_ctas_failure_cell(spec: CellSpec, kind: str, sessions: Any, records_pat
             error = f"{type(failure).__name__}: {failure}"[:500]
     listed = _listed(spark, kind, target_short)
     read = _read(spark, target_fq) if listed else None
+    caveat = spec.kill and kind == "s3tables" and listed
+    recovery = _recover(repark, spark, src_fq, target_fq) if caveat else None
     _record(
         records_path,
         kind,
@@ -254,6 +258,7 @@ def test_ctas_failure_cell(spec: CellSpec, kind: str, sessions: Any, records_pat
         kill_return_code=return_code,
         listed=listed,
         spark_read=read,
+        recovery=recovery,
         leftover="not-measured",
     )
     if spec.cell == "C5":
@@ -261,10 +266,28 @@ def test_ctas_failure_cell(spec: CellSpec, kind: str, sessions: Any, records_pat
             f"C5 blocks: the live table after a failed replace is unreadable or short: {read}"
         )
         return
+    if spec.kill:
+        assert return_code == -signal.SIGKILL, f"K is vacuous: the child exited {return_code}"
+    if caveat:
+        assert read == EMPTY_READ, f"K blocks: the killed CTAS left a non-empty table: {read}"
+        assert recovery == RECOVERED_READ, f"K blocks: the replace did not recover: {recovery}"
+        return
     if listed and spec.control_rows is None:
         assert read is not None and read["error"] is None and read["count"] != 0, (
             f"{spec.cell} blocks: listed table reads as empty or unreadable: {read}"
         )
+
+
+def _recover(repark: ReparkSession, spark: Any, src: str, target: str) -> dict[str, Any]:
+    try:
+        repark.sql(
+            f"CREATE OR REPLACE TABLE {target} AS SELECT id, CAST('1' AS INT) AS n FROM {src} "
+            "WHERE id BETWEEN 2 AND 4"
+        ).collect()
+        spark.catalog.refreshTable(target)
+    except Exception as failure:
+        return {"count": None, "min": None, "max": None, "error": _error(failure)}
+    return _read(spark, target)
 
 
 def _error(failure: Exception) -> str:
