@@ -18,6 +18,8 @@ use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
 use crate::pre_execute::PreExecute;
 use crate::session::ReparkSessionBuilder;
 
+mod native_ctas;
+
 pub const ALLOW_LOCAL_FILESYSTEM_DDL_KEY: &str = "repark.sql.allowLocalFilesystemDDL";
 
 pub const NATIVE_ENTRY_REFUSAL: &str = "repark.sql() does not allow local-file DDL";
@@ -86,7 +88,8 @@ async fn judged_plan(cx: &EngineContext<'_>, query: &str) -> Result<LogicalPlan>
 
 async fn refuse_native_statement(cx: &EngineContext<'_>, query: &str) -> Result<()> {
     let plan = judged_plan(cx, query).await?;
-    refuse_writes(cx.catalogs, &plan, Entry::NoOptIn)
+    refuse_writes(cx.catalogs, &plan, Entry::NoOptIn)?;
+    native_ctas::refuse_iceberg_ctas(cx.ctx, cx.catalogs, &plan)
 }
 
 impl ReparkSessionBuilder {

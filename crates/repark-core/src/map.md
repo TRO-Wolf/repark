@@ -52,11 +52,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   and on a pass hands the statement to the inner dialect; `execute_with_write_options`,
   `on_session_built`, `type_planner` and `configure_analyzer_rules` forward to it, so the inner
   dialect's planner and analyzer rules shape both plans. `ReparkSessionBuilder::with_local_fs_guard`
-  sets the builder's `local_fs_guard`, and `session_dialect` wraps, at build, whichever dialect the
-  builder would otherwise use (the one handed in, else `DataFusionDialect`); `repark.sql()`'s
+  sets `local_fs_guard`, and `session_dialect` wraps, at build, the dialect the
+  builder would otherwise use (the one handed in, else `DataFusionDialect`); the
   native door uses it. Its refusal says `repark.sql() does not allow local-file DDL` and that the
   entry has no opt-in (`NATIVE_ENTRY_REFUSAL`). `catalog_state.rs` imports `strip_ascii_prefix_ci`
-  from here; its private copy is deleted.
+  from here. Then `native_ctas` (NATIVE-CTAS-ICEBERG-REFUSE-1).
 - `microbatch/` + [microbatch/](microbatch/map.md) — **MB-3 (2026-10-07):** the Session-owned
   micro-batch driver (1.7): the `StreamingQueryManager` installed as a config extension through
   `Session::context()`, the `QueryHandle`, the trigger loop and the progress surface. One

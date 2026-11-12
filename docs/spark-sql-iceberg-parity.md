@@ -1245,6 +1245,31 @@ perfectly good read.
   (`-SIGKILL`), that the leftover reads exactly zero rows (never a partial set), and that
   `CREATE OR REPLACE` recovers it. S1 and R1 are as above.
 
+#### NATIVE-CTAS-ICEBERG-REFUSE-1 — `repark.sql()` CTAS into an Iceberg table refuses (declared native-door refusal, owner ruling 2026-11-12)
+
+- **repark** — on the native door (`repark.sql()`), `CREATE TABLE … AS SELECT` whose target is
+  an Iceberg catalog refuses before any catalog call with `UnsupportedOperationException`:
+  `repark.sql() does not support CREATE TABLE ... AS SELECT into the Iceberg table <target>:
+  create the table with its columns, CREATE TABLE <target> (<columns>), then INSERT INTO <target>
+  SELECT ...; or run the same statement through spark.sql (NATIVE-CTAS-ICEBERG-REFUSE-1)`. That
+  covers every spelling (`IF NOT EXISTS`, `OR REPLACE`, a column list, any letter case, an
+  unqualified target under an Iceberg default catalog) and `EXPLAIN`, `EXPLAIN ANALYZE` and
+  `PREPARE` of one. Nothing is created, and an existing table keeps its rows and metadata. Before
+  the refusal, a `UNION`, `DISTINCT`, `INTERSECT`, `EXCEPT` or aggregate query created the table
+  with zero rows and answered success, other shapes failed with the fork's `register_table does
+  not support tables with data`, and `OR REPLACE` dropped an existing table before the query ran.
+  CTAS into the session's in-memory catalog, a plain `CREATE TABLE`, `INSERT … SELECT` and every
+  `spark.sql` statement are unchanged. The native door is DataFusion's `CreateMemoryTable`, not
+  `crates/repark-sql/src/create_table.rs`.
+- **Apache Spark** — the same CTAS stores the query's rows, and so do RePark's `spark.sql` and the
+  native two-step workaround, for every shape measured. *(oracle: PySpark 4.1.2 with Iceberg
+  1.11.0 on a Hadoop catalog, 2026-11-12, `task/wo/native-ctas-iceberg-refuse-1/evidence/step0/`.)*
+- **Pin** — `python/repark/tests/sql/test_native_ctas_iceberg_refuse_1.py` and
+  `crates/repark-core/src/local_fs_policy/native_ctas/tests.rs`.
+- **Rationale** — DECLARED refusal, owner ruling 2026-11-12, verbatim "Okay go with the default"
+  (item 3, option (b)): silent data loss becomes a loud refusal. The real native CTAS waits on the
+  owner's routing decision ([card](../task/roadmap/mid-term/native-ctas-iceberg-refuse-1-card-2026-11-12.md)).
+
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
 
 - **repark** — the local catalog keeps its table pointer in process memory. That is the
