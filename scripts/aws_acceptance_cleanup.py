@@ -13,16 +13,16 @@ from typing import Any, NamedTuple
 from urllib.parse import urlparse
 
 SCRATCH_NAMESPACE = "testing_repark_acceptance"
-RUN_PREFIX = re.compile(r"testing_r[0-9]+a[0-9]+_(?:acc|u|x)_")
-RUN_GROUP = re.compile(r"testing_r[0-9]+a[0-9]+_(?:(?:acc|u|x)_)?")
-STEM_OF_PREFIX = re.compile(r"testing_(r[0-9]+a[0-9]+_(?:acc|u|x)_)")
+RUN_PREFIX = re.compile(r"testing_r[0-9]+a[0-9]+_(?:acc|u|x|fm|cf)_")
+RUN_GROUP = re.compile(r"testing_r[0-9]+a[0-9]+_(?:(?:acc|u|x|fm|cf)_)?")
+STEM_OF_PREFIX = re.compile(r"testing_(r[0-9]+a[0-9]+_(?:acc|u|x|fm|cf)_)")
 PLACEHOLDER_WAREHOUSE = "s3://example-warehouse/"
 GLUE_DELETE_BATCH = 100
 S3_DELETE_BATCH = 1000
 ClientFactory = Callable[[str], Any]
 DESCRIPTION = (
     "Delete the tables and S3 path-write objects of one run-and-leg prefix"
-    " (testing_r<digits>a<digits>_<acc|u|x>_), or the tables of every run prefix whose newest"
+    " (testing_r<digits>a<digits>_<acc|u|x|fm|cf>_), or the tables of every run prefix whose newest"
     " table is older than N hours, from the Glue scratch database and the S3 Tables scratch"
     " namespace."
     " Dry run unless --execute."
@@ -38,10 +38,10 @@ class ScratchTable(NamedTuple):
 
 
 def validate_run_prefix(prefix: str) -> str:
-    """Return ``prefix`` when it is ``testing_r<digits>a<digits>_<acc|u|x>_``, else raise."""
+    """Return ``prefix`` when it is ``testing_r<digits>a<digits>_<acc|u|x|fm|cf>_``, else raise."""
     if RUN_PREFIX.fullmatch(prefix) is None:
         raise ValueError(
-            f"run prefix must match testing_r<digits>a<digits>_<acc|u|x>_, got {prefix!r}"
+            f"run prefix must match testing_r<digits>a<digits>_<acc|u|x|fm|cf>_, got {prefix!r}"
         )
     return prefix
 
