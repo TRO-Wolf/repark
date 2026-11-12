@@ -16,4 +16,8 @@ Spark 4.1.2 legs, and compared cell by cell with the base (`276dc503`, item 1's 
   (`python/repark/tests/sql/data/signed_zero_keys_1_cells.jsonl`) from the head read leg, Spark's view answers and
   both label sets.
 
+- [scan_predicates.py](scan_predicates.py) — runs `EXPLAIN` on every step-0 read cell on both doors and keeps the
+  `IcebergTableScan` lines (the pushed predicate); `scan-predicates-276dc503.jsonl` and `scan-predicates-head.jsonl` are
+  its legs (guard (d) pin 1).
+
 Up: [../map.md](../map.md).

@@ -66,12 +66,24 @@ ACCEPTED-WHERE-SPARK-REFUSED 13, BOTH-REFUSED 13, WRONG-WRITE 8, SIGN-ONLY+WRONG
   `key_tests.rs` (`no_provider_in_use_takes_a_wrapped_filter_as_exact`).
 - The Filter stays above the scan and the rows equal the truth (the same pin, over Parquet, and every CM-* clause cell
   above on Iceberg).
-- On Iceberg, nothing new is converted: `__repark_normalize_zero__` has no arm in the fork's `expr_to_predicate.rs`,
-  so a wrapped predicate copied into `TableScan.filters` is dropped by the scanner, and the base predicate it sits
-  beside is the same on base and head. The measured base-against-head comparison of pushed predicates and pruning
-  counts is listed as open in the hand-back.
+- On Iceberg, nothing new is converted ([scan_predicates.py](scan_predicates.py)): `EXPLAIN` of all 617 step-0
+  read cells on both doors, on the base and head wheels, gives 597 cells with an `IcebergTableScan`, and every
+  `predicate:[...]` is identical on base and head (24 cells push a non-empty predicate). No scan line names the UDF.
+  File and row-group pruning follow from that predicate alone; the pruning counters themselves were not read.
 
-## 5. Finding outside part 1
+## 5. Red and green (the facade pin, P5)
+
+The pin's 780 cells run on the `276dc503` wheel and on the head wheel (same harness, `PYTHONPATH` to each wheel):
+
+| Build | Key rows failing | Key rows passing | Controls failing | Controls passing |
+|---|---|---|---|---|
+| `276dc503` | 470 | 0 | 0 | 310 |
+| head | 0 | 470 | 0 | 310 |
+
+The pytest run on `276dc503`: 5 failed (the four routes and the `SET` pin), 1 passed (the count pin). On the head: 6
+passed. The Rust pins pass on the head; on a `keys`-off session the key answers return to the bit-pattern ones.
+
+## 6. Finding outside part 1
 
 - **A recursive `UNION` under `count(*)` panics** in DataFusion's `multi_group_by` (`index out of bounds: the len is 0`)
   on base and head alike, with integer keys too and with the key wrap off; `SELECT x FROM r` answers. Proposed card
