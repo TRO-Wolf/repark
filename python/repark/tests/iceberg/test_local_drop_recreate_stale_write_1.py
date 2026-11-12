@@ -122,9 +122,8 @@ def new_session(warehouse: Path, cache: bool = True) -> Any:
         .config(f"spark.sql.catalog.{CATALOG}", "org.apache.iceberg.spark.SparkCatalog")
         .config(f"spark.sql.catalog.{CATALOG}.type", "hadoop")
         .config(f"spark.sql.catalog.{CATALOG}.warehouse", str(warehouse))
+        .config("repark.iceberg.metadataCache", "true" if cache else "false")
     )
-    if not cache:
-        builder = builder.config("repark.iceberg.metadataCache", "false")
     session = builder.getOrCreate()
     session.sql(f"CREATE NAMESPACE IF NOT EXISTS {CATALOG}.ns").collect()
     return session
