@@ -4975,6 +4975,22 @@ still open is `isModifiable`.
 - **Rationale** — DECLARED by ruling G (2026-11-08: "min/max sign and zero tie order declared"). The answer differs
   only in a zero's sign; a fix would need Spark's encounter order inside the aggregate.
 
+### SIGNED-ZERO-KEYS-1-COLLECTSET — DataFrame `F.collect_set` over both zeros keeps one zero, which may carry the other sign — **DECLARED 2026-11-12 (owner ruling, SIGN-ONLY beside MM-1)**
+
+- **repark** — The DataFrame `F.collect_set` over a FLOAT or DOUBLE column plans through the float key's distinct,
+  so both zeros become one element. That element is always `0.0`: over `-0.0, 0.0, 0.0` it answers `[0.0]`.
+- **Apache Spark** — Spark keeps one element, the first zero it meets: `[-0.0]` when `-0.0` comes first, `[0.0]`
+  when `0.0` comes first. The answer is the same with 1 or 2 partitions and through SQL `collect_set`. The two values
+  are equal under SQL comparison. *(oracle: PySpark 4.1.2, measured 2026-11-12,
+  `task/wo/signed-zero-normalize-1/evidence/part-b/after/zero-side-legs.jsonl`.)*
+- **SQL door** — The SQL `collect_set(x)` on RePark still returns both zeros, `[-0.0, 0.0]`. That is a
+  function-internal comparison (`COLLECTION-FLOAT-EQ-1`), outside part 1.
+- **Pin** — `python/repark/tests/dataframe/test_group_agg.py::test_collect_set_keeps_one_zero_and_its_sign_is_the_declared_residue`
+  asserts one zero element and does not assert its sign. It keeps a non-zero control value.
+- **Rationale** — DECLARED by the owner on 2026-11-12, verbatim: "Go with the defaults on 1,2,4" (item 1: declare
+  `F.collect_set`'s zero sign SIGN-ONLY beside MM-1, and the pin asserts one element). This is the same "first zero it
+  meets" class that ruling G declared for `min` / `max`.
+
 ### SIGNED-ZERO-KEYS-1-TIES — `ORDER BY` ties between `-0.0` and `0.0` have no defined order — **DECLARED 2026-11-08 (ruling G)**
 
 - **repark** — `ORDER BY` on a FLOAT or DOUBLE key treats `-0.0` and `0.0` as equal. As with any tie, their

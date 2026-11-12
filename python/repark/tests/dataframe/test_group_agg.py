@@ -743,33 +743,27 @@ def test_mutation_multi_count_distinct_third_col_matters(spark: ReparkSession) -
     assert first_two == [{"count(DISTINCT x, y)": 1}]
 
 
-def test_collect_set_signed_zero_preserves_distinct_bits(spark: ReparkSession) -> None:
-    """Float edge: DF DISTINCT keeps IEEE ``-0.0`` distinct from ``+0.0``.
-
-    Live PySpark 4.1.2 normalizes ``-0.0`` to ``+0`` (set cardinality 1, multi-col count 1);
-    repark preserves the sign bit. Standing pin documents the accepted divergence, not a
-    silent defect.
-    """
-    import math
-
-    # SQL `-0.0` parses as DECIMAL 0 (no sign bit). IEEE signed-zero must enter
-    # as a Python float via createDataFrame.
+def test_collect_set_keeps_one_zero_and_its_sign_is_the_declared_residue(
+    spark: ReparkSession,
+) -> None:
     source = spark.createDataFrame(
-        [(1, -0.0), (1, 0.0), (1, 0.0)],
+        [(1, -0.0), (1, 0.0), (1, 0.0), (1, 1.5), (2, 1.5), (2, 1.5)],
         ["g", "x"],
     )
     result = source.groupBy("g").agg(F.collect_list("x"), F.collect_set("x"))
-    collected = result.to_arrow().to_pylist()
-    assert len(collected) == 1
-    list_vals = collected[0]["collect_list(x)"]
-    set_vals = collected[0]["collect_set(x)"]
-    assert len(list_vals) == 3
-    # Set keeps both signed zeros under DF DISTINCT (Spark collapses to one +0).
-    assert len(set_vals) == 2
-    signs = sorted(math.copysign(1.0, value) for value in set_vals)
-    assert signs == [-1.0, 1.0]
+    collected = {row["g"]: row for row in result.to_arrow().to_pylist()}
+    assert sorted(collected) == [1, 2]
+    assert len(collected[1]["collect_list(x)"]) == 4
+    zeros_and_control = sorted(collected[1]["collect_set(x)"])
+    assert len(zeros_and_control) == 2
+    assert zeros_and_control[0] == 0.0
+    assert zeros_and_control[1] == 1.5
+    assert collected[2]["collect_set(x)"] == [1.5]
 
-    # Multi-col pack inherits the same IEEE divergence vs Spark (oracle count = 1).
+
+def test_count_distinct_over_two_columns_keeps_signed_zero_pairs_apart(
+    spark: ReparkSession,
+) -> None:
     multi = spark.createDataFrame(
         [(-0.0, 0.0), (0.0, 0.0), (-0.0, -0.0)],
         ["a", "b"],

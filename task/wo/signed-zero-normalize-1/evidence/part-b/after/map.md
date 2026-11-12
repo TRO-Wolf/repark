@@ -21,7 +21,7 @@ Spark 4.1.2 legs, and compared cell by cell with the base (`276dc503`, item 1's 
   its legs (guard (d) pin 1).
 
 - [finish.md](finish.md) — the finish on `e710af4f`: the gate table, the two facade pins that moved and their
-  dispositions, the `F.collect_set` halt, and clause item 4's one-wrapper proof.
+  dispositions, the `F.collect_set` halt and its resolution (owner, 2026-11-12), and clause item 4's one-wrapper proof.
 - [confounded_wrappers.py](confounded_wrappers.py) — runs `EXPLAIN` on every answering confounded float cell and
   counts `__repark_normalize_zero__` per plan; `confounded-wrappers-head.jsonl` is its head leg (clause item 4).
 - [zero_side.py](zero_side.py), [zero_order.py](zero_order.py) — the side probes behind the moved facade pins

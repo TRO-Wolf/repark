@@ -1,4 +1,4 @@
-# Part 1 finish: the gates, the clause item 4 proof, and a halt
+# Part 1 finish: the gates, the clause item 4 proof, and a halt (resolved)
 
 Head `e710af4f` (the clippy fix on top of `5805a6ee`), base frozen at `276dc503`. Measured 2026-11-12 by
 `claude-opus-5-5`.
@@ -30,7 +30,7 @@ Those units' pin files all passed in both full profiles and again on their own:
 | Failing pin | Base answer | Head answer | Spark 4.1.2 (measured here) | Disposition |
 |---|---|---|---|---|
 | `dataframe/test_polars_is_duplicated_1.py::test_row_number_and_drop_duplicates_unchanged` (`keep.dropdup_double`, RePark's own base answer, not an oracle) | `dropDuplicates(['c'])` keeps `-0.0` and `0.0` | one `0.0` | one `0.0` | the clause seat DI-6 (`dropDuplicates`), moved to Spark's answer: the `-0.0` row is removed from the keep fixture |
-| `dataframe/test_group_agg.py::test_collect_set_signed_zero_preserves_distinct_bits` | `F.collect_set` over `-0.0, 0.0, 0.0` is `[-0.0, 0.0]` | `[0.0]` | `[-0.0]` | **HALT** (§2); the pin is left failing, pending a ruling |
+| `dataframe/test_group_agg.py::test_collect_set_signed_zero_preserves_distinct_bits` | `F.collect_set` over `-0.0, 0.0, 0.0` is `[-0.0, 0.0]` | `[0.0]` | `[-0.0]` | the §2 halt, **RESOLVED** by the owner's ruling of 2026-11-12: declared SIGN-ONLY, and the pin is renamed `test_collect_set_keeps_one_zero_and_its_sign_is_the_declared_residue` |
 
 ## 2. The halt: `F.collect_set` over both zeros moves, but not to Spark's answer
 
@@ -52,6 +52,15 @@ declaration names `min`/`max` only. The SQL-door `collect_set` does not move; it
 
 Proposed default for the owner: declare `F.collect_set`'s zero sign beside MM-1 (SIGN-ONLY, the zeros are equal under
 SQL comparison), and change the pin to assert one element.
+
+**RESOLVED, 2026-11-12.** The owner, verbatim: "Go with the defaults on 1,2,4". Item 1 adopts the default above:
+`F.collect_set`'s zero sign is declared SIGN-ONLY beside MM-1, as registry row SIGNED-ZERO-KEYS-1-COLLECTSET in
+`docs/spark-sql-iceberg-parity.md`. The pin is now
+`dataframe/test_group_agg.py::test_collect_set_keeps_one_zero_and_its_sign_is_the_declared_residue`. It asserts one
+zero element for `-0.0, 0.0, 0.0` and does not assert its sign. A non-zero control value (`1.5`, in the same group
+and in a second group) stays in the set. The `countDistinct('a', 'b')` assertion moves unchanged into its own test,
+`test_count_distinct_over_two_columns_keeps_signed_zero_pairs_apart`. Item 2 of the ruling, the card for that finding,
+is filed by a records clerk.
 
 **A second finding, unchanged by part 1:** `countDistinct('a', 'b')` over `(-0.0, 0.0), (0.0, 0.0), (-0.0, -0.0)`
 answers 3 on the base and the head. Spark answers 1. A multi-argument distinct aggregate's arguments are not a seat-2 key
