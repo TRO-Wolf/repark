@@ -23,6 +23,7 @@ pub(crate) mod frame_lineage;
 pub(crate) mod join_exact;
 mod predicate_names;
 pub(crate) mod self_join;
+mod signed_zero;
 pub(crate) mod skipping_limit;
 pub(crate) mod sort_names;
 mod struct_setop;
@@ -100,6 +101,11 @@ pub(super) fn context_with_df_54_1_rule_guards(
     Ok(context)
 }
 
+pub(super) fn finish_session_build(context: &SessionContext, dialect: &Arc<dyn SqlDialect>) {
+    dialect.on_session_built(context);
+    signed_zero::install_literal_seat(context);
+}
+
 pub(super) fn analyzer_rules_with_df_54_1_rule_guards()
 -> DataFusionResult<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
     let rules = window_rescan::analyzer_rules_with_sliding_rescan();
@@ -120,6 +126,10 @@ fn unnest_safe_optimizer_rules() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
             "decorrelate_lateral_join" => {
                 rules.push(Arc::new(subquery::ReparkLateralProjectionHoist));
                 rules.push(rule);
+            }
+            "simplify_expressions" => {
+                rules.push(rule);
+                rules.push(Arc::new(signed_zero::SignedZeroLiterals));
             }
             LEAF_PUSHDOWN_RULE_NAME => {
                 rules.push(Arc::new(UnnestSafeLeafProjectionPushdown { inner: rule }));

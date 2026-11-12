@@ -35,9 +35,8 @@ Source documentation may retain model provenance; code-quality grade tags stay o
 
 - `lib.rs` — re-exports G15 collation valves and FNP-15/16 `refuse_declared_function_in_*`
   from `repark-functions`, plus `refuse_sql_fragment` for `F.expr` / `filter_sql`.
-  **STAMP-2-R5P6-2 (2026-10-07):** re-exports `normalize/map_ordering.rs`'s
-  `analyze_built_plan` on the existing `normalize` line (the root stays at 156), for the
-  binding's native join door.
+  **STAMP-2-R5P6-2 (2026-10-07):** re-exports `normalize/map_ordering.rs`'s `analyze_built_plan` on
+  the existing `normalize` line (the root stays at 156), for the binding's native join door.
 - `insert_by_name.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `insert_by_name/nested.rs` (`refuse_nested_mismatch`) is
   deleted: the BY NAME append hands the conform stage (`conform_stage.rs`; formerly `wrap_store_outputs`) the by-name mode under the session's
   case rule and the table label, and the by-name source of `REPLACE WHERE` pairs at the planned
@@ -49,27 +48,25 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   a pure move off the ceiling), MERGE, OVERWRITE, BY NAME, options and TRUNCATE arms check at
   entry, `ctas.rs` checks staged properties and the replace target, and `spark_ast.rs` re-checks
   the post-plan DML target (case-folding and `EXPLAIN ANALYZE`). Pinned in `tests/enc_1.rs`.
-  **Fold 1 (2026-10-09):** `write_to_branch.rs` runs before the router's arms and rewrites
-  the target, so the arms never saw a branch or WAP write. `commit_write_on_branch` and
-  `commit_write_staged` now refuse a keyed table right after resolving it, before the WAP
-  branch is created, so a refused write leaves refs and the metadata pointer unmoved.
-  `create_table.rs` and `ctas.rs` open a staged create through
-  `repark_iceberg::catalog::begin_staged_create`. Every seat passes the table identifier,
-  so the text is one. Safety does not rest on these seats: the catalog guard in
-  `repark-iceberg` refuses the file and the commit without them. Pinned in
+  **Fold 1 (2026-10-09):** `write_to_branch.rs` runs before the router's arms and rewrites the
+  target, so the arms never saw a branch or WAP write. `commit_write_on_branch` and
+  `commit_write_staged` now refuse a keyed table right after resolving it, before the WAP branch is
+  created, so a refused write leaves refs and the metadata pointer unmoved. `create_table.rs` and
+  `ctas.rs` open a staged create through `repark_iceberg::catalog::begin_staged_create`. Every seat
+  passes the table identifier, so the text is one. Safety does not rest on these seats: the catalog
+  guard in `repark-iceberg` refuses the file and the commit without them. Pinned in
   `tests/enc_1_fold.rs`.
 - `router.rs`, `spark_ast.rs`, `append_with_options.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the DataFrame door's
   `source_by_name` reaches the conform: `execute_passthrough_inner` puts a `StatementPairing`
   (`source_by_name`, `case_sensitive`) on the statement's own state snapshot, where
-  `StoreOverflowCast` reads it; `execute_passthrough_by` and `execute_insert_source` take the
-  flag, and the plain-INSERT route of `execute_insert_routed` and the write-options append pass
-  it. **Build round 2 (2026-10-14):** both passthrough entries map their error through
-  `door_error`, which first peels the `StoreOverflowCast` rule's own analyzer context (the
-  label is the rule's `name()`, `repark_store_overflow_cast`; no message is read), so a
-  refusal raised inside the rule reaches Python with its Spark condition on the head. The
-  `overwrite(condition)` cells of `test_ice_write_df_2_overwrite.py` pin it.
-  `install_statement_pairing` and the one-line source SQL of `append_with_options.rs` keep both
-  functions under clippy's line ceiling.
+  `StoreOverflowCast` reads it; `execute_passthrough_by` and `execute_insert_source` take the flag,
+  and the plain-INSERT route of `execute_insert_routed` and the write-options append pass it.
+  **Build round 2 (2026-10-14):** both passthrough entries map their error through `door_error`,
+  which first peels the `StoreOverflowCast` rule's own analyzer context (the label is the rule's
+  `name()`, `repark_store_overflow_cast`; no message is read), so a refusal raised inside the rule
+  reaches Python with its Spark condition on the head. The `overwrite(condition)` cells of
+  `test_ice_write_df_2_overwrite.py` pin it. `install_statement_pairing` and the one-line source SQL
+  of `append_with_options.rs` keep both functions under clippy's line ceiling.
 - `router.rs` — **ICE-META-DELETE-1 (2026-09-19):** `execute_delete` asks
   `repark_iceberg::write::meta_delete` whether the statement is one of Spark's metadata-only
   deletes AFTER every existing refusal (read-only table, subquery predicate, MoR multi-spec)
@@ -84,39 +81,32 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   execution, and the wrapper-based read path (`parse` / `execute` / `read`).
   **PR2 (2026-09-22, V-DESCRIBE):** `describe.rs` answers DESCRIBE on a view
   from its stored schema off the `TableNotFound` arm in `describe_show.rs`.
-  **PR4 (2026-09-23, SHOW TBLPROPERTIES):** a viewless catalog's
-  `FeatureUnsupported` from `load_view` counts as no view, so an existing table
-  falls through to the table path and a missing name answers
-  `TABLE_OR_VIEW_NOT_FOUND`; routing and error-identity pins live in
+  **PR4 (2026-09-23, SHOW TBLPROPERTIES):** a viewless catalog's `FeatureUnsupported` from
+  `load_view` counts as no view, so an existing table falls through to the table path and a missing
+  name answers `TABLE_OR_VIEW_NOT_FOUND`; routing and error-identity pins live in
   `tests/show_tblproperties_routing.rs`.
-  **IPI-40 PR6 (2026-09-24):** session temporary views — `temp_parse.rs`
-  (CREATE TEMPORARY VIEW grammar and refusals), `temp_ddl.rs` (the session
-  dispatcher: CREATE, temp-first DROP TABLE / DROP VIEW, temp DESCRIBE, SHOW
-  VIEWS temp rows) and `temp_view.rs` (the re-planning provider).
-- `router.rs` — **ICE-VIEWS-1 (2026-09-20):** pre-parse CREATE/DROP/SHOW VIEWS
-  arms, the DROP VIEW match arm, INSERT/DELETE/UPDATE view write guards, the
-  query-only `execute_view_body_query` (no DDL dispatch, so no `Send` cycle),
-  and the CREATE VIEW straight-to-`execute_inner` skip that keeps stored bodies
-  verbatim past the time-travel/lineage rewrites. **IPI-40 PR3 (2026-09-22):**
-  `try_parse_alter_view` arms SET/UNSET TBLPROPERTIES and RENAME TO directly
-  after the `ALTER VIEW … AS` refusal and before SHOW VIEWS. `lib.rs` wires `pub mod
-  view_ddl`; `namespace_ddl.rs` refuses DROP TABLE over a view and DROP VIEW
-  over a table; `insert_by_name.rs` takes the same write guard;
-  `describe_show.rs` exposes `tokenize_with_spans` for the view parsers.
-  R2 hardens the guard fail-closed (metadata writes refuse up front, `is_view`
-  returns a `Result`, branch selectors still fall through).
-  **WO-R3 (2026-09-22):** the query-only `execute_view_body_query` and the
-  `refuse_insert_into_view` guard move to `view_dispatch.rs` (router.rs
-  1025 → 967, under the file-size ceiling); behavior unchanged, callers
-  updated by path only. **V-001 (2026-09-22):** the `bare_name_target` bit is
-  gone — the facade's bare-name mark qualifies the name only, and the
-  tighten refusal on the CREATE VIEW catalog write is unconditional.
-  **IPI-40 PR6 (2026-09-24):** `execute_with_statement_options` delegates to
-  the crate-private `execute_in_session`, which takes the session's
-  `TempViewSession` (None for the public router doors) and, after
-  canonicalization and before `execute_calibrated`, hands the statement to
-  `view_ddl::temp_ddl::route_temp_view_statement`; anything it does not own
-  falls through unchanged.
+  **IPI-40 PR6 (2026-09-24):** session temporary views — `temp_parse.rs` (CREATE TEMPORARY VIEW
+  grammar and refusals), `temp_ddl.rs` (the session dispatcher: CREATE, temp-first DROP TABLE / DROP
+  VIEW, temp DESCRIBE, SHOW VIEWS temp rows) and `temp_view.rs` (the re-planning provider).
+- `router.rs` — **ICE-VIEWS-1 (2026-09-20):** pre-parse CREATE/DROP/SHOW VIEWS arms, the DROP VIEW
+  match arm, INSERT/DELETE/UPDATE view write guards, the query-only `execute_view_body_query` (no
+  DDL dispatch, so no `Send` cycle), and the CREATE VIEW straight-to-`execute_inner` skip that keeps
+  stored bodies verbatim past the time-travel/lineage rewrites. **IPI-40 PR3 (2026-09-22):**
+  `try_parse_alter_view` arms SET/UNSET TBLPROPERTIES and RENAME TO directly after the `ALTER VIEW …
+  AS` refusal and before SHOW VIEWS. `lib.rs` wires `pub mod view_ddl`; `namespace_ddl.rs` refuses
+  DROP TABLE over a view and DROP VIEW over a table; `insert_by_name.rs` takes the same write guard;
+  `describe_show.rs` exposes `tokenize_with_spans` for the view parsers. R2 hardens the guard
+  fail-closed (metadata writes refuse up front, `is_view` returns a `Result`, branch selectors still
+  fall through).
+  **WO-R3 (2026-09-22):** the query-only `execute_view_body_query` and the `refuse_insert_into_view`
+  guard move to `view_dispatch.rs` (router.rs 1025 → 967, under the file-size ceiling); behavior
+  unchanged, callers updated by path only. **V-001 (2026-09-22):** the `bare_name_target` bit is
+  gone — the facade's bare-name mark qualifies the name only, and the tighten refusal on the CREATE
+  VIEW catalog write is unconditional.
+  **IPI-40 PR6 (2026-09-24):** `execute_with_statement_options` delegates to the crate-private
+  `execute_in_session`, which takes the session's `TempViewSession` (None for the public router
+  doors) and, after canonicalization and before `execute_calibrated`, hands the statement to
+  `view_ddl::temp_ddl::route_temp_view_statement`; anything it does not own falls through unchanged.
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_with_statement_options` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
   write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests). **IDENT-DIALECT-1 (2026-11-02):** the grammar refusal runs before expansion. The MERGE arm delegates to `merge::execute_merge_statement` in `merge.rs` (OUTPUT refusal, timestamp_ns cast lowering; moved out of `router.rs` in IPI-40 PR6a1).
@@ -143,137 +133,116 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `refuse_missing_replace_target`, so a missing-target `REPLACE TABLE` with a
   write body answers the parse refusal; other bodies still reach the catalog check.
   **ICE-SYSTEM-FUNCTIONS-1 round 3 (2026-09-20):** `execute_inner` next runs
-  `describe_show::rewrite_system_function_calls` (live-catalog-gated), and
-  `try_preparse_intercepts` gains the `SHOW [USER] FUNCTIONS IN <cat>.system`
-  arm after SHOW NAMESPACES.
+  `describe_show::rewrite_system_function_calls` (live-catalog-gated), and `try_preparse_intercepts`
+  gains the `SHOW [USER] FUNCTIONS IN <cat>.system` arm after SHOW NAMESPACES.
   **WO-C10 (2026-09-23):** `execute_with_statement_options` first calls the shared unclosed
-  bracketed-comment guard before the SHOW CREATE intercept and literal canonicalization. A
-  non-hint outer comment returns `UNCLOSED_BRACKETED_COMMENT` / `42601`; nested comments,
-  quoted markers, and line markers keep their existing outcomes. An unclosed `/*+` hint falls
-  through to its existing tokenizer outcome.
-  `execute_time_travelled` is a **release seam, not a routing step** (H-1b): it exists so
-  `execute_with_read_only` can own a `time_travel::PinnedViews` and release it on every `?` /
-  `return` path of the rewrite — see the `time_travel.rs` row below. **V3-4:** after time
-  travel, `prepare_lineage_sql` pins v3 `_row_id` / `_last_updated_sequence_number` onto a
-  temp provider for single-table reads (`LineagePins` released with the time-travel views);
+  bracketed-comment guard before the SHOW CREATE intercept and literal canonicalization. A non-hint
+  outer comment returns `UNCLOSED_BRACKETED_COMMENT` / `42601`; nested comments, quoted markers, and
+  line markers keep their existing outcomes. An unclosed `/*+` hint falls through to its existing
+  tokenizer outcome. `execute_time_travelled` is a **release seam, not a routing step** (H-1b): it
+  exists so `execute_with_read_only` can own a `time_travel::PinnedViews` and release it on every
+  `?` / `return` path of the rewrite — see the `time_travel.rs` row below. **V3-4:** after time
+  travel, `prepare_lineage_sql` pins v3 `_row_id` / `_last_updated_sequence_number` onto a temp
+  provider for single-table reads (`LineagePins` released with the time-travel views);
   JOIN/CTE/subquery/time-travel naming lineage refuse `V3-ROWID-2`. RP-6: plain-`WHERE`
-  UPDATE/DELETE are Spark-equal. V3-7: MERGE keeps `_row_id`; subquery-WHERE DML still
-  refuses `V3-COW-1`. **ICE-METADATA-COLS-1 (2026-09-20):** ahead of the lineage rewrite,
-  `prepare_metadata_column_sql` pins `_file` / `_pos` / `_spec_id` / `_partition` / `_deleted`
-  reads onto a metadata
-  temp provider (`MetadataColumnPins` released with the other pins).
+  UPDATE/DELETE are Spark-equal. V3-7: MERGE keeps `_row_id`; subquery-WHERE DML still refuses
+  `V3-COW-1`. **ICE-METADATA-COLS-1 (2026-09-20):** ahead of the lineage rewrite,
+  `prepare_metadata_column_sql` pins `_file` / `_pos` / `_spec_id` / `_partition` / `_deleted` reads
+  onto a metadata temp provider (`MetadataColumnPins` released with the other pins).
   **WO-R3 (2026-09-22):** the pins carry `_partition` too (a NULLABLE union struct).
-  **mcdel-r1 (2026-09-23):** the pins carry `_deleted` too — a non-null Boolean the
-  pinned fork fills from its include-deleted scan mode, so `SELECT id, _deleted` on a
-  merge-on-read table answers the deleted rows marked `true` (recorded cell
-  `R-MC-DELETED`); `SELECT *` stays user columns and a metadata column over a
-  time-travel read keeps the planner's unresolved-column error (KNOWN
-  DIVERGENCE for `_file` and `_deleted`, which Spark was measured serving; RePark
-  refuses every metadata column there, the other names unmeasured on Spark).
+  **mcdel-r1 (2026-09-23):** the pins carry `_deleted` too — a non-null Boolean the pinned fork
+  fills from its include-deleted scan mode, so `SELECT id, _deleted` on a merge-on-read table
+  answers the deleted rows marked `true` (recorded cell `R-MC-DELETED`); `SELECT *` stays user
+  columns and a metadata column over a time-travel read keeps the planner's unresolved-column error
+  (KNOWN DIVERGENCE for `_file` and `_deleted`, which Spark was measured serving; RePark refuses
+  every metadata column there, the other names unmeasured on Spark).
   **mcdel-r4 (2026-09-23):** a query naming a served metadata column that the table
   schema also carries refuses with Spark's reserved-name text from the same rewrite.
-  **mcdel-r6 (2026-09-23):** that refusal now comes from the metadata-column
-  provider's `scan`, and only when the scan reads the colliding user column;
-  aliases, CTE names, table aliases and joins that never read it answer.
-  SQP-1: the front door canonicalizes escapes once and
-  translates downstream parser locations back to the caller's SQL.
-  ICE-WRITE-OPTIONS-1 round 4 (2026-09-17, Q-21c-5): every `execute_inner` arm that
-  cannot honour a non-empty statement options map refuses it with
-  `refuse_if_non_empty` before it executes — one `refuse_options_on_non_write` gate ahead
-  of the arm match covers MERGE, DELETE, UPDATE, TRUNCATE, CALL, DROP, ALTER and the
-  passthrough arm (it keeps `execute_inner` under clippy's line limit), and each pre-parse
-  intercept is gated once its form is recognised, so nothing runs first. `insert_by_name.rs`
-  folds its two parse let-else blocks into one pattern (same fallthrough, under the same
-  limit after `1485db96` threaded the options through). INSERT, INSERT
-  OVERWRITE, CTAS and the BY NAME overwrite delegations honour the map; the
-  non-Iceberg INSERT OVERWRITE fallbacks in `insert_overwrite.rs` refuse it.
-  **ICE-WRITE-OPTIONS-1 (2026-09-17):** the front door threads the out-of-band
-  validated set through `execute_time_travelled` into `execute_inner`, and refuses
-  non-empty sets on the non-Iceberg arms so options are never silently dropped.
-  Round 3 withdrew the text-clause extractor (L-01/L-02): user-typed `OPTIONS(...)`
-  keeps main's parse error / CTAS refusal. `execute_time_travelled`
-  runs heap-pinned (`Box::pin`) so the thread-through keeps test-task futures
-  under the 16 KiB clippy ceiling.
-  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** `execute_inner` merges the live
-  session write conf into every Iceberg write arm's statement options, so
-  `spark.sql.iceberg.snapshot-property.*` and the session codec reach the owned
-  commits with writer-option precedence.
-  **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18, Q-22b-WO-1):** main's
-  `execute_routed` folds into `execute_with_statement_options`; ICE-DYN-OVERWRITE-1's
-  typed static flag rides as the typed field
+  **mcdel-r6 (2026-09-23):** that refusal now comes from the metadata-column provider's `scan`, and
+  only when the scan reads the colliding user column; aliases, CTE names, table aliases and joins
+  that never read it answer. SQP-1: the front door canonicalizes escapes once and translates
+  downstream parser locations back to the caller's SQL. ICE-WRITE-OPTIONS-1 round 4 (2026-09-17,
+  Q-21c-5): every `execute_inner` arm that cannot honour a non-empty statement options map refuses
+  it with `refuse_if_non_empty` before it executes — one `refuse_options_on_non_write` gate ahead of
+  the arm match covers MERGE, DELETE, UPDATE, TRUNCATE, CALL, DROP, ALTER and the passthrough arm
+  (it keeps `execute_inner` under clippy's line limit), and each pre-parse intercept is gated once
+  its form is recognised, so nothing runs first. `insert_by_name.rs` folds its two parse let-else
+  blocks into one pattern (same fallthrough, under the same limit after `1485db96` threaded the
+  options through). INSERT, INSERT OVERWRITE, CTAS and the BY NAME overwrite delegations honour the
+  map; the non-Iceberg INSERT OVERWRITE fallbacks in `insert_overwrite.rs` refuse it.
+  **ICE-WRITE-OPTIONS-1 (2026-09-17):** the front door threads the out-of-band validated set through
+  `execute_time_travelled` into `execute_inner`, and refuses non-empty sets on the non-Iceberg arms
+  so options are never silently dropped. Round 3 withdrew the text-clause extractor (L-01/L-02):
+  user-typed `OPTIONS(...)` keeps main's parse error / CTAS refusal. `execute_time_travelled` runs
+  heap-pinned (`Box::pin`) so the thread-through keeps test-task futures under the 16 KiB clippy
+  ceiling.
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** `execute_inner` merges the live session write conf into
+  every Iceberg write arm's statement options, so `spark.sql.iceberg.snapshot-property.*` and the
+  session codec reach the owned commits with writer-option precedence.
+  **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18, Q-22b-WO-1):** main's `execute_routed` folds into
+  `execute_with_statement_options`; ICE-DYN-OVERWRITE-1's typed static flag rides as the typed field
   `StatementWriteOptions::force_static_overwrite` (never an option key, so `is_empty` and
-  `refuse_if_non_empty` ignore it). `execute_static_overwrite` sets it on an empty set,
-  so the `saveAsTable` static pin and the options travel on one statement and the
-  router keeps its signatures (clippy's argument and line limits hold).
-  **IPI-51 PR5 (2026-09-20):** `try_preparse_intercepts` gains the four v2-command
-  intercepts — DESCRIBE AS JSON ahead of the describe-table arm, SET SERDE / MSCK REPAIR /
-  ANALYZE TABLE after SHOW PARTITIONS — through `crate::catalog_ops::v2_json_preparse` /
-  `v2_tail_preparse` (in `catalog_ops.rs`, in the `show_partitions_preparse` shape), each
-  refusing through the shared `v2_command_outcome` helper so the write-options gate still runs
-  first. The DESCRIBE NAMESPACE arm moves into `describe_namespace_preparse` so the function
-  holds clippy's line cap.
-  **IPI-26/27 round 2 (2026-09-20):** `COMMENT ON TABLE` and the two-name Hive
-  `CHANGE COLUMN` are true pre-parse intercepts
-  ([`router/comment_on_table.rs`](router/comment_on_table.rs),
-  [`router/hive_change_column.rs`](router/hive_change_column.rs)), wired after the
-  column-move intercept inside `try_preparse_comment_ddl` so the intercept chain
-  keeps clippy's line limit (cells `D-COMMENT-ON`, `D-X-CHANGE-COLUMN-TYPE`).
-  **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):** `try_alter_intercepts`
-  gains the `ALTER TABLE … SET LOCATION '<literal>'` arm after `column_move`
-  ([`router/table_props_ddl.rs`](router/table_props_ddl.rs)) — the statement does not
-  survive sqlparser, so it claims exactly that shape (keywords case-insensitive, path
-  verbatim), refuses a malformed tail loud naming the clause, leaves
-  `SET/UNSET TBLPROPERTIES` and branch/tag forms alone, and executes the metadata
-  location move through the fork's `SetLocation` update.
-- `merge.rs` — `execute_merge_statement` (the router's MERGE adapter: OUTPUT refusal,
-  timestamp_ns cast lowering; moved here from `router.rs` in IPI-40 PR6a1) and
-  MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
-  star-sentinel rewrite); MATCHED / NOT MATCHED / NOT MATCHED BY SOURCE (DML-A);
-  in-module tests (MG-2: M2 Oracle sub-predicates, M3
-  assignment-target qualification, M8 INSERT column list, M10 non-last
-  unconditional clause).
-  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** every rendered
-  fragment (`ON`, clause predicates, `VALUES` rows, `SET` assignments, the
-  derived source) goes through `repark_iceberg::write::sql_text::render_for_reparse`
-  so string values re-parse exactly.
-- `merge_fragments.rs` — **ICE-MIXED-CASE-1 (2026-09-17):** MERGE fragment
-  preprocessing for case-insensitive resolution (target/source scope read,
-  `ON` / predicate / value fragment rewrite, `maybe_` dispatcher that stamps
-  the carrier flag onto the spec). **Round 21b step 7 (R-03):** target field
-  names come from the Iceberg metadata (`catalog.load_table` →
-  `current_schema()`), and a named source reads its `TableProvider` schema; only
-  a subquery source (`USING (SELECT …) AS s`) still plans one `SELECT * … LIMIT
-  0`, because no metadata exists for it. `merge.rs` resolves the catalog handle
-  before the fragment rewrite.
+  `refuse_if_non_empty` ignore it). `execute_static_overwrite` sets it on an empty set, so the
+  `saveAsTable` static pin and the options travel on one statement and the router keeps its
+  signatures (clippy's argument and line limits hold).
+  **IPI-51 PR5 (2026-09-20):** `try_preparse_intercepts` gains the four v2-command intercepts —
+  DESCRIBE AS JSON ahead of the describe-table arm, SET SERDE / MSCK REPAIR / ANALYZE TABLE after
+  SHOW PARTITIONS — through `crate::catalog_ops::v2_json_preparse` / `v2_tail_preparse` (in
+  `catalog_ops.rs`, in the `show_partitions_preparse` shape), each refusing through the shared
+  `v2_command_outcome` helper so the write-options gate still runs first. The DESCRIBE NAMESPACE arm
+  moves into `describe_namespace_preparse` so the function holds clippy's line cap.
+  **IPI-26/27 round 2 (2026-09-20):** `COMMENT ON TABLE` and the two-name Hive `CHANGE COLUMN` are
+  true pre-parse intercepts ([`router/comment_on_table.rs`](router/comment_on_table.rs),
+  [`router/hive_change_column.rs`](router/hive_change_column.rs)), wired after the column-move
+  intercept inside `try_preparse_comment_ddl` so the intercept chain keeps clippy's line limit
+  (cells `D-COMMENT-ON`, `D-X-CHANGE-COLUMN-TYPE`).
+  **IPI-26/27 round 4 (2026-09-21, cell `D-SET-LOCATION`):** `try_alter_intercepts` gains the `ALTER
+  TABLE … SET LOCATION '<literal>'` arm after `column_move`
+  ([`router/table_props_ddl.rs`](router/table_props_ddl.rs)) — the statement does not survive
+  sqlparser, so it claims exactly that shape (keywords case-insensitive, path verbatim), refuses a
+  malformed tail loud naming the clause, leaves `SET/UNSET TBLPROPERTIES` and branch/tag forms
+  alone, and executes the metadata location move through the fork's `SetLocation` update.
+- `merge.rs` — `execute_merge_statement` (the router's MERGE adapter: OUTPUT refusal, timestamp_ns
+  cast lowering; moved here from `router.rs` in IPI-40 PR6a1) and MERGE INTO lowering (sqlparser AST
+  → `repark_iceberg::write::merge::MergeSpec`, star-sentinel rewrite); MATCHED / NOT MATCHED / NOT
+  MATCHED BY SOURCE (DML-A); in-module tests (MG-2: M2 Oracle sub-predicates, M3 assignment-target
+  qualification, M8 INSERT column list, M10 non-last unconditional clause).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** every rendered fragment (`ON`, clause
+  predicates, `VALUES` rows, `SET` assignments, the derived source) goes through
+  `repark_iceberg::write::sql_text::render_for_reparse` so string values re-parse exactly.
+- `merge_fragments.rs` — **ICE-MIXED-CASE-1 (2026-09-17):** MERGE fragment preprocessing for
+  case-insensitive resolution (target/source scope read, `ON` / predicate / value fragment rewrite,
+  `maybe_` dispatcher that stamps the carrier flag onto the spec). **Round 21b step 7 (R-03):**
+  target field names come from the Iceberg metadata (`catalog.load_table` → `current_schema()`), and
+  a named source reads its `TableProvider` schema; only a subquery source (`USING (SELECT …) AS s`)
+  still plans one `SELECT * … LIMIT 0`, because no metadata exists for it. `merge.rs` resolves the
+  catalog handle before the fragment rewrite.
 - `insert_overwrite.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the stage-then-swap path hands `conform_types` the door's
   mode (by name for `overwritePartitions`, by position otherwise) and the table label. The
   static-partition route keeps no pairing site: hint H-1 guards its cast.
-- `insert_overwrite.rs` — **RP-56 (2026-09-28):** the empty-overwrite target probe reads
-  through a scratch alias (engine machinery, like its sibling probes), and the
-  ambiguous-overwrite read-back counts (`SELECT 1 … HAVING COUNT(*)=1`) instead of starring.
-  before the fragment rewrite. **WO CASESENS-1 slice 1 (2026-09-27):** a
-  parenthesized derived source is folded as text
-  (`column_resolution::fold_query_text`) before the fragment rewrite, so its
-  another-case names bind.
-  **WO CASESENS-1 slice 2 (2026-09-27):** `rewrite_merge_fragments` takes a
-  `NameRule` and runs the same seven seats through the fold (`IgnoreCase`) or
-  [`merge_fragments/exact.rs`](merge_fragments/exact.rs) (`Exact`, R6: an exact
-  hit is backtick-quoted as written, a case-only hit refuses
-  `UNRESOLVED_COLUMN.WITH_SUGGESTION` with every scope field listed target
-  first, no hit is left alone); the derived-source probe plans with
+- `insert_overwrite.rs` — **RP-56 (2026-09-28):** the empty-overwrite target probe reads through a
+  scratch alias (engine machinery, like its sibling probes), and the ambiguous-overwrite read-back
+  counts (`SELECT 1 … HAVING COUNT(*)=1`) instead of starring. before the fragment rewrite. **WO
+  CASESENS-1 slice 1 (2026-09-27):** a parenthesized derived source is folded as text
+  (`column_resolution::fold_query_text`) before the fragment rewrite, so its another-case names
+  bind.
+  **WO CASESENS-1 slice 2 (2026-09-27):** `rewrite_merge_fragments` takes a `NameRule` and runs the
+  same seven seats through the fold (`IgnoreCase`) or
+  [`merge_fragments/exact.rs`](merge_fragments/exact.rs) (`Exact`, R6: an exact hit is
+  backtick-quoted as written, a case-only hit refuses `UNRESOLVED_COLUMN.WITH_SUGGESTION` with every
+  scope field listed target first, no hit is left alone); the derived-source probe plans with
   normalization off under `true` so scope fields keep their written case.
 - `insert_overwrite/store.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** split from
   `insert_overwrite.rs` (file-size gate; a child module so `lib.rs` keeps its exact
   baseline): `conform_types` resolves the positional targets and runs
   the conform stage (`conform_stage.rs`; formerly `wrap_store_outputs`) over the analyzed source plan; the stage-then-swap source passes
   through it. See [insert_overwrite/map.md](insert_overwrite/map.md).
-- `keyword_lower.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the AST lowering of
-  `CAST(… AS timestamp_ns)` / `timestamptz_ns` to a kernel call is deleted
-  (`timestamp_ns_cast_name`, `lower_timestamp_ns_cast`, the probe arm). The names reach
-  DataFusion's planner as custom types and `SparkTypePlanner` types them, in every
-  statement kind, so `UPDATE` and `DELETE` plan them too (R-010). The three entry points
-  keep their names; they still lower `TIMESTAMP_NTZ` casts, mark `VALUES` casts and lower
-  empty `map()`.
+- `keyword_lower.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** the AST lowering of `CAST(… AS
+  timestamp_ns)` / `timestamptz_ns` to a kernel call is deleted (`timestamp_ns_cast_name`,
+  `lower_timestamp_ns_cast`, the probe arm). The names reach DataFusion's planner as custom types
+  and `SparkTypePlanner` types them, in every statement kind, so `UPDATE` and `DELETE` plan them too
+  (R-010). The three entry points keep their names; they still lower `TIMESTAMP_NTZ` casts, mark
+  `VALUES` casts and lower empty `map()`.
 - `extension.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkExtension::type_planner`
   hands the session builder `repark_functions::SparkTypePlanner`, so every `CAST(… AS T)`
   and typed literal the Spark door plans takes its unit from the written name. The DDL
@@ -287,9 +256,8 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   **Merge origin/main v1.5.1 (2026-09-29):** both sides kept — the BY NAME and the
   stage-then-swap OVERWRITE sources pass through the conform stage (formerly `zone_stores(_by_name)`) first, then
   the overflow wrap (`conform_types`, which calls the conform stage; formerly `wrap_store_outputs`).
-  Re-verify VO3-1 (2026-09-29): both doors pass their per-batch op label into the wrap
-  (`append` / `INSERT OVERWRITE`), so the store gate judges before the overflow check
-  with byte-identical text.
+  Re-verify VO3-1 (2026-09-29): both doors pass their per-batch op label into the wrap (`append` /
+  `INSERT OVERWRITE`), so the store gate judges before the overflow check with byte-identical text.
 - `insert_overwrite.rs` — **WO NTZ-STORE-DOORS-1 (2026-09-28):** the stage-then-swap path
   (static, dynamic, `BY NAME`, column list, so `writeTo().overwritePartitions()` too) and
   the `PARTITION (…)` path pass the planned source through
@@ -317,30 +285,26 @@ Source documentation may retain model provenance; code-quality grade tags stay o
 - `insert_overwrite.rs` — INSERT OVERWRITE: empty probe/validate/provider-wipe (C1-Q-001) +
   non-empty stage-then-swap; **DML-B** `PARTITION (…)` static/dynamic via
   `repark_iceberg::write::partition_overwrite`; 2 in-module tests (`assignment_type_unit_tests`).
-  Named-ref targets go through `commit_overwrite_replace_all_to` / partition `_to`.
-  Empty overwrite onto a branch wipes via `commit_overwrite_replace_all_to`, not a 4-part
-  self-scan. **ICE-DYN-OVERWRITE-1 (2026-09-17):** PARTITION-less overwrite computes
-  `dynamic` once in `execute_insert_overwrite` (session conf, bypassed by the
-  `force_static_overwrite` flag the `execute_static_overwrite` router entry carries
-  (comment-free per the owner's comment ban, 2026-09-17: the entry carries
-  `#[allow(clippy::missing_errors_doc)]`);
-  round 2, ruling Q-20a-6 removed the in-band marker) and threads it through
-  `from_staged_source` into the stage-then-commit — dynamic commits
-  `commit_replace_partitions_to` on partitioned tables (the empty arm returns
+  Named-ref targets go through `commit_overwrite_replace_all_to` / partition `_to`. Empty overwrite
+  onto a branch wipes via `commit_overwrite_replace_all_to`, not a 4-part self-scan.
+  **ICE-DYN-OVERWRITE-1 (2026-09-17):** PARTITION-less overwrite computes `dynamic` once in
+  `execute_insert_overwrite` (session conf, bypassed by the `force_static_overwrite` flag the
+  `execute_static_overwrite` router entry carries (comment-free per the owner's comment ban,
+  2026-09-17: the entry carries `#[allow(clippy::missing_errors_doc)]`); round 2, ruling Q-20a-6
+  removed the in-band marker) and threads it through `from_staged_source` into the stage-then-commit
+  — dynamic commits `commit_replace_partitions_to` on partitioned tables (the empty arm returns
   before any commit), static and unpartitioned-dynamic keep replace-all.
-  **Round 3 (2026-09-17):** the mode decision is one function,
-  `overwrite_is_dynamic(ctx, force_static_overwrite)`, called here and by
-  `insert_by_name.rs` — no second conf read.
-  **ICE-OVERWRITE-MODE-1 (2026-09-19):** the flag is gone; `overwrite_is_dynamic(ctx,
-  options)` and `execute_partition_overwrite` both read
-  `StatementWriteOptions::overwrite_mode(ctx)` (session mode, the typed
-  `overwrite_intent`, the `overwrite-mode` writer option) and ask
-  `repark_iceberg::write::plan_overwrite` for the scope. `PARTITION (…)` now answers
-  Spark in both modes: static mode with no static value replaces the whole table
-  (`commit_overwrite_replace_all_with_summary`; an empty source wipes, zero-record staged
-  files dropped), static values filter by row (`overwrite_by_row_filter`), dynamic mode
-  replaces the source partitions with the static values injected (mixed lists stage
-  through `stage_static_partition_overwrite_files_with`). Pins:
+  **Round 3 (2026-09-17):** the mode decision is one function, `overwrite_is_dynamic(ctx,
+  force_static_overwrite)`, called here and by `insert_by_name.rs` — no second conf read.
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** the flag is gone; `overwrite_is_dynamic(ctx, options)` and
+  `execute_partition_overwrite` both read `StatementWriteOptions::overwrite_mode(ctx)` (session
+  mode, the typed `overwrite_intent`, the `overwrite-mode` writer option) and ask
+  `repark_iceberg::write::plan_overwrite` for the scope. `PARTITION (…)` now answers Spark in both
+  modes: static mode with no static value replaces the whole table
+  (`commit_overwrite_replace_all_with_summary`; an empty source wipes, zero-record staged files
+  dropped), static values filter by row (`overwrite_by_row_filter`), dynamic mode replaces the
+  source partitions with the static values injected (mixed lists stage through
+  `stage_static_partition_overwrite_files_with`). Pins:
   [tests/overwrite_mode.rs](tests/overwrite_mode.rs).
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** `execute_append_with_options` (option-carrying
   plain INSERT stages on the owned path with the merged summary); the overwrite
@@ -348,28 +312,24 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   canonical staging byte-identical) into the `*_with_summary` commits. The append
   executor refuses table-function targets, `REPLACE INTO`, explicit column lists, and
   non-3-part names loudly instead of mis-staging them.
-  **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):** the options map and the typed
-  `dynamic` answer ride together. A dynamic PARTITION-less overwrite on a partitioned
-  table commits `commit_replace_partitions_with_summary` (the `replace_partitions`
-  action `commit_replace_partitions_to` uses, plus the merged summary and isolation
-  override), so snapshot properties and writer knobs are honoured (Q-22b-WO-2). An
-  empty dynamic source returns before any commit, as Spark's `DynamicOverwrite` does;
-  with no snapshot there is nothing to stamp, so the options are validated and not
-  refused (Q-22b-WO-3). The static PARTITION arm calls
-  `stage_static_partition_overwrite_files_with` with the column list and `None` or the
-  staging overrides.
-  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the stage-then-swap overwrite arms
-  resolve the merged session write at their commits.
-  ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17): both PARTITION arms fill omitted
-  write-defaults through `insert_defaults::overwrite_source_with_defaults` and pass
-  the column list into staging (dynamic and static).
-  `rewrite_overwrite_default_markers` substitutes `DEFAULT` value markers before any
-  overwrite arm runs, so `INSERT OVERWRITE t VALUES (…, DEFAULT)` fills as `INSERT INTO`
-  does (ruling Q-21b-4).
-  Run 21b round 2 (2026-09-18): the marker pass and its rewritten `(sql, Insert)` pair are
-  boxed (`Box::pin` on the call, `Box` on the result) and the passthrough's `DEFAULT`
-  marker and fill awaits in `spark_ast.rs` are boxed with their preloaded `Table`, so
-  every `execute` future stays under clippy's `large_futures` 16 KiB threshold (the
+  **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):** the options map and the typed `dynamic` answer ride
+  together. A dynamic PARTITION-less overwrite on a partitioned table commits
+  `commit_replace_partitions_with_summary` (the `replace_partitions` action
+  `commit_replace_partitions_to` uses, plus the merged summary and isolation override), so snapshot
+  properties and writer knobs are honoured (Q-22b-WO-2). An empty dynamic source returns before any
+  commit, as Spark's `DynamicOverwrite` does; with no snapshot there is nothing to stamp, so the
+  options are validated and not refused (Q-22b-WO-3). The static PARTITION arm calls
+  `stage_static_partition_overwrite_files_with` with the column list and `None` or the staging
+  overrides.
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the stage-then-swap overwrite arms resolve the merged
+  session write at their commits. ICE-V3-WRITE-DEFAULT-1 round 5 (2026-09-17): both PARTITION arms
+  fill omitted write-defaults through `insert_defaults::overwrite_source_with_defaults` and pass the
+  column list into staging (dynamic and static). `rewrite_overwrite_default_markers` substitutes
+  `DEFAULT` value markers before any overwrite arm runs, so `INSERT OVERWRITE t VALUES (…, DEFAULT)`
+  fills as `INSERT INTO` does (ruling Q-21b-4). Run 21b round 2 (2026-09-18): the marker pass and
+  its rewritten `(sql, Insert)` pair are boxed (`Box::pin` on the call, `Box` on the result) and the
+  passthrough's `DEFAULT` marker and fill awaits in `spark_ast.rs` are boxed with their preloaded
+  `Table`, so every `execute` future stays under clippy's `large_futures` 16 KiB threshold (the
   round-1 inline awaits grew it to 16,384–16,544 bytes and tripped 135 test call sites).
 - `append_with_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):** the
   no-write-options arm is the append that stands in for the fork's DataFusion insert exec, so
@@ -396,20 +356,18 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   maps the source by name, and `commit_append_with_summary` commits it with the merged
   summary. A list-free append keeps `append_with_statement_options`. Table-function
   targets, `REPLACE INTO` and non-3-part names still refuse.
-  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the option-carrying append resolves
-  the merged session write at its commit. **Round 1 fix (Q-24c-5):** an
-  option-less list-free INSERT stages positionally (`stage_overwrite_files_with`
-  with an empty column list) instead of the by-name append, so positional
-  `VALUES` resolve over all columns as Spark's do; the by-name arm stays for
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the option-carrying append resolves the merged session
+  write at its commit. **Round 1 fix (Q-24c-5):** an option-less list-free INSERT stages
+  positionally (`stage_overwrite_files_with` with an empty column list) instead of the by-name
+  append, so positional `VALUES` resolve over all columns as Spark's do; the by-name arm stays for
   the option-carrying form.
   **IPI-41 WO1 (2026-09-22):** the `write-format` / `delete-format` options are
   copied into staging here, so the option door reaches `resolve_data_format`.
-- `insert_by_name.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):**
-  `execute_insert_by_name` (after the target resolves) calls
-  `void_type::refuse_insert_source_types` with by-name mapping; the positional twin runs in
-  `router/insert_positional.rs`. So a `-NULL` into a DATE, BOOLEAN or timestamp column and
-  a STRING into FLOAT/DOUBLE refuse with Spark's text on every INSERT door, the DataFrame
-  writers included.
+- `insert_by_name.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** `execute_insert_by_name` (after
+  the target resolves) calls `void_type::refuse_insert_source_types` with by-name mapping; the
+  positional twin runs in `router/insert_positional.rs`. So a `-NULL` into a DATE, BOOLEAN or
+  timestamp column and a STRING into FLOAT/DOUBLE refuse with Spark's text on every INSERT door, the
+  DataFrame writers included.
   **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the gate now judges `-NULL` only; STRING
   sources store as on base.
 - `insert_by_name.rs` — `INSERT … BY NAME` (ICE-RTAS-BYNAME-1, 2026-09-17): the token-level
@@ -428,47 +386,41 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   column — and `null_filled_projection`), shared by `plan_name_projection` and the REPLACE
   WHERE door's V2-writer binding.
   **U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001..V-005):** after `name_mapping`, `by_name_source_query`
-  runs `insert_by_name/nested.rs::refuse_nested_mismatch`, so the REPLACE WHERE door's
-  by-name binding reaches struct sub-fields (`CANNOT_FIND_DATA` with the dotted path,
-  `EXTRA_STRUCT_FIELDS`); `plan_name_projection` (SQL `BY NAME`, the append doors) does not
-  call it (residue R-15).
-  ICE-WRITE-OPTIONS-1 (2026-09-17): the statement write options travel into the two
-  delegating overwrite calls, which honour them; the empty-projection commit and the
-  by-name append commit without them, so both refuse a non-empty options set rather than
-  dropping it silently.
+  runs `insert_by_name/nested.rs::refuse_nested_mismatch`, so the REPLACE WHERE door's by-name
+  binding reaches struct sub-fields (`CANNOT_FIND_DATA` with the dotted path,
+  `EXTRA_STRUCT_FIELDS`); `plan_name_projection` (SQL `BY NAME`, the append doors) does not call it
+  (residue R-15). ICE-WRITE-OPTIONS-1 (2026-09-17): the statement write options travel into the two
+  delegating overwrite calls, which honour them; the empty-projection commit and the by-name append
+  commit without them, so both refuse a non-empty options set rather than dropping it silently.
   pins: ice-rtas-byname-1/C-001, C-002, C-003, C-004; ice-write-options-1/C-006
-  **Round 2 (2026-09-17):** `PARTITION` shapes delegate to the positional
-  partition arm (static overwrite) or inject clause literals (static append);
-  a PARTITION-less `BY NAME` overwrite follows `partitionOverwriteMode` (see round 3);
-  missing required targets
-  refuse `CANNOT_FIND_DATA`; matching honours `spark.sql.caseSensitive`
-  (matching plus projection live in `plan_name_projection`).
+  **Round 2 (2026-09-17):** `PARTITION` shapes delegate to the positional partition arm (static
+  overwrite) or inject clause literals (static append); a PARTITION-less `BY NAME` overwrite follows
+  `partitionOverwriteMode` (see round 3); missing required targets refuse `CANNOT_FIND_DATA`;
+  matching honours `spark.sql.caseSensitive` (matching plus projection live in
+  `plan_name_projection`).
   **ICE-OVERWRITE-MODE-1 round 2 (2026-09-19):** the mixed-list refusal in
   `static_partition_columns` is gone — `PARTITION (k='v', k2) BY NAME` projects the
   non-static columns by name and delegates to `execute_partition_overwrite`, so it follows
   the same plan as the positional form in both modes.
-  **ICE-DYN-OVERWRITE-1 round 3 (2026-09-17):** `execute_insert_by_name` takes the
-  router's `force_static_overwrite` and asks `insert_overwrite::overwrite_is_dynamic`
-  once. A non-empty PARTITION-less `BY NAME` overwrite passes that answer into
-  `insert_overwrite_from_staged_source` (dynamic replaces only the touched partitions
-  on a partitioned table; static and unpartitioned replace the whole table). An empty
-  source still runs the assignment-type check, then under dynamic returns with no
-  commit and no snapshot (Spark skips the commit, partitioned or not), and under
+  **ICE-DYN-OVERWRITE-1 round 3 (2026-09-17):** `execute_insert_by_name` takes the router's
+  `force_static_overwrite` and asks `insert_overwrite::overwrite_is_dynamic` once. A non-empty
+  PARTITION-less `BY NAME` overwrite passes that answer into `insert_overwrite_from_staged_source`
+  (dynamic replaces only the touched partitions on a partitioned table; static and unpartitioned
+  replace the whole table). An empty source still runs the assignment-type check, then under dynamic
+  returns with no commit and no snapshot (Spark skips the commit, partitioned or not), and under
   static wipes through `wipe_by_name_target` (`commit_overwrite_replace_all_to` plus
   reregister; split out to keep `execute_insert_by_name` under clippy's line limit). Explicit column lists never
   reach this module; they take `execute_insert_overwrite`, which reads the same function.
-  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the overwrite stage-then-swap fills
-  omitted columns from `write_default` before staging, so `INSERT OVERWRITE`
-  matches Spark's measured answer. The fill helper carries no doc comment per the
-  no-code-comments ruling.
+  **ICE-V3-WRITE-DEFAULT-1 (2026-09-17):** the overwrite stage-then-swap fills omitted columns from
+  `write_default` before staging, so `INSERT OVERWRITE` matches Spark's measured answer. The fill
+  helper carries no doc comment per the no-code-comments ruling.
   **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18):** the static flag is read from
   `write_options.force_static_overwrite` (ICE-OVERWRITE-MODE-1, 2026-09-19: now
   `overwrite_is_dynamic(ctx, write_options)`; `static_partition_columns` validates the clause
-  through `validated_static_equalities` and keeps refusing a mixed `BY NAME` list).
-  Only the static empty-projection wipe refuses a non-empty map
-  (it commits through `wipe_by_name_target` without a summary); the dynamic empty case
-  commits nothing, and the non-empty dynamic case honours the map through
-  `insert_overwrite_from_staged_source`.
+  through `validated_static_equalities` and keeps refusing a mixed `BY NAME` list). Only the static
+  empty-projection wipe refuses a non-empty map (it commits through `wipe_by_name_target` without a
+  summary); the dynamic empty case commits nothing, and the non-empty dynamic case honours the map
+  through `insert_overwrite_from_staged_source`.
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the by-name append commit resolves
   the merged session write.
   **RP-56 DIFF-PROBE fold (2026-09-29):** the direct file-writer calls pass `true`
@@ -481,64 +433,55 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   list. Anything else — overwrite, column list, partition clause, non-VALUES source,
   mixed-length rows, equal-or-wider VALUES, a missing table — falls through untouched.
   Pins: [tests/insert_arity.rs](tests/insert_arity.rs).
-- `void_type/ltz_values_store.rs` — **WO LTZ-STORE-INT-1 (2026-09-28):** the
-  VALUES-door store-assignment gate for `TIMESTAMP` (LTZ) targets, a child module of
-  `void_type.rs` reached from `refuse_insert_void_values`, before planning conforms
-  VALUES literals inside the `Values` node where the analyzer rule can no longer see
-  them: each cell mapped to a microsecond `Timestamp` column is judged through the
-  shared `incompatible_update_message` gate — bare literals by their Spark kind (`1` is
-  `INT`, three in-module classifier tests), anything else by a `SELECT <cell>` probe —
-  so `VALUES (0, 1)` refuses with Spark's recorded
-  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot safely cast `c` "INT" to
-  "TIMESTAMP". SQLSTATE: KD000` while NULL, DATE, TIMESTAMP, TIMESTAMP_NTZ and explicit
-  `CAST`s still store. Skips TIMESTAMP_NTZ targets (NTZ-1 Slice 2 owns that door),
-  partitioned inserts, and anything it cannot map. **Fold 2026-09-28 (critic
-  V-001):** null-valued cells pass; numerics refuse through a DDL-name fallback;
-  `1L` reads `BIGINT`; DECIMAL casts and typed literals read by declared type.
+- `void_type/ltz_values_store.rs` — **WO LTZ-STORE-INT-1 (2026-09-28):** the VALUES-door
+  store-assignment gate for `TIMESTAMP` (LTZ) targets, a child module of `void_type.rs` reached from
+  `refuse_insert_void_values`, before planning conforms VALUES literals inside the `Values` node
+  where the analyzer rule can no longer see them: each cell mapped to a microsecond `Timestamp`
+  column is judged through the shared `incompatible_update_message` gate — bare literals by their
+  Spark kind (`1` is `INT`, three in-module classifier tests), anything else by a `SELECT <cell>`
+  probe — so `VALUES (0, 1)` refuses with Spark's recorded
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] … Cannot safely cast `c` "INT" to "TIMESTAMP".
+  SQLSTATE: KD000` while NULL, DATE, TIMESTAMP, TIMESTAMP_NTZ and explicit `CAST`s still store.
+  Skips TIMESTAMP_NTZ targets (NTZ-1 Slice 2 owns that door), partitioned inserts, and anything it
+  cannot map. **Fold 2026-09-28 (critic V-001):** null-valued cells pass; numerics refuse through a
+  DDL-name fallback; `1L` reads `BIGINT`; DECIMAL casts and typed literals read by declared type.
   **Fold 2026-09-28 (verifier VL-1..VL-6):** the V-001 null rule narrows to bare
   NULL — `CAST(NULL AS T)` is judged by `T`; fractionals read `DECIMAL(p,s)`
   and out-of-`INT`-range integers read `BIGINT`.
-  **Fold 2026-09-28 (re-verify RL-1..RL-3):** the VL-1 function deferral narrows
-  to two-argument `nvl`/`ifnull`, probed as `coalesce(a, b)`; every other
-  function is judged by its probed type; leading-zero fractions count precision
-  from significant digits.
+  **Fold 2026-09-28 (re-verify RL-1..RL-3):** the VL-1 function deferral narrows to two-argument
+  `nvl`/`ifnull`, probed as `coalesce(a, b)`; every other function is judged by its probed type;
+  leading-zero fractions count precision from significant digits.
   **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** the VALUES gate also judges numeric,
   DATE and BOOLEAN targets, and the sibling `void_type/insert_source_types.rs`
   holds the INSERT gate for `-NULL` and STRING → FLOAT/DOUBLE.
   **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** STRING-planned cells and branching cells whose
   leaves are not all refused types stay silent (`void_type/source_leaves.rs`); the INSERT
   gate keeps only `-NULL`.
-  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2/VG-8):** the
-  probe renders through the shared recursive parenthesizer, an unparsable probe
-  refuses instead of passing the row, and `number_text_type` is shared with
-  `update_cast.rs`.
-  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-2):** a `DEFAULT`
-  cell is skipped like a bare NULL, and the `nvl`/`ifnull` → `coalesce` probe
-  renders both operands through the shared parenthesizer, so
-  `nvl(NULL, CAST(date_add(DATE'2024-01-01', - -1) AS TIMESTAMP))` stores as
-  Spark does instead of refusing on a `--` comment.
-  **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second re-verify fold, RN3-1):** the
-  probe renders through the shared `probe_text`, which dollar-quotes a string
-  literal holding a quote with the same value: sqlparser's `Display` leaves a
-  quote after a backslash unescaped, so the probe text failed to parse and
-  refused the row. Seven in-module pins (render, both probe dialects, `nvl`
-  operands, door pass/refusal).
-  Directory map: [void_type/map.md](void_type/map.md).
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2/VG-8):** the probe renders through
+  the shared recursive parenthesizer, an unparsable probe refuses instead of passing the row, and
+  `number_text_type` is shared with `update_cast.rs`.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-2):** a `DEFAULT` cell is skipped like a
+  bare NULL, and the `nvl`/`ifnull` → `coalesce` probe renders both operands through the shared
+  parenthesizer, so `nvl(NULL, CAST(date_add(DATE'2024-01-01', - -1) AS TIMESTAMP))` stores as Spark
+  does instead of refusing on a `--` comment.
+  **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second re-verify fold, RN3-1):** the probe renders through
+  the shared `probe_text`, which dollar-quotes a string literal holding a quote with the same value:
+  sqlparser's `Display` leaves a quote after a backslash unescaped, so the probe text failed to
+  parse and refused the row. Seven in-module pins (render, both probe dialects, `nvl` operands, door
+  pass/refusal). Directory map: [void_type/map.md](void_type/map.md).
   Pins: [tests/ltz_store.rs](tests/ltz_store.rs).
 - `write_options.rs` — **U7 PR1 (2026-09-24):** `output-spec-id` is a typed key
   (`StatementWriteOptions.output_spec_id`, parsed by `repark_iceberg::write::parse_output_spec_id`;
   a non-integer is a `NumberFormatMarker` since round 2) that `staging_overrides` hands to staging. `normalize.rs` `build_partition_spec` takes the
-  session's case flag: under the default `spark.sql.caseSensitive=false` a partition column
-  that misses exactly resolves to its one case-insensitive match and names the field after the
-  schema spelling (`PARTITIONED BY (bucket(4, ID))` → `id_bucket`), as Spark resolves CTAS and
-  column-def CREATE (measured 2026-09-24); `ctas.rs` and `create_table.rs` pass
-  `spark_door_case_insensitive`, and the early column-def validation passes `true` because the
-  execute-time build is authoritative.
+  session's case flag: under the default `spark.sql.caseSensitive=false` a partition column that
+  misses exactly resolves to its one case-insensitive match and names the field after the schema
+  spelling (`PARTITIONED BY (bucket(4, ID))` → `id_bucket`), as Spark resolves CTAS and column-def
+  CREATE (measured 2026-09-24); `ctas.rs` and `create_table.rs` pass `spark_door_case_insensitive`,
+  and the early column-def validation passes `true` because the execute-time build is authoritative.
 - `write_options.rs` — **U7 PR2 (2026-09-24):** `validate-from-snapshot-id` is kept raw
-  (`StatementWriteOptions.validate_from_snapshot_id`): only the overwrite-by-filter commit
-  reads it, so an append with a bad value commits as on Spark.
-  `router/insert_positional/replace_where.rs` passes it with the level as
-  `repark_iceberg::write::FilterValidation`.
+  (`StatementWriteOptions.validate_from_snapshot_id`): only the overwrite-by-filter commit reads it,
+  so an append with a bad value commits as on Spark. `router/insert_positional/replace_where.rs`
+  passes it with the level as `repark_iceberg::write::FilterValidation`.
   **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** `source_by_name: bool` (set by `dialect.rs` from
   `EngineContext`, never from an option key) tells the REPLACE WHERE door to bind its source by
   name; `validate_isolation_level` accepts only `snapshot` and `serializable`, so
@@ -556,17 +499,14 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   Option<bool>` (set by `dialect.rs` from `EngineContext`, never from an option key)
   forces the literal mode for one parse; `effective_verbatim` falls back to the session
   flag. `router.rs` reads it for the canonicalize call and the error translation.
-- `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** last-wins validation of
-  the out-of-band option pairs (snapshot-property strip-and-lowercase, parquet
-  honour, orc/avro/bogus refusals, option-over-table-property
-  numerics/codec/isolation, lenient booleans, Spark-shaped refusal texts),
-  in-module units. Round 3 withdrew the text-clause recognizer (L-01 smuggling,
-  L-02 UTF-8); the SQL text stays option-free. No inline comments per the owner
-  ban (round-2 purge 2026-09-17 removed the `# Errors` sections too); rationale
-  lives here and in the ledger.
-  Run 22b (2026-09-18, Q-22b-WO-1): the struct also carries
-  `force_static_overwrite`, the `saveAsTable` static pin, set by the dialect from
-  `EngineContext`; it is not an option and never counts toward `is_empty`.
+- `write_options.rs` — **ICE-WRITE-OPTIONS-1 (2026-09-17):** last-wins validation of the out-of-band
+  option pairs (snapshot-property strip-and-lowercase, parquet honour, orc/avro/bogus refusals,
+  option-over-table-property numerics/codec/isolation, lenient booleans, Spark-shaped refusal
+  texts), in-module units. Round 3 withdrew the text-clause recognizer (L-01 smuggling, L-02 UTF-8);
+  the SQL text stays option-free. No inline comments per the owner ban (round-2 purge 2026-09-17
+  removed the `# Errors` sections too); rationale lives here and in the ledger. Run 22b (2026-09-18,
+  Q-22b-WO-1): the struct also carries `force_static_overwrite`, the `saveAsTable` static pin, set
+  by the dialect from `EngineContext`; it is not an option and never counts toward `is_empty`.
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** `StatementWriteOptions` also merges
   the live session write conf (session codec plus snapshot properties), which the
   router folds into every Iceberg write arm.
@@ -575,14 +515,12 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   (lower-cased like every key) sets `overwrite_mode_dynamic` when its value is `dynamic` in
   any case — Iceberg's `SparkWriteConf` reading; other values are ignored like Spark.
   `overwrite_mode(ctx)` assembles the decision input.
-  **IPI-41 WO3a (2026-09-22):** `validate_write_format` accepts orc/avro
-  case-insensitively (parquet-identical normalisation); only unknown names refuse
-  with `Invalid file format`.
+  **IPI-41 WO3a (2026-09-22):** `validate_write_format` accepts orc/avro case-insensitively
+  (parquet-identical normalisation); only unknown names refuse with `Invalid file format`.
   **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the isolation, file-format and distribution-mode refusals echo the value
   masked.
-- `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`;
-  PARTITION / IF EXISTS / missing TABLE / multi-target refuse. Pins:
-  [tests/truncate.rs](tests/truncate.rs).
+- `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): delete-only `commit_truncate_to`; PARTITION
+  / IF EXISTS / missing TABLE / multi-target refuse. Pins: [tests/truncate.rs](tests/truncate.rs).
 - `update_cast.rs` — **ICE-STRUCT-PAIRING-1 build round 3 (2026-10-14), owner ruling 55(a)
   F-05, parity row R-016:** `refuse_incompatible_update_cast` reads the session's
   `spark.sql.caseSensitive` and judges a struct SET value by name under it
@@ -591,17 +529,15 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `` `st`.`b` `` and `named_struct('a', 1, 'b', 2, 'A', 3)` its `EXTRA_STRUCT_FIELDS`, not
   `AMBIGUOUS_COLUMN_NAME` (verifier 1's eight cells, v2 and v3, with and without `WHERE`).
 - `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** `execute_update` calls
-  `refuse_incompatible_update_cast` after the read-only, subquery-predicate, and MoR
-  refusals and before `execute_passthrough`: bare-column SET targets resolve on the
-  Iceberg schema, each SET value plans as `SELECT (<expr>) FROM <table>`, and the
-  first non-ANSI-store-assignable pair stamps
-  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000` as `Plan`. Missing
-  catalog/table, unresolvable names, and failed probes fall through. Pins:
+  `refuse_incompatible_update_cast` after the read-only, subquery-predicate, and MoR refusals and
+  before `execute_passthrough`: bare-column SET targets resolve on the Iceberg schema, each SET
+  value plans as `SELECT (<expr>) FROM <table>`, and the first non-ANSI-store-assignable pair stamps
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000` as `Plan`. Missing catalog/table,
+  unresolvable names, and failed probes fall through. Pins:
   [tests/update_cast.rs](tests/update_cast.rs). pins: ipi-51/W-UPDATE-TYPE-ERR
-  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** the probe also runs
-  `refuse_negated_null_writes` (a `-NULL` SET value is Spark's DOUBLE), and the final
-  check uses `incompatible_store_message`, so a STRING into a DECIMAL column refuses
-  naming `"DECIMAL(10,2)"`.
+  **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** the probe also runs `refuse_negated_null_writes` (a
+  `-NULL` SET value is Spark's DOUBLE), and the final check uses `incompatible_store_message`, so a
+  STRING into a DECIMAL column refuses naming `"DECIMAL(10,2)"`.
   **Fold 2026-09-29 (re-verify RT-1..RT-3, narrowing):** the DECIMAL-naming message applies only where
   the base message (`incompatible_update_message`) already refuses, or where the source
   is not STRING and `void_type::source_type_is_reliable` trusts the SET value; a STRING
@@ -615,21 +551,17 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `router.rs` stays at 1000 lines (two lines replaced by two). Fix round 4 (2026-09-25): the
   fold's scope carries `spark.sql.caseSensitive`, so a re-cased whole-struct value refuses
   `CANNOT_FIND_DATA` under `true`.
-  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the folded
-  statement renders through `repark_iceberg::write::sql_text::render_for_reparse`
-  so string values re-parse exactly.
-  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** the SET-value probe renders
-  through `void_type.rs`'s stacked-minus parenthesizer, and integer literals
-  are judged by Spark's type (`INT` unless `L`-suffixed or out of `INT` range)
-  because DataFusion plans every negated int literal as `BIGINT`. `UPDATE …
-  SET c = - -1` refuses `CANNOT_SAFELY_CAST` naming `"INT"`, as the
-  single-signed one now does; into an NTZ column both name `"INT"` through the
-  analyzed probe. Valid stacked-sign SET values still die in the downstream
-  re-parse (`ParserError`), unchanged.
-  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-8):** the integer
-  classifier delegates digit typing to `void_type.rs`'s shared
-  `number_text_type` (integer results only, behavior unchanged) instead of
-  re-implementing it.
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the folded statement renders through
+  `repark_iceberg::write::sql_text::render_for_reparse` so string values re-parse exactly.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 round 2):** the SET-value probe renders through
+  `void_type.rs`'s stacked-minus parenthesizer, and integer literals are judged by Spark's type
+  (`INT` unless `L`-suffixed or out of `INT` range) because DataFusion plans every negated int
+  literal as `BIGINT`. `UPDATE … SET c = - -1` refuses `CANNOT_SAFELY_CAST` naming `"INT"`, as the
+  single-signed one now does; into an NTZ column both name `"INT"` through the analyzed probe. Valid
+  stacked-sign SET values still die in the downstream re-parse (`ParserError`), unchanged.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-8):** the integer classifier delegates
+  digit typing to `void_type.rs`'s shared `number_text_type` (integer results only, behavior
+  unchanged) instead of re-implementing it.
 - `write_to_branch.rs` — Spark-door write-to-branch routing: tag/missing-branch Spark-shaped
   refuse; two-part names qualify through session defaults; the MOR valve runs on the
   Iceberg ident before the temp rewrite; fork-executed INSERT/UPDATE/DELETE via
@@ -671,30 +603,29 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `wap_branch_for_table`: it answers the conf's `spark.wap.id` only for a `write.wap.enabled=true`
   table and refuses both keys together first, and `WAP_ID_SNAPSHOT_PROPERTY` (`wap.id`) is the one
   spelling of the summary key the staged route stamps.
-  **ICE-WAP-BRANCH-1 (2026-09-19):** the `spark.wap.*` session carrier and the
-  read half of the resolver. `WapSessionConfig` is a DataFusion `ConfigExtension`
-  (`repark.wap`) holding `spark.wap.branch` and `spark.wap.id`; the Spark extension installs
-  it from the builder conf map and the binding's `set_runtime_config` writes the live one, so
-  the decision is Rust's and Python only forwards the string (an empty value clears the key).
-  `apply_wap_read_redirect` runs before the time-travel pass: with the conf set, every
-  relation in the statement naming a `write.wap.enabled=true` table is pinned to the branch's
-  snapshot (falling back to the table's current snapshot when the ref does not exist yet) and
-  spliced to an ephemeral provider, so the session's plain reads follow the branch while the
-  conf is set. **Round 2 (2026-09-20, WAP-001):** *every* relation means every one —
-  `find_read_relations` is a parenthesis-depth state machine, not a scan for FROM/JOIN/USING.
-  Each parenthesis carries its own relation list, so a subquery, a CTE body, an IN/EXISTS body
-  and each arm of a set operation get their own; FROM/JOIN/USING opens the list at the current
-  depth, a comma continues it, and a list-ending keyword (`RELATION_LIST_ENDS` — WHERE, GROUP,
-  ORDER, SELECT, SET, WHEN, LATERAL, the set operators …) closes it, so a select-list, GROUP BY
-  or alias-list comma is never read as a relation. Before it, only the first name after
-  FROM/JOIN/USING was redirected and `FROM t a, t b` silently mixed the audit branch with
-  `main`. The skip rules below apply per relation, inside a comma list too. Skipped: a relation
-  that carries its own `VERSION/TIMESTAMP AS OF` clause, a
-  `branch_`/`tag_` selector, a metadata-table path (including the `table$suffix` word the
-  metadata rewrite emits, which re-tokenizes as a `$`-placeholder glued to the base name), and
-  the statement's own write target. `both_wap_keys_message` carries Java's exact
-  `Cannot set both WAP ID and branch, but got ID [id] and branch [branch]`, raised as an
-  `IllegalArgumentException` through `repark_core::illegal_argument_error`.
+  **ICE-WAP-BRANCH-1 (2026-09-19):** the `spark.wap.*` session carrier and the read half of the
+  resolver. `WapSessionConfig` is a DataFusion `ConfigExtension` (`repark.wap`) holding
+  `spark.wap.branch` and `spark.wap.id`; the Spark extension installs it from the builder conf map
+  and the binding's `set_runtime_config` writes the live one, so the decision is Rust's and Python
+  only forwards the string (an empty value clears the key). `apply_wap_read_redirect` runs before
+  the time-travel pass: with the conf set, every relation in the statement naming a
+  `write.wap.enabled=true` table is pinned to the branch's snapshot (falling back to the table's
+  current snapshot when the ref does not exist yet) and spliced to an ephemeral provider, so the
+  session's plain reads follow the branch while the conf is set. **Round 2 (2026-09-20, WAP-001):**
+  *every* relation means every one — `find_read_relations` is a parenthesis-depth state machine, not
+  a scan for FROM/JOIN/USING. Each parenthesis carries its own relation list, so a subquery, a CTE
+  body, an IN/EXISTS body and each arm of a set operation get their own; FROM/JOIN/USING opens the
+  list at the current depth, a comma continues it, and a list-ending keyword (`RELATION_LIST_ENDS` —
+  WHERE, GROUP, ORDER, SELECT, SET, WHEN, LATERAL, the set operators …) closes it, so a select-list,
+  GROUP BY or alias-list comma is never read as a relation. Before it, only the first name after
+  FROM/JOIN/USING was redirected and `FROM t a, t b` silently mixed the audit branch with `main`.
+  The skip rules below apply per relation, inside a comma list too. Skipped: a relation that carries
+  its own `VERSION/TIMESTAMP AS OF` clause, a `branch_`/`tag_` selector, a metadata-table path
+  (including the `table$suffix` word the metadata rewrite emits, which re-tokenizes as a
+  `$`-placeholder glued to the base name), and the statement's own write target.
+  `both_wap_keys_message` carries Java's exact `Cannot set both WAP ID and branch, but got ID [id]
+  and branch [branch]`, raised as an `IllegalArgumentException` through
+  `repark_core::illegal_argument_error`.
   `spark.wap.id` on its own takes the staged route recorded under IPI-05 above. `set_value` carries `#[allow(clippy::missing_errors_doc)]` — the
   sanctioned form for the pedantic lint under the comment ban.
   **WO U9-TYPES-1 round-2 fixer (2026-09-26):** the WAP read redirect's static provider sets `with_uuid_as_string(true)`
@@ -705,49 +636,43 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   empty append through `create_branch_on_empty_table`, an `IF NOT EXISTS` on an existing branch
   is a no-op, and a tag, a replace of an existing branch, bare `REPLACE` and a duplicate raise
   Spark's IllegalArgumentException texts (`main_has_no_snapshot`, `Ref <name> already exists`).
-  **WO RP50-A (2026-09-26):** the repark-iceberg v1 kernel is gone too, so ref DDL on a
-  v1 table commits through the ref helpers; a tag on an empty v1 table still answers Spark's
-  `main has no snapshot`.
-  Its 14 in-module tests are file-backed in
-  [ref_ddl/map.md](ref_ddl/map.md); the module path, and so every pin name, is unchanged.
-  `parse_if_not_exists` / `parse_if_exists` take a token index and answer `(matched, next_index)`,
-  so `finish_create`, `finish_drop`, `parse_create_with_in` and `parse_drop_with_in` all consume
-  the guard at the same position; `refuse_guard_after_replace` is the parse-class refusal for the
-  combination Spark's grammar does not admit. The `RefOp::Create.if_not_exists` and
-  `RefOp::Drop.if_exists` flags are read in `execute_ref_ddl` against
-  `TableMetadata::snapshot_for_ref`, never as a replace — a guarded `DROP` on a missing ref
-  reads absent and no-ops rather than raising.
-  `IF NOT EXISTS` / `IF EXISTS` are optional **infixes** between `BRANCH|TAG` and the ref name —
-  Spark's token position, not a trailing clause — shared by the `ALTER TABLE` and the
-  `… IN cat.ns.t` spellings. Both guards are conditional: a missing ref is still created, a
-  present ref is still dropped, and an existing ref is left where it is (an `AS OF VERSION` on
-  the guarded form is ignored, as Spark ignores it). Spark's grammar attaches `IF NOT EXISTS` to
-  the plain `CREATE` alone, so `CREATE OR REPLACE … IF NOT EXISTS` and `REPLACE … IF NOT EXISTS`
-  refuse parse-class rather than being accepted and silently given one meaning
-  (**IPI-42**, 2026-09-20; registry `REF-2` retired). The create arm's
-  create-vs-or-replace dispatch sits in `execute_create_ref` so `execute_ref_ddl`
-  stays under clippy's 100-line cap (repark#751 CI).
-  `WITH SNAPSHOT RETENTION` takes BOTH halves — `n SNAPSHOTS` then an optional
-  `k DAYS|HOURS|MINUTES` — because Spark's grammar does; the reversed order is a Spark parse
-  error and refuses here too. Write-to-branch routing lives in `write_to_branch.rs` (RP-5):
-  the sniff still locates the statement's ONE write target. Registry rows: `REF-1` FIXED,
+  **WO RP50-A (2026-09-26):** the repark-iceberg v1 kernel is gone too, so ref DDL on a v1 table
+  commits through the ref helpers; a tag on an empty v1 table still answers Spark's `main has no
+  snapshot`. Its 14 in-module tests are file-backed in [ref_ddl/map.md](ref_ddl/map.md); the module
+  path, and so every pin name, is unchanged. `parse_if_not_exists` / `parse_if_exists` take a token
+  index and answer `(matched, next_index)`, so `finish_create`, `finish_drop`,
+  `parse_create_with_in` and `parse_drop_with_in` all consume the guard at the same position;
+  `refuse_guard_after_replace` is the parse-class refusal for the combination Spark's grammar does
+  not admit. The `RefOp::Create.if_not_exists` and `RefOp::Drop.if_exists` flags are read in
+  `execute_ref_ddl` against `TableMetadata::snapshot_for_ref`, never as a replace — a guarded `DROP`
+  on a missing ref reads absent and no-ops rather than raising. `IF NOT EXISTS` / `IF EXISTS` are
+  optional **infixes** between `BRANCH|TAG` and the ref name — Spark's token position, not a
+  trailing clause — shared by the `ALTER TABLE` and the `… IN cat.ns.t` spellings. Both guards are
+  conditional: a missing ref is still created, a present ref is still dropped, and an existing ref
+  is left where it is (an `AS OF VERSION` on the guarded form is ignored, as Spark ignores it).
+  Spark's grammar attaches `IF NOT EXISTS` to the plain `CREATE` alone, so `CREATE OR REPLACE … IF
+  NOT EXISTS` and `REPLACE … IF NOT EXISTS` refuse parse-class rather than being accepted and
+  silently given one meaning (**IPI-42**, 2026-09-20; registry `REF-2` retired). The create arm's
+  create-vs-or-replace dispatch sits in `execute_create_ref` so `execute_ref_ddl` stays under
+  clippy's 100-line cap (repark#751 CI). `WITH SNAPSHOT RETENTION` takes BOTH halves — `n SNAPSHOTS`
+  then an optional `k DAYS|HOURS|MINUTES` — because Spark's grammar does; the reversed order is a
+  Spark parse error and refuses here too. Write-to-branch routing lives in `write_to_branch.rs`
+  (RP-5): the sniff still locates the statement's ONE write target. Registry rows: `REF-1` FIXED,
   `REF-3` BACKLOG, `REF-4` FIXED.
 - **ICE-CHANGELOG-1 (2026-09-20):** `time_travel.rs` declares `pub mod changes;` —
-  `time_travel/changes.rs` rewrites `FROM <cat>.<ns>.<t>.changes` onto a
-  `ChangelogTableProvider` temp view, hooked in `router.rs` right after the metadata-table
-  rewrite and before the branch/WAP redirects, releasing through the same `PinnedViews`.
-  `changes` is deliberately NOT a metadata table: a metadata table is snapshot-scoped table
-  METADATA reached through the fork's `table$suffix` spelling, while `t.changes` is table DATA
-  over a snapshot RANGE. `metadata_tables.rs` is untouched (it holds an exact 1059-line
-  baseline).
+  `time_travel/changes.rs` rewrites `FROM <cat>.<ns>.<t>.changes` onto a `ChangelogTableProvider`
+  temp view, hooked in `router.rs` right after the metadata-table rewrite and before the branch/WAP
+  redirects, releasing through the same `PinnedViews`. `changes` is deliberately NOT a metadata
+  table: a metadata table is snapshot-scoped table METADATA reached through the fork's
+  `table$suffix` spelling, while `t.changes` is table DATA over a snapshot RANGE.
+  `metadata_tables.rs` is untouched (it holds an exact 1059-line baseline).
 - **ICE-CHANGELOG-1 (2026-09-20):** `call.rs` gains `create_changelog_view` in
   `SUPPORTED_PROCEDURES` and the dispatch; `call/create_changelog_view.rs` parses the six Java
-  parameters (`identifier_columns => array(…)` through `call_args::expr_as_string_array`),
-  applies Java's `shouldComputeUpdateImages` default (an identifier list with no
-  `compute_updates` still pairs), refuses `net_changes` beside update images with Java's exact
-  text, falls back to the table's identifier fields, and registers the LAZY
-  `ChangelogViewProvider` under the view name — returning the name Java returns, backticked when
-  defaulted.
+  parameters (`identifier_columns => array(…)` through `call_args::expr_as_string_array`), applies
+  Java's `shouldComputeUpdateImages` default (an identifier list with no `compute_updates` still
+  pairs), refuses `net_changes` beside update images with Java's exact text, falls back to the
+  table's identifier fields, and registers the LAZY `ChangelogViewProvider` under the view name —
+  returning the name Java returns, backticked when defaulted.
 - **ICE-CHANGELOG-1 (2026-09-20):** `call.rs` declares `mod changelog;` — the changelog row
   transforms live under `call/` because they are `create_changelog_view`'s, and because
   `src/lib.rs` holds a 150-line ceiling.
@@ -756,136 +681,119 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   publish is a procedure rather than one of the names the unknown-procedure refusal lists.
 - `call.rs` — twenty-one maintenance procedures: twenty maintenance calls plus `register_table`
   (**ICE-PROCS-ROUTE-1 (2026-09-19):** `ancestors_of`, `compute_table_stats`,
-  `compute_partition_stats`, `rewrite_table_path` route through `call/` bodies over the
-  fork's maintenance actions; the shared `illegal_argument` helper maps
-  procedure-layer validations to `IllegalArgumentException`). Each
-  preserves Spark's result schema and count sources. Orphan removal takes Spark's defaults
-  (a bare call deletes with `older_than` at now minus 3 days), accepts every Spark argument
-  including `file_list_view` — `location` reads named or positionally at index 2
-  through `call_args::CallArgs::optional_string_at`, matching Spark's parameter order —
-  and its guards refuse a scan path that is the shared fallback root, a parent of it, or a
-  directory holding another table of the catalog, while the listing path also refuses a table
-  whose stored location is not in normal path form (**ORPHAN-3, owner ruling Q-55-6,
-  2026-09-22**; body in `call/remove_orphan_files.rs`); on a `ServiceManagedLocation`
-  catalog (the `s3tables` kind) it refuses before any IO — table buckets answer
-  `ListObjectsV2` 405 — naming the service's `unreferencedFileRemoval` maintenance as the
-  remedy (**ORPHAN-S3TABLES-1, 2026-09-12**); rewrite-position-delete returns Spark's
-  four zeros on a DV-only table and converts admitted parquet deletes to one PUFFIN per data
-  file (`B-MOR-3` FIXED 2026-09-03; `B-MOR-3-FLOOR-1` FIXED 2026-09-04 (RP-11));
-  rewrite-data-files honors v2 `where` file-selection, refuses
-  sort/`sort_order` (`RDF-SORT-1`), answers the `options` map (registry
-  `ICE-RDF-OPTIONS-1` round 3: signed sizes, IAE-first RPD order, NULL-key precedence),
-  and on v3 drops in-scope DVs (`V3-DANGLE-1`
-  FIXED). rewrite-position-delete answers its measured options subset and refuses its
+  `compute_partition_stats`, `rewrite_table_path` route through `call/` bodies over the fork's
+  maintenance actions; the shared `illegal_argument` helper maps procedure-layer validations to
+  `IllegalArgumentException`). Each preserves Spark's result schema and count sources. Orphan
+  removal takes Spark's defaults (a bare call deletes with `older_than` at now minus 3 days),
+  accepts every Spark argument including `file_list_view` — `location` reads named or positionally
+  at index 2 through `call_args::CallArgs::optional_string_at`, matching Spark's parameter order —
+  and its guards refuse a scan path that is the shared fallback root, a parent of it, or a directory
+  holding another table of the catalog, while the listing path also refuses a table whose stored
+  location is not in normal path form (**ORPHAN-3, owner ruling Q-55-6, 2026-09-22**; body in
+  `call/remove_orphan_files.rs`); on a `ServiceManagedLocation` catalog (the `s3tables` kind) it
+  refuses before any IO — table buckets answer `ListObjectsV2` 405 — naming the service's
+  `unreferencedFileRemoval` maintenance as the remedy (**ORPHAN-S3TABLES-1, 2026-09-12**);
+  rewrite-position-delete returns Spark's four zeros on a DV-only table and converts admitted
+  parquet deletes to one PUFFIN per data file (`B-MOR-3` FIXED 2026-09-03; `B-MOR-3-FLOOR-1` FIXED
+  2026-09-04 (RP-11)); rewrite-data-files honors v2 `where` file-selection, refuses
+  sort/`sort_order` (`RDF-SORT-1`), answers the `options` map (registry `ICE-RDF-OPTIONS-1` round 3:
+  signed sizes, IAE-first RPD order, NULL-key precedence), and on v3 drops in-scope DVs
+  (`V3-DANGLE-1` FIXED). rewrite-position-delete answers its measured options subset and refuses its
   unwired keys loud. **ICE-PROCEDURES-1 PR1b (2026-09-21):** its `where` wires through
   `call/rewrite_where.rs` into the fork's `RewritePositionDeleteFiles::filter`, and
-  `expire_snapshots` binds against its declared list with `snapshot_ids` expiring each id
-  in array order while `max_concurrent_deletes`, `stream_results` and
-  `clean_expired_metadata` parse and stay ignored, and `add_files` routes through
-  `call/add_files.rs` ([call/map.md](call/map.md)). **ICE-PROCEDURES-1 PR2a
-  (2026-09-21):** `rewrite_data_files` `branch` threads into the fork's
-  `RewriteDataFiles::branch` and commits only that ref; `branch` beside
-  `remove-dangling-deletes` refuses loud, and an unknown ref passes the fork text
-  through.
+  `expire_snapshots` binds against its declared list with `snapshot_ids` expiring each id in array
+  order while `max_concurrent_deletes`, `stream_results` and `clean_expired_metadata` parse and stay
+  ignored, and `add_files` routes through `call/add_files.rs` ([call/map.md](call/map.md)).
+  **ICE-PROCEDURES-1 PR2a (2026-09-21):** `rewrite_data_files` `branch` threads into the fork's
+  `RewriteDataFiles::branch` and commits only that ref; `branch` beside `remove-dangling-deletes`
+  refuses loud, and an unknown ref passes the fork text through.
   **MAINT-POLICY-1 steps 2–3 (2026-09-10):** `run_maintenance` plans the
   five D-4 steps over the stamped `[<profile>.maintenance]` policy plus inline overrides,
   and `dry_run => false` applies them step by step (`ran` / `failed` / `skipped`).
-  **AP-1 step 1 (2026-09-10):** `plan_partitioning` scores the P-2 candidates with exactly
-  P-3 over the `files` metadata table and answers the D-1 plan frame (the pure engine lives
-  in `call/plan_partitioning_score.rs`). **AP-1 step 2 (2026-09-11):**
-  `projected_files_at_target` derives from post-rewrite bytes via the parquet-footer
-  `byte_ratio` in `call/plan_partitioning_bytes.rs` (0.55 fallback), reported per row in
-  `notes`. **AP-2 step 1 (2026-09-11):** `apply_partitioning` re-derives the plan id at the
-  current snapshot and applies the matching candidate (`dry_run` default true; `false`
-  executes one commit per step). Body: `call/apply_partitioning.rs`.
-  Details and test pointers:
-  [call/map.md](call/map.md).
+  **AP-1 step 1 (2026-09-10):** `plan_partitioning` scores the P-2 candidates with exactly P-3 over
+  the `files` metadata table and answers the D-1 plan frame (the pure engine lives in
+  `call/plan_partitioning_score.rs`). **AP-1 step 2 (2026-09-11):** `projected_files_at_target`
+  derives from post-rewrite bytes via the parquet-footer `byte_ratio` in
+  `call/plan_partitioning_bytes.rs` (0.55 fallback), reported per row in `notes`. **AP-2 step 1
+  (2026-09-11):** `apply_partitioning` re-derives the plan id at the current snapshot and applies
+  the matching candidate (`dry_run` default true; `false` executes one commit per step). Body:
+  `call/apply_partitioning.rs`. Details and test pointers: [call/map.md](call/map.md).
 - [call/branch_ops.rs](call/branch_ops.rs) — **ICE-BRANCH-OPS-1 (2026-09-17):** `fast_forward`,
   `cherrypick_snapshot`, `set_current_snapshot`, `rollback_to_timestamp` (Spark 4.1.2
   parity, oracle-pinned in `python/repark/tests/iceberg/branch_ops_1_truth.json`).
   Details: [call/map.md](call/map.md).
-- `ctas.rs` — **U7 PR2 slice-1 round 2 (2026-09-25):** a replace loads the existing table
-  before the schema is built and the fork's `begin_replace` re-keys the query's fresh-id
-  schema by name against the table's current schema (Java's RTAS); the staging reuses the
-  loaded table. The AS-SELECT doors (`saveAsTable` overwrite, `createOrReplace`, `replace`,
-  SQL `CREATE OR REPLACE … AS SELECT`) keep their column ids, so an older ref still reads
-  its rows; round 3 (2026-09-25) brings the column-def doors in `create_table.rs` and the
-  native door in `repark-sql` onto the same kernel, so every `begin_replace` caller keeps
-  them. **WO RP50-B (2026-09-26):** the re-keying moved into the fork (#354) and RePark's
-  `replace_schema.rs` is deleted.
+- `ctas.rs` — **U7 PR2 slice-1 round 2 (2026-09-25):** a replace loads the existing table before the
+  schema is built and the fork's `begin_replace` re-keys the query's fresh-id schema by name against
+  the table's current schema (Java's RTAS); the staging reuses the loaded table. The AS-SELECT doors
+  (`saveAsTable` overwrite, `createOrReplace`, `replace`, SQL `CREATE OR REPLACE … AS SELECT`) keep
+  their column ids, so an older ref still reads its rows; round 3 (2026-09-25) brings the column-def
+  doors in `create_table.rs` and the native door in `repark-sql` onto the same kernel, so every
+  `begin_replace` caller keeps them. **WO RP50-B (2026-09-26):** the re-keying moved into the fork
+  (#354) and RePark's `replace_schema.rs` is deleted.
   **U7 PR2 slice-2 round 3 (2026-09-25, critic r3 V-001..V-005):** `execute_ctas` refuses an unknown
   `isolation-level` option (`none` included) on the replace arm (`or_replace`) before any
   catalog read, as Spark's RTAS does with or without a table; a plain CTAS ignores it.
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
-  **D-5 (2026-09-21):** `refuse_unsupported_create_table_clauses`' options arm
-  narrows to `Plain | With` — the `Options` variant leaves the refusal (A-1; the
-  rewrite carries iceberg `OPTIONS` clauses as `TBLPROPERTIES` before the parse)
-  — and the message text no longer names `OPTIONS`.
+  **D-5 (2026-09-21):** `refuse_unsupported_create_table_clauses`' options arm narrows to `Plain |
+  With` — the `Options` variant leaves the refusal (A-1; the rewrite carries iceberg `OPTIONS`
+  clauses as `TBLPROPERTIES` before the parse) — and the message text no longer names `OPTIONS`.
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** option-carrying CTAS stages with overrides,
   then publishes once (materialize plus summary on a fork `Transaction`,
   `publish_create_table` / `publish_replace_table`; one snapshot); the tail lives
   in `finish_ctas_staged_commit` so `execute_ctas` keeps the function
   length ceiling. Round 3 withdrew the empty-publish-then-append double commit.
-  **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** all three creation sites merge user
-  properties through the catalog side map (the service-managed site takes
-  `catalogs` for it).
+  **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** all three creation sites merge user properties through
+  the catalog side map (the service-managed site takes `catalogs` for it).
   **D-CREATE-DEFAULT-PROPS (2026-09-23):** all three CTAS creation paths stamp the
   session owner through the shared `create_table::stamp_owner` helper; a user-supplied,
   exact lowercase `owner` property refuses before catalog access with a parser-kind
   error (ParseException, as Spark raises it).
-  **WO CASESENS-1 slice 4 (2026-09-27):** `execute_ctas` refuses
-  `COLUMN_ALREADY_EXISTS` 42711 on a folded duplicate in the planned source
-  schema under `caseSensitive=false` (R10), before staging.
+  **WO CASESENS-1 slice 4 (2026-09-27):** `execute_ctas` refuses `COLUMN_ALREADY_EXISTS` 42711 on a
+  folded duplicate in the planned source schema under `caseSensitive=false` (R10), before staging.
   **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the staged commit resolves the
   merged session write, so CTAS stamps session snapshot properties.
-  **ICE-MERGE-APPEND-1 (2026-09-19):** the staged-table append commits through
-  `merge_append()`, not `fast_append()`. Spark's CTAS writes through `StagedSparkTable`,
-  whose table is a `BaseTransaction$TransactionTable`; its `newAppend()` forwards to
-  `BaseTransaction.newAppend()`, which the 1.11.0 bytecode shows constructing
-  `org.apache.iceberg.MergeAppend` — a CTAS append is a merging append too. The
-  `replace_write` arm keeps `overwrite_files` (Java `newOverwrite`).
+  **ICE-MERGE-APPEND-1 (2026-09-19):** the staged-table append commits through `merge_append()`, not
+  `fast_append()`. Spark's CTAS writes through `StagedSparkTable`, whose table is a
+  `BaseTransaction$TransactionTable`; its `newAppend()` forwards to `BaseTransaction.newAppend()`,
+  which the 1.11.0 bytecode shows constructing `org.apache.iceberg.MergeAppend` — a CTAS append is a
+  merging append too. The `replace_write` arm keeps `overwrite_files` (Java `newOverwrite`).
   **ICE-COMMIT-UNKNOWN-1 (2026-09-14):** the service-managed abort arm skips `drop_table`
   and returns the original error unwrapped when `is_commit_state_unknown` fires — a
   possibly-landed create is never abort-dropped, and the class + `operation_id` reach the
   caller; definite kinds keep the drop-and-explain abort.
-  **IPI-26/27 round 2 (2026-09-20):** the extracted table `COMMENT` lands as the
-  `comment` property and the extracted `LOCATION` overrides the namespace-derived
-  location in `CreatePlan`, `TableCreation`, and the scheme-selected `FileIO`, so
-  CTAS data files land under the given path. Service-managed catalogs and
-  `OR REPLACE` refuse a custom location loudly (`check_custom_location`; cells
-  `D-CTAS-COMMENT`, `D-CTAS-LOCATION`).
+  **IPI-26/27 round 2 (2026-09-20):** the extracted table `COMMENT` lands as the `comment` property
+  and the extracted `LOCATION` overrides the namespace-derived location in `CreatePlan`,
+  `TableCreation`, and the scheme-selected `FileIO`, so CTAS data files land under the given path.
+  Service-managed catalogs and `OR REPLACE` refuse a custom location loudly
+  (`check_custom_location`; cells `D-CTAS-COMMENT`, `D-CTAS-LOCATION`).
   **CTAS-VIEW-1 (2026-09-03):** unpartitioned `write_ctas_stream` inherits stream conforming
   from `write_data_files_from_stream_with_concurrency` (Utf8View/BinaryView → table schema).
   **PERF-ICE-WRITEPATH-1 (2026-09-05):** `write_ctas_stream` is now `write_ctas_query` — it hands
-  the SELECT's physical plan to
-  [`write/partition_write.rs`](../../repark-iceberg/src/write/map.md), so each DataFusion
-  partition writes its own data files instead of one coalesced stream feeding cooperative
-  writers. The conform inheritance above is unchanged: the node calls the same stream writer per
-  partition. The task context is the frame's own, so the node executes
+  the SELECT's physical plan to [`write/partition_write.rs`](../../repark-iceberg/src/write/map.md),
+  so each DataFusion partition writes its own data files instead of one coalesced stream feeding
+  cooperative writers. The conform inheritance above is unchanged: the node calls the same stream
+  writer per partition. The task context is the frame's own, so the node executes
   under the state that planned it. `write_ctas_query` keeps `write_ctas_stream`'s doc comment verbatim: a renamed
   function carries its pre-existing comment unchanged.
   **V3-2:** `format-version` is consumed at parse and resolved at execute against
   `repark.sql.allowCreateFormatVersion3` (same helper as column-def CREATE).
-  **SE-1 PR-D1:** refuses Iceberg CREATE when any `TableScan` source (including
-  expression subqueries, R-B) is tighten-derived AND the output has a
-  non-nullable field (R-D), or the output schema still carries the tag. The
-  write-boundary relax is PR-D2 (via the same source walk).
-  **CUTOVER-SCHEMA-1 (2026-09-04):** the derived Arrow schema relaxes to all-nullable
-  before Iceberg conversion, so CTAS stores every column optional the way Spark does —
-  including provably non-null `SELECT coalesce(x, 0)` outputs. The SE-1 refusal checks
-  run first on the un-relaxed schema and still fire; only the derived table schema
-  relaxes, never the written batches.
+  **SE-1 PR-D1:** refuses Iceberg CREATE when any `TableScan` source (including expression
+  subqueries, R-B) is tighten-derived AND the output has a non-nullable field (R-D), or the output
+  schema still carries the tag. The write-boundary relax is PR-D2 (via the same source walk).
+  **CUTOVER-SCHEMA-1 (2026-09-04):** the derived Arrow schema relaxes to all-nullable before Iceberg
+  conversion, so CTAS stores every column optional the way Spark does — including provably non-null
+  `SELECT coalesce(x, 0)` outputs. The SE-1 refusal checks run first on the un-relaxed schema and
+  still fire; only the derived table schema relaxes, never the written batches.
   **ICE-RTAS-OPS-2 (2026-09-18):** both staged branches set
-  `StagedTableTransaction::with_replace_write(ctas.or_replace)` — the
-  `begin_replace` arm and the `begin_create` arm — so an RTAS commits `overwrite`
-  (or `delete` when the SELECT is empty) while plain CTAS keeps `append`. The
-  service-managed create-first arm never reaches the staged type; **round 2** gave
-  `execute_ctas_service_managed` the same answer through
-  `repark_iceberg::write::commit_replace_write` when `ctas.or_replace` (new-table
-  RTAS → `overwrite`, empty → `delete`); plain service-managed CTAS keeps `commit_append`.
-  The two opt-in lines took `execute_ctas` past clippy's `too_many_lines`, so it
-  carries the repository's `#[allow(clippy::too_many_lines)]` like 23 other sites.
+  `StagedTableTransaction::with_replace_write(ctas.or_replace)` — the `begin_replace` arm and the
+  `begin_create` arm — so an RTAS commits `overwrite` (or `delete` when the SELECT is empty) while
+  plain CTAS keeps `append`. The service-managed create-first arm never reaches the staged type;
+  **round 2** gave `execute_ctas_service_managed` the same answer through
+  `repark_iceberg::write::commit_replace_write` when `ctas.or_replace` (new-table RTAS →
+  `overwrite`, empty → `delete`); plain service-managed CTAS keeps `commit_append`. The two opt-in
+  lines took `execute_ctas` past clippy's `too_many_lines`, so it carries the repository's
+  `#[allow(clippy::too_many_lines)]` like 23 other sites.
   **ICE-WRITE-OPTIONS-1 run 22b (2026-09-18, Q-22b-WO-4):** an option-carrying RTAS keeps
   ICE-RTAS-OPS-2's operation. `finish_ctas_staged_commit` takes `replace_write` and stages
   `overwrite_files().overwrite_by_row_filter(AlwaysTrue).allow_empty_commit()` with the
@@ -900,10 +808,9 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   as an owned write head, so the statement keeps its ref-qualified name and reaches RePark's
   own append / identity-DML path instead of the fork temp provider (which carries neither
   snapshot properties nor a codec — `QS-BRANCH-*`, `QZ-BRANCH-*`).
-  **WO U5 PR2b round 3 (2026-09-25):** `commit_write_on_branch` checks that an explicit
-  `t.branch_x` target exists, so a missing branch on a format v1 table answers REF-1's `Cannot
-  use branch (does not exist): x` (Spark's text). WO RP50-A keeps the check with the v1 kernel
-  removed.
+  **WO U5 PR2b round 3 (2026-09-25):** `commit_write_on_branch` checks that an explicit `t.branch_x`
+  target exists, so a missing branch on a format v1 table answers REF-1's `Cannot use branch (does
+  not exist): x` (Spark's text). WO RP50-A keeps the check with the v1 kernel removed.
 - `write_to_branch.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28), delete-format check reverted by RP-61 (2026-10-28):** `commit_write_on_branch` no longer runs the delete-format check: the DML arm's owned-head and fork-parse checks and the MERGE arm are gone, with the `data_format` import. Its BUG-001 valve for DML still runs before `create_wap_branch_from_main`, so that refusal creates no branch. `branch_write_kind` (`BranchWriteKind::{Dml, Merge}`) still classifies the statement from its tokenised head (`statement_head`), so a leading comment does not hide its kind; UPDATE, DELETE, MERGE, INSERT and TRUNCATE classify, and any other head refuses before any file is written (fail closed). `tag_write_error` reads the same head. A branch statement reaches the fork writer through a temp view, so the router never sees its table. The path still resolves the name as written (follow-up card SPARK-DOOR-TARGET-NORMALISATION-1). A MERGE on a branch reaches the branch path without a delete-format check, as it did before ICE-DELETE-FORMAT-GUARD-1.
 - `time_travel.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the ref-selector scan
   skips the `FROM` that names a `DELETE` target, so `DELETE FROM t.branch_b …` is a write to
@@ -912,9 +819,8 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   **RP-56 verifier fold (2026-09-28):** branch-selector spans refuse 42711 under `false` when
   the pinned provider schema has top-level twins (p9 `f_branch_table`); `VERSION`/`TIMESTAMP
   AS OF` keeps answering through the scratch skip.
-  **RP-56 DIFF-PROBE fold (2026-09-29):** tag selectors refuse like branch selectors
-  (`ref_selector` refuses 42711 under `false` on twin schemas; `VERSION`/`TIMESTAMP AS OF`
-  still answer).
+  **RP-56 DIFF-PROBE fold (2026-09-29):** tag selectors refuse like branch selectors (`ref_selector`
+  refuses 42711 under `false` on twin schemas; `VERSION`/`TIMESTAMP AS OF` still answer).
 - `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 8 (2026-09-20):**
   `canonicalize_identity_selection` canonicalises the selection and each SET *value* through
   `rewrite_fragment_case` (a SQL fragment in, a SQL fragment out — the repair backticks a
@@ -929,28 +835,25 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `EXPLAIN ANALYZE` (the `Explain` arm, which never reached the strict pregate) and a `PREPARE` of
   any write refuse on both repark-spark doors with the ruled texts, before the strict pregate;
   the nested-NTZ gate (`router.rs`) still runs first.
-- `spark_ast.rs` — **WO CASESENS-1 slice 2 (2026-09-27):**
-  `try_execute_identity_dml` runs the `false` branch through
-  `canonicalize_identity_selection` as before and the `true` branch through the
-  new `check_identity_selection_exact`, which checks the selection and each SET
-  *value* with `merge_fragments/exact.rs` `check_identity_exact` (single
-  target scope, bare candidates — Spark's
-  `cs_update_where` / `cs_delete_where` text byte-exact). Plain UPDATE/DELETE
-  bypass `plan_case_sensitive` through this owned route, so without the check
-  the `ctx.sql` identity scan folds `WHERE ID` under `true`. SET *targets*
-  stay with `validate_update_assignments`, which already reads the flag.
+- `spark_ast.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** `try_execute_identity_dml` runs the
+  `false` branch through `canonicalize_identity_selection` as before and the `true` branch through
+  the new `check_identity_selection_exact`, which checks the selection and each SET *value* with
+  `merge_fragments/exact.rs` `check_identity_exact` (single target scope, bare candidates — Spark's
+  `cs_update_where` / `cs_delete_where` text byte-exact). Plain UPDATE/DELETE bypass
+  `plan_case_sensitive` through this owned route, so without the check the `ctx.sql` identity scan
+  folds `WHERE ID` under `true`. SET *targets* stay with `validate_update_assignments`, which
+  already reads the flag.
 - `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** `execute_insert_source`
   is `execute_passthrough` stopped one step short — same parse, same rewrites, same analysis,
   but it executes the insert's INPUT instead of the insert. One pipeline answers both routes,
   so an owned INSERT cannot drift from a delegated one.
-- `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):**
-  `plain_identity_or_update` adds the plain `UPDATE … SET … WHERE <scalar comparison>` to the
-  owned identity-DML route when the session write conf is set. Without it the statement
-  commits through the fork's DataFusion DML, which takes no snapshot properties and no codec,
-  so Spark's stamp, its MoR delete-file codec and its summary-key refusal were all silently
-  lost (`QS-UPDATE-MOR`, `QZ-POSDEL-UPDATE`, `QR-UPDATE-COW-CHANGED-PARTITION`, `SP-UPDATE`).
-  The reroute is conf-scoped on purpose: making every plain UPDATE owned is a routing decision
-  of its own, tracked outside this unit.
+- `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** `plain_identity_or_update`
+  adds the plain `UPDATE … SET … WHERE <scalar comparison>` to the owned identity-DML route when the
+  session write conf is set. Without it the statement commits through the fork's DataFusion DML,
+  which takes no snapshot properties and no codec, so Spark's stamp, its MoR delete-file codec and
+  its summary-key refusal were all silently lost (`QS-UPDATE-MOR`, `QZ-POSDEL-UPDATE`,
+  `QR-UPDATE-COW-CHANGED-PARTITION`, `SP-UPDATE`). The reroute is conf-scoped on purpose: making
+  every plain UPDATE owned is a routing decision of its own, tracked outside this unit.
 - `spark_ast.rs` — **SE-1 D1:** after the SEC-02 plan guard,
   calls the shared belt's `repark_core::PreExecute::guard` (which owns
   `refuse_iceberg_create_of_tightened_ddl`) so `CREATE VIEW cat.ns.v AS …` and
@@ -977,34 +880,28 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   the statement will plan; quoting after the gate left the arm unplannable
   and the cell unjudged, which stored (VT5-1). DataFusion plans only
   `SingleQuotedString` interval bounds, hence the rewrite.
-- `spark_ast.rs` — **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):**
-  the pre-gate AST rewrite chain is one shared pair of functions
-  (`apply_pregate_rewrites_before_identity_dml` /
-  `apply_pregate_rewrites_after_identity_dml`), called strict by the
-  statement path and best-effort by the sibling judge through
-  `apply_pregate_judge_rewrites`, so an arm or probe plans exactly what the
-  statement plans (VT6-1). The split sits around identity-DML execution,
-  which is not a rewrite and stays mid-chain; order inside each half is the
-  old order (collation and declared-function at executing-parse altitude,
-  the DML-subquery valve, ordering defaults, the time-window wrap, the sort
-  rewrite, `BINARY`→`BYTEA`, bare units, the nullary demotion, keyword
-  lowering, interval-bound quoting). Best-effort keeps each rewrite's side
-  effects and continues past refusal errors, which on judge text are
-  double-application artifacts — notably the bare-unit rewrite refusing its
-  own quoted output — so the nullary demotion still runs after them.
-  `prepare_ordering` folds into the after half. The range-frame restatement
-  below keeps its own partial chain; it re-plans, it does not judge.
-- `bare_nullary.rs` — **SPARK-SQL-GRAMMAR-1 C-010 (2026-09-16):** bare nullary
-  keywords in both Spark directions. `demote_refusing_nullary_calls` lowers a
-  no-paren `localtimestamp` call (the Databricks dialect parses it as a function)
-  to a plain column reference, so a real column still wins and a missing one
-  reaches the planner; `map_bare_nullary_column_error` maps the missing-field
-  error for the six names Spark refuses (`localtimestamp`, `current_catalog`,
-  `current_database`, `current_schema`, `current_timezone`, `now`) to
-  `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` (framed) or `[WITHOUT_SUGGESTION]`
-  (frameless), matching PySpark 4.1.2. Runs in `spark_ast::execute_passthrough`
-  (rewrite pre-plan, map around the whole passthrough) and the range-frame
-  restatement. 8 in-module tests.
+- `spark_ast.rs` — **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):** the pre-gate AST rewrite
+  chain is one shared pair of functions (`apply_pregate_rewrites_before_identity_dml` /
+  `apply_pregate_rewrites_after_identity_dml`), called strict by the statement path and best-effort
+  by the sibling judge through `apply_pregate_judge_rewrites`, so an arm or probe plans exactly what
+  the statement plans (VT6-1). The split sits around identity-DML execution, which is not a rewrite
+  and stays mid-chain; order inside each half is the old order (collation and declared-function at
+  executing-parse altitude, the DML-subquery valve, ordering defaults, the time-window wrap, the
+  sort rewrite, `BINARY`→`BYTEA`, bare units, the nullary demotion, keyword lowering, interval-bound
+  quoting). Best-effort keeps each rewrite's side effects and continues past refusal errors, which
+  on judge text are double-application artifacts — notably the bare-unit rewrite refusing its own
+  quoted output — so the nullary demotion still runs after them. `prepare_ordering` folds into the
+  after half. The range-frame restatement below keeps its own partial chain; it re-plans, it does
+  not judge.
+- `bare_nullary.rs` — **SPARK-SQL-GRAMMAR-1 C-010 (2026-09-16):** bare nullary keywords in both
+  Spark directions. `demote_refusing_nullary_calls` lowers a no-paren `localtimestamp` call (the
+  Databricks dialect parses it as a function) to a plain column reference, so a real column still
+  wins and a missing one reaches the planner; `map_bare_nullary_column_error` maps the missing-field
+  error for the six names Spark refuses (`localtimestamp`, `current_catalog`, `current_database`,
+  `current_schema`, `current_timezone`, `now`) to `[UNRESOLVED_COLUMN.WITH_SUGGESTION]` (framed) or
+  `[WITHOUT_SUGGESTION]` (frameless), matching PySpark 4.1.2. Runs in
+  `spark_ast::execute_passthrough` (rewrite pre-plan, map around the whole passthrough) and the
+  range-frame restatement. 8 in-module tests.
   **UNRESOLVED-ROUTINE-1 (2026-09-16):** `non_schema_error_passes_through` now
   fixtures a genuinely unrelated `Plan` error — unknown names reshape in
   `repark-core::unknown_routine`, not here.
@@ -1023,25 +920,23 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   session analyzer can narrow a `timestamptz_ns` source to microseconds; `after_analysis`
   wraps what is still not the target type. A `timestamptz_ns` target is left out: it is the
   unit's control and stays as main answers (parity row ICE-TSNS-SQL-1-R-008).
-  **The split (2026-10-09):** the nested conform of folds 1 and 2 is removed from this hook;
-  a nested target is not touched here and is refused earlier, at the router
-  (`router/nested_ns.rs`). One top-level refusal was added, `refuse_narrowed_update`: for an
-  `UPDATE` plan, a `SET` value into a naive `timestamp_ns` column that holds a cast from a
-  nanosecond timestamp to a coarser one (`narrows`; a typed NULL excepted, a `CASE` condition
-  not searched) is refused by name. That is the cast type coercion inserts for
-  `CASE … ELSE NULL END`, `if(…, c, NULL)` and `array(c, NULL)[0]` (parity row R-017). On main
-  the statement raised a raw Arrow error (the array form of a `timestamp_ns` source stored a
-  cut value at the UTC wall); once the unit made the unfiltered `UPDATE` answer, it stored a
-  value cut to microseconds, and in a DST gap an hour off. The text ends `The value was
-  narrowed from nanoseconds to microseconds before the store; give the NULL beside it the
-  type timestamp_ns`. **Why only here:** the other doors store such a value on main (cut, row
-  R-017) and a refusal there would also refuse a written `CAST(ns AS TIMESTAMP)`; this door
-  did not answer on main, so nothing that stored is refused.
-  `router.rs` makes the one call of `router/nested_ns.rs` in `execute_calibrated`, before the
-  branch and WAP rewrite (that directory's map; split fold 1). `write_to_branch.rs` gained
-  `written_targets`, the target after every `INSERT`, `UPDATE` or `MERGE` keyword read from
-  the tokens, for a statement the gate cannot parse (fold 2 widened it from the statement's
-  head to every such keyword).
+  **The split (2026-10-09):** the nested conform of folds 1 and 2 is removed from this hook; a
+  nested target is not touched here and is refused earlier, at the router (`router/nested_ns.rs`).
+  One top-level refusal was added, `refuse_narrowed_update`: for an `UPDATE` plan, a `SET` value
+  into a naive `timestamp_ns` column that holds a cast from a nanosecond timestamp to a coarser one
+  (`narrows`; a typed NULL excepted, a `CASE` condition not searched) is refused by name. That is
+  the cast type coercion inserts for `CASE … ELSE NULL END`, `if(…, c, NULL)` and `array(c,
+  NULL)[0]` (parity row R-017). On main the statement raised a raw Arrow error (the array form of a
+  `timestamp_ns` source stored a cut value at the UTC wall); once the unit made the unfiltered
+  `UPDATE` answer, it stored a value cut to microseconds, and in a DST gap an hour off. The text
+  ends `The value was narrowed from nanoseconds to microseconds before the store; give the NULL
+  beside it the type timestamp_ns`. **Why only here:** the other doors store such a value on main
+  (cut, row R-017) and a refusal there would also refuse a written `CAST(ns AS TIMESTAMP)`; this
+  door did not answer on main, so nothing that stored is refused. `router.rs` makes the one call of
+  `router/nested_ns.rs` in `execute_calibrated`, before the branch and WAP rewrite (that directory's
+  map; split fold 1). `write_to_branch.rs` gained `written_targets`, the target after every
+  `INSERT`, `UPDATE` or `MERGE` keyword read from the tokens, for a statement the gate cannot parse
+  (fold 2 widened it from the statement's head to every such keyword).
 - `insert_timestamp_ns.rs` — **ICE-TSNS-SQL-1 (2026-09-17):** the SQL door's INSERT conform
   for Iceberg `timestamp_ns` / `timestamptz_ns` target columns, called from `spark_ast`.
   `before_analysis` replaces the planner's `CAST(… AS Timestamp(ns))` over a non-column source
@@ -1065,15 +960,13 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   identity-DML path so `UPDATE … SET c = map()` plans (V-001); a MERGE runs
   `lower_empty_maps_and_timestamp_ns_casts` when `has_empty_map_or_timestamp_ns_cast` finds
   either, so every MERGE clause takes `map()`.
-- `keyword_lower.rs` — **SPARK-SQL-GRAMMAR-1 C-003/C-004/C-005 (2026-09-16):**
-  Spark-only keyword lowerings onto registered kernels. `x RLIKE p` becomes
-  `regexp_like(x, p)` (`NOT RLIKE` becomes `NOT regexp_like`); `CAST(x AS
-  TIMESTAMP_LTZ)` becomes `CAST(x AS TIMESTAMP)` (TRY_CAST included); a
-  `TIMESTAMP_NTZ` type name still refuses, now as `[UNSUPPORTED_TIMESTAMP_NTZ]`
-  naming TZ-6 (no tz-naive CAST path exists — rewriting onto `TIMESTAMP WITHOUT
-  TIME ZONE` plans tz-aware, measured). Runs pre-plan in `spark_ast`; the error
-  map chains after the nullary map around the whole passthrough. 6 in-module
-  tests.
+- `keyword_lower.rs` — **SPARK-SQL-GRAMMAR-1 C-003/C-004/C-005 (2026-09-16):** Spark-only keyword
+  lowerings onto registered kernels. `x RLIKE p` becomes `regexp_like(x, p)` (`NOT RLIKE` becomes
+  `NOT regexp_like`); `CAST(x AS TIMESTAMP_LTZ)` becomes `CAST(x AS TIMESTAMP)` (TRY_CAST included);
+  a `TIMESTAMP_NTZ` type name still refuses, now as `[UNSUPPORTED_TIMESTAMP_NTZ]` naming TZ-6 (no
+  tz-naive CAST path exists — rewriting onto `TIMESTAMP WITHOUT TIME ZONE` plans tz-aware,
+  measured). Runs pre-plan in `spark_ast`; the error map chains after the nullary map around the
+  whole passthrough. 6 in-module tests.
   **WO NTZ-1 slice 1 (2026-09-26):** the scalar `TIMESTAMP_NTZ` literal and cast no
   longer refuse: `CAST` / `::` / `TRY_CAST` to `TIMESTAMP_NTZ` lower first (see
   [keyword_lower/](keyword_lower/map.md)) and only a nested target still refuses, with
@@ -1121,66 +1014,54 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   decimals skip the tokenize. The 200-column decimal gap is DataFusion-side.
   `sql_may_have_insert_partition` keeps quote-free `INSERT … PARTITION` text off the
   fast path so the column-list swap runs.
-  **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the file reached 999 of its 1,000
-  lines, so the literal-value engine moves verbatim to the child module
-  [spark_literals/unescape.rs](spark_literals/unescape.rs) (comments shed per
-  the owner ruling; behavior identical, callers untouched via re-export).
-  The follow-up fix makes the value engine quote-aware: `""` collapses in
-  double-quoted literals (PE-10), `r"…"` answers, raw `''`/`""` splits head
-  from quoted tail, and verbatim keeps doublings. `create_options.rs` option
-  keys unescape with their own quote type. Rust pins in
-  [tests/string_literal_escape_1.rs](tests/string_literal_escape_1.rs) (own
-  leaf; the SQP-1 leaf is byte-frozen), facade pins in
-  `python/repark/tests/sql/test_string_literal_escape_1.py`.
-  **DIFF-PROBE fold (2026-09-29):** verbatim keep-exact now applies only to
-  query-expression literals and `OPTIONS` values; DDL property lists
-  (`TBLPROPERTIES` / `PROPERTIES` / `DBPROPERTIES` parens) and `COMMENT`
-  literal runs in `CREATE` / `ALTER` statements take default treatment, so
-  their canonical text matches default mode exactly. Doubled `""` inside a
-  `COMMENT` double-quoted literal forces a rewrite (the borrower path refuses
-  doubles there) into single-quoted form. The statement gate keeps
-  `SELECT comment '…'` aliases on the query rule. `OPTIONS` needs no span:
-  its planner already unescapes keys from original text and splices values
-  from verbatim inners. `COMMENT ON` stays out (Spark collapses doublings
-  but preserves backslashes there — a different rule).
-  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the DDL gate covers
-  `SHOW` and `COMMENT` statements too; `UNSET … [IF EXISTS]` skips the guard
-  words before the key paren, `SHOW TBLPROPERTIES t (…)` spans the trailing
-  key paren, and `COMMENT ON … IS …` spans the literal after the last `IS`
-  followed by one. A clean Spark rerun shows `COMMENT ON` fully unescapes
-  both modes, superseding the DIFF-PROBE note above. The verbatim entry
-  points (`canonicalize_verbatim`, `translate_downstream_error_verbatim`,
-  `with_escaped_string_literals_config`, `escaped_verbatim_from_options`)
-  turn `pub` for the binding's `filter`/`where`/`F.expr` doors.
+  **STRING-LITERAL-ESCAPE-1 (2026-09-29):** the file reached 999 of its 1,000 lines, so the
+  literal-value engine moves verbatim to the child module
+  [spark_literals/unescape.rs](spark_literals/unescape.rs) (comments shed per the owner ruling;
+  behavior identical, callers untouched via re-export). The follow-up fix makes the value engine
+  quote-aware: `""` collapses in double-quoted literals (PE-10), `r"…"` answers, raw `''`/`""`
+  splits head from quoted tail, and verbatim keeps doublings. `create_options.rs` option keys
+  unescape with their own quote type. Rust pins in
+  [tests/string_literal_escape_1.rs](tests/string_literal_escape_1.rs) (own leaf; the SQP-1 leaf is
+  byte-frozen), facade pins in `python/repark/tests/sql/test_string_literal_escape_1.py`.
+  **DIFF-PROBE fold (2026-09-29):** verbatim keep-exact now applies only to query-expression
+  literals and `OPTIONS` values; DDL property lists (`TBLPROPERTIES` / `PROPERTIES` / `DBPROPERTIES`
+  parens) and `COMMENT` literal runs in `CREATE` / `ALTER` statements take default treatment, so
+  their canonical text matches default mode exactly. Doubled `""` inside a `COMMENT` double-quoted
+  literal forces a rewrite (the borrower path refuses doubles there) into single-quoted form. The
+  statement gate keeps `SELECT comment '…'` aliases on the query rule. `OPTIONS` needs no span: its
+  planner already unescapes keys from original text and splices values from verbatim inners.
+  `COMMENT ON` stays out (Spark collapses doublings but preserves backslashes there — a different
+  rule).
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the DDL gate covers `SHOW` and `COMMENT`
+  statements too; `UNSET … [IF EXISTS]` skips the guard words before the key paren, `SHOW
+  TBLPROPERTIES t (…)` spans the trailing key paren, and `COMMENT ON … IS …` spans the literal after
+  the last `IS` followed by one. A clean Spark rerun shows `COMMENT ON` fully unescapes both modes,
+  superseding the DIFF-PROBE note above. The verbatim entry points (`canonicalize_verbatim`,
+  `translate_downstream_error_verbatim`, `with_escaped_string_literals_config`,
+  `escaped_verbatim_from_options`) turn `pub` for the binding's `filter`/`where`/`F.expr` doors.
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the `escapedStringLiterals` refusal echoes the rejected value through
   `mask_value_credentials`.
-- `spark_literal_typing.rs` — **SQL-LITERAL-TYPING-1 (2026-09-16):**
-  `SparkIntegralLiteral` types unsuffixed integral literals as Spark does —
-  Int64 fitting i32 narrows to Int32, UInt64 becomes Decimal128(digits, 0),
-  decimal literals past precision 38 refuse with
-  `[DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION]`, `-2147483648` folds — installed
-  from `SparkExtension::configure_analyzer_rules` immediately before the first
-  `type_coercion`, so DataFusion's own coercion then produces Spark's promotion
-  with no per-operator retag. Skips `Limit` plans, rebuilds `Values` rows. The
-  late `SparkIntegerLiteral` stays (idempotent no-op afterwards). The rule
-  recurses with subqueries, re-resolves lambda variables after narrowing, and
-  re-derives union schemas from their inputs, so the first coercion sees one
-  consistent narrow world (else it cements Int64 around lambdas and unions).
-  Unit tests beside the change cover the mapping, the refusal shape, the
-  insert order and the union refresh.
-  **Remediation round 1 (2026-09-16):** the seat stays immediately before
-  `type_coercion` (a first-among-pre-coercion seat was measured, broke 24
-  FNP-8 HOF pins, and reverted — the revert stayed red, exonerating the
-  seat; the true cause was the `recompute_schema` skip leaving stale parent
-  schemas, fixed by always recomputing); the `Negative` fold is gone so only
-  the lexer-level negative token narrows and `-(2147483648)` stays bigint
-  (LIT2-SQL-03/04); the late `SparkIntegerLiteral` is uninstalled on both
-  Spark doors (`spark_door_post_coercion_rules`, the early rule subsumes it).
-  A plan-level apply pre-check skips literal-free plans;
-  `resolve_lambda_variables` runs only with a higher-order function on the
-  node (`recompute_schema` stays unconditional: gating it left stale parent
-  schemas after bottom-up narrowing); `Values` clones rows only on change;
-  `Union` rebuilds only on a moved child type.
+- `spark_literal_typing.rs` — **SQL-LITERAL-TYPING-1 (2026-09-16):** `SparkIntegralLiteral` types
+  unsuffixed integral literals as Spark does — Int64 fitting i32 narrows to Int32, UInt64 becomes
+  Decimal128(digits, 0), decimal literals past precision 38 refuse with
+  `[DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION]`, `-2147483648` folds — installed from
+  `SparkExtension::configure_analyzer_rules` immediately before the first `type_coercion`, so
+  DataFusion's own coercion then produces Spark's promotion with no per-operator retag. Skips
+  `Limit` plans, rebuilds `Values` rows. The late `SparkIntegerLiteral` stays (idempotent no-op
+  afterwards). The rule recurses with subqueries, re-resolves lambda variables after narrowing, and
+  re-derives union schemas from their inputs, so the first coercion sees one consistent narrow world
+  (else it cements Int64 around lambdas and unions). Unit tests beside the change cover the mapping,
+  the refusal shape, the insert order and the union refresh.
+  **Remediation round 1 (2026-09-16):** the seat stays immediately before `type_coercion` (a
+  first-among-pre-coercion seat was measured, broke 24 FNP-8 HOF pins, and reverted — the revert
+  stayed red, exonerating the seat; the true cause was the `recompute_schema` skip leaving stale
+  parent schemas, fixed by always recomputing); the `Negative` fold is gone so only the lexer-level
+  negative token narrows and `-(2147483648)` stays bigint (LIT2-SQL-03/04); the late
+  `SparkIntegerLiteral` is uninstalled on both Spark doors (`spark_door_post_coercion_rules`, the
+  early rule subsumes it). A plan-level apply pre-check skips literal-free plans;
+  `resolve_lambda_variables` runs only with a higher-order function on the node (`recompute_schema`
+  stays unconditional: gating it left stale parent schemas after bottom-up narrowing); `Values`
+  clones rows only on change; `Union` rebuilds only on a moved child type.
   pins: sql-literal-typing-1/L-001, L-002, L-003
   **ICE-COUNT-FOLD-1 (2026-09-19):** this is the rule that narrowed `count(*)`'s
   `COUNT_STAR_EXPANSION` on both Spark doors, which kept DataFusion's `AggregateStatistics`
@@ -1195,28 +1076,25 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   **WO-2 xo-muse8 UNIT1 fix-b (2026-09-21):** the same pre-coercion seat now also
   widens a decimal literal compared against a FLOAT/DOUBLE expression to DOUBLE
   (`d = CAST(0.0 AS DOUBLE)`, Spark's analyzed shape — the float side keeps its
-  type and DataFusion's coercion then promotes a FLOAT column to double, exactly
-  like Spark). DataFusion prefers decimal over float and used to cast the column
+  type and DataFusion's coercion then promotes a FLOAT column to double, exactly like Spark). DataFusion prefers decimal over float and used to cast the column
   (`CAST(d AS Decimal128(30,15))`), which dies with `Overflowing on NaN`. Covers
   the six comparison operators, `IN`/`NOT IN`, `BETWEEN`/`NOT BETWEEN`, either
   side, and `Negative`-wrapped literals; decimal-vs-decimal and
   decimal-vs-integral comparisons are untouched, as are unresolvable sides
   (conservative no-op). The post-coercion `FoldSparkNumericCasts` folds the new
-  cast into a double literal on full sessions. Signed-zero `=`/`<>`/`<`/`>=`
-  outcomes still follow the float eq kernel (total order: `-0.0` distinct from
-  `0.0`), a separate pre-existing divergence pinned beside the sweep.
+  cast into a double literal on full sessions. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `<=>`,
+  `IS DISTINCT FROM` and a simple `CASE` over a float operand (`widen_case`) widen too; the
+  core's `signed_zero_literals` then gives zero comparisons IEEE equality.
 - `spark_rewrites/` — the token-rewrite planners of the canonicalize layer;
   `mod.rs` carries the shared span helpers and the families below.
-  **D-5 (2026-09-21):** `create_options.rs` (wired last in `spark_literals.rs`
-  `canonical_rewrite`, with its `sql_may_have_create_options` fast-path guard)
-  rewrites the single well-formed `OPTIONS (k=v, …)` clause of a
-  `CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name [(cols)] USING iceberg`
-  statement into `TBLPROPERTIES` carrying each key raw and `option.`-prefixed,
-  so both spellings reach the stored property map. Values copy verbatim from the
-  source with inner literal regions spliced in; non-iceberg providers, a missing
-  `USING iceberg`, `WITH`/plain variants, malformed pairs, and DataFusion-style
-  no-eq pairs stay untouched. Cells `D-CREATE-OPTIONS`, `D-CTAS-OPTIONS`.
-  Details: [spark_rewrites/map.md](spark_rewrites/map.md).
+  **D-5 (2026-09-21):** `create_options.rs` (wired last in `spark_literals.rs` `canonical_rewrite`,
+  with its `sql_may_have_create_options` fast-path guard) rewrites the single well-formed `OPTIONS
+  (k=v, …)` clause of a `CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name [(cols)] USING iceberg`
+  statement into `TBLPROPERTIES` carrying each key raw and `option.`-prefixed, so both spellings
+  reach the stored property map. Values copy verbatim from the source with inner literal regions
+  spliced in; non-iceberg providers, a missing `USING iceberg`, `WITH`/plain variants, malformed
+  pairs, and DataFusion-style no-eq pairs stay untouched. Cells `D-CREATE-OPTIONS`,
+  `D-CTAS-OPTIONS`. Details: [spark_rewrites/map.md](spark_rewrites/map.md).
 - `spark_rewrites/mod.rs` + `spark_rewrites/timestamp_ltz_literal.rs` — **WO U9-TYPES-1
   (2026-09-25):** `plan_keyword_regions` (the one call `spark_literals.rs` makes, in place of
   `plan_drop_temporary_regions`) adds `TIMESTAMP_LTZ '…'` → `TIMESTAMP '…'`, Spark's LTZ
@@ -1264,6 +1142,9 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `(- 0.0)`; composites like `a + Int64(1)` or `getbit(Int64(6),Int64(1))`
   keep their plan names) and names unfolded integer `CAST`s from the literal
   inner. Inner renames are out of scope: analysis runs twice and outer references would go stale.
+  **SIGNED-ZERO-NORMALIZE-1 delta (2026-11-11):** the display reads through
+  `__repark_spark_nonnull__` and spells `<=>` and `IS DISTINCT FROM` as Spark does (`(d <=> 0.0)`,
+  `(NOT (d <=> 0.0))`), so `selectExpr` never shows the wrapper.
 - `spark_ast.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** the passthrough runs every planned
   statement through `normalize/map_ordering.rs`'s `refuse_map_ordering` before analysis, so a
   map comparison, `ORDER BY` or `DISTINCT` refuses as Spark does (verifier V-003).
@@ -1314,26 +1195,21 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   sources `DECIMAL(p,s)`, first refusal in row order winning as before. The
   helper lives in `void_type.rs` and `update_cast.rs` reuses it; the LTZ child
   module keeps its own copy under the round-1 file-scope ruling.
-  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2/VG-8):** the
-  helper is one recursive post-visit over the whole expression — the operand of
-  every unary operator is wrapped when itself unary or sign-led — used at all
-  three probe sites, so `(- -1)`, `+- -1`, `+(- -1)`, `-(- -1)`, `- -1 + 0`,
-  `abs(- -1)` and `CAST(- -1 AS INT)` probe their numeric type instead of a
-  `--` comment; a probe that still cannot parse now refuses with the analyzer's
-  own error instead of passing the row. `update_cast.rs` judges integer
-  literals through the shared `number_text_type`.
-  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-1..RN2-3):** every
-  NTZ probe position is aliased `p{n}`, so a row with two equal cells (`(1, 1, 1,
-  ts)`, `(3, NULL, NULL, ts)`, two equal NTZ literals, `7` beside `CAST(7 AS INT)`)
-  no longer trips DataFusion's unique-projection check; a `DEFAULT` cell probes as
-  `NULL` through `insert_defaults::is_default_marker`, as the probe runs
-  before marker substitution and a declared write-default fits its column by
-  construction. The fail-closed probe stays: with its own failure causes gone,
-  `(10, 1, 1, '2024-…')` and `(11, 1, 1, - -1)` refuse `CANNOT_SAFELY_CAST` as
-  Spark does, where base stored them as the duplicate-name error skipped the
-  check. The sign-led `starts_with('-')` disjunct is removed: every tree the
-  parser produces with a sign-led operand is a unary-under-unary the match
-  already wraps.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 verifier fold, VG-1/VG-2/VG-8):** the helper is one
+  recursive post-visit over the whole expression — the operand of every unary operator is wrapped
+  when itself unary or sign-led — used at all three probe sites, so `(- -1)`, `+- -1`, `+(- -1)`,
+  `-(- -1)`, `- -1 + 0`, `abs(- -1)` and `CAST(- -1 AS INT)` probe their numeric type instead of a
+  `--` comment; a probe that still cannot parse now refuses with the analyzer's own error instead of
+  passing the row. `update_cast.rs` judges integer literals through the shared `number_text_type`.
+  **Fold 2026-09-28 (LTZ-STACKED-SIGN-1 re-verify fold, RN2-1..RN2-3):** every NTZ probe position is
+  aliased `p{n}`, so a row with two equal cells (`(1, 1, 1, ts)`, `(3, NULL, NULL, ts)`, two equal
+  NTZ literals, `7` beside `CAST(7 AS INT)`) no longer trips DataFusion's unique-projection check; a
+  `DEFAULT` cell probes as `NULL` through `insert_defaults::is_default_marker`, as the probe runs
+  before marker substitution and a declared write-default fits its column by construction. The
+  fail-closed probe stays: with its own failure causes gone, `(10, 1, 1, '2024-…')` and `(11, 1, 1,
+  - -1)` refuse `CANNOT_SAFELY_CAST` as Spark does, where base stored them as the duplicate-name
+  error skipped the check. The sign-led `starts_with('-')` disjunct is removed: every tree the
+  parser produces with a sign-led operand is a unary-under-unary the match already wraps.
   **Fold 2026-09-29 (LTZ-STACKED-SIGN-1 second re-verify fold, RN3-1):** the
   shared `probe_text` (parenthesizer, then dollar-quote of string literals
   holding a quote under a collision-free tag) renders every fail-closed VALUES
@@ -1812,15 +1688,13 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   the real `spark_catalog`.
   Tests: [dialect/map.md](dialect/map.md).
 - `extension.rs` — `SparkExtension` owns Spark session defaults and installs the ordered
-  `InsertStoreAssignment`, function registry, analyzer rules, `StackRewrite` (PERF-UNPIVOT-1,
-  after integer-literal narrowing), and composed `TaExtension`. It also
-  carries the session timezone, Spark decimal settings, the case-sensitivity
-  carrier (`repark_functions::case_sensitive`, default false) and the
-  partition-overwrite-mode knob (**ICE-DYN-OVERWRITE-1**, 2026-09-17). A bad
+  `InsertStoreAssignment`, function registry, analyzer rules, `StackRewrite` (PERF-UNPIVOT-1, after
+  integer-literal narrowing), and composed `TaExtension`. It also carries the session timezone,
+  Spark decimal settings, the case-sensitivity carrier (`repark_functions::case_sensitive`, default
+  false) and the partition-overwrite-mode knob (**ICE-DYN-OVERWRITE-1**, 2026-09-17). A bad
   `spark.sql.iceberg.merge-schema` value is formatted here with `mask_value_credentials`
-  (**SOURCE-URL-REDACT-1-FN**). Fold 1 masks every `Configuration` message
-  `configure` returns. It installs
-  the Spark fanout commit order on the fork's `DataFileCommitOrder` hook
+  (**SOURCE-URL-REDACT-1-FN**). Fold 1 masks every `Configuration` message `configure` returns. It
+  installs the Spark fanout commit order on the fork's `DataFileCommitOrder` hook
   (row-lineage-order-1). Tests:
   [extension/map.md](extension/map.md) and [../tests/session_timezone.rs](../tests/session_timezone.rs).
   **FNP-8 (2026-09-07):** its analyzer-configuration hook inserts the shared HOF preparation rule
@@ -1831,17 +1705,15 @@ Source documentation may retain model provenance; code-quality grade tags stay o
 - **FNP-8 (2026-09-07):** the executing parser selects lambda syntax only inside
   recognized higher-order calls. JSON arrows retain the session parser and its AST.
 - `normalize/` — token rewrites and statement guards `normalize.rs` has no ceiling headroom for; see
-  [normalize/map.md](normalize/map.md). `replace_table.rs` rewrites `REPLACE TABLE` to
-  `CREATE OR REPLACE TABLE` **first**, before `is_create_table` gates the other rewrites, and
-  carries the missing-table refusal that keeps the two spellings apart (**IPI-25**, 2026-09-20).
-  `clustered_by.rs` rewrites `CLUSTERED BY (col) INTO n BUCKETS` into
-  `PARTITIONED BY (bucket(n, col))` between the `USING` strip and the
-  `PARTITIONED BY` extraction, so the bucket field lands named `{col}_bucket`
-  (**IPI-26/27 round 1**, 2026-09-20, cell `D-X-CLUSTERED-BY`).
-  `sort_key_projection.rs` rewrites a single-`SELECT` with an un-projected `ORDER BY` key
-  into a derived table projecting select items plus keys under internal aliases, with the
-  outer query carrying Spark's display names (**WO TZ-ASOF-1**, 2026-09-26, cell
-  `E-TZ-TIMESTAMP-AS-OF`).
+  [normalize/map.md](normalize/map.md). `replace_table.rs` rewrites `REPLACE TABLE` to `CREATE OR
+  REPLACE TABLE` **first**, before `is_create_table` gates the other rewrites, and carries the
+  missing-table refusal that keeps the two spellings apart (**IPI-25**, 2026-09-20).
+  `clustered_by.rs` rewrites `CLUSTERED BY (col) INTO n BUCKETS` into `PARTITIONED BY (bucket(n,
+  col))` between the `USING` strip and the `PARTITIONED BY` extraction, so the bucket field lands
+  named `{col}_bucket` (**IPI-26/27 round 1**, 2026-09-20, cell `D-X-CLUSTERED-BY`).
+  `sort_key_projection.rs` rewrites a single-`SELECT` with an un-projected `ORDER BY` key into a
+  derived table projecting select items plus keys under internal aliases, with the outer query
+  carrying Spark's display names (**WO TZ-ASOF-1**, 2026-09-26, cell `E-TZ-TIMESTAMP-AS-OF`).
 - `dml_target.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28, fix round 1; round 2 2026-10-28; RP-61 2026-10-28):** `resolve_dml_target(ctx, catalogs, name)` resolves a DML target the way the planner does: the parts as written with their quote style, a write-ref selector stripped, unquoted parts folded to lower case when `sql_parser.enable_ident_normalization` is on, and session defaults completed. A name part that is not a plain identifier, or a catalog missing from the registry, returns None. A table that fails to load returns None when its namespace is absent or when the planner and the catalog both report the table absent; otherwise the resolver returns a Plan error that names the target (fail closed). RP-61 removed the `catalog_name` and `on_branch` fields of `DmlTarget`, whose only readers were the reverted delete-format checks; a tag selector still returns None. Users: `merge.rs` (its encryption check), `catalog_ops.rs` (`refuse_encrypted_write_target`) and the BUG-001 valve in `normalize.rs`.
 - `normalize.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28, fix round 1):** `dml_target_ident` and `session_defaults` are removed. The BUG-001 valve's lookup (`refuse_mor_unpartitioned_multi_spec_dml`) resolves its target through `dml_target.rs`, so it folds case and fails closed.
 - `normalize.rs` — token normalisers (`USING` strip, `PARTITIONED BY` extraction,
@@ -1893,20 +1765,18 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `bucket('x', 16)` and `bucket("x", 16)` refuse with the integer error — only a bare
   unquoted integer token can be the width.
 - `call_args.rs` — CALL argument bag, scalar coercions, and quoted-name keys for dashed options.
-  **ICE-PROCEDURES-1 (2026-09-20):** mixed positional and named arguments are
-  legal (Spark accepts the mix), and `bind` binds a `CallArgs` against a
-  declared parameter list into a `BoundArgs` — positionals in declared order, SQL
-  NULL as unset, a loud duplicate-binding Plan error when one parameter is bound
-  both ways, today's unknown/arity/missing strings otherwise. Array-of-literal
-  coercions land here for the rounds that wire array parameters. **PR1b
-  (2026-09-21):** `BoundArgs` gains the scalar readers the wiring rounds need
-  (`optional_i64`, `optional_i32`, `optional_timestamp_ms`, `require_expr`), and
-  the expire handler calls the i64-array coercion. **RM-SORTBY-1 (2026-09-21):**
-  `CallArgs` gains `optional_string_array`, the named-or-positional string-array
-  reader with SQL NULL as unset that the `rewrite_manifests` handler parses
-  `sort_by` through. **IPI-30 round 3 (2026-09-22):** `CallArgs` gains
-  `optional_string_at`, the named-first-then-positional string reader
-  `remove_orphan_files` uses for `location` (Spark position 2).
+  **ICE-PROCEDURES-1 (2026-09-20):** mixed positional and named arguments are legal (Spark accepts
+  the mix), and `bind` binds a `CallArgs` against a declared parameter list into a `BoundArgs` —
+  positionals in declared order, SQL NULL as unset, a loud duplicate-binding Plan error when one
+  parameter is bound both ways, today's unknown/arity/missing strings otherwise. Array-of-literal
+  coercions land here for the rounds that wire array parameters. **PR1b (2026-09-21):** `BoundArgs`
+  gains the scalar readers the wiring rounds need (`optional_i64`, `optional_i32`,
+  `optional_timestamp_ms`, `require_expr`), and the expire handler calls the i64-array coercion.
+  **RM-SORTBY-1 (2026-09-21):** `CallArgs` gains `optional_string_array`, the named-or-positional
+  string-array reader with SQL NULL as unset that the `rewrite_manifests` handler parses `sort_by`
+  through. **IPI-30 round 3 (2026-09-22):** `CallArgs` gains `optional_string_at`, the
+  named-first-then-positional string reader `remove_orphan_files` uses for `location` (Spark
+  position 2).
 - `collation.rs` — **G15:** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,
   session `SQLConf` keys containing `collation` (including `ParenthesizedAssignments`),
@@ -1922,30 +1792,25 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   nested element tokens; `long` stays in `repark-python` for `printSchema`.
   **FACADE-4 step 1 (2026-09-14):** a delegation shim — every answer now comes from
   `type_table::arrow_name` on the `Describe` surface; spellings unchanged.
-- `type_table.rs` — **FACADE-4 step 1 (2026-09-14):** the shared conversion table —
-  one `SparkDataType`/`SparkField` descriptor mirroring the 25 public
-  `repark.spark.types` classes, Arrow ↔ descriptor conversion in both directions,
-  DDL/simpleString parse and write, and the distinct name surfaces the census found
-  disagreeing (`ArrowNameSurface::Describe` vs `::LogicalKey`, engine cast token, DDL
-  token, SQL marker, CSV rung row). Every surface keeps its step-0 answer
-  byte-for-byte; no D1–D21 row is unified. Depth-bounded at 32 with a `"..."`
-  fallback. Pure Rust, no PyO3; `repark-python::type_bridge` is the only consumer
-  over the FFI boundary. S2-21 remediation (P3-COLLATION): `SparkString.collation`
-  is `Cow<'static, str>` — the `UTF8_BINARY` default borrows the
-  `pub const DEFAULT_COLLATION` everywhere (Arrow, DDL fallback, CSV rungs) and
-  only a parsed custom collation owns.
-  Round-2 remediation: `TypeTableError::IntegerOverflow` marks integer
-  parameters beyond i64 so the bridge can route them to Python's unbounded
-  parse (`PyOverflowError`).
-  **TYPES-GEO-DDL-1 (2026-09-15):** `SparkDataType::Geometry { srid }` /
-  `Geography { srid }` (`-1` is Spark's `any`, `SPATIAL_MIXED_SRID`); the
-  supported-SRID sets live here once (`GEOMETRY_SRIDS`, `GEOGRAPHY_SRIDS`) —
-  Python keeps only the JSON door's CRS spellings. `simple_string` answers the
-  oracle `geometry(n)` / `geography(n)` forms; `arrow_type_from_spark` refuses
-  both variants naming the type (V3-GEO-1) instead of the `Utf8` catch-all;
-  `ddl_token` / `sql_marker_token` fall through to the existing generic arms.
-  Round 2: `spatial_srid_supported` validates inbound bridge SRIDs (mixed form
-  included) so no Spark-impossible spelling builds.
+- `type_table.rs` — **FACADE-4 step 1 (2026-09-14):** the shared conversion table — one
+  `SparkDataType`/`SparkField` descriptor mirroring the 25 public `repark.spark.types` classes,
+  Arrow ↔ descriptor conversion in both directions, DDL/simpleString parse and write, and the
+  distinct name surfaces the census found disagreeing (`ArrowNameSurface::Describe` vs
+  `::LogicalKey`, engine cast token, DDL token, SQL marker, CSV rung row). Every surface keeps its
+  step-0 answer byte-for-byte; no D1–D21 row is unified. Depth-bounded at 32 with a `"..."`
+  fallback. Pure Rust, no PyO3; `repark-python::type_bridge` is the only consumer over the FFI
+  boundary. S2-21 remediation (P3-COLLATION): `SparkString.collation` is `Cow<'static, str>` — the
+  `UTF8_BINARY` default borrows the `pub const DEFAULT_COLLATION` everywhere (Arrow, DDL fallback,
+  CSV rungs) and only a parsed custom collation owns. Round-2 remediation:
+  `TypeTableError::IntegerOverflow` marks integer parameters beyond i64 so the bridge can route them
+  to Python's unbounded parse (`PyOverflowError`).
+  **TYPES-GEO-DDL-1 (2026-09-15):** `SparkDataType::Geometry { srid }` / `Geography { srid }` (`-1`
+  is Spark's `any`, `SPATIAL_MIXED_SRID`); the supported-SRID sets live here once (`GEOMETRY_SRIDS`,
+  `GEOGRAPHY_SRIDS`) — Python keeps only the JSON door's CRS spellings. `simple_string` answers the
+  oracle `geometry(n)` / `geography(n)` forms; `arrow_type_from_spark` refuses both variants naming
+  the type (V3-GEO-1) instead of the `Utf8` catch-all; `ddl_token` / `sql_marker_token` fall through
+  to the existing generic arms. Round 2: `spatial_srid_supported` validates inbound bridge SRIDs
+  (mixed form included) so no Spark-impossible spelling builds.
   pins: facade-4/C-010, C-019, C-020; types-geo-ddl-1/C-001, C-003
   **LOGICAL-WIDTH-1 (2026-09-16):** the `LogicalKey` arms answer Spark's narrow
   widths (Int8→`byte`, Int16→`short`, Float16|Float32→`float`,
@@ -2005,28 +1870,22 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   **FNP-8 (2026-09-06):** the EXECUTING parse takes `normalize::dialect_for_executing_parse`
   (Databricks when the SQL carries a lambda arrow, else the session dialect), so HOF calls
   with `x -> y` plan to the registered kernels.
-- `time_window.rs` — **FNP-WIN-1 (2026-09-15):** the SQL-door `TimeWindowing`
-  aliasing. A top-level `GROUP BY window(...)` stages the query over
-  `SELECT *, window(...) AS window` so `window.start` / `window.end` resolve to
-  a real column; the group and bare projection calls resolve to that column.
-  Sliding values stay correct: the analyzer rule expands the staged
-  projection. A second window specification refuses loud. Step 3 refuses a
-  `window_time(...)` call in the staged projection / having / order-by with
-  the oracle `[MISSING_AGGREGATION]` text, as the planner lifts it into a
-  projection where the analyzer can no longer tell it apart from the legal
-  post-aggregation use. Step 4 stages `GROUP BY session_window(...)` the same
-  way (`SELECT *, session_window(...) AS session_window`); the analyzer rule
-  strips the marker and rewrites stale parent `session_window` references.
-  Remediation 16a stages inside CTE bodies, derived-table subqueries and both
-  UNION branches by recursing the query/set tree; `time_window.rs` stays the
-  only file this unit touches under `repark-spark`. Round 2 (2026-09-15):
-  the second session spec refuses with Spark's `1039` text (shared constant
-  from `repark_functions::spark_session_window`).
-  **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):**
-  `wrapped_twice_matches_wrapped_once` pins that a second wrap over
-  Display text is a no-op returning false, which the sibling judge relies on
-  when it re-applies the pre-gate chain to arm text the statement already
-  wrapped.
+- `time_window.rs` — **FNP-WIN-1 (2026-09-15):** the SQL-door `TimeWindowing` aliasing. A top-level
+  `GROUP BY window(...)` stages the query over `SELECT *, window(...) AS window` so `window.start` /
+  `window.end` resolve to a real column; the group and bare projection calls resolve to that column.
+  Sliding values stay correct: the analyzer rule expands the staged projection. A second window
+  specification refuses loud. Step 3 refuses a `window_time(...)` call in the staged projection /
+  having / order-by with the oracle `[MISSING_AGGREGATION]` text, as the planner lifts it into a
+  projection where the analyzer can no longer tell it apart from the legal post-aggregation use.
+  Step 4 stages `GROUP BY session_window(...)` the same way (`SELECT *, session_window(...) AS
+  session_window`); the analyzer rule strips the marker and rewrites stale parent `session_window`
+  references. Remediation 16a stages inside CTE bodies, derived-table subqueries and both UNION
+  branches by recursing the query/set tree; `time_window.rs` stays the only file this unit touches
+  under `repark-spark`. Round 2 (2026-09-15): the second session spec refuses with Spark's `1039`
+  text (shared constant from `repark_functions::spark_session_window`).
+  **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):** `wrapped_twice_matches_wrapped_once` pins
+  that a second wrap over Display text is a no-op returning false, which the sibling judge relies on
+  when it re-applies the pre-gate chain to arm text the statement already wrapped.
 - `window_range.rs` — Spark temporal `RANGE` rules. Unit-less bounds over `TIMESTAMP` refuse;
   bounds over `DATE` restate as day intervals because DataFusion reads bare values as months.
   Negative and value-inverted frames retain Spark refusal/empty behavior; numeric-key interval
@@ -2102,18 +1961,16 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   through `repark_core::prop_key_is_secret` (widened to `pub` for this call; no second
   predicate): **deliberate Spark delta** — Spark prints `s3.access-key-id` in the clear and
   RePark redacts it; printing a credential is the worse divergence (RF-6).
-  **ICE-SYSTEM-FUNCTIONS-1 round 3 (2026-09-20):** the file also hosts the
-  `<cat>.system.<fn>(` pre-parse rewrite (`rewrite_system_function_calls`,
-  span surgery over `tokenize_with_location` in the `cast_map` shape) and the
-  `SHOW [USER] FUNCTIONS IN <catalog>.system` parser + one-column `function`
-  executor. The rewrite fires only for unquoted three-part calls whose head is
-  a live Iceberg catalog and whose tail names one of the seven functions;
-  strings, quoted identifiers, two-part `system.<fn>`, `CALL`, and unknown
-  catalogs pass through untouched. The SHOW tail parser claims only an exact
-  two-part `<cat>.system` name — one-part, non-`system`, and trailing-token
-  forms all fall through to stock handling — and the router gates on a live
-  catalog entry, so unknown catalogs keep DataFusion's old error. Unit pins
-  live file-backed in [`describe_show/`](describe_show/map.md).
+  **ICE-SYSTEM-FUNCTIONS-1 round 3 (2026-09-20):** the file also hosts the `<cat>.system.<fn>(`
+  pre-parse rewrite (`rewrite_system_function_calls`, span surgery over `tokenize_with_location` in
+  the `cast_map` shape) and the `SHOW [USER] FUNCTIONS IN <catalog>.system` parser + one-column
+  `function` executor. The rewrite fires only for unquoted three-part calls whose head is a live
+  Iceberg catalog and whose tail names one of the seven functions; strings, quoted identifiers,
+  two-part `system.<fn>`, `CALL`, and unknown catalogs pass through untouched. The SHOW tail parser
+  claims only an exact two-part `<cat>.system` name — one-part, non-`system`, and trailing-token
+  forms all fall through to stock handling — and the router gates on a live catalog entry, so
+  unknown catalogs keep DataFusion's old error. Unit pins live file-backed in
+  [`describe_show/`](describe_show/map.md).
   **IPI-51 PR4 (2026-09-20):** the file also parses `SHOW PARTITIONS <table>` (a `SHOW` +
   `PARTITIONS` head check, so the sibling SHOW parsers keep their statements) and the router
   arm always refuses it through `catalog_ops::partition_management_unsupported` with the
@@ -2312,18 +2169,16 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   pre-parse). Planner `default_catalog` / `default_schema` stay at the DataFusion
   builtins; a raw `SET` of either key still lands there and mirrors that side into the
   box (R6). `rename_dest` anchors short `RENAME TO` targets on the source table (T-3);
-  **WO U5 PR3 (2026-09-25):** it reads every longer target as `namespace…name` inside the
-  source catalog, as Spark does (the cross-catalog refusal in `alter.rs` is gone), and
-  `rename_error` answers Spark's `Cannot rename <src> to <target>. Namespace does not exist:
-  <ns>` (source present, target namespace missing) and `[TABLE_OR_VIEW_ALREADY_EXISTS]`
-  texts; every other catalog error keeps its old mapping.
-  the ALTER / CALL / CREATE / CTAS / DROP call sites complete through `complete_name`.
-  S4 adds the `SHOW CATALOGS` / `SHOW TABLES` / `SHOW COLUMNS` executors (sorted
-  names, ambient scope from the session defaults, `LIKE`-glob suffix, `TERSE` /
-  `EXTENDED` / `FULL` parse refusals) and the `SHOW TABLES IN` scope resolver
-  (catalog-first, like `USE`). S5 adds native `REFRESH [TABLE] name` /
-  `REFRESH 'path'` (temp views and paths answer ok; missing tables refuse
-  `TABLE_OR_VIEW_NOT_FOUND`; hits rebuild the catalog provider).
+  **WO U5 PR3 (2026-09-25):** it reads every longer target as `namespace…name` inside the source
+  catalog, as Spark does (the cross-catalog refusal in `alter.rs` is gone), and `rename_error`
+  answers Spark's `Cannot rename <src> to <target>. Namespace does not exist: <ns>` (source present,
+  target namespace missing) and `[TABLE_OR_VIEW_ALREADY_EXISTS]` texts; every other catalog error
+  keeps its old mapping. the ALTER / CALL / CREATE / CTAS / DROP call sites complete through
+  `complete_name`. S4 adds the `SHOW CATALOGS` / `SHOW TABLES` / `SHOW COLUMNS` executors (sorted
+  names, ambient scope from the session defaults, `LIKE`-glob suffix, `TERSE` / `EXTENDED` / `FULL`
+  parse refusals) and the `SHOW TABLES IN` scope resolver (catalog-first, like `USE`). S5 adds
+  native `REFRESH [TABLE] name` / `REFRESH 'path'` (temp views and paths answer ok; missing tables
+  refuse `TABLE_OR_VIEW_NOT_FOUND`; hits rebuild the catalog provider).
 - `matrix.rs` — the Q13 surface matrix maps every `repark_common::surfaces` ID to a tested row or
   an explicit absence. `CROSS_DOOR_EQUIVALENCE` uses the `TwoSession` profile and keeps its
   cross-door evidence in `crates/repark-sql/tests/cross_door.rs`.
@@ -2445,24 +2300,19 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   recognised write-option keys (boolean, last-wins, case-insensitive like the
   rest; any value but `true` is `false`, as Java's `Boolean.parseBoolean`
   reads it). `StatementWriteOptions::merge_schema(ctx)` is the precedence:
-  **per-write option > session conf `spark.sql.iceberg.merge-schema` > false**,
-  matching Java `SparkWriteConf.mergeSchema()`'s `confParser` order.
-  `refuse_if_non_empty` now skips those two keys, as the by-name append
-  honors them — every other unrecognised key is still ignored, which is
-  Spark's measured behaviour and registry row `ICE-WRITE-OPTIONS-1`; this unit
-  does not reopen it.
-- `insert_by_name.rs` + [`insert_by_name/evolution.rs`](insert_by_name/evolution.rs)
-  — extra source columns are a schema-evolution question, decided in
-  `evolution::columns_to_add` **before** the arity and name arms run, so the
-  three measured outcomes come out of three different places and keep their own
-  error classes: without `write.spark.accept-any-schema` nothing changes and the
-  existing arms answer (`INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS` /
-  `21S01` when the source is wider, `INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS`
-  / `KD000` when it is not); with the property but no flag, Java's
-  `IllegalArgumentException: Field <name> not found in source schema`; with
-  both, the extras join the projection and the append evolves. The conf is inert
-  without the property — that asymmetry is Spark's, and it is the single thing
-  most easily got wrong here.
+  **per-write option > session conf `spark.sql.iceberg.merge-schema` > false**, matching Java
+  `SparkWriteConf.mergeSchema()`'s `confParser` order. `refuse_if_non_empty` now skips those two
+  keys, as the by-name append honors them — every other unrecognised key is still ignored, which is
+  Spark's measured behaviour and registry row `ICE-WRITE-OPTIONS-1`; this unit does not reopen it.
+- `insert_by_name.rs` + [`insert_by_name/evolution.rs`](insert_by_name/evolution.rs) — extra source
+  columns are a schema-evolution question, decided in `evolution::columns_to_add` **before** the
+  arity and name arms run, so the three measured outcomes come out of three different places and
+  keep their own error classes: without `write.spark.accept-any-schema` nothing changes and the
+  existing arms answer (`INSERT_COLUMN_ARITY_MISMATCH.TOO_MANY_DATA_COLUMNS` / `21S01` when the
+  source is wider, `INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS` / `KD000` when it is not); with the
+  property but no flag, Java's `IllegalArgumentException: Field <name> not found in source schema`;
+  with both, the extras join the projection and the append evolves. The conf is inert without the
+  property — that asymmetry is Spark's, and it is the single thing most easily got wrong here.
 - `merge.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28, fix round 1; the delete-format check reverted by RP-61, 2026-10-28):** `execute_merge` resolves the MERGE target through `dml_target.rs` for its encryption check, before the fragment rewrite and before execution. The delete-format check of fix round 1 (`refuse_any_unreadable_delete_format` with `write.merge.mode`) is gone, so a merge-on-read MERGE on an Avro or ORC table writes its delete files in the table's delete format and the fork reads them back.
 - `merge.rs` + [`merge/`](merge/map.md) — the `MERGE WITH SCHEMA EVOLUTION`
   pre-parse strip and the `schema_evolution` flag it carries into the lowered
@@ -2485,25 +2335,21 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
 
 ## U6 WRITE-REFUSALS (2026-09-24) — by-name writes on accept-any-schema tables
 
-- `router.rs` — `execute_insert_routed` now receives every `INSERT`, overwrite
-  included, and first asks
-  `insert_by_name::evolution::routes_positional_by_name`. A positional append or
-  overwrite with no column list and no `PARTITION` clause, whose target is an
-  Iceberg table carrying `write.spark.accept-any-schema=true`, runs through
-  `execute_insert_by_name` as if it said `BY NAME`. Spark skips its output
-  resolution for such a table, so Iceberg resolves the write by name. A table
-  without the property keeps the positional path unchanged.
+- `router.rs` — `execute_insert_routed` now receives every `INSERT`, overwrite included, and first
+  asks `insert_by_name::evolution::routes_positional_by_name`. A positional append or overwrite with
+  no column list and no `PARTITION` clause, whose target is an Iceberg table carrying
+  `write.spark.accept-any-schema=true`, runs through `execute_insert_by_name` as if it said `BY
+  NAME`. Spark skips its output resolution for such a table, so Iceberg resolves the write by name.
+  A table without the property keeps the positional path unchanged.
 - `write_options.rs` — `carries_only_merge_schema` says whether the statement's
   options are all merge-schema keys. A positional INSERT with any other option
   stays positional, as the by-name append refuses those options.
-- Critic r1 remediation (2026-09-24): `routes_positional_by_name` now returns
-  `Result<bool>`, and `execute_insert_routed` propagates it with `?`. A failed
-  table load now surfaces as the error instead of reading as "no property".
-  Before, the positional path could then reload the table and write
-  positionally. A tag selector, a missing table or a missing namespace still
-  keeps the positional path and its own answer. The `PARTITION (…)` and
-  `REPLACE INTO` exclusions are measured, and they are listed in residue R-3
-  of the ledger.
+- Critic r1 remediation (2026-09-24): `routes_positional_by_name` now returns `Result<bool>`, and
+  `execute_insert_routed` propagates it with `?`. A failed table load now surfaces as the error
+  instead of reading as "no property". Before, the positional path could then reload the table and
+  write positionally. A tag selector, a missing table or a missing namespace still keeps the
+  positional path and its own answer. The `PARTITION (…)` and `REPLACE INTO` exclusions are
+  measured, and they are listed in residue R-3 of the ledger.
 - `insert_overwrite.rs`, critic r2 remediation (2026-09-24):
   `assert_empty_overwrite_types_assignment_compatible` takes `null_assignable`.
   The by-name door passes `true`, so a NULL-typed column no longer blocks the
