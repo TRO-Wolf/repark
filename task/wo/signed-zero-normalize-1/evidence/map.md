@@ -15,6 +15,7 @@ rendered from the raw files by the probe itself.
 - [item4/](item4/map.md) — cost: the profile, the change and the re-measure.
 - [item2/](item2/map.md) — build item 2: `pin_cells.py`, which writes the facade pin data from item 1's legs.
 - [item1/](item1/map.md) — build item 1's runners and raw legs on main `68b09d18` and the Spark oracle.
+- [part-b/](part-b/map.md) — part B part 1 (flat float keys): the step-0 clause table on main `ae247767`, the Q3 re-run on `276dc503`, the order's questions and the insertion inventory.
 - [provenance.md](provenance.md) — wheel and jar hashes, versions, session settings, the commands run, the label rules and the deviations from the brief.
 
 Up: [../map.md](../map.md).
