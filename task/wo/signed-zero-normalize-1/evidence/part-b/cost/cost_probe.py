@@ -30,6 +30,7 @@ def session(warehouse: str) -> Any:
     )
     spark.register_memory_catalog("ice", warehouse)
     spark.sql("CREATE NAMESPACE ice.ns").collect()
+    spark.sql("CREATE NAMESPACE ice.szb").collect()
     return spark
 
 
