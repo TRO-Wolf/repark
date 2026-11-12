@@ -138,7 +138,7 @@ async fn decimal_literal_against_float_matches_spark() {
 }
 
 #[tokio::test]
-async fn signed_zero_eq_documents_kernel_divergence() {
+async fn signed_zero_comparisons_answer_like_spark() {
     let session = spark_session();
     session
         .create_or_replace_temp_view("sweep_temp", vec![sweep_batch()])
@@ -202,11 +202,11 @@ async fn signed_zero_eq_documents_kernel_divergence() {
             vec![1, 2, 4, 6, 7, 8, 9, 10],
         ),
     ];
-    for (predicate, spark, repark) in cases {
+    for (predicate, spark, total_order) in cases {
         assert_eq!(
             ids_where(&session, predicate).await,
-            repark,
-            "{predicate}: spark answers {spark:?}; the float eq kernel keeps -0.0 distinct from 0.0"
+            spark,
+            "{predicate}: the float kernel alone would answer {total_order:?}"
         );
     }
 }
@@ -235,7 +235,7 @@ async fn decimal_literal_against_float_casts_the_literal() {
         "no decimal cast may remain, got {logical}"
     );
     assert!(
-        logical.contains("sweep_temp.d = Float64(0)"),
-        "the folded literal must be the Float64 scalar, got {logical}"
+        logical.contains("sweep_temp.d >= Float64(-0) AND sweep_temp.d <= Float64(0)"),
+        "the folded literal must reach the signed-zero bound form, got {logical}"
     );
 }

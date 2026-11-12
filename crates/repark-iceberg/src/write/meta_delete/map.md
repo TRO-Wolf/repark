@@ -19,7 +19,10 @@ here even though its own end-to-end battery lives in
   planner does, and binds a QUOTED one verbatim), the four-part branch selector and every
   non-identity clause declining, and the translation table — what Spark can convert and the
   negations, functions, casts, subqueries and non-primitive columns that keep the row-level
-  route.
+  route. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** two zero-only files (`-0.0`, `0.0`): `d = 0.0`,
+  `d = -0.0`, `d IN (0.0, 1.0)` and `0.0 = d` never translate or plan, both modes, while an
+  `id` control still deletes a file from metadata (mutation: drop `is_float_zero` and let
+  `Decimal::parse` take zero, and the plan deletes the `0.0` file only).
 
 The per-test `pins:` citations live in this map's header row, not in the source: the owner's
 comment ban covers doc comments too.

@@ -1,0 +1,10 @@
+{"ansi": "false", "text": "SELECT 1.0D / CAST('-0.0' AS DOUBLE) AS x", "rows": ["None"]}
+{"ansi": "false", "text": "SELECT 1.0D % CAST('-0.0' AS DOUBLE) AS x", "rows": ["None"]}
+{"ansi": "false", "text": "SELECT 1.0D / CAST('0.0' AS DOUBLE) AS x", "rows": ["None"]}
+{"ansi": "false", "text": "SELECT v / d AS x FROM VALUES (1.0D, CAST('-0.0' AS DOUBLE)), (1.0D, CAST('0.0' AS DOUBLE)) AS t(v, d)", "rows": ["None", "None"]}
+{"ansi": "false", "text": "SELECT nullif(CAST('-0.0' AS DOUBLE), 0.0D) AS x", "rows": ["None"]}
+{"ansi": "true", "text": "SELECT 1.0D / CAST('-0.0' AS DOUBLE) AS x", "error": "ArithmeticException: [DIVIDE_BY_ZERO] Division by zero. Use `try_divide` to tolerate divisor being 0 and"}
+{"ansi": "true", "text": "SELECT 1.0D % CAST('-0.0' AS DOUBLE) AS x", "error": "ArithmeticException: [REMAINDER_BY_ZERO] Remainder by zero. Use `try_mod` to tolerate divisor being 0 and"}
+{"ansi": "true", "text": "SELECT 1.0D / CAST('0.0' AS DOUBLE) AS x", "error": "ArithmeticException: [DIVIDE_BY_ZERO] Division by zero. Use `try_divide` to tolerate divisor being 0 and"}
+{"ansi": "true", "text": "SELECT v / d AS x FROM VALUES (1.0D, CAST('-0.0' AS DOUBLE)), (1.0D, CAST('0.0' AS DOUBLE)) AS t(v, d)", "error": "ArithmeticException: [DIVIDE_BY_ZERO] Division by zero. Use `try_divide` to tolerate divisor being 0 and"}
+{"ansi": "true", "text": "SELECT nullif(CAST('-0.0' AS DOUBLE), 0.0D) AS x", "rows": ["None"]}

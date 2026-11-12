@@ -27,7 +27,7 @@ pub(super) fn reciprocal_trig_or_inf(divisor: Expr) -> Expr {
         expr: None,
         when_then_expr: vec![(
             Box::new(binary_expr(divisor.clone(), Operator::Eq, lit(0.0f64))),
-            Box::new(lit(f64::INFINITY)),
+            Box::new(datafusion::functions::expr_fn::cot(divisor.clone())),
         )],
         else_expr: Some(Box::new(lit(1.0f64) / divisor)),
     })

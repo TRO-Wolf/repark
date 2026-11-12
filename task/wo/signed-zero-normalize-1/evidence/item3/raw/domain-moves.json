@@ -1,0 +1,8723 @@
+[
+ {
+  "key": "D1-1-cow|native|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-1-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-1-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-1-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-2-cow|native|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-2-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-2-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-2-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-3-cow|native|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-3-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-3-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-3-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-4-cow|native|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-4-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-4-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D1-4-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D1",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "new": {
+   "group": "D1",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D12-delete-cow|spark-sql|part",
+  "old": {
+   "group": "D12",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1, \"1.5\", \"1.5\", \"f1\"]",
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D12",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1, \"1.5\", \"1.5\", \"f1\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D12-delete-mor|spark-sql|part",
+  "old": {
+   "group": "D12",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1, \"1.5\", \"1.5\", \"f1\"]",
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D12",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1, \"1.5\", \"1.5\", \"f1\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D12-select-cow|spark-sql|part",
+  "old": {
+   "group": "D12",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM {dm} WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D12",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM {dm} WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D12-select-mor|spark-sql|part",
+  "old": {
+   "group": "D12",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM {dm} WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D12",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM {dm} WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D13-1|typed|split",
+  "old": {
+   "group": "D13",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [],
+   "cols": [],
+   "error": "{'class': 'PySparkException', 'message': 'Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead",
+   "text": "frame.filter(F.col('id') == 4).select(F.csc(F.lit(-0.0)).alias('x'))"
+  },
+  "new": {
+   "group": "D13",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[\"-Infinity\"]"
+   ],
+   "cols": [
+    "x"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('id') == 4).select(F.csc(F.lit(-0.0)).alias('x'))"
+  },
+  "old_label": "REFUSED-WHERE-SPARK-ACCEPTED",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D13-2|typed|split",
+  "old": {
+   "group": "D13",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [],
+   "cols": [],
+   "error": "{'class': 'PySparkException', 'message': 'Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead",
+   "text": "frame.filter(F.col('id') == 4).select(F.csc(F.col('d')).alias('x'))"
+  },
+  "new": {
+   "group": "D13",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[\"-Infinity\"]"
+   ],
+   "cols": [
+    "x"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('id') == 4).select(F.csc(F.col('d')).alias('x'))"
+  },
+  "old_label": "REFUSED-WHERE-SPARK-ACCEPTED",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-1|f-expr|split",
+  "old": {
+   "group": "D2",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d = 1 - 1.0"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d = 1 - 1.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-1|native|split",
+  "old": {
+   "group": "D2",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d = 1 - 1.0"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d = 1 - 1.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-1|typed|split",
+  "old": {
+   "group": "D2",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') == (F.lit(1) - F.lit(1.0))).select('id')"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') == (F.lit(1) - F.lit(1.0))).select('id')"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-2|f-expr|split",
+  "old": {
+   "group": "D2",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d >= CAST(0 AS DOUBLE) * 1"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d >= CAST(0 AS DOUBLE) * 1"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-2|filter-str|split",
+  "old": {
+   "group": "D2",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d >= CAST(0 AS DOUBLE) * 1"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d >= CAST(0 AS DOUBLE) * 1"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-2|native|split",
+  "old": {
+   "group": "D2",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d >= CAST(0 AS DOUBLE) * 1"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d >= CAST(0 AS DOUBLE) * 1"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-2|spark-sql|split",
+  "old": {
+   "group": "D2",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d >= CAST(0 AS DOUBLE) * 1"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d >= CAST(0 AS DOUBLE) * 1"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-2|typed|split",
+  "old": {
+   "group": "D2",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') >= (F.lit(0).cast('double') * 1)).select('id')"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') >= (F.lit(0).cast('double') * 1)).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-3|f-expr|split",
+  "old": {
+   "group": "D2",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d < abs(-0.0)"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d < abs(-0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-3|native|split",
+  "old": {
+   "group": "D2",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d < abs(-0.0)"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d < abs(-0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-3|typed|split",
+  "old": {
+   "group": "D2",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') < F.abs(F.lit(-0.0))).select('id')"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') < F.abs(F.lit(-0.0))).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-4|f-expr|split",
+  "old": {
+   "group": "D2",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "CAST(tf AS DOUBLE) = 0.0"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "CAST(tf AS DOUBLE) = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-4|filter-str|split",
+  "old": {
+   "group": "D2",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "CAST(tf AS DOUBLE) = 0.0"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "CAST(tf AS DOUBLE) = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-4|native|split",
+  "old": {
+   "group": "D2",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE CAST(tf AS DOUBLE) = 0.0"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE CAST(tf AS DOUBLE) = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-4|spark-sql|split",
+  "old": {
+   "group": "D2",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE CAST(tf AS DOUBLE) = 0.0"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE CAST(tf AS DOUBLE) = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-4|typed|split",
+  "old": {
+   "group": "D2",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf').cast('double') == 0.0).select('id')"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf').cast('double') == 0.0).select('id')"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-5|f-expr|split",
+  "old": {
+   "group": "D2",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[4]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d * 0 <> 0"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d * 0 <> 0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-5|filter-str|split",
+  "old": {
+   "group": "D2",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[4]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d * 0 <> 0"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d * 0 <> 0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-5|native|split",
+  "old": {
+   "group": "D2",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[4]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d * 0 <> 0"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d * 0 <> 0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-5|spark-sql|split",
+  "old": {
+   "group": "D2",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[4]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d * 0 <> 0"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d * 0 <> 0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D2-5|typed|split",
+  "old": {
+   "group": "D2",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[4]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter((F.col('d') * 0) != 0).select('id')"
+  },
+  "new": {
+   "group": "D2",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter((F.col('d') * 0) != 0).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D3-1|native|none",
+  "old": {
+   "group": "D3",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]"
+   ],
+   "cols": [
+    "x"
+   ],
+   "error": "",
+   "text": "SELECT CAST('-0.0' AS DOUBLE) = 0.0 AS x"
+  },
+  "new": {
+   "group": "D3",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[true]"
+   ],
+   "cols": [
+    "x"
+   ],
+   "error": "",
+   "text": "SELECT CAST('-0.0' AS DOUBLE) = 0.0 AS x"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D3-1|spark-sql|none",
+  "old": {
+   "group": "D3",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]"
+   ],
+   "cols": [
+    "x"
+   ],
+   "error": "",
+   "text": "SELECT CAST('-0.0' AS DOUBLE) = 0.0 AS x"
+  },
+  "new": {
+   "group": "D3",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[true]"
+   ],
+   "cols": [
+    "x"
+   ],
+   "error": "",
+   "text": "SELECT CAST('-0.0' AS DOUBLE) = 0.0 AS x"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D3-2|native|none",
+  "old": {
+   "group": "D3",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[true]"
+   ],
+   "cols": [
+    "x"
+   ],
+   "error": "",
+   "text": "SELECT CAST('-0.0' AS DOUBLE) < 0.0 AS x"
+  },
+  "new": {
+   "group": "D3",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]"
+   ],
+   "cols": [
+    "x"
+   ],
+   "error": "",
+   "text": "SELECT CAST('-0.0' AS DOUBLE) < 0.0 AS x"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D3-2|spark-sql|none",
+  "old": {
+   "group": "D3",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[true]"
+   ],
+   "cols": [
+    "x"
+   ],
+   "error": "",
+   "text": "SELECT CAST('-0.0' AS DOUBLE) < 0.0 AS x"
+  },
+  "new": {
+   "group": "D3",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]"
+   ],
+   "cols": [
+    "x"
+   ],
+   "error": "",
+   "text": "SELECT CAST('-0.0' AS DOUBLE) < 0.0 AS x"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D3-3|native|none",
+  "old": {
+   "group": "D3",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]"
+   ],
+   "cols": [
+    "x"
+   ],
+   "error": "",
+   "text": "SELECT CAST('-0.0' AS DOUBLE) <=> 0.0 AS x"
+  },
+  "new": {
+   "group": "D3",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[true]"
+   ],
+   "cols": [
+    "x"
+   ],
+   "error": "",
+   "text": "SELECT CAST('-0.0' AS DOUBLE) <=> 0.0 AS x"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-10|f-expr|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "NOT (d <=> 0.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "NOT (d <=> 0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-10|filter-str|split",
+  "old": {
+   "group": "D4",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [],
+   "cols": [],
+   "error": "{'class': 'PySparkException', 'message': 'Arrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing on inf'}",
+   "text": "NOT (d <=> 0.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "NOT (d <=> 0.0)"
+  },
+  "old_label": "REFUSED-WHERE-SPARK-ACCEPTED",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-10|native|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d IS DISTINCT FROM 0.0"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d IS DISTINCT FROM 0.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-10|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [],
+   "cols": [],
+   "error": "{'class': 'PySparkException', 'message': 'Arrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing on inf'}",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (d <=> 0.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (d <=> 0.0)"
+  },
+  "old_label": "REFUSED-WHERE-SPARK-ACCEPTED",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-1|f-expr|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d NOT IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d NOT IN (0.0, 1.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-1|filter-str|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d NOT IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d NOT IN (0.0, 1.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-1|native|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d NOT IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d NOT IN (0.0, 1.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-1|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d NOT IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d NOT IN (0.0, 1.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-2|f-expr|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-2|filter-str|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-2|native|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-2|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-3|f-expr|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-3|filter-str|split",
+  "old": {
+   "group": "D4",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-3|native|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-3|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-5|f-expr|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d NOT BETWEEN 0.0 AND 1.0"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d NOT BETWEEN 0.0 AND 1.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-5|filter-str|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d NOT BETWEEN 0.0 AND 1.0"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d NOT BETWEEN 0.0 AND 1.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-5|native|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d NOT BETWEEN 0.0 AND 1.0"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d NOT BETWEEN 0.0 AND 1.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-5|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d NOT BETWEEN 0.0 AND 1.0"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d NOT BETWEEN 0.0 AND 1.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-7|f-expr|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "NOT (d < 0.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "NOT (d < 0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-7|filter-str|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "NOT (d < 0.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "NOT (d < 0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-7|native|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (d < 0.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (d < 0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-7|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (d < 0.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (d < 0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-9|f-expr|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d = 0.0 AND d = -0.0"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d = 0.0 AND d = -0.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-9|filter-str|split",
+  "old": {
+   "group": "D4",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d = 0.0 AND d = -0.0"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "d = 0.0 AND d = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-9|native|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d = 0.0 AND d = -0.0"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d = 0.0 AND d = -0.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-9|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d = 0.0 AND d = -0.0"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d = 0.0 AND d = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t10|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (d IN (0.0, 1.0))"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (d IN (0.0, 1.0))"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t10|typed|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(~F.col('d').isin(0.0, 1.0)).select('id')"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(~F.col('d').isin(0.0, 1.0)).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t12|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE 0.0 <= d"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE 0.0 <= d"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t12|typed|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.lit(0.0) <= F.col('d')).select('id')"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.lit(0.0) <= F.col('d')).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t1|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t1|typed|split",
+  "old": {
+   "group": "D4",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') == 0.0).select('id')"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') == 0.0).select('id')"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t2|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d <> -0.0"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d <> -0.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t2|typed|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') != -0.0).select('id')"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') != -0.0).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t3|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d < -0.0"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d < -0.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t4|typed|split",
+  "old": {
+   "group": "D4",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') <= -0.0).select('id')"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') <= -0.0).select('id')"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t5|typed|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') > -0.0).select('id')"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') > -0.0).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t6|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d >= 0.0"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d >= 0.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t6|typed|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') >= 0.0).select('id')"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d') >= 0.0).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t7|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [],
+   "cols": [],
+   "error": "{'class': 'PySparkException', 'message': 'Arrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing on inf'}",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d <=> 0.0"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d <=> 0.0"
+  },
+  "old_label": "REFUSED-WHERE-SPARK-ACCEPTED",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t7|typed|split",
+  "old": {
+   "group": "D4",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d').eqNullSafe(0.0)).select('id')"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d').eqNullSafe(0.0)).select('id')"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t8|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [],
+   "cols": [],
+   "error": "{'class': 'PySparkException', 'message': 'Arrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing on inf'}",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (d <=> 0.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (d <=> 0.0)"
+  },
+  "old_label": "REFUSED-WHERE-SPARK-ACCEPTED",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t8|typed|split",
+  "old": {
+   "group": "D4",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(~F.col('d').eqNullSafe(0.0)).select('id')"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(~F.col('d').eqNullSafe(0.0)).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t9|spark-sql|split",
+  "old": {
+   "group": "D4",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE d IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D4-t9|typed|split",
+  "old": {
+   "group": "D4",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d').isin(0.0, 10.0, 20.0, 30.0)).select('id')"
+  },
+  "new": {
+   "group": "D4",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('d').isin(0.0, 10.0, 20.0, 30.0)).select('id')"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-1|f-expr|split",
+  "old": {
+   "group": "D5",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf = 1 - 1.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf = 1 - 1.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-1|native|split",
+  "old": {
+   "group": "D5",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf = 1 - 1.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf = 1 - 1.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-1|typed|split",
+  "old": {
+   "group": "D5",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') == (F.lit(1) - F.lit(1.0))).select('id')"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') == (F.lit(1) - F.lit(1.0))).select('id')"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-2|f-expr|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf >= CAST(0 AS DOUBLE) * 1"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf >= CAST(0 AS DOUBLE) * 1"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-2|filter-str|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf >= CAST(0 AS DOUBLE) * 1"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf >= CAST(0 AS DOUBLE) * 1"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-2|native|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf >= CAST(0 AS DOUBLE) * 1"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf >= CAST(0 AS DOUBLE) * 1"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-2|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf >= CAST(0 AS DOUBLE) * 1"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf >= CAST(0 AS DOUBLE) * 1"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-2|typed|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') >= (F.lit(0).cast('double') * 1)).select('id')"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') >= (F.lit(0).cast('double') * 1)).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-3|f-expr|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf < abs(-0.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf < abs(-0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-3|native|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf < abs(-0.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf < abs(-0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-3|typed|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') < F.abs(F.lit(-0.0))).select('id')"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') < F.abs(F.lit(-0.0))).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-5|f-expr|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[4]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf * 0 <> 0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf * 0 <> 0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-5|filter-str|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[4]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf * 0 <> 0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf * 0 <> 0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-5|native|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[4]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf * 0 <> 0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf * 0 <> 0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-5|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[4]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf * 0 <> 0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf * 0 <> 0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-5|typed|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[4]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter((F.col('tf') * 0) != 0).select('id')"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[3]",
+    "[5]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter((F.col('tf') * 0) != 0).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-10|f-expr|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "NOT (tf <=> 0.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "NOT (tf <=> 0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-10|filter-str|split",
+  "old": {
+   "group": "D5",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [],
+   "cols": [],
+   "error": "{'class': 'PySparkException', 'message': 'Arrow error: Cast error: Cannot cast to Decimal128(14, 7). Overflowing on NaN'}",
+   "text": "NOT (tf <=> 0.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "NOT (tf <=> 0.0)"
+  },
+  "old_label": "REFUSED-WHERE-SPARK-ACCEPTED",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-10|native|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf IS DISTINCT FROM 0.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf IS DISTINCT FROM 0.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-10|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [],
+   "cols": [],
+   "error": "{'class': 'PySparkException', 'message': 'Arrow error: Cast error: Cannot cast to Decimal128(14, 7). Overflowing on inf'}",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (tf <=> 0.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (tf <=> 0.0)"
+  },
+  "old_label": "REFUSED-WHERE-SPARK-ACCEPTED",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-1|f-expr|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf NOT IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf NOT IN (0.0, 1.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-1|filter-str|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf NOT IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf NOT IN (0.0, 1.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-1|native|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf NOT IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf NOT IN (0.0, 1.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-1|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf NOT IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf NOT IN (0.0, 1.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-2|f-expr|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-2|filter-str|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-2|native|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-2|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf NOT IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-3|f-expr|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-3|filter-str|split",
+  "old": {
+   "group": "D5",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-3|native|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-3|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf IN (-0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-5|f-expr|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf NOT BETWEEN 0.0 AND 1.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf NOT BETWEEN 0.0 AND 1.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-5|filter-str|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf NOT BETWEEN 0.0 AND 1.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf NOT BETWEEN 0.0 AND 1.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-5|native|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf NOT BETWEEN 0.0 AND 1.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf NOT BETWEEN 0.0 AND 1.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-5|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf NOT BETWEEN 0.0 AND 1.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf NOT BETWEEN 0.0 AND 1.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-7|f-expr|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "NOT (tf < 0.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "NOT (tf < 0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-7|filter-str|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "NOT (tf < 0.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "NOT (tf < 0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-7|native|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (tf < 0.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (tf < 0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-7|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (tf < 0.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (tf < 0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-9|f-expr|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf = 0.0 AND tf = -0.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf = 0.0 AND tf = -0.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-9|filter-str|split",
+  "old": {
+   "group": "D5",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf = 0.0 AND tf = -0.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "tf = 0.0 AND tf = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-9|native|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf = 0.0 AND tf = -0.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf = 0.0 AND tf = -0.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-d4-9|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf = 0.0 AND tf = -0.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf = 0.0 AND tf = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t10|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (tf IN (0.0, 1.0))"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (tf IN (0.0, 1.0))"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t10|typed|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(~F.col('tf').isin(0.0, 1.0)).select('id')"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(~F.col('tf').isin(0.0, 1.0)).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t12|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE 0.0 <= tf"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE 0.0 <= tf"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t12|typed|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.lit(0.0) <= F.col('tf')).select('id')"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.lit(0.0) <= F.col('tf')).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t1|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf = 0.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t1|typed|split",
+  "old": {
+   "group": "D5",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') == 0.0).select('id')"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') == 0.0).select('id')"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t2|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf <> -0.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf <> -0.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t2|typed|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') != -0.0).select('id')"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') != -0.0).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t3|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf < -0.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf < -0.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t4|typed|split",
+  "old": {
+   "group": "D5",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') <= -0.0).select('id')"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') <= -0.0).select('id')"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t5|typed|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') > -0.0).select('id')"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') > -0.0).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t6|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf >= 0.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf >= 0.0"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t6|typed|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') >= 0.0).select('id')"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[6]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf') >= 0.0).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t7|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [],
+   "cols": [],
+   "error": "{'class': 'PySparkException', 'message': 'Arrow error: Cast error: Cannot cast to Decimal128(14, 7). Overflowing on inf'}",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf <=> 0.0"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf <=> 0.0"
+  },
+  "old_label": "REFUSED-WHERE-SPARK-ACCEPTED",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t7|typed|split",
+  "old": {
+   "group": "D5",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf').eqNullSafe(0.0)).select('id')"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf').eqNullSafe(0.0)).select('id')"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t8|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [],
+   "cols": [],
+   "error": "{'class': 'PySparkException', 'message': 'Arrow error: Cast error: Cannot cast to Decimal128(14, 7). Overflowing on inf'}",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (tf <=> 0.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE NOT (tf <=> 0.0)"
+  },
+  "old_label": "REFUSED-WHERE-SPARK-ACCEPTED",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t8|typed|split",
+  "old": {
+   "group": "D5",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[4]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(~F.col('tf').eqNullSafe(0.0)).select('id')"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1]",
+    "[2]",
+    "[3]",
+    "[5]",
+    "[7]",
+    "[8]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(~F.col('tf').eqNullSafe(0.0)).select('id')"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t9|spark-sql|split",
+  "old": {
+   "group": "D5",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM ice.ns.t_split_cow WHERE tf IN (0.0, 10.0, 20.0, 30.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D5-t9|typed|split",
+  "old": {
+   "group": "D5",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf').isin(0.0, 10.0, 20.0, 30.0)).select('id')"
+  },
+  "new": {
+   "group": "D5",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "frame.filter(F.col('tf').isin(0.0, 10.0, 20.0, 30.0)).select('id')"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D6-1|native|split",
+  "old": {
+   "group": "D6",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[null]",
+    "[null]",
+    "[true]"
+   ],
+   "cols": [
+    "ice.ns.t_split_cow.d = Float64(0)"
+   ],
+   "error": "",
+   "text": "SELECT d = 0.0 FROM ice.ns.t_split_cow"
+  },
+  "new": {
+   "group": "D6",
+   "label": "WRONG-READ (names)",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[null]",
+    "[null]",
+    "[true]",
+    "[true]"
+   ],
+   "cols": [
+    "ice.ns.t_split_cow.d = Float64(0)"
+   ],
+   "error": "",
+   "text": "SELECT d = 0.0 FROM ice.ns.t_split_cow"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "WRONG-READ (names)"
+ },
+ {
+  "key": "D6-1|spark-sql|split",
+  "old": {
+   "group": "D6",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[null]",
+    "[null]",
+    "[true]"
+   ],
+   "cols": [
+    "ice.ns.t_split_cow.d = Decimal128(Some(0),1,1)"
+   ],
+   "error": "",
+   "text": "SELECT d = 0.0 FROM ice.ns.t_split_cow"
+  },
+  "new": {
+   "group": "D6",
+   "label": "WRONG-READ (names)",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[null]",
+    "[null]",
+    "[true]",
+    "[true]"
+   ],
+   "cols": [
+    "ice.ns.t_split_cow.d = Decimal128(Some(0),1,1)"
+   ],
+   "error": "",
+   "text": "SELECT d = 0.0 FROM ice.ns.t_split_cow"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "WRONG-READ (names)"
+ },
+ {
+  "key": "D6-1|typed|split",
+  "old": {
+   "group": "D6",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[null]",
+    "[null]",
+    "[true]"
+   ],
+   "cols": [
+    "(d = 0.0)"
+   ],
+   "error": "",
+   "text": "frame.select(F.col('d') == 0.0)"
+  },
+  "new": {
+   "group": "D6",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[null]",
+    "[null]",
+    "[true]",
+    "[true]"
+   ],
+   "cols": [
+    "(d = 0.0)"
+   ],
+   "error": "",
+   "text": "frame.select(F.col('d') == 0.0)"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D6-2|native|split",
+  "old": {
+   "group": "D6",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[true]"
+   ],
+   "cols": [
+    "ice.ns.t_split_cow.d IS NOT DISTINCT FROM Float64(0)"
+   ],
+   "error": "",
+   "text": "SELECT d <=> 0.0 FROM ice.ns.t_split_cow"
+  },
+  "new": {
+   "group": "D6",
+   "label": "WRONG-READ (names)",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[true]",
+    "[true]"
+   ],
+   "cols": [
+    "ice.ns.t_split_cow.d IS NOT DISTINCT FROM Float64(0)"
+   ],
+   "error": "",
+   "text": "SELECT d <=> 0.0 FROM ice.ns.t_split_cow"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "WRONG-READ (names)"
+ },
+ {
+  "key": "D6-2|spark-sql|split",
+  "old": {
+   "group": "D6",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [],
+   "cols": [],
+   "error": "{'class': 'PySparkException', 'message': 'Arrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing on inf'}",
+   "text": "SELECT d <=> 0.0 FROM ice.ns.t_split_cow"
+  },
+  "new": {
+   "group": "D6",
+   "label": "WRONG-READ (names)",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[true]",
+    "[true]"
+   ],
+   "cols": [
+    "ice.ns.t_split_cow.d IS NOT DISTINCT FROM Decimal128(Some(0),1,1)"
+   ],
+   "error": "",
+   "text": "SELECT d <=> 0.0 FROM ice.ns.t_split_cow"
+  },
+  "old_label": "REFUSED-WHERE-SPARK-ACCEPTED",
+  "new_label": "WRONG-READ (names)"
+ },
+ {
+  "key": "D6-2|typed|split",
+  "old": {
+   "group": "D6",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[true]"
+   ],
+   "cols": [
+    "(d <=> 0.0)"
+   ],
+   "error": "",
+   "text": "frame.select(F.col('d').eqNullSafe(0.0))"
+  },
+  "new": {
+   "group": "D6",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[false]",
+    "[true]",
+    "[true]"
+   ],
+   "cols": [
+    "(d <=> 0.0)"
+   ],
+   "error": "",
+   "text": "frame.select(F.col('d').eqNullSafe(0.0))"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-ctas-1|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "CREATE TABLE {dst} USING iceberg AS SELECT * FROM {dm} WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "CREATE TABLE {dst} USING iceberg AS SELECT * FROM {dm} WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-ctas-2|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "CREATE TABLE {dst} USING iceberg AS SELECT * FROM {dm} WHERE d = -0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "CREATE TABLE {dst} USING iceberg AS SELECT * FROM {dm} WHERE d = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-ctas-3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "CREATE TABLE {dst} USING iceberg AS SELECT * FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "CREATE TABLE {dst} USING iceberg AS SELECT * FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-ctas-4|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "CREATE TABLE {dst} USING iceberg AS SELECT * FROM {dm} WHERE 0.0 = d"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "CREATE TABLE {dst} USING iceberg AS SELECT * FROM {dm} WHERE 0.0 = d"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-ctas-5|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "CREATE TABLE {dst} USING iceberg AS SELECT * FROM {dm} WHERE d <> 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "CREATE TABLE {dst} USING iceberg AS SELECT * FROM {dm} WHERE d <> 0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-ctas-6|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "CREATE TABLE {dst} USING iceberg AS SELECT * FROM {dm} WHERE d < 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "CREATE TABLE {dst} USING iceberg AS SELECT * FROM {dm} WHERE d < 0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-ctas-7|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "CREATE TABLE {dst} USING iceberg AS SELECT * FROM {dm} WHERE NOT (d < 0.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "CREATE TABLE {dst} USING iceberg AS SELECT * FROM {dm} WHERE NOT (d < 0.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-1-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-1-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-1-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-1-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-2-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-2-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-2-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-2-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-3-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-3-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-3-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-3-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-4-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-4-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-4-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-4-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE 0.0 = d"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-5-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d <> 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d <> 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-5-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d <> 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d <> 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-5-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d <> 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d <> 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-5-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d <> 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d <> 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-6-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d < 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d < 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-6-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d < 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d < 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-6-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d < 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d < 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-6-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d < 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d < 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-7-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE NOT (d < 0.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE NOT (d < 0.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-7-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE NOT (d < 0.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE NOT (d < 0.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-7-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE NOT (d < 0.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE NOT (d < 0.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-7-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE NOT (d < 0.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE NOT (d < 0.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-delete-8-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d <=> 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "DELETE FROM {dm} WHERE d <=> 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-insert-1|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "INSERT INTO {dst} SELECT * FROM {dm} WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "INSERT INTO {dst} SELECT * FROM {dm} WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-insert-2|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "INSERT INTO {dst} SELECT * FROM {dm} WHERE d = -0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "INSERT INTO {dst} SELECT * FROM {dm} WHERE d = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-insert-3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "INSERT INTO {dst} SELECT * FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "INSERT INTO {dst} SELECT * FROM {dm} WHERE d IN (0.0, 1.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-insert-4|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "INSERT INTO {dst} SELECT * FROM {dm} WHERE 0.0 = d"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "INSERT INTO {dst} SELECT * FROM {dm} WHERE 0.0 = d"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-insert-5|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "INSERT INTO {dst} SELECT * FROM {dm} WHERE d <> 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "INSERT INTO {dst} SELECT * FROM {dm} WHERE d <> 0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-insert-6|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "INSERT INTO {dst} SELECT * FROM {dm} WHERE d < 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "INSERT INTO {dst} SELECT * FROM {dm} WHERE d < 0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-insert-7|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "INSERT INTO {dst} SELECT * FROM {dm} WHERE NOT (d < 0.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "INSERT INTO {dst} SELECT * FROM {dm} WHERE NOT (d < 0.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-merge-Ma-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "MERGE INTO {dm} AS t USING (SELECT CAST(4 AS BIGINT) AS id, CAST('0.0' AS DOUBLE) AS d) AS u ON t.id = u.id WHEN MATCHED AND t.d = 0.0 THEN UPDATE SET flag = 'ma'"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"ma\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "MERGE INTO {dm} AS t USING (SELECT CAST(4 AS BIGINT) AS id, CAST('0.0' AS DOUBLE) AS d) AS u ON t.id = u.id WHEN MATCHED AND t.d = 0.0 THEN UPDATE SET flag = 'ma'"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-merge-Ma-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "MERGE INTO {dm} AS t USING (SELECT CAST(4 AS BIGINT) AS id, CAST('0.0' AS DOUBLE) AS d) AS u ON t.id = u.id WHEN MATCHED AND t.d = 0.0 THEN UPDATE SET flag = 'ma'"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"ma\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "MERGE INTO {dm} AS t USING (SELECT CAST(4 AS BIGINT) AS id, CAST('0.0' AS DOUBLE) AS d) AS u ON t.id = u.id WHEN MATCHED AND t.d = 0.0 THEN UPDATE SET flag = 'ma'"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-1-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-1-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-1-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-1-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-2-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = -0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = -0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-2-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = -0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-2-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = -0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-2-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = -0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "{'class': 'AnalysisException', 'message': 'Error during planning: Mismatch between schema and batches'}",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d = -0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "REFUSED-WHERE-SPARK-ACCEPTED"
+ },
+ {
+  "key": "D7-update-3-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d IN (0.0, 1.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-3-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d IN (0.0, 1.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-3-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d IN (0.0, 1.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-3-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d IN (0.0, 1.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d IN (0.0, 1.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-4-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE 0.0 = d"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE 0.0 = d"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-4-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE 0.0 = d"
+  },
+  "new": {
+   "group": "D7",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "{'class': 'AnalysisException', 'message': 'Error during planning: Mismatch between schema and batches'}",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE 0.0 = d"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "REFUSED-WHERE-SPARK-ACCEPTED"
+ },
+ {
+  "key": "D7-update-4-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE 0.0 = d"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE 0.0 = d"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-4-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE 0.0 = d"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE 0.0 = d"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-5-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d <> 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d <> 0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-5-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d <> 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d <> 0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-5-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d <> 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d <> 0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-5-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d <> 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d <> 0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-6-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d < 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d < 0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-6-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d < 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d < 0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-6-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d < 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d < 0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-6-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "WRONG-WRITE",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d < 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d < 0.0"
+  },
+  "old_label": "WRONG-WRITE",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-7-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE NOT (d < 0.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE NOT (d < 0.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-7-cow|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE NOT (d < 0.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE NOT (d < 0.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-7-mor|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE NOT (d < 0.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE NOT (d < 0.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-7-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE NOT (d < 0.0)"
+  },
+  "new": {
+   "group": "D7",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "{'class': 'AnalysisException', 'message': 'Error during planning: Mismatch between schema and batches'}",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE NOT (d < 0.0)"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "REFUSED-WHERE-SPARK-ACCEPTED"
+ },
+ {
+  "key": "D7-update-8-cow|native|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d <=> 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d <=> 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D7-update-8-v3|spark-sql|zsplit",
+  "old": {
+   "group": "D7",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"upd\"]",
+    "[6, \"0.0\", \"0.0\", \"upd\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d <=> 0.0"
+  },
+  "new": {
+   "group": "D7",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [
+    "[4, \"-0.0\", \"-0.0\", \"f4\"]",
+    "[6, \"0.0\", \"0.0\", \"f6\"]"
+   ],
+   "cols": [
+    "id",
+    "d",
+    "tf",
+    "flag"
+   ],
+   "error": "{'class': 'AnalysisException', 'message': 'Error during planning: Mismatch between schema and batches'}",
+   "text": "UPDATE {dm} SET flag = 'upd' WHERE d <=> 0.0"
+  },
+  "old_label": "EQUAL",
+  "new_label": "REFUSED-WHERE-SPARK-ACCEPTED"
+ },
+ {
+  "key": "D8-8|native|one",
+  "old": {
+   "group": "D8",
+   "label": "WRONG-READ",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1, \"n\"]",
+    "[2, \"z\"]",
+    "[3, \"n\"]",
+    "[4, \"n\"]"
+   ],
+   "cols": [
+    "id",
+    "c"
+   ],
+   "error": "",
+   "text": "SELECT id, CASE d WHEN 0.0 THEN 'z' ELSE 'n' END AS c FROM ice.ns.p_one_cow"
+  },
+  "new": {
+   "group": "D8",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1, \"z\"]",
+    "[2, \"z\"]",
+    "[3, \"n\"]",
+    "[4, \"n\"]"
+   ],
+   "cols": [
+    "id",
+    "c"
+   ],
+   "error": "",
+   "text": "SELECT id, CASE d WHEN 0.0 THEN 'z' ELSE 'n' END AS c FROM ice.ns.p_one_cow"
+  },
+  "old_label": "WRONG-READ",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D8-8|spark-sql|one",
+  "old": {
+   "group": "D8",
+   "label": "REFUSED-WHERE-SPARK-ACCEPTED",
+   "outcome": "REFUSED",
+   "rows": [],
+   "cols": [],
+   "error": "{'class': 'PySparkException', 'message': 'Arrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing on NaN'}",
+   "text": "SELECT id, CASE d WHEN 0.0 THEN 'z' ELSE 'n' END AS c FROM ice.ns.p_one_cow"
+  },
+  "new": {
+   "group": "D8",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[1, \"z\"]",
+    "[2, \"z\"]",
+    "[3, \"n\"]",
+    "[4, \"n\"]"
+   ],
+   "cols": [
+    "id",
+    "c"
+   ],
+   "error": "",
+   "text": "SELECT id, CASE d WHEN 0.0 THEN 'z' ELSE 'n' END AS c FROM ice.ns.p_one_cow"
+  },
+  "old_label": "REFUSED-WHERE-SPARK-ACCEPTED",
+  "new_label": "EQUAL"
+ },
+ {
+  "key": "D9-25|spark-sql|split",
+  "old": {
+   "group": "D9",
+   "label": "PRUNED-WRONG",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM vt9 WHERE d = 0.0"
+  },
+  "new": {
+   "group": "D9",
+   "label": "EQUAL",
+   "outcome": "ANSWERED",
+   "rows": [
+    "[4]",
+    "[6]"
+   ],
+   "cols": [
+    "id"
+   ],
+   "error": "",
+   "text": "SELECT id FROM vt9 WHERE d = 0.0"
+  },
+  "old_label": "PRUNED-WRONG",
+  "new_label": "EQUAL"
+ }
+]
