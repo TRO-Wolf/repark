@@ -52,6 +52,7 @@ ENVELOPE_SEAT_NAMES = {"merge": "merge-when"}
 EXPECTED_GROUP_CELLS = {
     "pilot": 30,
     "floatkeys": 28,
+    "p15": 30,
     "J1": 168,
     "J2": 112,
     "J3a": 140,
@@ -99,6 +100,27 @@ def test_all_group_is_the_whole_universe() -> None:
 def test_cell_ids_are_unique() -> None:
     ids = [cell.cell_id for cell in universe()]
     assert len(ids) == len(set(ids))
+
+
+def test_the_p15_group_is_exactly_the_p15_cells() -> None:
+    members = [cell.cell_id for cell in cells_for_group("p15")]
+    p15 = [cell.cell_id for cell in universe() if cell.pid == "p15"]
+    assert len(members) == len(set(members)) == 30
+    assert members == p15
+    assert all(cell.pid == "p15" for cell in cells_for_group("p15"))
+    assert not [cell for cell in universe() if cell.pid != "p15" and "p15" in cell.group_tags]
+
+
+def test_existing_groups_keep_their_cells() -> None:
+    cells = universe()
+    assert [c.cell_id for c in cells_for_group("pilot")] == [
+        c.cell_id for c in cells if c.pid == "p01"
+    ]
+    assert [c.cell_id for c in cells_for_group("floatkeys")] == [c.cell_id for c in float_cells()]
+    for name in (name for name in GROUP_NAMES if name.startswith("J")):
+        assert [c.cell_id for c in cells_for_group(name)] == [
+            c.cell_id for c in cells if c.combo is not None and c.combo.group == name
+        ], name
 
 
 def test_unknown_group_is_refused() -> None:

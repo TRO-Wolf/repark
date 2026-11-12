@@ -206,6 +206,7 @@ SIGNED_ZERO_PR_B = "SIGNED-ZERO-NORMALIZE-1 PR B"
 GROUP_NAMES: tuple[str, ...] = (
     "pilot",
     "floatkeys",
+    "p15",
     "J1",
     "J2",
     "J3a",
@@ -259,6 +260,8 @@ def matrix_cells() -> tuple[Cell, ...]:
             tags = [combo.group]
             if pid == "p01":
                 tags.append("pilot")
+            if pid == "p15":
+                tags.append("p15")
             cells.append(Cell(f"{combo.key}|{pid}", tuple(tags), combo, pid, None, None))
     return tuple(cells)
 
