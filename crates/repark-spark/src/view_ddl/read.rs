@@ -158,6 +158,7 @@ async fn expand_view_body(
     if guard.level() > MAX_VIEW_EXPANSION_DEPTH {
         return Err(nested_depth_refusal());
     }
+    repark_core::refuse_multiset_set_operation(datafusion::config::Dialect::Databricks, &spec.sql)?;
     let stored_catalog = spec
         .default_catalog
         .clone()

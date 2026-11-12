@@ -85,7 +85,7 @@ pub use repark_functions::declared_refuse::{
 pub fn refuse_sql_fragment(sql: &str) -> datafusion::error::Result<()> {
     refuse_collation_in_sql(sql)?;
     refuse_declared_function_in_sql(sql)?;
-    Ok(())
+    repark_core::refuse_multiset_set_operation(datafusion::config::Dialect::Databricks, sql)
 }
 
 #[must_use]

@@ -12,14 +12,14 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - **run 27, the night and day lanes' reports (09-21 → 22):** [muse2](night-report-2026-09-21-27-muse2.md) views · [grok2](night-report-2026-09-21-27-grok2.md) IPI-51 · [grok47](night-report-2026-09-21-27-grok47.md) IPI-51 exception types, Grok 4.7 · [glmflash2](night-report-2026-09-21-27-glmflash2.md) IPI-26/27 parser, DDL · [opus2](night-report-2026-09-21-27-opus2.md) IPI-32, IPI-05 close-out · [muse3](night-report-2026-09-21-27-muse3.md) IPI-41 ORC/Avro, fork half · [muse4](night-report-2026-09-21-27-muse4.md) IPI-30/31 procedures · [muse5](night-report-2026-09-21-27-muse5.md) views · [muse6](night-report-2026-09-21-27-muse6.md) metadata columns · [muse7](night-report-2026-09-21-27-muse7.md) non-Iceberg functions · [muse8](night-report-2026-09-21-27-muse8.md) finish-time order · [muse9](day-report-2026-09-22-27-muse9.md) functions · [muse10](day-report-2026-09-22-27-muse10.md) WAP, SET LOCATION, RP-47 · [opus3](day-report-2026-09-22-27-opus3.md) IPI-40 views on Opus 5 high · [opus55](day-report-2026-09-22-27-opus55.md) READ and PROC residue on Opus 5.5 high · [opus56](day-report-2026-09-22-27-opus56.md) functions, successor of muse9 · [opus57](day-report-2026-09-22-27-opus57.md) RP-47 landed, successor of muse10.
 - [day-report-2026-09-20-27-orchestrating-note.md](day-report-2026-09-20-27-orchestrating-note.md) — **run 27, orchestrating note:** the tick-driven harness, the four-engine bake-off and the gate scoreboard 461 → 537 EQUAL.
 - [run27-eval-protocol.md](run27-eval-protocol.md) · [run27-blind-grades.md](run27-blind-grades.md) · [run27-agent-lessons.md](run27-agent-lessons.md) — the bake-off's pre-registered protocol, blind grades and agent-pattern ledger.
-- [day-report-2026-09-20-27-opus-closeout.md](day-report-2026-09-20-27-opus-closeout.md) — **run 27, the Opus close-out lane:** closed the seven units stopped on 2026-09-20.
+- [DAY-REPORT-2026-09-20-27-OPUS-CLOSEOUT](day-report-2026-09-20-27-opus-closeout.md) — **run 27, the Opus close-out lane:** closed the seven units stopped on 2026-09-20.
 - [day-report-2026-09-20-27-grok.md](day-report-2026-09-20-27-grok.md) · [day-report-2026-09-20-27-muse.md](day-report-2026-09-20-27-muse.md) · [day-report-2026-09-20-27-glmflash.md](day-report-2026-09-20-27-glmflash.md) · [day-report-2026-09-20-27-glm.md](day-report-2026-09-20-27-glm.md) — **run 27, the four bake-off lanes' own reports:** error conditions (Grok), system functions (Muse), map gate step 1 and the small parser unit (GLM 5.3 Flash), catalog and session commands (GLM 5.3, paused).
 - [MAP-CURRENCY](map-currency-card-2026-09-20.md) — **card MAP-CURRENCY (2026-09-20):** maps checked like a build target — 310 maps, 3.06 MB, the lockstep rule unenforced in CI and firing per commit; step 1
   (work order MAP-PR-GATE-1, chartered) moves the rule to the pull request; steps 2–3 (generated navigation with per-row blob ids, `pins.toml`, a size gate, a clerk-written prose pass) wait for five owner rulings.
 - [night-report-2026-09-20-25a.md](night-report-2026-09-20-25a.md) — **run 25a (every bump, the perf remainder, the RePark halves):** RP-39 and RP-40, the `count(*)` fold, the bench baseline switch, metadata-only DELETE, delete-manifest rewrite, writer metrics config on main; the AWS pair and the first gate scoreboard in the orchestrating note.
-- [night-report-2026-09-20-25b.md](night-report-2026-09-20-25b.md) — **run 25b (fork lane one):** the wrong `replace` snapshot summary fixed, F-PAGE-PRUNE-2, branch-read schema merged; output-spec-id ready; WAP stage-only a draft.
+- [NIGHT-REPORT-2026-09-20-25B](night-report-2026-09-20-25b.md) — **run 25b (fork lane one):** the wrong `replace` snapshot summary fixed, F-PAGE-PRUNE-2, branch-read schema merged; output-spec-id ready; WAP stage-only a draft.
 - [night-report-2026-09-20-25c.md](night-report-2026-09-20-25c.md) — **run 25c (parity, RePark side):** `REPLACE COLUMNS`, four routed procedures and `spark.wap.branch` on main; #733 session write confs ready and unmerged.
-- [night-report-2026-09-20-25d.md](night-report-2026-09-20-25d.md) — **run 25d (fork lane two):** rewrite sort and zorder, transform sort orders, `add_files` and location providers merged; a nested residual rename that silently lost rows fixed; container accessors a draft hand-over.
+- [NIGHT-REPORT-2026-09-20-25D](night-report-2026-09-20-25d.md) — **run 25d (fork lane two):** rewrite sort and zorder, transform sort orders, `add_files` and location providers merged; a nested residual rename that silently lost rows fixed; container accessors a draft hand-over.
 - [night-report-2026-09-20-25e.md](night-report-2026-09-20-25e.md) — **run 25e (the plan packets):** thirteen
   execution packets for the large parity units, 222 cells; four units found to need no fork work.
 - [csv-header-default-1.md](csv-header-default-1.md) — **card CSV-HEADER-DEFAULT-1 (filed 2026-09-28 on the owner's ruling, option B):** `df.write.csv(path)` writes a header by default where Spark 4.1.2 does not; 9 of U12's 16 residues (`R-S3-CSV-HEADER`); RePark 1.5.x keeps today's default, the change waits for a minor release with a release note.
@@ -37,7 +37,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [day-report-2026-09-19-24b.md](day-report-2026-09-19-24b.md) — **run 24b (the read-performance fork lane):** fork #310, #311, #312, #316, #317 merged; a pre-existing silent wrong answer on `_pos` / `_row_id` projections fixed.
 - [day-report-2026-09-19-24c.md](day-report-2026-09-19-24c.md) — **run 24c (parity, RePark side):** time travel,
   `DROP NAMESPACE`, overwrite partition sets and string-to-timestamp casts answer Spark on main; RP-34 and RP-35.
-- [day-report-2026-09-19-24d.md](day-report-2026-09-19-24d.md) — **run 24d (parity, fork side):** fork #308, #309,
+- [DAY-REPORT-2026-09-19-24D](day-report-2026-09-19-24d.md) — **run 24d (parity, fork side):** fork #308, #309,
   #313, #315, #318, #320 merged; a strict-metrics decimal-scale defect found and fixed.
 - [night-report-2026-09-19-23a.md](night-report-2026-09-19-23a.md) — **run 23a (the fork residue lane):** nine fork PRs merged; #303 held for the owner.
 - [night-report-2026-09-19-23b.md](night-report-2026-09-19-23b.md) — **run 23b (the RePark side and every pin bump):** ten PRs merged, RP-29 → RP-33.
@@ -122,7 +122,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [REPLACE-NOVALUE-1](replace-novalue-1-card-2026-09-14.md) — **card REPLACE-NOVALUE-1 (2026-09-14,
   run 13b under owner ruling Q-13b-2, card only):** `DataFrame.replace(to_replace)` with no `value` raises PySpark's
   `ARGUMENT_REQUIRED` through a private sentinel default; today repark reads it as a NULL replacement.
-- [overnight-report-2026-09-13-run12b.md](overnight-report-2026-09-13-run12b.md) — **run 12b report (2026-09-13,
+- [OVERNIGHT-REPORT-2026-09-13-RUN12B](overnight-report-2026-09-13-run12b.md) — **run 12b report (2026-09-13,
   cache and expressions, beside run 12):** EAGER-BUDGET-1 merged (#569: `repark.cache.max_total_bytes` refuses and
   never evicts, distinct-buffer `repark.cache.retained_bytes`, incremental admission; the per-call slowdown did not
   reproduce under 2/4/8 GB caps). REPLACE-LINEAR-1 step 0 merged (#571), with step 1 parked on owner question Q-R1 (nine
@@ -203,7 +203,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   reads, lane/brief/launch commands per launcher, the hand-back audit checklist, the gated
   push/PR/merge chain, bounded decision authority, one night's order, stop conditions, the
   morning report, and the launch command the owner runs. Standing instructions added 2026-09-16 (morning): the Rust-first decision sentence, whole-suite gates, the commit as a numbered step, the box rules and the run-17 rulings.
-- [overnight-report-2026-09-09.md](overnight-report-2026-09-09.md) — **the first unattended run (2026-09-08/09):** BALLISTA-AUDIT-0 #426 and DF-EXPLAIN-1 #427 merged; SQL-DESCRIBE-1 parked on D-3 (#428 draft).
+- [OVERNIGHT-REPORT](overnight-report-2026-09-09.md) — **the first unattended run (2026-09-08/09):** BALLISTA-AUDIT-0 #426 and DF-EXPLAIN-1 #427 merged; SQL-DESCRIBE-1 parked on D-3 (#428 draft).
 - [overnight-report-2026-09-09-night2.md](overnight-report-2026-09-09-night2.md) — **the second unattended run (2026-09-09):** LEDGER-READING-1 #432, SQL-DESCRIBE-1 #428 and PREFLIGHT-PARITY-1 #433 merged; DISPLAY-POLARS-1 step 2 parked (#434 draft).
 - [overnight-report-2026-09-10-run6.md](overnight-report-2026-09-10-run6.md) — run 6 (2026-09-10
   15:06 → 2026-09-11, the review-fix run, one orchestrator across two processes): review-fix-slate
@@ -218,12 +218,12 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [overnight-report-2026-09-11-run8.md](overnight-report-2026-09-11-run8.md) — run 8 overnight report (2026-09-11).
 - [overnight-report-2026-09-15-15c.md](overnight-report-2026-09-15-15c.md) — **run 15c (2026-09-15, the 1.5 Spark-parity SQL door):** SQL-SET-DOOR-1 #601 and FNP-6D #609 merged; DOOR-CONVERGE-1 #616, JAVA-DOUBLE-STR-1 #612 and FNP-4B #611 left as PRs for the owner.
 - [overnight-report-2026-09-12-run9.md](overnight-report-2026-09-12-run9.md) — run 9 overnight report (2026-09-12).
-- [overnight-report-2026-09-10-run5.md](overnight-report-2026-09-10-run5.md) — run 5 (2026-09-10,
+- [OVERNIGHT-REPORT-2026-09-10-RUN5](overnight-report-2026-09-10-run5.md) — run 5 (2026-09-10,
   orchestrator A): seven units merged and one parked green as a draft (NEVEROOM-1 step 1). AP-0's
   O-run refuted P-3's byte model; a live-Spark run narrowed TORTURE-1's `DATE-INTERVAL-NSBOUND-1`
   to a day width. The runbook corrections are in the report.
 - [overnight-report-2026-09-09-run4.md](overnight-report-2026-09-09-run4.md) — **run 4:** seven merged (CFG-1 steps 1b to 4; DISPLAY-POLARS-1 steps 4 and 5; DF-EAGER-1 steps 2 and 3); DISPLAY-BRIDGE-1 #454 parked on a merge conflict with DF-EAGER-1; CFG-1's ledger waits on one clause.
-- [overnight-report-2026-09-09-run3.md](overnight-report-2026-09-09-run3.md) — run 3 (2026-09-09,
+- [OVERNIGHT-REPORT-2026-09-09-RUN3](overnight-report-2026-09-09-run3.md) — run 3 (2026-09-09,
   08:56–15:00 local): five merged (DISPLAY-POLARS-1 steps 2 and 3, DOCS-LINKS-1, the
   PREFLIGHT-PARITY-1 close, CFG-1 seed + step 1), two open at the stop (PROFILES-1 step 0,
   DF-EAGER-1 step 1), none parked. Eight §6 decisions, three questions for the owner.
@@ -251,7 +251,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   Landed fork #237 the same day; RP-3 (2026-08-30) wired the call from the engine's own MOR path.
   **F-5 corrected 2026-08-29:** answered in fork #217 (inside the engine pin) — the static half
   of the ask was void; DML-B is not blocked.
-- [roadmap-intake-2026-08-21.md](roadmap-intake-2026-08-21.md) — **the roadmap intake (2026-08-21):** campaign briefs reduced to eleven open workstreams, one closed ledger and five items to verify. It carries the **MW campaign** (Iceberg merge-on-read operability) and the MW-0 measurements, including an undeclared `rewrite_data_files` result-schema divergence.
+- [ROADMAP-INTAKE](roadmap-intake-2026-08-21.md) — **the roadmap intake (2026-08-21):** campaign briefs reduced to eleven open workstreams, one closed ledger and five items to verify. It carries the **MW campaign** (Iceberg merge-on-read operability) and the MW-0 measurements, including an undeclared `rewrite_data_files` result-schema divergence.
 - [roadmap-intake-2026-08-23.md](roadmap-intake-2026-08-23.md) — **roadmap intake
   (2026-08-23), two tracks** (Track B's MW-4b row delivered as MW-10 — measured allow 2026-08-30). Track A: the six DuckDB window-operator optimizations evaluated
   against the pinned DataFusion 54.1.0 sources — two already in DataFusion, two upstream
@@ -277,7 +277,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 ## Pointers
 - Up: [../map.md](../map.md)
 - [overnight-report-2026-09-15-15a.md](overnight-report-2026-09-15-15a.md) — run 15a (1.5 Spark-parity campaign, THE FUNCTIONS): census slice before/after, per-PR table with reviewer verdicts and costs, rulings, owner questions.
-- [overnight-report-2026-09-15-16b.md](overnight-report-2026-09-15-16b.md) — run 16b day report (the facade surfaces and IO of the
+- [OVERNIGHT-REPORT-2026-09-15-16B](overnight-report-2026-09-15-16b.md) — run 16b day report (the facade surfaces and IO of the
   1.5 Spark-parity campaign): census slice 17 → 7 missing names, #610 / #621 / #626 / #630 merged, rulings R-16b-1..44, owner questions
   Q-16b-1..4, the Rust-first roll-call, and the carry-overs DF-RUST-3, DF-SUBQUERY-1, IO-ORC-1, DF-METADATA-COL-1 with their oracles.
 - [overnight-report-2026-09-16-17b.md](overnight-report-2026-09-16-17b.md) — run 17b overnight report (2026-09-15/16): the 1.5 Spark-parity facade surfaces, IO and type widths (DataFrame census 108 → 114 of 115), rulings R-17b-1…24 and owner questions Q-17b-1…5; its lesson: a review finding can be real while its diagnosis is wrong.
@@ -451,19 +451,19 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   QUALIFIED-TWIN-BIND-1 (2026-10-02, record only, from ATTR-ID-1 S3e):** single-id
   multi-hit qualified binds against Spark's two-attribute refusal under the settled
   S1/C-038 select-dup model; target "revisit if a cell disagrees".
-- [df-metadata-col-1-card-2026-10-02.md](df-metadata-col-1-card-2026-10-02.md) — **card
+- [DF-METADATA-COL-1](df-metadata-col-1-card-2026-10-02.md) — **card
   DF-METADATA-COL-1 (2026-10-02, re-cut from closed draft PR #662):**
   `DataFrame.metadataColumn` and the hidden `_metadata` struct on file scans, two weeks
   stale with review findings open (P1 L-501 + 3 P2 + 1 P3, R-18b-16..19, Spark cells
   recorded); kept branch `feat/df-metadata-col-1` at `e07acb9c`, round-4 tree saved as a
   patch.
-- [java-regex-features-1-card-2026-10-02.md](java-regex-features-1-card-2026-10-02.md) — **card
+- [JAVA-REGEX-FEATURES-1](java-regex-features-1-card-2026-10-02.md) — **card
   JAVA-REGEX-FEATURES-1 (2026-10-02, re-cut from closed draft PR #658):** `split` /
   `regexp_*` / `rlike` answer Java lookaround, backreferences and possessive quantifiers
   via `fancy-regex 0.11`, verification-clean but never queued; kept branch
   `feat/java-regex-features-1` at `4c36c6f6`; three declared residue cells with recorded
   Spark answers.
-- [fnp-agg-1-card-2026-10-02.md](fnp-agg-1-card-2026-10-02.md) — **card FNP-AGG-1
+- [FNP-AGG-1](fnp-agg-1-card-2026-10-02.md) — **card FNP-AGG-1
   (2026-10-02, re-cut from closed draft PR #625, step 1 of 5):** the aggregate names
   still only on the branch — slice (d) (`grouping_id` + foundation) landed as `41534851`,
   slices (a)–(c) unbuilt with 10 names remaining per the 09-21 rescue report; kept branch
@@ -557,13 +557,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   25.0.0's bundled mimalloc (apache/arrow GH-50471, fixed in 25.0.1), reproduced without RePark; the
   threaded test is in the facade suite and the floor awaits the owner.
 - [CROSS-JOIN-CONDITION-1](cross-join-condition-1-card-2026-10-08.md) — **card CROSS-JOIN-CONDITION-1 (closed 2026-10-08 by its unit, sequenced after PR #997):** a cross with a condition now takes the inner path on both routes.
-- [join-condition-refusals-1-card-2026-10-08.md](join-condition-refusals-1-card-2026-10-08.md) — **card
-  JOIN-CONDITION-REFUSALS-1 (2026-10-08, closed 2026-10-08 by CROSS-JOIN-CONDITION-1 fold 2,
-  re-opened 2026-10-09 by fold 3 narrowed to residues R-CJC-1..R-CJC-5,
-  from the CROSS-JOIN-CONDITION-1 Opus verifier):** every join door answered conditions
-  Spark 4.1.2 refuses (non-deterministic expressions, an untyped NULL condition); the fold's
-  `JoinConditionRefusals` analyzer rule now refuses them with Spark's class, condition and
-  text on every `how` of both doors.
+- [JOIN-CONDITION-REFUSALS-1](join-condition-refusals-1-card-2026-10-08.md) — **card JOIN-CONDITION-REFUSALS-1 (2026-10-08, closed 2026-10-08 by CROSS-JOIN-CONDITION-1 fold 2, re-opened 2026-10-09 by fold 3 narrowed to residues R-CJC-1..R-CJC-5, from the CROSS-JOIN-CONDITION-1 Opus verifier):** every join door answered conditions Spark 4.1.2 refuses (non-deterministic expressions, an untyped NULL condition); the fold's `JoinConditionRefusals` analyzer rule now refuses them with Spark's class, condition and text on every `how` of both doors.
 - [c-3-null-stride-1-card-2026-10-08.md](c-3-null-stride-1-card-2026-10-08.md) — **card
   C-3-NULL-STRIDE-1 (2026-10-08, filed, not scheduled, from C-3 question Q3, PR #998):** the first
   stride's `OR col IS NULL` arm is a sequential scan of the whole table (about 1.1 s of a 7.3 s
@@ -732,7 +726,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   `[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME]` at `` `st`.`a` `` (parity row
   R-021; owner ruling, question 37, 2026-10-14). Format v3 not measured; non-struct
   case twins already covered by ID-1a.
-- [ice-tsns-update-ntz-cast-1-card-2026-10-15.md](ice-tsns-update-ntz-cast-1-card-2026-10-15.md) —
+- [ICE-TSNS-UPDATE-NTZ-CAST-1](ice-tsns-update-ntz-cast-1-card-2026-10-15.md) —
   card ICE-TSNS-UPDATE-NTZ-CAST-1 (2026-10-15, filed by U-1's carry-over fix round from Q1 and
   the orchestrator's provisional ruling on it): a written `CAST(ns AS TIMESTAMP_NTZ)` in
   `UPDATE … WHERE` truncates where the no-`WHERE` form floors; outside ruling 91, four dated
@@ -874,7 +868,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   resident before any result on main `c516c54a` (112 GB measured by U-8's verifier; stopped by
   the OOM killer at a 40 G scope cap after 166 s in fix round 3). It predates U-8 and is not its
   gate. Probes of this shape run under a memory cap.
-- [ice-resource-bound-1-card-2026-10-20.md](ice-resource-bound-1-card-2026-10-20.md) — **card
+- [ICE-RESOURCE-BOUND-1](ice-resource-bound-1-card-2026-10-20.md) — **card
   ICE-RESOURCE-BOUND-1 (U-11, 2026-10-20, built on the branch 2026-10-26, verifiers passed on head 76bd5891, PR #1191 open for the merge):** a stated resource bound for ordered writes (PP-01) and merge-on-read MERGE
   (PP-02), measured on the acceptance sizes and written in docs; above it the statement refuses
   with one text and the old snapshot stands, under #1044's "refuses cleanly where it cannot
@@ -910,7 +904,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [quoted-target-no-view-1-card-2026-11-02.md](quoted-target-no-view-1-card-2026-11-02.md) — **card QUOTED-TARGET-NO-VIEW-1 (2026-11-02, folded into IDENT-DIALECT-1 on 2026-11-02):** class 1 with no view in scope, S1 on the deleting heads.
 - [unicode-word-identifier-1-card-2026-11-02.md](unicode-word-identifier-1-card-2026-11-02.md) — **card UNICODE-WORD-IDENTIFIER-1 (2026-11-02, folded into IDENT-DIALECT-1 on 2026-11-02):** class 2.
 - [drop-target-trailing-comment-1-card-2026-11-02.md](drop-target-trailing-comment-1-card-2026-11-02.md) — **card DROP-TARGET-TRAILING-COMMENT-1 (2026-11-02, folded into IDENT-DIALECT-1 on 2026-11-02):** class 4, lead L13.
-- [ident-dialect-1-card-2026-11-02.md](ident-dialect-1-card-2026-11-02.md) and [IDENT-DIALECT-1B](ident-dialect-1b-card-2026-11-02.md) — **cards (closed; 1B on 2026-11-03):** the quoted-segment, non-ASCII-word and over-refusal classes (folds four cards above); 1B's relation after a comma that follows a VALUES row list or a LATERAL subquery, ruled out by owner ruling A.
+- [IDENT-DIALECT-1](ident-dialect-1-card-2026-11-02.md) and [IDENT-DIALECT-1B](ident-dialect-1b-card-2026-11-02.md) — **cards (closed; 1B on 2026-11-03):** the quoted-segment, non-ASCII-word and over-refusal classes (folds four cards above); 1B's relation after a comma that follows a VALUES row list or a LATERAL subquery, ruled out by owner ruling A.
 - [ident-dialect-2-card-2026-11-02.md](ident-dialect-2-card-2026-11-02.md) — **card IDENT-DIALECT-2 (2026-11-02, grade C, P2, open):** identifier positions outside the head target and the FROM, JOIN and comma relations, including the from-first forms (S3 over-refusals). Residue rows from IDENT-DIALECT-1B are appended.
 - [alter-view-rename-over-table-1-card-2026-11-02.md](alter-view-rename-over-table-1-card-2026-11-02.md) — **card ALTER-VIEW-RENAME-OVER-TABLE-1 (filed 2026-11-02, lead L14, open):** plain `ALTER VIEW t RENAME TO t2` over a same-named table refuses where Spark 4.1.2 renames the view; held. Leaves when pinned or declined.
 - [SPARK-DOOR-TEMP-VIEW-TARGET-1](spark-door-temp-view-target-1-card-2026-10-29.md) — **card SPARK-DOOR-TEMP-VIEW-TARGET-1 (merged 2026-10-30, closed):** a one-part DML target wrote the same-named table (AUD-006),
@@ -920,7 +914,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [temp-view-name-validation-1-card-2026-10-30.md](temp-view-name-validation-1-card-2026-10-30.md) — **card TEMP-VIEW-NAME-VALIDATION-1 (filed 2026-10-30, grade C, open, awaiting the owner's charter):** two name-level differences from Spark 4.1.2: an unquoted digit-led name is refused where Spark accepts it, and the `createOrReplaceTempView` name check disagrees with Spark's parser both ways. Loud or harmless; no table changes. Leaves when pinned to Spark's parser or declined.
 - [ddl-over-temp-view-1-card-2026-10-30.md](ddl-over-temp-view-1-card-2026-10-30.md) — **card DDL-OVER-TEMP-VIEW-1 (filed 2026-10-30, grade C, open, awaiting the owner's charter):** `CREATE OR REPLACE TABLE t AS SELECT` and `DROP TABLE t` with a temporary view `t` in scope, both outside the six write routes that SPARK-DOOR-TEMP-VIEW-TARGET-1 refuses; Spark measured both shapes equal on 2026-11-01. Leaves when both shapes match Spark 4.1.2 on the probe and are pinned, or the charter declines them.
 - [ICE-HADOOP-GZIP-METADATA-1](ice-hadoop-gzip-metadata-1-card-2026-10-29.md) — **card ICE-HADOOP-GZIP-METADATA-1 (2026-10-29; PR #1218, closed):** gzip metadata names no longer return a deleted row or hide a current file (AUD-007, AUD-010).
-- [HADOOP-HINT-CATALOG-STYLE-NAME-1](hadoop-hint-catalog-style-name-1-card-2026-11-01.md), [HADOOP-HINT-UNREADABLE-FALLBACK-1](hadoop-hint-unreadable-fallback-1-card-2026-11-01.md), [HADOOP-HINT-NEGATIVE-1](hadoop-hint-negative-1-card-2026-10-29.md), [HADOOP-DISCOVERY-RULE-1](hadoop-discovery-rule-1-card-2026-11-03.md), [HADOOP-HINT-MISSING-VERSION-TEXT-1](hadoop-hint-missing-version-text-1-card-2026-11-03.md), [f-struct-empty-child-panic-1-card-2026-10-29.md](f-struct-empty-child-panic-1-card-2026-10-29.md), [f-idless-struct-child-remap-1-card-2026-10-31.md](f-idless-struct-child-remap-1-card-2026-10-31.md), [f-idless-toplevel-positional-1-card-2026-11-01.md](f-idless-toplevel-positional-1-card-2026-11-01.md) and [rp-65-idless-repin-1-card-2026-11-03.md](rp-65-idless-repin-1-card-2026-11-03.md) — **cards (closed 2026-10-31 to 2026-11-03):** the hadoop group by PR #1251; the id-less residues (AUD-008, S-11, S-16, S-20, S-26), leads L1 and L2 in the RP-65 card; ledger [hadoop-discovery-rule-1-ledger.md](../../ledgers/completed/hadoop-discovery-rule-1-ledger.md).
+- [HADOOP-HINT-CATALOG-STYLE-NAME-1](hadoop-hint-catalog-style-name-1-card-2026-11-01.md), [HADOOP-HINT-UNREADABLE-FALLBACK-1](hadoop-hint-unreadable-fallback-1-card-2026-11-01.md), [HADOOP-HINT-NEGATIVE-1](hadoop-hint-negative-1-card-2026-10-29.md), [HADOOP-DISCOVERY-RULE-1](hadoop-discovery-rule-1-card-2026-11-03.md), [HADOOP-HINT-MISSING-VERSION-TEXT-1](hadoop-hint-missing-version-text-1-card-2026-11-03.md), [F-STRUCT-EMPTY-CHILD-PANIC-1](f-struct-empty-child-panic-1-card-2026-10-29.md), [F-IDLESS-STRUCT-CHILD-REMAP-1](f-idless-struct-child-remap-1-card-2026-10-31.md), [F-IDLESS-TOPLEVEL-POSITIONAL-1](f-idless-toplevel-positional-1-card-2026-11-01.md) and [RP-65-IDLESS-REPIN-1](rp-65-idless-repin-1-card-2026-11-03.md) — **cards (closed 2026-10-31 to 2026-11-03):** the hadoop group by PR #1251; the id-less residues (AUD-008, S-11, S-16, S-20, S-26), leads L1 and L2 in the RP-65 card; ledger [hadoop-discovery-rule-1-ledger.md](../../ledgers/completed/hadoop-discovery-rule-1-ledger.md).
 - [f-map-key-drop-alter-1-card-2026-10-31.md](f-map-key-drop-alter-1-card-2026-10-31.md) — **fork card F-MAP-KEY-DROP-ALTER-1 (filed 2026-10-31, grade C, P3, not dispatched):** the fork accepts `drop m.key.a` where Spark refuses the ALTER (S-14); the read is correct. RePark refuses at both doors since MAP-KEY-ALTER-1 (2026-11-04).
 - [MAP-KEY-ALTER-1](map-key-alter-1-card-2026-11-04.md) — **card MAP-KEY-ALTER-1 (2026-11-04, closed at PR #1256):** every ALTER and union under a map key refuses as Spark does; [ledger](../../ledgers/completed/map-key-alter-1-ledger.md).
 - [df-append-map-key-union-1-card-2026-11-04.md](df-append-map-key-union-1-card-2026-11-04.md) — **card DF-APPEND-MAP-KEY-UNION-1 (2026-11-04, S3, not dispatched):** a DataFrame append that differs only inside a map key skips the union; the owner decides the scope.
@@ -959,7 +953,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [f-eqdel-dropped-key-2-card-2026-10-29.md](f-eqdel-dropped-key-2-card-2026-10-29.md) — **fork card F-EQDEL-DROPPED-KEY-2 (filed 2026-10-29, P2, not dispatched):** the Avro and ORC data readers refuse a scan whose equality-delete key column was dropped (`DataInvalid`, naming the data file), where the Parquet data path reads the survivors; RP-62 pins the refusal as loud-or-correct until the fork projects the key by field id.
 - [f-eqdel-promoted-key-pos-1-card-2026-10-28.md](f-eqdel-promoted-key-pos-1-card-2026-10-28.md) — **fork card F-EQDEL-PROMOTED-KEY-POS-1 (filed 2026-10-28, P3, not dispatched):** a key promoted from `int` to `long` after an equality delete fails loud under a `_pos` or `_row_id` projection, which also fails the fork's merge-on-read DELETE and UPDATE on such tables with the table unchanged. Leaves when the owner charters it or declines it.
 - [f-interop-test-s3-dir-1-card-2026-10-28.md](f-interop-test-s3-dir-1-card-2026-10-28.md) — **fork card F-INTEROP-TEST-S3-DIR-1 (filed 2026-10-28, P3 housekeeping, not dispatched):** `cargo test -p iceberg` leaves an untracked `s3:`-named directory in the crate, because three interop tests resolve an s3 path as a local relative path. Leaves when the owner charters it or declines it.
-- [f-ci-macos-cap-1-card-2026-10-29.md](f-ci-macos-cap-1-card-2026-10-29.md) — **fork card F-CI-MACOS-CAP-1 (filed 2026-10-29, P3 housekeeping, not dispatched):** the fork's two macOS `Tests` jobs were cancelled at exactly fifteen minutes on every run of fork PRs `#375` and `#377` on 2026-10-28; they are not required checks, so both PRs merged on the required checks, and the cancel source is not identified (no `timeout-minutes` is set). The fix is the fork's, in its `.github/`; no RePark lane takes it.
+- [F-CI-MACOS-CAP-1](f-ci-macos-cap-1-card-2026-10-29.md) — **fork card F-CI-MACOS-CAP-1 (filed 2026-10-29, P3 housekeeping, not dispatched):** the fork's two macOS `Tests` jobs were cancelled at exactly fifteen minutes on every run of fork PRs `#375` and `#377` on 2026-10-28; they are not required checks, so both PRs merged on the required checks, and the cancel source is not identified (no `timeout-minutes` is set). The fix is the fork's, in its `.github/`; no RePark lane takes it.
 - [DEP-AUDIT-0414-1](dep-audit-0414-1-card-2026-10-28.md) — **card DEP-AUDIT-0414-1 (merged 2026-10-29, PR #1210; closed):** the RUSTSEC-2026-0414 failure of `cargo audit` on main.
 - [v3-label-gate-dimensions-2026-10-28.md](v3-label-gate-dimensions-2026-10-28.md) — **gate input for the format-v3 label (filed 2026-10-28, not dispatched):** the fifteen dimensions of section 5 of the independent audit, each with its required discriminating evidence, copied unchanged; the input to the V3-LABEL-1 order (label of record 2026-11-17).
 - [rp-posdel-batch-2-card-2026-10-27.md](rp-posdel-batch-2-card-2026-10-27.md) — **card RP-POSDEL-BATCH-2 (filed 2026-10-27, P2, product grade; dispatched 2026-10-28 on an Opus 5.5 lane; PR #1203):** RePark's position-delete writers built one array per partition or identity set, so a large batch still panicked after RP-60; the fix is a chunked write. Closes on the merge of PR #1203; ledger [rp-posdel-batch-2-ledger.md](../../ledgers/staging/rp-posdel-batch-2-ledger.md) in staging.
@@ -977,7 +971,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [v3-lineage-native-assert-1-card-2026-11-08.md](v3-lineage-native-assert-1-card-2026-11-08.md) — **card V3-LINEAGE-NATIVE-ASSERT-1 (2026-11-08, S3, not dispatched):** the empty-DML table asserts v3 lineage on the Spark door only. Leaves when asserted on every door or declined.
 - [facade-affected-row-shape-1-card-2026-11-08.md](facade-affected-row-shape-1-card-2026-11-08.md) — **card FACADE-AFFECTED-ROW-SHAPE-1 (2026-11-08, S3, not dispatched):** the facade's affected-row column shape depends on the route. Leaves when pinned or declined.
 - [empty-dml-set-error-divergence-1-card-2026-11-08.md](empty-dml-set-error-divergence-1-card-2026-11-08.md) — **card EMPTY-DML-SET-ERROR-DIVERGENCE-1 (2026-11-08, S3, not dispatched):** a no-op UPDATE whose SET expression errors is count 0 where Spark refuses on v2 merge-on-read; no pin yet. Leaves when the cell and its registry row land together.
-- [struct-compare-by-position-1-card-2026-11-09.md](struct-compare-by-position-1-card-2026-11-09.md) and [struct-compare-seat-family-1-card-2026-11-10.md](struct-compare-seat-family-1-card-2026-11-10.md) — **cards STRUCT-COMPARE-BY-POSITION-1 (closed, PR #1292, `68f70b0f`) and its family STRUCT-COMPARE-SEAT-FAMILY-1 (closed, PR #1295, `68b09d18`, 2026-11-11):** comparisons, `IN` lists and join keys, then key-list joins, `BETWEEN`, simple `CASE` and `nullif`, pair struct fields by position; C-116 and C-118 CLOSED; residue carded.
+- [STRUCT-COMPARE-BY-POSITION-1](struct-compare-by-position-1-card-2026-11-09.md) and [STRUCT-COMPARE-SEAT-FAMILY-1](struct-compare-seat-family-1-card-2026-11-10.md) — **cards STRUCT-COMPARE-BY-POSITION-1 (closed, PR #1292, `68f70b0f`) and its family STRUCT-COMPARE-SEAT-FAMILY-1 (closed, PR #1295, `68b09d18`, 2026-11-11):** comparisons, `IN` lists and join keys, then key-list joins, `BETWEEN`, simple `CASE` and `nullif`, pair struct fields by position; C-116 and C-118 CLOSED; residue carded.
 - [STRUCT-SETOP-TYPE-FAMILY-1](struct-setop-type-family-1-card-2026-11-09.md) — **card STRUCT-SETOP-TYPE-FAMILY-1 (closed, PR #1290, 2026-11-10):** set operations pair a reordered struct by position; F-2 and F-7 carded; F-5 and F-6 appended to FACADE-INGEST-ARROW-NORMALIZE-1. Ledger C-117 CLOSED.
 - [struct-setop-listview-coercion-1-card-2026-11-10.md](struct-setop-listview-coercion-1-card-2026-11-10.md) — **card STRUCT-SETOP-LISTVIEW-COERCION-1 (filed 2026-11-10, S3, not dispatched):** a `ListView` set operation against a plain `List` with the same names is refused by coercion where Spark answers. Leaves when fixed or declined.
 - [rcte-projection-prune-1-card-2026-11-10.md](rcte-projection-prune-1-card-2026-11-10.md) — **card RCTE-PROJECTION-PRUNE-1 (filed 2026-11-10, S3, not dispatched):** a recursive CTE that selects only some columns fails on both doors, one form as a caught panic. Leaves when fixed or declined.
@@ -1001,6 +995,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [STRUCT-COMPARE-REVIEW-RESIDUE-1](struct-compare-review-residue-1-card-2026-11-10.md) — **card STRUCT-COMPARE-REVIEW-RESIDUE-1 (filed 2026-11-10, S3, not dispatched):** class (c) residue items from the PR #1292 verdicts.
 - [facade-ingest-arrow-normalize-1-card-2026-11-09.md](facade-ingest-arrow-normalize-1-card-2026-11-09.md) — **card FACADE-INGEST-ARROW-NORMALIZE-1 (filed 2026-11-09, unscheduled):** narrow the Arrow list kinds and run-end encoding at `createDataFrame` to Spark's plain types; costs offset narrowing and the 2^31 limit; needs a sketch and a measurement.
 - [LISTVIEW-INNER-JOIN-KEY-1](listview-inner-join-key-1-card-2026-11-11.md) — **card LISTVIEW-INNER-JOIN-KEY-1 (filed 2026-11-11, S1, owner ruled the fix 2026-11-11, blocks v1.5.7, not dispatched):** a DataFrame key-name inner join on a `ListView` key returns the cross product (Q2059, Q2063).
+- [SQL-SETOP-ALL-MULTISET-1](sql-setop-all-multiset-1-card-2026-11-12.md) — **card SQL-SETOP-ALL-MULTISET-1 (filed 2026-11-12, S2, not dispatched):** SQL and DataFrame `INTERSECT ALL` / `EXCEPT ALL` answer Spark's multiset; until then SQL-SETOP-ALL-REFUSE-1 refuses them (owner, 2026-11-12, blocks ICE-V2-FLAT-AWS-LABEL-1).
 - [S3T-CTAS-SHELL-CREATE-1](s3t-ctas-shell-create-1-card-2026-11-12.md) — **card S3T-CTAS-SHELL-CREATE-1 (filed 2026-11-12, after the scoped label, not dispatched):** an S3 Tables CTAS creates its entry with no first version and adopts such an entry on retry, as the AWS jar does.
 - [struct-position-grouping-sets-1-card-2026-11-11.md](struct-position-grouping-sets-1-card-2026-11-11.md), [not-between-dml-cse-1-card-2026-11-11.md](not-between-dml-cse-1-card-2026-11-11.md), [struct-compare-family-residue-1-card-2026-11-11.md](struct-compare-family-residue-1-card-2026-11-11.md), [struct-position-error-names-1-card-2026-11-11.md](struct-position-error-names-1-card-2026-11-11.md) and [map-nested-ordering-on-1-card-2026-11-11.md](map-nested-ordering-on-1-card-2026-11-11.md) — **cards (filed 2026-11-11, not dispatched):** S3 except STRUCT-POSITION-ERROR-NAMES-1 (S4). Each leaves when fixed or declined.
 - [using-scalar-struct-key-class-1-card-2026-11-11.md](using-scalar-struct-key-class-1-card-2026-11-11.md), [struct-setop-control-class-1-card-2026-11-11.md](struct-setop-control-class-1-card-2026-11-11.md), [using-chain-ambiguous-1-card-2026-11-11.md](using-chain-ambiguous-1-card-2026-11-11.md), [natural-existence-join-accept-1-card-2026-11-11.md](natural-existence-join-accept-1-card-2026-11-11.md) and [map-ordering-forms-1-card-2026-11-11.md](map-ordering-forms-1-card-2026-11-11.md) — **cards (filed 2026-11-11, S3, not dispatched):** the class-only gaps and the NATURAL (X0001 to X0060) and map-ordering acceptances; each leaves when fixed or declined.
