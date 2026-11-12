@@ -1,0 +1,18 @@
+{"case": "execute", "kind": "list", "leg": "base", "run": 1, "executions": 5, "seconds": 0.160548149025999, "rows": [[300000, 29999850000]], "sha": "476acc04374cadb8"}
+{"case": "execute", "kind": "list", "leg": "head", "run": 1, "executions": 5, "seconds": 0.16824073094176129, "rows": [[300000, 29999850000]], "sha": "476acc04374cadb8"}
+{"case": "build", "kind": "list", "leg": "base", "run": 1, "builds": 2000, "seconds": 0.4380195959820412}
+{"case": "build", "kind": "list", "leg": "head", "run": 1, "builds": 2000, "seconds": 0.42935040895827115}
+{"case": "execute", "kind": "listview", "leg": "head", "run": 1, "executions": 5, "seconds": 0.2501751060481183, "rows": [[300000, 29999850000]], "sha": "476acc04374cadb8"}
+{"case": "build", "kind": "listview", "leg": "head", "run": 1, "builds": 2000, "seconds": 0.45393965201219544}
+{"case": "execute", "kind": "list", "leg": "base", "run": 2, "executions": 5, "seconds": 0.17502995894756168, "rows": [[300000, 29999850000]], "sha": "476acc04374cadb8"}
+{"case": "execute", "kind": "list", "leg": "head", "run": 2, "executions": 5, "seconds": 0.1609101939247921, "rows": [[300000, 29999850000]], "sha": "476acc04374cadb8"}
+{"case": "build", "kind": "list", "leg": "base", "run": 2, "builds": 2000, "seconds": 0.4573395809857175}
+{"case": "build", "kind": "list", "leg": "head", "run": 2, "builds": 2000, "seconds": 0.4471720560104586}
+{"case": "execute", "kind": "listview", "leg": "head", "run": 2, "executions": 5, "seconds": 0.24221187201328576, "rows": [[300000, 29999850000]], "sha": "476acc04374cadb8"}
+{"case": "build", "kind": "listview", "leg": "head", "run": 2, "builds": 2000, "seconds": 0.4519960029865615}
+{"case": "execute", "kind": "list", "leg": "base", "run": 3, "executions": 5, "seconds": 0.1689503199304454, "rows": [[300000, 29999850000]], "sha": "476acc04374cadb8"}
+{"case": "execute", "kind": "list", "leg": "head", "run": 3, "executions": 5, "seconds": 0.1552230659290217, "rows": [[300000, 29999850000]], "sha": "476acc04374cadb8"}
+{"case": "build", "kind": "list", "leg": "base", "run": 3, "builds": 2000, "seconds": 0.4465379400062375}
+{"case": "build", "kind": "list", "leg": "head", "run": 3, "builds": 2000, "seconds": 0.45298397896112874}
+{"case": "execute", "kind": "listview", "leg": "head", "run": 3, "executions": 5, "seconds": 0.2659585041110404, "rows": [[300000, 29999850000]], "sha": "476acc04374cadb8"}
+{"case": "build", "kind": "listview", "leg": "head", "run": 3, "builds": 2000, "seconds": 0.45652119803708047}

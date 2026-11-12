@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Int32Array, RecordBatch, StringArray};
+use datafusion::arrow::array::{Float64Array, Int32Array, RecordBatch, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::Statement;
@@ -499,5 +499,105 @@ fn the_translation_keeps_spark_answerable_shapes_and_refuses_the_rest() {
             delete_predicate(&target_of(sql), &schema, true).is_none(),
             "{sql:?} must keep the row-level route"
         );
+    }
+}
+
+fn signed_zero_schema() -> Schema {
+    Schema::builder()
+        .with_schema_id(0)
+        .with_fields(vec![
+            NestedField::optional(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+            NestedField::optional(2, "d", Type::Primitive(PrimitiveType::Double)).into(),
+        ])
+        .build()
+        .expect("build signed-zero schema")
+}
+
+async fn seed_signed_zero_files(catalog: &Arc<dyn Catalog>, delete_mode: &str) -> TableIdent {
+    let creation = TableCreation::builder()
+        .name("zeros".to_string())
+        .schema(signed_zero_schema())
+        .properties(HashMap::from([(
+            "write.delete.mode".to_string(),
+            delete_mode.to_string(),
+        )]))
+        .build();
+    catalog
+        .create_table(&NamespaceIdent::new("sales".to_string()), creation)
+        .await
+        .expect("create signed-zero table");
+    let ident = TableIdent::new(
+        NamespaceIdent::new("sales".to_string()),
+        "zeros".to_string(),
+    );
+    let schema = Arc::new(ArrowSchema::new(vec![
+        Field::new("id", DataType::Int32, true),
+        Field::new("d", DataType::Float64, true),
+    ]));
+    for (id, value) in [(1, -0.0), (2, 0.0)] {
+        let batch = RecordBatch::try_new(
+            Arc::clone(&schema),
+            vec![
+                Arc::new(Int32Array::from(vec![id])),
+                Arc::new(Float64Array::from(vec![value])),
+            ],
+        )
+        .expect("signed-zero batch");
+        crate::write::append::append(catalog, &ident, vec![batch])
+            .await
+            .expect("append a zero-only file");
+    }
+    ident
+}
+
+#[tokio::test]
+async fn a_float_zero_predicate_never_takes_the_metadata_path_over_zero_only_files() {
+    for mode in [MERGE_ON_READ, COPY_ON_WRITE] {
+        let warehouse = TempDir::new().expect("temp warehouse");
+        let catalog = memory_catalog(&warehouse).await;
+        let ident = seed_signed_zero_files(&catalog, mode).await;
+        let schema = catalog
+            .load_table(&ident)
+            .await
+            .expect("load table")
+            .metadata()
+            .current_schema()
+            .as_ref()
+            .clone();
+        for sql in [
+            "DELETE FROM ice.sales.zeros WHERE d = 0.0",
+            "DELETE FROM ice.sales.zeros WHERE d = -0.0",
+            "DELETE FROM ice.sales.zeros WHERE d IN (0.0, 1.0)",
+            "DELETE FROM ice.sales.zeros WHERE 0.0 = d",
+        ] {
+            let target = target_of(sql);
+            assert!(
+                delete_predicate(&target, &schema, true).is_none(),
+                "{mode}: {sql:?} must not translate"
+            );
+            assert!(
+                plan_metadata_delete(&catalog, &target, true)
+                    .await
+                    .expect("the decision runs")
+                    .is_none(),
+                "{mode}: {sql:?}"
+            );
+            assert!(
+                !try_metadata_delete(&catalog, &target, true)
+                    .await
+                    .expect("the decision runs"),
+                "{mode}: {sql:?}"
+            );
+        }
+        assert_eq!(read_ids(&catalog, &ident).await, vec![1, 2], "{mode}");
+        assert_eq!(snapshot_log(&catalog, &ident).await.len(), 2, "{mode}");
+        let control = target_of("DELETE FROM ice.sales.zeros WHERE id = 1");
+        assert!(
+            try_metadata_delete(&catalog, &control, true)
+                .await
+                .expect("metadata delete runs"),
+            "{mode}: a whole-file id predicate still takes the metadata path"
+        );
+        assert_eq!(read_ids(&catalog, &ident).await, vec![2], "{mode}");
     }
 }

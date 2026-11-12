@@ -1,13 +1,20 @@
 from __future__ import annotations
 
+import json
+import re
+from pathlib import Path
+from typing import Any
+
 import pytest
 from _flat_matrix_cells import (
     COMBINATIONS,
+    FOLDED_PREDICATES,
     GROUP_NAMES,
     KNOWN_OPEN,
     PREDICATES,
     SIGNED_ZERO_PR_A,
     SIGNED_ZERO_PR_B,
+    TYPED_BUILDERS,
     cells_for_group,
     class_a_key,
     classify,
@@ -17,8 +24,19 @@ from _flat_matrix_cells import (
     float_cells,
     load_expected,
     matrix_cells,
+    passes,
+    typed_predicate,
     universe,
 )
+
+ENVELOPE_DIR = (
+    Path(__file__).resolve().parents[4]
+    / "task"
+    / "wo"
+    / "write-path-envelope-matrix-1"
+    / "evidence"
+)
+ENVELOPE_SEAT_NAMES = {"merge": "merge-when"}
 
 EXPECTED_GROUP_CELLS = {
     "pilot": 30,
@@ -178,6 +196,7 @@ def test_classifier_declared_empty_dml_and_commit_labels() -> None:
         spark_answer=[(1,)],
         repark_commits=0,
         spark_commits=1,
+        folded=True,
     )
     fewer = classify(
         seat="update",
@@ -189,8 +208,122 @@ def test_classifier_declared_empty_dml_and_commit_labels() -> None:
         repark_commits=0,
         spark_commits=1,
     )
-    assert declared == "KNOWN-EMPTY-DML"
+    assert declared == "KNOWN-EMPTY-DML, FEWER-COMMIT"
     assert fewer == "FEWER-COMMIT"
+    assert passes(declared)
+    assert not passes(fewer)
+
+
+def test_folded_empty_dml_with_a_wrong_write_still_fails() -> None:
+    label = classify(
+        seat="delete",
+        pid="p04",
+        repark_outcome="ANSWERED",
+        spark_outcome="ANSWERED",
+        repark_answer=[(6,)],
+        spark_answer=[(2,), (4,)],
+        folded=True,
+    )
+    assert label == "KNOWN-EMPTY-DML, WRONG-WRITE"
+    assert not passes(label)
+
+
+def test_folded_predicates_are_the_ones_spark_folds_to_empty() -> None:
+    spark_records = _raw_cells("spark-*.jsonl")
+    folded = {record["pid"] for record in spark_records.values() if record["plan_empty"] is True}
+    assert folded == FOLDED_PREDICATES == {"p04"}
+
+
+def test_every_scalar_predicate_has_a_column_api_builder() -> None:
+    assert set(TYPED_BUILDERS) == {pid for pid, _ in PREDICATES}
+    assert len(TYPED_BUILDERS) == 28
+    for pid, builder in TYPED_BUILDERS.items():
+        assert "expr" not in builder.__code__.co_names, pid
+
+
+def test_typed_predicate_refuses_an_unknown_predicate() -> None:
+    with pytest.raises(ValueError):
+        typed_predicate(object(), "p99")
+
+
+def _raw_cells(pattern: str) -> dict[str, dict[str, Any]]:
+    cells: dict[str, dict[str, Any]] = {}
+    for path in sorted(ENVELOPE_DIR.glob("raw/" + pattern)):
+        for line in path.read_text(encoding="utf-8").splitlines():
+            record = json.loads(line)
+            if record.get("record") == "cell" and record["door"] != "native":
+                cells[record["key"]] = record
+    return cells
+
+
+def _envelope_labels() -> dict[str, str]:
+    labels: dict[str, str] = {}
+    table = (ENVELOPE_DIR / "envelope-table.md").read_text(encoding="utf-8")
+    for line in table.splitlines():
+        if not re.match(r"\| p\d+ \|", line):
+            continue
+        parts = [part.strip() for part in re.split(r"(?<!\\)\|", line)]
+        pid, door, seat, kind = parts[1], parts[2], parts[3], parts[4]
+        if door == "native":
+            continue
+        labels[f"{door}|{seat}|{kind}|{pid}"] = parts[9]
+    return labels
+
+
+def _delta(record: dict[str, Any], before: str, after: str) -> int:
+    if record[before] is None or record[after] is None:
+        return 0
+    return record[after]["count"] - record[before]["count"]
+
+
+def _target_delta(record: dict[str, Any]) -> int:
+    return 0 if record["target"] is None else record["target"]["snapshot"]["count"]
+
+
+def _own_ids(record: dict[str, Any]) -> list[Any] | None:
+    pre = record["pre_select"]
+    return pre["ids"] if pre is not None and pre["outcome"] == "ANSWERED" else None
+
+
+def test_classifier_reproduces_the_committed_envelope_labels() -> None:
+    repark_cells = _raw_cells("repark-main-*.jsonl")
+    spark_cells = _raw_cells("spark-*.jsonl")
+    folded = FOLDED_PREDICATES
+    expected = _envelope_labels()
+    compared: list[str] = []
+    seats: set[str] = set()
+    doors: set[str] = set()
+    for key, label in sorted(expected.items()):
+        record = repark_cells[key]
+        oracle = spark_cells[key]
+        seat = ENVELOPE_SEAT_NAMES.get(record["seat"], record["seat"])
+        actual = classify(
+            seat=seat,
+            pid=record["pid"],
+            repark_outcome=record["outcome"],
+            spark_outcome=oracle["outcome"],
+            repark_answer=record["ids"],
+            spark_answer=oracle["ids"],
+            repark_commits=_delta(record, "snapshot_before", "snapshot_after"),
+            spark_commits=_delta(oracle, "snapshot_before", "snapshot_after"),
+            repark_target_commits=_target_delta(record),
+            spark_target_commits=_target_delta(oracle),
+            repark_damaged=record["damaged"],
+            spark_damaged=oracle["damaged"],
+            repark_lost=record["lost"],
+            spark_lost=oracle["lost"],
+            repark_own=_own_ids(record),
+            repark_lineage=record["lineage_advanced"],
+            spark_lineage=oracle["lineage_advanced"],
+            folded=record["pid"] in folded,
+        )
+        assert actual == label, f"{key}: classify gave {actual!r}, envelope gave {label!r}"
+        compared.append(key)
+        seats.add(seat)
+        doors.add(record["door"])
+    assert len(compared) >= 200
+    assert {"select", "insert", "ctas", "delete", "update", "merge-when"} <= seats
+    assert {"spark-sql", "f-expr", "filter-str"} <= doors
 
 
 def test_copy_seats_compare_the_target_ids_and_skip_the_source_commits() -> None:

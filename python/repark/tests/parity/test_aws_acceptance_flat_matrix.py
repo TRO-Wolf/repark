@@ -25,6 +25,7 @@ from _flat_matrix_cells import (
     FLOAT_SEED_U,
     FLOAT_SQL,
     FLOAT_WRITE_SHAPES,
+    FOLDED_PREDICATES,
     KNOWN_OPEN,
     PREDICATE_TEXT,
     SEED_ROWS,
@@ -38,6 +39,7 @@ from _flat_matrix_cells import (
     passes,
     record_line,
     target_for,
+    typed_predicate,
 )
 from test_aws_acceptance_cross_read import _spark_session_for_catalog
 
@@ -145,10 +147,16 @@ def _short(table: str) -> str:
 
 
 def _frame_run(
-    session: Any, fns: Any, seat: str, door: str, names: dict[str, str], predicate: str
+    session: Any,
+    fns: Any,
+    seat: str,
+    door: str,
+    names: dict[str, str],
+    predicate: str,
+    pid: str,
 ) -> Any:
     t, t2, t3 = names["t"], names["t2"], names["t3"]
-    column = fns.expr(predicate)
+    column = typed_predicate(fns, pid) if door == "column-api" else fns.expr(predicate)
     condition = predicate if door == "filter-str" else column
     source = session.table(t)
     if seat == "select":
@@ -195,7 +203,7 @@ def _observe_matrix(
         if combo.door == "spark-sql":
             result = session.sql(_matrix_sql(seat, names, predicate))
         else:
-            result = _frame_run(session, fns, seat, combo.door, names, predicate)
+            result = _frame_run(session, fns, seat, combo.door, names, predicate, cell.pid)
         answer = _rows(result.collect()) if combo.is_read else None
         outcome = "ANSWERED"
     except Exception as failure:
@@ -299,6 +307,50 @@ def _record(path: Path, **fields: Any) -> None:
         handle.write(record_line(**fields) + "\n")
 
 
+def _describe(session: Any, table: str) -> list[list[str]]:
+    fields: list[list[str]] = []
+    for row in session.sql(f"DESCRIBE TABLE {table}").collect():
+        name, data_type = str(row[0]), str(row[1])
+        if not name or not data_type:
+            break
+        fields.append([name, data_type])
+    return fields
+
+
+def _file_counts(session: Any, table: str) -> dict[str, int]:
+    counts = {"data": 0, "delete": 0}
+    rows = session.sql(f"SELECT content, count(*) FROM {table}.files GROUP BY content").collect()
+    for content, count in rows:
+        counts["data" if int(content) == 0 else "delete"] += int(count)
+    return counts
+
+
+def _shape_fields(
+    prefix: str, schema_session: Any, file_session: Any, table: str
+) -> dict[str, Any]:
+    fields: dict[str, Any] = {f"{prefix}_schema": None, f"{prefix}_files": None}
+    fields[f"{prefix}_schema_error"] = None
+    fields[f"{prefix}_files_error"] = None
+    try:
+        fields[f"{prefix}_schema"] = _describe(schema_session, table)
+    except Exception as failure:
+        fields[f"{prefix}_schema_error"] = f"{type(failure).__name__}: {failure}"[:500]
+    try:
+        fields[f"{prefix}_files"] = _file_counts(file_session, table)
+    except Exception as failure:
+        fields[f"{prefix}_files_error"] = f"{type(failure).__name__}: {failure}"[:500]
+    return fields
+
+
+def _absent_shape(prefix: str) -> dict[str, Any]:
+    return {
+        f"{prefix}_schema": None,
+        f"{prefix}_schema_error": None,
+        f"{prefix}_files": None,
+        f"{prefix}_files_error": None,
+    }
+
+
 @pytest.mark.timeout(3600)
 @pytest.mark.parametrize("cell", _params())
 def test_flat_matrix_cell(cell: Cell, sessions: Any, records_path: Path) -> None:
@@ -334,6 +386,8 @@ def test_flat_matrix_cell(cell: Cell, sessions: Any, records_path: Path) -> None
             spark_answer=oracle.answer,
         )
         seat_name = cell.shape
+        repark_final = repark_names["t"]
+        oracle_final: str | None = oracle_fq["t"]
     else:
         combo = cell.combo
         assert combo is not None and cell.pid is not None
@@ -344,6 +398,7 @@ def test_flat_matrix_cell(cell: Cell, sessions: Any, records_path: Path) -> None
         repark.sql(f"INSERT INTO {fq_names['t']} VALUES " + ", ".join(SEED_ROWS))
         mine = _observe_matrix(repark, functions, cell, fq_names, predicate)
         expected_entry = expected_for(cell, EXPECTED)
+        oracle_final = None
         if expected_entry is not None:
             source = "committed-spark"
             ids = committed_ids(combo, expected_entry)
@@ -366,7 +421,9 @@ def test_flat_matrix_cell(cell: Cell, sessions: Any, records_path: Path) -> None
             from pyspark.sql import functions as spark_functions
 
             oracle = _observe_matrix(spark, spark_functions, cell, oracle_map, predicate)
+            oracle_final = oracle_map[target_for(combo)]
         seat_name = combo.seat
+        repark_final = fq_names[target_for(combo)]
         label = classify(
             seat=seat_name,
             pid=cell.pid,
@@ -376,7 +433,13 @@ def test_flat_matrix_cell(cell: Cell, sessions: Any, records_path: Path) -> None
             spark_answer=oracle.answer,
             repark_commits=mine.commits if glue else None,
             spark_commits=oracle.commits if glue else None,
+            folded=cell.pid in FOLDED_PREDICATES,
         )
+    shape = _shape_fields("repark", repark, spark, repark_final)
+    if oracle_final is None:
+        shape.update(_absent_shape("oracle"))
+    else:
+        shape.update(_shape_fields("oracle", spark, spark, oracle_final))
     _record(
         records_path,
         cell=cell.cell_id,
@@ -395,5 +458,6 @@ def test_flat_matrix_cell(cell: Cell, sessions: Any, records_path: Path) -> None
         oracle_error=oracle.error,
         oracle_probe_error=oracle.probe_error,
         label=label,
+        **shape,
     )
     assert passes(label), f"{cell.cell_id}: label {label}"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,45 @@ PREDICATES: tuple[tuple[str, str], ...] = (
     ("p36", "CASE WHEN i = 1 THEN true END"),
 )
 PREDICATE_TEXT: dict[str, str] = dict(PREDICATES)
+
+TYPED_BUILDERS: dict[str, Any] = {
+    "p01": lambda f: f.col("i") == f.lit(1),
+    "p02": lambda f: f.col("i") != f.lit(1),
+    "p03": lambda f: f.col("i").isin(f.lit(1), f.lit(None)),
+    "p04": lambda f: ~f.col("i").isin(f.lit(1), f.lit(None)),
+    "p05": lambda f: f.col("i").isNull(),
+    "p06": lambda f: f.col("i").between(f.lit(1), f.lit(2)),
+    "p07": lambda f: f.col("i").eqNullSafe(f.lit(None)),
+    "p08": lambda f: f.col("i") + f.lit(1) > f.lit(0),
+    "p09": lambda f: f.col("i").cast("string") == f.lit("1"),
+    "p10": lambda f: f.col("l") == f.lit(9223372036854775807),
+    "p11": lambda f: f.col("dec") == f.lit(Decimal("1.10")),
+    "p12": lambda f: f.col("dec") > f.lit(Decimal("1.1")),
+    "p13": lambda f: f.col("d") == f.lit(float("nan")),
+    "p14": lambda f: f.isnan(f.col("d")),
+    "p15": lambda f: f.col("d") == f.lit(0.0),
+    "p16": lambda f: f.col("d") > f.lit(0),
+    "p17": lambda f: f.col("s") == f.lit(""),
+    "p18": lambda f: f.col("s") == f.lit("a "),
+    "p19": lambda f: f.col("s").like("a%"),
+    "p20": lambda f: f.upper(f.col("s")) == f.lit("A"),
+    "p21": lambda f: f.length(f.col("s")) == f.lit(0),
+    "p22": lambda f: f.col("b"),
+    "p23": lambda f: ~f.col("b").eqNullSafe(f.lit(True)),
+    "p24": lambda f: f.col("dt") == f.to_date(f.lit("1970-01-01")),
+    "p25": lambda f: f.col("ts") > f.to_timestamp(f.lit("2026-01-01 00:00:00")),
+    "p26": lambda f: f.col("ntz") == f.to_timestamp_ntz(f.lit("2026-03-08 02:30:00")),
+    "p35": lambda f: f.coalesce(f.col("i"), f.lit(0)) == f.lit(0),
+    "p36": lambda f: f.when(f.col("i") == f.lit(1), f.lit(True)),
+}
+
+
+def typed_predicate(fns: Any, pid: str) -> Any:
+    builder = TYPED_BUILDERS.get(pid)
+    if builder is None:
+        raise ValueError(f"no typed Column builder for predicate {pid!r}")
+    return builder(fns)
+
 
 READ_SEAT = "select"
 
@@ -300,36 +340,122 @@ def answer_rows(ids: list[int] | None) -> list[tuple[int, ...]] | None:
     return sorted((int(value),) for value in ids)
 
 
+KNOWN_EMPTY_DML = "KNOWN-EMPTY-DML"
+FOLDED_PREDICATES: frozenset[str] = frozenset({"p04"})
+FINDING_LABELS: frozenset[str] = frozenset(
+    {"WRONG-WRITE", "EXTRA-COMMIT", "FEWER-COMMIT", "LINEAGE-DIFFER"}
+)
+UNANSWERED_ORACLE_LABEL = "ORACLE-MISSING"
+
+
+def _answer_labels(
+    *,
+    seat: str,
+    repark_answer: list[Any] | None,
+    spark_answer: list[Any] | None,
+    repark_damaged: list[Any] | None,
+    spark_damaged: list[Any] | None,
+    repark_lost: list[Any] | None,
+    spark_lost: list[Any] | None,
+    repark_own: list[Any] | None,
+) -> list[str]:
+    if seat == READ_SEAT or seat.startswith("K"):
+        return ["WRONG-READ"] if repark_answer != spark_answer else []
+    differs = (
+        repark_answer != spark_answer
+        or repark_damaged != spark_damaged
+        or repark_lost != spark_lost
+    )
+    own_differs = repark_own is not None and repark_own != repark_answer
+    return ["WRONG-WRITE"] if differs or own_differs else []
+
+
+def _commit_labels(
+    *,
+    seat: str,
+    repark_commits: int | None,
+    spark_commits: int | None,
+    repark_target_commits: int | None,
+    spark_target_commits: int | None,
+) -> list[str]:
+    snapshots = (repark_commits or 0, spark_commits or 0)
+    targets = (repark_target_commits or 0, spark_target_commits or 0)
+    labels: list[str] = []
+    if (
+        snapshots[0] > snapshots[1]
+        or targets[0] > targets[1]
+        or (seat == READ_SEAT and snapshots[0] != 0)
+    ):
+        labels.append("EXTRA-COMMIT")
+    if snapshots[0] < snapshots[1] or targets[0] < targets[1]:
+        labels.append("FEWER-COMMIT")
+    return labels
+
+
 def classify(
     *,
     seat: str,
     pid: str | None,
     repark_outcome: str,
     spark_outcome: str,
-    repark_answer: list[tuple[Any, ...]] | None,
-    spark_answer: list[tuple[Any, ...]] | None,
+    repark_answer: list[Any] | None,
+    spark_answer: list[Any] | None,
     repark_commits: int | None = None,
     spark_commits: int | None = None,
+    repark_target_commits: int | None = None,
+    spark_target_commits: int | None = None,
+    repark_damaged: list[Any] | None = None,
+    spark_damaged: list[Any] | None = None,
+    repark_lost: list[Any] | None = None,
+    spark_lost: list[Any] | None = None,
+    repark_own: list[Any] | None = None,
+    repark_lineage: list[Any] | None = None,
+    spark_lineage: list[Any] | None = None,
+    folded: bool = False,
 ) -> str:
     if repark_outcome == "PANIC":
         return "PANIC"
-    if spark_outcome != "ANSWERED" and repark_outcome != "ANSWERED":
-        return "BOTH-REFUSED" if spark_outcome == "REFUSED" else "ORACLE-MISSING"
-    if repark_outcome != "ANSWERED":
+    if repark_outcome in ("SETUP-REFUSED", "NOT-EXPRESSIBLE"):
+        return repark_outcome
+    if spark_outcome not in ("ANSWERED", "REFUSED"):
+        return UNANSWERED_ORACLE_LABEL
+    if repark_outcome == "REFUSED" and spark_outcome == "REFUSED":
+        return "BOTH-REFUSED"
+    if repark_outcome == "REFUSED":
         return "REFUSED-WHERE-SPARK-ACCEPTED"
-    if spark_outcome != "ANSWERED":
+    if spark_outcome == "REFUSED":
         return "ACCEPTED-WHERE-SPARK-REFUSED"
-    if repark_answer != spark_answer:
-        return "WRONG-READ" if seat == READ_SEAT or seat.startswith("K") else "WRONG-WRITE"
-    if repark_commits is not None and spark_commits is not None and repark_commits != spark_commits:
-        if pid == "p04" and seat in DML_SEATS and repark_commits < spark_commits:
-            return "KNOWN-EMPTY-DML"
-        return "EXTRA-COMMIT" if repark_commits > spark_commits else "FEWER-COMMIT"
-    return "EQUAL"
+    labels = _answer_labels(
+        seat=seat,
+        repark_answer=repark_answer,
+        spark_answer=spark_answer,
+        repark_damaged=repark_damaged,
+        spark_damaged=spark_damaged,
+        repark_lost=repark_lost,
+        spark_lost=spark_lost,
+        repark_own=repark_own,
+    )
+    if not labels and repark_lineage != spark_lineage:
+        labels.append("LINEAGE-DIFFER")
+    labels.extend(
+        _commit_labels(
+            seat=seat,
+            repark_commits=repark_commits,
+            spark_commits=spark_commits,
+            repark_target_commits=repark_target_commits,
+            spark_target_commits=spark_target_commits,
+        )
+    )
+    if folded and seat in DML_SEATS and FINDING_LABELS & set(labels):
+        labels.insert(0, KNOWN_EMPTY_DML)
+    return ", ".join(labels) if labels else "EQUAL"
 
 
 def passes(label: str) -> bool:
-    return label in PASSING_LABELS
+    parts = set(label.split(", "))
+    if parts <= PASSING_LABELS:
+        return True
+    return KNOWN_EMPTY_DML in parts and parts <= PASSING_LABELS | {"FEWER-COMMIT"}
 
 
 def record_line(**fields: Any) -> str:
