@@ -28,6 +28,9 @@ Spark 4.1.2 legs, and compared cell by cell with the base (`276dc503`, item 1's 
   (`collect_set`, `countDistinct` over two columns, `dropDuplicates`, and `collect_set` by input order) on Spark and
   RePark; `zero-side-legs.jsonl` holds their legs.
 - [schema_batch_repeat.py](schema_batch_repeat.py) — the 50-repeat `UPDATE-SCHEMA-BATCH-MISMATCH-1` probe for part 1:
-  part A's `<=>` statement and a key statement (`IN (SELECT …)`) per kind. Prepared; not yet run.
+  part A's `<=>` statement and a key statement (`IN (SELECT …)`) per kind; `schema-batch-repeat-276dc503.json` and
+  `schema-batch-repeat-head-66fb7f13.json` are its base and head results.
+- [measure.md](measure.md) — the mutation record (order §6) and the 50-repeat result (order §7) on `66fb7f13`;
+  [mutations.jsonl](mutations.jsonl) holds the per-mutation records.
 
 Up: [../map.md](../map.md).
