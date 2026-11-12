@@ -20,7 +20,10 @@ if ENGINE == "spark":
         SparkSession.builder.master("local[2]")
         .config("spark.ui.enabled", "false")
         .config("spark.jars", sys.argv[3])
-        .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .config(
+            "spark.sql.extensions",
+            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+        )
         .config("spark.sql.catalog.c", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.c.type", "hadoop")
         .config("spark.sql.catalog.c.warehouse", str(root))
@@ -47,6 +50,10 @@ for query in (
     f"SELECT id, CAST(d AS STRING) AS d FROM {name} ORDER BY id",
 ):
     try:
-        print(ENGINE, query.split(" FROM ")[1], sorted(str(tuple(r)) for r in session.sql(query).collect()))
+        print(
+            ENGINE,
+            query.split(" FROM ")[1],
+            sorted(str(tuple(r)) for r in session.sql(query).collect()),
+        )
     except Exception as error:
         print(ENGINE, query, "REFUSED", str(error)[:200])

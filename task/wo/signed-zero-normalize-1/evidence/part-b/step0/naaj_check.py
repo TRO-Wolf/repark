@@ -1,5 +1,6 @@
 import json
 import sys
+from pathlib import Path
 
 from pyspark.sql import SparkSession
 
@@ -10,7 +11,8 @@ session.sql(
     "(2, CAST('-0.0' AS DOUBLE)), (6, CAST('1.5' AS DOUBLE)) AS x(id, d)"
 )
 session.sql(
-    "CREATE OR REPLACE TEMPORARY VIEW u AS SELECT * FROM VALUES (10, CAST('0.0' AS DOUBLE)) AS x(uid, d)"
+    "CREATE OR REPLACE TEMPORARY VIEW u AS SELECT * FROM VALUES (10, CAST('0.0' AS DOUBLE)) AS "
+    "x(uid, d)"
 )
 queries = {
     "not-in": "SELECT id FROM t WHERE d NOT IN (SELECT d FROM u)",
@@ -26,10 +28,20 @@ for naaj in ("true", "false"):
         for name, query in queries.items():
             frame = session.sql(query)
             plan = frame._jdf.queryExecution().executedPlan().toString()
-            joins = sorted({word for word in plan.replace("(", " ").split() if word.endswith("Join")})
+            joins = sorted(
+                {word for word in plan.replace("(", " ").split() if word.endswith("Join")}
+            )
             rows = sorted(r[0] for r in frame.collect())
-            out.append({"naaj": naaj, "broadcast_threshold": threshold, "query": name, "ids": rows, "joins": joins})
+            out.append(
+                {
+                    "naaj": naaj,
+                    "broadcast_threshold": threshold,
+                    "query": name,
+                    "ids": rows,
+                    "joins": joins,
+                }
+            )
 session.stop()
-with open(sys.argv[1], "w", encoding="utf-8") as handle:
+with Path(sys.argv[1]).open("w", encoding="utf-8") as handle:
     for record in out:
         handle.write(json.dumps(record) + "\n")

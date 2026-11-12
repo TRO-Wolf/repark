@@ -12,9 +12,17 @@ from pathlib import Path
 from typing import Any
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
 
-import szb_cells as cells_mod
+
+def load_cells() -> Any:
+    spec = importlib.util.spec_from_file_location("szb_cells", HERE / "szb_cells.py")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["szb_cells"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+cells_mod = load_cells()
 
 CLONE = Path(os.environ["SZB_CLONE"])
 PART_A = CLONE / "task/wo/signed-zero-normalize-1/evidence/probe_signed_zero.py"
@@ -58,7 +66,9 @@ def run_sql(door: dict[str, Any], text: str) -> tuple[list[str], list[list[Any]]
     return PA.collect(PA.to_arrow(door["sql"](text)))
 
 
-def run_frame(door: dict[str, Any], code: str, names: dict[str, str]) -> tuple[list[str], list[list[Any]]]:
+def run_frame(
+    door: dict[str, Any], code: str, names: dict[str, str]
+) -> tuple[list[str], list[list[Any]]]:
     session = door["session"]
     frames = {"t": session.table(names["t"])}
     if names.get("u"):
@@ -118,17 +128,33 @@ def seed_view(ctx: dict[str, Any], door: dict[str, Any], dataset: str) -> None:
     setup(ctx, door, text)
 
 
-def readback(ctx: dict[str, Any], door: dict[str, Any], qualified: str, tag: str, columns: str) -> None:
+def readback(
+    ctx: dict[str, Any], door: dict[str, Any], qualified: str, tag: str, columns: str
+) -> None:
     try:
-        names, rows, bits = collect_raw(PA.to_arrow(door["sql"](f"SELECT {columns} FROM {qualified}")))
+        names, rows, bits = collect_raw(
+            PA.to_arrow(door["sql"](f"SELECT {columns} FROM {qualified}"))
+        )
         ctx["records"].append(
-            {"record": "seed", "engine": ctx["engine"], "door": door["name"], "tag": tag,
-             "cols": names, "rows": rows, "bits": bits}
+            {
+                "record": "seed",
+                "engine": ctx["engine"],
+                "door": door["name"],
+                "tag": tag,
+                "cols": names,
+                "rows": rows,
+                "bits": bits,
+            }
         )
     except BaseException as error:
         ctx["records"].append(
-            {"record": "seed", "engine": ctx["engine"], "door": door["name"], "tag": tag,
-             "error": PA.excerpt(PA.scrub(str(error), ctx["roots"]))}
+            {
+                "record": "seed",
+                "engine": ctx["engine"],
+                "door": door["name"],
+                "tag": tag,
+                "error": PA.excerpt(PA.scrub(str(error), ctx["roots"])),
+            }
         )
 
 
@@ -157,7 +183,8 @@ def ensure_views(ctx: dict[str, Any], door: dict[str, Any]) -> None:
     setup(
         ctx,
         door,
-        f"CREATE OR REPLACE TEMPORARY VIEW tv_nn AS SELECT * FROM VALUES {', '.join(cells_mod.NN_ROWS)} AS tv(id, d)",
+        "CREATE OR REPLACE TEMPORARY VIEW tv_nn AS SELECT * FROM VALUES "
+        f"{', '.join(cells_mod.NN_ROWS)} AS tv(id, d)",
     )
     readback(ctx, door, "tv_t", "t-view", "id, d, f, m, e, fe, me")
     readback(ctx, door, "tv_nn", "nn-view", "id, d")
@@ -173,23 +200,41 @@ def expand_reads() -> list[dict[str, Any]]:
                 out.append({**spec, "cid": cid, "type": type_name, "ty": ty, "build": build})
     for site, sql, ordered in cells_mod.NN_SPECS:
         out.append(
-            {"site": site, "group": "nan-payload", "sql": sql, "native": sql, "fexpr": None,
-             "typed": None, "ordered": ordered, "cid": f"{site}|double", "type": "double",
-             "ty": cells_mod.TYPES["double"], "build": None, "pre": {}, "post": {},
-             "seat": "NaN payload key"}
+            {
+                "site": site,
+                "group": "nan-payload",
+                "sql": sql,
+                "native": sql,
+                "fexpr": None,
+                "typed": None,
+                "ordered": ordered,
+                "cid": f"{site}|double",
+                "type": "double",
+                "ty": cells_mod.TYPES["double"],
+                "build": None,
+                "pre": {},
+                "post": {},
+                "seat": "NaN payload key",
+            }
         )
     return out
 
 
 def fill(text: str, item: dict[str, Any], names: dict[str, str]) -> str:
-    out = text.replace("{k}", item["ty"]["k"]).replace("{k2}", item["ty"]["k2"]).replace("{ksql}", item["ty"]["sql"])
+    out = (
+        text.replace("{k}", item["ty"]["k"])
+        .replace("{k2}", item["ty"]["k2"])
+        .replace("{ksql}", item["ty"]["sql"])
+    )
     out = out.replace("{t}", names["t"]).replace("{nn}", names["nn"])
     if item.get("build"):
         out = out.replace("{u}", names[item["build"]])
     return out
 
 
-def side_statements(ctx: dict[str, Any], item: dict[str, Any], key: str, names: dict[str, str]) -> list[str]:
+def side_statements(
+    ctx: dict[str, Any], item: dict[str, Any], key: str, names: dict[str, str]
+) -> list[str]:
     stmts = list(item[key].get("both", ())) + list(item[key].get(ctx["engine"], ()))
     return [fill(s, item, names) for s in stmts]
 
@@ -210,7 +255,10 @@ def run_reads(ctx: dict[str, Any], routes: list[tuple[str, str, str]]) -> None:
                 if code is None or layout == "view":
                     continue
                 text = code.replace("{k}", item["ty"]["k"]).replace("{k2}", item["ty"]["k2"])
-                frame_names = {"t": names["t"], "u": names[item["build"]] if item["build"] else None}
+                frame_names = {
+                    "t": names["t"],
+                    "u": names[item["build"]] if item["build"] else None,
+                }
                 call, args = run_frame, (door, text, frame_names)
             for stmt in side_statements(ctx, item, "pre", names):
                 PA.attempt(ctx, run_sql, door, stmt)
@@ -325,12 +373,25 @@ def run_partitions(ctx: dict[str, Any]) -> None:
                 outcome, error, cols, rows = PA.SETUP_REFUSED, None, [], []
             ctx["records"].append(
                 {
-                    "record": "cell", "engine": ctx["engine"], "family": "read",
-                    "group": "partition", "site": site, "seat": seat, "type": type_name,
-                    "build": None, "cid": f"{site}|{type_name}", "route": "spark-sql",
-                    "layout": "one", "test_layout": "one", "truth_layout": "one",
-                    "ordered": False, "text": PA.scrub(text, ctx["roots"]), "outcome": outcome,
-                    "error": error, "cols": cols, "rows": rows,
+                    "record": "cell",
+                    "engine": ctx["engine"],
+                    "family": "read",
+                    "group": "partition",
+                    "site": site,
+                    "seat": seat,
+                    "type": type_name,
+                    "build": None,
+                    "cid": f"{site}|{type_name}",
+                    "route": "spark-sql",
+                    "layout": "one",
+                    "test_layout": "one",
+                    "truth_layout": "one",
+                    "ordered": False,
+                    "text": PA.scrub(text, ctx["roots"]),
+                    "outcome": outcome,
+                    "error": error,
+                    "cols": cols,
+                    "rows": rows,
                 }
             )
 
@@ -352,7 +413,11 @@ def run_floatkeys(ctx: dict[str, Any]) -> None:
                         "USING iceberg TBLPROPERTIES ('format-version'='2')"
                     )
                     rows = ", ".join(r.replace("{ty}", ty) for r in seed)
-                    ok = ok and setup(ctx, door, ddl) and setup(ctx, door, f"INSERT INTO {names[key]} VALUES {rows}")
+                    ok = (
+                        ok
+                        and setup(ctx, door, ddl)
+                        and setup(ctx, door, f"INSERT INTO {names[key]} VALUES {rows}")
+                    )
                 if ok and shape == "K1-group-by":
                     readback(ctx, door, names["t"], f"fk-{variant}-{ty}-t", "id, d")
                     readback(ctx, door, names["u"], f"fk-{variant}-{ty}-u", "id, d")
@@ -404,25 +469,43 @@ def build_spark(arguments: argparse.Namespace, warehouse: Path) -> dict[str, Any
         .config("spark.local.dir", str(warehouse / "spark-local"))
         .config("spark.sql.shuffle.partitions", "4")
         .config("spark.jars", arguments.ivy_jar)
-        .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .config(
+            "spark.sql.extensions",
+            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+        )
         .config(f"spark.sql.catalog.{SPARK_CATALOG}", "org.apache.iceberg.spark.SparkCatalog")
         .config(f"spark.sql.catalog.{SPARK_CATALOG}.type", "hadoop")
         .config(f"spark.sql.catalog.{SPARK_CATALOG}.warehouse", str(warehouse / "spark"))
         .getOrCreate()
     )
     session.sparkContext.setLogLevel("ERROR")
-    door = {"name": "spark-sql", "sql": session.sql, "session": session,
-            "functions": spark_functions, "window": Window}
+    door = {
+        "name": "spark-sql",
+        "sql": session.sql,
+        "session": session,
+        "functions": spark_functions,
+        "window": Window,
+    }
     session.sql(f"CREATE NAMESPACE IF NOT EXISTS {SPARK_CATALOG}.{NS}")
     jar = Path(arguments.ivy_jar)
     header = {
-        "record": "leg", "engine": "spark", "spark_version": session.version,
+        "record": "leg",
+        "engine": "spark",
+        "spark_version": session.version,
         "jdk_version": session.sparkContext._jvm.System.getProperty("java.version"),
-        "iceberg_jar": jar.name, "iceberg_jar_sha256": PA.sha256_of(jar),
-        "python": sys.version.split()[0], "load1": os.getloadavg()[0],
-        "master": "local[2]", "shuffle_partitions": 4,
+        "iceberg_jar": jar.name,
+        "iceberg_jar_sha256": PA.sha256_of(jar),
+        "python": sys.version.split()[0],
+        "load1": os.getloadavg()[0],
+        "master": "local[2]",
+        "shuffle_partitions": 4,
     }
-    return {"engine": "spark", "doors": {"spark-sql": door}, "header": header, "close": session.stop}
+    return {
+        "engine": "spark",
+        "doors": {"spark-sql": door},
+        "header": header,
+        "close": session.stop,
+    }
 
 
 def build_repark(arguments: argparse.Namespace, warehouse: Path) -> dict[str, Any]:
@@ -451,19 +534,40 @@ def build_repark(arguments: argparse.Namespace, warehouse: Path) -> dict[str, An
     facade.register_memory_catalog(REPARK_CATALOG, str(facade_root))
     facade.sql(f"CREATE NAMESPACE {REPARK_CATALOG}.{NS} LOCATION '{facade_root / NS}'")
     so = Path(repark.__file__).parent / "_native.abi3.so"
-    head = subprocess.run(["git", "-C", str(CLONE), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
-    dirty = subprocess.run(["git", "-C", str(CLONE), "status", "--porcelain"], capture_output=True, text=True).stdout.strip()
+    head = subprocess.run(
+        ["git", "-C", str(CLONE), "rev-parse", "HEAD"], capture_output=True, text=True
+    ).stdout.strip()
+    dirty = subprocess.run(
+        ["git", "-C", str(CLONE), "status", "--porcelain"], capture_output=True, text=True
+    ).stdout.strip()
     header = {
-        "record": "leg", "engine": "repark", "repark_file": str(Path(repark.__file__).resolve().relative_to(CLONE.resolve())),
-        "native_so_sha256": PA.sha256_of(so), "clone_head": head, "clone_dirty": bool(dirty),
+        "record": "leg",
+        "engine": "repark",
+        "repark_file": str(Path(repark.__file__).resolve().relative_to(CLONE.resolve())),
+        "native_so_sha256": PA.sha256_of(so),
+        "clone_head": head,
+        "clone_dirty": bool(dirty),
         "repark_version": __import__("importlib.metadata").metadata.version("repark"),
-        "pyarrow_version": pyarrow.__version__, "python": sys.version.split()[0],
-        "load1": os.getloadavg()[0], "native_config": NATIVE_CONFIG,
+        "pyarrow_version": pyarrow.__version__,
+        "python": sys.version.split()[0],
+        "load1": os.getloadavg()[0],
+        "native_config": NATIVE_CONFIG,
     }
     doors = {
-        "spark-sql": {"name": "spark-sql", "sql": facade.sql, "session": facade,
-                      "functions": repark_functions, "window": Window},
-        "native": {"name": "native", "sql": repark.sql, "session": None, "functions": None, "window": None},
+        "spark-sql": {
+            "name": "spark-sql",
+            "sql": facade.sql,
+            "session": facade,
+            "functions": repark_functions,
+            "window": Window,
+        },
+        "native": {
+            "name": "native",
+            "sql": repark.sql,
+            "session": None,
+            "functions": None,
+            "window": None,
+        },
     }
     return {"engine": "repark", "doors": doors, "header": header, "close": lambda: None}
 
@@ -480,7 +584,11 @@ def main() -> int:
     if warehouse.exists():
         shutil.rmtree(warehouse)
     warehouse.mkdir(parents=True)
-    ctx = build_spark(arguments, warehouse) if arguments.engine == "spark" else build_repark(arguments, warehouse)
+    ctx = (
+        build_spark(arguments, warehouse)
+        if arguments.engine == "spark"
+        else build_repark(arguments, warehouse)
+    )
     ctx["roots"] = [(str(warehouse), "<warehouse>"), (str(Path.home()), "<home>")]
     ctx["header"]["part"] = arguments.part
     ctx["records"] = [ctx["header"]]
@@ -490,13 +598,21 @@ def main() -> int:
                 door = ctx["doors"]["spark-sql"]
                 ensure_views(ctx, door)
                 ensure_read_tables(ctx, door)
-                routes = [("spark-sql", "spark-sql", "view"), ("spark-sql", "spark-sql", "one"),
-                          ("f-expr", "spark-sql", "one"), ("typed", "spark-sql", "one")]
+                routes = [
+                    ("spark-sql", "spark-sql", "view"),
+                    ("spark-sql", "spark-sql", "one"),
+                    ("f-expr", "spark-sql", "one"),
+                    ("typed", "spark-sql", "one"),
+                ]
             else:
                 ensure_read_tables(ctx, ctx["doors"]["spark-sql"])
                 ensure_read_tables(ctx, ctx["doors"]["native"])
-                routes = [("spark-sql", "spark-sql", "one"), ("f-expr", "spark-sql", "one"),
-                          ("typed", "spark-sql", "one"), ("native", "native", "one")]
+                routes = [
+                    ("spark-sql", "spark-sql", "one"),
+                    ("f-expr", "spark-sql", "one"),
+                    ("typed", "spark-sql", "one"),
+                    ("native", "native", "one"),
+                ]
             run_reads(ctx, routes)
         elif arguments.part == "dml":
             run_dml(ctx, ["spark-sql"] if arguments.engine == "spark" else ["spark-sql", "native"])
@@ -506,7 +622,9 @@ def main() -> int:
     finally:
         with Path(arguments.out).open("w", encoding="utf-8") as handle:
             for record in ctx["records"]:
-                handle.write(json.dumps(record, sort_keys=True, default=str, ensure_ascii=False) + "\n")
+                handle.write(
+                    json.dumps(record, sort_keys=True, default=str, ensure_ascii=False) + "\n"
+                )
         ctx["close"]()
     return 0
 

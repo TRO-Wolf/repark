@@ -1024,12 +1024,12 @@ an id; NOT MEASURED means no cell ran in step 0 and the builder adds it in item 
 | `Aggregate::group_expr`, column, computed and key-list keys | GB-1, GB-2, GB-3, GB-7, GB-9 | all four (GB-7, GB-9: spark-sql, native) | clause |
 | Group key **output value** (Spark outputs `0.0`) | GB-8, and the value columns of GB-1/DI-1 | spark-sql, native | clause (part B normalises group outputs, sketch §6) |
 | `GroupingSet` members: ROLLUP, CUBE, GROUPING SETS | GB-4, GB-5, GB-6 | spark-sql, typed, native | clause |
-| `Repartition` Hash / `DISTRIBUTE BY` then aggregate | GB-10 | typed, native (spark-sql refuses `DISTRIBUTE BY` for every type) | clause on typed and native; the Spark-door refusal is carded `SPARK-DISTRIBUTE-BY-1` (decimal twin refuses too) |
+| `Repartition` Hash / `DISTRIBUTE BY` then aggregate | GB-10; item 1's X-repartition, X-repartition-typed | typed, native (spark-sql refuses `DISTRIBUTE BY` for every type) | clause on typed and native as plain group keys; the Spark-door refusal is carded `SPARK-DISTRIBUTE-BY-1` (decimal twin refuses too). **Item 1:** no RePark cell reaches a `Repartition` node: native GB-10's text has no `DISTRIBUTE BY`, `DISTRIBUTE BY` has no physical plan on native either, and the typed `repartition(4, 'd')` leaves no `Repartition` in the optimized plan ([plans](../item1/plans.md)). The node row stays a plan-shape pin over a hand-built plan |
 | Pivot value discovery | GB-11 (typed) | typed | **confounded**: the decimal twin is WRONG-READ (empty pivot cells: Spark NULL, RePark 0). Carded `PIVOT-EMPTY-CELL-COUNT-1`; the float rows join the clause once the card is fixed or the cell is re-cut to `sum` |
 | `Distinct::All` (`SELECT DISTINCT`, one and two columns) | DI-1, DI-2 | all four / three | clause |
 | Distinct aggregates: single (`single_distinct_to_groupby`), multi-distinct, under a group key, `sum(DISTINCT)` | DI-3, DI-4, DI-5, DI-7 | all four / three | clause (DI-3, DI-4); DI-5 and DI-7 are EQUAL by seed (each group holds one sign; a sum of zeros is zero) and stay as controls |
 | `dropDuplicates` | DI-6 | typed | clause |
-| `Distinct::On` | none | — | NOT MEASURED: Spark has no `DISTINCT ON`; native-only, ORACLE-MISSING (E9). Plan-shape pin only |
+| `Distinct::On` | item 1's X-distinct-on | native | MEASURED in item 1 ([plans](../item1/plans.md)): at EXPLAIN it is already an `Aggregate` on `d` with `first_value(… ORDER BY d, id)` and a `Sort`, as sketch §3 says; ORACLE-MISSING (Spark has no `DISTINCT ON`; E9). Plan-shape pin only |
 | `Window` `partition_by` | WI-1, WI-6 | all four / three | clause |
 | `Window` `order_by`: rank, dense_rank, RANGE peers, row_number with a tie-breaker | WI-2, WI-3, WI-4, WI-5 | all four / three | clause. WI-2 f-expr and WI-2/3/5 native are **confounded** (decimal twin wrong: native and `F.expr` window ORDER BY put NULLs last; section 4 lists them) |
 | `Window` distinct arguments | none | — | NOT EXPRESSIBLE on Spark (no `DISTINCT` window aggregates); plan-shape pin only |
@@ -1053,7 +1053,7 @@ an id; NOT MEASURED means no cell ran in step 0 and the builder adds it in item 
 | `UNION ALL` | SO-unionall | spark-sql, typed, native | control (stored signs must survive: EQUAL today) |
 | `INTERSECT`, `EXCEPT` | SO-intersect, SO-except | spark-sql, typed, native | clause (SO-intersect / up EQUAL by seed) |
 | `INTERSECT ALL`, `EXCEPT ALL` | SO-intersectall, SO-exceptall | spark-sql, native (typed refuses by design) | **confounded**: the decimal twin is WRONG-READ on both doors (multiset counts lost: `INTERSECT ALL` returns every left duplicate, `EXCEPT ALL` removes all of them). A non-signed-zero silent wrong read inside the label's scope; carded `SQL-SETOP-ALL-MULTISET-1` (owner question Q2) |
-| `RecursiveQuery { is_distinct }` | SO-recursive | spark-sql, native | out: Spark refuses `UNION` in a recursive CTE; plan-shape pin only |
+| `RecursiveQuery { is_distinct }` | SO-recursive; item 1's X-recursive (plan shape) | spark-sql, native | out: Spark refuses `UNION` in a recursive CTE; plan-shape pin only ([plans](../item1/plans.md)) |
 | Temporary view over a float table | TV-1 | spark-sql (native has no temp views) | clause |
 | Native `PREPARE` / `EXECUTE`, group key and join key (review-cap memo §7: seat-2 idempotence) | PR-1, PR-2 | native; spark-sql runs the literal twin | clause; plus the EXPLAIN one-wrapper pin |
 | MERGE `ON` float key: matched update, not-matched insert | WR-merge-on, WR-merge-notmatched | spark-sql, three kinds; native refuses MERGE | clause (merge-notmatched / un EQUAL by seed) |
@@ -1064,10 +1064,11 @@ an id; NOT MEASURED means no cell ran in step 0 and the builder adds it in item 
 | Identity partition on a float column: stored values, GROUP BY, count(DISTINCT), the `.partitions` metadata table | PT-1…PT-4 | spark-sql | PT-1 control (stored signs kept); PT-2, PT-4 clause; PT-3 (`.partitions` merges `-0.0` with `0.0` and NaN with NULL, `partition_check.py`) is metadata-table code outside the plan: carded `ICEBERG-PARTITIONS-TABLE-FLOAT-1` |
 | NaN payloads (`sqrt(-1.0)`, `-NaN`) in group, distinct, join, order, window and count(DISTINCT) keys | NN-1…NN-6 | spark-sql, native | clause (ruling G "canonical positive NaN for the UDF") |
 | Types: DOUBLE, FLOAT, decimal control | every site | — | carried; decimal is the control column (section 3b) |
+| A FLOAT key joined to a DOUBLE key (coercion cast; order §5) | item 1's X-float-double | spark-sql, native | MEASURED in item 1: WRONG-READ on both doors (the zero rows match by sign only); clause, the wrap goes outside the cast |
 | Values: `0.0`, `-0.0`, NaN, mixed groups | seeds `t`, `up`, `un`, `ub`, `nn` | — | carried; every seed's stored signs and NaN bits are read back (section 6) |
-| Spill with float keys (sketch D16) | none | — | NOT MEASURED: part A's D16 could not force a spill at 1 GB; the builder forces one (smaller limit or more rows) and records a nonzero `spill_count` |
+| Spill with float keys (sketch D16) | item 1's SP-group, SP-window-order, SP-window-partition, SP-sortmerge | spark-sql, native | MEASURED in item 1 ([spill](../item1/spill.md)): every cell spills (`spill_count` 2 to 8) under a 96M pool with 4 partitions on 2M rows, and all 16 are WRONG-READ on the base; clause |
 | Hash-join dynamic filters and sort elision on wrapped keys | none | — | NOT MEASURED here: a cost item (order, cost gates) |
-| `TableScan.filters` untouched by seat 2 | none (plan shape) | — | pin (sketch §3); no oracle |
+| `TableScan.filters` untouched by seat 2 | item 1's X-compare-filter (plan shape) | spark-sql, native | pin (sketch §3); no oracle. The base plans are recorded verbatim in [plans](../item1/plans.md) |
 | The flat live matrix's floatkeys cells | section 8 | spark-sql | clause; the seed finding (Q3) is resolved on main by #1307 ([q3-rerun](../q3-rerun/table.md)) |
 
 ## 8. The flat matrix's floatkeys cells (G6) and the part 1 cells that cover them

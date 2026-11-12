@@ -118,7 +118,7 @@ the sign-set NaN bits (`fff8…`) in Iceberg, Spark's Iceberg write stores `7ff8
 - The step-0 files were filed unchanged except: the RePark legs' header field `repark_file` now holds the
   tree-relative path (it held the scratch clone's absolute path; the hashes above are of the filed files);
   `run_leg.sh` takes its paths from the environment; `szb_probe.py` records the tree-relative path;
-  `label_render.py` gained `--raw-file`, `--out` and `--base`, and without them still writes `labels.jsonl` and
+  `label_render.py` gained `--raw-file`, `--out`, `--base` and `--title`, and without them still writes `labels.jsonl` and
   `table.md` byte for byte as before; `szb_cells.py` gained the #1307 seeds as `matrix` and kept the old ones as
   `bare`.
 - `named-seats.md` (and so `table.md` §7–§8) records Q3 as resolved on main by #1307.

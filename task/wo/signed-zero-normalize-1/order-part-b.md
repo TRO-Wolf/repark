@@ -75,6 +75,10 @@ seeds keep the sign; test files only). Item 1:
    drops the 28 float cells from `KNOWN_OPEN` (`known_open_unit`, `_flat_matrix_cells.py:288`), or they XPASS
    under strict xfail once the keys are fixed.
 
+**Item 1 is done** (2026-11-12, main `276dc503`): [item1.md](evidence/part-b/item1/item1.md). No premise broke; three cites
+moved by a line or two; the RePark legs reproduce step 0 label for label; the 16 spill cells spill on both doors and
+are WRONG-READ on the base.
+
 ## 3. Clause: part 1's measured cells
 
 The clause is the step-0 table, [step0/table.md](evidence/part-b/step0/table.md), measured on main `ae247767`'s release build against

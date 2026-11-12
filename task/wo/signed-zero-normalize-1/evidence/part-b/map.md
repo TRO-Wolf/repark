@@ -6,6 +6,7 @@ Measurement and records only; no product code. Part B part 1's order is
 - [questions.md](questions.md) — the order's nine questions with defaults: Q3 resolved on main by #1307, the rest NOT RULED.
 - [inventory.md](inventory.md) — the insertion inventory for seat 2, the consumers of the pairing, and seat 2's placement and idempotence proof obligations.
 - [step0/](step0/map.md) — the step-0 measurement on main `ae247767` against Spark 4.1.2: the probe, the raw legs, the labels and the clause table.
+- [item1/](item1/map.md) — build item 1 on main `276dc503`: cites re-verified, the step-0 probes re-measured, and the added spill, plan-shape, `Distinct::On` and FLOAT-to-DOUBLE cells.
 - [q3-rerun/](q3-rerun/map.md) — the floatkeys part re-run on main `276dc503` with #1307's seeds: all 28 matrix cells non-EQUAL.
 
 Up: [../map.md](../map.md).

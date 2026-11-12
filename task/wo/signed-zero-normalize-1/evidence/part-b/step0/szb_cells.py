@@ -178,7 +178,8 @@ def read_specs() -> list[dict[str, Any]]:
         cell(
             "GB-10",
             "group-by",
-            "SELECT {k}, count(*) AS c FROM (SELECT {k} FROM {t} DISTRIBUTE BY {k}) AS x GROUP BY {k}",
+            "SELECT {k}, count(*) AS c FROM (SELECT {k} FROM {t} DISTRIBUTE BY {k}) AS x GROUP "
+            "BY {k}",
             native="SELECT {k}, count(*) AS c FROM (SELECT {k} FROM {t}) AS x GROUP BY {k}",
             typed="t.repartition(4, '{k}').groupBy('{k}').agg(" + COUNT_C + ")",
             seat="Repartition Hash then Aggregate",
@@ -267,7 +268,8 @@ def read_specs() -> list[dict[str, Any]]:
         cell(
             "WI-4",
             "window",
-            "SELECT id, count(*) OVER (ORDER BY {k} RANGE BETWEEN CURRENT ROW AND CURRENT ROW) AS c FROM {t}",
+            "SELECT id, count(*) OVER (ORDER BY {k} RANGE BETWEEN CURRENT ROW AND CURRENT ROW) "
+            "AS c FROM {t}",
             typed=(
                 "t.select('id', F.count(F.lit(1)).over(W.orderBy('{k}').rangeBetween(0, 0))"
                 ".alias('c'))"
@@ -285,7 +287,9 @@ def read_specs() -> list[dict[str, Any]]:
             "WI-6",
             "window",
             "SELECT id, row_number() OVER (PARTITION BY {k} ORDER BY id) AS r FROM {t}",
-            typed="t.select('id', F.row_number().over(W.partitionBy('{k}').orderBy('id')).alias('r'))",
+            typed=(
+                "t.select('id', F.row_number().over(W.partitionBy('{k}').orderBy('id')).alias('r'))"
+            ),
             seat="Window.partition_by with ordered frame",
         ),
         cell(
@@ -324,7 +328,9 @@ def read_specs() -> list[dict[str, Any]]:
             "MM-1",
             "min-max",
             "SELECT min({k}) AS lo, max({k}) AS hi FROM {t} WHERE id <= 4",
-            typed="t.filter(F.col('id') <= 4).agg(F.min('{k}').alias('lo'), F.max('{k}').alias('hi'))",
+            typed=(
+                "t.filter(F.col('id') <= 4).agg(F.min('{k}').alias('lo'), F.max('{k}').alias('hi'))"
+            ),
             seat="min/max of zeros (declared SIGN-ONLY)",
         ),
         cell(
@@ -452,7 +458,9 @@ def read_specs() -> list[dict[str, Any]]:
             "JN-nullsafe",
             "join",
             "SELECT t.id, u.uid FROM {t} AS t JOIN {u} AS u ON t.{k} <=> u.{k}",
-            native="SELECT t.id, u.uid FROM {t} AS t JOIN {u} AS u ON t.{k} IS NOT DISTINCT FROM u.{k}",
+            native=(
+                "SELECT t.id, u.uid FROM {t} AS t JOIN {u} AS u ON t.{k} IS NOT DISTINCT FROM u.{k}"
+            ),
             typed="t.join(u, t['{k}'].eqNullSafe(u['{k}'])).select('id', 'uid')",
             builds=BOTH_BUILDS,
             seat="Join::on, null-safe",
@@ -608,7 +616,8 @@ def read_specs() -> list[dict[str, Any]]:
         cell(
             "SO-recursive",
             "set-op",
-            "WITH RECURSIVE r(n) AS (SELECT CAST('-0.0' AS DOUBLE) UNION SELECT n * 0 FROM r WHERE n < 1) SELECT n FROM r",
+            "WITH RECURSIVE r(n) AS (SELECT CAST('-0.0' AS DOUBLE) UNION SELECT n * 0 FROM r "
+            "WHERE n < 1) SELECT n FROM r",
             types=("double",),
             seat="RecursiveQuery is_distinct",
         ),
@@ -618,9 +627,16 @@ def read_specs() -> list[dict[str, Any]]:
             "SELECT {k}, count(*) AS c FROM {t} WHERE {k} >= -1.0 GROUP BY {k}",
             native="EXECUTE szbp(-1.0)",
             types=("double", "float"),
-            pre={"repark": ("PREPARE szbp({ksql}) AS SELECT {k}, count(*) AS c FROM {t} WHERE {k} >= $1 GROUP BY {k}",)},
+            pre={
+                "repark": (
+                    "PREPARE szbp({ksql}) AS SELECT {k}, count(*) AS c FROM {t} WHERE {k} >= $1 "
+                    "GROUP BY {k}",
+                )
+            },
             post={"repark": ("DEALLOCATE szbp",)},
-            seat="native PREPARE / EXECUTE, GROUP BY (seat-2 idempotence across two optimizer runs)",
+            seat=(
+                "native PREPARE / EXECUTE, GROUP BY (seat-2 idempotence across two optimizer runs)"
+            ),
         ),
         cell(
             "PR-2",
@@ -629,7 +645,12 @@ def read_specs() -> list[dict[str, Any]]:
             native="EXECUTE szbq(-1.0)",
             types=("double", "float"),
             builds=BOTH_BUILDS,
-            pre={"repark": ("PREPARE szbq({ksql}) AS SELECT t.id, u.uid FROM {t} AS t JOIN {u} AS u ON t.{k} = u.{k} WHERE t.{k} >= $1",)},
+            pre={
+                "repark": (
+                    "PREPARE szbq({ksql}) AS SELECT t.id, u.uid FROM {t} AS t JOIN {u} AS u ON "
+                    "t.{k} = u.{k} WHERE t.{k} >= $1",
+                )
+            },
             post={"repark": ("DEALLOCATE szbq",)},
             seat="native PREPARE / EXECUTE, join key",
         ),
@@ -642,7 +663,8 @@ def read_specs() -> list[dict[str, Any]]:
         cell(
             "JN-natural",
             "join",
-            "SELECT id, uid FROM (SELECT id, {k} FROM {t}) AS a NATURAL JOIN (SELECT uid, {k} FROM {u}) AS b",
+            "SELECT id, uid FROM (SELECT id, {k} FROM {t}) AS a NATURAL JOIN (SELECT uid, {k} "
+            "FROM {u}) AS b",
             builds=BOTH_BUILDS,
             seat="Join::on, NATURAL",
         ),
@@ -670,13 +692,15 @@ NN_SPECS = (
 DML_SPECS = (
     (
         "WR-merge-on",
-        "MERGE INTO {t} AS t USING {u} AS u ON t.{k} = u.{k} WHEN MATCHED THEN UPDATE SET flag = 'z'",
+        "MERGE INTO {t} AS t USING {u} AS u ON t.{k} = u.{k} WHEN MATCHED THEN UPDATE SET flag = "
+        "'z'",
         BOTH_BUILDS,
         "merge",
     ),
     (
         "WR-merge-card",
-        "MERGE INTO {t} AS t USING {u} AS u ON t.{k} = u.{k} WHEN MATCHED THEN UPDATE SET flag = 'z'",
+        "MERGE INTO {t} AS t USING {u} AS u ON t.{k} = u.{k} WHEN MATCHED THEN UPDATE SET flag = "
+        "'z'",
         ("ub",),
         "merge",
     ),
@@ -765,7 +789,8 @@ FLOAT_SQL = {
     "K10-except": "SELECT d FROM {t} EXCEPT SELECT d FROM {u}",
     "K11-union-distinct": "SELECT d FROM {t} UNION SELECT d FROM {u}",
     "K12-in-subquery": "SELECT id FROM {t} WHERE d IN (SELECT d FROM {u})",
-    "W1-merge-on": "MERGE INTO {t} AS t USING {u} AS s ON t.d = s.d WHEN MATCHED THEN UPDATE SET flag = 'z'",
+    "W1-merge-on": "MERGE INTO {t} AS t USING {u} AS s ON t.d = s.d WHEN MATCHED THEN UPDATE SET "
+    "flag = 'z'",
     "W2-delete-in": "DELETE FROM {t} WHERE d IN (SELECT d FROM {u})",
 }
 NEGATIVE_ZERO = "CAST('-0.0' AS DOUBLE)"
@@ -794,7 +819,15 @@ FLOAT_SEED_VARIANTS = {
 
 PART_SPECS = (
     ("PT-1", "SELECT id, {k} FROM {t}", "stored value read back through an identity partition"),
-    ("PT-2", "SELECT {k}, count(*) AS c FROM {t} GROUP BY {k}", "GROUP BY on the identity partition column"),
-    ("PT-3", "SELECT count(*) AS n FROM {t}.partitions", "partition count (write-side partition key)"),
+    (
+        "PT-2",
+        "SELECT {k}, count(*) AS c FROM {t} GROUP BY {k}",
+        "GROUP BY on the identity partition column",
+    ),
+    (
+        "PT-3",
+        "SELECT count(*) AS n FROM {t}.partitions",
+        "partition count (write-side partition key)",
+    ),
     ("PT-4", "SELECT count(DISTINCT {k}) AS n FROM {t}", "count(DISTINCT) on the partition column"),
 )
