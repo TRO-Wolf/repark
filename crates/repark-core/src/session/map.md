@@ -153,8 +153,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   run their schema and batches through `df_guards::attr_id::strip_record_batches`, so materialized
   views are born without the key (cache reads mint fresh ids — S3 resolve must cope, ledger R-5).
   **SQM round 6 (R6-1):** the temp-view family, split out of `session.rs` when the choke-point fix
-  pushed that file past its ceiling. The old exception then retired under the prior default; CAP-1
-  records the file again at its exact source-size baseline. Holds `create_or_replace_temp_view`
+  pushed that file past its ceiling. The old exception then retired under the prior default;
+  CAP-1 records the file again at its exact source-size baseline. Holds `create_or_replace_temp_view`
   (batches) / `create_or_replace_temp_view_from` (a plan), `register_record_batches_as_temp_view`,
   `materialize_dataframe_as_temp_view` / `materialize_dataframe_as_cache_view` (which takes the
   `(max_bytes, max_total_bytes)` budgets tuple) and their shared `register_collected_memtable`,
