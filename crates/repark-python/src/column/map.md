@@ -109,7 +109,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   naming read through `grown_read`. `Column.sql` plans under `block_on_grown_if` on the text gate.
   The `expr_tests` module moved verbatim to `expr_tests.rs` and the `PyColumn` struct plus its level
   constructors moved verbatim to `levels.rs` (the file would otherwise pass its ceiling; 1049 → 969,
-  the exception row retires); `expr_tests.rs` carries the column exactness battery.
+  the exception row retires).
 - [`expr_tests.rs`](expr_tests.rs) — **Re-verify fold (2026-09-30):** the `column` unit tests, moved
   verbatim from the inline module, plus the cached- level exactness battery (every operator asserts
   cached levels equal a fresh survey, with df-level pins for SQL-text and mixed shapes).
@@ -375,9 +375,8 @@ sync after changes.
   `grouping_id` arm (n-ary, maybe zero columns); `expr_build.rs` gains the `grouping_id_column`
   binding behind the unsigned-to-signed cast; `mod.rs` `aggregate_binary` takes trailing columns as
   a vector (exact baseline 1012).
-- **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `expr_build.rs` `build_expr_context` registers
-  `repark_functions::SparkTypePlanner` on the expression-string session, so
-  `F.expr("CAST(x AS TIMESTAMP)")` and `selectExpr` take the same types as `spark.sql`.
-- **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-09):** `build_expr_context` seats the set-op
-  name check after `type_coercion`; STRUCT-COMPARE-BY-POSITION-1: struct operands by position
-  before it, names bare; both pinned.
+- **`build_expr_context`:** ICE-TSNS-TYPE-PLANNER-1 (10-13) registers `repark_functions::SparkTypePlanner`,
+  so `F.expr("CAST(x AS TIMESTAMP)")` and `selectExpr` type as `spark.sql`; STRUCT-SETOP-REORDER-REFUSAL-1
+  (11-09) seats the set-op name check after `type_coercion`, STRUCT-COMPARE-BY-POSITION-1 struct operands
+  by position before it, names bare; FEXPR-WINDOW-NULL-ORDER-1 (11-12): `default_null_ordering =
+  nulls_min`, Spark's NULL placement for a fragment `ORDER BY`. All pinned (`expr_tests.rs`).

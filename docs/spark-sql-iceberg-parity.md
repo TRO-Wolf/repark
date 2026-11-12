@@ -9179,6 +9179,27 @@ the pin rather than obeying it.
   dropped its ignorenulls leg; names for the next EX batch are listed in the
   FN-FIX-1 ledger.
 
+### FEXPR-WINDOW-NULL-ORDER-1 — an `F.expr` fragment's `ORDER BY` placed NULLs backwards — **FIXED 2026-11-12 (FEXPR-WINDOW-NULL-ORDER-1)**
+
+- **repark** — **FIXED 2026-11-12.** A window `ORDER BY` inside `F.expr` (in `select` or
+  `withColumn`), and the `ORDER BY` of a scalar subquery inside one, place NULLs first for `ASC` and
+  last for `DESC` when the text states no placement; an explicit `NULLS FIRST` / `NULLS LAST` wins.
+  Over `(1, 10), (2, NULL), (3, 30)`, `F.expr('row_number() OVER (ORDER BY m DESC)')` gives row 1 to
+  id 3, and the dedup `withColumn('r', …).filter('r = 1')` keeps id 3. Before the fix both directions
+  were reversed (DataFusion's `nulls_max` default), and the dedup kept the NULL row. The native
+  `repark.sql()` door keeps its own dialect (`nulls_max`), by owner ruling.
+- **Apache Spark** — NULLs first for `ASC`, last for `DESC`; row 1 to id 3; the dedup keeps id 3.
+  *(oracle: recorded — PySpark 4.1.2 `local[2]`, 2026-11-12, 1,362 cells on INT, STRING and DOUBLE
+  keys: nine window functions, the dedup, the scalar subquery and the controls.)*
+- **Pin** —
+  `python/repark/tests/functions/test_fexpr_window_null_order_1.py::test_every_recorded_cell_answers_as_recorded`
+  and `crates/repark-python/src/column/expr_tests.rs::fragment_order_by_takes_spark_null_placement_unless_explicit`.
+- **Rationale** — FIXED. The fragment context (`build_expr_context`) now sets DataFusion's
+  `default_null_ordering` to `nulls_min`; the Spark door already wrote the placement into the AST.
+  Card: [FEXPR-WINDOW-NULL-ORDER-1](../task/roadmap/mid-term/fexpr-window-null-order-1-card-2026-11-12.md),
+  with three findings outside the unit (aggregate `ORDER BY` accepted where Spark refuses, `WITHIN
+  GROUP` coverage, `F.expr('k DESC')`).
+
 ### FN-APPROXPCT-1 — `approx_percentile` / `percentile_approx` interpolate to DOUBLE — **FIXED 2026-09-03 (FN-FIX-1)**
 
 - **repark** — **FIXED 2026-09-03 (FN-FIX-1).** both names answer the discrete data

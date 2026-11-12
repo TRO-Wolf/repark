@@ -78,7 +78,7 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "crates/repark-iceberg/src/microbatch/map.md": (280, 18027),
     "crates/repark-iceberg/src/write/map.md": (2032, 180553),
     "crates/repark-iceberg/src/write/merge/map.md": (509, 40910),
-    "crates/repark-python/src/column/map.md": (383, 31359),
+    "crates/repark-python/src/column/map.md": (382, 31341),
     "crates/repark-python/src/map.md": (299, 105660),
     "crates/repark-spark/benches/ice_read_perf/map.md": (375, 28754),
     "crates/repark-spark/src/call/map.md": (444, 36836),
@@ -103,14 +103,14 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "python/repark/src/repark/spark/dataframe/map.md": (1892, 143467),
     "python/repark/src/repark/spark/map.md": (1085, 90448),
     "python/repark/src/repark/spark/session/map.md": (147, 86244),
-    "python/repark/tests/functions/map.md": (145, 18709),
+    "python/repark/tests/functions/map.md": (143, 18702),
     "python/repark/tests/iceberg/map.md": (162, 22221),
     "python/repark/tests/timestamps/map.md": (221, 39701),
     "python/repark/tests/writes/map.md": (213, 32084),
     "scripts/map.md": (528, 56026),
     "task/map.md": (224, 24514),
-    "task/roadmap/mid-term/map.md": (1007, 151931),
-    "task/wo/map.md": (60, 16689),
+    "task/roadmap/mid-term/map.md": (1006, 151918),
+    "task/wo/map.md": (60, 16687),
 }
 
 
