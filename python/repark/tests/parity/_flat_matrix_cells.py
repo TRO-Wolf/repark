@@ -191,13 +191,14 @@ FLOAT_SQL: dict[str, str] = {
     "W2-delete-in": "DELETE FROM {t} WHERE d IN (SELECT d FROM {u})",
 }
 
+NEGATIVE_ZERO = "CAST('-0.0' AS DOUBLE)"
 FLOAT_SEED_T: tuple[str, ...] = (
-    "(1, 0.0, NULL)",
-    "(2, -0.0, NULL)",
-    "(3, 1.5, NULL)",
-    "(4, 0.0, NULL)",
+    "(1, CAST('0.0' AS DOUBLE), NULL)",
+    f"(2, {NEGATIVE_ZERO}, NULL)",
+    "(3, CAST('1.5' AS DOUBLE), NULL)",
+    "(4, CAST('0.0' AS DOUBLE), NULL)",
 )
-FLOAT_SEED_U: tuple[str, ...] = ("(10, -0.0, NULL)",)
+FLOAT_SEED_U: tuple[str, ...] = (f"(10, {NEGATIVE_ZERO}, NULL)",)
 
 SIGNED_ZERO_PR_A = "SIGNED-ZERO-NORMALIZE-1 PR A"
 SIGNED_ZERO_PR_B = "SIGNED-ZERO-NORMALIZE-1 PR B"
@@ -378,16 +379,20 @@ def _commit_labels(
     repark_target_commits: int | None,
     spark_target_commits: int | None,
 ) -> list[str]:
-    snapshots = (repark_commits or 0, spark_commits or 0)
-    targets = (repark_target_commits or 0, spark_target_commits or 0)
+    pairs = [
+        (mine, theirs)
+        for mine, theirs in (
+            (repark_commits, spark_commits),
+            (repark_target_commits, spark_target_commits),
+        )
+        if mine is not None and theirs is not None
+    ]
     labels: list[str] = []
-    if (
-        snapshots[0] > snapshots[1]
-        or targets[0] > targets[1]
-        or (seat == READ_SEAT and snapshots[0] != 0)
+    if any(mine > theirs for mine, theirs in pairs) or (
+        seat == READ_SEAT and (repark_commits or 0) != 0
     ):
         labels.append("EXTRA-COMMIT")
-    if snapshots[0] < snapshots[1] or targets[0] < targets[1]:
+    if any(mine < theirs for mine, theirs in pairs):
         labels.append("FEWER-COMMIT")
     return labels
 
