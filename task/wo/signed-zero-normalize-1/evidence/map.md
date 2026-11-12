@@ -9,6 +9,12 @@ rendered from the raw files by the probe itself.
 - [domain-table.md](domain-table.md) — one row per RePark cell on the test layout, with the truth, Spark, RePark-main and label columns; generated.
 - [summary.md](summary.md) — counts by label, row group and route; the findings list; the timing and spill sections; the legs; generated.
 - [cards.md](cards.md) — the open items carded from this measurement: UPDATE-SCHEMA-BATCH-MISMATCH-1, E2 and E9 as missing evidence.
+- [inventory.md](inventory.md) — build item 1: the sketch's citations on main `68b09d18` (moved seats and the one premise that does not hold), the re-measured RePark legs, the order's additions, the insertion, type-variant and consumers-of-the-pairing inventories, and the questions owed before item 2.
+- [item3/](item3/map.md) — after-tables and the 50-repeat check.
+- [item5/](item5/map.md) — the mutation record.
+- [item4/](item4/map.md) — cost: the profile, the change and the re-measure.
+- [item2/](item2/map.md) — build item 2: `pin_cells.py`, which writes the facade pin data from item 1's legs.
+- [item1/](item1/map.md) — build item 1's runners and raw legs on main `68b09d18` and the Spark oracle.
 - [provenance.md](provenance.md) — wheel and jar hashes, versions, session settings, the commands run, the label rules and the deviations from the brief.
 
 Up: [../map.md](../map.md).

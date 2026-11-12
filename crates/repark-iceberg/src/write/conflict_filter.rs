@@ -320,14 +320,19 @@ fn number_datum(raw: &str, field_type: &PrimitiveType) -> Option<Datum> {
         PrimitiveType::Long => raw.parse::<i64>().ok().map(Datum::long),
         PrimitiveType::Float => {
             let value = raw.parse::<f32>().ok()?;
-            is_exactly(raw, f64::from(value)).then(|| Datum::float(value))
+            let wide = f64::from(value);
+            (!is_float_zero(wide) && is_exactly(raw, wide)).then(|| Datum::float(value))
         }
         PrimitiveType::Double => {
             let value = raw.parse::<f64>().ok()?;
-            is_exactly(raw, value).then(|| Datum::double(value))
+            (!is_float_zero(value) && is_exactly(raw, value)).then(|| Datum::double(value))
         }
         _ => None,
     }
+}
+
+fn is_float_zero(value: f64) -> bool {
+    value.classify() == std::num::FpCategory::Zero
 }
 
 fn is_exactly(raw: &str, value: f64) -> bool {
@@ -560,6 +565,16 @@ mod tests {
     fn a_zero_float_literal_leaves_the_filter_unscoped() {
         assert_eq!(floating("f = 0.0"), "TRUE");
         assert_eq!(floating("d = -0"), "TRUE");
+        for sql in [
+            "d = 0.0",
+            "d = -0.0",
+            "0.0 = d",
+            "d <> -0.0",
+            "f = 0e3",
+            "d IN (0.0, 1.0)",
+        ] {
+            assert_eq!(floating(sql), "TRUE", "{sql}");
+        }
     }
 
     #[test]

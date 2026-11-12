@@ -18,7 +18,7 @@ pins.
 - [test_collation_refuse.py](test_collation_refuse.py) — G15 — collation refuses loudly.
 - [test_decimal128_parity.py](test_decimal128_parity.py) — Decimal128 differential corpus (gap G2) + expression overflow (gap G13).
 - [test_decimal_cache_1.py](test_decimal_cache_1.py) — DECIMAL-CACHE-1 pins: every oracle decimal cell on both doors and every action.
-- [test_decimal_float_coercion_1.py](test_decimal_float_coercion_1.py) — WO-2 (xo-muse8 UNIT1 fix-b): decimal literals against DOUBLE/FLOAT widen the literal.
+- [test_decimal_float_coercion_1.py](test_decimal_float_coercion_1.py) — WO-2 (xo-muse8 UNIT1 fix-b): decimal literals against DOUBLE/FLOAT widen the literal. Its 17 zero-bound legs answer Spark since SIGNED-ZERO-NORMALIZE-1.
 - [test_facade_4_census_pins.py](test_facade_4_census_pins.py) — FACADE-4 step-1 census pins: every Agree and D1-D24 row's measured answer.
 - [test_facade_4_ddl_round_trip.py](test_facade_4_ddl_round_trip.py) — FACADE-4 type-conversion goldens against the committed JSON file.
 - [test_facade_4_step1_remediation.py](test_facade_4_step1_remediation.py) — FACADE-4 step-1 remediation pins: byte-identity repros for the round-2 findings.

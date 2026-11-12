@@ -9,10 +9,11 @@ use datafusion::error::DataFusionError;
 use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
-    ColumnarValue, Expr, LogicalPlan, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
+    ColumnarValue, Expr, LogicalPlan, Operator, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
 };
 use datafusion::logical_expr::{ReturnFieldArgs, ScalarFunctionArgs};
 use datafusion::optimizer::AnalyzerRule;
+use repark_functions::decimal_cast::SPARK_NONNULL_NAME;
 use repark_functions::java_double::{java_double_text, java_float_text};
 
 pub const SPARK_AS_NAME: &str = "__repark_spark_as__";
@@ -115,7 +116,9 @@ fn rewrite_projection_display(plan: LogicalPlan) -> Result<LogicalPlan> {
             Expr::Alias(alias) => alias.expr.as_ref(),
             other => other,
         };
-        let display = spark_display(&crate::struct_position::without_relabels(inner));
+        let display = spark_display(&without_nonnull(crate::struct_position::without_relabels(
+            inner,
+        ))?);
         if display == name {
             continue;
         }
@@ -135,6 +138,23 @@ fn rewrite_projection_display(plan: LogicalPlan) -> Result<LogicalPlan> {
     } else {
         Ok(LogicalPlan::Projection(projection))
     }
+}
+
+fn without_nonnull(expr: Expr) -> Result<Expr> {
+    expr.transform_up(|node| {
+        Ok(match node {
+            Expr::ScalarFunction(mut function)
+                if function.func.name() == SPARK_NONNULL_NAME && function.args.len() == 1 =>
+            {
+                match function.args.pop() {
+                    Some(arg) => Transformed::yes(arg),
+                    None => Transformed::no(Expr::ScalarFunction(function)),
+                }
+            }
+            other => Transformed::no(other),
+        })
+    })
+    .data()
 }
 
 fn integer_arith_op(name: &str) -> Option<&'static str> {
@@ -280,12 +300,15 @@ fn spark_display_inner(expr: &Expr) -> String {
             }
             _ => expr.schema_name().to_string(),
         },
-        Expr::BinaryExpr(binary) => format!(
-            "({} {} {})",
-            spark_display(binary.left.as_ref()),
-            binary.op,
-            spark_display(binary.right.as_ref())
-        ),
+        Expr::BinaryExpr(binary) => {
+            let left = spark_display(binary.left.as_ref());
+            let right = spark_display(binary.right.as_ref());
+            match binary.op {
+                Operator::IsNotDistinctFrom => format!("({left} <=> {right})"),
+                Operator::IsDistinctFrom => format!("(NOT ({left} <=> {right}))"),
+                op => format!("({left} {op} {right})"),
+            }
+        }
         Expr::ScalarFunction(function) if let Some(op) = integer_arith_op(function.func.name()) => {
             if function.args.len() == 2 {
                 format!(

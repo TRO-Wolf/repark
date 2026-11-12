@@ -191,13 +191,14 @@ FLOAT_SQL: dict[str, str] = {
     "W2-delete-in": "DELETE FROM {t} WHERE d IN (SELECT d FROM {u})",
 }
 
+NEGATIVE_ZERO = "CAST('-0.0' AS DOUBLE)"
 FLOAT_SEED_T: tuple[str, ...] = (
-    "(1, 0.0, NULL)",
-    "(2, -0.0, NULL)",
-    "(3, 1.5, NULL)",
-    "(4, 0.0, NULL)",
+    "(1, CAST('0.0' AS DOUBLE), NULL)",
+    f"(2, {NEGATIVE_ZERO}, NULL)",
+    "(3, CAST('1.5' AS DOUBLE), NULL)",
+    "(4, CAST('0.0' AS DOUBLE), NULL)",
 )
-FLOAT_SEED_U: tuple[str, ...] = ("(10, -0.0, NULL)",)
+FLOAT_SEED_U: tuple[str, ...] = (f"(10, {NEGATIVE_ZERO}, NULL)",)
 
 SIGNED_ZERO_PR_A = "SIGNED-ZERO-NORMALIZE-1 PR A"
 SIGNED_ZERO_PR_B = "SIGNED-ZERO-NORMALIZE-1 PR B"

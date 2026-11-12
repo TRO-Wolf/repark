@@ -8,9 +8,12 @@ from typing import Any
 import pytest
 from _flat_matrix_cells import (
     COMBINATIONS,
+    FLOAT_SEED_T,
+    FLOAT_SEED_U,
     FOLDED_PREDICATES,
     GROUP_NAMES,
     KNOWN_OPEN,
+    NEGATIVE_ZERO,
     PREDICATES,
     SIGNED_ZERO_PR_A,
     SIGNED_ZERO_PR_B,
@@ -400,3 +403,9 @@ def test_a_set_expected_commit_count_still_flags_extra_and_fewer() -> None:
     )
     assert "EXTRA-COMMIT" in extra
     assert "FEWER-COMMIT" in fewer
+
+
+def test_the_float_seeds_store_a_negative_zero_through_a_cast() -> None:
+    for seed in (FLOAT_SEED_T, FLOAT_SEED_U):
+        assert any(NEGATIVE_ZERO in row for row in seed)
+        assert not any(", -0.0," in row for row in seed)
