@@ -25,6 +25,15 @@ the inventory, step 0 on main and on Spark 4.1.2, and the head run.
 | RePark `spark.sql` CTAS, every shape | Spark's rows | — |
 | in-memory CTAS (bare, `datafusion.public.`) | Spark's rows, every shape | — |
 
+## Round 2: an in-memory schema under an Iceberg catalog
+
+The first full facade run on the first head (target test: the catalog is Iceberg) failed 26
+tests in `test_ice_struct_pairing_1_exception.py`, `test_update_set_subquery_walk_1.py` and
+`test_write_body_carriers_1.py`. Those seed native tables after `CREATE SCHEMA <catalog>.ns`,
+which registers DataFusion's in-memory `MemorySchemaProvider` under the Iceberg catalog name: on
+main such a CTAS stores its rows in memory and writes no file. The target test now also requires
+the target schema not to be a `MemorySchemaProvider`; the seat and facade pins carry the case.
+
 ## Cost
 
 The refusal reads the plan the native guard already builds (`refuse_native_statement`); it adds no

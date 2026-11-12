@@ -1,3 +1,4 @@
+use datafusion::catalog::{MemorySchemaProvider, SchemaProvider};
 use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::error::Result;
 use datafusion::logical_expr::{CreateMemoryTable, DdlStatement, EmptyRelation, LogicalPlan};
@@ -61,11 +62,19 @@ fn refused_target(
         .name
         .clone()
         .resolve(&options.default_catalog, &options.default_schema);
-    refused_catalog(catalogs, &resolved.catalog).then(|| resolved.to_string())
+    let schema = ctx
+        .catalog(&resolved.catalog)
+        .and_then(|catalog| catalog.schema(&resolved.schema));
+    refused_schema(catalogs, &resolved.catalog, schema.as_deref()).then(|| resolved.to_string())
 }
 
-fn refused_catalog(catalogs: &CatalogRegistry, catalog: &str) -> bool {
+fn refused_schema(
+    catalogs: &CatalogRegistry,
+    catalog: &str,
+    schema: Option<&dyn SchemaProvider>,
+) -> bool {
     catalogs.get(catalog).is_some()
+        && schema.is_some_and(|schema| schema.downcast_ref::<MemorySchemaProvider>().is_none())
 }
 
 #[cfg(test)]

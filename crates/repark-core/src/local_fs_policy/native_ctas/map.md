@@ -14,9 +14,9 @@ The seat tests for `../native_ctas.rs`, NATIVE-CTAS-ICEBERG-REFUSE-1's native-do
   `a_refused_replace_leaves_the_existing_table_and_its_rows` (`OR REPLACE` with a failing and a
   succeeding query, `IF NOT EXISTS`, plain CTAS over an existing table);
   `the_controls_keep_answering` (in-memory CTAS bare and qualified, plain `CREATE TABLE`,
-  `INSERT … SELECT`, `EXPLAIN INSERT`, an in-memory `CREATE VIEW`); and
-  `the_walk_names_the_resolved_target_and_only_iceberg_catalogs` (the predicate and the walk on
-  bare plans).
+  `INSERT … SELECT`, `EXPLAIN INSERT`, an in-memory `CREATE VIEW`);
+  `a_ctas_into_a_memory_schema_under_an_iceberg_catalog_still_stores_rows`; and
+  `the_walk_names_the_resolved_target_and_only_iceberg_schemas` (the predicate and the walk).
 
 ## Pointers
 

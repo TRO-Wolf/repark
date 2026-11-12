@@ -42,9 +42,10 @@ refusing everything. `native_ctas.rs` is the native door's Iceberg CTAS refusal 
   inputs included) for a `CreateMemoryTable` that carries a query (its input is not the
   `EmptyRelation` a plain `CREATE TABLE` plans), resolves the target against the session's default
   catalog and schema, and refuses with `UnsupportedMarker` (`refusal_message`, which names the
-  two-step workaround, `spark.sql` and the card) when `refused_catalog` holds: the target catalog
-  is a registered Iceberg catalog. That predicate is the one place to widen the guard to every
-  target. The in-memory catalog is untouched.
+  two-step workaround, `spark.sql` and the card) when `refused_schema` holds: the target catalog
+  is a registered Iceberg catalog and the target schema is not a `MemorySchemaProvider` (what a
+  native `CREATE SCHEMA` registers). That predicate is the one place to widen the guard to every
+  target. The in-memory catalog and in-memory schemas are untouched.
 
 ## Pointers
 

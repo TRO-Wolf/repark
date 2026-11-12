@@ -74,10 +74,14 @@ native door's guard. It reads the plan that guard already builds, so it adds no 
 the plan (so `EXPLAIN`, `EXPLAIN ANALYZE` and `PREPARE` are covered) for a `CreateMemoryTable`
 that carries a query (its input is not the empty relation a plain `CREATE TABLE` plans),
 resolves the target against the session's default catalog and schema, and refuses when the
-target catalog is a registered Iceberg catalog. Every Iceberg catalog kind the native session
+target catalog is a registered Iceberg catalog and the target schema is not DataFusion's in-memory
+`MemorySchemaProvider`. A native `CREATE SCHEMA <iceberg catalog>.<name>` registers such an
+in-memory schema (datafusion 54.1.0 `execution/context/mod.rs:1023-1024`, stored as given by
+`ReparkCatalogProvider::register_schema`, `crates/repark-iceberg/src/catalog/provider.rs:114`); its
+tables never reach Iceberg, and CTAS there stores the right rows on main, so it stays answered. Every Iceberg catalog kind the native session
 can register (memory, `type=hadoop`, Glue, S3 Tables) is entered by
 `register_iceberg_catalog_with_policy` (`crates/repark-core/src/session.rs:458`), so one
-registry lookup covers them. The target test is the one predicate `refused_catalog`; refusing
+registry lookup covers them. The target test is the one predicate `refused_schema`; refusing
 every native CTAS is a one-line change to it, if the owner rules that.
 
 The refusal is `UnsupportedOperationException`, before any catalog call, so nothing is created,
@@ -115,5 +119,9 @@ and still fails with the fork's `register_table` text, creating nothing.
   not hold (see Why); the native door has no replace publish into an Iceberg table to kill.
 - The registry row is NATIVE-CTAS-ICEBERG-REFUSE-1 in
   [the parity doc](../../../docs/spark-sql-iceberg-parity.md).
+- Found, not carded: a native `CREATE SCHEMA` under an Iceberg catalog answers success, ignores
+  `WITH (location = …)` and makes an in-memory schema, so its tables are not durable and write no
+  file (measured on main; `test_write_body_carriers_1.py` and the ICE-STRUCT-PAIRING-1 exception
+  recorder seed their native tables this way).
 - Not ruled: whether native CTAS into the in-memory catalog also refuses. Measured on main and
   pinned here, it stores the right rows for every shape.

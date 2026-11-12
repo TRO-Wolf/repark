@@ -51,4 +51,5 @@ No other native entry plans SQL text: the only `create_logical_plan` call outsid
 | a mixed-case target `ICE.Ns.t` | normalized to `ice.ns.t` | as `ice` | refusal naming `ice.ns.t` |
 | a bare target under `SET datafusion.catalog.default_catalog = 'ice'` | resolved against the session default | as `ice` | refusal |
 | Glue (`session.rs:531`), S3 Tables (`session.rs:540`) | Iceberg; registered by the same `register_iceberg_catalog_with_policy` (`session.rs:458`) | read only (no AWS calls) | the same registry lookup refuses |
+| an in-memory schema under an Iceberg catalog (native `CREATE SCHEMA ice.s`, a `MemorySchemaProvider`) | not Iceberg: no file is written | stores Spark's rows (measured on main) | unchanged |
 | Postgres | not an Iceberg catalog (registration refused on this core, `session.rs:555-561`) | — | not touched |

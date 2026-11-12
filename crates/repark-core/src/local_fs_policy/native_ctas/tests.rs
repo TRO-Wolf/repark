@@ -1,12 +1,7 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, Int32Array, Int64Array};
 use datafusion::arrow::record_batch::RecordBatch;
-use datafusion::prelude::SessionContext;
-use iceberg::io::LocalFsStorageFactory;
-use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
-use iceberg::{Catalog, CatalogBuilder};
 use tempfile::TempDir;
 
 use super::*;
@@ -230,37 +225,63 @@ async fn the_controls_keep_answering() {
 }
 
 #[tokio::test]
-async fn the_walk_names_the_resolved_target_and_only_iceberg_catalogs() {
-    let warehouse = TempDir::new().expect("warehouse");
-    let catalog: Arc<dyn Catalog> = Arc::new(
-        MemoryCatalogBuilder::default()
-            .with_storage_factory(Arc::new(LocalFsStorageFactory))
-            .load(
-                "ice",
-                HashMap::from([(
-                    MEMORY_CATALOG_WAREHOUSE.to_string(),
-                    warehouse.path().to_string_lossy().into_owned(),
-                )]),
-            )
-            .await
-            .expect("memory catalog"),
-    );
-    let catalogs = CatalogRegistry::from([("ice".to_string(), catalog)]);
-    assert!(refused_catalog(&catalogs, "ice"));
-    assert!(!refused_catalog(&catalogs, "datafusion"));
-    assert!(!refused_catalog(&catalogs, "ICE"));
-    let ctx = SessionContext::new();
+async fn a_ctas_into_a_memory_schema_under_an_iceberg_catalog_still_stores_rows() {
+    let root = TempDir::new().expect("warehouse");
+    let session = native_session(&root).await;
+    run(&session, "CREATE SCHEMA ice.scratch").await;
+    run(
+        &session,
+        "CREATE TABLE ice.scratch.kept AS SELECT DISTINCT id FROM ice.ns.src",
+    )
+    .await;
+    let rows = run(&session, "SELECT id FROM ice.scratch.kept").await;
+    assert_eq!(ids(&rows), vec![1, 2, 3]);
+    assert!(!root.path().join("ice").join("scratch").exists());
+}
+
+#[tokio::test]
+async fn the_walk_names_the_resolved_target_and_only_iceberg_schemas() {
+    let root = TempDir::new().expect("warehouse");
+    let session = native_session(&root).await;
+    run(&session, "CREATE SCHEMA ice.scratch").await;
+    let ctx = session.context();
+    let catalogs = session.catalogs_snapshot();
+    let schema = |catalog: &str, name: &str| {
+        ctx.catalog(catalog)
+            .and_then(|provider| provider.schema(name))
+    };
+    assert!(refused_schema(
+        &catalogs,
+        "ice",
+        schema("ice", "ns").as_deref()
+    ));
+    assert!(refused_schema(
+        &catalogs,
+        "hd",
+        schema("hd", "ns").as_deref()
+    ));
+    assert!(!refused_schema(
+        &catalogs,
+        "ice",
+        schema("ice", "scratch").as_deref()
+    ));
+    assert!(!refused_schema(&catalogs, "ice", None));
+    assert!(!refused_schema(
+        &catalogs,
+        "datafusion",
+        schema("datafusion", "public").as_deref()
+    ));
     let state = ctx.state();
     let memory = state
         .create_logical_plan("CREATE TABLE m AS SELECT 1 AS id")
         .await
         .expect("plan");
-    refuse_iceberg_ctas(&ctx, &catalogs, &memory).expect("an in-memory target is not refused");
+    refuse_iceberg_ctas(ctx, &catalogs, &memory).expect("an in-memory target is not refused");
     let iceberg = state
         .create_logical_plan("EXPLAIN CREATE TABLE ICE.Ns.T AS SELECT 1 AS id")
         .await
         .expect("plan");
-    let error = refuse_iceberg_ctas(&ctx, &catalogs, &iceberg).expect_err("an Iceberg target");
+    let error = refuse_iceberg_ctas(ctx, &catalogs, &iceberg).expect_err("an Iceberg target");
     assert!(
         error.to_string().contains(&refusal_message("ice.ns.t")),
         "{error}"
@@ -273,5 +294,5 @@ async fn the_walk_names_the_resolved_target_and_only_iceberg_catalogs() {
         panic!("a plain CREATE TABLE plans a CreateMemoryTable");
     };
     assert!(!carries_query(create));
-    refuse_iceberg_ctas(&ctx, &catalogs, &empty).expect("a CREATE TABLE without a query");
+    refuse_iceberg_ctas(ctx, &catalogs, &empty).expect("a CREATE TABLE without a query");
 }

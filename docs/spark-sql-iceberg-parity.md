@@ -1258,7 +1258,8 @@ perfectly good read.
   the refusal, a `UNION`, `DISTINCT`, `INTERSECT`, `EXCEPT` or aggregate query created the table
   with zero rows and answered success, other shapes failed with the fork's `register_table does
   not support tables with data`, and `OR REPLACE` dropped an existing table before the query ran.
-  CTAS into the session's in-memory catalog, a plain `CREATE TABLE`, `INSERT … SELECT` and every
+  CTAS into the session's in-memory catalog (or into an in-memory schema that a native `CREATE
+  SCHEMA` registers under an Iceberg catalog), a plain `CREATE TABLE`, `INSERT … SELECT` and every
   `spark.sql` statement are unchanged. The native door is DataFusion's `CreateMemoryTable`, not
   `crates/repark-sql/src/create_table.rs`.
 - **Apache Spark** — the same CTAS stores the query's rows, and so do RePark's `spark.sql` and the

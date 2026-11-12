@@ -298,6 +298,11 @@ def measured(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, dic
         for catalog in CATALOGS:
             door.seed(catalog)
         cells = native_cells(door)
+        door.run("CREATE SCHEMA ice.scratch")
+        cells["control|ice|memory_schema"] = door.cell(
+            "ice.scratch.kept",
+            ["CREATE TABLE ice.scratch.kept AS SELECT DISTINCT id FROM ice.ns.src"],
+        )
         cells["insert|ice|union"] = door.cell(
             "ice.ns.c_insert",
             [
@@ -464,3 +469,12 @@ def test_native_insert_select_into_an_iceberg_table_still_writes(
     cell = measured["insert|ice|union"]
     assert [result["kind"] for result in cell["results"]] == ["rows", "rows"], cell
     assert cell["after"]["rows"] == [(1,), (2,), (3,), (4,)], cell
+
+
+def test_ctas_into_a_memory_schema_under_an_iceberg_catalog_still_stores_rows(
+    measured: dict[str, dict[str, Any]],
+) -> None:
+    cell = measured["control|ice|memory_schema"]
+    assert cell["results"] == [{"kind": "rows", "rows": []}], cell
+    assert cell["after"]["rows"] == [(1,), (2,), (3,)], cell
+    assert cell["after"]["metadata"] == [], cell
