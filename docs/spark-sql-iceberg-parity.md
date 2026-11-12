@@ -1208,6 +1208,43 @@ perfectly good read.
   read is aws-ephemeral-runs-1 C-017 and C-030.
 - **Dated 2026-10-28, AUD-005 (independent audit; a gate defect, not a product result; CLOSED 2026-10-29):** the nightly cross-read helper (`python/repark/tests/parity/_acceptance_cross_read.py`, lines 298–314 and 376–384) classifies every Spark exception as `SPARK-CANNOT-READ`, and accepts that outcome whenever the table has nanosecond columns. A connection failure therefore passes as the expected nanosecond limitation: the audit's probe simulates a `ConnectionError` on a nanosecond table and the gate accepts it, while a non-nanosecond control is rejected. The narrowing (accept only the unsupported-type condition) is CROSS-READ-GATE-CLASS-1, filed and not dispatched (P3; card [cross-read-gate-class-1](../task/roadmap/mid-term/cross-read-gate-class-1-card-2026-10-28.md)). This row also says nothing about the green cross-read runs; the audit makes no claim that one met the simulated failure. Narrowed by CROSS-READ-GATE-CLASS-1 on 2026-10-29 (branch `fix/cross-read-gate-class-1`), merged 2026-10-29 as `7ef6bcf4` (PR #1211).
 
+#### S3T-CTAS-KILL-1 — a CTAS killed mid-write on S3 Tables leaves an empty table (stated caveat, owner ruling 2026-11-12)
+
+- **repark** — on S3 Tables a CTAS creates the table first (its first version is empty and
+  readable at once), streams the rows, and publishes once. A definite failure drops the table:
+  G5 cells C1 to C3 leave nothing listed. A process killed mid-write (`SIGKILL`, an OOM kill,
+  a lost host) cannot drop it, so the table stays listed and reads zero rows with no error
+  (G5 cell K, runs `43126006620` and `43220069749`). Glue is unaffected: its staged create
+  writes the catalog entry at the commit, so a kill leaves nothing listed (run `43123707194`).
+- **Apache Spark** — through the S3 Tables Iceberg REST endpoint Spark refuses CTAS
+  (`Stage-create is currently not supported`; AWS documents the 400). Through the AWS client
+  jar (`software.amazon.s3tables.iceberg.S3TablesCatalog`) Spark creates the table entry
+  before any data is written, and Iceberg's staged abort does not remove it. So a killed or
+  failed Spark CTAS leaves an entry with no metadata location, which is listed and fails on
+  read. Cell S1 builds that entry: Spark over REST answers `The specified metadata location is
+  not valid`, and repark answers not found. *(oracle: S1 measured live; the jar's create and
+  abort read from source.)*
+- **Recovery** — `DROP TABLE`, or `CREATE OR REPLACE TABLE … AS SELECT` over the leftover. A
+  plain `CREATE TABLE … AS SELECT` retry fails loudly (the table exists).
+- **Retries** — the silver pattern converges after a kill. That pattern is
+  `CREATE TABLE IF NOT EXISTS … AS SELECT` followed by a `MERGE` on the key. The CTAS skips on
+  the empty table and the `MERGE` writes every row (cell R1: 100,000 rows, equal to the
+  expected set). A bare `CREATE TABLE IF NOT EXISTS … AS SELECT` with no follow-up write does
+  not converge: after a kill its retry skips, and the table stays empty with no error. On S3
+  Tables, the ICE-COMMIT-UNKNOWN-1 Airflow guidance to retry `CTAS IF NOT EXISTS` therefore
+  holds only with a follow-up write, or after a `DROP TABLE` of the leftover.
+- **Ruling** — owner, 2026-11-12, verbatim "Go with the default C’". The behavior stays
+  inside ICE-V2-FLAT-AWS-LABEL-1 as a stated caveat. The G5 rule ("a catalog entry that reads
+  as an empty table blocks") is waived for cell K on S3 Tables only. The jar's shape (create
+  the entry with no first version, set the metadata location once at publish, and adopt such
+  an entry on retry) is card
+  [S3T-CTAS-SHELL-CREATE-1](../task/roadmap/mid-term/s3t-ctas-shell-create-1-card-2026-11-12.md),
+  after the label.
+- **Pin** — `python/repark/tests/parity/test_aws_acceptance_ctas_failure.py`, the
+  `ctas-failure` leg of `aws-acceptance`. On S3 Tables K asserts that the kill landed
+  (`-SIGKILL`), that the leftover reads exactly zero rows (never a partial set), and that
+  `CREATE OR REPLACE` recovers it. S1 and R1 are as above.
+
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
 
 - **repark** — the local catalog keeps its table pointer in process memory. That is the
