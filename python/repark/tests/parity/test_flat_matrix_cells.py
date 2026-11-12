@@ -361,3 +361,42 @@ def test_dml_seats_compare_the_table_after_the_statement() -> None:
     assert cell.combo is not None
     assert committed_ids(cell.combo, entry) == [int(value) for value in entry["after_ids"] or []]
     assert committed_commits(cell.combo, entry) == entry["commits"]
+
+
+def test_an_unset_expected_commit_count_is_not_compared() -> None:
+    label = classify(
+        seat="insert",
+        pid="p01",
+        repark_outcome="ANSWERED",
+        spark_outcome="ANSWERED",
+        repark_answer=[(1,), (8,)],
+        spark_answer=[(1,), (8,)],
+        repark_commits=1,
+        spark_commits=None,
+    )
+    assert label == "EQUAL"
+
+
+def test_a_set_expected_commit_count_still_flags_extra_and_fewer() -> None:
+    extra = classify(
+        seat="delete",
+        pid="p01",
+        repark_outcome="ANSWERED",
+        spark_outcome="ANSWERED",
+        repark_answer=[(2,)],
+        spark_answer=[(2,)],
+        repark_commits=2,
+        spark_commits=1,
+    )
+    fewer = classify(
+        seat="delete",
+        pid="p01",
+        repark_outcome="ANSWERED",
+        spark_outcome="ANSWERED",
+        repark_answer=[(2,)],
+        spark_answer=[(2,)],
+        repark_commits=0,
+        spark_commits=1,
+    )
+    assert "EXTRA-COMMIT" in extra
+    assert "FEWER-COMMIT" in fewer

@@ -378,16 +378,20 @@ def _commit_labels(
     repark_target_commits: int | None,
     spark_target_commits: int | None,
 ) -> list[str]:
-    snapshots = (repark_commits or 0, spark_commits or 0)
-    targets = (repark_target_commits or 0, spark_target_commits or 0)
+    pairs = [
+        (mine, theirs)
+        for mine, theirs in (
+            (repark_commits, spark_commits),
+            (repark_target_commits, spark_target_commits),
+        )
+        if mine is not None and theirs is not None
+    ]
     labels: list[str] = []
-    if (
-        snapshots[0] > snapshots[1]
-        or targets[0] > targets[1]
-        or (seat == READ_SEAT and snapshots[0] != 0)
+    if any(mine > theirs for mine, theirs in pairs) or (
+        seat == READ_SEAT and (repark_commits or 0) != 0
     ):
         labels.append("EXTRA-COMMIT")
-    if snapshots[0] < snapshots[1] or targets[0] < targets[1]:
+    if any(mine < theirs for mine, theirs in pairs):
         labels.append("FEWER-COMMIT")
     return labels
 
