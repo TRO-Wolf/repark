@@ -1,10 +1,9 @@
-# SIGNED-ZERO-NORMALIZE-1: order, part B part 1 (SIGNED-ZERO-KEYS, flat keys) — DRAFT
+# SIGNED-ZERO-NORMALIZE-1: order, part B part 1 (SIGNED-ZERO-KEYS, flat keys) — RULED, NOT BUILT
 
-**Status:** Draft, filed 2026-11-12; questions Q1, Q2 and Q4–Q9 await the owner.
+**Status:** filed 2026-11-12; the questions were RULED the same day ("Go with the defaults", below). Not built.
 
-Drafted by `claude-opus-5-5` (2026-11-12). Nothing in it is built. Questions Q1, Q2 and Q4–Q9 in
-[questions.md](evidence/part-b/questions.md) are NOT RULED, and their defaults are marked "(default, Qn)" below. Q3 is
-resolved on main by #1307, with no change in part 1.
+Drafted by `claude-opus-5-5` (2026-11-12). The text marked "(default, Qn)" below is now the ruled outcome of that
+question ([questions.md](evidence/part-b/questions.md)); where a ruling below differs, the ruling governs.
 
 **Grade:** B (guided).
 
@@ -27,6 +26,31 @@ scoped-review rule (2026-11-09) and the named-seat rule (2026-11-10) bind.
   interactions, cost, doors), as amended here. Where they disagree, this order governs.
 - Part A's [order.md](order.md) and its evidence.
 - This step's [step0/](evidence/part-b/step0/table.md) and [inventory.md](evidence/part-b/inventory.md).
+
+## Owner rulings, 2026-11-12
+
+The owner, verbatim: **"Go with the defaults"**, on the defaults as amended by Fable's review of 2026-11-12.
+
+- **Q1 RULED:** IEEE is the truth for `NOT IN (subquery)`. Spark's default-plan answer is declared `NAAJ-WRONG`, and
+  seat 2 wraps null-aware anti-join keys. The two-column `NOT IN` cell is a second witness in the clause (item 1:
+  Spark IEEE; RePark refuses that form on both doors today).
+- **Q2 RULED:** SQL `INTERSECT ALL` / `EXCEPT ALL` is OUT of part B. A separate small PR refuses the SQL forms at
+  statement level; card `SQL-SETOP-ALL-MULTISET-1`. Part 1 still wraps these operators' float pairs, and its pin
+  checks the wrap, not the multiset.
+- **Q3 RULED:** RESOLVED on main by #1307 (item 0's re-run: all 28 floatkeys cells non-EQUAL with the matrix's seeds).
+- **Q4 RULED:** gate against `04d84ab9` and report current main beside it. A split result HALTS in both directions.
+  Measure base against base first and record it. Freeze the branch base between the cost measurement and the merge,
+  or re-measure after any rebase.
+- **Q5 RULED:** a door-internal policy (`literals`, `keys`), both true on both doors, with no user config. ADD a pin
+  that a `SET` on either door cannot change the policy.
+- **Q6 RULED:** OUT of part B. A separate small PR fixes `F.expr` window `ORDER BY` NULL placement; card
+  `FEXPR-WINDOW-NULL-ORDER-1`. Until that PR lands, part 1 judges its float cells on that route with the NULL row
+  excluded.
+- **Q7 RULED:** in the clause, with a release-note line. ADD the delete-only MERGE cell: both zeros match one target
+  row, Spark deletes and does not raise, and RePark must not raise after seat 2 (item 1: EQUAL today on three kinds).
+- **Q8 RULED:** the cards are filed by a separate records clerk after item 1's re-measure on main; not in this PR.
+- **Q9 RULED:** no stored-NaN change in part 1.
+- **Q10 and Q11 RULED:** outside part 1. Item 1's measurements and sizing feed a later owner decision.
 
 ## 1. Rulings this order carries (owner, verbatim)
 
@@ -257,6 +281,26 @@ Sketch §1 (seat 2's row), §3, §4, §6 and §7 apply, with these bindings.
    - nested floats (part 2, §9);
    - `FUNC-FLOAT-EQ-1`, `COLLECTION-FLOAT-EQ-1`, `DIST-SIGNED-ZERO-1`, `NAN-PAYLOAD-1` outside key positions;
    - the cards of Q8.
+8. **Design guards ruled 2026-11-12** (Fable's review):
+   - **(a) Fast exit on key expressions, not the schema.** Skip a node only when its input schemas have no float column
+     AND no key expression contains a cast to float, a float literal or a function call. Integer-derived keys make a
+     float key with no float column (item 1's IK-* cells: `a / b`, `CAST(int AS DOUBLE) * -1`, WRONG-READ on the
+     Spark door). Add group, distinct, join and window cells on integer-derived keys, and put one such key in N1's
+     workload.
+   - **(b) F1's join gives identical output on base and head:** `-0.0` on the probe side only and no zero on the build
+     side. Record the count on both.
+   - **(c) MERGE:** the planner does not depend on the `ON` key's shape for a float key. The join is DataFusion's plan
+     of the SQL text (`merge_sql.rs:132-145`, `merge/mod.rs:516`), and target pruning parses the user's `ON` text and
+     prunes only identical-width integer keys (`scan_prune.rs:32, 248, 361`). No MERGE timing row is needed for this
+     reason ([addendum §3.10](evidence/part-b/item1/addendum.md)).
+   - **(d) `TableScan.filters`:** no mechanism exists today. `push_down_filter` copies every predicate the provider does
+     not call `Unsupported` into the scan's filters (`push_down_filter.rs:1155-1189`), and the fork's Iceberg provider
+     answers `Inexact` for every filter (fork `table/mod.rs:236-242`). So a wrapped Filter predicate enters
+     `TableScan.filters` on the next pass. The build must add one named mechanism (seat 2 strips its own wrapper from
+     scan filters, or an `Unsupported` classification for filters that contain the UDF), pinned by an EXPLAIN after a
+     full optimize ([addendum §3.9](evidence/part-b/item1/addendum.md)).
+   - **(e) `DECIMAL-DOUBLE-UNION-COERCION-1`** will make more `VALUES` and set-operation columns DOUBLE keys, so part 1's
+     pins must stay green on that unit's branch, and its card notes that its table carries signed-zero rows.
 
 ## 5. Inventories (item 1 confirms; drafted in [inventory.md](evidence/part-b/inventory.md))
 
@@ -333,7 +377,7 @@ Tests go in the same commit as the code they pin. Every expected value comes fro
 - like-for-like medians, interleaved per run (base, head, base, head …);
 - a fresh process and warehouse each run;
 - at least five runs;
-- inside `flock -x /tmp/oc-worker/build-slots/measure.lock` around the build wrapper, with nothing else running.
+- inside `flock -x <build-slots>/measure.lock` around the build wrapper, with nothing else running.
 
 | Gate | Workload | Bar |
 |---|---|---|

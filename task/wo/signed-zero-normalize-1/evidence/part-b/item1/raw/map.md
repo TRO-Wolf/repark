@@ -6,5 +6,6 @@ One JSONL file per leg; the first line is the leg header. `repark-276dc503-*` is
 - `repark-276dc503-reads.jsonl`, `repark-276dc503-dml.jsonl`, `repark-276dc503-floatkeys.jsonl` — step 0's three parts re-run (`../../step0/run_leg.sh`).
 - `repark-276dc503-spill.jsonl`, `spark-spill.jsonl` — D16 (`item1_probe.py --part spill`; RePark with `--memory 96M --partitions 4`, Spark with `--partitions 4`).
 - `repark-276dc503-explain.jsonl`, `spark-explain.jsonl` — D14 plan shapes, `Distinct::On` and the FLOAT-to-DOUBLE join (`--part explain`).
+- `repark-276dc503-addendum.jsonl`, `spark-addendum.jsonl` — the addendum (`addendum_probe.py`); the Spark leg also reads RePark's Hadoop-catalog tables.
 
 Up: [../map.md](../map.md).

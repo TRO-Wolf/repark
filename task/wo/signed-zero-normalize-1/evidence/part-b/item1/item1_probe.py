@@ -388,7 +388,9 @@ def run_explain(ctx: dict[str, Any]) -> None:
             )
 
 
-def build_repark(warehouse: Path, memory: str | None) -> dict[str, Any]:
+def build_repark(
+    warehouse: Path, memory: str | None, extra: dict[str, str] | None = None
+) -> dict[str, Any]:
     import pyarrow
 
     import repark
@@ -415,6 +417,8 @@ def build_repark(warehouse: Path, memory: str | None) -> dict[str, Any]:
     )
     if memory is not None:
         builder = builder.config("datafusion.runtime.memory_limit", memory)
+    for key, value in (extra or {}).items():
+        builder = builder.config(key, value)
     facade = builder.getOrCreate()
     facade.register_memory_catalog(base.REPARK_CATALOG, str(facade_root))
     facade.sql(f"CREATE NAMESPACE {base.REPARK_CATALOG}.{NS} LOCATION '{facade_root / NS}'")

@@ -1,9 +1,35 @@
-# SIGNED-ZERO-NORMALIZE-1 part B: questions the order needs (Q3 resolved on main; the rest NOT RULED)
+# SIGNED-ZERO-NORMALIZE-1 part B: the order's questions (all RULED 2026-11-12)
 
-Drafted by `claude-opus-5-5`, 2026-11-12. Every question here except Q3 is **NOT RULED**; Q3 is resolved on main by
-#1307. None is covered by the rulings the order quotes. Each open question comes with a default and a one-line reason. Cell ids are from [step0/table.md](step0/table.md).
+Drafted by `claude-opus-5-5`, 2026-11-12. Every question was RULED on 2026-11-12 (above). Each draft keeps its default and its one-line reason. Cell ids are from [step0/table.md](step0/table.md).
 
-## Q1. `NOT IN (subquery)`: which Spark answer is the truth? — NOT RULED
+## Owner rulings, 2026-11-12
+
+The owner, verbatim: **"Go with the defaults"**, on the defaults as amended by Fable's review of 2026-11-12.
+
+- **Q1 RULED:** IEEE is the truth for `NOT IN (subquery)`. Spark's default-plan answer is declared `NAAJ-WRONG`, and
+  seat 2 wraps null-aware anti-join keys. The two-column `NOT IN` cell is a second witness in the clause (item 1:
+  Spark IEEE; RePark refuses that form on both doors today).
+- **Q2 RULED:** SQL `INTERSECT ALL` / `EXCEPT ALL` is OUT of part B. A separate small PR refuses the SQL forms at
+  statement level; card `SQL-SETOP-ALL-MULTISET-1`. Part 1 still wraps these operators' float pairs, and its pin
+  checks the wrap, not the multiset.
+- **Q3 RULED:** RESOLVED on main by #1307 (item 0's re-run: all 28 floatkeys cells non-EQUAL with the matrix's seeds).
+- **Q4 RULED:** gate against `04d84ab9` and report current main beside it. A split result HALTS in both directions.
+  Measure base against base first and record it. Freeze the branch base between the cost measurement and the merge,
+  or re-measure after any rebase.
+- **Q5 RULED:** a door-internal policy (`literals`, `keys`), both true on both doors, with no user config. ADD a pin
+  that a `SET` on either door cannot change the policy.
+- **Q6 RULED:** OUT of part B. A separate small PR fixes `F.expr` window `ORDER BY` NULL placement; card
+  `FEXPR-WINDOW-NULL-ORDER-1`. Until that PR lands, part 1 judges its float cells on that route with the NULL row
+  excluded.
+- **Q7 RULED:** in the clause, with a release-note line. ADD the delete-only MERGE cell: both zeros match one target
+  row, Spark deletes and does not raise, and RePark must not raise after seat 2 (item 1: EQUAL today on three kinds).
+- **Q8 RULED:** the cards are filed by a separate records clerk after item 1's re-measure on main; not in this PR.
+- **Q9 RULED:** no stored-NaN change in part 1.
+- **Q10 and Q11 RULED:** outside part 1. Item 1's measurements and sizing feed a later owner decision.
+
+The drafts below are kept as written; each heading now carries its ruling.
+
+## Q1. `NOT IN (subquery)`: which Spark answer is the truth? — RULED 2026-11-12: IEEE is the truth; NAAJ-WRONG declared; seat 2 wraps null-aware keys
 
 **Measured** (`step0/raw/spark-naaj-check.jsonl`):
 - Spark 4.1.2's default plan for `d NOT IN (SELECT d FROM u)` is a null-aware broadcast hash anti join. It keeps
@@ -20,7 +46,7 @@ precedent.
 **Reason:** a Spark answer that depends on the physical plan is not Spark SQL semantics, and every other Spark plan
 for the same predicate is IEEE.
 
-## Q2. SQL `INTERSECT ALL` / `EXCEPT ALL` return wrong multisets for every type — NOT RULED
+## Q2. SQL `INTERSECT ALL` / `EXCEPT ALL` return wrong multisets for every type — RULED 2026-11-12: OUT of part B; a separate PR refuses the SQL forms
 
 **Measured.** On the decimal control:
 - `INTERSECT ALL` returns every left duplicate; Spark keeps the minimum multiplicity.
@@ -36,7 +62,7 @@ its pin checks the wrap, not the multiset.
 
 **Reason:** fixing multiplicity is a set-operation rewrite, not a key wrap, and it would grow part B past its cap.
 
-## Q3. The flat matrix's floatkeys seeds — RESOLVED on main by #1307 (no change in part 1)
+## Q3. The flat matrix's floatkeys seeds — RULED 2026-11-12: RESOLVED on main by #1307 (no change in part 1)
 
 **Step 0** (main `ae247767`): `_flat_matrix_cells.py` seeded `-0.0` as a bare literal, which the Spark door types as a
 sign-less decimal. Both engines stored `+0.0`, so all 28 floatkeys cells were EQUAL and could not detect a signed-zero
@@ -55,7 +81,7 @@ DOUBLE and the FLOAT tables. Re-run of the step-0 floatkeys part on `276dc503`, 
 `_flat_matrix_cells.py:288`), since they XPASS under strict xfail once the keys are fixed; G6's floatkeys job runs
 after the merge.
 
-## Q4. The cost base: `04d84ab9` (ruled) or the branch base `ae247767` — NOT RULED
+## Q4. The cost base: `04d84ab9` (ruled) or the branch base `ae247767` — RULED 2026-11-12: gate against 04d84ab9, HALT on a split in both directions
 
 The ruled base, PR A's merged head, is `04d84ab9`. The branch sits on `ae247767`, which adds #1303 (CTAS cleanup),
 #1304 (LISTVIEW key-name join) and #1310 (tests). #1304 touches a join path that part 1 also touches.
@@ -65,7 +91,7 @@ against `04d84ab9` but passes against `ae247767` is a HALT for a ruling, not a p
 
 **Reason:** this keeps the ruled bar and still separates part B's cost from #1304's.
 
-## Q5. What the two per-door switches are — NOT RULED (their existence and "both on" are ruled)
+## Q5. What the two per-door switches are — RULED 2026-11-12: door-internal policy, plus a pin that SET cannot change it
 
 **Default:**
 - A door-internal policy value: `literals` (seats 1/1b) and `keys` (seat 2). It is set by the door's
@@ -77,7 +103,7 @@ against `04d84ab9` but passes against `ae247767` is a HALT for a ruling, not a p
 **Reason:** this matches sketch §8 and adds no config surface. The fallback carve-out needs only `keys = false` on
 native.
 
-## Q6. Window `ORDER BY` NULL ordering on the Spark door's `F.expr` route — NOT RULED
+## Q6. Window `ORDER BY` NULL ordering on the Spark door's `F.expr` route — RULED 2026-11-12: OUT of part B; a separate PR; NULL row excluded until then
 
 **Measured.** `F.expr('rank() OVER (ORDER BY m)')` puts NULLs last on the Spark door. Spark puts them first, and the
 typed and `spark.sql` routes match Spark (WI-2 `f-expr` decimal twin WRONG-READ). The native door puts NULLs last on
@@ -90,7 +116,7 @@ every type, which is DataFusion's default (WI-2/3/5, OB-1/2 native decimal twins
 
 **Reason:** neither is signed zero.
 
-## Q7. The MERGE cardinality change (Table B m1) is in the clause — NOT RULED
+## Q7. The MERGE cardinality change (Table B m1) is in the clause — RULED 2026-11-12: in the clause, plus the delete-only MERGE cell
 
 **Measured.** With both zeros in the MERGE source, Spark raises `MERGE_CARDINALITY_VIOLATION` on three kinds, and
 RePark updates (WR-merge-card: ACCEPTED-WHERE-SPARK-REFUSED). After seat 2, RePark raises too. A statement that
@@ -101,7 +127,7 @@ succeeds today will refuse.
 **Reason:** it follows the truth, and sketch §6 already names it as a user-visible change. Ruling G's defaults do not
 name it.
 
-## Q8. Cards found by step 0 (outside part 1) — NOT RULED
+## Q8. Cards found by step 0 (outside part 1) — RULED 2026-11-12: a separate records clerk files the cards
 
 **Default:** the records clerk files them; none is built in part 1. Each was confirmed on its decimal twin or by a
 side check, so none is signed zero.
@@ -119,7 +145,7 @@ side check, so none is signed zero.
 
 **Reason:** each is a measured divergence with its own owning layer.
 
-## Q9. NaN bit patterns written to Iceberg — NOT RULED
+## Q9. NaN bit patterns written to Iceberg — RULED 2026-11-12: no stored-NaN change in part 1
 
 **Measured.** Spark's Iceberg write stores sign-set NaNs as canonical `7ff8…`, while RePark keeps `fff8…` (table §6).
 After part 1 the keys agree either way, because the UDF canonicalises them. Raw `-NaN` ordering outside key positions

@@ -11,6 +11,10 @@ is [item1.md](item1.md).
 - [render_item1.py](render_item1.py) — writes `plans.md` and `spill.md` from the raw legs.
 - [plans.md](plans.md) — every plan-shape `EXPLAIN`, verbatim, RePark and Spark, with Spark's `normalizenanandzero` counts; generated.
 - [spill.md](spill.md) — the D16 spill cells with their labels, answers and `spill_count`; generated.
+- [addendum.md](addendum.md) — the cells Fable's review asked for (Q1, Q2, Q6, Q7, integer-derived keys, sign-set NaN, NaN partitions, logs) and three code readings (scan filters, MERGE key shape, NaN partition sizing).
+- [addendum_probe.py](addendum_probe.py) — the addendum's probe: `--engine spark|repark`; `--cross` points Spark at RePark's warehouse.
+- [render_bits.py](render_bits.py) — writes `addendum/bits.md` from the addendum legs.
+- [addendum/](addendum/map.md) — the addendum cells, labelled, and their bit patterns.
 - [raw/](raw/map.md) — the item 1 legs.
 - [remeasure/](remeasure/map.md) — the step-0 probes re-labelled on `276dc503` and their differences from step 0.
 - [new-cells/](new-cells/map.md) — the added answer cells, labelled.
