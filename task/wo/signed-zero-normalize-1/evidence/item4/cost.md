@@ -83,3 +83,25 @@ they read the file base pruned, or run where base refused.
 | WRONG-READ → EQUAL | 24 | 66.4 | 81.6 | 1.2286 |
 | PRUNED-WRONG → EQUAL | 10 | 23.1 | 29.7 | 1.2877 |
 | refused → answered | 8 | 19.4 | 24.0 | 1.24 |
+
+## Round r5: the delta's quiet-box re-measure (2026-11-11, orchestrator)
+
+The owner's condition (2026-11-11, "accept part A as measured"): queries with no float-zero comparison must cost at most
+1.05x. The Opus verifier's controls read c2 1.1607x, with per-run ratios of 1.120, 1.174 and 0.986 and load outside the
+locks.
+
+**Method.** Each run held `measure.lock` exclusively, plus both build locks. No verifier or builder ran, and load stood
+at 3 to 4 from desktop applications only. The figures are the median of 3, with base and head interleaved.
+- **Base:** main's release package (product code `68b09d18`).
+- **Head:** the delta head's release package (`032fb7f7` / `e30bf6be`).
+- **Controls:** the verifier's `cost_controls.py`. c1 is case (b)'s generator with every zero literal replaced by
+  `1.5`; c2 is case (a)'s 207 cells with every float zero replaced by `1.5`.
+
+| Case | Base runs (s) | Head runs (s) | Median ratio | Bar |
+|---|---|---|---|---|
+| c1 (no zero) | 27.189, 27.840, 27.166 | 26.097, 26.613, 26.570 | **0.9772** | 1.05 |
+| c2 (no zero) | 0.644, 0.620, 0.717 | 0.637, 0.657, 0.689 | **1.0213** | 1.05 |
+| (a) | 0.814, 0.767, 0.770 | 0.813, 0.802, 0.897 | 1.0557 | 1.20 (accepted) |
+| (b) | 27.569, 27.530, 28.420 | 28.579, 28.152, 28.358 | 1.0286 | 1.05 |
+
+The owner's condition holds: both controls are under 1.05x.
