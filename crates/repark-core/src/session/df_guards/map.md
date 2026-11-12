@@ -343,6 +343,7 @@ wrapped optimizer rule) and declares this directory.
   analysis on the result and coercion happens there. It leaves through `frame_names` as
   `ExactJoin`, `ExactKeys` and `join_exact_sides`. Pins: the binding's
   `crates/repark-python/src/join_exact_tests.rs` (plan equality against `sql_built`).
+- [join_keys.rs](join_keys.rs) — **LISTVIEW-INNER-JOIN-KEY-1 (2026-11-11):** `hashable_join_keys` casts each key-name join key failing DataFusion's `can_hash` (ListView, LargeListView, RunEndEncoded, a container of one) to its hashable kind, which `eliminate_cross_join` keeps; all-hashable keys answer `None` (main's `join` call stays), a Union refuses `REPARK_UNHASHABLE_JOIN_KEY`. Leaves via `frame_names`; seats `join_on_named_keys` and repark-python's `lateral_join`. Pins: its test module.
 - `predicate_names.rs` — **CASESENS-2 port (2026-10-03):** the join-condition
   half of #881's `predicate_names.rs` (folds `15a7bb9d`, `b89a7d7f`, `3ac80920`),
   re-pointed at `attr_id::resolve`. `bind_condition_qualifiers(condition, left,
@@ -476,8 +477,7 @@ wrapped optimizer rule) and declares this directory.
   left columns); `union_by_folded_name` respells the right frame's fields to the
   left spelling, refuses a strict mismatch with the facade's former text (`Union can only be
   performed … mismatched columns: [...]`, now listing folded mismatches only) and unions by
-  name. Spark shapes: `target/probe-u11-edge-1/vx-spark.json`, `vx2-spark.json` (the
-  verifier probes). Rust pins in the file's test module:
+  name.  Rust pins in the file's test module:
   `qualified_reference_binds_through_its_relation`, `qualified_alias_names_the_written_segment`,
   `projection_keeps_the_written_spelling`, `drop_removes_every_folded_match`,
   `join_binds_each_side_and_keeps_one_key`, `union_respells_the_right_and_refuses_a_mismatch`;
@@ -490,8 +490,7 @@ wrapped optimizer rule) and declares this directory.
   select and filter use (a qualified target narrows by `same_relation` from the right:
   `F.col("t.ID")` drops `(t, ID)`, `F.col("b.id")` drops `(b, ID)`). A target matching no
   field is a no-op on both, as Spark answers (`drop("t.ID")`, `drop("u.id")`,
-  `drop(F.col("u.id"))`). Spark shapes: `target/probe-u11-edge-1/vz-spark.json` (`q_drop_*`,
-  `j_drop_*`). Rust pin `qualified_drop_binds_through_its_relation`.
+  `drop(F.col("u.id"))`).  Rust pin `qualified_drop_binds_through_its_relation`.
   **Round 4 (2026-09-26, verifier round 2 V-002/V-008):** the binder's final rule, under
   `caseSensitive=false`: a column reference collects every field whose name matches it ignoring
   case (`case_hits`; a qualified reference first narrows to fields whose relation matches
@@ -513,8 +512,7 @@ wrapped optimizer rule) and declares this directory.
   `exact_and_ambiguous_references_stay` now asserts the three refusals (V-008). Rust pins:
   `exact_and_ambiguous_references_stay`, `ambiguous_candidates_render_sorted_like_spark`,
   `unqualified_and_catalog_candidates_render_like_spark`,
-  `requalified_join_carries_each_side_relation`. Spark shapes:
-  `target/probe-u11-edge-1/vz-spark.json`, `vz2-spark.json`.
+  `requalified_join_carries_each_side_relation`. 
   **Round 5 (2026-09-26, verifier round 3 V-001..V-004):** the ambiguity rule is for references
   the user wrote; Spark resolves the facade's own re-projections and origin Columns by
   attribute. `attribute_reference(name)` builds an unqualified `Expr::Column` for an exact engine
@@ -527,8 +525,7 @@ wrapped optimizer rule) and declares this directory.
   refuses with select's `ambiguous_reference` text (`drop(F.col("id"))` on twins →
   `[`id`, `id`]`, on the self-join → `[`a`.`id`, `b`.`id`]`); string targets keep dropping every
   folded twin. Rust pins `attribute_reference_binds_exactly_where_a_written_one_refuses`,
-  `attribute_drop_is_exact_and_a_two_hit_reference_refuses`. Spark shapes:
-  `target/probe-u11-edge-1/vw/fold-spark.json`, `fold2-spark.json`.
+  `attribute_drop_is_exact_and_a_two_hit_reference_refuses`. 
   Round 6 (2026-09-26, V-001): `with_attribute_copies(frame)` re-projects every held column,
   adding one exact copy per uniquely named field, named `attribute_copy_name(field)`
   (`__repark_attr_` plus the name's bytes in hex, so case twins never collide); the facade's SQL
@@ -563,30 +560,28 @@ wrapped optimizer rule) and declares this directory.
   top-level `Cast`/`TryCast` over a direct column child to the written child
   name, so `F.col(x).cast(...)` keeps the child name instead of leaking the
   qualified engine name (the all-lowercase leak goes with it). Pinned through
-  the facade (`test_cast_of_a_column_keeps_the_written_child_name`) — the file
-  sits 12 lines under the size ceiling, so no unit test lands here.
+  the facade (`test_cast_of_a_column_keeps_the_written_child_name`) .
   **Re-verify (2026-09-28, RC-3):** the child-name lookup recurses through
   nested casts (`test_nested_cast_of_a_column_keeps_the_written_child_name`).
   **ATTR-ID-1 S1 (2026-09-30):** one `pub use` block re-exports `AttrId`, `Resolution`,
   `attribute_ids`, `remint_join_collisions`, `resolve` and `stamp` from `attr_id.rs`, so they
-  leave through `frame_names`; `same_relation` moved to `attr_id.rs` and is imported back
-  (1000 → 990).
+  leave through `frame_names`; `same_relation` moved to `attr_id.rs` and is imported back.
   **ATTR-ID-1 S2 (2026-09-30):** `join_on_named_keys` (USING) counts the kept right-side
   output positions while building the key-dedup projection and runs the S1
   `remint_join_collisions` over the projected join split at that count, so a self-join
   keeps the left ids and re-mints every colliding right id (semi/anti return before the
-  projection and need none). `strip` joins the `frame_names` re-export. 990 → 997.
+  projection and need none). `strip` joins the `frame_names` re-export. 
   **ATTR-ID-1 S3a (2026-09-30):** `alias_with_fresh_id` joins the `frame_names` re-export beside `strip`.
   **ATTR-ID-1 S3b (2026-10-01):** re-exports `SortShape`, `sort_shape`,
   `grandchild_key` and `bind_free_names` from `sort_names.rs`; `Hit`, `ambiguous_reference` and
-  `unresolved_column` widen to `pub(crate)` for the walker. 999 lines.
+  `unresolved_column` widen to `pub(crate)` for the walker. 
   **ATTR-ID-1 S3b H-1 (2026-10-01):** also re-exports `engine_field_is_unique` and
-  `join_dup_below_wrappers` from `sort_names.rs` (one brace line). 1000 lines, at ceiling.
+  `join_dup_below_wrappers` from `sort_names.rs` 
   **ATTR-ID-1 S3e (2026-10-01):** re-exports `bind_qualified_free_refs`,
   `grandchild_qualified_key`, `join_output_sources` and
   `qualifier_star_positions` from `sort_names.rs`; `bind_names` widens to
   `pub(crate)` for the moved tests. The inline test module moves unchanged to
-  `../tests/case_bind.rs` (1000 → 552).
+  `../tests/case_bind.rs`.
   **ATTR-ID-1 V-4 (2026-10-02):** `copy_attribute_ids` joins the `frame_names` re-export.
   **ATTR-ID-1 SJ-1a (2026-10-02):** the re-export swaps `remint_join_collisions` for
   `remint_shared` and `join_collisions`, and adds `frame_lineage.rs`'s `AttrRef`,
