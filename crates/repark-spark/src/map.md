@@ -10,16 +10,9 @@ CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08): `extension.rs` seats `normalize/join
 
 U1-MEM-LAYOUT-1 (2026-09-23): Spark create resolution uses the registered memory warehouse layout root. On a `TempFallbackAllowed` catalog only, an orphan scan refuses a path that holds another table's metadata file or an unreadable one, or whose ancestor walk (`call/map.md`) reaches a `metadata/` directory holding one (the other table of any catalog); and a path that holds another table of the same catalog, lies inside one outside the swept table's own location, or lies inside the swept table's own location when another table shares it. See `tests/map.md` and `call/map.md`.
 
-ICE-MIXED-CASE-1 round 3 (2026-09-17, Q-20b-1): `merge_fragments.rs` passes the clause home scope — NOT MATCHED [BY TARGET] fragments resolve bare references against the source alias, NOT MATCHED BY SOURCE against the target alias, MATCHED/ON against both.
+ICE-MIXED-CASE-1 (2026-09-17): `merge_fragments.rs` passes the clause home scope — NOT MATCHED fragments resolve against one alias, MATCHED/ON against both; normalization stays ON with backticked stored-case spellings; `spark_door_case_insensitive` negates the one `spark.sql.caseSensitive` carrier. pins: ice-mixed-case-1/C-001…C-006
 
-ICE-MIXED-CASE-1 round 5 (2026-09-17, Q-20b-2): normalization stays ON (`extension.rs` carries no parser switch); the fold and fragment rewrites emit backticked stored-case spellings. pins: ice-mixed-case-1/C-001…C-006
-
-ICE-MIXED-CASE-1 round 21b: `lib.rs` `spark_door_case_insensitive` negates `SparkCaseSensitiveConfig` (the one `spark.sql.caseSensitive` carrier); `spark_ast.rs` and `merge_fragments.rs` pass it to the repark-core fold. `extension.rs` installs only main's carrier.
-
-CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Router canonicalize reasons restored byte-exact to `6774ebd` (test-pinned; 102-col line kept). spark_literals rule tokens kept. Wrapped-line fragments rewritten as complete sentences (D-002).
-
-CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
-accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+CC-2/CC-3 (2026-08-30): comments condensed to one line, banners removed, truncated comments rewritten as complete sentences; router canonicalize reasons restored byte-exact to `6774ebd` (test-pinned); review-round narration swept, safety contracts kept condensed.
 
 ## Purpose
 
@@ -803,6 +796,10 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   **RP-56 DIFF-PROBE fold (2026-09-29):** both write sites pass the session case flag
   down — `write_ctas_query` into the plan writer, `staging.case_sensitive` into the
   options path — so a CTAS `SELECT *` over twins answers under `caseSensitive=true`.
+  **CTAS-QUERY-FAILURE-CLEANUP-1 (2026-11-11):** `finish_ctas_staged_commit` runs
+  `discard_unpublished_create` when the query fails before any publish — the fast path
+  on a `write_ctas_query` error, the options path on any error before `publish_applied`
+  — then returns the original error unchanged.
 - `write_to_branch.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** when the session
   write conf is set, a plain `INSERT` / `DELETE` / `UPDATE` on `<table>.branch_<name>` counts
   as an owned write head, so the statement keeps its ref-qualified name and reaches RePark's

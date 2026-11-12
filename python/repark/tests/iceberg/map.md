@@ -9,6 +9,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 ## Contents
 
 - [test_alter_table.py](test_alter_table.py) — R-ALTER-TABLE — Spark ALTER TABLE schema evolution facade pins.
+- [test_ctas_query_failure_cleanup_1.py](test_ctas_query_failure_cleanup_1.py) — CTAS-QUERY-FAILURE-CLEANUP-1 — failing CTAS creates (F1/F3/F6 × six spellings × hadoop/memory × v2/v3, saveAsTable × v2 only per ruling 1) leave no metadata and refuse on every read; K4's five replace spellings keep the live table.
 - [test_describe_table.py](test_describe_table.py) — Facade pins for DESCRIBE [TABLE] [EXTENDED|FORMATTED] on Iceberg tables.
 - [test_empty_projection_count_1.py](test_empty_projection_count_1.py) — `count(*)` over an empty projection (changelog and v3 DV reads) answers the row count.
 - [test_ice_branch_ops_1.py](test_ice_branch_ops_1.py) — ICE-BRANCH-OPS-1 pins: four Iceberg branch procedures on both doors.
@@ -153,14 +154,8 @@ path expression repointed in the same unit and no other line changed:
 | `test_ice_mixed_case_1.py` | names its own or a sibling's new path in a docstring or recorded string; anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `test_ice_nan_pushdown_1.py` | reads the root `fixtures/` one level up. |
 | `test_ice_page_prune_1.py` | reads the root `fixtures/` one level up. |
-| `test_mw8_runbook.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_rp3_c009_write_default.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_rp4_c004_to_branch.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_sql_harden_cutover.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_v3_lineage_columns.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_v3_live_oracle.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_v3e3_fixtures.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_v3e4_refs_time_travel.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_mw8_runbook.py`, `test_rp3_c009_write_default.py`, `test_rp4_c004_to_branch.py`, `test_sql_harden_cutover.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_v3_lineage_columns.py`, `test_v3_live_oracle.py`, `test_v3e3_fixtures.py`, `test_v3e4_refs_time_travel.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
 
 ## Pointers
 

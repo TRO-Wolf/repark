@@ -60,6 +60,22 @@ pub fn written_paths(data_files: &[DataFile]) -> Vec<String> {
         .collect()
 }
 
+pub async fn discard_unpublished_create(staged: &StagedTableTransaction) {
+    if staged.mode() != StagedTableMode::Create {
+        return;
+    }
+    let Some(location) = staged.table().metadata_location() else {
+        return;
+    };
+    if let Err(error) = staged.table().file_io().delete(location).await {
+        tracing::warn!(
+            ?error,
+            location,
+            "could not delete the begin file of a failed create"
+        );
+    }
+}
+
 async fn discard_rejected(
     catalog: &dyn Catalog,
     mode: StagedTableMode,
