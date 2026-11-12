@@ -324,7 +324,7 @@ impl ReparkSessionBuilder {
         crate::range_table::register_spark_range(&context);
         text_write_format::file_format::register_text_write_formats(&context)
             .map_err(engine_err)?;
-        df_guards::finish_session_build(&context, &dialect);
+        df_guards::finish_session_build(&context, &dialect, &ext);
         let session = ReparkSession {
             backend: Arc::new(SingleNodeBackend::new(context)),
             dialect,

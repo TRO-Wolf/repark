@@ -296,9 +296,19 @@ Sketch §1 (seat 2's row), §3, §4, §6 and §7 apply, with these bindings.
    - **(d) `TableScan.filters`:** no mechanism exists today. `push_down_filter` copies every predicate the provider does
      not call `Unsupported` into the scan's filters (`push_down_filter.rs:1155-1189`), and the fork's Iceberg provider
      answers `Inexact` for every filter (fork `table/mod.rs:236-242`). So a wrapped Filter predicate enters
-     `TableScan.filters` on the next pass. The build must add one named mechanism (seat 2 strips its own wrapper from
-     scan filters, or an `Unsupported` classification for filters that contain the UDF), pinned by an EXPLAIN after a
-     full optimize ([addendum §3.9](evidence/part-b/item1/addendum.md)).
+     `TableScan.filters` on the next pass ([addendum §3.9](evidence/part-b/item1/addendum.md)).
+     - **RULED 2026-11-12, option (a)** (owner, verbatim: "Go with the defaults"): the halt "a wrapper in
+       `TableScan.filters`" is restated as **"nothing new reaches an Iceberg evaluator, and no table provider RePark
+       uses classifies a filter that contains `__repark_normalize_zero__` as `Exact`."** Pins replace the old halt.
+       They show that:
+       1. on the Iceberg provider, the set of predicates converted to Iceberg expressions (the scan's pushed predicate,
+          and file and row-group pruning counts) is the same on base and head for every clause cell that has a wrapped
+          filter;
+       2. the rows equal the truth with the Filter kept above the scan;
+       3. no provider in use (Iceberg, MemTable, the listing/path providers) returns `Exact` for a filter containing
+          the UDF.
+     - Option (b), a fork-side `Unsupported` classification, is not taken. Option (c), stripping wrappers, is rejected,
+       because with an `Exact` provider it would drop the predicate.
    - **(e) `DECIMAL-DOUBLE-UNION-COERCION-1`** will make more `VALUES` and set-operation columns DOUBLE keys, so part 1's
      pins must stay green on that unit's branch, and its card notes that its table carries signed-zero rows.
 
@@ -323,7 +333,7 @@ Tests go in the same commit as the code they pin. Every expected value comes fro
   - One `__repark_normalize_zero__` per float key after a full optimize, on every node kind.
   - Optimizing twice gives an identical plan.
   - `EXPLAIN EXECUTE` of PR-1 and PR-2 shows one wrapper per key.
-  - No wrapper in `TableScan.filters`.
+  - No provider classifies a wrapped filter as `Exact`, and the Filter stays above the scan (guard (d), option (a)).
   - Output names, `printSchema` and qualifiers are unchanged for every clause cell (GB-*, DI-*, the f-expr and typed
     forms, and part A's D6-3…D6-6, whose values are now part B's; part A's F5).
 - **P7, NaN and stored bits.**
@@ -357,7 +367,9 @@ Tests go in the same commit as the code they pin. Every expected value comes fro
 - Any change to part A's tables or pins, to unit C's, #1290's, #1292's, #1295's or #1304's pins, or to the outcome of
   their tables.
 - A `-0.0` or a NaN payload stored differently from before, outside group, distinct and set-operation outputs.
-- A wrapper in `TableScan.filters`, or any new predicate reaching an Iceberg evaluator.
+- Any new predicate reaching an Iceberg evaluator, or a table provider RePark uses classifying a filter that contains
+  `__repark_normalize_zero__` as `Exact` (restated 2026-11-12, guard (d) option (a), owner: "Go with the defaults";
+  it replaces "a wrapper in `TableScan.filters`", which the guard (d) pins now hold).
 - `UPDATE-SCHEMA-BATCH-MISMATCH-1` reproducing more often after the change than before: 50 repeats per kind, before and
   after.
 - A cost gate exceeded (§8), except the native carve-out of design point 5.

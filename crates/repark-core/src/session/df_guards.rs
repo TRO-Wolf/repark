@@ -87,7 +87,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
         .with_runtime_env(runtime)
         .with_default_features()
         .with_query_planner(Arc::new(crate::stack::StackQueryPlanner))
-        .with_optimizer_rules(unnest_safe_optimizer_rules())
+        .with_optimizer_rules(unnest_safe_optimizer_rules(extension.signed_zero_policy()))
         .with_analyzer_rules(analyzer_rules)
         .with_physical_optimizer_rules(skipping_limit::skip_safe_physical_optimizer_rules())
         .with_physical_optimizer_rule(Arc::new(crate::nlj_build_reset::NljBuildSideReset))
@@ -98,13 +98,18 @@ pub(super) fn context_with_df_54_1_rule_guards(
     crate::stack::register_stack(&context);
     crate::update_fields::register_update_fields(&context);
     crate::isnan::register_repark_isnan(&context);
+    signed_zero::register_normalize_zero(&context);
     subquery::register_single_row_guard(&context);
     Ok(context)
 }
 
-pub(super) fn finish_session_build(context: &SessionContext, dialect: &Arc<dyn SqlDialect>) {
+pub(super) fn finish_session_build(
+    context: &SessionContext,
+    dialect: &Arc<dyn SqlDialect>,
+    extension: &Arc<dyn SessionExtension>,
+) {
     dialect.on_session_built(context);
-    signed_zero::install_literal_seat(context);
+    signed_zero::install_literal_seat(context, extension.signed_zero_policy());
 }
 
 pub(super) fn analyzer_rules_with_df_54_1_rule_guards()
@@ -114,7 +119,9 @@ pub(super) fn analyzer_rules_with_df_54_1_rule_guards()
 }
 
 /// DataFusion's recommended rule list with `push_down_leaf_projections` wrapped.
-fn unnest_safe_optimizer_rules() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
+fn unnest_safe_optimizer_rules(
+    policy: crate::extension::SignedZeroPolicy,
+) -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
     let mut rules: Vec<Arc<dyn OptimizerRule + Send + Sync>> =
         vec![Arc::new(attr_id::StripAttributeIds)];
     for rule in Optimizer::new().rules {
@@ -130,7 +137,7 @@ fn unnest_safe_optimizer_rules() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
             }
             "simplify_expressions" => {
                 rules.push(rule);
-                rules.push(Arc::new(signed_zero::SignedZeroLiterals));
+                rules.push(signed_zero::literal_optimizer_seat(policy));
             }
             LEAF_PUSHDOWN_RULE_NAME => {
                 rules.push(Arc::new(UnnestSafeLeafProjectionPushdown { inner: rule }));
@@ -138,6 +145,7 @@ fn unnest_safe_optimizer_rules() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
             _ => rules.push(rule),
         }
     }
+    rules.push(signed_zero::key_seat(policy));
     rules
 }
 

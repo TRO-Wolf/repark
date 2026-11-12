@@ -9,7 +9,7 @@ mod config_file;
 mod dialect;
 mod dynamic_flatten;
 mod error_map;
-mod extension;
+pub mod extension;
 mod freq_items;
 mod iceberg_path;
 pub mod idents;
@@ -117,7 +117,7 @@ pub use error_map::{
 pub use pool_refusals::{
     PoolRefusalLog, REFUSAL_CONTAINMENT_NOTE, RefusalRecordingPool, pool_refusal_log,
 };
-pub use repark_common::{Error, ErrorClass, Result, redaction};
+pub use repark_common::{Error, ErrorClass, Result, float_canon, redaction};
 pub use unknown_routine::map_unknown_routine_message;
 
 // === SE-1 tightenNulls ===
