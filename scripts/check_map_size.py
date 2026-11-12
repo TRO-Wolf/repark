@@ -61,7 +61,7 @@ EXEMPT_PATTERNS: dict[str, str] = {
 }
 
 EXCEPTIONS: dict[str, tuple[int, int]] = {
-    ".github/workflows/map.md": (109, 37120),
+    ".github/workflows/map.md": (109, 37111),
     "crates/repark-common/src/map.md": (249, 20706),
     "crates/repark-connect/src/map.md": (426, 35714),
     "crates/repark-connect/tests/it/map.md": (468, 38148),
