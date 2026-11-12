@@ -9,6 +9,7 @@ use datafusion::datasource::MemTable;
 use datafusion::logical_expr::{
     ColumnarValue, LogicalPlan, LogicalPlanBuilder, Partitioning, TableProviderFilterPushDown, col,
 };
+use datafusion::prelude::ParquetReadOptions;
 
 use super::udf::{normalize_array, normalize_zero_call, normalize_zero_udf};
 use crate::ReparkSession;
@@ -40,6 +41,10 @@ fn others() -> [Option<f64>; 6] {
     ]
 }
 
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "the seeds are exact in FLOAT"
+)]
 fn narrow(value: Option<f64>) -> Option<f32> {
     value.map(|value| {
         if value.to_bits() == NEG_NAN_64 {
@@ -153,6 +158,7 @@ async fn optimized(session: &ReparkSession, sql: &str) -> LogicalPlan {
         .unwrap_or_else(|error| panic!("{sql}: {error}"))
 }
 
+#[expect(clippy::too_many_lines, reason = "one row per key-site cell")]
 fn key_cases(d: &str) -> Vec<(String, Vec<i64>, bool)> {
     let e = if d == "d" { "e" } else { "g" };
     let rows = |sql: &str| sql.replace("{d}", d).replace("{e}", e);
@@ -687,7 +693,11 @@ async fn no_provider_in_use_takes_a_wrapped_filter_as_exact() {
         .expect("copy");
     session
         .context()
-        .register_parquet("p", path.to_string_lossy().as_ref(), Default::default())
+        .register_parquet(
+            "p",
+            path.to_string_lossy().as_ref(),
+            ParquetReadOptions::default(),
+        )
         .await
         .expect("register parquet");
     let listing = session

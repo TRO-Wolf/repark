@@ -144,7 +144,7 @@ pub(crate) fn rewrite_node(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>
             repartition.partitioning_scheme = match repartition.partitioning_scheme {
                 Partitioning::Hash(exprs, count) => Partitioning::Hash(wrap_all(exprs), count),
                 Partitioning::DistributeBy(exprs) => Partitioning::DistributeBy(wrap_all(exprs)),
-                other => other,
+                other @ Partitioning::RoundRobinBatch(_) => other,
             };
             Ok(Transformed::new_transformed(
                 LogicalPlan::Repartition(repartition),
