@@ -140,8 +140,12 @@ def main() -> None:
     record: dict[str, Any] = {
         "case": arguments.case,
         "label": arguments.label,
-        "module": str(Path(repark.__file__).resolve().parent.name),
+        "package": Path(repark.__file__).resolve().parents[1].name,
         "load1": os.getloadavg()[0],
+        "load_before": float(os.environ.get("REPARK_COST_LOAD0", "nan")),
+        "load_at_sample": float(os.environ.get("REPARK_COST_LOAD1", "nan")),
+        "waited": os.environ.get("REPARK_COST_WAITED") == "1",
+        "run": int(os.environ.get("REPARK_COST_RUN", "0")),
     }
     if arguments.case == "n1":
         record.update(wide_plan(session(arguments.warehouse)))

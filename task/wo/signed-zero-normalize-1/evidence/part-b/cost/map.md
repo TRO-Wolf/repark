@@ -7,7 +7,10 @@
   distinct, TopK, five repeats each, on the Spark door and on native) and `f2` (the same with canonical NaN and no
   `-0.0`). Each record carries the module, the load average and the answers (the join count is identical on every
   build, guard (b)).
-- [summarize.py](summarize.py) — medians per case and build, and the ratios against `04d84ab9` and `276dc503`.
+- [summarize.py](summarize.py) — medians per case and build (with `04d84ab9-aa`, a second run of the base package for
+  the base-against-base check), the ratios against `04d84ab9` and `276dc503`, and a per-sample load table.
+- [l4l_run.py](l4l_run.py) — the C-012 like-for-like ratio (PERF-1's work-equal set) per run and pair, from the
+  replay harness's per-cell work times. Prepared; not yet run.
 - `cost-raw.jsonl` — the interleaved runs (04d84ab9, 276dc503, head per case per run), written by the lane's runner
   under the exclusive measure lock; present once the runs finish.
 

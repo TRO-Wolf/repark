@@ -1,0 +1,5 @@
+{"engine": "repark-head-e710af4f-release", "collect_list": ["-0.0", "0.0", "0.0"], "collect_set": ["0.0"], "count_distinct_ab": 3, "dropdup_double": ["0.0", "1.0", "2.0", "nan", "null"]}
+{"engine": "repark-276dc503", "collect_list": ["-0.0", "0.0", "0.0"], "collect_set": ["-0.0", "0.0"], "count_distinct_ab": 3, "dropdup_double": ["-0.0", "0.0", "1.0", "2.0", "nan", "null"]}
+{"engine": "spark", "collect_list": ["-0.0", "0.0", "0.0"], "collect_set": ["-0.0"], "count_distinct_ab": 1, "dropdup_double": ["0.0", "1.0", "2.0", "nan", "null"]}
+{"engine": "repark-head", "neg-first/p1": ["0.0"], "neg-first/p2": ["0.0"], "neg-first/sql": ["-0.0", "0.0"], "pos-first/p1": ["0.0"], "pos-first/p2": ["0.0"], "pos-first/sql": ["-0.0", "0.0"], "pos-first-1/p1": ["0.0"], "pos-first-1/p2": ["0.0"], "pos-first-1/sql": ["-0.0", "0.0"]}
+{"engine": "spark", "neg-first/p1": ["-0.0"], "neg-first/p2": ["-0.0"], "neg-first/sql": ["-0.0"], "pos-first/p1": ["0.0"], "pos-first/p2": ["0.0"], "pos-first/sql": ["0.0"], "pos-first-1/p1": ["0.0"], "pos-first-1/p2": ["0.0"], "pos-first-1/sql": ["0.0"]}

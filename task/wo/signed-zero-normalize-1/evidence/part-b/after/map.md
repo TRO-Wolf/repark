@@ -20,4 +20,14 @@ Spark 4.1.2 legs, and compared cell by cell with the base (`276dc503`, item 1's 
   `IcebergTableScan` lines (the pushed predicate); `scan-predicates-276dc503.jsonl` and `scan-predicates-head.jsonl` are
   its legs (guard (d) pin 1).
 
+- [finish.md](finish.md) — the finish on `e710af4f`: the gate table, the two facade pins that moved and their
+  dispositions, the `F.collect_set` halt, and clause item 4's one-wrapper proof.
+- [confounded_wrappers.py](confounded_wrappers.py) — runs `EXPLAIN` on every answering confounded float cell and
+  counts `__repark_normalize_zero__` per plan; `confounded-wrappers-head.jsonl` is its head leg (clause item 4).
+- [zero_side.py](zero_side.py), [zero_order.py](zero_order.py) — the side probes behind the moved facade pins
+  (`collect_set`, `countDistinct` over two columns, `dropDuplicates`, and `collect_set` by input order) on Spark and
+  RePark; `zero-side-legs.jsonl` holds their legs.
+- [schema_batch_repeat.py](schema_batch_repeat.py) — the 50-repeat `UPDATE-SCHEMA-BATCH-MISMATCH-1` probe for part 1:
+  part A's `<=>` statement and a key statement (`IN (SELECT …)`) per kind. Prepared; not yet run.
+
 Up: [../map.md](../map.md).

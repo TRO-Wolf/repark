@@ -4934,6 +4934,82 @@ still open is `isModifiable`.
 - **Rationale** — FIXED 2026-10-08 (card ZONE-HORIZON-RENDER-1, the C-2d fold 1 re-verify's S2
   finding). A silent wrong wall clock over a right instant. pins: zone-horizon-render-1/C-015
 
+### SIGNED-ZERO-KEYS-1 — flat FLOAT and DOUBLE keys treat both zeros and every NaN as one value — **FIXED 2026-11-12 (SIGNED-ZERO-NORMALIZE-1 part B part 1, branch `fix/signed-zero-normalize-1-part-b`, merge pending)**
+
+- **repark** — Before (main `276dc503`): every FLOAT and DOUBLE key compared by bit pattern (total order).
+  The affected keys were `GROUP BY` (grouping sets included), `DISTINCT` and `dropDuplicates`, join keys (null-aware
+  anti joins included), set operations, window `PARTITION BY` and `ORDER BY`, sorts, `IN` / `EXISTS` subqueries and
+  `MERGE … ON`. So `-0.0` and `0.0` were two keys, and a NaN with the sign bit or a payload was a key apart from the
+  canonical NaN. On the step-0 clause (1182 cells over the Spark SQL, `F.expr`, typed and native doors) the base
+  had 480 WRONG-READ, 82 WRONG-WRITE, 28 SIGN-ONLY+WRONG-READ and 18 ORDER-DIFFER cells. After: a last optimizer
+  rule, `signed_zero_keys`, wraps every float key position in `__repark_normalize_zero__`. That function passes
+  NULL, maps every NaN to the canonical positive NaN and `-0.0` to `0.0`, and is the identity otherwise. It runs
+  on the Spark door and the native door, under a door-internal policy that no `SET` reaches. Group, distinct and
+  set-operation outputs carry the normalised key (`0.0`), as Spark's do; every other stored value keeps its bits.
+  All 608 of those cells reach the truth; the 418 EQUAL controls do not move. The evidence is
+  `task/wo/signed-zero-normalize-1/evidence/part-b/after/after.md`. The declared residues are the three rows below.
+- **Release note (v1.5.7, ruling Q7)** — "A `MERGE` whose `ON` clause compares FLOAT or DOUBLE columns now
+  matches `-0.0` and `0.0` as one value. When both zeros in the source match one target row, the statement now
+  raises `MERGE_CARDINALITY_VIOLATION`, as Spark does; it used to update the row. A delete-only `MERGE` over the
+  same rows deletes and does not raise, as in Spark."
+- **Apache Spark** — the step-0 cells: Spark SQL semantics, over inline `VALUES` views for reads and one-file
+  Iceberg tables for writes, with Spark's `spark-sql` answer for the native rows.
+  *(oracle: recorded PySpark 4.1.2, 2026-11-12, `task/wo/signed-zero-normalize-1/evidence/part-b/step0/raw/spark-*.jsonl`.)*
+- **Pin** — `python/repark/tests/sql/test_signed_zero_keys_1.py::test_every_float_key_cell_reaches_the_spark_truth`
+  (780 cells, four doors) and `::test_a_set_on_either_door_cannot_turn_the_key_wrap_off`;
+  `crates/repark-core/src/session/df_guards/signed_zero/key_tests.rs::every_key_site_treats_both_zeros_and_every_nan_as_one_value_on_both_float_types`,
+  `::each_float_key_carries_one_wrapper_and_a_second_optimize_is_the_identity`,
+  `::prepare_then_execute_wraps_each_key_once`, `::no_provider_in_use_takes_a_wrapped_filter_as_exact`;
+  `python/repark/tests/parity/test_flat_matrix_cells.py` (the 28 floatkeys cells, out of `KNOWN_OPEN`).
+- **Rationale** — FIXED 2026-11-12 (owner ruling G 2026-11-08; part 1 of PR B, rulings 2026-11-11 Q3/Q4 and
+  2026-11-12 Q1–Q11). Float grouping and join keys are in the scoped v2 label (G3 of ICE-V2-FLAT-AWS-LABEL-1).
+
+### SIGNED-ZERO-KEYS-1-MINMAX — `min` / `max` over both zeros may return the other sign — **DECLARED 2026-11-08 (ruling G)**
+
+- **repark** — When the minimum or maximum of a FLOAT or DOUBLE column is a zero, RePark may return the other sign
+  than Spark: RePark orders `-0.0` below `0.0`. Over the four zeros `0.0, -0.0, 0.0, -0.0`,
+  `SELECT min(d), max(d)` answers `-0.0, 0.0` on the Spark SQL, typed and native doors (MM-1).
+- **Apache Spark** — Spark returns the first zero it meets: `0.0, 0.0` over the same rows. The two values are equal
+  under SQL comparison. *(oracle: recorded PySpark 4.1.2, 2026-11-12, step-0 cell MM-1.)*
+- **Pin** — `python/repark/tests/sql/test_signed_zero_keys_1.py::test_min_and_max_over_both_zeros_keep_the_declared_sign`.
+- **Rationale** — DECLARED by ruling G (2026-11-08: "min/max sign and zero tie order declared"). The answer differs
+  only in a zero's sign; a fix would need Spark's encounter order inside the aggregate.
+
+### SIGNED-ZERO-KEYS-1-TIES — `ORDER BY` ties between `-0.0` and `0.0` have no defined order — **DECLARED 2026-11-08 (ruling G)**
+
+- **repark** — `ORDER BY` on a FLOAT or DOUBLE key treats `-0.0` and `0.0` as equal. As with any tie, their
+  relative order is unspecified; add a tie-breaking key for a deterministic order. With a tie-breaker
+  (`ORDER BY d, id`, OB-1 and OB-3) the order is deterministic and equal to Spark's. Without one (OB-4) the
+  measured one-file order equals Spark's input order on every door, and nothing guarantees it.
+- **Apache Spark** — the same: the zeros are ties, in the order of the input, `0.0, -0.0, 0.0, -0.0` for OB-4.
+  *(oracle: recorded PySpark 4.1.2, 2026-11-12, step-0 cells OB-1, OB-3, OB-4.)*
+- **Pin** — `python/repark/tests/sql/test_signed_zero_keys_1.py::test_every_float_key_cell_reaches_the_spark_truth`
+  (the OB-1, OB-3 and OB-4 cells).
+- **Rationale** — DECLARED by ruling G (2026-11-08). A tie order is not a SQL guarantee on either engine.
+
+### SIGNED-ZERO-KEYS-1-NAAJ — `NOT IN (subquery)` over a float key: Spark's default plan keeps `-0.0` apart (`NAAJ-WRONG`) — **DECLARED 2026-11-12 (ruling Q1)**
+
+- **repark** — `d NOT IN (SELECT d FROM u)` compares with IEEE equality, so `-0.0` and `0.0` are one value; seat 2
+  wraps null-aware anti-join keys too. Against a subquery whose only zero is `-0.0`, the zero rows of `t` are
+  excluded and only id 6 is kept, on the Spark SQL and native doors, for FLOAT and DOUBLE (SQ-notin-ieee). An
+  `INSERT … SELECT … WHERE d NOT IN (…)` writes the same rows (WR-insert-notin-ieee).
+- **Apache Spark** — Spark 4.1.2's default plan for this predicate is a null-aware broadcast hash anti join. It
+  keeps `-0.0` distinct from `0.0` (`-0.0 NOT IN (0.0)` is true), so it keeps ids 1, 3 and 6 in that case (the
+  `NAAJ-WRONG` answer), whether broadcast is allowed or not. Every other Spark plan for the same predicate is IEEE:
+  with `spark.sql.optimizeNullAwareAntiJoin=false`, as `NOT EXISTS`, and as a literal `NOT IN`. The second witness
+  is the two-column form, `(d, k) NOT IN (SELECT d, k FROM u)`, where Spark compares IEEE and answers `[2]`; RePark
+  refuses that form on both doors ("Too many columns!"), a pre-existing over-refusal.
+  *(oracle: recorded PySpark 4.1.2, 2026-11-12, `task/wo/signed-zero-normalize-1/evidence/part-b/step0/raw/spark-naaj-check.jsonl`
+  and the item 1 addendum's N1 and N2 cells.)*
+- **Pin** — `python/repark/tests/sql/test_signed_zero_keys_1.py::test_every_float_key_cell_reaches_the_spark_truth`
+  (the SQ-notin-ieee cells);
+  `crates/repark-core/src/session/df_guards/signed_zero/key_tests.rs::every_key_site_treats_both_zeros_and_every_nan_as_one_value_on_both_float_types`
+  (the `NOT IN` case).
+- **Rationale** — DECLARED by ruling Q1 (owner, 2026-11-12, "Go with the defaults"): IEEE is the truth for
+  `NOT IN (subquery)`. A Spark answer that depends on the physical plan is not Spark SQL semantics, on the
+  `PRUNED-WRONG` precedent of ruling G. 16 cells that matched Spark's default plan on the base
+  (SQ-notin on both builds, WR-insert-notin on build `un`) now differ from it, by this ruling.
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`

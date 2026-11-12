@@ -134,6 +134,28 @@ def test_every_float_key_cell_reaches_the_spark_truth(
     assert not failures, "\n".join(failures[:25])
 
 
+@pytest.mark.parametrize("route", ("spark-sql", "typed", "native"))
+def test_min_and_max_over_both_zeros_keep_the_declared_sign(
+    route: str, request: pytest.FixtureRequest
+) -> None:
+    door = request.getfixturevalue("native" if route == "native" else "facade")
+    tag = "n" if route == "native" else "s"
+    table = f"{CATALOG}.{NAMESPACE}.t_{tag}"
+    text = f"SELECT min(d), max(d), min(f), max(f) FROM {table} WHERE id <= 4"
+    if route == "native":
+        rows = collect(repark.sql(text))
+    elif route == "spark-sql":
+        rows = collect(door.sql(text))
+    else:
+        frame = door.table(table).filter(functions.col("id") <= 4)
+        rows = collect(
+            frame.agg(
+                functions.min("d"), functions.max("d"), functions.min("f"), functions.max("f")
+            )
+        )
+    assert rows == [["-0.0", "0.0", "-0.0", "0.0"]]
+
+
 def test_the_pins_cover_the_moved_rows() -> None:
     assert {cell["route"] for cell in CELLS} == set(ROUTES)
     assert len(CELLS) == 780
