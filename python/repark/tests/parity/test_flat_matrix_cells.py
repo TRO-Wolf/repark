@@ -8,9 +8,12 @@ from typing import Any
 import pytest
 from _flat_matrix_cells import (
     COMBINATIONS,
+    FLOAT_SEED_T,
+    FLOAT_SEED_U,
     FOLDED_PREDICATES,
     GROUP_NAMES,
     KNOWN_OPEN,
+    NEGATIVE_ZERO,
     PREDICATES,
     SIGNED_ZERO_PR_A,
     SIGNED_ZERO_PR_B,
@@ -361,3 +364,9 @@ def test_dml_seats_compare_the_table_after_the_statement() -> None:
     assert cell.combo is not None
     assert committed_ids(cell.combo, entry) == [int(value) for value in entry["after_ids"] or []]
     assert committed_commits(cell.combo, entry) == entry["commits"]
+
+
+def test_the_float_seeds_store_a_negative_zero_through_a_cast() -> None:
+    for seed in (FLOAT_SEED_T, FLOAT_SEED_U):
+        assert any(NEGATIVE_ZERO in row for row in seed)
+        assert not any(", -0.0," in row for row in seed)
