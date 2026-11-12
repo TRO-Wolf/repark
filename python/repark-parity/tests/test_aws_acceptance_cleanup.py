@@ -26,10 +26,12 @@ from cleanup_stubs import (
         "testing_r1a1_acc_",
         "testing_r40079497082a1_u_",
         "testing_r0a1_x_",
+        "testing_r43100789993a1_fm_",
+        "testing_r43100789993a1_cf_",
     ],
 )
 def test_a_well_formed_run_and_leg_prefix_is_accepted(prefix: str) -> None:
-    """The three leg shapes the workflow and the local default produce validate."""
+    """The five leg shapes the workflow and the local default produce validate."""
     assert cleanup.validate_run_prefix(prefix) == prefix
 
 
