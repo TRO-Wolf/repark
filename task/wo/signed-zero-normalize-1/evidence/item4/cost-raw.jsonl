@@ -1,0 +1,12 @@
+{"answered": 173, "case": "a", "cells": 207, "label": "base", "seconds": 0.7984960477915592}
+{"answered": 188, "case": "a", "cells": 207, "label": "head", "seconds": 0.8189258188358508}
+{"case": "b", "columns": 300, "explains": 200, "label": "base", "seconds": 27.530053476977628}
+{"case": "b", "columns": 300, "explains": 200, "label": "head", "seconds": 29.29436897096457}
+{"answered": 173, "case": "a", "cells": 207, "label": "base", "seconds": 0.8122730838367715}
+{"answered": 188, "case": "a", "cells": 207, "label": "head", "seconds": 0.8014413666096516}
+{"case": "b", "columns": 300, "explains": 200, "label": "base", "seconds": 27.755898441013414}
+{"case": "b", "columns": 300, "explains": 200, "label": "head", "seconds": 29.050390299002174}
+{"answered": 173, "case": "a", "cells": 207, "label": "base", "seconds": 0.7785686667193659}
+{"answered": 188, "case": "a", "cells": 207, "label": "head", "seconds": 0.9189957159105688}
+{"case": "b", "columns": 300, "explains": 200, "label": "base", "seconds": 27.679720939020626}
+{"case": "b", "columns": 300, "explains": 200, "label": "head", "seconds": 30.838498138007708}

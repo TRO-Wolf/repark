@@ -96,7 +96,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   paid for by a second shed comment.
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** session build registers the `repark_text_csv` / `repark_text_json` sink formats instead of the retired `repark_write_format_text` UDF. **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
-  `Self::list_iceberg_table_names` for the live list path). **ICE-READ-PERF-0 (2026-09-19):**
+  `Self::list_iceberg_table_names` for the live list path). **SIGNED-ZERO-NORMALIZE-1:** `build`
+  calls `df_guards::finish_session_build` (dialect hook, then seat 1). **ICE-READ-PERF-0 (2026-09-19):**
   `register_catalog_spec` builds Glue and S3 Tables catalogs through
   `glue_catalog_counted` / `s3tables_catalog_counted` with the session's I/O counters
   (see `session/map.md`). **ICE-CATALOG-CACHE-1 (2026-09-19):**
@@ -127,15 +128,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `datafusion.*` key from the same map onto the `SessionConfig` via
   `apply_datafusion_config_keys` (P2G R2 — `DATAFUSION_CONFIG_PREFIX`; applied after the typed
   setters + core defaults so an explicit conf wins, before the extension hook; an unknown key is
-  an `Error::Config`, never silently inert — this is what makes
-  `datafusion.catalog.information_schema = true` real and Q8's `SHOW TABLES` / `DESCRIBE` /
+  an `Error::Config`, never silently inert — so `datafusion.catalog.information_schema = true`
+  is real and Q8's `SHOW TABLES` / `DESCRIBE` /
   `information_schema.*` live in BOTH SQL doors), carries the parsed `SourceSpec`s from a
   loaded `repark.toml` on `source_specs` (CFG-2 step 1 — one `Arc<SourceSpec>` per spec so
   the registry and the per-query registry snapshot clone atomics, not deep specs;
   `register_configured_sources` and the `sources()` / `source(name)` doors live in
-  `named_sources.rs`), carries the
-  **two DF-54.1 regression guards**
-  (`session/df_guards.rs`) at two different altitudes — a config default,
+  `named_sources.rs`), carries the **two DF-54.1 regression guards** (`session/df_guards.rs`) at
+  two altitudes — a config default,
   `optimizer.enable_physical_uncorrelated_scalar_subquery = false` (the 54.1 physical
   scalar-subquery path drops a top-level Sort), and, since DEFECT-2 2026-08-18, a **scoped
   optimizer rule**: DataFusion's rule list with `push_down_leaf_projections` wrapped so it
@@ -189,23 +189,19 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `with_session_owner` with the owner snapshotted from the process environment at build;
   the query path never reads the environment. `catalogs_snapshot` is `pub` so doors
   outside this crate can route over the session's registry.
-  **EAGER-BUDGET-1 step 1 (2026-09-13):** the file gained one `mod cache_budget;` line —
-  the D-2 retained-bytes accounting (`retained_cache_bytes` /
-  `distinct_buffer_bytes`) lives in `session/cache_budget.rs`, keeping this file under
-  the default ceiling at 988.
+  **EAGER-BUDGET-1 step 1 (2026-09-13):** one `mod cache_budget;` line: the D-2 retained-bytes
+  accounting (`retained_cache_bytes` / `distinct_buffer_bytes`) lives in
+  `session/cache_budget.rs`, keeping this file under the default ceiling at 988.
   **EAGER-BUDGET-1 step 2 (2026-09-13):** the D-1/D-3 incremental admission loop and the
   live-buffer seed (`live_cache_buffer_set`) live in `session/temp_views.rs` and
   `session/cache_budget.rs` — this file is unchanged.
   **S3-PATH-WRITE-1 round 2 (2026-09-28):** `read_json` resolves the S3 prefix
   once per call through `object_store_s3` (parquet and csv resolve inside their
   reader bodies, so this file grows by one line and stays under its ceiling).
-  **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** re-exports
-  `repark_common::java_case::{fold_a_equal, fold_b_equal}` for the binding
-  (the Python crate reaches the tier-0 folds only through here).
-  **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** `fold_a_equal` is
-  `string_lower_equal` (length plus `String.toLowerCase`).
-  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** declares
-  `session/text_write_format.rs` and registers its UDF at session build.
+  **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** re-exports `repark_common::java_case::{fold_a_equal, fold_b_equal}`
+  for the binding (the Python crate reaches the tier-0 folds only through here).
+  **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** `fold_a_equal` is `string_lower_equal` (length plus `String.toLowerCase`).
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** declares `session/text_write_format.rs` and registers its UDF at session build.
   **SOURCE-URL-REDACT-1 (2026-10-06):** the session stores the raw conf rows (`raw_conf_dump_rows`) so S3 endpoint
   resolution reads the configured endpoint, and `conf_dump()` returns them through
   `redact_dump_rows`.
@@ -315,13 +311,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   being a missing table; then `newest_from_hint` walks `v<N+1>`, ... to the first gap, the Java
   `int` bound or `HINT_WALK_LIMIT` (10,000). A `metadata/` dir with no Java candidate keeps the
   older leading-integer listing over `NNNNN-<uuid>` names (`latest_metadata_location`). Lower-case `file://<authority>` and
-  `file:<relative>` arguments
-  refuse Spark's texts before any I/O, and `file:/abs`-style spellings read as
+  `file:<relative>` arguments refuse Spark's texts before any I/O, and `file:/abs`-style spellings read as
   `file:///abs`. A location with no resolvable metadata raises `Error::Analysis` naming the
-  supplied path. The `FileIO` comes from
-  `repark_iceberg::catalog::file_io_for_location` on the normalised spelling
-  (scheme-selected local fs / s3 / s3a),
-  the read-only static table feeds `IcebergStaticTableProvider::try_new_from_table`, and
+  supplied path. The `FileIO` comes from `repark_iceberg::catalog::file_io_for_location` on the
+  normalised spelling (scheme-selected local fs / s3 / s3a), the read-only static table feeds `IcebergStaticTableProvider::try_new_from_table`, and
   the provider goes straight to `SessionContext::read_table` — no registration is left
   behind and no time-travel or incremental option reaches the path route.
   **WO U9-TYPES-1 round-2 fixer (2026-09-26):** the static provider sets the fork's `with_uuid_as_string(true)`
@@ -451,7 +444,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the build side) plus the wrapper exec `NljBuildSideExec`. The rule wraps each
   `NestedLoopJoinExec` left child once (idempotent); the wrapper's `execute` runs a
   `reset_plan_states` clone of its child, so the OOM fallback's second `execute(0)` meets
-  fresh `RepartitionExec` channels and really spills instead of hitting
+  fresh `RepartitionExec` channels and spills instead of hitting
   `expect("partition not used yet")` and poisoning the shared once-future. Properties,
   schema, partitioning, fetch and limit-pushdown support delegate to the inner plan;
   `metrics` is `None` (per-execute clones own theirs). A child count other than one is an
@@ -580,7 +573,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   segment names a directory lists one leaf level through an iterative walk.
   pins: io-text-1/T-5, U-5, U-6
   **IO-ORC-1 (2026-09-16):** adds `match_file_name_glob` (one-segment match for the
-  ORC `pathGlobFilter`); the matcher itself is unchanged.
+  ORC `pathGlobFilter`); the matcher is unchanged.
 - `text_io.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` writer.
   **Follow-up (2026-09-15):** the writer streams `execute_stream` batches into
   sequential `part-*.txt` (NULL rows write empty lines, every row terminated; an empty
@@ -741,7 +734,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the loop ends when a miss repeats or a fold changes nothing. An outer spelling is never
   rewritten into an inner scope. The ambiguity sentence carries one option per matching field
   in the requested spelling, qualified by the relation's written parts, `SQLSTATE: 42704`
-  (Q-21b-1, Q-21b-2). The fold itself lives in `column_resolution/fold.rs`.
+  (Q-21b-1, Q-21b-2). The fold lives in `column_resolution/fold.rs`.
   Round 21b step 4 (V-04): JOIN USING columns fold inside every query the visitor reaches
   (INSERT … SELECT, CTAS, subqueries, CTE bodies), each against its own SELECT's relations;
   identical stored spellings across the joined relations fold to that spelling.
@@ -778,7 +771,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **WO CASESENS-1 slice 1 (2026-09-27):** `finish_with_display` respells the
   folded statement's inner scopes (`column_resolution/inner_scopes.rs`) and
   re-plans once on change, falling back to the pre-respell plan when the
-  respelled statement fails (ledger D1); the repair loop itself is untouched.
+  respelled statement fails (ledger D1); the repair loop is untouched.
   **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):**
   `rewrite_fragment_case` re-renders through
   `repark_iceberg::write::sql_text::render_for_reparse` so string values
@@ -990,11 +983,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   EXPLAIN-DML-WRITE-1). The ANSI door and the shared function are unchanged. *(Superseded
   2026-10-17 by ruling 135, below: a plain `EXPLAIN` is no longer refused.)*
   **Owner ruling 135 (a), 2026-10-17:** `refuse_dml_subquery_where` runs the shared refusal,
-  with no exemption, on every statement that
-  `repark_iceberg::write::statement_writes::executed_writes` answers, the walk the Spark SQL
+  with no exemption, on every statement `repark_iceberg::write::statement_writes::executed_writes`
+  answers, the walk the Spark SQL
   router uses: through `PREPARE`, through `EXPLAIN ANALYZE`, and every `UPDATE` and `DELETE` in
-  the statement. DataFusion parses a leading
-  `EXPLAIN` itself (`DFStatement::Explain`), so the function peels those layers first under the
+  the statement. DataFusion parses a leading `EXPLAIN` itself (`DFStatement::Explain`), so the function peels those layers first under the
   walk's rule: `EXPLAIN ANALYZE` reaches the statement it wraps, a plain `EXPLAIN` executes
   nothing and is not refused. `explained_statement` is gone. So `PREPARE p AS DELETE … WHERE id
   IN (SELECT …)`, which `EXECUTE p` used to run, refuses at `PREPARE`, alone, parameterised or
@@ -1209,13 +1201,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   relation, and every other shape keeps the unresolved-routine answer —
   including a non-query statement, which returns `Ok(None)` rather than the
   `[ICE-MC-1]` refusal when only this trigger fired. The wildcard path's
-  `sole_rewritten_relation` keeps main's alias fallback untouched — the two
-  helpers differ on purpose. **IPI-20-R4 (2026-09-23):** collection itself is
+  `sole_rewritten_relation` keeps main's alias fallback untouched — the two helpers differ on purpose. **IPI-20-R4 (2026-09-23):** collection itself is
   CTE-aware — every `With` clause in the statement (nested ones included)
   contributes its alias names, and a one-part `TableFactor::Table` matching a
   CTE name on the planner's own fold (unquoted folds case-insensitively,
-  quoted stays exact) is never treated as the physical table and falls
-  through unrewritten; qualified names are never CTE references and stay
+  quoted stays exact) is never the physical table and falls through unrewritten; qualified names are never CTE references and stay
   collected.
   **WO-R3 (2026-09-22):** `_partition` joins the served set as a NULLABLE union struct.
   **mcdel-r1 (2026-09-23):** `_deleted` joins the served set — the projected name
@@ -1436,7 +1426,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   name refuses loud (`Error::Analysis` → facade `AnalysisException`, mirroring PySpark's class):
   `createOrReplaceTempView("ice.sales.v")` used to forward the raw name to `register_table`,
   which resolved into the Iceberg catalog provider and PERSISTED a real table — a `tightenNulls`
-  `required: true` payload included, the very thing `pre_execute.rs` refuses on the SQL doors
+  `required: true` payload included, what `pre_execute.rs` refuses on the SQL doors
   (MEASURED, round-6 ledger). A one-part name is pinned `Full` against the home, so
   `SET datafusion.catalog.default_catalog = <iceberg>` cannot move where a temp view registers.
   The home is a NAME **and** the schema PROVIDER that sat under it at build (`assert_home_intact`,

@@ -5,7 +5,7 @@ use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, Result, ScalarValue};
 use datafusion::error::DataFusionError;
-use datafusion::logical_expr::expr::InList;
+use datafusion::logical_expr::expr::{Case, InList};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
     Between, BinaryExpr, Cast, Expr, ExprSchemable, LogicalPlan, LogicalPlanBuilder, Operator,
@@ -268,8 +268,48 @@ fn widen_decimal_against_float(expr: Expr, schema: &DFSchema) -> Transformed<Exp
         }
         Expr::InList(in_list) => widen_in_list(in_list, schema),
         Expr::Between(between) => widen_between(between, schema),
+        Expr::Case(case) => widen_case(case, schema),
         other => Transformed::no(other),
     }
+}
+
+fn widen_case(case: Case, schema: &DFSchema) -> Transformed<Expr> {
+    let float_operand = case.expr.as_ref().is_some_and(|operand| {
+        operand
+            .get_type(schema)
+            .is_ok_and(|data_type| is_float_type(&data_type))
+    });
+    if !float_operand
+        || !case
+            .when_then_expr
+            .iter()
+            .any(|(when, _)| is_decimal_literal(when))
+    {
+        return Transformed::no(Expr::Case(case));
+    }
+    let Case {
+        expr,
+        when_then_expr,
+        else_expr,
+    } = case;
+    let when_then_expr = when_then_expr
+        .into_iter()
+        .map(|(when, then)| {
+            if is_decimal_literal(&when) {
+                (
+                    Box::new(Expr::Cast(Cast::new(when, DataType::Float64))),
+                    then,
+                )
+            } else {
+                (when, then)
+            }
+        })
+        .collect();
+    Transformed::yes(Expr::Case(Case {
+        expr,
+        when_then_expr,
+        else_expr,
+    }))
 }
 
 fn is_float_comparison(operator: Operator) -> bool {
@@ -281,6 +321,8 @@ fn is_float_comparison(operator: Operator) -> bool {
             | Operator::LtEq
             | Operator::Gt
             | Operator::GtEq
+            | Operator::IsDistinctFrom
+            | Operator::IsNotDistinctFrom
     )
 }
 
@@ -829,6 +871,22 @@ mod tests {
                 "SELECT id FROM v WHERE f BETWEEN 0.0 AND 1.5",
                 "v.f BETWEEN CAST(Decimal128(Some(0),1,1) AS Float64) AND CAST(Decimal128(Some(15),2,1) AS Float64)",
             ),
+            (
+                "SELECT id FROM v WHERE d <=> 0.0",
+                "v.d IS NOT DISTINCT FROM CAST(Decimal128(Some(0),1,1) AS Float64)",
+            ),
+            (
+                "SELECT id FROM v WHERE d IS DISTINCT FROM 1.5",
+                "v.d IS DISTINCT FROM CAST(Decimal128(Some(15),2,1) AS Float64)",
+            ),
+            (
+                "SELECT CASE d WHEN 0.0 THEN 'z' WHEN id THEN 'i' END FROM v",
+                "CASE v.d WHEN CAST(Decimal128(Some(0),1,1) AS Float64) THEN Utf8(\"z\") WHEN v.id THEN",
+            ),
+            (
+                "SELECT CASE f WHEN -1.5 THEN 'n' END FROM v",
+                "CASE v.f WHEN CAST(Decimal128(Some(-15),2,1) AS Float64) THEN",
+            ),
         ];
         for (sql, needle) in cases {
             let rendered = analyzed_render(&ctx, sql).await;
@@ -846,6 +904,8 @@ mod tests {
             "SELECT id FROM v WHERE dec > 10",
             "SELECT id FROM v WHERE dec IN (0.0, 1.00)",
             "SELECT id FROM v WHERE id = 5",
+            "SELECT CASE dec WHEN 0.0 THEN 'z' END FROM v",
+            "SELECT CASE WHEN dec = 0.0 THEN 'z' END FROM v",
             "SELECT 0.0 AS v",
         ] {
             let rendered = analyzed_render(&ctx, sql).await;

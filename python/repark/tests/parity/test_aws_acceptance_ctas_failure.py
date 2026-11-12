@@ -40,7 +40,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 CHILD_CODE = (
-    "import sys; sys.path.insert(0, sys.argv[1]); "
+    "import sys, pathlib; sys.path[:0] = [sys.argv[1], str(pathlib.Path(sys.argv[1]).parent)]; "
     "import test_aws_acceptance_ctas_failure as m; m.child_main(sys.argv[2], sys.argv[3])"
 )
 
@@ -78,7 +78,10 @@ def _statement(cell: str, src: str, target: str) -> str:
             f"CREATE OR REPLACE TABLE {target} AS SELECT id, CAST('1' AS INT) AS n FROM {src} "
             "WHERE id BETWEEN 2 AND 6"
         ),
-        "K": (f"CREATE TABLE {target} AS SELECT id, CAST(s AS INT) AS n FROM {src} WHERE s = '1'"),
+        "K": (
+            f"CREATE TABLE {target} AS SELECT a.id, CAST(a.s AS INT) AS n "
+            f"FROM {src} a CROSS JOIN {src} b WHERE a.s = '1' AND b.id <= 2000"
+        ),
     }
     return texts[cell]
 
@@ -135,8 +138,8 @@ def _table_names(kind: str, cell: str) -> tuple[str, str, str]:
 
 
 def _listed(spark: Any, kind: str, short: str) -> bool:
-    arrow = spark.sql(f"SHOW TABLES IN {_catalog_name(kind)}.{ACCEPTANCE_NAMESPACE}").to_arrow()
-    return short in {str(name) for name in arrow.column("tableName").to_pylist()}
+    rows = spark.sql(f"SHOW TABLES IN {_catalog_name(kind)}.{ACCEPTANCE_NAMESPACE}").collect()
+    return short in {str(row["tableName"]) for row in rows}
 
 
 def _read(spark: Any, table: str) -> dict[str, Any]:

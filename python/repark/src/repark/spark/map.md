@@ -40,39 +40,32 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   descriptor encode/decode, tree walks, and the container-token fallbacks for
   foreign `DataType` subtypes. Class references resolve lazily so `types.py` keeps
   a one-directional import.
-  **FACADE-4 step-1 remediation (2026-09-14, P1-DTYPES):** atomic token answers are
-  Python-side constants/parameter derivations byte-identical to the Rust table
-  (pinned in `test_facade_4_census_pins.py`); nested trees compose over them in
-  Python because a per-column descriptor FFI (~15 µs for nested3's `mid`) cannot
-  meet the +5 % `dtypes` bar.
-  P2-DICT follow-through: the descriptor decode caches its kind→class and
-  class→head maps and the `types` module handle — the first landing rebuilt a
-  19-row map per recursive node and re-imported `types` per call (~30 µs on a
-  7-node nested decode, regressing `df.schema` +50 %).
-  **FACADE-4 step-1 remediation round 2 (2026-09-14):** the row table grows to
-  five per-class answers (descriptor head, `simpleString`, `_engine_type`, SQL
-  marker, DDL marker) resolved by an MRO scan so pass-through subclasses keep
-  the base answer (`_inherited_type_name` reproduces the dynamic
-  `type(self).typeName()` fallback); `_leaf_ddl` dispatches nested DDL leaves
-  the same way. `_parse_datatype_string` keeps a Python
-  residue (`_parse_datatype_string_python` + `_parse_field_list`) for integer
-  parameters beyond i64 and non-printable text whose refusal `repr` bytes
-  differ from Rust's; `_native_function` caches lazy native lookups.
+  **FACADE-4 step-1 remediation (2026-09-14, P1-DTYPES):** atomic token answers are Python-side
+  constants/parameter derivations byte-identical to the Rust table (pinned in
+  `test_facade_4_census_pins.py`); nested trees compose over them in Python because a per-column
+  descriptor FFI (~15 µs for nested3's `mid`) cannot meet the +5 % `dtypes` bar. P2-DICT
+  follow-through: the descriptor decode caches its kind→class and class→head maps and the `types`
+  module handle — the first landing rebuilt a 19-row map per recursive node and re-imported `types`
+  per call (~30 µs on a 7-node nested decode, regressing `df.schema` +50 %).
+  **FACADE-4 step-1 remediation round 2 (2026-09-14):** the row table grows to five per-class
+  answers (descriptor head, `simpleString`, `_engine_type`, SQL marker, DDL marker) resolved by an
+  MRO scan so pass-through subclasses keep the base answer (`_inherited_type_name` reproduces the
+  dynamic `type(self).typeName()` fallback); `_leaf_ddl` dispatches nested DDL leaves the same way.
+  `_parse_datatype_string` keeps a Python residue (`_parse_datatype_string_python` +
+  `_parse_field_list`) for integer parameters beyond i64 and non-printable text whose refusal `repr`
+  bytes differ from Rust's; `_native_function` caches lazy native lookups.
   **Round 2 (PY-P2-002):** `_descriptor_to_datatype` decodes the tagged-tuple
   wire shape (`("kind", …)`) the bridge now emits — positional indexing, no
   per-node dict lookups.
-  **Round 4 (2026-09-14, L-008/L-009):** base answers each surface with a
-  different resolution — MRO for `simpleString`-style answers, an
-  integer-first `isinstance` order for Arrow and SQL markers, and a
-  string-first order for DDL. `_arrow_order`/`_sql_order`/`_ddl_order` cache
-  the three orders; `_primary_class` picks the first matching class in an
-  order (exact tabled classes and exact containers short-circuit);
-  `_atomic_token`'s `order` parameter switches its subclass scan from MRO to
-  the surface order; `_datatype_to_descriptor` propagates `None` upward so
-  unknown subtrees reach the Python fallbacks in one walk, and struct members
-  build through `_field_descriptor`. `_leaf_ddl`/`_ddl_token_python` keep the
-  DDL fallback on `data_type.simpleString().upper()` so `simpleString`
-  overrides (intervals and every other leaf) survive nested.
+  **Round 4 (2026-09-14, L-008/L-009):** base answers each surface with a different resolution — MRO
+  for `simpleString`-style answers, an integer-first `isinstance` order for Arrow and SQL markers,
+  and a string-first order for DDL. `_arrow_order`/`_sql_order`/`_ddl_order` cache the three orders;
+  `_primary_class` picks the first matching class in an order (exact tabled classes and exact
+  containers short-circuit); `_atomic_token`'s `order` parameter switches its subclass scan from MRO
+  to the surface order; `_datatype_to_descriptor` propagates `None` upward so unknown subtrees reach
+  the Python fallbacks in one walk, and struct members build through `_field_descriptor`.
+  `_leaf_ddl`/`_ddl_token_python` keep the DDL fallback on `data_type.simpleString().upper()` so
+  `simpleString` overrides (intervals and every other leaf) survive nested.
   **Round 5 (2026-09-14, L-011):** the `isinstance(StructField)` arm is deleted
   — a field is encoded only from `StructType.fields` through
   `_field_descriptor`, so a `Left+StructField` class built without `.dataType`
@@ -148,18 +141,16 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `_native.namespace_metadata` instead of parsing the display-masked `DESCRIBE NAMESPACE`.
   **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 2 (2026-10-29):** `tableExists` quotes a one-part name only when the caller quoted it (an unquoted non-ASCII name stays an error, as in Spark), and `dropTempView` passes the literal name, quoted, so it matches only the folded literal as Spark does (C-021).
 - `catalog_surface.py` — **IDENT-DIALECT-1/1B (2026-11-03):** the identifier grammar runs first in `_resolve_table_identity` and `create_table`. **CATALOG-SURFACE-1 (2026-09-14):** the thirteen-name second
-  half of the `Catalog` surface — `getTable` / `listColumns` / `listFunctions` /
-  `getFunction` metadata (DESCRIBE + SHOW PARTITIONS + the `repark.spark.functions`
-  export table), the `cacheTable` / `isCached` / `uncacheTable` trio over EAGER-OWN-1
-  cache handles keyed by resolved table identity on the session's alive token,
-  `createTable` / `createExternalTable` through the existing CREATE TABLE path
-  (non-`iceberg` source and `path=` share the EX-IO-6 refusal), and the maintenance
-  no-ops (`dropGlobalTempView` False while EX-DF-2 stands, `recoverPartitions` None —
-  §5 CAT-RECOVER-1, `refreshTable` via `refresh_catalog_provider`, `refreshByPath`
-  None). `ReparkSession.table` delegates to `catalog_surface.session_table`, which
-  resolves the name temp-view-first and scans the held cache view when the identity
-  is catalog-cached; `Catalog.clearCache` and
-  `Catalog.uncacheTable` release entries from the same registry.
+  half of the `Catalog` surface — `getTable` / `listColumns` / `listFunctions` / `getFunction`
+  metadata (DESCRIBE + SHOW PARTITIONS + the `repark.spark.functions` export table), the
+  `cacheTable` / `isCached` / `uncacheTable` trio over EAGER-OWN-1 cache handles keyed by resolved
+  table identity on the session's alive token, `createTable` / `createExternalTable` through the
+  existing CREATE TABLE path (non-`iceberg` source and `path=` share the EX-IO-6 refusal), and the
+  maintenance no-ops (`dropGlobalTempView` False while EX-DF-2 stands, `recoverPartitions` None — §5
+  CAT-RECOVER-1, `refreshTable` via `refresh_catalog_provider`, `refreshByPath` None).
+  `ReparkSession.table` delegates to `catalog_surface.session_table`, which resolves the name
+  temp-view-first and scans the held cache view when the identity is catalog-cached;
+  `Catalog.clearCache` and `Catalog.uncacheTable` release entries from the same registry.
   **CATALOG-SURFACE-1 critic round 1 (2026-09-14, L-001..L-007 / R-6/R-7):** each
   held cache entry stores an identity token — the Iceberg `current-snapshot-id`
   from `DESCRIBE TABLE EXTENDED`'s `Table Properties` row for a table, the
@@ -169,22 +160,18 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   materialize path notes the same baseline on identity-mapped frames via
   `cache_handle.bind_registered_view`; `create_or_replace_temp_view` registers
   through `_register_temp_view` so replacements bump the view token.
-  **Fold SM-2c C-3 (2026-10-06):** `_register_temp_view` renames the registered
-  frame's output fields to the display names when they are exactly unique
-  (`writer_layout._rename_to_unique_display_names`), so a dropped-side twin
-  engine name never reaches the view; EXPLAIN opts out with
-  `rename_fields=False` because the plan text must show the true engine
-  plan. Every
-  raised `AnalysisException` carries its Spark errorClass through the
-  `_integral` attach helpers (`getCondition`). `Table Properties` parses as
-  comma-joined `k=v` with `=`-less fragments folded into the previous value
-  (comments with `,` / `]` round-trip), `# Partitioning` transform rows map to
-  their source columns (`bucket`/`truncate`/time transforms included), while
-  `# Partition Information` identity rows after the `# col_name` sub-header name
-  their columns directly, and
-  `createTable` DDL spells arrays `ARRAY<INT>` recursively plus `NOT NULL`
-  (**FNP-4B round 7 (2026-09-15):** the one-line R-16b-21 grant; nothing else in
-  this file changed). pins: catalog-surface-1/C-001…C-006, C-009
+  **Fold SM-2c C-3 (2026-10-06):** `_register_temp_view` renames the registered frame's output
+  fields to the display names when they are exactly unique
+  (`writer_layout._rename_to_unique_display_names`), so a dropped-side twin engine name never
+  reaches the view; EXPLAIN opts out with `rename_fields=False` because the plan text must show the
+  true engine plan. Every raised `AnalysisException` carries its Spark errorClass through the
+  `_integral` attach helpers (`getCondition`). `Table Properties` parses as comma-joined `k=v` with
+  `=`-less fragments folded into the previous value (comments with `,` / `]` round-trip), `#
+  Partitioning` transform rows map to their source columns (`bucket`/`truncate`/time transforms
+  included), while `# Partition Information` identity rows after the `# col_name` sub-header name
+  their columns directly, and `createTable` DDL spells arrays `ARRAY<INT>` recursively plus `NOT
+  NULL` (**FNP-4B round 7 (2026-09-15):** the one-line R-16b-21 grant; nothing else in this file
+  changed). pins: catalog-surface-1/C-001…C-006, C-009
   **C1 SHOW CREATE (2026-09-23):** `_table_comment` reads the `Comment` row of the
   `# Detailed Table Information` block (Spark's measured spelling) — the shared
   Spark-visible `Table Properties` list no longer carries the reserved `comment` key.
@@ -290,23 +277,21 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   the `repark.attr` key from every top-level Arrow field (Tables and RecordBatches;
   zero-copy when absent), called from `DataFrame._apply_export_display_names`.
   **ATTR-ID-1 S3a (2026-09-30):** the `select` family's one resolve rule lives here.
-  `_bind_resolved_name(frame, written)` parses the written name (backtick-aware split;
-  unparsable text and `*` fall back to `_bind_schema_column`), stamps on read, and
-  resolves under the live `session_case_sensitive`: one hit binds the engine field at
-  that position with the written spelling; a folded ambiguous name with one exact
-  spelling present births an id-less written ref (V-5; S3a bound that position
-  inline); several exact spellings raise the old whole-name
-  `AMBIGUOUS_REFERENCE` inline; a quoted spelling delegates to `_bind_schema_column`
-  (the old path matches the raw written text, quotes intact); a pure folded ambiguous
-  name raises Spark's `AMBIGUOUS_REFERENCE` echoing the written-case candidates; a
-  miss raises `UNRESOLVED_COLUMN.WITH_SUGGESTION` with the folded candidates.
-  Non-relation frames and display/engine overlays delegate unchanged. Unqualified hits
-  come from `_unqualified_candidates` (Python `casefold`, exact-first) grouped by held
-  id in `_group_candidates` — the native rule folds ASCII-only, which the first S0
-  replay caught on 109 unicode cells. One exact hit with no folded rival binds without
-  reading the session rule; the rule, the relation check and the id-loudness check run
-  only off that path, so the common bind costs what the old one did.
-  Qualified names still call native `resolve_display_name` for the relation narrowing.
+  `_bind_resolved_name(frame, written)` parses the written name (backtick-aware split; unparsable
+  text and `*` fall back to `_bind_schema_column`), stamps on read, and resolves under the live
+  `session_case_sensitive`: one hit binds the engine field at that position with the written
+  spelling; a folded ambiguous name with one exact spelling present births an id-less written ref
+  (V-5; S3a bound that position inline); several exact spellings raise the old whole-name
+  `AMBIGUOUS_REFERENCE` inline; a quoted spelling delegates to `_bind_schema_column` (the old path
+  matches the raw written text, quotes intact); a pure folded ambiguous name raises Spark's
+  `AMBIGUOUS_REFERENCE` echoing the written-case candidates; a miss raises
+  `UNRESOLVED_COLUMN.WITH_SUGGESTION` with the folded candidates. Non-relation frames and
+  display/engine overlays delegate unchanged. Unqualified hits come from `_unqualified_candidates`
+  (Python `casefold`, exact-first) grouped by held id in `_group_candidates` — the native rule folds
+  ASCII-only, which the first S0 replay caught on 109 unicode cells. One exact hit with no folded
+  rival binds without reading the session rule; the rule, the relation check and the id-loudness
+  check run only off that path, so the common bind costs what the old one did. Qualified names still
+  call native `resolve_display_name` for the relation narrowing.
   **ATTR-ID-1 V-5 (2026-10-02):** a folded-ambiguous name with one exact spelling
   no longer binds that twin's id; it births an id-less written-ref `Column`
   (exact-engine spelling, birth frame kept), so the engine refuses exactly as
@@ -321,39 +306,34 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   qualifier while `spark_display`/`projection_name` stay bare. Held names, not
   plan qualifiers, so a USING kept key shows the written side, never the
   internal join qualifier. Unqualified binds leave it `None`.
-  **Fold SM-2 R6 (2026-10-06):** the qualified USING-key chokes in the bind
-  path: `_bind_resolved_name` and `_quote_filter_sql_identifiers` call into
-  `qualified_names` before resolving, so refused side-key references fail
-  with the explicit unsupported error instead of binding the merged key.
-  `_bind_stable_id_column` rebinds a parent Column by `_attr_id` to the first held
-  position through `attribute_column`, but only across plans (a same-frame bind stays
-  the written ref, so the engine shapes the refusal) and only onto a unique engine
-  field (a marked unqualified ref over duplicate engine names dies bare in DataFusion
-  analysis instead of the shaped hook refusal — 330 first-replay cells). An id miss
-  returns the column unchanged. `_rebind_stable_name_column` tries the id bind first,
-  then the old stable-name path over the new resolve rule (a refusal falls through to
-  the engine). `_column_of` is the same funnel over Columns and strings.
-  No docstrings: the lane's no-comments ruling covers new private helpers; the
-  contract lives here. Pins: `python/repark/tests/resolution/test_attr_id_1_s3a.py`.
-  **ATTR-ID-1 S3b (2026-10-01):** the filter/sort family's one resolve rule lives
-  here too. `_rebind_free_names` funnels a filter/sort `Column` through native
-  `bind_free_names` (stamping on read, under the live session rule; a frame with
-  unicode-folded rivals keeps the legacy path, since the native rule folds
-  ASCII-only). `_bind_sort_key` binds strings through `_resolve_sort_name` and
-  parent Columns by id first (`_bind_stable_id_column`), then by stable name
-  over the same rule, then an aggregate display rebind, else the free-name
-  funnel: one id binds the engine field, several bind the oldest on a Project
-  child (`sort_child_shape`) and refuse `UNRESOLVED_COLUMN` elsewhere, and a
-  miss skips to the join grandchild (`grandchild_key_status`) before refusing.
-  `_quote_filter_sql_identifiers` keeps the old parsing (quoted-span
-  protection, the function-call lookahead) and binds each bare token through
-  `_bind_filter_token`: a literal keyword (`_SQL_LITERAL_KEYWORDS`, re-homed
-  from `dataframe/core.py`) never binds, one id quotes the engine field, several
-  raise the old `AMBIGUOUS_REFERENCE` text listing the actual display spellings,
-  and a miss or a non-unique qualified engine name stays for the engine. No
-  exact-preference on either door: an exact spelling among folded rivals
-  refuses, as live Spark does. No docstrings on the new private helpers; the
-  contract lives here. Pins: `python/repark/tests/resolution/test_attr_id_1_s3b.py`.
+  **Fold SM-2 R6 (2026-10-06):** the qualified USING-key chokes in the bind path:
+  `_bind_resolved_name` and `_quote_filter_sql_identifiers` call into `qualified_names` before
+  resolving, so refused side-key references fail with the explicit unsupported error instead of
+  binding the merged key. `_bind_stable_id_column` rebinds a parent Column by `_attr_id` to the
+  first held position through `attribute_column`, but only across plans (a same-frame bind stays the
+  written ref, so the engine shapes the refusal) and only onto a unique engine field (a marked
+  unqualified ref over duplicate engine names dies bare in DataFusion analysis instead of the shaped
+  hook refusal — 330 first-replay cells). An id miss returns the column unchanged.
+  `_rebind_stable_name_column` tries the id bind first, then the old stable-name path over the new
+  resolve rule (a refusal falls through to the engine). `_column_of` is the same funnel over Columns
+  and strings. No docstrings: the lane's no-comments ruling covers new private helpers; the contract
+  lives here. Pins: `python/repark/tests/resolution/test_attr_id_1_s3a.py`.
+  **ATTR-ID-1 S3b (2026-10-01):** the filter/sort family's one resolve rule lives here too.
+  `_rebind_free_names` funnels a filter/sort `Column` through native `bind_free_names` (stamping on
+  read, under the live session rule; a frame with unicode-folded rivals keeps the legacy path, since
+  the native rule folds ASCII-only). `_bind_sort_key` binds strings through `_resolve_sort_name` and
+  parent Columns by id first (`_bind_stable_id_column`), then by stable name over the same rule,
+  then an aggregate display rebind, else the free-name funnel: one id binds the engine field,
+  several bind the oldest on a Project child (`sort_child_shape`) and refuse `UNRESOLVED_COLUMN`
+  elsewhere, and a miss skips to the join grandchild (`grandchild_key_status`) before refusing.
+  `_quote_filter_sql_identifiers` keeps the old parsing (quoted-span protection, the function-call
+  lookahead) and binds each bare token through `_bind_filter_token`: a literal keyword
+  (`_SQL_LITERAL_KEYWORDS`, re-homed from `dataframe/core.py`) never binds, one id quotes the engine
+  field, several raise the old `AMBIGUOUS_REFERENCE` text listing the actual display spellings, and
+  a miss or a non-unique qualified engine name stays for the engine. No exact-preference on either
+  door: an exact spelling among folded rivals refuses, as live Spark does. No docstrings on the new
+  private helpers; the contract lives here. Pins:
+  `python/repark/tests/resolution/test_attr_id_1_s3b.py`.
   **ATTR-ID-1 S3b H-1 (2026-10-01):** the §9e rulings. A one-id multi-hit
   token refuses when `join_dup_below_wrappers` sees a join below (the
   `SubqueryAlias` dedup hides the join but preserves ids) and the echo lists
@@ -363,67 +343,56 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   else takes main's bare-ident path. The quoter machinery moves to
   `filter_quote.py` (this module keeps the `_quote_filter_sql_identifiers`
   entry): 1209 → 871 lines. Pins: `python/repark/tests/resolution/test_attr_id_1_s3b.py`.
-  **ATTR-ID-1 S3c (2026-10-01):** `_live_rule_hits` is the shared hit
-  computation the `withColumn(s)`/`withColumn(s)Renamed` family binds through
-  (exact hits under the exact rule; insensitive adds `_java_case_equal`, which
-  reproduces Java `String.equalsIgnoreCase` — same length plus per-character
-  upper/lower/equal, with U+0130 read as `I` because Python's full case mapping
-  splits it where Java's char mapping does not; literal names, no qualifier
-  split). Python `casefold` is wrong here: it matches `ß`/`SS`, which Spark
-  misses, and it misses `İ`/`i`, which Spark matches (live-Spark s3c5 probes).
-  `_rebind_stable_name_column` now re-raises an unqualified
-  `AMBIGUOUS_REFERENCE` instead of falling through to a bare engine error;
-  misses and qualified names still fall through (S3e owns qualified). Pins:
+  **ATTR-ID-1 S3c (2026-10-01):** `_live_rule_hits` is the shared hit computation the
+  `withColumn(s)`/`withColumn(s)Renamed` family binds through (exact hits under the exact rule;
+  insensitive adds `_java_case_equal`, which reproduces Java `String.equalsIgnoreCase` — same length
+  plus per-character upper/lower/equal, with U+0130 read as `I` because Python's full case mapping
+  splits it where Java's char mapping does not; literal names, no qualifier split). Python
+  `casefold` is wrong here: it matches `ß`/`SS`, which Spark misses, and it misses `İ`/`i`, which
+  Spark matches (live-Spark s3c5 probes). `_rebind_stable_name_column` now re-raises an unqualified
+  `AMBIGUOUS_REFERENCE` instead of falling through to a bare engine error; misses and qualified
+  names still fall through (S3e owns qualified). Pins:
   `python/repark/tests/resolution/test_attr_id_1_s3c.py`.
   **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** `_java_case_equal` is deleted;
   insensitive hits come from the native `java_fold_hits` mode `b` (same
   contract, exact Java tables). The 41 S3c pins are unchanged.
-  **ATTR-ID-1 S3e (2026-10-01):** the qualified-name family moves to
-  `qualified_names.py` (pure move at the ceiling); `_bind_resolved_name`
-  passes the frame qualifiers into `resolve` and prefixes the bound engine
-  field with the held (not written) qualifier parts; `_column_of` runs a
-  stable-no-op Column through the qualified rewriter, so aliased compounds
-  bind; the filter quoter gains the facade qualifiers and substitutes the
-  held-qualified engine field under duplicate engines. Pins:
+  **ATTR-ID-1 S3e (2026-10-01):** the qualified-name family moves to `qualified_names.py` (pure move
+  at the ceiling); `_bind_resolved_name` passes the frame qualifiers into `resolve` and prefixes the
+  bound engine field with the held (not written) qualifier parts; `_column_of` runs a stable-no-op
+  Column through the qualified rewriter, so aliased compounds bind; the filter quoter gains the
+  facade qualifiers and substitutes the held-qualified engine field under duplicate engines. Pins:
   `python/repark/tests/resolution/test_attr_id_1_s3e.py`.
-  **ATTR-ID-1 S4 (2026-10-02):** `_bind_stable_id_column` splits into
-  `_exact_rebind_position` (one held position through `attribute_column`, onto a
-  unique engine field only) and `_qualified_narrow_position` (a qualifier-carrying
-  Column picks its one name-and-qualifier hit before the first-held fallback); an
-  id the frame does not hold consults the native `projection_source_ids` lineage
-  (alias, single-column `coalesce`, single-column searched `CASE`) before the
-  miss, and a miss still returns the column unchanged so the id reaches the
-  refusal and the engine fallback. A held id whose SQL already spells its engine
-  field stays the written ref (no rebind, so the engine shapes twin refusals).
-  `_column_of` routes an `_is_ambiguous_qualified_ref` (qualifiers plus an id
-  held twice) through the qualified rewriter first. `_bind_sort_key` takes only
-  true rebinds from the id bind; a miss stays verbatim for a plain column but a
-  marked (asc/desc) column falls through to the free-name funnel, which binds
-  the oldest project hit. Pins: `python/repark/tests/resolution/test_attr_id_1_s4.py`.
-  **ATTR-ID-1 S4 follow-up (2026-10-02):** the SQL-spells-engine written-ref check
-  is deleted and the sameness test moves to `Column._birth_frame`: a column bound
-  against the target frame stays verbatim (the engine shapes same-frame twin
-  refusals), any other frame's held id rebinds by position through
-  `_exact_rebind_position`, which keeps the written ref when the target engine
-  name is not exactly unique (a marked duplicate-named ref would fail with a
-  bare engine error instead of the shaped ambiguity the engine reports for the
-  quoted written ref). A lineage
-  hit (`projection_source_ids`) binds only when the output display still shows the
-  column's written name under the live session rule, so a rename that drops the
-  name refuses while a case-only rename still binds. `outer`, the sort bound
-  column, and `_rewrap_with_markers` carry `_birth_frame` with `_attr_id`. Pins:
+  **ATTR-ID-1 S4 (2026-10-02):** `_bind_stable_id_column` splits into `_exact_rebind_position` (one
+  held position through `attribute_column`, onto a unique engine field only) and
+  `_qualified_narrow_position` (a qualifier-carrying Column picks its one name-and-qualifier hit
+  before the first-held fallback); an id the frame does not hold consults the native
+  `projection_source_ids` lineage (alias, single-column `coalesce`, single-column searched `CASE`)
+  before the miss, and a miss still returns the column unchanged so the id reaches the refusal and
+  the engine fallback. A held id whose SQL already spells its engine field stays the written ref (no
+  rebind, so the engine shapes twin refusals). `_column_of` routes an `_is_ambiguous_qualified_ref`
+  (qualifiers plus an id held twice) through the qualified rewriter first. `_bind_sort_key` takes
+  only true rebinds from the id bind; a miss stays verbatim for a plain column but a marked
+  (asc/desc) column falls through to the free-name funnel, which binds the oldest project hit. Pins:
   `python/repark/tests/resolution/test_attr_id_1_s4.py`.
+  **ATTR-ID-1 S4 follow-up (2026-10-02):** the SQL-spells-engine written-ref check is deleted and
+  the sameness test moves to `Column._birth_frame`: a column bound against the target frame stays
+  verbatim (the engine shapes same-frame twin refusals), any other frame's held id rebinds by
+  position through `_exact_rebind_position`, which keeps the written ref when the target engine name
+  is not exactly unique (a marked duplicate-named ref would fail with a bare engine error instead of
+  the shaped ambiguity the engine reports for the quoted written ref). A lineage hit
+  (`projection_source_ids`) binds only when the output display still shows the column's written name
+  under the live session rule, so a rename that drops the name refuses while a case-only rename
+  still binds. `outer`, the sort bound column, and `_rewrap_with_markers` carry `_birth_frame` with
+  `_attr_id`. Pins: `python/repark/tests/resolution/test_attr_id_1_s4.py`.
   **ATTR-ID-1 SJ-2 (2026-10-02):** `_column_frame_id(column)` reads the birth
   frame's node id (`None` without a birth frame); it is the one helper every
   frame-id read uses. Pins: `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
-  **ATTR-ID-1 SJ-5 F1 (2026-10-03):** `_rebind_stable_name_column` runs the
-  native free-name check on compounds that reach it unbound (skipped for
-  token-bearing parent refs); `_rebind_free_names` runs the qualified-only
-  check on the filter path; `_quote_filter_sql_identifiers` checks the SQL
-  text first. The four error builders move to `column_errors.py` (pure move
-  at the ceiling). `_window_keys_bound` skips the check for windows whose
-  partition and order keys all carry an attribute id (internal
-  `drop_duplicates`/`distinct` projections), while user windows with free
+  **ATTR-ID-1 SJ-5 F1 (2026-10-03):** `_rebind_stable_name_column` runs the native free-name check
+  on compounds that reach it unbound (skipped for token-bearing parent refs); `_rebind_free_names`
+  runs the qualified-only check on the filter path; `_quote_filter_sql_identifiers` checks the SQL
+  text first. The four error builders move to `column_errors.py` (pure move at the ceiling).
+  `_window_keys_bound` skips the check for windows whose partition and order keys all carry an
+  attribute id (internal `drop_duplicates`/`distinct` projections), while user windows with free
   refs still raise. Pins: `python/repark/tests/resolution/test_attr_id_1_sj5.py`.
   **CASESENS-2 port phase 2 (2026-10-03):** `_resolve_sort_name`'s project
   branch refuses `UNRESOLVED_COLUMN` when `_native.sort_hits_meet_at_join` says
@@ -439,16 +408,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   rule, so the engine refuses `AMBIGUOUS_REFERENCE` with v1.5.2's text
   instead of binding the oldest project hit; one match still funnels
   (MISSING-REF-RESOLVE-1).
-  **Fold SM-2c round B (2026-10-06):** `_resolve_sort_name` no longer binds
-  the oldest hit on an ambiguous Project sort (that rule sorted rows neither
-  Spark nor main produces). It first binds the sourced twin
-  (`_native.sort_sourced_twin_engine`: the one hit tracing to the written
-  name when the input carries none), else delegates to
-  `qualified_names._route_sort_key_through_input`, which sorts by the
-  projection's input column when the input carries exactly one of the name,
-  else flows unbound so the engine refuses or pushes deeper exactly as on
-  main — except string keys over reminted outputs, which raise
-  `AMBIGUOUS_REFERENCE` with main's text. Stable `F.col` keys pass
+  **Fold SM-2c round B (2026-10-06):** `_resolve_sort_name` no longer binds the oldest hit on an
+  ambiguous Project sort (that rule sorted rows neither Spark nor main produces). It first binds the
+  sourced twin (`_native.sort_sourced_twin_engine`: the one hit tracing to the written name when the
+  input carries none), else delegates to `qualified_names._route_sort_key_through_input`, which
+  sorts by the projection's input column when the input carries exactly one of the name, else flows
+  unbound so the engine refuses or pushes deeper exactly as on main — except string keys over
+  reminted outputs, which raise `AMBIGUOUS_REFERENCE` with main's text. Stable `F.col` keys pass
   `is_column_key=True` so the reminted shapes keep main's passthrough.
   **Fold SM-2d (2026-10-07):** the Project arm refuses `UNRESOLVED_COLUMN`
   when `_native.sort_input_carries_twice` fires, before the sourced twin;
@@ -461,12 +427,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   so dropping a carried attribute silently breaks another subsystem
   (`sql_expr`, `generator`, the attribute id). No module docstring: the
   lane's no-comments ruling covers the new file; the contract lives here.
-- `column_string.py` — **ATTR-ID-1 S4 alias fix (2026-10-02):** the
-  string-predicate family (`contains`/`substr`/`startswith`/`endswith`/`like`/
-  `ilike`/`rlike` plus `_string_predicate`), split out of `column.py` at the
-  size ceiling (pure move; `Column` binds the seven spellings). No module
-  docstring: the lane's no-comments ruling covers the new file; the contract
-  lives here.
+- `column_string.py` — **ATTR-ID-1 S4 alias fix (2026-10-02):** the string-predicate family
+  (`contains`/`substr`/`startswith`/`endswith`/`like`/ `ilike`/`rlike` plus `_string_predicate`),
+  split out of `column.py` at the size ceiling (pure move; `Column` binds the seven spellings). No
+  module docstring: the lane's no-comments ruling covers the new file; the contract lives here.
 - `column_render.py` — **ATTR-ID-1 SJ-2 (2026-10-02):** the expression-fragment
   family (`sql_expr_part`/`join_sql_part`/`sql_expr_without_alias`/
   `spark_display_part`/`spark_wrap_display_part`), split out of `column.py` at
@@ -484,25 +448,21 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   display in frame order, as Spark lists every input attribute (live Spark 4.1.2:
   `select("nope")` suggests `` `id`, `s`, `Data` `` under both rules); the
   fold-only `_suggestion_candidates` filter is deleted.
-- `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL
-  identifier quoter, split out of `column_fields.py` at the size ceiling (pure
-  move; the entry stays there). **R-CS2P-1 (2026-10-03):** under the exact
-  rule `_bind_filter_token` leaves a dotted token to the engine when its head
-  matches no qualifier and no display, or when its qualified name misses;
-  folding the later segments there bound `l.id` as `id` (or `T.data` as
-  `` `T`.`Data` ``) where Spark refuses. `_FILTER_TOKEN_PATTERN`,
-  `_SQL_LITERAL_KEYWORDS`, the candidate pair, the lambda scope tokenizer
-  (RC4-1/RC4-6/RC5-2 port: decl sites quoted, bodies resolve params, outer
-  columns bind), `_main_path_dotted_token` (main's bare-ident tokenization
-  with the byte-identical collision raise), and `_bind_filter_token`.
-  **S3b H-1 follow-up (2026-10-01):** a lambda reference that matches its
-  parameter only by folding (`X` under param `x`, insensitive rule) raises
-  `_FoldedLambdaFallbackError`; the entry catches it and runs the whole
-  predicate through `_main_path_filter_sql` (a verbatim port of main's
-  fold-everything quoter, string-identical on probes). Spark folds nested
-  case-colliding lambda variables to one variable; the engine binds them
-  case-sensitively, so only main's path reproduces Spark there. Exact-rule
-  references never fold and never trigger.
+- `filter_quote.py` — **ATTR-ID-1 S3b H-1 (2026-10-01):** the filter-SQL identifier quoter, split
+  out of `column_fields.py` at the size ceiling (pure move; the entry stays there). **R-CS2P-1
+  (2026-10-03):** under the exact rule `_bind_filter_token` leaves a dotted token to the engine when
+  its head matches no qualifier and no display, or when its qualified name misses; folding the later
+  segments there bound `l.id` as `id` (or `T.data` as `` `T`.`Data` ``) where Spark refuses.
+  `_FILTER_TOKEN_PATTERN`, `_SQL_LITERAL_KEYWORDS`, the candidate pair, the lambda scope tokenizer
+  (RC4-1/RC4-6/RC5-2 port: decl sites quoted, bodies resolve params, outer columns bind),
+  `_main_path_dotted_token` (main's bare-ident tokenization with the byte-identical collision
+  raise), and `_bind_filter_token`.
+  **S3b H-1 follow-up (2026-10-01):** a lambda reference that matches its parameter only by folding
+  (`X` under param `x`, insensitive rule) raises `_FoldedLambdaFallbackError`; the entry catches it
+  and runs the whole predicate through `_main_path_filter_sql` (a verbatim port of main's
+  fold-everything quoter, string-identical on probes). Spark folds nested case-colliding lambda
+  variables to one variable; the engine binds them case-sensitively, so only main's path reproduces
+  Spark there. Exact-rule references never fold and never trigger.
   **Gate narrowing (2026-10-01):** the raise fires only when
   `_scopes_have_folded_collision` finds an inner parameter that folds to an
   enclosing parameter with different spelling. Single-level folded
@@ -527,33 +487,27 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   USING-key text choke after the ambiguity check, so refused side-key
   references fail explicit instead of binding the merged key.
 - `subset_resolve.py` — **ATTR-ID-1 S3d (2026-10-01):** the
-  `drop`/`dropDuplicates`/`fillna`/`dropna` name-binding home. `_bindings`
-  reads the stamped ids, native engines, and facade displays (or `None` for a
-  bridge frame or a desynced overlay, where each caller keeps its legacy path);
-  `_grouped` answers bound/ambiguous/missing over the live-rule hits;
-  `_guard_passes` is the shared S3a/S3b guard (a multi-hit bind needs unique
-  engine fields and no join dup below the wrappers). `_drop_targets` binds each
-  drop item: a parent Column by its `_attr_id` (every id position, one side of
-  a self-join; an engine-shared id position takes the base-identical native
-  path because a bare duplicate-engine frame cannot drop one position by
-  name), an origin-mapped Column by its engine, a resolved-but-absent Column
-  to a no-op, a free Column by name with ambiguity refusal, a str by fanning
-  out to every hit, and a miss to a no-op; dotted or backticked free Columns
-  keep the native qualified path (S3e owns qualified). `_fanout_subset` binds
-  each `dropDuplicates` key to every hit and misses with Spark's
-  `_LEGACY_ERROR_TEMP_1201`; `_bound_subset_positions` binds each
-  `fillna`/`dropna` key with ambiguity refusal and guarded fan-out, missing
-  with `UNRESOLVED_COLUMN.WITH_SUGGESTION`. No module docstring: the lane's
-  no-comments ruling covers the new file; the contract lives here.
-  **ATTR-ID-1 S3d follow-up (2026-10-01):** the insensitive folds are
-  codepoint Java (A: `toLowerCase`; B: `==`/upper/lower per codepoint) over
-  int-version Java tables, so expansion pairs (`ß`/`SS`, U+0130/`i`+U+0307,
-  U+FB00/`FF`) and newer-than-Java scripts (Vithkuqi, U+A7Cx) miss; one id
-  closes over every same-id position in both rules (a sensitive exact hit
-  fans out too); a one-id multi-position bind under a union binds the
-  positionally-first hit only for `fillna`/`dropna`/free-Column `drop`,
-  while `drop(str)` and `dropDuplicates` keep every-hit fan-out
-  (probes s3d8..11).
+  `drop`/`dropDuplicates`/`fillna`/`dropna` name-binding home. `_bindings` reads the stamped ids,
+  native engines, and facade displays (or `None` for a bridge frame or a desynced overlay, where
+  each caller keeps its legacy path); `_grouped` answers bound/ambiguous/missing over the live-rule
+  hits; `_guard_passes` is the shared S3a/S3b guard (a multi-hit bind needs unique engine fields and
+  no join dup below the wrappers). `_drop_targets` binds each drop item: a parent Column by its
+  `_attr_id` (every id position, one side of a self-join; an engine-shared id position takes the
+  base-identical native path because a bare duplicate-engine frame cannot drop one position by
+  name), an origin-mapped Column by its engine, a resolved-but-absent Column to a no-op, a free
+  Column by name with ambiguity refusal, a str by fanning out to every hit, and a miss to a no-op;
+  dotted or backticked free Columns keep the native qualified path (S3e owns qualified).
+  `_fanout_subset` binds each `dropDuplicates` key to every hit and misses with Spark's
+  `_LEGACY_ERROR_TEMP_1201`; `_bound_subset_positions` binds each `fillna`/`dropna` key with
+  ambiguity refusal and guarded fan-out, missing with `UNRESOLVED_COLUMN.WITH_SUGGESTION`. No module
+  docstring: the lane's no-comments ruling covers the new file; the contract lives here.
+  **ATTR-ID-1 S3d follow-up (2026-10-01):** the insensitive folds are codepoint Java (A:
+  `toLowerCase`; B: `==`/upper/lower per codepoint) over int-version Java tables, so expansion pairs
+  (`ß`/`SS`, U+0130/`i`+U+0307, U+FB00/`FF`) and newer-than-Java scripts (Vithkuqi, U+A7Cx) miss;
+  one id closes over every same-id position in both rules (a sensitive exact hit fans out too); a
+  one-id multi-position bind under a union binds the positionally-first hit only for
+  `fillna`/`dropna`/free-Column `drop`, while `drop(str)` and `dropDuplicates` keep every-hit
+  fan-out (probes s3d8..11).
   **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** the Python fold tables and helpers
   are deleted; `_hits_folded` takes a mode and calls the native
   `java_fold_hits` (`a` for `fillna`/`dropna`/free-Column `drop`, `b` for
@@ -566,13 +520,11 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **ATTR-ID-1 S3d follow-up 3 (2026-10-01):** mode `a` is length plus
   `String.toLowerCase` (fillna/dropna miss U+0130/`i`, probe s3d16); mode `b`
   is OpenJDK `equalsIgnoreCase` down to the lower-of-uppers step.
-  **ATTR-ID-1 S3d follow-up 4 (2026-10-01):** under a union, `fillna`/
-  `dropna`/free-Column `drop` refuse a multi-id bind and bind the
-  positional-first hit of a single-id bind for either spelling (a
-  creation-dup union is multi-id and refuses, a select-dup union is
-  single-id and trims — probe s3d18 untangled the two fixtures behind the
-  withdrawn multi-exact refusal); `drop(str)` and `dropDuplicates` fan out
-  to every hit with no trim and no refusal (probe s3d17).
+  **ATTR-ID-1 S3d follow-up 4 (2026-10-01):** under a union, `fillna`/ `dropna`/free-Column `drop`
+  refuse a multi-id bind and bind the positional-first hit of a single-id bind for either spelling
+  (a creation-dup union is multi-id and refuses, a select-dup union is single-id and trims — probe
+  s3d18 untangled the two fixtures behind the withdrawn multi-exact refusal); `drop(str)` and
+  `dropDuplicates` fan out to every hit with no trim and no refusal (probe s3d17).
   **ATTR-ID-1 S3e (2026-10-01):** a dotted free Column whose head names a
   qualifier resolves through `resolve` (unique engines drop by attribute,
   shared engines drop by plan-held qualified reference, a miss is a no-op,
@@ -582,41 +534,32 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   only simple refs (display equals the drop name), so an alias — which now
   carries its base id — falls through to the name path and stays a no-op as
   at base.
-- `qualified_names.py` — **FA-5 (2026-10-08):**
-  `_refuse_ambiguous_partition_columns(frame, partition_columns)` refuses a
-  csv `partitionBy` name that two distinct attribute ids carry, with Spark's
-  `AMBIGUOUS_REFERENCE` text: the reference as written and one candidate per
-  twin under its plan qualifier, sorted as Spark sorts them. A frame without
-  a repeated display name returns at once. **Fold 1 (2026-10-08):** two more
-  refusals keep every text clean of the scratch view name. Same-id twins
-  (`select('id', 'id', 's').write.partitionBy('id')`) refuse with a declared
-  repark sentence (Spark writes that shape; a pinned divergence), and under
-  `caseSensitive=true` a spelling that matches a repeated name only by case
-  refuses with Spark's `Partition column … not found in schema …` text and
-  condition `_LEGACY_ERROR_TEMP_1155`.
-  **ATTR-ID-1 S3e (2026-10-01):** the qualified-name
-  home, split out of `column_fields.py` at the ceiling. `_frame_qualifiers`
-  threading (`_alias_frame_qualifiers` names every stamped id,
-  `_join_frame_qualifiers` unions each side's names onto the
-  output ids, pairing using keys), the compound rewriter
-  (`_rebind_qualified_refs`), the qualified star expansion
-  (`_expand_qualified_star`, unknown qualifiers fall through to the engine),
-  and the qualified sort bind (`_resolve_sort_qualified_name`, ambiguous
-  twins and multi-hit binds under a join raise unresolved as Spark does in
-  sort). No module docstring: the
-  lane's no-comments ruling covers the new file; the contract lives here.
-  **ATTR-ID-1 PERF-1 (2026-10-03):** `_frame_id_snapshot` reads stamped ids
-  plus engine names once per native handle into the `_ID_SNAPSHOTS` weak
-  table (keyed by frame, guarded by handle identity, so any `_inner` swap
-  misses and recomputes); `_stamped_frame_id_snapshot` adds the
-  stamp-on-missing pass. Every id-reader funnels through one of the two.
-  `_frame_engine_names` caches names alone per frame-plus-handle for the
-  `columns` fallback, which must not call `_plan()` (it would materialize
-  map bridges); it copies on return, so callers keep a fresh list. The
-  stable-id rebind and the subset `_bindings` funnel through the snapshots;
-  all downstream uses read the shared lists without mutation.
-  `_expand_select_star_item` returns early without a `*` in the written
-  name, which star expansion needs.
+- `qualified_names.py` — **FA-5 (2026-10-08):** `_refuse_ambiguous_partition_columns(frame,
+  partition_columns)` refuses a csv `partitionBy` name that two distinct attribute ids carry, with
+  Spark's `AMBIGUOUS_REFERENCE` text: the reference as written and one candidate per twin under its
+  plan qualifier, sorted as Spark sorts them. A frame without a repeated display name returns at
+  once. **Fold 1 (2026-10-08):** two more refusals keep every text clean of the scratch view name.
+  Same-id twins (`select('id', 'id', 's').write.partitionBy('id')`) refuse with a declared repark
+  sentence (Spark writes that shape; a pinned divergence), and under `caseSensitive=true` a spelling
+  that matches a repeated name only by case refuses with Spark's `Partition column … not found in
+  schema …` text and condition `_LEGACY_ERROR_TEMP_1155`.
+  **ATTR-ID-1 S3e (2026-10-01):** the qualified-name home, split out of `column_fields.py` at the
+  ceiling. `_frame_qualifiers` threading (`_alias_frame_qualifiers` names every stamped id,
+  `_join_frame_qualifiers` unions each side's names onto the output ids, pairing using keys), the
+  compound rewriter (`_rebind_qualified_refs`), the qualified star expansion
+  (`_expand_qualified_star`, unknown qualifiers fall through to the engine), and the qualified sort
+  bind (`_resolve_sort_qualified_name`, ambiguous twins and multi-hit binds under a join raise
+  unresolved as Spark does in sort). No module docstring: the lane's no-comments ruling covers the
+  new file; the contract lives here.
+  **ATTR-ID-1 PERF-1 (2026-10-03):** `_frame_id_snapshot` reads stamped ids plus engine names once
+  per native handle into the `_ID_SNAPSHOTS` weak table (keyed by frame, guarded by handle identity,
+  so any `_inner` swap misses and recomputes); `_stamped_frame_id_snapshot` adds the
+  stamp-on-missing pass. Every id-reader funnels through one of the two. `_frame_engine_names`
+  caches names alone per frame-plus-handle for the `columns` fallback, which must not call `_plan()`
+  (it would materialize map bridges); it copies on return, so callers keep a fresh list. The
+  stable-id rebind and the subset `_bindings` funnel through the snapshots; all downstream uses read
+  the shared lists without mutation. `_expand_select_star_item` returns early without a `*` in the
+  written name, which star expansion needs.
   **ATTR-ID-1 S4 follow-up (2026-10-02):** the qualified star expansion, the
   qualified sort bound column, and the rebound rewrap carry `_birth_frame` with
   `_attr_id`, so expanded columns count as birth-frame columns at the bind.
@@ -625,12 +568,10 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   flags) bound on `Column`, so both `F.col` and `rp.col` carry it; `column.py`
   stays at its exact 1529 baseline (one bind line in, one `__radd__` docstring
   line out, net zero).
-  **Fold SM-2 R3 (2026-10-06):** `_arrow_c_stream_with_display` passes the
-  display overlay names into the native dunder when the frame holds one, so
-  `pa.table(J)` over a duplicate-display-name join carries the display names
-  like `toArrow` does; frames without an overlay take the passthrough arm.
-  SM-2b item 3 moved the rename to the Rust side (no pyarrow import on
-  either stream path).
+  **Fold SM-2 R3 (2026-10-06):** `_arrow_c_stream_with_display` passes the display overlay names
+  into the native dunder when the frame holds one, so `pa.table(J)` over a duplicate-display-name
+  join carries the display names like `toArrow` does; frames without an overlay take the passthrough
+  arm. SM-2b item 3 moved the rename to the Rust side (no pyarrow import on either stream path).
   **Fold SM-2 R4 (2026-10-06):** `_refuse_ambiguous_map_input` refuses a
   `mapInArrow`/`mapInPandas` input whose first duplicate display name (folded
   unless the session is case-sensitive) carries distinct stamped attribute
@@ -638,34 +579,27 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   42704 and `name`/`referenceNames` params; same-id duplicates
   (`select("id", "id")`) still run. The case-sensitivity read falls back to
   insensitive when the session is a test double, which has no native handle.
-  **Fold SM-2 R6 (2026-10-06, R-R6-2/3):** the USING-key marker home.
-  `_using_state` runs at the two DataFrame USING sites and returns the
-  immutable `(kept ids, keys, refused qualifier names, right key ids)`
-  mark for `left`/`right`/`full` (`inner`/`semi`/`anti` carry none): the
-  kept key is the left key physically, so left-side references bind it
-  Spark-exact and only right-side qualifier names refuse. No facade
-  qualifier patching: the kept field keeps its main qualifiers.
-  `_join_frame_qualifiers` unions side marks onto every join child, so
-  later joins still see nested USING keys. The chokes refuse before any
-  bind: `_refuse_using_key_name` (select/getitem/sort strings),
-  `_refuse_using_key_text` (generated backtick-quoted SQL and user SQL with
-  quoted spans skipped), and `_refuse_using_key_tokens` (attribute tokens
-  carrying a right-input key id, i.e. pre-join right keys reused after
-  the merge, where Spark answers per-side values; left-id tokens pass
-  and bind the kept key). The unqualified key always binds the merged
-  value. No new registry and no `DataFrame` slot: the `_USING_MARKS` weak map
-  holds the mark, copied by `_spawn` (SM-2b item 5).
-  **Fold SM-2c round B (2026-10-06):** `_route_sort_key_through_input`
-  serves the ambiguous-Project arm of `_resolve_sort_name` after the sourced
-  twin: it reads the input spelling from
-  `_native.sort_project_input_spelling` and binds it as a plain column (no
-  attribute mark, so the final binder and DataFusion's missing-sort-column
-  pushdown treat it exactly as main's unbound key), else returns the written
-  spelling unbound when the engine still matches a twin or the key came from
-  a Column, and raises `AMBIGUOUS_REFERENCE` with main's text only for string
-  keys over reminted outputs, where main refuses at the getitem. No
-  docstring: the lane's no-comments ruling covers the new helper; the
-  contract lives here.
+  **Fold SM-2 R6 (2026-10-06, R-R6-2/3):** the USING-key marker home. `_using_state` runs at the two
+  DataFrame USING sites and returns the immutable `(kept ids, keys, refused qualifier names, right
+  key ids)` mark for `left`/`right`/`full` (`inner`/`semi`/`anti` carry none): the kept key is the
+  left key physically, so left-side references bind it Spark-exact and only right-side qualifier
+  names refuse. No facade qualifier patching: the kept field keeps its main qualifiers.
+  `_join_frame_qualifiers` unions side marks onto every join child, so later joins still see nested
+  USING keys. The chokes refuse before any bind: `_refuse_using_key_name` (select/getitem/sort
+  strings), `_refuse_using_key_text` (generated backtick-quoted SQL and user SQL with quoted spans
+  skipped), and `_refuse_using_key_tokens` (attribute tokens carrying a right-input key id, i.e.
+  pre-join right keys reused after the merge, where Spark answers per-side values; left-id tokens
+  pass and bind the kept key). The unqualified key always binds the merged value. No new registry
+  and no `DataFrame` slot: the `_USING_MARKS` weak map holds the mark, copied by `_spawn` (SM-2b
+  item 5).
+  **Fold SM-2c round B (2026-10-06):** `_route_sort_key_through_input` serves the ambiguous-Project
+  arm of `_resolve_sort_name` after the sourced twin: it reads the input spelling from
+  `_native.sort_project_input_spelling` and binds it as a plain column (no attribute mark, so the
+  final binder and DataFusion's missing-sort-column pushdown treat it exactly as main's unbound
+  key), else returns the written spelling unbound when the engine still matches a twin or the key
+  came from a Column, and raises `AMBIGUOUS_REFERENCE` with main's text only for string keys over
+  reminted outputs, where main refuses at the getitem. No docstring: the lane's no-comments ruling
+  covers the new helper; the contract lives here.
   **Fold SM-2d (2026-10-07):** the route still pushes through the input when
   the input carries the name once, but binds the written spelling when the
   output engines are twins — the refusal then names the reference as
@@ -698,13 +632,12 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   the fragment pre-rendered for the default door as the column's `sql_expr`, so
   an `F.expr` column spliced into facade-built SQL keeps the session flag's
   values; default input passes through unchanged. The display-naming fold keeps
-  the 1938 baseline.
-  **STRING-LITERAL-ESCAPE-1 CI round (2026-09-30):** `expr` pre-renders the
-  display-shaped text (a bare infix fragment keeps its parens) instead of the
-  raw fragment, so the stored `sql_expr` keeps base's grouping when composed
-  and the pre-render only re-renders string-literal regions; the raw fragment
-  dropped the parens and mis-valued cube/rollup keys built from composed
-  `F.expr` columns.
+  the 1938 baseline. **SIGNED-ZERO-NORMALIZE-1 delta (2026-11-11):** `expr` parenthesizes a ` <=> `
+  fragment like the arithmetic ones, so `F.expr("d <=> 0.0")` is named `(d <=> 0.0)`, as Spark.
+  **STRING-LITERAL-ESCAPE-1 CI round (2026-09-30):** `expr` pre-renders the display-shaped text (a
+  bare infix fragment keeps its parens) instead of the raw fragment, so the stored `sql_expr` keeps
+  base's grouping when composed and the pre-render only re-renders string-literal regions; the raw
+  fragment dropped the parens and mis-valued cube/rollup keys built from composed `F.expr` columns.
 - `functions_agg.py` — aggregate-function re-exports. **FNP-ALIAS-1 (2026-09-15):**
   `approxCountDistinct` is the deprecated alias of `approx_count_distinct` and warns Spark's
   exact `FutureWarning` on every call; it reaches `functions.py` through this module's
@@ -814,54 +747,47 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `select_with_stack_if_present`. Installed last onto `functions.py`; its
   one-generator gate also reads `_repark_generator` (FNP-GEN-1) so `stack` beside
   an analyzer generator refuses. pins: perf-unpivot-1/C-004, fnp-gen-1/C-003
-- `functions_generators.py` — **FNP-GEN-1 step 2 (2026-09-16):** the thin wrappers for
-  `posexplode` / `posexplode_outer` / `inline` / `inline_outer`, plus `_GeneratorColumn`
-  whose `alias(*names)` packs multi-name output aliases into the `__repark_gen_alias`
-  marker call that `repark_functions::generator::GeneratorRewrite` peels. The wrappers
-  return plain scalar expressions; the analyzer rule does the unnesting, so
-  `dataframe/**` and the `_select_with_generator` allow-list stay untouched.
-  `_GeneratorColumn` carries `_repark_generator` (the `functions_stack.py`
-  one-generator gate reads it so `stack` + `inline` refuses) and clears
-  `_projection_name` so `_collapse_identity_projection_alias` keeps the call bare —
-  an identity `Expr::Alias` would otherwise reach the rewrite as a one-name
-  `COLUMN_ALIASES_MISMATCH`. `GENERATOR_NAMES` is the export table
-  `scripts/check_example_coverage.py` reads, and
+- `functions_generators.py` — **FNP-GEN-1 step 2 (2026-09-16):** the thin wrappers for `posexplode`
+  / `posexplode_outer` / `inline` / `inline_outer`, plus `_GeneratorColumn` whose `alias(*names)`
+  packs multi-name output aliases into the `__repark_gen_alias` marker call that
+  `repark_functions::generator::GeneratorRewrite` peels. The wrappers return plain scalar
+  expressions; the analyzer rule does the unnesting, so `dataframe/**` and the
+  `_select_with_generator` allow-list stay untouched. `_GeneratorColumn` carries `_repark_generator`
+  (the `functions_stack.py` one-generator gate reads it so `stack` + `inline` refuses) and clears
+  `_projection_name` so `_collapse_identity_projection_alias` keeps the call bare — an identity
+  `Expr::Alias` would otherwise reach the rewrite as a one-name `COLUMN_ALIASES_MISMATCH`.
+  `GENERATOR_NAMES` is the export table `scripts/check_example_coverage.py` reads, and
   `install_into` runs at the tail of `functions.py`'s installer chain; `posexplode` /
-  `posexplode_outer` are additionally imported statically into `functions.py` because
-  their `__all__` rows predate the installer. **Step 2 (run 18a):** `json_tuple` joins
-  this module — its stub leaves `functions_expr.py` and it is imported statically
-  beside `posexplode` / `posexplode_outer`, keeping its presplit `__all__` row, so
-  `GENERATOR_NAMES` keeps only the four step-2 names. A lone `.alias('x')` on one
-  field is ignored and a wrong count raises `UDTF_ALIAS_NUMBER_MISMATCH`, both decided
-  by the rewrite.
+  `posexplode_outer` are additionally imported statically into `functions.py` because their
+  `__all__` rows predate the installer. **Step 2 (run 18a):** `json_tuple` joins this module — its
+  stub leaves `functions_expr.py` and it is imported statically beside `posexplode` /
+  `posexplode_outer`, keeping its presplit `__all__` row, so `GENERATOR_NAMES` keeps only the four
+  step-2 names. A lone `.alias('x')` on one field is ignored and a wrong count raises
+  `UDTF_ALIAS_NUMBER_MISMATCH`, both decided by the rewrite.
 - `functions_json.py` — **FNP-10 (2026-09-05):** the JSON wrappers (`get_json_object`,
   `json_array_length`, `json_object_keys`, `to_json`, `from_json`). Its `install_into` also
-  re-exports the collection constructors from `functions_collections`, so the whole FNP-9/10
-  surface reaches `functions.py` through the existing installer chain instead of growing that
-  module past its exact size baseline. `FNP9_NAMES` is the export table
-  `scripts/check_example_coverage.py` reads, so a name added here is a name that needs an
-  example. The unit's unbuilt names (`call_udf`, `call_function` — before FNP-MISC-1)
-  were deliberately NOT here (`stack` landed in PERF-UNPIVOT-1; `inline` /
-  `inline_outer` landed in FNP-GEN-1 step 2 through `functions_generators.py`):
-  exporting a refusal would add rows to an example backlog whose count only ratchets down.
-  §7 `FNP9-GENERATORS-1` / `FNP9-BYNAME-1`.
-  The `DataType` import is under `TYPE_CHECKING` — a runtime one closes an import cycle through
-  `repark.spark.types`. `_refuse_json_options` is the one rule `from_json`, `to_json` and
-  `schema_of_json` share: repark implements no JSON option beyond `mode` and
-  `columnNameOfCorruptRecord`, and Spark's `ignoreNullFields` / `primitivesAsString` change the
-  answer, so a non-empty mapping refuses instead of being ignored.
-  `install_into` ran last in `functions.py`'s installer chain until PERF-UNPIVOT-1 appended
-  `functions_stack`; `test_functions_split_identity.py` pins the order, which
-  `test_functions_split_identity.py` pins by position. The rules each wrapper carries — Spark's
-  `map(k1, v1, …)` spelling behind `create_map`, the `-1`-appends and NULL-padding rules of
-  `array_insert`, the NULL-fill of `arrays_zip`, PERMISSIVE decoding and the `_corrupt_record`
-  column of `from_json`, and `schema_of_json` reading a bare `str` as the document rather than a
-  column name — are recorded here and in the unit ledger, not in the function bodies: each keeps
-  exactly the one-line docstring the presence gate requires.
-  FN-REGEXP-EXTRACT-1 (2026-09-04): `regexp_extract` calls the native kernel on both doors; its
-  docstring is one line.
-  SEM-1: `log(col)` or `log(base, expr)` (PySpark `log(arg1, arg2=None)`).
-  LOG1P-1: `log1p` / `expm1` are `_scalar` onto the precise kernels, not
+  re-exports the collection constructors from `functions_collections`, so the whole FNP-9/10 surface
+  reaches `functions.py` through the existing installer chain instead of growing that module past
+  its exact size baseline. `FNP9_NAMES` is the export table `scripts/check_example_coverage.py`
+  reads, so a name added here is a name that needs an example. The unit's unbuilt names (`call_udf`,
+  `call_function` — before FNP-MISC-1) were deliberately NOT here (`stack` landed in PERF-UNPIVOT-1;
+  `inline` / `inline_outer` landed in FNP-GEN-1 step 2 through `functions_generators.py`): exporting
+  a refusal would add rows to an example backlog whose count only ratchets down. §7
+  `FNP9-GENERATORS-1` / `FNP9-BYNAME-1`. The `DataType` import is under `TYPE_CHECKING` — a runtime
+  one closes an import cycle through `repark.spark.types`. `_refuse_json_options` is the one rule
+  `from_json`, `to_json` and `schema_of_json` share: repark implements no JSON option beyond `mode`
+  and `columnNameOfCorruptRecord`, and Spark's `ignoreNullFields` / `primitivesAsString` change the
+  answer, so a non-empty mapping refuses instead of being ignored. `install_into` ran last in
+  `functions.py`'s installer chain until PERF-UNPIVOT-1 appended `functions_stack`;
+  `test_functions_split_identity.py` pins the order, which `test_functions_split_identity.py` pins
+  by position. The rules each wrapper carries — Spark's `map(k1, v1, …)` spelling behind
+  `create_map`, the `-1`-appends and NULL-padding rules of `array_insert`, the NULL-fill of
+  `arrays_zip`, PERMISSIVE decoding and the `_corrupt_record` column of `from_json`, and
+  `schema_of_json` reading a bare `str` as the document rather than a column name — are recorded
+  here and in the unit ledger, not in the function bodies: each keeps exactly the one-line docstring
+  the presence gate requires. FN-REGEXP-EXTRACT-1 (2026-09-04): `regexp_extract` calls the native
+  kernel on both doors; its docstring is one line. SEM-1: `log(col)` or `log(base, expr)` (PySpark
+  `log(arg1, arg2=None)`). LOG1P-1: `log1p` / `expm1` are `_scalar` onto the precise kernels, not
   `log(1+col)` / `exp(col)-1`.
   **DATE-FN-1 (2026-09-04):** `unix_timestamp` is `_scalar` onto the kernel (format arg still
   unsupported).
@@ -985,18 +911,16 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the built `MERGE`
   runs through the native `sql_built` method (default-mode literals); free-SQL `str` conditions
   stay refused, so only `F.expr` columns carry user text.
-- `merge_aliases.py` — **IPI-56 (2026-09-20):** which `(target, source)` aliases
-  the rendered `MERGE INTO` declares. Spark's own condition form qualifies the
-  target by its **short table name** and the source by the frame's alias, so a
-  hardcoded `AS target` / `AS source` pair answered `No field named <table>.id`
-  on five inventory cells. A SQL relation carries exactly one alias, so the pair
-  is read off the qualifiers the user's own expressions reference: the short
-  table name when they name it, the legacy `target` when they name that instead,
-  and whichever single other qualifier they use for the source. That keeps
-  RePark's `target.` / `source.` spellings and the bare-key sugar working beside
-  Spark's form — owner decision 22 narrows registry row `EX-DF-9` rather than
-  retiring it. String literals are removed before the scan so a `'target.x'`
-  literal cannot pick an alias.
+- `merge_aliases.py` — **IPI-56 (2026-09-20):** which `(target, source)` aliases the rendered `MERGE
+  INTO` declares. Spark's own condition form qualifies the target by its **short table name** and
+  the source by the frame's alias, so a hardcoded `AS target` / `AS source` pair answered `No field
+  named <table>.id` on five inventory cells. A SQL relation carries exactly one alias, so the pair
+  is read off the qualifiers the user's own expressions reference: the short table name when they
+  name it, the legacy `target` when they name that instead, and whichever single other qualifier
+  they use for the source. That keeps RePark's `target.` / `source.` spellings and the bare-key
+  sugar working beside Spark's form — owner decision 22 narrows registry row `EX-DF-9` rather than
+  retiring it. String literals are removed before the scan so a `'target.x'` literal cannot pick an
+  alias.
 - `polars.py` — optional Polars-style facade. Imports Polars lazily and keeps join,
   sort, and null-placement semantics explicit. TYPES-1 round 4: `with_row_index` casts
   `row_number` to BIGINT. DF-EAGER-1 step 2 (2026-09-09):
@@ -1029,15 +953,13 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   estimators and feature/evaluation surfaces live in [ml/map.md](ml/map.md).
 - `types.py` — Spark SQL data types, DDL/JSON conversion, schema inspection, interval
   support, metadata, and Python-value verification.
-  **FACADE-4 step 1 (2026-09-14):** the conversion surfaces
-  (`fromDDL`/`_parse_datatype_string`, `StructType.toDDL`, `_arrow_type_to_repark`,
-  `struct_type_from_arrow`, `repark_type_to_arrow`) thin to descriptor build + one
-  `_native` call over `repark_spark::type_table`; the public classes and
-  `isinstance` identity are unchanged. `simpleString`/`_engine_type` answer from
-  the `_type_table.py` row table (P1-DTYPES: per-column descriptor FFI regressed
-  `dtypes` +106 % on wide50). Python residue: descriptor trees containing a
-  foreign `DataType` subtype, decimals outside the Arrow FFI scale envelope,
-  collation refusal policy, and the `json`/`fromJson` surface.
+  **FACADE-4 step 1 (2026-09-14):** the conversion surfaces (`fromDDL`/`_parse_datatype_string`,
+  `StructType.toDDL`, `_arrow_type_to_repark`, `struct_type_from_arrow`, `repark_type_to_arrow`)
+  thin to descriptor build + one `_native` call over `repark_spark::type_table`; the public classes
+  and `isinstance` identity are unchanged. `simpleString`/`_engine_type` answer from the
+  `_type_table.py` row table (P1-DTYPES: per-column descriptor FFI regressed `dtypes` +106 % on
+  wide50). Python residue: descriptor trees containing a foreign `DataType` subtype, decimals
+  outside the Arrow FFI scale envelope, collation refusal policy, and the `json`/`fromJson` surface.
   **Remediation round 2 (2026-09-14):** `_parse_datatype_string` moved to
   `_type_table.py` (Python parse for beyond-i64 parameters and non-printable
   text); parameterised `jsonValue` formats locally; `repark_type_to_arrow`
@@ -1046,24 +968,20 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   ceilings); the FFI-covered wide-decimal pre-walks are gone; native calls bind
   through the cached `_type_table._native_function`.
   **Remediation round 3 (2026-09-14, ruling R14b-D-2):** the per-class literal
-  `simpleString`/`_engine_type` methods are restored on every atomic class
-  exactly as base had them (the five dynamic-answer classes and `DataType`
-  keep `type(self).typeName()` bodies) — the row-table dict path was ~0.24 µs
-  per leaf against base's ~0.05 µs method call, and `dtypes` breached the
-  surface bar. `_atomic_token` still answers for nested composition, foreign
-  subclasses and the SQL/DDL marker columns; the MRO mutation still turns the
-  marker pins red.
-  **Remediation round 4 (2026-09-14, L-007/L-008/L-009):** `DataType.simpleString`
-  answers from `_SIMPLE_STRING_FAST` for exact classes then falls back to
-  `type(self).typeName()` — the five dynamic-answer classes lose their literal
-  methods so multiple-inheritance MRO matches base; `DataType._engine_type`
-  delegates to `self.simpleString()`. `ArrayType`/`MapType`/`StructField`/
-  `StructType` get base's `simpleString`/`_engine_type` bodies back so child
-  and field overrides compose (a `StructField.simpleString` override survives
-  inside `StructType`, `ArrayType` and `MapType`); the parameterized
-  `jsonValue`s dispatch through `self.simpleString()` again. `StructType.toDDL`
-  and `repark_type_to_arrow` pass their surface orders into
-  `_type_table`'s descriptor build.
+  `simpleString`/`_engine_type` methods are restored on every atomic class exactly as base had them
+  (the five dynamic-answer classes and `DataType` keep `type(self).typeName()` bodies) — the
+  row-table dict path was ~0.24 µs per leaf against base's ~0.05 µs method call, and `dtypes`
+  breached the surface bar. `_atomic_token` still answers for nested composition, foreign subclasses
+  and the SQL/DDL marker columns; the MRO mutation still turns the marker pins red.
+  **Remediation round 4 (2026-09-14, L-007/L-008/L-009):** `DataType.simpleString` answers from
+  `_SIMPLE_STRING_FAST` for exact classes then falls back to `type(self).typeName()` — the five
+  dynamic-answer classes lose their literal methods so multiple-inheritance MRO matches base;
+  `DataType._engine_type` delegates to `self.simpleString()`. `ArrayType`/`MapType`/`StructField`/
+  `StructType` get base's `simpleString`/`_engine_type` bodies back so child and field overrides
+  compose (a `StructField.simpleString` override survives inside `StructType`, `ArrayType` and
+  `MapType`); the parameterized `jsonValue`s dispatch through `self.simpleString()` again.
+  `StructType.toDDL` and `repark_type_to_arrow` pass their surface orders into `_type_table`'s
+  descriptor build.
   **Remediation round 5 (2026-09-14, L-010):** `repark_type_to_arrow` builds
   the descriptor before the C-028 wide-decimal envelope guard and keys the
   guard on the descriptor's `decimal` kind — `.precision`/`.scale` are read
@@ -1071,28 +989,23 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `Left+DecimalType` class without decimal attrs keeps base's left-parent
   Arrow answer instead of crashing.
   pins: facade-4/C-011, C-012, C-014, C-015, C-016, C-020..C-024, C-028..C-033
-  **TYPES-BASES-1 (2026-09-14):** the concrete classes re-parent onto the Spark
-  abstract bases imported from `types_bases.py` (`DataType` moved there so the
-  bases can subclass it without an import cycle; `_SIMPLE_STRING_FAST` is a
-  shared dict populated here so the fast path survives the move), and
-  `types.Row` re-exports `spark.row.Row`. DDL routing through the Rust table is
-  unchanged — spatial DDL tokens stay refused pending the Rust spatial step.
-  Follow-up: `_merge_type` gains Spark's two mixed-SRID arms
-  (Geometry×Geometry / Geography×Geography with different `srid` → the `ANY`
-  form) plus `SpatialType` in the `StringType` soft-merge tuple;
-  `StructField` / `StructType` gain `needConversion` / `toInternal` /
-  `fromInternal` delegating to the shared helpers in `types_bases.py`.
-- `types_bases.py` — **TYPES-BASES-1 (2026-09-14):** `DataType` plus the Spark
-  abstract bases (`AtomicType`, `NumericType`, `IntegralType`, `FractionalType`,
-  `DatetimeType`, `AnyTimeType`, `AnsiIntervalType`, `SpatialType`),
-  `GeographyType` / `GeometryType` with the vendored SRID→CRS table and Spark's
-  `ST_*` refusals, `UserDefinedType` (TYPES-UDT-1 declared refusal on column
-  use; the `serialize` / `deserialize` / `_cachedSqlType` / `toInternal` /
-  `fromInternal` / `jsonValue` / `__eq__` template follows Spark on a
-  subclass), the spatial JSON token helpers, and the shared
-  `_struct_to_internal` / `_struct_from_internal` conversion bodies.
-  `types.py` imports and re-exports every public
-  name.
+  **TYPES-BASES-1 (2026-09-14):** the concrete classes re-parent onto the Spark abstract bases
+  imported from `types_bases.py` (`DataType` moved there so the bases can subclass it without an
+  import cycle; `_SIMPLE_STRING_FAST` is a shared dict populated here so the fast path survives the
+  move), and `types.Row` re-exports `spark.row.Row`. DDL routing through the Rust table is unchanged
+  — spatial DDL tokens stay refused pending the Rust spatial step. Follow-up: `_merge_type` gains
+  Spark's two mixed-SRID arms (Geometry×Geometry / Geography×Geography with different `srid` → the
+  `ANY` form) plus `SpatialType` in the `StringType` soft-merge tuple; `StructField` / `StructType`
+  gain `needConversion` / `toInternal` / `fromInternal` delegating to the shared helpers in
+  `types_bases.py`.
+- `types_bases.py` — **TYPES-BASES-1 (2026-09-14):** `DataType` plus the Spark abstract bases
+  (`AtomicType`, `NumericType`, `IntegralType`, `FractionalType`, `DatetimeType`, `AnyTimeType`,
+  `AnsiIntervalType`, `SpatialType`), `GeographyType` / `GeometryType` with the vendored SRID→CRS
+  table and Spark's `ST_*` refusals, `UserDefinedType` (TYPES-UDT-1 declared refusal on column use;
+  the `serialize` / `deserialize` / `_cachedSqlType` / `toInternal` / `fromInternal` / `jsonValue` /
+  `__eq__` template follows Spark on a subclass), the spatial JSON token helpers, and the shared
+  `_struct_to_internal` / `_struct_from_internal` conversion bodies. `types.py` imports and
+  re-exports every public name.
 - `table_arg.py` — **DF-SUBQUERY-1 (2026-09-15):** `TableArg`, the value object
   `DataFrame.asTable()` returns, with exactly Spark's public surface
   (`partitionBy` / `orderBy` / `withSinglePartition`) and Spark's ordering guards

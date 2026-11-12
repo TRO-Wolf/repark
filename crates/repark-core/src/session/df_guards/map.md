@@ -10,6 +10,7 @@ wrapped optimizer rule) and declares this directory.
 
 - [struct_setop.rs](struct_setop.rs), [struct_walk.rs](struct_walk.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** `struct_setop_names` refuses struct operands differing in field-name order or set, any depth. Delta #2 seats it after `type_coercion`, reading beneath stacked casts; the `RecursiveQuery` arm checks recursive-term types against the static term. **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** all three arms call the shared `struct_walk` (peel encodings, recurse list kinds, refuse unpaired pairs). **STRUCT-COMPARE-BY-POSITION-1:** equal types never mismatch (F-1).
   **Delta 1 (2026-11-08):** `insert_struct_setop_after_coercion` reaches the crate root for Python's expression context. **Item #5:** refusals name `INTERSECT ALL` / `EXCEPT ALL` without `Distinct` left.
+- [signed_zero.rs](signed_zero.rs), [signed_zero/](signed_zero/map.md) — **SIGNED-ZERO-NORMALIZE-1 part A (2026-11-11):** seats 1 and 1b.
 - `skipping_limit.rs` — **OFFSET-NESTED-SORT-1 (2026-10-08):** a guard for a DataFusion 54.1.0
   defect. DataFusion's `EnforceSorting` rule (its sort pushdown,
   `datafusion-physical-optimizer` `enforce_sorting/sort_pushdown.rs`) treats a
@@ -27,10 +28,9 @@ wrapped optimizer rule) and declares this directory.
   of its own; the limit is rebuilt over the result and replaced with
   `SealedSkippingLimitExec`, a leaf reporting the limit's own properties (ordering,
   one partition) with no children, so the rule has nothing below the seal to push a row cap
-  or a sort into: the seal is a leaf. (Verifier mutation D made
-  the seal report the limit's `fetch`; the lane pins, 1356 answered cells and every plan of a
-  statement without an `OFFSET` stood still, so the missing `fetch` is not what holds the
-  cap back.) The wrapper then runs the inner rule on the sealed plan and puts every limit
+  or a sort into: the seal is a leaf. (Verifier mutation D, the seal reporting the limit's `fetch`,
+  left the lane pins, 1356 answered cells and every plan without an `OFFSET` still: the missing
+  `fetch` does not hold the cap back.) The wrapper then runs the inner rule on the sealed plan and puts every limit
   back top-down. A seal never leaves the rule: later rules cannot see the plan a seal
   holds (`OutputRequirements` puts its marker node below a top-level limit, so the marker would
   stay), so `execute` on a seal is an internal error and `no_seal_survives_into_a_final_plan`
@@ -43,7 +43,7 @@ wrapped optimizer rule) and declares this directory.
   Verifier-measured (2026-10-08, `ci` profile, 11 rounds, guard vs stock): over a 1M-row
   memory table at 8 partitions the refining outer sort ran +78.4% guarded (second run
   +83.7%; stock-vs-stock floor +2.3%). **OPEN for the owner:** accept the cost, or a
-  follow-up that merges the two sorts when the outer refines the inner. Statements without
+  follow-up merging the two sorts when the outer refines the inner. Statements without
   an `OFFSET` pay none of it (full table in the unit ledger, section 9).
   Routes not taken: a repair after the rule (the original `fetch` is gone by then); splitting
   the limit into `skip` over `fetch` (the rule then pushes the sort through the skip-only half).
@@ -51,10 +51,9 @@ wrapped optimizer rule) and declares this directory.
   `stock_enforce_sorting_still_*` pins in `../tests/skipping_limit.rs` go red when stock
   DataFusion answers right; delete this file, its wiring line and those two pins then.
   DataFusion 55.0.0 carries the same pushdown code (read in the registry copy, not run).
-  At the same bump check whether `EnforceSorting` overrides
-  `PhysicalOptimizerRule::optimize_with_context`: the physical planner calls that method and
+  At the same bump check whether `EnforceSorting` overrides `PhysicalOptimizerRule::optimize_with_context`: the physical planner calls that method and
   `SkipSafeEnforceSorting` does not forward it (the default calls the wrapper's own `optimize`),
-  so an override in the new version would be dropped silently. In 54.1.0 only `JoinSelection`
+  so a new version's override would drop silently. In 54.1.0 only `JoinSelection`
   overrides it, so nothing is lost today.
   The `skip > 0` boundary is pinned by grid cell `offset_one`: with `is_skipping_limit` at
   `skip > 1` (verifier mutation A, repeated on the committed pins) it answers `[2,3,4,5]`
@@ -67,7 +66,7 @@ wrapped optimizer rule) and declares this directory.
   `python/repark/tests/functions/test_win_slide_1.py`.
 - `attr_id.rs` — **ATTR-ID-1 S1 (2026-09-30):** attribute identity as a function of the plan.
   Every output field of a DataFrame plan carries one attribute id in its field metadata under
-  `repark.attr`; the design and its rulings are recorded in the unit ledger,
+  `repark.attr`; the design and its rulings are in the unit ledger,
   `task/ledgers/staging/attr-id-1-ledger.md`.
   `AttrId` is `a` plus 12 hex digits from a per-process counter (`NEXT_ATTR`, the
   `TEMP_VIEW_SEQ` pattern of `metadata_columns.rs`), never derived from a name, a position or a
@@ -132,17 +131,16 @@ wrapped optimizer rule) and declares this directory.
   (`PyDataFrame::executable`) calls it, so the native doors that execute analyze and optimize
   an id-free plan. It is not the non-collapsing `strip`, which keeps `col AS col` wrappers in
   the optimized plan. `StripAttributeIds` stays the first optimizer rule as the backstop for
-  every other path (the SQL door, view registration, the join door's planning), and is still
+  every other path (the SQL door, view registration, the join door's planning), and is
   never an analyzer rule: the O-1 sketch's analyzer placement (E1) was measured to strip the
   eager SQL door's frames and break every condition join and `crossJoin` with the frame-lineage
-  internal error (`/tmp/oc-worker/direct/wo/attr-id-1/stamp2-o1/probes/`). Pins:
-  `../tests/attr_id_seam.rs`
+  internal error (`/tmp/oc-worker/direct/wo/attr-id-1/stamp2-o1/probes/`). Pins: `../tests/attr_id_seam.rs`
   (`a_stamped_plan_reaches_the_optimizer_backstop_and_its_collapsed_twin_plans_the_same`,
   `every_session_strips_ids_first_in_its_optimizer_and_never_in_its_analyzer`,
   `an_analyzed_plan_keeps_its_ids_for_the_eager_sql_door`).
   **O-1 fold V-1 (2026-10-04):** `strip_schema_ids(schema)` drops the key from every top-level
   field of an Arrow schema and returns the same `Arc` when no field carries it;
-  `strip_record_batches` now uses it. The binding applies it to the analyzed export schema, so a
+  `strip_record_batches` uses it. The binding applies it to the analyzed export schema, so a
   provider schema that carries ids (a SQL-defined temp view, which neither the backstop nor
   `drop_node_ids` can clean) never reaches an export.
   **ATTR-ID-1 S1b (2026-09-30):** identity is decided by structure, never copied metadata
@@ -231,8 +229,7 @@ wrapped optimizer rule) and declares this directory.
   with the type-group cast and const-foldable literal casts). Only these strict
   shapes resolve; anything else reads `None` so the caller keeps the old miss
   behavior. Re-exported through `frame_names`. Pins:
-  `python/repark/tests/resolution/test_attr_id_1_s4.py` (fillna/replace/eqNullSafe/expression
-  pins).
+  `python/repark/tests/resolution/test_attr_id_1_s4.py` (fillna/replace/eqNullSafe/expression pins).
   **CASESENS-2 port phase 2 (2026-10-03):** `sort_hits_meet_at_join(plan,
   positions)` follows output positions down through `Filter`, `Sort`, `Limit`,
   `Repartition`, `Distinct::All`, `SubqueryAlias` and plain column projections
@@ -280,17 +277,16 @@ wrapped optimizer rule) and declares this directory.
   - `FrameId::mint()` is a per-process counter, Spark's `__dataset_id`. A node mints
     its id when it is built, after its inputs, so an ancestor's id is always smaller.
   - `FrameNode` is an immutable node in an `Arc` DAG: its id, its output attribute ids
-    read from the frame's stamped schema (`FrameNode::{root, derived, set_op, join}`;
-    an output without an id is an internal error, never a wildcard), its `FrameKind`
-    (`Root`, `Derived(parent)`, `SetOp { first, others }`,
-    `Join { left, right, remint, emits_right }`), and `renews`, true when this node or
-    any node below it (set-operation inputs and join right sides included) is a join
-    with a non-empty `remint`. It is computed once at construction, so a frame with no
-    self-join below it skips every check on one branch.
+    read from the frame's stamped schema (`FrameNode::{root, derived, set_op, join}`; an output
+    without an id is an internal error, never a wildcard), its `FrameKind` (`Root`,
+    `Derived(parent)`, `SetOp { first, others }`, `Join { left, right, remint, emits_right }`), and
+    `renews`, true when this node or any node below it (set-operation inputs and join right sides
+    included) is a join with a non-empty `remint`. It is computed once at construction, so a frame
+    with no self-join below it skips every check on one branch.
   - `all_ids(node)` is the union of the outputs of every reachable node.
-    `shared_ids(left, right_outputs)` is the right outputs found in `all_ids(left)`:
-    the set `remint_shared` renews.
-  - `AttrRef { attr, frame }` is one Column reference: the attribute id it holds and
+    `shared_ids(left, right_outputs)` is the right outputs found in `all_ids(left)`: the set
+    `remint_shared` renews. - `AttrRef { attr, frame }` is one Column reference: the attribute id it
+    holds and
     the frame it was bound on. SJ-1b's token parser will produce them.
   - `ambiguous(target, visible, refs)` is the detector, an explicit-stack depth-first
     walk of the target's lineage. It carries the chain of `remint` maps crossed on
@@ -318,13 +314,12 @@ wrapped optimizer rule) and declares this directory.
   live Spark 4.1.2 (`/tmp/oc-worker/direct/wo/attr-id-1/sj-1a/probe/sj1a.spark.json`):
   `d.join(d.union(f), …).select(f.v)` answers `[[10],[20],[20],[30],[30]]`
   (`K_on_union_named_second_input`), while `.select(un.v)`, `.select(d.v)` and
-  `d.join(f.union(d), …).select(f.v)` refuse with 1182. That cell is the one that pins
-  the opaque `SetOp.others`.
+  `d.join(f.union(d), …).select(f.v)` refuse with 1182. That cell pins the opaque `SetOp.others`.
 
   `emits_right` changes no verdict on its own: a semi or anti join's renewed right ids
   never reach any frame's outputs, so `visible` (the target's outputs) cannot hold an
-  image reached only through that side. It prunes the walk. Its mutation (M-A7) turns
-  no test red, which the SJ-1a hand-back records. SJ-1b's condition check must build
+  image reached only through that side. It prunes the walk. Its mutation (M-A7) turns no test red,
+  as the SJ-1a hand-back records. SJ-1b's condition check must build
   its provisional join node with the right side walked, since Spark checks a semi or
   anti join's own condition against the renewed right side (`F_left_anti_gt`).
 
@@ -385,8 +380,7 @@ wrapped optimizer rule) and declares this directory.
   token and the seam, SJ-3 the condition join, SJ-4 the post-join surfaces.
   **CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08):** the nondeterministic-function list is
   published as `NONDETERMINISTIC_FUNCTION_NAMES`, re-exported through `case_bind.rs`,
-  the single home the Spark door's join-condition rule reads; the `foldable` use is
-  unchanged.
+  the single home the Spark door's join-condition rule reads; the `foldable` use is unchanged.
   - `parse_attr_refs(sql)` reads the reference tokens SJ-2 will render,
     `__REPARK_ATTR_<id>__F<frame>__<qualifiers>__` (the frame field precedes the
     greedy qualifier group, and the qualifier group ends at its last `__`, as the
@@ -395,17 +389,15 @@ wrapped optimizer rule) and declares this directory.
     `` `…` ``, doubled-quote and backslash escapes) are text. A token without the frame
     field, a malformed token, or text already holding `__rp_ref_` is an internal error,
     never a guess (halt rule 5).
-  - The condition is parsed with `sqlparser`'s `DatabricksDialect` (as `case_bind.rs`)
-    and walked with `visit_expressions`. The walk records the
-    placeholders inside a window function (`Function { over: Some(_) }`, never checked),
-    and Spark's two exemptions from `DetectAmbiguousSelfJoin`'s root-`Join` branch: an
-    equality (`=`, `<=>`, `IS NOT DISTINCT FROM`) of two references to the same id, each
-    in any number of casts (Spark's recursive `AttrWithCast`, measured
-    `X_self_eq_castcast` = 9, widening the sketch's "one cast"), and, when the two inputs are
-    the same frame, an equality of a reference and a foldable operand
-    (no reference, no column name, no subquery, no nondeterministic function: `rand()`
-    refuses, `1 + 1` and `upper('a')` pass; measured `X_self_eq_rand`,
-    `X_self_eq_litexpr`, `X_self_lit_rev`).
+  - The condition is parsed with `sqlparser`'s `DatabricksDialect` (as `case_bind.rs`) and walked
+    with `visit_expressions`. The walk records the placeholders inside a window function (`Function
+    { over: Some(_) }`, never checked), and Spark's two exemptions from `DetectAmbiguousSelfJoin`'s
+    root-`Join` branch: an equality (`=`, `<=>`, `IS NOT DISTINCT FROM`) of two references to the
+    same id, each in any number of casts (Spark's recursive `AttrWithCast`, measured
+    `X_self_eq_castcast` = 9, widening the sketch's "one cast"), and, when the two inputs are the
+    same frame, an equality of a reference and a foldable operand (no reference, no column name, no
+    subquery, no nondeterministic function: `rand()` refuses, `1 + 1` and `upper('a')` pass;
+    measured `X_self_eq_rand`, `X_self_eq_litexpr`, `X_self_lit_rev`).
   - `prepare_join_condition(cond_sql, left, right, names, rule, rules)` runs Spark's
     order over two `JoinSide`s (node, stamped schema, display names, view alias):
     1. `shared_ids` and one fresh id per shared id: the `remint` map returned with the
@@ -432,29 +424,27 @@ wrapped optimizer rule) and declares this directory.
     5. Rewrite, when `auto_resolve` and the two inputs' output ids intersect: each
        exempt equality of two bare references becomes `left.<name> = right.<name>`, the
        first operand left whatever its frame (`D_derived_eq_rev`), each side
-       resolved by name with `resolve` under the session rule. No hit is
-       `UNRESOLVED_COLUMN.WITH_SUGGESTION` suggesting the side's displays
+       resolved by name with `resolve` under the session rule. No hit is `UNRESOLVED_COLUMN.WITH_SUGGESTION`
+       suggesting the side's displays
        (`I_rewrite_name_missing`); two ids is `AMBIGUOUS_REFERENCE` `` `id` `` /
        `` [`id`, `id`] `` (`G_eq3_*`), both through `spark_error` and byte-equal to Spark.
     The text is spliced by span on the original condition, never re-rendered from the
-    syntax tree: each placeholder becomes `<alias>.` + the engine field backtick-quoted
-    as today's facade rewriter does.
-  - `check_refs(target, displays, sql_parts, rules)` is the post-join check (SJ-4): the
-    references of every part, deduplicated by (frame, id) as Spark's `ColumnReference`
-    set is, minus window ones, walked with the target's outputs visible. It runs nothing
-    when `fail_ambiguous` is off or the target does not renew.
-  - **ATTR-ID-1 SJ-4 (2026-10-02):** `check_refs` wires `renewed_absent` after
-    the ambiguity walk (SJ-1a ruling 3 discharged: live Spark refuses the
-    K shapes and their filter/order variants on every surface under both
-    conf settings, so no per-surface switch; conf-on ambiguity still wins).
-    `attr_token` also decodes the token's `__D` leaf display, naming the missing
-    attributes (via `missing_refusal`) and backing the ambiguous-image name when the
-    positional display is engine-flavored (crossJoin frames
-    carry no display overlay; SJ-5 owns that path).
+    syntax tree: each placeholder becomes `<alias>.` + the engine field backtick-quoted as
+    today's facade rewriter does.
+  - `check_refs(target, displays, sql_parts, rules)` is the post-join check (SJ-4): the references
+    of every part, deduplicated by (frame, id) as Spark's `ColumnReference` set is, minus window
+    ones, walked with the target's outputs visible. It runs nothing when `fail_ambiguous` is off or
+    the target does not renew.
+  - **ATTR-ID-1 SJ-4 (2026-10-02):** `check_refs` wires `renewed_absent` after the ambiguity walk
+    (SJ-1a ruling 3 discharged: live Spark refuses the K shapes and their filter/order variants on
+    every surface under both conf settings, so no per-surface switch; conf-on ambiguity still wins).
+    `attr_token` also decodes the token's `__D` leaf display, naming the missing attributes (via
+    `missing_refusal`) and backing the ambiguous-image name when the positional display is
+    engine-flavored (crossJoin frames carry no display overlay; SJ-5 owns that path).
   - `self_join_message(names, config)` is the verbatim `_LEGACY_ERROR_TEMP_1182` template;
-    `missing_message`, `missing_condition` and `quoted_names` render `MISSING_ATTRIBUTES`
-    in the facade's one-line shape plus Spark's `SQLSTATE: XX000`. The operator renders
-    as `!Join` (Spark prints the plan node with exprIds).
+    `missing_message`, `missing_condition` and `quoted_names` render `MISSING_ATTRIBUTES` in the
+    facade's one-line shape plus Spark's `SQLSTATE: XX000`. The operator renders as `!Join` (Spark
+    prints the plan node with exprIds).
   The join type is not an input: `emits_right` is never a verdict input (SJ-1a ruling 2).
   Pins: `../tests/self_join.rs`; the bindings in `crates/repark-python/src/frame_lineage.rs`.
   **CASESENS-2 port (2026-10-03):** `JoinSide` carries the facade's
@@ -487,7 +477,7 @@ wrapped optimizer rule) and declares this directory.
   left columns); `union_by_folded_name` respells the right frame's fields to the
   left spelling, refuses a strict mismatch with the facade's former text (`Union can only be
   performed … mismatched columns: [...]`, now listing folded mismatches only) and unions by
-  name. Rust pins in the file's test module:
+  name.  Rust pins in the file's test module:
   `qualified_reference_binds_through_its_relation`, `qualified_alias_names_the_written_segment`,
   `projection_keeps_the_written_spelling`, `drop_removes_every_folded_match`,
   `join_binds_each_side_and_keeps_one_key`, `union_respells_the_right_and_refuses_a_mismatch`;
@@ -500,7 +490,7 @@ wrapped optimizer rule) and declares this directory.
   select and filter use (a qualified target narrows by `same_relation` from the right:
   `F.col("t.ID")` drops `(t, ID)`, `F.col("b.id")` drops `(b, ID)`). A target matching no
   field is a no-op on both, as Spark answers (`drop("t.ID")`, `drop("u.id")`,
-  `drop(F.col("u.id"))`). Rust pin `qualified_drop_binds_through_its_relation`.
+  `drop(F.col("u.id"))`).  Rust pin `qualified_drop_binds_through_its_relation`.
   **Round 4 (2026-09-26, verifier round 2 V-002/V-008):** the binder's final rule, under
   `caseSensitive=false`: a column reference collects every field whose name matches it ignoring
   case (`case_hits`; a qualified reference first narrows to fields whose relation matches
@@ -522,7 +512,7 @@ wrapped optimizer rule) and declares this directory.
   `exact_and_ambiguous_references_stay` now asserts the three refusals (V-008). Rust pins:
   `exact_and_ambiguous_references_stay`, `ambiguous_candidates_render_sorted_like_spark`,
   `unqualified_and_catalog_candidates_render_like_spark`,
-  `requalified_join_carries_each_side_relation`.
+  `requalified_join_carries_each_side_relation`. 
   **Round 5 (2026-09-26, verifier round 3 V-001..V-004):** the ambiguity rule is for references
   the user wrote; Spark resolves the facade's own re-projections and origin Columns by
   attribute. `attribute_reference(name)` builds an unqualified `Expr::Column` for an exact engine
@@ -535,7 +525,7 @@ wrapped optimizer rule) and declares this directory.
   refuses with select's `ambiguous_reference` text (`drop(F.col("id"))` on twins →
   `[`id`, `id`]`, on the self-join → `[`a`.`id`, `b`.`id`]`); string targets keep dropping every
   folded twin. Rust pins `attribute_reference_binds_exactly_where_a_written_one_refuses`,
-  `attribute_drop_is_exact_and_a_two_hit_reference_refuses`.
+  `attribute_drop_is_exact_and_a_two_hit_reference_refuses`. 
   Round 6 (2026-09-26, V-001): `with_attribute_copies(frame)` re-projects every held column,
   adding one exact copy per uniquely named field, named `attribute_copy_name(field)`
   (`__repark_attr_` plus the name's bytes in hex, so case twins never collide); the facade's SQL
@@ -570,7 +560,7 @@ wrapped optimizer rule) and declares this directory.
   top-level `Cast`/`TryCast` over a direct column child to the written child
   name, so `F.col(x).cast(...)` keeps the child name instead of leaking the
   qualified engine name (the all-lowercase leak goes with it). Pinned through
-  the facade (`test_cast_of_a_column_keeps_the_written_child_name`).
+  the facade (`test_cast_of_a_column_keeps_the_written_child_name`) .
   **Re-verify (2026-09-28, RC-3):** the child-name lookup recurses through
   nested casts (`test_nested_cast_of_a_column_keeps_the_written_child_name`).
   **ATTR-ID-1 S1 (2026-09-30):** one `pub use` block re-exports `AttrId`, `Resolution`,
@@ -580,21 +570,19 @@ wrapped optimizer rule) and declares this directory.
   output positions while building the key-dedup projection and runs the S1
   `remint_join_collisions` over the projected join split at that count, so a self-join
   keeps the left ids and re-mints every colliding right id (semi/anti return before the
-  projection and need none). `strip` joins the `frame_names` re-export.
-  **ATTR-ID-1 S3a (2026-09-30):** `alias_with_fresh_id` joins the `frame_names`
-  re-export beside `strip`.
+  projection and need none). `strip` joins the `frame_names` re-export. 
+  **ATTR-ID-1 S3a (2026-09-30):** `alias_with_fresh_id` joins the `frame_names` re-export beside `strip`.
   **ATTR-ID-1 S3b (2026-10-01):** re-exports `SortShape`, `sort_shape`,
-  `grandchild_key` and `bind_free_names` from `sort_names.rs`; `Hit`,
-  `ambiguous_reference` and `unresolved_column` widen to `pub(crate)` for the walker.
-  **ATTR-ID-1 S3b H-1 (2026-10-01):** also re-exports
-  `engine_field_is_unique` and `join_dup_below_wrappers` from `sort_names.rs`.
+  `grandchild_key` and `bind_free_names` from `sort_names.rs`; `Hit`, `ambiguous_reference` and
+  `unresolved_column` widen to `pub(crate)` for the walker. 
+  **ATTR-ID-1 S3b H-1 (2026-10-01):** also re-exports `engine_field_is_unique` and
+  `join_dup_below_wrappers` from `sort_names.rs` 
   **ATTR-ID-1 S3e (2026-10-01):** re-exports `bind_qualified_free_refs`,
   `grandchild_qualified_key`, `join_output_sources` and
   `qualifier_star_positions` from `sort_names.rs`; `bind_names` widens to
   `pub(crate)` for the moved tests. The inline test module moves unchanged to
   `../tests/case_bind.rs`.
-  **ATTR-ID-1 V-4 (2026-10-02):** `copy_attribute_ids` joins the `frame_names`
-  re-export.
+  **ATTR-ID-1 V-4 (2026-10-02):** `copy_attribute_ids` joins the `frame_names` re-export.
   **ATTR-ID-1 SJ-1a (2026-10-02):** the re-export swaps `remint_join_collisions` for
   `remint_shared` and `join_collisions`, and adds `frame_lineage.rs`'s `AttrRef`,
   `FrameId`, `FrameKind`, `FrameNode`, `all_ids`, `ambiguous`, `renewed_absent` and
