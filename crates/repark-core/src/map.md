@@ -291,13 +291,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   expansions, 20 fields visited.
 - `lib.rs` — **IPI-40 PR6 (2026-09-24):** re-exports `TempViewSession` beside `EngineContext` / `SqlDialect`.
   **PERF-DYNFLATTEN-1:** `built_with_debug_assertions()` gates the measurement report, so an H-3 number never comes from a debug build.
-  **U10 / R-DF-LOAD-PATH (2026-09-23):** `mod iceberg_path;` joined the module list at the exact 155-line baseline; the stale half-comment above the
+  **U10 / R-DF-LOAD-PATH (2026-09-23):** `mod iceberg_path;` joined the module list; the stale half-comment above the
   `error_map` re-export (already noted in `session.rs`) was the shed line.
-  **ATTR-ID-1 S3d (2026-10-01):** `string_lower_equal` / `fold_b_equal` join the `session` list (reflowed in place: still 155 lines; R-S3d-1
-  landed them as `fold_a_equal` / `fold_b_equal`, follow-up 3 merged the alias).
+  **ATTR-ID-1 S3d (2026-10-01):** `string_lower_equal` / `fold_b_equal` join the `session` list (R-S3d-1 landed them as `fold_a_equal` /
+  `fold_b_equal`, follow-up 3 merged the alias).
   **SOURCE-URL-REDACT-1 (2026-10-06):** re-exports `repark_common::redaction` as `repark_core::redaction`, the binding's path to the redactor (no new crate edge).
   **STRUCT-SETOP-REORDER-REFUSAL-1 delta #2 (2026-11-09):** `insert_struct_setop_after_coercion` joins the `session` list; the `write_postgres` fold holds at 156.
-  **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the `session` list (still 156).
+  **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the `session` list.
 - `iceberg_path.rs` (+ [iceberg_path/](iceberg_path/map.md)) — **U10 / R-DF-LOAD-PATH +
   R-DF-LOAD-METADATA-JSON (2026-09-23):** `ReparkSession::read_iceberg_path`, the
   `format("iceberg").load(<path>)` arm — Spark's `IcebergSource` rule applied at the

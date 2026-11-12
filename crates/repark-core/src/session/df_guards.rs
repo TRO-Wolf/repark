@@ -21,6 +21,7 @@ pub mod case_bind;
 pub(crate) mod duplicate_names;
 pub(crate) mod frame_lineage;
 pub(crate) mod join_exact;
+pub mod join_keys;
 mod predicate_names;
 pub(crate) mod self_join;
 mod signed_zero;

@@ -52,8 +52,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   places it. A gap refuses `ValueRefusal::WallClockGap` and an overlap `WallClockOverlap` (both
   `CONNECT-DIV-pg-timestamp-zone`, naming `prefer_timestamp_ntz`). A wall clock whose instant falls
   past chrono's calendar refuses `TimestampPastCalendar` (`CONNECT-DECL-pg-out-of-range`). H-TZ did
-  not fire. `session.rs` holds 1000 lines: its two new `mod` lines are paid for by two shed
-  comments. Pins: [zone_localiser/map.md](zone_localiser/map.md).
+  not fire.  Pins: [zone_localiser/map.md](zone_localiser/map.md).
   **C-4 fold 3 item 2 (2026-10-11):** `zone_of` is `pub(crate)` so the text renderer
   parses the session zone through the same canonicalisation.
   **C-4 fold 3 S3 (2026-10-11):** `localise_at`, `unlocalise`, `place` and
@@ -327,8 +326,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   `source_catalog_refusal` first, so an Iceberg-handle lookup of a mounted source's name refuses
   with that source's text.
 - `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
-  CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical and the
-  `session.rs` baseline ratcheted 1039 → 1002.
+  CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical .
   **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** `register_late_catalog_block` registers one runtime
   block tolerantly (incomplete parses stay silent; registered names only update the side map;
   register failures propagate, so the postgres S-6 refusal stays), and `note_catalog_table_props`
