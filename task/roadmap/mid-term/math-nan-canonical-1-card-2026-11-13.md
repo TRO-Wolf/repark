@@ -4,7 +4,9 @@
 2026-11-13: the step-0 hand-back, halted at step 2. Its evidence (`task/wo/math-nan-canonical-1/evidence/step0/`) is on
 branch `fix/math-nan-canonical-1` at `a3f3f683`, not merged at filing.
 
-**Status:** closed 2026-11-13: the owner chose (C), carried by [NAN-WRITE-CANONICAL-1](nan-write-canonical-1-card-2026-11-13.md); (B) is the first unit after the label. This is the follow-up unit the owner queued on
+**Status:** closed 2026-11-13: the owner ruled (below) (C) before the label, carried by
+[NAN-WRITE-CANONICAL-1](nan-write-canonical-1-card-2026-11-13.md), and (B) first after it as
+[NAN-COMPARE-SPARK-1](nan-compare-spark-1-card-2026-11-13.md). This is the follow-up unit the owner queued on
 [NAN-PAYLOAD-1](nan-payload-1-card-2026-11-12.md); it halted before any product code.
 
 **Measured on:** main `168dd934`, release build, against Spark 4.1.2 at default ANSI.
@@ -29,7 +31,7 @@ branch `fix/math-nan-canonical-1` at `a3f3f683`, not merged at filing.
   sign), and nine aggregates (`stddev`, `stddev_pop`, `var_pop`, `variance` on the frame door, `covar_pop`,
   `covar_samp`, `avg`, `sum`, `median`). Spark gives `fff8…` for the aggregates too.
 
-## The options (from the hand-back; not chosen)
+## The options (from the hand-back; ruled 2026-11-13, below)
 
 - **(A) Canonicalise at every producer:** every float operator, about 15 functions on three doors, and nine
   aggregates. A hot-path decision the order reserves, and it does not cover NaNs already in stored data.
@@ -49,11 +51,28 @@ branch `fix/math-nan-canonical-1` at `a3f3f683`, not merged at filing.
 - `INSERT INTO t SELECT … FROM (VALUES (…)) AS s(x)` fails planning on the Spark door ("Inconsistent data length
   across values list").
 
+## Owner ruling, 2026-11-13
+
+The owner, verbatim "Defaults", to Q11 as Fable refined it (Fable guidance, 2026-11-13); the record is
+[rulings-2026-11-13.md](../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-13.md), item 3.
+
+- **(C) before the label, as NAN-WRITE-CANONICAL-1:** NaN only, canonicalised at RePark's write. It does **not**
+  reuse part B's kernel: `canonical_f64` returns `value + 0.0`, which also turns `-0.0` into `+0.0`, and on the write
+  path that would store a different zero. Fable's design notes for its brief: seat it before the partition split and
+  the file statistics; inventory every write door; one Spark cell on whether Spark's copy-on-write `UPDATE`
+  canonicalises the NaN of a row it does not change; say whether nested leaves are in or out; one write cost row at
+  1.05x; a table written before the fix keeps its bits, and the repair is a rewrite.
+- **(B) first after the label,** filed as [NAN-COMPARE-SPARK-1](nan-compare-spark-1-card-2026-11-13.md). (A) is not
+  built; (B) replaces it.
+- **The owner accepts a label exclusion as an input domain:** `max`, `min`, `greatest`, `least` and non-key
+  comparisons over a NaN computed in the same query still answer unlike Spark. Its exact text is measured on the
+  head that has part B and NAN-WRITE-CANONICAL-1: **text pending that measurement.**
+
 ## Close
 
-The owner chooses (A), (B) or (C); the unit resumes at step 2 on that seat, or the card records a decline.
+The owner chose (C), then (B). The work resumes as NAN-WRITE-CANONICAL-1 (before the label) and NAN-COMPARE-SPARK-1
+(after it).
 
-**Closed (2026-11-13):** the owner ruled "Defaults" on Q11: (C) before the label, as [NAN-WRITE-CANONICAL-1](nan-write-canonical-1-card-2026-11-13.md) (a new unit, not this
-one resumed); a label exclusion for in-query answers over a computed NaN; (B) first after the label. That unit's
-seat is the fork's file writer and partition calculator, not part B's `canonical_f64`, which also rewrites
-`-0.0`.
+**Closed (2026-11-13)** by [NAN-WRITE-CANONICAL-1](nan-write-canonical-1-card-2026-11-13.md), a new unit rather than
+this one resumed. Its seat is the fork's file writer and partition calculator, not part B's `canonical_f64`, which
+also rewrites `-0.0`.

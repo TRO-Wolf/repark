@@ -4,14 +4,16 @@
 
 **Status:** open. Grade C (clerk). S3, refusal text: not a label blocker under the label gate. Not dispatched; no build is owed until the owner charters it.
 
-**Why:** A `version-hint.text` that holds `0` makes both engines refuse a path read of a `type=hadoop` table. Java's rule (R4 of the [rule doc](../../../docs/corpus/hadoop-discovery-rule-2026-11-03.md)) treats version 0 on a first load as a table that does not exist, so Spark raises `TABLE_OR_VIEW_NOT_FOUND`. RePark refuses with its own message, which names `v0.metadata.json`. The class is the same, a refusal with nothing read and nothing written; the words differ.
+**Why:** A `version-hint.text` that holds `0` makes both engines refuse a path read of a `type=hadoop` table. Java's rule (R4 of the [rule doc](../../../docs/corpus/hadoop-discovery-rule-2026-11-03.md)) treats version 0 on a first load as a table that does not exist, so Spark raises `TABLE_OR_VIEW_NOT_FOUND`. RePark refuses with its own message, which now prints a literal `<location>` placeholder (it named `v0.metadata.json` at the pilot). The class is the same, a refusal with nothing read and nothing written; the words differ.
 
-**Site:** `crates/repark-core/src/iceberg_path.rs`, the message at line 195 (`version-hint.text names '{file_name}', which does not exist`).
+**Site:** `crates/repark-core/src/iceberg_path.rs`, `no_metadata_error` (line 241 on main `16974986`). At the pilot it was the message at line 195 (`version-hint.text names '{file_name}', which does not exist`).
 
 **Fix shape:** The charter rules between two shapes. (a) Match Spark: a zero hint refuses with `TABLE_OR_VIEW_NOT_FOUND` on the path read, pinned beside the existing hint pins. (b) Keep RePark's text: register the difference as an accepted text divergence in the parity registry, with a pin and the reason.
 
-**Measured (pilot cells, S3; count from the estimate's D5):** 84 cells, class REFUSE_TEXT. Spark: `[TABLE_OR_VIEW_NOT_FOUND] The table or view ... cannot be found`. RePark: `no Iceberg table found at '<table>': version-hint.text names 'v0.metadata.json', which does not exist`. Evidence: [cells](../../../docs/corpus/hadoop-discovery-cells-2026-11-03.jsonl).
+**Measured (pilot cells, S3; count from the estimate's D5):** 84 cells, class REFUSE_TEXT. Spark: `[TABLE_OR_VIEW_NOT_FOUND] The table or view ... cannot be found`. RePark at the pilot: `no Iceberg table found at '<table>': version-hint.text names 'v0.metadata.json', which does not exist`. Evidence: [cells](../../../docs/corpus/hadoop-discovery-cells-2026-11-03.jsonl).
 
 **Retires:** when the zero-hint refusal follows the charter's ruling and is pinned on the path read.
 
 **Relation:** [HADOOP-DISCOVERY-RULE-1](hadoop-discovery-rule-1-card-2026-11-03.md), whose R4 this card's text follows; [HADOOP-HINT-MISSING-VERSION-TEXT-1](hadoop-hint-missing-version-text-1-card-2026-11-03.md), the sibling refusal text for a hinted version with no file.
+
+**RePark's current text (updated 2026-11-13, #1322 verifier, O6):** `AnalysisException: no Iceberg table found at '<root>': expected metadata files under '<location>/metadata' or a '<location>/metadata/version-hint.text'`, as the corpus checker's D5 golden pins it on all 126 `hint_zero` rows ([goldens](../../../docs/corpus/hadoop-discovery-repark-goldens-2026-11-13.jsonl), card label `D5 HADOOP-HINT-ZERO-TEXT-1`). `<root>` is the checker's normalised table root; `<location>` is printed literally by RePark. The orchestrator's ruling of 2026-11-13, confirmed by the owner ([rulings](../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-13.md), item 6), declares D5 a checker class; this card stays open.
