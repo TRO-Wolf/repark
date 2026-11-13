@@ -4,7 +4,8 @@
 2026-11-13: the step-0 hand-back, halted at step 2. Its evidence (`task/wo/math-nan-canonical-1/evidence/step0/`) is on
 branch `fix/math-nan-canonical-1` at `a3f3f683`, not merged at filing.
 
-**Status:** **ruled 2026-11-13** (below): (C) before the label as NAN-WRITE-CANONICAL-1, (B) first after it as
+**Status:** closed 2026-11-13: the owner ruled (below) (C) before the label, carried by
+[NAN-WRITE-CANONICAL-1](nan-write-canonical-1-card-2026-11-13.md), and (B) first after it as
 [NAN-COMPARE-SPARK-1](nan-compare-spark-1-card-2026-11-13.md). This is the follow-up unit the owner queued on
 [NAN-PAYLOAD-1](nan-payload-1-card-2026-11-12.md); it halted before any product code.
 
@@ -70,4 +71,8 @@ The owner, verbatim "Defaults", to Q11 as Fable refined it (Fable guidance, 2026
 ## Close
 
 The owner chose (C), then (B). The work resumes as NAN-WRITE-CANONICAL-1 (before the label) and NAN-COMPARE-SPARK-1
-(after it); this card retires when NAN-WRITE-CANONICAL-1 merges.
+(after it).
+
+**Closed (2026-11-13)** by [NAN-WRITE-CANONICAL-1](nan-write-canonical-1-card-2026-11-13.md), a new unit rather than
+this one resumed. Its seat is the fork's file writer and partition calculator, not part B's `canonical_f64`, which
+also rewrites `-0.0`.
