@@ -1,0 +1,13 @@
+{"ansi": "true", "engine": "repark", "key": "provenance", "native": "<scratchpad>/nwc/pkg-base/repark/_native.abi3.so", "texts": ["1.255", "1.005", "2.675", "0.125", "0.375", "2.5", "-1.255", "-0.125", "-2.5", "1e-20", "123456789.125", "-0.0", "0.30000000000000004", "9.995", "99.95", "1e10", "2.82879384806159E17", "1e23", "NaN", "Infinity", "-Infinity"], "warehouse": "ddr-repark-true-nivmvm07"}
+{"key": "select/card_cast", "sql": "SELECT CAST(CAST('1.005' AS DOUBLE) AS DECIMAL(5,2)) AS a, CAST(1.005D AS DECIMAL(5,2)) AS b", "types": ["decimal(5,2)", "decimal(5,2)"], "values": ["1.00", "1.00"]}
+{"key": "select/subscript_struct", "sql": "SELECT map(named_struct('k', CAST(1.00 AS DECIMAL(5,2)), 'j', 2), 7, named_struct('k', CAST(1.01 AS DECIMAL(5,2)), 'j', 2), 8)[named_struct('k', CAST('1.005' AS DOUBLE), 'j', 2)]", "types": ["int"], "values": ["7"]}
+{"key": "select/subscript_array", "sql": "SELECT map(array(CAST(1.00 AS DECIMAL(5,2))), 7, array(CAST(1.01 AS DECIMAL(5,2))), 8)[array(CAST('1.005' AS DOUBLE))]", "types": ["int"], "values": ["7"]}
+{"key": "select/cast_array", "sql": "SELECT CAST(array(CAST('1.255' AS DOUBLE), CAST('1.005' AS DOUBLE)) AS ARRAY<DECIMAL(10,2)>)", "types": ["array<decimal(10,2)>"], "values": ["[Decimal('1.25'), Decimal('1.00')]"]}
+{"key": "select/cast_struct", "sql": "SELECT CAST(named_struct('a', CAST('1.255' AS DOUBLE)) AS STRUCT<a: DECIMAL(10,2)>)", "types": ["struct<a:decimal(10,2)>"], "values": ["{'a': Decimal('1.25')}"]}
+{"key": "select/cast_map_value", "sql": "SELECT CAST(map('k', CAST('1.255' AS DOUBLE)) AS MAP<STRING, DECIMAL(10,2)>)", "types": ["map<string,decimal(10,2)>"], "values": ["{'k': Decimal('1.25')}"]}
+{"key": "select/cast_map_key", "sql": "SELECT CAST(map(CAST('1.255' AS DOUBLE), 1) AS MAP<DECIMAL(10,2), INT>)", "types": ["map<decimal(10,2),int>"], "values": ["{Decimal('1.25'): 1}"]}
+{"key": "select/try_cast_round", "sql": "SELECT TRY_CAST(CAST('1.255' AS DOUBLE) AS DECIMAL(10,2))", "types": ["decimal(10,2)"], "values": ["1.25"]}
+{"key": "select/try_cast_overflow", "sql": "SELECT TRY_CAST(CAST('1e10' AS DOUBLE) AS DECIMAL(10,2))", "types": ["decimal(10,2)"], "values": ["None"]}
+{"key": "select/try_cast_nan", "sql": "SELECT TRY_CAST(CAST('NaN' AS DOUBLE) AS DECIMAL(10,2))", "types": ["decimal(10,2)"], "values": ["None"]}
+{"key": "select/float_literal", "sql": "SELECT CAST(CAST('1.255' AS FLOAT) AS DECIMAL(10,2))", "types": ["decimal(10,2)"], "values": ["1.25"]}
+{"key": "select/double_literal_d", "sql": "SELECT CAST(1.255D AS DECIMAL(10,2)) AS a, CAST(1.255E0 AS DECIMAL(10,2)) AS b", "types": ["decimal(10,2)", "decimal(10,2)"], "values": ["1.25", "1.25"]}
