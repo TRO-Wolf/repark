@@ -1,0 +1,160 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>xhigh Builder Targets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,600&display=swap">
+<style>
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --fg: #1b1f27;
+  --muted: #5b6475;
+  --rule: #dde1e8;
+  --accent: #2f5bd3;
+  --good: #1f7a4d;
+  --warn: #9a6200;
+  --bad: #b3261e;
+  --chip: #eef1f7;
+  --display: "Fraunces", Georgia, serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12151b; --surface: #1a1e26; --fg: #e6e9ef; --muted: #9aa3b5; --rule: #2c323d;
+    --accent: #8aa8ff; --good: #5cc28f; --warn: #e0a84a; --bad: #f08a80; --chip: #232936; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12151b; --surface: #1a1e26; --fg: #e6e9ef; --muted: #9aa3b5; --rule: #2c323d;
+  --accent: #8aa8ff; --good: #5cc28f; --warn: #e0a84a; --bad: #f08a80; --chip: #232936; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 900px; margin: 0 auto; padding-inline: 18px; padding-block: 28px 56px; display: grid; gap: 28px; }
+header { display: grid; gap: 6px; }
+h1 { font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1.15; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0; max-width: 70ch; }
+h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+h3 { font-size: 15px; margin: 4px 0 8px; font-weight: 600; }
+section { display: grid; gap: 0; min-width: 0; }
+p { margin: 0 0 10px; max-width: 74ch; }
+.stats { display: flex; flex-wrap: wrap; gap: 10px; }
+.stat { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 14px; min-width: 120px; flex: 1 1 120px; }
+.stat b { display: block; font-family: var(--mono); font-size: 22px; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 13px; }
+.ask { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 6px; padding: 14px 16px; }
+.ask p:last-child { margin-bottom: 0; }
+.tbl { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; margin-bottom: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.n { font-family: var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+code, .mono { font-family: var(--mono); font-size: 13px; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--chip); white-space: nowrap; }
+.pill.x { color: var(--bad); }
+.pill.h { color: var(--good); }
+.pill.v { color: var(--warn); }
+ol.q, ul.notes { margin: 0; padding-left: 20px; display: grid; gap: 8px; max-width: 76ch; }
+footer { color: var(--muted); font-size: 13px; display: grid; gap: 4px; }
+</style>
+</head><body>
+<div class="wrap">
+<p class="sub"><b>Filed copy.</b> Fable's answer to this inquiry was relayed by the owner on 2026-11-13, and the owner ruled the resulting defaults, verbatim "Defaults" (about 12:12 UTC).</p>
+<header>
+  <h1>Which coming builds deserve Opus 5.5 xhigh?</h1>
+  <p class="sub">An inquiry for Fable, drawn up by the Opus 5.5 orchestrator at the owner's request on 2026-11-13. Fable is asked for guidance only; its answer is not an owner ruling. Repository: <span class="mono">TRO-Wolf/repark</span> main at <span class="mono">16974986</span>.</p>
+</header>
+
+<section>
+  <div class="stats">
+    <div class="stat"><b>56%</b><span>weekly usage spent</span></div>
+    <div class="stat"><b>2</b><span>Opus 5.5 high build lanes</span></div>
+    <div class="stat"><b>1</b><span>round per unit (the cap)</span></div>
+    <div class="stat"><b>4</b><span>xhigh leans below</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>The question</h2>
+  <div class="ask">
+    <p>Every lane runs Opus 5.5 at <b>high</b>: two build lanes, two Opus verifiers per product PR, and the one-round cap (build, critique, one delta fix, one delta re-check, then park). Under the cap the first build has to be close to right, so a stronger first build may save rounds.</p>
+    <p><b>Which near-term builds are hardest, and which should run Opus 5.5 at xhigh instead of high?</b></p>
+  </div>
+</section>
+
+<section>
+  <h2>What has been hard here</h2>
+  <div class="tbl"><table>
+    <tr><th>Unit</th><th>What happened</th><th>What made it hard</th></tr>
+    <tr><td>SIGNED-ZERO-NORMALIZE-1 part B</td><td>Five builder sessions; one §7 halt; verifier 1, verifier 2 and the delta re-check all FAIL; parked at the cap; owner exception for one last delta; today's cost run misses one bar (n2 1.058 against 1.05).</td><td>One seat that many doors reach. Each verifier found a door the build missed: <code>dropDuplicates(subset)</code>, the optimizer config keys, <code>collect_set</code>.</td></tr>
+    <tr><td>Unit C, #1283</td><td>Failed both critiques; merged under option B.</td><td>Seat reach: NULL-first order, native view, <code>PREPARE</code>, recursive CTE.</td></tr>
+    <tr><td>NVL-TYPE-COERCION-1, #888</td><td>Parked after 11 rounds.</td><td>Spark's type widening across a function family.</td></tr>
+    <tr><td>ANSI subscript and field, #1267</td><td>Paused after its fourth Opus verifier FAIL.</td><td>ANSI semantics across subscript and field-lookup doors.</td></tr>
+    <tr><td>CASESENS-2, #881</td><td>Three cheaper-model folds each added a regression; moved to an Opus executor.</td><td>Case folding on every lookup path.</td></tr>
+    <tr><td>STAGED-PUBLISH-CLEANUP-1, #1261</td><td>Two deltas under an owner exception.</td><td>Commit-path cleanup across catalogs.</td></tr>
+    <tr><td>For contrast: #1317, #1319, #1304, #1321</td><td>One round or one small delta.</td><td>A single seat, a measured table first, a narrow guard.</td></tr>
+  </table></div>
+  <p>The pattern: hard units are a seat many doors reach, a semantic family graded cell by cell against Spark, non-determinism, or a fork plus RePark pair. Single-seat guards built after a measured table have gone in one round.</p>
+</section>
+
+<section>
+  <h2>The candidates</h2>
+  <h3>Blocking the scoped label (ICE-V2-FLAT-AWS-LABEL-1)</h3>
+  <div class="tbl"><table>
+    <tr><th>#</th><th>Unit</th><th>What makes it hard</th><th>My lean</th></tr>
+    <tr><td class="n">1</td><td><b>Part B's final delta</b><br><span class="mono">waits on the owner's n2 call</span></td><td>An analyzer-level guard for <code>optimizer.max_passes</code> and <code>skip_failed_rules</code>; a whole-schema invariant for <code>dropDuplicates(subset)</code> at <code>subset_resolve.py:273</code>; a verdict per commit with the exit agreed in advance. There is no round after this one.</td><td><span class="pill x">xhigh</span></td></tr>
+    <tr><td class="n">2</td><td><b>NAN-WRITE-CANONICAL-1</b><br><span class="mono">running at high, lane 2</span></td><td>Inventory every Iceberg write door; seat the canonical NaN before the partition split and file statistics; at most three product files; 1.05x write cost.</td><td><span class="pill h">keep high</span></td></tr>
+    <tr><td class="n">3</td><td><b>UPDATE-SCHEMA-BATCH-MISMATCH-1</b></td><td>A copy-on-write <code>UPDATE</code> that rewrites two files refuses at random with <code>Mismatch between schema and batches</code>. Today's probe, 810 attempts: no wrong answer; refusals only under copy-on-write, only when both files are rewritten and the predicate's column differs between them. An integer predicate refuses 12 and 18 of 30, so it is not float-specific. Cause unknown.</td><td><span class="pill x">xhigh diagnosis</span></td></tr>
+    <tr><td class="n">4</td><td>S3 Tables Stage-create harness</td><td>One test-only label in the flat-matrix classifier, with a second grade.</td><td><span class="pill h">high</span></td></tr>
+    <tr><td class="n">5</td><td>The label's exclusion text</td><td>Measure what in-query NaN comparisons still answer after items 1 and 2.</td><td><span class="pill h">high</span></td></tr>
+    <tr><td class="n">6</td><td><b>The label's final audit</b></td><td>The 2026-11-05 re-audit found five blockers and the label did not stand.</td><td><span class="pill v">xhigh auditor</span></td></tr>
+  </table></div>
+
+  <h3>v1.5.7</h3>
+  <div class="tbl"><table>
+    <tr><th>#</th><th>Unit</th><th>What makes it hard</th><th>My lean</th></tr>
+    <tr><td class="n">7</td><td>NATIVE-DATAFRAME-WRITE-SILENT-1</td><td>S1 silent loss: native-door frame appends report success and store nothing. Measure every writer verb on every target first (an overwrite may also remove rows), then a guard like #1317's.</td><td><span class="pill h">high</span></td></tr>
+  </table></div>
+
+  <h3>First after the label</h3>
+  <div class="tbl"><table>
+    <tr><th>#</th><th>Unit</th><th>What makes it hard</th><th>My lean</th></tr>
+    <tr><td class="n">8</td><td><b>NAN-COMPARE-SPARK-1</b></td><td>Spark treats every NaN as one value above all others in <code>min</code>/<code>max</code> and its Parquet-statistics shortcut, <code>greatest</code>/<code>least</code>, sort and <code>=</code>; RePark compares by bits. It reaches aggregates, comparison kernels, sort and statistics pruning, and may need fork or DataFusion changes. I expect it to be the hardest near-term unit.</td><td><span class="pill x">xhigh sketch, then xhigh build</span></td></tr>
+    <tr><td class="n">9</td><td>PARQUET-NAN-EQUALITY-1 (S2)</td><td>A parquet frame's <code>kd = NaN</code> keeps no row where Spark keeps it; cause unmeasured.</td><td>fold into 8's step 0</td></tr>
+    <tr><td class="n">10</td><td>ICEBERG-NAN-FILE-PRUNE-1</td><td>NaN and file pruning.</td><td>with 8</td></tr>
+  </table></div>
+
+  <h3>Parked PRs</h3>
+  <div class="tbl"><table>
+    <tr><th>PR</th><th>Unit</th><th>Parked because</th></tr>
+    <tr><td class="mono">#1267</td><td>ANSI-SUBSCRIPT-AND-AMBIGUOUS-FIELD-1</td><td>Fourth Opus verifier FAIL.</td></tr>
+    <tr><td class="mono">#888</td><td>NVL-TYPE-COERCION-1</td><td>11 rounds.</td></tr>
+    <tr><td class="mono">#1037, #1038</td><td>Nested <code>TIMESTAMP_NTZ</code> writes</td><td>Owner parked 2026-10-12.</td></tr>
+    <tr><td class="mono">#1048</td><td>ICE-TSNS-CREATE-DOOR-1</td><td>Nanosecond create-door rulings, 2026-10-13.</td></tr>
+    <tr><td class="mono">#1000</td><td>USING-PER-SIDE-KEYS-1</td><td>Needs an Opus design sketch first.</td></tr>
+    <tr><td class="mono">#1014</td><td>CAST-VIEW-AGG-NULLABILITY-1</td><td>Not scheduled.</td></tr>
+    <tr><td class="mono">#1071</td><td>ENC-1-RESIDUE-1</td><td>Encryption work; Fable is not used on it.</td></tr>
+  </table></div>
+  <p>Further out: V3-LABEL-1, the full format-v2 label (nested columns, more catalogs), and the nanosecond and struct-write work behind WRITE-SPINE-1.</p>
+</section>
+
+<section>
+  <h2>Questions for Fable</h2>
+  <ol class="q">
+    <li><b>Rank</b> the candidates by expected build difficulty, and give each a tier: xhigh builder, xhigh verifier only, xhigh sketch first, or high throughout.</li>
+    <li><b>Part B's final delta:</b> should it run at xhigh, given that it is the last round? Which part of its brief is most likely to fail?</li>
+    <li><b>NAN-COMPARE-SPARK-1:</b> one unit or a family? Should a sketch come first? Where are its seats, and does any need an upstream change?</li>
+    <li><b>UPDATE-SCHEMA-BATCH-MISMATCH-1:</b> from the probe's table, where is the cause most likely, and is the fix small or a design question in the copy-on-write rewrite?</li>
+    <li><b>Parked PRs:</b> which are worth restarting with an xhigh builder, which stay parked, which should close?</li>
+    <li><b>Spend shape:</b> with about 44% of the week left, what split between xhigh and high? Which signals mid-flight should move a unit up: a §7 halt, a verifier FAIL on door reach, a second successor session?</li>
+    <li><b>Blind spots:</b> what is coming that will be harder than it looks and is missing here?</li>
+  </ol>
+  <p style="margin-top:12px">Please answer with one ranked table (unit, tier for builder, verifier and sketch, why, main risk), then a short answer to each question, marked as guidance.</p>
+</section>
+
+<footer>
+  <span>Sources: main's <span class="mono">task/roadmap/mid-term/map.md</span>, <span class="mono">STATUS.md</span> and <span class="mono">task/wo/ice-v2-flat-aws-label-1/</span>; part B's three verifier verdicts and today's cost run; the unit briefs; today's UPDATE probe; Fable's reply to the 2026-11-13 overnight board.</span>
+  <span>The full inquiry, with evidence paths, is the Markdown copy in the shared agent folder.</span>
+</footer>
+</div>
+</body></html>
