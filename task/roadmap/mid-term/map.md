@@ -148,36 +148,29 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   `string_to_date` (`crates/repark-functions/src/cast_map/leaf.rs:562-576`) rejects
   `'2024-01-01 junk'` and `'2024-01-01Tjunk'` where Spark truncates to the date; ANSI-off
   `nullif(DATE '2024-01-01', '2024-01-01 junk')` returns the date where Spark returns NULL.
-- [s3a-overwrite-commit-1-card-2026-10-01.md](s3a-overwrite-commit-1-card-2026-10-01.md) — **card
-  S3A-OVERWRITE-COMMIT-1 (2026-10-01, from the overnight owner-items backlog, #889 rollback fold
+- [S3A-OVERWRITE-COMMIT-1](s3a-overwrite-commit-1-card-2026-10-01.md) — **card (2026-10-01, from the overnight owner-items backlog, #889 rollback fold
   on moto):** an s3a `mode("overwrite")` text write deletes the destination's existing objects
   BEFORE the COPY, so a failed overwrite leaves the destination empty; Spark's commit protocol
   keeps the old data until commit; same on `3d4f2030` and on base.
-- [coalesce-shuffle-flake-1-card-2026-10-01.md](coalesce-shuffle-flake-1-card-2026-10-01.md) — **card
-  COALESCE-SHUFFLE-FLAKE-1 (2026-10-01, from the overnight owner-items backlog, #888 re-verify 7):**
+- [COALESCE-SHUFFLE-FLAKE-1](coalesce-shuffle-flake-1-card-2026-10-01.md) — **card (2026-10-01, from the overnight owner-items backlog, #888 re-verify 7):**
   an attack3 coalesce/shuffle wrong-result flake, reproduced on base; evidence
   `/tmp/oc-worker/direct/wo/reverify7-nvl/` (evidence location, retained).
-- [json-ntz-null-inference-1-card-2026-10-01.md](json-ntz-null-inference-1-card-2026-10-01.md) — **card
-  JSON-NTZ-NULL-INFERENCE-1 (2026-10-01, from the overnight owner-items backlog, #889 fold):** a
+- [JSON-NTZ-NULL-INFERENCE-1](json-ntz-null-inference-1-card-2026-10-01.md) — **card (2026-10-01, from the overnight owner-items backlog, #889 fold):** a
   mostly-null NTZ column drops out of JSON read-back key inference, so appending such a frame to
   its own seed fails append validation.
-- [view-ansi-capture-1-card-2026-10-01.md](view-ansi-capture-1-card-2026-10-01.md) — **card
-  VIEW-ANSI-CAPTURE-1 (2026-10-01, from the overnight owner-items backlog, #888 re-verify 8
+- [VIEW-ANSI-CAPTURE-1](view-ansi-capture-1-card-2026-10-01.md) — **card (2026-10-01, from the overnight owner-items backlog, #888 re-verify 8
   VN9-4):** views are re-analyzed under the current session's ANSI setting, not the setting they
   were created under, so a view created under ANSI on with `sequence(1, '3')` or a CAST changes
   behaviour when read under ANSI off; Spark keeps the creation-time setting.
-- [const-eval-ceiling-1-card-2026-10-01.md](const-eval-ceiling-1-card-2026-10-01.md) — **card
-  CONST-EVAL-CEILING-1 (2026-10-01, the owner's card, from the overnight owner-items backlog):**
+- [CONST-EVAL-CEILING-1](const-eval-ceiling-1-card-2026-10-01.md) — **card (2026-10-01, the owner's card, from the overnight owner-items backlog):**
   replace the mirror constant evaluator (`cardinality.rs` const_i128/const_f64/exact_i128, and
   `cardinality_nullif.rs`) with a ceiling check on DataFusion's ExprSimplifier/ConstEvaluator
   output; includes the line-67 unknown-versus-NULL defect (`nullif(101,
   coalesce(CAST('0' AS INT), 101))` proves a false equality) as a known instance.
-- [verbatim-ctas-escape-1-card-2026-10-01.md](verbatim-ctas-escape-1-card-2026-10-01.md) — **card
-  VERBATIM-CTAS-ESCAPE-1 (2026-10-01, from the overnight owner-items backlog, #890 re-verify
+- [VERBATIM-CTAS-ESCAPE-1](verbatim-ctas-escape-1-card-2026-10-01.md) — **card (2026-10-01, from the overnight owner-items backlog, #890 re-verify
   VE2-3):** in verbatim mode (`spark.sql.parser.escapedStringLiterals=true`), CTAS and INSERT
   OVERWRITE with a `\'` literal fail with a parse error, while Spark accepts them.
-- [cte-temp-view-precedence-1-card-2026-10-01.md](cte-temp-view-precedence-1-card-2026-10-01.md) — **card
-  CTE-TEMP-VIEW-PRECEDENCE-1 (2026-10-01, from the overnight owner-items backlog, one card covering
+- [CTE-TEMP-VIEW-PRECEDENCE-1](cte-temp-view-precedence-1-card-2026-10-01.md) — **card (2026-10-01, from the overnight owner-items backlog, one card covering
   lines 69, 77 and 81):** CTE-versus-temp-view precedence gives silent wrong data on column-list
   INSERT, static-partition OVERWRITE and CTAS (a CTE should shadow a same-named temp view); the
   facade region walker expands CTE references on the column-list door; VT4-2 (quoted-case CTE name)
@@ -781,7 +774,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [struct-case-name-cast-1-card-2026-11-11.md](struct-case-name-cast-1-card-2026-11-11.md), [struct-typed-form-schema-1-card-2026-11-11.md](struct-typed-form-schema-1-card-2026-11-11.md) and [facade-dup-field-row-1-card-2026-11-11.md](facade-dup-field-row-1-card-2026-11-11.md) — **cards (filed 2026-11-11, S3, not dispatched):** head-leg class gaps from the pin file; FACADE-DUP-FIELD-ROW-1's true card for X0030 and X0032 is NATURAL-EXISTENCE-JOIN-ACCEPT-1.
 - [PIVOT-EMPTY-CELL-COUNT-1](pivot-empty-cell-count-1-card-2026-11-12.md) — **card (filed 2026-11-12, S2, not dispatched):** a pivoted count answers 0 where Spark answers NULL for an absent pair.
 - [LOG-NONPOSITIVE-NULL-1](log-nonpositive-null-1-card-2026-11-12.md) — **card (filed 2026-11-12, S2, not dispatched):** `ln`, `log10` and `log2` of zero or a negative answer -Infinity or NaN where Spark answers NULL.
-- [NAN-PAYLOAD-1](nan-payload-1-card-2026-11-12.md) — **card (named by the signed-zero sketch; card file 2026-11-12, unrated, not dispatched):** math functions return sign-set NaN, so `max`/`min`, `greatest`/`least` and `ORDER BY` differ from Spark; the owner queued a follow-up unit.
+- [NAN-PAYLOAD-1](nan-payload-1-card-2026-11-12.md) — **card (named by the signed-zero sketch; card file 2026-11-12, unrated):** math functions return sign-set NaN, so `max`/`min`, `greatest`/`least` and `ORDER BY` differ from Spark; NAN-WRITE-CANONICAL-1 fixed the stored half.
 - [PIVOT-COLUMN-ORDER-1](pivot-column-order-1-card-2026-11-12.md), [SPARK-DOOR-IS-DISTINCT-COLUMNS-1](spark-door-is-distinct-columns-1-card-2026-11-12.md), [SPARK-DISTRIBUTE-BY-1](spark-distribute-by-1-card-2026-11-12.md), [POW-NEGATIVE-FRACTIONAL-1](pow-negative-fractional-1-card-2026-11-12.md) and [NOT-IN-MULTICOLUMN-1](not-in-multicolumn-1-card-2026-11-12.md) — **cards (filed 2026-11-12, S3, not dispatched):** a discovered pivot's column order and NaN name; over-refusals of two-column `IS DISTINCT FROM` (raised priority), `DISTRIBUTE BY`, `pow(-8.0, 0.5)` (1.5.6) and `(a, b) NOT IN`.
 - [COUNT-DISTINCT-MULTI-SIGNED-ZERO-1](count-distinct-multi-signed-zero-1-card-2026-11-12.md) — **card (filed 2026-11-12, S2, not dispatched):** `countDistinct('a', 'b')` over signed-zero rows answers 3 where Spark answers 1; owner ruling 2.
 - [RECURSIVE-UNION-COUNT-PANIC-1](recursive-union-count-panic-1-card-2026-11-12.md) — **card (filed 2026-11-12, S2 provisional, not dispatched):** `count(*)` over a recursive `UNION` CTE panics in DataFusion's `multi_group_by`.
@@ -789,13 +782,13 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [MEMORY-CATALOG-PUT-AFTER-UNLOCK-1](memory-catalog-put-after-unlock-1-card-2026-11-12.md), [HADOOP-CHAIN-LOCATIONS-BOUND-1](hadoop-chain-locations-bound-1-card-2026-11-12.md) and [SQL-MINUS-REFUSE-1](sql-minus-refuse-1-card-2026-11-12.md) — **cards (filed 2026-11-12, not dispatched):** S3 except HADOOP-CHAIN-LOCATIONS-BOUND-1 (S4): the memory catalog's cache put after the unlock (fork #382's follow-up), an unbounded Hadoop drop eviction, and `MINUS` refused where Spark answers.
 - [NATIVE-DATAFRAME-WRITE-SILENT-1](native-dataframe-write-silent-1-card-2026-11-13.md) — **card (2026-11-13, S1; fixed, v1.5.7):** native frame writes stored nothing, path overwrites deleted rows; refused now.
 - [NATIVE-CREATE-SCHEMA-NOT-DURABLE-1](native-create-schema-not-durable-1-card-2026-11-13.md) — **card (2026-11-13, S2, not dispatched):** native `CREATE SCHEMA` under Iceberg is in-memory and can shadow a namespace.
-- [NAN-PARTITION-RAW-BITS-1](nan-partition-raw-bits-1-card-2026-11-13.md) — **card (2026-11-13, S2, not dispatched):** fan-out writes keep a raw NaN partition; RePark's `= NaN` misses rows.
+- [NAN-WRITE-CANONICAL-1](nan-write-canonical-1-card-2026-11-13.md) — **card (2026-11-13, Q11 (C); FIXED, unmerged):** writes store NaN as Spark's (Avro data raw); closes [NAN-PARTITION-RAW-BITS-1](nan-partition-raw-bits-1-card-2026-11-13.md) (S2), [NAN-PARTITION-FILE-SPLIT-1](nan-partition-file-split-1-card-2026-11-13.md) (S4), [MATH-NAN-CANONICAL-1](math-nan-canonical-1-card-2026-11-13.md) (owner: C then B); filed [NAN-AVRO-REWRITE-PARTITION-1](nan-avro-rewrite-partition-1-card-2026-11-13.md) (S3).
 - [FLOAT-PARTITION-INSERT-REFUSE-1](float-partition-insert-refuse-1-card-2026-11-13.md) — **card (2026-11-13, S2 loud, not dispatched):** an `INSERT` of an inexact FLOAT partition value refuses.
 - [ICEBERG-NAN-FILE-PRUNE-1](iceberg-nan-file-prune-1-card-2026-11-13.md) — **card (2026-11-13, S2 provisional, not dispatched):** the scan drops a NaN row for `x > 0.5`; Spark-on-Iceberg keeps it.
 - [COLLECTSET-NAN-ELEMENTS-1](collectset-nan-elements-1-card-2026-11-13.md) — **card (2026-11-13, S3, not dispatched):** `F.collect_set` keeps one NaN; Spark keeps each NaN row.
-- [MATH-NAN-CANONICAL-1](math-nan-canonical-1-card-2026-11-13.md) and [NAN-COMPARE-SPARK-1](nan-compare-spark-1-card-2026-11-13.md) — **cards (2026-11-13; owner: C before the label, B after):** Spark keeps sign-set NaN in memory too; Spark's NaN comparison.
+- [NAN-COMPARE-SPARK-1](nan-compare-spark-1-card-2026-11-13.md) — **card (2026-11-13; owner: first after the label):** Spark's NaN comparison.
 - [NATIVE-CREATE-VIEW-ICEBERG-EMPTY-1](native-create-view-iceberg-empty-1-card-2026-11-13.md), [NATIVE-UNION-LITERAL-INT-1](native-union-literal-int-1-card-2026-11-13.md), [NATIVE-CONCAT-NULL-1](native-concat-null-1-card-2026-11-13.md), [NATIVE-LISTING-FLOAT-PARTITION-1](native-listing-float-partition-1-card-2026-11-13.md), [NATIVE-EXPLAIN-EXECUTE-1](native-explain-execute-1-card-2026-11-13.md) — **cards (2026-11-13, not dispatched):** S3; the last S4.
 - [AGG-ORDER-BY-ACCEPTED-1](agg-order-by-accepted-1-card-2026-11-13.md), [FEXPR-COUNT-STAR-AGG-1](fexpr-count-star-agg-1-card-2026-11-13.md), [NAN-PARTITION-FILE-SPLIT-1](nan-partition-file-split-1-card-2026-11-13.md), [S3T-STAGE-CREATE-ORACLE-1](s3t-stage-create-oracle-1-card-2026-11-13.md) — **cards (2026-11-13, S3, S3, S4, unrated; not dispatched):** the first refuses after the label (owner); the last declared on S3 Tables (owner).
-- [UPDATE-SCHEMA-BATCH-MISMATCH-1](update-schema-batch-mismatch-1-card-2026-11-13.md), [PARQUET-NAN-EQUALITY-1](parquet-nan-equality-1-card-2026-11-13.md) and [DECIMAL-DOUBLE-UNION-COERCION-1](decimal-double-union-coercion-1-card-2026-11-13.md) — **cards (2026-11-13, S3 label-blocking; S2; S1 label-blocking, not ruled):** a two-file copy-on-write `UPDATE` refuses about half the time; `= NaN` misses on a parquet frame; a DECIMAL-and-DOUBLE `UNION` write stores 0.0 for 1e-20.
+- [UPDATE-SCHEMA-BATCH-MISMATCH-1](update-schema-batch-mismatch-1-card-2026-11-13.md), [PARQUET-NAN-EQUALITY-1](parquet-nan-equality-1-card-2026-11-13.md) and [DECIMAL-DOUBLE-UNION-COERCION-1](decimal-double-union-coercion-1-card-2026-11-13.md) — **cards (2026-11-13, S3 label-blocking; S2; S1 label-blocking, not ruled):** a two-file COW `UPDATE` refused by its batch order, now fixed; `= NaN` misses on a parquet frame; a DECIMAL-and-DOUBLE `UNION` write stores 0.0 for 1e-20.
 - [ZERO-PARTITION-MERGE-1](zero-partition-merge-1-card-2026-11-13.md), [SIGNED-ZERO-WRITE-METADATA-1](signed-zero-write-metadata-1-card-2026-11-13.md), [UPDATE-REQUIRED-NULL-TEXT-1](update-required-null-text-1-card-2026-11-13.md) — **cards (2026-11-13, S1 label-blocking by the owner; S3; S4; not dispatched):** `0.0` and `-0.0` rows written together share one DOUBLE partition; zero bounds, `.partitions` and map keys unlike Spark; two required-NULL `UPDATE` texts.
 - [DOUBLE-DECIMAL-STORE-ROUND-1](double-decimal-store-round-1-card-2026-11-13.md), [DECIMAL-FLOAT-ARITH-1](decimal-float-arith-1-card-2026-11-13.md), [DECIMAL-DOUBLE-NESTED-1](decimal-double-nested-1-card-2026-11-13.md), [DECIMAL-PRUNING-CONJUNCT-1](decimal-pruning-conjunct-1-card-2026-11-13.md), [DROPDUP-SUBSET-SCHEMA-1](dropdup-subset-schema-1-card-2026-11-13.md), [C002-BENCH-MAX-PASSES-1](c002-bench-max-passes-1-card-2026-11-13.md), [NORMALIZE-ZERO-DEAD-ARM-1](normalize-zero-dead-arm-1-card-2026-11-13.md) — **cards (2026-11-13; S1 label-blocking, S3, S3, S4, S3, S4, S4; not dispatched):** the decimal sketch's, store rounding first (DECIMAL-DOUBLE-UNION-COERCION-1 ruled); part B's residues.

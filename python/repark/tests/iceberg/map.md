@@ -9,7 +9,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 ## Contents
 
 - [test_alter_table.py](test_alter_table.py) — R-ALTER-TABLE — Spark ALTER TABLE schema evolution facade pins.
-- [test_ctas_query_failure_cleanup_1.py](test_ctas_query_failure_cleanup_1.py) — CTAS-QUERY-FAILURE-CLEANUP-1 — failing CTAS creates (F1/F3/F6 × six spellings × hadoop/memory × v2/v3, saveAsTable × v2 only per ruling 1) leave no metadata and refuse on every read; K4's five replace spellings keep the live table.
+- [test_ctas_query_failure_cleanup_1.py](test_ctas_query_failure_cleanup_1.py) — CTAS-QUERY-FAILURE-CLEANUP-1 — failing CTAS creates (F1/F3/F6, six spellings, hadoop/memory, v2/v3; saveAsTable v2 only, ruling 1) leave no metadata and refuse on every read; K4's five replace spellings keep the live table.
 - [test_describe_table.py](test_describe_table.py) — Facade pins for DESCRIBE [TABLE] [EXTENDED|FORMATTED] on Iceberg tables.
 - [test_empty_projection_count_1.py](test_empty_projection_count_1.py) — `count(*)` over an empty projection (changelog and v3 DV reads) answers the row count.
 - [test_ice_branch_ops_1.py](test_ice_branch_ops_1.py) — ICE-BRANCH-OPS-1 pins: four Iceberg branch procedures on both doors.
@@ -26,9 +26,8 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_drop_ns_1.py](test_ice_drop_ns_1.py) — ICE-DROP-NS-1 — ``DROP NAMESPACE`` on a non-empty namespace refuses like Spark.
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) — ICE-ERROR-CONDITIONS-1: the `[CONDITION]` and SQLSTATE parsers that attach Spark error conditions to engine errors.
 - [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — ICE-HADOOP-VN-1 — a stale Hadoop `vN` writer raises loud and loses nothing.
-- [test_ice_idless_struct_1.py](test_ice_idless_struct_1.py) — ICE-NESTED-DDL-1 / RP-64 — an id-less Parquet file reads its struct children by id (shapes a to i, two filter pins); red on `14a93602`, green on `ee592dcf`.
-- [test_ice_idless_late_file_1.py](test_ice_idless_late_file_1.py) — ICE-NESTED-DDL-1 / RP-64 fix round 1 — a late id-less file reads values (pins j to o, control n); red on `ee592dcf`, green on `56ff5545`.
-- [test_ice_idless_toplevel_1.py](test_ice_idless_toplevel_1.py) — RP-65 — an unmapped id-less top-level string/binary pair reads, answers its null tests, `!=` and prefixes, and refuses `=` and `>`; green on `66901f02`.
+- [test_ice_idless_struct_1.py](test_ice_idless_struct_1.py), [test_ice_idless_late_file_1.py](test_ice_idless_late_file_1.py) — ICE-NESTED-DDL-1 / RP-64 — an id-less Parquet file reads its struct children by id (shapes a to i, two filter pins); fix round 1: a late id-less file reads values (pins j to o, control n), red on `ee592dcf`, green on `56ff5545`.
+- [test_ice_idless_toplevel_1.py](test_ice_idless_toplevel_1.py) — RP-65 — an unmapped id-less top-level string/binary pair reads, answers its null tests, `!=` and prefixes, and refuses `=` and `>`.
 - [test_ice_metadata_cols_1.py](test_ice_metadata_cols_1.py) — IPI-20 PR-1 — the Spark door serves the metadata columns ``_file`` … ``_deleted``.
 - [test_ice_mixed_case_1.py](test_ice_mixed_case_1.py) — ICE-MIXED-CASE-1 — the Spark door resolves mixed-case columns case-insensitively.
 - [test_ice_mt_as_of_1.py](test_ice_mt_as_of_1.py) — xo55-mt R1 — the Spark door serves ``VERSION AS OF`` on Iceberg metadata tables.
@@ -59,15 +58,16 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_views_6_temp.py](test_ice_views_6_temp.py) — IPI-40 views PR6a1 battery — SQL ``CREATE [OR REPLACE] TEMPORARY VIEW``.
 - [test_ice_views_6_temp_errors.py](test_ice_views_6_temp_errors.py) — IPI-40 views PR6 error-path battery — every temp-view refusal with its complete text.
 - [test_iceberg_hygiene.py](test_iceberg_hygiene.py) — R-ICEBERG-HYGIENE oracles — column-def CREATE + ref DDL time-travel pins.
-- [test_iceberg_load_path.py](test_iceberg_load_path.py) — R-DF-LOAD-PATH / R-DF-LOAD-METADATA-JSON — ``format("iceberg").load(<path>)`` reads. The hadoop hint pins (2026-10-28, 10-29): after a committed `DELETE` on a `type=hadoop` table, a stale `version-hint.text` or a gzip-named newer metadata file reads the newest rows; ICE-HADOOP-GZIP-METADATA-1 and ICE-HADOOP-HINT-WINDOW-1 assert those survivors. Merge facts: the sidecar.
-- [test_local_drop_recreate_stale_write_1.py](test_local_drop_recreate_stale_write_1.py) — LOCAL-DROP-RECREATE-STALE-WRITE-1 — a Hadoop drop and recreate reads and writes the new table: session read, path read and current-file uuid per cell; live Spark reads the six wrong-write rows.
+- [test_iceberg_load_path.py](test_iceberg_load_path.py) — R-DF-LOAD-PATH / R-DF-LOAD-METADATA-JSON — ``format("iceberg").load(<path>)`` reads. Hadoop hint pins (2026-10-28, 10-29): after a committed `DELETE` on a `type=hadoop` table, a stale hint or a gzip-named newer metadata file reads the newest rows (ICE-HADOOP-GZIP-METADATA-1, ICE-HADOOP-HINT-WINDOW-1). Merge facts: the sidecar.
+- [test_local_drop_recreate_stale_write_1.py](test_local_drop_recreate_stale_write_1.py) — LOCAL-DROP-RECREATE-STALE-WRITE-1 — a Hadoop drop and recreate reads and writes the new table, three reads per cell; live Spark reads the six wrong-write rows.
 - [test_maintenance_call.py](test_maintenance_call.py) — R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
 - [test_maintenance_policy_1.py](test_maintenance_policy_1.py) — `run_maintenance` policy surface: dry-run default, override kwargs, refusal without a policy.
 - [test_map_key_union_1.py](test_map_key_union_1.py) — MAP-KEY-ALTER-1 delta — evolving BY NAME, MERGE and DataFrame writes refuse a map-key change, writing nothing; a map value still evolves.
 - [test_metadata_tables.py](test_metadata_tables.py) — Oracle — Spark-style Iceberg metadata tables.
 - [test_mw5_baseline_delta.py](test_mw5_baseline_delta.py) — MW-5: re-run the MW-0 merge-on-read growth demo and pin the compact delta.
 - [test_mw8_runbook.py](test_mw8_runbook.py) — Run the documented maintenance runbook end to end and pin what each step changes.
-- [test_nan_partition_value_1.py](test_nan_partition_value_1.py) — NAN-PARTITION-VALUE-1: a NaN or infinite FLOAT/DOUBLE partition value written by `INSERT`, CTAS, `writeTo` or `saveAsTable` reads back as itself; live, Spark reads it as its own table's, and RePark reads Spark's table as Spark does.
+- [test_nan_partition_value_1.py](test_nan_partition_value_1.py) — NAN-PARTITION-VALUE-1: a NaN or infinite FLOAT/DOUBLE partition value written by `INSERT`, CTAS, `writeTo` or `saveAsTable` reads back as itself; live, Spark and RePark each read the other's table as their own.
+- [test_nan_write_canonical_1.py](test_nan_write_canonical_1.py) — NAN-WRITE-CANONICAL-1: NaN bits and partition files per door and format; live = Spark's; xfail: Avro filters.
 - [test_partname_1.py](test_partname_1.py) — WO PARTNAME-1: partition-field names stay Spark's on each door.
 - [test_rdf_schema_evo_1.py](test_rdf_schema_evo_1.py) — RDF-SCHEMA-EVO-1: rewrite_data_files after schema evolution, pinned against Spark.
 - [test_ref_branch_tag_wap.py](test_ref_branch_tag_wap.py) — REF facade pins for Iceberg branches, tags and write-audit-publish.
@@ -82,6 +82,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — Facade pins for nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the SQL DESCRIBE type.
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — V3 facade `.sql()` v3 DML pins: UPDATE, sequential COW DELETE, and MERGE keep `_row_id`.
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — V3-2: CREATE/CTAS format-version=3 behind ``repark.sql.allowCreateFormatVersion3``.
+- [test_update_schema_batch_mismatch_1.py](test_update_schema_batch_mismatch_1.py) — UPDATE-SCHEMA-BATCH-MISMATCH-1 — a two-file `UPDATE` answers in either batch order.
 - [test_v3_dv_compaction.py](test_v3_dv_compaction.py) — V3-5: facade rewrite_data_files drops in-scope v3 deletion vectors.
 - [test_v3_dv_container_close.py](test_v3_dv_container_close.py) — RP-7 — the shared-Puffin deletion-vector container close, repark against live Spark.
 - [test_v3_legacy_delete_merge.py](test_v3_legacy_delete_merge.py) — V3-12 — a legacy parquet position delete merges into the DV on the next MoR write.
@@ -131,19 +132,18 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 
 ## Path expressions
 
-The move put every file here one level below the old flat directory. These files had a
-path expression repointed in the same unit and no other line changed:
+The move put every file here one level below the old flat directory. These files had a path expression repointed in the same unit and no other line changed ("new path": names its own or a sibling's new path in a docstring or recorded string):
 
 | file | change |
 |---|---|
-| `_record_branch_ops_1.py`, `_record_ice_drop_ns_1_oracle.py`, `_record_ice_procs_route_1_oracle.py`, `_record_ice_replace_columns_1_oracle.py`, `_record_ice_tt_resolve_1_oracle.py`, `_record_v3_multiarg_1.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` when run as a script. |
-| `_record_ice_column_reorder_1.py` | its usage block sets `PYTHONPATH=python/repark/tests` for the root-helper import; names its own or a sibling's new path in a docstring or recorded string. |
-| `_record_ice_hadoop_vn_1.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` when run as a script; anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_ice_mixed_case_1.py`, `test_ice_mixed_case_1.py` | names its own or a sibling's new path in a docstring or recorded string; anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_ice_nan_pushdown_1.py` | names its own or a sibling's new path in a docstring or recorded string; reads the root `fixtures/` one level up. |
-| `_record_ice_page_prune_1.py` | its usage block sets `PYTHONPATH=python/repark/tests`; names its own or a sibling's new path in a docstring or recorded string; reads the root `fixtures/` one level up. |
+| `_record_branch_ops_1.py`, `_record_ice_drop_ns_1_oracle.py`, `_record_ice_procs_route_1_oracle.py`, `_record_ice_replace_columns_1_oracle.py`, `_record_ice_tt_resolve_1_oracle.py`, `_record_v3_multiarg_1.py` | new path; puts the tests root on `sys.path` when run as a script. |
+| `_record_ice_column_reorder_1.py` | its usage block sets `PYTHONPATH=python/repark/tests` for the root-helper import; new path. |
+| `_record_ice_hadoop_vn_1.py` | new path; puts the tests root on `sys.path` when run as a script; anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_mixed_case_1.py`, `test_ice_mixed_case_1.py` | new path; anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_nan_pushdown_1.py` | new path; reads the root `fixtures/` one level up. |
+| `_record_ice_page_prune_1.py` | its usage block sets `PYTHONPATH=python/repark/tests`; new path; reads the root `fixtures/` one level up. |
 | `_record_ice_promote_read_1.py` | puts the tests root on `sys.path` when run as a script; anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_ice_rdf_sort_parse_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_ice_rdf_sort_parse_1_oracle.py` | new path. |
 | `_record_rdf_options_1_oracle.py`, `test_ice_hadoop_vn_1.py`, `_record_ice_nested_evo_1.py`, `test_mw8_runbook.py`, `test_rp3_c009_write_default.py`, `test_rp4_c004_to_branch.py`, `test_sql_harden_cutover.py`, `test_v3_lineage_columns.py`, `test_v3_live_oracle.py`, `test_v3e3_fixtures.py`, `test_v3e4_refs_time_travel.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `test_ice_nan_pushdown_1.py`, `test_ice_page_prune_1.py` | reads the root `fixtures/` one level up. |
 

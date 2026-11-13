@@ -415,6 +415,7 @@ async fn collect_identity_update_rows(
         .await?
         .execute_stream()
         .await?;
+    let planned = datafusion::physical_plan::RecordBatchStream::schema(&*stream);
     let mut pairs = Vec::new();
     let mut data_batches = Vec::new();
     while let Some(batch) = stream.next().await {
@@ -429,7 +430,7 @@ async fn collect_identity_update_rows(
         pairs.reserve(batch.num_rows());
         lineage::push_pairs_from_batch(&batch, &mut pairs)?;
         if batch.num_rows() > 0 {
-            data_batches.push(project_update_data_batch(&batch, values_schema)?);
+            data_batches.push(project_update_data_batch(&batch, values_schema, &planned)?);
         }
     }
     Ok((pairs, data_batches))

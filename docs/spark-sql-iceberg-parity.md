@@ -5265,6 +5265,44 @@ still open is `isModifiable`.
   fixed before ICE-V2-FLAT-AWS-LABEL-1 under the owner's 2026-11-12 ruling ("Go with the
   defaults", two fork files or fewer).
 
+### NAN-WRITE-CANONICAL-1 — RePark's Iceberg write stores every NaN as Spark's does — **FIXED 2026-11-13 (branch, not merged)**
+
+- **repark** — Before (main `1d9d2808`, fork `92242cb4`): every write door stored the bits each NaN arrived with.
+  RePark's arithmetic, functions and aggregates make a sign-set NaN (`fff8…`/`ffc00000`), and payload NaNs from
+  `createDataFrame` kept their payload, in data files, nested leaves and partition values alike. CTAS, RTAS,
+  `writeTo` `create`/`createOrReplace`, `saveAsTable` overwrite, `INSERT OVERWRITE`, MERGE and UPDATE stored several
+  NaN partition values, so `= CAST('NaN' …)` missed rows, and every partitioned door wrote the NaN partition as 3–4
+  files. After (fork PR #384 `d6592644`, merged as `8b6ff921` with the same tree; RePark `e100717f`): the fork's `AnyFileWriter` stores the canonical NaN
+  (`7ff8000000000000`/`7fc00000`) in Parquet and ORC data files, nested leaves included, and keeps Avro's bits; the
+  partition-value calculator stores one canonical NaN partition value on all three formats; RePark's plan-path
+  routing hashes the canonical value, so the NaN partition is one file. No other value changes (`-0.0` stays
+  `-0.0`).
+- **spark** — Spark 4.1.2 with Iceberg 1.11.0 stores the canonical NaN in Parquet and ORC data files, keeps the raw
+  bits in Avro data files, stores one canonical NaN partition value in one file on all three formats, canonicalises
+  every NaN of each file its copy-on-write UPDATE or `rewrite_data_files` rewrites (Parquet and ORC), and refuses a
+  map with two NaN keys (`DUPLICATED_MAP_KEY`). *(oracle: measured live 2026-11-13,
+  `task/wo/nan-write-canonical-1/evidence/step0/`.)*
+- **Still unlike Spark** — a single sign-set or payload NaN map key in a Parquet or ORC map keeps its bits (Spark
+  stores it canonical; rewriting keys could merge two keys Spark would refuse); the plain Parquet path write
+  (`df.write.parquet`, not Iceberg) keeps raw bits; `max`, `min`, `greatest`, `least` and comparisons over a sign-set
+  NaN computed in the same query answer by bits (NAN-PAYLOAD-1, option (B)).
+- **Still unlike Spark, Avro** — Avro data keeps the raw NaN bits, as Spark's does, and RePark compares by bits: on
+  a non-partition column of an Avro table RePark has just written, `= CAST('NaN' …)` finds 1 of 6 or 7 NaN rows and
+  `> CAST('Infinity' …)` 3 of 6, where Spark finds all of them (NAN-COMPARE-SPARK-1; the pin holds it as a strict
+  xfail). A computed sign-set NaN key in an Avro map keeps its bits, where Spark stores it canonical.
+- **Tables written before the fix** — keep their bits. A RePark rewrite with a fixed build (`rewrite_data_files`, or
+  any copy-on-write rewrite of the file) repairs Parquet and ORC files and the NaN partition value; Avro data of an
+  unpartitioned table stays raw, as on Spark. A rewrite of an Avro table partitioned by the float column writes each
+  row from the old raw partition value, where Spark writes the canonical NaN (NAN-AVRO-REWRITE-PARTITION-1, S3).
+- **Pin** — `python/repark/tests/iceberg/test_nan_write_canonical_1.py` (Parquet on INSERT, CTAS, `writeTo`,
+  `saveAsTable` overwrite, MERGE and UPDATE; ORC and Avro on INSERT and CTAS; live: equal to Spark's own table; a
+  strict xfail for the Avro filters above); fork
+  `crates/iceberg/src/arrow/partition_value_calculator.rs` tests over every NaN pattern, the controls and all three
+  formats.
+- **Rationale** — the owner's 2026-11-13 ruling on Q11 ("Defaults", option C before the label); card
+  [NAN-WRITE-CANONICAL-1](../task/roadmap/mid-term/nan-write-canonical-1-card-2026-11-13.md). Closes
+  NAN-PARTITION-RAW-BITS-1 and NAN-PARTITION-FILE-SPLIT-1.
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`
