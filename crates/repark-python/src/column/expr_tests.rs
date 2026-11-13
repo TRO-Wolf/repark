@@ -304,3 +304,67 @@ fn the_expression_context_plans_an_empty_dml_as_a_no_op() {
     let context = super::expr_build::build_expr_context().expect("expression context");
     crate::session_tests::assert_the_context_plans_an_empty_dml_as_a_no_op(&context, "F.expr");
 }
+
+fn fragment_sort_options(sql: &str) -> Vec<(bool, bool)> {
+    use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+    use datafusion::logical_expr::LogicalPlan;
+    let column = PyColumn::sql(sql, false).expect("the fragment plans");
+    let mut found = Vec::new();
+    column
+        .expr()
+        .apply(|node| {
+            match node {
+                Expr::WindowFunction(window) => found.extend(
+                    window
+                        .params
+                        .order_by
+                        .iter()
+                        .map(|sort| (sort.asc, sort.nulls_first)),
+                ),
+                Expr::ScalarSubquery(subquery) => {
+                    subquery.subquery.apply(|plan| {
+                        if let LogicalPlan::Sort(sort) = plan {
+                            found.extend(sort.expr.iter().map(|key| (key.asc, key.nulls_first)));
+                        }
+                        Ok(TreeNodeRecursion::Continue)
+                    })?;
+                }
+                _ => {}
+            }
+            Ok(TreeNodeRecursion::Continue)
+        })
+        .expect("the walk completes");
+    found
+}
+
+#[test]
+fn fragment_order_by_takes_spark_null_placement_unless_explicit() {
+    let cases: [(&str, Vec<(bool, bool)>); 8] = [
+        ("row_number() OVER (ORDER BY m)", vec![(true, true)]),
+        ("row_number() OVER (ORDER BY m ASC)", vec![(true, true)]),
+        ("row_number() OVER (ORDER BY m DESC)", vec![(false, false)]),
+        (
+            "row_number() OVER (ORDER BY m ASC NULLS LAST)",
+            vec![(true, false)],
+        ),
+        (
+            "row_number() OVER (ORDER BY m DESC NULLS FIRST)",
+            vec![(false, true)],
+        ),
+        (
+            "first_value(id) OVER (PARTITION BY g ORDER BY g DESC, m)",
+            vec![(false, false), (true, true)],
+        ),
+        (
+            "(SELECT a FROM VALUES (CAST(NULL AS INT)), (1) AS v(a) ORDER BY a LIMIT 1)",
+            vec![(true, true)],
+        ),
+        (
+            "(SELECT a FROM VALUES (CAST(NULL AS INT)), (1) AS v(a) ORDER BY a DESC LIMIT 1)",
+            vec![(false, false)],
+        ),
+    ];
+    for (sql, expected) in cases {
+        assert_eq!(fragment_sort_options(sql), expected, "{sql}");
+    }
+}
