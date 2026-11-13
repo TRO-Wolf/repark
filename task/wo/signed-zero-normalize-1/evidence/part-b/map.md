@@ -9,6 +9,7 @@ Measurement and records only; no product code. Part B part 1's order is
 - [item1/](item1/map.md) — build item 1 on main `276dc503`: cites re-verified, the step-0 probes re-measured, and the added spill, plan-shape, `Distinct::On` and FLOAT-to-DOUBLE cells.
 - [after/](after/map.md) — the part 1 head re-measured: every step-0 and item-1 RePark leg on the head, the after-table and the facade pin's cell file generator.
 - [cost/](cost/map.md) — the cost gates' probe and summariser (order §8).
+- [cost5/](cost5/map.md) — the final head's re-measure and the owner's case (a) exception.
 - [q3-rerun/](q3-rerun/map.md) — the floatkeys part re-run on main `276dc503` with #1307's seeds: all 28 matrix cells non-EQUAL.
 
 Up: [../map.md](../map.md).

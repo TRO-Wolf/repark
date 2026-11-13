@@ -90,6 +90,11 @@ On the §7 halt "`UPDATE-SCHEMA-BATCH-MISMATCH-1` reproducing more often", measu
   1.0101 (C-012) and 1.0179 (case (a)), F1 0.9844, F2 1.0302, f3 1.1297 (bar 1.20). The orchestrator had relayed the
   mislabel. The owner, about 15:20 UTC, verbatim: **"Defaults, merge #1326 when green and cost4 passes"**: the
   final head's re-measure (cost4) gates N1 and case (a) at 1.05 and f3 at 1.20, and reports the step-0 reads.
+- **The final re-measure and the exception.** The re-measure ran as cost5 (`pkg-head3`, the final head `9d92adf60`,
+  against `04d84ab9`, five rotated runs, 45 samples, every sample exit 0): N1 1.0205 and f3 1.0918 pass; case (a)
+  reads 1.0516 against 1.05 (per run 1.004, 0.927, 1.089, 1.052, 1.076; base against base 1.0156). The owner, about
+  19:12 UTC, verbatim: **"Take A and allow two Spark JVMs"**: a cost exception for case (a) at 1.0516, and the merge
+  on green. Ten further case (a) runs (cost6) were started and stopped unsampled when the exception was ruled.
 - **The re-check's open items.** The owner, about 14:52 UTC, verbatim: **"Defaults, and merge #1323 when green"**.
   That adopted three defaults:
   - **The schema invariant** for `dropDuplicates(subset)` is held against main's own behaviour. Names, order, ids,
