@@ -6,7 +6,7 @@ both verifiers of PR #1316 (FEXPR-WINDOW-NULL-ORDER-1); owner ruling of 2026-11-
 anything you need. Then proceed with defaults.": card it at S2 and fix it before the scoped label
 ICE-V2-FLAT-AWS-LABEL-1, as a small unit in the second-builder queue after Q10; the native door keeps
 its own dialect (ruling Q6). **Status:** **FIXED by this unit** (branch
-`fix/filter-string-null-order-1`, stacked on #1316's `fix/fexpr-window-null-order-1`).
+`fix/filter-string-null-order-1`, built on #1316, which has since merged).
 
 ## Why
 
