@@ -658,3 +658,97 @@ pub fn java_double_text_len(value: f64) -> usize {
 pub fn java_float_text_len(value: f32) -> usize {
     with_java_float_text(value, str::len)
 }
+
+const POW10_F64: [f64; 23] = [
+    1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16,
+    1e17, 1e18, 1e19, 1e20, 1e21, 1e22,
+];
+const PRODUCT_LIMIT: f64 = 4_503_599_627_370_496.0;
+const ULP_MARGIN: f64 = 4.0;
+
+#[must_use]
+pub fn java_double_unscaled(value: f64, scale: i8) -> Option<i128> {
+    if !value.is_finite() {
+        return None;
+    }
+    if let Some(unscaled) = product_unscaled(value, scale) {
+        return Some(unscaled);
+    }
+    with_java_double_text(value, |text| text_unscaled(text, scale))
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn product_unscaled(value: f64, scale: i8) -> Option<i128> {
+    let factor = POW10_F64.get(usize::try_from(scale).ok()?)?;
+    let magnitude = (value * factor).abs();
+    if magnitude >= PRODUCT_LIMIT {
+        return None;
+    }
+    if magnitude == 0.0 {
+        return Some(0);
+    }
+    let spacing = ulp_of(magnitude);
+    if ((magnitude.fract() - 0.5).abs()) <= ULP_MARGIN * spacing {
+        return None;
+    }
+    let rounded = magnitude.round() as i128;
+    Some(if value.is_sign_negative() {
+        -rounded
+    } else {
+        rounded
+    })
+}
+
+fn ulp_of(magnitude: f64) -> f64 {
+    let exponent = (magnitude.to_bits() & EXP_MASK) >> EXP_SHIFT;
+    if exponent <= 52 {
+        return f64::from_bits(1);
+    }
+    f64::from_bits((exponent - 52) << EXP_SHIFT)
+}
+
+fn text_unscaled(text: &str, scale: i8) -> Option<i128> {
+    let (negative, body) = match text.strip_prefix('-') {
+        Some(rest) => (true, rest),
+        None => (false, text),
+    };
+    let (mantissa, exponent) = match body.split_once('E') {
+        Some((mantissa, exponent)) => (mantissa, exponent.parse::<i32>().ok()?),
+        None => (body, 0),
+    };
+    let mut digits: u128 = 0;
+    let mut fraction: i32 = 0;
+    let mut after_point = false;
+    for byte in mantissa.bytes() {
+        if byte == b'.' {
+            after_point = true;
+            continue;
+        }
+        let digit = byte.checked_sub(b'0').filter(|digit| *digit <= 9)?;
+        digits = digits.checked_mul(10)?.checked_add(u128::from(digit))?;
+        if after_point {
+            fraction += 1;
+        }
+    }
+    let shift = i32::from(scale) + exponent - fraction;
+    let magnitude = if digits == 0 {
+        0
+    } else if shift >= 0 {
+        digits.checked_mul(10u128.checked_pow(u32::try_from(shift).ok()?)?)?
+    } else {
+        let dropped = u32::try_from(-shift).ok()?;
+        match 10u128.checked_pow(dropped) {
+            Some(divisor) if dropped <= 38 => {
+                let kept = digits / divisor;
+                if (digits % divisor) * 2 >= divisor {
+                    kept + 1
+                } else {
+                    kept
+                }
+            }
+            _ => 0,
+        }
+    };
+    let magnitude = i128::try_from(magnitude).ok()?;
+    Some(if negative { -magnitude } else { magnitude })
+}

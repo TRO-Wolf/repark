@@ -327,3 +327,50 @@ async fn the_staging_sink_pairs_on_every_branch() {
         );
     }
 }
+
+#[tokio::test]
+async fn every_stage_site_casts_a_float_leaf_to_its_decimal_target_in_the_plan() {
+    let ctx = SessionContext::new();
+    let targets = vec![
+        ("d".to_string(), DataType::Decimal128(10, 2)),
+        ("f".to_string(), DataType::Decimal128(38, 18)),
+    ];
+    for site in [
+        StageSite::InsertByName,
+        StageSite::InsertOverwrite,
+        StageSite::PartitionOverwrite,
+        StageSite::MergeInsert,
+        StageSite::MergeUpdate,
+        StageSite::PredicateUpdate,
+        StageSite::MicroBatchAppend,
+    ] {
+        let frame = ctx
+            .sql("SELECT CAST(1.255 AS DOUBLE) AS d, CAST(1.255 AS FLOAT) AS f")
+            .await
+            .expect("frame");
+        let request = StageRequest {
+            site,
+            targets: &targets,
+            by_name: true,
+            fold: false,
+            gate_op: None,
+            pairing: StructPairing::by_name(false),
+            table: "``",
+        };
+        let plan = conform_stage(&ctx, frame.logical_plan().clone(), &request).expect("stage");
+        let types: Vec<DataType> = plan
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| field.data_type().clone())
+            .collect();
+        assert_eq!(
+            types,
+            vec![DataType::Decimal128(10, 2), DataType::Decimal128(38, 18)],
+            "{site:?}"
+        );
+        let shown = plan.display_indent().to_string();
+        assert!(shown.contains("AS Decimal128(10, 2)"), "{site:?}: {shown}");
+        assert!(shown.contains("AS Decimal128(38, 18)"), "{site:?}: {shown}");
+    }
+}

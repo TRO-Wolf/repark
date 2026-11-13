@@ -303,6 +303,15 @@ fn leaf_store(
         };
         return Ok(Some(call(udf, vec![value])));
     }
+    if matches!(source, DataType::Float32 | DataType::Float64)
+        && matches!(target, DataType::Decimal128(_, _))
+    {
+        let stored = Field::new(field.name(), target.clone(), field.is_nullable());
+        return Ok(Some(Expr::Cast(Cast::new_from_field(
+            Box::new(column),
+            Arc::new(stored),
+        ))));
+    }
     if !(is_ltz_instant_target(target) && needs_ltz_instant_cast(source)) {
         return Ok(None);
     }

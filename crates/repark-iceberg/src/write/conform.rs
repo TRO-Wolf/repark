@@ -6,9 +6,13 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use datafusion::arrow::array::{ArrayRef, RecordBatch};
+use datafusion::arrow::array::{Array, ArrayRef, AsArray, Decimal128Array, RecordBatch};
 use datafusion::arrow::compute::{CastOptions, cast_with_options};
-use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, SchemaRef, TimeUnit};
+use datafusion::arrow::datatypes::{
+    DataType, Decimal128Type, DecimalType, Field, Float32Type, Float64Type, Schema as ArrowSchema,
+    SchemaRef, TimeUnit,
+};
+use datafusion::arrow::error::ArrowError;
 use datafusion::error::{DataFusionError, Result};
 
 use crate::catalog::uuid_presentation::{convert_uuid_column, presents_uuid};
@@ -275,7 +279,47 @@ fn entry_store_cast(
 ) -> Result<ArrayRef> {
     refuse_unpaired_struct(table, entry, name, column.data_type(), target)?;
     refuse_coarser_timestamp(name, column.data_type(), target)?;
+    if let DataType::Decimal128(precision, scale) = target {
+        let values: Option<Vec<Option<f64>>> = match column.data_type() {
+            DataType::Float64 => Some(column.as_primitive::<Float64Type>().iter().collect()),
+            DataType::Float32 => Some(
+                column
+                    .as_primitive::<Float32Type>()
+                    .iter()
+                    .map(|value| value.map(f64::from))
+                    .collect(),
+            ),
+            _ => None,
+        };
+        if let Some(values) = values {
+            return Ok(Arc::new(float_store_decimal(&values, *precision, *scale)?));
+        }
+    }
     Ok(cast_with_options(column, target, &strict_cast())?)
+}
+
+fn float_store_decimal(
+    values: &[Option<f64>],
+    precision: u8,
+    scale: i8,
+) -> Result<Decimal128Array> {
+    let mut out = Vec::with_capacity(values.len());
+    for value in values {
+        let Some(value) = *value else {
+            out.push(None);
+            continue;
+        };
+        let overflow = || {
+            ArrowError::CastError(format!(
+                "Cannot cast to Decimal128({precision}, {scale}). Overflowing on {value:?}"
+            ))
+        };
+        let unscaled =
+            repark_common::java_double::java_double_unscaled(value, scale).ok_or_else(overflow)?;
+        Decimal128Type::validate_decimal_precision(unscaled, precision, scale)?;
+        out.push(Some(unscaled));
+    }
+    Ok(Decimal128Array::from(out).with_precision_and_scale(precision, scale)?)
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -376,5 +420,42 @@ mod tests {
                 .value(0),
             "s1"
         );
+    }
+
+    #[test]
+    fn a_float_batch_stores_into_decimal_by_the_doubles_text() {
+        let doubles: ArrayRef = Arc::new(datafusion::arrow::array::Float64Array::from(vec![
+            Some(1.255),
+            Some(-1.255),
+            Some(1.254_999_999_999_999_7),
+            None,
+        ]));
+        let stored =
+            strict_store_cast("v", &doubles, &DataType::Decimal128(10, 2)).expect("stores");
+        let stored = stored.as_primitive::<Decimal128Type>();
+        assert_eq!(
+            stored.iter().collect::<Vec<_>>(),
+            vec![Some(126), Some(-126), Some(125), None]
+        );
+        let floats: ArrayRef = Arc::new(datafusion::arrow::array::Float32Array::from(vec![
+            1.255_f32,
+        ]));
+        let stored = strict_partition_store_cast("v", &floats, &DataType::Decimal128(10, 2))
+            .expect("stores");
+        assert_eq!(stored.as_primitive::<Decimal128Type>().value(0), 125);
+        for (value, text) in [
+            (f64::NAN, "Overflowing on NaN"),
+            (
+                1e10,
+                "is too large to store in a Decimal128 of precision 10",
+            ),
+        ] {
+            let column: ArrayRef =
+                Arc::new(datafusion::arrow::array::Float64Array::from(vec![value]));
+            let error = strict_store_cast("v", &column, &DataType::Decimal128(10, 2))
+                .expect_err("refuses")
+                .to_string();
+            assert!(error.contains(text), "{error}");
+        }
     }
 }

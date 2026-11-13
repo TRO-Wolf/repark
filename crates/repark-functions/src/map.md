@@ -841,13 +841,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   router's ZS-9 gate (`repark-spark/src/router/nested_ns.rs`) can look through the non-null
   marker around a `named_struct` when it reads an UPDATE's assigned struct leaf by leaf.
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
-  rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
-  installer calls it in place of the integer-only one — same line count, so the
-  session map needs no ratchet): `CAST(bool AS DECIMAL(p,s))` becomes a
-  precision-carrying UDF (true → 1, false → 0 at scale; per-row nulls). The UDF
-  reads ANSI once at plan time for the overflow edge (`(2,2)`: raise vs NULL);
-  its return field marks overflow-exposed targets nullable. Registry
-  `CAST-BOOL-DEC-1`.
+  rule, on BOTH doors via `install_shared_analyzer_rules` (here since FNP-11B step 3, re-exported at the crate root: `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call unchanged; no doc line: the rules both doors install (integer overflow, decimal casts); TIME guard left to `analyzer_rules()` (remediation round 1)).
+  The session installer calls it in place of the integer-only one (same line count, no session-map
+  ratchet). `CAST(bool AS DECIMAL(p,s))` becomes a precision-carrying UDF (true 1, false 0;
+  per-row nulls) reading ANSI at plan time for the overflow (`(2,2)`: raise vs NULL),
+  overflow-exposed targets nullable; registry `CAST-BOOL-DEC-1`. **DOUBLE-DECIMAL-STORE-ROUND-1
+  (2026-11-13):** FLOAT/DOUBLE `CAST`/`TRY_CAST`/`arrow_cast` to `Decimal128` is
+  `__repark_float_to_decimal__` (Spark's JDK 17 text, half up; Arrow's refusals).
 - `int_to_binary.rs` — **BL-11 (2026-09-16):** the `IntToBinaryCast` analyzer rule,
   slotted after `SparkExprSemantics` so `SparkIntegerLiteral` has already narrowed bare
   literals: a `CAST(<integral> AS BINARY)` becomes the `__repark_int_to_binary__` UDF
