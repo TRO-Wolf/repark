@@ -1,0 +1,12 @@
+{"built_from": "nwc/pkg-base", "engine": "repark", "native_file": "<scratchpad>/nwc/pkg-base/repark/_native.abi3.so", "python": "3.12.3", "record": "leg"}
+{"ok": true, "record": "write", "table": "sc.ns.ingest_rb_parquet"}
+{"nan_bits": [], "ok": true, "record": "read", "rows": [[20, "1.0"], [21, "1.0"]], "table": "sc.ns.ingest_rb_parquet"}
+{"error": "AnalysisException: Error during planning: table 'sc.ns.ingest_sp_parquet' not found", "ok": false, "record": "read", "table": "sc.ns.ingest_sp_parquet"}
+{"ok": true, "record": "write", "table": "sc.ns.ingest_rb_avro"}
+{"nan_bits": [], "ok": true, "record": "read", "rows": [[20, "1.0"], [21, "1.0"]], "table": "sc.ns.ingest_rb_avro"}
+{"error": "AnalysisException: Error during planning: table 'sc.ns.ingest_sp_avro' not found", "ok": false, "record": "read", "table": "sc.ns.ingest_sp_avro"}
+{"engine": "spark", "python": "3.12.3", "record": "leg"}
+{"nan_bits": [], "ok": true, "record": "read", "rows": [[20, "1.0"], [21, "1.0"]], "table": "sc.ns.ingest_rb_parquet"}
+{"error": "AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`ingest_sp_parquet` cannot be found. Verify the spelling and correctness of the schema and catalog.", "ok": false, "record": "read", "table": "sc.ns.ingest_sp_parquet"}
+{"nan_bits": [], "ok": true, "record": "read", "rows": [[20, "1.0"], [21, "1.0"]], "table": "sc.ns.ingest_rb_avro"}
+{"error": "AnalysisException: [TABLE_OR_VIEW_NOT_FOUND] The table or view `sc`.`ns`.`ingest_sp_avro` cannot be found. Verify the spelling and correctness of the schema and catalog.", "ok": false, "record": "read", "table": "sc.ns.ingest_sp_avro"}

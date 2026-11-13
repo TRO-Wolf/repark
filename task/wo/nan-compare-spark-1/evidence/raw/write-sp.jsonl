@@ -1,0 +1,12 @@
+{"engine": "spark", "python": "3.12.3", "record": "leg"}
+{"name": "sc.ns.sp_parquet_l1", "record": "table"}
+{"name": "sc.ns.sp_parquet_l5", "record": "table"}
+{"name": "sc.ns.sp_parquet_part", "record": "table"}
+{"name": "sc.ns.sp_orc_l1", "record": "table"}
+{"name": "sc.ns.sp_orc_l5", "record": "table"}
+{"name": "sc.ns.sp_orc_part", "record": "table"}
+{"name": "sc.ns.sp_avro_l1", "record": "table"}
+{"name": "sc.ns.sp_avro_l5", "record": "table"}
+{"name": "sc.ns.sp_avro_part", "record": "table"}
+{"path": "sp_l1", "record": "parquet"}
+{"path": "sp_l5", "record": "parquet"}
