@@ -320,7 +320,7 @@ def test_nan_outputs_carry_the_canonical_bits_and_passthrough_keeps_the_payload(
     stored = {row[0]: float_bits(row[1]) for row in raw(query(scan)) if row[1] != row[1]}
     sorted_rows = {row[0]: float_bits(row[1]) for row in raw(query(sort)) if row[1] != row[1]}
     assert len(stored) == 3
-    assert set(stored.values()) != {CANONICAL_NAN}
+    assert set(stored.values()) == {CANONICAL_NAN}
     assert sorted_rows == stored
 
 
