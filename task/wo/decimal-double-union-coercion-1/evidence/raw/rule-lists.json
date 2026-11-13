@@ -1,0 +1,181 @@
+{
+ "native": "<scratchpad>/pkg-04d84ab9/repark/_native.abi3.so",
+ "query": "EXPLAIN VERBOSE SELECT 0.1 AS c UNION ALL SELECT CAST(1e-20 AS DOUBLE)",
+ "spark_door": {
+  "analyzer": [
+   "resolve_grouping_function",
+   "spark_timestamp_unit_widen",
+   "spark_fractional_division",
+   "higher_order_preparation",
+   "spark_float_stringify",
+   "spark_decimal_precision",
+   "spark_integral_literal",
+   "join_condition_refusals",
+   "spark_map_subscript",
+   "struct_operands_by_position",
+   "type_coercion",
+   "struct_setop_names",
+   "sliding_frame_rescan",
+   "repark_insert_store_assignment",
+   "spark_negate_null_decimal",
+   "lambda_rebind",
+   "spark_decimal_precision",
+   "spark_decimal_rewrite",
+   "spark_nullability",
+   "spark_integer_overflow",
+   "spark_expr_semantics",
+   "int_to_binary_cast",
+   "spark_float_stringify",
+   "array_cardinality_ceiling",
+   "csv_fold",
+   "time_cast_guard",
+   "spark_ltz_timestamp_cast",
+   "interval_string_cast",
+   "type_coercion",
+   "lambda_rebind",
+   "spark_map_rewrite",
+   "spark_map_subscript",
+   "spark_time_window",
+   "spark_window_time_grouping",
+   "spark_session_window",
+   "generator_rewrite",
+   "resolve_grouping_id",
+   "fold_spark_numeric_casts",
+   "spark_projection_display",
+   "stack_rewrite",
+   "repark_store_overflow_cast",
+   "signed_zero_literals",
+   "spark_integer_overflow",
+   "bool_decimal_cast"
+  ],
+  "optimizer_pass_1": [
+   "repark_strip_attribute_ids",
+   "rewrite_set_comparison",
+   "optimize_unions",
+   "unions_to_filter",
+   "simplify_expressions",
+   "signed_zero_literals",
+   "replace_distinct_aggregate",
+   "eliminate_join",
+   "decorrelate_predicate_subquery",
+   "repark_projection_exists",
+   "repark_scalar_subquery_guard",
+   "scalar_subquery_to_join",
+   "repark_lateral_projection_hoist",
+   "decorrelate_lateral_join",
+   "extract_equijoin_predicate",
+   "eliminate_duplicated_expr",
+   "eliminate_filter",
+   "eliminate_cross_join",
+   "eliminate_limit",
+   "propagate_empty_relation",
+   "filter_null_join_keys",
+   "eliminate_outer_join",
+   "push_down_limit",
+   "push_down_filter",
+   "single_distinct_aggregation_to_group_by",
+   "eliminate_group_by_constant",
+   "common_sub_expression_eliminate",
+   "extract_leaf_expressions",
+   "push_down_leaf_projections",
+   "optimize_projections"
+  ],
+  "initial_logical_plan": "Union\n  Projection: Decimal128(Some(1),1,1) AS c\n    EmptyRelation: rows=1\n  Projection: CAST(CAST(Decimal128(Some(1),20,20) AS Float64) AS Float64)\n    EmptyRelation: rows=1",
+  "analyzed_logical_plan": "SAME TEXT AS ABOVE",
+  "logical_plan": "Union\n  Projection: Decimal128(Some(100000000000000),30,15) AS c\n    EmptyRelation: rows=1\n  Projection: Decimal128(Some(0),30,15) AS c\n    EmptyRelation: rows=1",
+  "changed_at": [
+   "logical_plan after resolve_grouping_function",
+   "logical_plan after simplify_expressions"
+  ]
+ },
+ "native_door": {
+  "analyzer": [
+   "resolve_grouping_function",
+   "spark_timestamp_unit_widen",
+   "spark_map_subscript",
+   "type_coercion",
+   "struct_setop_names",
+   "sliding_frame_rescan",
+   "spark_map_rewrite",
+   "signed_zero_literals",
+   "spark_integer_overflow",
+   "bool_decimal_cast",
+   "planned_timestamp_cast"
+  ],
+  "optimizer_pass_1": [
+   "repark_strip_attribute_ids",
+   "rewrite_set_comparison",
+   "optimize_unions",
+   "unions_to_filter",
+   "simplify_expressions",
+   "signed_zero_literals",
+   "replace_distinct_aggregate",
+   "eliminate_join",
+   "decorrelate_predicate_subquery",
+   "repark_projection_exists",
+   "repark_scalar_subquery_guard",
+   "scalar_subquery_to_join",
+   "repark_lateral_projection_hoist",
+   "decorrelate_lateral_join",
+   "extract_equijoin_predicate",
+   "eliminate_duplicated_expr",
+   "eliminate_filter",
+   "eliminate_cross_join",
+   "eliminate_limit",
+   "propagate_empty_relation",
+   "filter_null_join_keys",
+   "eliminate_outer_join",
+   "push_down_limit",
+   "push_down_filter",
+   "single_distinct_aggregation_to_group_by",
+   "eliminate_group_by_constant",
+   "common_sub_expression_eliminate",
+   "extract_leaf_expressions",
+   "push_down_leaf_projections",
+   "optimize_projections"
+  ],
+  "initial_logical_plan": "Union\n  Projection: Float64(0.1) AS c\n    EmptyRelation: rows=1\n  Projection: CAST(Float64(0.00000000000000000001) AS Float64)\n    EmptyRelation: rows=1",
+  "analyzed_logical_plan": "SAME TEXT AS ABOVE",
+  "logical_plan": "Union\n  Projection: Float64(0.1) AS c\n    EmptyRelation: rows=1\n  Projection: Float64(0.00000000000000000001) AS c\n    EmptyRelation: rows=1",
+  "changed_at": [
+   "logical_plan after type_coercion",
+   "logical_plan after simplify_expressions"
+  ]
+ },
+ "prepare_execute": {
+  "spark_door": {
+   "type": "decimal(30,15)",
+   "values": [
+    "0.100000000000000",
+    "0E-15"
+   ]
+  },
+  "native_door": {
+   "type": "double",
+   "values": [
+    "1e-20",
+    "0.1"
+   ]
+  }
+ },
+ "stored_plans": {
+  "df_cache": {
+   "type": "decimal(30,15)",
+   "values": [
+    "0.100000000000000",
+    "0E-15"
+   ]
+  },
+  "cache_table": {
+   "error": "UnsupportedOperationException",
+   "head": "This feature is not implemented: Unsupported SQL statement: CACHE TABLE dd_ct AS SELECT 0.1 AS c UNION ALL SELECT CAST(CAST(0.00000000000000000001 AS DOUBLE) AS DOUBLE)"
+  },
+  "native_view": {
+   "type": "double",
+   "values": [
+    "0.1",
+    "1e-20"
+   ]
+  }
+ }
+}
