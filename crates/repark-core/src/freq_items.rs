@@ -151,13 +151,7 @@ impl Hash for FreqKey {
 }
 
 fn canonical_float_bits(value: f64) -> u64 {
-    if value == 0.0 {
-        0.0f64.to_bits()
-    } else if value.is_nan() {
-        f64::NAN.to_bits()
-    } else {
-        value.to_bits()
-    }
+    repark_common::float_canon::canonical_f64(value).to_bits()
 }
 
 struct FreqItemsAccumulator {

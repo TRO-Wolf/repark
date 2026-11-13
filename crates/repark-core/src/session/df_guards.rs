@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TreeNodeRecursion, TreeNodeRewriter};
 use datafusion::common::{DataFusionError, Result as DataFusionResult, SchemaError};
 use datafusion::execution::SessionStateBuilder;
@@ -28,6 +29,7 @@ mod signed_zero;
 pub(crate) mod skipping_limit;
 pub(crate) mod sort_names;
 mod struct_setop;
+pub(crate) use signed_zero::normalize_zero_call;
 pub use struct_setop::insert_struct_setop_after_coercion;
 pub mod struct_walk;
 pub(super) mod subquery;
@@ -47,6 +49,72 @@ pub(super) fn dead_datafusion_54_1_refusal(key: &str, value: &str) -> Error {
          the option but no engine path reads it, so the value cannot take effect",
         repark_common::redaction::mask_value_credentials(value)
     ))
+}
+
+pub(super) const OPTIMIZER_SEAT_KEYS: &[&str] = &[
+    "datafusion.optimizer.max_passes",
+    "datafusion.optimizer.skip_failed_rules",
+];
+
+pub(super) fn optimizer_seat_refusal(key: &str, value: &str) -> Option<Error> {
+    let key = key.to_ascii_lowercase();
+    if !OPTIMIZER_SEAT_KEYS.contains(&key.as_str()) {
+        return None;
+    }
+    let mut probe = datafusion::common::config::ConfigOptions::default();
+    probe.set(&key, value).ok()?;
+    let why = if probe.optimizer.max_passes == 0 {
+        "a value of 0 skips every optimizer pass"
+    } else if probe.optimizer.skip_failed_rules {
+        "it lets a failing optimizer rule be skipped silently"
+    } else {
+        return None;
+    };
+    Some(Error::Config(format!(
+        "unsupported DataFusion session config '{key}' = '{}': {why}, and RePark's float-key \
+         normalisation and its other plan guards run as optimizer rules on every pass, so \
+         queries would return wrong answers; keep max_passes at 1 or more and \
+         skip_failed_rules false",
+        repark_common::redaction::mask_value_credentials(value)
+    )))
+}
+
+#[derive(Debug)]
+struct OptimizerSeatConfig;
+
+impl AnalyzerRule for OptimizerSeatConfig {
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> DataFusionResult<LogicalPlan> {
+        if matches!(
+            plan,
+            LogicalPlan::Statement(_) | LogicalPlan::EmptyRelation(_) | LogicalPlan::Values(_)
+        ) {
+            return Ok(plan);
+        }
+        let refusal = if config.optimizer.max_passes == 0 {
+            optimizer_seat_refusal(OPTIMIZER_SEAT_KEYS[0], "0")
+        } else if config.optimizer.skip_failed_rules {
+            optimizer_seat_refusal(OPTIMIZER_SEAT_KEYS[1], "true")
+        } else {
+            None
+        };
+        match refusal {
+            Some(Error::Config(message)) => Err(DataFusionError::Configuration(message)),
+            Some(other) => Err(DataFusionError::Configuration(other.to_string())),
+            None => Ok(plan),
+        }
+    }
+
+    #[allow(clippy::unnecessary_literal_bound)]
+    fn name(&self) -> &str {
+        "repark_optimizer_seat_config"
+    }
+}
+
+pub(super) fn datafusion_config_refusal(key: &str, value: &str) -> Option<Error> {
+    if DEAD_DATAFUSION_54_1_KEYS.contains(&key) {
+        return Some(dead_datafusion_54_1_refusal(key, value));
+    }
+    optimizer_seat_refusal(key, value)
 }
 
 pub(super) fn invalid_datafusion_config(
@@ -87,7 +155,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
         .with_runtime_env(runtime)
         .with_default_features()
         .with_query_planner(Arc::new(crate::stack::StackQueryPlanner))
-        .with_optimizer_rules(unnest_safe_optimizer_rules())
+        .with_optimizer_rules(unnest_safe_optimizer_rules(extension.signed_zero_policy()))
         .with_analyzer_rules(analyzer_rules)
         .with_physical_optimizer_rules(skipping_limit::skip_safe_physical_optimizer_rules())
         .with_physical_optimizer_rule(Arc::new(crate::nlj_build_reset::NljBuildSideReset))
@@ -98,13 +166,19 @@ pub(super) fn context_with_df_54_1_rule_guards(
     crate::stack::register_stack(&context);
     crate::update_fields::register_update_fields(&context);
     crate::isnan::register_repark_isnan(&context);
+    signed_zero::register_normalize_zero(&context);
     subquery::register_single_row_guard(&context);
     Ok(context)
 }
 
-pub(super) fn finish_session_build(context: &SessionContext, dialect: &Arc<dyn SqlDialect>) {
+pub(super) fn finish_session_build(
+    context: &SessionContext,
+    dialect: &Arc<dyn SqlDialect>,
+    extension: &Arc<dyn SessionExtension>,
+) {
     dialect.on_session_built(context);
-    signed_zero::install_literal_seat(context);
+    context.add_analyzer_rule(Arc::new(OptimizerSeatConfig));
+    signed_zero::install_literal_seat(context, extension.signed_zero_policy());
 }
 
 pub(super) fn analyzer_rules_with_df_54_1_rule_guards()
@@ -114,7 +188,9 @@ pub(super) fn analyzer_rules_with_df_54_1_rule_guards()
 }
 
 /// DataFusion's recommended rule list with `push_down_leaf_projections` wrapped.
-fn unnest_safe_optimizer_rules() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
+fn unnest_safe_optimizer_rules(
+    policy: crate::extension::SignedZeroPolicy,
+) -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
     let mut rules: Vec<Arc<dyn OptimizerRule + Send + Sync>> =
         vec![Arc::new(attr_id::StripAttributeIds)];
     for rule in Optimizer::new().rules {
@@ -130,7 +206,7 @@ fn unnest_safe_optimizer_rules() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
             }
             "simplify_expressions" => {
                 rules.push(rule);
-                rules.push(Arc::new(signed_zero::SignedZeroLiterals));
+                rules.push(signed_zero::literal_optimizer_seat(policy));
             }
             LEAF_PUSHDOWN_RULE_NAME => {
                 rules.push(Arc::new(UnnestSafeLeafProjectionPushdown { inner: rule }));
@@ -138,6 +214,7 @@ fn unnest_safe_optimizer_rules() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
             _ => rules.push(rule),
         }
     }
+    rules.push(signed_zero::key_seat(policy));
     rules
 }
 
