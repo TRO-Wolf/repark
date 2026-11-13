@@ -548,6 +548,66 @@ async fn each_float_key_carries_one_wrapper_and_a_second_optimize_is_the_identit
 }
 
 #[tokio::test]
+async fn a_float_literal_key_is_canonicalised_in_place_and_never_wrapped() {
+    let session = session();
+    let state = session.context().state();
+    let cases: &[(&str, &str, usize)] = &[
+        (
+            "SELECT count(*) OVER (PARTITION BY -0.0) FROM t",
+            "windowExpr=[[count(Int64(1)) PARTITION BY [Float64(0)] ROWS",
+            0,
+        ),
+        (
+            "SELECT count(*) OVER (PARTITION BY d, CAST(0.0 AS FLOAT)) FROM t",
+            "PARTITION BY [__repark_normalize_zero__(t.d), Float32(0)] ROWS",
+            1,
+        ),
+        (
+            "SELECT rank() OVER (ORDER BY CAST('NaN' AS DOUBLE)) FROM t",
+            "windowExpr=[[rank() ORDER BY [Float64(NaN) ASC NULLS LAST] RANGE",
+            0,
+        ),
+        (
+            "SELECT id FROM t ORDER BY -0.0, id",
+            "Sort: Float64(0) ASC NULLS LAST, t.id ASC NULLS LAST",
+            0,
+        ),
+        (
+            "SELECT d, count(*) FROM t GROUP BY ROLLUP(d, 0.0)",
+            "ROLLUP (__repark_normalize_zero__(t.d) AS d, Float64(0))",
+            1,
+        ),
+        (
+            "SELECT count(*) FROM t GROUP BY GROUPING SETS ((d), (CAST(-0.0 AS DOUBLE)))",
+            "(Float64(0) AS Float64(-0))",
+            1,
+        ),
+        (
+            "SELECT count(DISTINCT 0.0) FROM t",
+            "groupBy=[[Float64(0) AS alias1]]",
+            0,
+        ),
+        (
+            "SELECT array_agg(d ORDER BY -0.0) FROM t",
+            "aggr=[[array_agg(t.d) ORDER BY [Float64(0) ASC NULLS LAST] AS",
+            0,
+        ),
+    ];
+    for (sql, key, wrappers) in cases {
+        let plan = optimized(&session, sql).await;
+        let rendered = format!("{}", plan.display_indent());
+        assert!(rendered.contains(key), "{sql}\n{rendered}");
+        assert_eq!(wrap_count(&plan), *wrappers, "{sql}\n{rendered}");
+        assert!(
+            !rendered.contains("__repark_normalize_zero__(Float"),
+            "{sql}\n{rendered}"
+        );
+        let again = state.optimize(&plan).expect("second optimize");
+        assert_eq!(format!("{}", again.display_indent()), rendered, "{sql}");
+    }
+}
+
+#[tokio::test]
 async fn output_names_and_qualifiers_survive_the_wrap() {
     let on = session();
     let off = keys_off_session();

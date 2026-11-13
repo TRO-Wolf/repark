@@ -30,7 +30,8 @@ Spark 4.1.2 legs, and compared cell by cell with the base (`276dc503`, item 1's 
 - [schema_batch_repeat.py](schema_batch_repeat.py) — the 50-repeat `UPDATE-SCHEMA-BATCH-MISMATCH-1` probe for part 1:
   part A's `<=>` statement and a key statement (`IN (SELECT …)`) per kind; `schema-batch-repeat-276dc503.json` and
   `schema-batch-repeat-head-66fb7f13.json` are its base and head results.
-- [measure.md](measure.md) — the mutation record (order §6) and the 50-repeat result (order §7) on `66fb7f13`;
+- [measure.md](measure.md) — the mutation record (order §6) and the 50-repeat result (order §7) on `66fb7f13`, the
+  literal-skip pin with the shapes tried on both doors (§1a), and the verifiers' note on P5's OB-4 order (§3);
   [mutations.jsonl](mutations.jsonl) holds the per-mutation records.
 
 Up: [../map.md](../map.md).

@@ -52,6 +52,20 @@ The owner, verbatim: **"Go with the defaults"**, on the defaults as amended by F
 - **Q9 RULED:** no stored-NaN change in part 1.
 - **Q10 and Q11 RULED:** outside part 1. Item 1's measurements and sizing feed a later owner decision.
 
+## Rulings after the measurements (orchestrator, as the order's author, 2026-11-13)
+
+On the §7 halt "`UPDATE-SCHEMA-BATCH-MISMATCH-1` reproducing more often", measured 50 times per kind on base and head
+([measure.md](evidence/part-b/after/measure.md) §2):
+
+- **Not a halt.** Like for like, the literal statement `d <=> 0.0` refuses 51/150 times on base and 48/150 on head,
+  so the defect does not reproduce more often.
+- The key statement `d IN (SELECT …)` wrote wrong answers 150/150 times on base. On head it writes the right answer
+  or refuses: 25/50 (v2-cow), 0/50 (v2-mor), 24/50 (v3). That is the card's own refusal, now reached because the
+  statement selects both zero-only files.
+- The halt was meant to catch part B making the card's defect more likely. Turning silent wrong writes into the
+  card's existing loud refusal does not do that.
+- The owner may overrule.
+
 ## 1. Rulings this order carries (owner, verbatim)
 
 - **2026-11-08, "G yes and defaults"** (sketch §12, defaults):

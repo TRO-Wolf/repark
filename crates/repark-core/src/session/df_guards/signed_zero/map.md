@@ -63,7 +63,9 @@ under `task/wo/signed-zero-normalize-1/`.
   a recursive `UNION`; the `keys`-off session (bit-pattern keys) and a `SET` that cannot reach the
   policy; group, distinct and set outputs store `+0.0` while `UNION ALL` and projections keep the
   stored bits; P6 one wrapper per key with a second optimize the identity, names, qualifiers and
-  types equal to the keys-off plan, `PREPARE`/`EXECUTE`, a view, a hand-built `Repartition`; the
+  types equal to the keys-off plan, `PREPARE`/`EXECUTE`, a view, a hand-built `Repartition`; a
+  float literal key (`PARTITION BY`, window and `Sort` `ORDER BY`, `ROLLUP`, `GROUPING SETS`,
+  `count(DISTINCT 0.0)`, an aggregate `ORDER BY`) canonicalised in place with no wrapper; the
   guard (d) pins (no provider takes a wrapped filter as `Exact`, the Filter stays above a Parquet
   scan, rows equal the truth); the kernel's fast path (same `ArrayRef`), null buffer, bits, scalar
   input and field.
