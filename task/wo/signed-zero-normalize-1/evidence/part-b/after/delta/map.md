@@ -1,6 +1,6 @@
 # task/wo/signed-zero-normalize-1/evidence/part-b/after/delta/ — part B part 1, the verifier delta round
 
-- [delta.md](delta.md) — items D1 to D8: the configuration-key inventory and the refused `SET`s, the `dropDuplicates`
+- [delta.md](delta.md) — items D1 to D8 and the gate table: the configuration-key inventory and the refused `SET`s, the `dropDuplicates`
   and `collect_set` measurements and dispositions, the pin changes, the records and the prepared cost run.
 - [mkdata.py](mkdata.py) — writes the probe's parquet rows (`-0.0` and `-NaN` first, NaN payloads, FLOAT and DOUBLE;
   the `collect_set` groups over one file and four files).

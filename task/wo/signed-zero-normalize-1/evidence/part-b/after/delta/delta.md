@@ -136,3 +136,26 @@ catalog written as 20 files with disjoint `d` ranges (`-0.0` only in the first m
 1000-row zero-free build side in the middle of the range (`count = 1000` on every build, guard (b)), five timed repeats,
 plus one `EXPLAIN ANALYZE` that records the probe scan's lines and whether a dynamic filter reaches it. It gates at
 the 1.20 bar, like F1 and F2.
+
+## Gates (head `4442b88f1`; each run inside the lane's build wrapper)
+
+| gate | exit | result |
+|---|---|---|
+| `cargo test --locked -p repark-core --lib --tests` | 0 | 1653 passed, 0 failed |
+| `cargo test --locked -p repark-python --lib` (touched) | 0 | 176 passed |
+| `cargo fmt --all -- --check` | 0 | |
+| `make rust-clippy` | 0 | |
+| `make rust-panic-ban` | 0 | |
+| `make py-test-facade FACADE_WORKERS=8` (ci) | 0 | 27913 passed, 711 skipped, 151 xfailed |
+| `make py-test-facade FACADE_PROFILE=release FACADE_WORKERS=8` | 0 | 27918 passed, 706 skipped, 151 xfailed |
+| `sync_map_md.py --check`, `check_map_md.sh`, `check_crate_dag.sh`, `check_manifest.sh` | 0 | |
+| `check_docs_compaction.py`, `make check-map-size`, `make check-ledger-grammar`, `make check-docs-links` | 0 | |
+| `typos@1.47.2`, `ruff@0.15.22 check .`, `ruff@0.15.22 format --check .` | 0 | |
+| comment gate (`origin/main..HEAD`) | 0 | 0 hits |
+
+`check_map_md.sh` is advisory: the maps at exact size baselines (`crates/repark-core/src/`, `session/`,
+`df_guards/`, `python/repark/src/repark/spark/`, `spark/dataframe/`, `scripts/`) were not grown for this round's
+one-line changes; the touched files are described in the maps below them and in this record.
+
+The f3 trial on the earlier head package: `count = 1000`, and the probe scan line is
+`IcebergTableScan projection:[d] predicate:[] N=16, metrics=[]` (no dynamic filter at the Iceberg scan).
