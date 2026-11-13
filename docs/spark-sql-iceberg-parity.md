@@ -1244,6 +1244,30 @@ perfectly good read.
   `ctas-failure` leg of `aws-acceptance`. On S3 Tables K asserts that the kill landed
   (`-SIGKILL`), that the leftover reads exactly zero rows (never a partial set), and that
   `CREATE OR REPLACE` recovers it. S1 and R1 are as above.
+#### LOCAL-DROP-RECREATE-STALE-WRITE-1 — DATED ROW 2026-11-12: a Hadoop drop and recreate can write on the dropped table's metadata
+
+- **repark** — FIXED by LOCAL-DROP-RECREATE-STALE-WRITE-1 (fork PR #382, merged as `a8bd3a1e`,
+  pinned here; card
+  [local-drop-recreate-stale-write-1](../task/roadmap/mid-term/local-drop-recreate-stale-write-1-card-2026-11-12.md)).
+  Found on 1.5.6 (fork `66901f02`): on a `type=hadoop` catalog the session metadata cache is
+  keyed by the metadata path, Hadoop naming reuses `v1`, `v2`, … after a drop, and the staged
+  replace behind `CREATE OR REPLACE` and RTAS neither evicted its base nor cached the file it
+  wrote. A dropped table's entry at a reused `vN` then served the recreated table: `C,I7,R,D,C,R`
+  read id 7, and an `INSERT`, `MERGE`, `UPDATE`, `DELETE` or `ALTER … ADD COLUMN` on top committed
+  the dropped table's uuid and snapshots into the next `vN` (S1, a wrong write; Spark reading the
+  directory reads the dropped rows). Replace-only history (`R1,R2,R3,D,R4,R5`) read R2, and with
+  `PURGE` the stale base failed on a purged manifest list. The fix keeps the memory catalog's
+  invariant: every write puts the location it wrote, every pointer move evicts the location it
+  left, and a Hadoop drop evicts `v1` through the current version. Glue and S3 Tables name files
+  with a uuid and never reuse a path; their replace-path cache leak is a separate card.
+- **Workaround on 1.5.6** — set `repark.iceberg.metadataCache=false` on Hadoop catalogs.
+- **Apache Spark** — the same sequences read and write the recreated table.
+  *(oracle: measured, Spark 4.1.2 + Iceberg 1.11.0, Hadoop catalog.)*
+- **Pin** — `python/repark/tests/iceberg/test_local_drop_recreate_stale_write_1.py` (each cell
+  checks the session read, a path read through `StaticTable`, and the current file's uuid; a
+  live Spark cell reads the six wrong-write rows by path); the fork's
+  `crates/iceberg/src/catalog/memory/hadoop_cache_invariant_tests.rs` and
+  `hadoop_cache_differential_tests.rs` (cache on against cache off over 96 seeded sequences).
 
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
 
