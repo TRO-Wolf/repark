@@ -85,6 +85,19 @@ On the §7 halt "`UPDATE-SCHEMA-BATCH-MISMATCH-1` reproducing more often", measu
   and the subset re-projection returns to the round-1 files byte for byte; the key's sign on `dropDuplicates(subset)`
   becomes its own label-blocking unit. If the other commits fail, the unit stays parked for the owner. n2 is a merge
   condition, not a round verdict.
+- **The re-check's open items.** The owner, about 14:52 UTC, verbatim: **"Defaults, and merge #1323 when green"**.
+  That adopted three defaults:
+  - **The schema invariant** for `dropDuplicates(subset)` is held against main's own behaviour. Names, order, ids,
+    types, nullability and qualified references are held against the input. Plan qualifiers, field metadata and
+    self-join renames are held against the same steps over a non-float key. Main already drops all three for every
+    subset, float or not (the re-check's C1), and part B adds no loss beyond main's. Main's loss gets its own card.
+  - **The C-002 bench** (`bench/cast/attribute.py`) sets `max_passes = 0` on purpose. The builder now refuses that
+    value, so the bench's attribution mode raises. It is a manual measurement harness, not a gate, so this is not a
+    halt (the re-check's M4, which agrees with the builder's note). The bench gets a card.
+  - **The unused `__repark_normalize_zero__` arm** in `dispatch_json.rs` stays. The facade no longer calls it; the
+    builder left it so item 1 stayed at three product files (the builder's note). It gets a clean-up card after the
+    merge.
+  - These cards are filed by the next records batch, not in this PR.
 
 ## 1. Rulings this order carries (owner, verbatim)
 
