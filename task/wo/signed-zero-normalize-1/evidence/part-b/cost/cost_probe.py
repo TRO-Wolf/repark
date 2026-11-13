@@ -17,6 +17,9 @@ WARMUP = 10
 ROWS = 10_000_000
 BUILD_ROWS = 1000
 REPEAT = 5
+PROBE_FILES = 20
+SIGNED_ROWS = 1_000_000
+BUILD_START = 5_000_001
 
 
 def session(warehouse: str) -> Any:
@@ -129,9 +132,64 @@ def float_keys(signed: bool, warehouse: str) -> dict[str, Any]:
     return out
 
 
+def hadoop_session(warehouse: str) -> Any:
+    from repark import ReparkSession
+
+    spark = (
+        ReparkSession.builder.appName("signed-zero-keys-cost-f3")
+        .config("spark.sql.session.timeZone", "America/New_York")
+        .config("spark.sql.catalog.hc.type", "hadoop")
+        .config("spark.sql.catalog.hc.warehouse", str(Path(warehouse) / "hc"))
+        .getOrCreate()
+    )
+    spark.sql("CREATE NAMESPACE IF NOT EXISTS hc.ns").collect()
+    spark.sql("CREATE TABLE hc.ns.p (id BIGINT, d DOUBLE) USING iceberg").collect()
+    step = ROWS // PROBE_FILES
+    for part in range(PROBE_FILES):
+        low = part * step
+        spark.sql(
+            f"INSERT INTO hc.ns.p SELECT id, CASE WHEN id < {SIGNED_ROWS} AND id % 4 = 0 "
+            f"THEN CAST('-0.0' AS DOUBLE) ELSE CAST(id AS DOUBLE) END AS d "
+            f"FROM range({low}, {low + step}) s"
+        ).collect()
+    return spark
+
+
+ICEBERG_JOIN = (
+    f"WITH b AS (SELECT CAST(id + {BUILD_START} AS DOUBLE) AS d FROM range(0, {BUILD_ROWS}) r) "
+    "SELECT count(*) AS n FROM hc.ns.p AS p JOIN b ON p.d = b.d"
+)
+
+
+def probe_scan(spark: Any) -> dict[str, Any]:
+    text = "\n".join(str(row[-1]) for row in to_rows(spark.sql("EXPLAIN ANALYZE " + ICEBERG_JOIN)))
+    scans = [line.strip() for line in text.splitlines() if "hc.ns.p" in line or "Scan" in line]
+    return {
+        "scan_lines": scans,
+        "dynamic_filter_at_scan": any("DynamicFilter" in line for line in scans),
+        "plan": text,
+    }
+
+
+def iceberg_join(warehouse: str) -> dict[str, Any]:
+    spark = hadoop_session(warehouse)
+    to_rows(spark.sql(ICEBERG_JOIN))
+    start = time.perf_counter()
+    for _ in range(REPEAT):
+        rows = to_rows(spark.sql(ICEBERG_JOIN))
+    out: dict[str, Any] = {
+        "spark:iceberg-join": {"seconds": time.perf_counter() - start, "answer": rows[0][0]}
+    }
+    try:
+        out["explain"] = probe_scan(spark)
+    except Exception as error:
+        out["explain"] = {"error": f"{type(error).__name__}: {str(error)[:300]}"}
+    return out
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--case", choices=("n1", "n2", "a", "f1", "f2"), required=True)
+    parser.add_argument("--case", choices=("n1", "n2", "a", "f1", "f2", "f3"), required=True)
     parser.add_argument("--label", required=True)
     parser.add_argument("--warehouse", required=True)
     parser.add_argument("--out", required=True)
@@ -154,6 +212,10 @@ def main() -> None:
         record.update(statements(session(arguments.warehouse), READS))
     elif arguments.case == "a":
         record.update(statements(session(arguments.warehouse), PART_A_READS))
+    elif arguments.case == "f3":
+        found = iceberg_join(arguments.warehouse)
+        record["explain"] = found.pop("explain")
+        record["statements"] = found
     else:
         record["statements"] = float_keys(arguments.case == "f1", arguments.warehouse)
     with Path(arguments.out).open("a", encoding="utf-8") as handle:
