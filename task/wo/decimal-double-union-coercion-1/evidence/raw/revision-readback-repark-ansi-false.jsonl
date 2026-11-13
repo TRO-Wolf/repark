@@ -1,0 +1,25 @@
+{"engine": "spark-reader", "key": "provenance", "warehouse": "rev-repark-false-909snhwf", "written_by": "revision-repark-ansi-false.jsonl"}
+{"key": "ow_values", "rows": [["1", "0.1"], ["2", "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "0.1|3fb999999999999a"]}, "table": "lc.ns.r00"}
+{"key": "ow_union", "rows": [["1", "0.1"], ["2", "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "0.1|3fb999999999999a"]}, "table": "lc.ns.r01"}
+{"key": "ow_select_values", "rows": [["1", "0.1"], ["2", "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "0.1|3fb999999999999a"]}, "table": "lc.ns.r02"}
+{"key": "byname_values", "rows": [["1", "0.1"], ["2", "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "0.1|3fb999999999999a"]}, "table": "lc.ns.r03"}
+{"key": "byname_union", "rows": [["1", "0.1"], ["2", "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "0.1|3fb999999999999a"]}, "table": "lc.ns.r04"}
+{"key": "values_string", "rows": [["1", "1.50"], ["2", "2.0"]], "spark_read": {"type": "string", "values": ["'1.50'", "'2.0'"]}, "table": "lc.ns.r05"}
+{"key": "select_values_string", "rows": [["1", "1.50"], ["2", "2.0"]], "spark_read": {"type": "string", "values": ["'1.50'", "'2.0'"]}, "table": "lc.ns.r06"}
+{"key": "values_dec38", "rows": [["1", "123456789.123456789000000000"], ["2", "1.000000000000000000"]], "spark_read": {"type": "decimal(38,18)", "values": ["dec:1.000000000000000000", "dec:123456789.123456789000000000"]}, "table": "lc.ns.r07"}
+{"key": "values_float", "rows": [["1", "0.10000000149011612"], ["2", "9.999999682655225e-21"]], "spark_read": {"type": "float", "values": ["0.10000000149011612|3fb99999a0000000", "9.999999682655225e-21|3bc79ca100000000"]}, "table": "lc.ns.r08"}
+{"key": "values_bigint", "rows": [["1", "1"], ["2", "2"]], "spark_read": {"type": "bigint", "values": ["1", "2"]}, "table": "lc.ns.r09"}
+{"key": "rtas_values", "rows": [["1", "0.100000000000000"], ["2", "0E-15"]], "spark_read": {"type": "decimal(30,15)", "values": ["dec:0.100000000000000", "dec:0E-15"]}, "table": "lc.ns.r10"}
+{"key": "rtas_union", "rows": [["1", "0.100000000000000"], ["2", "0E-15"]], "spark_read": {"type": "decimal(30,15)", "values": ["dec:0.100000000000000", "dec:0E-15"]}, "table": "lc.ns.r11"}
+{"key": "delete_eq_cols", "rows": [], "spark_read": {"type": "decimal(10,2)", "values": []}, "table": "lc.ns.r12"}
+{"key": "update_where_cols", "rows": [["11", "1e-20", "0.00"], ["12", "0.5", "0.50"]], "spark_read": {"type": "decimal(10,2)", "values": ["dec:0.00", "dec:0.50"]}, "table": "lc.ns.r13"}
+{"key": "merge_on_cols", "rows": [["2", "0.5", "0.50"], ["99", "1e-20", "0.00"]], "spark_read": {"type": "decimal(10,2)", "values": ["dec:0.00", "dec:0.50"]}, "table": "lc.ns.r14"}
+{"key": "delete_eq_cols_mor", "rows": [], "spark_read": {"type": "decimal(10,2)", "values": []}, "table": "lc.ns.r15"}
+{"key": "update_where_cols_mor", "rows": [["11", "1e-20", "0.00"], ["12", "0.5", "0.50"]], "spark_read": {"type": "decimal(10,2)", "values": ["dec:0.00", "dec:0.50"]}, "table": "lc.ns.r16"}
+{"key": "merge_on_cols_mor", "rows": [["2", "0.5", "0.50"], ["99", "1e-20", "0.00"]], "spark_read": {"type": "decimal(10,2)", "values": ["dec:0.00", "dec:0.50"]}, "table": "lc.ns.r17"}
+{"key": "merge_on_zero_today", "rows": [["99", "-0.0", "0.00"]], "spark_read": {"type": "decimal(10,2)", "values": ["dec:0.00"]}, "table": "lc.ns.r18"}
+{"key": "merge_on_zero_widened", "rows": [["1", "-0.0", "0.00"]], "spark_read": {"type": "decimal(10,2)", "values": ["dec:0.00"]}, "table": "lc.ns.r19"}
+{"key": "delete_zero_today", "rows": [], "spark_read": {"type": "decimal(10,2)", "values": []}, "table": "lc.ns.r20"}
+{"key": "delete_zero_widened", "rows": [["1", "-0.0", "0.00"]], "spark_read": {"type": "decimal(10,2)", "values": ["dec:0.00"]}, "table": "lc.ns.r21"}
+{"key": "df_insertinto_union", "rows": [["1", "0.1"], ["2", "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "0.1|3fb999999999999a"]}, "table": "lc.ns.r22"}
+{"key": "df_overwritepartitions_union", "rows": [["1", "0.1"], ["2", "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "0.1|3fb999999999999a"]}, "table": "lc.ns.r23"}
