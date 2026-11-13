@@ -1301,6 +1301,22 @@ perfectly good read.
   (item 3, option (b)): silent data loss becomes a loud refusal. The real native CTAS waits on the
   owner's routing decision ([card](../task/roadmap/mid-term/native-ctas-iceberg-refuse-1-card-2026-11-12.md)).
 
+#### NATIVE-DATAFRAME-WRITE-SILENT-1 — `repark.sql()` DataFrame appends report success and store nothing (known issue in 1.5.6; the fix rides v1.5.7)
+
+- **repark** — on the native door, a frame from `repark.sql(…)` written with
+  `.write.mode("append").saveAsTable(…)`, `.write.insertInto(…)` or `.writeTo(…).append()` returns without an error,
+  and the target's rows are unchanged afterwards. Measured on the memory catalog only; the other target kinds and
+  the overwrite forms are unmeasured. On the same door `writeTo(…).create()`, `writeTo(…).createOrReplace()` and
+  `saveAsTable` into a new table or with overwrite fail to parse on `USING`. Measured on main `a3f8c7d9` and on
+  #1317's head `ed9f678c`, identical; the surface ships in 1.5.6. The cause is not known.
+- **Apache Spark** — each append stores the frame's rows. *(documented: the writer API's contract; no Spark cell
+  was run for this row. The fix's measured table attaches the oracle.)*
+- **Pin** — none yet; the fix lands one per verb and target kind.
+- **Rationale** — a silent lost write (S1), a known issue on the shipped 1.5.6 wheel. Owner ruling 2026-11-13,
+  verbatim "Defaults": first measure every writer verb on every target kind, the overwrite forms included, then a
+  refusal guard like NATIVE-CTAS-ICEBERG-REFUSE-1's; it rides v1.5.7. ([card](../task/roadmap/mid-term/native-dataframe-write-silent-1-card-2026-11-13.md);
+  [ruling](../task/wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-13.md), item 5.)
+
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
 
 - **repark** — the local catalog keeps its table pointer in process memory. That is the
