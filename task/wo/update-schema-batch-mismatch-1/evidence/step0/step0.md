@@ -143,7 +143,8 @@ carries a real NULL. Under the declared value alone that would refuse inside `pr
 `Internal error: identity UPDATE data batch does not match the projected schema: …` (with DataFusion's file-a-bug
 suffix); under the OR it reaches the writer's `Column 'r' is declared as non-nullable but contains null values`, so
 the identity route has one text. On main, a two-batch computed NULL (`SET r = nullif(r, 1) WHERE id = 4 OR id = 6`)
-refused with the mismatch text in 11 of 12 attempts (the critic's probe).
+refused with the mismatch text in 3 of 3 attempts in the critic's probe; its "11 of 12" counted four computed-NULL
+statements of 3 attempts each (verifier 1, F1).
 
 **Against Spark 4.1.2** (the critic's live oracle): Spark refuses with `NOT_NULL_ASSERT_VIOLATION` only when a NULL
 actually reaches the required column, at run time. Both choices keep RePark's outcome class equal to Spark's;

@@ -6,7 +6,8 @@ evidence on main ([cards.md](../../wo/signed-zero-normalize-1/evidence/cards.md)
 2026-11-13 (the 50-repeat check on branch `fix/signed-zero-normalize-1-part-b`, not merged at filing); Fable guidance,
 2026-11-13; the orchestrator's first probe, 2026-11-13.
 
-**Status:** filed 2026-11-13, not dispatched. Severity **S3**, a loud refusal: no wrong answer was measured.
+**Status:** filed 2026-11-13; fixed on branch `fix/update-schema-batch-mismatch-1` (PR #1327). Severity **S3**, a loud
+refusal: no wrong answer was measured.
 Priority **label-blocking**: the owner's ruling of 2026-11-13
 ([rulings](../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-13.md), item 6) ranks it now, and it must be
 explained before the scoped label ICE-V2-FLAT-AWS-LABEL-1.
@@ -120,3 +121,15 @@ gave the mismatch text in 11 to 16 of 30). **Open for the records batch, not fix
 `NOT_NULL_ASSERT_VIOLATION`. Neither RePark text is Spark's.
 
 **Close:** met on merge of the branch: both files' rows updated on every repeat, pinned on v2 copy-on-write and v3.
+
+**Review notes (#1327 verifiers, 2026-11-13), recorded, not fixed here:**
+- **Orphan file (verifier 1, F3, S4):** when the identity route refuses a NULL into a required column after a
+  NULL-free batch, the head leaves a zero-byte data file the table never references (263 attempts on the head, 0 on
+  main, where the same order refused before the writer ran). No answer or stored row changes; the fork route and
+  partitioned merge-on-read already leave such files on main. A cleanup card for the records batch.
+- **Signed zero (verifier 2, class (c)):** for `d <=> 0.0` with the `-0.0` row alone in its file, Spark's Iceberg file
+  pruning keeps that row unchanged (the PRUNED-WRONG class of SIGNED-ZERO-NORMALIZE-1); RePark updates it on main
+  and on the head. The pin's truth rows follow SQL here, not Spark.
+- **CTE subquery (verifier 2, class (c)):** `UPDATE … WHERE id IN (WITH c AS … SELECT id FROM c)` refuses on main and
+  on the head with the subquery-WHERE text, where Spark answers. A loud over-refusal; a card for the records batch.
+
