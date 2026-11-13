@@ -6,7 +6,8 @@ evidence on main ([cards.md](../../wo/signed-zero-normalize-1/evidence/cards.md)
 2026-11-13 (the 50-repeat check on branch `fix/signed-zero-normalize-1-part-b`, not merged at filing); Fable guidance,
 2026-11-13; the orchestrator's first probe, 2026-11-13.
 
-**Status:** filed 2026-11-13, not dispatched. Severity **S3**, a loud refusal: no wrong answer was measured.
+**Status:** filed 2026-11-13; fixed on branch `fix/update-schema-batch-mismatch-1` (PR #1327). Severity **S3**, a loud
+refusal: no wrong answer was measured.
 Priority **label-blocking**: the owner's ruling of 2026-11-13
 ([rulings](../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-13.md), item 6) ranks it now, and it must be
 explained before the scoped label ICE-V2-FLAT-AWS-LABEL-1.
@@ -84,3 +85,51 @@ is deterministic: two batches, the NULL-free one first. Then the owner picks a f
 
 The refusal is explained by that probe, and then either fixed (both files' rows updated on every repeat, pinned on
 v2 copy-on-write and v3) or named in the label's text, as the owner rules.
+
+## Step 0 and the fix (builder `claude-opus-5-5`, 2026-11-13, branch `fix/update-schema-batch-mismatch-1`, not merged at writing)
+
+Records: [task/wo/update-schema-batch-mismatch-1/](../../wo/update-schema-batch-mismatch-1/map.md).
+
+**Explained.** A print hook on main `dd77603a` printed each new-value batch's schema and arrival order (372
+attempts, Spark and native doors). Every printed batch holds one row from one file. The file whose row has `i` NULL
+gives a batch with `i` nullable; the other does not. `MemTable::try_new` takes the first batch's schema, so the
+NULL-free batch first refuses. That rule predicted 25 refusals, and exactly those 25 refused (0 disagreements). The
+order is random because the fork reads files unordered and the identity plan repartitions round-robin. `d <=> 0.0`
+refuses for the same reason (its row-4 batch carries `i` NULL), not because of signed zero.
+
+**Why `id` and `flag` never refused:** `IN (4, 6)` and `IN ('f4', 'f6')` are `IN` lists, which the Spark door's
+plain identity route does not accept (it takes a binary operator only), so those statements take the fork's
+`TableProvider::update`, whose batches all carry the declared schema. `id = 4` takes the identity route but touches
+one file. The native door has no router and always takes the fork's route; it never reached the seat.
+
+**Also reached, found by the xhigh inventory critic and pinned:** `WHERE col IN (subquery)` (no fork exit; 18 and
+17 of 30 refused on main, v2 COW and v3); a top-level struct NULL in one file only (13 and 18 of 30). A NULL child
+inside a struct, list or map never refused.
+
+**The fix,** at `project_update_data_batch` (`predicate_dml/lineage.rs`) and its caller (`predicate_dml.rs`):
+each value field's nullability is the declared value schema's OR the planned field of the identity stream's schema,
+captured once per statement, never the batch's data. Every batch of a statement then has one schema. Two product
+files; no stored value changes. Red on main and green on the branch: the Rust pin `tests/batch_nullability.rs`
+(4 of 4) and the facade pin `python/repark/tests/iceberg/test_update_schema_batch_mismatch_1.py` (14 cells red on
+main, 47 of 47 green twice).
+
+**A NULL into a NOT NULL column** on the identity route now refuses with the writer's
+`Column 'r' is declared as non-nullable but contains null values` every time (on main a two-batch computed NULL
+gave the mismatch text in 11 to 16 of 30). **Open for the records batch, not fixed here:** the fork's route
+(`SET r = NULL WHERE id IN (4, 6)`, and the native door) refuses with a second text,
+`UPDATE cannot assign NULL to required column 'r'`, and Spark 4.1.2 refuses every form with
+`NOT_NULL_ASSERT_VIOLATION`. Neither RePark text is Spark's.
+
+**Close:** met on merge of the branch: both files' rows updated on every repeat, pinned on v2 copy-on-write and v3.
+
+**Review notes (#1327 verifiers, 2026-11-13), recorded, not fixed here:**
+- **Orphan file (verifier 1, F3, S4):** when the identity route refuses a NULL into a required column after a
+  NULL-free batch, the head leaves a zero-byte data file the table never references (263 attempts on the head, 0 on
+  main, where the same order refused before the writer ran). No answer or stored row changes; the fork route and
+  partitioned merge-on-read already leave such files on main. A cleanup card for the records batch.
+- **Signed zero (verifier 2, class (c)):** for `d <=> 0.0` with the `-0.0` row alone in its file, Spark's Iceberg file
+  pruning keeps that row unchanged (the PRUNED-WRONG class of SIGNED-ZERO-NORMALIZE-1); RePark updates it on main
+  and on the head. The pin's truth rows follow SQL here, not Spark.
+- **CTE subquery (verifier 2, class (c)):** `UPDATE … WHERE id IN (WITH c AS … SELECT id FROM c)` refuses on main and
+  on the head with the subquery-WHERE text, where Spark answers. A loud over-refusal; a card for the records batch.
+
