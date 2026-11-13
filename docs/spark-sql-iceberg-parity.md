@@ -1246,7 +1246,7 @@ perfectly good read.
   `CREATE OR REPLACE` recovers it. S1 and R1 are as above.
 #### LOCAL-DROP-RECREATE-STALE-WRITE-1 — DATED ROW 2026-11-12: a Hadoop drop and recreate can write on the dropped table's metadata
 
-- **repark** — FIXED by LOCAL-DROP-RECREATE-STALE-WRITE-1 (fork PR #382, head `79b6f19b`,
+- **repark** — FIXED by LOCAL-DROP-RECREATE-STALE-WRITE-1 (fork PR #382, merged as `a8bd3a1e`,
   pinned here; card
   [local-drop-recreate-stale-write-1](../task/roadmap/mid-term/local-drop-recreate-stale-write-1-card-2026-11-12.md)).
   Found on 1.5.6 (fork `66901f02`): on a `type=hadoop` catalog the session metadata cache is

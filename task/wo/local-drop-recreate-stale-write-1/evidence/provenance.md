@@ -9,6 +9,8 @@ Measured 2026-11-12 on branch `fix/local-drop-recreate-stale-write-1`.
 - **after:** the same tree with the five `TRO-Wolf/iceberg-rust` revs in `Cargo.toml` moved to
   `79b6f19b5d19a43d30241ee0242da9de2fdd629f` (fork PR #382) and `cargo update -p iceberg`, which
   moved only the six fork packages' source lines in `Cargo.lock`; same build command and profile.
+  Fork PR #382 was squash-merged on 2026-11-13 as `a8bd3a1e`, with the same tree, and the
+  merged pin names that commit.
 - **Spark oracle:** PySpark 4.1.2 with `iceberg-spark-runtime-4.1_2.13-1.11.0.jar`, `local[2]`,
   JDK 17, under the single-JVM lock.
 - **Commands:** `python -I cells_repark.py --root <dir> --out <cells.jsonl>` on each build, then
