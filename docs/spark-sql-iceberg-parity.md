@@ -1308,13 +1308,15 @@ perfectly good read.
   is an `INSERT` or `COPY` that `repark.sql()` leaves lazy and the writer would drop.
   - **For a table:** `DataFrame.write and writeTo cannot write a repark.sql() frame into the
     table <target>: the write would return without storing any rows, so nothing was written;
-    <workaround> (NATIVE-DATAFRAME-WRITE-SILENT-1)`. The workaround depends on the insert:
-    - an append: a collected `INSERT INTO <target> SELECT ...` through `repark.sql(...)`, or a
-      `ReparkSession` frame;
-    - a static overwrite: `INSERT OVERWRITE` for an Iceberg table, or a `ReparkSession` frame;
-    - `overwritePartitions`: a `ReparkSession` frame.
-  - **For a path:** the same shape, naming the user's path, with a `ReparkSession` frame as the
-    workaround.
+    <workaround> (NATIVE-DATAFRAME-WRITE-SILENT-1)`. The workaround is a statement collected
+    through `repark.sql(...)`, and each one stores when followed literally:
+    - an append: `INSERT INTO <target> SELECT ...`;
+    - a static overwrite, or `overwritePartitions` (every table this door can create is
+      unpartitioned): `INSERT OVERWRITE <target> SELECT ...` on an Iceberg table;
+    - either overwrite of an in-memory table, where `INSERT OVERWRITE` is not implemented:
+      `CREATE OR REPLACE TABLE <target> AS SELECT ...`.
+  - **For a path:** the same shape, naming the path as the user wrote it (`out`, `.`, `..`
+    included), with a `ReparkSession` frame as the workaround.
   - **The verbs:**
     - `saveAsTable` append;
     - `format("iceberg").save(name)` append and overwrite;
@@ -1326,7 +1328,10 @@ perfectly good read.
   - **The targets:** existing Iceberg tables (memory and hadoop catalogs), in-memory tables and
     paths, from any frame shape.
   - **What 1.5.6 did:** these returned success and stored nothing, and an overwrite of an
-    existing path deleted its rows and left one empty file.
+    existing path deleted its rows and left one empty file. The append form was first measured
+    on main `a3f8c7d9` and on #1317's head `ed9f678c`, identical.
+  - **An empty frame:** its native write refuses too, where 1.5.6 was vacuously right; the
+    Spark door stores it.
   - **Unchanged:** every verb that already refused or stored, `repark.sql()` statements
     themselves, `mergeInto` (still refused on this door) and every Spark-door write.
   - **Not measured:** a partitioned Iceberg table cannot be reached natively, and Glue, S3
@@ -1336,7 +1341,8 @@ perfectly good read.
   writer API's contract, with RePark's Spark door measured beside it; no Spark JVM cell was run.
   `task/wo/native-dataframe-write-silent-1/evidence/`.)*
 - **Pin** — `python/repark/tests/writes/test_native_dataframe_write_silent_1.py` (2436 cells:
-  399 refuse, the rest keep main's outcome) and
+  399 refuse, the rest keep main's outcome, rows, snapshots and files; each workaround followed
+  from the message; nine path spellings) and
   `crates/repark-python/src/session_write_options_tests.rs`.
 - **Rationale** — DECLARED refusal. Owner ruling 2026-11-13, verbatim "Defaults": measure every
   verb on every target kind, then a refusal guard like NATIVE-CTAS-ICEBERG-REFUSE-1's, riding

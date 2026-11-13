@@ -3,12 +3,11 @@
 **Date:** 2026-11-13. **Filed by:** the records clerk (`claude-opus-5-5`). **Source:** NATIVE-CTAS-ICEBERG-REFUSE-1
 (PR #1317) verifier 2, 2026-11-13, finding F4.
 
-**Status:** filed 2026-11-13, not dispatched. Severity **S1**, a silent lost write, as rated at filing. The verifier
+**Status:** **FIXED 2026-11-13** by this unit (branch `fix/native-dataframe-write-silent-1`, PR #1331): every
+native-door DataFrame write that would store nothing refuses before any effect. See "Step 0", "Fix" and "Delta"
+below. Filed and ruled the same day. Severity **S1**, a silent lost write, as rated at filing; the verifier
 recorded it as S2 and outside its unit's scope.
 **Ruled 2026-11-13** (below): measure first, then a refusal guard; it rides v1.5.7.
-**FIXED 2026-11-13** by this unit (branch `fix/native-dataframe-write-silent-1`): every
-native-door DataFrame write that would store nothing refuses before any effect. See "Step 0" and
-"Fix" below.
 
 ## Measured
 
@@ -93,22 +92,51 @@ under its `step0/`.
   `UnsupportedOperationException` before anything runs.
 - **The message names the target:**
   - a table by `TableReference::to_quoted_string()`;
-  - a path by the user's destination, recovered from the staging segment
-    `repark-staging-<32 hex>-<name>` only on an exact match, with the raw URL otherwise.
-- **The workaround follows the insert:**
-  - an append points to a collected native `INSERT INTO … SELECT` or a `ReparkSession` frame;
-  - a static overwrite points to `INSERT OVERWRITE` for an Iceberg table, or a `ReparkSession`
-    frame;
-  - `overwritePartitions` and paths point to a `ReparkSession` frame.
+  - a path as the user wrote it, recovered from the staging segment: `repark-staging-<32 hex>-<name>`,
+    or `repark-staging-<32 hex>` with no suffix for a nameless destination (`.`). Any other URL is
+    named raw.
+- **The workaround is one that stores when followed literally** (delta, below):
+  - an append: a collected native `INSERT INTO … SELECT`;
+  - a static overwrite or `overwritePartitions` on an Iceberg table: a collected
+    `INSERT OVERWRITE … SELECT`, which on an unpartitioned table replaces what
+    `overwritePartitions` would;
+  - either overwrite of an in-memory table: a collected `CREATE OR REPLACE TABLE … AS SELECT`;
+  - a path: a `ReparkSession` frame.
 - Plain `repark.sql()` and the Spark door do not pass the check, and neither does `mergeInto`.
   `mergeInto` keeps its loud native refusal as a control pin.
 - **Pins:**
   - `crates/repark-python/src/session_write_options_tests.rs`;
   - `python/repark/tests/writes/test_native_dataframe_write_silent_1.py`, over all 2436 cells:
     the 399 guarded cells refuse with the exact text and leave rows, snapshots, files and
-    staging unchanged, and every other cell keeps main's outcome.
+    staging unchanged, and every other cell keeps main's outcome, rows, snapshot count and file
+    shape (main's table re-recorded on `1d9d2808` in the delta, outcomes and rows identical).
 - **Residue, recorded for the records batch:** `note_local_write_root` keeps the staging path
   allow-listed after a refusal. Also recorded there: the S3 overwrite deletes before it copies
   (`path_write.rs:403`), a native path containing `'` is refused before the seat, and the Spark
   door stores `partitionBy(c).insertInto` rows. The list is in
   [evidence/map.md](../../wo/native-dataframe-write-silent-1/evidence/map.md).
+
+## Delta (2026-11-13, after both verifiers)
+
+Both verifiers of #1331 passed the guard (every silent or destructive cell refuses with no
+effect; nothing else moved) and failed three S3 records-and-message findings, fixed here:
+
+- **F1, the path name.** A destination whose last segment is `out` (`out`, `out/`, `data/out`,
+  an absolute `…/out`) was named by its staging path, because `out` was also the stand-in for a
+  nameless destination. The writer now stages a nameless destination with no suffix, a form no
+  user name can take, so every spelling is named as written. Pinned: `out`, `out/`,
+  `data/out`, an absolute `…/out`, `.`, `..` and three relative spellings, in both modes.
+- **F2, the workarounds.** A `ReparkSession` cannot see a native-door table (`unknown catalog`,
+  `TABLE_OR_VIEW_NOT_FOUND`), and `INSERT OVERWRITE` is not implemented for an in-memory table.
+  The table messages now name only the collected statements above; each is pinned by following
+  it literally from the message text and checking the rows.
+- **F3, the records.** `STATUS.md` and the v1.5.6 release notes now state the destructive path
+  overwrite, with the workarounds; both forms and every workaround were re-checked on the
+  published 1.5.6 wheel.
+- **N1, ruled consequence: an empty frame refuses.** A native write of an empty `repark.sql(…)`
+  frame (a new path, an existing path's append or overwrite, a table append) refuses, where
+  main was vacuously right and the Spark door stores. This follows from the ruling's "stored
+  nothing": the guard reads the planned statement before any row exists, and on this door that
+  statement is dropped whatever the frame holds. Workaround: for a path, write the frame from a
+  `ReparkSession`, which is the Spark door and stores it; for a table, run the collected
+  statement the message names.
