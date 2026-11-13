@@ -405,6 +405,13 @@ pub(crate) fn prepare_session_sql(query: &str) -> PyResult<std::borrow::Cow<'_, 
 pub(crate) struct NativeDoorTypes;
 
 impl repark_core::SessionExtension for NativeDoorTypes {
+    fn signed_zero_policy(&self) -> repark_core::extension::SignedZeroPolicy {
+        repark_core::extension::SignedZeroPolicy {
+            literals: true,
+            keys: true,
+        }
+    }
+
     fn type_planner(
         &self,
     ) -> Option<std::sync::Arc<dyn datafusion::logical_expr::planner::TypePlanner>> {

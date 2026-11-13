@@ -209,6 +209,10 @@ pub(crate) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(2)?;
             repark_functions::expr_fn::datediff(exprs[0].clone(), exprs[1].clone())
         }
+        repark_core::extension::NORMALIZE_ZERO_NAME => {
+            need(1)?;
+            repark_core::extension::normalize_zero_call(exprs[0].clone())
+        }
         other => {
             return Err(PyValueError::new_err(crate::exceptions::mask_user_visible(
                 format!("call_scalar: unsupported function {other:?}"),

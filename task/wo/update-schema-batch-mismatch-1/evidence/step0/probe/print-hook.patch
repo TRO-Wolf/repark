@@ -1,0 +1,99 @@
+diff --git a/crates/repark-iceberg/src/write/predicate_dml.rs b/crates/repark-iceberg/src/write/predicate_dml.rs
+index af95b3f8..2a34d277 100644
+--- a/crates/repark-iceberg/src/write/predicate_dml.rs
++++ b/crates/repark-iceberg/src/write/predicate_dml.rs
+@@ -410,13 +410,18 @@ async fn collect_identity_update_rows(
+         table: "``",
+     };
+     let plan = crate::write::conform_stage::conform_stage(ctx, raw, &request)?;
+-    let mut stream = ctx
+-        .execute_logical_plan(plan)
+-        .await?
+-        .execute_stream()
+-        .await?;
++    let step0_log = std::env::var("REPARK_STEP0_BATCH_LOG").ok();
++    let step0_df = ctx.execute_logical_plan(plan).await?;
++    if let Some(path) = step0_log.as_deref() {
++        let physical = step0_df.clone().create_physical_plan().await?;
++        let shown = datafusion::physical_plan::displayable(physical.as_ref()).indent(true).to_string();
++        let line = serde_json::json!({"event": "plan", "selection": spec.selection_sql, "physical": shown});
++        step0_append(path, &line);
++    }
++    let mut stream = step0_df.execute_stream().await?;
+     let mut pairs = Vec::new();
+     let mut data_batches = Vec::new();
++    let mut step0_order = 0usize;
+     while let Some(batch) = stream.next().await {
+         let batch = batch?;
+         if batch.num_columns() != values_schema.fields().len() + 2 {
+@@ -429,12 +434,47 @@ async fn collect_identity_update_rows(
+         pairs.reserve(batch.num_rows());
+         lineage::push_pairs_from_batch(&batch, &mut pairs)?;
+         if batch.num_rows() > 0 {
+-            data_batches.push(project_update_data_batch(&batch, values_schema)?);
++            let projected = project_update_data_batch(&batch, values_schema)?;
++            if let Some(path) = step0_log.as_deref() {
++                let files: Vec<String> = batch
++                    .column(0)
++                    .as_any()
++                    .downcast_ref::<datafusion::arrow::array::StringArray>()
++                    .map(|a| a.iter().map(|v| v.unwrap_or("").rsplit('/').next().unwrap_or("").to_string()).collect())
++                    .unwrap_or_default();
++                let fields: Vec<serde_json::Value> = projected
++                    .schema()
++                    .fields()
++                    .iter()
++                    .zip(projected.columns())
++                    .map(|(f, a)| serde_json::json!({"name": f.name(), "type": f.data_type().to_string(), "nullable": f.is_nullable(), "nulls": a.null_count()}))
++                    .collect();
++                let raw_fields: Vec<serde_json::Value> = batch
++                    .schema()
++                    .fields()
++                    .iter()
++                    .map(|f| serde_json::json!({"name": f.name(), "type": f.data_type().to_string(), "nullable": f.is_nullable()}))
++                    .collect();
++                let line = serde_json::json!({"event": "batch", "order": step0_order, "rows": projected.num_rows(), "files": files, "fields": fields, "raw_fields": raw_fields});
++                step0_append(path, &line);
++                step0_order += 1;
++            }
++            data_batches.push(projected);
+         }
+     }
++    if let Some(path) = step0_log.as_deref() {
++        step0_append(path, &serde_json::json!({"event": "done", "batches": data_batches.len()}));
++    }
+     Ok((pairs, data_batches))
+ }
+ 
++fn step0_append(path: &str, line: &serde_json::Value) {
++    use std::io::Write;
++    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
++        let _ = writeln!(file, "{line}");
++    }
++}
++
+ fn validate_update_assignments(
+     write_schema: &datafusion::arrow::datatypes::SchemaRef,
+     assignments: &[(String, String)],
+diff --git a/crates/repark-iceberg/src/write/predicate_dml/cow_commit.rs b/crates/repark-iceberg/src/write/predicate_dml/cow_commit.rs
+index 011f7a36..714ed917 100644
+--- a/crates/repark-iceberg/src/write/predicate_dml/cow_commit.rs
++++ b/crates/repark-iceberg/src/write/predicate_dml/cow_commit.rs
+@@ -95,6 +95,17 @@ fn register_update_values_table(ctx: &SessionContext, batches: Vec<RecordBatch>)
+         ));
+     }
+     let schema = batches[0].schema();
++    if let Ok(path) = std::env::var("REPARK_STEP0_BATCH_LOG") {
++        use std::io::Write;
++        let shapes: Vec<Vec<bool>> = batches
++            .iter()
++            .map(|b| b.schema().fields().iter().map(|f| f.is_nullable()).collect())
++            .collect();
++        let line = serde_json::json!({"event": "register", "batches": batches.len(), "nullability": shapes});
++        if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
++            let _ = writeln!(file, "{line}");
++        }
++    }
+     let provider = MemTable::try_new(schema, vec![batches])?;
+     crate::write::merge::cow_scratch::register_scratch_provider(ctx, Arc::new(provider), "pred_upd")
+ }

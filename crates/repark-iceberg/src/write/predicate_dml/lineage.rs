@@ -162,6 +162,7 @@ pub(super) fn update_projection_sql(
 pub(super) fn project_update_data_batch(
     batch: &RecordBatch,
     values_schema: &datafusion::arrow::datatypes::SchemaRef,
+    planned: &datafusion::arrow::datatypes::SchemaRef,
 ) -> Result<RecordBatch> {
     let indices: Vec<usize> = (2..batch.num_columns()).collect();
     let projected = batch.project(&indices)?;
@@ -169,11 +170,12 @@ pub(super) fn project_update_data_batch(
         .fields()
         .iter()
         .zip(projected.columns())
-        .map(|(field, array)| {
+        .zip(planned.fields().iter().skip(2))
+        .map(|((field, array), planned_field)| {
             datafusion::arrow::datatypes::Field::new(
                 field.name(),
                 array.data_type().clone(),
-                array.is_nullable(),
+                field.is_nullable() || planned_field.is_nullable(),
             )
         })
         .collect();
