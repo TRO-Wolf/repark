@@ -40,3 +40,8 @@ the Parquet statistics shortcut, so it needs its own cost row.
 Its step 0 measured Spark keeping `fff8…` in memory over a column for these producers; the `7ff8…` answers above
 are the folded literal form. The difference is Spark's NaN comparison semantics plus its canonicalising write. The
 seat awaits the owner's choice of (A), (B) or (C).
+
+**Stored half fixed by [NAN-WRITE-CANONICAL-1](nan-write-canonical-1-card-2026-11-13.md) (2026-11-13, branch, not merged):** under the owner's choice of (C), RePark's
+Iceberg write stores every NaN as Spark's does (canonical in Parquet and ORC data and in every partition value; Avro
+data raw, as Spark's). The in-query `max`, `min`, `greatest`, `least` and comparison answers over a computed sign-set
+NaN stay open here; (B), Spark's NaN comparison, is the first unit after the label.

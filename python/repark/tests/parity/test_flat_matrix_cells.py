@@ -18,7 +18,6 @@ from _flat_matrix_cells import (
     ORACLE_AGREES_WITH_TRUTH,
     PREDICATES,
     PRUNED_WRONG,
-    SIGNED_ZERO_PR_B,
     TRUTH_PREDICATES,
     TYPED_BUILDERS,
     cells_for_group,
@@ -146,11 +145,10 @@ def test_class_b_cells_have_no_committed_key() -> None:
     assert all(class_a_key(cell) is None for cell in class_b)
 
 
-def test_known_open_dict_covers_the_float_key_cells_only() -> None:
-    assert len(KNOWN_OPEN) == 28
-    assert set(KNOWN_OPEN.values()) == {SIGNED_ZERO_PR_B}
-    assert set(KNOWN_OPEN) == {cell.cell_id for cell in float_cells()}
+def test_known_open_dict_holds_neither_the_p15_nor_the_float_key_cells() -> None:
+    assert len(KNOWN_OPEN) == 0
     assert not [cell_id for cell_id in KNOWN_OPEN if cell_id.endswith("|p15")]
+    assert not any(cell_id.startswith("float|") for cell_id in KNOWN_OPEN)
 
 
 ALL_IDS = [1, 2, 3, 4, 5, 6, 7, 8]

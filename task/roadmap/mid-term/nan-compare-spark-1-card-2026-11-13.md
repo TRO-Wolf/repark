@@ -27,6 +27,10 @@ RePark compares by bits (Arrow's total order), so a sign-set NaN (`fff8…`) is 
   filing), per MATH-NAN-CANONICAL-1's option (B).
 - Data written by another engine, or by RePark before NAN-WRITE-CANONICAL-1, keeps its bits; this unit makes reads
   of it agree with Spark.
+- Avro tables RePark writes: Avro data keeps the raw NaN bits, as Spark's does, so on a non-partition column `=` finds
+  1 of 6 or 7 NaN rows and `>` over `Infinity` 3 of 6, where Spark finds all of them (NAN-WRITE-CANONICAL-1's head and
+  main's build alike). `test_nan_write_canonical_1.py` holds it as a strict xfail on the Avro `f` column, which this
+  unit turns green.
 
 ## Relation
 

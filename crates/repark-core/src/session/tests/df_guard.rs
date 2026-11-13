@@ -78,6 +78,7 @@ async fn bare_session_without_extension_scopes_leaf_projection_pushdown() {
         .expect("simplify_expressions is a stock rule");
     expected.insert(simplify + 1, "signed_zero_literals".to_string());
     expected.insert(0, "repark_strip_attribute_ids".to_string());
+    expected.push("signed_zero_keys".to_string());
     assert_eq!(
         installed, expected,
         "the id strip first, then the DataFusion rule list plus repark's subquery and signed-zero rules"

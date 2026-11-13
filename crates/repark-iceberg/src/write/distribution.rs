@@ -144,12 +144,13 @@ pub(crate) fn partition_value_exprs(
         let index = input_schema.index_of(&source_field.name)?;
         let source_type = type_to_arrow_type(&source_field.field_type).map_err(iceberg_err)?;
         let result_type = type_to_arrow_type(&partition_field.field_type).map_err(iceberg_err)?;
-        exprs.push(Arc::new(PartitionTransformExpr {
+        let expr: Arc<dyn PhysicalExpr> = Arc::new(PartitionTransformExpr {
             source: Arc::new(Column::new(&source_field.name, index)),
             transform: field.transform,
             source_type,
-            result_type,
-        }));
+            result_type: result_type.clone(),
+        });
+        exprs.push(CanonicalFloatExpr::wrap(expr, &result_type));
     }
     Ok(exprs)
 }

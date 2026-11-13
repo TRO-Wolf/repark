@@ -501,6 +501,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `_LEGACY_ERROR_TEMP_1201`; `_bound_subset_positions` binds each `fillna`/`dropna` key with
   ambiguity refusal and guarded fan-out, missing with `UNRESOLVED_COLUMN.WITH_SUGGESTION`. No module
   docstring: the lane's no-comments ruling covers the new file; the contract lives here.
+  **SIGNED-ZERO-NORMALIZE-1 part B part 1, delta 2 (2026-11-13):** `_normalized_keys(frame, input_names, keys)` passes
+  the `dropDuplicates` input's key positions to `_native.normalized_float_keys` and spawns the result with the frame's
+  identity: each field keeps its relation, name, metadata and id. Detail: `task/wo/signed-zero-normalize-1/evidence/part-b/after/delta2/delta2.md`.
   **ATTR-ID-1 S3d follow-up (2026-10-01):** the insensitive folds are codepoint Java (A:
   `toLowerCase`; B: `==`/upper/lower per codepoint) over int-version Java tables, so expansion pairs
   (`ß`/`SS`, U+0130/`i`+U+0307, U+FB00/`FF`) and newer-than-Java scripts (Vithkuqi, U+A7Cx) miss;
@@ -634,256 +637,60 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   values; default input passes through unchanged. The display-naming fold keeps
   the 1938 baseline. **SIGNED-ZERO-NORMALIZE-1 delta (2026-11-11):** `expr` parenthesizes a ` <=> `
   fragment like the arithmetic ones, so `F.expr("d <=> 0.0")` is named `(d <=> 0.0)`, as Spark.
-  **STRING-LITERAL-ESCAPE-1 CI round (2026-09-30):** `expr` pre-renders the display-shaped text (a
-  bare infix fragment keeps its parens) instead of the raw fragment, so the stored `sql_expr` keeps
-  base's grouping when composed and the pre-render only re-renders string-literal regions; the raw
-  fragment dropped the parens and mis-valued cube/rollup keys built from composed `F.expr` columns.
-- `functions_agg.py` — aggregate-function re-exports. **FNP-ALIAS-1 (2026-09-15):**
-  `approxCountDistinct` is the deprecated alias of `approx_count_distinct` and warns Spark's
-  exact `FutureWarning` on every call; it reaches `functions.py` through this module's
-  `install_into` (functions.py sits at its baseline, so new names install instead of
-  importing).
-- `functions_bitwise.py` — bitwise scalar wrappers. **FNP-ALIAS-1 (2026-09-15):**
-  `shiftLeft`/`shiftRight`/`shiftRightUnsigned` are the deprecated camelCase aliases of the
-  Spark-equal snake_case kernels and warn Spark's exact `FutureWarning` on every call; they
-  reach `functions.py` through this module's `install_into`.
-  **FNP-MISC-1 (2026-09-15):** `bucket` folds a literal Column count to the int path,
-  including CAST(int-literal AS INT/SMALLINT/TINYINT/BIGINT); any other Column raises
-  `NOT_COLUMN_OR_INT`. Every call warns the Spark 4.1.2 `FutureWarning`; outside
-  `partitionedBy` the fragment refuses like the int form.
-  pins: fnp-misc-1/C-003, fnp-misc-1/L-003
-  **FNP-BITMAP-FACADE-1 (2026-09-15):** `bitmap_construct_agg` / `bitmap_or_agg` /
-  `bitmap_and_agg` are one-line aggregate wrappers over
-  `column._inner.aggregate(kind, False)` — the same shape `functions.py`'s `sum` builds —
-  reaching the FNP-6D Rust UDAFs through the three new `unary_aggregate_udaf` arms, and
-  installing through this module's `INSTALL_NAMES`.
+  **STRING-LITERAL-ESCAPE-1 CI round (2026-09-30):** `expr` pre-renders the display-shaped text (a bare infix fragment keeps its parens) instead of the raw fragment, so the stored `sql_expr` keeps base's grouping when composed and the pre-render only re-renders string-literal regions; the raw fragment dropped the parens and mis-valued cube/rollup keys built from composed `F.expr` columns.
+- `functions_agg.py` — aggregate-function re-exports. **FNP-ALIAS-1 (2026-09-15):** `approxCountDistinct` is the deprecated alias of `approx_count_distinct` and warns Spark's exact `FutureWarning` on every call; it reaches `functions.py` through this module's `install_into` (functions.py sits at its baseline, so new names install instead of importing).
+- `functions_bitwise.py` — bitwise scalar wrappers. **FNP-ALIAS-1 (2026-09-15):** `shiftLeft`/`shiftRight`/`shiftRightUnsigned` are the deprecated camelCase aliases of the Spark-equal snake_case kernels and warn Spark's exact `FutureWarning` on every call; they reach `functions.py` through this module's `install_into`.
+  **FNP-MISC-1 (2026-09-15):** `bucket` folds a literal Column count to the int path, including CAST(int-literal AS INT/SMALLINT/TINYINT/BIGINT); any other Column raises `NOT_COLUMN_OR_INT`. Every call warns the Spark 4.1.2 `FutureWarning`; outside `partitionedBy` the fragment refuses like the int form. pins: fnp-misc-1/C-003, fnp-misc-1/L-003
+  **FNP-BITMAP-FACADE-1 (2026-09-15):** `bitmap_construct_agg` / `bitmap_or_agg` / `bitmap_and_agg` are one-line aggregate wrappers over `column._inner.aggregate(kind, False)` — the same shape `functions.py`'s `sum` builds — reaching the FNP-6D Rust UDAFs through the three new `unary_aggregate_udaf` arms, and installing through this module's `INSTALL_NAMES`.
 - `functions_agg.py` — aggregate-function re-exports.
-- `functions_agg_1.py` — FNP-AGG-1 slice-(d) aggregate installed onto `functions.py`
-  `__all__` through this module's `install_into`: `grouping_id` over the new
-  kernel (zero or more columns; display names the Spark spelling), registered
-  for by-name resolution.
+- `functions_agg_1.py` — FNP-AGG-1 slice-(d) aggregate installed onto `functions.py` `__all__` through this module's `install_into`: `grouping_id` over the new kernel (zero or more columns; display names the Spark spelling), registered for by-name resolution.
 - `functions_bitwise.py` — bitwise scalar wrappers.
-- `functions_arrow_udf.py` — **FNP-MISC-1 (2026-09-15):** `arrow_udf` over the pandas
-  bridge (scalar / iterator / grouped forms chosen by type hints, or forced through
-  `functionType`) and `arrow_udtf` over the Python UDTF path. Round 2 runs arrow `eval`
-  once per RecordBatch with whole-column Arrays (`_eval_batch`, Tables projected onto
-  declared names, per-row `eval` refuses) through the additive `_map_arrow_udtf_batches`
-  branch in `udtf.py`, and streams the SCALAR_ITER adapter one batch at a time behind a
-  pull feeder. `pyarrow` stays optional: both entry points import it lazily and raise
-  Spark's `[PACKAGE_NOT_INSTALLED]` shape when it is absent. Installed onto `functions.py`
-  after `__all__` through `install_into`.
-  pins: fnp-misc-1/C-004, C-005, C-006, fnp-misc-1/F-1, fnp-misc-1/F-2, fnp-misc-1/L-002
-- `functions_byname.py` — **FNP-MISC-1 (2026-09-15):** `call_function` / `call_udf`
-  resolved at call time (session-registered UDF wins, else the engine scalar built by name,
-  else a `FACADE_ONLY_ROUTINE_NAMES` fallback, else `UNRESOLVED_ROUTINE`; dotted names raise
-  `REQUIRES_SINGLE_PART_NAMESPACE`; `BYNAME_NON_ROUTINE_NAMES` never resolve). Round 3 maps
-  engine arity failures to `WRONG_NUM_ARGS.WITHOUT_SUGGESTION` (exact counts in Spark's
-  words; ranged specs reuse the engine wording). Installed
-  onto `functions.py` after `__all__` through `install_into`. **DOOR-CONVERGE-1 round 5
-  (2026-09-16):** `char_length` leaves `FACADE_ONLY_ROUTINE_NAMES` — the Rust dispatch
-  serves it (`call_function('char_length', lit('abc'))` = 3, A11-callfn-char-length).
-  pins: fnp-misc-1/C-002, fnp-misc-1/F-3, fnp-misc-1/F-4, fnp-misc-1/F-5, fnp-misc-1/L-004, fnp-misc-1/L-005, fnp-misc-1/L-010
-  **FNP-BITMAP-FACADE-1 (2026-09-15):** `FACADE_ONLY_ROUTINE_NAMES` gains
-  `bitmap_construct_agg` / `bitmap_or_agg` / `bitmap_and_agg` (owner ruling: PySpark 4.1.2
-  resolves them as `call_function` builtins, so they are facade-only routines); the
-  by-name route answers the same bytes as the wrappers and the SQL door.
-  pins: fnp-bitmap-facade-1/C-002, fnp-bitmap-facade-1/C-004
-  **FNP-WIN-1 step 5 (2026-09-15):** `window` and `session_window` join the
-  facade-only rows (analyzer-rewrite and GROUP-BY-only marker names the scalar
-  dispatch does not carry; step-2 debt for `window`).
-  pins: fnp-misc-1/C-002, fnp-misc-1/F-3, fnp-misc-1/F-4, fnp-misc-1/F-5, fnp-misc-1/L-004, fnp-misc-1/L-005, fnp-misc-1/L-010, fnp-win-1/C-008
-- `functions_collections.py` — array, map, sequence, and collection wrappers. **FNP-9
-  (2026-09-05):** `create_map`, `map_concat` and `array_insert` land here.
-  **ARRAY-NULL-1 (2026-09-14):** `_glue_element` is one `_scalar("array_append"/
-  "array_prepend", a, e)` call per level — the null-preserving
-  `spark_array_*_udf` shims replaced the `when(isnull(a), NULL).otherwise(flatten(...))`
-  rewrite that embedded `array_col` 2× per level (measured ~×3/level: 51 MB at
-  depth 12, 269 MB at depth 16 on the base tree).
-  **FN-FIX-1:** `arrays_overlap` is the three-valued kernel, not the size-of-intersect shim.
-  Live co-collect `test_live_fn_fix_1_arrays`.
+- `functions_arrow_udf.py` — **FNP-MISC-1 (2026-09-15):** `arrow_udf` over the pandas bridge (scalar / iterator / grouped forms chosen by type hints, or forced through `functionType`) and `arrow_udtf` over the Python UDTF path. Round 2 runs arrow `eval` once per RecordBatch with whole-column Arrays (`_eval_batch`, Tables projected onto declared names, per-row `eval` refuses) through the additive `_map_arrow_udtf_batches` branch in `udtf.py`, and streams the SCALAR_ITER adapter one batch at a time behind a pull feeder. `pyarrow` stays optional: both entry points import it lazily and raise Spark's `[PACKAGE_NOT_INSTALLED]` shape when it is absent. Installed onto `functions.py` after `__all__` through `install_into`. pins: fnp-misc-1/C-004, C-005, C-006, fnp-misc-1/F-1, fnp-misc-1/F-2, fnp-misc-1/L-002
+- `functions_byname.py` — **FNP-MISC-1 (2026-09-15):** `call_function` / `call_udf` resolved at call time (session-registered UDF wins, else the engine scalar built by name, else a `FACADE_ONLY_ROUTINE_NAMES` fallback, else `UNRESOLVED_ROUTINE`; dotted names raise `REQUIRES_SINGLE_PART_NAMESPACE`; `BYNAME_NON_ROUTINE_NAMES` never resolve). Round 3 maps engine arity failures to `WRONG_NUM_ARGS.WITHOUT_SUGGESTION` (exact counts in Spark's words; ranged specs reuse the engine wording). Installed onto `functions.py` after `__all__` through `install_into`. **DOOR-CONVERGE-1 round 5 (2026-09-16):** `char_length` leaves `FACADE_ONLY_ROUTINE_NAMES` — the Rust dispatch serves it (`call_function('char_length', lit('abc'))` = 3, A11-callfn-char-length). pins: fnp-misc-1/C-002, fnp-misc-1/F-3, fnp-misc-1/F-4, fnp-misc-1/F-5, fnp-misc-1/L-004, fnp-misc-1/L-005, fnp-misc-1/L-010
+  **FNP-BITMAP-FACADE-1 (2026-09-15):** `FACADE_ONLY_ROUTINE_NAMES` gains `bitmap_construct_agg` / `bitmap_or_agg` / `bitmap_and_agg` (owner ruling: PySpark 4.1.2 resolves them as `call_function` builtins, so they are facade-only routines); the by-name route answers the same bytes as the wrappers and the SQL door. pins: fnp-bitmap-facade-1/C-002, fnp-bitmap-facade-1/C-004
+  **FNP-WIN-1 step 5 (2026-09-15):** `window` and `session_window` join the facade-only rows (analyzer-rewrite and GROUP-BY-only marker names the scalar dispatch does not carry; step-2 debt for `window`). pins: fnp-misc-1/C-002, fnp-misc-1/F-3, fnp-misc-1/F-4, fnp-misc-1/F-5, fnp-misc-1/L-004, fnp-misc-1/L-005, fnp-misc-1/L-010, fnp-win-1/C-008
+- `functions_collections.py` — array, map, sequence, and collection wrappers. **FNP-9 (2026-09-05):** `create_map`, `map_concat` and `array_insert` land here.
+  **ARRAY-NULL-1 (2026-09-14):** `_glue_element` is one `_scalar("array_append"/ "array_prepend", a, e)` call per level — the null-preserving `spark_array_*_udf` shims replaced the `when(isnull(a), NULL).otherwise(flatten(...))` rewrite that embedded `array_col` 2× per level (measured ~×3/level: 51 MB at depth 12, 269 MB at depth 16 on the base tree).
+  **FN-FIX-1:** `arrays_overlap` is the three-valued kernel, not the size-of-intersect shim. Live co-collect `test_live_fn_fix_1_arrays`.
 - `functions_datetime.py` — date/time and timestamp wrappers.
-- `functions_declared.py` — FNP-15/16 declared-absent refusals (unreachable / deferred-by-cost).
-  Installed onto `functions.py` after `__all__` so the sql.functions re-export sees them.
-  Sketches (32), CSV/XML/XPath (11), VARIANT (8), and geospatial (5) are deferred-by-cost.
-- `functions_expr.py` — shared expression builders and scalar lowering. **FNP-9/10
-  (2026-09-05):** `arrays_zip` and `schema_of_json` stop refusing and route to their kernels.
-  **FNP-GEN-1 (2026-09-16):** `from_xml` / `schema_of_xml` raise the dated declared
-  refusal naming `FNP-16-csv-xml-xpath` (owner ruling D-6, 2026-09-15), verbatim the
-  same `{name} is reachable without a JVM …` string the armed parse-altitude refusal
-  raises on both SQL doors.
-  **FNP-GEN-1 step 3 (2026-09-16, run 18a):** `from_csv` stops refusing and binds
-  its schema string as a literal and its options dict as a `create_map` of literals
-  (built inline — `functions_collections` imports this module, so the facade cannot
-  import `create_map` back); the output name keeps Spark's first-argument form.
-  **Step 4b (run 18a):** `schema_of_csv` stops refusing and binds its CSV literal
-  plus an optional options dict the same way; the output name keeps Spark's
-  `schema_of_csv(<csv text>)` form.
-  **Gate pass (run 18a):** `from_csv` checks its schema argument with the
-  conditioned `NOT_COLUMN_OR_STR` bar.
-  **ABS-EXPR-1 (2026-09-13):** `cbrt` and `nullif` are one native `_scalar` call each
-  (`expr_fn::cbrt` / `expr_fn::nullif`); both `when(...)` rewrites embedded their child
-  more than once per level (cbrt 3×, nullif 2×). `nvl2` stays a `when` — each child is
-  embedded exactly once (linear).
-  **FNP-MATH-1 step 4 (2026-09-16, run 18a):** `hash` destubs in place to one native
-  `_scalar` call (default display already reads Spark's `hash(a, b)`); `hash` leaves
-  `functions_byname.py` `FACADE_ONLY_ROUTINE_NAMES`.
-  **FNP-MATH-1 step 5 (2026-09-16, run 18a):** `format_number` destubs in place to one
-  native `_scalar` call (the `d` scale rides `lit_indices`, so the display reads
-  Spark's `format_number(x, 2)`); `format_number` leaves `FACADE_ONLY_ROUTINE_NAMES`.
-  **FNP-MATH-1 mask slice (2026-09-16, run 18a):** `mask` lands in
-  `functions_math.py` (absent on the base tree, so no destub): Spark defaults
-  materialize as `lit` args, and the display already reads
-  `mask(masked, X, x, n, NULL)`.
-  **FNP-ALIAS-1 (2026-09-15):** `degrees`/`radians` move to `functions_math.py` (this file sat
-  exactly on its ceiling; the baseline ratchets 2247 → 2237 in `check_lib_py.py` and the CAP-1
-  mirror). `functions.py` ratchets 1962 → 1960: the two re-export entries move between its
-  import blocks, the tail gains a third module-handle line for the new `install_into` modules,
-  paid by one narration comment line.
-  **FNP-11B step 2 (2026-09-15):** `to_date` / `to_timestamp` / `unix_timestamp` stop
-  refusing `format=` and bind it as a literal (`lit_indices={1}`); a Column format raises
-  `NOT_ITERABLE`; `unix_timestamp` takes Spark's default `'yyyy-MM-dd HH:mm:ss'`. The file
-  holds exactly 2235 lines.
-- `functions_stack.py` — **PERF-UNPIVOT-1 (2026-09-12):** `F.stack` / `StackCall` /
-  `select_with_stack_if_present`. Installed last onto `functions.py`; its
-  one-generator gate also reads `_repark_generator` (FNP-GEN-1) so `stack` beside
-  an analyzer generator refuses. pins: perf-unpivot-1/C-004, fnp-gen-1/C-003
-- `functions_generators.py` — **FNP-GEN-1 step 2 (2026-09-16):** the thin wrappers for `posexplode`
-  / `posexplode_outer` / `inline` / `inline_outer`, plus `_GeneratorColumn` whose `alias(*names)`
-  packs multi-name output aliases into the `__repark_gen_alias` marker call that
-  `repark_functions::generator::GeneratorRewrite` peels. The wrappers return plain scalar
-  expressions; the analyzer rule does the unnesting, so `dataframe/**` and the
-  `_select_with_generator` allow-list stay untouched. `_GeneratorColumn` carries `_repark_generator`
-  (the `functions_stack.py` one-generator gate reads it so `stack` + `inline` refuses) and clears
-  `_projection_name` so `_collapse_identity_projection_alias` keeps the call bare — an identity
-  `Expr::Alias` would otherwise reach the rewrite as a one-name `COLUMN_ALIASES_MISMATCH`.
-  `GENERATOR_NAMES` is the export table `scripts/check_example_coverage.py` reads, and
-  `install_into` runs at the tail of `functions.py`'s installer chain; `posexplode` /
-  `posexplode_outer` are additionally imported statically into `functions.py` because their
-  `__all__` rows predate the installer. **Step 2 (run 18a):** `json_tuple` joins this module — its
-  stub leaves `functions_expr.py` and it is imported statically beside `posexplode` /
-  `posexplode_outer`, keeping its presplit `__all__` row, so `GENERATOR_NAMES` keeps only the four
-  step-2 names. A lone `.alias('x')` on one field is ignored and a wrong count raises
-  `UDTF_ALIAS_NUMBER_MISMATCH`, both decided by the rewrite.
-- `functions_json.py` — **FNP-10 (2026-09-05):** the JSON wrappers (`get_json_object`,
-  `json_array_length`, `json_object_keys`, `to_json`, `from_json`). Its `install_into` also
-  re-exports the collection constructors from `functions_collections`, so the whole FNP-9/10 surface
-  reaches `functions.py` through the existing installer chain instead of growing that module past
-  its exact size baseline. `FNP9_NAMES` is the export table `scripts/check_example_coverage.py`
-  reads, so a name added here is a name that needs an example. The unit's unbuilt names (`call_udf`,
-  `call_function` — before FNP-MISC-1) were deliberately NOT here (`stack` landed in PERF-UNPIVOT-1;
-  `inline` / `inline_outer` landed in FNP-GEN-1 step 2 through `functions_generators.py`): exporting
-  a refusal would add rows to an example backlog whose count only ratchets down. §7
-  `FNP9-GENERATORS-1` / `FNP9-BYNAME-1`. The `DataType` import is under `TYPE_CHECKING` — a runtime
-  one closes an import cycle through `repark.spark.types`. `_refuse_json_options` is the one rule
-  `from_json`, `to_json` and `schema_of_json` share: repark implements no JSON option beyond `mode`
-  and `columnNameOfCorruptRecord`, and Spark's `ignoreNullFields` / `primitivesAsString` change the
-  answer, so a non-empty mapping refuses instead of being ignored. `install_into` ran last in
-  `functions.py`'s installer chain until PERF-UNPIVOT-1 appended `functions_stack`;
-  `test_functions_split_identity.py` pins the order, which `test_functions_split_identity.py` pins
-  by position. The rules each wrapper carries — Spark's `map(k1, v1, …)` spelling behind
-  `create_map`, the `-1`-appends and NULL-padding rules of `array_insert`, the NULL-fill of
-  `arrays_zip`, PERMISSIVE decoding and the `_corrupt_record` column of `from_json`, and
-  `schema_of_json` reading a bare `str` as the document rather than a column name — are recorded
-  here and in the unit ledger, not in the function bodies: each keeps exactly the one-line docstring
-  the presence gate requires. FN-REGEXP-EXTRACT-1 (2026-09-04): `regexp_extract` calls the native
-  kernel on both doors; its docstring is one line. SEM-1: `log(col)` or `log(base, expr)` (PySpark
-  `log(arg1, arg2=None)`). LOG1P-1: `log1p` / `expm1` are `_scalar` onto the precise kernels, not
-  `log(1+col)` / `exp(col)-1`.
-  **DATE-FN-1 (2026-09-04):** `unix_timestamp` is `_scalar` onto the kernel (format arg still
-  unsupported).
-  **FN-FIX-1 (2026-09-03):** `sha2` hex string + bit lengths; `array_sort` vs
-  `sort_array`; `percentile_approx` discrete type.
-  **PERF-APPROXPCT-1 (2026-09-05):** `percentile_approx` threads accuracy: the native
-  `_inner` call takes it as `Option` (None is the two-arg default), and the `sql_expr`
-  carries a `, {accuracy}` tail because the list form always lowers through the
-  global-aggregate SQL path (nested parens fail the native classifier), where a missing
-  tail would silently run at default accuracy.
-  **Round 2 (2026-09-06):** accuracy normalizes through `_integral.checked_integral`
-  before either path (Spark's INTEGRAL contract, measured on live 4.1.2): numpy integers
-  run as the int on both forms, bool/float/str fail with
-  `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` — the NULL-tail fallback is gone. The two
-  Column builds merged into one shared return; ceiling 2259 → 2258.
-  **Round 3 (2026-09-06):** that refusal is `AnalysisException` with Spark's class,
-  message and params (not `PySparkTypeError` / `{arg_name, arg_type}`).
-  **FN-FIX-2 (2026-09-04):** `trim`/`ltrim`/`rtrim` optional charset; `initcap` /
-  `chr`/`elt`/`rlike` lower onto Spark kernels.
-  **FN-REGEXP-EXTRACT-1 (2026-09-04):** `regexp_extract` is `_scalar` onto the
-  kernel (bare pattern forced-lit, optional idx defaulting to 1).
+- `functions_declared.py` — FNP-15/16 declared-absent refusals (unreachable / deferred-by-cost). Installed onto `functions.py` after `__all__` so the sql.functions re-export sees them. Sketches (32), CSV/XML/XPath (11), VARIANT (8), and geospatial (5) are deferred-by-cost.
+- `functions_expr.py` — shared expression builders and scalar lowering. **FNP-9/10 (2026-09-05):** `arrays_zip` and `schema_of_json` stop refusing and route to their kernels.
+  **FNP-GEN-1 (2026-09-16):** `from_xml` / `schema_of_xml` raise the dated declared refusal naming `FNP-16-csv-xml-xpath` (owner ruling D-6, 2026-09-15), verbatim the same `{name} is reachable without a JVM …` string the armed parse-altitude refusal raises on both SQL doors.
+  **FNP-GEN-1 step 3 (2026-09-16, run 18a):** `from_csv` stops refusing and binds its schema string as a literal and its options dict as a `create_map` of literals (built inline — `functions_collections` imports this module, so the facade cannot import `create_map` back); the output name keeps Spark's first-argument form.
+  **Step 4b (run 18a):** `schema_of_csv` stops refusing and binds its CSV literal plus an optional options dict the same way; the output name keeps Spark's `schema_of_csv(<csv text>)` form.
+  **Gate pass (run 18a):** `from_csv` checks its schema argument with the conditioned `NOT_COLUMN_OR_STR` bar.
+  **ABS-EXPR-1 (2026-09-13):** `cbrt` and `nullif` are one native `_scalar` call each (`expr_fn::cbrt` / `expr_fn::nullif`); both `when(...)` rewrites embedded their child more than once per level (cbrt 3×, nullif 2×). `nvl2` stays a `when` — each child is embedded exactly once (linear).
+  **FNP-MATH-1 step 4 (2026-09-16, run 18a):** `hash` destubs in place to one native `_scalar` call (default display already reads Spark's `hash(a, b)`); `hash` leaves `functions_byname.py` `FACADE_ONLY_ROUTINE_NAMES`.
+  **FNP-MATH-1 step 5 (2026-09-16, run 18a):** `format_number` destubs in place to one native `_scalar` call (the `d` scale rides `lit_indices`, so the display reads Spark's `format_number(x, 2)`); `format_number` leaves `FACADE_ONLY_ROUTINE_NAMES`.
+  **FNP-MATH-1 mask slice (2026-09-16, run 18a):** `mask` lands in `functions_math.py` (absent on the base tree, so no destub): Spark defaults materialize as `lit` args, and the display already reads `mask(masked, X, x, n, NULL)`.
+  **FNP-ALIAS-1 (2026-09-15):** `degrees`/`radians` move to `functions_math.py` (this file sat exactly on its ceiling; the baseline ratchets 2247 → 2237 in `check_lib_py.py` and the CAP-1 mirror). `functions.py` ratchets 1962 → 1960: the two re-export entries move between its import blocks, the tail gains a third module-handle line for the new `install_into` modules, paid by one narration comment line.
+  **FNP-11B step 2 (2026-09-15):** `to_date` / `to_timestamp` / `unix_timestamp` stop refusing `format=` and bind it as a literal (`lit_indices={1}`); a Column format raises `NOT_ITERABLE`; `unix_timestamp` takes Spark's default `'yyyy-MM-dd HH:mm:ss'`. The file holds exactly 2235 lines.
+- `functions_stack.py` — **PERF-UNPIVOT-1 (2026-09-12):** `F.stack` / `StackCall` / `select_with_stack_if_present`. Installed last onto `functions.py`; its one-generator gate also reads `_repark_generator` (FNP-GEN-1) so `stack` beside an analyzer generator refuses. pins: perf-unpivot-1/C-004, fnp-gen-1/C-003
+- `functions_generators.py` — **FNP-GEN-1 step 2 (2026-09-16):** the thin wrappers for `posexplode` / `posexplode_outer` / `inline` / `inline_outer`, plus `_GeneratorColumn` whose `alias(*names)` packs multi-name output aliases into the `__repark_gen_alias` marker call that `repark_functions::generator::GeneratorRewrite` peels. The wrappers return plain scalar expressions; the analyzer rule does the unnesting, so `dataframe/**` and the `_select_with_generator` allow-list stay untouched. `_GeneratorColumn` carries `_repark_generator` (the `functions_stack.py` one-generator gate reads it so `stack` + `inline` refuses) and clears `_projection_name` so `_collapse_identity_projection_alias` keeps the call bare — an identity `Expr::Alias` would otherwise reach the rewrite as a one-name `COLUMN_ALIASES_MISMATCH`. `GENERATOR_NAMES` is the export table `scripts/check_example_coverage.py` reads, and `install_into` runs at the tail of `functions.py`'s installer chain; `posexplode` / `posexplode_outer` are additionally imported statically into `functions.py` because their `__all__` rows predate the installer. **Step 2 (run 18a):** `json_tuple` joins this module — its stub leaves `functions_expr.py` and it is imported statically beside `posexplode` / `posexplode_outer`, keeping its presplit `__all__` row, so `GENERATOR_NAMES` keeps only the four step-2 names. A lone `.alias('x')` on one field is ignored and a wrong count raises `UDTF_ALIAS_NUMBER_MISMATCH`, both decided by the rewrite.
+- `functions_json.py` — **FNP-10 (2026-09-05):** the JSON wrappers (`get_json_object`, `json_array_length`, `json_object_keys`, `to_json`, `from_json`). Its `install_into` also re-exports the collection constructors from `functions_collections`, so the whole FNP-9/10 surface reaches `functions.py` through the existing installer chain instead of growing that module past its exact size baseline. `FNP9_NAMES` is the export table `scripts/check_example_coverage.py` reads, so a name added here is a name that needs an example. The unit's unbuilt names (`call_udf`, `call_function` — before FNP-MISC-1) were deliberately NOT here (`stack` landed in PERF-UNPIVOT-1; `inline` / `inline_outer` landed in FNP-GEN-1 step 2 through `functions_generators.py`): exporting a refusal would add rows to an example backlog whose count only ratchets down. §7 `FNP9-GENERATORS-1` / `FNP9-BYNAME-1`. The `DataType` import is under `TYPE_CHECKING` — a runtime one closes an import cycle through `repark.spark.types`. `_refuse_json_options` is the one rule `from_json`, `to_json` and `schema_of_json` share: repark implements no JSON option beyond `mode` and `columnNameOfCorruptRecord`, and Spark's `ignoreNullFields` / `primitivesAsString` change the answer, so a non-empty mapping refuses instead of being ignored. `install_into` ran last in `functions.py`'s installer chain until PERF-UNPIVOT-1 appended `functions_stack`; `test_functions_split_identity.py` pins the order, which `test_functions_split_identity.py` pins by position. The rules each wrapper carries — Spark's `map(k1, v1, …)` spelling behind `create_map`, the `-1`-appends and NULL-padding rules of `array_insert`, the NULL-fill of `arrays_zip`, PERMISSIVE decoding and the `_corrupt_record` column of `from_json`, and `schema_of_json` reading a bare `str` as the document rather than a column name — are recorded here and in the unit ledger, not in the function bodies: each keeps exactly the one-line docstring the presence gate requires. FN-REGEXP-EXTRACT-1 (2026-09-04): `regexp_extract` calls the native kernel on both doors; its docstring is one line. SEM-1: `log(col)` or `log(base, expr)` (PySpark `log(arg1, arg2=None)`). LOG1P-1: `log1p` / `expm1` are `_scalar` onto the precise kernels, not `log(1+col)` / `exp(col)-1`.
+  **DATE-FN-1 (2026-09-04):** `unix_timestamp` is `_scalar` onto the kernel (format arg still unsupported).
+  **FN-FIX-1 (2026-09-03):** `sha2` hex string + bit lengths; `array_sort` vs `sort_array`; `percentile_approx` discrete type.
+  **PERF-APPROXPCT-1 (2026-09-05):** `percentile_approx` threads accuracy: the native `_inner` call takes it as `Option` (None is the two-arg default), and the `sql_expr` carries a `, {accuracy}` tail because the list form always lowers through the global-aggregate SQL path (nested parens fail the native classifier), where a missing tail would silently run at default accuracy.
+  **Round 2 (2026-09-06):** accuracy normalizes through `_integral.checked_integral` before either path (Spark's INTEGRAL contract, measured on live 4.1.2): numpy integers run as the int on both forms, bool/float/str fail with `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` — the NULL-tail fallback is gone. The two Column builds merged into one shared return; ceiling 2259 → 2258.
+  **Round 3 (2026-09-06):** that refusal is `AnalysisException` with Spark's class, message and params (not `PySparkTypeError` / `{arg_name, arg_type}`).
+  **FN-FIX-2 (2026-09-04):** `trim`/`ltrim`/`rtrim` optional charset; `initcap` / `chr`/`elt`/`rlike` lower onto Spark kernels.
+  **FN-REGEXP-EXTRACT-1 (2026-09-04):** `regexp_extract` is `_scalar` onto the kernel (bare pattern forced-lit, optional idx defaulting to 1).
   **TYPES-1 (2026-09-05):** `from_unixtime` forwards the optional format argument.
-- `functions_lambda.py` — higher-order function and lambda builders. FNP-4c adds
-  `transform`, `filter`, `forall`, `aggregate`, `reduce`, `zip_with`, `transform_keys`,
-  `transform_values`, `map_filter`, `map_zip_with` (installed onto `functions.py` `__all__`).
-  Spark 4.1.2 `NUM_ARGS_MISMATCH` puts the user arity in expects and the declared arity in got.
-  FNP-8-REVIEW (2026-09-07) restored the `_lambda_arity` docstring #412 reworded.
-  **FNP-8 (2026-09-07):** Column builders preserve function-specific
-  `NUM_ARGS_MISMATCH` errors after the generic 1–3 parameter check. Invalid-return errors name
-  functions, callable objects, and `functools.partial` instances without assuming `__name__`.
+- `functions_lambda.py` — higher-order function and lambda builders. FNP-4c adds `transform`, `filter`, `forall`, `aggregate`, `reduce`, `zip_with`, `transform_keys`, `transform_values`, `map_filter`, `map_zip_with` (installed onto `functions.py` `__all__`). Spark 4.1.2 `NUM_ARGS_MISMATCH` puts the user arity in expects and the declared arity in got. FNP-8-REVIEW (2026-09-07) restored the `_lambda_arity` docstring #412 reworded.
+  **FNP-8 (2026-09-07):** Column builders preserve function-specific `NUM_ARGS_MISMATCH` errors after the generic 1–3 parameter check. Invalid-return errors name functions, callable objects, and `functools.partial` instances without assuming `__name__`.
 - `functions_try.py` — FNP-7a/7b `try_*` wrappers installed onto `functions.py` `__all__`.
-- `functions_lit.py` — **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):**
-  the `lit` rendering helpers (`_lit_sql_expr`, `_lit_spark_display`), moved
-  unchanged from `functions.py` so that file holds its ratcheted baseline.
-- `functions_math.py` — mathematical and trigonometric wrappers. **FNP-ALIAS-1 (2026-09-15):**
-  `degrees`/`radians` move here from `functions_expr.py` (functions_expr sat exactly on its
-  ceiling) and stop composing `(x * 180) / pi()`. The engine's `degrees` scalar has no
-  `call_scalar` dispatch arm and Rust is fenced, so the wrapper is one multiply by the
-  precomputed double `180.0/pi` (Rust `f64::to_degrees`'s exact form) — measured bit-equal to
-  the SQL-door kernel and to live PySpark 4.1.2 on every oracle cell, including INT input
-  (the DOUBLE literal coerces before the multiply, so no ANSI overflow). Display is Spark's
-  `DEGREES(x)`/`RADIANS(x)` via the `dayname`-style rewrap. `toDegrees`/`toRadians` are the
-  deprecated aliases and warn Spark's exact `FutureWarning`; they reach `functions.py`
-  through this module's `install_into`. **FNP-MATH-1 step 2 (2026-09-16, run 18a):**
-  `bround(col, scale=None)` joins `INSTALL_NAMES` (thin `_scalar` bind, scale default
-  materialized as `0` so the display reads Spark's `bround(d, 0)`); the installer path
-  keeps `functions.py` untouched under its ceiling.
-  **FNP-MATH-1 step 3 (2026-09-16, run 18a):** `conv(col, fromBase, toBase)` joins
-  `INSTALL_NAMES` beside it.
-  **crit-logic-1 L-001 (2026-09-15):** `_rescaled`
-  threaded join origin like every house wrapper of that date — `join_sql_expr` from the
-  multiply result and the origin threader — so a right-parent column after semi/anti raises
-  `MISSING_ATTRIBUTES` instead of silently binding the left, and a two-sided `degrees` ON
-  clause binds each side.
-  **ATTR-ID-1 S4 (2026-10-02):** the origin threader is deleted with the origin encodings;
-  the composed `join_sql_expr` attribute tokens alone carry the semi/anti refusal.
-- `functions_temporal.py` — FNP-11A temporal wrappers installed onto `functions.py`
-  `__all__`; `make_timestamp` and `months_between` delegate through `functions_expr.py`.
-  Interval builders print only the parts the call gave (`try_make_interval()`
-  prints one zero); `months_between` prints `roundOff` only when false.
-  **FNP-11B step 3 (2026-09-15):** `to_timestamp_ltz` / `to_timestamp_ntz` join
-  `FNP11A_EXPORTS` (thin `_scalar` binds, `format` stays a literal position) —
-  a new exports tuple would cost the example-coverage gate a binding-table line
-  it has no room for (`check_example_coverage.py` sits exactly on its ceiling),
-  so the step-3 names ride the existing installer tuple and binding;
-  `try_to_timestamp` is destubbed in place in `functions_expr.py`.
-  **FNP-11B step 4 (2026-09-15):** `make_time` / `to_time` / `time_diff` /
-  `time_trunc` / `current_time` / `typeof` join `FNP11A_EXPORTS` the same way
-  (thin `_scalar` binds with PySpark 4.1.2's parameter names, order and defaults).
-  **FNP-11B step 5 (2026-09-15):** `to_char` / `to_varchar` / `to_number` /
-  `to_binary` join `FNP11A_EXPORTS` the same way (`format` stays a literal
-  position; `to_binary` defaults it to `None`).
-  **FNP-11B step 6 (2026-09-15):** `make_timestamp` widens to PySpark 4.1.2's
-  all-optional signature under owner ruling Q-15a-3 (the freeze register
-  regenerates in the same commit); the live def in `functions_expr.py` widens
-  identically and forwards to this one.
-  **FNP-11B remediation round 1 (2026-09-16):** `functions_expr.py` drops the
-  `make_timestamp` forwarder for a direct re-export of this def (identical
-  signatures; the freeze builder follows the alias); `ColumnOrName` format
-  positions (`to_timestamp_ltz/ntz`, `to_time`, `to_char/varchar/number`,
-  `to_binary`, `try_to_timestamp`) stop forcing string formats to literals so a
-  bare string is a column reference as Spark measures it, while the
-  `str`-typed formats keep `lit_indices`; `current_time` passes `foldable=True`.
-  pins: fnp-11a/C-001, C-015; fnp-11b/C-001, C-002, C-005, C-007
-- `functions_math.py` — mathematical and trigonometric wrappers.
-  clause binds each side. **DEGREES-RUST-1 (2026-09-15, owner Q-15a-1):** `degrees` /
-  `radians` move onto the engine's scalar UDFs through new `call_scalar` dispatch arms —
-  the single-multiply `f64::to_degrees` / `f64::to_radians` form, swept bit-identical to
-  the replaced multiply over 4015 values, so reuse and not a new kernel. The wrappers are
-  thin `_scalar` binds over a `double` cast keeping the `DEGREES(x)` / `RADIANS(x)`
-  display, the warnings, and every alias pin green; `_rescaled` and the factor constants
-  are deleted. **Run 16a round 3 (DEGREES-RUST-1 done properly, owner Q-15a-1):** the
-  Python `double` cast is dropped (PYPERF-001) — the wrappers are bare `_scalar` binds
-  and the Spark-exact UDFs in `repark_functions::spark_degrees` carry the numeric/STRING
-  coercion, the refusals and the ANSI switch for both doors. pins: fnp-alias-1/C-001,
-  C-002, C-003, C-004; fnp-bitmap-facade-1/C-011, C-012, C-013, C-014
+- `functions_lit.py` — **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** the `lit` rendering helpers (`_lit_sql_expr`, `_lit_spark_display`), moved unchanged from `functions.py` so that file holds its ratcheted baseline.
+- `functions_math.py` — mathematical and trigonometric wrappers. **FNP-ALIAS-1 (2026-09-15):** `degrees`/`radians` move here from `functions_expr.py` (functions_expr sat exactly on its ceiling) and stop composing `(x * 180) / pi()`. The engine's `degrees` scalar has no `call_scalar` dispatch arm and Rust is fenced, so the wrapper is one multiply by the precomputed double `180.0/pi` (Rust `f64::to_degrees`'s exact form) — measured bit-equal to the SQL-door kernel and to live PySpark 4.1.2 on every oracle cell, including INT input (the DOUBLE literal coerces before the multiply, so no ANSI overflow). Display is Spark's `DEGREES(x)`/`RADIANS(x)` via the `dayname`-style rewrap. `toDegrees`/`toRadians` are the deprecated aliases and warn Spark's exact `FutureWarning`; they reach `functions.py` through this module's `install_into`. **FNP-MATH-1 step 2 (2026-09-16, run 18a):** `bround(col, scale=None)` joins `INSTALL_NAMES` (thin `_scalar` bind, scale default materialized as `0` so the display reads Spark's `bround(d, 0)`); the installer path keeps `functions.py` untouched under its ceiling.
+  **FNP-MATH-1 step 3 (2026-09-16, run 18a):** `conv(col, fromBase, toBase)` joins `INSTALL_NAMES` beside it.
+  **crit-logic-1 L-001 (2026-09-15):** `_rescaled` threaded join origin like every house wrapper of that date — `join_sql_expr` from the multiply result and the origin threader — so a right-parent column after semi/anti raises `MISSING_ATTRIBUTES` instead of silently binding the left, and a two-sided `degrees` ON clause binds each side.
+  **ATTR-ID-1 S4 (2026-10-02):** the origin threader is deleted with the origin encodings; the composed `join_sql_expr` attribute tokens alone carry the semi/anti refusal.
+- `functions_temporal.py` — FNP-11A temporal wrappers installed onto `functions.py` `__all__`; `make_timestamp` and `months_between` delegate through `functions_expr.py`. Interval builders print only the parts the call gave (`try_make_interval()` prints one zero); `months_between` prints `roundOff` only when false.
+  **FNP-11B step 3 (2026-09-15):** `to_timestamp_ltz` / `to_timestamp_ntz` join `FNP11A_EXPORTS` (thin `_scalar` binds, `format` stays a literal position) — a new exports tuple would cost the example-coverage gate a binding-table line it has no room for (`check_example_coverage.py` sits exactly on its ceiling), so the step-3 names ride the existing installer tuple and binding; `try_to_timestamp` is destubbed in place in `functions_expr.py`.
+  **FNP-11B step 4 (2026-09-15):** `make_time` / `to_time` / `time_diff` / `time_trunc` / `current_time` / `typeof` join `FNP11A_EXPORTS` the same way (thin `_scalar` binds with PySpark 4.1.2's parameter names, order and defaults).
+  **FNP-11B step 5 (2026-09-15):** `to_char` / `to_varchar` / `to_number` / `to_binary` join `FNP11A_EXPORTS` the same way (`format` stays a literal position; `to_binary` defaults it to `None`).
+  **FNP-11B step 6 (2026-09-15):** `make_timestamp` widens to PySpark 4.1.2's all-optional signature under owner ruling Q-15a-3 (the freeze register regenerates in the same commit); the live def in `functions_expr.py` widens identically and forwards to this one.
+  **FNP-11B remediation round 1 (2026-09-16):** `functions_expr.py` drops the `make_timestamp` forwarder for a direct re-export of this def (identical signatures; the freeze builder follows the alias); `ColumnOrName` format positions (`to_timestamp_ltz/ntz`, `to_time`, `to_char/varchar/number`, `to_binary`, `try_to_timestamp`) stop forcing string formats to literals so a bare string is a column reference as Spark measures it, while the `str`-typed formats keep `lit_indices`; `current_time` passes `foldable=True`. pins: fnp-11a/C-001, C-015; fnp-11b/C-001, C-002, C-005, C-007
+- `functions_math.py` — mathematical and trigonometric wrappers. clause binds each side. **DEGREES-RUST-1 (2026-09-15, owner Q-15a-1):** `degrees` / `radians` move onto the engine's scalar UDFs through new `call_scalar` dispatch arms — the single-multiply `f64::to_degrees` / `f64::to_radians` form, swept bit-identical to the replaced multiply over 4015 values, so reuse and not a new kernel. The wrappers are thin `_scalar` binds over a `double` cast keeping the `DEGREES(x)` / `RADIANS(x)` display, the warnings, and every alias pin green; `_rescaled` and the factor constants are deleted. **Run 16a round 3 (DEGREES-RUST-1 done properly, owner Q-15a-1):** the Python `double` cast is dropped (PYPERF-001) — the wrappers are bare `_scalar` binds and the Spark-exact UDFs in `repark_functions::spark_degrees` carry the numeric/STRING coercion, the refusals and the ANSI switch for both doors. pins: fnp-alias-1/C-001, C-002, C-003, C-004; fnp-bitmap-facade-1/C-011, C-012, C-013, C-014
 - `functions_session.py` — session-bound function helpers.
   **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):**
   `_active_verbatim_flag` reads the active session's build-time
