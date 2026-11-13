@@ -63,8 +63,12 @@ metadata directory is empty; on the memory catalog it no longer reads. Spark kee
 failed replace and replaces it on a good one.
 
 Native `CREATE TABLE t (<columns>)` then `INSERT INTO t SELECT …` stores Spark 4.1.2's rows for
-every shape on both catalogs, and the Spark door's CTAS of the same statement stores Spark's
-rows for every shape.
+the ten step-0 shapes on both catalogs, and the Spark door's CTAS of the same statement stores
+Spark's rows for them. Two measured exceptions (both verifiers, 2026-11-13, the same on main):
+the native `INSERT` of an integer literal into an `INT` column through a `UNION` (`SELECT 1 UNION
+SELECT 9`) fails with `cannot convert text Int64 into byte Int32`, so that shape needs a `CAST`;
+and a CTE-shaped CTAS fails on the Spark door with `table 'spark_catalog.default.<cte>' not
+found` (the CTE-TEMP-VIEW-PRECEDENCE-1 family), where the native workaround stores its rows.
 
 ## The fix
 
@@ -84,12 +88,15 @@ can register (memory, `type=hadoop`, Glue, S3 Tables) is entered by
 registry lookup covers them. The target test is the one predicate `refused_schema`; refusing
 every native CTAS is a one-line change to it, if the owner rules that.
 
-The refusal is `UnsupportedOperationException`, before any catalog call, so nothing is created,
-replaced or dropped:
+The refusal is `UnsupportedOperationException`, raised at planning before any write. The
+source tables are read to plan the query, but nothing is created, replaced or dropped:
 
 > repark.sql() does not support CREATE TABLE ... AS SELECT into the Iceberg table ice.ns.t:
 > create the table with its columns, CREATE TABLE ice.ns.t (<columns>), then INSERT INTO ice.ns.t
 > SELECT ...; or run the same statement through spark.sql (NATIVE-CTAS-ICEBERG-REFUSE-1)
+
+The target is printed quoted where it needs quotes (`ice.ns."MixQ"`), so the workaround, followed
+literally, reaches the same table (fixed 2026-11-13 after verifier 1's F1).
 
 **F4 is closed on the native door** for Iceberg targets: the replace refuses before
 `deregister_table`, and the existing table keeps its rows, snapshots and metadata file.
@@ -116,7 +123,10 @@ and still fails with the fork's `register_table` text, creating nothing.
   This card covers its native-door Iceberg half, because the native door no longer creates an
   Iceberg table from a query at all.
 - [NATIVE-DOOR-REPLACE-KILL-1](native-door-replace-kill-1-card-2026-10-27.md): its premise does
-  not hold (see Why); the native door has no replace publish into an Iceberg table to kill.
+  not hold (see Why). Native CTAS and RTAS into an Iceberg table now refuse, but a native
+  `CREATE OR REPLACE TABLE t (<columns>)` with no query is not refused: it still drops and
+  re-creates `t` (a fresh `v1` with a new table uuid and no snapshots; the old files are
+  orphaned), the same on main (verifier 1, 2026-11-13). That replace is what remains to pin.
 - The registry row is NATIVE-CTAS-ICEBERG-REFUSE-1 in
   [the parity doc](../../../docs/spark-sql-iceberg-parity.md).
 - Found, not carded: a native `CREATE SCHEMA` under an Iceberg catalog answers success, ignores

@@ -142,6 +142,28 @@ async fn every_ctas_into_an_iceberg_catalog_refuses_before_any_create() {
 }
 
 #[tokio::test]
+async fn the_refusal_names_a_quoted_target_so_its_workaround_reaches_that_table() {
+    let root = TempDir::new().expect("warehouse");
+    let session = native_session(&root).await;
+    for catalog in ["ice", "hd"] {
+        let error = refusal(
+            &session,
+            &format!(
+                r#"CREATE TABLE "{catalog}".ns."MixQ" AS SELECT DISTINCT id FROM {catalog}.ns.src"#
+            ),
+        )
+        .await;
+        let named = format!(r#"{catalog}.ns."MixQ""#);
+        assert_eq!(error.to_string(), refusal_message(&named));
+        run(&session, &format!("CREATE TABLE {named} (id INT)")).await;
+        run(&session, &format!("INSERT INTO {named} SELECT 5")).await;
+        let rows = run(&session, &format!("SELECT id FROM {named}")).await;
+        assert_eq!(ids(&rows), vec![5]);
+        assert!(!exists(&session, &format!("{catalog}.ns.mixq")));
+    }
+}
+
+#[tokio::test]
 async fn an_unqualified_ctas_under_an_iceberg_default_catalog_refuses() {
     let root = TempDir::new().expect("warehouse");
     let session = native_session(&root).await;

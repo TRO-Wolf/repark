@@ -1248,7 +1248,8 @@ perfectly good read.
 #### NATIVE-CTAS-ICEBERG-REFUSE-1 — `repark.sql()` CTAS into an Iceberg table refuses (declared native-door refusal, owner ruling 2026-11-12)
 
 - **repark** — on the native door (`repark.sql()`), `CREATE TABLE … AS SELECT` whose target is
-  an Iceberg catalog refuses before any catalog call with `UnsupportedOperationException`:
+  an Iceberg catalog refuses at planning, before any write, with `UnsupportedOperationException`
+  (the target is printed quoted where it needs quotes):
   `repark.sql() does not support CREATE TABLE ... AS SELECT into the Iceberg table <target>:
   create the table with its columns, CREATE TABLE <target> (<columns>), then INSERT INTO <target>
   SELECT ...; or run the same statement through spark.sql (NATIVE-CTAS-ICEBERG-REFUSE-1)`. That
@@ -1263,7 +1264,9 @@ perfectly good read.
   `spark.sql` statement are unchanged. The native door is DataFusion's `CreateMemoryTable`, not
   `crates/repark-sql/src/create_table.rs`.
 - **Apache Spark** — the same CTAS stores the query's rows, and so do RePark's `spark.sql` and the
-  native two-step workaround, for every shape measured. *(oracle: PySpark 4.1.2 with Iceberg
+  native two-step workaround, for the ten step-0 shapes. Two exceptions, the same on main: a
+  native `INSERT` of an integer literal through a `UNION` into an `INT` column needs a `CAST`,
+  and a CTE-shaped CTAS fails on the Spark door (CTE-TEMP-VIEW-PRECEDENCE-1). *(oracle: PySpark 4.1.2 with Iceberg
   1.11.0 on a Hadoop catalog, 2026-11-12, `task/wo/native-ctas-iceberg-refuse-1/evidence/step0/`.)*
 - **Pin** — `python/repark/tests/sql/test_native_ctas_iceberg_refuse_1.py` and
   `crates/repark-core/src/local_fs_policy/native_ctas/tests.rs`.
