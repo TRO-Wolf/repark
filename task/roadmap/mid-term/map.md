@@ -14,7 +14,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [run27-eval-protocol.md](run27-eval-protocol.md) · [run27-blind-grades.md](run27-blind-grades.md) · [run27-agent-lessons.md](run27-agent-lessons.md) — the bake-off's pre-registered protocol, blind grades and agent-pattern ledger.
 - [27-opus-closeout](day-report-2026-09-20-27-opus-closeout.md) — **run 27, the Opus close-out lane:** closed the seven units stopped on 2026-09-20.
 - [27-grok](day-report-2026-09-20-27-grok.md) · [27-muse](day-report-2026-09-20-27-muse.md) · [27-glmflash](day-report-2026-09-20-27-glmflash.md) · [27-glm](day-report-2026-09-20-27-glm.md) — **run 27, the four bake-off lanes' own reports:** error conditions (Grok), system functions (Muse), map gate step 1 and the small parser unit (GLM 5.3 Flash), catalog and session commands (GLM 5.3, paused).
-- [MAP-CURRENCY](map-currency-card-2026-09-20.md) — **card MAP-CURRENCY (2026-09-20):** maps checked like a build target — 310 maps, 3.06 MB, the lockstep rule unenforced in CI and firing per commit; step 1
+- [MAP-CURRENCY](map-currency-card-2026-09-20.md) — **card (2026-09-20):** maps checked like a build target — 310 maps, 3.06 MB, the lockstep rule unenforced in CI and firing per commit; step 1
   (work order MAP-PR-GATE-1, chartered) moves the rule to the pull request; steps 2–3 (generated navigation with per-row blob ids, `pins.toml`, a size gate, a clerk-written prose pass) wait for five owner rulings.
 - **run 25, the night reports (2026-09-20):** [25a](night-report-2026-09-20-25a.md) (every bump, the perf remainder, the RePark halves): RP-39 and RP-40, the `count(*)` fold, the bench baseline switch, metadata-only DELETE, delete-manifest rewrite, writer metrics config on main; the AWS pair and the first gate scoreboard in the orchestrating note. [25b](night-report-2026-09-20-25b.md) (fork lane one): the wrong `replace` snapshot summary fixed, F-PAGE-PRUNE-2, branch-read schema merged; output-spec-id ready; WAP stage-only a draft. [25c](night-report-2026-09-20-25c.md) (parity, RePark side): `REPLACE COLUMNS`, four routed procedures and `spark.wap.branch` on main; #733 session write confs ready and unmerged. [25d](night-report-2026-09-20-25d.md) (fork lane two): rewrite sort and zorder, transform sort orders, `add_files` and location providers merged; a nested residual rename that silently lost rows fixed; container accessors a draft hand-over.
 - [25e](night-report-2026-09-20-25e.md) — **run 25e (the plan packets):** thirteen
@@ -64,11 +64,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [ice-read-perf-slate-2026-09-18.md](ice-read-perf-slate-2026-09-18.md) — **Iceberg read performance on S3 Tables and Glue, slate for v1.5.0 (2026-09-18, owner-instructed):** page pruning off on the DataFusion path, no shared catalog cache, an unfed footer hook; wave 1 is ICE-READ-PERF-0 plus three cache and prune cards and a re-measure gate; nothing measured yet. Owner rulings 2026-09-18: v1.5.0 waits for wave 1; AWS-managed compaction is the S3 Tables default; the bench spend is capped at $25 with a 3 GB table-size flag.
 - [15b](overnight-report-2026-09-15-15b.md) — **run 15b (2026-09-15, the 1.5 facade surfaces):** Row, types, Catalog, SparkSession and DataFrame surfaces A and B merged; DF-PLAN-INTROSPECT-1 and IO-TEXT-1 end as branches.
 - [run14](overnight-report-2026-09-14-run14.md) — **run 14 report:** the Iceberg production-cutover slate; fork and RePark units #587 to #590 landed, the aws-acceptance run green, owner questions Q-R14-1..6.
-- [ice-cutover-slate-2026-09-14.md](ice-cutover-slate-2026-09-14.md) — **Iceberg production-cutover slate (2026-09-14,
-  run 14, from the production assessment's G-1..G-6 and rulings Q-ICE-1..7):** F-GLUE-REPLACE-1 (fork Glue replace
-  publish), RP-20 + ICE-GOLD-TWICE-1 (repin, CREATE OR REPLACE twice in the nightly, gold dbt twice in aws-acceptance),
-  ICE-SPARK-TABLE-1 (RePark MERGE and maintenance on a Spark-created table, Spark reads back), ICE-COMMIT-UNKNOWN-1
-  (own exception class), ICE-TRINO-READ-1 (parked behind 1.8 Trino) and the pipeline-side SHADOW-1 change.
+- [ice-cutover-slate-2026-09-14.md](ice-cutover-slate-2026-09-14.md) — **Iceberg production-cutover slate (2026-09-14, run 14, from the production assessment's G-1..G-6 and rulings Q-ICE-1..7):** F-GLUE-REPLACE-1 (fork Glue replace publish), RP-20 + ICE-GOLD-TWICE-1 (repin, CREATE OR REPLACE twice in the nightly, gold dbt twice in aws-acceptance), ICE-SPARK-TABLE-1 (RePark MERGE and maintenance on a Spark-created table, Spark reads back), ICE-COMMIT-UNKNOWN-1 (own exception class), ICE-TRINO-READ-1 (parked behind 1.8 Trino) and the pipeline-side SHADOW-1 change.
 - [run14b](overnight-report-2026-09-14-run14b.md) — **run 14b report (2026-09-14, day run beside run 14):** FACADE-4 step 1 merged (#582) and ARRAY-NULL-1 (#581); rulings R14b-D-1..13, incidents, owner questions Q-R14b-1..6 with recommendations.
 - [f-append-window-failloud-1-2026-10-05.md](f-append-window-failloud-1-2026-10-05.md) — **fork card (2026-10-05):** an opt-in fail-loud mode on `IncrementalAppendScan` when the window holds a non-append snapshot, with skip opt-ins mirroring Spark's `streaming-skip-overwrite-snapshots` / `-delete-snapshots`; default unchanged; consumer MB-1 (O-5: Bronze refuses deletes).
 - [f-commit-offset-property-1-2026-10-05.md](f-commit-offset-property-1-2026-10-05.md) — **fork card (2026-10-05):** the summary half of the sink's offsets already exists at the pin (both MERGE arms pass summary extras). The request is a red-first proof that a table-property update in the same `Transaction` as a row delta or overwrite survives the commit-retry and rebase path, plus a measurement of the same-key race. A fork fix lands only if the proof fails. Consumers: MB-2a and MB-2c.
@@ -102,12 +98,12 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [bl11-encoder-perf-1-card-2026-09-16.md](bl11-encoder-perf-1-card-2026-09-16.md) — **card BL11-ENCODER-PERF-1
   (2026-09-16, P3 perf, ruling Q-17c-5):** the numeric → BINARY encoder builds fixed-width output in bulk (arithmetic
   offsets, cloned validity) instead of a per-row builder; starts from 17c's measured 26.81 ms vs 18.35 ms (~1.5×).
-- [DECIMAL-CACHE-1](decimal-cache-1-card-2026-09-15.md) — **card DECIMAL-CACHE-1 (2026-09-15,
+- [DECIMAL-CACHE-1](decimal-cache-1-card-2026-09-15.md) — **card (2026-09-15,
   owner report from a Windows 1.4.1 notebook, reproduced on the published 1.4.1 wheel):** decimal arithmetic
   whose Spark result type needs the precision-overflow adjustment refuses `.eager()` / `.cache()` / `.persist()`
   with `Mismatch between schema and batches` while `collect()` succeeds; the physical batches do not carry the
   logical decimal field. Oracle `/tmp/oc-worker/qd-decimal/oracle-decimal-cells.json`. Not started.**
-- [DDL-DEPTH-1](ddl-depth-1-card-2026-09-14.md) — **card DDL-DEPTH-1 (2026-09-14, run 14b under
+- [DDL-DEPTH-1](ddl-depth-1-card-2026-09-14.md) — **card (2026-09-14, run 14b under
   owner ruling Q-R13-13, card only):** a nesting-depth cap on the DDL type parser at `SPARK_TYPE_NAME_MAX_DEPTH` with a
   typed refusal, measured on the Spark oracle first; no new refusal ships until the card runs.
 - [run13b](overnight-report-2026-09-14-run13b.md) — **run 13b report (2026-09-14,
@@ -115,7 +111,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   a flat searched CASE with Spark semantics per Q-R1, 277 MB → 4.5 MiB at 16 entries on a release native, Grok
   critic-logic (1 P1, 5 P2 remediated) and S2-21 Python reviewer (2 P2 remediated). Then ARRAY-NULL-1 and ANSI-DOOR-1,
   with owner questions and recommendations.
-- [REPLACE-NOVALUE-1](replace-novalue-1-card-2026-09-14.md) — **card REPLACE-NOVALUE-1 (2026-09-14,
+- [REPLACE-NOVALUE-1](replace-novalue-1-card-2026-09-14.md) — **card (2026-09-14,
   run 13b under owner ruling Q-13b-2, card only):** `DataFrame.replace(to_replace)` with no `value` raises PySpark's
   `ARGUMENT_REQUIRED` through a private sentinel default; today repark reads it as a NULL replacement.
 - [run12b](overnight-report-2026-09-13-run12b.md) — **run 12b report (2026-09-13,
@@ -124,14 +120,14 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   reproduce under 2/4/8 GB caps). REPLACE-LINEAR-1 step 0 merged (#571), with step 1 parked on owner question Q-R1 (nine
   Spark divergences). ARRAY-NULL-1 and ANSI-DOOR-1 filed as cards. Owner questions Q-B1, Q-B2, Q-R1, Q-R2 with
   recommendations.
-- [ARRAY-NULL-1](array-null-1-card-2026-09-13.md) — **card ARRAY-NULL-1 (2026-09-13, run 12b
+- [ARRAY-NULL-1](array-null-1-card-2026-09-13.md) — **card (2026-09-13, run 12b
   under G-5; ABS-EXPR-1's C-004 audit residue):** `F.array_append` / `F.array_prepend` compose
   `when(isnull(arr), NULL).otherwise(flatten(array(arr, array(x))))`, embedding the array twice per level
   (19 MB at depth 12, 66 MB at 14), because DataFusion's kernels drop the input null buffer. D-1 a
   null-preserving native arm measured first between a wrapping `ScalarUDF` and a Rust-built single-reference CASE
   (HALT if neither is linear); D-2 Spark oracle cells (NULL array, NULL element, empty, nested, coercion); D-3 the
   SQL door's divergence row; step 0 measures and lands the red-first depth-40 memory pin. Not started.
-- [ANSI-DOOR-1](ansi-door-1-card-2026-09-13.md) — **card ANSI-DOOR-1 (2026-09-13, run 12b,
+- [ANSI-DOOR-1](ansi-door-1-card-2026-09-13.md) — **card (2026-09-13, run 12b,
   card only):** the SQL door's datafusion-spark kernels read `execution.enable_ansi_mode`, which repark never sets,
   so `spark.sql("SELECT abs(x)")` wraps on signed minimums while the facade raises `ARITHMETIC_OVERFLOW` as Spark
   does with ANSI on. D-1 wire `spark.sql.ansi.enabled` (session build and runtime set) to that option; D-2 measure
@@ -298,17 +294,16 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [v1-5-2-release-notes-2026-10-03.md](v1-5-2-release-notes-2026-10-03.md) — **v1.5.2 release notes (2026-10-03):** the notes for the second patch on 1.5.0, from `db3a1f37` (v1.5.1): TA-CHAIN-1, POLARS-IS-DUPLICATED-1, DEEP-FILTER-CHAIN-CRASH-1, STORE-TS-DOORS-2, STRING-LITERAL-ESCAPE-1, CAST-OVERFLOW-INSERT-1 and TEXT-WRITE-TIMESTAMP-ZONE-1, the RP-56 fork repin, CI-1 wheel-smoke sharding and the C-0 disposable Postgres harness.
 - [v1-5-3-release-notes-2026-10-07.md](v1-5-3-release-notes-2026-10-07.md) — **v1.5.3 release notes (2026-10-07):** the notes for the third patch on 1.5.0, from `d0c50405` (v1.5.2) to `392f2350`: SOURCE-URL-REDACT-1, -1-FN and -2, ATTR-ID-1 with its ruled release note and the STAMP-2 gate record (1.0812), the TA single-series slices S0 to S3, the ANSI -0.0 division, GROWN-STACK-GATE-1, the connect and micro-batch groundwork that is not exposed, and the rerun matrix.
 - [v1-5-4-release-notes-2026-10-10.md](v1-5-4-release-notes-2026-10-10.md) — **v1.5.4 release notes (2026-10-10):** the fourth patch on 1.5.0, after v1.5.3 (`7a8fcf1a`): the cross-join condition fix (#1010), the pyarrow floor 25.0.1 (#1015), `COUNT(*)` over the changelog, incremental and lineage readers (#1017), the nanosecond wall on every write door (#1018, R-007), the `encryption.key-id` refusal (#1019, ENC-1), the SQL door's `timestamp_*` family (#1012), and the known issues carried to v1.5.5. Tag, PyPI and matrix: `TODO(owner)` or `TODO(orchestrator)`.
-- [v1-5-5-release-notes-2026-10-13.md](v1-5-5-release-notes-2026-10-13.md) — **v1.5.5 release notes (2026-10-13):** the fifth patch on 1.5.0, after v1.5.4 (`f4e424c1`): the `timestamptz_ns` wall on every write door (R-008), the pandas/polars nanosecond frame door with its three behaviour changes (R-019), `current_date` in the session zone, the Postgres write core with both-door routing, the merge module split, two lock-only dependency bumps, and the known issues carried to v1.5.6. Tag, PyPI and matrix rerun: `TODO(owner)` or `TODO(orchestrator)`.
-  Reconciled 2026-10-22: the section "Added by the re-pointed tag" lists what the 2026-10-20 re-tag to `7fb5f6b2` shipped (U-1, U-3, U-5, U-6, U-7, the subquery refusals, the fork repins) and "Known issues in this release" what the wheel carries that main has since fixed.
+- [v1-5-5-release-notes-2026-10-13.md](v1-5-5-release-notes-2026-10-13.md) — **v1.5.5 release notes (2026-10-13):** the fifth patch on 1.5.0, after v1.5.4 (`f4e424c1`): the `timestamptz_ns` wall on every write door (R-008), the pandas/polars nanosecond frame door with its three behaviour changes (R-019), `current_date` in the session zone, the Postgres write core with both-door routing, the merge module split, two lock-only dependency bumps, and the known issues carried to v1.5.6. Tag, PyPI and matrix rerun: `TODO(owner)` or `TODO(orchestrator)`. Reconciled 2026-10-22: the section "Added by the re-pointed tag" lists what the 2026-10-20 re-tag to `7fb5f6b2` shipped (U-1, U-3, U-5, U-6, U-7, the subquery refusals, the fork repins) and "Known issues in this release" what the wheel carries that main has since fixed.
 - [v1-5-6-release-notes-2026-11-08.md](v1-5-6-release-notes-2026-11-08.md) — **v1.5.6 release notes (2026-11-08):** the empty-DML guard as the data-safety lead, the ruling D divergences, what the release does not carry (the v2 and v3 labels, see [ice-v2-label-1-card-2026-11-05.md](ice-v2-label-1-card-2026-11-05.md)), one line per change since `v1.5.5`. The [qualification record](v1-5-6-qualification-record.md) holds the source, lock, CI, verdicts, gates and owner actions.
 - [v1-5-3-card-2026-10-04.md](v1-5-3-card-2026-10-04.md) — **card v1.5.3 (2026-10-04):** the third patch on 1.5.0, from main after `d0c50405`: PARITY-LIVE-STOP-1 (clerk grade) and SOURCE-URL-REDACT-1 and -2 (security, a release item, masking a password in URL- or DSN-shaped values); the folds and the re-verify findings are on the card.
 - [release-diff-1-5-1-pre-existing.md](release-diff-1-5-1-pre-existing.md) — **RELEASE-DIFF-1-5-1-PE (2026-09-29):** the wrong answers found on main by the v1.5.1 release differential and the per-PR verifiers that were already there before this release. PE-3 to PE-26 each carry a severity, Spark's answer and a card name, with the silent rows (S1) first.
 - [cast-overflow-in-table-insert-1.md](cast-overflow-in-table-insert-1.md) — **CAST-OVERFLOW-IN-TABLE-INSERT-1 card (2026-09-28):** an out-of-range fractional store into an integer column refuses `CAST_OVERFLOW_IN_TABLE_INSERT`, as Spark does. It is in flight as PR #891 (v1.5.2).
 - [polars-is-duplicated-1.md](polars-is-duplicated-1.md) — **POLARS-IS-DUPLICATED-1 card (2026-09-28, owner ruling):** `.filter(col('x').is_duplicated())` on both `rp.col` and `F.col`, with Polars 1.43.2 semantics (every occurrence, null==null, NaN==NaN, 0.0==-0.0). It is in flight as PR #883 (v1.5.2).
-- [MISSING-REF-RESOLVE-1](missing-ref-resolve-1-card-2026-10-03.md) — **card MISSING-REF-RESOLVE-1 (2026-10-03, ATTR-ID-1 SJ-6):** non-join missing references resolve the way Spark does — `select` refuses, `filter`/`orderBy` resolve through the child — with the `p2_lineage` oracle cells and the three pins it flips. Verifier V-3. **SM-1 (2026-10-06):** the D-4 orderBy grid gains the six `halt3` cells.
-- [VIEW-LINEAGE-SELFJOIN-1](view-lineage-selfjoin-1-card-2026-10-03.md) — **card VIEW-LINEAGE-SELFJOIN-1 (2026-10-03, ATTR-ID-1 SJ-6):** a view read keeps its frame's lineage for self-join checks — the temp-view registry stores the registering frame's node — with the `J_view_sel_d`/`J_sql_sel_d` oracle cells.
-- [LOCAL-CHECKPOINT-NEW-FRAME-1](local-checkpoint-new-frame-1-card-2026-10-03.md) — **card LOCAL-CHECKPOINT-NEW-FRAME-1 (2026-10-03, ATTR-ID-1 SJ-6, ruled R-SJ4-1):** `localCheckpoint()` returns a new frame, so `I_checkpoint_sel_d` answers Spark's rows; the same-object pins are rewritten to the new semantics.
-- [PERF-ATTR-STAMP-2](perf-attr-stamp-2-card-2026-10-03.md) — **card PERF-ATTR-STAMP-2 (2026-10-03, owner ruling, design unit, before 1.6):** take attribute-id stamping under 1.10x like-for-like; the stack ships to main at 1.2021x as a dated carve-out and no release tag carries it until this card lands and is measured.
+- [MISSING-REF-RESOLVE-1](missing-ref-resolve-1-card-2026-10-03.md) — **card (2026-10-03, ATTR-ID-1 SJ-6):** non-join missing references resolve the way Spark does — `select` refuses, `filter`/`orderBy` resolve through the child — with the `p2_lineage` oracle cells and the three pins it flips. Verifier V-3. **SM-1 (2026-10-06):** the D-4 orderBy grid gains the six `halt3` cells.
+- [VIEW-LINEAGE-SELFJOIN-1](view-lineage-selfjoin-1-card-2026-10-03.md) — **card (2026-10-03, ATTR-ID-1 SJ-6):** a view read keeps its frame's lineage for self-join checks — the temp-view registry stores the registering frame's node — with the `J_view_sel_d`/`J_sql_sel_d` oracle cells.
+- [LOCAL-CHECKPOINT-NEW-FRAME-1](local-checkpoint-new-frame-1-card-2026-10-03.md) — **card (2026-10-03, ATTR-ID-1 SJ-6, ruled R-SJ4-1):** `localCheckpoint()` returns a new frame, so `I_checkpoint_sel_d` answers Spark's rows; the same-object pins are rewritten to the new semantics.
+- [PERF-ATTR-STAMP-2](perf-attr-stamp-2-card-2026-10-03.md) — **card (2026-10-03, owner ruling, design unit, before 1.6):** take attribute-id stamping under 1.10x like-for-like; the stack ships to main at 1.2021x as a dated carve-out and no release tag carries it until this card lands and is measured.
 - [PERF-BASELINE-2](perf-baseline-2-card-2026-11-08.md) — **card PERF-BASELINE-2 (2026-11-08, owner ruling B, filed, not scheduled):** the ETL-vs-Spark gate and the Polars and DuckDB targets; protocol and baseline PENDING.
 - [fa-6-duplicate-view-schemas-card-2026-10-08.md](fa-6-duplicate-view-schemas-card-2026-10-08.md) — **card FA-6 (2026-10-08, filed, needs an owner decision):** temp views over frames with duplicate display names. A first design (unique engine names plus an ambiguity audit) was withdrawn from #1002 for silent wrong answers; the ask is a design where the planner's own scoping resolves the names, or the declared refusal stays. Carries the verifier's shapes as the acceptance grid.
 - [STAMP-2-R5P6-2](stamp-2-r5p6-2-card-2026-10-07.md) — **card STAMP-2-R5P6-2 (2026-10-07, filed, not scheduled):** the remaining r5p6 construction cost after #980 (family 1.135 on the met 1.0812 gate record): native join doors when attribute-exact, shared field-metadata maps, binding only if a hot spot is measured.
@@ -545,7 +540,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   25.0.0's bundled mimalloc (apache/arrow GH-50471, fixed in 25.0.1), reproduced without RePark; the
   threaded test is in the facade suite and the floor awaits the owner.
 - [CROSS-JOIN-CONDITION-1](cross-join-condition-1-card-2026-10-08.md) — **card (closed 2026-10-08 by its unit, sequenced after PR #997):** a cross with a condition now takes the inner path on both routes.
-- [JOIN-CONDITION-REFUSALS-1](join-condition-refusals-1-card-2026-10-08.md) — **card JOIN-CONDITION-REFUSALS-1 (2026-10-08, closed 2026-10-08 by CROSS-JOIN-CONDITION-1 fold 2, re-opened 2026-10-09 by fold 3 narrowed to residues R-CJC-1..R-CJC-5, from the CROSS-JOIN-CONDITION-1 Opus verifier):** every join door answered conditions Spark 4.1.2 refuses (non-deterministic expressions, an untyped NULL condition); the fold's `JoinConditionRefusals` analyzer rule now refuses them with Spark's class, condition and text on every `how` of both doors.
+- [JOIN-CONDITION-REFUSALS-1](join-condition-refusals-1-card-2026-10-08.md) — **card (2026-10-08, closed 2026-10-08 by CROSS-JOIN-CONDITION-1 fold 2, re-opened 2026-10-09 by fold 3 narrowed to residues R-CJC-1..R-CJC-5, from the CROSS-JOIN-CONDITION-1 Opus verifier):** every join door answered conditions Spark 4.1.2 refuses (non-deterministic expressions, an untyped NULL condition); the fold's `JoinConditionRefusals` analyzer rule now refuses them with Spark's class, condition and text on every `how` of both doors.
 - [c-3-null-stride-1-card-2026-10-08.md](c-3-null-stride-1-card-2026-10-08.md) — **card
   C-3-NULL-STRIDE-1 (2026-10-08, filed, not scheduled, from C-3 question Q3, PR #998):** the first
   stride's `OR col IS NULL` arm is a sequential scan of the whole table (about 1.1 s of a 7.3 s
@@ -679,11 +674,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   ICE-TSNS-COERCION-1 (2026-10-10, open, no release assigned):** nanosecond-aware type coercion so `coalesce`, `nvl`,
   `array`, `CASE ... ELSE NULL` and `if` keep nanoseconds beside a `timestamp_ns` operand (parity row R-017). Turns the
   refusals of ICE-TSNS-NARROW-REFUSE-1 back into stores. Sibling: ICE-TSNS-NARROW-REFUSE-1.
-- [ice-ntz-nested-wall-1-card-2026-10-10.md](ice-ntz-nested-wall-1-card-2026-10-10.md) — **card
-  ICE-NTZ-NESTED-WALL-1 (2026-10-10, open, target v1.5.5, own unit):** a nested microsecond `TIMESTAMP_NTZ` field stores
-  the session wall through field assignment (28 cells) and the UTC wall through every other door (106 cells) (parity row
-  R-011). The release note must say that nested NTZ values written by INSERT before the fix hold the UTC wall. Sibling:
-  ICE-TSNS-NESTED-1. **2026-10-20:** the stopgap refusal shipped by U-8 (ICE-NTZ-NESTED-REFUSE-1); the lift is 1.5.7.
+- [ice-ntz-nested-wall-1-card-2026-10-10.md](ice-ntz-nested-wall-1-card-2026-10-10.md) — **card ICE-NTZ-NESTED-WALL-1 (2026-10-10, open, target v1.5.5, own unit):** a nested microsecond `TIMESTAMP_NTZ` field stores the session wall through field assignment (28 cells) and the UTC wall through every other door (106 cells) (parity row R-011). The release note must say that nested NTZ values written by INSERT before the fix hold the UTC wall. Sibling: ICE-TSNS-NESTED-1. **2026-10-20:** the stopgap refusal shipped by U-8 (ICE-NTZ-NESTED-REFUSE-1); the lift is 1.5.7.
 - [write-body-carriers-1-card-2026-10-10.md](write-body-carriers-1-card-2026-10-10.md) — **card
   WRITE-BODY-CARRIERS-1 (2026-10-10, build round 1 landed 2026-10-14):** owner ruling 2026-10-10 that `CREATE [OR REPLACE] TABLE
   z AS INSERT INTO t ...` refuses at parse, as Spark does; today it commits the inner INSERT and then fails with
@@ -728,19 +719,8 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   R-024; owner ruling, question 53, 2026-10-14). From finding F4 of the verifier of PR
   #1059: same on main in every cell. Reconciles with the R-015 refusal of a nested
   `timestamp_ns` target leaf.
-- [ice-commit-rebase-dup-1-card-2026-10-15.md](ice-commit-rebase-dup-1-card-2026-10-15.md) —
-  **card ICE-COMMIT-REBASE-DUP-1 (2026-10-15; fork half done via fork #368 and RePark #1095, pin now `d80a2884`; U-9 drill half open):** the fork's
-  re-base after a CAS rejection can append the same rows twice (a lost reply, an
-  SDK re-send, a stale rejection, then the re-base), from the owner's ruling 84;
-  fork work (refresh and check for our snapshot id before re-basing, SDK retry
-  off on the two commit calls), retired by a pin running the exact sequence
-  with no double append in U-9's live drill.
-- [commit-unknown-operation-id-1-card-2026-10-15.md](commit-unknown-operation-id-1-card-2026-10-15.md) —
-  **card COMMIT-UNKNOWN-OPERATION-ID-1 (2026-10-15, open, not scheduled):** thread
-  the fork's minted operation id to the plain `INSERT` unknown-outcome error,
-  which raises with `operation_id = None` today, from the owner's ruling 85;
-  the error text keeps the snapshot-list read-back, retired when the id
-  reaches the error, pinned.
+- [ice-commit-rebase-dup-1-card-2026-10-15.md](ice-commit-rebase-dup-1-card-2026-10-15.md) — **card ICE-COMMIT-REBASE-DUP-1 (2026-10-15; fork half done via fork #368 and RePark #1095, pin now `d80a2884`; U-9 drill half open):** the fork's re-base after a CAS rejection can append the same rows twice (a lost reply, an SDK re-send, a stale rejection, then the re-base), from the owner's ruling 84; fork work (refresh and check for our snapshot id before re-basing, SDK retry off on the two commit calls), retired by a pin running the exact sequence with no double append in U-9's live drill.
+- [commit-unknown-operation-id-1-card-2026-10-15.md](commit-unknown-operation-id-1-card-2026-10-15.md) — **card COMMIT-UNKNOWN-OPERATION-ID-1 (2026-10-15, open, not scheduled):** thread the fork's minted operation id to the plain `INSERT` unknown-outcome error, which raises with `operation_id = None` today, from the owner's ruling 85; the error text keeps the snapshot-list read-back, retired when the id reaches the error, pinned.
 - [facade-hang-98-1-card-2026-10-14.md](facade-hang-98-1-card-2026-10-14.md) — **card
   FACADE-HANG-98-1 (2026-10-14, open, not scheduled):** the facade suite (`pytest -n 8`
   over `python/repark/tests/`) sometimes stalls at 98–99 % with idle xdist workers on CI
@@ -796,14 +776,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   `f8f1d252` flake shape) or does something else. Proposed fix is one shared helper
   that picks by the version number in the file name, as `f8f1d252`'s
   `_metadata_version` does. Retires when every listed use is converted.
-- [mb-fence-body-flake-1-card-2026-10-18.md](mb-fence-body-flake-1-card-2026-10-18.md) — **card
-  MB-FENCE-BODY-FLAKE-1 (2026-10-18, fixed in the unit's PR, one open question):**
-  `two_drivers_on_one_sink_land_each_epoch_exactly_once` failed on CI (run 39157958057,
-  main's tree) with `left: [0, 0, 1, 2]`: a fenced driver's `foreachBatch` body ran epoch 0.
-  Cause: `enter_scope` loaded the sink before it entered the sink's scope, against MB-3 D-19.
-  A deterministic pin reproduces it; the fix enters the scope first. Open: the same pin also
-  misses its 10 s bound on a slow disk (the PA-15 family), measured to `fsync`; the owner
-  keeps the bound or rules otherwise.
+- [mb-fence-body-flake-1-card-2026-10-18.md](mb-fence-body-flake-1-card-2026-10-18.md) — **card MB-FENCE-BODY-FLAKE-1 (2026-10-18, fixed in the unit's PR, one open question):** `two_drivers_on_one_sink_land_each_epoch_exactly_once` failed on CI (run 39157958057, main's tree) with `left: [0, 0, 1, 2]`: a fenced driver's `foreachBatch` body ran epoch 0. Cause: `enter_scope` loaded the sink before it entered the sink's scope, against MB-3 D-19. A deterministic pin reproduces it; the fix enters the scope first. Open: the same pin also misses its 10 s bound on a slow disk (the PA-15 family), measured to `fsync`; the owner keeps the bound or rules otherwise.
 - [parity-live-drift-1-card-2026-10-20.md](parity-live-drift-1-card-2026-10-20.md) — **card
   PARITY-LIVE-DRIFT-1 (2026-10-20, open, not scheduled):** the `parity-live` nightly is red every
   morning since 2026-10-14 on one test, `test_ice_meta_delete_1.py::test_live_oracle_fixture_reproduces`:
@@ -821,7 +794,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   step-0 door-by-shape census in every write-path order and a "doors I did not touch" hand-back line.
   Adopted 2026-10-22 as option D of the crate-boundary evaluation (no new crate, no new edge);
   WRITE-NTZ-TO-LTZ-NESTED-1 folded into its step (2).
-- [FORK-NS-UNIT-FAIL-CLOSED-1](fork-ns-unit-fail-closed-1-card-2026-10-23.md) — **card FORK-NS-UNIT-FAIL-CLOSED-1 (2026-10-23, open, clerk grade, next fork repin after RP-60):** the fork's record-batch writer refuses an Arrow timestamp unit that is not the column's unit, before any file is written; the fork half of the owner's 2026-10-23 nanosecond ruling (the engine half is WRITE-SPINE-1 step 2).
+- [FORK-NS-UNIT-FAIL-CLOSED-1](fork-ns-unit-fail-closed-1-card-2026-10-23.md) — **card (2026-10-23, open, clerk grade, next fork repin after RP-60):** the fork's record-batch writer refuses an Arrow timestamp unit that is not the column's unit, before any file is written; the fork half of the owner's 2026-10-23 nanosecond ruling (the engine half is WRITE-SPINE-1 step 2).
 - [container-cast-zone-1-card-2026-10-20.md](container-cast-zone-1-card-2026-10-20.md) — **card
   CONTAINER-CAST-ZONE-1 (2026-10-20, open, not scheduled):** a `CAST`/`TRY_CAST` of a struct,
   array or map holding a zoned timestamp leaf, and `to_json` of one, render the leaf in UTC
@@ -983,6 +956,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [CATALOG-REPLACE-CACHE-LEAK-1](catalog-replace-cache-leak-1-card-2026-11-12.md) — **card CATALOG-REPLACE-CACHE-LEAK-1 (filed 2026-11-12, S4, not dispatched):** the fork's Glue and S3 Tables replace publishes never invalidate the replaced metadata location; UUID names make it a capped leak, not a wrong read.
 - [S3TABLES-CATALOG-IMPL-NAME-1](s3tables-catalog-impl-name-1-card-2026-11-12.md) — **card S3TABLES-CATALOG-IMPL-NAME-1 (filed 2026-11-12, S4, not dispatched):** tests name a `catalog-impl` class that does not exist; RePark's suffix match hides it.
 - [S3T-CTAS-SHELL-CREATE-1](s3t-ctas-shell-create-1-card-2026-11-12.md) — **card S3T-CTAS-SHELL-CREATE-1 (filed 2026-11-12, after the scoped label, not dispatched):** an S3 Tables CTAS creates its entry with no first version and adopts such an entry on retry, as the AWS jar does.
+- [NAN-PARTITION-VALUE-1](nan-partition-value-1-card-2026-11-12.md) — **card NAN-PARTITION-VALUE-1 (2026-11-12, S1, fixed on branch, not merged):** a NaN or ±Infinity FLOAT/DOUBLE partition value written by `INSERT`, `writeTo` or `saveAsTable` reached the manifest as NULL.
 - [LOCAL-DROP-RECREATE-STALE-WRITE-1](local-drop-recreate-stale-write-1-card-2026-11-12.md) — **card (filed 2026-11-12, S1 wrong write, blocked the full v2 label; FIXED in v1.5.7 by fork #382 and #1313):** a Hadoop drop and recreate read and wrote on the dropped table's metadata.
 - [STRUCT-POSITION-GROUPING-SETS-1](struct-position-grouping-sets-1-card-2026-11-11.md), [NOT-BETWEEN-DML-CSE-1](not-between-dml-cse-1-card-2026-11-11.md), [STRUCT-COMPARE-FAMILY-RESIDUE-1](struct-compare-family-residue-1-card-2026-11-11.md), [STRUCT-POSITION-ERROR-NAMES-1](struct-position-error-names-1-card-2026-11-11.md) and [MAP-NESTED-ORDERING-ON-1](map-nested-ordering-on-1-card-2026-11-11.md) — **cards (filed 2026-11-11, not dispatched):** S3 except STRUCT-POSITION-ERROR-NAMES-1 (S4). Each leaves when fixed or declined.
 - [USING-SCALAR-STRUCT-KEY-CLASS-1](using-scalar-struct-key-class-1-card-2026-11-11.md), [STRUCT-SETOP-CONTROL-CLASS-1](struct-setop-control-class-1-card-2026-11-11.md), [USING-CHAIN-AMBIGUOUS-1](using-chain-ambiguous-1-card-2026-11-11.md), [NATURAL-EXISTENCE-JOIN-ACCEPT-1](natural-existence-join-accept-1-card-2026-11-11.md) and [MAP-ORDERING-FORMS-1](map-ordering-forms-1-card-2026-11-11.md) — **cards (filed 2026-11-11, S3, not dispatched):** the class-only gaps and the NATURAL (X0001 to X0060) and map-ordering acceptances; each leaves when fixed or declined.

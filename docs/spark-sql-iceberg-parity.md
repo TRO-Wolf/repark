@@ -5064,6 +5064,34 @@ still open is `isModifiable`.
 - **Rationale** — FIXED 2026-10-08 (card ZONE-HORIZON-RENDER-1, the C-2d fold 1 re-verify's S2
   finding). A silent wrong wall clock over a right instant. pins: zone-horizon-render-1/C-015
 
+### NAN-PARTITION-VALUE-1 — a NaN or infinite FLOAT/DOUBLE partition value is stored as itself — **FIXED 2026-11-12 (branch, not merged)**
+
+- **repark** — Before (main `a3f8c7d9`, fork `66901f02`): `INSERT`, `writeTo(...).append()` and
+  `saveAsTable` into a table partitioned by a FLOAT or DOUBLE column wrote the NaN file's
+  partition value, and `±Infinity`'s, as NULL in the manifest; the data file kept the value.
+  RePark's own `WHERE isnan(d)` and `WHERE d = CAST('NaN' AS DOUBLE)` then returned no rows,
+  `.files` showed two `d = NULL` files and `.partitions` merged them. CTAS was not affected.
+  The seat was the fork's data-file JSON hand-off from `IcebergWriteExec` to
+  `IcebergCommitExec`: `serde_json` writes a non-finite float as `null`. After (fork PR #383,
+  merged as `92242cb4`): the hand-off writes such a slot as `"NaN"`, `"Infinity"` or `"-Infinity"`
+  (Java's `SingleValueParser.toJson` spelling) and reads it back as the float; the manifest
+  stores the Avro float with Spark's bits (`7ff8…` for NaN).
+- **spark** — Spark 4.1.2 with Iceberg 1.11.0 stores `d = NaN`, `Infinity` and `-Infinity`
+  partitions, answers `isnan` and `= NaN` with the NaN row, and reads a RePark table written
+  before the fix with the NaN row as NULL. *(oracle: measured live 2026-11-12,
+  `task/wo/nan-partition-value-1/evidence/step0/`.)*
+- **Tables written by 1.5.6 or earlier** — a file whose FLOAT/DOUBLE partition value was NaN
+  or `±Infinity` carries a NULL partition; its rows are intact. Rewriting the file with a
+  fixed build (`rewrite_data_files`, or delete and re-insert) repairs it.
+- **Pin** — `python/repark/tests/iceberg/test_nan_partition_value_1.py` (four write doors ×
+  FLOAT/DOUBLE, the infinity twin, the controls; live: Spark reads RePark's tables as its own,
+  RePark reads Spark's as Spark does); fork `crates/iceberg/src/spec/manifest/_serde.rs`
+  `test_json_transport_*` and `test_avro_manifest_keeps_nan_float_and_double_partition_values`.
+- **Rationale** — S1 wrong write; card
+  [NAN-PARTITION-VALUE-1](../task/roadmap/mid-term/nan-partition-value-1-card-2026-11-12.md),
+  fixed before ICE-V2-FLAT-AWS-LABEL-1 under the owner's 2026-11-12 ruling ("Go with the
+  defaults", two fork files or fewer).
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`

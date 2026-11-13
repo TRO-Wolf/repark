@@ -1,0 +1,49 @@
+{"native": "<out>/src/repark/_native.abi3.so"}
+{"cell": "rows|DOUBLE|part", "rows": [[1, 0.0], [2, 0.0], [3, "NaN"], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM hd.ns.rp_double_part ORDER BY id"}
+{"cell": "isnan|DOUBLE|part", "rows": [[3]], "sql": "SELECT id FROM hd.ns.rp_double_part WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|DOUBLE|part", "rows": [[3]], "sql": "SELECT id FROM hd.ns.rp_double_part WHERE d = CAST('NaN' AS DOUBLE) ORDER BY id"}
+{"cell": "gt1|DOUBLE|part", "rows": [[5]], "sql": "SELECT id FROM hd.ns.rp_double_part WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|DOUBLE|part", "rows": [[4]], "sql": "SELECT id FROM hd.ns.rp_double_part WHERE d IS NULL ORDER BY id"}
+{"cell": "count|DOUBLE|part", "rows": [[5]], "sql": "SELECT count(*) FROM hd.ns.rp_double_part"}
+{"cell": "files|DOUBLE|part", "rows": [[{"d": null}, 1], [{"d": 0.0}, 2], [{"d": 1.5}, 1], [{"d": "NaN"}, 1]], "sql": "SELECT partition, record_count FROM hd.ns.rp_double_part.files"}
+{"cell": "partitions|DOUBLE|part", "rows": [[{"d": null}, 1, 1], [{"d": 0.0}, 2, 1], [{"d": 1.5}, 1, 1], [{"d": "NaN"}, 1, 1]], "sql": "SELECT partition, record_count, file_count FROM hd.ns.rp_double_part.partitions"}
+{"cell": "rows|DOUBLE|flat", "rows": [[1, 0.0], [2, 0.0], [3, "NaN"], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM hd.ns.rp_double_flat ORDER BY id"}
+{"cell": "isnan|DOUBLE|flat", "rows": [[3]], "sql": "SELECT id FROM hd.ns.rp_double_flat WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|DOUBLE|flat", "rows": [[3]], "sql": "SELECT id FROM hd.ns.rp_double_flat WHERE d = CAST('NaN' AS DOUBLE) ORDER BY id"}
+{"cell": "gt1|DOUBLE|flat", "rows": [[3], [5]], "sql": "SELECT id FROM hd.ns.rp_double_flat WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|DOUBLE|flat", "rows": [[4]], "sql": "SELECT id FROM hd.ns.rp_double_flat WHERE d IS NULL ORDER BY id"}
+{"cell": "count|DOUBLE|flat", "rows": [[5]], "sql": "SELECT count(*) FROM hd.ns.rp_double_flat"}
+{"cell": "rows|FLOAT|part", "rows": [[1, 0.0], [2, 0.0], [3, "NaN"], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM hd.ns.rp_float_part ORDER BY id"}
+{"cell": "isnan|FLOAT|part", "rows": [[3]], "sql": "SELECT id FROM hd.ns.rp_float_part WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|FLOAT|part", "rows": [[3]], "sql": "SELECT id FROM hd.ns.rp_float_part WHERE d = CAST('NaN' AS FLOAT) ORDER BY id"}
+{"cell": "gt1|FLOAT|part", "rows": [[5]], "sql": "SELECT id FROM hd.ns.rp_float_part WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|FLOAT|part", "rows": [[4]], "sql": "SELECT id FROM hd.ns.rp_float_part WHERE d IS NULL ORDER BY id"}
+{"cell": "count|FLOAT|part", "rows": [[5]], "sql": "SELECT count(*) FROM hd.ns.rp_float_part"}
+{"cell": "files|FLOAT|part", "rows": [[{"d": null}, 1], [{"d": 0.0}, 2], [{"d": 1.5}, 1], [{"d": "NaN"}, 1]], "sql": "SELECT partition, record_count FROM hd.ns.rp_float_part.files"}
+{"cell": "partitions|FLOAT|part", "rows": [[{"d": null}, 1, 1], [{"d": 0.0}, 2, 1], [{"d": 1.5}, 1, 1], [{"d": "NaN"}, 1, 1]], "sql": "SELECT partition, record_count, file_count FROM hd.ns.rp_float_part.partitions"}
+{"cell": "rows|FLOAT|flat", "rows": [[1, 0.0], [2, 0.0], [3, "NaN"], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM hd.ns.rp_float_flat ORDER BY id"}
+{"cell": "isnan|FLOAT|flat", "rows": [[3]], "sql": "SELECT id FROM hd.ns.rp_float_flat WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|FLOAT|flat", "rows": [[3]], "sql": "SELECT id FROM hd.ns.rp_float_flat WHERE d = CAST('NaN' AS FLOAT) ORDER BY id"}
+{"cell": "gt1|FLOAT|flat", "rows": [[3], [5]], "sql": "SELECT id FROM hd.ns.rp_float_flat WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|FLOAT|flat", "rows": [[4]], "sql": "SELECT id FROM hd.ns.rp_float_flat WHERE d IS NULL ORDER BY id"}
+{"cell": "count|FLOAT|flat", "rows": [[5]], "sql": "SELECT count(*) FROM hd.ns.rp_float_flat"}
+{"cell": "isnan|DOUBLE|ctas", "rows": [[3]], "sql": "SELECT id FROM hd.ns.rp_double_ctas WHERE isnan(d) ORDER BY id"}
+{"cell": "files|DOUBLE|ctas", "rows": [[{"d": null}, 1], [{"d": 0.0}, 2], [{"d": 1.5}, 1], [{"d": "NaN"}, 1]], "sql": "SELECT partition, record_count FROM hd.ns.rp_double_ctas.files"}
+{"cell": "isnan|DOUBLE|writeto", "rows": [[3]], "sql": "SELECT id FROM hd.ns.rp_double_writeto WHERE isnan(d) ORDER BY id"}
+{"cell": "files|DOUBLE|writeto", "rows": [[{"d": null}, 1], [{"d": 0.0}, 2], [{"d": 1.5}, 1], [{"d": "NaN"}, 1]], "sql": "SELECT partition, record_count FROM hd.ns.rp_double_writeto.files"}
+{"cell": "isnan|DOUBLE|saveastable", "rows": [[3]], "sql": "SELECT id FROM hd.ns.rp_double_saveastable WHERE isnan(d) ORDER BY id"}
+{"cell": "files|DOUBLE|saveastable", "rows": [[{"d": null}, 1], [{"d": 0.0}, 2], [{"d": 1.5}, 1], [{"d": "NaN"}, 1]], "sql": "SELECT partition, record_count FROM hd.ns.rp_double_saveastable.files"}
+{"cell": "isnan|FLOAT|ctas", "rows": [[3]], "sql": "SELECT id FROM hd.ns.rp_float_ctas WHERE isnan(d) ORDER BY id"}
+{"cell": "files|FLOAT|ctas", "rows": [[{"d": null}, 1], [{"d": 0.0}, 2], [{"d": 1.5}, 1], [{"d": "NaN"}, 1]], "sql": "SELECT partition, record_count FROM hd.ns.rp_float_ctas.files"}
+{"cell": "isnan|FLOAT|writeto", "rows": [[3]], "sql": "SELECT id FROM hd.ns.rp_float_writeto WHERE isnan(d) ORDER BY id"}
+{"cell": "files|FLOAT|writeto", "rows": [[{"d": null}, 1], [{"d": 0.0}, 2], [{"d": 1.5}, 1], [{"d": "NaN"}, 1]], "sql": "SELECT partition, record_count FROM hd.ns.rp_float_writeto.files"}
+{"cell": "isnan|FLOAT|saveastable", "rows": [[3]], "sql": "SELECT id FROM hd.ns.rp_float_saveastable WHERE isnan(d) ORDER BY id"}
+{"cell": "files|FLOAT|saveastable", "rows": [[{"d": null}, 1], [{"d": 0.0}, 2], [{"d": 1.5}, 1], [{"d": "NaN"}, 1]], "sql": "SELECT partition, record_count FROM hd.ns.rp_float_saveastable.files"}
+{"cell": "rows|DOUBLE|inf", "rows": [[6, "Infinity"], [7, "-Infinity"]], "sql": "SELECT id, d FROM hd.ns.rp_double_inf ORDER BY id"}
+{"cell": "files|DOUBLE|inf", "rows": [[{"d": "-Infinity"}, 1], [{"d": "Infinity"}, 1]], "sql": "SELECT partition, record_count FROM hd.ns.rp_double_inf.files"}
+{"cell": "rows|INT|part", "rows": [[1, 7], [2, null]], "sql": "SELECT id, d FROM hd.ns.rp_int_part ORDER BY id"}
+{"cell": "isnull|INT|part", "rows": [[2]], "sql": "SELECT id FROM hd.ns.rp_int_part WHERE d IS NULL ORDER BY id"}
+{"cell": "files|INT|part", "rows": [[{"d": 7}, 1], [{"d": null}, 1]], "sql": "SELECT partition, record_count FROM hd.ns.rp_int_part.files"}
+{"cell": "rows|STRING|part", "rows": [[1, "a"], [2, null]], "sql": "SELECT id, d FROM hd.ns.rp_string_part ORDER BY id"}
+{"cell": "isnull|STRING|part", "rows": [[2]], "sql": "SELECT id FROM hd.ns.rp_string_part WHERE d IS NULL ORDER BY id"}
+{"cell": "files|STRING|part", "rows": [[{"d": null}, 1], [{"d": "a"}, 1]], "sql": "SELECT partition, record_count FROM hd.ns.rp_string_part.files"}
