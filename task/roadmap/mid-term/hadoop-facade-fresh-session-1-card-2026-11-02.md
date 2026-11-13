@@ -16,4 +16,9 @@
 
 **Relation:** [MAP-STRUCT-KEY-SUBSCRIPT-1](../../ledgers/staging/map-struct-key-subscript-1-ledger.md) (residue R4; the facade cells in `python/repark/tests/functions/test_map_struct_key_subscript_1.py` use the reopen step); `python/repark/tests/iceberg/test_ice_idless_struct_1.py` (the same reopen, pre-existing); ICE-CATALOG-SESSION-HADOOP-1 and ICE-LOCAL-COMMIT-POINT-1 in the parity registry.
 
+**Append (2026-11-13):** seen again by NAN-WRITE-CANONICAL-1 verifier 1, 2026-11-13 (#1325, finding C4): a RePark
+`type=hadoop` catalog opened in a new session over an existing warehouse reports `SCHEMA_NOT_FOUND` / `table … not
+found` for tables another RePark process wrote there, while Spark finds them. Verifier 2 (C2) saw the same. Both
+verifiers, like the builder, reached the tables with `register_table`. Unchanged: still not ruled, not dispatched.
+
 Up: [map.md](map.md).
