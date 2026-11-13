@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from pathlib import Path
 from typing import Any
@@ -14,8 +15,10 @@ from _flat_matrix_cells import (
     GROUP_NAMES,
     KNOWN_OPEN,
     NEGATIVE_ZERO,
+    ORACLE_AGREES_WITH_TRUTH,
     PREDICATES,
-    SIGNED_ZERO_PR_A,
+    PRUNED_WRONG,
+    TRUTH_PREDICATES,
     TYPED_BUILDERS,
     cells_for_group,
     class_a_key,
@@ -24,9 +27,14 @@ from _flat_matrix_cells import (
     committed_ids,
     expected_for,
     float_cells,
+    grade_against_truth,
     load_expected,
     matrix_cells,
+    oracle_truth_label,
     passes,
+    seed_doubles,
+    truth_ids,
+    truth_match_ids,
     typed_predicate,
     universe,
 )
@@ -43,6 +51,7 @@ ENVELOPE_SEAT_NAMES = {"merge": "merge-when"}
 EXPECTED_GROUP_CELLS = {
     "pilot": 30,
     "floatkeys": 28,
+    "p15": 30,
     "J1": 168,
     "J2": 112,
     "J3a": 140,
@@ -92,6 +101,27 @@ def test_cell_ids_are_unique() -> None:
     assert len(ids) == len(set(ids))
 
 
+def test_the_p15_group_is_exactly_the_p15_cells() -> None:
+    members = [cell.cell_id for cell in cells_for_group("p15")]
+    p15 = [cell.cell_id for cell in universe() if cell.pid == "p15"]
+    assert len(members) == len(set(members)) == 30
+    assert members == p15
+    assert all(cell.pid == "p15" for cell in cells_for_group("p15"))
+    assert not [cell for cell in universe() if cell.pid != "p15" and "p15" in cell.group_tags]
+
+
+def test_existing_groups_keep_their_cells() -> None:
+    cells = universe()
+    assert [c.cell_id for c in cells_for_group("pilot")] == [
+        c.cell_id for c in cells if c.pid == "p01"
+    ]
+    assert [c.cell_id for c in cells_for_group("floatkeys")] == [c.cell_id for c in float_cells()]
+    for name in (name for name in GROUP_NAMES if name.startswith("J")):
+        assert [c.cell_id for c in cells_for_group(name)] == [
+            c.cell_id for c in cells if c.combo is not None and c.combo.group == name
+        ], name
+
+
 def test_unknown_group_is_refused() -> None:
     with pytest.raises(ValueError):
         cells_for_group("J9")
@@ -115,12 +145,145 @@ def test_class_b_cells_have_no_committed_key() -> None:
     assert all(class_a_key(cell) is None for cell in class_b)
 
 
-def test_known_open_dict_covers_p15_only() -> None:
-    assert len(KNOWN_OPEN) == 30
-    p15 = [cell_id for cell_id, unit in KNOWN_OPEN.items() if unit == SIGNED_ZERO_PR_A]
-    assert len(p15) == 30
-    assert all(cell_id.endswith("|p15") for cell_id in p15)
+def test_known_open_dict_holds_neither_the_p15_nor_the_float_key_cells() -> None:
+    assert len(KNOWN_OPEN) == 0
+    assert not [cell_id for cell_id in KNOWN_OPEN if cell_id.endswith("|p15")]
     assert not any(cell_id.startswith("float|") for cell_id in KNOWN_OPEN)
+
+
+ALL_IDS = [1, 2, 3, 4, 5, 6, 7, 8]
+P15_TRUTH_BY_SEAT = {
+    "select": [4, 6],
+    "insert": [4, 6],
+    "append": [4, 6],
+    "ctas": [4, 6],
+    "create-or-replace": [4, 6],
+    "delete": [1, 2, 3, 5, 7, 8],
+    "update": ALL_IDS,
+    "update-set": ALL_IDS,
+    "merge-when": ALL_IDS,
+    "merge-on": ALL_IDS,
+    "merge-into-on": ALL_IDS,
+    "merge-into-matched": ALL_IDS,
+    "overwrite": [1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 7, 7, 8, 8],
+}
+
+
+def _p15_cells() -> list[Any]:
+    return [cell for cell in matrix_cells() if cell.pid == "p15"]
+
+
+def test_the_seed_holds_both_zeros_on_rows_4_and_6() -> None:
+    doubles = seed_doubles()
+    assert set(doubles) == set(ALL_IDS)
+    negative, positive, nan = doubles[4], doubles[6], doubles[3]
+    assert negative is not None and positive is not None and nan is not None
+    assert negative == 0.0 and math.copysign(1.0, negative) == -1.0
+    assert positive == 0.0 and math.copysign(1.0, positive) == 1.0
+    assert math.isnan(nan)
+    assert doubles[2] is None and doubles[7] is None
+
+
+def test_p15_truth_matches_both_zeros_under_ieee_equality() -> None:
+    assert {"p15"} == TRUTH_PREDICATES
+    assert truth_match_ids("p15") == [4, 6]
+    with pytest.raises(ValueError):
+        truth_match_ids("p01")
+
+
+def test_the_truth_table_names_every_seat_in_the_matrix() -> None:
+    assert {combo.seat for combo in COMBINATIONS} == set(P15_TRUTH_BY_SEAT)
+
+
+@pytest.mark.parametrize("cell", _p15_cells(), ids=lambda cell: cell.cell_id)
+def test_p15_truth_per_seat_comes_from_the_seed(cell: Any) -> None:
+    assert cell.combo is not None
+    assert truth_ids(cell) == P15_TRUTH_BY_SEAT[cell.combo.seat]
+
+
+def test_the_committed_p15_values_already_agree_with_the_truth() -> None:
+    table = load_expected()
+    committed = [cell for cell in _p15_cells() if class_a_key(cell) is not None]
+    assert len(committed) == 15
+    for cell in committed:
+        entry = expected_for(cell, table)
+        assert entry is not None and cell.combo is not None
+        assert entry["outcome"] == "ANSWERED"
+        assert committed_ids(cell.combo, entry) == truth_ids(cell), cell.cell_id
+
+
+def test_no_truth_column_outside_p15() -> None:
+    others = [cell for cell in universe() if cell.pid != "p15"]
+    assert len(others) == 868 - 30
+    assert all(truth_ids(cell) is None for cell in others)
+    assert all(grade_against_truth(cell, "ANSWERED", [1]) == (None, None) for cell in others)
+
+
+def test_the_effective_class_a_table_equals_the_committed_table() -> None:
+    table = load_expected()
+    before: dict[str, Any] = {}
+    after: dict[str, Any] = {}
+    for cell in matrix_cells():
+        entry = expected_for(cell, table)
+        if entry is None or cell.combo is None:
+            continue
+        ids = committed_ids(cell.combo, entry)
+        before[cell.cell_id] = (entry["outcome"], ids, committed_commits(cell.combo, entry))
+        truth, _ = grade_against_truth(cell, entry["outcome"], ids)
+        graded = ids if truth is None else truth
+        after[cell.cell_id] = (entry["outcome"], graded, committed_commits(cell.combo, entry))
+    assert len(before) == 420
+    assert after == before
+
+
+def test_a_zero_only_oracle_answer_is_labelled_pruned_wrong() -> None:
+    select = next(cell for cell in _p15_cells() if cell.cell_id == "column-api|select|v2-cow|p15")
+    delete = next(cell for cell in _p15_cells() if cell.cell_id == "spark-sql|delete|v2-cow|p15")
+    assert grade_against_truth(select, "ANSWERED", [6]) == ([4, 6], PRUNED_WRONG)
+    assert grade_against_truth(select, "ANSWERED", [6, 4]) == ([4, 6], ORACLE_AGREES_WITH_TRUTH)
+    assert grade_against_truth(delete, "ANSWERED", [1, 2, 3, 4, 5, 7, 8]) == (
+        [1, 2, 3, 5, 7, 8],
+        PRUNED_WRONG,
+    )
+    assert oracle_truth_label(None, [4, 6]) == PRUNED_WRONG
+
+
+def test_a_refused_oracle_keeps_its_refusal() -> None:
+    overwrite = next(cell for cell in _p15_cells() if cell.cell_id == "f-expr|overwrite|v2-cow|p15")
+    assert grade_against_truth(overwrite, "REFUSED", None) == (None, None)
+    label = classify(
+        seat="overwrite",
+        pid="p15",
+        repark_outcome="REFUSED",
+        spark_outcome="REFUSED",
+        repark_answer=None,
+        spark_answer=None,
+    )
+    assert label == "BOTH-REFUSED" and passes(label)
+
+
+def test_repark_is_graded_against_the_truth_not_the_pruned_oracle() -> None:
+    cell = next(cell for cell in _p15_cells() if cell.cell_id == "column-api|select|v2-cow|p15")
+    truth, oracle_label = grade_against_truth(cell, "ANSWERED", [6])
+    assert truth is not None and oracle_label == PRUNED_WRONG
+    graded = classify(
+        seat="select",
+        pid="p15",
+        repark_outcome="ANSWERED",
+        spark_outcome="ANSWERED",
+        repark_answer=[(value,) for value in [4, 6]],
+        spark_answer=[(value,) for value in truth],
+    )
+    pruned_repark = classify(
+        seat="select",
+        pid="p15",
+        repark_outcome="ANSWERED",
+        spark_outcome="ANSWERED",
+        repark_answer=[(6,)],
+        spark_answer=[(value,) for value in truth],
+    )
+    assert graded == "EQUAL"
+    assert pruned_repark == "WRONG-READ"
 
 
 def test_classifier_equal_when_answers_match() -> None:
@@ -361,6 +524,45 @@ def test_dml_seats_compare_the_table_after_the_statement() -> None:
     assert cell.combo is not None
     assert committed_ids(cell.combo, entry) == [int(value) for value in entry["after_ids"] or []]
     assert committed_commits(cell.combo, entry) == entry["commits"]
+
+
+def test_an_unset_expected_commit_count_is_not_compared() -> None:
+    label = classify(
+        seat="insert",
+        pid="p01",
+        repark_outcome="ANSWERED",
+        spark_outcome="ANSWERED",
+        repark_answer=[(1,), (8,)],
+        spark_answer=[(1,), (8,)],
+        repark_commits=1,
+        spark_commits=None,
+    )
+    assert label == "EQUAL"
+
+
+def test_a_set_expected_commit_count_still_flags_extra_and_fewer() -> None:
+    extra = classify(
+        seat="delete",
+        pid="p01",
+        repark_outcome="ANSWERED",
+        spark_outcome="ANSWERED",
+        repark_answer=[(2,)],
+        spark_answer=[(2,)],
+        repark_commits=2,
+        spark_commits=1,
+    )
+    fewer = classify(
+        seat="delete",
+        pid="p01",
+        repark_outcome="ANSWERED",
+        spark_outcome="ANSWERED",
+        repark_answer=[(2,)],
+        spark_answer=[(2,)],
+        repark_commits=0,
+        spark_commits=1,
+    )
+    assert "EXTRA-COMMIT" in extra
+    assert "FEWER-COMMIT" in fewer
 
 
 def test_the_float_seeds_store_a_negative_zero_through_a_cast() -> None:

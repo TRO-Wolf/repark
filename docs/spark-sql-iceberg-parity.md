@@ -1208,6 +1208,115 @@ perfectly good read.
   read is aws-ephemeral-runs-1 C-017 and C-030.
 - **Dated 2026-10-28, AUD-005 (independent audit; a gate defect, not a product result; CLOSED 2026-10-29):** the nightly cross-read helper (`python/repark/tests/parity/_acceptance_cross_read.py`, lines 298–314 and 376–384) classifies every Spark exception as `SPARK-CANNOT-READ`, and accepts that outcome whenever the table has nanosecond columns. A connection failure therefore passes as the expected nanosecond limitation: the audit's probe simulates a `ConnectionError` on a nanosecond table and the gate accepts it, while a non-nanosecond control is rejected. The narrowing (accept only the unsupported-type condition) is CROSS-READ-GATE-CLASS-1, filed and not dispatched (P3; card [cross-read-gate-class-1](../task/roadmap/mid-term/cross-read-gate-class-1-card-2026-10-28.md)). This row also says nothing about the green cross-read runs; the audit makes no claim that one met the simulated failure. Narrowed by CROSS-READ-GATE-CLASS-1 on 2026-10-29 (branch `fix/cross-read-gate-class-1`), merged 2026-10-29 as `7ef6bcf4` (PR #1211).
 
+#### S3T-CTAS-KILL-1 — a CTAS killed mid-write on S3 Tables leaves an empty table (stated caveat, owner ruling 2026-11-12)
+
+- **repark** — on S3 Tables a CTAS creates the table first (its first version is empty and
+  readable at once), streams the rows, and publishes once. A definite failure drops the table:
+  G5 cells C1 to C3 leave nothing listed. A process killed mid-write (`SIGKILL`, an OOM kill,
+  a lost host) cannot drop it, so the table stays listed and reads zero rows with no error
+  (G5 cell K, runs `43126006620` and `43220069749`). Glue is unaffected: its staged create
+  writes the catalog entry at the commit, so a kill leaves nothing listed (run `43123707194`).
+- **Apache Spark** — through the S3 Tables Iceberg REST endpoint Spark refuses CTAS
+  (`Stage-create is currently not supported`; AWS documents the 400). Through the AWS client
+  jar (`software.amazon.s3tables.iceberg.S3TablesCatalog`) Spark creates the table entry
+  before any data is written, and Iceberg's staged abort does not remove it. So a killed or
+  failed Spark CTAS leaves an entry with no metadata location, which is listed and fails on
+  read. Cell S1 builds that entry: Spark over REST answers `The specified metadata location is
+  not valid`, and repark answers not found. *(oracle: S1 measured live; the jar's create and
+  abort read from source.)*
+- **Recovery** — `DROP TABLE`, or `CREATE OR REPLACE TABLE … AS SELECT` over the leftover. A
+  plain `CREATE TABLE … AS SELECT` retry fails loudly (the table exists).
+- **Retries** — the silver pattern converges after a kill. That pattern is
+  `CREATE TABLE IF NOT EXISTS … AS SELECT` followed by a `MERGE` on the key. The CTAS skips on
+  the empty table and the `MERGE` writes every row (cell R1: 100,000 rows, equal to the
+  expected set). A bare `CREATE TABLE IF NOT EXISTS … AS SELECT` with no follow-up write does
+  not converge: after a kill its retry skips, and the table stays empty with no error. On S3
+  Tables, the ICE-COMMIT-UNKNOWN-1 Airflow guidance to retry `CTAS IF NOT EXISTS` therefore
+  holds only with a follow-up write, or after a `DROP TABLE` of the leftover.
+- **Ruling** — owner, 2026-11-12, verbatim "Go with the default C’". The behavior stays
+  inside ICE-V2-FLAT-AWS-LABEL-1 as a stated caveat. The G5 rule ("a catalog entry that reads
+  as an empty table blocks") is waived for cell K on S3 Tables only. The jar's shape (create
+  the entry with no first version, set the metadata location once at publish, and adopt such
+  an entry on retry) is card
+  [S3T-CTAS-SHELL-CREATE-1](../task/roadmap/mid-term/s3t-ctas-shell-create-1-card-2026-11-12.md),
+  after the label.
+- **Pin** — `python/repark/tests/parity/test_aws_acceptance_ctas_failure.py`, the
+  `ctas-failure` leg of `aws-acceptance`. On S3 Tables K asserts that the kill landed
+  (`-SIGKILL`), that the leftover reads exactly zero rows (never a partial set), and that
+  `CREATE OR REPLACE` recovers it. S1 and R1 are as above.
+#### LOCAL-DROP-RECREATE-STALE-WRITE-1 — DATED ROW 2026-11-12: a Hadoop drop and recreate can write on the dropped table's metadata
+
+- **repark** — FIXED by LOCAL-DROP-RECREATE-STALE-WRITE-1 (fork PR #382, merged as `a8bd3a1e`,
+  pinned here; card
+  [local-drop-recreate-stale-write-1](../task/roadmap/mid-term/local-drop-recreate-stale-write-1-card-2026-11-12.md)).
+  Found on 1.5.6 (fork `66901f02`): on a `type=hadoop` catalog the session metadata cache is
+  keyed by the metadata path, Hadoop naming reuses `v1`, `v2`, … after a drop, and the staged
+  replace behind `CREATE OR REPLACE` and RTAS neither evicted its base nor cached the file it
+  wrote. A dropped table's entry at a reused `vN` then served the recreated table: `C,I7,R,D,C,R`
+  read id 7, and an `INSERT`, `MERGE`, `UPDATE`, `DELETE` or `ALTER … ADD COLUMN` on top committed
+  the dropped table's uuid and snapshots into the next `vN` (S1, a wrong write; Spark reading the
+  directory reads the dropped rows). Replace-only history (`R1,R2,R3,D,R4,R5`) read R2, and with
+  `PURGE` the stale base failed on a purged manifest list. The fix keeps the memory catalog's
+  invariant: every write puts the location it wrote, every pointer move evicts the location it
+  left, and a Hadoop drop evicts `v1` through the current version. Glue and S3 Tables name files
+  with a uuid and never reuse a path; their replace-path cache leak is a separate card.
+- **Workaround on 1.5.6** — set `repark.iceberg.metadataCache=false` on Hadoop catalogs.
+- **Apache Spark** — the same sequences read and write the recreated table.
+  *(oracle: measured, Spark 4.1.2 + Iceberg 1.11.0, Hadoop catalog.)*
+- **Pin** — `python/repark/tests/iceberg/test_local_drop_recreate_stale_write_1.py` (each cell
+  checks the session read, a path read through `StaticTable`, and the current file's uuid; a
+  live Spark cell reads the six wrong-write rows by path); the fork's
+  `crates/iceberg/src/catalog/memory/hadoop_cache_invariant_tests.rs` and
+  `hadoop_cache_differential_tests.rs` (cache on against cache off over 96 seeded sequences).
+- **Rationale** — FIXED 2026-11-13. Owner ruling 2026-11-12 ("Go with the defaults"): an S1
+  wrong write that blocks the full format-v2 label, not the scoped label
+  (ICE-V2-FLAT-AWS-LABEL-1); the fix rides v1.5.7.
+
+#### NATIVE-CTAS-ICEBERG-REFUSE-1 — `repark.sql()` CTAS into an Iceberg table refuses (declared native-door refusal, owner ruling 2026-11-12)
+
+- **repark** — on the native door (`repark.sql()`), `CREATE TABLE … AS SELECT` whose target is
+  an Iceberg catalog refuses at planning, before any write, with `UnsupportedOperationException`
+  (the target is printed quoted where it needs quotes):
+  `repark.sql() does not support CREATE TABLE ... AS SELECT into the Iceberg table <target>:
+  create the table with its columns, CREATE TABLE <target> (<columns>), then INSERT INTO <target>
+  SELECT ...; or run the same statement through spark.sql (NATIVE-CTAS-ICEBERG-REFUSE-1)`. That
+  covers every spelling (`IF NOT EXISTS`, `OR REPLACE`, a column list, any letter case, an
+  unqualified target under an Iceberg default catalog) and `EXPLAIN`, `EXPLAIN ANALYZE` and
+  `PREPARE` of one. Nothing is created, and an existing table keeps its rows and metadata. Before
+  the refusal, a `UNION`, `DISTINCT`, `INTERSECT`, `EXCEPT` or aggregate query created the table
+  with zero rows and answered success, other shapes failed with the fork's `register_table does
+  not support tables with data`, and `OR REPLACE` dropped an existing table before the query ran.
+  CTAS into the session's in-memory catalog (or into an in-memory schema that a native `CREATE
+  SCHEMA` registers under an Iceberg catalog), a plain `CREATE TABLE`, `INSERT … SELECT` and every
+  `spark.sql` statement are unchanged. The native door is DataFusion's `CreateMemoryTable`, not
+  `crates/repark-sql/src/create_table.rs`.
+- **Apache Spark** — the same CTAS stores the query's rows, and so do RePark's `spark.sql` and the
+  native two-step workaround, for the ten step-0 shapes. Two exceptions, the same on main: a
+  native `INSERT` whose query unions an `INT` column with a bare integer literal needs a `CAST`,
+  and a CTE-shaped CTAS fails on the Spark door (CTE-TEMP-VIEW-PRECEDENCE-1). *(oracle: PySpark 4.1.2 with Iceberg
+  1.11.0 on a Hadoop catalog, 2026-11-12, `task/wo/native-ctas-iceberg-refuse-1/evidence/step0/`.)*
+- **Pin** — `python/repark/tests/sql/test_native_ctas_iceberg_refuse_1.py` and
+  `crates/repark-core/src/local_fs_policy/native_ctas/tests.rs`.
+- **Rationale** — DECLARED refusal, owner ruling 2026-11-12, verbatim "Okay go with the default"
+  (item 3, option (b)): silent data loss becomes a loud refusal. The real native CTAS waits on the
+  owner's routing decision ([card](../task/roadmap/mid-term/native-ctas-iceberg-refuse-1-card-2026-11-12.md)).
+
+#### NATIVE-DATAFRAME-WRITE-SILENT-1 — `repark.sql()` DataFrame appends report success and store nothing (known issue in 1.5.6; the fix rides v1.5.7)
+
+- **repark** — on the native door, a frame from `repark.sql(…)` written with
+  `.write.mode("append").saveAsTable(…)`, `.write.insertInto(…)` or `.writeTo(…).append()` returns without an error,
+  and the target's rows are unchanged afterwards. Measured on the memory catalog only; the other target kinds and
+  the overwrite forms are unmeasured. On the same door `writeTo(…).create()`, `writeTo(…).createOrReplace()` and
+  `saveAsTable` into a new table or with overwrite fail to parse on `USING`. Measured on main `a3f8c7d9` and on
+  #1317's head `ed9f678c`, identical; the surface ships in 1.5.6. The cause is not known.
+- **Apache Spark** — each append stores the frame's rows. *(documented: the writer API's contract; no Spark cell
+  was run for this row. The fix's measured table attaches the oracle.)*
+- **Pin** — none yet; the fix lands one per verb and target kind.
+- **Rationale** — a silent lost write (S1), a known issue on the shipped 1.5.6 wheel. Owner ruling 2026-11-13,
+  verbatim "Defaults": first measure every writer verb on every target kind, the overwrite forms included, then a
+  refusal guard like NATIVE-CTAS-ICEBERG-REFUSE-1's; it rides v1.5.7. ([card](../task/roadmap/mid-term/native-dataframe-write-silent-1-card-2026-11-13.md);
+  [ruling](../task/wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-13.md), item 5.)
+
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
 
 - **repark** — the local catalog keeps its table pointer in process memory. That is the
@@ -2328,6 +2437,43 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
 - **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** unchanged: the default
   pool on cgroup v1, macOS and Windows still needs an explicit budget. Carried on the format-v2
   label (ICE-V2-LABEL-1).
+
+### 2.8 Multiset set operations
+
+#### SQL-SETOP-ALL-REFUSE-1 — SQL `INTERSECT ALL`, `EXCEPT ALL` and `MINUS ALL` refuse on both SQL doors (declared refusal, owner ruling 2026-11-12)
+
+- **repark** — a statement that names `INTERSECT ALL`, `EXCEPT ALL` or `MINUS ALL` anywhere (top
+  level, a CTE, a scalar or `IN` subquery, a temporary or persistent view body, the source of
+  `INSERT`, CTAS or `MERGE USING`, nested in `UNION ALL`, under `EXPLAIN`, in any letter case,
+  with whitespace or a comment between the words) refuses on `spark.sql` and on `repark.sql()`
+  with `UnsupportedOperationException`: `SQL INTERSECT ALL multiset semantics are not
+  Spark-correct on this engine yet; use INTERSECT for distinct bags, or number each side's
+  duplicates with row_number() and INTERSECT the numbered rows (SQL-SETOP-ALL-MULTISET-1)` (the
+  `EXCEPT ALL` and `MINUS ALL` texts name `EXCEPT`). It refuses before either door plans, so a
+  refused `INSERT`, CTAS or `MERGE` writes nothing: no snapshot, no rows, no CTAS table. The
+  `F.expr`, `selectExpr` and `filter` fragments and a stored Iceberg view body that name the
+  operator refuse the same way; the DataFrame `intersectAll` / `exceptAll` refusals
+  ([EX-DF-7](#ex-df-7--intersectall--intersect_all-refuse-spark-answers-the-multiset-intersect))
+  are unchanged. Before this refusal both doors answered the wrong multiset for every column
+  type: on `l = {1, 1, 1, 2, 2, 4}`, `r = {1, 2, 2, 3}`, `INTERSECT ALL` answered
+  `1, 1, 1, 2, 2` and `EXCEPT ALL` answered `4`, and the writes stored those rows; `MINUS ALL`
+  was refused by DataFusion (`MINUS ALL not implemented`).
+- **Apache Spark** — `INTERSECT ALL` keeps each row at the smaller of the two sides'
+  multiplicities (`1, 2, 2`); `EXCEPT ALL` and its synonym `MINUS ALL` subtract the right side's
+  count (`1, 1, 4`); every shape above answers, and the writes store those rows. *(oracle:
+  recorded from PySpark 4.1.2 with Iceberg 1.11.0, 2026-11-12,
+  `task/wo/sql-setop-all-refuse-1/evidence/step0/`.)*
+- **Pin** — `python/repark/tests/sql/test_sql_setop_all_refuse_1.py::test_every_shape_refuses_before_any_write`
+  (with `test_every_spelling_refuses`, `test_sql_fragments_refuse_the_same_way`,
+  `test_a_stored_view_body_naming_the_operator_refuses_at_read` and the controls
+  `test_controls_keep_answering`), and the seat tests in
+  `crates/repark-core/src/pre_execute/setop_all/tests.rs`.
+- **Rationale** — DECLARED refusal, owner ruling 2026-11-12, verbatim "Go with the defaults"
+  (signed-zero part B, Q2): a refusal is honest where the answer is silently wrong. It blocks
+  the scoped label ICE-V2-FLAT-AWS-LABEL-1 and ships in v1.5.7. The fix is card
+  SQL-SETOP-ALL-MULTISET-1
+  ([card](../task/roadmap/mid-term/sql-setop-all-multiset-1-card-2026-11-12.md)); the row
+  retires when it lands.
 
 ## 3. Identifier resolution (DECLARED)
 
@@ -5063,6 +5209,34 @@ still open is `isModifiable`.
   `NOT IN (subquery)`. A Spark answer that depends on the physical plan is not Spark SQL semantics, on the
   `PRUNED-WRONG` precedent of ruling G. 16 cells that matched Spark's default plan on the base
   (SQ-notin on both builds, WR-insert-notin on build `un`) now differ from it, by this ruling.
+
+### NAN-PARTITION-VALUE-1 — a NaN or infinite FLOAT/DOUBLE partition value is stored as itself — **FIXED 2026-11-12 (branch, not merged)**
+
+- **repark** — Before (main `a3f8c7d9`, fork `66901f02`): `INSERT`, `writeTo(...).append()` and
+  `saveAsTable` into a table partitioned by a FLOAT or DOUBLE column wrote the NaN file's
+  partition value, and `±Infinity`'s, as NULL in the manifest; the data file kept the value.
+  RePark's own `WHERE isnan(d)` and `WHERE d = CAST('NaN' AS DOUBLE)` then returned no rows,
+  `.files` showed two `d = NULL` files and `.partitions` merged them. CTAS was not affected.
+  The seat was the fork's data-file JSON hand-off from `IcebergWriteExec` to
+  `IcebergCommitExec`: `serde_json` writes a non-finite float as `null`. After (fork PR #383,
+  merged as `92242cb4`): the hand-off writes such a slot as `"NaN"`, `"Infinity"` or `"-Infinity"`
+  (Java's `SingleValueParser.toJson` spelling) and reads it back as the float; the manifest
+  stores the Avro float with Spark's bits (`7ff8…` for NaN).
+- **spark** — Spark 4.1.2 with Iceberg 1.11.0 stores `d = NaN`, `Infinity` and `-Infinity`
+  partitions, answers `isnan` and `= NaN` with the NaN row, and reads a RePark table written
+  before the fix with the NaN row as NULL. *(oracle: measured live 2026-11-12,
+  `task/wo/nan-partition-value-1/evidence/step0/`.)*
+- **Tables written by 1.5.6 or earlier** — a file whose FLOAT/DOUBLE partition value was NaN
+  or `±Infinity` carries a NULL partition; its rows are intact. Rewriting the file with a
+  fixed build (`rewrite_data_files`, or delete and re-insert) repairs it.
+- **Pin** — `python/repark/tests/iceberg/test_nan_partition_value_1.py` (four write doors ×
+  FLOAT/DOUBLE, the infinity twin, the controls; live: Spark reads RePark's tables as its own,
+  RePark reads Spark's as Spark does); fork `crates/iceberg/src/spec/manifest/_serde.rs`
+  `test_json_transport_*` and `test_avro_manifest_keeps_nan_float_and_double_partition_values`.
+- **Rationale** — S1 wrong write; card
+  [NAN-PARTITION-VALUE-1](../task/roadmap/mid-term/nan-partition-value-1-card-2026-11-12.md),
+  fixed before ICE-V2-FLAT-AWS-LABEL-1 under the owner's 2026-11-12 ruling ("Go with the
+  defaults", two fork files or fewer).
 
 ## 5. Facade drop-in semantics (DECLARED)
 
@@ -9271,6 +9445,51 @@ the pin rather than obeying it.
   an aggregate as a window. The example `docs/examples/functions/first_last.py`
   dropped its ignorenulls leg; names for the next EX batch are listed in the
   FN-FIX-1 ledger.
+
+### FEXPR-WINDOW-NULL-ORDER-1 — an `F.expr` fragment's `ORDER BY` placed NULLs backwards — **FIXED 2026-11-12 (FEXPR-WINDOW-NULL-ORDER-1)**
+
+- **repark** — **FIXED 2026-11-12.** A window `ORDER BY` inside `F.expr` (in `select` or
+  `withColumn`), and the `ORDER BY` of a scalar subquery inside one, place NULLs first for `ASC` and
+  last for `DESC` when the text states no placement; an explicit `NULLS FIRST` / `NULLS LAST` wins.
+  Over `(1, 10), (2, NULL), (3, 30)`, `F.expr('row_number() OVER (ORDER BY m DESC)')` gives row 1 to
+  id 3, and the dedup `withColumn('r', …).filter('r = 1')` keeps id 3. Before the fix both directions
+  were reversed (DataFusion's `nulls_max` default), and the dedup kept the NULL row. The native
+  `repark.sql()` door keeps its own dialect (`nulls_max`), by owner ruling.
+- **Apache Spark** — NULLs first for `ASC`, last for `DESC`; row 1 to id 3; the dedup keeps id 3.
+  *(oracle: recorded — PySpark 4.1.2 `local[2]`, 2026-11-12, 1,362 cells on INT, STRING and DOUBLE
+  keys: nine window functions, the dedup, the scalar subquery and the controls.)*
+- **Pin** —
+  `python/repark/tests/functions/test_fexpr_window_null_order_1.py::test_every_recorded_cell_answers_as_recorded`
+  and `crates/repark-python/src/column/expr_tests.rs::fragment_order_by_takes_spark_null_placement_unless_explicit`.
+- **Rationale** — FIXED. The fragment context (`build_expr_context`) now sets DataFusion's
+  `default_null_ordering` to `nulls_min`; the Spark door already wrote the placement into the AST.
+  Card: [FEXPR-WINDOW-NULL-ORDER-1](../task/roadmap/mid-term/fexpr-window-null-order-1-card-2026-11-12.md),
+  with three findings outside the unit (aggregate `ORDER BY` accepted where Spark refuses, `WITHIN
+  GROUP` coverage, `F.expr('k DESC')`).
+
+### FILTER-STRING-NULL-ORDER-1 — an `ORDER BY` inside a string `filter` / `where` placed NULLs backwards — **FIXED 2026-11-13 (FILTER-STRING-NULL-ORDER-1)**
+
+- **repark** — **FIXED 2026-11-13.** On a frame from the Spark door (`spark.sql`, `spark.table`,
+  `createDataFrame` and every frame derived from one, including a join), a string `filter` / `where`
+  places NULLs first for `ASC` and last for `DESC` in the `ORDER BY` of a scalar, `IN`, `NOT IN`,
+  `EXISTS` or `NOT EXISTS` subquery and of a window inside one, when the text states no placement; an
+  explicit `NULLS FIRST` / `NULLS LAST` wins. Over `ki` = `(10, NULL, 30, 20, 40)`,
+  `filter("ki = (SELECT a FROM VALUES (NULL), (10), (20) AS q(a) ORDER BY a DESC LIMIT 1)")` keeps
+  the row with `ki = 20`. Before the fix it kept no row (DataFusion's `nulls_max` default), while
+  `filter(F.expr(<same text>))` was right. A frame from the native `repark.sql()` door keeps its own
+  dialect (`nulls_max`), by owner ruling.
+- **Apache Spark** — NULLs first for `ASC`, last for `DESC`; the row with `ki = 20`. *(oracle:
+  recorded — PySpark 4.1.2 `local[2]`, 2026-11-13, 28 predicates on INT, STRING and DOUBLE keys over
+  nine doors, 3 joined-frame cells and 12 controls.)*
+- **Pin** —
+  `python/repark/tests/functions/test_filter_string_null_order_1.py::test_every_recorded_cell_answers_as_recorded`
+  and `crates/repark-python/src/column/expr_tests.rs::a_string_predicate_takes_spark_null_placement_only_on_the_spark_door`.
+- **Rationale** — FIXED. A string predicate plans on the frame's own session state; the predicate
+  parse (`expr_build::predicate_state`) now sets `default_null_ordering` to `nulls_min` when that
+  session is the Spark door's (`repark_spark::is_spark_door_session`), the same setting
+  FEXPR-WINDOW-NULL-ORDER-1 gave the `F.expr` context. Card:
+  [FILTER-STRING-NULL-ORDER-1](../task/roadmap/mid-term/filter-string-null-order-1-card-2026-11-13.md),
+  with three findings outside the unit.
 
 ### FN-APPROXPCT-1 — `approx_percentile` / `percentile_approx` interpolate to DOUBLE — **FIXED 2026-09-03 (FN-FIX-1)**
 

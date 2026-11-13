@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +35,7 @@ from _flat_matrix_cells import (
     committed_commits,
     committed_ids,
     expected_for,
+    grade_against_truth,
     load_expected,
     passes,
     record_line,
@@ -97,6 +98,19 @@ def _normal(value: Any) -> Any:
 
 def _rows(frame_rows: list[Any]) -> list[tuple[Any, ...]]:
     return sorted((tuple(_normal(v) for v in row) for row in frame_rows), key=repr)
+
+
+def _answer_ids(answer: list[tuple[Any, ...]] | None) -> list[int] | None:
+    if answer is None:
+        return None
+    return [int(row[0]) for row in answer]
+
+
+def _against_truth(cell: Cell, oracle: Observed) -> tuple[Observed, list[int] | None, str | None]:
+    truth, oracle_truth = grade_against_truth(cell, oracle.outcome, _answer_ids(oracle.answer))
+    if truth is None:
+        return oracle, None, None
+    return replace(oracle, answer=_rows([(value,) for value in truth])), truth, oracle_truth
 
 
 def _commit_count(session: Any, table: str) -> int:
@@ -359,6 +373,8 @@ def test_flat_matrix_cell(cell: Cell, sessions: Any, records_path: Path) -> None
     names = _names(cell, prefix)
     glue = CATALOG == "glue"
     known = KNOWN_OPEN.get(cell.cell_id)
+    truth: list[int] | None = None
+    oracle_truth: str | None = None
     if cell.is_float:
         float_type = cell.float_type or "DOUBLE"
         for key in ("t", "u"):
@@ -424,15 +440,16 @@ def test_flat_matrix_cell(cell: Cell, sessions: Any, records_path: Path) -> None
             oracle_final = oracle_map[target_for(combo)]
         seat_name = combo.seat
         repark_final = fq_names[target_for(combo)]
+        graded, truth, oracle_truth = _against_truth(cell, oracle)
         label = classify(
             seat=seat_name,
             pid=cell.pid,
             repark_outcome=mine.outcome,
-            spark_outcome=oracle.outcome,
+            spark_outcome=graded.outcome,
             repark_answer=mine.answer,
-            spark_answer=oracle.answer,
+            spark_answer=graded.answer,
             repark_commits=mine.commits if glue else None,
-            spark_commits=oracle.commits if glue else None,
+            spark_commits=graded.commits if glue else None,
             folded=cell.pid in FOLDED_PREDICATES,
         )
     shape = _shape_fields("repark", repark, spark, repark_final)
@@ -457,6 +474,8 @@ def test_flat_matrix_cell(cell: Cell, sessions: Any, records_path: Path) -> None
         oracle_commits=oracle.commits,
         oracle_error=oracle.error,
         oracle_probe_error=oracle.probe_error,
+        truth_answer=truth,
+        oracle_truth=oracle_truth,
         label=label,
         **shape,
     )

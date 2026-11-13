@@ -1,9 +1,6 @@
 # map — repark-core/src/session
 
-CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002).
-
-CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
-accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+CC-3 (2026-08-30): comments condensed to one line, banners removed, truncated and wrapped-line comments rewritten as complete sentences (D-001, D-002). CC-2 closing-critic remediation: review-round label narration swept from prose; safety and accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 
 ## Purpose
 
@@ -20,12 +17,12 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `read_postgres.rs` — **C-2d fold 1 (2026-10-07), S3:** the frame is built with `LogicalPlanBuilder::scan`
   under a name, instead of `read_table`'s `?table?`. A `dbtable` relation is named
   `<schema>.<table>`, and a `query` is named `jdbc`.
-- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** `PartitionOptions::of` is fallible: a
+  **C-3 fold 1 (2026-10-08):** `PartitionOptions::of` is fallible: a
   `num_partitions` outside Spark's 32-bit `Int` refuses before any connection.
-- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the door builds `PartitionOptions::of`
+  **C-3 fold 1 (2026-10-08):** the door builds `PartitionOptions::of`
   from its integer arguments; bounds given as text in `properties` reach
   `PostgresTable::partitioned` unparsed, so they are judged after the column's type.
-- `read_postgres.rs` — **C-3 (2026-10-07):** `PostgresRead` carries `partition_column`,
+  **C-3 (2026-10-07):** `PostgresRead` carries `partition_column`,
   `lower_bound`, `upper_bound`, `num_partitions` and a `predicates` flag in place of the list of
   option names C-2d refused by. The door refuses `predicates` first (still declared), lifts the four
   Spark spellings out of `properties` (`PartitionOptions::with_props`), applies Spark's all-or-none
@@ -33,7 +30,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   connection, and then calls `PostgresTable::partitioned` on the resolved table. `source_error` now
   keeps the `Analysis` and `NumberFormat` classes too. `tests/read_postgres.rs` pins each refusal's
   class and sentence against an unroutable address.
-- `read_postgres.rs` — **C-2d (2026-10-07):** `PostgresRead { url, target, properties,
+  **C-2d (2026-10-07):** `PostgresRead { url, target, properties,
   partitioning }` and `PostgresTarget::{Relation, Query}`, re-exported at the crate root with
   `READ_POSTGRES_SOURCE` (`jdbc`). `ReparkSession::read_postgres` refuses a partitioned read
   first (`CONNECT-DECL-pg-partitioned-read`), parses `dbtable` through
@@ -109,6 +106,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   and an interval into a text column still refuses. The shared Iceberg rule is untouched.
   **C-4 fold 4 item 3 (2026-10-11):** the gap-wall refusal into a timestamptz column names the real column type: the placement arm retargets the localiser's `timestamp` label at its own site, as the read path does (`retargeted`, mirroring `repark_connect::provider::scan`). The date arm keeps the `timestamp` label (ledger §15: the shape file sits at its ceiling, so the date pin has no room yet). The store-assignment refusal text is the shared Iceberg builder, so it stays byte-identical here (ledger §15).
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.
+  **SQL-SETOP-ALL-REFUSE-1 (2026-11-12):** it runs `pre_execute::setop_all::refuse_in_session_sql` first.
   **ICE-CATALOG-CACHE-1 (2026-09-19):** the door awaits `trim_iceberg_caches()`, which settles the moka cache before it counts.
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** `sql_with_write_options` and its crate-private body, the session's one statement funnel (spill SET intercept, cache trim, registry snapshot, `SqlDialect::execute_with_write_options`). **Run 22b rebase (2026-09-18, Q-22b-WO-1):** it replaced ICE-DYN-OVERWRITE-1's `static_overwrite.rs` body.
   **ICE-OVERWRITE-MODE-1 (2026-09-19):** it takes an `OverwriteIntent` and fills `EngineContext::overwrite_intent`; `ReparkSession::sql_with` passes an empty map and `Session`. pins: ice-write-options-1/C-014; ice-overwrite-mode-1/C-007
@@ -154,8 +152,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **CATALOG-1 (2026-09-26):** `note_catalog_refusal` / `check_catalog_refusal` (the refused-kind placeholder: stored beside the entries, never listed, every use raises its refusal; a later long-form block replaces it). The singular late path reports a refusal as `false`; the plural path reports refused names in neither list.
   **CSV-INFER-PERF-1 (2026-09-06):** `read_csv` body moved to `read_options.rs`; `session.rs` 1002 → 988 and the CAP-1 exception retired.
 - `df_guards.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `context_with_df_54_1_rule_guards` takes the dialect beside the extension: it
-  registers a handed-in `TypePlanner` (`with_type_planner`; with neither in, DataFusion's type mapping stands) and runs the dialect's `configure_analyzer_rules` after the extension's.
-- `df_guards.rs` — **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** re-exports `insert_struct_setop_after_coercion` toward the root; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the list. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `session.rs` calls `finish_session_build` (dialect hook, then seat 1). **Part B part 1, delta 2 (2026-11-13):** `finish_session_build` adds the analyzer rule `OptimizerSeatConfig` (`repark_optimizer_seat_config`): per plan, while the live config has `optimizer.max_passes` 0 or `optimizer.skip_failed_rules` true, however set, it refuses all but a statement, empty relation or bare `VALUES` (the analyzer runs before the optimizer loop and reads neither key). Detail: `task/wo/signed-zero-normalize-1/evidence/part-b/after/delta2/delta2.md`.
+  registers a handed-in `TypePlanner` (`with_type_planner`; with neither in, DataFusion's type mapping stands) and runs the dialect's `configure_analyzer_rules` after the extension's. **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** re-exports `insert_struct_setop_after_coercion` toward the root; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the list. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `session.rs` calls `finish_session_build` (dialect hook, then seat 1). **Part B part 1, delta 2 (2026-11-13):** `finish_session_build` adds the analyzer rule `OptimizerSeatConfig` (`repark_optimizer_seat_config`): per plan, while the live config has `optimizer.max_passes` 0 or `optimizer.skip_failed_rules` true, however set, it refuses all but a statement, empty relation or bare `VALUES` (the analyzer runs before the optimizer loop and reads neither key). Detail: `task/wo/signed-zero-normalize-1/evidence/part-b/after/delta2/delta2.md`.
 - `df_guards.rs` — the DataFusion **54.1 regression guards**, owned and constructed by CORE
   (design G8). Guard 1 is a configurable scalar-subquery default; guard 2 wraps
   `push_down_leaf_projections`, declining failed rewrites only on an `Unnest` path while keeping

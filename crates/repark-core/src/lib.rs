@@ -75,7 +75,7 @@ pub use dialect::{DataFusionDialect, EngineContext, SqlDialect, TempViewSession}
 pub use idents::{spark_numeric_literal, spark_target_grammar_message};
 // === Pre-execute belt ===
 pub use extension::{SessionBuildConf, SessionExtension};
-pub use pre_execute::PreExecute;
+pub use pre_execute::{PreExecute, refuse_multiset_set_operation};
 
 // --- The embedding's executor handle (EC-5 / design §4 Q7).
 pub use parallel_window::parallel_single_partition_active;

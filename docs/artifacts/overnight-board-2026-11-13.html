@@ -1,0 +1,167 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Overnight Board 11-13</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,600&display=swap">
+<style>
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --fg: #1b1f27;
+  --muted: #5b6475;
+  --rule: #dde1e8;
+  --accent: #2f5bd3;
+  --good: #1f7a4d;
+  --warn: #9a6200;
+  --bad: #b3261e;
+  --chip: #eef1f7;
+  --display: "Fraunces", Georgia, serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12151b; --surface: #1a1e26; --fg: #e6e9ef; --muted: #9aa3b5; --rule: #2c323d;
+    --accent: #8aa8ff; --good: #5cc28f; --warn: #e0a84a; --bad: #f08a80; --chip: #232936; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12151b; --surface: #1a1e26; --fg: #e6e9ef; --muted: #9aa3b5; --rule: #2c323d;
+  --accent: #8aa8ff; --good: #5cc28f; --warn: #e0a84a; --bad: #f08a80; --chip: #232936; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 860px; margin: 0 auto; padding-inline: 18px; padding-block: 28px 56px; display: grid; gap: 28px; }
+header { display: grid; gap: 6px; }
+h1 { font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1.15; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0; max-width: 68ch; }
+h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+section { display: grid; gap: 0; }
+.stats { display: flex; flex-wrap: wrap; gap: 10px; }
+.stat { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 14px; min-width: 120px; flex: 1 1 120px; }
+.stat b { display: block; font-family: var(--mono); font-size: 22px; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 13px; }
+.decision { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 6px; padding: 14px 16px; display: grid; gap: 6px; }
+.decisions { display: grid; gap: 10px; }
+.decision h3 { margin: 0; font-size: 16px; font-weight: 600; text-wrap: balance; }
+.decision p { margin: 0; max-width: 72ch; }
+.default { color: var(--fg); }
+.default::before { content: "Default: "; font-weight: 600; color: var(--accent); }
+.ruled { color: var(--fg); }
+.ruled::before { content: "Ruled: "; font-weight: 600; color: var(--good); }
+.tbl { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+code, .mono { font-family: var(--mono); font-size: 13px; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--chip); white-space: nowrap; }
+.pill.good { color: var(--good); }
+.pill.warn { color: var(--warn); }
+.pill.bad { color: var(--bad); }
+ul.notes { margin: 0; padding-left: 18px; display: grid; gap: 6px; max-width: 74ch; }
+footer { color: var(--muted); font-size: 13px; }
+</style>
+</head><body>
+
+<div class="wrap">
+  <header>
+    <p class="ruled">the owner, 2026-11-13, verbatim "Defaults", to all six decisions as Fable refined them: #1321 and #1322 merge; signed-zero part B gets one last delta under four conditions; NaN is canonicalised at the write before the label and Spark's NaN comparison follows it, with a NaN label exclusion whose text is pending measurement; Spark's S3 Tables Stage-create refusal is declared under two conditions; native DataFrame appends are measured, then guarded in v1.5.7; and the three calls stand, with UPDATE-SCHEMA-BATCH-MISMATCH-1 ranked label-blocking.</p>
+    <h1>Overnight Board, 2026-11-13</h1>
+    <p class="sub">Merges under your 01:35 UTC grant, what is still in review, and the decisions only you can make. Updated about 12:00 UTC: you ruled "Defaults" on all six decisions at about 11:15 UTC, with Fable's conditions. Every agent ran on Claude Opus 5.5 (<span class="mono">claude-opus-5-5</span>), verified from each transcript.</p>
+  </header>
+
+  <section aria-label="Totals">
+    <div class="stats">
+      <div class="stat"><b>9</b><span>RePark PRs merged</span></div>
+      <div class="stat"><b>2</b><span>fork PRs merged</span></div>
+      <div class="stat"><b>1</b><span>PR in CI</span></div>
+      <div class="stat"><b>6</b><span>decisions ruled</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Decisions, ruled "Defaults"</h2>
+    <div class="decisions">
+      <div class="decision">
+        <h3>1. Signed-zero part B: an exception to the one-round cap</h3>
+        <p>The delta round's re-check failed. The <span class="mono">dropDuplicates(subset)</span> fix drops the key column's qualifier, so <span class="mono">df.alias("a").dropDuplicates(["d"]).select("a.*")</span> loses <span class="mono">d</span>, and a write of it stores a table without <span class="mono">d</span> (branch only, never merged). The <span class="mono">SET</span> guard reads the SQL text, so quoted keys and comments slip past it. Under your 2026-11-03 rule the unit is parked. A one-round brief is ready: keep the qualifier, check the resulting config instead of the text, relax two tie pins, add one sentence to a registry row.</p>
+        <p class="ruled">one last delta and re-check. The configuration check moves into the analyzer, so every route is covered; <span class="mono">dropDuplicates</span> keeps its whole output schema, pinned over a table of frame shapes; that fix lands in its own commit, with a verdict per commit. If only that commit fails, it is dropped, becomes its own label-blocking unit, and part B merges without it. Dispatched after the cost run.</p>
+      </div>
+      <div class="decision">
+        <h3>2. Q11, NaN with the sign bit set: which seat</h3>
+        <p>The audit showed the premise was wrong. Spark also keeps sign-bit NaNs in memory, from <span class="mono">sqrt(-1.0)</span>, from the arithmetic operators and from aggregates. The real gap is comparison: Spark treats every NaN as one value, the largest, while RePark compares by bits, so a sign-bit NaN sorts first, loses <span class="mono">max</span>, and fails <span class="mono">= NaN</span>. Spark's Iceberg write stores the canonical NaN.</p>
+        <p>(A) canonicalise every producer, which puts work on every float operation; (B) adopt Spark's NaN comparison in min/max, greatest/least, sort and equality, and canonicalise on write; (C) canonicalise only at RePark's Iceberg/Parquet write.</p>
+        <p class="ruled">C before the label, as NAN-WRITE-CANONICAL-1. It changes NaN only, and never <span class="mono">-0.0</span>, so it does not reuse part B's kernel. You accept a label exclusion: <span class="mono">max</span>, <span class="mono">min</span>, <span class="mono">greatest</span>, <span class="mono">least</span> and comparisons over a NaN computed in the same query still differ from Spark. Its text is measured on the head that carries part B and C. B (Spark's NaN comparison) is the first unit after the label.</p>
+      </div>
+      <div class="decision">
+        <h3>3. S3 Tables: Spark's own Stage-create refusal in the flat matrix</h3>
+        <p>On S3 Tables, Spark's <span class="mono">createOrReplace</span> hits the REST endpoint's Stage-create 400, so the <span class="mono">column-api|create-or-replace</span> seat reads ACCEPTED-WHERE-SPARK-REFUSED for every value group (RePark answers). It is the only failure in the p15 S3 Tables run (29 of 30 passed). Card S3T-STAGE-CREATE-ORACLE-1.</p>
+        <p class="ruled">declared on S3 Tables only, if Spark's exact 400 text matches and Spark reads back RePark's table with rows equal to the Glue cell's. Any other outcome stays red.</p>
+      </div>
+      <div class="decision">
+        <h3>4. New S1: native-door DataFrame appends store nothing</h3>
+        <p>On <span class="mono">repark.sql()</span> frames, <span class="mono">saveAsTable</span> append, <span class="mono">insertInto</span> and <span class="mono">writeTo().append()</span> report success and write no rows. Base behaves the same. Outside the Spark-door label, but a shipped surface. Card NATIVE-DATAFRAME-WRITE-SILENT-1.</p>
+        <p class="ruled">first measure every writer verb on every target kind, overwrites included; then a guard like #1317's. It rides v1.5.7, and the known-issues text names it now.</p>
+      </div>
+      <div class="decision">
+        <h3>6. Merge words: the 8-hour grant ended at 09:35 UTC</h3>
+        <p><span class="mono">#1321</span> (C1) has two PASS verdicts and green CI. <span class="mono">#1322</span> (the corpus checker repair, test only) has a PASS verdict (all 3,904 rows compared, 2,593 goldens matched on a fresh run, 18 of 18 mutations red) and green CI. Both are up to date with main.</p>
+        <p class="ruled">#1321 merged as <span class="mono">1d9d2808</span>. #1322 has main merged in, with its maps rebuilt and no link lost, and is in CI.</p>
+      </div>
+      <div class="decision">
+        <h3>5. Calls I made as an order's author, for you to confirm or overrule</h3>
+        <ul class="notes">
+          <li>The UPDATE-SCHEMA-BATCH-MISMATCH-1 50-repeat result is not a halt: like for like, refusals went 51 to 48 of 150. The key statement went from 150 of 150 wrong writes to correct answers or the card's own refusal.</li>
+          <li>The corpus checker pins the five checksum controls (ledger C-005) and the zero-hint text (D5) as declared classes.</li>
+          <li>On #1317, after the delta re-check failed on one wrong record sentence (the code held, 228 of 228 cells), I corrected the sentence to the measured shape and merged. I did not open a further round.</li>
+        </ul>
+        <p class="ruled">all three stand. UPDATE-SCHEMA-BATCH-MISMATCH-1 is ranked now: label-blocking until explained. Its first probe reruns the two-file layout with an integer predicate.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Merged overnight</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>PR</th><th>What it does</th><th>Verification</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">fork #382, #1313</td><td>A Hadoop drop and recreate no longer reads or writes the dropped table's metadata (S1). Pinned to the fork's merge <span class="mono">a8bd3a1e</span>.</td><td><span class="pill good">2 PASS</span></td></tr>
+          <tr><td class="mono">#1312</td><td>Records: two card batches, including the cards fork #382's body names.</td><td><span class="pill good">docs</span></td></tr>
+          <tr><td class="mono">#1314</td><td>SQL <span class="mono">INTERSECT ALL</span> / <span class="mono">EXCEPT ALL</span> refuse instead of writing wrong multisets.</td><td><span class="pill good">CI</span></td></tr>
+          <tr><td class="mono">#1316</td><td><span class="mono">F.expr</span> window and subquery <span class="mono">ORDER BY</span> place NULLs as Spark does (358 wrong cells fixed).</td><td><span class="pill good">2 PASS</span></td></tr>
+          <tr><td class="mono">#1315</td><td>p15 cells grade against the IEEE truth column. Live: Glue all green; S3 Tables 29 of 30 (decision 3).</td><td><span class="pill good">live</span></td></tr>
+          <tr><td class="mono">#1317</td><td>Native-door CTAS into an Iceberg table refuses instead of storing zero rows (S1). In-memory CTAS unchanged.</td><td><span class="pill good">PASS + delta</span></td></tr>
+          <tr><td class="mono">fork #383, #1319</td><td>A NaN or infinite FLOAT/DOUBLE partition value is stored as itself, not NULL (S1). Fixed before the label, under your two-file bar.</td><td><span class="pill good">2 PASS</span></td></tr>
+          <tr><td class="mono">#1320</td><td>Records: 15 cards and four appends from the night's verifier findings.</td><td><span class="pill good">docs</span></td></tr>
+          <tr><td class="mono">#1321</td><td>A string <span class="mono">filter</span>'s subquery <span class="mono">ORDER BY</span> places NULLs as Spark does on the Spark door; native keeps its own order.</td><td><span class="pill good">2 PASS</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Still moving</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Unit</th><th>State</th><th>Next</th></tr></thead>
+        <tbody>
+                    <tr><td>Corpus checker repair (#1322)</td><td><span class="pill good">PASS</span> Test only. Every one of 3,904 Hadoop rows is now compared. Main merged in; CI running.</td><td>Merge when CI is green.</td></tr>
+          <tr><td>Signed-zero part B</td><td><span class="pill warn">exception granted</span> The final cost run is in round 5 of 5.</td><td>The last delta, once the cost run passes.</td></tr>
+          <tr><td>Q11, math NaN</td><td><span class="pill warn">seat ruled</span> Option C, as NAN-WRITE-CANONICAL-1; the brief is ready.</td><td>Lane 2, once the cost run ends.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Process notes</h2>
+    <ul class="notes">
+      <li>Every merge needed main merged in first, because main requires up-to-date branches. Each merge rebuilt the exact-size maps from main's version plus the branch's rows, then condensed closed rows without losing a fact. No baseline was raised.</li>
+      <li>The cost measurement starves whenever another lane holds the shared timing lock, because the lock gives the exclusive waiter no priority. Timing runs need a quiet box; samples it does take are clean.</li>
+      <li>You ran a Fable session on this board. It agreed with every default and added the conditions shown under "Ruled".</li>
+    </ul>
+  </section>
+
+  <footer>Prepared by the orchestrator, Claude Opus 5.5. Sources: the PR verdicts and hand-backs from this session, and the live-run artifacts for runs 43364971824 and 43368025158.</footer>
+</div>
+</body></html>

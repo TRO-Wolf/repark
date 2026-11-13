@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
@@ -200,11 +201,10 @@ FLOAT_SEED_T: tuple[str, ...] = (
 )
 FLOAT_SEED_U: tuple[str, ...] = (f"(10, {NEGATIVE_ZERO}, NULL)",)
 
-SIGNED_ZERO_PR_A = "SIGNED-ZERO-NORMALIZE-1 PR A"
-
 GROUP_NAMES: tuple[str, ...] = (
     "pilot",
     "floatkeys",
+    "p15",
     "J1",
     "J2",
     "J3a",
@@ -258,6 +258,8 @@ def matrix_cells() -> tuple[Cell, ...]:
             tags = [combo.group]
             if pid == "p01":
                 tags.append("pilot")
+            if pid == "p15":
+                tags.append("p15")
             cells.append(Cell(f"{combo.key}|{pid}", tuple(tags), combo, pid, None, None))
     return tuple(cells)
 
@@ -284,8 +286,6 @@ def cells_for_group(group: str) -> tuple[Cell, ...]:
 
 
 def known_open_unit(cell: Cell) -> str | None:
-    if cell.pid == "p15":
-        return SIGNED_ZERO_PR_A
     return None
 
 
@@ -338,6 +338,64 @@ def answer_rows(ids: list[int] | None) -> list[tuple[int, ...]] | None:
     return sorted((int(value),) for value in ids)
 
 
+TRUTH_PREDICATES: frozenset[str] = frozenset({"p15"})
+PRUNED_WRONG = "PRUNED-WRONG"
+ORACLE_AGREES_WITH_TRUTH = "EQUAL"
+SEED_DOUBLE = re.compile(r"CAST\('([^']*)' AS DOUBLE\)")
+COPY_SEATS: frozenset[str] = frozenset({"select", "insert", "append", "ctas", "create-or-replace"})
+ROW_UPDATE_SEATS: frozenset[str] = frozenset(
+    {"update", "update-set", "merge-when", "merge-on", "merge-into-on", "merge-into-matched"}
+)
+
+
+def seed_doubles() -> dict[int, float | None]:
+    values: dict[int, float | None] = {}
+    for row_id, row in zip(SEED_IDS, SEED_ROWS, strict=True):
+        found = SEED_DOUBLE.findall(row)
+        if len(found) > 1:
+            raise ValueError(f"seed row {row_id} carries more than one DOUBLE: {row!r}")
+        values[row_id] = float(found[0]) if found else None
+    return values
+
+
+def truth_match_ids(pid: str) -> list[int]:
+    if pid not in TRUTH_PREDICATES:
+        raise ValueError(f"no truth column for predicate {pid!r}")
+    return [row_id for row_id, d in seed_doubles().items() if d is not None and d == 0.0]
+
+
+def truth_ids(cell: Cell) -> list[int] | None:
+    if cell.combo is None or cell.pid not in TRUTH_PREDICATES:
+        return None
+    seat = cell.combo.seat
+    matched = truth_match_ids(cell.pid)
+    kept = [row_id for row_id in SEED_IDS if row_id not in matched]
+    if seat in COPY_SEATS:
+        return matched
+    if seat == "delete":
+        return kept
+    if seat in ROW_UPDATE_SEATS:
+        return list(SEED_IDS)
+    if seat == "overwrite":
+        return sorted(kept + list(SEED_IDS))
+    raise ValueError(f"no truth rule for seat {seat!r}")
+
+
+def oracle_truth_label(oracle_ids: list[int] | None, truth: list[int]) -> str:
+    if oracle_ids is not None and sorted(oracle_ids) == sorted(truth):
+        return ORACLE_AGREES_WITH_TRUTH
+    return PRUNED_WRONG
+
+
+def grade_against_truth(
+    cell: Cell, oracle_outcome: str, oracle_ids: list[int] | None
+) -> tuple[list[int] | None, str | None]:
+    truth = truth_ids(cell)
+    if truth is None or oracle_outcome != "ANSWERED":
+        return None, None
+    return truth, oracle_truth_label(oracle_ids, truth)
+
+
 KNOWN_EMPTY_DML = "KNOWN-EMPTY-DML"
 FOLDED_PREDICATES: frozenset[str] = frozenset({"p04"})
 FINDING_LABELS: frozenset[str] = frozenset(
@@ -376,16 +434,20 @@ def _commit_labels(
     repark_target_commits: int | None,
     spark_target_commits: int | None,
 ) -> list[str]:
-    snapshots = (repark_commits or 0, spark_commits or 0)
-    targets = (repark_target_commits or 0, spark_target_commits or 0)
+    pairs = [
+        (mine, theirs)
+        for mine, theirs in (
+            (repark_commits, spark_commits),
+            (repark_target_commits, spark_target_commits),
+        )
+        if mine is not None and theirs is not None
+    ]
     labels: list[str] = []
-    if (
-        snapshots[0] > snapshots[1]
-        or targets[0] > targets[1]
-        or (seat == READ_SEAT and snapshots[0] != 0)
+    if any(mine > theirs for mine, theirs in pairs) or (
+        seat == READ_SEAT and (repark_commits or 0) != 0
     ):
         labels.append("EXTRA-COMMIT")
-    if snapshots[0] < snapshots[1] or targets[0] < targets[1]:
+    if any(mine < theirs for mine, theirs in pairs):
         labels.append("FEWER-COMMIT")
     return labels
 
