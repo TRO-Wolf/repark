@@ -1246,22 +1246,31 @@ perfectly good read.
   `CREATE OR REPLACE` recovers it. S1 and R1 are as above.
 #### LOCAL-DROP-RECREATE-STALE-WRITE-1 — DATED ROW 2026-11-12: a Hadoop drop and recreate can write on the dropped table's metadata
 
-- **repark** — **OPEN 2026-11-12.** On a `type=hadoop` catalog, in one session, take a table
-  whose history holds a `CREATE OR REPLACE`. If it is dropped and recreated under the same name,
-  and the recreated table's next commit at a reused version number is also a replace, then later
-  reads and writes use the dropped table's metadata. Spark reads the wrong rows from disk
-  afterwards. The cause: the memory catalog's staged replace publish neither caches what it wrote
-  nor invalidates the location it replaced, and Hadoop metadata names (`v1`, `v2`, …) are reused
-  after a drop.
-- **Apache Spark** — returns the recreated table's rows.
-- **Workaround for 1.5.6** — set `repark.iceberg.metadataCache=false` on Hadoop catalogs; the
-  probes measured the right answer with the cache off.
-- **Not affected** — Glue and S3 Tables, whose metadata file names carry a UUID, and a fresh
-  session.
-- **Evidence** — the 2026-11-12 probes, filed with the fix.
-- **Rationale** — DATED ROW 2026-11-12, owner ruling 2026-11-12 ("Go with the defaults"): an S1
-  wrong write. It blocks the full format-v2 label, not the scoped label (ICE-V2-FLAT-AWS-LABEL-1).
-  The fix rides v1.5.7; its card is filed by the fix lane.
+- **repark** — FIXED by LOCAL-DROP-RECREATE-STALE-WRITE-1 (fork PR #382, merged as `a8bd3a1e`,
+  pinned here; card
+  [local-drop-recreate-stale-write-1](../task/roadmap/mid-term/local-drop-recreate-stale-write-1-card-2026-11-12.md)).
+  Found on 1.5.6 (fork `66901f02`): on a `type=hadoop` catalog the session metadata cache is
+  keyed by the metadata path, Hadoop naming reuses `v1`, `v2`, … after a drop, and the staged
+  replace behind `CREATE OR REPLACE` and RTAS neither evicted its base nor cached the file it
+  wrote. A dropped table's entry at a reused `vN` then served the recreated table: `C,I7,R,D,C,R`
+  read id 7, and an `INSERT`, `MERGE`, `UPDATE`, `DELETE` or `ALTER … ADD COLUMN` on top committed
+  the dropped table's uuid and snapshots into the next `vN` (S1, a wrong write; Spark reading the
+  directory reads the dropped rows). Replace-only history (`R1,R2,R3,D,R4,R5`) read R2, and with
+  `PURGE` the stale base failed on a purged manifest list. The fix keeps the memory catalog's
+  invariant: every write puts the location it wrote, every pointer move evicts the location it
+  left, and a Hadoop drop evicts `v1` through the current version. Glue and S3 Tables name files
+  with a uuid and never reuse a path; their replace-path cache leak is a separate card.
+- **Workaround on 1.5.6** — set `repark.iceberg.metadataCache=false` on Hadoop catalogs.
+- **Apache Spark** — the same sequences read and write the recreated table.
+  *(oracle: measured, Spark 4.1.2 + Iceberg 1.11.0, Hadoop catalog.)*
+- **Pin** — `python/repark/tests/iceberg/test_local_drop_recreate_stale_write_1.py` (each cell
+  checks the session read, a path read through `StaticTable`, and the current file's uuid; a
+  live Spark cell reads the six wrong-write rows by path); the fork's
+  `crates/iceberg/src/catalog/memory/hadoop_cache_invariant_tests.rs` and
+  `hadoop_cache_differential_tests.rs` (cache on against cache off over 96 seeded sequences).
+- **Rationale** — FIXED 2026-11-13. Owner ruling 2026-11-12 ("Go with the defaults"): an S1
+  wrong write that blocks the full format-v2 label, not the scoped label
+  (ICE-V2-FLAT-AWS-LABEL-1); the fix rides v1.5.7.
 
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
 
