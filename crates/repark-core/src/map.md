@@ -7,12 +7,7 @@ U7 PR1 (2026-09-24): `session.rs` declares `session/writer_layout.rs` (the DataF
 ICE-MIXED-CASE-1 round 3 (2026-09-17, Q-20b-1): `rewrite_fragment_case` takes `unqualified_scope` — bare references resolve against one MERGE side only while qualified references keep validating against both.
 ICE-MIXED-CASE-1 round 4 (2026-09-17): red-first `dataframe_filter_binds_projection_alias` reproduces the L-01 DataFrame filter regression at the Rust level.
 
-CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
-
-CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002). Clippy doc_markdown backticks added.
-
-CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
-accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+CC-3 and CC-4 (2026-08-30): comments condensed to one line, banners removed (CC-4: the remaining banner files), truncated and wrapped-line comments rewritten as complete sentences (D-001, D-002), clippy doc_markdown backticks added. CC-2 closing-critic remediation: review-round label narration swept from prose; safety and accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 
 ## Purpose
 
@@ -907,7 +902,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   load-bearing part, not the surface, which would have to widen (with its call sites) before a
   distributed backend could exist. Distribution is deferred by decision
   ([../../../docs/adr/0004-server-prep-disciplines.md](../../../docs/adr/0004-server-prep-disciplines.md)).
-- `pre_execute.rs` (+ `pre_execute/tests.rs`) — **the shared pre-execute belt (round 5, Z-2):** Delta #2 analyzes each `PREPARE` body.
+- `pre_execute.rs` (+ [pre_execute/](pre_execute/map.md): `tests.rs`, SQL-SETOP-ALL-REFUSE-1's `setop_all.rs`) — **the shared pre-execute belt (round 5, Z-2):** Delta #2 analyzes each `PREPARE` body.
   `PreExecute` = plan (`create_logical_plan`, no execution) → `guard` (the ONE choke point for
   pre-execute refusals; today the tighten DDL-sink refuse and CFG-2's `refuse_source_ddl`,
   refusing `LogicalPlan::Ddl` naming a registered database source — DataFusion's

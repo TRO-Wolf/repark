@@ -2422,6 +2422,43 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
   pool on cgroup v1, macOS and Windows still needs an explicit budget. Carried on the format-v2
   label (ICE-V2-LABEL-1).
 
+### 2.8 Multiset set operations
+
+#### SQL-SETOP-ALL-REFUSE-1 — SQL `INTERSECT ALL`, `EXCEPT ALL` and `MINUS ALL` refuse on both SQL doors (declared refusal, owner ruling 2026-11-12)
+
+- **repark** — a statement that names `INTERSECT ALL`, `EXCEPT ALL` or `MINUS ALL` anywhere (top
+  level, a CTE, a scalar or `IN` subquery, a temporary or persistent view body, the source of
+  `INSERT`, CTAS or `MERGE USING`, nested in `UNION ALL`, under `EXPLAIN`, in any letter case,
+  with whitespace or a comment between the words) refuses on `spark.sql` and on `repark.sql()`
+  with `UnsupportedOperationException`: `SQL INTERSECT ALL multiset semantics are not
+  Spark-correct on this engine yet; use INTERSECT for distinct bags, or number each side's
+  duplicates with row_number() and INTERSECT the numbered rows (SQL-SETOP-ALL-MULTISET-1)` (the
+  `EXCEPT ALL` and `MINUS ALL` texts name `EXCEPT`). It refuses before either door plans, so a
+  refused `INSERT`, CTAS or `MERGE` writes nothing: no snapshot, no rows, no CTAS table. The
+  `F.expr`, `selectExpr` and `filter` fragments and a stored Iceberg view body that name the
+  operator refuse the same way; the DataFrame `intersectAll` / `exceptAll` refusals
+  ([EX-DF-7](#ex-df-7--intersectall--intersect_all-refuse-spark-answers-the-multiset-intersect))
+  are unchanged. Before this refusal both doors answered the wrong multiset for every column
+  type: on `l = {1, 1, 1, 2, 2, 4}`, `r = {1, 2, 2, 3}`, `INTERSECT ALL` answered
+  `1, 1, 1, 2, 2` and `EXCEPT ALL` answered `4`, and the writes stored those rows; `MINUS ALL`
+  was refused by DataFusion (`MINUS ALL not implemented`).
+- **Apache Spark** — `INTERSECT ALL` keeps each row at the smaller of the two sides'
+  multiplicities (`1, 2, 2`); `EXCEPT ALL` and its synonym `MINUS ALL` subtract the right side's
+  count (`1, 1, 4`); every shape above answers, and the writes store those rows. *(oracle:
+  recorded from PySpark 4.1.2 with Iceberg 1.11.0, 2026-11-12,
+  `task/wo/sql-setop-all-refuse-1/evidence/step0/`.)*
+- **Pin** — `python/repark/tests/sql/test_sql_setop_all_refuse_1.py::test_every_shape_refuses_before_any_write`
+  (with `test_every_spelling_refuses`, `test_sql_fragments_refuse_the_same_way`,
+  `test_a_stored_view_body_naming_the_operator_refuses_at_read` and the controls
+  `test_controls_keep_answering`), and the seat tests in
+  `crates/repark-core/src/pre_execute/setop_all/tests.rs`.
+- **Rationale** — DECLARED refusal, owner ruling 2026-11-12, verbatim "Go with the defaults"
+  (signed-zero part B, Q2): a refusal is honest where the answer is silently wrong. It blocks
+  the scoped label ICE-V2-FLAT-AWS-LABEL-1 and ships in v1.5.7. The fix is card
+  SQL-SETOP-ALL-MULTISET-1
+  ([card](../task/roadmap/mid-term/sql-setop-all-multiset-1-card-2026-11-12.md)); the row
+  retires when it lands.
+
 ## 3. Identifier resolution (DECLARED)
 
 ### ID-1 — quoted identifiers stay exact on the ANSI door, fold on the Spark door
@@ -9234,6 +9271,27 @@ the pin rather than obeying it.
   an aggregate as a window. The example `docs/examples/functions/first_last.py`
   dropped its ignorenulls leg; names for the next EX batch are listed in the
   FN-FIX-1 ledger.
+
+### FEXPR-WINDOW-NULL-ORDER-1 — an `F.expr` fragment's `ORDER BY` placed NULLs backwards — **FIXED 2026-11-12 (FEXPR-WINDOW-NULL-ORDER-1)**
+
+- **repark** — **FIXED 2026-11-12.** A window `ORDER BY` inside `F.expr` (in `select` or
+  `withColumn`), and the `ORDER BY` of a scalar subquery inside one, place NULLs first for `ASC` and
+  last for `DESC` when the text states no placement; an explicit `NULLS FIRST` / `NULLS LAST` wins.
+  Over `(1, 10), (2, NULL), (3, 30)`, `F.expr('row_number() OVER (ORDER BY m DESC)')` gives row 1 to
+  id 3, and the dedup `withColumn('r', …).filter('r = 1')` keeps id 3. Before the fix both directions
+  were reversed (DataFusion's `nulls_max` default), and the dedup kept the NULL row. The native
+  `repark.sql()` door keeps its own dialect (`nulls_max`), by owner ruling.
+- **Apache Spark** — NULLs first for `ASC`, last for `DESC`; row 1 to id 3; the dedup keeps id 3.
+  *(oracle: recorded — PySpark 4.1.2 `local[2]`, 2026-11-12, 1,362 cells on INT, STRING and DOUBLE
+  keys: nine window functions, the dedup, the scalar subquery and the controls.)*
+- **Pin** —
+  `python/repark/tests/functions/test_fexpr_window_null_order_1.py::test_every_recorded_cell_answers_as_recorded`
+  and `crates/repark-python/src/column/expr_tests.rs::fragment_order_by_takes_spark_null_placement_unless_explicit`.
+- **Rationale** — FIXED. The fragment context (`build_expr_context`) now sets DataFusion's
+  `default_null_ordering` to `nulls_min`; the Spark door already wrote the placement into the AST.
+  Card: [FEXPR-WINDOW-NULL-ORDER-1](../task/roadmap/mid-term/fexpr-window-null-order-1-card-2026-11-12.md),
+  with three findings outside the unit (aggregate `ORDER BY` accepted where Spark refuses, `WITHIN
+  GROUP` coverage, `F.expr('k DESC')`).
 
 ### FN-APPROXPCT-1 — `approx_percentile` / `percentile_approx` interpolate to DOUBLE — **FIXED 2026-09-03 (FN-FIX-1)**
 

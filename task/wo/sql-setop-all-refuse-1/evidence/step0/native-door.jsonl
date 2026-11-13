@@ -1,0 +1,87 @@
+{"door": "native", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[1], [1], [1], [2], [2]], "shape": "top"}
+{"door": "native", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[1], [1], [1], [2], [2]], "shape": "cte"}
+{"door": "native", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[5]], "shape": "scalar"}
+{"door": "native", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[1], [2], [2]], "shape": "in"}
+{"create": {"kind": "rows", "rows": []}, "door": "native", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[1], [1], [1], [2], [2]], "shape": "temp-view"}
+{"class": "AnalysisException", "create": {"class": "PySparkException", "kind": "refused", "text": "Unexpected => register_table does not support tables with data."}, "door": "native", "group": "refuse", "kind": "refused", "op": "INTERSECT ALL", "shape": "persistent-view", "text": "Error during planning: table 'ice.ns.vp_6' not found"}
+{"door": "native", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[1], [1], [1], [2], [2]], "shape": "iceberg-source"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "native", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[5]], "shape": "insert", "stored": [[1], [1], [1], [2], [2]]}
+{"after": {"exists": false, "snapshots": null}, "before": {"exists": false, "snapshots": null}, "class": "PySparkException", "door": "native", "group": "refuse", "kind": "refused", "op": "INTERSECT ALL", "shape": "ctas", "stored": "AnalysisException", "text": "Unexpected => register_table does not support tables with data."}
+{"after": {"exists": true, "snapshots": 0}, "before": {"exists": true, "snapshots": 0}, "class": "ParseException", "door": "native", "group": "refuse", "kind": "refused", "op": "INTERSECT ALL", "shape": "merge", "stored": [], "text": "SQL error: ParserError(\"Expected: VALUES, found: * at Line: 1, Column: 124\")"}
+{"door": "native", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[1], [1], [1], [2], [2], [9]], "shape": "union-nested"}
+{"door": "native", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": "elided", "shape": "explain"}
+{"door": "native", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[4]], "shape": "top"}
+{"door": "native", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[4]], "shape": "cte"}
+{"door": "native", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[1]], "shape": "scalar"}
+{"door": "native", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [], "shape": "in"}
+{"create": {"kind": "rows", "rows": []}, "door": "native", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[4]], "shape": "temp-view"}
+{"class": "AnalysisException", "create": {"class": "PySparkException", "kind": "refused", "text": "Unexpected => register_table does not support tables with data."}, "door": "native", "group": "refuse", "kind": "refused", "op": "EXCEPT ALL", "shape": "persistent-view", "text": "Error during planning: table 'ice.ns.vp_18' not found"}
+{"door": "native", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[4]], "shape": "iceberg-source"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "native", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[1]], "shape": "insert", "stored": [[4]]}
+{"after": {"exists": false, "snapshots": null}, "before": {"exists": false, "snapshots": null}, "class": "PySparkException", "door": "native", "group": "refuse", "kind": "refused", "op": "EXCEPT ALL", "shape": "ctas", "stored": "AnalysisException", "text": "Unexpected => register_table does not support tables with data."}
+{"after": {"exists": true, "snapshots": 0}, "before": {"exists": true, "snapshots": 0}, "class": "ParseException", "door": "native", "group": "refuse", "kind": "refused", "op": "EXCEPT ALL", "shape": "merge", "stored": [], "text": "SQL error: ParserError(\"Expected: VALUES, found: * at Line: 1, Column: 121\")"}
+{"door": "native", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[4], [9]], "shape": "union-nested"}
+{"door": "native", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": "elided", "shape": "explain"}
+{"class": "UnsupportedOperationException", "door": "native", "group": "refuse", "kind": "refused", "op": "MINUS ALL", "shape": "top", "text": "This feature is not implemented: MINUS ALL not implemented"}
+{"class": "UnsupportedOperationException", "door": "native", "group": "refuse", "kind": "refused", "op": "MINUS ALL", "shape": "cte", "text": "This feature is not implemented: MINUS ALL not implemented"}
+{"class": "UnsupportedOperationException", "door": "native", "group": "refuse", "kind": "refused", "op": "MINUS ALL", "shape": "scalar", "text": "This feature is not implemented: MINUS ALL not implemented"}
+{"class": "UnsupportedOperationException", "door": "native", "group": "refuse", "kind": "refused", "op": "MINUS ALL", "shape": "in", "text": "This feature is not implemented: MINUS ALL not implemented"}
+{"class": "AnalysisException", "create": {"class": "UnsupportedOperationException", "kind": "refused", "text": "This feature is not implemented: MINUS ALL not implemented"}, "door": "native", "group": "refuse", "kind": "refused", "op": "MINUS ALL", "shape": "temp-view", "text": "Error during planning: table 'datafusion.public.vt_29' not found"}
+{"class": "AnalysisException", "create": {"class": "UnsupportedOperationException", "kind": "refused", "text": "This feature is not implemented: MINUS ALL not implemented"}, "door": "native", "group": "refuse", "kind": "refused", "op": "MINUS ALL", "shape": "persistent-view", "text": "Error during planning: table 'ice.ns.vp_30' not found"}
+{"class": "UnsupportedOperationException", "door": "native", "group": "refuse", "kind": "refused", "op": "MINUS ALL", "shape": "iceberg-source", "text": "This feature is not implemented: MINUS ALL not implemented"}
+{"after": {"exists": true, "snapshots": 0}, "before": {"exists": true, "snapshots": 0}, "class": "UnsupportedOperationException", "door": "native", "group": "refuse", "kind": "refused", "op": "MINUS ALL", "shape": "insert", "stored": [], "text": "This feature is not implemented: MINUS ALL not implemented"}
+{"after": {"exists": false, "snapshots": null}, "before": {"exists": false, "snapshots": null}, "class": "UnsupportedOperationException", "door": "native", "group": "refuse", "kind": "refused", "op": "MINUS ALL", "shape": "ctas", "stored": "AnalysisException", "text": "This feature is not implemented: MINUS ALL not implemented"}
+{"after": {"exists": true, "snapshots": 0}, "before": {"exists": true, "snapshots": 0}, "class": "ParseException", "door": "native", "group": "refuse", "kind": "refused", "op": "MINUS ALL", "shape": "merge", "stored": [], "text": "SQL error: ParserError(\"Expected: VALUES, found: * at Line: 1, Column: 120\")"}
+{"class": "UnsupportedOperationException", "door": "native", "group": "refuse", "kind": "refused", "op": "MINUS ALL", "shape": "union-nested", "text": "This feature is not implemented: MINUS ALL not implemented"}
+{"class": "UnsupportedOperationException", "door": "native", "group": "refuse", "kind": "refused", "op": "MINUS ALL", "rows": "elided", "shape": "explain", "text": "This feature is not implemented: MINUS ALL not implemented"}
+{"door": "native", "group": "spelling", "kind": "rows", "op": "intersect all", "rows": [[1], [1], [1], [2], [2]], "shape": "top"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "native", "group": "spelling", "kind": "rows", "op": "intersect all", "rows": [[5]], "shape": "insert", "stored": [[1], [1], [1], [2], [2]]}
+{"door": "native", "group": "spelling", "kind": "rows", "op": "Intersect All", "rows": [[1], [1], [1], [2], [2]], "shape": "top"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "native", "group": "spelling", "kind": "rows", "op": "Intersect All", "rows": [[5]], "shape": "insert", "stored": [[1], [1], [1], [2], [2]]}
+{"door": "native", "group": "spelling", "kind": "rows", "op": "except all", "rows": [[4]], "shape": "top"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "native", "group": "spelling", "kind": "rows", "op": "except all", "rows": [[1]], "shape": "insert", "stored": [[4]]}
+{"door": "native", "group": "spelling", "kind": "rows", "op": "ExCePt AlL", "rows": [[4]], "shape": "top"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "native", "group": "spelling", "kind": "rows", "op": "ExCePt AlL", "rows": [[1]], "shape": "insert", "stored": [[4]]}
+{"class": "UnsupportedOperationException", "door": "native", "group": "spelling", "kind": "refused", "op": "minus all", "shape": "top", "text": "This feature is not implemented: MINUS ALL not implemented"}
+{"after": {"exists": true, "snapshots": 0}, "before": {"exists": true, "snapshots": 0}, "class": "UnsupportedOperationException", "door": "native", "group": "spelling", "kind": "refused", "op": "minus all", "shape": "insert", "stored": [], "text": "This feature is not implemented: MINUS ALL not implemented"}
+{"class": "UnsupportedOperationException", "door": "native", "group": "spelling", "kind": "refused", "op": "MiNuS aLl", "shape": "top", "text": "This feature is not implemented: MINUS ALL not implemented"}
+{"after": {"exists": true, "snapshots": 0}, "before": {"exists": true, "snapshots": 0}, "class": "UnsupportedOperationException", "door": "native", "group": "spelling", "kind": "refused", "op": "MiNuS aLl", "shape": "insert", "stored": [], "text": "This feature is not implemented: MINUS ALL not implemented"}
+{"door": "native", "group": "spelling", "kind": "rows", "op": "INTERSECT /* gap */ ALL", "rows": [[1], [1], [1], [2], [2]], "shape": "top"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "native", "group": "spelling", "kind": "rows", "op": "INTERSECT /* gap */ ALL", "rows": [[5]], "shape": "insert", "stored": [[1], [1], [1], [2], [2]]}
+{"door": "native", "group": "spelling", "kind": "rows", "op": "EXCEPT\n  ALL", "rows": [[4]], "shape": "top"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "native", "group": "spelling", "kind": "rows", "op": "EXCEPT\n  ALL", "rows": [[1]], "shape": "insert", "stored": [[4]]}
+{"door": "native", "group": "control", "kind": "rows", "op": "UNION ALL", "rows": [[1], [1], [1], [1], [2], [2], [2], [2], [3], [4]], "shape": "top"}
+{"door": "native", "group": "control", "kind": "rows", "op": "UNION ALL", "rows": [[1], [1], [1], [1], [2], [2], [2], [2], [3], [4]], "shape": "cte"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "native", "group": "control", "kind": "rows", "op": "UNION ALL", "rows": [[10]], "shape": "insert", "stored": [[1], [1], [1], [1], [2], [2], [2], [2], [3], [4]]}
+{"after": {"exists": false, "snapshots": null}, "before": {"exists": false, "snapshots": null}, "class": "PySparkException", "door": "native", "group": "control", "kind": "refused", "op": "UNION ALL", "shape": "ctas", "stored": "AnalysisException", "text": "Unexpected => register_table does not support tables with data."}
+{"door": "native", "group": "control", "kind": "rows", "op": "UNION", "rows": [[1], [2], [3], [4]], "shape": "top"}
+{"door": "native", "group": "control", "kind": "rows", "op": "UNION", "rows": [[1], [2], [3], [4]], "shape": "cte"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "native", "group": "control", "kind": "rows", "op": "UNION", "rows": [[4]], "shape": "insert", "stored": [[1], [2], [3], [4]]}
+{"after": {"exists": true, "snapshots": 0}, "before": {"exists": false, "snapshots": null}, "door": "native", "group": "control", "kind": "rows", "op": "UNION", "rows": [], "shape": "ctas", "stored": []}
+{"door": "native", "group": "control", "kind": "rows", "op": "INTERSECT", "rows": [[1], [2]], "shape": "top"}
+{"door": "native", "group": "control", "kind": "rows", "op": "INTERSECT", "rows": [[1], [2]], "shape": "cte"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "native", "group": "control", "kind": "rows", "op": "INTERSECT", "rows": [[2]], "shape": "insert", "stored": [[1], [2]]}
+{"after": {"exists": true, "snapshots": 0}, "before": {"exists": false, "snapshots": null}, "door": "native", "group": "control", "kind": "rows", "op": "INTERSECT", "rows": [], "shape": "ctas", "stored": []}
+{"door": "native", "group": "control", "kind": "rows", "op": "EXCEPT", "rows": [[4]], "shape": "top"}
+{"door": "native", "group": "control", "kind": "rows", "op": "EXCEPT", "rows": [[4]], "shape": "cte"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "native", "group": "control", "kind": "rows", "op": "EXCEPT", "rows": [[1]], "shape": "insert", "stored": [[4]]}
+{"after": {"exists": true, "snapshots": 0}, "before": {"exists": false, "snapshots": null}, "door": "native", "group": "control", "kind": "rows", "op": "EXCEPT", "rows": [], "shape": "ctas", "stored": []}
+{"door": "native", "group": "control", "kind": "rows", "op": "EXCEPT DISTINCT", "rows": [[4]], "shape": "top"}
+{"door": "native", "group": "control", "kind": "rows", "op": "EXCEPT DISTINCT", "rows": [[4]], "shape": "cte"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "native", "group": "control", "kind": "rows", "op": "EXCEPT DISTINCT", "rows": [[1]], "shape": "insert", "stored": [[4]]}
+{"after": {"exists": true, "snapshots": 0}, "before": {"exists": false, "snapshots": null}, "door": "native", "group": "control", "kind": "rows", "op": "EXCEPT DISTINCT", "rows": [], "shape": "ctas", "stored": []}
+{"door": "native", "group": "control", "kind": "rows", "op": "INTERSECT DISTINCT", "rows": [[1], [2]], "shape": "top"}
+{"door": "native", "group": "control", "kind": "rows", "op": "INTERSECT DISTINCT", "rows": [[1], [2]], "shape": "cte"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "native", "group": "control", "kind": "rows", "op": "INTERSECT DISTINCT", "rows": [[2]], "shape": "insert", "stored": [[1], [2]]}
+{"after": {"exists": true, "snapshots": 0}, "before": {"exists": false, "snapshots": null}, "door": "native", "group": "control", "kind": "rows", "op": "INTERSECT DISTINCT", "rows": [], "shape": "ctas", "stored": []}
+{"class": "UnsupportedOperationException", "door": "native", "group": "control", "kind": "refused", "op": "MINUS", "shape": "top", "text": "This feature is not implemented: MINUS not implemented"}
+{"class": "UnsupportedOperationException", "door": "native", "group": "control", "kind": "refused", "op": "MINUS", "shape": "cte", "text": "This feature is not implemented: MINUS not implemented"}
+{"after": {"exists": true, "snapshots": 0}, "before": {"exists": true, "snapshots": 0}, "class": "UnsupportedOperationException", "door": "native", "group": "control", "kind": "refused", "op": "MINUS", "shape": "insert", "stored": [], "text": "This feature is not implemented: MINUS not implemented"}
+{"after": {"exists": false, "snapshots": null}, "before": {"exists": false, "snapshots": null}, "class": "UnsupportedOperationException", "door": "native", "group": "control", "kind": "refused", "op": "MINUS", "shape": "ctas", "stored": "AnalysisException", "text": "This feature is not implemented: MINUS not implemented"}
+{"door": "native", "group": "text-control", "kind": "rows", "op": "string-literal", "rows": [["a INTERSECT ALL b"]], "shape": "top"}
+{"door": "native", "group": "text-control", "kind": "rows", "op": "block-comment", "rows": [[1]], "shape": "top"}
+{"door": "native", "group": "text-control", "kind": "rows", "op": "line-comment", "rows": [[1]], "shape": "top"}
+{"door": "native", "group": "text-control", "kind": "rows", "op": "quoted-ident", "rows": [[1]], "shape": "top"}
+{"door": "native", "group": "text-control", "kind": "rows", "op": "all-prefix-ident", "rows": [[1], [2]], "shape": "top"}
+{"door": "native", "group": "workaround", "kind": "rows", "op": "numbered-intersect", "rows": [[1], [2], [2]], "shape": "top"}
+{"door": "native", "group": "workaround", "kind": "rows", "op": "numbered-except", "rows": [[1], [1], [4]], "shape": "top"}
