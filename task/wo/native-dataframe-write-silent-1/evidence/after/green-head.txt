@@ -1,0 +1,9 @@
+facade pin on the head (release build): same command
+2448 passed, 6 warnings in 47.80s
+
+Rust pins on the head: same command
+test session_write_options::tests::copy_destination_strips_only_an_exact_staging_segment ... ok
+test session_write_options::tests::native_pending_copy_refuses_naming_the_destination_and_writes_nothing ... ok
+test session_write_options::tests::native_pending_inserts_refuse_before_any_effect ... ok
+test session_write_options::tests::native_reads_and_spark_door_writes_pass_the_guard ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 178 filtered out; finished in 0.35s

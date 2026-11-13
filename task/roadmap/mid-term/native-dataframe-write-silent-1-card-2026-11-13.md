@@ -6,6 +6,9 @@
 **Status:** filed 2026-11-13, not dispatched. Severity **S1**, a silent lost write, as rated at filing. The verifier
 recorded it as S2 and outside its unit's scope.
 **Ruled 2026-11-13** (below): measure first, then a refusal guard; it rides v1.5.7.
+**FIXED 2026-11-13** by this unit (branch `fix/native-dataframe-write-silent-1`): every
+native-door DataFrame write that would store nothing refuses before any effect. See "Step 0" and
+"Fix" below.
 
 ## Measured
 
@@ -48,3 +51,64 @@ The refusal guard above, after the measured table. No source gives the cause.
 ## Close
 
 Each of the three calls either stores Spark's rows or refuses loudly before any effect, pinned per catalog kind.
+
+## Step 0 (measured, main `1d9d2808`)
+
+Every writer verb was run on every target kind the native door reaches, with seven frame shapes:
+1568 native cells and 868 Spark-door cells. The table is
+[evidence/map.md](../../wo/native-dataframe-write-silent-1/evidence/map.md); the raw cells are
+under its `step0/`.
+
+- **SILENT, 308 cells.** These return success and leave rows, snapshots and files unchanged:
+  - on existing Iceberg tables (`ice` memory, `hd` hadoop): `saveAsTable` append,
+    `format("iceberg").save(name)` append and overwrite, `insertInto` (both forms, and with
+    `partitionBy`), `writeTo().append()` (plain, `tableProperty`, `partitionedBy`) and
+    `overwritePartitions()`;
+  - on in-memory tables: `insertInto`;
+  - on a new path: every Parquet/CSV/JSON mode and spelling, plus an existing path's append.
+- **S1, 63 cells.** A Parquet/CSV/JSON overwrite of an existing path, plain, partitioned or
+  through `save`, deletes the rows already there and leaves one empty file.
+- **28 cells** of `partitionBy(c).insertInto` return unchanged where Spark refuses.
+- **No Iceberg overwrite removes rows.**
+- **Every other verb refuses before any effect, or stores:** `saveAsTable` ignore as a no-op,
+  and `.text`.
+- **Not measured:**
+  - A partitioned Iceberg table cannot be reached on the native door.
+  - Glue, S3 Tables and REST do not run locally.
+- **Cause:**
+  - `writer_layout.run_through_temp_view` (`writer_layout.py:112`) discards the frame that
+    `session_sql_with_write_options` returns.
+  - On the native door, `DataFusionDialect` → `ctx.execute_logical_plan`
+    (`pre_execute.rs:57`) leaves a `Dml` insert or `Copy` lazy, so that discarded frame is
+    still pending.
+  - The Spark door collects such statements (`spark_ast.rs:271`).
+  - For the path S1, the empty staging directory then replaces the destination
+    (`writer_readwriter.py:429-466`).
+
+## Fix
+
+- **Seat:** the pyfunction `session_sql_with_write_options`
+  (`crates/repark-python/src/session_write_options.rs`), the facade writers' only entry. When the
+  planned frame's root is a pending write (a `Dml` insert or a `Copy`), it raises
+  `UnsupportedOperationException` before anything runs.
+- **The message names the target:**
+  - a table by `TableReference::to_quoted_string()`;
+  - a path by the user's destination, recovered from the staging segment
+    `repark-staging-<32 hex>-<name>` only on an exact match, with the raw URL otherwise.
+- **The workaround follows the insert:**
+  - an append points to a collected native `INSERT INTO … SELECT` or a `ReparkSession` frame;
+  - a static overwrite points to `INSERT OVERWRITE` for an Iceberg table, or a `ReparkSession`
+    frame;
+  - `overwritePartitions` and paths point to a `ReparkSession` frame.
+- Plain `repark.sql()` and the Spark door do not pass the check, and neither does `mergeInto`.
+  `mergeInto` keeps its loud native refusal as a control pin.
+- **Pins:**
+  - `crates/repark-python/src/session_write_options_tests.rs`;
+  - `python/repark/tests/writes/test_native_dataframe_write_silent_1.py`, over all 2436 cells:
+    the 399 guarded cells refuse with the exact text and leave rows, snapshots, files and
+    staging unchanged, and every other cell keeps main's outcome.
+- **Residue, recorded for the records batch:** `note_local_write_root` keeps the staging path
+  allow-listed after a refusal. Also recorded there: the S3 overwrite deletes before it copies
+  (`path_write.rs:403`), a native path containing `'` is refused before the seat, and the Spark
+  door stores `partitionBy(c).insertInto` rows. The list is in
+  [evidence/map.md](../../wo/native-dataframe-write-silent-1/evidence/map.md).

@@ -3,8 +3,8 @@
 ## Purpose
 
 Step 0 of NATIVE-DATAFRAME-WRITE-SILENT-1 on main `1d9d2808`. It covers every DataFrame writer
-verb on every target kind the native door reaches, with four frame shapes, and the same verbs on
-RePark's Spark door. A diagnostic run collects the frame the writer drops. The table also holds
+verb on every target kind the native door reaches, with seven frame shapes, and the same verbs
+on RePark's Spark door (round 2 adds the inventory critic's spellings). A diagnostic run collects the frame the writer drops. The table also holds
 the partitioned-table reach probe and the measured workarounds.
 
 ## Contents

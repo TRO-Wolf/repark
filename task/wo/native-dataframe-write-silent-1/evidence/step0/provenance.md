@@ -15,7 +15,8 @@
   partitioned pool for the reach probe.
 - **Data.** Source `src = {(9, 1), (10, 3)}` and `src2 = {(11, 1)}` (`id INT, p INT`). Every
   existing target starts as `{(7, 1), (8, 2)}`. The frames are the source itself (`sql`),
-  `filter("id >= 9")`, `select("id", "p")` and `union(src2)`. `writeTo(...).overwrite` uses
+  `filter("id >= 9")`, `select("id", "p")`, `union(src2)`, `cache()`, `localCheckpoint()` and a
+  self-join on `id`. `writeTo(...).overwrite` uses
   `functions.expr("p = 1")`. An existing path target is seeded with one file of the target rows
   in the verb's format. The text verbs write `CAST(id AS STRING) AS value`.
 - **Each cell** builds a fresh target. It records the call's outcome, the rows before and after,
@@ -27,7 +28,7 @@
   spark-door.jsonl`, then the same two with `CELLS_COLLECT_RETURNED=1` into the
   `*-collect-returned.jsonl` files, then `render.py "<title>" <jsonl> <jsonl> > table.md` (and
   `table-collect-returned.md`). The warehouse path in the committed jsonl is replaced by
-  `<warehouse>`. Each run took about seven seconds.
+  `<warehouse>`. Each run took under thirty seconds.
 - **The diagnostic mode.** `CELLS_COLLECT_RETURNED=1` wraps
   `repark._native.session_sql_with_write_options` so the wrapper collects (`count()`) the frame it
   returns before the writer drops it. It shows that the dropped frame is the pending write: with
@@ -35,5 +36,14 @@
   `insertInto(overwrite=True)` cells on in-memory tables, which then refuse loudly
   (`Insert Overwrite not implemented for MemoryTable yet`). The Spark door changes in no cell, so
   its router never returns a pending write.
+- **Round 2 (after the inventory critic, 2026-11-13).** This round adds:
+  - `format("iceberg").mode("overwrite").save(name)`, `partitionBy(c).insertInto`,
+    `writeTo().tableProperty().append()`, `writeTo().partitionedBy().append()` and a native
+    `mergeInto(...).whenNotMatched().insertAll().merge()` control;
+  - the default, `error`, `errorifexists` and `ignore` path modes, `partitionBy(c)` path
+    writes, `format("parquet").save(p)`, `save(p, format=, mode=)` and
+    `format("parquet").option("path", p).save()`;
+  - the three frame shapes above.
+  The committed jsonl and tables are the round-2 runs: 1568 native and 868 Spark-door cells.
 - **After the runs**, `ruff format` reflowed `cells.py` and the `functions as F` import was
   renamed for `N812`. The measuring logic is unchanged.

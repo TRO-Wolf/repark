@@ -13,7 +13,16 @@ E_ROWS = [(7, 1), (8, 2)]
 SRC_ROWS = [(9, 1), (10, 3)]
 SRC2_ROWS = [(11, 1)]
 REFUSE = "refuse"
-APPENDS = ("sat_append", "save_name", "save_option", "ins_append", "v2_append")
+APPENDS = (
+    "sat_append",
+    "save_name",
+    "save_option",
+    "ins_append",
+    "v2_append",
+    "v2_property_append",
+    "v2_partitioned_append",
+    "merge_insert_all",
+)
 CREATES_ON_NEW = ("sat_append", "save_name", "save_option")
 VIEW_KINDS = ("view", "temp_view")
 
@@ -40,6 +49,11 @@ VERBS: dict[str, Callable[[Any, str], None]] = {
     "v2_replace": lambda f, t: f.writeTo(t).replace(),
     "save_name": lambda f, t: f.write.format("iceberg").mode("append").save(t),
     "save_option": lambda f, t: f.write.format("iceberg").mode("append").option("path", t).save(),
+    "save_name_overwrite": lambda f, t: f.write.format("iceberg").mode("overwrite").save(t),
+    "ins_partition_by": lambda f, t: f.write.partitionBy("p").insertInto(t),
+    "v2_property_append": lambda f, t: f.writeTo(t).tableProperty("k", "v").append(),
+    "v2_partitioned_append": lambda f, t: f.writeTo(t).partitionedBy("p").append(),
+    "merge_insert_all": lambda f, t: f.mergeInto(t, "id").whenNotMatched().insertAll().merge(),
 }
 PATH_VERBS: dict[str, Callable[[Any, str], None]] = {
     "save_path": lambda f, t: f.write.format("iceberg").mode("append").save(t),
@@ -54,6 +68,25 @@ PATH_VERBS: dict[str, Callable[[Any, str], None]] = {
     ),
     "text_overwrite": lambda f, t: (
         f.selectExpr("CAST(id AS STRING) AS value").write.mode("overwrite").text(t)
+    ),
+    "parquet_default": lambda f, t: f.write.parquet(t),
+    "parquet_error": lambda f, t: f.write.mode("error").parquet(t),
+    "parquet_errorifexists": lambda f, t: f.write.mode("errorifexists").parquet(t),
+    "parquet_ignore": lambda f, t: f.write.mode("ignore").parquet(t),
+    "csv_default": lambda f, t: f.write.option("header", True).csv(t),
+    "json_default": lambda f, t: f.write.json(t),
+    "parquet_partitioned_append": lambda f, t: f.write.partitionBy("p").mode("append").parquet(t),
+    "parquet_partitioned_overwrite": lambda f, t: (
+        f.write.partitionBy("p").mode("overwrite").parquet(t)
+    ),
+    "csv_partitioned_overwrite": lambda f, t: (
+        f.write.partitionBy("p").mode("overwrite").option("header", True).csv(t)
+    ),
+    "json_partitioned_overwrite": lambda f, t: f.write.partitionBy("p").mode("overwrite").json(t),
+    "parquet_format_save": lambda f, t: f.write.format("parquet").mode("overwrite").save(t),
+    "csv_save_kwargs": lambda f, t: f.write.save(t, format="csv", mode="overwrite", header=True),
+    "parquet_option_path_save": lambda f, t: (
+        f.write.format("parquet").mode("overwrite").option("path", t).save()
     ),
 }
 PATH_KINDS = ("path_new", "path_existing")
@@ -70,8 +103,8 @@ NATIVE_TARGETS = (
     "temp_view",
 )
 SPARK_TARGETS = ("hd_existing", "hd_partitioned", "hd_new", "temp_view")
-FRAMES = ("sql", "filter", "select", "union")
-POOL_SIZE = 15 * 4
+FRAMES = ("sql", "filter", "select", "union", "cache", "local_checkpoint", "join")
+POOL_SIZE = len(VERBS) * len(FRAMES)
 RETURNED: list[Any] = []
 
 
@@ -114,8 +147,21 @@ def table_files(table_dir: Path) -> dict[str, Any]:
 
 
 def path_format(verb: str) -> str:
-    head = verb.split("_")[0]
-    return "iceberg" if head == "save" else head
+    if verb == "save_path":
+        return "iceberg"
+    for fmt in ("csv", "json", "text"):
+        if verb.startswith(fmt):
+            return fmt
+    return "parquet"
+
+
+def path_mode(verb: str) -> str:
+    for mode in ("append", "overwrite", "ignore", "errorifexists", "error"):
+        if verb.endswith(mode):
+            return mode
+    if verb.endswith("_default"):
+        return "error"
+    return "overwrite"
 
 
 def path_rows(path: Path, fmt: str) -> list[list[int]] | None:
@@ -139,7 +185,10 @@ def path_rows(path: Path, fmt: str) -> list[list[int]] | None:
             table = pjson.read_json(file)
         else:
             table = pq.read_table(file)
-        rows.extend([row["id"], row["p"]] for row in table.to_pylist())
+        partition = [part for part in file.parts if part.startswith("p=")]
+        for row in table.to_pylist():
+            value = row.get("p", int(partition[-1][2:]) if partition else None)
+            rows.append([row["id"], value])
     return sorted(rows)
 
 
@@ -172,14 +221,21 @@ def expected_rows(
     verb: str, kind: str, before: list[list[int]] | None, frame: list[list[int]]
 ) -> Any:
     if kind in PATH_KINDS:
+        mode = path_mode(verb)
         if verb == "save_path":
             return REFUSE
-        if verb.endswith("_append"):
+        if before is not None and mode in ("error", "errorifexists"):
+            return REFUSE
+        if before is not None and mode == "ignore":
+            return before
+        if mode == "append":
             return sorted((before or []) + frame)
         return sorted(frame)
     exists = before is not None
     current = before or []
     partitioned = kind == "hd_partitioned"
+    if verb == "ins_partition_by":
+        return REFUSE
     if verb in APPENDS:
         if exists:
             return sorted(current + frame)
@@ -192,7 +248,7 @@ def expected_rows(
         return current if exists else sorted(frame)
     if not exists:
         return REFUSE
-    if verb in ("ins_overwrite", "v2_replace"):
+    if verb in ("ins_overwrite", "v2_replace", "save_name_overwrite"):
         return sorted(frame)
     if verb == "v2_overwrite":
         return sorted([row for row in current if row[1] != 1] + frame)
@@ -291,6 +347,9 @@ class Door:
             "filter": (base.filter("id >= 9"), SRC_ROWS),
             "select": (base.select("id", "p"), SRC_ROWS),
             "union": (base.union(other), SRC_ROWS + SRC2_ROWS),
+            "cache": (base.cache(), SRC_ROWS),
+            "local_checkpoint": (base.localCheckpoint(), SRC_ROWS),
+            "join": (base.alias("a").join(base.alias("b"), "id").select("id", "a.p"), SRC_ROWS),
         }
 
     def make_target(self, kind: str, verb: str) -> tuple[str, Path | None]:

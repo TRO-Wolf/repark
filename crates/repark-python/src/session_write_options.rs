@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use datafusion::logical_expr::dml::InsertOp;
+use datafusion::logical_expr::{LogicalPlan, WriteOp};
 use pyo3::prelude::*;
 
 use crate::dataframe::PyDataFrame;
@@ -62,8 +64,94 @@ pub fn session_sql_with_write_options(
                 )
             })
             .map_err(crate::to_py_err)?;
+        if let Some(message) = pending_write_refusal(df.logical_plan(), force_dynamic_overwrite) {
+            return Err(crate::to_py_err(repark_core::Error::NotImplemented(
+                message,
+            )));
+        }
         Ok(PyDataFrame::new(df, runtime))
     })
+}
+
+const PENDING_WRITE_CARD: &str = "NATIVE-DATAFRAME-WRITE-SILENT-1";
+
+const STAGING_PREFIX: &str = "repark-staging-";
+
+const STAGING_HEX_LEN: usize = 32;
+
+const STAGING_UNNAMED: &str = "out";
+
+pub(crate) fn pending_write_refusal(plan: &LogicalPlan, dynamic_overwrite: bool) -> Option<String> {
+    match plan {
+        LogicalPlan::Dml(dml) => match dml.op {
+            WriteOp::Insert(op) => Some(table_refusal(
+                &dml.table_name.to_quoted_string(),
+                op,
+                dynamic_overwrite,
+            )),
+            _ => None,
+        },
+        LogicalPlan::Copy(copy) => Some(path_refusal(&copy_destination(&copy.output_url))),
+        _ => None,
+    }
+}
+
+fn table_refusal(target: &str, op: InsertOp, dynamic_overwrite: bool) -> String {
+    let workaround = match op {
+        InsertOp::Append => format!(
+            "run INSERT INTO {target} SELECT ... through repark.sql(...) and collect the result, \
+             or write the frame from a ReparkSession"
+        ),
+        InsertOp::Overwrite | InsertOp::Replace if dynamic_overwrite => {
+            "write the frame from a ReparkSession, whose overwritePartitions replaces only the \
+             frame's partitions"
+                .to_string()
+        }
+        InsertOp::Overwrite | InsertOp::Replace => format!(
+            "to replace an Iceberg table's rows, run INSERT OVERWRITE {target} SELECT ... through \
+             repark.sql(...) and collect the result; otherwise write the frame from a \
+             ReparkSession"
+        ),
+    };
+    format!(
+        "DataFrame.write and writeTo cannot write a repark.sql() frame into the table {target}: \
+         the write would return without storing any rows, so nothing was written; {workaround} \
+         ({PENDING_WRITE_CARD})"
+    )
+}
+
+fn path_refusal(path: &str) -> String {
+    format!(
+        "DataFrame.write cannot write a repark.sql() frame to the path {path}: the write would \
+         return without storing any rows, so nothing was written; write the frame from a \
+         ReparkSession ({PENDING_WRITE_CARD})"
+    )
+}
+
+pub(crate) fn copy_destination(url: &str) -> String {
+    let trimmed = url.strip_suffix('/').unwrap_or(url);
+    let (parent, segment) = match trimmed.rsplit_once('/') {
+        Some((parent, segment)) => (Some(parent), segment),
+        None => (None, trimmed),
+    };
+    match (staged_name(segment), parent) {
+        (Some(name), Some(parent)) => format!("{parent}/{name}"),
+        (Some(name), None) => name.to_string(),
+        (None, _) => url.to_string(),
+    }
+}
+
+fn staged_name(segment: &str) -> Option<&str> {
+    let rest = segment.strip_prefix(STAGING_PREFIX)?;
+    let hex = rest.get(..STAGING_HEX_LEN)?;
+    if !hex
+        .bytes()
+        .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
+        return None;
+    }
+    let name = rest.get(STAGING_HEX_LEN..)?.strip_prefix('-')?;
+    (!name.is_empty() && name != STAGING_UNNAMED).then_some(name)
 }
 
 #[allow(clippy::missing_errors_doc, clippy::too_many_arguments)]
@@ -153,6 +241,10 @@ fn last_write_doors(session: &PyReparkSession) -> Vec<String> {
         .map(|door| door.id().to_string())
         .collect()
 }
+
+#[cfg(test)]
+#[path = "session_write_options_tests.rs"]
+mod tests;
 
 pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(session_sql_with_write_options, module)?)?;
