@@ -35,3 +35,8 @@ option for that remainder is to pass `min`/`max` arguments through part B's norm
 the Parquet statistics shortcut, so it needs its own cost row.
 
 **Close:** the follow-up unit merges with those pins, and the remainder is fixed or declined by a recorded ruling.
+
+**Follow-up unit halted at step 0 (2026-11-13):** see [MATH-NAN-CANONICAL-1](math-nan-canonical-1-card-2026-11-13.md).
+Its step 0 measured Spark keeping `fff8…` in memory over a column for these producers; the `7ff8…` answers above
+are the folded literal form. The difference is Spark's NaN comparison semantics plus its canonicalising write. The
+seat awaits the owner's choice of (A), (B) or (C).
