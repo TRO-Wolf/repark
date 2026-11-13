@@ -8,5 +8,6 @@ are replaced by `<scratch>`, `<tmp>` and `<home>`. Error texts are cut at 400 ch
 - `repark-1d9d2808-rewrite.jsonl`, `spark-4.1.2-rewrite.jsonl` — leg `rewrite`: the files of two main-written tables before and after one engine's copy-on-write `UPDATE`.
 - `formats-repark-1d9d2808.jsonl`, `formats-spark-4.1.2.jsonl` — `format_cells_probe.py`, legs `formats` then `rewrite`: each table's live files with their manifest entries and decoded data bits.
 - `keys-repark-1d9d2808.jsonl`, `keys-spark-4.1.2.jsonl` — `format_cells_probe.py --tables k1,k2`: the float map-key cells.
+- `repark-e100717f.jsonl`, `repark-e100717f-rewrite.jsonl`, `formats-repark-e100717f.jsonl`, `keys-repark-e100717f.jsonl` — the same legs on the head `e100717f` (fork `d6592644`) release build; the rewrite legs ran on copies written by main's build.
 
 Up: [../map.md](../map.md).

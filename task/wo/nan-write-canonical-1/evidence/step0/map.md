@@ -27,10 +27,14 @@ each engine. The legs ran as `--engine spark --legs doors,nested,plain`, `--engi
    is split across files. `= CAST('NaN' …)` misses the non-canonical rows on RePark's read.
 3. Spark's copy-on-write UPDATE canonicalises the NaN of every row it rewrites, changed or not; main's keeps the bits.
 4. The addendum (`formats.md`): Spark canonicalises Parquet and ORC data files and keeps Avro's raw bits; it canonicalises partition values on all three; it refuses a map with two NaN keys. The seat, corrected after the inventory critic, is in `inventory.md`.
+5. **The head** `e100717f` (fork `d6592644`; `table.md` §5, `formats.md` §4): every Iceberg door and the native door
+   store the canonical NaN on Parquet and ORC, Avro data keeps its bits, and every partitioned door stores one
+   canonical NaN partition value in one file, as Spark does; no non-NaN value differs from main. NAN-PARTITION-RAW-BITS-1
+   and NAN-PARTITION-FILE-SPLIT-1 close on every door measured. A float map key on Parquet or ORC keeps its bits.
 
 - [inventory.md](inventory.md) — every write door with its entry and writer (file:line), how the list was searched, the partition-value sites, and the intended seat.
-- [formats.md](formats.md) — the critic addendum: Parquet, ORC and Avro data files, nested leaves on each, float map keys, and `rewrite_data_files` per format.
-- [table.md](table.md) — the stored bits per door, partitioned and not, against Spark; the nested, rewrite and plain-Parquet cells.
+- [formats.md](formats.md) — the critic addendum: Parquet, ORC and Avro data files, nested leaves on each, float map keys, and `rewrite_data_files` per format; §4 the head.
+- [table.md](table.md) — the stored bits per door, partitioned and not, against Spark; the nested, rewrite and plain-Parquet cells; §5 the head.
 - [write_doors_probe.py](write_doors_probe.py) — the probe: `--engine repark|spark --warehouse <new dir> --out <leg.jsonl> [--legs …] [--only …] [--source …]`.
 - [avro_bits.py](avro_bits.py) — a minimal Avro container reader that keeps float and double bits, and the current-snapshot manifest walk.
 - [format_cells_probe.py](format_cells_probe.py) — the addendum probe: `--engine repark|spark --warehouse <dir> --out <leg.jsonl> [--legs formats|rewrite] [--source <dir>] [--tables k1,k2]`.

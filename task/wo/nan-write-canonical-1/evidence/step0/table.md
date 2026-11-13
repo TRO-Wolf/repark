@@ -117,3 +117,110 @@ it does not rewrite alone. A writer-side seat matches this.
 
 `df.write.parquet(<dir>)` (`plain`): RePark stores the raw bits, Spark (parquet-java's `doubleToLongBits`) stores the
 canonical NaN. This writer is DataFusion's, outside the Iceberg write; it is recorded, not this unit's.
+
+## 5. The head, `e100717f` (fork `d6592644`), after the fix
+
+Re-run 2026-11-13 on the head's release build (`maturin develop --profile release`, module sha256
+`dd1009157ad8375a8e55ab15cae499f1d322e7de8d430a8faaac8289a4a4d2f4`), same legs, scripts and locks as §1; Spark's legs
+are §1's. Rendered by `render_step0.py --repark raw/repark-e100717f.jsonl --spark raw/spark-4.1.2.jsonl --label head`.
+
+**Per partitioned door** (from §1 and the render below). "RAW-BITS-1" is NAN-PARTITION-RAW-BITS-1, "FILE-SPLIT-1" is
+NAN-PARTITION-FILE-SPLIT-1; "canonical on main" means that door already stored one canonical NaN partition value.
+The update doors' file counts include files from earlier statements on both engines.
+
+| door | NaN partition values main → head (Spark) | NaN-partition files main → head (Spark) | `= NaN` d head | RAW-BITS-1 | FILE-SPLIT-1 |
+|---|---|---|---|---|---|
+| `ctas` | 4 → 1 (1) | 4 → 1 (1) | 1–8 | closed | closed |
+| `delete_cow` | 1 → 1 (1) | 3 → 1 (1) | 1–8 | canonical on main | closed |
+| `delete_mor` | 1 → 1 (1) | 3 → 1 (1) | 1–8 | canonical on main | closed |
+| `insert` | 1 → 1 (1) | 3 → 1 (1) | 1–8 | canonical on main | closed |
+| `insert_overwrite` | 3 → 1 (1) | 3 → 1 (1) | 1–8 | closed | closed |
+| `insertinto` | 1 → 1 (1) | 3 → 1 (1) | 1–8 | canonical on main | closed |
+| `merge_insert` | 3 → 1 (1) | 3 → 1 (1) | 1–8 | closed | closed |
+| `merge_update_cow` | 3 → 1 (1) | 3 → 1 (1) | 1–8 | closed | closed |
+| `merge_update_mor` | 3 → 1 (1) | 3 → 1 (1) | 1–8 | closed | closed |
+| `rtas` | 4 → 1 (1) | 4 → 1 (1) | 1–8 | closed | closed |
+| `save_name` | 1 → 1 (1) | 3 → 1 (1) | 1–8 | canonical on main | closed |
+| `saveastable_append` | 1 → 1 (1) | 3 → 1 (1) | 1–8 | canonical on main | closed |
+| `saveastable_overwrite` | 4 → 1 (1) | 4 → 1 (1) | 1–8 | closed | closed |
+| `update_cow` | 2 → 1 (1) | 6 → 5 (5) | 1–8 | closed | closed |
+| `update_mor` | 2 → 1 (1) | 8 → 7 (7) | 1–8 | closed | closed |
+| `writeto_append` | 1 → 1 (1) | 3 → 1 (1) | 1–8 | canonical on main | closed |
+| `writeto_create` | 4 → 1 (1) | 4 → 1 (1) | 1–8 | closed | closed |
+| `writeto_create_or_replace` | 4 → 1 (1) | 4 → 1 (1) | 1–8 | closed | closed |
+| `writeto_overwrite` | 3 → 1 (1) | 3 → 1 (1) | 1–8 | closed | closed |
+| `writeto_overwrite_partitions` | 3 → 1 (1) | 3 → 1 (1) | 1–8 | closed | closed |
+
+**Every door, rendered:**
+
+| table | head NaN bits d / f | Spark NaN bits d / f | controls d, f equal | NaN partition value head / Spark | NaN-partition files head / Spark | `= NaN` d head / Spark | `isnan(d)` head / Spark | NaN count d head / Spark |
+|---|---|---|---|---|---|---|---|---|
+| n_ctas | refused: datafusion engine error: Arrow error: Invalid argument error: column types must match sche | | | | | | | |
+| n_insert | - / - | - / - | yes | - / - | 0 / 0 | - / - | - / - | 0 / 0 |
+| p_ctas | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_delete_cow | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_delete_mor | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_insert | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_insert_overwrite | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_insertinto | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_merge_insert | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_merge_update_cow | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_merge_update_mor | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_path_append | refused: [TABLE_OR_VIEW_NOT_FOUND] The table or view `<scratch>/whh/doors/ns`.p_path_append cannot  | | | | | | | |
+| p_rtas | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_save_name | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_saveastable_append | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_saveastable_overwrite | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_update_cow | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 5 / 5 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_update_mor | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 7 / 7 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 9 / 9 |
+| p_writeto_append | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_writeto_create | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_writeto_create_or_replace | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_writeto_overwrite | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| p_writeto_overwrite_partitions | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | 7ff8000000000000 / 7ff8000000000000 | 1 / 1 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| plain | 7ff8000000000000 7ff8deadbeef0001 fff8000000000000 fff8deadbeef0001 / 7fc00000 7fc00123 ffc00000 ffc00123 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | - / - | - / - | 0 / 0 |
+| u_ctas | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_delete_cow | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_delete_mor | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_insert | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_insert_overwrite | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_insertinto | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_merge_insert | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_merge_update_cow | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_merge_update_mor | 7ff8000000000000 / 7fc00000 | 4000000000000000 7ff8000000000000 / 40000000 7fc00000 | NO | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_path_append | refused: [TABLE_OR_VIEW_NOT_FOUND] The table or view `<scratch>/whh/doors/ns`.u_path_append cannot  | | | | | | | |
+| u_rtas | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_save_name | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_saveastable_append | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_saveastable_overwrite | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_update_cow | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_update_mor | 7ff8000000000000 / 7fc00000 | 3ff8000000000000 7ff0000000000000 7ff8000000000000 bff0000000000000 / 3fc00000 7f800000 7fc00000 bf800000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 9 / 9 |
+| u_writeto_append | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_writeto_create | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_writeto_create_or_replace | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_writeto_overwrite | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+| u_writeto_overwrite_partitions | 7ff8000000000000 / 7fc00000 | 7ff8000000000000 / 7fc00000 | yes | - / - | 0 / 0 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 1,2,3,4,5,6,7,8 / 1,2,3,4,5,6,7,8 | 8 / 8 |
+
+| native table | head NaN bits d / f | controls d | outcome |
+|---|---|---|---|
+| u_native_ctas | - / - | {9: None, 10: None, 11: None, 12: None, 13: None, 14: None} | error repark.sql() does not support CREATE TABLE ... AS SELECT into the Iceberg table nat.ns.u_n |
+| u_native_delete | 7ff8000000000000 / 7fc00000 | {9: '8000000000000000', 10: '0000000000000000', 11: '7ff0000000000000', 12: 'fff0000000000000', 13: None, 14: None} | ok  |
+| u_native_insert | 7ff8000000000000 / 7fc00000 | {9: '8000000000000000', 10: '0000000000000000', 11: '7ff0000000000000', 12: 'fff0000000000000', 13: None, 14: '3ff8000000000000'} | ok  |
+| u_native_insert_partitioned | - / - | {9: None, 10: None, 11: None, 12: None, 13: None, 14: None} | error This feature is not implemented: Hive distribution not supported: PARTITIONED { columns: [ |
+| u_native_merge | - / - | {9: None, 10: None, 11: None, 12: None, 13: None, 14: None} | error This feature is not implemented: Unsupported SQL statement: MERGE INTO nat.ns.u_native_mer |
+| u_native_update | 7ff8000000000000 / 7fc00000 | {9: '8000000000000000', 10: '0000000000000000', 11: '7ff0000000000000', 12: 'fff0000000000000', 13: None, 14: '3ff8000000000000'} | ok  |
+
+- **Stored bits.** Every Iceberg door stores `7ff8000000000000`/`7fc00000` for all eight NaN rows, as Spark does,
+  partitioned or not, and so does the native door's INSERT, UPDATE and DELETE. `= CAST('NaN' …)`, `isnan` and the NaN
+  counts equal Spark's on every door.
+- **No non-NaN value changed.** Rendering the head against main (`--spark raw/repark-1d9d2808.jsonl`) gives
+  "controls equal: yes" on all 45 tables that wrote; the native controls are identical. `u_merge_update_mor`'s "NO"
+  against Spark is §1's merge-on-read note, unchanged from main.
+- **Refusals** are main's: `n_ctas` (the map CTAS), `u_path_append`/`p_path_append`, native CTAS, partitioned
+  native create and native MERGE.
+- **Nested leaves** (`n_insert`): every leaf `7ff8000000000000`/`7fc00000`, row 9 `8000000000000000`/`80000000`, as
+  Spark.
+- **Rewrite cell** (`raw/repark-e100717f-rewrite.jsonl`, sources written by main's build): the head's copy-on-write
+  `UPDATE` of `u_merge_insert` row 14 writes one file whose NaN rows are all canonical, `-0.0` kept; on `p_insert`
+  the rewritten file is canonical and files not rewritten keep their bits. That is Spark's answer in §3.
+- **Plain Parquet path write** (§4) still stores the raw bits; it is DataFusion's writer, outside this unit.
