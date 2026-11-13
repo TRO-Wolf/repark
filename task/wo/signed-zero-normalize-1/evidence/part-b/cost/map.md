@@ -12,8 +12,9 @@
   the base-against-base check), the ratios against `04d84ab9` and `276dc503`, and a per-sample load table.
 - [l4l_run.py](l4l_run.py) — the C-012 like-for-like ratio (PERF-1's work-equal set) per run and pair, from the
   replay harness's per-cell work times. Prepared; not yet run.
-- `cost-raw.jsonl` — the interleaved runs (04d84ab9, 276dc503, head per case per run), written by the lane's runner
-  under the exclusive measure lock; present once the runs finish.
+- `cost-raw.jsonl`, `samples.jsonl`, [summary.md](summary.md), [l4l.md](l4l.md) — the final cost run (`cost3`, 2026-11-13):
+  five rotated runs of 04d84ab9, 04d84ab9-aa, 276dc503 and head (`4442b88f1`) under the exclusive measure lock. Every
+  gate passes except n2 at 1.0583 (base against base 0.9812); the second delta re-measures it.
 
 The C-012 like-for-like set itself has no committed harness (it lives in an uncommitted scratch tree of the
 ATTR-ID-1 lane); see the hand-back.

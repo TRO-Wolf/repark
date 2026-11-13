@@ -34,5 +34,7 @@ Spark 4.1.2 legs, and compared cell by cell with the base (`276dc503`, item 1's 
   literal-skip pin with the shapes tried on both doors (§1a), and the verifiers' note on P5's OB-4 order (§3);
   [mutations.jsonl](mutations.jsonl) holds the per-mutation records.
 - [delta/](delta/map.md) — the verifier delta round (2026-11-13): [delta.md](delta/delta.md) and its Spark and RePark legs.
+- [delta2/](delta2/map.md) — the second delta (2026-11-13, owner's cap exception): [delta2.md](delta2/delta2.md), the n2
+  attribution harness and the final cost run on the round's head.
 
 Up: [../map.md](../map.md).

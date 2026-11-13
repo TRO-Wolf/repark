@@ -2,8 +2,9 @@
 
 **Status:** filed 2026-11-12; the questions were RULED the same day ("Go with the defaults", below). Built on
 `fix/signed-zero-normalize-1-part-b` (2026-11-12); both verifiers FAILED it with no class (a) finding, and the one
-delta round (2026-11-13, [delta.md](evidence/part-b/after/delta/delta.md)) answers their findings. The delta
-re-check and the final cost run are next.
+delta round (2026-11-13, [delta.md](evidence/part-b/after/delta/delta.md)) answered their findings. The delta
+re-check failed it (N1–N3); under the owner's cap exception a second and last delta
+([delta2.md](evidence/part-b/after/delta2/delta2.md)) answers N1–N5, and its re-check gives a verdict per commit.
 
 Drafted by `claude-opus-5-5` (2026-11-12). The text marked "(default, Qn)" below is now the ruled outcome of that
 question ([questions.md](evidence/part-b/questions.md)); where a ruling below differs, the ruling governs.
@@ -68,6 +69,19 @@ On the §7 halt "`UPDATE-SCHEMA-BATCH-MISMATCH-1` reproducing more often", measu
 - The halt was meant to catch part B making the card's defect more likely. Turning silent wrong writes into the
   card's existing loud refusal does not do that.
 - The owner may overrule.
+
+## Rulings for the second delta (owner, 2026-11-13)
+
+- **The cap exception.** The owner, about 11:15 UTC, verbatim: **"Defaults"**. That adopted Fable's four conditions:
+  the configuration guard at the analyzer, the whole-schema invariant for `dropDuplicates`, a verdict per commit with
+  the agreed exit, and dispatch after the cost run.
+- **The cost result.** The final cost run (`cost3`) passed every gate but one: n2 at 1.0583 against its 1.05 bar. The
+  owner, about 12:05 UTC, verbatim: **"Okay let’s go with A then"**. Option A: dispatch now, attribute the n2 cost, and
+  re-measure n2 on the round's final head. Part B merges only if n2 passes there or the owner grants a cost exception.
+- **The exit, agreed before dispatch.** This is the last round. If only the `dropDuplicates` commit fails, it is dropped
+  and the subset re-projection returns to the round-1 files byte for byte; the key's sign on `dropDuplicates(subset)`
+  becomes its own label-blocking unit. If the other commits fail, the unit stays parked for the owner. n2 is a merge
+  condition, not a round verdict.
 
 ## 1. Rulings this order carries (owner, verbatim)
 

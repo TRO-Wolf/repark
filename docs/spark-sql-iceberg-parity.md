@@ -4944,13 +4944,15 @@ still open is `isModifiable`.
   had 480 WRONG-READ, 82 WRONG-WRITE, 28 SIGN-ONLY+WRONG-READ and 18 ORDER-DIFFER cells. After: a last optimizer
   rule, `signed_zero_keys`, wraps every float key position in `__repark_normalize_zero__`. That function passes
   NULL, maps every NaN to the canonical positive NaN and `-0.0` to `0.0`, and is the identity otherwise. It runs
-  on the Spark door and the native door, under a door-internal policy that no `SET` reaches. A `SET` (SQL, or
-  `spark.conf.set` on the Spark door) or a builder config that would stop it from running is refused on both
-  doors: `datafusion.optimizer.max_passes = 0` skips every optimizer pass, and
-  `datafusion.optimizer.skip_failed_rules = true` would drop a failing rule silently (delta round, verifier
-  findings). Group, distinct and set-operation outputs carry the normalised key (`0.0`), as Spark's do; so do the
+  on the Spark door and the native door, under a door-internal policy that no `SET` reaches. A configuration that
+  would stop it from running is refused: `datafusion.optimizer.max_passes = 0` skips every optimizer pass, and
+  `datafusion.optimizer.skip_failed_rules = true` would drop a failing rule silently. The plain `SET` spellings,
+  `spark.conf.set` and the builder refuse the value itself (delta round); a value that reaches the session config by
+  any other route (a quoted key, a comment, a native `SessionConfig`) leaves every following query refused on both
+  doors, by an analyzer rule that reads both keys from the live config, until they are reset (delta 2). Group, distinct and set-operation outputs carry the normalised key (`0.0`), as Spark's do; so do the
   subset columns of `dropDuplicates(subset)` and `drop_duplicates(subset)`, read and written, while the kept row's
-  other columns keep their own values (delta round). Every other stored value keeps its bits.
+  other columns keep their own values (delta round); the output keeps its input's fields and attribute ids, so a
+  qualified reference to the key (`a.*`, `a.d`, a join on it, a self-join's two keys) still resolves (delta 2). Every other stored value keeps its bits.
   All 608 of those cells reach the truth; the 418 EQUAL controls do not move. The evidence is
   `task/wo/signed-zero-normalize-1/evidence/part-b/after/after.md`. The declared residues are the three rows below.
 - **Release note (v1.5.7, ruling Q7)** — "A `MERGE` whose `ON` clause compares FLOAT or DOUBLE columns now
@@ -4964,7 +4966,9 @@ still open is `isModifiable`.
   (780 cells, four doors), `::test_a_set_on_either_door_cannot_turn_the_key_wrap_off`,
   `::test_nan_outputs_carry_the_canonical_bits_and_passthrough_keeps_the_payload`,
   `::test_drop_duplicates_keeps_the_normalised_key_and_the_row_values` and
-  `::test_drop_duplicates_writes_the_normalised_key`; `key_tests.rs::a_set_statement_cannot_reach_the_door_policy`;
+  `::test_drop_duplicates_writes_the_normalised_key`, `::test_every_spelling_that_stops_the_key_seat_refuses_the_next_query`;
+  `python/repark/tests/dataframe/test_drop_duplicates_schema.py`; `key_tests.rs::a_set_statement_cannot_reach_the_door_policy`,
+  `::a_config_that_stops_the_seat_refuses_every_query_whatever_set_it`;
   `crates/repark-core/src/session/df_guards/signed_zero/key_tests.rs::every_key_site_treats_both_zeros_and_every_nan_as_one_value_on_both_float_types`,
   `::each_float_key_carries_one_wrapper_and_a_second_optimize_is_the_identity`,
   `::prepare_then_execute_wraps_each_key_once`, `::no_provider_in_use_takes_a_wrapped_filter_as_exact`;
@@ -4986,7 +4990,9 @@ still open is `isModifiable`.
 ### SIGNED-ZERO-KEYS-1-COLLECTSET — DataFrame `F.collect_set` over both zeros keeps one zero, which may carry the other sign — **DECLARED 2026-11-12 (owner ruling, SIGN-ONLY beside MM-1)**
 
 - **repark** — The DataFrame `F.collect_set` over a FLOAT or DOUBLE column plans through the float key's distinct,
-  so both zeros become one element. That element is always `0.0`: over `-0.0, 0.0, 0.0` it answers `[0.0]`.
+  so both zeros become one element. That element is always `0.0`: over `-0.0, 0.0, 0.0` it answers `[0.0]`. This
+  row covers the aggregate form only: the window form `collect_set(…) OVER (…)` keeps both zeros and every NaN row on
+  base and head alike (its SQL twin keeps one element per bit pattern; delta re-check, 2026-11-13).
 - **Apache Spark** — Spark keeps one element, the first zero it meets: `[-0.0]` when `-0.0` comes first, `[0.0]`
   when `0.0` comes first, through the DataFrame and SQL `collect_set` alike. Which zero it meets first depends on
   the plan: with the rows split over four files, or after `repartition(4)` under `local[4]`, the same rows gave the
@@ -5008,7 +5014,9 @@ still open is `isModifiable`.
   NaN becomes one element, the canonical NaN (`7ff8000000000000`). Over `NaN, NaN(payload 1), -NaN, NaN, 1.5` it
   answers 2 elements; over two identical canonical NaNs it answers 1. Before part 1 (main `276dc503`) it kept one
   element per NaN bit pattern. The SQL `collect_set(x)` is unchanged by part 1: one element per bit pattern
-  (`COLLECTION-FLOAT-EQ-1`).
+  (`COLLECTION-FLOAT-EQ-1`). This row covers the aggregate form only: the window form `collect_set(…) OVER (…)`
+  keeps both zeros and every NaN row on base and head alike (its SQL twin keeps one element per bit pattern; delta
+  re-check, 2026-11-13).
 - **Apache Spark** — Spark compares NaNs by IEEE inside `collect_set`: no NaN equals another, so every NaN row is
   its own element, even two identical canonical NaNs (2 elements), while the two zeros are one element. The same
   holds for the DataFrame and SQL forms, under `local[1]` and `local[4]`, over one file, over four files and after
