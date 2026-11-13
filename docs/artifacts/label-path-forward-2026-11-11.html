@@ -1,0 +1,227 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Label Path Forward</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F2F5F7; --panel:#FFFFFF; --fg:#16232B; --muted:#55666F; --line:#D6DEE3;
+  --accent:#0E6C88; --accent-soft:#DCEDF3;
+  --ok:#1E7A4C; --ok-soft:#DDF1E6; --warn:#9A6200; --warn-soft:#F7ECD6; --crit:#A3302A; --crit-soft:#F6E0DE;
+  --track:#E3E9ED;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1418; --panel:#152027; --fg:#E3ECF0; --muted:#97A9B2; --line:#26353E;
+  --accent:#4DB1CF; --accent-soft:#16323D;
+  --ok:#5CC48E; --ok-soft:#173226; --warn:#E0A84A; --warn-soft:#352914; --crit:#E8817A; --crit-soft:#3A1E1C;
+  --track:#1E2B33; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --panel:#152027; --fg:#E3ECF0; --muted:#97A9B2; --line:#26353E;
+  --accent:#4DB1CF; --accent-soft:#16323D;
+  --ok:#5CC48E; --ok-soft:#173226; --warn:#E0A84A; --warn-soft:#352914; --crit:#E8817A; --crit-soft:#3A1E1C;
+  --track:#1E2B33; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:2rem;font-weight:700;letter-spacing:.01em}
+h2{font-size:1.25rem;font-weight:600;color:var(--accent)}
+h3{font-size:1.05rem;font-weight:600}
+p{margin:0;max-width:72ch}
+.eyebrow{font:500 .74rem/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{color:var(--muted)}
+code,.mono{font-family:var(--mono);font-size:.86em}
+code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+header,section{display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.chip{display:inline-block;font:500 .72rem/1.6 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:0 8px;border-radius:999px;white-space:nowrap}
+.ok{background:var(--ok-soft);color:var(--ok)} .warn{background:var(--warn-soft);color:var(--warn)} .crit{background:var(--crit-soft);color:var(--crit)} .info{background:var(--accent-soft);color:var(--accent)} .open{background:var(--track);color:var(--muted)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 .78rem var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+tr.sub td{background:var(--bg);font:600 .8rem var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+td.k{white-space:nowrap;font-family:var(--mono);font-size:.84em;color:var(--muted)}
+td.q{min-width:230px} td.r{min-width:240px}
+.foot{color:var(--muted);font-size:.84rem;display:flex;flex-direction:column;gap:6px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:520px){h1{font-size:1.6rem}}
+</style>
+</head><body>
+
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">Planning board · 2026-11-11 · main <span class="mono">f341171a</span> · six read-only evaluations</span>
+  <h1>Label path forward</h1>
+  <p class="lede">What six early evaluations found about the remaining format-v2 and format-v3 work, and the order that gets both labels soonest. Companion to the Iceberg label progress page of the same date.</p>
+</header>
+
+<section>
+  <h2>Verdict</h2>
+  <div class="panel">
+    <p><strong>The early look retired two risks and found four possible blockers that are not on the gate list.</strong> Finding them now costs a ruling or a small unit. Finding them at the re-audit would cost a failed audit, and each of the four audits so far that found a blocker set the label back by days.</p>
+    <p><strong>The date range on the progress page (v2 near 11-22 to 11-27) can hold, and can improve by a few days,</strong> if three things happen: you rule on the questions below this week, a clerk track starts today beside the lane, and a second, cheaper builder takes the two units that share no files with the lane. If the two largest open questions are ruled as blocking, they add about three lane days. These are my estimates.</p>
+  </div>
+  <div class="cols">
+    <div class="panel">
+      <h3>Retired <span class="chip ok">2 risks</span></h3>
+      <ul class="plain">
+        <li><strong>LISTVIEW does not need a DataFusion change.</strong> The cause is found and RePark can avoid it on its own side.</li>
+        <li><strong>v3 lineage after schema changes matches Spark</strong> in all 14 cells measured. What is missing is tests that assert it.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Smaller than feared <span class="chip info">2 units</span></h3>
+      <ul class="plain">
+        <li><strong>The failed-CTAS cleanup</strong> is two call sites and one helper.</li>
+        <li><strong>The 126 loosely checked corpus cases</strong> hide only a refusal-text difference, not a wrong answer.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>New or larger <span class="chip crit">4 items</span></h3>
+      <ul class="plain">
+        <li>Unnamed <code>struct(...)</code> fields are named differently from Spark. Not yet measured on main.</li>
+        <li>Floats nested inside struct, array or map keys treat <code>0.0</code> and <code>-0.0</code> as different.</li>
+        <li>Two proposed v3 carve-outs are silent wrong values, which the label rule does not allow as carve-outs.</li>
+        <li>The corpus checker skips or never reads 2,486 rows, so its repair is larger than planned.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Decisions that unblock the work</h2>
+  <p class="lede">Each row is a question the units will otherwise stop on. The last column is my recommendation, not a ruling. A reply by number is enough.</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>#</th><th>Question</th><th>Recommendation</th></tr></thead>
+      <tbody>
+        <tr class="sub"><td colspan="3">This week: format-v2</td></tr>
+        <tr><td class="k">1</td><td class="q"><strong>A second builder beside the lane?</strong> Today one implementation lane runs at a time. The failed-CTAS cleanup (AUD-025) and the checker repair share no files with signed zero, LISTVIEW or the subscript work.</td><td class="r">Yes, for those two units only: a Muse MAX builder with an Opus 5.5 verifier, while the Opus lane keeps the design-heavy units. This is the largest single saving, about two lane days.</td></tr>
+        <tr><td class="k">2</td><td class="q"><strong>Unnamed struct field names.</strong> Spark names the fields of <code>struct(1, 2)</code> as <code>col1, col2</code>; RePark 1.5.6 uses <code>c0, c1</code>. Six of #1267's ten verifier findings came from this. Whether it still causes a wrong write on main is inferred, not measured.</td><td class="r">Measure eight cells on main first (the lane's build, a few minutes). If an <code>INSERT</code> writes a row Spark refuses, make it its own unit after AUD-023 and treat it as blocking. If not, card it.</td></tr>
+        <tr><td class="k">3</td><td class="q"><strong>Floats nested in keys.</strong> <code>GROUP BY</code>, <code>DISTINCT</code>, joins and window partitions on a struct, array or map value holding <code>-0.0</code> split it from <code>0.0</code> on 1.5.6 (12 cells, all differ from Spark). The signed-zero sketch set these aside under a card name that has no card file.</td><td class="r">Follow your 11-05 ruling 1: the <code>SELECT</code> answers become a card with the measured table. Measure the write conditions (<code>MERGE ON</code>, <code>DELETE</code> and <code>UPDATE</code> predicates on a nested float) on main; only those block, as a small second part of PR B.</td></tr>
+        <tr><td class="k">4</td><td class="q"><strong>Signed-zero PR B: one pull request or two, and which cost bars?</strong> The sketch names 1.20x for float-key queries. The 1.05x bar that PR A is being held to is not written in any signed-zero document.</td><td class="r">Two parts: flat keys first, nested write conditions second (question 3). Write both bars into the order before the build: at most 1.05x for a query with no float keys, at most 1.20x for float-key queries, both measured against PR A's merged head.</td></tr>
+        <tr><td class="k">5</td><td class="q"><strong>A plain <code>SELECT ... WHERE a[i] IS NULL</code> under ANSI</strong> returns a row where Spark raises. Is that a blocker or a card under ruling 1 ("SELECT answers")?</td><td class="r">Card. The AUD-022 fix sits in the subscript function, so the <code>SELECT</code> is corrected by the same change. Ruling it a card means a missed read-only seat cannot fail the unit.</td></tr>
+        <tr><td class="k">6</td><td class="q"><strong>Native door</strong> (<code>repark.sql()</code>) for AUD-022 and AUD-023: in scope or not?</td><td class="r">Out. The label is scoped to the Spark door, with the native gaps published beside it. Add both to the native gap list.</td></tr>
+        <tr><td class="k">7</td><td class="q"><strong>Failed CTAS with write options set</strong> also leaves data files (66 on RePark 1.5.6, 100 on Spark in the same cell). In the unit or not?</td><td class="r">Not in the unit. Remove the leftover metadata file on both paths, which is what makes the leftover look like an empty table. Card the orphan data files; Spark leaves more.</td></tr>
+        <tr><td class="k">8</td><td class="q"><strong>LISTVIEW scope.</strong> Joins between a ListView key and an ordinary list key are refused where Spark answers (24 cells). The card's closing criteria omit them.</td><td class="r">Put them in the unit's table. If the fix converts ListView keys to ordinary lists before the join, they come right at no extra cost; if not, card them, since a refusal does not block.</td></tr>
+        <tr><td class="k">9</td><td class="q"><strong>Three <code>DELETE</code> cells</strong> compare a struct column to a <code>named_struct</code> literal. RePark deletes the right rows; Spark refuses because Iceberg's Spark integration cannot convert the literal.</td><td class="r">Keep as a stated divergence on the label, as you did for AUD-024.</td></tr>
+        <tr><td class="k">10</td><td class="q"><strong>What the repaired checker compares for a refusal.</strong> One ledger row says the exception class is not a parity claim; the production-grade document asks tests to assert class and message.</td><td class="r">Pin RePark's exact text for each declared divergence, with its card id, and keep the ledger row's position on Spark's class. Assert D4 (names that lie about the payload) as the stated exclusion it already is.</td></tr>
+        <tr class="sub"><td colspan="3">Before the v3 work starts</td></tr>
+        <tr><td class="k">11</td><td class="q"><strong>R-024 and U-2 / R-020</strong> are on the v3 carve-out list, but both are silent wrong values (a nanosecond source truncates; <code>applyInPandas</code> stores ticks 1,000 times too large). The label order says no carve-out covers a silent value.</td><td class="r">State nanosecond columns as outside the v3 core label, under their own EXPERIMENTAL label, instead of signing carve-outs. If R-024 can change a value in an ordinary microsecond column, it needs a refusal first. I have not checked that.</td></tr>
+        <tr><td class="k">12</td><td class="q"><strong>Which Iceberg spec revision is pinned?</strong> None is. The corpus cites 1.11.0, the fork ledger 1.10.0, and the spec text is in neither repository.</td><td class="r">The spec as released with Iceberg 1.11.0, which matches the Spark runtime jar the oracle uses.</td></tr>
+        <tr><td class="k">13</td><td class="q"><strong>How many v3 signatures?</strong> <code>STATUS.md</code> asks for three; the 10-26 plan lists six.</td><td class="r">Settle the list after question 11. A clerk then reconciles the two documents.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Order of work</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Step</th><th>Unit</th><th>What the evaluation changes</th></tr></thead>
+      <tbody>
+        <tr class="sub"><td colspan="3">Implementation lane (Opus 5.5), in order</td></tr>
+        <tr><td class="k">L1</td><td>Signed-zero PR A <span class="chip warn">in flight</span></td><td>Nothing. If its cost number was taken while the six agents were measuring (about 09:40 to 10:00 local), re-run it before deciding.</td></tr>
+        <tr><td class="k">L2</td><td>LISTVIEW join</td><td>Start from the found cause: RePark hands DataFusion a join key it cannot hash, and DataFusion's <code>eliminate_cross_join</code> rule drops that key without keeping the condition. Fix on RePark's side before planning. Build the table from every type DataFusion will not hash, not from ListView alone. Only inner joins are wrong. Confirm on main first.</td></tr>
+        <tr><td class="k">L3</td><td>Signed-zero PR B, flat keys</td><td>Add cells where the join or set-operation side holds only one sign of zero. The existing table always has both signs on that side, which hides every miss: 14 such cells differ from Spark on 1.5.6. Re-measure the table's RePark column, which is 1.5.5.</td></tr>
+        <tr><td class="k">L4</td><td>AUD-022, ANSI subscript</td><td>Fresh branch from main, not a rebase of #1267. Carry over the three ANSI function files, which main has not touched. Add <code>element_at</code> in writes (the 20 envelope cells) and the guard forms (<code>CASE</code>, <code>AND</code>, <code>OR</code>, <code>COALESCE</code>), where a raise must not fire on a guarded branch.</td></tr>
+        <tr><td class="k">L5</td><td>AUD-023, duplicate field lookup</td><td>Its own unit, on <code>named_struct</code> duplicates only. It does not need the naming work.</td></tr>
+        <tr><td class="k">L6</td><td>Conditional units</td><td>Struct field naming (question 2) and nested-float write conditions (question 3), only if measured and ruled blocking.</td></tr>
+        <tr><td class="k">L7</td><td>Re-audit, then the label</td><td>Run only after the pre-audit replay below is clean.</td></tr>
+        <tr class="sub"><td colspan="3">Second builder (needs question 1)</td></tr>
+        <tr><td class="k">B1</td><td>AUD-025, failed CTAS</td><td>A create-only cleanup. The trap from #1261: when the CTAS replaces an existing table, the cleanup must never remove the live table's metadata. Parked #1071 touches the same code and is rebased after.</td></tr>
+        <tr><td class="k">B2</td><td>Checker repair</td><td>Remove the branch that accepts any error; assert the 472 skipped D4 cells and the path-insert refusals as declared outcomes; add controls that prove a wrong value fails.</td></tr>
+        <tr class="sub"><td colspan="3">Clerk track (Haiku or Muse; no product files; can start today)</td></tr>
+        <tr><td class="k">C1</td><td>Records</td><td>Close ledger rows whose fixes look merged (C-063, C-064, C-065, C-077, C-079, C-080, C-085; confirm C-091). File cards for findings that have none: the nested-float card, 22 over-refusal cells, the native door's MERGE and CTAS refusals. Correct the LISTVIEW card (inner joins only; mixed list kinds).</td></tr>
+        <tr><td class="k">C2</td><td>AUD-022 preparation</td><td>List every place a subscript can sit, from the source. Split #1267's 320-row cell file into the two units. About 4.5 hours.</td></tr>
+        <tr><td class="k">C3</td><td>Envelope matrix</td><td>Design the missing doors and seats, then re-run on the candidate wheel. The committed table was measured on 1.5.5.</td></tr>
+        <tr><td class="k">C4</td><td>Pre-audit replay</td><td>Replay every recorded corpus cell against the candidate wheel and list each cell whose label changed. This is the cheapest way to see what the audit will see.</td></tr>
+        <tr><td class="k">C5</td><td>v3 inventory</td><td>Pin the spec (question 12), turn the draft inventory into the step 5.1 document, measure the 33 unmeasured cells, and add lineage assertions to the existing schema-evolution tests.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>What each evaluation found</h2>
+  <div class="cols">
+    <div class="panel">
+      <h3>1 · AUD-022 and AUD-023</h3>
+      <ul class="plain">
+        <li>All ten verifier findings on #1267 were a missed place or a missed table row. None was a wrong reading of Spark.</li>
+        <li>About two thirds of the PR's diff is struct-comparison code that main now has in another form.</li>
+        <li>28 cells on 1.5.6 against Spark: 10 match, 15 differ.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>2 · LISTVIEW join</h3>
+      <ul class="plain">
+        <li>A rule-by-rule plan trace shows the join intact until <code>eliminate_cross_join</code>, and a cross join after it.</li>
+        <li>Left, right, full, semi and anti joins are correct.</li>
+        <li>The 326-cell table is not on main, and no write was re-measured.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>3 · Signed-zero PR B</h3>
+      <ul class="plain">
+        <li>40 RePark cells: 35 differ from Spark on 1.5.6.</li>
+        <li>The sketch's PR B wraps bare float expressions only, so nested keys stay wrong as sketched.</li>
+        <li>A cost emulation at 10 million rows was inconclusive.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>4 · AUD-025, failed CTAS</h3>
+      <ul class="plain">
+        <li>One metadata file is left after any failure once the create has begun, including failures in planning.</li>
+        <li>The audit's "Spark leaves no table directory" holds only for the audit's own spelling. Spark usually leaves orphan data files and no metadata.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>5 · Checker, matrix, re-audit readiness</h3>
+      <ul class="plain">
+        <li>126 of 1,418 confirmed by count. The checker also skips 492 rows and never reads 1,994.</li>
+        <li>The matrix lacks three doors and two seats against plan step 3.1 (the agent's reading).</li>
+        <li>A draft gap list and a re-audit checklist are in the report.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>6 · v3 inventory</h3>
+      <ul class="plain">
+        <li>A first inventory by feature and by read, write, evolution and operations, with 33 unmeasured cells.</li>
+        <li>Most exposed: lineage after expire, orphan removal and manifest rewrite; anything on nanosecond tables.</li>
+        <li>Unexplained: Spark reported no delete files where RePark wrote two deletion vectors, with identical rows.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>How far to trust this</h2>
+  <div class="panel">
+    <ul class="plain">
+      <li><strong>Every RePark measurement is on the released 1.5.6 wheel, not on main.</strong> Main has since merged #1283, #1290, #1292 and #1295. Anything that touches struct comparison needs a re-measure on main before it becomes a brief.</li>
+      <li><strong>Checked by me against the sources:</strong> the LISTVIEW cause (DataFusion source and the plan trace), the checker's loose branch and skips, the CTAS call sites, the label rule on silent values, the #1267 ledger rows, and a sample of measured cells from each report.</li>
+      <li><strong>Corrected by me:</strong> the 472 skipped codec cells are the D4 exclusion you adopted on 11-03, not a new blocker. The 20 <code>element_at</code> cells belong to AUD-022, not to a missing unit.</li>
+      <li><strong>Not checked by anyone:</strong> struct field naming on main; whether each stale-looking ledger row is truly closed; write cells for AUD-022; R-024's reach into ordinary columns; REST, Glue and S3 Tables for the CTAS leftover.</li>
+      <li><strong>The agents were Haiku 5.5.</strong> Their reports are good for finding where to look. Each brief the lane receives should still start from a table measured on main.</li>
+    </ul>
+  </div>
+</section>
+
+<footer class="foot">
+  <span>Sources: six evaluation reports of 2026-11-11 with their scripts and raw outputs, in the frontier folder's <span class="mono">path-forward-agent-reports-2026-11-11/</span>; the Iceberg label progress page of 2026-11-11; main <span class="mono">f341171a</span>; DataFusion 54.1.0 source; PR #1267; Spark 4.1.2 with Iceberg 1.11.0 as the oracle.</span>
+  <span>Recommendations are the planning agent's. Nothing here is a ruling until you give it in your own words.</span>
+</footer>
+
+</div>
+</body></html>

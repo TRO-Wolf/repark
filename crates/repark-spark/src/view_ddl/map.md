@@ -70,64 +70,12 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** `show_tblproperties_rows` (views: `SHOW TBLPROPERTIES`, `SHOW CREATE TABLE`)
   masks every stored value and the `location` row through `mask_value_credentials`; the
   table arm in `show_tblproperties.rs` masks its stored values the same way.
-- `parse.rs` + `execute.rs` + the router arm — **PR4 (2026-09-22,
-  V-SHOW-TBLPROPERTIES):** `try_parse_show_tblproperties` (quoted, unquoted
-  and dotted keys; a quoted key ends at the string; a tail that tokenizes but
-  does not parse refuses with the parser's `Plan` text; a tail the tokenizer
-  rejects, such as an unclosed backtick, returns `None` and falls through to
-  the ordinary path, which answers the tokenizer error; on the Spark SQL
-  front door an unterminated quote is rejected earlier, by the literal
-  canonicalizer; other SHOW forms stay `None`),
-  the `try_preparse_intercepts` arm after `try_parse_alter_view` that falls
-  through on `None`, and `execute_show_tblproperties` /
-  `show_tblproperties_batch` (`key`/`value` rows, reserved
-  `location`/`provider`/`format-version` then sorted stored properties; the
-  stored `comment` is hidden from the listing and from a keyed lookup, as in
-  Spark (PR5 r2, p5 `vc.props`), keyed
-  misses answer Spark's sentence, missing names fail closed with
-  `TABLE_OR_VIEW_NOT_FOUND`, tables fall through; viewless catalogs treat
-  `FeatureUnsupported` as no view and take the same table/missing split).
-  **PR4 r2 (2026-09-23):** bare and two-part names complete through
-  `complete_view_name(catalogs, …)` from `use_ddl::session_defaults`, so
-  they follow `USE` like ALTER VIEW.
-  **WO TBLPROPS-1 (2026-09-26):** tables no longer fall through —
-  `execute_show_tblproperties` answers a session-resolved bare name with the
-  empty frame, keeps the view arm, and loads a table through
-  `show_tblproperties.rs` once the view arm misses; the missing-name refusal
-  is unchanged.
-- `show_tblproperties.rs` — **WO TBLPROPS-1 (2026-09-26):** the `SHOW
-  TBLPROPERTIES` table arm. `table_rows` builds Spark's sorted `key, value`
-  list from the loaded table's metadata: the `current-snapshot-id` / `format`
-  / `format-version` built-ins, the stored properties except `comment`,
-  `owner` and the built-in names, and the `zstd` compression-codec default
-  when no stored value wins; a key selects one row and a miss renders Spark's
-  `Table <catalog>.<namespace>.<table> does not have property: <key>` text.
-  Called from `execute.rs` once the view arm misses; the frame still comes
-  from `show_tblproperties_batch`.
+- `parse.rs` + `execute.rs` + the router arm — **PR4 (2026-09-22, V-SHOW-TBLPROPERTIES):** `try_parse_show_tblproperties` (quoted, unquoted and dotted keys; a quoted key ends at the string; a tail that tokenizes but does not parse refuses with the parser's `Plan` text; a tail the tokenizer rejects, such as an unclosed backtick, returns `None` and falls through to the ordinary path, which answers the tokenizer error; on the Spark SQL front door an unterminated quote is rejected earlier, by the literal canonicalizer; other SHOW forms stay `None`), the `try_preparse_intercepts` arm after `try_parse_alter_view` that falls through on `None`, and `execute_show_tblproperties` / `show_tblproperties_batch` (`key`/`value` rows, reserved `location`/`provider`/`format-version` then sorted stored properties; the stored `comment` is hidden from the listing and from a keyed lookup, as in Spark (PR5 r2, p5 `vc.props`), keyed misses answer Spark's sentence, missing names fail closed with `TABLE_OR_VIEW_NOT_FOUND`, tables fall through; viewless catalogs treat `FeatureUnsupported` as no view and take the same table/missing split). **PR4 r2 (2026-09-23):** bare and two-part names complete through `complete_view_name(catalogs, …)` from `use_ddl::session_defaults`, so they follow `USE` like ALTER VIEW. **WO TBLPROPS-1 (2026-09-26):** tables no longer fall through — `execute_show_tblproperties` answers a session-resolved bare name with the empty frame, keeps the view arm, and loads a table through `show_tblproperties.rs` once the view arm misses; the missing-name refusal is unchanged.
+- `show_tblproperties.rs` — **WO TBLPROPS-1 (2026-09-26):** the `SHOW TBLPROPERTIES` table arm. `table_rows` builds Spark's sorted `key, value` list from the loaded table's metadata: the `current-snapshot-id` / `format` / `format-version` built-ins, the stored properties except `comment`, `owner` and the built-in names, and the `zstd` compression-codec default when no stored value wins; a key selects one row and a miss renders Spark's `Table <catalog>.<namespace>.<table> does not have property: <key>` text. Called from `execute.rs` once the view arm misses; the frame still comes from `show_tblproperties_batch`.
   pins: [`../tests/show_tblproperties.rs`](../tests/show_tblproperties.rs)
-  **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** table rows and `execute.rs`'s view rows (SHOW TBLPROPERTIES, SHOW CREATE view)
-  apply `displayed_property_value`, the key rule as well as the value rule.
-- `temp_parse.rs` — **IPI-40 PR6** grammar for `CREATE [OR REPLACE] [GLOBAL]
-  TEMP|TEMPORARY VIEW`: `try_parse_create_temp_view` (verbatim body, column
-  aliases with COMMENT, view COMMENT accepted) and the Spark-measured parse
-  refusals as ParseException-class `DataFusionError::SQL` (`spark_parse_error`):
-  PARSE_SYNTAX_ERROR for a body that does not open a query, the legacy IF NOT
-  EXISTS / OR REPLACE + IF NOT EXISTS / TBLPROPERTIES texts,
-  TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS (two parts) and
-  IDENTIFIER_TOO_MANY_NAME_PARTS (three or more); GLOBAL refuses as
-  `NotImplemented` (`GLOBAL_TEMP_VIEW_REFUSAL`). Split out of `parse.rs`
-  after the PR4 rebase (PR6b1).
-- `temp_ddl.rs` — **IPI-40 PR6** the session dispatcher
-  `route_temp_view_statement`, called from `router.rs::execute_in_session`
-  after canonicalization: CREATE TEMPORARY VIEW always; with a session
-  attached, DROP TABLE / DROP VIEW (any IF EXISTS / PURGE form) of a
-  registered temp name — a bare name or the temp HOME-qualified name the
-  facade emits — drops it through `TempViewSession::drop_temp_view`, so
-  one-part names are temp-first; DESCRIBE [TABLE] [EXTENDED] of a temp view
-  answers Spark rows with an Arrow NULL comment (alias COMMENT clauses kept); SHOW
-  VIEWS appends the session's temp rows. Every other target falls through to
-  the catalog arms unchanged.
-  **SPARK-DOOR-TEMP-VIEW-TARGET-1 (2026-10-29):** before the DROP and DESCRIBE arms (empty write-options map only) the router calls `temp_write::refuse_temp_view_write_target`, so a view-named write target refuses first; `route_temp_view_alter` takes the ALTER heads after it. **SPARK-DOOR-TEMP-VIEW-DDL-1 fix round 3:** `try_drop_temp_view` refuses a double-quoted target that names a view.
+  **SOURCE-URL-REDACT-1 fold 3 (2026-10-06):** table rows and `execute.rs`'s view rows (SHOW TBLPROPERTIES, SHOW CREATE view) apply `displayed_property_value`, the key rule as well as the value rule.
+- `temp_parse.rs` — **IPI-40 PR6** grammar for `CREATE [OR REPLACE] [GLOBAL] TEMP|TEMPORARY VIEW`: `try_parse_create_temp_view` (verbatim body, column aliases with COMMENT, view COMMENT accepted) and the Spark-measured parse refusals as ParseException-class `DataFusionError::SQL` (`spark_parse_error`): PARSE_SYNTAX_ERROR for a body that does not open a query, the legacy IF NOT EXISTS / OR REPLACE + IF NOT EXISTS / TBLPROPERTIES texts, TEMP_VIEW_NAME_TOO_MANY_NAME_PARTS (two parts) and IDENTIFIER_TOO_MANY_NAME_PARTS (three or more); GLOBAL refuses as `NotImplemented` (`GLOBAL_TEMP_VIEW_REFUSAL`). Split out of `parse.rs` after the PR4 rebase (PR6b1).
+- `temp_ddl.rs` — **IPI-40 PR6** the session dispatcher `route_temp_view_statement`, called from `router.rs::execute_in_session` after canonicalization: CREATE TEMPORARY VIEW always; with a session attached, DROP TABLE / DROP VIEW (any IF EXISTS / PURGE form) of a registered temp name — a bare name or the temp HOME-qualified name the facade emits — drops it through `TempViewSession::drop_temp_view`, so one-part names are temp-first; DESCRIBE [TABLE] [EXTENDED] of a temp view answers Spark rows with an Arrow NULL comment (alias COMMENT clauses kept); SHOW VIEWS appends the session's temp rows. Every other target falls through to the catalog arms unchanged. **SPARK-DOOR-TEMP-VIEW-TARGET-1 (2026-10-29):** before the DROP and DESCRIBE arms (empty write-options map only) the router calls `temp_write::refuse_temp_view_write_target`, so a view-named write target refuses first; `route_temp_view_alter` takes the ALTER heads after it. **SPARK-DOOR-TEMP-VIEW-DDL-1 fix round 3:** `try_drop_temp_view` refuses a double-quoted target that names a view.
 - `temp_write.rs` — **SPARK-DOOR-TEMP-VIEW-TARGET-1 (2026-10-29, AUD-006):** `refuse_temp_view_write_target`, called by `temp_ddl.rs::route_temp_view_statement`. It parses the target of `DELETE FROM`, `UPDATE`, `MERGE [WITH SCHEMA EVOLUTION] INTO`, `INSERT [INTO | OVERWRITE] [TABLE]` (not `[LOCAL] DIRECTORY`) and `TRUNCATE TABLE`, resolves it through `temp_view_home_segments`, and refuses a view-named target with Spark's text. **Fix round 3 (2026-11-02):** a lookup error refuses (the AUD-006 "not a view" rule is superseded); `double_quoted_target_refusal` refuses a double-quoted TRUNCATE target naming a view.
   **Fix round 1:** `merge_head` accepts `MERGE WITH SCHEMA EVOLUTION INTO` (card MERGE-SCHEMA-EVOLUTION-SPELLING-1).
 - `temp_alter.rs` — **SPARK-DOOR-TEMP-VIEW-DDL-1 (2026-11-02, AUD-015):** `route_temp_view_alter`, called by `temp_ddl.rs` after the AUD-006 check; `route_temp_view_statement` refuses a leading `;` before any route. The target is read with sqlparser's `ALTER [ICEBERG] TABLE [IF EXISTS] [ONLY] <name> [ON CLUSTER <ident>]` grammar: a prefix or quoted target part is RePark-only and refuses; a view-named target refuses with Spark's `EXPECT_TABLE_NOT_VIEW` text; an unknown word head fails closed; `RENAME TO` renames the view (`renamed_temp_view`). Fix round 3: a lookup error refuses (no `.ok()??`), and the raw token decides a name the segment parser rejects (core `temp_views.rs`).
@@ -140,7 +88,7 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   **ATTR-VIEW-SEMANTICS-1 (2026-10-05):** the provider schema is born without attribute ids,
   and the carry of the definition's ids is deleted, so each read mints fresh ids through the
   facade stamp, as Spark does (card `task/roadmap/mid-term/attr-view-semantics-1-card-2026-10-04.md`).
-- `temp_view.rs` — **IPI-40 PR6** `ReplanningTempView`, the provider behind
+  **IPI-40 PR6** `ReplanningTempView`, the provider behind
   a SQL temp view (registered through `create_or_replace_temp_view_from`): it
   re-plans the stored body at every scan under the creation-time catalog and
   namespace and the temp names captured at CREATE, conforms the answer to the
@@ -172,7 +120,7 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   temp-view CREATE, the captured map at re-plan) so bare temp names qualify
   to their home first; `refuse_write_query_body` answers PARSE_SYNTAX_ERROR
   for a `WITH … INSERT/UPDATE/DELETE/MERGE` temp body; `nested_depth_refusal`
-  is shared with `temp_view.rs`.
+  is shared with `temp_view.rs`. **SQL-SETOP-ALL-REFUSE-1:** `expand_view_body` runs `repark_core::refuse_multiset_set_operation` on the stored body first.
   **RP-56 DIFF-PROBE fold (2026-09-29):** the `_repark_view` wrapper is skipped when the
   view emits the stored names unchanged (`view_output_matches_stored`), so a catalog view
   over a twin table answers `SELECT *` like Spark instead of refusing on the wrapper.

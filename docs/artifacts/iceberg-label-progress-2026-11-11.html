@@ -1,0 +1,245 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iceberg Label Progress</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F2F5F7; --panel:#FFFFFF; --fg:#16232B; --muted:#55666F; --line:#D6DEE3;
+  --accent:#0E6C88; --accent-soft:#DCEDF3;
+  --ok:#1E7A4C; --ok-soft:#DDF1E6; --warn:#9A6200; --warn-soft:#F7ECD6; --crit:#A3302A; --crit-soft:#F6E0DE;
+  --track:#E3E9ED; --assume:#B9C6CD;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1418; --panel:#152027; --fg:#E3ECF0; --muted:#97A9B2; --line:#26353E;
+  --accent:#4DB1CF; --accent-soft:#16323D;
+  --ok:#5CC48E; --ok-soft:#173226; --warn:#E0A84A; --warn-soft:#352914; --crit:#E8817A; --crit-soft:#3A1E1C;
+  --track:#1E2B33; --assume:#3B4C56; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --panel:#152027; --fg:#E3ECF0; --muted:#97A9B2; --line:#26353E;
+  --accent:#4DB1CF; --accent-soft:#16323D;
+  --ok:#5CC48E; --ok-soft:#173226; --warn:#E0A84A; --warn-soft:#352914; --crit:#E8817A; --crit-soft:#3A1E1C;
+  --track:#1E2B33; --assume:#3B4C56; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);padding-inline:16px;padding-block:28px 56px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:2rem;font-weight:700;letter-spacing:.01em}
+h2{font-size:1.25rem;font-weight:600;color:var(--accent)}
+h3{font-size:1.05rem;font-weight:600}
+p{margin:0}
+.eyebrow{font:500 .74rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{color:var(--muted);max-width:70ch}
+.mono,code{font-family:var(--mono);font-size:.86em}
+code{background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+header,section{display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+.meters{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.meter{display:flex;flex-direction:column;gap:12px;min-width:0}
+.meter .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.pct{font:700 3rem/1 var(--display);font-variant-numeric:tabular-nums;color:var(--fg)}
+.pct small{font-size:1.2rem;color:var(--muted);font-weight:600}
+.bar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--track)}
+.bar span{display:block;height:100%}
+.seg-done{background:var(--ok)} .seg-fly{background:var(--warn)} .seg-assume{background:var(--assume)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.82rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.9rem;margin:0}
+.facts dt{color:var(--muted)} .facts dd{margin:0}
+.chip{display:inline-block;font:500 .72rem/1.6 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:0 8px;border-radius:999px;white-space:nowrap}
+.ok{background:var(--ok-soft);color:var(--ok)} .warn{background:var(--warn-soft);color:var(--warn)} .crit{background:var(--crit-soft);color:var(--crit)} .info{background:var(--accent-soft);color:var(--accent)} .open{background:var(--track);color:var(--muted)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 .78rem var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+tr.sub td{background:var(--bg);font:600 .8rem var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+td.n{text-align:right;white-space:nowrap}
+td.ev{color:var(--muted);font-size:.86rem;min-width:180px}
+tfoot td{font-weight:600;border-top:1px solid var(--line)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.cols .panel{display:flex;flex-direction:column;gap:8px;min-width:0}
+ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.foot{color:var(--muted);font-size:.84rem;display:flex;flex-direction:column;gap:6px}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:520px){h1{font-size:1.6rem}.pct{font-size:2.4rem}}
+</style>
+</head><body>
+
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">Status board · 2026-11-11 · main <span class="mono">f341171a</span> · Master Plan 2026-11-08</span>
+  <h1>Iceberg label progress</h1>
+  <p class="lede">How far RePark is toward the format-v2 and format-v3 core PRODUCTION labels. Each label is measured against the gate list the master plan and your rulings set. Format-v2 has been WITHDRAWN since 10-29. Format-v3 core is HARDENED-NARROW until V3-LABEL-1.</p>
+</header>
+
+<section class="meters" aria-label="Progress meters">
+  <div class="panel meter">
+    <div class="top">
+      <h3>Format-v2 PRODUCTION</h3>
+      <span class="chip crit">Withdrawn since 10-29</span>
+    </div>
+    <div class="pct">51<small>%</small></div>
+    <div class="bar" role="img" aria-label="21 points done, 2.1 credited in flight, 18.9 open, 3 assumed for audit findings, of 45">
+      <span class="seg-done" style="width:46.7%"></span>
+      <span class="seg-fly" style="width:4.7%"></span>
+      <span style="width:42%"></span>
+      <span class="seg-assume" style="width:6.6%"></span>
+    </div>
+    <div class="legend">
+      <span><i class="seg-done"></i>Done 21</span>
+      <span><i class="seg-fly"></i>In-flight credit 2.1</span>
+      <span><i style="background:var(--track);border:1px solid var(--line)"></i>Open 18.9</span>
+      <span><i class="seg-assume"></i>Audit allowance 3</span>
+    </div>
+    <dl class="facts">
+      <dt>Points</dt><dd>23.1 of 45 (55% without the audit allowance)</dd>
+      <dt>Left</dt><dd>6 build units, 2 Phase-2 steps, the envelope completion, the re-audit, the label PR</dd>
+      <dt>Scope</dt><dd>Spark door (ruling E); native gap list published beside it; operational gaps recorded as missing (R11)</dd>
+    </dl>
+  </div>
+
+  <div class="panel meter">
+    <div class="top">
+      <h3>Format-v3 core PRODUCTION</h3>
+      <span class="chip warn">Hardened-narrow</span>
+    </div>
+    <div class="pct">49<small>%</small></div>
+    <div class="bar" role="img" aria-label="29 points done, 2.1 credited in flight, 26.9 open, 6 assumed for audit findings, of 64">
+      <span class="seg-done" style="width:45.3%"></span>
+      <span class="seg-fly" style="width:3.3%"></span>
+      <span style="width:42%"></span>
+      <span class="seg-assume" style="width:9.4%"></span>
+    </div>
+    <div class="legend">
+      <span><i class="seg-done"></i>Done 29</span>
+      <span><i class="seg-fly"></i>In-flight credit 2.1</span>
+      <span><i style="background:var(--track);border:1px solid var(--line)"></i>Open 26.9</span>
+      <span><i class="seg-assume"></i>Audit allowances 6</span>
+    </div>
+    <dl class="facts">
+      <dt>Points</dt><dd>31.1 of 64. Its own track: 8 of 19 (42%)</dd>
+      <dt>Left</dt><dd>Everything v2 still needs, then the spec inventory, the residual units, its first full audit and the label PR</dd>
+      <dt>Why so close to v2</dt><dd>Most v3-only work landed in September (the v1.0 north star). The rest waits on v2's write-path fixes.</dd>
+    </dl>
+  </div>
+</section>
+
+<section>
+  <h2>How the number is computed</h2>
+  <div class="panel">
+    <ul class="plain">
+      <li>Each gate carries points by size: <strong>1</strong> for a clerk, docs or ruling step; <strong>2</strong> for a small build unit or an audit; <strong>3</strong> for a design-heavy build unit.</li>
+      <li>Done gates count in full. A gate in flight counts at its share of committed work: signed-zero PR A at 60% (four of five build items committed, review not started), LISTVIEW at 15% (table measured, order drafted).</li>
+      <li>Each label carries a <strong>3-point allowance</strong> for one fix round after its audit. Each of the four v2 audits so far (10-28, 10-29, 11-01, 11-05) found at least one blocker. The allowance is an assumption, so the bars shade it apart.</li>
+      <li>v3 inherits every v2 row. The plan runs Phase 5 after Phase 3, and the empty-DML, struct and signed-zero tables all measured the same defects on v3 tables.</li>
+      <li>The nanosecond-column and struct-write labels (both EXPERIMENTAL) are separate labels and are not in these numbers.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>Format-v2 gate list</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Gate</th><th>Plan step</th><th>Pts</th><th>State</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr class="sub"><td colspan="5">Done</td></tr>
+        <tr><td>Owner ruling batch R1–R11, P1–P9</td><td>0.1</td><td class="n">1</td><td><span class="chip ok">Done</span></td><td class="ev">"Defaults." 11-08</td></tr>
+        <tr><td>Status reconciliation</td><td>0.2</td><td class="n">1</td><td><span class="chip ok">Done</span></td><td class="ev">#1270, 11-08</td></tr>
+        <tr><td>Empty-DML and struct probe tables</td><td>0.3</td><td class="n">1</td><td><span class="chip ok">Done</span></td><td class="ev">#1271</td></tr>
+        <tr><td>A DELETE or UPDATE that folds to no rows writes nothing (EMPTY-DML-SHARED-GUARD-1)</td><td>1.1</td><td class="n">3</td><td><span class="chip ok">Done</span></td><td class="ev">#1277, shipped in v1.5.6</td></tr>
+        <tr><td>Hardening release v1.5.6</td><td>1.4</td><td class="n">1</td><td><span class="chip ok">Done</span></td><td class="ev">tag <span class="mono">ae60c359</span>, 11-08, PyPI</td></tr>
+        <tr><td>AUD-021: <code>doubleQuotedIdentifiers=true</code> refuses loudly</td><td>Re-audit 11-05</td><td class="n">2</td><td><span class="chip ok">Done</span></td><td class="ev">#1266, 11-05</td></tr>
+        <tr><td>Set operations refuse reordered struct names (unit C)</td><td>3.2</td><td class="n">3</td><td><span class="chip ok">Done</span></td><td class="ev">#1283, 11-09</td></tr>
+        <tr><td>The set-op name check holds across Arrow list kinds</td><td>3.2</td><td class="n">2</td><td><span class="chip ok">Done</span></td><td class="ev">#1290, 11-10</td></tr>
+        <tr><td>Struct comparisons pair fields by position, as Spark does</td><td>3.2, made a fix (D2)</td><td class="n">3</td><td><span class="chip ok">Done</span></td><td class="ev">#1292, 11-10</td></tr>
+        <tr><td>Key-list joins, BETWEEN, simple CASE and nullif pair by position</td><td>3.2 family</td><td class="n">3</td><td><span class="chip ok">Done</span></td><td class="ev">#1295, 11-11; C-116, C-118 closed</td></tr>
+        <tr><td>Write-path envelope matrix measured, 936 cells</td><td>3.1</td><td class="n">1</td><td><span class="chip ok">Done</span></td><td class="ev">#1275, #1276</td></tr>
+        <tr class="sub"><td colspan="5">In flight</td></tr>
+        <tr><td>SIGNED-ZERO-NORMALIZE-1 PR A: <code>d = 0.0</code> matches <code>-0.0</code>, the metadata delete, <code>&lt;=&gt;</code></td><td>Ruling G</td><td class="n">3</td><td><span class="chip warn">Build 60%</span></td><td class="ev">Items 1–4 committed. The cost re-measure and item 5 are running. Then CI and two verifiers.</td></tr>
+        <tr><td>LISTVIEW-INNER-JOIN-KEY-1: key-name joins on ListView keys cross-join and persist it</td><td>Gate rule (wrong write)</td><td class="n">2</td><td><span class="chip warn">Order 15%</span></td><td class="ev">326-cell table measured; 7 WRONG-WRITE cells. Order drafted; waits for the lane.</td></tr>
+        <tr class="sub"><td colspan="5">Open</td></tr>
+        <tr><td>SIGNED-ZERO-NORMALIZE-1 PR B: GROUP BY, DISTINCT, join and window keys</td><td>Ruling G</td><td class="n">3</td><td><span class="chip open">Open</span></td><td class="ev">After PR A; cost bar ≤ 1.20x</td></tr>
+        <tr><td>AUD-022 and AUD-023: ANSI out-of-range subscript, ambiguous struct field lookup</td><td>1.2</td><td class="n">3</td><td><span class="chip open">Open</span></td><td class="ev">#1267 paused after four verifier FAILs</td></tr>
+        <tr><td>AUD-025: a failed CTAS query leaves its begin-create file</td><td>1.3</td><td class="n">2</td><td><span class="chip open">Open</span></td><td class="ev">No unit opened</td></tr>
+        <tr><td>Checker repairs: the corpus checker passes any engine error in 126 of 1,418 cases</td><td>2.1</td><td class="n">2</td><td><span class="chip open">Open</span></td><td class="ev"><span class="mono">spark_missing_version</span> unchanged on main</td></tr>
+        <tr><td>Execution tiers per corpus family</td><td>2.2</td><td class="n">1</td><td><span class="chip open">Open</span></td><td class="ev">—</td></tr>
+        <tr><td>Matrix as a committed test, the R11 gap list, your workload run on the candidate wheel</td><td>3.1</td><td class="n">2</td><td><span class="chip open">Open</span></td><td class="ev">R10, R11</td></tr>
+        <tr><td>Narrow re-audit on the packaged candidate</td><td>3.3</td><td class="n">2</td><td><span class="chip open">Open</span></td><td class="ev">Opus 5.5, one round, live AWS</td></tr>
+        <tr><td>Allowance: fixes for what the re-audit finds</td><td>—</td><td class="n">3</td><td><span class="chip info">Assumed</span></td><td class="ev">Each v2 audit so far found a blocker</td></tr>
+        <tr><td>Label re-dated to PRODUCTION</td><td>3.4</td><td class="n">1</td><td><span class="chip open">Open</span></td><td class="ev">Names the audited SHA and the wheel (R3)</td></tr>
+      </tbody>
+      <tfoot><tr><td colspan="2">Total</td><td class="n">45</td><td colspan="2">23.1 earned · 51%</td></tr></tfoot>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Format-v3 core gate list</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Gate</th><th>Plan step</th><th>Pts</th><th>State</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>Every format-v2 gate above (shared engine and write path)</td><td>Phases 1–3</td><td class="n">45</td><td><span class="chip warn">51%</span></td><td class="ev">23.1 earned</td></tr>
+        <tr class="sub"><td colspan="5">v3 only: done</td></tr>
+        <tr><td>v1.0 north-star gate: all twenty rows ✅ or DECLARED</td><td>—</td><td class="n">3</td><td><span class="chip ok">Done</span></td><td class="ev">V1-GATE, 2026-09-03</td></tr>
+        <tr><td>v3 statement matrix and V3-COV-3 to V3-COV-6</td><td>—</td><td class="n">2</td><td><span class="chip ok">Done</span></td><td class="ev">267 cells; registry rows FIXED</td></tr>
+        <tr><td>U-4: the unfiltered UPDATE reports the true refusal class (R-012)</td><td>v3 plan 10-26</td><td class="n">2</td><td><span class="chip ok">Done</span></td><td class="ev">#1194</td></tr>
+        <tr><td>NS-TRUTHUP-1: four nanosecond rows re-measured</td><td>v3 plan 10-26</td><td class="n">1</td><td><span class="chip ok">Done</span></td><td class="ev">#1192</td></tr>
+        <tr class="sub"><td colspan="5">v3 only: open</td></tr>
+        <tr><td>Inventory from the pinned spec: DVs, lineage, ns, variant, defaults, upgrade, multi-arg transforms, each by read, write, evolution and operations</td><td>5.1</td><td class="n">1</td><td><span class="chip open">Open</span></td><td class="ev">Clerk</td></tr>
+        <tr><td>Residual units: DVs and lineage after schema evolution, plus what the inventory finds</td><td>5.2</td><td class="n">4</td><td><span class="chip open">Open</span></td><td class="ev">Not yet measured after evolution (STATUS)</td></tr>
+        <tr><td>V3-LABEL-1 audit, carrying the 10-28 audit's gate dimensions</td><td>5.3</td><td class="n">2</td><td><span class="chip open">Open</span></td><td class="ev">v3's first full independent audit</td></tr>
+        <tr><td>Allowance: fixes for what that audit finds</td><td>—</td><td class="n">3</td><td><span class="chip info">Assumed</span></td><td class="ev">Same basis as v2</td></tr>
+        <tr><td>Label PR with your signed carve-outs</td><td>5.3</td><td class="n">1</td><td><span class="chip open">Open</span></td><td class="ev">R-002, R-015, R-024, U-2, the ns create door, ENC-1 items 1 and 5</td></tr>
+      </tbody>
+      <tfoot><tr><td colspan="2">Total</td><td class="n">64</td><td colspan="2">31.1 earned · 49%</td></tr></tfoot>
+    </table>
+  </div>
+  <p class="lede">V3-FILEORDER-1 and V3-UPGRADE-V4-1 are DECLARED rows, and G3-E8 is a refusal. None of the three holds the label.</p>
+</section>
+
+<section>
+  <h2>Pace and forecast</h2>
+  <div class="cols">
+    <div class="panel">
+      <h3>Dates of record have slipped</h3>
+      <p>The 10-26 plan set v2 for 11-10 and v3 core for 11-17. The 11-05 re-audit (five facade blockers) and the 11-08 master plan added the work in the open rows.</p>
+    </div>
+    <div class="panel">
+      <h3>Pace on one lane</h3>
+      <p>Five product units merged in four days: #1277 (11-08), #1283 (11-09), #1290 and #1292 (11-10), #1295 (11-11).</p>
+    </div>
+    <div class="panel">
+      <h3>Estimate</h3>
+      <p>The v2 remainder is about 22 points: six build units plus the clerk and audit steps, roughly 10 to 15 lane days. That puts v2 near <strong>11-22 to 11-27</strong> if the re-audit finds no more than the allowance. v3 core would follow about a week later. These dates are estimates, not dates of record.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>What could move the number</h2>
+  <div class="panel">
+    <ul class="plain">
+      <li><strong>AUD-022 and AUD-023 are the hardest open unit.</strong> #1267 was paused at <span class="mono">8e929978</span> after four verifier FAILs. The struct-pairing half has since shipped on its own as #1292.</li>
+      <li><strong>Signed-zero PR A is at its cost bar.</strong> The optimization pass brought the synthetic case from 1.0583x to 1.0093x (commit <span class="mono">22bae1d9</span>). The realistic case drew 1.0715x this round, against 1.0256x before. On the 164 cells whose answers do not change it is 1.0189x. The rest of the cost is in the 43 cells that now read the rows Spark reads. If the bar still reads as missed when the builder hands back, it comes to you.</li>
+      <li><strong>LISTVIEW's root cause is not yet found.</strong> If it sits inside DataFusion and needs a fork change, the order halts to you.</li>
+      <li><strong>Release vehicle.</strong> v1.5.7 carries signed zero and LISTVIEW. AUD-022, AUD-023 and CTAS go to v1.5.8 unless they are ready earlier (Q5). So the label most likely names v1.5.8, or says it covers an unreleased candidate (R3).</li>
+      <li><strong>New audit findings.</strong> Each audit so far has added a blocker. A finding beyond the allowance lowers both percentages.</li>
+    </ul>
+  </div>
+</section>
+
+<footer class="foot">
+  <span>Sources: STATUS.md and the parity registry on main <span class="mono">f341171a</span>; Master Plan 2026-11-08 §§2–7, §9; the v3 label plan of 2026-10-26 (<span class="mono">docs/artifacts/v3-label-plan-2026-10-26.html</span>); the label order <span class="mono">task/wo/ice-v2-label-1/order.md</span>; git history on main; the signed-zero build branch at <span class="mono">7d8b4a4d</span>.</span>
+  <span>The points and allowances are the orchestrator's sizing, so read the percentages as estimates. The gate list itself comes from the plan and your rulings.</span>
+</footer>
+
+</div>
+</body></html>

@@ -1,0 +1,191 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Board 11-12</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F2F5F7; --panel:#FFFFFF; --fg:#16232B; --muted:#55666F; --line:#D6DEE3;
+  --accent:#0E6C88; --accent-soft:#DCEDF3;
+  --ok:#1E7A4C; --ok-soft:#DDF1E6; --warn:#9A6200; --warn-soft:#F7ECD6; --crit:#A3302A; --crit-soft:#F6E0DE; --track:#E3E9ED;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1418; --panel:#152027; --fg:#E3ECF0; --muted:#97A9B2; --line:#26353E;
+  --accent:#4DB1CF; --accent-soft:#16323D;
+  --ok:#5CC48E; --ok-soft:#173226; --warn:#E0A84A; --warn-soft:#352914; --crit:#E8817A; --crit-soft:#3A1E1C; --track:#1E2B33; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --panel:#152027; --fg:#E3ECF0; --muted:#97A9B2; --line:#26353E;
+  --accent:#4DB1CF; --accent-soft:#16323D;
+  --ok:#5CC48E; --ok-soft:#173226; --warn:#E0A84A; --warn-soft:#352914; --crit:#E8817A; --crit-soft:#3A1E1C; --track:#1E2B33; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);padding-inline:16px;padding-block:28px 56px}
+.wrap{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:2rem;font-weight:700}
+h2{font-size:1.25rem;font-weight:600;color:var(--accent)}
+h3{font-size:1.02rem;font-weight:600}
+p{margin:0}
+.eyebrow{font:500 .74rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{color:var(--muted);max-width:70ch}
+.mono,code{font-family:var(--mono);font-size:.86em}
+code{background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+header,section{display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.card{display:flex;flex-direction:column;gap:8px;min-width:0}
+.card .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.chip{display:inline-block;font:500 .72rem/1.6 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:0 8px;border-radius:999px;white-space:nowrap}
+.ok{background:var(--ok-soft);color:var(--ok)} .warn{background:var(--warn-soft);color:var(--warn)} .crit{background:var(--crit-soft);color:var(--crit)} .info{background:var(--accent-soft);color:var(--accent)} .open{background:var(--track);color:var(--muted)}
+.decisions{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.decision{border-left:3px solid var(--warn);background:var(--panel);border-radius:0 10px 10px 0;padding:12px 16px;border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.decision.crit{border-left-color:var(--crit)}
+.decision .def{color:var(--muted);font-size:.9rem}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:.88rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:7px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 .76rem var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.n{text-align:right;white-space:nowrap}
+td.ev{color:var(--muted);font-size:.84rem}
+ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+.foot{color:var(--muted);font-size:.84rem}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:520px){h1{font-size:1.6rem}}
+</style>
+</head><body>
+
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">Morning board · 2026-11-12 · main <span class="mono">72da190c</span></span>
+  <h1>Morning board</h1>
+  <p class="lede">The night of 11-11 to 11-12. Three fix units passed review and wait for your merge word. The live flat matrix ran on Glue and S3 Tables and found no new RePark defect. One blocker for the scoped label (an S3 Tables killed CTAS) and one new S1 (decimal plus double in a UNION) need your decisions.</p>
+</header>
+
+<section>
+  <h2>Ready for your merge word</h2>
+  <div class="grid">
+    <div class="panel card">
+      <div class="top"><h3>#1298 signed-zero part A</h3><span class="chip ok">Reviewed</span></div>
+      <p>The first round was Muse PASS and Opus FAIL. One delta followed, and the Opus re-check passed all seven items.</p>
+      <p class="ev">Fixed: grouping sets (B1) and the <code>&lt;=&gt;</code> names (A3). Carded: 16 native DML cells that refuse instead of writing (A1). Your cost condition is met on a quiet box: no-zero controls 0.977x and 1.021x, re-check c2 0.966x.</p>
+    </div>
+    <div class="panel card">
+      <div class="top"><h3>#1303 AUD-025, failed CTAS cleanup</h3><span class="chip ok">Reviewed</span></div>
+      <p>Opus PASS and Muse PASS. Built by the Muse second builder.</p>
+      <p class="ev">Measured across 228 cells and 66 extra failure points. A follow-up pin is offered for the create-only guard (advisory A-1); the head is correct.</p>
+    </div>
+    <div class="panel card">
+      <div class="top"><h3>#1304 LISTVIEW join keys</h3><span class="chip ok">Reviewed</span></div>
+      <p>Opus PASS and Muse PASS.</p>
+      <p class="ev">31 cross products, 14 wrong answers, 14 wrong writes and 24 mixed cells now equal Spark. Plain List joins: 1.005x executed, 1.009x built.</p>
+    </div>
+    <div class="panel card">
+      <div class="top"><h3>#1307 and #1308, harness fixes</h3><span class="chip info">CI green</span></div>
+      <p>#1307 makes the float-key seed store a real negative zero (the cells were vacuous). #1308 stops the classifier from reading an unset commit count as 0.</p>
+      <p class="ev">Test code only. Each blocks a clean re-run of its groups.</p>
+    </div>
+  </div>
+  <p class="lede">The three fix PRs are behind main. Each is updated and re-run through CI right before its merge.</p>
+</section>
+
+<section>
+  <h2>Decisions for you</h2>
+  <ol class="decisions">
+    <li class="decision crit">
+      <h3>1. A killed CTAS on S3 Tables leaves an empty table (blocks the scoped label)</h3>
+      <p>On S3 Tables, RePark creates the table first and drops it if the query fails. A kill skips the drop, so the catalog lists an empty table under the user's name (run 43126006620). Glue leaves nothing, and ordinary failures leave nothing on either catalog.</p>
+      <p class="def">Options:</p>
+      <ul class="plain def">
+        <li><strong>A (default):</strong> refuse CTAS and REPLACE … AS on S3 Tables, as Spark very likely does. First, one live Spark CTAS cell.</li>
+        <li><strong>B:</strong> a temporary name, then a rename. This is a new design, and the place where a Fable consult would help.</li>
+        <li><strong>C:</strong> keep RePark's CTAS on S3 Tables and exclude it from the label.</li>
+      </ul>
+      <p class="def">Spark's own CTAS on S3 Tables is still unmeasured; the matrix's CTAS cells use local Spark values.</p>
+    </li>
+    <li class="decision crit">
+      <h3>2. New S1: decimal plus double in a UNION or VALUES writes a wrong value</h3>
+      <p>RePark types <code>0.1 UNION ALL CAST(1e-20 AS DOUBLE)</code> as <code>decimal(30,15)</code>, where Spark types it double. <code>INSERT … SELECT … UNION ALL …</code> into a DOUBLE column then stores <code>0.0</code> instead of <code>1e-20</code>.</p>
+      <ul class="plain def">
+        <li>Large doubles overflow, where Spark answers.</li>
+        <li>A negative zero loses its sign.</li>
+        <li>Plain <code>INSERT … VALUES</code> is correct.</li>
+        <li>The existing card COALESCE-NAN-DOUBLE-1 has the same root.</li>
+      </ul>
+      <p class="def">Default: open DECIMAL-DOUBLE-UNION-COERCION-1 as the next lane unit, after signed-zero PR B or ahead of it (your call).</p>
+    </li>
+    <li class="decision">
+      <h3>3. The p15 truth column in the matrix harness</h3>
+      <p>For <code>d = 0.0</code> in DML, the committed Spark-on-Iceberg answers are the zero-only pruned ones (PRUNED-WRONG under ruling G). So RePark's current answer matches them, and the strict xfail markers XPASS. Once part A merges, these cells would read as wrong.</p>
+      <p class="def">Default: a small harness PR that takes p15's expected value from the truth rule (Spark SQL semantics), and labels Spark-on-Iceberg's answer as the declared divergence.</p>
+    </li>
+  </ol>
+</section>
+
+<section>
+  <h2>The full flat matrix, overnight</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Group</th><th>Catalog</th><th>EQUAL</th><th>Declared or both refused</th><th>Known (part A)</th><th>Harness labels</th><th>Minutes</th></tr></thead>
+      <tbody>
+        <tr><td>floatkeys</td><td>Glue</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td>28 vacuous XPASS (seed bug; #1307)</td><td class="n">4</td></tr>
+        <tr><td>J1 SQL DELETE, UPDATE</td><td>Glue</td><td class="n">152</td><td>p08 ×6, p04 ×2, p36 refused ×6</td><td class="n">2</td><td>4 p15 XPASS</td><td class="n">24</td></tr>
+        <tr><td>J2 SQL MERGE</td><td>Glue</td><td class="n">104</td><td>p04 ×4, p08 ×4</td><td class="n">0</td><td>4 p15 XPASS</td><td class="n">17</td></tr>
+        <tr><td>J3a SELECT, INSERT, CTAS</td><td>Glue</td><td class="n">78 (+50)</td><td>p08 ×5, p04 ×2</td><td class="n">5</td><td>50 EXTRA-COMMIT (#1308)</td><td class="n">13</td></tr>
+        <tr><td>J3b writeTo.overwrite</td><td>Glue</td><td class="n">0</td><td>56 both refused (Iceberg partial-file)</td><td class="n">0</td><td>2 p15 XPASS</td><td class="n">14</td></tr>
+        <tr><td>J4a DataFrame doors</td><td>Glue</td><td class="n">52 (+50)</td><td>p04 ×2, p08 ×4</td><td class="n">4</td><td>50 EXTRA-COMMIT (#1308)</td><td class="n">10</td></tr>
+        <tr><td>J4b typed Column API, selectExpr</td><td>Glue</td><td class="n">104</td><td>p08 ×4</td><td class="n">4</td><td><span class="chip ok">green</span></td><td class="n">28</td></tr>
+        <tr><td>J5a mergeInto</td><td>Glue</td><td class="n">104</td><td>p04 ×4, p08 ×4</td><td class="n">0</td><td>4 p15 XPASS</td><td class="n">39</td></tr>
+        <tr><td>J5b createOrReplace</td><td>Glue</td><td class="n">26</td><td>p08 ×1</td><td class="n">1</td><td><span class="chip ok">green</span></td><td class="n">5</td></tr>
+        <tr><td>J1</td><td>S3 Tables</td><td class="n">154</td><td>p08 ×6, p36 refused ×6</td><td class="n">2</td><td>4 p15 XPASS</td><td class="n">16</td></tr>
+        <tr><td>J2</td><td>S3 Tables</td><td class="n">108</td><td>p08 ×4</td><td class="n">0</td><td>4 p15 XPASS</td><td class="n">22</td></tr>
+        <tr><td>J3a</td><td>S3 Tables</td><td class="n">130</td><td>p08 ×5</td><td class="n">5</td><td><span class="chip ok">green</span></td><td class="n">11</td></tr>
+        <tr><td>J3b</td><td>S3 Tables</td><td class="n">0</td><td>56 both refused</td><td class="n">0</td><td>2 p15 XPASS</td><td class="n">7</td></tr>
+        <tr><td>J4a</td><td>S3 Tables</td><td class="n">104</td><td>p08 ×4</td><td class="n">4</td><td><span class="chip ok">green</span></td><td class="n">7</td></tr>
+        <tr><td>J4b</td><td>S3 Tables</td><td class="n">104</td><td>p08 ×4</td><td class="n">4</td><td><span class="chip ok">green</span></td><td class="n">15</td></tr>
+        <tr><td>J5a, J5b</td><td>S3 Tables</td><td colspan="5" class="ev">J5a running at publish time; J5b follows.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ul class="plain lede">
+    <li><strong>The only wrong answers are the known p15 cells</strong> (<code>d = 0.0</code> missing <code>-0.0</code>), which part A fixes.</li>
+    <li><strong>"(+50)":</strong> rows equal to Spark that carry the harness commit label.</li>
+    <li><strong>p36 refusals:</strong> <code>CASE WHEN</code> in DML, the R5 DML-reconstruction family, carded.</li>
+    <li><strong>p04:</strong> the declared empty-DML divergence.</li>
+    <li><strong>Float keys on S3 Tables:</strong> held back until #1307.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>AWS usage</h2>
+  <div class="panel">
+    <ul class="plain">
+      <li>All runs went one at a time from main through the dispatch-only job: 14 matrix groups, the pilots, and the CTAS-failure runs.</li>
+      <li>The per-leg scratch cleanup has passed on every run since #1305. Earlier leftovers were swept by the nightly backstop job, which passed at 08:45 UTC along with the whole nightly acceptance run.</li>
+      <li>GitHub Actions minutes are free on a public repo. The AWS cost is Glue and S3 API calls plus small scratch tables.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>For the records clerk (after the merges)</h2>
+  <div class="panel">
+    <ul class="plain">
+      <li><strong>Signed zero:</strong> NATIVE-DML-CSE-FILTER-1; SELECTEXPR-NOT-DISPLAY-1, with the <code>&lt;=&gt;</code> paren and arithmetic name cases; the DECIMAL-EXPR-FLOAT-COMPARE-1 residues; the C2 to C4 cards; part B's <code>HAVING … GROUP BY d</code> cell.</li>
+      <li><strong>LISTVIEW:</strong> LISTVIEW-SQL-USING-1, with the upstream DataFusion report draft for your approval; FACADE-LISTVIEW-SCHEMA-1; CROSSJOIN-WHERE-QUALIFIED-1; LATERAL-USING-ACCEPT-1; the narrowed STRUCT-SETOP-LISTVIEW-COERCION-1 (with MERGE ON); the UNION ALL view performance card; the map-hygiene card.</li>
+      <li><strong>AUD-025:</strong> CTAS-OPTIONS-ORPHAN-DATA-1, CTAS-PATH-READ-TEXT-1, CTAS-CANCEL-CLEANUP-1, NATIVE-CTAS-FAILURE-CLEANUP-1, S3T-CTAS-FAILED-DROP-1, SAVEASTABLE-FORMAT-VERSION-1.</li>
+      <li><strong>Matrix:</strong> the S3 Tables four-part metadata identifier refusal; <code>createOrReplace</code> on S3 Tables, which RePark answers and Spark refuses (Stage-create).</li>
+    </ul>
+  </div>
+</section>
+
+<footer class="foot">
+  <p>Sources: the PR verdicts in the session scratch; the live-run artifacts of every run id above; <span class="mono">task/wo/*/order.md</span> on each branch. Nothing was merged overnight without your word.</p>
+</footer>
+
+</div>
+</body></html>

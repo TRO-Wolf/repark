@@ -1,0 +1,229 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hadoop Drop-Recreate Stale Read</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+:root {
+  --bg: #F2F5F7;
+  --surface: #FFFFFF;
+  --fg: #16232B;
+  --muted: #546873;
+  --rule: #D5DEE3;
+  --accent: #0E6C88;
+  --accent-soft: #E1EEF2;
+  --bad: #A8322A;
+  --bad-soft: #F7E3E1;
+  --good: #2B7A4B;
+  --good-soft: #E0F0E6;
+  --warn: #8A5A00;
+  --warn-soft: #F6ECD6;
+  --code-bg: #E8EEF1;
+  --display: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1418; --surface: #141D22; --fg: #DCE6EB; --muted: #8FA3AD; --rule: #26343C;
+    --accent: #4DB1CF; --accent-soft: #15303A; --bad: #F08A80; --bad-soft: #3A1C1A;
+    --good: #7BCB98; --good-soft: #17301F; --warn: #E2B45A; --warn-soft: #33290F; --code-bg: #1B262C;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1418; --surface: #141D22; --fg: #DCE6EB; --muted: #8FA3AD; --rule: #26343C;
+  --accent: #4DB1CF; --accent-soft: #15303A; --bad: #F08A80; --bad-soft: #3A1C1A;
+  --good: #7BCB98; --good-soft: #17301F; --warn: #E2B45A; --warn-soft: #33290F; --code-bg: #1B262C;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15.5px; line-height: 1.6; padding-inline: 16px; padding-block: 28px 64px; }
+.wrap { max-width: 920px; margin: 0 auto; display: grid; gap: 28px; }
+header { display: grid; gap: 10px; border-bottom: 2px solid var(--accent); padding-bottom: 18px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(28px, 5vw, 40px); line-height: 1.1; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 22px; margin: 0; text-wrap: balance; color: var(--accent); }
+h3 { font-family: var(--display); font-weight: 600; font-size: 17px; margin: 0; }
+p, li { max-width: 72ch; }
+p { margin: 0; }
+section { display: grid; gap: 12px; min-width: 0; }
+ul, ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+code, .mono { font-family: var(--mono); font-size: 0.88em; }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+pre { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; margin: 0; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.55; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted); font-size: 13.5px; }
+.chip { display: inline-block; font-family: var(--mono); font-size: 11.5px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip.good { background: var(--good-soft); color: var(--good); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.info { background: var(--accent-soft); color: var(--accent); }
+.verdict { background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--bad); border-radius: 6px; padding: 16px 18px; display: grid; gap: 8px; }
+.verdict strong { font-family: var(--display); font-size: 18px; font-weight: 600; }
+.tablebox { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: 0.03em; text-transform: uppercase; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.seq { font-family: var(--mono); font-size: 13px; white-space: nowrap; }
+.legend { color: var(--muted); font-size: 13.5px; }
+.chain { counter-reset: step; list-style: none; padding: 0; display: grid; gap: 10px; }
+.chain li { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px 12px 48px; position: relative; max-width: none; }
+.chain li::before { counter-increment: step; content: counter(step); position: absolute; left: 14px; top: 12px; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--bg); font-family: var(--mono); font-size: 12px; display: grid; place-items: center; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.panel ul { gap: 4px; }
+.note { color: var(--muted); font-size: 13.5px; }
+footer { border-top: 1px solid var(--rule); padding-top: 14px; color: var(--muted); font-size: 13px; display: grid; gap: 4px; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head><body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">RePark · finding · 2026-11-12 · brief for a frontier agent</div>
+    <h1>A dropped table's rows come back after drop and recreate on the Hadoop catalog</h1>
+    <div class="meta">
+      <span><span class="chip bad">S1 candidate</span> silent wrong read</span>
+      <span><span class="chip warn">not carded · not ruled</span></span>
+      <span class="mono">fork rev 66901f02 · main aacefc82</span>
+    </div>
+  </header>
+
+  <div class="verdict">
+    <strong>RePark returns the rows of a dropped table; Spark returns the right rows.</strong>
+    <p>This happens on a <code>type=hadoop</code> catalog, in one session, through the ordinary SQL door, with no error. The cause is located: a staged replace in the iceberg-rust fork leaves a metadata cache entry behind. Hadoop names metadata files <code>v1</code>, <code>v2</code> and so on, and those names come back when a table is recreated. Glue and S3 Tables are not affected, and turning the cache off gives the right answer.</p>
+  </div>
+
+  <section>
+    <h2>The reproduction</h2>
+<pre><code>CREATE TABLE hd.ns.t (id BIGINT, n INT) USING iceberg;
+INSERT INTO hd.ns.t VALUES (7, 1);
+CREATE OR REPLACE TABLE hd.ns.t AS SELECT CAST(id AS BIGINT) AS id, 1 AS n FROM range(2, 5);
+DROP TABLE hd.ns.t;
+CREATE TABLE hd.ns.t (id BIGINT, n INT) USING iceberg;
+CREATE OR REPLACE TABLE hd.ns.t AS SELECT CAST(id AS BIGINT) AS id, 1 AS n FROM range(2, 5);
+SELECT count(*), min(id), max(id) FROM hd.ns.t;</code></pre>
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>Engine</th><th>Answer</th><th></th></tr></thead>
+        <tbody>
+          <tr><td>Apache Spark 4.1.2 + Iceberg 1.11.0, Hadoop catalog</td><td class="mono">3, 2, 4</td><td><span class="chip good">right</span></td></tr>
+          <tr><td>RePark 1.5.6 dev build (main 68f70b0f, fork 66901f02)</td><td class="mono">1, 7, 7</td><td><span class="chip bad">wrong</span></td></tr>
+          <tr><td>RePark with <code>repark.iceberg.metadataCache=false</code></td><td class="mono">3, 2, 4</td><td><span class="chip good">right</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">All values measured. The wrong answer is the dropped table's second version, the state just after its <code>INSERT</code>. The files on disk are right: <code>v2.metadata.json</code> carries the new table's uuid and its overwrite snapshot.</p>
+  </section>
+
+  <section>
+    <h2>When it triggers</h2>
+    <p class="legend">Step codes: <code>C</code> = create, <code>I7</code>/<code>I8</code> = insert one row, <code>R</code> = RTAS (3 rows), <code>RC</code> = column-def replace, <code>M</code> = MERGE, <code>CT</code> = CTAS, <code>S</code> = select, <code>D</code> = drop, <code>DP</code> = drop purge. Each sequence ran in one session on a fresh warehouse.</p>
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>Sequence</th><th>Result</th><th>What it shows</th></tr></thead>
+        <tbody>
+          <tr><td class="seq">C,I7,R,D,C,R</td><td><span class="chip bad">wrong</span></td><td>the reproduction</td></tr>
+          <tr><td class="seq">C,I7,R,D,C,R,S</td><td><span class="chip bad">wrong</span></td><td>a later read stays wrong</td></tr>
+          <tr><td class="seq">C,I7,R,D,C,RC</td><td><span class="chip bad">wrong</span></td><td>a column-def replace triggers it too</td></tr>
+          <tr><td class="seq">C,I7,R,D,CT,R</td><td><span class="chip bad">wrong</span></td><td>a recreate by CTAS triggers it too</td></tr>
+          <tr><td class="seq">C,I7,R,DP,C,R</td><td><span class="chip warn">loud error</span></td><td>with purge, the stale entry points at deleted files</td></tr>
+          <tr><td class="seq">C,I7,D,C,R</td><td><span class="chip good">right</span></td><td>no replace before the drop</td></tr>
+          <tr><td class="seq">C,I7,I7,D,C,R</td><td><span class="chip good">right</span></td><td>an INSERT-only history leaves no stale entry</td></tr>
+          <tr><td class="seq">C,I7,R,D,C,I8</td><td><span class="chip good">right</span></td><td>the new commit is an INSERT</td></tr>
+          <tr><td class="seq">C,I7,R,D,C,M</td><td><span class="chip good">right</span></td><td>the new commit is a MERGE</td></tr>
+          <tr><td class="seq">new session after D</td><td><span class="chip good">right</span></td><td>the cache belongs to one session</td></tr>
+          <tr><td class="seq">14 commit paths</td><td><span class="chip good">right</span></td><td>MERGE, DELETE, UPDATE, overwrite, truncate, replaces, ALTER and the DataFrame writers, after an INSERT-only history</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>The trigger:</strong> the dropped table's history contains a replace, and the recreated table's commit at the reused version number is also a replace.</p>
+  </section>
+
+  <section>
+    <h2>The cause</h2>
+    <p>Read from the fork's source at rev <span class="mono">66901f02</span>. Paths are relative to the root of the <span class="mono">TRO-Wolf/iceberg-rust</span> repository.</p>
+    <div class="cols">
+      <div class="panel">
+        <h3>The cache key is the file path</h3>
+        <p><code>table_metadata_cache.rs</code>: the key is (scope, location), at line 142. A hit is re-checked only when both object versions are known (line 155). The memory catalog passes none, so a hit is never re-checked. RePark turns the cache on by default with 512 entries (<code>repark-iceberg/src/catalog/caches.rs:44</code>).</p>
+      </div>
+      <div class="panel">
+        <h3>Hadoop names are reused</h3>
+        <p>Hadoop naming writes <code>v1</code>, <code>v2</code> and so on. A recreated table starts again at <code>v1</code>. Glue, S3 Tables and the default memory naming put a UUID in each file name, so they never reuse a path.</p>
+      </div>
+      <div class="panel">
+        <h3>Normal commits keep the cache clean</h3>
+        <p><code>memory/catalog.rs</code> <code>update_table</code> invalidates the previous location (line 606) and caches the new one (line 608). <code>drop_table</code> invalidates only the current location (line 459).</p>
+      </div>
+      <div class="panel">
+        <h3>The staged replace does neither</h3>
+        <p><code>memory/staged_publish.rs:82</code> <code>publish_replace</code> swaps the pointer and nothing else. It never drops the base location it replaced from the cache, and never caches the location it wrote. Compare <code>publish_create_hadoop</code>, which caches at line 72.</p>
+      </div>
+    </div>
+    <ol class="chain">
+      <li>In <code>C,I7,R</code>, the insert caches <code>v2</code>. The replace publishes <code>v3</code> and leaves <code>v2</code> in the cache.</li>
+      <li>The drop invalidates only <code>v3</code>, so <code>v2</code> survives. It holds the dropped table's state after the insert.</li>
+      <li>The recreated table's replace writes a new <code>v2</code> and caches nothing.</li>
+      <li>The next load of <code>v2</code> hits the dead entry and reads the dropped table.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Scope</h2>
+    <div class="cols">
+      <div class="panel">
+        <h3><span class="chip bad">affected</span></h3>
+        <ul>
+          <li>Hadoop catalogs, in one session.</li>
+          <li>Every later read of the recreated table. Whether later writes build on the stale base is not measured (question 2).</li>
+          <li>My reading, not ruled: this blocks the full format-v2 label at S1.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3><span class="chip good">not affected</span></h3>
+        <ul>
+          <li>Glue and S3 Tables, because metadata file names carry a UUID.</li>
+          <li>The scoped Glue and S3 Tables label.</li>
+          <li>A fresh session or process.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3><span class="chip info">workaround</span></h3>
+        <p><code>repark.iceberg.metadataCache=false</code> gives the right answer (measured).</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Proposed fix (not ruled)</h2>
+    <p>Card <span class="mono">LOCAL-DROP-RECREATE-STALE-READ-1</span>, S1. It would block the full v2 label and not the scoped one. The fix would be one fork PR and one RePark pin.</p>
+    <ol>
+      <li><strong>Replace keeps the cache clean.</strong> <code>publish_replace</code> does what <code>update_table</code> does: it drops the base location it replaced from the cache and caches the location it wrote.</li>
+      <li><strong>Drop clears the whole chain.</strong> Under Hadoop naming, <code>drop_table</code> invalidates every location in the dropped table's chain, not only the current one.</li>
+      <li><strong>Optional extra guard.</strong> A lookup could check the cached table uuid against the pointer. Alternatively, local files could carry an object version (size and mtime) so the existing check can fire.</li>
+      <li><strong>Pins.</strong> Every wrong row above becomes a cell checked against Spark. A fork unit test asserts that a replace and a drop leave no stale entry. The purge row must read right instead of failing.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Questions for the agent</h2>
+    <ol>
+      <li>Are fixes 1 and 2 both needed, or is one enough and the other a guard? Is fix 3 worth its cost on a read path that has performance gates?</li>
+      <li>Can a write whose commit base comes from the stale entry, such as a MERGE after the stale replace, persist wrong data? If so, the severity rises to a wrong write.</li>
+      <li>Do other fork catalogs' replace or create paths have the same missing invalidate or put? With UUID names that leaks memory but does not return wrong rows.</li>
+      <li>Within one table's life, can a Hadoop <code>vN</code> path ever be written twice, through a retried commit or a version-hint race?</li>
+      <li>Should a Hadoop-named <code>DROP TABLE</code> simply clear the whole cache for that catalog?</li>
+    </ol>
+  </section>
+
+  <footer>
+    <span>Full brief (Markdown, for pasting): the frontier folder's <span class="mono">Brief for a frontier agent — Hadoop drop-and-recreate stale read 2026-11-12.md</span></span>
+    <span>Probe scripts: the frontier folder's <span class="mono">hadoop-drop-recreate-2026-11-12/probes/</span> (probe.py, probe_spark.py, variants.py, ops.py, seq.py, twosess.py)</span>
+    <span>Found while testing PR #1311 (the S3 Tables killed-CTAS caveat, owner ruling C′). Written by the Opus 5.5 orchestrator.</span>
+  </footer>
+</div>
+</body></html>
