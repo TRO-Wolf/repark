@@ -1039,6 +1039,26 @@ perfectly good read.
   not a bug. Open residue: V1-door `.option("isolation-level","serializable")`
   honoring is unmeasured (Spark side) and stays with the V2-29 options surface.
 
+#### ZPM-1 — a write-ordered table given interleaved `-0.0` and `0.0` rows — **DECLARED 2026-11-13**
+
+- **repark** — on an identity-partitioned FLOAT or DOUBLE column of a table with a write order
+  (`WRITE ORDERED BY id`), an `INSERT` whose rows interleave `-0.0` and `0.0` writes a `-0.0`
+  partition and a `0.0` partition, each row reading its own zero, with fan-out on or off.
+- **Apache Spark** — Spark 4.1.2 with Iceberg 1.11.0 refuses the write: its write sort treats the
+  two zeros as equal, and the clustered writer (`ClusteredWriter.java:96`) raises "Incoming records
+  violate the writer assumption that records are clustered by spec and by partition within each
+  spec". With `write.spark.fanout.enabled = true` it writes two partitions. *(oracle: live, PySpark
+  4.1.2 + Iceberg 1.11.0, 2026-11-13.)*
+- **Pin** — `python/repark/tests/iceberg/test_zero_partition_merge_1.py::test_repark_keeps_the_two_zero_partitions_apart`
+  cells `write_ordered` and `write_ordered_clustered`; Spark's refusal in
+  `test_spark_refuses_interleaved_zeros_on_a_write_ordered_table` (live tier).
+- **Rationale** — DECLARED by the owner's ruling of 2026-11-13, about 19:53 UTC, verbatim "Defaults,
+  merge #1325 and #1327 when green" (ZERO-PARTITION-MERGE-1 question Q2): RePark answers where Spark
+  refuses. The same ruling (Q1) records that a table RePark wrote before ZERO-PARTITION-MERGE-1 may
+  hold a partition-granularity delete file stamped `+0.0` over rows of the `-0.0` partition; after
+  the fix RePark reads those deleted rows again, as Spark already does, and nothing hides them
+  ([card](../task/roadmap/mid-term/zero-partition-merge-1-card-2026-11-13.md)).
+
 #### V3-COV-1 — static `PARTITION (k = v)` overwrite from a `SELECT` source
 
 - **repark** — **FIXED 2026-09-03 (V3-COV).** `INSERT OVERWRITE t PARTITION (part = 10) SELECT …`

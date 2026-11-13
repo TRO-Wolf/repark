@@ -2,16 +2,16 @@
 
 ## Purpose
 
-Iceberg table format: catalogs and namespaces, DDL and schema evolution, metadata tables and columns, time travel, branches and tags, maintenance procedures, views, scans and pruning, and format v3 (deletion vectors, row lineage, upgrade).
+Iceberg table format: catalogs, namespaces, DDL, schema evolution, metadata tables and columns, time travel, branches, tags, maintenance procedures, views, scans, pruning, format v3 (deletion vectors, row lineage, upgrade).
 
 Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live in [../map.md](../map.md) "Layout".
 
 ## Contents
 
 - [test_alter_table.py](test_alter_table.py) — R-ALTER-TABLE — Spark ALTER TABLE schema evolution facade pins.
-- [test_ctas_query_failure_cleanup_1.py](test_ctas_query_failure_cleanup_1.py) — CTAS-QUERY-FAILURE-CLEANUP-1 — failing CTAS creates (F1/F3/F6, six spellings, hadoop/memory, v2/v3; saveAsTable v2 only, ruling 1) leave no metadata and refuse on every read; K4's five replace spellings keep the live table.
+- [test_ctas_query_failure_cleanup_1.py](test_ctas_query_failure_cleanup_1.py) — CTAS-QUERY-FAILURE-CLEANUP-1 — failing CTAS creates (F1/F3/F6, six spellings, hadoop/memory, v2/v3; saveAsTable v2 only, ruling 1) leave no metadata, refuse every read; K4's five replace spellings keep the live table.
 - [test_describe_table.py](test_describe_table.py) — Facade pins for DESCRIBE [TABLE] [EXTENDED|FORMATTED] on Iceberg tables.
-- [test_empty_projection_count_1.py](test_empty_projection_count_1.py) — `count(*)` over an empty projection (changelog and v3 DV reads) answers the row count.
+- [test_empty_projection_count_1.py](test_empty_projection_count_1.py) — `count(*)` over an empty projection (changelog, v3 DV reads) answers the row count.
 - [test_ice_branch_ops_1.py](test_ice_branch_ops_1.py) — ICE-BRANCH-OPS-1 pins: four Iceberg branch procedures on both doors.
 - [test_ice_branch_schema_1.py](test_ice_branch_schema_1.py) — IPI-07 R-BRANCH-SCHEMA — a branch read projects the table's current schema.
 - [test_ice_case_twin_1.py](test_ice_case_twin_1.py) — ICE-CASE-TWIN-1 — the RP-56 verifier fold pins against the p9/p9b Spark oracle.
@@ -26,26 +26,26 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_drop_ns_1.py](test_ice_drop_ns_1.py) — ICE-DROP-NS-1 — ``DROP NAMESPACE`` on a non-empty namespace refuses like Spark.
 - [test_ice_error_conditions_1.py](test_ice_error_conditions_1.py) — ICE-ERROR-CONDITIONS-1: the `[CONDITION]` and SQLSTATE parsers that attach Spark error conditions to engine errors.
 - [test_ice_hadoop_vn_1.py](test_ice_hadoop_vn_1.py) — ICE-HADOOP-VN-1 — a stale Hadoop `vN` writer raises loud and loses nothing.
-- [test_ice_idless_struct_1.py](test_ice_idless_struct_1.py), [test_ice_idless_late_file_1.py](test_ice_idless_late_file_1.py) — ICE-NESTED-DDL-1 / RP-64 — an id-less Parquet file reads its struct children by id (shapes a to i, two filter pins); fix round 1: a late id-less file reads values (pins j to o, control n), red on `ee592dcf`, green on `56ff5545`.
-- [test_ice_idless_toplevel_1.py](test_ice_idless_toplevel_1.py) — RP-65 — an unmapped id-less top-level string/binary pair reads, answers its null tests, `!=` and prefixes, and refuses `=` and `>`.
+- [test_ice_idless_struct_1.py](test_ice_idless_struct_1.py), [test_ice_idless_late_file_1.py](test_ice_idless_late_file_1.py) — ICE-NESTED-DDL-1 / RP-64 — an id-less Parquet file reads struct children by id (shapes a–i, two filter pins); fix round 1: a late id-less file reads values (pins j–o, control n), red on `ee592dcf`, green on `56ff5545`.
+- [test_ice_idless_toplevel_1.py](test_ice_idless_toplevel_1.py) — RP-65 — an unmapped id-less top-level string/binary pair reads, answers null tests, `!=` and prefixes, refuses `=` and `>`.
 - [test_ice_metadata_cols_1.py](test_ice_metadata_cols_1.py) — IPI-20 PR-1 — the Spark door serves the metadata columns ``_file`` … ``_deleted``.
 - [test_ice_mixed_case_1.py](test_ice_mixed_case_1.py) — ICE-MIXED-CASE-1 — the Spark door resolves mixed-case columns case-insensitively.
 - [test_ice_mt_as_of_1.py](test_ice_mt_as_of_1.py) — xo55-mt R1 — the Spark door serves ``VERSION AS OF`` on Iceberg metadata tables.
 - [test_ice_mt_describe_1.py](test_ice_mt_describe_1.py) — md-r1 — DESCRIBE on an Iceberg metadata table answers one row per column.
 - [test_ice_mt_reader_1.py](test_ice_mt_reader_1.py) — IPI-23-MT-READER-1 — the DataFrame reader loads Iceberg metadata tables.
 - [test_ice_nan_pushdown_1.py](test_ice_nan_pushdown_1.py) — ICE-NAN-PUSHDOWN-1 — NaN filter pushdown answers Spark end to end on Iceberg scans.
-- [test_ice_nested_evo_1.py](test_ice_nested_evo_1.py) — ICE-NESTED-EVO-1 — adopt a Spark-evolved nested table, and nested DDL, against Spark 4.1.2.
-- [test_ice_nested_evo_1_schema.py](test_ice_nested_evo_1_schema.py) — ICE-NESTED-EVO-1 round 2 — nested DDL metadata (ids, order, doc, required) against Spark 4.1.2.
+- [test_ice_nested_evo_1.py](test_ice_nested_evo_1.py) — ICE-NESTED-EVO-1 — adopt a Spark-evolved nested table and nested DDL vs Spark 4.1.2.
+- [test_ice_nested_evo_1_schema.py](test_ice_nested_evo_1_schema.py) — ICE-NESTED-EVO-1 round 2 — nested DDL metadata (ids, order, doc, required) vs Spark 4.1.2.
 - [test_ice_page_prune_1.py](test_ice_page_prune_1.py) — ICE-PAGE-PRUNE-1 — page-pruning scans answer Spark row for row, both doors.
 - [test_ice_procedures_1.py](test_ice_procedures_1.py) — ICE-PROCEDURES-1 binder pins: positional and mixed CALL forms, exact refusals.
 - [test_ice_procs_route_1.py](test_ice_procs_route_1.py) — ICE-PROCS-ROUTE-1 pins: four Iceberg maintenance procedures answer as Spark.
 - [test_ice_promote_read_1.py](test_ice_promote_read_1.py) — ICE-PROMOTE-READ-1 — reads and DML after a legal Iceberg type promotion answer Spark.
 - [test_ice_rdf_options_1.py](test_ice_rdf_options_1.py) — ICE-RDF-OPTIONS-1 options-map pins against the recorded Spark oracle.
-- [test_ice_rdf_sort_parse_1.py](test_ice_rdf_sort_parse_1.py) — ICE-RDF-SORT-PARSE-1 — rewrite_data_files sort and zorder against the Spark oracle.
+- [test_ice_rdf_sort_parse_1.py](test_ice_rdf_sort_parse_1.py) — ICE-RDF-SORT-PARSE-1 — rewrite_data_files sort and zorder vs the Spark oracle.
 - [test_ice_replace_columns_1.py](test_ice_replace_columns_1.py) — ICE-REPLACE-COLUMNS-1 — ``ALTER TABLE … REPLACE COLUMNS`` drops and re-adds every column.
 - [test_ice_rm_deletes_1.py](test_ice_rm_deletes_1.py) — ICE-RM-DELETES-1 rewrite_manifests pins against the recorded Spark oracle.
 - [test_ice_small_parser_1.py](test_ice_small_parser_1.py) — IPI-21 + IPI-25 + IPI-42 — the three small parser shapes over finished behaviour.
-- [test_ice_struct_empty_child_1.py](test_ice_struct_empty_child_1.py) — ICE-NESTED-DDL-1 / RP-63 — a column-emptied struct reads per row through the Spark door, no panic (AUD-008); pins c and f assert RePark's per-row value; Spark's answers are in the registry.
+- [test_ice_struct_empty_child_1.py](test_ice_struct_empty_child_1.py) — ICE-NESTED-DDL-1 / RP-63 — a column-emptied struct reads per row through the Spark door, no panic (AUD-008); pins c and f assert RePark's per-row value; Spark's are in the registry.
 - [test_ice_system_functions_1.py](test_ice_system_functions_1.py) — IPI-29 system functions rounds 1-3 — the catalog-qualified system-function pins.
 - [test_ice_tt_resolve_1.py](test_ice_tt_resolve_1.py) — ICE-TT-RESOLVE-1 — Spark's time-travel resolution on every door.
 - [test_ice_tt_resolve_1_tt2.py](test_ice_tt_resolve_1_tt2.py) — ICE-TT-RESOLVE-1 TT2 critic cells — offline pins on the two-snapshot shape.
@@ -56,17 +56,17 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_views_4_showprops.py](test_ice_views_4_showprops.py) — IPI-40 views PR4 battery — SHOW TBLPROPERTIES on an Iceberg view.
 - [test_ice_views_5_showcreate.py](test_ice_views_5_showcreate.py) — IPI-40 views PR5 battery — SHOW CREATE TABLE on an Iceberg view.
 - [test_ice_views_6_temp.py](test_ice_views_6_temp.py) — IPI-40 views PR6a1 battery — SQL ``CREATE [OR REPLACE] TEMPORARY VIEW``.
-- [test_ice_views_6_temp_errors.py](test_ice_views_6_temp_errors.py) — IPI-40 views PR6 error-path battery — every temp-view refusal with its complete text.
+- [test_ice_views_6_temp_errors.py](test_ice_views_6_temp_errors.py) — IPI-40 views PR6 error-path battery — every temp-view refusal, complete text.
 - [test_iceberg_hygiene.py](test_iceberg_hygiene.py) — R-ICEBERG-HYGIENE oracles — column-def CREATE + ref DDL time-travel pins.
-- [test_iceberg_load_path.py](test_iceberg_load_path.py) — R-DF-LOAD-PATH / R-DF-LOAD-METADATA-JSON — ``format("iceberg").load(<path>)`` reads. Hadoop hint pins (2026-10-28, 10-29): after a committed `DELETE` on a `type=hadoop` table, a stale hint or a gzip-named newer metadata file reads the newest rows (ICE-HADOOP-GZIP-METADATA-1, ICE-HADOOP-HINT-WINDOW-1). Merge facts: the sidecar.
-- [test_local_drop_recreate_stale_write_1.py](test_local_drop_recreate_stale_write_1.py) — LOCAL-DROP-RECREATE-STALE-WRITE-1 — a Hadoop drop and recreate reads and writes the new table, three reads per cell; live Spark reads the six wrong-write rows.
+- [test_iceberg_load_path.py](test_iceberg_load_path.py) — R-DF-LOAD-PATH / R-DF-LOAD-METADATA-JSON — ``format("iceberg").load(<path>)`` reads. Hadoop hint pins (2026-10-28, 10-29): after a committed `DELETE` on a `type=hadoop` table, a stale hint or gzip-named newer metadata reads the newest rows (ICE-HADOOP-GZIP-METADATA-1, ICE-HADOOP-HINT-WINDOW-1). Merge facts: the sidecar.
+- [test_local_drop_recreate_stale_write_1.py](test_local_drop_recreate_stale_write_1.py) — LOCAL-DROP-RECREATE-STALE-WRITE-1 — a Hadoop drop and recreate reads and writes the new table, three reads a cell; live Spark reads the six wrong-write rows.
 - [test_maintenance_call.py](test_maintenance_call.py) — R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
 - [test_maintenance_policy_1.py](test_maintenance_policy_1.py) — `run_maintenance` policy surface: dry-run default, override kwargs, refusal without a policy.
 - [test_map_key_union_1.py](test_map_key_union_1.py) — MAP-KEY-ALTER-1 delta — evolving BY NAME, MERGE and DataFrame writes refuse a map-key change, writing nothing; a map value still evolves.
 - [test_metadata_tables.py](test_metadata_tables.py) — Oracle — Spark-style Iceberg metadata tables.
 - [test_mw5_baseline_delta.py](test_mw5_baseline_delta.py) — MW-5: re-run the MW-0 merge-on-read growth demo and pin the compact delta.
 - [test_mw8_runbook.py](test_mw8_runbook.py) — Run the documented maintenance runbook end to end and pin what each step changes.
-- [test_nan_partition_value_1.py](test_nan_partition_value_1.py) — NAN-PARTITION-VALUE-1: a NaN or infinite FLOAT/DOUBLE partition value written by `INSERT`, CTAS, `writeTo` or `saveAsTable` reads back as itself; live, Spark and RePark each read the other's table as their own.
+- [test_nan_partition_value_1.py](test_nan_partition_value_1.py) — NAN-PARTITION-VALUE-1: a NaN or infinite FLOAT/DOUBLE partition value written by `INSERT`, CTAS, `writeTo` or `saveAsTable` reads back as itself; live: each engine reads the other's table as its own.
 - [test_nan_write_canonical_1.py](test_nan_write_canonical_1.py) — NAN-WRITE-CANONICAL-1: NaN bits and partition files per door and format; live = Spark's; xfail: Avro filters.
 - [test_partname_1.py](test_partname_1.py) — WO PARTNAME-1: partition-field names stay Spark's on each door.
 - [test_rdf_schema_evo_1.py](test_rdf_schema_evo_1.py) — RDF-SCHEMA-EVO-1: rewrite_data_files after schema evolution, pinned against Spark.
@@ -79,24 +79,24 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_tblprops_1.py](test_tblprops_1.py) — WO TBLPROPS-1 battery — ``SHOW TBLPROPERTIES`` on an Iceberg table.
 - [test_time_travel.py](test_time_travel.py) — Oracle — snapshot / timestamp / branch / tag reads.
 - [test_u11_edge_partition_field.py](test_u11_edge_partition_field.py) — E-CASE-PARTITION-FIELD facade pins: partition sources bind case-sensitively.
-- [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — Facade pins for nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the SQL DESCRIBE type.
+- [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the SQL DESCRIBE type.
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — V3 facade `.sql()` v3 DML pins: UPDATE, sequential COW DELETE, and MERGE keep `_row_id`.
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — V3-2: CREATE/CTAS format-version=3 behind ``repark.sql.allowCreateFormatVersion3``.
-- [test_update_schema_batch_mismatch_1.py](test_update_schema_batch_mismatch_1.py) — UPDATE-SCHEMA-BATCH-MISMATCH-1 — a two-file `UPDATE` answers in either batch order.
+- [test_update_schema_batch_mismatch_1.py](test_update_schema_batch_mismatch_1.py) — UPDATE-SCHEMA-BATCH-MISMATCH-1 — a two-file `UPDATE` answers in either batch order; [test_zero_partition_merge_1.py](test_zero_partition_merge_1.py) — ZERO-PARTITION-MERGE-1: two zero partitions, 18 doors; live = Spark's.
 - [test_v3_dv_compaction.py](test_v3_dv_compaction.py) — V3-5: facade rewrite_data_files drops in-scope v3 deletion vectors.
-- [test_v3_dv_container_close.py](test_v3_dv_container_close.py) — RP-7 — the shared-Puffin deletion-vector container close, repark against live Spark.
+- [test_v3_dv_container_close.py](test_v3_dv_container_close.py) — RP-7 — the shared-Puffin deletion-vector container close vs live Spark.
 - [test_v3_legacy_delete_merge.py](test_v3_legacy_delete_merge.py) — V3-12 — a legacy parquet position delete merges into the DV on the next MoR write.
 - [test_v3_lineage_columns.py](test_v3_lineage_columns.py) — V3-4: facade serves `_row_id` and `_last_updated_sequence_number` on v3 reads.
 - [test_v3_live_file_order.py](test_v3_live_file_order.py) — V3-11 live oracle: one commit's data files take Spark's ascending-partition order.
 - [test_v3_live_oracle.py](test_v3_live_oracle.py) — V3E-5 live oracle for Spark-written v3 fixtures.
 - [test_v3_multiarg_1.py](test_v3_multiarg_1.py) — V3-MULTIARG-1 — multi-argument partition transforms are DECLARED out of 1.x.
-- [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — V3-COV — every served statement class and CALL procedure on a v3 table, repark against Spark.
+- [test_v3_statement_coverage.py](test_v3_statement_coverage.py) — V3-COV — every served statement class and CALL procedure on a v3 table vs Spark.
 - [test_v3_upgrade.py](test_v3_upgrade.py) — V3-10: in-place v2 to v3 upgrade through ALTER TABLE on the facade door.
 - [test_v3e3_fixtures.py](test_v3e3_fixtures.py) — V3E-3: facade reads of Spark-written partitioned v3 DV and equality-delete fixtures.
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — V3E-4: facade refs, time travel over DVs, expire/orphans on format-v3.
 - [_record_branch_ops_1.py](_record_branch_ops_1.py) — Spark oracle recorder for ICE-BRANCH-OPS-1.
 - [_record_ice_column_reorder_1.py](_record_ice_column_reorder_1.py) — Record the ICE-COLUMN-REORDER-1 Spark oracle into test_ice_column_reorder_1_truth.json.
-- [_record_ice_drop_ns_1_oracle.py](_record_ice_drop_ns_1_oracle.py) — Record or re-check the ICE-DROP-NS-1 Spark oracle cells on live PySpark 4.1.2.
+- [_record_ice_drop_ns_1_oracle.py](_record_ice_drop_ns_1_oracle.py) — Record or re-check the ICE-DROP-NS-1 Spark oracle cells, live PySpark 4.1.2.
 - [_record_ice_hadoop_vn_1.py](_record_ice_hadoop_vn_1.py) — Record the ICE-HADOOP-VN-1 Spark oracle and fixture.
 - [_record_ice_mixed_case_1.py](_record_ice_mixed_case_1.py) — Record the ICE-MIXED-CASE-1 Spark oracle and stamp the mixed-case fixture warehouse.
 - [_record_ice_nan_pushdown_1.py](_record_ice_nan_pushdown_1.py) — Record the ICE-NAN-PUSHDOWN-1 Spark oracle — truth JSON plus fixture warehouses.
@@ -123,10 +123,10 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [ice_nan_pushdown_1_oracle.json](ice_nan_pushdown_1_oracle.json) — Recorded Spark oracle read by `test_ice_nan_pushdown_1.py`; re-derived by `_record_ice_nan_pushdown_1.py`.
 - [ice_procs_route_1_spark_oracle.json](ice_procs_route_1_spark_oracle.json) — Recorded Spark oracle read by `test_ice_procs_route_1.py`; re-derived by `_record_ice_procs_route_1_oracle.py`.
 - [ice_rdf_options_1_spark_oracle.json](ice_rdf_options_1_spark_oracle.json) — Recorded Spark oracle read by `test_ice_rdf_options_1.py`; re-derived by `_record_rdf_options_1_oracle.py`.
-- [ice_rdf_sort_parse_1_spark_oracle.json](ice_rdf_sort_parse_1_spark_oracle.json) — Recorded Spark oracle read by `test_ice_rdf_sort_parse_1.py`; re-derived by `_record_ice_rdf_sort_parse_1_oracle.py`.
-- [ice_replace_columns_1_spark_oracle.json](ice_replace_columns_1_spark_oracle.json) — Recorded Spark oracle (34 cells) read by `test_ice_replace_columns_1.py`; re-derived by `_record_ice_replace_columns_1_oracle.py`.
+- [ice_rdf_sort_parse_1_spark_oracle.json](ice_rdf_sort_parse_1_spark_oracle.json) — Recorded Spark oracle for `test_ice_rdf_sort_parse_1.py`; re-derived by `_record_ice_rdf_sort_parse_1_oracle.py`.
+- [ice_replace_columns_1_spark_oracle.json](ice_replace_columns_1_spark_oracle.json) — Recorded Spark oracle (34 cells) for `test_ice_replace_columns_1.py`; re-derived by `_record_ice_replace_columns_1_oracle.py`.
 - [ice_rm_deletes_1_spark_oracle.json](ice_rm_deletes_1_spark_oracle.json) and [ice_rm_deletes_1_spark_oracle2.json](ice_rm_deletes_1_spark_oracle2.json) — Recorded Spark oracles read by `test_ice_rm_deletes_1.py`.
-- [ice_tt_resolve_1_spark_oracle.json](ice_tt_resolve_1_spark_oracle.json) — Recorded Spark oracle (115 cells) read by `test_ice_tt_resolve_1.py`, `test_ice_tt_resolve_1_tt2.py`; re-derived by `_record_ice_tt_resolve_1_oracle.py`.
+- [ice_tt_resolve_1_spark_oracle.json](ice_tt_resolve_1_spark_oracle.json) — Recorded Spark oracle (115 cells) for `test_ice_tt_resolve_1.py`, `test_ice_tt_resolve_1_tt2.py`; re-derived by `_record_ice_tt_resolve_1_oracle.py`.
 - [rp32_rdf_cow_bytes_spark_oracle.json](rp32_rdf_cow_bytes_spark_oracle.json) — Recorded Spark oracle (6 cells), kept for the record (no test loads it); re-derived by `_record_rp32_rdf_cow_bytes.py`.
 - [v3_multiarg_1_spark_oracle.json](v3_multiarg_1_spark_oracle.json) — Recorded Spark oracle read by `test_v3_multiarg_1.py`; re-derived by `_record_v3_multiarg_1.py`.
 

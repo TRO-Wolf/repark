@@ -4,7 +4,7 @@
 1, 2026-11-13 (#1325, finding C1, class (c), and its probe `sz.py`); NAN-WRITE-CANONICAL-1 verifier 2, 2026-11-13
 (#1325, finding C1); owner, 2026-11-13, about 16:45 UTC, verbatim "Go with default".
 
-**Status:** filed 2026-11-13, ruled label-blocking, not dispatched. Severity **S1**: a wrong value through every
+**Status:** filed 2026-11-13, ruled label-blocking; **FIXED 2026-11-13** by this unit (fork `bc5a9211`, see "Fixed" below). Severity **S1**: a wrong value through every
 reader. The owner's ruling makes it label-blocking for the scoped label ICE-V2-FLAT-AWS-LABEL-1: a small fork unit
 after the current lanes free. Pre-existing: base and head of #1325 store the same layout.
 
@@ -48,3 +48,47 @@ at filing (`e51927b1`) reseeds that cell so no partition holds both zeros.
 
 Every partitioned write door keeps `0.0` and `-0.0` in their own partitions on every core count, as Spark's table
 does, and both engines read each row's own zero; pinned on a 1-core and a many-core run, the fork test at the splitter.
+
+## Fixed (2026-11-13, ZERO-PARTITION-MERGE-1, `claude-opus-5-5`)
+
+Step 0, the inventory critic's verdict (GAPS: one missed door, one non-`Struct` key, one sort key, two pinning
+tests, four ordering helpers) and the records are in [the unit's directory](../../wo/zero-partition-merge-1/map.md).
+
+- **Seats (three product files).**
+  - Fork `crates/iceberg/src/spec/values/struct_value.rs`: `Struct` compares and hashes a FLOAT or DOUBLE leaf,
+    top level or nested, by its bits after NaN canonicalisation, which is Java's `Double.equals` / `hashCode`.
+    Every map and set keyed on a partition tuple now keeps `-0.0` and `0.0` apart. That covers the splitter, both
+    partitioning writers, the rewrite plan and writers, the replace-partitions drop set,
+    `rewrite_position_delete_files`, remove-dangling-deletes, commit-time delete matching, RePark's lineage and
+    position-delete groups, and the read side's delete-file index. `PrimitiveLiteral` and `Datum` are unchanged.
+  - Fork `crates/integrations/datafusion/src/physical_plan/sort.rs`: the write-order sort key on `_partition`
+    canonicalises NaN only, so a write-ordered table sorts the two zeros apart instead of interleaving them.
+  - RePark `crates/repark-iceberg/src/write/summary_collision.rs`: the dynamic-overwrite summary check matches
+    replaced files by `(spec id, Struct)`, so its refusal counts only the replaced partition's files.
+- **Pins.**
+  - Fork unit tests at both seats.
+  - Two fork tests that pinned the merge now assert two partitions:
+    - `record_batch_partition_splitter.rs` `test_float_partition_values_stay_on_the_row_wise_split`, which now
+      expects 3 parts;
+    - `tests/sorted_insert.rs` `float_partition_signed_zeros_write_two_partitions_sorted_by_id`, renamed from
+      `…_stays_sorted_by_id`.
+  - The facade test `python/repark/tests/iceberg/test_zero_partition_merge_1.py` covers 18 doors x DOUBLE and
+    FLOAT x 1 and 16 writers.
+    - Red on main: 60 of 72.
+    - Green on the fix: 72 of 72, on 1 CPU and on 10 CPUs.
+    - Live tier: 146 of 146 green; main fails 120.
+- **Orderings, not changed (follow-up, not carded).** Four hand-written comparators still answer `Equal` for the
+  two zeros: fork `inspect/partition_values.rs:203-236`, `maintenance/partition_stats.rs:800-821` and
+  `maintenance/rewrite_data_files_plan.rs:246-250`, and RePark `write/file_order.rs:25-31`. The two zero rows or
+  groups come out in hash order there, where Java orders `-0.0` first. No pin depends on that order.
+- **Owner rulings**, 2026-11-13, about 19:53 UTC, verbatim "Defaults, merge #1325 and #1327 when green":
+  - **Q1, release note.** A table RePark wrote before this fix may hold a partition-granularity position-delete
+    file stamped `+0.0` that covers rows in the `-0.0` partition. After this fix, RePark reads those deleted
+    `-0.0` rows again, as Spark already does. Nothing hides them. A partition-stats file computed before the fix
+    may seed a merged row.
+  - **Q2, declared divergence.** On a write-ordered table, rows that interleave `-0.0` and `0.0` are refused by
+    Spark 4.1.2's clustered writer (`ClusteredWriter.java:96`). RePark writes both partitions. See the parity
+    registry row ZPM-1.
+  - **Q3.** #1325 merged first. The pin to fork `bc5a9211` sits on fork main `8b6ff921`.
+- **Not explained, confined to merged files.** Spark read the other float column of a merged ORC file as `-0.0`.
+  After the fix no file holds both zeros.
