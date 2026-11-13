@@ -31,8 +31,11 @@ Avro data bits of `d`, rows 1–6, read from the files:
   `7ff0000000000001` to `fff8deadbeef0001`. The file's data then disagrees with its own partition value.
 - On Parquet and ORC the same rewrite stores the canonical NaN, equal to Spark. Unpartitioned and INSERT-written Avro
   tables rewrite equal to Spark.
-- **Reach:** Avro tables RePark wrote before NAN-WRITE-CANONICAL-1 through a door that stored raw NaN partition values
-  (CTAS, RTAS, `writeTo` `create`/`createOrReplace`, `saveAsTable` overwrite).
+- **Reach:** any Avro table whose NaN partition values are not canonical: every table RePark wrote before
+  NAN-WRITE-CANONICAL-1 through a door that stored raw NaN partition values. On main those are CTAS, RTAS, `writeTo`
+  `create`/`createOrReplace` and `saveAsTable` overwrite, and also INSERT OVERWRITE, `writeTo`
+  `overwrite`/`overwritePartitions`, MERGE and UPDATE (step 0 `table.md`). The delta re-check measured the MERGE and
+  INSERT OVERWRITE tables rewriting the same way (#1325 delta re-check, D1, 2026-11-13).
 
 ## Probe
 
