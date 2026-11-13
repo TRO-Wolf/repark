@@ -1378,167 +1378,45 @@ stay. The AST equals `origin/main`. Each
 `moved-to-map` row in the unit ledger has its sentence here, grouped under the function
 that held the comment.
 
-- `(module)`: Vertical `show` is Spark-style only; styled displays stay horizontal and
-  warn once. WriterV2 `option`/`options` are accepted for signature parity but ignored
-  beyond `tableProperty`. Warn once per process; tests reset the flag.
-  `_STOPPED_MESSAGE` must match `ReparkSession.stop`. The filter rewriter never binds
-  SQL keywords `true` / `false` / `null` as columns — Spark's grammar reads the keyword.
-  Semi/anti engine tokens emit the left schema only. Cache MemTable names are
-  object-identity and exclude checkpoints, CDF, and mapInArrow. Re-exports keep
-  `plan_collapse` first so sibling modules import its helpers.
-- `_by_name_casefold_map`: Exact duplicate names must not silently overwrite the prior
-  entry.
-- `_normalize_subset`: PySpark's error class is per-surface, not derivable from
-  `accept_str` (dropDuplicates + fillna → `NOT_LIST_OR_TUPLE`, dropna →
-  `NOT_LIST_OR_STR_OR_TUPLE`). Keep `enumerate` for position-aware diagnostics.
-- `DataFrame`: Sticky window-merge metadata, display maps, smartCsv diagnostics,
-  declared-sort source, and the tighten-nulls flag live on the instance.
-  `_unemitted_attr_ids` holds right-side attribute ids a semi/anti join did not emit.
-  `declareSorted` is the disclosed repark camelCase spelling of `declare_sorted` (no
-  PySpark equivalent). `is_empty` and `to_local_iterator` are disclosed snake_case
-  aliases, not PySpark names. `repartition` validates arguments; execution is
-  single-node. `unionAll` is Spark's historical alias of `union`. `except_` is the
-  Python keyword escape and is not shipped. Arrow export uses the facade exception
-  taxonomy and positional display names. `toArrowBatches` is a disclosed camelCase
-  extension.
-- `__init__`: Cache is object-identity and lazy until the first action. Action-ephemeral
-  views are replaced on the next action; plan-stable views remain valid for children.
-  One plan-stable bridge snapshot serves all plan children. The facade plan token
-  resolves join sides. Duplicate displays map to unique engine fields. Declared-sort is
-  source-only. Tighten-nulls propagates to derived frames. `_mia_temp_views` holds
-  MemTable names for deferred bridge results; they are dropped during finalization.
-- `_identity_child`: Identity-preserving operations keep display, engine, and origin
-  maps.
-- `_materialize_cache_if_needed`: Cache keeps `_map_bridge` so `unpersist` restores
-  re-run; checkpoint truncates lineage. Never route VALUES / `createDataFrame` through
-  this entry. Commit handle state only after a successful materialize. Converting an
-  already-cached pin drops the old `__repark_cache_*` view after the checkpoint view
-  registers. Checkpoint keeps the VALUES seam and is not a session cache-registry
-  entry. Checkpoint does not advertise as cached (`is_cached` is False).
-- `_prepare_for_plan`: An already-pinned child uses the MemTable and does not clear the
-  bridge.
-- `_action_inner`: An already-pinned action does not re-run the UDF. Fresh bridge
-  execution leaves `_map_bridge` in place. After `replace_ephemeral` drops a prior
-  action view, rebind `_inner` so later readers cannot use a dangling MemTable. Leave
-  `_inner` alone when `_mia_plan_ready` — that view is plan-stable.
-- `_execute_map_in_arrow_bridge`: Fall back to the IPC path when the native C-stream
-  register is absent (version-skew). Output batches drain in Python first: a live
-  `RecordBatchReader` over the generator would re-enter `__arrow_c_stream__` while Rust
-  holds the GIL and abort.
-- `_execute_map_in_arrow_bridge_ipc`: An empty iterator writes a schema-only IPC stream
-  (zero batches).
-- `_register_ipc_bytes_as_inner`: Own the view before `sql()` so finalize drops it even
-  if SELECT fails.
+- `(module)`: Vertical `show` is Spark-style only; styled displays stay horizontal and warn once. WriterV2 `option`/`options` are accepted for signature parity but ignored beyond `tableProperty`. Warn once per process; tests reset the flag. `_STOPPED_MESSAGE` must match `ReparkSession.stop`. The filter rewriter never binds SQL keywords `true` / `false` / `null` as columns — Spark's grammar reads the keyword. Semi/anti engine tokens emit the left schema only. Cache MemTable names are object-identity and exclude checkpoints, CDF, and mapInArrow. Re-exports keep `plan_collapse` first so sibling modules import its helpers.
+- `_by_name_casefold_map`: Exact duplicate names must not silently overwrite the prior entry.
+- `_normalize_subset`: PySpark's error class is per-surface, not derivable from `accept_str` (dropDuplicates + fillna → `NOT_LIST_OR_TUPLE`, dropna → `NOT_LIST_OR_STR_OR_TUPLE`). Keep `enumerate` for position-aware diagnostics.
+- `DataFrame`: Sticky window-merge metadata, display maps, smartCsv diagnostics, declared-sort source, and the tighten-nulls flag live on the instance. `_unemitted_attr_ids` holds right-side attribute ids a semi/anti join did not emit. `declareSorted` is the disclosed repark camelCase spelling of `declare_sorted` (no PySpark equivalent). `is_empty` and `to_local_iterator` are disclosed snake_case aliases, not PySpark names. `repartition` validates arguments; execution is single-node. `unionAll` is Spark's historical alias of `union`. `except_` is the Python keyword escape and is not shipped. Arrow export uses the facade exception taxonomy and positional display names. `toArrowBatches` is a disclosed camelCase extension.
+- `__init__`: Cache is object-identity and lazy until the first action. Action-ephemeral views are replaced on the next action; plan-stable views remain valid for children. One plan-stable bridge snapshot serves all plan children. The facade plan token resolves join sides. Duplicate displays map to unique engine fields. Declared-sort is source-only. Tighten-nulls propagates to derived frames. `_mia_temp_views` holds MemTable names for deferred bridge results; they are dropped during finalization.
+- `_identity_child`: Identity-preserving operations keep display, engine, and origin maps.
+- `_materialize_cache_if_needed`: Cache keeps `_map_bridge` so `unpersist` restores re-run; checkpoint truncates lineage. Never route VALUES / `createDataFrame` through this entry. Commit handle state only after a successful materialize. Converting an already-cached pin drops the old `__repark_cache_*` view after the checkpoint view registers. Checkpoint keeps the VALUES seam and is not a session cache-registry entry. Checkpoint does not advertise as cached (`is_cached` is False).
+- `_prepare_for_plan`: An already-pinned child uses the MemTable and does not clear the bridge.
+- `_action_inner`: An already-pinned action does not re-run the UDF. Fresh bridge execution leaves `_map_bridge` in place. After `replace_ephemeral` drops a prior action view, rebind `_inner` so later readers cannot use a dangling MemTable. Leave `_inner` alone when `_mia_plan_ready` — that view is plan-stable.
+- `_execute_map_in_arrow_bridge`: Fall back to the IPC path when the native C-stream register is absent (version-skew). Output batches drain in Python first: a live `RecordBatchReader` over the generator would re-enter `__arrow_c_stream__` while Rust holds the GIL and abort.
+- `_execute_map_in_arrow_bridge_ipc`: An empty iterator writes a schema-only IPC stream (zero batches).
+- `_register_ipc_bytes_as_inner`: Own the view before `sql()` so finalize drops it even if SELECT fails.
 - `unpersist`: `blocking` is signature parity; a single-node drop is always synchronous.
-- `localCheckpoint`: `storageLevel` is accepted for signature parity and ignored
-  (single-node MemTable only). `eager` is live.
-- `sameSemantics`: Plan equality over the canonical analyzed-plan stream (R-9);
-  independently built local frames still answer `False` by construction identity.
-- `declare_sorted`: Caching redirects the scan; declare the source before caching. Bind
-  with the same case-insensitive overlay as `select`. Re-resolve the table source after
-  re-register, or the declaring frame never sees the elision.
-- `with_column`: Scalar UDF markers use the `withColumns` → `select` bridge. Aggregates
-  are rejected here — a native `with_column` would fail engine-side, and a pure-global
-  select would collapse N→1 rows. Generators must go through the select unnest rewrite
-  or the array placeholder projects without multiplying rows. The ordinary path routes
-  through `with_columns` so alias-chain squash and adjacent same-spec window merge
-  apply.
-- `with_columns`: Validate keys and values before any `.alias` so a bad map raises
-  early. Aggregates are rejected (same N→1 collapse). Adjacent same-spec window merge
-  runs only when the immediately-prior sticky layer used the same structural window and
-  no new column reads a name that layer defined; `filter` / `drop` / `select` never copy
-  sticky meta. Multi-name frames iterate engine/display bindings and preserve origin on
-  replacement. The new layer writes sticky meta for a later merge.
-  **ATTR-ID-1 S3c (2026-10-01):** each key's hit set is the shared live-rule
-  computation (`column_fields._live_rule_hits`); every hit position is replaced
-  (Spark fans out across one id and across two — no ambiguity refusal), a miss
-  appends, and among folded-duplicate keys the last wins, as before. Each
-  replaced or appended position gets its own fresh id through `.alias`.
-- `_try_merge_adjacent_window_layer`: Do not merge past a cache mark (that would orphan
-  the intermediate MemTable pin). Replay both maps on the pre-layer frame so DataFusion
-  fuses one `WindowAggr`.
-- `filter`: A generator predicate would target the array placeholder. Compounds keep
-  join_sql attribute tokens — rewrite to local engine fields and use
-  `filter_sql`. Pure id Columns rebind to engine fields before native filter.
-- `select`: Multi-name frames cannot re-resolve bare display strings (`AMBIGUOUS_REFERENCE`);
-  expand via engine fields plus display identity. DataFusion requires unique engine
-  projection names; Spark allows duplicate displays. Duplicate displays take positional
-  `__repark_sel_{n}` engine names. Keep composed
-  `join_sql` so an attribute-token select does not fall back to a bare leaf. Classify projections
-  from Column metadata, not expression text. A generator and an aggregate cannot share
-  one grouping stage. Pure global requires every projection aggregate and/or foldable,
-  with no free attributes and no sticky ungroupable (`row_number().over` is neither).
-  Bare aggregates use the native aggregate path; composed post-agg ops need SQL because
-  DataFusion `aggregate` rejects non-AggregateFunction exprs. Attach the display overlay
-  before the early return so `sum,sum` does not leak `__repark_sel_*`. Mixed
-  aggregate and free companion without GROUP BY is Spark `[MISSING_GROUP_BY]`. Duplicate
-  displays cannot pass the generator SQL rewrite. Compounds that still carry attribute
-  tokens cannot use unrebound native exprs on multi-name frames.
-- `_select_global_aggregate_sql`: One plan-stable snapshot for uncached mapInArrow.
-  Register the prepared plan — never the empty MIA placeholder and never a second
-  action re-run. Do not call `self.group_by()` (that would `_prepare_for_plan` again).
-  Case-preserving rebind covers bare AF builders including post-`.alias` pure AFs that
-  clear `_agg_name` but keep structural `sql_expr`.
-- `_select_with_generator`: The private array field is a uuid so it cannot collide with
-  user projection names. Project from `_plan()` not raw `_inner` so an uncached
-  mapInArrow parent materializes before unnest — raw `_inner` is the empty schema
-  placeholder and would yield zero rows. The second SQL projection refers only to
-  quoted identifiers from the intermediate schema. Length is top-level only. Three
-  generator kinds: `explode` drops null and empty arrays, and the element type is not
-  needed — do not call outer-type resolution (struct arrays are legal);
-  `explode_outer` turns null and empty into one null-element row; `explode_keep_null`
-  turns a NULL list into one null-element row while an EMPTY list stays empty and
-  drops. Take the element type from the intermediate field for the outer CASE (covers
-  coalesce/compounds); never fail-open to BIGINT. Keep `make_array(NULL)` untyped so
-  the engine infers. Element cast after unnest is a sticky chain (innermost first)
-  from chained `.cast()`.
-- `_array_element_sql_type`: Bind uses `array_sql` only (no display substring match).
-  Prefer exact spelling; otherwise require a unique casefold hit. A bound field with
-  an unsupported element type (map / nested-void) still refuses.
-- `__getattr__`: Half-built instances (copy/pickle) must not recurse through
-  `_ensure_alive` reading `self._inner`. A bare `AttributeError` handles those probes;
-  user misses use the classified error. Permanent out-of-scope surfaces use named
-  errors. Exact membership is case-sensitive like PySpark; quoted bind keeps
-  non-lowercase schema fields re-selectable.
-- `_resolve_getitem_column_name`: De-dupe preserving order for case-insensitive
-  multi-hit reporting. Same-display join duplicates are handled above the casefold
-  multi path.
-- `_select_via_attr_sql`: Token resolution requires stamped attribute ids. Prefer
-  multi-name engine aliases when the outer select already assigned them. A unique
-  display is safe as an engine name; a CAST display needs an alias.
-- `_refuse_unemitted_ids`: A Column whose attribute id sits in `_unemitted_attr_ids`
-  raises `MISSING_ATTRIBUTES`; any other Column passes through for the id rebind.
-- `_bind_schema_column`: Quote the engine schema field for free-SQL embeds. Join ON
-  rewrite uses attribute-id tokens, not this fragment.
-- `_quote_filter_sql_identifiers`: Do not rewrite function names or SQL boolean and
-  null literals. Protect single-quoted SQL string literals, then double-quoted idents
-  inside the rest. **FNP-4B (2026-09-15):** backtick-quoted spans are protected exactly
-  like double-quoted spans (BL-2 FIXED); schema-bound idents quote with backticks.
-- `_rebind_stable_name_column`: The attribute id pins a specific side/engine field — skip
-  bare-name rebind. Sort markers force a new Column and keep sticky bits; prefer the
-  bound's schema-quoted `sql_expr` so cube/rollup free-SQL SELECT quotes reserved
-  names such as `order`. Keep the id and `join_sql` through sort-marker rebind.
-- `__getitem__`: `df["*"]` is the star projection token for `count` and `select`.
-  Live PySpark 4.1.2: CI getitem is a NamedExpression with the requested spelling
-  (same display identity as `F.col("X")`), not `Alias(canonical AS item)`. Quoted
-  schema bind keeps the field re-selectable after a non-lowercase projection.
-- `schema`: `"Null"` is the Arrow Debug spelling and reaches every flat void column,
-  a plain NULL literal included (W-1). Overlay Spark-legal display names while engine
-  fields stay unique.
+- `localCheckpoint`: `storageLevel` is accepted for signature parity and ignored (single-node MemTable only). `eager` is live.
+- `sameSemantics`: Plan equality over the canonical analyzed-plan stream (R-9); independently built local frames still answer `False` by construction identity.
+- `declare_sorted`: Caching redirects the scan; declare the source before caching. Bind with the same case-insensitive overlay as `select`. Re-resolve the table source after re-register, or the declaring frame never sees the elision.
+- `with_column`: Scalar UDF markers use the `withColumns` → `select` bridge. Aggregates are rejected here — a native `with_column` would fail engine-side, and a pure-global select would collapse N→1 rows. Generators must go through the select unnest rewrite or the array placeholder projects without multiplying rows. The ordinary path routes through `with_columns` so alias-chain squash and adjacent same-spec window merge apply.
+- `with_columns`: Validate keys and values before any `.alias` so a bad map raises early. Aggregates are rejected (same N→1 collapse). Adjacent same-spec window merge runs only when the immediately-prior sticky layer used the same structural window and no new column reads a name that layer defined; `filter` / `drop` / `select` never copy sticky meta. Multi-name frames iterate engine/display bindings and preserve origin on replacement. The new layer writes sticky meta for a later merge.
+  **ATTR-ID-1 S3c (2026-10-01):** each key's hit set is the shared live-rule computation (`column_fields._live_rule_hits`); every hit position is replaced (Spark fans out across one id and across two — no ambiguity refusal), a miss appends, and among folded-duplicate keys the last wins, as before. Each replaced or appended position gets its own fresh id through `.alias`.
+- `_try_merge_adjacent_window_layer`: Do not merge past a cache mark (that would orphan the intermediate MemTable pin). Replay both maps on the pre-layer frame so DataFusion fuses one `WindowAggr`.
+- `filter`: A generator predicate would target the array placeholder. Compounds keep join_sql attribute tokens — rewrite to local engine fields and use `filter_sql`. Pure id Columns rebind to engine fields before native filter.
+- `select`: Multi-name frames cannot re-resolve bare display strings (`AMBIGUOUS_REFERENCE`); expand via engine fields plus display identity. DataFusion requires unique engine projection names; Spark allows duplicate displays. Duplicate displays take positional `__repark_sel_{n}` engine names. Keep composed `join_sql` so an attribute-token select does not fall back to a bare leaf. Classify projections from Column metadata, not expression text. A generator and an aggregate cannot share one grouping stage. Pure global requires every projection aggregate and/or foldable, with no free attributes and no sticky ungroupable (`row_number().over` is neither). Bare aggregates use the native aggregate path; composed post-agg ops need SQL because DataFusion `aggregate` rejects non-AggregateFunction exprs. Attach the display overlay before the early return so `sum,sum` does not leak `__repark_sel_*`. Mixed aggregate and free companion without GROUP BY is Spark `[MISSING_GROUP_BY]`. Duplicate displays cannot pass the generator SQL rewrite. Compounds that still carry attribute tokens cannot use unrebound native exprs on multi-name frames.
+- `_select_global_aggregate_sql`: One plan-stable snapshot for uncached mapInArrow. Register the prepared plan — never the empty MIA placeholder and never a second action re-run. Do not call `self.group_by()` (that would `_prepare_for_plan` again). Case-preserving rebind covers bare AF builders including post-`.alias` pure AFs that clear `_agg_name` but keep structural `sql_expr`.
+- `_select_with_generator`: The private array field is a uuid so it cannot collide with user projection names. Project from `_plan()` not raw `_inner` so an uncached mapInArrow parent materializes before unnest — raw `_inner` is the empty schema placeholder and would yield zero rows. The second SQL projection refers only to quoted identifiers from the intermediate schema. Length is top-level only. Three generator kinds: `explode` drops null and empty arrays, and the element type is not needed — do not call outer-type resolution (struct arrays are legal); `explode_outer` turns null and empty into one null-element row; `explode_keep_null` turns a NULL list into one null-element row while an EMPTY list stays empty and drops. Take the element type from the intermediate field for the outer CASE (covers coalesce/compounds); never fail-open to BIGINT. Keep `make_array(NULL)` untyped so the engine infers. Element cast after unnest is a sticky chain (innermost first) from chained `.cast()`.
+- `_array_element_sql_type`: Bind uses `array_sql` only (no display substring match). Prefer exact spelling; otherwise require a unique casefold hit. A bound field with an unsupported element type (map / nested-void) still refuses.
+- `__getattr__`: Half-built instances (copy/pickle) must not recurse through `_ensure_alive` reading `self._inner`. A bare `AttributeError` handles those probes; user misses use the classified error. Permanent out-of-scope surfaces use named errors. Exact membership is case-sensitive like PySpark; quoted bind keeps non-lowercase schema fields re-selectable.
+- `_resolve_getitem_column_name`: De-dupe preserving order for case-insensitive multi-hit reporting. Same-display join duplicates are handled above the casefold multi path.
+- `_select_via_attr_sql`: Token resolution requires stamped attribute ids. Prefer multi-name engine aliases when the outer select already assigned them. A unique display is safe as an engine name; a CAST display needs an alias.
+- `_refuse_unemitted_ids`: A Column whose attribute id sits in `_unemitted_attr_ids` raises `MISSING_ATTRIBUTES`; any other Column passes through for the id rebind.
+- `_bind_schema_column`: Quote the engine schema field for free-SQL embeds. Join ON rewrite uses attribute-id tokens, not this fragment.
+- `_quote_filter_sql_identifiers`: Do not rewrite function names or SQL boolean and null literals. Protect single-quoted SQL string literals, then double-quoted idents inside the rest. **FNP-4B (2026-09-15):** backtick-quoted spans are protected exactly like double-quoted spans (BL-2 FIXED); schema-bound idents quote with backticks.
+- `_rebind_stable_name_column`: The attribute id pins a specific side/engine field — skip bare-name rebind. Sort markers force a new Column and keep sticky bits; prefer the bound's schema-quoted `sql_expr` so cube/rollup free-SQL SELECT quotes reserved names such as `order`. Keep the id and `join_sql` through sort-marker rebind.
+- `__getitem__`: `df["*"]` is the star projection token for `count` and `select`. Live PySpark 4.1.2: CI getitem is a NamedExpression with the requested spelling (same display identity as `F.col("X")`), not `Alias(canonical AS item)`. Quoted schema bind keeps the field re-selectable after a non-lowercase projection.
+- `schema`: `"Null"` is the Arrow Debug spelling and reaches every flat void column, a plain NULL literal included (W-1). Overlay Spark-legal display names while engine fields stay unique.
 - `printSchema`: `treeString` ends with a newline and `print` adds Spark's second one.
-- `toDF`: Multi-name frames cannot re-bind bare display strings; rename positionally
-  via engine/display bindings.
-- `selectExpr`: A bare `*` keeps multi-name display identity. Use a plan-stable
-  bridge snapshot rather than action registration.
-- `alias`: Register one plan-stable bridge snapshot so post-prepare alias agrees with
-  `selectExpr` / `select` / `filter`. The NAME stays one-part (the user chose it) but
-  the read is home-pinned — a bare one-part reference re-resolves against the live
-  default catalog. SQL `SELECT *` surfaces engine field names; re-attach display
-  identity so multi-name joins keep duplicate display columns positionally.
-- `replace`: Multi-name frames bind by engine/display pairs — or by `_join_qualifiers`
-  when the plan carries duplicate display names. Preserve origin for multi-name select
-  identity. The CASE lives in `replace_expr.py` (flat searched CASE, not a nested
-  `when.otherwise` chain).
+- `toDF`: Multi-name frames cannot re-bind bare display strings; rename positionally via engine/display bindings.
+- `selectExpr`: A bare `*` keeps multi-name display identity. Use a plan-stable bridge snapshot rather than action registration.
+- `alias`: Register one plan-stable bridge snapshot so post-prepare alias agrees with `selectExpr` / `select` / `filter`. The NAME stays one-part (the user chose it) but the read is home-pinned — a bare one-part reference re-resolves against the live default catalog. SQL `SELECT *` surfaces engine field names; re-attach display identity so multi-name joins keep duplicate display columns positionally.
+- `replace`: Multi-name frames bind by engine/display pairs — or by `_join_qualifiers` when the plan carries duplicate display names. Preserve origin for multi-name select identity. The CASE lives in `replace_expr.py` (flat searched CASE, not a nested `when.otherwise` chain).
 - `repartition`: Spark: first position is int count, or a Column/str partition expr
   when the call is `repartition(*cols)`. A list/bool/float always raises
   `NOT_COLUMN_OR_STR`. Reject a sole-argument list instead of treating it as no
@@ -1806,8 +1684,9 @@ facade already knows the exact field — `_bind_engine_display_column`, `_rebind
 `select`, `df["x"]`, `F.col` rebinds) stays a plain column and keeps the ambiguity rule.
 `select("*")` expands through `_iter_bound_columns`, so `selectExpr("*")`, `withColumn(s)`,
 `toDF` and `fillna` re-project by attribute; `dropDuplicates(subset)` keys every field matching a
-subset name ignoring case, as Spark does, bound by attribute (SIGNED-ZERO-NORMALIZE-1 delta 2: its float keys are
-normalised by input position through `subset_resolve._normalized_keys`, so a self-join's renamed fields are reached); `drop` sends an origin Column's
+subset name ignoring case, as Spark does, bound by attribute (SIGNED-ZERO-NORMALIZE-1 delta 2: float keys normalised by input position via
+`subset_resolve._normalized_keys`, reaching a self-join's renamed fields; detail in
+`task/wo/signed-zero-normalize-1/evidence/part-b/after/delta2/delta2.md`); `drop` sends an origin Column's
 engine name as an exact attribute. `core.py` 3979 → 3976.
 U11-EDGE-1 round 6 (2026-09-26, V-001): `_select_via_qcol_sql` registers its scratch view over
 `_native.attribute_copies(plan)` and rewrites each resolved QCOL token — and each rebound bare
