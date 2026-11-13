@@ -12,5 +12,8 @@ Written by the probes in [../probes/](../probes/map.md); scratchpad paths are sh
   upper bounds with their bits), the partitioned tables' manifest partition summaries, and every Parquet
   footer's statistics (pyarrow, RePark and Spark writers, plain files and Iceberg data files).
 - [write-rb.jsonl](write-rb.jsonl), [write-sp.jsonl](write-sp.jsonl) — the two writer runs: what each wrote.
+- [critic-cells.jsonl](critic-cells.jsonl) — §9's cells: group, cell, door, Spark's answer and each build's.
+- [critic-plans.jsonl](critic-plans.jsonl) — each §9 leg's provenance record and its truncated TopK scan lines.
+- [ingest.jsonl](ingest.jsonl) — the ingestion cells, both engines.
 
 Up: [../map.md](../map.md).

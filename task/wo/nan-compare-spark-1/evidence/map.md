@@ -33,6 +33,10 @@
   grouped `min`/`max` operations over six sources); `analyze.py <runs> <out>` then `render.py <out> <tables>`.
 - **Per-leg raw output** (about 3 MB per RePark leg) stays in the scratchpad; `raw/` holds the
   merged per-cell answers, which carry every answer each build and Spark gave.
+- **After the critic** (about 15:00–15:40 local time): `critic_cells.py write` on base, then on Spark, into a
+  second warehouse and Parquet root; `critic_cells.py cells` on each build and on Spark; `ingest_probe.py` on
+  base (writes) and on Spark (reads); one Spark read of `rb_meta_base.files` for the partition-value bits
+  (`7ff8…` for all three NaN partitions). Spark through `spark_slot.sh`; ANSI on only.
 - **Spark's runtime jar** is named by `ICEBERG_SPARK_JAR` (the runs used the c26 oracle's ivy copy of
   `iceberg-spark-runtime-4.1_2.13-1.11.0`). From about 14:15 the owner allowed two Spark JVMs; the later
   Spark legs took a free Spark slot instead of the single Spark lock.

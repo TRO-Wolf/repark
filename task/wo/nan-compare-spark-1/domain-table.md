@@ -1,5 +1,8 @@
 # NAN-COMPARE-SPARK-1: the domain table
 
+**Revised after the inventory critic (§9):** grouped `max`/`min` is wrong on stored canonical NaN and on
+`±Infinity`-only groups inside the label's scope; plain-Parquet reads replace NaN by a constant from statistics.
+
 Measured 2026-11-13 on three RePark builds against Spark 4.1.2 with Iceberg 1.11.0, in both ANSI modes. The
 builds, commands and locks are in [evidence/](evidence/map.md); every cell's answers are in
 [evidence/raw/cells.tsv](evidence/raw/cells.tsv).
@@ -557,12 +560,14 @@ is the Iceberg scan's file count (`N=`, of five or nine) or `stats` where `max` 
   in the pin answers `[1..6]` because Avro data files have no bounds. `pk > 0.5` differs by format for the same
   reason: on Parquet and ORC the NaN partitions' data files are NaN-only and pruned by metrics; on Avro they are
   kept.
-- **PARQUET-NAN-EQUALITY-1 is a writer's statistics, read the same way by both engines.** pyarrow and RePark
+- **PARQUET-NAN-EQUALITY-1, first reading (corrected in §9):** a writer's statistics, read the same way by both engines. pyarrow and RePark
   write Parquet min/max without NaN; Spark's `parquet-mr` 1.16 writes NaN as the max (`stats.jsonl`). On a
   single pyarrow or RePark file, `d = NaN` keeps nothing on Spark and on RePark (`pq_pa_l1`, `pq_rb_l1`), and
   `d > Infinity` likewise; on Spark's own file both keep the NaN rows (`pq_sp_l1`). The card compared RePark on
   RePark's file with Spark on Spark's. RePark's cause is DataFusion's `PruningPredicate` (`min <= NaN AND NaN
-  <= max` is false under totalOrder, inventory F2).
+  <= max` is false under totalOrder, inventory F2). **The critic refuted the general claim:** on a file whose
+  non-NaN values are all one value, RePark reads the NaN as that value and Spark reads NaN (§9 M1). The read side
+  is equal only where the file's non-NaN values differ.
 - **The statistics shortcut answers `max` without NaN.** On a single pyarrow or RePark Parquet file,
   `max(d)` is `Infinity` on every build (Spark: NaN): the footer's exact max leaves NaN out (inventory B5). On
   `pq_sp_l5` RePark answers `max` from statistics (`stats`) and is right only because `parquet-mr` stored NaN
@@ -637,3 +642,183 @@ Cells measured in both modes: 4061; verdicts that move with ANSI: base 9, 1325 9
 
 The cells that move are `array_sort` ties between `-0.0` and `0.0` on the five-file sources, whose order
 follows the files' read order in both modes on both engines; no NaN cell depends on the ANSI mode.
+
+## 9. After the critic: the doors M1–M8
+
+Measured 2026-11-13 after the xhigh inventory critic (`VERDICT: GAPS`), with `probes/critic_cells.py` on the same
+three builds and Spark 4.1.2, ANSI on, the Spark door and the native door. New sources, written fresh:
+
+- `pa_grp`: one pyarrow file, groups in a fixed row order: `g1 {NaN, 0.0}`, `g2 {5.0, NaN}`, `g3 {-Infinity}`,
+  `g4 {Infinity}`, `g5 {NaN}`, `g6 {1.0}`, as DOUBLE `d` and FLOAT `f`, canonical NaN only. From it,
+  `rb_grp_*` (RePark base) and `sp_grp_*` (Spark): Iceberg Parquet, ORC and Avro, one file each.
+- `pa_const`: one pyarrow file `{(20, NaN), (21, 1.0)}`; `pa_const48`: 48 files, every third `{NaN, 1.0}`, the
+  rest `{2.0}`; `pa_dyn`: 48 files, every third `{NaN, 0.5, 1.0}`, the rest `{5.0, 6.0}`.
+- `rt_<build>`: each build's `spark.read.parquet(pa_const).coalesce(1).write.parquet(…)`, read back by every
+  engine.
+- `rb_meta_<engine>`: a base-written Iceberg table partitioned by `pk` (the rows of `*_part`), one per engine,
+  each engine running `DELETE … WHERE pk < 100` on its own copy.
+
+Spark answer, then each build's (`=` where it equals Spark's). The native door is compared with Spark SQL.
+
+| group | cell | door | Spark | base | 1325 | head3 |
+|---|---|---|---|---|---|---|
+| constant | pa_const48_eq_nan | sql | [[0]] | = | = | = |
+| constant | pa_const48_isnan | sql | [[16]] | [[0]] | [[0]] | [[0]] |
+| constant | pa_const48_max | sql | [["NaN"]] | [["2.0"]] | [["2.0"]] | [["2.0"]] |
+| constant | pa_const_isnan | sql | [[1]] | [[0]] | [[0]] | [[0]] |
+| constant | pa_const_max | sql | [["NaN"]] | [["1.0"]] | [["1.0"]] | [["1.0"]] |
+| constant | pa_const_rows | sql | [[20,"NaN"],[21,"1.0"]] | [[20,"1.0"],[21,"1.0"]] | [[20,"1.0"],[21,"1.0"]] | [[20,"1.0"],[21,"1.0"]] |
+| constant | roundtrip_1325_rows | sql | [[20,"1.0"],[21,"1.0"]] | . | = | = |
+| constant | roundtrip_base_rows | sql | [[20,"1.0"],[21,"1.0"]] | = | = | = |
+| constant | roundtrip_head3_rows | sql | [[20,"1.0"],[21,"1.0"]] | . | . | = |
+| constant | pa_const48_eq_nan | native | [[0]] | = | = | = |
+| constant | pa_const48_isnan | native | [[16]] | [[0]] | [[0]] | [[0]] |
+| constant | pa_const48_max | native | [["NaN"]] | [["2.0"]] | [["2.0"]] | [["2.0"]] |
+| constant | pa_const_isnan | native | [[1]] | [[0]] | [[0]] | [[0]] |
+| constant | pa_const_max | native | [["NaN"]] | [["1.0"]] | [["1.0"]] | [["1.0"]] |
+| constant | pa_const_rows | native | [[20,"NaN"],[21,"1.0"]] | [[20,"1.0"],[21,"1.0"]] | [[20,"1.0"],[21,"1.0"]] | [[20,"1.0"],[21,"1.0"]] |
+| constant | roundtrip_1325_rows | native | [[20,"1.0"],[21,"1.0"]] | . | = | = |
+| constant | roundtrip_base_rows | native | [[20,"1.0"],[21,"1.0"]] | = | = | = |
+| constant | roundtrip_head3_rows | native | [[20,"1.0"],[21,"1.0"]] | . | . | = |
+| dynamic | agg_max_off | sql | [["NaN","0.5"]] | [["6.0","0.5"]] | [["6.0","0.5"]] | [["6.0","0.5"]] |
+| dynamic | agg_max_on | sql | [["NaN","0.5"]] | [["6.0","0.5"]] | [["6.0","0.5"]] | [["6.0","0.5"]] |
+| dynamic | topk_desc_off | sql | [["NaN"]] | = | = | = |
+| dynamic | topk_desc_on | sql | [["NaN"]] | [["6.0"]] | [["6.0"]] | = |
+| dynamic | agg_max_off | native | [["NaN","0.5"]] | [["6.0","0.5"]] | [["6.0","0.5"]] | [["6.0","0.5"]] |
+| dynamic | agg_max_on | native | [["NaN","0.5"]] | [["6.0","0.5"]] | [["6.0","0.5"]] | [["6.0","0.5"]] |
+| dynamic | topk_desc_off | native | [["NaN"]] | = | = | = |
+| dynamic | topk_desc_on | native | [["NaN"]] | [["6.0"]] | [["6.0"]] | = |
+| grouped-iceberg | rb_grp_avro | sql | [[1,"NaN","0.0","NaN","0.0"],[2,"NaN","5.0","NaN","5.0"],[3,"-inf","-… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… |
+| grouped-iceberg | rb_grp_avro_ungrouped | sql | [["NaN","-inf"]] | = | = | = |
+| grouped-iceberg | rb_grp_orc | sql | [[1,"NaN","0.0","NaN","0.0"],[2,"NaN","5.0","NaN","5.0"],[3,"-inf","-… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… |
+| grouped-iceberg | rb_grp_orc_ungrouped | sql | [["NaN","-inf"]] | = | = | = |
+| grouped-iceberg | rb_grp_parquet | sql | [[1,"NaN","0.0","NaN","0.0"],[2,"NaN","5.0","NaN","5.0"],[3,"-inf","-… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… |
+| grouped-iceberg | rb_grp_parquet_ungrouped | sql | [["NaN","-inf"]] | = | = | = |
+| grouped-iceberg | sp_grp_avro | sql | [[1,"NaN","0.0","NaN","0.0"],[2,"NaN","5.0","NaN","5.0"],[3,"-inf","-… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… |
+| grouped-iceberg | sp_grp_avro_ungrouped | sql | [["NaN","-inf"]] | = | = | = |
+| grouped-iceberg | sp_grp_orc | sql | [[1,"NaN","0.0","NaN","0.0"],[2,"NaN","5.0","NaN","5.0"],[3,"-inf","-… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… |
+| grouped-iceberg | sp_grp_orc_ungrouped | sql | [["NaN","-inf"]] | = | = | = |
+| grouped-iceberg | sp_grp_parquet | sql | [[1,"NaN","0.0","NaN","0.0"],[2,"NaN","5.0","NaN","5.0"],[3,"-inf","-… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… | [[1,"0.0","0.0","0.0","0.0"],[2,"NaN","NaN","NaN","NaN"],[3,"-1.79769… |
+| grouped-iceberg | sp_grp_parquet_ungrouped | sql | [["NaN","-inf"]] | = | = | = |
+| memory | array_contains_canon | sql | [[true]] | = | = | = |
+| memory | array_contains_sign | sql | [[true]] | [[false]] | [[false]] | [[false]] |
+| memory | array_distinct_canon | sql | [[1]] | = | = | = |
+| memory | array_distinct_sign | sql | [[1]] | [[2]] | [[2]] | [[2]] |
+| memory | array_except_canon | sql | [[0]] | = | = | = |
+| memory | array_except_sign | sql | [[0]] | [[1]] | [[1]] | [[1]] |
+| memory | array_intersect_canon | sql | [[1]] | = | = | = |
+| memory | array_intersect_sign | sql | [[1]] | [[0]] | [[0]] | [[0]] |
+| memory | array_position_canon | sql | [[2]] | = | = | = |
+| memory | array_position_sign | sql | [[2]] | [[0]] | [[0]] | [[0]] |
+| memory | array_remove_canon | sql | [[1]] | = | = | = |
+| memory | array_remove_sign | sql | [[1]] | [[2]] | [[2]] | [[2]] |
+| memory | array_union_canon | sql | [[1]] | = | = | = |
+| memory | array_union_sign | sql | [[1]] | [[2]] | [[2]] | [[2]] |
+| memory | arrays_overlap_canon | sql | [[true]] | = | = | = |
+| memory | arrays_overlap_sign | sql | [[true]] | [[false]] | [[false]] | [[false]] |
+| memory | grp_mem_double | sql | [[1,"NaN","0.0"],[2,"NaN","5.0"],[3,"-inf","-inf"],[4,"inf","inf"],[5… | [[1,"0.0","0.0"],[2,"NaN","NaN"],[3,"-1.7976931348623157e+308","-inf"… | [[1,"0.0","0.0"],[2,"NaN","NaN"],[3,"-1.7976931348623157e+308","-inf"… | [[1,"0.0","0.0"],[2,"NaN","NaN"],[3,"-1.7976931348623157e+308","-inf"… |
+| memory | grp_mem_float | sql | [[1,"NaN","0.0"],[2,"NaN","5.0"],[3,"-inf","-inf"],[4,"inf","inf"],[5… | [[1,"0.0","0.0"],[2,"NaN","NaN"],[3,"-3.4028234663852886e+38","-inf"]… | [[1,"0.0","0.0"],[2,"NaN","NaN"],[3,"-3.4028234663852886e+38","-inf"]… | [[1,"0.0","0.0"],[2,"NaN","NaN"],[3,"-3.4028234663852886e+38","-inf"]… |
+| memory | median_canon | sql | [["2.0"]] | = | = | = |
+| memory | median_sign | sql | [["-1.0"]] | [["-2.0"]] | [["-2.0"]] | [["-2.0"]] |
+| memory | nullif_canon | sql | [[true]] | = | = | = |
+| memory | nullif_sign | sql | [[true]] | [[false]] | [[false]] | [[false]] |
+| memory | pct_canon | sql | [["1.0","2.0","NaN"]] | = | = | = |
+| memory | pct_sign | sql | [["-2.0","-1.0","NaN"]] | [["-2.0","-1.0","-1.0"]] | [["-2.0","-1.0","-1.0"]] | [["-2.0","-1.0","-1.0"]] |
+| memory | struct_distinct_canon | sql | [[1]] | = | = | = |
+| memory | struct_distinct_sign | sql | [[1]] | [[2]] | [[2]] | [[2]] |
+| memory | struct_max_canon | sql | [["NaN"]] | = | = | = |
+| memory | struct_max_sign | sql | [["NaN"]] | [["-1.0"]] | [["-1.0"]] | [["-1.0"]] |
+| memory | struct_order_canon | sql | [["-1.0"],["NaN"]] | = | = | = |
+| memory | struct_order_sign | sql | [["-1.0"],["NaN"]] | [["NaN"],["-1.0"]] | [["NaN"],["-1.0"]] | [["NaN"],["-1.0"]] |
+| memory | array_contains_canon | native | [[true]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | array_contains_sign | native | [[true]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | array_distinct_canon | native | [[1]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | array_distinct_sign | native | [[1]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | array_except_canon | native | [[0]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | array_except_sign | native | [[0]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | array_intersect_canon | native | [[1]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | array_intersect_sign | native | [[1]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | array_position_canon | native | [[2]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | array_position_sign | native | [[2]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | array_remove_canon | native | [[1]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | array_remove_sign | native | [[1]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | array_union_canon | native | [[1]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | array_union_sign | native | [[1]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | arrays_overlap_canon | native | [[true]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | arrays_overlap_sign | native | [[true]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | grp_mem_double | native | [[1,"NaN","0.0"],[2,"NaN","5.0"],[3,"-inf","-inf"],[4,"inf","inf"],[5… | [[1,"0.0","0.0"],[2,"NaN","NaN"],[3,"-1.7976931348623157e+308","-inf"… | [[1,"0.0","0.0"],[2,"NaN","NaN"],[3,"-1.7976931348623157e+308","-inf"… | [[1,"0.0","0.0"],[2,"NaN","NaN"],[3,"-1.7976931348623157e+308","-inf"… |
+| memory | grp_mem_float | native | [[1,"NaN","0.0"],[2,"NaN","5.0"],[3,"-inf","-inf"],[4,"inf","inf"],[5… | [[1,"0.0","0.0"],[2,"NaN","NaN"],[3,"-3.4028234663852886e+38","-inf"]… | [[1,"0.0","0.0"],[2,"NaN","NaN"],[3,"-3.4028234663852886e+38","-inf"]… | [[1,"0.0","0.0"],[2,"NaN","NaN"],[3,"-3.4028234663852886e+38","-inf"]… |
+| memory | median_canon | native | [["2.0"]] | = | = | = |
+| memory | median_sign | native | [["-1.0"]] | [["-2.0"]] | [["-2.0"]] | [["-2.0"]] |
+| memory | nullif_canon | native | [[true]] | = | = | = |
+| memory | nullif_sign | native | [[true]] | [[false]] | [[false]] | [[false]] |
+| memory | pct_canon | native | [["1.0","2.0","NaN"]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | pct_sign | native | [["-2.0","-1.0","NaN"]] | ERR AnalysisException | ERR AnalysisException | ERR AnalysisException |
+| memory | struct_distinct_canon | native | [[1]] | = | = | = |
+| memory | struct_distinct_sign | native | [[1]] | [[2]] | [[2]] | [[2]] |
+| memory | struct_max_canon | native | [["NaN"]] | ERR UnsupportedOperationException | ERR UnsupportedOperationException | ERR UnsupportedOperationException |
+| memory | struct_max_sign | native | [["NaN"]] | ERR UnsupportedOperationException | ERR UnsupportedOperationException | ERR UnsupportedOperationException |
+| memory | struct_order_canon | native | [["-1.0"],["NaN"]] | = | = | = |
+| memory | struct_order_sign | native | [["-1.0"],["NaN"]] | [["NaN"],["-1.0"]] | [["NaN"],["-1.0"]] | [["NaN"],["-1.0"]] |
+| meta-delete | after | sql | [[2],[3],[4],[5]] | [[2],[3],[4],[5],[9]] | [[2],[3],[4],[5],[9]] | [[2],[3],[4],[5],[9]] |
+| meta-delete | before | sql | [[1],[2],[3],[4],[5],[6],[7],[8],[9]] | = | = | = |
+| meta-delete | delete | sql | [] | [[]] | [[]] | [[]] |
+
+**What these cells add.**
+
+- **M2, grouped `max`/`min` (inside the label's scope).** On every Iceberg table, both writers, all three
+  formats, DOUBLE and FLOAT, every build:
+  - RePark answers `g1 = (0.0, 0.0)`, `g2 = (NaN, NaN)`, `g3 max = -1.7976931348623157e+308`,
+    `g4 min = 1.7976931348623157e+308` (FLOAT `±3.4028234663852886e+38`);
+  - Spark answers `(NaN, 0.0)`, `(NaN, 5.0)`, `-Infinity`, `Infinity`;
+  - the ungrouped `max`/`min` of the same tables are right.
+
+  Groups holding only `±Infinity` are wrong with no NaN at all: the grouped accumulator starts from
+  `f64::MIN`/`f64::MAX` (inventory B2b). The same holds in memory on both doors (`grp_mem_*`).
+- **M1, the constant-column read (plain Parquet, all builds, both doors).** A file whose non-NaN values are
+  one value reads every NaN as that value:
+  - `pa_const` reads `[[20, 1.0], [21, 1.0]]` where Spark reads `[[20, NaN], [21, 1.0]]`;
+  - `isnan` counts 0 of 16 over `pa_const48`.
+
+  **RePark's own round trip writes the corrupted value:** Spark reads `rt_base`, `rt_1325` and `rt_head3` as
+  `[[20, 1.0], [21, 1.0]]`. This is a wrong write, from a wrong read.
+  **The same holds into Iceberg:** base's `spark.read.parquet(pa_const).writeTo(<table>).append()` stores `1.0`
+  for the NaN row, in Parquet and in Avro tables. Spark reads both tables as `[[20, 1.0], [21, 1.0]]`
+  (`probes/ingest_probe.py`, `raw/ingest.jsonl`).
+- **B5 again, with every file holding statistics.** `max(d)` over `pa_dyn` is `6.0` on every build where Spark
+  answers NaN, with dynamic filters on and off alike, so it is the statistics shortcut, not the dynamic filter.
+  `max(d)` over `pa_const48` is `2.0`.
+- **M3, the TopK dynamic filter.** `ORDER BY d DESC LIMIT 1` over `pa_dyn` gives:
+  - `6.0` on base and 1325, `NaN` on head3, with dynamic filters on;
+  - `NaN` on every build with them off;
+  - Spark answers NaN.
+
+  Part B's wrapped key is what keeps head3 right.
+- **`= NaN` on pyarrow files:** Spark itself answers 0 over `pa_const48`, as RePark does. This is pruning by
+  NaN-free statistics in both readers.
+- **M4, quantiles.** Over `{-NaN, -1.0, -2.0}` (a sign-set NaN), every build gives `median -2.0` and
+  `percentile_approx(…, 1.0) -1.0`; Spark gives `-1.0` and NaN. The canonical control is right.
+- **M5, function-internal equality.** With a sign-set NaN against `CAST('NaN' …)`, every build is wrong on the
+  Spark door in all nine functions measured:
+  - `nullif`, `array_contains`, `array_position`;
+  - `array_distinct`, `arrays_overlap`, `array_remove`;
+  - `array_union`, `array_intersect`, `array_except`.
+
+  Every canonical control is right. The native door has no such Spark names (`AnalysisException`), except
+  `nullif`, which is wrong there too.
+- **M6, struct leaves.** On every build, head3 included:
+  - `max(s).a` is `-1.0` (Spark NaN);
+  - `ORDER BY s` puts the sign-set NaN first;
+  - `DISTINCT` over `{NaN, -NaN}` structs counts 2.
+
+  Part B wraps top-level float keys only.
+- **M7, the metadata-only DELETE (not reached).**
+  - **What base stored:** three NaN partitions, as three files, but the manifest's partition values are
+    `7ff8…` for all three (read through Spark's `files` table).
+  - **What happened:** `DELETE … WHERE pk < 100` kept every NaN row on every build, and so did Spark.
+  - **What it leaves:** the `total_cmp` door (inventory G4) is reachable only from a writer that stores
+    sign-set partition bits in the manifest; neither engine does.
+  - **Spark deleted the NULL-partition row** (`id 9`) for `pk < 100`, where RePark keeps it. This is not NaN,
+    and it is recorded only (sketch §9).
+- **M8, the aggregate dynamic filter (code level).** Not separable here: the shortcut answered first. The
+  name-based pushdown stays a code-level risk for unit 1's UDAF (inventory B7).

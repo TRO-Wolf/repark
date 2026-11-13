@@ -4,226 +4,302 @@
 **Source:** the owner's ruling of 2026-11-13 ("Defaults", item 3: this unit first after the scoped label) and
 Fable's guidance adopted the same day (an xhigh sketch before any build; a truth ruling owed on pruning).
 **Card:** [NAN-COMPARE-SPARK-1](../../roadmap/mid-term/nan-compare-spark-1-card-2026-11-13.md). Evidence:
-[domain-table.md](domain-table.md) (`§n` below), [inventory.md](inventory.md) (seats `A1`…`H5`).
+[domain-table.md](domain-table.md) (`§n` below), [inventory.md](inventory.md) (seats `A1`…`I8`).
+
+**Revised after the xhigh inventory critic** (`VERDICT: GAPS`, 2026-11-13). The critic's doors M1–M8 are
+measured in §9 of the domain table and inventoried in section I. This revision:
+
+- corrects three claims: PARQUET-NAN-EQUALITY-1's "read side equal to Spark", "pruning equals Spark file for
+  file" and "sort and keys need no unit";
+- regroups the units;
+- adds the label question (§7);
+- rewrites the owner questions (§8).
 
 ## 1. The fault
 
 Spark compares every NaN as one value, equal to itself and larger than `+Infinity`, whatever its sign bit or
 payload. RePark compares floats by Arrow's totalOrder (inventory A1): a sign-set NaN (`fff8…`) is the smallest
-value, a payload NaN (`7ff8dead…`) is above the canonical one, and two NaNs with different bits are unequal.
-Both engines keep a sign-set NaN in memory: over a column, `sqrt(-1)`, `-x`, `Infinity - Infinity`,
-`0 * Infinity`, `Infinity / Infinity` and `Infinity % 1` give `fff8…` on Spark too (§7, `jvm_raw`). The
-difference is only in how the two compare it.
+value, a payload NaN (`7ff8dead…`) is above the canonical one, and two NaNs with different bits are unequal. Both
+engines keep a sign-set NaN in memory (§7, `jvm_raw`); only the comparison differs.
+
+Three faults the critic found are not about NaN's bits at all:
+
+- **The grouped accumulator** replaces its running value on any NaN comparison, and it starts from
+  `f64::MIN`/`f64::MAX`, not "no value" (B2, I1).
+- **RePark consumes Parquet statistics Spark never uses:** the `max`/`min` shortcut, constant columns, and the
+  TopK and aggregate dynamic filters (B5, I2, I3, I8). Parquet statistics leave NaN out.
+- **Equality inside functions** (`nullif`, the array set functions) compares bits (I5).
 
 ## 2. The headline
 
-- **15,351 cells at ANSI on, 4,061 at ANSI off**, on four doors, 29 sources (in memory, computed, 18 Iceberg
-  tables from two writers in three formats and two layouts plus six partitioned, six plain Parquet sets, a
-  native-written table) and 53 operations (§1).
-- **Wrong cells, ANSI on:** base 7,095, NAN-WRITE-CANONICAL-1 (1325) 7,001, part B (head3) 4,685. No NaN
-  verdict moves with the ANSI mode (§8).
-- **Part B already fixes** sort (`ORDER BY`, TopK, window `ORDER BY`), keys (`GROUP BY`, `DISTINCT`, joins) and
-  column-to-column comparisons, on every NaN shape (§2, inventory H3).
-- **Still wrong on head3:**
-  - a sign-set NaN in `max`/`min` (ungrouped and every window form), `greatest`/`least`, every comparison with
-    a literal (`=`, `<>`, `<`, `<=`, `>`, `>=`, `<=>`, `IN`, `BETWEEN`, a searched `CASE`), and the array
-    functions;
-  - a payload NaN in `= NaN`, `<> NaN`, `<=> NaN`, `IN (NaN)` and `> NaN`;
-  - **grouped `max`/`min`, for every NaN shape, canonical included** (§3; new);
-  - `max` over one plain Parquet file holding NaN, answered from statistics without the NaN (§6; new).
-- **NAN-WRITE-CANONICAL-1 moves only the table RePark writes itself** (§5, `nat_parquet_l5`); Avro tables and
-  tables written before it keep their bits, so every stored-NaN cell stays wrong (NWC verifier 2, F2).
+- **The main table:** 15,351 cells at ANSI on and 4,061 at ANSI off, on four doors and 29 sources (§1).
+  Wrong at ANSI on: base 7,095, 1325 7,001, head3 4,685.
+- **§9, after the critic:** about 100 cells per build on the Spark and native doors. No NaN verdict moves with
+  the ANSI mode.
+- **Wrong on stored data with a canonical NaN, on every build:**
+  - grouped `max`/`min` (every Iceberg format, both writers, DOUBLE and FLOAT);
+  - every NaN in a plain-Parquet file whose other values are one value, read as that value; RePark then
+    writes it into Parquet and into Iceberg tables (§9 M1).
+- **Wrong with no NaN at all, on every build:** grouped `max` of a `-Infinity`-only group is
+  `-1.7976931348623157e+308`, and grouped `min` of a `+Infinity`-only group is `1.7976931348623157e+308`.
+- **Part B (head3) fixes:** sort, keys and column-to-column comparisons for top-level scalar columns, and the
+  TopK dynamic filter by accident of its wrap.
+- **Part B does not fix:**
+  - literal comparisons;
+  - `max`/`min` in every form;
+  - `greatest`/`least`;
+  - the array sort, set and search functions;
+  - `nullif`;
+  - `median`/`percentile_approx`;
+  - struct leaves.
+- **NAN-WRITE-CANONICAL-1 (1325) moves only the tables RePark writes itself** (§5). Grouped `max`/`min` stays
+  wrong on them too.
 
 ## 3. What the folded cards turn out to be
 
-- **PARQUET-NAN-EQUALITY-1:** not a RePark read fault. pyarrow and RePark write Parquet min/max without NaN;
-  Spark's `parquet-mr` 1.16 writes NaN as the max. On a single RePark or pyarrow file, `d = NaN` and
-  `d > Infinity` keep nothing **on Spark too**; on Spark's file both engines keep the rows (§6, `pq_*_l1`).
-  The card compared RePark on RePark's file with Spark on Spark's. RePark's mechanism is DataFusion's
-  `PruningPredicate` (inventory F2); Spark's is `parquet-mr`'s statistics filter. This is the pruning question
-  (§6 below), not a compare seat.
-- **ICEBERG-NAN-FILE-PRUNE-1:** the PRUNED-WRONG class. On the same five files, Spark-on-Iceberg and RePark both
-  answer `d > 0.5` with `[1, 3]`, dropping the NaN rows that Spark's row semantics keep (`[1, 2, 3, 9]`):
-  Iceberg's metrics evaluator reads `NaN > x` as false, in Java and in the fork's port alike (inventory G2).
-  With a canonical NaN RePark's pruning **is** Spark-on-Iceberg's on every measured layout.
-- **The Avro partition-column oddity:** Spark's `pk > Infinity` keeps nothing on its own Parquet, ORC and Avro
-  tables alike. The manifest's partition summary has upper bound `Infinity` (NaN left out, `contains_nan`
-  true) and the manifest evaluator skips the manifest without reading `contains_nan` (inventory G3). The
-  non-partition `f` answers `[1..6]` because Avro data files carry no column metrics, on either writer.
-- **The label exclusion understates the gap.** Its pending text ("`max`, `min`, `greatest`, `least` and
-  non-key comparisons over a NaN computed in the same query") misses stored non-canonical NaNs (Avro, old
-  tables, other writers), the array functions, the payload cases and grouped `max`/`min` over any NaN. A
-  measured text is question Q6.
+- **PARQUET-NAN-EQUALITY-1 has two causes.**
+  1. **Pruning by NaN-free statistics** (inventory F2). Spark's reader prunes the same pyarrow or RePark files:
+     `= NaN` keeps nothing on Spark too (§6 `pq_*_l1`, §9 `pa_const48_eq_nan`). This half is the pruning
+     question, and here RePark equals Spark.
+  2. **The constant-column read** (I2). Where a file's non-NaN values are one value, RePark reads every NaN as
+     that value and Spark reads NaN (§9 `pa_const_rows`, `pa_const48_isnan`). That is a RePark-only wrong
+     read, and through any write a wrong write (§9 `roundtrip_*`, `ingest`).
+
+  **Withdrawn:** the first draft's "read side equal to Spark".
+- **ICEBERG-NAN-FILE-PRUNE-1:** the PRUNED-WRONG class. On the same files, Spark-on-Iceberg and RePark both
+  answer `d > 0.5` with `[1, 3]` (§6); Iceberg's metrics evaluator reads `NaN > x` as false in Java and in the
+  fork alike (G2).
+- **The Avro partition-column oddity:** the manifest evaluator skips a manifest whose partition summary's upper
+  bound (`Infinity`) is not above the literal, without reading `contains_nan` (G3). It happens on every format;
+  the non-partition `f` survives on Avro because Avro data files carry no column metrics.
+- **The label exclusion's pending text understates the gap:** §7 states what is wrong inside the label.
 
 ## 4. Seats, one family at a time
 
-Each family has at most two proposals; **(a)** is the recommendation. "Cost cases" are the rows a build runs
-at 1.05x on plans **without** NaN (release build, the C-012 harness rules, median of runs).
+**(a)** is the recommendation in each family. "Cost cases" are run at 1.05x on plans **without** NaN.
 
-### 4.1 Comparisons with a literal (inventory E1–E4; F2, G1–G6 follow)
+### 4.1 Comparisons with a literal (E1–E4), function-internal equality (I5), the delete door (I7)
 
-- **(a) Total-order bounds, in part A's literal seat.** Part A (`df_guards/signed_zero/literals.rs`) already
-  rewrites float comparisons against zero literals on every door, as an analyzer rule and again after each
-  simplification. Extend it to every float comparison with a literal `c`:
-  - non-NaN `c`: `e > c` → `e > c OR e < -Infinity`; `e >= c` → `e >= c OR e < -Infinity`;
-    `e < c` → `e >= -Infinity AND e < c`; `e <= c` → `e >= -Infinity AND e <= c`; `=`/`<>` unchanged. Under
-    totalOrder every NaN lies above `+Infinity` or below `-Infinity`, so these are exactly Spark's answers for
-    every NaN shape, and each added term is a plain comparison that DataFusion's `PruningPredicate` and the
-    fork's converter push down as before;
-  - NaN `c`: `= NaN`, `<=> NaN`, `>= NaN` → `isnan(e)` (null-preserving where the form needs it); `<> NaN`,
-    `< NaN` → `NOT isnan(e)`; `<= NaN` → `e IS NOT NULL`-preserving true; `> NaN` → false; `IN (NaN, …)` →
-    `isnan(e) OR e IN (…)`; `NOT IN` its complement. The fork already pushes `isnan` as `is_nan` (G1);
-  - `BETWEEN` and a searched `CASE` expand first, as part A does for zeros.
-  - **Trade-offs:** no new kernel, no UDF, no pushdown lost; one extra comparison and an `OR`/`AND` per float
-    literal comparison. Pruning stays what it is today, so on the same files RePark answers as
-    Spark-on-the-same-files (§6) — the "exact" reading of the pruning question. For the "sound" reading the
-    `e < -Infinity` term becomes `isnan(e)` (same seat, one token), which keeps NaN files on Iceberg (NaN counts)
-    but makes `>`/`>=` unprunable on plain Parquet (no NaN counts in parquet-rs 58).
-  - **Risk to check in the build:** DataFusion's simplifier and interval analysis must leave `e < -Infinity`
-    alone (no range fold to false). Measure it in step 0 with `EXPLAIN VERBOSE`.
-  - **Cost cases:** `count(*) WHERE d > c`, `d < c`, `d BETWEEN a AND b` over 10 M DOUBLE rows in memory, from a
-    100-row-group Parquet file and from a 100-file Iceberg table; a TPC-H Q6-shaped filter; and the pruning
-    rows: files and row groups scanned, before and after, which must be equal.
-  - **Fork or upstream:** neither.
-- **(b) Canonical wrap.** Wrap the float operand in part B's `canonical_f64` call, as part B does for
-  column-to-column comparisons. Uniform with part B, but a wrapped column is no longer `column op literal`, so
-  every float predicate stops pushing down (Iceberg file pruning and Parquet row-group pruning both lost) unless
-  the fork's converter and DataFusion's pruning learn the call. Rejected as the default on cost.
+**(a) Total-order bounds, in part A's literal seat** (`df_guards/signed_zero/literals.rs`, analyzer rule and
+after each simplification, every door).
 
-### 4.2 `max` and `min` (inventory B1–B6)
+- **Non-NaN literal `c`.** The rewrites:
+  - `e > c` → `e > c OR e < -Infinity`;
+  - `e >= c` → `e >= c OR e < -Infinity`;
+  - `e < c` → `e >= -Infinity AND e < c`;
+  - `e <= c` → `e >= -Infinity AND e <= c`;
+  - `=` and `<>` are unchanged.
 
-- **(a) RePark's own float `max`/`min`.** A UDAF in `repark-functions` registered under `max`/`min` on every
-  door; for FLOAT and DOUBLE it answers Spark's way, and it delegates every other type to DataFusion's:
-  - ungrouped: `max` is NaN if any input is NaN, else Arrow's `max`; `min` ignores NaN unless every value is NaN;
-  - grouped: its own `GroupsAccumulator` with a NaN-greatest comparator, which fixes B2 for every shape;
-  - sliding windows: `MovingMax`/`MovingMin` over a NaN-greatest key;
-  - `value_from_stats`: none for FLOAT/DOUBLE, because Parquet's exact min/max leave NaN out (B5);
-  - `array_min`/`array_max` reuse the batch kernel through RePark's dispatch (`function_dispatch.rs:444-451`).
-  - **Trade-offs:** one owned kernel per accumulator kind; the result's NaN is `7ff8…` (Spark returns the
-    input's bits; Q5). The statistics shortcut is given up for float columns of plain Parquet files only (the
-    fork's Iceberg scan never offered it).
-  - **Cost cases:** ungrouped `max`/`min(d)` over 10 M rows; grouped by 1 K and by 1 M keys; a running and a
-    sliding window `max`; `array_max` over 1 M arrays of ten doubles; and, as a separate row not held to 1.05x,
-    `SELECT max(d)` over a Parquet file with statistics (a metadata answer becomes a scan; Q4).
-  - **Fork or upstream:** neither. B2 is a DataFusion bug worth reporting upstream (Q8), but this seat does
-    not wait for it.
-- **(b) Argument wrap.** Extend part B's `aggregate_call` to wrap `max`/`min` arguments in a NaN-only
-  canonicaliser. It fixes B1, B3, B4 and removes the shortcut (a call is not a `Column`), but not B2 (a
-  canonical NaN still makes `partial_cmp` return `None`), so it needs an upstream fix or a patched DataFusion,
-  and it adds a per-row call to every float `max`/`min`.
+  The critic evaluated these forms over all nine shapes: 374 of 378 cells equal Spark on every build. No
+  simplifier fold was seen (`EXPLAIN` keeps them as written), and pruning power is unchanged.
+- **NaN literal, with NULL guards valid on both doors.** `isnan(NULL)` is `false` on the Spark door and NULL on
+  the native door. So the forms avoid relying on either:
+  - **in a filter:**
+    - `= NaN` and `>= NaN` → `e IS NOT NULL AND isnan(e)`;
+    - `<> NaN` and `< NaN` → `e IS NOT NULL AND NOT isnan(e)`, so **no NULL row is kept** (the critic's wrong-row
+      case);
+    - `<= NaN` → `e IS NOT NULL`;
+    - `> NaN` → `false`;
+    - `<=> NaN` → `e IS NOT NULL AND isnan(e)`;
+  - **in a projection:** the same predicate under `CASE WHEN e IS NULL THEN NULL ELSE … END`, except `<=>`,
+    which is never NULL;
+  - **`IN (NaN, …)`** → `(e IS NOT NULL AND isnan(e)) OR e IN (…)`; `NOT IN` is its complement with Spark's NULL
+    rule;
+  - **`BETWEEN` and a searched `CASE`** expand first.
 
-### 4.3 `greatest` and `least` (inventory D1)
+  The fork converts `isnan` and `IS NOT NULL` (G1), so pushdown is kept; step 0 must confirm it on the guarded
+  forms.
+- **Operands that cannot hold NaN are skipped:** a cast from an integer or decimal type, and literals.
+  Cost row: an INT column against a DOUBLE literal.
+- **Function-internal equality (I5, nine functions):** in RePark's shims (`array_contains.rs`, `array_position.rs`,
+  `arrays_overlap.rs`) and in a `nullif` shim. Canonicalise every float NaN to `7ff8…` (NaN only, zeros
+  untouched) before the inner call. The union, intersect, except, distinct and remove functions get the same
+  pre-pass in the dispatch (`function_dispatch.rs:420-456`).
+- **The delete door (I7).** It is not reached from either engine's writes (§9). Align the fork's `Datum` float
+  order with Java's `Double.compare` (every NaN one value above `+Infinity`; `datum.rs:225-227`). That is one
+  function and closes the door for every writer. The alternative, a writer census, cannot cover third-party
+  writers.
+- **Cost cases:**
+  - `count(*) WHERE d > c`, `d < c`, `d BETWEEN a AND b` over 10 M DOUBLE rows, in memory, from a 100-row-group
+    Parquet file and from a 100-file Iceberg table;
+  - a TPC-H Q6 shape;
+  - an INT column against a DOUBLE literal;
+  - `array_contains` over 1 M arrays;
+  - files and row groups scanned, before and after, which must be equal.
+- **Fork or upstream:** the `Datum` alignment is a fork change. The rest is RePark.
 
-- **(a) RePark's own float `greatest`/`least`**, bound in `function_dispatch.rs:290-297` and on the SQL doors,
-  delegating non-float types: NaN is greatest; NULLs skipped as today. Returns the NaN argument itself.
-  **Cost case:** `greatest(a, b, c)` and `least` over 10 M DOUBLE rows. Neither fork nor upstream.
-- **(b) Argument wrap** with the NaN-only canonicaliser in part B's projection seat: smaller, a per-argument
-  pass, and the output's NaN becomes canonical.
+**(b) The canonical wrap**, as part B does for column comparisons. It blocks every float predicate's pushdown, so
+it is rejected on cost.
 
-### 4.4 The array functions (inventory C5, B6)
+### 4.2 `max`/`min`, quantiles, and the statistics RePark alone consumes (B1–B7, I1–I4, I8)
 
-- **(a) Canonicalise in the shim.** RePark's `array_sort`/`sort_array` shim (`collection/array_sort.rs`)
-  already rebuilds its arguments; for a FLOAT/DOUBLE element type it maps every NaN child to `7ff8…` before
-  forwarding, so DataFusion's totalOrder sort puts NaN last ascending and first descending, as Spark does.
-  **Cost case:** `array_sort` over 1 M arrays of ten doubles. Neither fork nor upstream.
-- **(b) Own comparator:** sort the children with a NaN-greatest comparator in the shim. More code, keeps bits.
+**(a) RePark's own float `max`/`min`, plus a statistics seat.**
+
+- **The UDAF.** In `repark-functions`, for FLOAT and DOUBLE, delegating other types:
+  - **grouped:** its own accumulator that starts from **no value** (fixing I1 for `±Infinity`) and treats NaN
+    as one value above `+Infinity` (fixing B2);
+  - **ungrouped and sliding windows:** the same order;
+  - **`array_min`/`array_max`:** the same kernel through the dispatch;
+  - **its internal name is not `max`/`min`** (aliases keep the SQL names), so DataFusion's name-matched
+    aggregate dynamic filter (I8) does not attach.
+- **The statistics seat, which is the Inexact seat.** Wrap `ParquetFormat` in RePark's plain-Parquet read path
+  (`crates/repark-core/src/spark_nullable.rs:27`, `:32`). The wrapper is a `FileFormat` whose
+  `infer_stats_and_ordering` returns FLOAT/DOUBLE `min_value`/`max_value` as `Precision::Inexact`.
+  - Both RePark-only consumers require `Exact`: the `max`/`min` shortcut (B5) and the constant-column
+    replacement (I2), so one seat neutralises both.
+  - File pruning (Inexact is enough) and row-group pruning (it reads the footers) keep working.
+  - Iceberg is untouched: the fork reports no column statistics, and its reader is its own.
+  - **Alternative:** turn `datafusion.execution.collect_statistics` off for the session. That is simpler, but it
+    drops row counts and every column's statistics.
+- **Quantiles (I4).** Canonicalise the argument's NaN (NaN only) before `median` and in RePark's
+  `quantile_summaries.rs` insert path. Both then order NaN last, as Spark does.
+- **Pins:**
+  - every §9 grouped cell, the `±Infinity`-only groups included;
+  - the constant-file read, the round trip, and the Iceberg ingestion;
+  - `max` over `pa_dyn` (the shortcut);
+  - a multi-file plain-Parquet ungrouped `max` with the UDAF in place, with dynamic filters on (I8);
+  - the TopK cell `topk_desc_on`, which stays right only while part B wraps the sort key (I3).
+- **Struct and list leaves** (`min_max_struct.rs`): **not in this unit.** They go to unit 4 with nested sort and
+  keys (§5).
+- **Cost cases:**
+  - ungrouped and grouped `max`/`min` (1 K and 1 M keys);
+  - a running and a sliding window;
+  - `median`, `percentile_approx`;
+  - `array_max`;
+  - `SELECT count(*)` and a selective filter over 100 Parquet files, whose row groups scanned must not change;
+  - a separate row, not held to 1.05x: `SELECT max(d)` over a Parquet file with statistics.
+- **Fork or upstream:** neither. B2 and I1 are worth reporting upstream (Q9).
+
+**(b) An argument wrap.** Part B's `aggregate_call` wraps the `max`/`min` argument. It fixes B1 and B3, but not
+B2 or I1, which need an upstream fix; and it adds a per-row call.
+
+### 4.3 `greatest`/`least` (D1) and 4.4 the array sorts (C5)
+
+- **4.3(a):** RePark's own float `greatest`/`least`, NaN greatest.
+  - **Alternative (b):** an argument wrap.
+  - **Cost case:** `greatest(a, b, c)` over 10 M rows.
+- **4.4(a):** in the `array_sort`/`sort_array` shim, canonicalise NaN children before DataFusion's sort.
+  - **Alternative (b):** the shim's own comparator.
+  - **Cost case:** `array_sort` over 1 M arrays.
 
 ### 4.5 Sort and keys
 
-Part B covers them (§2: every `ord_*`, `topk_*`, `win_rank`, `group_by`, `cnt_distinct`, `join_col` cell is
-`=` on head3). No seat here. The native door's default null placement and `array_agg` keeping NULLs (§4) are
-its dialect, outside this unit.
+- **Top-level scalar keys:** part B covers them (§2), including the TopK dynamic filter (I3).
+- **Nested leaves are not covered** (I6, §9 `struct_*`): `max(struct)`, `ORDER BY struct` and `DISTINCT` over
+  structs are wrong on head3. **Corrected:** the first draft's "sort and keys need no unit" was wrong. Unit 4
+  takes them; it sits outside the scoped label, which covers scalar columns only.
 
 ### 4.6 Pruning
 
-No seat of its own: under 4.1(a) the pushed predicates keep today's pruning power (exact) or keep NaN files
-(sound), per the ruling in §6. Two optional fork changes, not needed by either reading:
-
-- `Datum`'s float order is `total_cmp` (inventory G4), unlike Java's `Double.compare`; it matters only for a
-  sign-set or payload partition value, and the identity column reads back canonical on every build (§5). Leave
-  it, or align with Java as a fork hygiene item.
-- The manifest evaluator's `>`/`>=` could read `contains_nan` (G3); only the "sound" reading would want it, and
-  Java does not.
+See §6. The literal seat keeps the evaluators' pruning; the statistics seat in 4.2 removes RePark's own
+consumers.
 
 ## 5. The unit split and the order
 
-| # | Unit | Seats | Retires (label exclusion, cards) | Needs |
+| # | Unit | Takes | Retires | Needs |
 |---|---|---|---|---|
-| 1 | **NAN-MINMAX-1** | 4.2(a): `max`/`min` ungrouped, grouped, windows, statistics shortcut, `array_min`/`array_max` | "`max`, `min`"; the grouped case for every NaN shape (not in the text); `max` from Parquet statistics | nothing; independent of part B |
-| 2 | **NAN-COMPARE-LITERAL-1** | 4.1(a) in part A's seat, the pruning reading from Q1 | "non-key comparisons"; NWC verifier 2 F2 (stored Avro and old tables); closes ICEBERG-NAN-FILE-PRUNE-1 into PRUNED-WRONG and re-scopes PARQUET-NAN-EQUALITY-1 (Q7) | part B merged (shares the seat module and its policy switch); the Q1 ruling |
-| 3 | **NAN-GREATEST-ARRAY-1** | 4.3(a), 4.4(a) | "`greatest`, `least`"; the array functions (not in the text) | nothing |
+| 1 | **NAN-MINMAX-1** | 4.2(a): the float UDAF (grouped start from no value, NaN order, sliding, `array_min`/`array_max`), the Inexact statistics seat (B5 + I2), quantiles, the dynamic-filter pins (I3, I8) | grouped `max`/`min` on stored data and `±Infinity` groups; the constant-column wrong read and write; `max` from statistics; the quantiles | nothing; independent of part B |
+| 2 | **NAN-COMPARE-LITERAL-1** | 4.1(a): the bounds rewrite with NULL guards on both doors and the integer-cast skip; function-internal equality (I5: `nullif` and eight array functions); the fork's `Datum` order (I7) | literal comparisons on stored non-canonical NaN (NWC F2); the delete door; ICEBERG-NAN-FILE-PRUNE-1 into PRUNED-WRONG | part B merged; the Q1 ruling; one fork PR |
+| 3 | **NAN-GREATEST-ARRAY-1** | 4.3(a), 4.4(a) | `greatest`/`least`, `array_sort`, `sort_array` | nothing |
+| 4 | **NESTED-NAN-ORDER-1** (to be carded; outside the scoped label) | struct and list leaves in sort, keys, `DISTINCT` and `max`/`min` | §9 `struct_*` | part B merged |
 
-- **Order 1 → 2 → 3** (Q2). Unit 1 first because grouped `max`/`min` is wrong for canonical NaN, so it reaches
-  every table with a NaN from any writer; it needs no ruling and no part B. Unit 2 waits for part B and the
-  pruning ruling. Unit 3 is the smallest.
-- **Sort and keys** need no unit: part B retires them when it merges.
-- Each unit: step 0 re-measures its slice of this table on its base; red pins from these cells (Spark door,
-  DataFrame, `F.expr`, native) with the canonical column as the control; one cost table at 1.05x; one verifier.
+- **Order:** 1 → 2 → 3 → 4 (Q2).
+- **Unit 1's first item is the statistics seat.** It is a wrong read that becomes a wrong write, so it may also
+  run alone ahead of the rest of unit 1 (Q3).
+- **Each unit's step 0** re-measures its §2 and §9 slice on its base. Red pins use canonical controls; there is
+  one cost table at 1.05x and one verifier.
 
-## 6. The pruning truth question (Fable)
+## 6. The pruning truth question (Fable), restated
 
-**The question.** Must file and statistics pruning return Spark's answer exactly, or only never drop a row
-Spark keeps?
+**The question.** Must file and statistics pruning return Spark's answer exactly, or only never drop a row Spark
+keeps?
 
-**What Spark does, measured (§6).**
+**Measured.**
 
-- **Spark-on-Iceberg drops NaN rows whenever Iceberg's IEEE evaluators can:** a NaN-only data file for any
-  `>`/`>=`; a file whose non-NaN upper bound is not above the literal (`{NaN, -0.0, NULL}` for `d > 0.5`); a
-  manifest whose partition summary's upper bound is not above the literal (`pk > Infinity`).
-- **It keeps them where there are no metrics:** Avro data files (no bounds on either writer), and any file
-  whose other values pass.
-- **On plain Parquet it depends on the writer:** `parquet-mr` stores NaN as the max, so Spark's own files keep
-  the rows; pyarrow and RePark (arrow-rs) leave NaN out, so Spark drops them reading those files.
-- **So Spark's answer is a function of the files, not of the rows.** The same rows answer differently after a
-  compaction, a different writer, or another `local[n]`. RePark today matches it file for file for a
-  canonical NaN (every pruning row in §6 with `dc`/`pk`), and differs only by its bit comparison for sign-set
-  NaNs.
+- **Spark-on-Iceberg drops NaN rows** wherever Iceberg's IEEE evaluators can: NaN-only files; files whose
+  non-NaN upper bound is not above the literal; manifests whose summary's upper bound is not above it (§6).
+- **Spark keeps them where there are no metrics** (Avro data files).
+- **On plain Parquet, Spark's reader prunes the user's predicate by footers.** It drops `= NaN` on pyarrow and
+  RePark files, as RePark does. It has **no** `max`/`min` shortcut, no constant columns and no dynamic
+  filters: Spark answers NaN in every §9 cell where RePark's own statistics consumers lose it.
+- **So Spark's answer is a function of the files**, and RePark matches it file for file only in the evaluators
+  both engines share. **Corrected:** the first draft's "RePark's pruning equals Spark's file for file" holds
+  for the Iceberg evaluators only.
 
 **The two readings.**
 
-- **(E) Exact: Spark-on-the-same-files.** 4.1(a) as written. RePark keeps today's pruning, answers Spark's way
-  at the row level, and returns Spark's answer on every table both engines read. Rows Spark itself drops stay
-  dropped and are stated as the PRUNED-WRONG class (as AUD-024 and GD-10/GD-11 already are). No cost.
-- **(S) Sound: never drop a row Spark's row semantics keep.** 4.1(a) with `isnan(e)` instead of
-  `e < -Infinity`. Layout-independent, equal to Spark over `VALUES`, a superset of Spark-on-Iceberg's answer. On
-  Iceberg it costs nothing when a file's NaN count is zero; on plain Parquet `>`/`>=` lose row-group pruning.
-  RePark then differs from Spark-on-Iceberg in exactly the PRUNED-WRONG cells, which become RePark-right,
-  Spark-wrong.
-- **The AUD-024 link.** AUD-024's ruled divergence assumed RePark keeps the NaN row where Spark's pushed filter
-  drops it. This table shows RePark drops it too whenever the fork's metrics evaluator can; (S) would make
-  AUD-024's premise true on every layout, (E) would make RePark agree with Spark on AUD-024's SELECT side.
+- **(E) Exact: prune only where Spark's own reader prunes.**
+  - **What stays:** the Iceberg metrics and manifest evaluators, and footer and page pruning of the user's
+    predicate.
+  - **What goes, for float columns:** every RePark-only statistics consumer, through 4.2's statistics seat,
+    the UDAF's name, and part B's sort-key wrap.
+  - **The literal rewrite** uses the `e < -Infinity` form, which keeps the evaluators' pruning unchanged.
+  - **The rows Spark itself drops** stay dropped, as the stated PRUNED-WRONG class.
+- **(S) Sound: never drop a row Spark's row semantics keep.**
+  - **What changes:** the literal rewrite uses `isnan(e)` instead of `e < -Infinity`. That keeps NaN files on
+    Iceberg (NaN counts), and makes `>`/`>=` unprunable on plain Parquet.
+  - **What follows:** RePark then differs from Spark-on-Iceberg in exactly the PRUNED-WRONG cells, as the
+    AUD-024 ruling already chose for DML.
 
-**Default: (E).** The Iceberg parity goal grades RePark against Spark-on-Iceberg cell for cell, (E) costs
-nothing, and the class of rows Spark drops is already a stated, measured class. (S) is the alternative if the
-owner prefers SQL truth over Spark's pruning, as the AUD-024 ruling did for DML.
+**Default: (E),** restated as above. It is cheap rather than free: the statistics seat costs float `max`
+metadata answers.
 
-## 7. Owner questions
+## 7. The label question, plainly
 
-| # | Question | Default | Rests on |
+Scope: scalar columns, the Spark door, Glue and S3 Tables (Iceberg). Which wrong answers on **stored** data fall
+inside it, on main and on both heads?
+
+| # | Wrong answer inside the label | Cells | Fixed by |
 |---|---|---|---|
-| Q1 | The pruning reading: exact (Spark-on-the-same-files) or sound (never drop a row Spark's row semantics keep)? | **(E) exact** | §6 pruning rows; stats.jsonl; AUD-024 |
-| Q2 | The order of the three units. | **NAN-MINMAX-1, NAN-COMPARE-LITERAL-1, NAN-GREATEST-ARRAY-1** | §2 `grp_*` `WWW` on canonical; §3 |
-| Q3 | Do the seats apply on the native door too? | **Yes**, as part B's policy does (`signed_zero_policy` on both doors) | §4 native matrix: the same NaN codes as the Spark door |
-| Q4 | Give up the `max`/`min` statistics shortcut for FLOAT/DOUBLE on plain Parquet? | **Yes**; its cost row is recorded, not held to 1.05x | §6 `agg_max` on `pq_pa_l1`, `pq_rb_l1` (`Infinity`), `pq_sp_l5` (`stats`) |
-| Q5 | The NaN that `max`, `min`, `greatest` and `least` return: canonical `7ff8…` or the input's bits? | **Canonical** (bits differ, values equal; Spark's writers store `7ff8…`) | §2 `nan_bits`; §5 |
-| Q6 | The label exclusion's text, measured on head3 (part B) with 1325: "A NaN with the sign bit set (computed in the query, stored in Avro, or stored before NAN-WRITE-CANONICAL-1) answers unlike Spark in `max`, `min`, `greatest`, `least`, `array_sort`, `sort_array`, `array_min`, `array_max` and comparisons with a literal; a NaN with a payload answers unlike Spark in `=`, `<>`, `<=>`, `IN` and `>` against NaN; grouped `max` and `min` answer unlike Spark for any NaN; `max` over a Parquet file holding NaN can be answered without it." | **Adopt this text** for the label; each unit narrows it | §2, §3, §5, §6 |
-| Q7 | PARQUET-NAN-EQUALITY-1: re-scope it to the writers' statistics (RePark leaves NaN out of Parquet min/max, as the format says; `parquet-mr` writes it as max), with the read side recorded as equal to Spark on the same file? | **Yes; no writer change** | §6 `pq_*_l1`; stats.jsonl footers |
-| Q8 | Report B2 (the grouped `max`/`min` accumulator) to DataFusion upstream? | **Yes, after NAN-MINMAX-1 lands**; the unit does not wait for it | inventory B2; §3 |
-| Q9 | Card the `UNION ALL` internal error ("Physical input schema should be the same…", four columns of one Iceberg table) and `approx_count_distinct` refusing FLOAT/DOUBLE? | **Card both, S3, outside this family** | §1 `R-ERR` |
+| L1 | **Grouped `max`/`min` over any stored NaN, canonical included**, on every format and both writers: `{NaN, 0.0}` gives `max 0.0`; `{5.0, NaN}` gives `min NaN` | §9 `rb_grp_parquet`, `rb_grp_orc`, `rb_grp_avro`, `sp_grp_parquet`, `sp_grp_orc`, `sp_grp_avro`, DOUBLE and FLOAT | unit 1 |
+| L2 | **Grouped `max`/`min` of a `±Infinity`-only group, no NaN at all:** `max(-Infinity) = -1.7976931348623157e+308` | the same six tables, groups `g3`, `g4`; `grp_mem_*` | unit 1 |
+| L3 | **Ingesting a plain-Parquet file into a labelled table** (`spark.read.parquet(f).writeTo(t)`): a NaN in a file whose other values are one value is stored as that value | §9 `ingest` (Parquet and Avro tables), `roundtrip_*` | unit 1, statistics seat |
+| L4 | **A stored non-canonical NaN.** These tables hold one: Avro tables from either engine when the NaN was sign-set, Parquet or ORC tables RePark wrote before NAN-WRITE-CANONICAL-1, and other engines' tables. Wrong on them: literal comparisons (`= NaN`, `> Infinity`, `> 0.5`, `< 0`), ungrouped and window `max`/`min`, `greatest`/`least`, the array functions, quantiles, `nullif` | §5 `rb_avro_*`, `sp_avro_*`, `rb_*` columns `ds`/`dq`; §6 `rb_avro_l5 ds f_eq_nan` (`[]` vs `[2, 9]`); §2 | units 1, 2, 3 |
+| L5 | **A stored payload NaN:** `= NaN`, `<> NaN`, `<=> NaN`, `IN (NaN)`, `> NaN` | §5 `dp` columns | unit 2 |
 
-## 8. Cost in one place
+- **Outside the label:**
+  - struct leaves (unit 4);
+  - the native door;
+  - plain-Parquet reads as such: the shortcut, constant columns and TopK. L3 is the exception, because its
+    destination is labelled.
+- **The choice for the owner (Q1).**
+  - **(i) NAN-MINMAX-1 before the label.** It removes L1, L2 and L3, the three that hit canonical data and data
+    with no NaN at all. The exclusion text then covers only L4 and L5.
+  - **(ii) A wider exclusion text now.** It must name L1–L5, including "grouped `max`/`min` over a group whose
+    values are all `+Infinity` or all `-Infinity`" and "ingesting a Parquet file whose NaN shares a file with a
+    single other value".
+- **Default: (i).** L2 and L3 are not NaN-comparison semantics, and no NaN-scoped text describes them honestly.
 
-Hot kernels: comparisons and `max`/`min` run on every float filter and aggregate. Every cost row runs at
-1.05x on plans without NaN; the unit fails its cost gate rather than trading a pruning loss for correctness
-silently. The rows, by unit: 4.2(a)'s five plus the separate statistics row; 4.1(a)'s three filter shapes on
-three sources plus the TPC-H Q6 shape and the files-and-row-groups-scanned equality; 4.3(a)'s and 4.4(a)'s one each.
+## 8. Owner questions (rewritten after the critic)
+
+| # | Question | Default | Rests on | Replaces |
+|---|---|---|---|---|
+| Q1 | NAN-MINMAX-1 before the label (i), or a wider exclusion (ii)? | **(i)** | §7 L1–L3; §9 grouped, `ingest`, `roundtrip_*` | new |
+| Q2 | Unit order? | **1 NAN-MINMAX-1, 2 NAN-COMPARE-LITERAL-1, 3 NAN-GREATEST-ARRAY-1, 4 NESTED-NAN-ORDER-1** | §5; §9 | old Q2 |
+| Q3 | Run unit 1's statistics seat (the constant-column wrong read and write) alone first, carded S1? | **Yes, as unit 1's first PR** | §9 `pa_const_rows`, `roundtrip_*`, `ingest` | new |
+| Q4 | The statistics seat: an Inexact `FileFormat` wrapper for float columns, or `collect_statistics` off? | **The wrapper** | inventory B5, I2; §9 `pa_dyn` `agg_max_*` | old Q4 |
+| Q5 | Pruning reading: (E) "prune only where Spark's own reader prunes", or (S) sound? | **(E)** | §6 pruning rows; §9 `topk_desc_*`, `pa_const48_eq_nan` | old Q1 |
+| Q6 | The literal rewrite's NaN forms: one NULL-guarded form valid on both doors (`e IS NOT NULL AND …`)? | **Yes** | the critic's 378-cell evaluation; `isnan(NULL)` per door | new |
+| Q7 | The delete door: align the fork's `Datum` float order with Java's `Double.compare`? | **Yes, one fork PR in unit 2** | inventory G4, I7; §9 `meta-delete` (not reached) | new |
+| Q8 | The NaN that `max`, `min`, `greatest`, `least` return: canonical `7ff8…`? | **Yes** | §2 `nan_bits` | old Q5 |
+| Q9 | Report B2 and I1 (the grouped accumulator) to DataFusion upstream? | **Yes, after unit 1 lands** | §3; §9 `grp_mem_*` | old Q8 |
+| Q10 | Re-scope PARQUET-NAN-EQUALITY-1: its pruning half recorded as equal to Spark on the same file, and its constant-column half moved to unit 1? | **Yes; no writer change** | §6 `pq_*_l1`; §9 `pa_const_*` | old Q7 (withdrawn) |
+| Q11 | Card NESTED-NAN-ORDER-1 (struct and list leaves), outside the scoped label? | **Yes** | §9 `struct_*` on head3 | new (old §4.5 claim withdrawn) |
+| Q12 | Card the side observations: the `UNION ALL` internal error; `approx_count_distinct` refusing floats; Spark deleting the NULL-partition row for `pk < 100` where RePark keeps it? | **Card all three, S3** | §1 `R-ERR`; §9 `meta-delete after` | old Q9 |
+
+- **Folded into §7 and Q1:** old Q6 (the exclusion text).
+- **Kept in substance:** old Q3 (the seats apply on the native door too) is the default throughout, as part B's
+  policy does.
 
 ## 9. Side observations (not acted on)
 
-- `approx_count_distinct` refuses FLOAT and DOUBLE on every door and build; Spark answers (§1).
+- `approx_count_distinct` refuses FLOAT and DOUBLE on every door and build; Spark answers.
 - A `UNION ALL` of four DOUBLE columns of one Iceberg table fails planning on the Spark door ("Physical input
-  schema should be the same as the one converted from logical input schema"); not found carded (Q9).
-- `ln(-1)` and `log10(-1)` are NaN on RePark, NULL on Spark (LOG-NONPOSITIVE-NULL-1, carded). The native door
-  answers `0.0 / 0.0` with NaN in both ANSI modes (its dialect).
-- Spark folds `sqrt(-1.0)` and the other producers to `7ff8…` and RePark to `fff8…` (§7); over a column both
-  give `fff8…`. No comparison sees the difference once the seats above land.
+  schema should be the same…").
+- `DELETE … WHERE pk < 100` on the partitioned table: Spark 4.1.2 with Iceberg 1.11.0 also deletes the NULL
+  partition's row (`id 9`); RePark keeps it, as SQL's three-valued logic does (§9 `meta-delete after`). It was
+  measured once, on one table, and is not NaN.
+- `ln(-1)`, `log10(-1)` are NaN on RePark and NULL on Spark (LOG-NONPOSITIVE-NULL-1). The native door answers
+  `0.0 / 0.0` with NaN in both ANSI modes.
+- The native door has no `array_contains`, `array_position`, `array_distinct`, `arrays_overlap`, `array_remove`,
+  `array_union`, `array_intersect`, `array_except`, `percentile_approx` or struct `max` (its dialect).

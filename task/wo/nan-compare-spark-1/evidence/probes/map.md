@@ -20,5 +20,12 @@ Comment-free Python; the commands and the environment are in [../map.md](../map.
 - [analyze.py](analyze.py) — pairs every RePark cell with Spark's cell on the same door and source ("exact") and
   with Spark's in-memory cell ("semantic"), and writes the verdicts.
 - [render.py](render.py) — the tables in [../../domain-table.md](../../domain-table.md).
+- [critic_cells.py](critic_cells.py) — after the critic: `write` (pyarrow files `pa_grp`, `pa_const`,
+  `pa_const48`, `pa_dyn`, `pa_part`; the `*_grp_*` tables from both engines; base's `rb_meta_*` tables) and
+  `cells` (grouped `max`/`min`, the constant-column and round-trip reads, dynamic filters on and off,
+  quantiles, function equality, struct leaves, the metadata DELETE) on one engine.
+- [critic_table.py](critic_table.py) — the domain table's §9 rows.
+- [ingest_probe.py](ingest_probe.py) — `spark.read.parquet(pa_const).writeTo(<Iceberg table>)` on RePark,
+  read back by both engines.
 
 Up: [../map.md](../map.md).
