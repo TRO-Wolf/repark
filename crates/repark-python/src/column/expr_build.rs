@@ -6,7 +6,7 @@ use std::sync::{Arc, OnceLock};
 use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
 use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, DFSchema, SchemaError, TableReference};
-use datafusion::execution::SessionStateBuilder;
+use datafusion::execution::{SessionState, SessionStateBuilder};
 use datafusion::functions_aggregate::array_agg::array_agg_udaf;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::logical_expr::expr::{Alias, Cast, NullTreatment, WindowFunction};
@@ -50,7 +50,8 @@ pub(crate) fn parse_canonical_predicate(
     let verbatim = frame_verbatim(frame.inner());
     let canonical = repark_spark::spark_literals::canonicalize_verbatim(predicate, verbatim)?;
     let schema = frame.inner().schema();
-    let parsed = match frame.inner().parse_sql_expr(canonical.as_ref()) {
+    let state = predicate_state(frame);
+    let parsed = match state.create_logical_expr(canonical.as_ref(), schema) {
         Ok(expr)
             if expr
                 .column_refs()
@@ -59,7 +60,7 @@ pub(crate) fn parse_canonical_predicate(
         {
             Ok(expr)
         }
-        first => folded_qualifier_predicate(frame, canonical.as_ref()).unwrap_or(first),
+        first => folded_qualifier_predicate(&state, schema, canonical.as_ref()).unwrap_or(first),
     };
     parsed.map_err(|error| {
         repark_spark::spark_literals::translate_downstream_error_verbatim(
@@ -71,13 +72,24 @@ pub(crate) fn parse_canonical_predicate(
     })
 }
 
+pub(crate) fn predicate_state(frame: &crate::dataframe::PyDataFrame) -> SessionState {
+    let (mut state, _) =
+        crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths()).into_parts();
+    if repark_spark::is_spark_door_session(state.config()) {
+        state
+            .config_mut()
+            .options_mut()
+            .sql_parser
+            .default_null_ordering = SPARK_NULL_ORDERING.to_string();
+    }
+    state
+}
+
 fn folded_qualifier_predicate(
-    frame: &crate::dataframe::PyDataFrame,
+    state: &SessionState,
+    schema: &DFSchema,
     canonical: &str,
 ) -> Option<datafusion::error::Result<Expr>> {
-    let (state, _) =
-        crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths()).into_parts();
-    let schema = frame.inner().schema();
     let dialect = state.config().options().sql_parser.dialect;
     let mut parsed = state.sql_to_expr_with_alias(canonical, &dialect).ok()?;
     repark_core::frame_names::fold_frame_qualifiers(
@@ -94,8 +106,7 @@ pub(crate) fn parse_canonical_predicate_exact(
 ) -> datafusion::error::Result<Expr> {
     let verbatim = frame_verbatim(frame.inner());
     let canonical = repark_spark::spark_literals::canonicalize_verbatim(predicate, verbatim)?;
-    let (mut state, _) =
-        crate::deep_stack::grown_clone_frame(frame.inner(), &frame.depths()).into_parts();
+    let mut state = predicate_state(frame);
     state
         .config_mut()
         .options_mut()
