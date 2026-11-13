@@ -1292,7 +1292,7 @@ perfectly good read.
   `crates/repark-sql/src/create_table.rs`.
 - **Apache Spark** — the same CTAS stores the query's rows, and so do RePark's `spark.sql` and the
   native two-step workaround, for the ten step-0 shapes. Two exceptions, the same on main: a
-  native `INSERT` of an integer literal through a `UNION` into an `INT` column needs a `CAST`,
+  native `INSERT` whose query unions an `INT` column with a bare integer literal needs a `CAST`,
   and a CTE-shaped CTAS fails on the Spark door (CTE-TEMP-VIEW-PRECEDENCE-1). *(oracle: PySpark 4.1.2 with Iceberg
   1.11.0 on a Hadoop catalog, 2026-11-12, `task/wo/native-ctas-iceberg-refuse-1/evidence/step0/`.)*
 - **Pin** — `python/repark/tests/sql/test_native_ctas_iceberg_refuse_1.py` and

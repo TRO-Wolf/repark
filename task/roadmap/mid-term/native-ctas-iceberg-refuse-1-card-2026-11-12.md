@@ -64,9 +64,10 @@ failed replace and replaces it on a good one.
 
 Native `CREATE TABLE t (<columns>)` then `INSERT INTO t SELECT …` stores Spark 4.1.2's rows for
 the ten step-0 shapes on both catalogs, and the Spark door's CTAS of the same statement stores
-Spark's rows for them. Two measured exceptions (both verifiers, 2026-11-13, the same on main):
-the native `INSERT` of an integer literal into an `INT` column through a `UNION` (`SELECT 1 UNION
-SELECT 9`) fails with `cannot convert text Int64 into byte Int32`, so that shape needs a `CAST`;
+Spark's rows for them. Two measured exceptions (the verifiers, 2026-11-13, the same on main):
+a native `INSERT` whose query unions an `INT` column with a bare integer literal (`SELECT id
+FROM src UNION SELECT 9`) fails with `cannot convert text Int64 into byte Int32`, and
+`CAST(9 AS INT)` fixes it (`SELECT 1 UNION SELECT 9`, literals only, stores its rows);
 and a CTE-shaped CTAS fails on the Spark door with `table 'spark_catalog.default.<cte>' not
 found` (the CTE-TEMP-VIEW-PRECEDENCE-1 family), where the native workaround stores its rows.
 
