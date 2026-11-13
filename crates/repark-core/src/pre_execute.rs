@@ -8,6 +8,9 @@ use crate::catalog_state::CatalogRegistry;
 use crate::dialect::EngineContext;
 use crate::sorted_view::refuse_iceberg_create_of_tightened_ddl;
 
+pub(crate) mod setop_all;
+pub use setop_all::refuse_multiset_set_operation;
+
 /// The per-statement belt: plan without executing, guard the plan, then execute it.
 // No `Debug`: neither `SessionContext` nor `CatalogRegistry` implements it.
 #[derive(Clone, Copy)]

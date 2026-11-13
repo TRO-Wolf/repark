@@ -7,12 +7,7 @@ U7 PR1 (2026-09-24): `session.rs` declares `session/writer_layout.rs` (the DataF
 ICE-MIXED-CASE-1 round 3 (2026-09-17, Q-20b-1): `rewrite_fragment_case` takes `unqualified_scope` — bare references resolve against one MERGE side only while qualified references keep validating against both.
 ICE-MIXED-CASE-1 round 4 (2026-09-17): red-first `dataframe_filter_binds_projection_alias` reproduces the L-01 DataFrame filter regression at the Rust level.
 
-CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
-
-CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002). Clippy doc_markdown backticks added.
-
-CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
-accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+CC-3 and CC-4 (2026-08-30): comments condensed to one line, banners removed (CC-4: the remaining banner files), truncated and wrapped-line comments rewritten as complete sentences (D-001, D-002), clippy doc_markdown backticks added. CC-2 closing-critic remediation: review-round label narration swept from prose; safety and accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 
 ## Purpose
 
@@ -52,11 +47,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   and on a pass hands the statement to the inner dialect; `execute_with_write_options`,
   `on_session_built`, `type_planner` and `configure_analyzer_rules` forward to it, so the inner
   dialect's planner and analyzer rules shape both plans. `ReparkSessionBuilder::with_local_fs_guard`
-  sets the builder's `local_fs_guard`, and `session_dialect` wraps, at build, whichever dialect the
-  builder would otherwise use (the one handed in, else `DataFusionDialect`); `repark.sql()`'s
+  sets `local_fs_guard`, and `session_dialect` wraps, at build, the dialect the
+  builder would otherwise use (the one handed in, else `DataFusionDialect`); the
   native door uses it. Its refusal says `repark.sql() does not allow local-file DDL` and that the
   entry has no opt-in (`NATIVE_ENTRY_REFUSAL`). `catalog_state.rs` imports `strip_ascii_prefix_ci`
-  from here; its private copy is deleted.
+  from here. Then `native_ctas` (NATIVE-CTAS-ICEBERG-REFUSE-1).
 - `microbatch/` + [microbatch/](microbatch/map.md) — **MB-3 (2026-10-07):** the Session-owned
   micro-batch driver (1.7): the `StreamingQueryManager` installed as a config extension through
   `Session::context()`, the `QueryHandle`, the trigger loop and the progress surface. One
@@ -907,7 +902,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   load-bearing part, not the surface, which would have to widen (with its call sites) before a
   distributed backend could exist. Distribution is deferred by decision
   ([../../../docs/adr/0004-server-prep-disciplines.md](../../../docs/adr/0004-server-prep-disciplines.md)).
-- `pre_execute.rs` (+ `pre_execute/tests.rs`) — **the shared pre-execute belt (round 5, Z-2):** Delta #2 analyzes each `PREPARE` body.
+- `pre_execute.rs` (+ [pre_execute/](pre_execute/map.md): `tests.rs`, SQL-SETOP-ALL-REFUSE-1's `setop_all.rs`) — **the shared pre-execute belt (round 5, Z-2):** Delta #2 analyzes each `PREPARE` body.
   `PreExecute` = plan (`create_logical_plan`, no execution) → `guard` (the ONE choke point for
   pre-execute refusals; today the tighten DDL-sink refuse and CFG-2's `refuse_source_ddl`,
   refusing `LogicalPlan::Ddl` naming a registered database source — DataFusion's

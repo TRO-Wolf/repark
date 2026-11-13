@@ -260,6 +260,8 @@ pub(super) fn strip_outer_alias(expr: Expr) -> Expr {
 
 static EXPR_CONTEXT: OnceLock<SessionContext> = OnceLock::new();
 
+const SPARK_NULL_ORDERING: &str = "nulls_min";
+
 pub(super) fn sql_context(
     _sql: &str,
     _normalize_idents: bool,
@@ -276,6 +278,7 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
     let mut config = SessionConfig::new();
     config.options_mut().sql_parser.dialect = datafusion::config::Dialect::Databricks;
     config.options_mut().sql_parser.enable_ident_normalization = false;
+    config.options_mut().sql_parser.default_null_ordering = SPARK_NULL_ORDERING.to_string();
     let rules = repark_core::insert_struct_setop_after_coercion(
         datafusion::optimizer::Analyzer::new().rules,
     )?;

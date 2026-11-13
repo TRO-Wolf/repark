@@ -25,11 +25,12 @@ on:
           - ctas-failure
         default: acceptance
       group:
-        description: "flat-matrix cell group (pilot, floatkeys, J1 to J5b, or all); ignored by ctas-failure"
+        description: "flat-matrix cell group (pilot, floatkeys, p15, J1 to J5b, or all); ignored by ctas-failure"
         type: choice
         options:
           - pilot
           - floatkeys
+          - p15
           - J1
           - J2
           - J3a

@@ -1,9 +1,6 @@
 # map — repark-core/src/session
 
-CC-3 (2026-08-30): comments condensed to one line; banners removed; truncated comments rewritten as complete sentences (D-001). Wrapped-line fragments rewritten as complete sentences (D-002).
-
-CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
-accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+CC-3 (2026-08-30): comments condensed to one line, banners removed, truncated and wrapped-line comments rewritten as complete sentences (D-001, D-002). CC-2 closing-critic remediation: review-round label narration swept from prose; safety and accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
 
 ## Purpose
 
@@ -20,12 +17,12 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `read_postgres.rs` — **C-2d fold 1 (2026-10-07), S3:** the frame is built with `LogicalPlanBuilder::scan`
   under a name, instead of `read_table`'s `?table?`. A `dbtable` relation is named
   `<schema>.<table>`, and a `query` is named `jdbc`.
-- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** `PartitionOptions::of` is fallible: a
+  **C-3 fold 1 (2026-10-08):** `PartitionOptions::of` is fallible: a
   `num_partitions` outside Spark's 32-bit `Int` refuses before any connection.
-- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the door builds `PartitionOptions::of`
+  **C-3 fold 1 (2026-10-08):** the door builds `PartitionOptions::of`
   from its integer arguments; bounds given as text in `properties` reach
   `PostgresTable::partitioned` unparsed, so they are judged after the column's type.
-- `read_postgres.rs` — **C-3 (2026-10-07):** `PostgresRead` carries `partition_column`,
+  **C-3 (2026-10-07):** `PostgresRead` carries `partition_column`,
   `lower_bound`, `upper_bound`, `num_partitions` and a `predicates` flag in place of the list of
   option names C-2d refused by. The door refuses `predicates` first (still declared), lifts the four
   Spark spellings out of `properties` (`PartitionOptions::with_props`), applies Spark's all-or-none
@@ -33,7 +30,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   connection, and then calls `PostgresTable::partitioned` on the resolved table. `source_error` now
   keeps the `Analysis` and `NumberFormat` classes too. `tests/read_postgres.rs` pins each refusal's
   class and sentence against an unroutable address.
-- `read_postgres.rs` — **C-2d (2026-10-07):** `PostgresRead { url, target, properties,
+  **C-2d (2026-10-07):** `PostgresRead { url, target, properties,
   partitioning }` and `PostgresTarget::{Relation, Query}`, re-exported at the crate root with
   `READ_POSTGRES_SOURCE` (`jdbc`). `ReparkSession::read_postgres` refuses a partitioned read
   first (`CONNECT-DECL-pg-partitioned-read`), parses `dbtable` through
@@ -115,6 +112,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   here (ledger §15).
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
   `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.
+  **SQL-SETOP-ALL-REFUSE-1 (2026-11-12):** it runs `pre_execute::setop_all::refuse_in_session_sql` first.
   **ICE-CATALOG-CACHE-1 (2026-09-19):** the door awaits
   `trim_iceberg_caches()`, which settles the moka cache before it counts.
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** `sql_with_write_options` and
@@ -338,8 +336,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **CSV-INFER-PERF-1 (2026-09-06):** `read_csv` body moved to `read_options.rs`;
   `session.rs` 1002 → 988 and the CAP-1 exception retired.
 - `df_guards.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `context_with_df_54_1_rule_guards` takes the dialect beside the extension: it
-  registers a handed-in `TypePlanner` (`with_type_planner`; with neither in, DataFusion's type mapping stands) and runs the dialect's `configure_analyzer_rules` after the extension's.
-- `df_guards.rs` — **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** re-exports `insert_struct_setop_after_coercion` toward the root; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the list. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `session.rs` calls `finish_session_build` (dialect hook, then seat 1).
+  registers a handed-in `TypePlanner` (`with_type_planner`; with neither in, DataFusion's type mapping stands) and runs the dialect's `configure_analyzer_rules` after the extension's. **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** re-exports `insert_struct_setop_after_coercion` toward the root; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the list. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `session.rs` calls `finish_session_build` (dialect hook, then seat 1).
 - `df_guards.rs` — the DataFusion **54.1 regression guards**, owned and constructed by CORE
   (design G8). Guard 1 is a configurable scalar-subquery default; guard 2 wraps
   `push_down_leaf_projections`, declining failed rewrites only on an `Unnest` path while keeping
