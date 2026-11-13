@@ -5,7 +5,8 @@
 `fix/signed-zero-normalize-1-part-b`), and the owner's ruling of 2026-11-12 on Q10, verbatim
 "Go with the defaults": a fix of two fork files or fewer lands before ICE-V2-FLAT-AWS-LABEL-1.
 **Severity:** S1, wrong write. **Status:** FIXED on branch `fix/nan-partition-value-1` in both
-repositories (fork `945d3326`; fork PR and RePark pin bump not yet opened). Evidence:
+repositories (fork PR #383, `46d5db39` after its rebase onto `a8bd3a1e`; built and measured as
+`945d3326` off `66901f02`, the same two-file change). Evidence:
 [task/wo/nan-partition-value-1/](../../wo/nan-partition-value-1/map.md).
 
 ## What was wrong
