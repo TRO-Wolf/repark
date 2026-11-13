@@ -130,7 +130,8 @@ and still fails with the fork's `register_table` text, creating nothing.
   orphaned), the same on main (verifier 1, 2026-11-13). That replace is what remains to pin.
 - The registry row is NATIVE-CTAS-ICEBERG-REFUSE-1 in
   [the parity doc](../../../docs/spark-sql-iceberg-parity.md).
-- Found, not carded: a native `CREATE SCHEMA` under an Iceberg catalog answers success, ignores
+- Found here, carded 2026-11-13 as
+  [NATIVE-CREATE-SCHEMA-NOT-DURABLE-1](native-create-schema-not-durable-1-card-2026-11-13.md): a native `CREATE SCHEMA` under an Iceberg catalog answers success, ignores
   `WITH (location = …)` and makes an in-memory schema, so its tables are not durable and write no
   file (measured on main; `test_write_body_carriers_1.py` and the ICE-STRUCT-PAIRING-1 exception
   recorder seed their native tables this way).

@@ -50,3 +50,16 @@ verifier/orchestrator, not a decision.
 ## Pointers
 
 - Up: [map.md](map.md)
+
+## Appended 2026-11-13: a Spark-door CTAS whose query is a CTE fails
+
+Source: NATIVE-CTAS-ICEBERG-REFUSE-1 (PR #1317) verifiers 1 and 2 (findings F6 and F2) and the delta verifier
+(check 3), 2026-11-13.
+
+- `CREATE TABLE ice.ns.t AS WITH x AS (…) SELECT id FROM x` through `spark.sql` fails with
+  `table 'spark_catalog.default.x' not found`, and the table is absent afterwards. Spark 4.1.2 stores `(2),(3)`.
+- The error names the temp-view home (`spark_catalog.default.<cte>`), as line 77 records for the column-list door;
+  the verifiers place it in this card's family. Here it is loud, not silent.
+- Builds: #1317's head `ed9f678c` and its base, main `a3f8c7d9`, identical; the same on the delta head `dbd86fd6`.
+- The native workaround (`CREATE TABLE` with columns, then `INSERT … WITH x AS (…) SELECT id FROM x`) stores `2, 3`.
+- Filed 2026-11-13, not dispatched; this card's severity stays unrated.
