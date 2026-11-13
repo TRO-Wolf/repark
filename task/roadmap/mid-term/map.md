@@ -548,7 +548,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   PR #991):** the neighbouring Spark-door catalog and DDL doors answer a mounted source with
   misleading text (`getTable`, `listColumns`, `SHOW VIEWS`, `SHOW COLUMNS`, `DESCRIBE TABLE`,
   `TRUNCATE TABLE`, `USE`); none writes; each door gives the declared listing or names its registry row.
-- [OFFSET-NESTED-SORT-1](offset-nested-sort-1-card-2026-10-08.md) — **card OFFSET-NESTED-SORT-1 (closed 2026-10-08 by its unit; the product PR's verifier pending):** an `OFFSET` under a nested `ORDER BY` answered 0 rows where 16 partitions answer 5; a DataFusion 54.1.0 defect, guarded in `repark-core`.
+- [OFFSET-NESTED-SORT-1](offset-nested-sort-1-card-2026-10-08.md), [CROSS-JOIN-CONDITION-1](cross-join-condition-1-card-2026-10-08.md) — **cards (closed 2026-10-08; the second after PR #997):** a nested `ORDER BY` `OFFSET` answered 0 rows (DataFusion 54.1.0, guarded in `repark-core`); a conditioned cross join takes the inner path.
 - [threaded-collect-segv-1-card-2026-10-08.md](threaded-collect-segv-1-card-2026-10-08.md) — **card
   THREADED-COLLECT-SEGV-1 (2026-10-08, filed, not scheduled, from the orchestrator's measurements, PR #998):**
   `collect()` on a second thread segfaults with pyarrow 25.0.0 and survives with 25.0.1, in 1.5.1 through
@@ -556,7 +556,6 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   threaded test, and decide the dependency floor, an owner ruling. **Cause found 2026-10-08:** pyarrow
   25.0.0's bundled mimalloc (apache/arrow GH-50471, fixed in 25.0.1), reproduced without RePark; the
   threaded test is in the facade suite and the floor awaits the owner.
-- [CROSS-JOIN-CONDITION-1](cross-join-condition-1-card-2026-10-08.md) — **card CROSS-JOIN-CONDITION-1 (closed 2026-10-08 by its unit, sequenced after PR #997):** a cross with a condition now takes the inner path on both routes.
 - [join-condition-refusals-1-card-2026-10-08.md](join-condition-refusals-1-card-2026-10-08.md) — **card
   JOIN-CONDITION-REFUSALS-1 (2026-10-08, closed 2026-10-08 by CROSS-JOIN-CONDITION-1 fold 2,
   re-opened 2026-10-09 by fold 3 narrowed to residues R-CJC-1..R-CJC-5,
@@ -1004,4 +1003,5 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [LISTVIEW-INNER-JOIN-KEY-1](listview-inner-join-key-1-card-2026-11-11.md) — **card LISTVIEW-INNER-JOIN-KEY-1 (filed 2026-11-11, S1, owner ruled the fix 2026-11-11, blocks v1.5.7, not dispatched):** a DataFrame key-name inner join on a `ListView` key returns the cross product (Q2059, Q2063).
 - [struct-position-grouping-sets-1-card-2026-11-11.md](struct-position-grouping-sets-1-card-2026-11-11.md), [not-between-dml-cse-1-card-2026-11-11.md](not-between-dml-cse-1-card-2026-11-11.md), [struct-compare-family-residue-1-card-2026-11-11.md](struct-compare-family-residue-1-card-2026-11-11.md), [struct-position-error-names-1-card-2026-11-11.md](struct-position-error-names-1-card-2026-11-11.md) and [map-nested-ordering-on-1-card-2026-11-11.md](map-nested-ordering-on-1-card-2026-11-11.md) — **cards (filed 2026-11-11, not dispatched):** S3 except STRUCT-POSITION-ERROR-NAMES-1 (S4). Each leaves when fixed or declined.
 - [using-scalar-struct-key-class-1-card-2026-11-11.md](using-scalar-struct-key-class-1-card-2026-11-11.md), [struct-setop-control-class-1-card-2026-11-11.md](struct-setop-control-class-1-card-2026-11-11.md), [using-chain-ambiguous-1-card-2026-11-11.md](using-chain-ambiguous-1-card-2026-11-11.md), [natural-existence-join-accept-1-card-2026-11-11.md](natural-existence-join-accept-1-card-2026-11-11.md) and [map-ordering-forms-1-card-2026-11-11.md](map-ordering-forms-1-card-2026-11-11.md) — **cards (filed 2026-11-11, S3, not dispatched):** the class-only gaps and the NATURAL (X0001 to X0060) and map-ordering acceptances; each leaves when fixed or declined.
+- [COLLECTSET-NAN-ELEMENTS-1](collectset-nan-elements-1-card-2026-11-13.md) — **card (2026-11-13, S3, not dispatched):** `F.collect_set` keeps one NaN; Spark keeps each NaN row.
 - [struct-case-name-cast-1-card-2026-11-11.md](struct-case-name-cast-1-card-2026-11-11.md), [struct-typed-form-schema-1-card-2026-11-11.md](struct-typed-form-schema-1-card-2026-11-11.md) and [facade-dup-field-row-1-card-2026-11-11.md](facade-dup-field-row-1-card-2026-11-11.md) — **cards (filed 2026-11-11, S3, not dispatched):** head-leg class gaps from the pin file; FACADE-DUP-FIELD-ROW-1's true card for X0030 and X0032 is NATURAL-EXISTENCE-JOIN-ACCEPT-1.

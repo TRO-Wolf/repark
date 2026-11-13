@@ -4944,8 +4944,13 @@ still open is `isModifiable`.
   had 480 WRONG-READ, 82 WRONG-WRITE, 28 SIGN-ONLY+WRONG-READ and 18 ORDER-DIFFER cells. After: a last optimizer
   rule, `signed_zero_keys`, wraps every float key position in `__repark_normalize_zero__`. That function passes
   NULL, maps every NaN to the canonical positive NaN and `-0.0` to `0.0`, and is the identity otherwise. It runs
-  on the Spark door and the native door, under a door-internal policy that no `SET` reaches. Group, distinct and
-  set-operation outputs carry the normalised key (`0.0`), as Spark's do; every other stored value keeps its bits.
+  on the Spark door and the native door, under a door-internal policy that no `SET` reaches. A `SET` (SQL, or
+  `spark.conf.set` on the Spark door) or a builder config that would stop it from running is refused on both
+  doors: `datafusion.optimizer.max_passes = 0` skips every optimizer pass, and
+  `datafusion.optimizer.skip_failed_rules = true` would drop a failing rule silently (delta round, verifier
+  findings). Group, distinct and set-operation outputs carry the normalised key (`0.0`), as Spark's do; so do the
+  subset columns of `dropDuplicates(subset)` and `drop_duplicates(subset)`, read and written, while the kept row's
+  other columns keep their own values (delta round). Every other stored value keeps its bits.
   All 608 of those cells reach the truth; the 418 EQUAL controls do not move. The evidence is
   `task/wo/signed-zero-normalize-1/evidence/part-b/after/after.md`. The declared residues are the three rows below.
 - **Release note (v1.5.7, ruling Q7)** — "A `MERGE` whose `ON` clause compares FLOAT or DOUBLE columns now
@@ -4956,7 +4961,10 @@ still open is `isModifiable`.
   Iceberg tables for writes, with Spark's `spark-sql` answer for the native rows.
   *(oracle: recorded PySpark 4.1.2, 2026-11-12, `task/wo/signed-zero-normalize-1/evidence/part-b/step0/raw/spark-*.jsonl`.)*
 - **Pin** — `python/repark/tests/sql/test_signed_zero_keys_1.py::test_every_float_key_cell_reaches_the_spark_truth`
-  (780 cells, four doors) and `::test_a_set_on_either_door_cannot_turn_the_key_wrap_off`;
+  (780 cells, four doors), `::test_a_set_on_either_door_cannot_turn_the_key_wrap_off`,
+  `::test_nan_outputs_carry_the_canonical_bits_and_passthrough_keeps_the_payload`,
+  `::test_drop_duplicates_keeps_the_normalised_key_and_the_row_values` and
+  `::test_drop_duplicates_writes_the_normalised_key`; `key_tests.rs::a_set_statement_cannot_reach_the_door_policy`;
   `crates/repark-core/src/session/df_guards/signed_zero/key_tests.rs::every_key_site_treats_both_zeros_and_every_nan_as_one_value_on_both_float_types`,
   `::each_float_key_carries_one_wrapper_and_a_second_optimize_is_the_identity`,
   `::prepare_then_execute_wraps_each_key_once`, `::no_provider_in_use_takes_a_wrapped_filter_as_exact`;
@@ -4980,9 +4988,12 @@ still open is `isModifiable`.
 - **repark** — The DataFrame `F.collect_set` over a FLOAT or DOUBLE column plans through the float key's distinct,
   so both zeros become one element. That element is always `0.0`: over `-0.0, 0.0, 0.0` it answers `[0.0]`.
 - **Apache Spark** — Spark keeps one element, the first zero it meets: `[-0.0]` when `-0.0` comes first, `[0.0]`
-  when `0.0` comes first. The answer is the same with 1 or 2 partitions and through SQL `collect_set`. The two values
-  are equal under SQL comparison. *(oracle: PySpark 4.1.2, measured 2026-11-12,
-  `task/wo/signed-zero-normalize-1/evidence/part-b/after/zero-side-legs.jsonl`.)*
+  when `0.0` comes first, through the DataFrame and SQL `collect_set` alike. Which zero it meets first depends on
+  the plan: with the rows split over four files, or after `repartition(4)` under `local[4]`, the same rows gave the
+  other sign (delta round). The count of zero elements, one, does not depend on the plan. The two values are equal
+  under SQL comparison. *(oracle: PySpark 4.1.2, measured 2026-11-12,
+  `task/wo/signed-zero-normalize-1/evidence/part-b/after/zero-side-legs.jsonl`, and 2026-11-13,
+  `task/wo/signed-zero-normalize-1/evidence/part-b/after/delta/legs-spark.jsonl`.)*
 - **SQL door** — The SQL `collect_set(x)` on RePark still returns both zeros, `[-0.0, 0.0]`. That is a
   function-internal comparison (`COLLECTION-FLOAT-EQ-1`), outside part 1.
 - **Pin** — `python/repark/tests/dataframe/test_group_agg.py::test_collect_set_keeps_one_zero_and_its_sign_is_the_declared_residue`
@@ -4990,6 +5001,24 @@ still open is `isModifiable`.
 - **Rationale** — DECLARED by the owner on 2026-11-12, verbatim: "Go with the defaults on 1,2,4" (item 1: declare
   `F.collect_set`'s zero sign SIGN-ONLY beside MM-1, and the pin asserts one element). This is the same "first zero it
   meets" class that ruling G declared for `min` / `max`.
+
+### SIGNED-ZERO-KEYS-1-COLLECTSET-NAN — DataFrame `F.collect_set` keeps one NaN; Spark keeps every NaN apart — **DECLARED 2026-11-13 (delta round D3, branch (ii)); card `COLLECTSET-NAN-ELEMENTS-1`**
+
+- **repark** — The DataFrame `F.collect_set` normalises its argument through the float key's distinct, so every
+  NaN becomes one element, the canonical NaN (`7ff8000000000000`). Over `NaN, NaN(payload 1), -NaN, NaN, 1.5` it
+  answers 2 elements; over two identical canonical NaNs it answers 1. Before part 1 (main `276dc503`) it kept one
+  element per NaN bit pattern. The SQL `collect_set(x)` is unchanged by part 1: one element per bit pattern
+  (`COLLECTION-FLOAT-EQ-1`).
+- **Apache Spark** — Spark compares NaNs by IEEE inside `collect_set`: no NaN equals another, so every NaN row is
+  its own element, even two identical canonical NaNs (2 elements), while the two zeros are one element. The same
+  holds for the DataFrame and SQL forms, under `local[1]` and `local[4]`, over one file, over four files and after
+  `repartition(4)`. *(oracle: PySpark 4.1.2, measured 2026-11-13,
+  `task/wo/signed-zero-normalize-1/evidence/part-b/after/delta/legs-spark.jsonl`.)*
+- **Pin** — `python/repark/tests/dataframe/test_group_agg.py::test_collect_set_keeps_one_zero_and_its_sign_is_the_declared_residue`
+  asserts RePark's declared answer: one canonical NaN element and the `1.5` control.
+- **Rationale** — DECLARED under the order author's rule for D3 (orchestrator, 2026-11-13): Spark's rule is not "NaNs
+  separated by their bits", so RePark does not change code in part 1. Spark's answer counts NaN rows rather than
+  values; matching it is card `COLLECTSET-NAN-ELEMENTS-1` (S3).
 
 ### SIGNED-ZERO-KEYS-1-TIES — `ORDER BY` ties between `-0.0` and `0.0` have no defined order — **DECLARED 2026-11-08 (ruling G)**
 
@@ -5000,7 +5029,8 @@ still open is `isModifiable`.
 - **Apache Spark** — the same: the zeros are ties, in the order of the input, `0.0, -0.0, 0.0, -0.0` for OB-4.
   *(oracle: recorded PySpark 4.1.2, 2026-11-12, step-0 cells OB-1, OB-3, OB-4.)*
 - **Pin** — `python/repark/tests/sql/test_signed_zero_keys_1.py::test_every_float_key_cell_reaches_the_spark_truth`
-  (the OB-1, OB-3 and OB-4 cells).
+  (the OB-1, OB-3 and OB-4 cells). OB-1 and OB-3 are checked in order; OB-4 is checked as the multiset of signed
+  values plus the order of the normalised keys, because its tie order is unspecified (delta round).
 - **Rationale** — DECLARED by ruling G (2026-11-08). A tie order is not a SQL guarantee on either engine.
 
 ### SIGNED-ZERO-KEYS-1-NAAJ — `NOT IN (subquery)` over a float key: Spark's default plan keeps `-0.0` apart (`NAAJ-WRONG`) — **DECLARED 2026-11-12 (ruling Q1)**

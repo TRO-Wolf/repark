@@ -1,6 +1,9 @@
-# SIGNED-ZERO-NORMALIZE-1: order, part B part 1 (SIGNED-ZERO-KEYS, flat keys) — RULED, NOT BUILT
+# SIGNED-ZERO-NORMALIZE-1: order, part B part 1 (SIGNED-ZERO-KEYS, flat keys) — RULED, BUILT, IN REVIEW
 
-**Status:** filed 2026-11-12; the questions were RULED the same day ("Go with the defaults", below). Not built.
+**Status:** filed 2026-11-12; the questions were RULED the same day ("Go with the defaults", below). Built on
+`fix/signed-zero-normalize-1-part-b` (2026-11-12); both verifiers FAILED it with no class (a) finding, and the one
+delta round (2026-11-13, [delta.md](evidence/part-b/after/delta/delta.md)) answers their findings. The delta
+re-check and the final cost run are next.
 
 Drafted by `claude-opus-5-5` (2026-11-12). The text marked "(default, Qn)" below is now the ruled outcome of that
 question ([questions.md](evidence/part-b/questions.md)); where a ruling below differs, the ruling governs.

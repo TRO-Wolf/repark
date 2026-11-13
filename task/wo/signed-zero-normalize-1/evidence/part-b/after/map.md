@@ -33,5 +33,6 @@ Spark 4.1.2 legs, and compared cell by cell with the base (`276dc503`, item 1's 
 - [measure.md](measure.md) — the mutation record (order §6) and the 50-repeat result (order §7) on `66fb7f13`, the
   literal-skip pin with the shapes tried on both doors (§1a), and the verifiers' note on P5's OB-4 order (§3);
   [mutations.jsonl](mutations.jsonl) holds the per-mutation records.
+- [delta/](delta/map.md) — the verifier delta round (2026-11-13): [delta.md](delta/delta.md) and its Spark and RePark legs.
 
 Up: [../map.md](../map.md).
