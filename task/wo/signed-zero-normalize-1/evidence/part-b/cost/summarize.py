@@ -57,7 +57,10 @@ def main() -> None:
     if arguments.samples is None:
         return
     print()
-    print("| run | case | build | rc | wall (s) | load1 before | load1 at sample | waited 60 s | above 4 |")
+    print(
+        "| run | case | build | rc | wall (s) | load1 before | load1 at sample "
+        "| waited 60 s | above 4 |"
+    )
     print("|---|---|---|---|---|---|---|---|---|")
     for line in arguments.samples.read_text(encoding="utf-8").splitlines():
         if not line.strip():

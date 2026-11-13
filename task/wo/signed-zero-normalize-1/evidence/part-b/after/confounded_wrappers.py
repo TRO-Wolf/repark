@@ -24,8 +24,7 @@ def confounded() -> set[tuple[str, str]]:
 
 def doors(warehouse: Path) -> dict[str, Any]:
     import repark
-    from repark import ReparkSession
-    from repark import functions
+    from repark import ReparkSession, functions
     from repark._native import PyReparkSession
     from repark.spark.window import Window
 
@@ -50,7 +49,9 @@ def logical_of_sql(frame: Any) -> str:
     table = frame.toArrow() if hasattr(frame, "toArrow") else frame.to_arrow()
     kinds = table.column(0).to_pylist()
     plans = table.column(table.num_columns - 1).to_pylist()
-    return "\n".join(str(plan) for kind, plan in zip(kinds, plans, strict=True) if kind == "logical_plan")
+    return "\n".join(
+        str(plan) for kind, plan in zip(kinds, plans, strict=True) if kind == "logical_plan"
+    )
 
 
 def logical_of_frame(frame: Any) -> str:
