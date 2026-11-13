@@ -4948,8 +4948,8 @@ still open is `isModifiable`.
   would stop it from running is refused: `datafusion.optimizer.max_passes = 0` skips every optimizer pass, and
   `datafusion.optimizer.skip_failed_rules = true` would drop a failing rule silently. The plain `SET` spellings,
   `spark.conf.set` and the builder refuse the value itself (delta round); a value that reaches the session config by
-  any other route (a quoted key, a comment, a native `SessionConfig`) leaves every following query refused on both
-  doors, by an analyzer rule that reads both keys from the live config, until they are reset (delta 2). Group, distinct and set-operation outputs carry the normalised key (`0.0`), as Spark's do; so do the
+  any other route (a quoted key, a comment, a native `SessionConfig`) leaves every query planned after it refused on
+  both doors (a DataFrame built before it still answers, correctly), by an analyzer rule that reads both keys from the live config, until they are reset (delta 2). Group, distinct and set-operation outputs carry the normalised key (`0.0`), as Spark's do; so do the
   subset columns of `dropDuplicates(subset)` and `drop_duplicates(subset)`, read and written, while the kept row's
   other columns keep their own values (delta round); the output keeps its input's fields and attribute ids, so a
   qualified reference to the key (`a.*`, `a.d`, a join on it, a self-join's two keys) still resolves (delta 2). Every other stored value keeps its bits.

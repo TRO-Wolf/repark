@@ -11,7 +11,7 @@
 - [summarize.py](summarize.py) — medians per case and build (with `04d84ab9-aa`, a second run of the base package for
   the base-against-base check), the ratios against `04d84ab9` and `276dc503`, and a per-sample load table.
 - [l4l_run.py](l4l_run.py) — the C-012 like-for-like ratio (PERF-1's work-equal set) per run and pair, from the
-  replay harness's per-cell work times. Prepared; not yet run.
+  replay harness's per-cell work times; its cost3 output is [l4l.md](l4l.md).
 - `cost-raw.jsonl`, `samples.jsonl`, [summary.md](summary.md), [l4l.md](l4l.md) — the final cost run (`cost3`, 2026-11-13):
   five rotated runs of 04d84ab9, 04d84ab9-aa, 276dc503 and head (`4442b88f1`) under the exclusive measure lock. Every
   gate passes except n2 at 1.0583 (base against base 0.9812); the second delta re-measures it.

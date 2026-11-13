@@ -78,6 +78,9 @@ On the §7 halt "`UPDATE-SCHEMA-BATCH-MISMATCH-1` reproducing more often", measu
 - **The cost result.** The final cost run (`cost3`) passed every gate but one: n2 at 1.0583 against its 1.05 bar. The
   owner, about 12:05 UTC, verbatim: **"Okay let’s go with A then"**. Option A: dispatch now, attribute the n2 cost, and
   re-measure n2 on the round's final head. Part B merges only if n2 passes there or the owner grants a cost exception.
+- **The tier.** The owner, about 12:12 UTC, verbatim: **"Defaults"**, to the default "restart part B's last delta now at
+  xhigh" (Fable's guidance: it is the last round and nothing follows it). A first attempt at high was stopped after
+  about 10 minutes, before any commit.
 - **The exit, agreed before dispatch.** This is the last round. If only the `dropDuplicates` commit fails, it is dropped
   and the subset re-projection returns to the round-1 files byte for byte; the key's sign on `dropDuplicates(subset)`
   becomes its own label-blocking unit. If the other commits fail, the unit stays parked for the owner. n2 is a merge
