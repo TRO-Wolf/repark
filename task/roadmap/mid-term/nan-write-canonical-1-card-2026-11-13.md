@@ -92,3 +92,11 @@ partitioned by the float column is NAN-AVRO-REWRITE-PARTITION-1. Data written by
 ## Close
 
 Closed by this unit when it merges.
+
+**Integration with SIGNED-ZERO-NORMALIZE-1 part B (#1326, merged 2026-11-13).** Part B's pin
+`test_signed_zero_keys_1.py::test_nan_outputs_carry_the_canonical_bits_and_passthrough_keeps_the_payload` asserted that
+the payload NaNs stored in its Parquet `nn_*` tables were not canonical, which held only while RePark stored raw NaN
+bits. With this unit those tables store the canonical NaN, as Spark's do, so the assertion now expects canonical
+stored bits and still checks that `ORDER BY d, id` returns each row's stored bits. A pin that a plain scan and a sort
+pass a NaN payload through unchanged needs a source that keeps the payload (an inline `VALUES` relation, or an Avro
+table on the Spark door): open for the records batch.
