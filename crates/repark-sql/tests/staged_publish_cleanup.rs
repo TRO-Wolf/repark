@@ -1,7 +1,10 @@
+mod staged_publish_faults;
+
 use std::collections::{BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::sync::{Arc, Mutex, PoisonError};
+use std::task::Waker;
 
 use datafusion::arrow::util::pretty::pretty_format_batches;
 use iceberg::io::LocalFsStorageFactory;
@@ -18,6 +21,7 @@ use repark_core::{ReparkSession, SqlDialect};
 use repark_spark::{SparkDialect, SparkExtension};
 use repark_sql::AnsiDialect;
 use serde_json::Value;
+use staged_publish_faults::{inject, recorded_refusal, run_until_killed};
 
 const CELLS: &str = include_str!("../../../docs/corpus/commit-cells-2026-11-04.jsonl");
 const DOOR: &str = "native";
@@ -38,6 +42,11 @@ const LOST_ACK: u8 = 6;
 const BUILT_OVER: u8 = 7;
 const DROPPED: u8 = 8;
 const EXPIRED_OVER: u8 = 9;
+const KILL: u8 = 10;
+const RENAME: u8 = 11;
+const KILLED: &str = "killed at publish";
+const COMMITTED: &str =
+    "success; the change is committed (one new metadata version); fresh read shows the change";
 const EXPIRE_SIDE: [&str; 3] = [
     "ALTER TABLE fault.ns.t SET TBLPROPERTIES ('write.metadata.previous-versions-max'='1')",
     "INSERT INTO fault.ns.t VALUES (9, 90)",
@@ -50,6 +59,7 @@ struct FaultCatalog {
     point: AtomicU8,
     spent: AtomicBool,
     tripped: AtomicBool,
+    killer: Mutex<Option<Waker>>,
 }
 
 impl FaultCatalog {
@@ -80,6 +90,23 @@ impl FaultCatalog {
         })
         .join()
         .expect("side writer");
+    }
+
+    async fn kill_or_inject(&self, table: &Table) {
+        let point = self.point.load(Ordering::SeqCst);
+        if point == RENAME && !table.metadata().location().ends_with("/t") {
+            inject(table.metadata().location());
+        }
+        if point == KILL {
+            self.tripped.store(true, Ordering::SeqCst);
+            let waker = self
+                .killer
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .take();
+            waker.into_iter().for_each(Waker::wake);
+            std::future::pending::<()>().await;
+        }
     }
 
     fn fault(&self) -> iceberg::Result<()> {
@@ -205,6 +232,7 @@ impl Catalog for FaultCatalog {
     }
 
     async fn publish_create_table(&self, table: Table) -> iceberg::Result<Table> {
+        self.kill_or_inject(&table).await;
         self.fault()?;
         let published = self.inner.publish_create_table(table).await;
         self.lost_ack(self.published(published))
@@ -222,6 +250,7 @@ impl Catalog for FaultCatalog {
                 "replace rejected before a concurrent drop",
             ));
         }
+        self.kill_or_inject(&table).await;
         self.fault()?;
         let published = self.inner.publish_replace_table(table, base).await;
         let point = self.point.load(Ordering::SeqCst);
@@ -433,6 +462,7 @@ async fn cell(stmt: &str, kind: &str, target: &str, point: u8) -> Outcome {
         point: AtomicU8::new(NONE),
         spent: AtomicBool::new(false),
         tripped: AtomicBool::new(false),
+        killer: Mutex::new(None),
     });
     let writer = writer();
     writer
@@ -445,8 +475,13 @@ async fn cell(stmt: &str, kind: &str, target: &str, point: u8) -> Outcome {
     let table_dir: PathBuf = root.join("ns").join(target);
     let before: BTreeSet<String> = metadata_files(&table_dir).into_iter().collect();
     fault.tripped.store(false, Ordering::SeqCst);
+    if point == RENAME && target == "t" {
+        inject(&table_dir.display().to_string());
+    }
     fault.point.store(point, Ordering::SeqCst);
-    let failed = run(&writer, stmt).await.err();
+    let failed = run_until_killed(&writer, stmt, &fault)
+        .await
+        .map(|error| error.replace(&root.display().to_string(), "<root>"));
     fault.point.store(NONE, Ordering::SeqCst);
     let after = metadata_files(&table_dir);
     let newest = after.iter().max_by_key(|path| version(path)).cloned();
@@ -529,6 +564,7 @@ async fn built_over(stmt: &str, kind: &str, point: u8) -> BuiltOver {
         point: AtomicU8::new(NONE),
         spent: AtomicBool::new(false),
         tripped: AtomicBool::new(false),
+        killer: Mutex::new(None),
     });
     let writer = writer();
     writer
@@ -616,6 +652,8 @@ fn point_of(name: &str) -> Option<u8> {
         "listing_after_publish" => Some(LIST),
         "load_after_publish" => Some(LOAD),
         "refresh_after_publish" => Some(REFRESH),
+        "kill_before_publish" => Some(KILL),
+        "metadata_rename" => Some(RENAME),
         _ => None,
     }
 }
@@ -623,7 +661,6 @@ fn point_of(name: &str) -> Option<u8> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_commit_table_d2_rows_and_their_controls_hold_on_the_native_door() {
     let mut pinned = Vec::new();
-    let mut skipped = Vec::new();
     for line in CELLS.lines().filter(|line| !line.trim().is_empty()) {
         let row: Value = serde_json::from_str(line).expect("cell row");
         let text = |key: &str| row[key].as_str().unwrap_or_default().to_string();
@@ -631,21 +668,49 @@ async fn the_commit_table_d2_rows_and_their_controls_hold_on_the_native_door() {
         if text("door") != DOOR || !STAGED_HEADS.contains(&head.as_str()) {
             continue;
         }
-        let Some(point) = point_of(&point_name) else {
-            skipped.push(text("view"));
-            continue;
-        };
+        let point = point_of(&point_name)
+            .unwrap_or_else(|| panic!("{}: unknown point {point_name}", text("view")));
         let target = if head == "RTAS" { "t" } else { "c" };
         let kind = text("catalog");
         let seen = cell(&text("stmt"), &kind, target, point).await;
         let view = text("view");
-        if point == BEFORE {
-            assert_eq!(group, "D2", "{view}");
+        if point == KILL {
+            assert_eq!(
+                (group.as_str(), text("class").as_str()),
+                ("G1", "EQUAL_REGISTERED")
+            );
+            assert!(text("spark").starts_with("no outcome; the writer dies before its commit"));
+            assert_eq!(seen.failed.as_deref(), Some(KILLED), "{view}");
+            assert_eq!(
+                seen.rejected_files.len(),
+                1,
+                "{view}: {:?}",
+                seen.rejected_files
+            );
+            assert_eq!(seen.reopened, changed_rows(&head), "{view}");
+        } else if point == RENAME {
+            assert_eq!((kind.as_str(), group.as_str()), ("hadoop", ""), "{view}");
+            assert_eq!(text("class"), "EQUAL", "{view}");
+            assert!(text("spark").starts_with("failure, CommitFailedException Version N already"));
+            let failed = seen.failed.clone().unwrap_or_default();
             assert!(
-                seen.failed
-                    .as_deref()
-                    .is_some_and(|e| e.contains("catalog update unavailable")),
+                failed.starts_with(recorded_refusal(&text("repark"))),
+                "{view}: {failed}"
+            );
+            assert_eq!(seen.fresh, unchanged_rows(&head), "{view}");
+        } else if point == BEFORE {
+            assert_eq!(group, "D2", "{view}");
+            assert_eq!(
+                text("class"),
+                "FAILURE_REPORTED_COMMITTED_ON_REOPEN",
                 "{view}"
+            );
+            let spark = format!("failure; no new version; fresh read {}", seen.fresh);
+            assert_eq!(text("spark"), spark, "{view}");
+            let failed = seen.failed.clone().unwrap_or_default();
+            assert!(
+                failed.starts_with(recorded_refusal(&text("repark"))),
+                "{view}: {failed}"
             );
             assert!(
                 seen.rejected_files.is_empty(),
@@ -660,19 +725,20 @@ async fn the_commit_table_d2_rows_and_their_controls_hold_on_the_native_door() {
             }
         } else if group == "D1" {
             assert_eq!(text("class"), "FAILURE_REPORTED_COMMITTED", "{view}");
+            assert_eq!(text("spark"), COMMITTED, "{view}");
             assert!(seen.failed.is_some(), "{view}");
             assert_eq!(seen.fresh, changed_rows(&head), "{view}");
             assert_eq!(seen.reopened, changed_rows(&head), "{view}");
         } else {
             assert_eq!(text("class"), "EQUAL", "{view}");
+            assert_eq!(text("spark"), COMMITTED, "{view}");
             assert!(seen.failed.is_none(), "{view}: {:?}", seen.failed);
             assert_eq!(seen.fresh, changed_rows(&head), "{view}");
             assert_eq!(seen.reopened, changed_rows(&head), "{view}");
         }
         pinned.push(view);
     }
-    assert_eq!(pinned.len(), 30, "{pinned:?}");
-    assert_eq!(skipped.len(), 9, "{skipped:?}");
+    assert_eq!(pinned.len(), 39, "{pinned:?}");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -701,6 +767,7 @@ async fn a_rejected_replace_of_a_format_version_3_table_keeps_the_previous_versi
             point: AtomicU8::new(BEFORE),
             spent: AtomicBool::new(false),
             tripped: AtomicBool::new(false),
+            killer: Mutex::new(None),
         });
         let writer = writer();
         writer
@@ -764,6 +831,7 @@ async fn the_next_write_after_a_rejected_hadoop_replace_takes_the_freed_version(
         point: AtomicU8::new(NONE),
         spent: AtomicBool::new(false),
         tripped: AtomicBool::new(false),
+        killer: Mutex::new(None),
     });
     let writer = writer();
     writer

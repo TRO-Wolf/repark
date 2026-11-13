@@ -76,7 +76,7 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `map_column_panic_1.rs` — **MAP-COLUMN-PANIC-1 (2026-10-20):** the 20 pins above; they read each answer as rendered rows and the Arrow key and value types, and assert the map field is never nullable.
-- `map_key_alter.rs` — **MAP-KEY-ALTER-1 (2026-11-03):** replays the nested-cells corpus `A-ddl` rows (skipped if absent): `mapkey_*` answer Spark, others keep theirs; 10 arm pins.
+- `map_key_alter.rs` — **MAP-KEY-ALTER-1 (2026-11-03):** replays the nested-cells corpus `A-ddl` rows (fails if absent): `mapkey_*` answer Spark, others keep theirs; 10 arm pins.
 - `map_key_union.rs` — **MAP-KEY-ALTER-1 delta:** every evolving write refuses a map-key change; value/element unions evolve.
 - `commit_unknown_doors.rs` — **ICE-INTEGRITY-PINS-1 pin U offline twin (2026-10-22):** the 24 cells U-1 to U-4 × three doors × v2 and v3, the seed with the status-check properties, and the fresh-session resolution.
 - `commit_unknown_gate.rs` — **ICE-INTEGRITY-PINS-1 pin U offline twin (2026-10-22):** `GateCatalog`, the test-only
