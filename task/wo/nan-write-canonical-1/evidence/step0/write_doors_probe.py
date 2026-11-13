@@ -127,7 +127,7 @@ def leaf_bits(array: Any) -> Any:
     if pa.types.is_struct(kind):
         return {kind.field(i).name: leaf_bits(child) for i, child in enumerate(array.flatten())}
     if pa.types.is_map(kind):
-        return leaf_bits(array.items)
+        return {"keys": leaf_bits(array.keys), "values": leaf_bits(array.items)}
     if pa.types.is_list(kind) or pa.types.is_large_list(kind):
         return leaf_bits(array.flatten())
     return None

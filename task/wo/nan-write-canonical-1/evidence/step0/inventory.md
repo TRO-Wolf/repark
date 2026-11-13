@@ -31,6 +31,9 @@ Main `1d9d2808`, fork pin `92242cb4`. Line numbers are on those trees. "Measured
 | `crates/repark-iceberg/src/write/append_fanout_serial.rs:90` | every partitioned RePark fan-out (`fanout_conformed_stream_serial_with_abort`, line 40; splitter at line 54) |
 | `crates/repark-iceberg/src/write/merge/session_staging.rs:130` | MERGE and predicate UPDATE/DELETE staging (`write_new_data_files_from_stream_with`, line 26) |
 | `crates/repark-iceberg/src/write/merge/row_lineage.rs:205` | format-v3 row-lineage MERGE writes (`split_lineage_batch`, line 227) |
+| fork `crates/integrations/datafusion/src/physical_plan/row_lineage.rs:309` (`StreamingDataFileWriter`) | the fork's DataFusion DELETE / UPDATE (`IcebergDeleteExec`, `IcebergUpdateExec`): native UPDATE and DELETE, and any Spark-door DELETE or UPDATE that falls through to DataFusion |
+
+Every site builds its file writer through the fork's `AnyFileWriterBuilder` (`writer/file_writer/any_writer.rs:50-84`), with the format from the table's `write.format.default` or the per-write `write-format` option (`write/data_format.rs`): Parquet, ORC or Avro. The step 0 table measured Parquet; [formats.md](formats.md) measures all three.
 
 ## Doors
 
@@ -52,14 +55,17 @@ Main `1d9d2808`, fork pin `92242cb4`. Line numbers are on those trees. "Measured
 | `save(<table name>)` | `writer_readwriter.py:336` → `writer_save.py:99` | `write_table` | as `saveAsTable` | `save_name` |
 | `save(<path>)` (Iceberg path) | `writer_save.py:99` | refused on main (`TABLE_OR_VIEW_NOT_FOUND`): RePark has no Iceberg path write | — | `path_append` (refused) |
 | `insertInto` | `writer_readwriter.py:215` | `INSERT INTO`/`INSERT OVERWRITE … SELECT * FROM <view>` (D1/D4) | as D1 / D4 | `insertinto` |
-| native INSERT (D14, D15) | `repark-sql/src/router.rs:163` | DataFusion `insert_into` → fork | fork `write.rs:330` | `native_insert` |
-| native INSERT OVERWRITE / PARTITION (D16) | `repark-sql/src/router.rs:160` → `repark-sql/src/insert_overwrite.rs:23` | `stage_overwrite_files_with`, `stage_static_partition_overwrite_files_with` | `write_options.rs:364`, `append_fanout_serial.rs:90` | not measured (native has no partitioned `CREATE TABLE`) |
-| native CTAS (D17) | `repark-sql/src/create_table.rs:621` | refused into Iceberg on main (NATIVE-CTAS-ICEBERG-REFUSE-1) | — | `native_ctas` (refused) |
-| native UPDATE / DELETE (D20) | `repark-sql/src/router.rs:176-177` | `commit_identity_dml` / predicate DML | `session_staging.rs:130` | `native_update`, `native_delete` |
-| native MERGE (D19) | `repark-sql/src/router.rs:158` | refused in the measured form (`Unsupported SQL statement: MERGE`) | `session_staging.rs:130` when it runs | `native_merge` (refused) |
+| native INSERT (D14, D15) | `repark.sql()`: `repark-core/src/dialect.rs:145` `DataFusionDialect` in `local_fs_policy.rs:51` (stock DataFusion; `repark-sql` is on no door) | DataFusion → fork `table/mod.rs:244` `insert_into` (partition values from fork `project.rs:93`) | fork `write.rs:330` | `native_insert` |
+| native INSERT OVERWRITE (D16) | as D14 | DataFusion `InsertOp::Overwrite` → fork `insert_into`, committed at fork `physical_plan/commit.rs:412` | fork `write.rs:330` | not measured: the native door registers only memory catalogs and cannot create a partitioned table, so it cannot reach a partitioned table another door made |
+| native CTAS (D17) | as D14 | refused by `repark-core/src/local_fs_policy/native_ctas.rs:14`, reached from `local_fs_policy.rs:102` | — | `native_ctas` (refused) |
+| native UPDATE / DELETE (D20) | as D14 | DataFusion → fork `table/mod.rs:368` / `:311` → `update.rs:35-36,173` / `delete.rs:656,819,968` | fork `physical_plan/row_lineage.rs:309` `StreamingDataFileWriter` (partition values at `:338`) | `native_update`, `native_delete` |
+| native MERGE (D19) | as D14 | refused by DataFusion (`Unsupported SQL statement: MERGE`) | — | `native_merge` (refused) |
 | Rust `append()` (D18) | `repark-iceberg/src/write/append.rs:33` | `write_data_files_with_concurrency` / `fanout_data_files_with_concurrency` | `write_options.rs:364`, `append_fanout_serial.rs:90` | not measured (no Python door) |
 | micro-batch sink (D21) | `repark-core/src/microbatch/run.rs:351,465,482` | `append` / `stage_overwrite_files_with` | as D18 | not measured (streaming track frozen) |
-| `CALL … rewrite_data_files` | `repark-spark/src/router.rs` `Statement::Call` | fork `maintenance/rewrite_data_files_write.rs:265` | the fork's `DataFileWriter` | not measured |
+| `CALL … rewrite_data_files` (and `run_maintenance` `call/run_maintenance_apply.rs:122`, `apply_partitioning` `call/apply_partitioning.rs:199`, which reach it) | `repark-spark/src/router.rs` `Statement::Call` | fork `maintenance/rewrite_data_files_write.rs:265` (splitter), `:278,:358,:411` (`DataFileWriter` over `AnyFileWriterBuilder`) | yes | `rewrite_data_files` per format (`formats.md`) |
+| `CALL add_files` | `repark-spark/src/call/add_files.rs:22` → fork `maintenance::AddFiles` | imports files as they are | writes data files: no | — |
+| `CALL rewrite_manifests`, `CALL rewrite_table_path` | `Statement::Call` | copy existing manifests, partition values and files | writes data files: no | — |
+| fork `RepairPartitionKeys` | fork `maintenance/partition_key_audit.rs:533` (bare `ParquetWriterBuilder`) | no RePark caller | not a door | — |
 
 ## Partition values (who computes them, who routes by them)
 
@@ -72,26 +78,29 @@ Main `1d9d2808`, fork pin `92242cb4`. Line numbers are on those trees. "Measured
 | `crates/repark-iceberg/src/write/merge/row_lineage.rs:165` | v3 lineage calculator, grouped by `Struct` | first NaN's raw bits |
 | `crates/repark-iceberg/src/write/distribution.rs:129` `partition_value_exprs` (used by `hash_distribution`, line 157, from `partition_write.rs:229`) | plan-path hash distribution over `PartitionTransformExpr` (not the calculator) | raw bits hashed |
 
-## The seat I intend to use (for the critic; no product code is in this commit)
+## The seat (corrected after the inventory critic, 2026-11-13)
 
-One canonicalising function in the fork, `canonical_nan_batch` / `canonical_nan_array` (every NaN of a FLOAT or
-DOUBLE leaf, top-level or inside a STRUCT, LIST or MAP, becomes `7ff8000000000000` / `7fc00000`; nothing else
-changes; a batch with no other NaN is returned untouched), applied at the two fork points every door crosses:
+The critic measured, and [formats.md](formats.md) confirms, that Spark's **Avro** data files keep the raw NaN bits
+while its Parquet and ORC files canonicalise; Spark canonicalises partition values on all three formats. The
+orchestrator ruled the seat as follows; the build follows it.
 
-1. **`DataFileWriter::write`** (fork `writer/base_writer/data_file_writer.rs:207`): every data file of every door,
-   before the file writer computes its statistics. Stored bits and NaN counts; also every copy-on-write rewrite,
-   which matches Spark's rewrite cell.
-2. **`PartitionValueCalculator::calculate_from_columns`** (line 281, before the partition struct is built): the
-   partition value and the grouping of the fork splitter, the fork insert path's `_partition` hash, RePark's stream
-   router and the v3 lineage split. This is "before the partition split".
+1. **Data values:** fork `writer/file_writer/any_writer.rs:158` `AnyFileWriter::write`, Parquet and ORC arms only;
+   Avro keeps the bits it is given. Every site above writes through `AnyFileWriter`, after `DataFileWriter::write`'s
+   `apply_write_defaults`.
+2. **Partition values:** fork `arrow/partition_value_calculator.rs:281`, all formats; it feeds every consumer in the
+   partition-value table.
+3. **Plan-path routing:** RePark `write/distribution.rs:129` (used by `hash_distribution`, line 157), each float
+   partition expression wrapped in the existing `CanonicalFloatExpr::wrap`, so the plan-path doors write one NaN
+   partition file.
 
-Files: fork `partition_value_calculator.rs` and `data_file_writer.rs` (two product files), the offline tests in the
-fork's `data_file_writer_tests.rs` and the calculator's test module, and the RePark fork pin.
+One function, `canonical_nan_batch` / `canonical_nan_array` in `partition_value_calculator.rs`, does the rewrite:
+every NaN of a FLOAT or DOUBLE leaf, top-level or inside a STRUCT, LIST, LARGE LIST, FIXED SIZE LIST, DICTIONARY
+value or MAP value, becomes `7ff8000000000000` / `7fc00000`; nothing else changes.
 
-**Open question for the critic.** The plan-path hash (`distribution.rs:129`, RePark) does not go through the
-calculator, so the CTAS/RTAS-shaped doors would still route NaN patterns to different writers by their raw bits
-until (1) has canonicalised them inside each writer: the stored values and partition values become canonical, but
-the NaN partition can still be split across writer files (NAN-PARTITION-FILE-SPLIT-1, S4). Closing that too means
-wrapping each float partition expression in the existing `CanonicalFloatExpr::wrap`
-(`distribution/canonical_float.rs:17`) — a third product file. I lean to include it and will measure both ways.
-EOF
+- **Map keys stay out.** Spark stores one NaN key canonical in Parquet and ORC (`k1_*`), but refuses a map with two
+  NaN keys (`DUPLICATED_MAP_KEY`) where main writes it (`k2_*`). Rewriting keys would turn that map into one with two
+  identical keys, so keys keep their bits (ruling item 6); a single sign-set or payload NaN key in a Parquet or ORC
+  map stays unlike Spark.
+- **FixedSizeList and Dictionary** are covered by the function rather than argued unreachable: every RePark door
+  conforms columns to `schema_to_arrow_schema` types before the writer, but the fork's schema visitor accepts both
+  (`arrow/schema.rs:315,362`), so the arms cost nothing to keep.
