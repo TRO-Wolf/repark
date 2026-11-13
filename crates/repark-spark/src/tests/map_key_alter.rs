@@ -33,21 +33,20 @@ pub(super) fn text(row: &Json, key: &str) -> String {
     row[key].as_str().unwrap_or_default().to_string()
 }
 
-pub(super) fn ddl_cells() -> Option<Vec<Cell>> {
-    let body = std::fs::read_to_string(CELLS).ok()?;
-    Some(
-        body.lines()
-            .map(|line| serde_json::from_str::<Json>(line).unwrap())
-            .filter(|row| row["cat"] == "A-ddl")
-            .map(|row| Cell {
-                spelling: text(&row, "spelling"),
-                head: text(&row, "head"),
-                stmt: text(&row, "stmt"),
-                spark: text(&row, "spark"),
-                repark: text(&row, "repark"),
-            })
-            .collect(),
-    )
+pub(super) fn ddl_cells() -> Vec<Cell> {
+    let body = std::fs::read_to_string(CELLS)
+        .unwrap_or_else(|error| panic!("{CELLS} must exist: {error}"));
+    body.lines()
+        .map(|line| serde_json::from_str::<Json>(line).unwrap())
+        .filter(|row| row["cat"] == "A-ddl")
+        .map(|row| Cell {
+            spelling: text(&row, "spelling"),
+            head: text(&row, "head"),
+            stmt: text(&row, "stmt"),
+            spark: text(&row, "spark"),
+            repark: text(&row, "repark"),
+        })
+        .collect()
 }
 
 fn without_ids(message: &str) -> String {
@@ -166,10 +165,7 @@ async fn check_cell(
 
 #[tokio::test]
 async fn nested_ddl_cells_answer_spark_on_map_keys_and_keep_every_control() {
-    let Some(cells) = ddl_cells() else {
-        eprintln!("skipped: {CELLS} is absent (it lands with PR #1254)");
-        return;
-    };
+    let cells = ddl_cells();
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     repark_functions::register_all(&ctx);

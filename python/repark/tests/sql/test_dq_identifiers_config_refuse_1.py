@@ -20,6 +20,7 @@ AUDIT_CELLS = ROOT / "docs" / "corpus" / "reaudit-cells-2026-11-05.jsonl"
 TABLE_NAME = re.compile(r"hd\.n\d+\.t\b")
 DEFAULT_READ = {"cols": ["key", "value"], "rows": [[KEY, "false"]]}
 FIXTURE_ROWS = [[1, "a"], [2, "s"], [3, "b"]]
+AUD021_CELL_COUNT = 11
 
 
 def _records(kind: str) -> list[dict[str, Any]]:
@@ -29,8 +30,6 @@ def _records(kind: str) -> list[dict[str, Any]]:
 
 
 def _aud021_cells() -> list[dict[str, Any]]:
-    if not AUDIT_CELLS.exists():
-        return []
     with AUDIT_CELLS.open(encoding="utf-8") as handle:
         rows = [json.loads(line) for line in handle if line.strip()]
     return [
@@ -121,17 +120,15 @@ def _refuses(spark: ReparkSession, set_path: Callable[[ReparkSession], None]) ->
 AUD021_CELLS = _aud021_cells()
 
 
+def test_the_aud021_cells_are_the_eleven_facade_dq_rows() -> None:
+    assert len(AUD021_CELLS) == AUD021_CELL_COUNT
+
+
 @pytest.mark.parametrize("set_path", sorted(SET_PATHS))
-@pytest.mark.parametrize(
-    "cell",
-    AUD021_CELLS or [None],
-    ids=[cell["head"] for cell in AUD021_CELLS] or ["records-file-absent"],
-)
+@pytest.mark.parametrize("cell", AUD021_CELLS, ids=[cell["head"] for cell in AUD021_CELLS])
 def test_aud021_cell_set_paths_refuse_and_the_statement_runs_under_the_default(
-    spark: ReparkSession, cell: dict[str, Any] | None, set_path: str
+    spark: ReparkSession, cell: dict[str, Any], set_path: str
 ) -> None:
-    if cell is None:
-        pytest.skip(f"AUD-021 cells not filed yet: {AUDIT_CELLS.relative_to(ROOT)} is absent")
     baseline_table = _fixture_table(spark, "base")
     baseline = _answer(lambda: spark.sql(TABLE_NAME.sub(baseline_table, cell["stmt"])))
     baseline_state = _answer(lambda: spark.sql(f"SELECT * FROM {baseline_table}"))

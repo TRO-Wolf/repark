@@ -37,21 +37,20 @@ struct Read {
     spark: String,
 }
 
-fn unit_reads() -> Option<Vec<Read>> {
-    let body = std::fs::read_to_string(CELLS).ok()?;
-    Some(
-        body.lines()
-            .map(|line| serde_json::from_str::<Json>(line).unwrap())
-            .filter(|row| row["cat"] == "A-read" && text(row, "repark").contains(DOT_TEXT))
-            .map(|row| Read {
-                spelling: text(&row, "spelling"),
-                view: text(&row, "view"),
-                head: text(&row, "head"),
-                stmt: text(&row, "stmt"),
-                spark: text(&row, "spark"),
-            })
-            .collect(),
-    )
+fn unit_reads() -> Vec<Read> {
+    let body = std::fs::read_to_string(CELLS)
+        .unwrap_or_else(|error| panic!("{CELLS} must exist: {error}"));
+    body.lines()
+        .map(|line| serde_json::from_str::<Json>(line).unwrap())
+        .filter(|row| row["cat"] == "A-read" && text(row, "repark").contains(DOT_TEXT))
+        .map(|row| Read {
+            spelling: text(&row, "spelling"),
+            view: text(&row, "view"),
+            head: text(&row, "head"),
+            stmt: text(&row, "stmt"),
+            spark: text(&row, "spark"),
+        })
+        .collect()
 }
 
 fn format_of(spelling: &str) -> &str {
@@ -161,10 +160,7 @@ async fn check_read(
 
 #[tokio::test]
 async fn dot_access_cells_answer_spark_on_the_spark_door() {
-    let (Some(reads), Some(ddl)) = (unit_reads(), ddl_cells()) else {
-        eprintln!("skipped: {CELLS} is absent");
-        return;
-    };
+    let (reads, ddl) = (unit_reads(), ddl_cells());
     assert_eq!(reads.len(), 816);
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;

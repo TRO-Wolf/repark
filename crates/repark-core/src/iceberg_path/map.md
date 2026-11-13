@@ -57,12 +57,16 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
   <loc>/metadata`; a zero hint with no `v0` is a missing table; the listing keeps the highest
   `v([^.]*)\..*` stem whose canonical name is listed, so a catalog-style name never beats a `v`
   name.
-- `corpus_cells_tests.rs` — HADOOP-DISCOVERY-RULE-1's table-driven pin: every `path_select` row
-  of `docs/corpus/hadoop-discovery-cells-2026-11-03.jsonl` rebuilt on a five-commit RePark
-  history with the row's writer, name-form, cleanup and hint manipulations, asserting Spark's rows
-  or a refusal (Java's missing-version text where Spark gives it). 1418 rows pinned; skipped: 20
-  `crc_kept` controls (Hadoop's checksum sidecar) and 472 lying-name rows Spark refuses by codec
-  (D4, owner-ruled exclusion). Red on `05d0437d` with the pilot's 600 recorded mismatches.
+- `corpus_cells_tests.rs` — HADOOP-DISCOVERY-RULE-1's table-driven pin, rewritten by
+  CORPUS-CHECKER-REPAIR-1 (2026-11-13): every `path_select` and `path_insert` row of
+  `docs/corpus/hadoop-discovery-cells-2026-11-03.jsonl` (3820 rows, none skipped) rebuilt on a
+  five-commit RePark history with the row's writer, name form, cleanup, hint and checksum
+  sidecars. A row matches Spark's rows (959) or Java's missing-version body (348), or else its
+  golden in `docs/corpus/hadoop-discovery-repark-goldens-2026-11-13.jsonl`: RePark's exact
+  class and text with its card (D4 472, D5 126, D7 1910, C-005 checksum control 5). An append
+  replays the facade's `save_target_names_table` and `plan_table_write`, refuses, and leaves
+  the fixture byte-identical. A missing cells or goldens file fails. The negative controls feed
+  a wrong value, a wrong text, a changed class, a missing golden and a state change.
 - `hint_walk_tests.rs` — the stale-hint walk battery (ICE-HADOOP-HINT-WINDOW-1, 2026-10-28), a
   sibling of `tests.rs` in the default layout with its own two-line `FileIO` helper. A
   `version-hint.text` naming `N` is not the last word while `v<N+1>`, ... exist
