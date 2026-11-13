@@ -61,7 +61,8 @@ under `task/wo/signed-zero-normalize-1/`.
 - [key_tests.rs](key_tests.rs) — P5r over a MemTable (±0, both NaN signs, NULL, 1.5, on `DOUBLE`
   and `FLOAT`): every node kind against the Spark truth, integer-derived keys, `DISTINCT ON`,
   a recursive `UNION`; the `keys`-off session (bit-pattern keys) and a `SET` that cannot reach the
-  policy (`max_passes = 0` and `skip_failed_rules = true` refused at `SET` and at build, delta round); group, distinct and set outputs store `+0.0` while `UNION ALL` and projections keep the
+  policy (`max_passes = 0` and `skip_failed_rules = true` refused at `SET` and at build, delta round; delta 2: every other spelling, and a value written straight into the
+  session config, leaves the next query refused by the analyzer rule); group, distinct and set outputs store `+0.0` while `UNION ALL` and projections keep the
   stored bits; P6 one wrapper per key with a second optimize the identity, names, qualifiers and
   types equal to the keys-off plan, `PREPARE`/`EXECUTE`, a view, a hand-built `Repartition`; a
   float literal key (`PARTITION BY`, window and `Sort` `ORDER BY`, `ROLLUP`, `GROUPING SETS`,

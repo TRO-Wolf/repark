@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TreeNodeRecursion, TreeNodeRewriter};
 use datafusion::common::{DataFusionError, Result as DataFusionResult, SchemaError};
 use datafusion::execution::SessionStateBuilder;
@@ -78,6 +79,36 @@ pub(super) fn optimizer_seat_refusal(key: &str, value: &str) -> Option<Error> {
     )))
 }
 
+#[derive(Debug)]
+struct OptimizerSeatConfig;
+
+impl AnalyzerRule for OptimizerSeatConfig {
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> DataFusionResult<LogicalPlan> {
+        if matches!(
+            plan,
+            LogicalPlan::Statement(_) | LogicalPlan::EmptyRelation(_) | LogicalPlan::Values(_)
+        ) {
+            return Ok(plan);
+        }
+        let refusal = if config.optimizer.max_passes == 0 {
+            optimizer_seat_refusal(OPTIMIZER_SEAT_KEYS[0], "0")
+        } else if config.optimizer.skip_failed_rules {
+            optimizer_seat_refusal(OPTIMIZER_SEAT_KEYS[1], "true")
+        } else {
+            None
+        };
+        match refusal {
+            Some(Error::Config(message)) => Err(DataFusionError::Configuration(message)),
+            Some(other) => Err(DataFusionError::Configuration(other.to_string())),
+            None => Ok(plan),
+        }
+    }
+
+    fn name(&self) -> &str {
+        "repark_optimizer_seat_config"
+    }
+}
+
 pub(super) fn datafusion_config_refusal(key: &str, value: &str) -> Option<Error> {
     if DEAD_DATAFUSION_54_1_KEYS.contains(&key) {
         return Some(dead_datafusion_54_1_refusal(key, value));
@@ -145,6 +176,7 @@ pub(super) fn finish_session_build(
     extension: &Arc<dyn SessionExtension>,
 ) {
     dialect.on_session_built(context);
+    context.add_analyzer_rule(Arc::new(OptimizerSeatConfig));
     signed_zero::install_literal_seat(context, extension.signed_zero_policy());
 }
 

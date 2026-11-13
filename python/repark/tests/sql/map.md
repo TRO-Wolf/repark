@@ -49,6 +49,8 @@ pins.
   `typed` and native against Spark 4.1.2's view answers, and pins that a `SET` on either door cannot turn the key wrap off.
   Delta round (2026-11-13): the refused `max_passes = 0` / `skip_failed_rules = true` forms, OB-4 as ties, GB-8 in order,
   the canonical-NaN output bits, and `dropDuplicates(subset)` keeping the normalised key, read and written.
+  Delta 2 (2026-11-13): every `SET` spelling the delta re-check found (quoted keys, comments, spacing) leaves the next
+  query refused on both doors; the dedup pins assert the key classes and normalised bits, not which tied row survives.
 - [test_struct_compare_seat_family_1.py](test_struct_compare_seat_family_1.py) — STRUCT-COMPARE-SEAT-FAMILY-1 — every
   DataFrame typed and string door cell of the family table matches Spark: its rows, or Spark's class on a
   refusal (a carded class gap: a refusal; other known cells: no panic). Generated names never show the

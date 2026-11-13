@@ -251,6 +251,46 @@ def test_a_set_on_either_door_cannot_turn_the_key_wrap_off(
         assert collect(door(join.format(t=name))) == [[18]]
 
 
+SEAT_SPELLINGS = (
+    'SET "datafusion.optimizer.max_passes" = 0',
+    "SET `datafusion.optimizer.max_passes` = 0",
+    "SET 'datafusion.optimizer.max_passes' = 0",
+    'SET datafusion."optimizer".max_passes = 0',
+    "SET datafusion.optimizer . max_passes = 0",
+    "SET datafusion.optimizer.max_passes = 0 -- c",
+    "SET datafusion.optimizer.max_passes = 0 /* c */",
+    "SET datafusion.optimizer.max_passes = '0' -- c",
+    "SET/**/datafusion.optimizer.max_passes = 0",
+    "SET datafusion.optimizer.skip_failed_rules = true -- c",
+    'SET "datafusion.optimizer.skip_failed_rules" = true',
+    "SET datafusion.optimizer.max_passes = 0",
+    "SET datafusion.optimizer.skip_failed_rules = true",
+)
+
+
+@pytest.mark.parametrize("statement", SEAT_SPELLINGS)
+def test_every_spelling_that_stops_the_key_seat_refuses_the_next_query(
+    facade: ReparkSession, native: PyReparkSession, statement: str
+) -> None:
+    text = "SELECT count(*) FROM (SELECT d FROM {t} GROUP BY d)"
+    join = "SELECT count(*) FROM {t} AS a JOIN {t} AS b ON a.d = b.d"
+    queries = (text, join, "SELECT count(*) FROM {t}")
+    for door, table in ((facade.sql, "t_s"), (repark.sql, "t_n")):
+        name = f"{CATALOG}.{NAMESPACE}.{table}"
+        try:
+            collect(door(statement))
+        except Exception as error:
+            assert "datafusion.optimizer" in str(error) or "INVALID_SET_SYNTAX" in str(error)
+        else:
+            for query in queries:
+                with pytest.raises(Exception, match=r"datafusion\.optimizer\..*float-key"):
+                    collect(door(query.format(t=name)))
+            collect(door("SET datafusion.optimizer.max_passes = 3"))
+            collect(door("SET datafusion.optimizer.skip_failed_rules = false"))
+        assert collect(door(text.format(t=name))) == [[4]]
+        assert collect(door(join.format(t=name))) == [[18]]
+
+
 @pytest.mark.parametrize("route", ("spark-sql", "native"))
 def test_nan_outputs_carry_the_canonical_bits_and_passthrough_keeps_the_payload(
     route: str, request: pytest.FixtureRequest
@@ -362,12 +402,59 @@ def dedup_source(facade: ReparkSession, tmp_path: Path) -> Any:
     return facade.read.parquet(str(path))
 
 
+DEDUP_COLUMNS = ("i", "c", "f", "k")
+
+
+def canonical_bits(column: str, bits: int) -> int:
+    if column == "f":
+        exponent, mantissa, sign_free = 0x7F800000, 0x007FFFFF, 0x7FFFFFFF
+        canonical = 0x7FC00000
+    elif column in ("c", "k"):
+        exponent, mantissa, sign_free = 0x7FF << 52, (1 << 52) - 1, (1 << 63) - 1
+        canonical = CANONICAL_NAN
+    else:
+        return bits
+    if bits & sign_free == 0:
+        return 0
+    if bits & exponent == exponent and bits & mantissa:
+        return canonical
+    return bits
+
+
+def own_bits(row_id: int) -> tuple[int, ...]:
+    index = DEDUP_ROWS["i"].index(row_id)
+    return (row_id, *(DEDUP_ROWS[column][index] for column in DEDUP_COLUMNS[1:]))
+
+
+def assert_one_row_per_key_class(
+    rows: list[tuple[int, ...]], subset: tuple[str, ...], own_values: bool
+) -> None:
+    positions = [DEDUP_COLUMNS.index(column) for column in subset if column != "v"]
+    truth = DEDUP_TRUTH[subset]
+    assert sorted(tuple(row[p] for p in positions) for row in rows) == sorted(
+        tuple(row[p] for p in positions) for row in truth
+    )
+    for row in rows:
+        own = own_bits(row[0])
+        assert [row[p] for p in positions] == [
+            canonical_bits(DEDUP_COLUMNS[p], own[p]) for p in positions
+        ], row
+        if own_values:
+            assert [row[p] for p in range(1, 4) if p not in positions] == [
+                own[p] for p in range(1, 4) if p not in positions
+            ], row
+
+
 @pytest.mark.parametrize("subset", list(DEDUP_TRUTH), ids="-".join)
 def test_drop_duplicates_keeps_the_normalised_key_and_the_row_values(
     dedup_source: Any, subset: tuple[str, ...]
 ) -> None:
-    assert dedup_bits(dedup_source.dropDuplicates(list(subset))) == DEDUP_TRUTH[subset]
-    assert dedup_bits(dedup_source.drop_duplicates(list(subset))) == DEDUP_TRUTH[subset]
+    assert_one_row_per_key_class(
+        dedup_bits(dedup_source.dropDuplicates(list(subset))), subset, True
+    )
+    assert_one_row_per_key_class(
+        dedup_bits(dedup_source.drop_duplicates(list(subset))), subset, True
+    )
     assert dedup_source.dropDuplicates(list(subset)).columns == ["i", "c", "f", "k", "v"]
     assert dedup_source.dropDuplicates(list(subset)).schema == dedup_source.schema
 
@@ -378,13 +465,7 @@ def test_drop_duplicates_writes_the_normalised_key(
     for subset, name in ((("c",), "ddc"), (("f",), "ddf"), (("k", "v"), "ddkv")):
         target = f"{CATALOG}.{NAMESPACE}.{name}"
         dedup_source.dropDuplicates(list(subset)).writeTo(target).create()
-        stored = dedup_bits(facade.table(target))
-        positions = [("i", "c", "f", "k").index(column) for column in subset if column != "v"]
-        truth = DEDUP_TRUTH[subset]
-        assert [row[0] for row in stored] == [row[0] for row in truth]
-        assert [[row[p] for p in positions] for row in stored] == [
-            [row[p] for p in positions] for row in truth
-        ]
+        assert_one_row_per_key_class(dedup_bits(facade.table(target)), subset, False)
 
 
 def test_drop_duplicates_without_a_subset_and_distinct_match_spark(dedup_source: Any) -> None:

@@ -482,6 +482,92 @@ async fn a_set_statement_cannot_reach_the_door_policy() {
     );
 }
 
+async fn refused_message(session: &ReparkSession, sql: &str) -> String {
+    match session.sql(sql).await {
+        Ok(frame) => match frame.collect().await {
+            Ok(_) => panic!("{sql} answered"),
+            Err(error) => error.to_string(),
+        },
+        Err(error) => error.to_string(),
+    }
+}
+
+async fn assert_the_seat_config_refuses(session: &ReparkSession, route: &str) {
+    for sql in [
+        "SELECT count(*) FROM (SELECT d FROM t GROUP BY d)",
+        "SELECT count(*) FROM t JOIN u ON t.d = u.d",
+        "SELECT count(*) FROM t",
+    ] {
+        let message = refused_message(session, sql).await;
+        assert!(
+            message.contains("datafusion.optimizer.") && message.contains("float-key"),
+            "{route}: {sql}: {message}"
+        );
+    }
+}
+
+async fn restore_the_seat_config(session: &ReparkSession) {
+    for statement in [
+        "SET datafusion.optimizer.max_passes = 3",
+        "SET datafusion.optimizer.skip_failed_rules = false",
+    ] {
+        session.sql(statement).await.expect(statement);
+    }
+    assert_eq!(
+        ints(session, "SELECT count(*) FROM (SELECT d FROM t GROUP BY d)").await,
+        vec![4]
+    );
+    assert_eq!(
+        ints(session, "SELECT count(*) FROM t JOIN u ON t.d = u.d").await,
+        vec![9]
+    );
+}
+
+#[tokio::test]
+async fn a_config_that_stops_the_seat_refuses_every_query_whatever_set_it() {
+    let session = session();
+    for statement in [
+        "SET \"datafusion.optimizer.max_passes\" = 0",
+        "SET `datafusion.optimizer.max_passes` = 0",
+        "SET 'datafusion.optimizer.max_passes' = 0",
+        "SET datafusion.\"optimizer\".max_passes = 0",
+        "SET datafusion.optimizer . max_passes = 0",
+        "SET datafusion.optimizer.max_passes = 0 -- c",
+        "SET datafusion.optimizer.max_passes = 0 /* c */",
+        "SET datafusion.optimizer.max_passes = '0' -- c",
+        "SET/**/datafusion.optimizer.max_passes = 0",
+        "SET datafusion.optimizer.skip_failed_rules = true -- c",
+        "SET \"datafusion.optimizer.skip_failed_rules\" = true",
+    ] {
+        if session.sql(statement).await.is_err() {
+            continue;
+        }
+        assert_the_seat_config_refuses(&session, statement).await;
+        restore_the_seat_config(&session).await;
+    }
+    for (max_passes, skip_failed_rules) in [(0, false), (3, true)] {
+        {
+            let state = session.context().state_ref();
+            let mut state = state.write();
+            let optimizer = &mut state.config_mut().options_mut().optimizer;
+            optimizer.max_passes = max_passes;
+            optimizer.skip_failed_rules = skip_failed_rules;
+        }
+        assert_the_seat_config_refuses(&session, "SessionConfig").await;
+        restore_the_seat_config(&session).await;
+    }
+    for statement in [
+        "SET datafusion.optimizer.max_passes = 1",
+        "SET datafusion.execution.batch_size = 4096",
+    ] {
+        session.sql(statement).await.expect(statement);
+        assert_eq!(
+            ints(&session, "SELECT count(*) FROM t JOIN u ON t.d = u.d").await,
+            vec![9]
+        );
+    }
+}
+
 #[tokio::test]
 async fn group_and_distinct_outputs_store_the_positive_zero() {
     let session = session();
