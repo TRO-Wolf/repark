@@ -139,6 +139,7 @@ async fn default_hooks_are_noops_and_build_succeeds_without_extension() {
         .expect("type_coercion in the default analyzer");
     expected.insert(coercion + 1, "struct_setop_names".to_string());
     expected.push("sliding_frame_rescan".to_string());
+    expected.push("repark_optimizer_seat_config".to_string());
     expected.push("signed_zero_literals".to_string());
     assert_eq!(installed, expected);
     let frame = session

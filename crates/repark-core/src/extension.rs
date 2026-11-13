@@ -3,6 +3,8 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use datafusion::common::tree_node::TreeNode;
+use datafusion::logical_expr::Expr;
 use datafusion::logical_expr::planner::TypePlanner;
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{SessionConfig, SessionContext};
@@ -16,6 +18,37 @@ pub struct SessionBuildConf<'a> {
     pub conf: &'a HashMap<String, String>,
     /// The validated session timezone (`spark.sql.session.timeZone`), resolved once in `build()`.
     pub session_time_zone: &'a SessionTimeZone,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SignedZeroPolicy {
+    pub literals: bool,
+    pub keys: bool,
+}
+
+impl Default for SignedZeroPolicy {
+    fn default() -> Self {
+        Self {
+            literals: true,
+            keys: true,
+        }
+    }
+}
+
+#[must_use]
+pub fn contains_normalize_zero(expr: &Expr) -> bool {
+    expr.exists(|node| {
+        Ok(matches!(node, Expr::ScalarFunction(call)
+            if call.name() == repark_common::udf_names::NORMALIZE_ZERO_NAME))
+    })
+    .unwrap_or(true)
+}
+
+pub use repark_common::udf_names::NORMALIZE_ZERO_NAME;
+
+#[must_use]
+pub fn normalize_zero_call(expr: Expr) -> Expr {
+    crate::session::normalize_zero_call(expr)
 }
 
 /// Build-time extension with configure-then-register hooks.
@@ -45,6 +78,10 @@ pub trait SessionExtension: Send + Sync {
 
     fn type_planner(&self) -> Option<Arc<dyn TypePlanner>> {
         None
+    }
+
+    fn signed_zero_policy(&self) -> SignedZeroPolicy {
+        SignedZeroPolicy::default()
     }
 
     /// Register runtime objects on the freshly built [`SessionContext`].

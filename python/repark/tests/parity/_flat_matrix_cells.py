@@ -201,8 +201,6 @@ FLOAT_SEED_T: tuple[str, ...] = (
 )
 FLOAT_SEED_U: tuple[str, ...] = (f"(10, {NEGATIVE_ZERO}, NULL)",)
 
-SIGNED_ZERO_PR_B = "SIGNED-ZERO-NORMALIZE-1 PR B"
-
 GROUP_NAMES: tuple[str, ...] = (
     "pilot",
     "floatkeys",
@@ -288,8 +286,6 @@ def cells_for_group(group: str) -> tuple[Cell, ...]:
 
 
 def known_open_unit(cell: Cell) -> str | None:
-    if cell.is_float:
-        return SIGNED_ZERO_PR_B
     return None
 
 

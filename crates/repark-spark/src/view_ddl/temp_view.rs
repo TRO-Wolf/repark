@@ -83,7 +83,16 @@ impl TableProvider for ReplanningTempView {
         &self,
         filters: &[&Expr],
     ) -> Result<Vec<TableProviderFilterPushDown>> {
-        Ok(vec![TableProviderFilterPushDown::Exact; filters.len()])
+        Ok(filters
+            .iter()
+            .map(|filter| {
+                if repark_core::extension::contains_normalize_zero(filter) {
+                    TableProviderFilterPushDown::Inexact
+                } else {
+                    TableProviderFilterPushDown::Exact
+                }
+            })
+            .collect())
     }
 
     async fn scan(

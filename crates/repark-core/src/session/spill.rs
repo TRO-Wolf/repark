@@ -9,7 +9,9 @@ use datafusion::execution::runtime_env::RuntimeEnvBuilder;
 use datafusion::prelude::{DataFrame, SessionContext};
 use repark_common::{Error, Result};
 
-use super::df_guards::{DEAD_DATAFUSION_54_1_KEYS, dead_datafusion_54_1_refusal};
+use super::df_guards::{
+    DEAD_DATAFUSION_54_1_KEYS, dead_datafusion_54_1_refusal, optimizer_seat_refusal,
+};
 use crate::engine_err;
 use crate::pool_refusals::{PoolRefusalLog, RefusalRecordingPool, pool_refusal_log};
 
@@ -223,6 +225,11 @@ pub(crate) fn maybe_apply_runtime_set(
     context: &SessionContext,
     query: &str,
 ) -> Result<Option<DataFrame>> {
+    if let Some(refusal) =
+        parse_set_target(query).and_then(|(key, value)| optimizer_seat_refusal(&key, &value))
+    {
+        return Err(refusal);
+    }
     let Some((key, value)) = parse_set_assignment(query) else {
         return Ok(None);
     };
@@ -280,6 +287,14 @@ fn parse_memory_limit_value(value: &str) -> Result<usize> {
 
 /// Parse `SET [VARIABLE] <key> = <value>` (quoted or bare).
 fn parse_set_assignment(sql: &str) -> Option<(String, String)> {
+    parse_set_with(sql, false)
+}
+
+fn parse_set_target(sql: &str) -> Option<(String, String)> {
+    parse_set_with(sql, true)
+}
+
+fn parse_set_with(sql: &str, accept_to: bool) -> Option<(String, String)> {
     let stripped = strip_leading_sql_comments(sql);
     let after_set = strip_keyword(stripped, "set")?;
     let after_set = match strip_keyword(after_set, "variable") {
@@ -288,7 +303,11 @@ fn parse_set_assignment(sql: &str) -> Option<(String, String)> {
     };
     let (key, after_key) = split_ident_path(after_set)?;
     let after_eq = after_key.trim_start();
-    let after_eq = after_eq.strip_prefix('=')?;
+    let after_eq = match after_eq.strip_prefix('=') {
+        Some(rest) => rest,
+        None if accept_to => strip_keyword(after_eq, "to")?,
+        None => return None,
+    };
     let value = parse_sql_scalar(after_eq)?;
     Some((key, value))
 }
