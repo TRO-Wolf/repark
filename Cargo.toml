@@ -165,11 +165,11 @@ repark-distributed = { path = "crates/repark-distributed", default-features = fa
 # repark-iceberg catalog module (Glue primary + S3 Tables secondary builders).
 # -------------------------------------------------------------------------------------------
 [patch.crates-io]
-iceberg = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "66901f02a2df26098cfe073605152aeb518808f5" }
-iceberg-datafusion = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "66901f02a2df26098cfe073605152aeb518808f5" }
-iceberg-catalog-glue = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "66901f02a2df26098cfe073605152aeb518808f5" }
-iceberg-catalog-s3tables = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "66901f02a2df26098cfe073605152aeb518808f5" }
-iceberg-storage-opendal = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "66901f02a2df26098cfe073605152aeb518808f5" }
+iceberg = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "a8bd3a1ebd77bea08cea1156819face872ab637d" }
+iceberg-datafusion = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "a8bd3a1ebd77bea08cea1156819face872ab637d" }
+iceberg-catalog-glue = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "a8bd3a1ebd77bea08cea1156819face872ab637d" }
+iceberg-catalog-s3tables = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "a8bd3a1ebd77bea08cea1156819face872ab637d" }
+iceberg-storage-opendal = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "a8bd3a1ebd77bea08cea1156819face872ab637d" }
 
 # -------------------------------------------------------------------------------------------
 # Build profiles (carried from the private v1 repository). Profiles are architecture — every
