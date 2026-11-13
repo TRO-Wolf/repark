@@ -1,0 +1,29 @@
+{
+ "counts": {
+  "key:v2-cow": {
+   "answered": 25,
+   "refused-mismatch": 25
+  },
+  "key:v2-mor": {
+   "answered": 50
+  },
+  "key:v3": {
+   "answered": 26,
+   "refused-mismatch": 24
+  },
+  "literal:v2-cow": {
+   "answered": 24,
+   "refused-mismatch": 26
+  },
+  "literal:v2-mor": {
+   "answered": 50
+  },
+  "literal:v3": {
+   "answered": 28,
+   "refused-mismatch": 22
+  }
+ },
+ "label": "head",
+ "other": [],
+ "repeats": 50
+}

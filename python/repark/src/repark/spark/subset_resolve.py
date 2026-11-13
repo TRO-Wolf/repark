@@ -268,3 +268,11 @@ def _fanout_subset(frame: Any, names: list[str]) -> list[str]:
             _raise_cannot_resolve(key, displays)
         keyed.extend(engine_names[position] for position in key_hits)
     return keyed
+
+
+def _normalized_keys(frame: Any, input_names: list[str], engine_keys: list[str]) -> Any:
+    positions = [position for position, name in enumerate(input_names) if name in engine_keys]
+    projected = _native.normalized_float_keys(frame._plan(), positions)
+    if projected is None:
+        return frame
+    return frame._spawn_preserving_identity(projected)
