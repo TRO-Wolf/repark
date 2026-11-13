@@ -11,32 +11,29 @@ _Last updated: 2026-11-09._
 
 ## Now
 
-As of 2026-11-11.
+As of 2026-11-13.
 
 - **Shipped:** v1.5.6 ([Release state](#release-state)).
-- **Open S1 with write reach on the shipped wheel:** struct comparisons pair fields by name where
-  Spark pairs by position, so a `DELETE`, `UPDATE` or `MERGE` comparing reordered structs acts on
-  wrong rows ([Known correctness issues](#known-correctness-issues)).
-- **Labels:** format-v2 WITHDRAWN; format-v3 core HARDENED-NARROW; nanosecond columns and struct
-  writes EXPERIMENTAL ([Iceberg maturity](#iceberg-maturity-2026-10-27)).
-- **In flight:** SIGNED-ZERO-NORMALIZE-1 and LISTVIEW-INNER-JOIN-KEY-1 (blocks v1.5.7). #1295 merged; C-116 and C-118 closed.
+- **Open S1s with write reach on the shipped wheel:** struct comparisons pair fields by name where Spark pairs by position, so a `DELETE`, `UPDATE` or `MERGE` comparing reordered structs acts on wrong rows; native-door DataFrame appends store nothing ([Known correctness issues](#known-correctness-issues)).
+- **Labels:** format-v2 WITHDRAWN; format-v3 core HARDENED-NARROW; nanosecond columns and struct writes EXPERIMENTAL ([Iceberg maturity](#iceberg-maturity-2026-10-27)).
+- **In flight:** SIGNED-ZERO-NORMALIZE-1 (blocks v1.5.7); C-116 and C-118 closed.
 - **Next:** rest of v1.5.7 ([blockers](#release-blockers)).
 
 ## Release state
 
 **v1.5.6 (2026-11-08):** the empty-DML guard (EMPTY-DML-SHARED-GUARD-1, #1277: a DELETE or UPDATE whose condition folds to no rows writes nothing and reports zero rows), and the rest of the cycle, listed in the [notes](task/roadmap/mid-term/v1-5-6-release-notes-2026-11-08.md). Tagged `v1.5.6` at `ae60c359`; on PyPI with five wheels. The v2 production label is not part of this release (ruling A, 2026-11-08); the v3 label moves to a later release. Qualification: [record](task/roadmap/mid-term/v1-5-6-qualification-record.md).
 
-**v1.5.5 (2026-10-13):** R-008 (every write door stores INSERT's instant into `timestamptz_ns`), the frame door (R-019), `current_date` in the session zone, the Postgres write core and routing, the merge module split. Matrix 705/132/5/0 (2026-10-13). Tagged `v1.5.5` at `7fb5f6b2` (re-tag, #1127). [Notes](task/roadmap/mid-term/v1-5-5-release-notes-2026-10-13.md). The re-tag also ships U-1, U-3, U-5, U-6, U-7 (reconciled 2026-10-22).
+**v1.5.5 (2026-10-13):** R-008 (every write door stores INSERT's instant into `timestamptz_ns`), the frame door (R-019), `current_date` in the session zone, the Postgres write core and routing, the merge module split. Matrix 705/132/5/0 (2026-10-13; also v1.5.1 to v1.5.4). Tagged `v1.5.5` at `7fb5f6b2` (re-tag, #1127). [Notes](task/roadmap/mid-term/v1-5-5-release-notes-2026-10-13.md). The re-tag also ships U-1, U-3, U-5, U-6, U-7 (reconciled 2026-10-22).
 
-**v1.5.4 (2026-10-10):** R-007, ENC-1, CROSS-JOIN-CONDITION-1, EMPTY-PROJECTION-COUNT-1, SQL-EPOCH-CONSTRUCTORS-1, `pyarrow>=25.0.1`. Matrix 705/132/5/0. Tagged `v1.5.4` at `f4e424c1`. [Notes](task/roadmap/mid-term/v1-5-4-release-notes-2026-10-10.md).
+**v1.5.4 (2026-10-10):** R-007, ENC-1, CROSS-JOIN-CONDITION-1, EMPTY-PROJECTION-COUNT-1, SQL-EPOCH-CONSTRUCTORS-1, `pyarrow>=25.0.1`. Tagged `v1.5.4` at `f4e424c1`. [Notes](task/roadmap/mid-term/v1-5-4-release-notes-2026-10-10.md).
 
-**v1.5.3 (2026-10-07):** credential redaction, ATTR-ID-1, TA slices, ANSI -0.0 division, GROWN-STACK-GATE-1. Matrix 705/132/5/0. Tagged `v1.5.3` at `7a8fcf1a`. [Notes](task/roadmap/mid-term/v1-5-3-release-notes-2026-10-07.md).
+**v1.5.3 (2026-10-07):** credential redaction, ATTR-ID-1, TA slices, ANSI -0.0 division, GROWN-STACK-GATE-1. Tagged `v1.5.3` at `7a8fcf1a`. [Notes](task/roadmap/mid-term/v1-5-3-release-notes-2026-10-07.md).
 
-**v1.5.2 (2026-10-03):** TA-CHAIN-1, POLARS-IS-DUPLICATED-1, the write-door and cast fixes. Matrix 705/132/5/0. [Notes](task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md).
+**v1.5.2 (2026-10-03):** TA-CHAIN-1, POLARS-IS-DUPLICATED-1, the write-door and cast fixes. [Notes](task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md).
 
-**v1.5.1 (2026-09-29):** S3 path writes (U12), CASESENS-1, the store-assignment fixes, INTDIV-1. Matrix 705/132/5/0. Tagged `v1.5.1` at `db3a1f37`. [Notes](task/roadmap/mid-term/v1-5-1-release-notes-2026-09-29.md).
+**v1.5.1 (2026-09-29):** S3 path writes (U12), CASESENS-1, the store-assignment fixes, INTDIV-1. Tagged `v1.5.1` at `db3a1f37`. [Notes](task/roadmap/mid-term/v1-5-1-release-notes-2026-09-29.md).
 
-**v1.5.0 (2026-09-27) — the Spark–Iceberg parity minor.** The gate is met: zero non-EQUAL cells that Spark 4.1.2 answers on the 842-cell matrix, except dated owner carve-outs — **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-27 (main `f7422565`). Carved out: C-1 structured streaming (now 1.7), C-2 nested namespaces (v1.6.0 card), C-4 the v3 variant type; C-3 and C-5 count EQUAL under dated harness rules. Notes: [v1-5-0-release-notes-draft-2026-09-27.md](task/roadmap/mid-term/v1-5-0-release-notes-draft-2026-09-27.md).
+**v1.5.0 (2026-09-27) — the Spark–Iceberg parity minor.** The gate is met: zero non-EQUAL cells that Spark 4.1.2 answers on the 842-cell matrix, except dated owner carve-outs — **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-27 (main `f7422565`). Carved out: C-1 structured streaming (now 1.7), C-2 nested namespaces (v1.6.0 card), C-4 the v3 variant type; C-3 and C-5 count EQUAL under dated harness rules. [Notes](task/roadmap/mid-term/v1-5-0-release-notes-draft-2026-09-27.md).
 
 **v1.4.2 (2026-09-15):** DECIMAL-CACHE-1 (#632): decimal overflow past 38 digits types like PySpark 4.1.2 and materializes through the cache paths.
 
@@ -77,36 +74,7 @@ cutover [inventory](docs/cutover/inventory.md): 2026-09-04, single-writer-per-ta
 (rolling, opened 2026-08-21). It states sequence and reasoning; the per-track state stays here.
 
 <!-- ws id=v3 ledgers=v3-,v3e- state=open -->
-- **Format-v3 track** — **the v1.0 north star (owner ruling 2026-08-23): full production-grade
-  format-v3.** Definition and gate:
-  [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md);
-  design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:
-  [task/ledgers/staging/v3-0-charter-ledger.md](task/ledgers/staging/v3-0-charter-ledger.md).
-  **V3-5:** `V3-DANGLE-1` FIXED. V3E-5 added the nightly v3 live-oracle leg (#253); first green
-  nightly 2026-09-02.
-  V3-7 / V3-8 (2026-09-02) carry MERGE and subquery-`WHERE` COW `_row_id` — `V3-COW-1` **FIXED**.
-  **V3-6 (2026-09-01):** opt-in v3 CREATE takes the fork's `timestamp_ns` types, a positional
-  append fills from a schema-carried `write_default` (other paths: #678), and DEFAULT DDL / `unknown` / binary `variant`
-  refuse Spark-equal (`V3-VARIANT-SHRED-1`).
-  **V3-9 (2026-09-02):** predicate DML's V2-only gate is lifted — MoR `DELETE`/`UPDATE …
-  WHERE` on v3 write file-scoped Puffin DVs, Spark-equal (`V3-MOR-1` FIXED).
-  **V3-10 (2026-09-02):** the in-place v2→v3 upgrade lands on three doors (`V3-UPGRADE-1` FIXED).
-  RP-7: shared-Puffin close Spark-equal — `V3-DV-1` **FIXED**.
-  **LIVE-v3 (2026-09-02):** both live v3 legs green on `aws-acceptance` run 33635288918
-  (`S3T-V3-1`), re-dispatched 2026-09-03 (run 33699342417) under V3-11's `_row_id` assertion.
-  **V3-11 (2026-09-02):** same-commit data files ascend in the manifest, so the MoR MERGE
-  insert's `_row_id` is Spark-equal (`V3-ROWID-3` FIXED).
-  **RDF-1 (2026-09-02):** the position-delete writer stamps exact `file_path` bounds, so
-  `rewrite_data_files` selects the delete-laden file (residue `F-RDF1-1`).
-  **SCALE-v3 (2026-09-02):** the MW-7 `1e7 x 50` workload re-measured on v3 —
-  **96 delete files against v2's 400**; maintenance ends at
-  **zero delete files and zero delete records**. Numbers:
-  [scale-v3-mw7-ledger.md](task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md) §3.
-  **The gate is audited (V1-GATE, 2026-09-03) and §2 pillar 4 is discharged (**V3-COV**,
-  2026-09-03):** all twenty north-star §3 rows are ✅ or carry a dated DECLARED residual with a
-  pin (§3.1), and the statement matrix is measured — 81 programs, 267 cells, 72 EQUAL, 8 rows
-  filed, 2 FIXED ([v3-statement-coverage.md](docs/design/v3-statement-coverage.md)). `B-MOR-3`
-  FIXED 2026-09-03; `B-MOR-3-FLOOR-1` FIXED 2026-09-04 (RP-11).
+- **Format-v3 track** — **the v1.0 north star (owner ruling 2026-08-23): full production-grade format-v3.** Definition and gate: [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md); design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit: [task/ledgers/staging/v3-0-charter-ledger.md](task/ledgers/staging/v3-0-charter-ledger.md). **V3-5:** `V3-DANGLE-1` FIXED. V3E-5 added the nightly v3 live-oracle leg (#253); first green nightly 2026-09-02. V3-7 / V3-8 (2026-09-02) carry MERGE and subquery-`WHERE` COW `_row_id` — `V3-COW-1` **FIXED**. **V3-6 (2026-09-01):** opt-in v3 CREATE takes the fork's `timestamp_ns` types, a positional append fills from a schema-carried `write_default` (other paths: #678), and DEFAULT DDL / `unknown` / binary `variant` refuse Spark-equal (`V3-VARIANT-SHRED-1`). **V3-9 (2026-09-02):** predicate DML's V2-only gate is lifted — MoR `DELETE`/`UPDATE … WHERE` on v3 write file-scoped Puffin DVs, Spark-equal (`V3-MOR-1` FIXED). **V3-10 (2026-09-02):** the in-place v2→v3 upgrade lands on three doors (`V3-UPGRADE-1` FIXED). RP-7: shared-Puffin close Spark-equal — `V3-DV-1` **FIXED**. **LIVE-v3 (2026-09-02):** both live v3 legs green on `aws-acceptance` run 33635288918 (`S3T-V3-1`), re-dispatched 2026-09-03 (run 33699342417) under V3-11's `_row_id` assertion. **V3-11 (2026-09-02):** same-commit data files ascend in the manifest, so the MoR MERGE insert's `_row_id` is Spark-equal (`V3-ROWID-3` FIXED). **RDF-1 (2026-09-02):** the position-delete writer stamps exact `file_path` bounds, so `rewrite_data_files` selects the delete-laden file (residue `F-RDF1-1`). **SCALE-v3 (2026-09-02):** the MW-7 `1e7 x 50` workload re-measured on v3 — **96 delete files against v2's 400**; maintenance ends at **zero delete files and zero delete records**. Numbers: [scale-v3-mw7-ledger.md](task/ledgers/archive/2026-09/2026-09-02-scale-v3-mw7-ledger.md) §3. **The gate is audited (V1-GATE, 2026-09-03) and §2 pillar 4 is discharged (**V3-COV**, 2026-09-03):** all twenty north-star §3 rows are ✅ or carry a dated DECLARED residual with a pin (§3.1), and the statement matrix is measured — 81 programs, 267 cells, 72 EQUAL, 8 rows filed, 2 FIXED ([v3-statement-coverage.md](docs/design/v3-statement-coverage.md)). `B-MOR-3` FIXED 2026-09-03; `B-MOR-3-FLOOR-1` FIXED 2026-09-04 (RP-11).
   - **Next:** lineage carry and merge-on-read hold on the statement matrix's DML shapes (`V3-COW-1`,
     `V3-MOR-1`, `V3-DV-1`, `V3-ROWID-3`, the three `V3-UPGRADE-DV` rows and
     `F-v3-10-partition-file-order` FIXED), not yet after schema evolution; open v3 residuals are
@@ -115,48 +83,15 @@ cutover [inventory](docs/cutover/inventory.md): 2026-09-04, single-writer-per-ta
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
-- **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
-  Goal in [PROJECT.md](PROJECT.md) Goals; slates GATED on the numbers, the perf note's do-not list
-  binding, `unsafe` workspace-forbidden. [Baseline](docs/perf/dynamic-flatten-baseline.md): the one
-  queued candidate is delivered — the null-mask struct extractor takes `struct_d6`'s isolated null
-  cost 64.83 ms → 0.01 ms and closes `DYNFLATTEN-QUALNAME-1`; Cartesian and walks stay closed.
+- **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).** Goal in [PROJECT.md](PROJECT.md) Goals; slates GATED on the numbers, the perf note's do-not list binding, `unsafe` workspace-forbidden. [Baseline](docs/perf/dynamic-flatten-baseline.md): the one queued candidate is delivered — the null-mask struct extractor takes `struct_d6`'s isolated null cost 64.83 ms → 0.01 ms and closes `DYNFLATTEN-QUALNAME-1`; Cartesian and walks stay closed.
 <!-- /ws -->
 
 <!-- ws id=fnp ledgers=fnp- state=open -->
-- **Spark function parity campaign** (active, chartered 2026-08-20; first tranche merged as #190,
-  #191, #192 and #193). Close the `pyspark.sql.functions` gap and move the semantics behind every
-  name out of Python into Rust. Design:
-  [docs/design/spark-function-parity.md](docs/design/spark-function-parity.md); slate:
-  [briefs/spark-function-parity.md](briefs/spark-function-parity.md); gate (12/12 `PROVEN`):
-  [task/ledgers/staging/fnp-0-charter-ledger.md](task/ledgers/staging/fnp-0-charter-ledger.md).
-  **Delivered:** `__all__` 333 → 360, 41 names working (FNP-1..6c); F-Y10-1, FNP-4c, FNP-7a/7b.
-  Remaining work ships as one coherent PR per unit or tightly coupled pair.
-  **FN-FIX-1 (2026-09-03):** ten rows Spark-equal; residue `FN-APPROXPCT-ACC-1`, `PERF-APPROXPCT-1`.
-  **FN-FIX-2 (2026-09-04):** six silent string rows Spark-equal (`FN-INITCAP-1`, `FN-CHR-1`,
-  `FN-TRIM-CHARS-1`, `FN-ELT-1`, `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1`).
-  **FN-REGEXP-EXTRACT-1 (2026-09-04):** Spark `regexp_extract(str, regexp[, idx])` on both
-  doors (first match's group, `''` on no match); the R-FN-BATCH1 stub list shrinks by one.
-  **LOG1P-1 (2026-09-02):** `log1p` / `expm1` move to the precise kernels on both SQL doors and
-  the facade, Spark-equal at the tiny-argument edge (`BL-15` FIXED).
-  **Next, in order (revised 2026-08-31):**
-  FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z. Deferred: FNP-4b, FNP-6d, FNP-13, FNP-14.
+- **Spark function parity campaign** (active, chartered 2026-08-20; first tranche merged as #190, #191, #192 and #193). Close the `pyspark.sql.functions` gap and move the semantics behind every name out of Python into Rust. Design: [docs/design/spark-function-parity.md](docs/design/spark-function-parity.md); slate: [briefs/spark-function-parity.md](briefs/spark-function-parity.md); gate (12/12 `PROVEN`): [task/ledgers/staging/fnp-0-charter-ledger.md](task/ledgers/staging/fnp-0-charter-ledger.md). **Delivered:** `__all__` 333 → 360, 41 names working (FNP-1..6c); F-Y10-1, FNP-4c, FNP-7a/7b. Remaining work ships as one coherent PR per unit or tightly coupled pair. **FN-FIX-1 (2026-09-03):** ten rows Spark-equal; residue `FN-APPROXPCT-ACC-1`, `PERF-APPROXPCT-1`. **FN-FIX-2 (2026-09-04):** six silent string rows Spark-equal (`FN-INITCAP-1`, `FN-CHR-1`, `FN-TRIM-CHARS-1`, `FN-ELT-1`, `FN-REGEX-POSIX-1`, `FN-LIKE-ESCEND-1`). **FN-REGEXP-EXTRACT-1 (2026-09-04):** Spark `regexp_extract(str, regexp[, idx])` on both doors (first match's group, `''` on no match); the R-FN-BATCH1 stub list shrinks by one. **LOG1P-1 (2026-09-02):** `log1p` / `expm1` move to the precise kernels on both SQL doors and the facade, Spark-equal at the tiny-argument edge (`BL-15` FIXED). **Next, in order (revised 2026-08-31):** FNP-9/10 → FNP-8 → FNP-11/12 → FNP-Z. Deferred: FNP-4b, FNP-6d, FNP-13, FNP-14.
 <!-- /ws -->
 
 <!-- ws id=h2 ledgers=h-,h2- state=open -->
-- **V2 Engine Hardening** (active; recon complete; **H-1 archived mid-campaign 2026-08-11** at
-  [docs/history/hardening-h1/](docs/history/hardening-h1/README.md); continues into H-2) —
-  design: [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md); slate:
-  [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md). **DFP-1 (2026-08-31, #30):**
-  preserve-null Unnest removes redundant projections; adjacent candidates stay
-  measurement-gated.
-  **H3-SPILL-1 (2026-09-05):** the Never-OOM truth table is measured — 180 cells, 0 aborts, 0
-  wrong answers, two failure shapes filed (`H3-SPILL-NLJ-1`, `H3-SPILL-COLLECT-1`); the pool
-  bounds only the operators that register with it:
-  [docs/perf/spill-matrix-baseline.md](docs/perf/spill-matrix-baseline.md). **Next:** those two.
-  **COLUMN-OR-BUILD-1 (candidate, 2026-10-19, after U-9):** a 20,000-term `|` OR builds in 302 s,
-  quadratic, refusal under 0.2 s; [baseline](docs/perf/column-or-build-cost-2026-10-19.md).
-  **DATE-FN-1 (2026-09-04):** Spark SQL `date()` + `unix_timestamp`; S6 gold rows Spark-equal.
-  **SQL-HARDEN-2 (2026-09-04):** S8/S9 v2/v3 copy-on-write; `delete_files` empty both engines.
+- **V2 Engine Hardening** (active; recon complete; **H-1 archived mid-campaign 2026-08-11** at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md); continues into H-2) — design: [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md); slate: [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md). **DFP-1 (2026-08-31, #30):** preserve-null Unnest removes redundant projections; adjacent candidates stay measurement-gated. **H3-SPILL-1 (2026-09-05):** the Never-OOM truth table is measured — 180 cells, 0 aborts, 0 wrong answers, two failure shapes filed (`H3-SPILL-NLJ-1`, `H3-SPILL-COLLECT-1`); the pool bounds only the operators that register with it: [docs/perf/spill-matrix-baseline.md](docs/perf/spill-matrix-baseline.md). **Next:** those two. **COLUMN-OR-BUILD-1 (candidate, 2026-10-19, after U-9):** a 20,000-term `|` OR builds in 302 s, quadratic, refusal under 0.2 s; [baseline](docs/perf/column-or-build-cost-2026-10-19.md). **DATE-FN-1 (2026-09-04):** Spark SQL `date()` + `unix_timestamp`; S6 gold rows Spark-equal. **SQL-HARDEN-2 (2026-09-04):** S8/S9 v2/v3 copy-on-write; `delete_files` empty both engines.
 <!-- /ws -->
 
 <!-- ws id=ex ledgers=ex- state=open -->
@@ -167,17 +102,13 @@ Parked lanes: **none** (the `repark.sql` re-home lane closed 2026-08-14, #95 —
 [docs/release.md](docs/release.md) "RESOLVED").
 
 <!-- ws id=dbt ledgers=dbt- state=open -->
-- **dbt-repark is no longer parked.** M0–M2a merged on the sibling repo (append, delete+insert,
-  insert_overwrite, merge). M0b/M1b/M2b AWS gates are owner-scheduled; do not claim M0/M1/M2 done
-  until those run. **Next:** the dbt AWS gates (validate on the 1.0.1 wheel).
+- **dbt-repark is no longer parked.** M0–M2a merged on the sibling repo (append, delete+insert, insert_overwrite, merge). M0b/M1b/M2b AWS gates are owner-scheduled; do not claim M0/M1/M2 done until those run. **Next:** the dbt AWS gates (validate on the 1.0.1 wheel).
 <!-- /ws -->
 
 **Closed campaigns** — each record is in [docs/history/](docs/history/map.md); the rows below are
 written by `scripts/ledger_lifecycle.py compact` when a workstream's marker says `state=closed`:
 <!-- closed-campaigns -->
-- **Agent-Agnostic Front-Door campaign** — closed 2026-08-10; record:
-  [docs/history/frontdoor/README.md](docs/history/frontdoor/README.md); metrics:
-  [task/metrics.md](task/metrics.md)
+- **Agent-Agnostic Front-Door campaign** — closed 2026-08-10; record: [docs/history/frontdoor/README.md](docs/history/frontdoor/README.md); metrics: [task/metrics.md](task/metrics.md)
 - **Python convention conformance (PYC)** — closed 2026-08-22 by #216; record: [docs/history/pyc/status-record.md](docs/history/pyc/status-record.md)
 - **Low-risk sweep (LRS)** — closed 2026-08-21 by #191; record: [docs/history/lrs/status-record.md](docs/history/lrs/status-record.md)
 - **Iceberg maintenance wave (MW)** — closed 2026-08-23 by #224; record: [docs/history/iceberg-maintenance-wave/status-record.md](docs/history/iceberg-maintenance-wave/status-record.md)
@@ -198,51 +129,18 @@ this file keeps one line of state plus a link. A known **defect with its fix sch
 divergence and gets no row: it stays here until the fix lands, and the fixing unit deletes the
 entry rather than moving it. Nothing is described in both places.
 
-- **Struct comparison pairs fields by name (S1, write reach; fix for v1.5.7)** —
-  STRUCT-COMPARE-BY-POSITION-1,
-  [card](task/roadmap/mid-term/struct-compare-by-position-1-card-2026-11-09.md); measured on the
-  1.5.6 wheel 2026-11-09; workaround:
-  [1.5.6 notes](task/roadmap/mid-term/v1-5-6-release-notes-2026-11-08.md#known-issues).
+- **Struct comparison pairs fields by name (S1, write reach; fix for v1.5.7)** — STRUCT-COMPARE-BY-POSITION-1, [card](task/roadmap/mid-term/struct-compare-by-position-1-card-2026-11-09.md); measured on the 1.5.6 wheel 2026-11-09; workaround: [1.5.6 notes](task/roadmap/mid-term/v1-5-6-release-notes-2026-11-08.md#known-issues).
+- **Native-door DataFrame appends store nothing (S1; fix for v1.5.7)** — NATIVE-DATAFRAME-WRITE-SILENT-1: a 1.5.6 `repark.sql(…)` frame's append reports success; [card](task/roadmap/mid-term/native-dataframe-write-silent-1-card-2026-11-13.md), [registry](docs/spark-sql-iceberg-parity.md) row.
 - **FNP-8 residuals** — **BACKLOG (2026-09-07)**: [FNP8-NULLABILITY and following rows](docs/spark-sql-iceberg-parity.md#fnp8-nullability--higher-order-result-metadata-retains-inherited-nullable-fields).
-- **Identifier case folding** — **DECLARED (2026-08-10)**: registry
-  [ID-1](docs/spark-sql-iceberg-parity.md); revisiting it needs a new dated decision.
-- **The session-timezone family** — TZ-1 converted; TZ-6 / TZ-7 FIXED (#85); **TZ-8** partially
-  FIXED (#100): `CAST(ts AS DATE)` / `to_date` / `datediff` read the session zone now; only
-  `last_day` / `date_add` over a TIMESTAMP (+ B-TZ-3) stay BACKLOG; TZ-4 in progress (residue:
-  ANSI column-def `timestamp_ns`); F-V4-1 / F-V4-2 DECLARED, fork-routed; TIMESTAMP→INT
-  nullability BACKLOG (G6-4; the epoch-seconds class FIXED, #64). Semantics + pins: the registry's
-  TZ rows, [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md).
-- **decimal128** — DEC-2 / DEC-6 / DEC-7 / DEC-8 FIXED (#94 / #99); DEC-1 / DEC-3 / DEC-4 / DEC-5
-  width FIXED; DEC-9 (and DEC-5 nullability) stay BACKLOG; TY-3 DECLARED. Registry §7 DEC-1 … DEC-9 in
-  [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md).
-- **Temporal-RANGE frames** — G5b-R4 OPEN (FOLLOWING-to-FOLLOWING; DF 54.1 range-search); R1 /
-  R3 / R5 FIXED; the ANSI-door wrap is a named residual with no pin. Registry G5b rows.
-- **DELETE/UPDATE subquery predicates** — the dbt-upgrade gate is MET (IN / NOT IN / `[NOT]
-  EXISTS` ± correlation execute on both doors, plus uncorrelated identity UPDATE IN); `UPDATE NOT
-  IN` / `[NOT] EXISTS` / correlated UPDATE IN / ANY / ALL stay valved;
-  G3-E8-NULL's UPDATE half stays refused. Registry §7 G3-E8 / G3-E8-NULL.
-- **`bin` / `rint` BOOLEAN over-accept** — **BACKLOG (2026-08-19)**: registry
-  [§7 BL-6](docs/spark-sql-iceberg-parity.md).
-- **`bit_length` / `octet_length` DOUBLE stringify (Infinity / E-notation)** — **BACKLOG
-  (2026-08-19)**: registry [§7 BL-7](docs/spark-sql-iceberg-parity.md).
-- **Regexp match-counting residual families (GT1-FIX #180, no disposition yet)** — the owned
-  `regexp_count` / `regexp_instr` kernel reproduces Java `Matcher.find()` for the mainstream
-  corpus (97%+ agreement over a 4118-case fuzz vs real OpenJDK) but four narrow families still
-  diverge, each live-verified against PySpark 4.1.2 on 2026-08-19: (1) Java can match at a
-  mid-surrogate UTF-16 index with no preceding empty match (`'\B'` on `ab🐈cd`: Spark 3,
-  repark 2) — not fixable without a UTF-16 code-unit matcher; (2) Java non-MULTILINE `$` also
-  matches before a final line terminator (`'a\n'`, `'$'`: Spark 2, repark 1); (3) Java `(?m)^`
-  never matches at end-of-input and its line terminators include `\r`, `\r\n`, U+0085, U+2028,
-  U+2029 (regex-crate multiline is `\n`-only); (4) ANSI-off conditional semantics
-  (`legacySizeOfNull` −1; string-idx CAST NULL) are not modeled — the kernels hardcode the
-  ANSI-ON default. Descriptions with examples:
-  [task/fn-gt1-ledger.md](task/ledgers/archive/2026-08/2026-08-19-fn-gt1-ledger.md) Residuals.
-- **Numeric implicit-cast breadth on string-function arguments (no disposition yet)** — Spark
-  implicitly casts numeric→string first args (`regexp_count(123,'2')` = 1) and non-integer
-  numerics for `regexp_instr` idx / `split_part` partNum (`split_part(…, 2.0)` = `'b'`); repark
-  plan-refuses both doors (fail-loud direction, pre-existing class). Also `split_part` with a
-  NULL str and a non-foldable `partNum` 0 errors where Spark short-circuits to NULL. Live-verified
-  2026-08-19; [task/fn-gt1-ledger.md](task/ledgers/archive/2026-08/2026-08-19-fn-gt1-ledger.md) Residuals.
+- **Identifier case folding** — **DECLARED (2026-08-10)**: registry [ID-1](docs/spark-sql-iceberg-parity.md); revisiting it needs a new dated decision.
+- **The session-timezone family** — TZ-1 converted; TZ-6 / TZ-7 FIXED (#85); **TZ-8** partially FIXED (#100): `CAST(ts AS DATE)` / `to_date` / `datediff` read the session zone now; only `last_day` / `date_add` over a TIMESTAMP (+ B-TZ-3) stay BACKLOG; TZ-4 in progress (residue: ANSI column-def `timestamp_ns`); F-V4-1 / F-V4-2 DECLARED, fork-routed; TIMESTAMP→INT nullability BACKLOG (G6-4; the epoch-seconds class FIXED, #64). Semantics + pins: the registry's TZ rows, [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md).
+- **decimal128** — DEC-2 / DEC-6 / DEC-7 / DEC-8 FIXED (#94 / #99); DEC-1 / DEC-3 / DEC-4 / DEC-5 width FIXED; DEC-9 (and DEC-5 nullability) stay BACKLOG; TY-3 DECLARED. Registry §7 DEC-1 … DEC-9 in [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md).
+- **Temporal-RANGE frames** — G5b-R4 OPEN (FOLLOWING-to-FOLLOWING; DF 54.1 range-search); R1 / R3 / R5 FIXED; the ANSI-door wrap is a named residual with no pin. Registry G5b rows.
+- **DELETE/UPDATE subquery predicates** — the dbt-upgrade gate is MET (IN / NOT IN / `[NOT] EXISTS` ± correlation execute on both doors, plus uncorrelated identity UPDATE IN); `UPDATE NOT IN` / `[NOT] EXISTS` / correlated UPDATE IN / ANY / ALL stay valved; G3-E8-NULL's UPDATE half stays refused. Registry §7 G3-E8 / G3-E8-NULL.
+- **`bin` / `rint` BOOLEAN over-accept** — **BACKLOG (2026-08-19)**: registry [§7 BL-6](docs/spark-sql-iceberg-parity.md).
+- **`bit_length` / `octet_length` DOUBLE stringify (Infinity / E-notation)** — **BACKLOG (2026-08-19)**: registry [§7 BL-7](docs/spark-sql-iceberg-parity.md).
+- **Regexp match-counting residual families (GT1-FIX #180, no disposition yet)** — the owned `regexp_count` / `regexp_instr` kernel reproduces Java `Matcher.find()` for the mainstream corpus (97%+ agreement over a 4118-case fuzz vs real OpenJDK) but four narrow families still diverge, each live-verified against PySpark 4.1.2 on 2026-08-19: (1) Java can match at a mid-surrogate UTF-16 index with no preceding empty match (`'\B'` on `ab🐈cd`: Spark 3, repark 2) — not fixable without a UTF-16 code-unit matcher; (2) Java non-MULTILINE `$` also matches before a final line terminator (`'a\n'`, `'$'`: Spark 2, repark 1); (3) Java `(?m)^` never matches at end-of-input and its line terminators include `\r`, `\r\n`, U+0085, U+2028, U+2029 (regex-crate multiline is `\n`-only); (4) ANSI-off conditional semantics (`legacySizeOfNull` −1; string-idx CAST NULL) are not modeled — the kernels hardcode the ANSI-ON default. Descriptions with examples: [fn-gt1 ledger](task/ledgers/archive/2026-08/2026-08-19-fn-gt1-ledger.md) Residuals.
+- **Numeric implicit-cast breadth on string-function arguments (no disposition yet)** — Spark implicitly casts numeric→string first args (`regexp_count(123,'2')` = 1) and non-integer numerics for `regexp_instr` idx / `split_part` partNum (`split_part(…, 2.0)` = `'b'`); repark plan-refuses both doors (fail-loud direction, pre-existing class). Also `split_part` with a NULL str and a non-foldable `partNum` 0 errors where Spark short-circuits to NULL. Live-verified 2026-08-19; [fn-gt1 ledger](task/ledgers/archive/2026-08/2026-08-19-fn-gt1-ledger.md) Residuals.
 
 **Closed out (2026-08):** the `$`-metadata rider, H-1c
 ([ADR 0006](docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)); the time-travel
@@ -259,22 +157,13 @@ Design-honesty items — accurate today; each says where the honest description 
 
 Recorded, not built. Each names the trigger that would start it.
 
-- **Internal `ReparkSession` decomposition** — driver-gated: executed only when a concrete driver
-  arrives (PyO3 pressure, a second `ExecutionBackend`, cancellation / per-query resource policy, or
-  server-protocol needs), not on a schedule. Recorded as
-  [docs/adr/0005-defer-session-decomposition.md](docs/adr/0005-defer-session-decomposition.md)
-  (status **Deferred**, 2026-08-09) — the intended internal services, the precise trigger
-  conditions, and the rule that the unit appends a discharge note naming the driver that fired.
+- **Internal `ReparkSession` decomposition** — driver-gated: executed only when a concrete driver arrives (PyO3 pressure, a second `ExecutionBackend`, cancellation / per-query resource policy, or server-protocol needs), not on a schedule. Recorded as [docs/adr/0005-defer-session-decomposition.md](docs/adr/0005-defer-session-decomposition.md) (status **Deferred**, 2026-08-09) — the intended internal services, the precise trigger conditions, and the rule that the unit appends a discharge note naming the driver that fired.
 - **`repark-postgres` + `repark-excel` read connectors** — scheduled post-milestone-one by explicit decision (2026-08-07). The Python binding refuses `read_excel`, `excel_sheet_names` and `read_postgres` loudly, naming this schedule; the withheld tests are listed in [task/port/deferred-tests.md](task/port/deferred-tests.md), and the `postgres_p11` count in [crates/repark-spark/src/map.md](crates/repark-spark/src/map.md); the names are in the archived [p2d ledger](docs/history/port-v2/p2d-spark-dml-ledger.md).
-- **Never-OOM (spill coverage)** — closed as measured at v1.3 (NEVEROOM-1, 27 cells; H3-SPILL-1's
-  180-cell baseline before it); three cells wait on upstream datafusion#24768 and #22758; scope per
-  [PROJECT.md](PROJECT.md): spills where the engine can, documented where it cannot.
+- **Never-OOM (spill coverage)** — closed as measured at v1.3 (NEVEROOM-1, 27 cells; H3-SPILL-1's 180-cell baseline before it); three cells wait on upstream datafusion#24768 and #22758; scope per [PROJECT.md](PROJECT.md): spills where the engine can, documented where it cannot.
 
 ## Release blockers
 
-**For v1.5.7** (owner, 11-08 to 11-11): SIGNED-ZERO-NORMALIZE-1
-([sketch](task/wo/signed-zero-normalize-1/sketch.md)) and LISTVIEW-INNER-JOIN-KEY-1; done: #1283,
-#1290, #1292, #1295. **For the format-v2 label:**
+**For v1.5.7** (owner, 11-08 to 11-13): SIGNED-ZERO-NORMALIZE-1 ([sketch](task/wo/signed-zero-normalize-1/sketch.md)) and NATIVE-DATAFRAME-WRITE-SILENT-1; done: #1283, #1290, #1292, #1295, #1304 (LISTVIEW-INNER-JOIN-KEY-1). **For the format-v2 label:**
 [Iceberg maturity](#iceberg-maturity-2026-10-27). Tag history: [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).
