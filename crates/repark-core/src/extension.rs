@@ -44,6 +44,13 @@ pub fn contains_normalize_zero(expr: &Expr) -> bool {
     .unwrap_or(true)
 }
 
+pub use repark_common::udf_names::NORMALIZE_ZERO_NAME;
+
+#[must_use]
+pub fn normalize_zero_call(expr: Expr) -> Expr {
+    crate::session::normalize_zero_call(expr)
+}
+
 /// Build-time extension with configure-then-register hooks.
 pub trait SessionExtension: Send + Sync {
     /// Amend the [`SessionConfig`] before the runtime and context are assembled.

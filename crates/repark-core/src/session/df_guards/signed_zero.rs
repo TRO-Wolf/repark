@@ -15,6 +15,7 @@ mod udf;
 
 pub(super) use keys::SignedZeroKeys;
 pub(super) use literals::SignedZeroLiterals;
+pub(crate) use udf::normalize_zero_call;
 
 pub(super) fn install_literal_seat(context: &SessionContext, policy: SignedZeroPolicy) {
     context.add_analyzer_rule(Arc::new(Switched {

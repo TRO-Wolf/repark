@@ -2718,7 +2718,7 @@ class DataFrame:
         window = Window.partitionBy(*order_cols).orderBy(*order_cols)
         ranked = self.with_column("__repark_dd_rn", F.row_number().over(window))
         filtered = ranked.filter(F.col("__repark_dd_rn") == F.lit(1))
-        return filtered.drop("__repark_dd_rn")
+        return _subset_resolve._normalized_keys(filtered.drop("__repark_dd_rn"), resolved)
 
     dropDuplicates = drop_duplicates  # noqa: N815 — deliberate PySpark-compatible camelCase alias
 

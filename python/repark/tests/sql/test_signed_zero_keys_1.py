@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import contextlib
 import json
+import struct
 from collections.abc import Iterator
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 import repark
@@ -24,6 +27,10 @@ CELLS = LINES[1:]
 ROUTES = ("spark-sql", "f-expr", "typed", "native")
 CATALOG = "ice"
 NAMESPACE = "szb"
+CANONICAL_NAN = 0x7FF8000000000000
+TIES = ("OB-4|",)
+FIXED_ORDER = ("GB-8|",)
+KEYED_OUTPUTS = ("GB-", "DI-", "SO-union|", "SO-intersect|", "SO-except|", "NN-1|", "NN-2|")
 
 
 def norm(value: Any) -> Any:
@@ -57,6 +64,42 @@ def keys(rows: list[list[Any]]) -> list[str]:
     return sorted(json.dumps(row, sort_keys=True, default=str) for row in rows)
 
 
+def unsigned(rows: list[list[Any]]) -> list[list[Any]]:
+    return [["0.0" if value == "-0.0" else value for value in row] for row in rows]
+
+
+def without_nulls(rows: list[list[Any]]) -> list[list[Any]]:
+    return [row for row in rows if None not in row]
+
+
+def same_rows(cell: dict[str, Any], rows: list[list[Any]]) -> bool:
+    truth = cell["truth"]
+    if cell["cid"].startswith(TIES):
+        return keys(rows) == keys(truth) and unsigned(rows) == unsigned(truth)
+    if cell["cid"].startswith(FIXED_ORDER):
+        return keys(rows) == keys(truth) and without_nulls(rows) == without_nulls(truth)
+    return rows == truth if cell["ordered"] else keys(rows) == keys(truth)
+
+
+def float_bits(value: float) -> int:
+    return int.from_bytes(struct.pack(">d", value), "big")
+
+
+def raw(frame: Any) -> list[list[Any]]:
+    table = frame.toArrow() if hasattr(frame, "toArrow") else frame.to_arrow()
+    columns = [table.column(index).to_pylist() for index in range(table.num_columns)]
+    return [list(values) for values in zip(*columns, strict=True)] if columns else []
+
+
+def nan_bits(rows: list[list[Any]]) -> list[int]:
+    return [
+        float_bits(value)
+        for row in rows
+        for value in row
+        if isinstance(value, float) and value != value
+    ]
+
+
 @pytest.fixture
 def facade(tmp_path: Path) -> Iterator[ReparkSession]:
     session = ReparkSession.builder.appName("test_signed_zero_keys_1").getOrCreate()
@@ -83,17 +126,19 @@ def native(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> PyReparkSession:
     return session
 
 
-def run(cell: dict[str, Any], facade: ReparkSession | None) -> list[list[Any]]:
+def run(
+    cell: dict[str, Any], facade: ReparkSession | None, gather: Any = collect
+) -> list[list[Any]]:
     route = cell["route"]
     if route == "native":
-        return collect(repark.sql(cell["text"]))
+        return gather(repark.sql(cell["text"]))
     assert facade is not None
     if route == "spark-sql":
-        return collect(facade.sql(cell["text"]))
+        return gather(facade.sql(cell["text"]))
     frames = {"t": facade.table(f"{CATALOG}.{NAMESPACE}.t_s")}
     if cell["build"]:
         frames["u"] = facade.table(f"{CATALOG}.{NAMESPACE}.{cell['build']}_s")
-    return collect(eval(cell["text"], {"F": functions, "W": Window, **frames}))
+    return gather(eval(cell["text"], {"F": functions, "W": Window, **frames}))
 
 
 def side(cell: dict[str, Any], key: str, facade: ReparkSession | None) -> None:
@@ -114,8 +159,7 @@ def mismatch(cell: dict[str, Any], facade: ReparkSession | None) -> str | None:
         return f"{type(error).__name__}: {str(error)[:160]}"
     finally:
         side(cell, "post", facade)
-    same = rows == cell["truth"] if cell["ordered"] else keys(rows) == keys(cell["truth"])
-    return None if same else f"rows {rows} != {cell['truth']}"
+    return None if same_rows(cell, rows) else f"rows {rows} != {cell['truth']}"
 
 
 @pytest.mark.parametrize("route", ROUTES)
@@ -166,6 +210,7 @@ def test_a_set_on_either_door_cannot_turn_the_key_wrap_off(
     facade: ReparkSession, native: PyReparkSession
 ) -> None:
     text = "SELECT count(*) FROM (SELECT d FROM {t} GROUP BY d)"
+    join = "SELECT count(*) FROM {t} AS a JOIN {t} AS b ON a.d = b.d"
     for statement in (
         "SET repark.sql.signedZero.normalizeKeys = false",
         "SET repark.sql.signedZero.normalizeLiterals = false",
@@ -174,6 +219,179 @@ def test_a_set_on_either_door_cannot_turn_the_key_wrap_off(
             facade.sql(statement).collect()
         with contextlib.suppress(Exception):
             collect(repark.sql(statement))
-    spark_rows = collect(facade.sql(text.format(t=f"{CATALOG}.{NAMESPACE}.t_s")))
-    native_rows = collect(repark.sql(text.format(t=f"{CATALOG}.{NAMESPACE}.t_n")))
-    assert spark_rows == native_rows == [[4]]
+    for statement in (
+        "SET datafusion.optimizer.max_passes = 1",
+        "SET datafusion.optimizer.max_passes = 3",
+        "SET datafusion.optimizer.skip_failed_rules = false",
+    ):
+        facade.sql(statement).collect()
+        collect(repark.sql(statement))
+    facade.conf.set("datafusion.optimizer.max_passes", "2")
+    refused = (
+        "SET datafusion.optimizer.max_passes = 0",
+        "SET datafusion.optimizer.max_passes = '0'",
+        "SET datafusion.optimizer.max_passes TO 0",
+        "SET datafusion.optimizer.skip_failed_rules = true",
+    )
+    for statement in refused:
+        spark_text = "INVALID_SET_SYNTAX" if " TO " in statement else r"datafusion\.optimizer"
+        with pytest.raises(Exception, match=spark_text):
+            facade.sql(statement).collect()
+        with pytest.raises(Exception, match=r"datafusion\.optimizer"):
+            collect(repark.sql(statement))
+    for key, value in (
+        ("datafusion.optimizer.max_passes", "0"),
+        ("datafusion.optimizer.skip_failed_rules", "true"),
+    ):
+        with pytest.raises(Exception, match=r"datafusion\.optimizer"):
+            facade.conf.set(key, value)
+    for door, table in ((facade.sql, "t_s"), (repark.sql, "t_n")):
+        name = f"{CATALOG}.{NAMESPACE}.{table}"
+        assert collect(door(text.format(t=name))) == [[4]]
+        assert collect(door(join.format(t=name))) == [[18]]
+
+
+@pytest.mark.parametrize("route", ("spark-sql", "native"))
+def test_nan_outputs_carry_the_canonical_bits_and_passthrough_keeps_the_payload(
+    route: str, request: pytest.FixtureRequest
+) -> None:
+    door = request.getfixturevalue("native" if route == "native" else "facade")
+    facade = None if route == "native" else door
+    keyed = [
+        cell
+        for cell in CELLS
+        if cell["route"] == route
+        and cell["cid"].startswith(KEYED_OUTPUTS)
+        and "NaN" in json.dumps(cell["truth"])
+    ]
+    assert len(keyed) >= 10
+    for cell in keyed:
+        side(cell, "pre", facade)
+        try:
+            bits = nan_bits(run(cell, facade, raw))
+        finally:
+            side(cell, "post", facade)
+        assert bits, cell["cid"]
+        assert set(bits) == {CANONICAL_NAN}, (cell["cid"], [hex(bit) for bit in bits])
+    tag = "n" if route == "native" else "s"
+    scan = f"SELECT id, d FROM {CATALOG}.{NAMESPACE}.nn_{tag} ORDER BY id"
+    sort = f"SELECT id, d FROM {CATALOG}.{NAMESPACE}.nn_{tag} ORDER BY d, id"
+    query = repark.sql if route == "native" else door.sql
+    stored = {row[0]: float_bits(row[1]) for row in raw(query(scan)) if row[1] != row[1]}
+    sorted_rows = {row[0]: float_bits(row[1]) for row in raw(query(sort)) if row[1] != row[1]}
+    assert len(stored) == 3
+    assert set(stored.values()) != {CANONICAL_NAN}
+    assert sorted_rows == stored
+
+
+def from_bits(bits: int) -> float:
+    return struct.unpack(">d", bits.to_bytes(8, "big"))[0]
+
+
+def from_bits32(bits: int) -> float:
+    return struct.unpack(">f", bits.to_bytes(4, "big"))[0]
+
+
+DEDUP_ROWS = {
+    "i": [1, 2, 3, 4, 5, 6],
+    "c": [
+        0x8000000000000000,
+        0,
+        0xFFF8000000000000,
+        CANONICAL_NAN,
+        0x7FF8000000000001,
+        0x3FF8000000000000,
+    ],
+    "f": [0x80000000, 0, 0xFFC00000, 0x7FC00000, 0x7FC00001, 0x3FC00000],
+    "k": [0x8000000000000000, 0x8000000000000000, 0, 0, 0xFFF8000000000000, CANONICAL_NAN],
+}
+DEDUP_TRUTH = {
+    ("c",): [
+        (1, 0, 0x80000000, 0x8000000000000000),
+        (3, CANONICAL_NAN, 0xFFC00000, 0),
+        (6, 0x3FF8000000000000, 0x3FC00000, CANONICAL_NAN),
+    ],
+    ("f",): [
+        (1, 0x8000000000000000, 0, 0x8000000000000000),
+        (3, 0xFFF8000000000000, 0x7FC00000, 0),
+        (6, 0x3FF8000000000000, 0x3FC00000, CANONICAL_NAN),
+    ],
+    ("c", "k"): [
+        (1, 0, 0x80000000, 0),
+        (3, CANONICAL_NAN, 0xFFC00000, 0),
+        (5, CANONICAL_NAN, 0x7FC00001, CANONICAL_NAN),
+        (6, 0x3FF8000000000000, 0x3FC00000, CANONICAL_NAN),
+    ],
+    ("k", "v"): [
+        (1, 0x8000000000000000, 0x80000000, 0),
+        (2, 0, 0, 0),
+        (3, 0xFFF8000000000000, 0xFFC00000, 0),
+        (4, CANONICAL_NAN, 0x7FC00000, 0),
+        (5, 0x7FF8000000000001, 0x7FC00001, CANONICAL_NAN),
+        (6, 0x3FF8000000000000, 0x3FC00000, CANONICAL_NAN),
+    ],
+}
+
+
+def dedup_bits(frame: Any) -> list[tuple[int, int, int, int]]:
+    rows = raw(frame.select("i", "c", "f", "k"))
+    return sorted(
+        (
+            row[0],
+            float_bits(row[1]),
+            int.from_bytes(struct.pack(">f", row[2]), "big"),
+            float_bits(row[3]),
+        )
+        for row in rows
+    )
+
+
+@pytest.fixture
+def dedup_source(facade: ReparkSession, tmp_path: Path) -> Any:
+    table = pa.table(
+        {
+            "i": pa.array(DEDUP_ROWS["i"], pa.int64()),
+            "c": pa.array([from_bits(bits) for bits in DEDUP_ROWS["c"]], pa.float64()),
+            "f": pa.array([from_bits32(bits) for bits in DEDUP_ROWS["f"]], pa.float32()),
+            "k": pa.array([from_bits(bits) for bits in DEDUP_ROWS["k"]], pa.float64()),
+            "v": pa.array(["a", "b", "c", "d", "e", "g"]),
+        }
+    )
+    path = tmp_path / "dedup.parquet"
+    pq.write_table(table, path)
+    return facade.read.parquet(str(path))
+
+
+@pytest.mark.parametrize("subset", list(DEDUP_TRUTH), ids="-".join)
+def test_drop_duplicates_keeps_the_normalised_key_and_the_row_values(
+    dedup_source: Any, subset: tuple[str, ...]
+) -> None:
+    assert dedup_bits(dedup_source.dropDuplicates(list(subset))) == DEDUP_TRUTH[subset]
+    assert dedup_bits(dedup_source.drop_duplicates(list(subset))) == DEDUP_TRUTH[subset]
+    assert dedup_source.dropDuplicates(list(subset)).columns == ["i", "c", "f", "k", "v"]
+    assert dedup_source.dropDuplicates(list(subset)).schema == dedup_source.schema
+
+
+def test_drop_duplicates_writes_the_normalised_key(
+    facade: ReparkSession, dedup_source: Any
+) -> None:
+    for subset, name in ((("c",), "ddc"), (("f",), "ddf"), (("k", "v"), "ddkv")):
+        target = f"{CATALOG}.{NAMESPACE}.{name}"
+        dedup_source.dropDuplicates(list(subset)).writeTo(target).create()
+        stored = dedup_bits(facade.table(target))
+        positions = [("i", "c", "f", "k").index(column) for column in subset if column != "v"]
+        truth = DEDUP_TRUTH[subset]
+        assert [row[0] for row in stored] == [row[0] for row in truth]
+        assert [[row[p] for p in positions] for row in stored] == [
+            [row[p] for p in positions] for row in truth
+        ]
+
+
+def test_drop_duplicates_without_a_subset_and_distinct_match_spark(dedup_source: Any) -> None:
+    pairs = dedup_source.select("c", "f")
+    truth = [(0, 0), (CANONICAL_NAN, 0x7FC00000), (0x3FF8000000000000, 0x3FC00000)]
+    for frame in (pairs.dropDuplicates(), pairs.distinct()):
+        assert sorted(
+            (float_bits(row[0]), int.from_bytes(struct.pack(">f", row[1]), "big"))
+            for row in raw(frame)
+        ) == sorted(truth)

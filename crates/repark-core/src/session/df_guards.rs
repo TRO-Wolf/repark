@@ -28,6 +28,7 @@ mod signed_zero;
 pub(crate) mod skipping_limit;
 pub(crate) mod sort_names;
 mod struct_setop;
+pub(crate) use signed_zero::normalize_zero_call;
 pub use struct_setop::insert_struct_setop_after_coercion;
 pub mod struct_walk;
 pub(super) mod subquery;
@@ -47,6 +48,41 @@ pub(super) fn dead_datafusion_54_1_refusal(key: &str, value: &str) -> Error {
          the option but no engine path reads it, so the value cannot take effect",
         repark_common::redaction::mask_value_credentials(value)
     ))
+}
+
+pub(super) const OPTIMIZER_SEAT_KEYS: &[&str] = &[
+    "datafusion.optimizer.max_passes",
+    "datafusion.optimizer.skip_failed_rules",
+];
+
+pub(super) fn optimizer_seat_refusal(key: &str, value: &str) -> Option<Error> {
+    let key = key.to_ascii_lowercase();
+    if !OPTIMIZER_SEAT_KEYS.contains(&key.as_str()) {
+        return None;
+    }
+    let mut probe = datafusion::common::config::ConfigOptions::default();
+    probe.set(&key, value).ok()?;
+    let why = if probe.optimizer.max_passes == 0 {
+        "a value of 0 skips every optimizer pass"
+    } else if probe.optimizer.skip_failed_rules {
+        "it lets a failing optimizer rule be skipped silently"
+    } else {
+        return None;
+    };
+    Some(Error::Config(format!(
+        "unsupported DataFusion session config '{key}' = '{}': {why}, and RePark's float-key \
+         normalisation and its other plan guards run as optimizer rules on every pass, so \
+         queries would return wrong answers; keep max_passes at 1 or more and \
+         skip_failed_rules false",
+        repark_common::redaction::mask_value_credentials(value)
+    )))
+}
+
+pub(super) fn datafusion_config_refusal(key: &str, value: &str) -> Option<Error> {
+    if DEAD_DATAFUSION_54_1_KEYS.contains(&key) {
+        return Some(dead_datafusion_54_1_refusal(key, value));
+    }
+    optimizer_seat_refusal(key, value)
 }
 
 pub(super) fn invalid_datafusion_config(

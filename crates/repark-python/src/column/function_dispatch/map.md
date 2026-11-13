@@ -77,3 +77,5 @@ unit — so a new family gets a child module and the parent's default arm falls 
   (`make_timestamp` family, `make_ym_interval`, `try_make_interval`, `months_between`,
   `convert_timezone`, `localtimestamp`, `timestampadd`, `timestampdiff`, `datediff`): the parent
   `function_dispatch.rs` is at its 1000-line ceiling, so no arm lands there.
+- `dispatch_json.rs` also maps `__repark_normalize_zero__` to `repark_core::extension::normalize_zero_call`, for the
+  facade's `dropDuplicates(subset)` float keys (SIGNED-ZERO-NORMALIZE-1 part B part 1, delta round).

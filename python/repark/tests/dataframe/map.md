@@ -61,7 +61,9 @@ pins.
 - [test_g1_stat_and_expander.py](test_g1_stat_and_expander.py) — G1 — DataFrame.stat family + UPDATE/DELETE expander e2e pins.
 - [test_g2_window_rand_sampleby.py](test_g2_window_rand_sampleby.py) — G2 — window frames, seeded rand/randn, sampleBy XORShift, eagerEval.
 - [test_g4b_semi_join.py](test_g4b_semi_join.py) — G4b — DataFrame-API ``leftsemi`` / ``leftanti`` binding: the non-differential surface.
-- [test_group_agg.py](test_group_agg.py) — Facade tests for the DataFrame aggregation family (Group E: E1, E2, E7).
+- [test_group_agg.py](test_group_agg.py) — Facade tests for the DataFrame aggregation family (Group E: E1, E2, E7). The
+  `collect_set` pin asserts the declared zero and NaN answers (SIGNED-ZERO-KEYS-1-COLLECTSET, -COLLECTSET-NAN); the
+  two-column `countDistinct` pin is a strict xfail naming COUNT-DISTINCT-MULTI-SIGNED-ZERO-1.
 - [test_h2_group_h2.py](test_h2_group_h2.py) — Group H long tail + naming polish.
 - [test_join_condition_refusals_1.py](test_join_condition_refusals_1.py) — Join-condition refusals: nondeterministic and non-boolean conditions refuse like Spark.
 - [test_join_parity.py](test_join_parity.py) — Joins differential corpus (H-2 gap G4) - value AND Arrow type AND nullability vs live Spark.

@@ -49,10 +49,10 @@ pub mod write_postgres;
 pub mod writer_layout;
 pub(crate) mod zone_localiser;
 
+pub(crate) use df_guards::normalize_zero_call;
 pub use df_guards::subquery::{resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan};
 use df_guards::{
-    DEAD_DATAFUSION_54_1_KEYS, apply_df_54_1_config_guards, context_with_df_54_1_rule_guards,
-    dead_datafusion_54_1_refusal,
+    apply_df_54_1_config_guards, context_with_df_54_1_rule_guards, datafusion_config_refusal,
 };
 pub use df_guards::{case_bind as frame_names, insert_struct_setop_after_coercion, struct_walk};
 
@@ -84,8 +84,8 @@ fn apply_datafusion_config_keys(
     keys.sort();
     for key in keys {
         let value = &map[key];
-        if DEAD_DATAFUSION_54_1_KEYS.contains(&key.as_str()) {
-            return Err(dead_datafusion_54_1_refusal(key, value));
+        if let Some(refusal) = datafusion_config_refusal(key, value) {
+            return Err(refusal);
         }
         config
             .options_mut()

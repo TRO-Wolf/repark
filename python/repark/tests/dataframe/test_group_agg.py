@@ -9,6 +9,8 @@ type on the Arrow path).
 
 from __future__ import annotations
 
+import struct
+
 import pyarrow as pa
 import pytest
 
@@ -16,6 +18,8 @@ from repark import ReparkSession
 from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
 from repark.errors import AnalysisException
 from repark_parity import assert_frames_equal
+
+COLLECT_SET_NANS = ("7ff8000000000000", "7ff8000000000001", "fff8000000000000", "7ff8000000000000")
 
 
 @pytest.fixture
@@ -746,22 +750,38 @@ def test_mutation_multi_count_distinct_third_col_matters(spark: ReparkSession) -
 def test_collect_set_keeps_one_zero_and_its_sign_is_the_declared_residue(
     spark: ReparkSession,
 ) -> None:
+    nans = [struct.unpack(">d", bytes.fromhex(text))[0] for text in COLLECT_SET_NANS]
     source = spark.createDataFrame(
-        [(1, -0.0), (1, 0.0), (1, 0.0), (1, 1.5), (2, 1.5), (2, 1.5)],
+        [(1, -0.0), (1, 0.0), (1, 0.0), (1, 1.5), (2, 1.5), (2, 1.5)]
+        + [(3, nan) for nan in nans]
+        + [(3, 1.5)],
         ["g", "x"],
     )
     result = source.groupBy("g").agg(F.collect_list("x"), F.collect_set("x"))
     collected = {row["g"]: row for row in result.to_arrow().to_pylist()}
-    assert sorted(collected) == [1, 2]
+    assert sorted(collected) == [1, 2, 3]
     assert len(collected[1]["collect_list(x)"]) == 4
     zeros_and_control = sorted(collected[1]["collect_set(x)"])
     assert len(zeros_and_control) == 2
     assert zeros_and_control[0] == 0.0
     assert zeros_and_control[1] == 1.5
     assert collected[2]["collect_set(x)"] == [1.5]
+    elements = collected[3]["collect_set(x)"]
+    assert len(collected[3]["collect_list(x)"]) == len(nans) + 1
+    assert sorted(struct.pack(">d", value).hex() for value in elements) == [
+        "3ff8000000000000",
+        "7ff8000000000000",
+    ]
 
 
-def test_count_distinct_over_two_columns_keeps_signed_zero_pairs_apart(
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "COUNT-DISTINCT-MULTI-SIGNED-ZERO-1: RePark's answer is wrong; it counts signed-zero "
+        "pairs apart (3 here), and Spark 4.1.2 counts one pair (1)"
+    ),
+)
+def test_count_distinct_over_two_columns_counts_signed_zero_pairs_as_one(
     spark: ReparkSession,
 ) -> None:
     multi = spark.createDataFrame(
@@ -769,7 +789,7 @@ def test_count_distinct_over_two_columns_keeps_signed_zero_pairs_apart(
         ["a", "b"],
     )
     multi_count = multi.agg(F.countDistinct("a", "b")).to_arrow().to_pylist()
-    assert multi_count == [{"count(DISTINCT a, b)": 3}]
+    assert multi_count == [{"count(DISTINCT a, b)": 1}]
 
 
 def test_dict_agg_collect_function_names_are_case_insensitive(spark: ReparkSession) -> None:

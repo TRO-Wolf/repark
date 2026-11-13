@@ -426,12 +426,48 @@ async fn the_keys_switch_off_restores_the_bit_pattern_keys_on_that_session_only(
 #[tokio::test]
 async fn a_set_statement_cannot_reach_the_door_policy() {
     let session = session();
+    let _ = session
+        .sql("SET repark.sql.signedZero.normalizeKeys = false")
+        .await;
     for statement in [
-        "SET repark.sql.signedZero.normalizeKeys = false",
         "SET datafusion.optimizer.max_passes = 1",
+        "SET datafusion.optimizer.max_passes = 3",
+        "SET datafusion.optimizer.skip_failed_rules = false",
+        "SET datafusion.execution.batch_size = 4096",
     ] {
-        let _ = session.sql(statement).await;
+        session.sql(statement).await.expect(statement);
     }
+    for statement in [
+        "SET datafusion.optimizer.max_passes = 0",
+        "SET datafusion.optimizer.max_passes = '0'",
+        "SET datafusion.optimizer.max_passes TO 0",
+        "SET VARIABLE datafusion.optimizer.max_passes = 0",
+        "SET datafusion.optimizer.skip_failed_rules = true",
+    ] {
+        let message = match session.sql(statement).await {
+            Ok(_) => panic!("{statement} was accepted"),
+            Err(error) => error.to_string(),
+        };
+        assert!(
+            message.contains("datafusion.optimizer."),
+            "{statement}: {message}"
+        );
+    }
+    for (key, value) in [
+        ("datafusion.optimizer.max_passes", "0"),
+        ("datafusion.optimizer.skip_failed_rules", "true"),
+    ] {
+        assert!(
+            ReparkSession::builder().config(key, value).build().is_err(),
+            "{key} = {value} was accepted at build"
+        );
+    }
+    assert!(
+        ReparkSession::builder()
+            .config("datafusion.optimizer.max_passes", "1")
+            .build()
+            .is_ok()
+    );
     assert_eq!(
         ints(
             &session,
