@@ -4,7 +4,7 @@
 
 File-backed unit tests for `../local_fs_policy.rs`, the one local-file write policy of both SQL
 doors and `repark.sql()`. Every refusal has a test beside a control that proves the guard is not
-refusing everything.
+refusing everything. `native_ctas.rs` is the native door's Iceberg CTAS refusal (NATIVE-CTAS-ICEBERG-REFUSE-1).
 
 ## Contents
 
@@ -36,6 +36,16 @@ refusing everything.
   writes), and `the_judgment_plan_and_the_inner_plan_see_the_same_session_state` (the guard's
   plan and the inner plan both type `TIMESTAMP` with the inner dialect's planner, and its
   analyzer rule is in the state).
+- [`native_ctas.rs`](native_ctas.rs) (+ [native_ctas/](native_ctas/map.md)) — **NATIVE-CTAS-ICEBERG-REFUSE-1
+  (2026-11-12, owner ruling item 3 (b)):** `refuse_iceberg_ctas`, which `refuse_native_statement` runs
+  on the plan the native guard already built. It walks the plan (`Explain`, `Analyze` and `Prepare`
+  inputs included) for a `CreateMemoryTable` that carries a query (its input is not the
+  `EmptyRelation` a plain `CREATE TABLE` plans), resolves the target against the session's default
+  catalog and schema, and refuses with `UnsupportedMarker` (`refusal_message`, which names the
+  two-step workaround, `spark.sql` and the card) when `refused_schema` holds: the target catalog
+  is a registered Iceberg catalog and the target schema is not a `MemorySchemaProvider` (what a
+  native `CREATE SCHEMA` registers). That predicate is the one place to widen the guard to every
+  target. The in-memory catalog and in-memory schemas are untouched.
 
 ## Pointers
 

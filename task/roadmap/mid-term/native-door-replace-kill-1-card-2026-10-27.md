@@ -6,6 +6,8 @@
 
 **Why:** the native door (`repark.sql()`, the ANSI door) runs `CREATE OR REPLACE TABLE … AS SELECT` and `REPLACE TABLE … AS SELECT` through `crates/repark-sql/src/create_table.rs`. That file calls `StagedTableTransaction::begin_replace` at about line 247 and `publish_replace_table` at about line 332. The Spark door's replace is pinned by ICE-REPLACE-KILL-DOORS-1 (K-8, K-9 and K-10). No kill-mid-write cell holds the native door's publish, so a writer killed there is unpinned.
 
+**Corrected 2026-11-12 (NATIVE-CTAS-ICEBERG-REFUSE-1, measured):** the path in "Why" does not hold. `repark.sql()` never reaches `create_table.rs`; it runs DataFusion's `CreateMemoryTable`, whose `OR REPLACE` dropped the existing Iceberg table before the query ran. Native CTAS and RTAS into an Iceberg table now refuse before any write ([card](native-ctas-iceberg-refuse-1-card-2026-11-12.md)). A native `CREATE OR REPLACE TABLE t (<columns>)` with no query still drops and re-creates `t` (a fresh `v1`, a new uuid, no snapshots, orphaned files), so that replace is the one left for a kill cell.
+
 **Measured:** none yet. The native door's replace is read in the code only. No kill cell has run against it.
 
 **Retires:** a kill-mid-write cell that holds the native door's replace publish on format v2 and v3, and asserts the post-kill reading that RKD-1 (a) fixes for the Spark door. The registry row ICE-LOCAL-COMMIT-POINT-1 then names the cell.
