@@ -4,14 +4,14 @@ import json
 import re
 import sys
 from collections.abc import Callable, Iterator
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 E_ROWS = [(7, 1), (8, 2)]
 SRC_ROWS = [(9, 1), (10, 3)]
 SRC2_ROWS = [(11, 1)]
 EXPECTED_FILE = Path(__file__).with_name("native_dataframe_write_silent_1_main.json")
-STAGING = re.compile(r"repark-staging-[0-9a-f]{32}-")
+STAGING = re.compile(r"repark-staging-[0-9a-f]{32}(-|$)")
 
 
 def p_is_one() -> Any:
@@ -89,33 +89,35 @@ NATIVE_TARGETS = (
 )
 SPARK_TARGETS = ("hd_existing", "hd_partitioned", "hd_new", "temp_view")
 PATH_KINDS = ("path_new", "path_existing")
+MEMORY_KINDS = frozenset({"ice_memory_schema", "memory_qualified", "memory_bare"})
 FRAMES = ("sql", "filter", "select", "union", "cache", "local_checkpoint", "join")
 OVERWRITE_VERBS = frozenset({"ins_overwrite", "save_name_overwrite"})
 DYNAMIC_VERBS = frozenset({"v2_overwrite_partitions"})
 CARD = "NATIVE-DATAFRAME-WRITE-SILENT-1"
 
 
-def table_refusal(verb: str, target: str) -> str:
+def table_refusal(verb: str, target: str, kind: str) -> str:
     lead = (
         "DataFrame.write and writeTo cannot write a repark.sql() frame into the table "
         f"{target}: the write would return without storing any rows, so nothing was written; "
     )
-    if verb in DYNAMIC_VERBS:
+    collect = "through repark.sql(...) and collect the result"
+    if verb not in OVERWRITE_VERBS | DYNAMIC_VERBS:
+        tail = f"run INSERT INTO {target} SELECT ... {collect}"
+    elif kind in MEMORY_KINDS:
         tail = (
-            "write the frame from a ReparkSession, whose overwritePartitions replaces only the "
-            "frame's partitions"
+            f"{target} is an in-memory table, where INSERT OVERWRITE is not implemented: run "
+            f"CREATE OR REPLACE TABLE {target} AS SELECT ... {collect}, which replaces the "
+            "table with the query's columns and rows"
         )
-    elif verb in OVERWRITE_VERBS:
+    elif verb in DYNAMIC_VERBS:
         tail = (
-            f"to replace an Iceberg table's rows, run INSERT OVERWRITE {target} SELECT ... "
-            "through repark.sql(...) and collect the result; otherwise write the frame from a "
-            "ReparkSession"
+            "on an unpartitioned table, which is every table repark.sql(...) can create, "
+            f"overwritePartitions replaces every row: run INSERT OVERWRITE {target} SELECT ... "
+            f"{collect}"
         )
     else:
-        tail = (
-            f"run INSERT INTO {target} SELECT ... through repark.sql(...) and collect the "
-            "result, or write the frame from a ReparkSession"
-        )
+        tail = f"run INSERT OVERWRITE {target} SELECT ... {collect}"
     return f"{lead}{tail} ({CARD})"
 
 
@@ -384,6 +386,21 @@ def scrub(text: str, root: Path) -> str:
     return DATA_FILE.sub("/data/<file>.parquet", text.replace(str(root), "<warehouse>"))
 
 
+def file_shape(name: str) -> str:
+    path = PurePosixPath(name)
+    if path.name.startswith("_"):
+        return str(path)
+    hidden = "." if path.name.startswith(".") else ""
+    return str(path.parent / f"{hidden}*{''.join(path.suffixes)}")
+
+
+def shape(state: dict[str, Any]) -> dict[str, Any]:
+    kept = {key: value for key, value in state.items() if key != "rows"}
+    if "files" in kept:
+        kept["files"] = sorted(file_shape(name) for name in kept["files"])
+    return kept
+
+
 def record(root: Path) -> dict[str, Any]:
     expected: dict[str, Any] = {}
     for door_name in ("native", "spark-door"):
@@ -398,6 +415,7 @@ def record(root: Path) -> dict[str, Any]:
                     "guard": door_name == "native" and bool(cell["seat_returned"]),
                     "outcome": outcome,
                     "after_rows": cell["after"]["rows"],
+                    "after_shape": shape(cell["after"]),
                 }
         finally:
             door.close()

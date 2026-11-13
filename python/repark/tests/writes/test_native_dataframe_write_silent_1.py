@@ -13,10 +13,12 @@ from _native_dataframe_write_silent_1_cells import (
     Door,
     path_refusal,
     scrub,
+    shape,
     table_refusal,
 )
 
 import repark
+from repark import ReparkSession
 from repark._native import PyReparkSession
 from repark.spark.session import _reset_active_session_for_tests
 
@@ -67,7 +69,7 @@ def test_a_native_write_that_would_store_nothing_refuses_before_any_effect(
     if kind in PATH_KINDS:
         text = path_refusal(cell["target"])
     else:
-        text = table_refusal(verb, quoted_table(cell["target"]))
+        text = table_refusal(verb, quoted_table(cell["target"]), kind)
     assert cell["outcome"] == {
         "kind": "refused",
         "class": "UnsupportedOperationException",
@@ -88,6 +90,7 @@ def test_every_other_cell_keeps_its_outcome_on_main(
         outcome["text"] = scrub(outcome["text"], cell["root"])
     assert outcome == EXPECTED[key]["outcome"], cell
     assert cell["after"]["rows"] == EXPECTED[key]["after_rows"], cell
+    assert shape(cell["after"]) == EXPECTED[key]["after_shape"], cell
 
 
 @pytest.mark.parametrize(
@@ -120,56 +123,101 @@ def rows(sql: str) -> list[tuple[Any, ...]]:
     return sorted(tuple(row.values()) for row in repark.sql(sql).to_arrow().to_pylist())
 
 
-@pytest.mark.parametrize("statement", ["INSERT INTO", "INSERT OVERWRITE"])
-def test_the_named_workaround_stores_the_rows(native_door: Path, statement: str) -> None:
-    rows("CREATE TABLE ice.ns.t (id INT)")
-    rows("INSERT INTO ice.ns.t VALUES (7), (8)")
+WORKAROUND = re.compile(
+    r"run ((?:INSERT INTO|INSERT OVERWRITE|CREATE OR REPLACE TABLE) (\S+) (?:AS )?SELECT \.\.\.) "
+    r"through repark\.sql\(\.\.\.\) and collect the result"
+)
+WORKAROUND_CASES = {
+    "iceberg_append": ("ice.ns.t", "ice_existing", "ins_append", [(7,), (8,), (9,)]),
+    "iceberg_overwrite": ("ice.ns.t", "ice_existing", "ins_overwrite", [(9,)]),
+    "iceberg_save_overwrite": ("ice.ns.t", "ice_existing", "save_name_overwrite", [(9,)]),
+    "iceberg_overwrite_partitions": (
+        "ice.ns.t",
+        "ice_existing",
+        "v2_overwrite_partitions",
+        [(9,)],
+    ),
+    "memory_append": ("datafusion.public.m", "memory_qualified", "ins_append", [(7,), (8,), (9,)]),
+    "memory_overwrite": ("datafusion.public.m", "memory_qualified", "ins_overwrite", [(9,)]),
+    "memory_schema_overwrite": ("ice.ms.m", "ice_memory_schema", "ins_overwrite", [(9,)]),
+}
+
+
+@pytest.mark.parametrize("case", sorted(WORKAROUND_CASES))
+def test_the_named_workaround_stores_the_rows_when_followed_literally(
+    native_door: Path, case: str
+) -> None:
+    target, kind, verb, expected = WORKAROUND_CASES[case]
+    rows("CREATE SCHEMA ice.ms")
+    rows(f"CREATE TABLE {target} (id INT)")
+    rows(f"INSERT INTO {target} VALUES (7), (8)")
     rows("CREATE TABLE ice.ns.src (id INT)")
     rows("INSERT INTO ice.ns.src VALUES (9)")
     frame = repark.sql("SELECT id FROM ice.ns.src")
-    verb = "ins_append" if statement == "INSERT INTO" else "ins_overwrite"
     with pytest.raises(repark.errors.UnsupportedOperationException) as refused:
-        frame.write.insertInto("ice.ns.t", overwrite=statement == "INSERT OVERWRITE")
-    assert str(refused.value) == table_refusal(verb, "ice.ns.t")
-    rows(f"{statement} ice.ns.t SELECT id FROM ice.ns.src")
-    expected = [(7,), (8,), (9,)] if statement == "INSERT INTO" else [(9,)]
-    assert rows("SELECT id FROM ice.ns.t") == expected
+        if verb == "v2_overwrite_partitions":
+            frame.writeTo(target).overwritePartitions()
+        elif verb == "save_name_overwrite":
+            frame.write.format("iceberg").mode("overwrite").save(target)
+        else:
+            frame.write.insertInto(target, overwrite=verb == "ins_overwrite")
+    message = str(refused.value)
+    assert message == table_refusal(verb, target, kind)
+    assert rows(f"SELECT id FROM {target}") == [(7,), (8,)]
+    named = WORKAROUND.search(message)
+    assert named is not None, message
+    assert named.group(2) == target
+    frame.createOrReplaceTempView("frame_rows")
+    rows(named.group(1).replace("SELECT ...", "SELECT * FROM frame_rows"))
+    assert rows(f"SELECT id FROM {target}") == expected
+
+
+ABSOLUTE = "<absolute>"
 
 
 @pytest.mark.parametrize(
     ("spelling", "named"),
     [
+        ("out", "out"),
+        ("out/", "out"),
+        ("data/out", "data/out"),
+        (f"{ABSOLUTE}/out", f"{ABSOLUTE}/out"),
+        (".", "."),
+        ("..", ".."),
         ("relx", "relx"),
         ("sub/", "sub"),
         ("deep/er/", "deep/er"),
     ],
 )
-def test_a_relative_path_is_named_as_the_user_wrote_it(
-    native_door: Path, monkeypatch: pytest.MonkeyPatch, spelling: str, named: str
-) -> None:
-    monkeypatch.chdir(native_door)
-    frame = repark.sql("SELECT 1 AS id")
-    with pytest.raises(repark.errors.UnsupportedOperationException) as refused:
-        frame.write.mode("overwrite").parquet(spelling)
-    assert str(refused.value) == path_refusal(named)
-    assert not (native_door / named).exists()
-    assert not [p for p in native_door.iterdir() if p.name.startswith("repark-staging-")]
-
-
-@pytest.mark.parametrize(
-    ("spelling", "named"),
-    [(".", "repark-staging-[0-9a-f]{32}-out"), ("..", re.escape(".."))],
-)
-def test_a_dot_path_is_named_by_its_name_or_its_staging_url(
-    native_door: Path, monkeypatch: pytest.MonkeyPatch, spelling: str, named: str
+@pytest.mark.parametrize("mode", ["append", "overwrite"])
+def test_a_path_is_named_as_the_user_wrote_it(
+    native_door: Path, monkeypatch: pytest.MonkeyPatch, spelling: str, named: str, mode: str
 ) -> None:
     work = native_door / "work" / "inner"
     work.mkdir(parents=True)
     monkeypatch.chdir(work)
-    before = sorted(p.name for p in native_door.rglob("*"))
+    absolute = str(native_door / "abs")
+    spelling = spelling.replace(ABSOLUTE, absolute)
+    named = named.replace(ABSOLUTE, absolute)
+    before = sorted(str(p) for p in native_door.rglob("*"))
     frame = repark.sql("SELECT 1 AS id")
     with pytest.raises(repark.errors.UnsupportedOperationException) as refused:
-        frame.write.mode("append").parquet(spelling)
-    pattern = re.escape(path_refusal("NAMED")).replace("NAMED", named)
-    assert re.fullmatch(pattern, str(refused.value)), str(refused.value)
-    assert sorted(p.name for p in native_door.rglob("*")) == before
+        frame.write.mode(mode).parquet(spelling)
+    assert str(refused.value) == path_refusal(named)
+    assert sorted(str(p) for p in native_door.rglob("*")) == before
+
+
+def test_the_path_workaround_stores_the_rows(native_door: Path) -> None:
+    destination = native_door / "out"
+    frame = repark.sql("SELECT 9 AS id")
+    with pytest.raises(repark.errors.UnsupportedOperationException) as refused:
+        frame.write.mode("overwrite").parquet(str(destination))
+    assert str(refused.value) == path_refusal(str(destination))
+    assert "write the frame from a ReparkSession" in str(refused.value)
+    spark = ReparkSession.builder.appName("native-dataframe-write-silent-1").getOrCreate()
+    try:
+        spark.sql("SELECT 9 AS id").write.mode("overwrite").parquet(str(destination))
+        stored = sorted(tuple(row) for row in spark.read.parquet(str(destination)).collect())
+    finally:
+        spark.stop()
+    assert stored == [(9,)]

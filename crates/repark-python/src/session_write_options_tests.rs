@@ -9,31 +9,52 @@ use crate::session::PyReparkSession;
 
 const HEX: &str = "0123456789abcdef0123456789abcdef";
 
-fn append_refusal(target: &str) -> String {
+fn table_refusal(target: &str, workaround: &str) -> String {
     format!(
         "DataFrame.write and writeTo cannot write a repark.sql() frame into the table {target}: \
-         the write would return without storing any rows, so nothing was written; run INSERT \
-         INTO {target} SELECT ... through repark.sql(...) and collect the result, or write the \
-         frame from a ReparkSession (NATIVE-DATAFRAME-WRITE-SILENT-1)"
-    )
-}
-
-fn overwrite_refusal(target: &str) -> String {
-    format!(
-        "DataFrame.write and writeTo cannot write a repark.sql() frame into the table {target}: \
-         the write would return without storing any rows, so nothing was written; to replace \
-         an Iceberg table's rows, run INSERT OVERWRITE {target} SELECT ... through \
-         repark.sql(...) and collect the result; otherwise write the frame from a ReparkSession \
+         the write would return without storing any rows, so nothing was written; {workaround} \
          (NATIVE-DATAFRAME-WRITE-SILENT-1)"
     )
 }
 
+fn append_refusal(target: &str) -> String {
+    table_refusal(
+        target,
+        &format!(
+            "run INSERT INTO {target} SELECT ... through repark.sql(...) and collect the result"
+        ),
+    )
+}
+
+fn overwrite_refusal(target: &str) -> String {
+    table_refusal(
+        target,
+        &format!(
+            "run INSERT OVERWRITE {target} SELECT ... through repark.sql(...) and collect the \
+             result"
+        ),
+    )
+}
+
 fn dynamic_refusal(target: &str) -> String {
-    format!(
-        "DataFrame.write and writeTo cannot write a repark.sql() frame into the table {target}: \
-         the write would return without storing any rows, so nothing was written; write the \
-         frame from a ReparkSession, whose overwritePartitions replaces only the frame's \
-         partitions (NATIVE-DATAFRAME-WRITE-SILENT-1)"
+    table_refusal(
+        target,
+        &format!(
+            "on an unpartitioned table, which is every table repark.sql(...) can create, \
+             overwritePartitions replaces every row: run INSERT OVERWRITE {target} SELECT ... \
+             through repark.sql(...) and collect the result"
+        ),
+    )
+}
+
+fn memory_overwrite_refusal(target: &str) -> String {
+    table_refusal(
+        target,
+        &format!(
+            "{target} is an in-memory table, where INSERT OVERWRITE is not implemented: run \
+             CREATE OR REPLACE TABLE {target} AS SELECT ... through repark.sql(...) and collect \
+             the result, which replaces the table with the query's columns and rows"
+        ),
     )
 }
 
@@ -136,27 +157,26 @@ fn refusal(
 #[test]
 fn copy_destination_strips_only_an_exact_staging_segment() {
     let staged = |name: &str| format!("repark-staging-{HEX}-{name}");
-    assert_eq!(
-        copy_destination(&format!("/w/{}", staged("dest"))),
-        "/w/dest"
-    );
-    assert_eq!(
-        copy_destination(&format!("/w/{}/", staged("dest"))),
-        "/w/dest"
-    );
-    assert_eq!(
-        copy_destination(&format!("/w/{}", staged("my-dir"))),
-        "/w/my-dir"
-    );
-    assert_eq!(copy_destination(&staged("relx")), "relx");
-    assert_eq!(
-        copy_destination(&format!("a/b/{}", staged("relx"))),
-        "a/b/relx"
-    );
+    let unnamed = format!("repark-staging-{HEX}");
+    for (raw, named) in [
+        (format!("/w/{}", staged("dest")), "/w/dest"),
+        (format!("/w/{}/", staged("dest")), "/w/dest"),
+        (format!("/w/{}", staged("my-dir")), "/w/my-dir"),
+        (staged("relx"), "relx"),
+        (format!("a/b/{}", staged("relx")), "a/b/relx"),
+        (staged("out"), "out"),
+        (format!("{}/", staged("out")), "out"),
+        (format!("data/{}", staged("out")), "data/out"),
+        (format!("/w/{}", staged("out")), "/w/out"),
+        (staged(".."), ".."),
+        (staged(&unnamed), unnamed.as_str()),
+        (unnamed.clone(), "."),
+        (format!("{unnamed}/"), "."),
+        (format!("/{unnamed}"), "/"),
+    ] {
+        assert_eq!(copy_destination(&raw), named, "{raw}");
+    }
     for raw in [
-        staged("out"),
-        format!("/{}", staged("out")),
-        format!("/w/{}", staged("out")),
         format!("/w/repark-staging-{}-dest", HEX.to_uppercase()),
         format!("/w/repark-staging-{}-dest", &HEX[1..]),
         format!("/w/repark-staging-{HEX}dest"),
@@ -195,6 +215,16 @@ fn native_pending_inserts_refuse_before_any_effect() {
                 "INSERT INTO datafusion.public.m SELECT 9",
                 false,
                 append_refusal("datafusion.public.m"),
+            ),
+            (
+                "INSERT OVERWRITE datafusion.public.m SELECT 9",
+                false,
+                memory_overwrite_refusal("datafusion.public.m"),
+            ),
+            (
+                "INSERT OVERWRITE m SELECT 9",
+                true,
+                memory_overwrite_refusal("m"),
             ),
         ];
         for (sql, dynamic, expected) in cases {

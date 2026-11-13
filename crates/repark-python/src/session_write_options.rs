@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use datafusion::datasource::MemTable;
+use datafusion::datasource::default_table_source::source_as_provider;
 use datafusion::logical_expr::dml::InsertOp;
-use datafusion::logical_expr::{LogicalPlan, WriteOp};
+use datafusion::logical_expr::{LogicalPlan, TableSource, WriteOp};
 use pyo3::prelude::*;
 
 use crate::dataframe::PyDataFrame;
@@ -79,8 +81,6 @@ const STAGING_PREFIX: &str = "repark-staging-";
 
 const STAGING_HEX_LEN: usize = 32;
 
-const STAGING_UNNAMED: &str = "out";
-
 pub(crate) fn pending_write_refusal(plan: &LogicalPlan, dynamic_overwrite: bool) -> Option<String> {
     match plan {
         LogicalPlan::Dml(dml) => match dml.op {
@@ -88,6 +88,7 @@ pub(crate) fn pending_write_refusal(plan: &LogicalPlan, dynamic_overwrite: bool)
                 &dml.table_name.to_quoted_string(),
                 op,
                 dynamic_overwrite,
+                in_memory(&dml.target),
             )),
             _ => None,
         },
@@ -96,21 +97,28 @@ pub(crate) fn pending_write_refusal(plan: &LogicalPlan, dynamic_overwrite: bool)
     }
 }
 
-fn table_refusal(target: &str, op: InsertOp, dynamic_overwrite: bool) -> String {
+fn in_memory(target: &Arc<dyn TableSource>) -> bool {
+    source_as_provider(target).is_ok_and(|provider| provider.downcast_ref::<MemTable>().is_some())
+}
+
+fn table_refusal(target: &str, op: InsertOp, dynamic_overwrite: bool, in_memory: bool) -> String {
     let workaround = match op {
         InsertOp::Append => format!(
-            "run INSERT INTO {target} SELECT ... through repark.sql(...) and collect the result, \
-             or write the frame from a ReparkSession"
+            "run INSERT INTO {target} SELECT ... through repark.sql(...) and collect the result"
         ),
-        InsertOp::Overwrite | InsertOp::Replace if dynamic_overwrite => {
-            "write the frame from a ReparkSession, whose overwritePartitions replaces only the \
-             frame's partitions"
-                .to_string()
-        }
+        InsertOp::Overwrite | InsertOp::Replace if in_memory => format!(
+            "{target} is an in-memory table, where INSERT OVERWRITE is not implemented: run \
+             CREATE OR REPLACE TABLE {target} AS SELECT ... through repark.sql(...) and collect \
+             the result, which replaces the table with the query's columns and rows"
+        ),
+        InsertOp::Overwrite | InsertOp::Replace if dynamic_overwrite => format!(
+            "on an unpartitioned table, which is every table repark.sql(...) can create, \
+             overwritePartitions replaces every row: run INSERT OVERWRITE {target} SELECT ... \
+             through repark.sql(...) and collect the result"
+        ),
         InsertOp::Overwrite | InsertOp::Replace => format!(
-            "to replace an Iceberg table's rows, run INSERT OVERWRITE {target} SELECT ... through \
-             repark.sql(...) and collect the result; otherwise write the frame from a \
-             ReparkSession"
+            "run INSERT OVERWRITE {target} SELECT ... through repark.sql(...) and collect the \
+             result"
         ),
     };
     format!(
@@ -135,6 +143,9 @@ pub(crate) fn copy_destination(url: &str) -> String {
         None => (None, trimmed),
     };
     match (staged_name(segment), parent) {
+        (Some(""), Some("")) => "/".to_string(),
+        (Some(""), Some(parent)) => parent.to_string(),
+        (Some(""), None) => ".".to_string(),
         (Some(name), Some(parent)) => format!("{parent}/{name}"),
         (Some(name), None) => name.to_string(),
         (None, _) => url.to_string(),
@@ -150,8 +161,11 @@ fn staged_name(segment: &str) -> Option<&str> {
     {
         return None;
     }
-    let name = rest.get(STAGING_HEX_LEN..)?.strip_prefix('-')?;
-    (!name.is_empty() && name != STAGING_UNNAMED).then_some(name)
+    let tail = rest.get(STAGING_HEX_LEN..)?;
+    if tail.is_empty() {
+        return Some("");
+    }
+    tail.strip_prefix('-').filter(|name| !name.is_empty())
 }
 
 #[allow(clippy::missing_errors_doc, clippy::too_many_arguments)]
