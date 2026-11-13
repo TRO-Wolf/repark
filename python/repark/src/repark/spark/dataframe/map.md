@@ -1806,7 +1806,8 @@ facade already knows the exact field — `_bind_engine_display_column`, `_rebind
 `select`, `df["x"]`, `F.col` rebinds) stays a plain column and keeps the ambiguity rule.
 `select("*")` expands through `_iter_bound_columns`, so `selectExpr("*")`, `withColumn(s)`,
 `toDF` and `fillna` re-project by attribute; `dropDuplicates(subset)` keys every field matching a
-subset name ignoring case, as Spark does, bound by attribute; `drop` sends an origin Column's
+subset name ignoring case, as Spark does, bound by attribute (SIGNED-ZERO-NORMALIZE-1 delta 2: its float keys are
+normalised by input position through `subset_resolve._normalized_keys`, so a self-join's renamed fields are reached); `drop` sends an origin Column's
 engine name as an exact attribute. `core.py` 3979 → 3976.
 U11-EDGE-1 round 6 (2026-09-26, V-001): `_select_via_qcol_sql` registers its scratch view over
 `_native.attribute_copies(plan)` and rewrites each resolved QCOL token — and each rebound bare

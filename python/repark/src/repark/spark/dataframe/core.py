@@ -2717,8 +2717,8 @@ class DataFrame:
             order_cols = [self._bind_schema_column(name, name) for name in resolved]
         window = Window.partitionBy(*order_cols).orderBy(*order_cols)
         ranked = self.with_column("__repark_dd_rn", F.row_number().over(window))
-        filtered = ranked.filter(F.col("__repark_dd_rn") == F.lit(1))
-        return _subset_resolve._normalized_keys(filtered.drop("__repark_dd_rn"), resolved)
+        filtered = ranked.filter(F.col("__repark_dd_rn") == F.lit(1)).drop("__repark_dd_rn")
+        return _subset_resolve._normalized_keys(filtered, all_engine, resolved)
 
     dropDuplicates = drop_duplicates  # noqa: N815 — deliberate PySpark-compatible camelCase alias
 

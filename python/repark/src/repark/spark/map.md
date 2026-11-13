@@ -501,6 +501,9 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   `_LEGACY_ERROR_TEMP_1201`; `_bound_subset_positions` binds each `fillna`/`dropna` key with
   ambiguity refusal and guarded fan-out, missing with `UNRESOLVED_COLUMN.WITH_SUGGESTION`. No module
   docstring: the lane's no-comments ruling covers the new file; the contract lives here.
+  **SIGNED-ZERO-NORMALIZE-1 part B part 1, delta 2 (2026-11-13):** `_normalized_keys(frame, input_names, keys)`
+  hands the key positions of the `dropDuplicates` input to `_native.normalized_float_keys` and spawns the
+  result with the frame's identity, so the output keeps every field's relation, name, metadata and id.
   **ATTR-ID-1 S3d follow-up (2026-10-01):** the insensitive folds are codepoint Java (A:
   `toLowerCase`; B: `==`/upper/lower per codepoint) over int-version Java tables, so expansion pairs
   (`ß`/`SS`, U+0130/`i`+U+0307, U+FB00/`FF`) and newer-than-Java scripts (Vithkuqi, U+A7Cx) miss;

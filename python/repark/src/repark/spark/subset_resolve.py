@@ -270,25 +270,9 @@ def _fanout_subset(frame: Any, names: list[str]) -> list[str]:
     return keyed
 
 
-def _normalized_keys(frame: Any, engine_keys: list[str]) -> Any:
-    from repark.spark.functions import _scalar
-    from repark.spark.types import DoubleType, FloatType
-
-    engine_names = list(frame._engine_names or frame.columns)
-    fields = frame.schema.fields
-    keyed = {
-        position
-        for position, name in enumerate(engine_names)
-        if name in engine_keys and isinstance(fields[position].dataType, (DoubleType, FloatType))
-    }
-    if not keyed:
+def _normalized_keys(frame: Any, input_names: list[str], engine_keys: list[str]) -> Any:
+    positions = [position for position, name in enumerate(input_names) if name in engine_keys]
+    projected = _native.normalized_float_keys(frame._plan(), positions)
+    if projected is None:
         return frame
-    bounds = frame._iter_bound_columns()
-    return frame.select(
-        *[
-            _scalar("__repark_normalize_zero__", bound).alias(fields[position].name)
-            if position in keyed
-            else bound
-            for position, bound in enumerate(bounds)
-        ]
-    )
+    return frame._spawn_preserving_identity(projected)

@@ -22,6 +22,10 @@ pins.
 - [test_dataframe_x3_census.py](test_dataframe_x3_census.py) — Census pins — DataFrame error-class seed + high-leverage surface (test_dataframe).
 - [test_declare_sorted.py](test_declare_sorted.py) — Facade pins for the SE-1 ``declareSorted`` door (repark extension, not PySpark).
 - [test_declare_sorted_tighten.py](test_declare_sorted_tighten.py) — Facade pins for ``declareSorted(..., tightenNulls=True)``.
+- [test_drop_duplicates_schema.py](test_drop_duplicates_schema.py) — SIGNED-ZERO-NORMALIZE-1 part B part 1, delta 2:
+  `dropDuplicates(subset)` keeps its input's schema (names, order, ids, types, nullability, facade qualifiers; plan
+  relation qualifiers, engine names and field metadata as the same chain over a non-float key) over eight frame
+  shapes, and every qualified reference to the normalised key resolves (`a.*`, `a.d`, joins, a self-join, a write).
 - [test_df_batch2.py](test_df_batch2.py) — R-DF-BATCH2 — cube/rollup/unpivot/explain/views + loud census.
 - [test_df_eager_1.py](test_df_eager_1.py) — DF-EAGER-1 step 1: red-first pins for .eager(), .compute() and .lazy().
 - [test_df_easy.py](test_df_easy.py) — R-DF-EASY — easy DataFrame lowerings (oracle shapes; coverage over completeness).
