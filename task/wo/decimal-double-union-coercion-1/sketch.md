@@ -241,4 +241,18 @@ scoped label, and both carry wrong writes.
   does), or treat it as a Spark quirk? **Default: follow Spark, and pin both.** Rests on
   `merge_on_zero_today`, `merge_on_zero_widened` and `zero_eq_today`.
 
+## Rulings (owner, 2026-11-13)
+
+The owner, about 14:52 UTC, verbatim: **"Defaults, and merge #1323 when green"**. Every question above is ruled to its
+default:
+- **Q1′:** seat V plus seat E.
+- **Q2:** the native door stays on DataFusion's answer; it is recorded.
+- **Q3′:** the `array` and `map` constructors fold into S2; the nested leaves get a card.
+- **Q4:** a pre-fix stored view keeps its stored schema; the release note says to re-create it.
+- **Q5′:** the build waits for SIGNED-ZERO-NORMALIZE-1 part B and DOUBLE-DECIMAL-STORE-ROUND-1, and the nine shapes
+  are its pins.
+- **Q6:** DECIMAL-FLOAT-ARITH-1 is a card.
+- **Q7:** pruning comes later; today's "no decimal pushdown" is pinned.
+- **Q8:** `MERGE … ON` follows Spark, and both forms are pinned.
+
 Up: [map.md](map.md).
