@@ -6,7 +6,8 @@ both verifiers of PR #1316 (FEXPR-WINDOW-NULL-ORDER-1); owner ruling of 2026-11-
 anything you need. Then proceed with defaults.": card it at S2 and fix it before the scoped label
 ICE-V2-FLAT-AWS-LABEL-1, as a small unit in the second-builder queue after Q10; the native door keeps
 its own dialect (ruling Q6). **Status:** **FIXED by this unit** (branch
-`fix/filter-string-null-order-1`, built on #1316, which has since merged).
+`fix/filter-string-null-order-1`, built on #1316, which has since merged); merged as #1321, `1d9d2808`,
+on the owner's ruling of 2026-11-13 ([rulings](../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-13.md), item 1).
 
 ## Why
 
@@ -89,3 +90,29 @@ when the text states no placement. The marker changes nothing else: only `predic
   here, where Spark joins. The probe uses an independent `VALUES` source for the right side.
 - **F3. An `IN` subquery in a projection refuses** (`selectExpr("(ki IN (SELECT …)) AS r")`), as
   #1316's verifiers recorded (`q05`); the filter forms answer.
+
+## Verifier findings (#1321, appended 2026-11-13)
+
+Both verifiers returned PASS. F2 and F3 above are the last records batch's held items; they reached main with this
+card in #1321. The class (c) findings below are pre-existing (the same on base `7dd0ca20` and head `f4f27dcc`) and
+outside this unit; none is carded yet unless named.
+
+- **Names inside a string predicate's subquery are not found** (#1321 verifier 1, C2; verifier 2, c1). A temp view
+  or a catalog table named inside a subquery of a string `filter` / `where`, or of `F.expr`, fails with
+  `table 'datafusion.public.w' not found` or `table 'hd.db.src' not found`, on every frame-state door; `spark.sql`
+  and Spark resolve them. Loud.
+- **Optimizer ambiguity failures** (verifier 1, C3; verifier 2, c2). A scalar or `IN` subquery in a string filter
+  over a `unionByName`, `toDF`, `withColumnRenamed`, projected or aggregated frame fails with `Optimizer rule
+  'scalar_subquery_to_join' failed` or `'decorrelate_predicate_subquery' failed`; verifier 2's text is `Schema
+  contains qualified field name __scalar_sq_2.id and unqualified field name id which would be ambiguous`, when the
+  subquery's output column shares an outer unqualified name. Spark answers. Loud.
+- **Mixed-session frames** (verifier 1, C4). A native frame joined or unioned with a Spark-door frame
+  (`repark.sql(…).join(spark_frame)`, `.unionByName(spark_frame)`) plans in the native dialect, so it answers
+  `nulls_max`; `spark_frame.join(native_frame)` fails with an Arrow schema error.
+- **Per-call plan cost, S4** (verifier 1, (a), non-blocking). A string filter now clones `SessionState` on the
+  primary path. Construction of `w.filter("a > 1 AND b < 9")` went from 106–108 µs to 123–126 µs per call, about
+  +17 µs (+16 %), over two interleaved runs of five reps of 2000 each. Execution is unaffected; a note for the perf
+  ledger.
+- **Parquet NaN equality** (verifier 1, C1, S2): carded as
+  [PARQUET-NAN-EQUALITY-1](parquet-nan-equality-1-card-2026-11-13.md).
+- **F3 again** (verifier 2, c3): `selectExpr("(… IN (SELECT …)) AS r")` still refuses, unchanged.

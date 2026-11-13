@@ -95,3 +95,27 @@ Findings, not repaired here; each wants its own card or unit:
 Check mode: recorded goldens, no JVM, every PR. The Rust replay takes 29.9 s for the 3820 path rows and 0.6 s for the 84 catalog rows (debug build).
 
 **Retires:** retired by this unit. Each finding above that names a reader is a lead for its own card.
+
+## Verifier observations (#1322, appended 2026-11-13; all S4)
+
+#1322's verifier returned PASS with no finding at S1, S2 or S3, and no golden records a wrong read or write as
+declared. It merged as `16974986` on the owner's ruling of 2026-11-13
+([rulings](../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-13.md), items 1 and 6, which confirm the C-005
+controls and D5 as declared classes). Its six observations, each S4:
+
+- **O1. The `path_insert` state check is vacuous.** The replay stops at `plan_table_write`, so nothing could write;
+  "no state change" rests on the plan refusal. The facade does stop there for a path target, and the verifier's
+  real-facade probe saw no change on 10 D7 appends.
+- **O2. The native D1 staged rows check presence only.** They assert that a failure was seen, not RePark's failure
+  text, so a change of the D1 text would pass. The Spark column is compared exactly.
+- **O3. Cards are not checked in code.** A golden's card is a free string; only the count per card is pinned. The
+  verifier's data audit found every golden on the right fixture class.
+- **O4. D7 covers more than divergences.** The D7 label sits on all 1910 appends, including 126 rows where Spark
+  refuses with the same `TABLE_OR_VIEW_NOT_FOUND`. Over-broad, not a mis-declaration. D7 names a registry row
+  (ICE-WRITE-DF-SAVE-1), not a card file, and D4 has no card id.
+- **O5. The builder's door probe ran on an empty metadata directory.** The verifier's probe on populated fixtures
+  closed that gap for the 12 sampled catalog rows.
+- **O6. D5 is pinned against an open card.** The D5 golden carries RePark's literal `<location>` placeholder, while
+  the HADOOP-HINT-ZERO-TEXT-1 card quoted the old text; that card's quote is updated (2026-11-13).
+- **Records note.** The `iceberg_path/map.md` row dropped the historical note "Red on `05d0437d` with the pilot's
+  600 recorded mismatches"; the sha survives in the hadoop-discovery-rule-1 ledger.
