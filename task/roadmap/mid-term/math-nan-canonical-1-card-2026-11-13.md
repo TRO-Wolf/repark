@@ -4,7 +4,7 @@
 2026-11-13: the step-0 hand-back, halted at step 2. Its evidence (`task/wo/math-nan-canonical-1/evidence/step0/`) is on
 branch `fix/math-nan-canonical-1` at `a3f3f683`, not merged at filing.
 
-**Status:** awaiting the owner's choice. This is the follow-up unit the owner queued on
+**Status:** closed 2026-11-13: the owner chose (C), carried by [NAN-WRITE-CANONICAL-1](nan-write-canonical-1-card-2026-11-13.md); (B) is the first unit after the label. This is the follow-up unit the owner queued on
 [NAN-PAYLOAD-1](nan-payload-1-card-2026-11-12.md); it halted before any product code.
 
 **Measured on:** main `168dd934`, release build, against Spark 4.1.2 at default ANSI.
@@ -52,3 +52,8 @@ branch `fix/math-nan-canonical-1` at `a3f3f683`, not merged at filing.
 ## Close
 
 The owner chooses (A), (B) or (C); the unit resumes at step 2 on that seat, or the card records a decline.
+
+**Closed (2026-11-13):** the owner ruled "Defaults" on Q11: (C) before the label, as [NAN-WRITE-CANONICAL-1](nan-write-canonical-1-card-2026-11-13.md) (a new unit, not this
+one resumed); a label exclusion for in-query answers over a computed NaN; (B) first after the label. That unit's
+seat is the fork's file writer and partition calculator, not part B's `canonical_f64`, which also rewrites
+`-0.0`.

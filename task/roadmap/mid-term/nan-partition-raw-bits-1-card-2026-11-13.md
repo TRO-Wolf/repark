@@ -3,7 +3,7 @@
 **Date:** 2026-11-13. **Filed by:** the records clerk (`claude-opus-5-5`). **Source:** NAN-PARTITION-VALUE-1 (PR #1319,
 fork PR #383) verifier 1, 2026-11-13 (finding c2); verifier 2, 2026-11-13 (finding c2).
 
-**Status:** filed 2026-11-13, not dispatched. Severity **S2**: RePark's own read of its table misses rows; Spark reads
+**Status:** closed by [NAN-WRITE-CANONICAL-1](nan-write-canonical-1-card-2026-11-13.md) (2026-11-13, branch, not merged); filed 2026-11-13. Severity **S2**: RePark's own read of its table misses rows; Spark reads
 the table right.
 
 ## Measured
@@ -30,3 +30,9 @@ canonicalising seat at RePark's Iceberg write batch, would cover this writer if 
 
 Every RePark write door stores a canonical NaN partition value, and `= NaN` and `isnan` find every NaN row on RePark's
 own read, pinned per door at format v2 and v3.
+
+**Closed by [NAN-WRITE-CANONICAL-1](nan-write-canonical-1-card-2026-11-13.md) (2026-11-13):** the fork's `PartitionValueCalculator` canonicalises every NaN partition value on
+Parquet, ORC and Avro. On its head (`e100717f`, fork `d6592644`) every partitioned door stores one canonical NaN
+partition value, as Spark does, and `= NaN` and `isnan` find all eight NaN rows on RePark's read
+([table.md §5](../../wo/nan-write-canonical-1/evidence/step0/table.md)). Pinned at format v2 by
+`test_nan_write_canonical_1.py`; the fork's calculator test covers every NaN bit pattern.

@@ -3,7 +3,7 @@
 **Date:** 2026-11-13. **Filed by:** the records clerk (`claude-opus-5-5`). **Source:** NAN-PARTITION-VALUE-1 (PR #1319,
 fork PR #383) verifier 1, 2026-11-13 (finding c3); verifier 2, 2026-11-13 (finding c1).
 
-**Status:** filed 2026-11-13, not dispatched. Severity **S4**: layout only.
+**Status:** closed by [NAN-WRITE-CANONICAL-1](nan-write-canonical-1-card-2026-11-13.md) (2026-11-13, branch, not merged); filed 2026-11-13. Severity **S4**: layout only.
 
 ## Measured
 
@@ -23,3 +23,9 @@ None given by the sources.
 
 RePark writes one file per NaN partition, as Spark does, or a recorded ruling keeps the split, with the `.files` and
 `.partitions` cells pinned.
+
+**Closed by [NAN-WRITE-CANONICAL-1](nan-write-canonical-1-card-2026-11-13.md) (2026-11-13):** with the partition value canonical, the splitter keys every NaN pattern as one
+partition, and RePark's plan-path routing (`distribution.rs`) hashes the canonical value. On its head every
+partitioned door writes the NaN partition as one file, as Spark does
+([table.md §5](../../wo/nan-write-canonical-1/evidence/step0/table.md)); the CTAS and `saveAsTable`-overwrite file
+counts are pinned in `test_nan_write_canonical_1.py`.
