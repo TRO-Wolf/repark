@@ -1244,6 +1244,33 @@ perfectly good read.
   `ctas-failure` leg of `aws-acceptance`. On S3 Tables K asserts that the kill landed
   (`-SIGKILL`), that the leftover reads exactly zero rows (never a partial set), and that
   `CREATE OR REPLACE` recovers it. S1 and R1 are as above.
+#### LOCAL-DROP-RECREATE-STALE-WRITE-1 — DATED ROW 2026-11-12: a Hadoop drop and recreate can write on the dropped table's metadata
+
+- **repark** — FIXED by LOCAL-DROP-RECREATE-STALE-WRITE-1 (fork PR #382, merged as `a8bd3a1e`,
+  pinned here; card
+  [local-drop-recreate-stale-write-1](../task/roadmap/mid-term/local-drop-recreate-stale-write-1-card-2026-11-12.md)).
+  Found on 1.5.6 (fork `66901f02`): on a `type=hadoop` catalog the session metadata cache is
+  keyed by the metadata path, Hadoop naming reuses `v1`, `v2`, … after a drop, and the staged
+  replace behind `CREATE OR REPLACE` and RTAS neither evicted its base nor cached the file it
+  wrote. A dropped table's entry at a reused `vN` then served the recreated table: `C,I7,R,D,C,R`
+  read id 7, and an `INSERT`, `MERGE`, `UPDATE`, `DELETE` or `ALTER … ADD COLUMN` on top committed
+  the dropped table's uuid and snapshots into the next `vN` (S1, a wrong write; Spark reading the
+  directory reads the dropped rows). Replace-only history (`R1,R2,R3,D,R4,R5`) read R2, and with
+  `PURGE` the stale base failed on a purged manifest list. The fix keeps the memory catalog's
+  invariant: every write puts the location it wrote, every pointer move evicts the location it
+  left, and a Hadoop drop evicts `v1` through the current version. Glue and S3 Tables name files
+  with a uuid and never reuse a path; their replace-path cache leak is a separate card.
+- **Workaround on 1.5.6** — set `repark.iceberg.metadataCache=false` on Hadoop catalogs.
+- **Apache Spark** — the same sequences read and write the recreated table.
+  *(oracle: measured, Spark 4.1.2 + Iceberg 1.11.0, Hadoop catalog.)*
+- **Pin** — `python/repark/tests/iceberg/test_local_drop_recreate_stale_write_1.py` (each cell
+  checks the session read, a path read through `StaticTable`, and the current file's uuid; a
+  live Spark cell reads the six wrong-write rows by path); the fork's
+  `crates/iceberg/src/catalog/memory/hadoop_cache_invariant_tests.rs` and
+  `hadoop_cache_differential_tests.rs` (cache on against cache off over 96 seeded sequences).
+- **Rationale** — FIXED 2026-11-13. Owner ruling 2026-11-12 ("Go with the defaults"): an S1
+  wrong write that blocks the full format-v2 label, not the scoped label
+  (ICE-V2-FLAT-AWS-LABEL-1); the fix rides v1.5.7.
 
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
 
@@ -2365,6 +2392,43 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
 - **Status as of 2026-10-27 on `105d4625883fa10639c938a99cf411b9e1d26647`:** unchanged: the default
   pool on cgroup v1, macOS and Windows still needs an explicit budget. Carried on the format-v2
   label (ICE-V2-LABEL-1).
+
+### 2.8 Multiset set operations
+
+#### SQL-SETOP-ALL-REFUSE-1 — SQL `INTERSECT ALL`, `EXCEPT ALL` and `MINUS ALL` refuse on both SQL doors (declared refusal, owner ruling 2026-11-12)
+
+- **repark** — a statement that names `INTERSECT ALL`, `EXCEPT ALL` or `MINUS ALL` anywhere (top
+  level, a CTE, a scalar or `IN` subquery, a temporary or persistent view body, the source of
+  `INSERT`, CTAS or `MERGE USING`, nested in `UNION ALL`, under `EXPLAIN`, in any letter case,
+  with whitespace or a comment between the words) refuses on `spark.sql` and on `repark.sql()`
+  with `UnsupportedOperationException`: `SQL INTERSECT ALL multiset semantics are not
+  Spark-correct on this engine yet; use INTERSECT for distinct bags, or number each side's
+  duplicates with row_number() and INTERSECT the numbered rows (SQL-SETOP-ALL-MULTISET-1)` (the
+  `EXCEPT ALL` and `MINUS ALL` texts name `EXCEPT`). It refuses before either door plans, so a
+  refused `INSERT`, CTAS or `MERGE` writes nothing: no snapshot, no rows, no CTAS table. The
+  `F.expr`, `selectExpr` and `filter` fragments and a stored Iceberg view body that name the
+  operator refuse the same way; the DataFrame `intersectAll` / `exceptAll` refusals
+  ([EX-DF-7](#ex-df-7--intersectall--intersect_all-refuse-spark-answers-the-multiset-intersect))
+  are unchanged. Before this refusal both doors answered the wrong multiset for every column
+  type: on `l = {1, 1, 1, 2, 2, 4}`, `r = {1, 2, 2, 3}`, `INTERSECT ALL` answered
+  `1, 1, 1, 2, 2` and `EXCEPT ALL` answered `4`, and the writes stored those rows; `MINUS ALL`
+  was refused by DataFusion (`MINUS ALL not implemented`).
+- **Apache Spark** — `INTERSECT ALL` keeps each row at the smaller of the two sides'
+  multiplicities (`1, 2, 2`); `EXCEPT ALL` and its synonym `MINUS ALL` subtract the right side's
+  count (`1, 1, 4`); every shape above answers, and the writes store those rows. *(oracle:
+  recorded from PySpark 4.1.2 with Iceberg 1.11.0, 2026-11-12,
+  `task/wo/sql-setop-all-refuse-1/evidence/step0/`.)*
+- **Pin** — `python/repark/tests/sql/test_sql_setop_all_refuse_1.py::test_every_shape_refuses_before_any_write`
+  (with `test_every_spelling_refuses`, `test_sql_fragments_refuse_the_same_way`,
+  `test_a_stored_view_body_naming_the_operator_refuses_at_read` and the controls
+  `test_controls_keep_answering`), and the seat tests in
+  `crates/repark-core/src/pre_execute/setop_all/tests.rs`.
+- **Rationale** — DECLARED refusal, owner ruling 2026-11-12, verbatim "Go with the defaults"
+  (signed-zero part B, Q2): a refusal is honest where the answer is silently wrong. It blocks
+  the scoped label ICE-V2-FLAT-AWS-LABEL-1 and ships in v1.5.7. The fix is card
+  SQL-SETOP-ALL-MULTISET-1
+  ([card](../task/roadmap/mid-term/sql-setop-all-multiset-1-card-2026-11-12.md)); the row
+  retires when it lands.
 
 ## 3. Identifier resolution (DECLARED)
 

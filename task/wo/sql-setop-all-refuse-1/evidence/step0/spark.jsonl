@@ -1,0 +1,96 @@
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[1], [2], [2]], "shape": "top"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[1], [2], [2]], "shape": "cte"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[3]], "shape": "scalar"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[1], [2], [2]], "shape": "in"}
+{"create": {"kind": "rows", "rows": []}, "door": "spark", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[1], [2], [2]], "shape": "temp-view"}
+{"create": {"kind": "rows", "rows": []}, "door": "spark", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[1], [2], [2]], "shape": "persistent-view"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[1], [2], [2]], "shape": "iceberg-source"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [], "shape": "insert", "stored": [[1], [2], [2]]}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": false, "snapshots": null}, "door": "spark", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [], "shape": "ctas", "stored": [[1], [2], [2]]}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [], "shape": "merge", "stored": [[1], [2], [2]]}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": [[1], [2], [2], [9]], "shape": "union-nested"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "INTERSECT ALL", "rows": "elided", "shape": "explain"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[1], [1], [4]], "shape": "top"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[1], [1], [4]], "shape": "cte"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[3]], "shape": "scalar"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[1]], "shape": "in"}
+{"create": {"kind": "rows", "rows": []}, "door": "spark", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[1], [1], [4]], "shape": "temp-view"}
+{"create": {"kind": "rows", "rows": []}, "door": "spark", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[1], [1], [4]], "shape": "persistent-view"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[1], [1], [4]], "shape": "iceberg-source"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [], "shape": "insert", "stored": [[1], [1], [4]]}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": false, "snapshots": null}, "door": "spark", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [], "shape": "ctas", "stored": [[1], [1], [4]]}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [], "shape": "merge", "stored": [[1], [1], [4]]}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": [[1], [1], [4], [9]], "shape": "union-nested"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "EXCEPT ALL", "rows": "elided", "shape": "explain"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "MINUS ALL", "rows": [[1], [1], [4]], "shape": "top"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "MINUS ALL", "rows": [[1], [1], [4]], "shape": "cte"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "MINUS ALL", "rows": [[3]], "shape": "scalar"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "MINUS ALL", "rows": [[1]], "shape": "in"}
+{"create": {"kind": "rows", "rows": []}, "door": "spark", "group": "refuse", "kind": "rows", "op": "MINUS ALL", "rows": [[1], [1], [4]], "shape": "temp-view"}
+{"create": {"kind": "rows", "rows": []}, "door": "spark", "group": "refuse", "kind": "rows", "op": "MINUS ALL", "rows": [[1], [1], [4]], "shape": "persistent-view"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "MINUS ALL", "rows": [[1], [1], [4]], "shape": "iceberg-source"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "refuse", "kind": "rows", "op": "MINUS ALL", "rows": [], "shape": "insert", "stored": [[1], [1], [4]]}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": false, "snapshots": null}, "door": "spark", "group": "refuse", "kind": "rows", "op": "MINUS ALL", "rows": [], "shape": "ctas", "stored": [[1], [1], [4]]}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "refuse", "kind": "rows", "op": "MINUS ALL", "rows": [], "shape": "merge", "stored": [[1], [1], [4]]}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "MINUS ALL", "rows": [[1], [1], [4], [9]], "shape": "union-nested"}
+{"door": "spark", "group": "refuse", "kind": "rows", "op": "MINUS ALL", "rows": "elided", "shape": "explain"}
+{"door": "spark", "group": "spelling", "kind": "rows", "op": "intersect all", "rows": [[1], [2], [2]], "shape": "top"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "spelling", "kind": "rows", "op": "intersect all", "rows": [], "shape": "insert", "stored": [[1], [2], [2]]}
+{"door": "spark", "group": "spelling", "kind": "rows", "op": "Intersect All", "rows": [[1], [2], [2]], "shape": "top"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "spelling", "kind": "rows", "op": "Intersect All", "rows": [], "shape": "insert", "stored": [[1], [2], [2]]}
+{"door": "spark", "group": "spelling", "kind": "rows", "op": "except all", "rows": [[1], [1], [4]], "shape": "top"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "spelling", "kind": "rows", "op": "except all", "rows": [], "shape": "insert", "stored": [[1], [1], [4]]}
+{"door": "spark", "group": "spelling", "kind": "rows", "op": "ExCePt AlL", "rows": [[1], [1], [4]], "shape": "top"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "spelling", "kind": "rows", "op": "ExCePt AlL", "rows": [], "shape": "insert", "stored": [[1], [1], [4]]}
+{"door": "spark", "group": "spelling", "kind": "rows", "op": "minus all", "rows": [[1], [1], [4]], "shape": "top"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "spelling", "kind": "rows", "op": "minus all", "rows": [], "shape": "insert", "stored": [[1], [1], [4]]}
+{"door": "spark", "group": "spelling", "kind": "rows", "op": "MiNuS aLl", "rows": [[1], [1], [4]], "shape": "top"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "spelling", "kind": "rows", "op": "MiNuS aLl", "rows": [], "shape": "insert", "stored": [[1], [1], [4]]}
+{"door": "spark", "group": "spelling", "kind": "rows", "op": "INTERSECT /* gap */ ALL", "rows": [[1], [2], [2]], "shape": "top"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "spelling", "kind": "rows", "op": "INTERSECT /* gap */ ALL", "rows": [], "shape": "insert", "stored": [[1], [2], [2]]}
+{"door": "spark", "group": "spelling", "kind": "rows", "op": "EXCEPT\n  ALL", "rows": [[1], [1], [4]], "shape": "top"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "spelling", "kind": "rows", "op": "EXCEPT\n  ALL", "rows": [], "shape": "insert", "stored": [[1], [1], [4]]}
+{"door": "spark", "group": "control", "kind": "rows", "op": "UNION ALL", "rows": [[1], [1], [1], [1], [2], [2], [2], [2], [3], [4]], "shape": "top"}
+{"door": "spark", "group": "control", "kind": "rows", "op": "UNION ALL", "rows": [[1], [1], [1], [1], [2], [2], [2], [2], [3], [4]], "shape": "cte"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "control", "kind": "rows", "op": "UNION ALL", "rows": [], "shape": "insert", "stored": [[1], [1], [1], [1], [2], [2], [2], [2], [3], [4]]}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": false, "snapshots": null}, "door": "spark", "group": "control", "kind": "rows", "op": "UNION ALL", "rows": [], "shape": "ctas", "stored": [[1], [1], [1], [1], [2], [2], [2], [2], [3], [4]]}
+{"door": "spark", "group": "control", "kind": "rows", "op": "UNION", "rows": [[1], [2], [3], [4]], "shape": "top"}
+{"door": "spark", "group": "control", "kind": "rows", "op": "UNION", "rows": [[1], [2], [3], [4]], "shape": "cte"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "control", "kind": "rows", "op": "UNION", "rows": [], "shape": "insert", "stored": [[1], [2], [3], [4]]}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": false, "snapshots": null}, "door": "spark", "group": "control", "kind": "rows", "op": "UNION", "rows": [], "shape": "ctas", "stored": [[1], [2], [3], [4]]}
+{"door": "spark", "group": "control", "kind": "rows", "op": "INTERSECT", "rows": [[1], [2]], "shape": "top"}
+{"door": "spark", "group": "control", "kind": "rows", "op": "INTERSECT", "rows": [[1], [2]], "shape": "cte"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "control", "kind": "rows", "op": "INTERSECT", "rows": [], "shape": "insert", "stored": [[1], [2]]}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": false, "snapshots": null}, "door": "spark", "group": "control", "kind": "rows", "op": "INTERSECT", "rows": [], "shape": "ctas", "stored": [[1], [2]]}
+{"door": "spark", "group": "control", "kind": "rows", "op": "EXCEPT", "rows": [[4]], "shape": "top"}
+{"door": "spark", "group": "control", "kind": "rows", "op": "EXCEPT", "rows": [[4]], "shape": "cte"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "control", "kind": "rows", "op": "EXCEPT", "rows": [], "shape": "insert", "stored": [[4]]}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": false, "snapshots": null}, "door": "spark", "group": "control", "kind": "rows", "op": "EXCEPT", "rows": [], "shape": "ctas", "stored": [[4]]}
+{"door": "spark", "group": "control", "kind": "rows", "op": "EXCEPT DISTINCT", "rows": [[4]], "shape": "top"}
+{"door": "spark", "group": "control", "kind": "rows", "op": "EXCEPT DISTINCT", "rows": [[4]], "shape": "cte"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "control", "kind": "rows", "op": "EXCEPT DISTINCT", "rows": [], "shape": "insert", "stored": [[4]]}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": false, "snapshots": null}, "door": "spark", "group": "control", "kind": "rows", "op": "EXCEPT DISTINCT", "rows": [], "shape": "ctas", "stored": [[4]]}
+{"door": "spark", "group": "control", "kind": "rows", "op": "INTERSECT DISTINCT", "rows": [[1], [2]], "shape": "top"}
+{"door": "spark", "group": "control", "kind": "rows", "op": "INTERSECT DISTINCT", "rows": [[1], [2]], "shape": "cte"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "control", "kind": "rows", "op": "INTERSECT DISTINCT", "rows": [], "shape": "insert", "stored": [[1], [2]]}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": false, "snapshots": null}, "door": "spark", "group": "control", "kind": "rows", "op": "INTERSECT DISTINCT", "rows": [], "shape": "ctas", "stored": [[1], [2]]}
+{"door": "spark", "group": "control", "kind": "rows", "op": "MINUS", "rows": [[4]], "shape": "top"}
+{"door": "spark", "group": "control", "kind": "rows", "op": "MINUS", "rows": [[4]], "shape": "cte"}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": true, "snapshots": 0}, "door": "spark", "group": "control", "kind": "rows", "op": "MINUS", "rows": [], "shape": "insert", "stored": [[4]]}
+{"after": {"exists": true, "snapshots": 1}, "before": {"exists": false, "snapshots": null}, "door": "spark", "group": "control", "kind": "rows", "op": "MINUS", "rows": [], "shape": "ctas", "stored": [[4]]}
+{"door": "spark", "group": "text-control", "kind": "rows", "op": "string-literal", "rows": [["a INTERSECT ALL b"]], "shape": "top"}
+{"door": "spark", "group": "text-control", "kind": "rows", "op": "block-comment", "rows": [[1]], "shape": "top"}
+{"door": "spark", "group": "text-control", "kind": "rows", "op": "line-comment", "rows": [[1]], "shape": "top"}
+{"door": "spark", "group": "text-control", "kind": "rows", "op": "quoted-ident", "rows": [[1]], "shape": "top"}
+{"door": "spark", "group": "text-control", "kind": "rows", "op": "all-prefix-ident", "rows": [[1], [2]], "shape": "top"}
+{"door": "spark", "group": "workaround", "kind": "rows", "op": "numbered-intersect", "rows": [[1], [2], [2]], "shape": "top"}
+{"door": "spark", "group": "workaround", "kind": "rows", "op": "numbered-except", "rows": [[1], [1], [4]], "shape": "top"}
+{"door": "spark", "group": "dataframe", "kind": "rows", "op": "df-intersectAll", "rows": [[1], [2], [2]], "shape": "api"}
+{"door": "spark", "group": "dataframe", "kind": "rows", "op": "df-exceptAll", "rows": [[1], [1], [4]], "shape": "api"}
+{"door": "spark", "group": "dataframe", "kind": "rows", "op": "df-intersect", "rows": [[1], [2]], "shape": "api"}
+{"door": "spark", "group": "dataframe", "kind": "rows", "op": "df-subtract", "rows": [[4]], "shape": "api"}
+{"door": "spark", "group": "dataframe", "kind": "rows", "op": "fexpr-scalar", "rows": [[3]], "shape": "api"}
+{"door": "spark", "group": "dataframe", "kind": "rows", "op": "fexpr-filter-in", "rows": [[1]], "shape": "api"}
+{"door": "spark", "group": "dataframe", "kind": "rows", "op": "fexpr-filter-col", "rows": [[1]], "shape": "api"}
+{"door": "spark", "group": "dataframe", "kind": "rows", "op": "fexpr-control", "rows": [[2]], "shape": "api"}
+{"door": "spark", "group": "dataframe", "kind": "rows", "op": "selectexpr-scalar", "rows": [[3], [3], [3], [3]], "shape": "api"}

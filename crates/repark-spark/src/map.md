@@ -27,7 +27,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
 ## Contents
 
 - `lib.rs` — re-exports G15 collation valves and FNP-15/16 `refuse_declared_function_in_*`
-  from `repark-functions`, plus `refuse_sql_fragment` for `F.expr` / `filter_sql`.
+  from `repark-functions`, plus `refuse_sql_fragment` for `F.expr` / `filter_sql`, which also ends in `repark_core::refuse_multiset_set_operation` (SQL-SETOP-ALL-REFUSE-1).
   **STAMP-2-R5P6-2 (2026-10-07):** re-exports `normalize/map_ordering.rs`'s `analyze_built_plan` on
   the existing `normalize` line (the root stays at 156), for the binding's native join door.
 - `insert_by_name.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `insert_by_name/nested.rs` (`refuse_nested_mismatch`) is
@@ -100,7 +100,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `execute_in_session`, which takes the session's `TempViewSession` (None for the public router
   doors) and, after canonicalization and before `execute_calibrated`, hands the statement to
   `view_ddl::temp_ddl::route_temp_view_statement`; anything it does not own falls through unchanged.
-- `router.rs` — `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_with_statement_options` / `execute_time_travelled` / `execute_inner`
+  `execute` / `execute_with_read_only` / `execute_static_overwrite` / `execute_with_statement_options` / `execute_time_travelled` / `execute_inner`
   + pre-parse intercepts (alter I6/I7, write-order DDL, create-namespace, describe/show, ref DDL) + the
   write-to-branch sniff; full router arm set ([router/map.md](router/map.md) for the tests). **IDENT-DIALECT-1 (2026-11-02):** the grammar refusal runs before expansion. The MERGE arm delegates to `merge::execute_merge_statement` in `merge.rs` (OUTPUT refusal, timestamp_ns cast lowering; moved out of `router.rs` in IPI-40 PR6a1).
   **ICE-CATALOG-SESSION-1 S4 (2026-09-20):** `Statement::{ShowCatalogs, ShowTables,
@@ -213,7 +213,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
 - `insert_overwrite.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the stage-then-swap path hands `conform_types` the door's
   mode (by name for `overwritePartitions`, by position otherwise) and the table label. The
   static-partition route keeps no pairing site: hint H-1 guards its cast.
-- `insert_overwrite.rs` — **RP-56 (2026-09-28):** the empty-overwrite target probe reads through a
+  **RP-56 (2026-09-28):** the empty-overwrite target probe reads through a
   scratch alias (engine machinery, like its sibling probes), and the ambiguous-overwrite read-back
   counts (`SELECT 1 … HAVING COUNT(*)=1`) instead of starring. before the fragment rewrite. **WO
   CASESENS-1 slice 1 (2026-09-27):** a parenthesized derived source is folded as text
@@ -330,7 +330,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   no-write-options arm is the append that stands in for the fork's DataFusion insert exec, so
   it alone sets `WriterStagingOverrides::fork_insert_dictionary_rule` and writes that exec's
   Parquet layout; the option-carrying arm keeps Java's dictionary default.
-- `append_with_options.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** the owned
+  **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** the owned
   append plans the WHOLE insert, not a reconstructed `SELECT`. `spark_ast::execute_insert_source`
   runs the passthrough pipeline (marker rewrite, eager analysis, `fill_insert_plan`, the
   timestamp-ns passes) and executes the resulting `Dml` node's INPUT, so the owned route carries
