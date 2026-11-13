@@ -132,19 +132,18 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 
 ## Path expressions
 
-The move put every file here one level below the old flat directory. These files had a
-path expression repointed in the same unit and no other line changed:
+The move put every file here one level below the old flat directory. These files had a path expression repointed in the same unit and no other line changed ("new path": names its own or a sibling's new path in a docstring or recorded string):
 
 | file | change |
 |---|---|
-| `_record_branch_ops_1.py`, `_record_ice_drop_ns_1_oracle.py`, `_record_ice_procs_route_1_oracle.py`, `_record_ice_replace_columns_1_oracle.py`, `_record_ice_tt_resolve_1_oracle.py`, `_record_v3_multiarg_1.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` when run as a script. |
-| `_record_ice_column_reorder_1.py` | its usage block sets `PYTHONPATH=python/repark/tests` for the root-helper import; names its own or a sibling's new path in a docstring or recorded string. |
-| `_record_ice_hadoop_vn_1.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` when run as a script; anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_ice_mixed_case_1.py`, `test_ice_mixed_case_1.py` | names its own or a sibling's new path in a docstring or recorded string; anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_ice_nan_pushdown_1.py` | names its own or a sibling's new path in a docstring or recorded string; reads the root `fixtures/` one level up. |
-| `_record_ice_page_prune_1.py` | its usage block sets `PYTHONPATH=python/repark/tests`; names its own or a sibling's new path in a docstring or recorded string; reads the root `fixtures/` one level up. |
+| `_record_branch_ops_1.py`, `_record_ice_drop_ns_1_oracle.py`, `_record_ice_procs_route_1_oracle.py`, `_record_ice_replace_columns_1_oracle.py`, `_record_ice_tt_resolve_1_oracle.py`, `_record_v3_multiarg_1.py` | new path; puts the tests root on `sys.path` when run as a script. |
+| `_record_ice_column_reorder_1.py` | its usage block sets `PYTHONPATH=python/repark/tests` for the root-helper import; new path. |
+| `_record_ice_hadoop_vn_1.py` | new path; puts the tests root on `sys.path` when run as a script; anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_mixed_case_1.py`, `test_ice_mixed_case_1.py` | new path; anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_nan_pushdown_1.py` | new path; reads the root `fixtures/` one level up. |
+| `_record_ice_page_prune_1.py` | its usage block sets `PYTHONPATH=python/repark/tests`; new path; reads the root `fixtures/` one level up. |
 | `_record_ice_promote_read_1.py` | puts the tests root on `sys.path` when run as a script; anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_ice_rdf_sort_parse_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_ice_rdf_sort_parse_1_oracle.py` | new path. |
 | `_record_rdf_options_1_oracle.py`, `test_ice_hadoop_vn_1.py`, `_record_ice_nested_evo_1.py`, `test_mw8_runbook.py`, `test_rp3_c009_write_default.py`, `test_rp4_c004_to_branch.py`, `test_sql_harden_cutover.py`, `test_v3_lineage_columns.py`, `test_v3_live_oracle.py`, `test_v3e3_fixtures.py`, `test_v3e4_refs_time_travel.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `test_ice_nan_pushdown_1.py`, `test_ice_page_prune_1.py` | reads the root `fixtures/` one level up. |
 
