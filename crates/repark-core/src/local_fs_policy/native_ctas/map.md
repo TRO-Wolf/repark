@@ -10,6 +10,8 @@ The seat tests for `../native_ctas.rs`, NATIVE-CTAS-ICEBERG-REFUSE-1's native-do
   catalog `ice` and a `type=hadoop` catalog `hd`:
   `every_ctas_into_an_iceberg_catalog_refuses_before_any_create` (eight spellings, six query shapes,
   both catalogs, a mixed-case target: `Error::NotImplemented` with the exact text, no table after);
+  `the_refusal_names_a_quoted_target_so_its_workaround_reaches_that_table` (`"MixQ"` on both
+  catalogs: the text names it quoted, and the workaround followed literally fills that table);
   `an_unqualified_ctas_under_an_iceberg_default_catalog_refuses`;
   `a_refused_replace_leaves_the_existing_table_and_its_rows` (`OR REPLACE` with a failing and a
   succeeding query, `IF NOT EXISTS`, plain CTAS over an existing table);
