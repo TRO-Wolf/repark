@@ -11,6 +11,7 @@ Identity DELETE/UPDATE tests. `predicate_dml.rs` declares `#[cfg(test)] mod test
 ## Contents
 
 - `mod.rs` — thin index.
+- `batch_nullability.rs` — **UPDATE-SCHEMA-BATCH-MISMATCH-1 (2026-11-13):** two one-row batches on a fixed planned schema (an `Int32` value column holding a NULL in one), projected by `project_update_data_batch` and handed to `MemTable::try_new` as `register_update_values_table` does: the NULL-free batch first registers, the reverse order registers, a computed NULL into a required field keeps one nullable schema for the writer, and a required field planned non-null stays non-nullable.
 - `subquery_where.rs` — **REPARK-SQL-UPDATE-SUBQUERY-WHERE-1 (2026-10-16):** the shared G3-E8
   refusal's pins. The five allow-listed forms pass only with the identity exemption; six forms
   outside the allow-list, two-part names among them, refuse with or without it; six statements

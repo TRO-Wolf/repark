@@ -28,6 +28,8 @@ works, so the attribute is gone rather than documented.
   one per row (600k rows on one file: 31.0 → 11.5 ms, 66,000,000 → 110 B retained). It lives
   here rather than in the parent because `predicate_dml.rs` sits at an exact line ceiling (1142 since RP-7). **RP-7 (2026-09-02):** `push_pairs_from_batch` moved here for the same reason; both identity collectors now stream and call it once per arriving batch.
   pins: v3-8-subquery-where-lineage/C-002; v3-9-mor-predicate-dml-dv/C-009
+- `lineage.rs`, `../predicate_dml.rs` — **UPDATE-SCHEMA-BATCH-MISMATCH-1 (2026-11-13):** `project_update_data_batch` sets each value field's nullability to the declared value schema's OR the planned field of the identity stream's schema, which `collect_identity_update_rows` captures once and passes in, never from the batch's data. Every new-value batch of a statement then carries one schema, so `cow_commit.rs`'s `register_update_values_table` accepts the batches in any arrival order; before, a NULL-free batch first and a batch with a NULL later refused with `Mismatch between schema and batches`. A computed NULL into a required column still reaches the writer's NOT NULL refusal. Evidence: [task/wo/update-schema-batch-mismatch-1/](../../../../../task/wo/update-schema-batch-mismatch-1/map.md).
+  Pinned by `tests/batch_nullability.rs` and the facade file `test_update_schema_batch_mismatch_1.py`.
 - `lineage.rs`, `../predicate_dml.rs` — **ICE-TSNS-TYPE-PLANNER-1, ruling 91 (2026-10-15):**
   an identity `UPDATE … WHERE` into a `TIMESTAMP` (the microsecond instant) narrows its SET
   value as the MERGE insert arm does. `analyzed_identity_update` (here, called by the
