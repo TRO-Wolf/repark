@@ -5,8 +5,8 @@
 `fix/signed-zero-normalize-1-part-b`), and the owner's ruling of 2026-11-12 on Q10, verbatim
 "Go with the defaults": a fix of two fork files or fewer lands before ICE-V2-FLAT-AWS-LABEL-1.
 **Severity:** S1, wrong write. **Status:** FIXED on branch `fix/nan-partition-value-1` in both
-repositories (fork PR #383, `46d5db39` after its rebase onto `a8bd3a1e`; built and measured as
-`945d3326` off `66901f02`, the same two-file change). Evidence:
+repositories (fork PR #383, squash-merged 2026-11-13 as `92242cb4`, the tree of its verified head
+`46d5db39`; built and measured as `945d3326` off `66901f02`, the same two-file change). Evidence:
 [task/wo/nan-partition-value-1/](../../wo/nan-partition-value-1/map.md).
 
 ## What was wrong
@@ -57,8 +57,9 @@ losslessly (the CTAS cells and a fork unit test show it).
 - **Tables written by RePark 1.5.6 or earlier:** every file written by `INSERT`, `writeTo` or
   `saveAsTable` whose FLOAT or DOUBLE partition value was NaN or `±Infinity` carries a NULL
   partition in its manifest entry. Its rows are intact. A rewrite of those files with a fixed
-  build (`CALL … rewrite_data_files`, or delete and re-insert the rows) writes a correct
-  partition value. Until then, `isnan`, `= NaN` and partition filters miss those rows in every
+  build writes a correct partition value: `CALL … rewrite_data_files` with the
+  `rewrite-all` option (a bare call rewrote no file on a seeded broken table; verifier 2,
+  2026-11-13), or delete and re-insert the rows. Until then, `isnan`, `= NaN` and partition filters miss those rows in every
   engine.
 - **Out of this unit, not measured:** a NaN column default (`initial-default`/`write-default`)
   goes through `Literal::try_into_json` (`crates/iceberg/src/spec/values/literal.rs:630-640`)

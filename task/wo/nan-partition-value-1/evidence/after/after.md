@@ -3,7 +3,8 @@
 Model `claude-opus-5-5`, 2026-11-12. Fork `945d3326` (branch `fix/nan-partition-value-1` off
 `66901f02`); RePark branch `fix/nan-partition-value-1` off `a3f8c7d9` with the pin moved to it.
 The fork commit was later rebased onto `a8bd3a1e` (fork #382) as `46d5db39` for fork PR #383,
-with the same two-file change; the RePark pin names `46d5db39`.
+with the same two-file change, and squash-merged as `92242cb4` (the same tree); the RePark pin
+names `92242cb4`.
 Spark 4.1.2, Iceberg 1.11.0, `REPARK_PARITY_LIVE=1`.
 
 ## Red and green

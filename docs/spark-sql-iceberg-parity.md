@@ -5004,7 +5004,7 @@ still open is `isModifiable`.
   `.files` showed two `d = NULL` files and `.partitions` merged them. CTAS was not affected.
   The seat was the fork's data-file JSON hand-off from `IcebergWriteExec` to
   `IcebergCommitExec`: `serde_json` writes a non-finite float as `null`. After (fork PR #383,
-  `46d5db39`): the hand-off writes such a slot as `"NaN"`, `"Infinity"` or `"-Infinity"`
+  merged as `92242cb4`): the hand-off writes such a slot as `"NaN"`, `"Infinity"` or `"-Infinity"`
   (Java's `SingleValueParser.toJson` spelling) and reads it back as the float; the manifest
   stores the Avro float with Spark's bits (`7ff8…` for NaN).
 - **spark** — Spark 4.1.2 with Iceberg 1.11.0 stores `d = NaN`, `Infinity` and `-Infinity`
