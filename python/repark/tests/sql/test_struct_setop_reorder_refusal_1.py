@@ -204,6 +204,7 @@ UNION_WORD = {
 }
 OVERREFUSAL = {"reordered", "reordered-typed", "nested-reordered", "array-reordered", "three-way"}
 UNMEASURED = {"INTERSECT ALL", "EXCEPT ALL", "intersect", "subtract"}
+SETOP_ALL_REFUSED = {"INTERSECT ALL", "EXCEPT ALL"}
 
 
 def op_slug(op: str) -> str:
@@ -506,6 +507,14 @@ def measured(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, dic
 
 def check_outcome(outcome: dict[str, Any], shape: dict[str, Any], op: str) -> None:
     label = f"{shape['id']} {op}"
+    if op in SETOP_ALL_REFUSED:
+        assert outcome["kind"] == "refused", f"{label}: answered {outcome['rows']}"
+        assert outcome["class"] == "UnsupportedOperationException", f"{label}: {outcome}"
+        assert "(SQL-SETOP-ALL-MULTISET-1)" in outcome["text"], outcome["text"]
+        if "before" in outcome:
+            assert outcome["rows"] == "", label
+            assert outcome["snapshot"] == outcome["before"], label
+        return
     if outcome["kind"] == "rows":
         assert is_answer(shape, op), f"{label}: answered {outcome['rows']}"
         assert outcome["rows"] == expected_rows(shape, op), f"{label}: {outcome['rows']}"
