@@ -85,6 +85,11 @@ On the §7 halt "`UPDATE-SCHEMA-BATCH-MISMATCH-1` reproducing more often", measu
   and the subset re-projection returns to the round-1 files byte for byte; the key's sign on `dropDuplicates(subset)`
   becomes its own label-blocking unit. If the other commits fail, the unit stays parked for the owner. n2 is a merge
   condition, not a round verdict.
+- **The cost gates, corrected.** The `n2` probe case is the 310 step-0 reads (float-key statements and decimal
+  controls), not §8's N2, which is the C-012 set and part A's case (a). By §8, cost3 passed every gate: N1 1.0214, N2
+  1.0101 (C-012) and 1.0179 (case (a)), F1 0.9844, F2 1.0302, f3 1.1297 (bar 1.20). The orchestrator had relayed the
+  mislabel. The owner, about 15:20 UTC, verbatim: **"Defaults, merge #1326 when green and cost4 passes"**: the
+  final head's re-measure (cost4) gates N1 and case (a) at 1.05 and f3 at 1.20, and reports the step-0 reads.
 - **The re-check's open items.** The owner, about 14:52 UTC, verbatim: **"Defaults, and merge #1323 when green"**.
   That adopted three defaults:
   - **The schema invariant** for `dropDuplicates(subset)` is held against main's own behaviour. Names, order, ids,

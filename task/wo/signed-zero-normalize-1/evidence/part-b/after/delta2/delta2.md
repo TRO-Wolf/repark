@@ -83,8 +83,9 @@ pattern), as the re-check measured.
 ## Item 5: cost3 records
 
 `../../cost/` now holds cost3's `cost-raw.jsonl`, `samples.jsonl`, `summary.md` and `l4l.md`. Verdicts per gate: every
-gate passes except n2 at 1.0583 (head `4442b88f1` against `04d84ab9`; base against base 0.9812): n1 1.0214, a 1.0179,
-f1 0.9844, f2 1.0302, f3 1.1297 (bar 1.20), C-012 like-for-like 1.0101.
+§8 gate passes (head `4442b88f1` against `04d84ab9`): n1 1.0214, a 1.0179, f1 0.9844, f2 1.0302, f3 1.1297 (bar
+1.20), C-012 like-for-like 1.0101. The `n2` case, the step-0 reads, is not a §8 gate; it reads 1.0583 (base against
+base 0.9812).
 
 ## Not yet run (budget)
 
