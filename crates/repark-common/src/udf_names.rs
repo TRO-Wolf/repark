@@ -6,3 +6,4 @@ pub const CAST_MAP_NAME: &str = "__repark_cast_map__";
 pub const ZONE_SEAM_NAME: &str = "__repark_zone_seam__";
 pub const STORE_INT_GUARD_NAME: &str = "__repark_store_int_guard__";
 pub const STORE_PAIR_KERNEL_NAME: &str = "__repark_store_pair__";
+pub const NORMALIZE_ZERO_NAME: &str = "__repark_normalize_zero__";
