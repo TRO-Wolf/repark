@@ -1,0 +1,112 @@
+{"spark": "4.1.2"}
+{"cell": "rows|DOUBLE|part|spark-own", "rows": [[1, 0.0], [2, 0.0], [3, "NaN"], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM sp.ns.sp_double_part ORDER BY id"}
+{"cell": "isnan|DOUBLE|part|spark-own", "rows": [[3]], "sql": "SELECT id FROM sp.ns.sp_double_part WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|DOUBLE|part|spark-own", "rows": [[3]], "sql": "SELECT id FROM sp.ns.sp_double_part WHERE d = CAST('NaN' AS DOUBLE) ORDER BY id"}
+{"cell": "gt1|DOUBLE|part|spark-own", "rows": [[5]], "sql": "SELECT id FROM sp.ns.sp_double_part WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|DOUBLE|part|spark-own", "rows": [[4]], "sql": "SELECT id FROM sp.ns.sp_double_part WHERE d IS NULL ORDER BY id"}
+{"cell": "count|DOUBLE|part|spark-own", "rows": [[5]], "sql": "SELECT count(*) FROM sp.ns.sp_double_part"}
+{"cell": "files|DOUBLE|part|spark-own", "rows": [[{"d": null}, 1], [{"d": 1.5}, 1], [{"d": "NaN"}, 1], [{"d": 0.0}, 2]], "sql": "SELECT partition, record_count FROM sp.ns.sp_double_part.files ORDER BY record_count, partition"}
+{"cell": "rows|DOUBLE|flat|spark-own", "rows": [[1, 0.0], [2, 0.0], [3, "NaN"], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM sp.ns.sp_double_flat ORDER BY id"}
+{"cell": "isnan|DOUBLE|flat|spark-own", "rows": [[3]], "sql": "SELECT id FROM sp.ns.sp_double_flat WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|DOUBLE|flat|spark-own", "rows": [[3]], "sql": "SELECT id FROM sp.ns.sp_double_flat WHERE d = CAST('NaN' AS DOUBLE) ORDER BY id"}
+{"cell": "gt1|DOUBLE|flat|spark-own", "rows": [[3], [5]], "sql": "SELECT id FROM sp.ns.sp_double_flat WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|DOUBLE|flat|spark-own", "rows": [[4]], "sql": "SELECT id FROM sp.ns.sp_double_flat WHERE d IS NULL ORDER BY id"}
+{"cell": "count|DOUBLE|flat|spark-own", "rows": [[5]], "sql": "SELECT count(*) FROM sp.ns.sp_double_flat"}
+{"cell": "rows|FLOAT|part|spark-own", "rows": [[1, 0.0], [2, 0.0], [3, "NaN"], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM sp.ns.sp_float_part ORDER BY id"}
+{"cell": "isnan|FLOAT|part|spark-own", "rows": [[3]], "sql": "SELECT id FROM sp.ns.sp_float_part WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|FLOAT|part|spark-own", "rows": [[3]], "sql": "SELECT id FROM sp.ns.sp_float_part WHERE d = CAST('NaN' AS FLOAT) ORDER BY id"}
+{"cell": "gt1|FLOAT|part|spark-own", "rows": [[5]], "sql": "SELECT id FROM sp.ns.sp_float_part WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|FLOAT|part|spark-own", "rows": [[4]], "sql": "SELECT id FROM sp.ns.sp_float_part WHERE d IS NULL ORDER BY id"}
+{"cell": "count|FLOAT|part|spark-own", "rows": [[5]], "sql": "SELECT count(*) FROM sp.ns.sp_float_part"}
+{"cell": "files|FLOAT|part|spark-own", "rows": [[{"d": null}, 1], [{"d": 1.5}, 1], [{"d": "NaN"}, 1], [{"d": 0.0}, 2]], "sql": "SELECT partition, record_count FROM sp.ns.sp_float_part.files ORDER BY record_count, partition"}
+{"cell": "rows|FLOAT|flat|spark-own", "rows": [[1, 0.0], [2, 0.0], [3, "NaN"], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM sp.ns.sp_float_flat ORDER BY id"}
+{"cell": "isnan|FLOAT|flat|spark-own", "rows": [[3]], "sql": "SELECT id FROM sp.ns.sp_float_flat WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|FLOAT|flat|spark-own", "rows": [[3]], "sql": "SELECT id FROM sp.ns.sp_float_flat WHERE d = CAST('NaN' AS FLOAT) ORDER BY id"}
+{"cell": "gt1|FLOAT|flat|spark-own", "rows": [[3], [5]], "sql": "SELECT id FROM sp.ns.sp_float_flat WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|FLOAT|flat|spark-own", "rows": [[4]], "sql": "SELECT id FROM sp.ns.sp_float_flat WHERE d IS NULL ORDER BY id"}
+{"cell": "count|FLOAT|flat|spark-own", "rows": [[5]], "sql": "SELECT count(*) FROM sp.ns.sp_float_flat"}
+{"cell": "rows|DOUBLE|inf|spark-own", "rows": [[6, "Infinity"], [7, "-Infinity"]], "sql": "SELECT id, d FROM sp.ns.sp_double_inf ORDER BY id"}
+{"cell": "files|DOUBLE|inf|spark-own", "rows": [[{"d": "-Infinity"}, 1], [{"d": "Infinity"}, 1]], "sql": "SELECT partition, record_count FROM sp.ns.sp_double_inf.files ORDER BY record_count, partition"}
+{"cell": "rows|INT|part|spark-own", "rows": [[1, 7], [2, null]], "sql": "SELECT id, d FROM sp.ns.sp_int_part ORDER BY id"}
+{"cell": "files|INT|part|spark-own", "rows": [[{"d": null}, 1], [{"d": 7}, 1]], "sql": "SELECT partition, record_count FROM sp.ns.sp_int_part.files ORDER BY record_count, partition"}
+{"cell": "rows|STRING|part|spark-own", "rows": [[1, "a"], [2, null]], "sql": "SELECT id, d FROM sp.ns.sp_string_part ORDER BY id"}
+{"cell": "files|STRING|part|spark-own", "rows": [[{"d": null}, 1], [{"d": "a"}, 1]], "sql": "SELECT partition, record_count FROM sp.ns.sp_string_part.files ORDER BY record_count, partition"}
+{"cell": "rows|DOUBLE|ctas|spark-reads-repark", "rows": [[1, 0.0], [2, 0.0], [3, "NaN"], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM rp.ns.rp_double_ctas ORDER BY id"}
+{"cell": "isnan|DOUBLE|ctas|spark-reads-repark", "rows": [[3]], "sql": "SELECT id FROM rp.ns.rp_double_ctas WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|DOUBLE|ctas|spark-reads-repark", "rows": [[3]], "sql": "SELECT id FROM rp.ns.rp_double_ctas WHERE d = CAST('NaN' AS DOUBLE) ORDER BY id"}
+{"cell": "gt1|DOUBLE|ctas|spark-reads-repark", "rows": [[5]], "sql": "SELECT id FROM rp.ns.rp_double_ctas WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|DOUBLE|ctas|spark-reads-repark", "rows": [[4]], "sql": "SELECT id FROM rp.ns.rp_double_ctas WHERE d IS NULL ORDER BY id"}
+{"cell": "count|DOUBLE|ctas|spark-reads-repark", "rows": [[5]], "sql": "SELECT count(*) FROM rp.ns.rp_double_ctas"}
+{"cell": "files|DOUBLE|ctas|spark-reads-repark", "rows": [[{"d": null}, 1], [{"d": 1.5}, 1], [{"d": "NaN"}, 1], [{"d": 0.0}, 2]], "sql": "SELECT partition, record_count FROM rp.ns.rp_double_ctas.files ORDER BY record_count, partition"}
+{"cell": "rows|DOUBLE|flat|spark-reads-repark", "rows": [[1, 0.0], [2, 0.0], [3, "NaN"], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM rp.ns.rp_double_flat ORDER BY id"}
+{"cell": "isnan|DOUBLE|flat|spark-reads-repark", "rows": [[3]], "sql": "SELECT id FROM rp.ns.rp_double_flat WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|DOUBLE|flat|spark-reads-repark", "rows": [[3]], "sql": "SELECT id FROM rp.ns.rp_double_flat WHERE d = CAST('NaN' AS DOUBLE) ORDER BY id"}
+{"cell": "gt1|DOUBLE|flat|spark-reads-repark", "rows": [[3], [5]], "sql": "SELECT id FROM rp.ns.rp_double_flat WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|DOUBLE|flat|spark-reads-repark", "rows": [[4]], "sql": "SELECT id FROM rp.ns.rp_double_flat WHERE d IS NULL ORDER BY id"}
+{"cell": "count|DOUBLE|flat|spark-reads-repark", "rows": [[5]], "sql": "SELECT count(*) FROM rp.ns.rp_double_flat"}
+{"cell": "rows|DOUBLE|inf|spark-reads-repark", "rows": [[6, null], [7, null]], "sql": "SELECT id, d FROM rp.ns.rp_double_inf ORDER BY id"}
+{"cell": "files|DOUBLE|inf|spark-reads-repark", "rows": [[{"d": null}, 1], [{"d": null}, 1]], "sql": "SELECT partition, record_count FROM rp.ns.rp_double_inf.files ORDER BY record_count, partition"}
+{"cell": "rows|DOUBLE|part|spark-reads-repark", "rows": [[1, 0.0], [2, 0.0], [3, null], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM rp.ns.rp_double_part ORDER BY id"}
+{"cell": "isnan|DOUBLE|part|spark-reads-repark", "rows": [], "sql": "SELECT id FROM rp.ns.rp_double_part WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|DOUBLE|part|spark-reads-repark", "rows": [], "sql": "SELECT id FROM rp.ns.rp_double_part WHERE d = CAST('NaN' AS DOUBLE) ORDER BY id"}
+{"cell": "gt1|DOUBLE|part|spark-reads-repark", "rows": [[5]], "sql": "SELECT id FROM rp.ns.rp_double_part WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|DOUBLE|part|spark-reads-repark", "rows": [[4]], "sql": "SELECT id FROM rp.ns.rp_double_part WHERE d IS NULL ORDER BY id"}
+{"cell": "count|DOUBLE|part|spark-reads-repark", "rows": [[5]], "sql": "SELECT count(*) FROM rp.ns.rp_double_part"}
+{"cell": "files|DOUBLE|part|spark-reads-repark", "rows": [[{"d": null}, 1], [{"d": null}, 1], [{"d": 1.5}, 1], [{"d": 0.0}, 2]], "sql": "SELECT partition, record_count FROM rp.ns.rp_double_part.files ORDER BY record_count, partition"}
+{"cell": "rows|DOUBLE|saveastable|spark-reads-repark", "rows": [[1, 0.0], [2, 0.0], [3, null], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM rp.ns.rp_double_saveastable ORDER BY id"}
+{"cell": "isnan|DOUBLE|saveastable|spark-reads-repark", "rows": [], "sql": "SELECT id FROM rp.ns.rp_double_saveastable WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|DOUBLE|saveastable|spark-reads-repark", "rows": [], "sql": "SELECT id FROM rp.ns.rp_double_saveastable WHERE d = CAST('NaN' AS DOUBLE) ORDER BY id"}
+{"cell": "gt1|DOUBLE|saveastable|spark-reads-repark", "rows": [[5]], "sql": "SELECT id FROM rp.ns.rp_double_saveastable WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|DOUBLE|saveastable|spark-reads-repark", "rows": [[4]], "sql": "SELECT id FROM rp.ns.rp_double_saveastable WHERE d IS NULL ORDER BY id"}
+{"cell": "count|DOUBLE|saveastable|spark-reads-repark", "rows": [[5]], "sql": "SELECT count(*) FROM rp.ns.rp_double_saveastable"}
+{"cell": "files|DOUBLE|saveastable|spark-reads-repark", "rows": [[{"d": null}, 1], [{"d": null}, 1], [{"d": 1.5}, 1], [{"d": 0.0}, 2]], "sql": "SELECT partition, record_count FROM rp.ns.rp_double_saveastable.files ORDER BY record_count, partition"}
+{"cell": "rows|DOUBLE|writeto|spark-reads-repark", "rows": [[1, 0.0], [2, 0.0], [3, null], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM rp.ns.rp_double_writeto ORDER BY id"}
+{"cell": "isnan|DOUBLE|writeto|spark-reads-repark", "rows": [], "sql": "SELECT id FROM rp.ns.rp_double_writeto WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|DOUBLE|writeto|spark-reads-repark", "rows": [], "sql": "SELECT id FROM rp.ns.rp_double_writeto WHERE d = CAST('NaN' AS DOUBLE) ORDER BY id"}
+{"cell": "gt1|DOUBLE|writeto|spark-reads-repark", "rows": [[5]], "sql": "SELECT id FROM rp.ns.rp_double_writeto WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|DOUBLE|writeto|spark-reads-repark", "rows": [[4]], "sql": "SELECT id FROM rp.ns.rp_double_writeto WHERE d IS NULL ORDER BY id"}
+{"cell": "count|DOUBLE|writeto|spark-reads-repark", "rows": [[5]], "sql": "SELECT count(*) FROM rp.ns.rp_double_writeto"}
+{"cell": "files|DOUBLE|writeto|spark-reads-repark", "rows": [[{"d": null}, 1], [{"d": null}, 1], [{"d": 1.5}, 1], [{"d": 0.0}, 2]], "sql": "SELECT partition, record_count FROM rp.ns.rp_double_writeto.files ORDER BY record_count, partition"}
+{"cell": "rows|FLOAT|ctas|spark-reads-repark", "rows": [[1, 0.0], [2, 0.0], [3, "NaN"], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM rp.ns.rp_float_ctas ORDER BY id"}
+{"cell": "isnan|FLOAT|ctas|spark-reads-repark", "rows": [[3]], "sql": "SELECT id FROM rp.ns.rp_float_ctas WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|FLOAT|ctas|spark-reads-repark", "rows": [[3]], "sql": "SELECT id FROM rp.ns.rp_float_ctas WHERE d = CAST('NaN' AS FLOAT) ORDER BY id"}
+{"cell": "gt1|FLOAT|ctas|spark-reads-repark", "rows": [[5]], "sql": "SELECT id FROM rp.ns.rp_float_ctas WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|FLOAT|ctas|spark-reads-repark", "rows": [[4]], "sql": "SELECT id FROM rp.ns.rp_float_ctas WHERE d IS NULL ORDER BY id"}
+{"cell": "count|FLOAT|ctas|spark-reads-repark", "rows": [[5]], "sql": "SELECT count(*) FROM rp.ns.rp_float_ctas"}
+{"cell": "files|FLOAT|ctas|spark-reads-repark", "rows": [[{"d": null}, 1], [{"d": 1.5}, 1], [{"d": "NaN"}, 1], [{"d": 0.0}, 2]], "sql": "SELECT partition, record_count FROM rp.ns.rp_float_ctas.files ORDER BY record_count, partition"}
+{"cell": "rows|FLOAT|flat|spark-reads-repark", "rows": [[1, 0.0], [2, 0.0], [3, "NaN"], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM rp.ns.rp_float_flat ORDER BY id"}
+{"cell": "isnan|FLOAT|flat|spark-reads-repark", "rows": [[3]], "sql": "SELECT id FROM rp.ns.rp_float_flat WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|FLOAT|flat|spark-reads-repark", "rows": [[3]], "sql": "SELECT id FROM rp.ns.rp_float_flat WHERE d = CAST('NaN' AS FLOAT) ORDER BY id"}
+{"cell": "gt1|FLOAT|flat|spark-reads-repark", "rows": [[3], [5]], "sql": "SELECT id FROM rp.ns.rp_float_flat WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|FLOAT|flat|spark-reads-repark", "rows": [[4]], "sql": "SELECT id FROM rp.ns.rp_float_flat WHERE d IS NULL ORDER BY id"}
+{"cell": "count|FLOAT|flat|spark-reads-repark", "rows": [[5]], "sql": "SELECT count(*) FROM rp.ns.rp_float_flat"}
+{"cell": "rows|FLOAT|part|spark-reads-repark", "rows": [[1, 0.0], [2, 0.0], [3, null], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM rp.ns.rp_float_part ORDER BY id"}
+{"cell": "isnan|FLOAT|part|spark-reads-repark", "rows": [], "sql": "SELECT id FROM rp.ns.rp_float_part WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|FLOAT|part|spark-reads-repark", "rows": [], "sql": "SELECT id FROM rp.ns.rp_float_part WHERE d = CAST('NaN' AS FLOAT) ORDER BY id"}
+{"cell": "gt1|FLOAT|part|spark-reads-repark", "rows": [[5]], "sql": "SELECT id FROM rp.ns.rp_float_part WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|FLOAT|part|spark-reads-repark", "rows": [[4]], "sql": "SELECT id FROM rp.ns.rp_float_part WHERE d IS NULL ORDER BY id"}
+{"cell": "count|FLOAT|part|spark-reads-repark", "rows": [[5]], "sql": "SELECT count(*) FROM rp.ns.rp_float_part"}
+{"cell": "files|FLOAT|part|spark-reads-repark", "rows": [[{"d": null}, 1], [{"d": null}, 1], [{"d": 1.5}, 1], [{"d": 0.0}, 2]], "sql": "SELECT partition, record_count FROM rp.ns.rp_float_part.files ORDER BY record_count, partition"}
+{"cell": "rows|FLOAT|saveastable|spark-reads-repark", "rows": [[1, 0.0], [2, 0.0], [3, null], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM rp.ns.rp_float_saveastable ORDER BY id"}
+{"cell": "isnan|FLOAT|saveastable|spark-reads-repark", "rows": [], "sql": "SELECT id FROM rp.ns.rp_float_saveastable WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|FLOAT|saveastable|spark-reads-repark", "rows": [], "sql": "SELECT id FROM rp.ns.rp_float_saveastable WHERE d = CAST('NaN' AS FLOAT) ORDER BY id"}
+{"cell": "gt1|FLOAT|saveastable|spark-reads-repark", "rows": [[5]], "sql": "SELECT id FROM rp.ns.rp_float_saveastable WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|FLOAT|saveastable|spark-reads-repark", "rows": [[4]], "sql": "SELECT id FROM rp.ns.rp_float_saveastable WHERE d IS NULL ORDER BY id"}
+{"cell": "count|FLOAT|saveastable|spark-reads-repark", "rows": [[5]], "sql": "SELECT count(*) FROM rp.ns.rp_float_saveastable"}
+{"cell": "files|FLOAT|saveastable|spark-reads-repark", "rows": [[{"d": null}, 1], [{"d": null}, 1], [{"d": 1.5}, 1], [{"d": 0.0}, 2]], "sql": "SELECT partition, record_count FROM rp.ns.rp_float_saveastable.files ORDER BY record_count, partition"}
+{"cell": "rows|FLOAT|writeto|spark-reads-repark", "rows": [[1, 0.0], [2, 0.0], [3, null], [4, null], [5, 1.5]], "sql": "SELECT id, d FROM rp.ns.rp_float_writeto ORDER BY id"}
+{"cell": "isnan|FLOAT|writeto|spark-reads-repark", "rows": [], "sql": "SELECT id FROM rp.ns.rp_float_writeto WHERE isnan(d) ORDER BY id"}
+{"cell": "eqnan|FLOAT|writeto|spark-reads-repark", "rows": [], "sql": "SELECT id FROM rp.ns.rp_float_writeto WHERE d = CAST('NaN' AS FLOAT) ORDER BY id"}
+{"cell": "gt1|FLOAT|writeto|spark-reads-repark", "rows": [[5]], "sql": "SELECT id FROM rp.ns.rp_float_writeto WHERE d > 1.0 ORDER BY id"}
+{"cell": "isnull|FLOAT|writeto|spark-reads-repark", "rows": [[4]], "sql": "SELECT id FROM rp.ns.rp_float_writeto WHERE d IS NULL ORDER BY id"}
+{"cell": "count|FLOAT|writeto|spark-reads-repark", "rows": [[5]], "sql": "SELECT count(*) FROM rp.ns.rp_float_writeto"}
+{"cell": "files|FLOAT|writeto|spark-reads-repark", "rows": [[{"d": null}, 1], [{"d": null}, 1], [{"d": 1.5}, 1], [{"d": 0.0}, 2]], "sql": "SELECT partition, record_count FROM rp.ns.rp_float_writeto.files ORDER BY record_count, partition"}
+{"cell": "rows|INT|part|spark-reads-repark", "rows": [[1, 7], [2, null]], "sql": "SELECT id, d FROM rp.ns.rp_int_part ORDER BY id"}
+{"cell": "files|INT|part|spark-reads-repark", "rows": [[{"d": null}, 1], [{"d": 7}, 1]], "sql": "SELECT partition, record_count FROM rp.ns.rp_int_part.files ORDER BY record_count, partition"}
+{"cell": "rows|STRING|part|spark-reads-repark", "rows": [[1, "a"], [2, null]], "sql": "SELECT id, d FROM rp.ns.rp_string_part ORDER BY id"}
+{"cell": "files|STRING|part|spark-reads-repark", "rows": [[{"d": null}, 1], [{"d": "a"}, 1]], "sql": "SELECT partition, record_count FROM rp.ns.rp_string_part.files ORDER BY record_count, partition"}
+{"cell": "java-json|DOUBLE|NaN", "fromJson_error": "IllegalArgumentException: Cannot parse default as a double value: \"NaN\"", "toJson": "\"NaN\""}
+{"cell": "java-json|DOUBLE|Infinity", "fromJson_error": "IllegalArgumentException: Cannot parse default as a double value: \"Infinity\"", "toJson": "\"Infinity\""}
+{"cell": "java-json|DOUBLE|-Infinity", "fromJson_error": "IllegalArgumentException: Cannot parse default as a double value: \"-Infinity\"", "toJson": "\"-Infinity\""}
+{"cell": "java-json-parse|DOUBLE|\"NaN\"", "fromJson_error": "IllegalArgumentException: Cannot parse default as a double value: \"NaN\""}
+{"cell": "java-json-parse|DOUBLE|NaN", "fromJson_error": "Py4JJavaError: An error occurred while calling z:org.apache.iceberg.SingleValueParser.fromJson.\n: java.io.UncheckedIOException: org.apache.iceberg.shaded.com.fasterxml.jackson.core.JsonParseException: Non-standard token 'NaN': enable `JsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS` to allow\n at [Source: (String)\"NaN\"; "}
