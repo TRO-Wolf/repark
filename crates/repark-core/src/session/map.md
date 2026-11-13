@@ -107,239 +107,55 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   an engine `Interval` source into an interval (`ServerText`) column passes and stores through the
   Arrow cast, as before the gate; every non-interval source into an interval column still refuses,
   and an interval into a text column still refuses. The shared Iceberg rule is untouched.
-  **C-4 fold 4 item 3 (2026-10-11):** the gap-wall refusal into a timestamptz column names the real
-  column type: the placement arm retargets the localiser's `timestamp` label at its own site, as the
-  read path does (`retargeted`, mirroring `repark_connect::provider::scan`). The date arm keeps the
-  `timestamp` label (ledger §15: the shape file sits at its ceiling, so the date pin has no room
-  yet). The store-assignment refusal text is the shared Iceberg builder, so it stays byte-identical
-  here (ledger §15).
-- `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets
-  `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.
-  **ICE-CATALOG-CACHE-1 (2026-09-19):** the door awaits
-  `trim_iceberg_caches()`, which settles the moka cache before it counts.
-  **ICE-WRITE-OPTIONS-1 (2026-09-17):** `sql_with_write_options` and
-  its crate-private body, the session's one statement funnel (spill SET intercept, cache
-  trim, registry snapshot, `SqlDialect::execute_with_write_options`). **Run 22b rebase
-  (2026-09-18, Q-22b-WO-1):** it replaced ICE-DYN-OVERWRITE-1's `static_overwrite.rs` body.
-  **ICE-OVERWRITE-MODE-1 (2026-09-19):** it takes an `OverwriteIntent` and fills
-  `EngineContext::overwrite_intent`; `ReparkSession::sql_with` passes an empty map and
-  `Session`. pins: ice-write-options-1/C-014; ice-overwrite-mode-1/C-007
-  **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** it takes `source_by_name: bool` and fills
-  `EngineContext::source_by_name`; `sql_with` passes `false`.
-  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the funnel also merges the session
-  write conf (`session_write_conf_from_ctx`) into the statement options, so the
-  session codec and snapshot properties ride `EngineContext` to every door.
-  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the funnel takes
-  `verbatim_override: Option<bool>` and fills `EngineContext::verbatim_override`;
-  `sql_built` passes `Some(false)`, `sql_with` passes `None`.
-  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):**
-  `ReparkSession::set_time_parser_policy` (runtime `LEGACY`/`CORRECTED`/`EXCEPTION`
-  setter; lazily installs the policy carrier, so no builder install exists;
-  invalid values refuse with `INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS`).
-- `writer_layout.rs` — **U7 PR1 (2026-09-24), round 2:** `ReparkSession::plan_table_write`, the one
-  entry the Python binding calls, so `repark-python` keeps no `repark-iceberg` edge (the module is
-  public and re-exports the kernel's `WriterAction`, `WriterLayout`, `WriterRefusal`,
-  `WriterStatement`, `missing_column_message`, `missing_column_name` and `save_target_names_table`).
-  It probes `table_exists` for a qualified name, runs `repark_iceberg::write::plan_writer`, and when
-  the plan asks, splits the catalog-qualified name and runs `check_layout_matches_catalog_table`
-  before returning the statement.
-- `temp_views.rs` — **IPI-40 PR6 (2026-09-24):** implements `dialect::TempViewSession` for
-  `ReparkSession` by delegating to the inherent `create_or_replace_temp_view_from`,
-  `resolve_temp_view_home_ref`, `temp_view_home`, `list_temp_view_names` and `drop_temp_view`.
+  **C-4 fold 4 item 3 (2026-10-11):** the gap-wall refusal into a timestamptz column names the real column type: the placement arm retargets the localiser's `timestamp` label at its own site, as the read path does (`retargeted`, mirroring `repark_connect::provider::scan`). The date arm keeps the `timestamp` label (ledger §15: the shape file sits at its ceiling, so the date pin has no room yet). The store-assignment refusal text is the shared Iceberg builder, so it stays byte-identical here (ledger §15).
+- `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.
+  **ICE-CATALOG-CACHE-1 (2026-09-19):** the door awaits `trim_iceberg_caches()`, which settles the moka cache before it counts.
+  **ICE-WRITE-OPTIONS-1 (2026-09-17):** `sql_with_write_options` and its crate-private body, the session's one statement funnel (spill SET intercept, cache trim, registry snapshot, `SqlDialect::execute_with_write_options`). **Run 22b rebase (2026-09-18, Q-22b-WO-1):** it replaced ICE-DYN-OVERWRITE-1's `static_overwrite.rs` body.
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** it takes an `OverwriteIntent` and fills `EngineContext::overwrite_intent`; `ReparkSession::sql_with` passes an empty map and `Session`. pins: ice-write-options-1/C-014; ice-overwrite-mode-1/C-007
+  **U7 PR2 slice-2 round 2 (2026-09-25, critic r4 V-001..V-007):** it takes `source_by_name: bool` and fills `EngineContext::source_by_name`; `sql_with` passes `false`.
+  **ICE-SESSION-WRITE-CONF-1 (2026-09-19):** the funnel also merges the session write conf (`session_write_conf_from_ctx`) into the statement options, so the session codec and snapshot properties ride `EngineContext` to every door.
+  **STRING-LITERAL-ESCAPE-1 re-verify fold (2026-09-30):** the funnel takes `verbatim_override: Option<bool>` and fills `EngineContext::verbatim_override`; `sql_built` passes `Some(false)`, `sql_with` passes `None`.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** `ReparkSession::set_time_parser_policy` (runtime `LEGACY`/`CORRECTED`/`EXCEPTION` setter; lazily installs the policy carrier, so no builder install exists; invalid values refuse with `INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS`).
+- `writer_layout.rs` — **U7 PR1 (2026-09-24), round 2:** `ReparkSession::plan_table_write`, the one entry the Python binding calls, so `repark-python` keeps no `repark-iceberg` edge (the module is public and re-exports the kernel's `WriterAction`, `WriterLayout`, `WriterRefusal`, `WriterStatement`, `missing_column_message`, `missing_column_name` and `save_target_names_table`). It probes `table_exists` for a qualified name, runs `repark_iceberg::write::plan_writer`, and when the plan asks, splits the catalog-qualified name and runs `check_layout_matches_catalog_table` before returning the statement.
+- `temp_views.rs` — **IPI-40 PR6 (2026-09-24):** implements `dialect::TempViewSession` for `ReparkSession` by delegating to the inherent `create_or_replace_temp_view_from`, `resolve_temp_view_home_ref`, `temp_view_home`, `list_temp_view_names` and `drop_temp_view`.
   **SPARK-DOOR-TEMP-VIEW-TARGET-1 (2026-10-29, fix rounds 1 and 2):** the name rule (`SqlDialect::temp_view_name_rule`) is read at the lookup choke points, and the key folds at creation and at lookup under the rule in force (`temp_view_key`); the case-twin fallback is removed (TARGET-1 C-011, C-013, C-019, C-020). `temp_view_target_ref` answers the `[catalog, schema, table]` a CREATE registers under. **SPARK-DOOR-TEMP-VIEW-DDL-1 fix round 3 (2026-11-02):** `resolve_temp_view_home_ref` never fails open: a plain raw token that the segment parser rejects is looked up as one segment, any other unparsable name returns an analysis error, and an empty name still answers no view (DDL-1 C-031, C-032).
-  **ATTR-ID-1 S2 (2026-09-30):** all four `MemTable` constructors (`create_or_replace_temp_view`,
-  `register_record_batches_as_temp_view`, `register_collected_memtable`, `declare_temp_view_sorted`)
-  run their schema and batches through `df_guards::attr_id::strip_record_batches`, so materialized
-  views are born without the key (cache reads mint fresh ids — S3 resolve must cope, ledger R-5).
-  **SQM round 6 (R6-1):** the temp-view family, split out of `session.rs` when the choke-point fix
-  pushed that file past its ceiling. The old exception then retired under the prior default;
-  CAP-1 records the file again at its exact source-size baseline. Holds `create_or_replace_temp_view`
-  (batches) / `create_or_replace_temp_view_from` (a plan), `register_record_batches_as_temp_view`,
-  `materialize_dataframe_as_temp_view` / `materialize_dataframe_as_cache_view` (which takes the
-  `(max_bytes, max_total_bytes)` budgets tuple) and their shared `register_collected_memtable`,
-  `declare_temp_view_sorted`, the shared `replace_view` registration, `drop_temp_view`, and
-  `temp_view_ref` / `temp_view_ref_from_segment` — the wrappers over [`crate::temp_view`] that EVERY
-  member resolves names through, so a qualified name cannot register into a catalog and a one-part
-  name is immune to `SET datafusion.catalog.default_catalog`. They also re-check the home PROVIDER
-  live (`assert_home_intact`): a session built with `datafusion.catalog.default_catalog = <a name a
-  catalog is later registered under>` has no session-local home, and the whole family refuses
-  loud rather than write that catalog (round-6 critic S1, MEASURED).
-  **EAGER-BUDGET-1 step 2 (2026-09-13):** `register_collected_memtable` now streams
-  (`execute_stream`) instead of `collect()`: each batch's distinct-buffer bytes join a running
-  `admitted` total seeded with the live cache pointer set, `max_bytes` is checked incrementally
-  with its unchanged message, and `max_total_bytes` refuses with
-  `[REPARK_CACHE_BUDGET_EXCEEDED]` (budget, retained, admitted, and the unpersist/clearCache fix)
-  the moment `retained + admitted` would cross — before the result's peak and before any
-  registration. Stream errors propagate with nothing registered; checkpoint/temp-view
-  materialization passes both limits `None` and stays unbudgeted.
-  **Review round (2026-09-13, R12b-D-4):** `max_bytes` measures exactly what `main` measures — its
-  own running `batch.get_array_memory_size()` sum evaluated after each batch, never seeded from live
-  views and independent of `max_total_bytes`; the pointer set is built only when `max_total_bytes`
-  is set. The message integer is the complete sum (the monotonic counter makes per-batch checking
-  boundary-identical to `main`), so once the limit is crossed the loop stops retaining batches but
-  keeps pulling to finish the count, then refuses with `main`'s byte-identical message.
-  **DECIMAL-CACHE-1 (2026-09-15):** `register_collected_memtable` analyzes the plan with the
-  session's own rules before pinning the schema (facade-built plans carry the unanalyzed
-  DataFusion-default type, e.g. `(38,10)`, while the executed batches carry the analyzed Spark type
-  — pinning the former refused every materializing action). The analyzed plan is then optimized and
-  executed directly (one analyzer pass per materialize; no second analyze inside execution).
-  Collected batches then conform to the analyzed schema (`conform_batches_to_schema`: identical
-  schemas return the batch untouched; otherwise each plan field resolves its column by name — a
-  missing name or a duplicate name refuses with `Error::Analysis` naming the field, extra batch
-  columns project away — then same-type pass-through or `cast_with_options` with `safe: false` (a
-  failing cast refuses naming both types plus the cast error), nulls under a non-nullable plan field
-  refuse, and any residual rebuild failure is `Error::Analysis`). Inline `cache_conform_tests` pin
-  the drifted conform, the refusal messages, and the
-  reorder/missing/duplicate/superset/overflow/null cases; the untouched-batch fast path is
-  behavior-identical by construction (same columns, same schema `Arc`) and is held by the unchanged
-  end-to-end cache suites. (The analyze-then-conform pipeline is shared with the plain-`temp_view`
-  path, which funnels through the same `register_collected_memtable`.)
-  **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** `list_temp_view_names` moves here from
-  `session.rs` (pure move; the merge pushed that file one line past its ceiling). The moved code
-  sheds two comments; their reason lives here: the listing reads the build-time home and refuses
-  when a catalog replaced its provider, otherwise an empty home lists empty.
-  **TA-SERIES S1 (2026-10-04):** `register_collected_memtable` captures the physical plan's
-  `output_ordering` and, when every key is a plain output column of the stored schema **and the plan
-  has one output partition**, concats the conformed batches into one batch and registers the
-  `MemTable` `with_sort_order` (the logical key mapping lives in `sorted_view.rs`
-  `ordered_cache_sort_exprs`, direction and nulls-first carried exactly), so a sorted `.eager()` /
-  `cache()` / `persist()` / `localCheckpoint` reads back in order as on Spark 4.1.2. The partition
-  gate is a correctness condition, not an optimisation: a multi-partition output is collected in
-  completion order, so declaring its per-partition ordering as global order would lie and wrongly
-  elide downstream sorts (measured: rank 34465 for key=1). A single batch declares without
-  concatting; an empty collect, a non-column key, a multi-partition output, a concat that would
-  double past `max_bytes`, and any cache above 1 GiB all keep today's path (split batches, no
-  declared order, no error).
-  pins: ta-series-s1/P-S1-1, P-S1-2, P-S1-3, P-S1-4, P-S1-5, P-S1-6
-  **S1 FOLD V944-1/V944-2 (2026-10-05):** `ordered_cache_concat_fits` sizes the concat with
-  `cache_budget::distinct_buffer_bytes` over a fresh pointer set instead of the per-batch
-  `get_array_memory_size` sum, because a re-materialised cache arrives as 8192-row slices of one
-  buffer and the old sum counted the whole buffer once per slice (a frame around 750k rows silently
-  lost its declared order). The 1 GiB cap and the `2 * bytes <= max_bytes` rule are unchanged; the
-  guard additionally keeps today's path when `max_total_bytes` is set and `retained + 2 * bytes`
-  would exceed it, so the transient concat peak (source plus copy) stays inside the session budget.
-  pins: ta-series-s1/P-S1-7, P-S1-8
-- `cache_budget.rs` — **EAGER-BUDGET-1 step 1 (2026-09-13):** D-2 retained-byte accounting.
-  `ReparkSession::retained_cache_bytes` enumerates the temp-view home's `__repark_cache_*`
-  tables, downcasts each provider to `MemTable`, clones each partition's batch list under a
-  short read guard (never held across an `.await`), and sums the capacity of every distinct
-  Arrow buffer. `distinct_buffer_bytes(&[RecordBatch], &mut HashSet<usize>)` is the reusable
-  walk step-2 incremental admission reuses: `ArrayData` buffers, null bitmaps, and child data
-  recursively, deduped by `Buffer::data_ptr()` — the allocation base, not `as_ptr()`, because
-  arrow-58 `Array::slice` pushes the offset into the `Buffer` itself and only `data_ptr()`
-  makes a slice share its parent's key (the sliced-array pin proves it). Checkpoint
-  (`__repark_ckpt_*`), user views, and non-`MemTable` providers are skipped.
-  **EAGER-BUDGET-1 step 2 (2026-09-13):** the enumeration body became `live_cache_buffer_set()`,
-  which returns the `(pointer set, total)` pair so incremental admission seeds its `seen` set with
-  the live cache buffers — a new view's buffers already held by a live `__repark_cache_*` MemTable
-  add zero to `admitted`. `retained_cache_bytes` is the same walk reporting only the total.
-- `memory_catalog.rs` — **PR-B hadoop naming (2026-09-24):** `register_memory_catalog_with_props`,
-  the body of `register_memory_catalog`, moved here to keep `session.rs` under the default
-  ceiling. The public `register_memory_catalog(name, warehouse)` delegates with an empty map,
-  so it stays on uuid naming. The Memory arm of `session.rs::register_catalog_spec` passes only
-  the spec's `metadata-naming` prop, so no other passthrough prop reaches the fork builder. The
-  moved code sheds two comments; their reasons live here. The memory catalog registers with
-  `TempFallbackAllowed` because an in-memory LocalFs catalog keeps the offline CTAS fallback,
-  and real warehouses fail loud. The warehouse is noted as a local write root (the SEC-02
-  grandfather), so COPY TO and CREATE EXTERNAL under it stay allowed.
-- `iceberg_caches.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the session's view of its Iceberg
-  cache handles. `memory_catalog_handle` is what `session.rs::register_memory_catalog` reaches
-  (since PR-B through `memory_catalog.rs::register_memory_catalog_with_props`, which also forwards
-  the builder props), so a memory catalog is always built with the session's `CatalogCaches`;
-  `trim_iceberg_caches` runs at the statement door (`sql_with`) and clears the metadata cache once
-  the retained-location count passes `repark.iceberg.metadataCacheEntries`;
-  `iceberg_metadata_cache_stats` / `iceberg_metadata_cache_entries` are the census the Python pins
-  read (hits / misses / body fetches = the `metadata.json` GETs a real catalog would pay). A catalog
-  registered through `register_iceberg_catalog(name, catalog)` was built by its caller and therefore
-  carries whatever caches that caller gave it — the fork's default is OFF, so the injection point is
-  the builder, not the registration.
-  **ICE-READ-PERF-0 (2026-09-19):** `iceberg_io_stats()` returns the session's cumulative
-  `IcebergIoStats` snapshot and `reset_iceberg_io_stats()` zeroes it; `iceberg_io_counters()`
-  (public, so a caller that builds its own Glue / S3 Tables catalog — the ICE-READ-PERF-0
-  bench — can count into the session's set) is what `session.rs::register_catalog_spec` hands `glue_catalog_counted` /
-  `s3tables_catalog_counted`, so a configured Glue or S3 Tables catalog counts into the same set
-  as the memory catalog. A catalog passed to `register_iceberg_catalog` counts only if its
-  builder was given these counters.
-  **ICE-CATALOG-CACHE-1 (2026-09-19):** `register_catalog_spec` hands the whole `CatalogCaches`
-  to the Glue and S3 Tables builders, so they now carry the session's metadata and manifest
-  caches too. `iceberg_metadata_cache_report()` returns the fork's `TableMetadataCacheStats`
-  (hits, misses, body fetches, evictions); `iceberg_metadata_cache_stats()` keeps its
-  `(hits, misses, body_fetches)` signature for the Python census binding.
-  `trim_iceberg_caches` is async and `settle_iceberg_metadata_cache()` is public (the census
-  binding and the bench call it before reading counts).
-  **ICE-FOOTER-CACHE-1 (2026-09-19):** `iceberg_footer_cache_stats()` returns the fork's
-  `ParquetFooterCacheStats` (hits, misses, fetches, upgrades, evictions) of the session's one
-  footer cache, `None` when `repark.iceberg.footerCacheBytes = 0`. The cache reaches every
-  catalog this session builds through the same `CatalogCaches`, so no registration path changed.
-  Its counters are plain atomics (evictions from moka's listener), so unlike the metadata report
-  there is no settle step before reading.
-- `path_write.rs` — **FA-5 (2026-10-08, fold 1):** `materialize_empty_part` writes the csv header
-  from the frame schema's recorded display names (`duplicate_names::recorded_display_names`) when it
-  carries them, so the header-only part of an empty duplicate-name csv write shows the display
-  names, as the sink serializer does for a non-empty one; a frame without the record passes its own
-  column names as before.
-  **S3-PATH-WRITE-1 round 1 (2026-09-28):** `ReparkSession::write_path` owns the S3 save-mode
-  protocol: per-call temp view, one `COPY` per part, parts land direct under the destination,
-  `_SUCCESS` is the last object, exists means any object under the prefix, and `overwrite` lists and
-  deletes the whole prefix. Bucket root refuses loud.
-  **S3-PATH-WRITE-1 re-verify (2026-09-28):** the append branch `HEAD`s the
-  exact key and refuses loud when an object sits at the destination
-  (`R-S3-APPEND-EXACT`), since the exact object would win the read.
-  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the temporal options (`timestampFormat`,
-  `timestampNTZFormat`, `dateFormat`) are honored, not refused: they skip COPY option SQL and the
-  CSV/JSON `COPY` inner `SELECT` comes from `text_write_format::select`, which formats temporal
-  columns in the session zone.
-  **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** the CSV/JSON COPY parts (plain
-  inner `SELECT`, resolved `STORED AS`, spec OPTIONS merged after the validated format clause) come
-  from `text_write_format::select::text_write_copy_parts`; formatting runs in the sink serializer.
-  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 3 fold (2026-09-30):** the commit snapshots the
-  destination keys before the COPY and deletes every non-snapshot key when the write fails
-  ([`path_write/rollback.rs`](path_write/rollback.rs)), so no partial output survives on any mode;
-  the append-validation cohort moved to [`path_write/append.rs`](path_write/append.rs) under the
-  file-size gate. Child: [`path_write/`](path_write/map.md).
-  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 4 fold (2026-09-30):** the snapshot rollback is gone: a
-  failed CSV/JSON write deletes exactly the output paths its own sink recorded plus a materialized
-  empty part, so a concurrent writer's objects survive under the same prefix and at the bucket root;
-  the commit reaches the sink's collector through a per-session registry keyed by the write id the
-  COPY OPTIONS carry (the Spark door runs COPY eagerly, so no plan handle outlives the write), and
-  parquet keeps its pre-rollback commit with no cleanup. A cleanup failure appends the bare message
-  once, without repeating the variant prefix.
-  **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** both S3 commit legs run the
-  engine-built COPY through `sql_built_with_write_options`, so the statement
-  parses in default mode in every session mode.
-  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the format, mode, compression and destination refusals echo the value or URL
-  through `mask_value_credentials`.
-- `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the user-pattern compiler
-  and validator (Spark `INVALID_DATETIME_PATTERN` / `INCONSISTENT_BEHAVIOR_CROSS_VERSION` classes,
-  NTZ downgrades, DATE lazy messages), the micros-to-wall/zone conversions, and the option-key
-  helpers. Child: [`text_write_format/`](text_write_format/map.md).
-  **ZONE-HORIZON-RENDER-1 fold 1 Item A (2026-10-08):** `micros_to_wall_zone` is the shared
-  `micros_to_wall_and_offset`, whose tabulated branch is main's `with_timezone` expression.
-  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** Java quote-run scan, `y` runs past 6
-  refused, and the trailing-`]` class (RECOGNITION for LTZ/DATE when every letter is a legacy
-  `SimpleDateFormat` letter, measured against the JDK; NTZ downgrades).
-  **Re-verify (2026-09-29):** the RECOGNITION text keeps its class but drops
-  the LEGACY clause; `g` padding and the `fast.rs` loops live in the child.
-  **Re-verify 2 (2026-09-30):** the compiled pattern carries `has_era`,
-  decided once per pattern instead of once per value.
-- `late_catalogs.rs` — **C-2d fold 1 (2026-10-07), N5:** `check_catalog_refusal` asks
-  `source_catalog_refusal` first, so an Iceberg-handle lookup of a mounted source's name refuses
-  with that source's text.
-- `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the
-  CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical .
-  **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** `register_late_catalog_block` registers one runtime
-  block tolerantly (incomplete parses stay silent; registered names only update the side map;
-  register failures propagate, so the postgres S-6 refusal stays), and `note_catalog_table_props`
-  folds spec props into the side map (called from the builder loop too, one line).
-  **CATALOG-1 (2026-09-26):** `note_catalog_refusal` / `check_catalog_refusal`
-  (the refused-kind placeholder: stored beside the entries, never listed, every use raises
-  its refusal; a later long-form block replaces it). The singular late path reports a
-  refusal as `false`; the plural path reports refused names in neither list.
-  **CSV-INFER-PERF-1 (2026-09-06):** `read_csv` body moved to `read_options.rs`;
-  `session.rs` 1002 → 988 and the CAP-1 exception retired.
+  **ATTR-ID-1 S2 (2026-09-30):** all four `MemTable` constructors (`create_or_replace_temp_view`, `register_record_batches_as_temp_view`, `register_collected_memtable`, `declare_temp_view_sorted`) run their schema and batches through `df_guards::attr_id::strip_record_batches`, so materialized views are born without the key (cache reads mint fresh ids — S3 resolve must cope, ledger R-5).
+  **SQM round 6 (R6-1):** the temp-view family, split out of `session.rs` when the choke-point fix pushed that file past its ceiling. The old exception then retired under the prior default; CAP-1 records the file again at its exact source-size baseline. Holds `create_or_replace_temp_view` (batches) / `create_or_replace_temp_view_from` (a plan), `register_record_batches_as_temp_view`, `materialize_dataframe_as_temp_view` / `materialize_dataframe_as_cache_view` (which takes the `(max_bytes, max_total_bytes)` budgets tuple) and their shared `register_collected_memtable`, `declare_temp_view_sorted`, the shared `replace_view` registration, `drop_temp_view`, and `temp_view_ref` / `temp_view_ref_from_segment` — the wrappers over [`crate::temp_view`] that EVERY member resolves names through, so a qualified name cannot register into a catalog and a one-part name is immune to `SET datafusion.catalog.default_catalog`. They also re-check the home PROVIDER live (`assert_home_intact`): a session built with `datafusion.catalog.default_catalog = <a name a catalog is later registered under>` has no session-local home, and the whole family refuses loud rather than write that catalog (round-6 critic S1, MEASURED).
+  **EAGER-BUDGET-1 step 2 (2026-09-13):** `register_collected_memtable` now streams (`execute_stream`) instead of `collect()`: each batch's distinct-buffer bytes join a running `admitted` total seeded with the live cache pointer set, `max_bytes` is checked incrementally with its unchanged message, and `max_total_bytes` refuses with `[REPARK_CACHE_BUDGET_EXCEEDED]` (budget, retained, admitted, and the unpersist/clearCache fix) the moment `retained + admitted` would cross — before the result's peak and before any registration. Stream errors propagate with nothing registered; checkpoint/temp-view materialization passes both limits `None` and stays unbudgeted.
+  **Review round (2026-09-13, R12b-D-4):** `max_bytes` measures exactly what `main` measures — its own running `batch.get_array_memory_size()` sum evaluated after each batch, never seeded from live views and independent of `max_total_bytes`; the pointer set is built only when `max_total_bytes` is set. The message integer is the complete sum (the monotonic counter makes per-batch checking boundary-identical to `main`), so once the limit is crossed the loop stops retaining batches but keeps pulling to finish the count, then refuses with `main`'s byte-identical message.
+  **DECIMAL-CACHE-1 (2026-09-15):** `register_collected_memtable` analyzes the plan with the session's own rules before pinning the schema (facade-built plans carry the unanalyzed DataFusion-default type, e.g. `(38,10)`, while the executed batches carry the analyzed Spark type — pinning the former refused every materializing action). The analyzed plan is then optimized and executed directly (one analyzer pass per materialize; no second analyze inside execution). Collected batches then conform to the analyzed schema (`conform_batches_to_schema`: identical schemas return the batch untouched; otherwise each plan field resolves its column by name — a missing name or a duplicate name refuses with `Error::Analysis` naming the field, extra batch columns project away — then same-type pass-through or `cast_with_options` with `safe: false` (a failing cast refuses naming both types plus the cast error), nulls under a non-nullable plan field refuse, and any residual rebuild failure is `Error::Analysis`). Inline `cache_conform_tests` pin the drifted conform, the refusal messages, and the reorder/missing/duplicate/superset/overflow/null cases; the untouched-batch fast path is behavior-identical by construction (same columns, same schema `Arc`) and is held by the unchanged end-to-end cache suites. (The analyze-then-conform pipeline is shared with the plain-`temp_view` path, which funnels through the same `register_collected_memtable`.)
+  **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** `list_temp_view_names` moves here from `session.rs` (pure move; the merge pushed that file one line past its ceiling). The moved code sheds two comments; their reason lives here: the listing reads the build-time home and refuses when a catalog replaced its provider, otherwise an empty home lists empty.
+  **TA-SERIES S1 (2026-10-04):** `register_collected_memtable` captures the physical plan's `output_ordering` and, when every key is a plain output column of the stored schema **and the plan has one output partition**, concats the conformed batches into one batch and registers the `MemTable` `with_sort_order` (the logical key mapping lives in `sorted_view.rs` `ordered_cache_sort_exprs`, direction and nulls-first carried exactly), so a sorted `.eager()` / `cache()` / `persist()` / `localCheckpoint` reads back in order as on Spark 4.1.2. The partition gate is a correctness condition, not an optimisation: a multi-partition output is collected in completion order, so declaring its per-partition ordering as global order would lie and wrongly elide downstream sorts (measured: rank 34465 for key=1). A single batch declares without concatting; an empty collect, a non-column key, a multi-partition output, a concat that would double past `max_bytes`, and any cache above 1 GiB all keep today's path (split batches, no declared order, no error). pins: ta-series-s1/P-S1-1, P-S1-2, P-S1-3, P-S1-4, P-S1-5, P-S1-6
+  **S1 FOLD V944-1/V944-2 (2026-10-05):** `ordered_cache_concat_fits` sizes the concat with `cache_budget::distinct_buffer_bytes` over a fresh pointer set instead of the per-batch `get_array_memory_size` sum, because a re-materialised cache arrives as 8192-row slices of one buffer and the old sum counted the whole buffer once per slice (a frame around 750k rows silently lost its declared order). The 1 GiB cap and the `2 * bytes <= max_bytes` rule are unchanged; the guard additionally keeps today's path when `max_total_bytes` is set and `retained + 2 * bytes` would exceed it, so the transient concat peak (source plus copy) stays inside the session budget. pins: ta-series-s1/P-S1-7, P-S1-8
+- `cache_budget.rs` — **EAGER-BUDGET-1 step 1 (2026-09-13):** D-2 retained-byte accounting. `ReparkSession::retained_cache_bytes` enumerates the temp-view home's `__repark_cache_*` tables, downcasts each provider to `MemTable`, clones each partition's batch list under a short read guard (never held across an `.await`), and sums the capacity of every distinct Arrow buffer. `distinct_buffer_bytes(&[RecordBatch], &mut HashSet<usize>)` is the reusable walk step-2 incremental admission reuses: `ArrayData` buffers, null bitmaps, and child data recursively, deduped by `Buffer::data_ptr()` — the allocation base, not `as_ptr()`, because arrow-58 `Array::slice` pushes the offset into the `Buffer` itself and only `data_ptr()` makes a slice share its parent's key (the sliced-array pin proves it). Checkpoint (`__repark_ckpt_*`), user views, and non-`MemTable` providers are skipped.
+  **EAGER-BUDGET-1 step 2 (2026-09-13):** the enumeration body became `live_cache_buffer_set()`, which returns the `(pointer set, total)` pair so incremental admission seeds its `seen` set with the live cache buffers — a new view's buffers already held by a live `__repark_cache_*` MemTable add zero to `admitted`. `retained_cache_bytes` is the same walk reporting only the total.
+- `memory_catalog.rs` — **PR-B hadoop naming (2026-09-24):** `register_memory_catalog_with_props`, the body of `register_memory_catalog`, moved here to keep `session.rs` under the default ceiling. The public `register_memory_catalog(name, warehouse)` delegates with an empty map, so it stays on uuid naming. The Memory arm of `session.rs::register_catalog_spec` passes only the spec's `metadata-naming` prop, so no other passthrough prop reaches the fork builder. The moved code sheds two comments; their reasons live here. The memory catalog registers with `TempFallbackAllowed` because an in-memory LocalFs catalog keeps the offline CTAS fallback, and real warehouses fail loud. The warehouse is noted as a local write root (the SEC-02 grandfather), so COPY TO and CREATE EXTERNAL under it stay allowed.
+- `iceberg_caches.rs` — **PERF-ICE-CATALOG-IO-1 (2026-09-05):** the session's view of its Iceberg cache handles. `memory_catalog_handle` is what `session.rs::register_memory_catalog` reaches (since PR-B through `memory_catalog.rs::register_memory_catalog_with_props`, which also forwards the builder props), so a memory catalog is always built with the session's `CatalogCaches`; `trim_iceberg_caches` runs at the statement door (`sql_with`) and clears the metadata cache once the retained-location count passes `repark.iceberg.metadataCacheEntries`; `iceberg_metadata_cache_stats` / `iceberg_metadata_cache_entries` are the census the Python pins read (hits / misses / body fetches = the `metadata.json` GETs a real catalog would pay). A catalog registered through `register_iceberg_catalog(name, catalog)` was built by its caller and therefore carries whatever caches that caller gave it — the fork's default is OFF, so the injection point is the builder, not the registration.
+  **ICE-READ-PERF-0 (2026-09-19):** `iceberg_io_stats()` returns the session's cumulative `IcebergIoStats` snapshot and `reset_iceberg_io_stats()` zeroes it; `iceberg_io_counters()` (public, so a caller that builds its own Glue / S3 Tables catalog — the ICE-READ-PERF-0 bench — can count into the session's set) is what `session.rs::register_catalog_spec` hands `glue_catalog_counted` / `s3tables_catalog_counted`, so a configured Glue or S3 Tables catalog counts into the same set as the memory catalog. A catalog passed to `register_iceberg_catalog` counts only if its builder was given these counters.
+  **ICE-CATALOG-CACHE-1 (2026-09-19):** `register_catalog_spec` hands the whole `CatalogCaches` to the Glue and S3 Tables builders, so they now carry the session's metadata and manifest caches too. `iceberg_metadata_cache_report()` returns the fork's `TableMetadataCacheStats` (hits, misses, body fetches, evictions); `iceberg_metadata_cache_stats()` keeps its `(hits, misses, body_fetches)` signature for the Python census binding. `trim_iceberg_caches` is async and `settle_iceberg_metadata_cache()` is public (the census binding and the bench call it before reading counts).
+  **ICE-FOOTER-CACHE-1 (2026-09-19):** `iceberg_footer_cache_stats()` returns the fork's `ParquetFooterCacheStats` (hits, misses, fetches, upgrades, evictions) of the session's one footer cache, `None` when `repark.iceberg.footerCacheBytes = 0`. The cache reaches every catalog this session builds through the same `CatalogCaches`, so no registration path changed. Its counters are plain atomics (evictions from moka's listener), so unlike the metadata report there is no settle step before reading.
+- `path_write.rs` — **FA-5 (2026-10-08, fold 1):** `materialize_empty_part` writes the csv header from the frame schema's recorded display names (`duplicate_names::recorded_display_names`) when it carries them, so the header-only part of an empty duplicate-name csv write shows the display names, as the sink serializer does for a non-empty one; a frame without the record passes its own column names as before.
+  **S3-PATH-WRITE-1 round 1 (2026-09-28):** `ReparkSession::write_path` owns the S3 save-mode protocol: per-call temp view, one `COPY` per part, parts land direct under the destination, `_SUCCESS` is the last object, exists means any object under the prefix, and `overwrite` lists and deletes the whole prefix. Bucket root refuses loud.
+  **S3-PATH-WRITE-1 re-verify (2026-09-28):** the append branch `HEAD`s the exact key and refuses loud when an object sits at the destination (`R-S3-APPEND-EXACT`), since the exact object would win the read.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the temporal options (`timestampFormat`, `timestampNTZFormat`, `dateFormat`) are honored, not refused: they skip COPY option SQL and the CSV/JSON `COPY` inner `SELECT` comes from `text_write_format::select`, which formats temporal columns in the session zone.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** the CSV/JSON COPY parts (plain inner `SELECT`, resolved `STORED AS`, spec OPTIONS merged after the validated format clause) come from `text_write_format::select::text_write_copy_parts`; formatting runs in the sink serializer.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 3 fold (2026-09-30):** the commit snapshots the destination keys before the COPY and deletes every non-snapshot key when the write fails ([`path_write/rollback.rs`](path_write/rollback.rs)), so no partial output survives on any mode; the append-validation cohort moved to [`path_write/append.rs`](path_write/append.rs) under the file-size gate. Child: [`path_write/`](path_write/map.md).
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 4 fold (2026-09-30):** the snapshot rollback is gone: a failed CSV/JSON write deletes exactly the output paths its own sink recorded plus a materialized empty part, so a concurrent writer's objects survive under the same prefix and at the bucket root; the commit reaches the sink's collector through a per-session registry keyed by the write id the COPY OPTIONS carry (the Spark door runs COPY eagerly, so no plan handle outlives the write), and parquet keeps its pre-rollback commit with no cleanup. A cleanup failure appends the bare message once, without repeating the variant prefix.
+  **STRING-LITERAL-ESCAPE-1 merge (2026-10-01):** both S3 commit legs run the engine-built COPY through `sql_built_with_write_options`, so the statement parses in default mode in every session mode.
+  **SOURCE-URL-REDACT-1 fold 2 (2026-10-06):** the format, mode, compression and destination refusals echo the value or URL through `mask_value_credentials`.
+- `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the user-pattern compiler and validator (Spark `INVALID_DATETIME_PATTERN` / `INCONSISTENT_BEHAVIOR_CROSS_VERSION` classes, NTZ downgrades, DATE lazy messages), the micros-to-wall/zone conversions, and the option-key helpers. Child: [`text_write_format/`](text_write_format/map.md).
+  **ZONE-HORIZON-RENDER-1 fold 1 Item A (2026-10-08):** `micros_to_wall_zone` is the shared `micros_to_wall_and_offset`, whose tabulated branch is main's `with_timezone` expression.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 verifier fold (2026-09-29):** Java quote-run scan, `y` runs past 6 refused, and the trailing-`]` class (RECOGNITION for LTZ/DATE when every letter is a legacy `SimpleDateFormat` letter, measured against the JDK; NTZ downgrades).
+  **Re-verify (2026-09-29):** the RECOGNITION text keeps its class but drops the LEGACY clause; `g` padding and the `fast.rs` loops live in the child.
+  **Re-verify 2 (2026-09-30):** the compiled pattern carries `has_era`, decided once per pattern instead of once per value.
+- `late_catalogs.rs` — **C-2d fold 1 (2026-10-07), N5:** `check_catalog_refusal` asks `source_catalog_refusal` first, so an Iceberg-handle lookup of a mounted source's name refuses with that source's text.
+- `late_catalogs.rs` — `register_late_configured_catalogs`, moved out of `session.rs` under the CAP-1 rule that a file at its ceiling grows by splitting; behavior is byte-identical .
+  **ICE-CATALOG-SESSION-1 S6 (2026-09-20):** `register_late_catalog_block` registers one runtime block tolerantly (incomplete parses stay silent; registered names only update the side map; register failures propagate, so the postgres S-6 refusal stays), and `note_catalog_table_props` folds spec props into the side map (called from the builder loop too, one line).
+  **CATALOG-1 (2026-09-26):** `note_catalog_refusal` / `check_catalog_refusal` (the refused-kind placeholder: stored beside the entries, never listed, every use raises its refusal; a later long-form block replaces it). The singular late path reports a refusal as `false`; the plural path reports refused names in neither list.
+  **CSV-INFER-PERF-1 (2026-09-06):** `read_csv` body moved to `read_options.rs`; `session.rs` 1002 → 988 and the CAP-1 exception retired.
 - `df_guards.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `context_with_df_54_1_rule_guards` takes the dialect beside the extension: it
   registers a handed-in `TypePlanner` (`with_type_planner`; with neither in, DataFusion's type mapping stands) and runs the dialect's `configure_analyzer_rules` after the extension's.
-- `df_guards.rs` — **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** re-exports `insert_struct_setop_after_coercion` toward the root; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the list. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `session.rs` calls `finish_session_build` (dialect hook, then seat 1). **Part B part 1, delta 2 (2026-11-13):** `finish_session_build` also adds `OptimizerSeatConfig` (`repark_optimizer_seat_config`), an analyzer rule that reads `optimizer.max_passes` and `optimizer.skip_failed_rules` from the live session config on every plan and refuses any plan but a statement, an empty relation or a bare `VALUES` while `max_passes` is 0 or `skip_failed_rules` is true, whatever set them; the analyzer runs before the optimizer loop and reads neither key.
+- `df_guards.rs` — **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** re-exports `insert_struct_setop_after_coercion` toward the root; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the list. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `session.rs` calls `finish_session_build` (dialect hook, then seat 1). **Part B part 1, delta 2 (2026-11-13):** `finish_session_build` adds the analyzer rule `OptimizerSeatConfig` (`repark_optimizer_seat_config`): per plan, while the live config has `optimizer.max_passes` 0 or `optimizer.skip_failed_rules` true, however set, it refuses all but a statement, empty relation or bare `VALUES` (the analyzer runs before the optimizer loop and reads neither key). Detail: `task/wo/signed-zero-normalize-1/evidence/part-b/after/delta2/delta2.md`.
 - `df_guards.rs` — the DataFusion **54.1 regression guards**, owned and constructed by CORE
   (design G8). Guard 1 is a configurable scalar-subquery default; guard 2 wraps
   `push_down_leaf_projections`, declining failed rewrites only on an `Unnest` path while keeping
@@ -466,18 +282,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   runtime `SET` of a dead 54.1 key (`coalesce_batches`), so the refusal holds on
   both SQL doors. Pins: `tests/conf_unread.rs`.
   **SOURCE-URL-REDACT-2 (2026-10-06):** `maybe_apply_runtime_set` registers the parsed `SET` value before dispatch, so engine-direct `SET datafusion.*` errors mask it at the boundary.
-- `df_guards/window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer
-  rule, installed by `df_guards.rs` on EVERY core session (a DataFusion-54.1 capability guard, like the
-  two beside it, so an extension-less session gets it too). DataFusion evaluates a non-ever-expanding
-  window frame through `Accumulator::retract_batch` and refuses at execution when the accumulator
-  has none — the thirteen `WIN-SLIDE-*` registry rows. The rule probes
-  `AggregateUDF::create_sliding_accumulator` (NOT `accumulator`: `sum`'s plain accumulator has no
-  retract and only its *sliding* one does, so probing the wrong constructor moves `sum` onto the
-  re-scan — measured, and it reds `a_retractable_aggregate_keeps_datafusions_sliding_accumulator`) and, when that accumulator cannot retract, swaps the `AggregateUDF` window function for a
-  `WindowUDF` whose `PartitionEvaluator` re-evaluates the frame per output row into a fresh
-  accumulator. That is Spark's `AggregateWindowFunction` strategy at Spark's O(frame x rows) cost,
-  and it is by capability, not by name: a newly registered aggregate never refuses.
-  Design notes that cost a measurement:
+- `df_guards/window_rescan.rs` — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer rule, installed by `df_guards.rs` on EVERY core session (a DataFusion-54.1 capability guard, like the two beside it, so an extension-less session gets it too). DataFusion evaluates a non-ever-expanding window frame through `Accumulator::retract_batch` and refuses at execution when the accumulator has none — the thirteen `WIN-SLIDE-*` registry rows. The rule probes `AggregateUDF::create_sliding_accumulator` (NOT `accumulator`: `sum`'s plain accumulator has no retract and only its *sliding* one does, so probing the wrong constructor moves `sum` onto the re-scan — measured, and it reds `a_retractable_aggregate_keeps_datafusions_sliding_accumulator`) and, when that accumulator cannot retract, swaps the `AggregateUDF` window function for a `WindowUDF` whose `PartitionEvaluator` re-evaluates the frame per output row into a fresh accumulator. That is Spark's `AggregateWindowFunction` strategy at Spark's O(frame x rows) cost, and it is by capability, not by name: a newly registered aggregate never refuses. Design notes that cost a measurement:
   * **The physical route is closed in DataFusion 54.1.** `WindowExpr::create_window_fn` is a
     required trait method returning `WindowFn`, a `pub` type in the private module
     `datafusion_physical_expr::window::window_expr` that `window/mod.rs` does not re-export, so an
@@ -503,61 +308,18 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
     `IGNORE NULLS` flag DataFusion's SQL dialect accepts on an aggregate rides in `ignore_nulls`. The
     original column name is restored with `NamePreserver`, because DataFusion spells an
     `AggregateUDF` window function's schema name with `", "` between arguments and a `WindowUDF`'s
-    with `","`.
-  Pins: `tests/window_rescan.rs` and `python/repark/tests/functions/test_win_slide_1.py`. It sits under
-  `df_guards/` (see [df_guards/map.md](df_guards/map.md)) because it is the third DF-54.1 guard
-  and because `../session.rs` is at its file-size baseline and may not gain a `mod` line.
-- [df_guards/subquery.rs](df_guards/subquery.rs) — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery —
-  outer-reference scope resolution plus three optimizer rules and the `__repark_single_row` guard
-  UDAF, all installed on every core session through `df_guards.rs` (see
-  [df_guards/map.md](df_guards/map.md) for the full design note). Round 3 (2026-09-16):
-  `__repark_any_row` joins the guard family for a stripped correlated `LIMIT 1`, and the projection
-  hoist carries a `SubqueryAlias` qualifier through to its lifted outputs.
-  Pins: `tests/subquery.rs` and `python/repark/tests/dataframe/test_df_subquery_1.py`.
-- `tests/subquery.rs` — **DF-SUBQUERY-1:** plan-level pins for the three subquery rules: the scalar
-  guard wraps a non-singleton subplan and leaves a zero-group `count(*)` aggregate untouched, the
-  lateral hoist lifts a `Subquery`-wrapped right projection and refuses a correlated `Unnest`, and
-  the EXISTS-in-projection rewrite keeps the plan's field name.
-- `tests/window_rescan.rs` — **WIN-SLIDE-1:** the capability pins — a throwaway aggregate with no
-  `retract_batch`, registered at test time, answers over a sliding frame and plans as a re-scan;
-  `sum` keeps DataFusion's sliding accumulator; an ever-expanding frame is never rewritten; an
-  empty frame answers the fresh accumulator, not the aggregate's `default_value` (the throwaway's
-  `default_value` is a sentinel so the two are distinguishable); a `FILTER`ed non-retractable
-  aggregate answers the masked frame.
-- `tests/aws_gate.rs` — E-2 gate pins, AWS-free by construction: an offline session's finalize
-  never resolves the AWS SDK chain (no IMDS probe); an S3-path read on a session that never
-  resolved fails loud naming `register_configured_catalogs` and the `repark.aws.enable` opt-in;
-  opt-in without finalize still refuses (no lazy query-time resolution); the late config map's
-  region-conf signal class is consulted (dual-spelling conflict fails loud pre-resolution).
-- `tests/namespace_create.rs` — **R-6 / G-6 Q1 (2026-08-14):** session `create_namespace`
-  location-guard pins on a memory catalog: create-new, re-create same location (idempotent),
-  re-create conflicting (Analysis, both paths named, stored location unchanged), re-create without
-  request location (idempotent), trailing-slash-only difference (idempotent).
-- `tests/` — session test modules; see [tests/map.md](tests/map.md).
-  Registration pins cover `rust-catalog-registration/C-001` through `C-004`.
-- `tests/session.rs` — the ported v1 session test battery (38 port-now tests, v1 order; the deferred
-  subset is in `task/port/deferred-tests.md`), plus the P2G R2 cohort at the tail: the
-  builder→`SessionConfig` `datafusion.*` plumbing (key lands / unprefixed key still ignored /
-  unknown key fails loud / explicit conf overrides a core default / unset `batch_size` lands
-  `DEFAULT_BATCH_SIZE` 65536 with the conf key still winning), the DF-54.1 guard pins and the Q8
-  enumeration pair (a registered Iceberg catalog enumerates through `information_schema` + `SHOW
-  TABLES` + `DESCRIBE` on the PRODUCT path; the negative half proves the conf is what enables it).
-  **A13:** `register_memory_catalog` and the `spark.sql.catalog.*.type=memory` config path set
-  `TempFallbackAllowed.root` to the warehouse, not `$TMPDIR`. Since
-  **2026-08-10 (unit H-1c,
-  [ADR-0006](../../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md))** the
-  `$`-metadata rows are the **bare-session** half of the enumeration claim — the synthesized names
-  do not enumerate, the base table still does, and a hidden name still resolves and executes. They
-  replace the former single row that pinned the opposite
-  (`information_schema_still_exposes_the_dollar_metadata_tables`), flipped in the same diff as the
-  behavior.
-- `tests/a13.rs` — **A13:** `file://` / `FILE://` / `file://localhost` warehouses become a
-  filesystem fallback root on the product path (skipping the helper reds this pin).
-- `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `ReparkSession::auto_session_catalog_wanted`
-  (the session catalog is wanted unless `repark.sql.autoMemoryCatalog` is `false` / `0` / `no`
-  or a `spark.sql.catalog.spark_catalog[.*]` / `repark.sql.catalog.spark_catalog[.*]` key is
-  present — other blocks and a different `spark.sql.defaultCatalog` no longer suppress it) and
-  `current_catalog_checked` (the current catalog, or `CATALOG_NOT_FOUND`).
+    with `","`. Pins: `tests/window_rescan.rs` and `python/repark/tests/functions/test_win_slide_1.py`. It sits under `df_guards/` (see [df_guards/map.md](df_guards/map.md)) because it is the third DF-54.1 guard and because `../session.rs` is at its file-size baseline and may not gain a `mod` line.
+- [df_guards/subquery.rs](df_guards/subquery.rs) — **DF-SUBQUERY-1 (2026-09-15):** the subquery machinery — outer-reference scope resolution plus three optimizer rules and the `__repark_single_row` guard UDAF, all installed on every core session through `df_guards.rs` (see [df_guards/map.md](df_guards/map.md) for the full design note). Round 3 (2026-09-16): `__repark_any_row` joins the guard family for a stripped correlated `LIMIT 1`, and the projection hoist carries a `SubqueryAlias` qualifier through to its lifted outputs. Pins: `tests/subquery.rs` and `python/repark/tests/dataframe/test_df_subquery_1.py`.
+- `tests/subquery.rs` — **DF-SUBQUERY-1:** plan-level pins for the three subquery rules: the scalar guard wraps a non-singleton subplan and leaves a zero-group `count(*)` aggregate untouched, the lateral hoist lifts a `Subquery`-wrapped right projection and refuses a correlated `Unnest`, and the EXISTS-in-projection rewrite keeps the plan's field name.
+- `tests/window_rescan.rs` — **WIN-SLIDE-1:** the capability pins — a throwaway aggregate with no `retract_batch`, registered at test time, answers over a sliding frame and plans as a re-scan; `sum` keeps DataFusion's sliding accumulator; an ever-expanding frame is never rewritten; an empty frame answers the fresh accumulator, not the aggregate's `default_value` (the throwaway's `default_value` is a sentinel so the two are distinguishable); a `FILTER`ed non-retractable aggregate answers the masked frame.
+- `tests/aws_gate.rs` — E-2 gate pins, AWS-free by construction: an offline session's finalize never resolves the AWS SDK chain (no IMDS probe); an S3-path read on a session that never resolved fails loud naming `register_configured_catalogs` and the `repark.aws.enable` opt-in; opt-in without finalize still refuses (no lazy query-time resolution); the late config map's region-conf signal class is consulted (dual-spelling conflict fails loud pre-resolution).
+- `tests/namespace_create.rs` — **R-6 / G-6 Q1 (2026-08-14):** session `create_namespace` location-guard pins on a memory catalog: create-new, re-create same location (idempotent), re-create conflicting (Analysis, both paths named, stored location unchanged), re-create without request location (idempotent), trailing-slash-only difference (idempotent).
+- `tests/` — session test modules; see [tests/map.md](tests/map.md). Registration pins cover `rust-catalog-registration/C-001` through `C-004`.
+- `tests/session.rs` — the ported v1 session test battery (38 port-now tests, v1 order; the deferred subset is in `task/port/deferred-tests.md`), plus the P2G R2 cohort at the tail: the builder→`SessionConfig` `datafusion.*` plumbing (key lands / unprefixed key still ignored / unknown key fails loud / explicit conf overrides a core default / unset `batch_size` lands `DEFAULT_BATCH_SIZE` 65536 with the conf key still winning), the DF-54.1 guard pins and the Q8 enumeration pair (a registered Iceberg catalog enumerates through `information_schema` + `SHOW TABLES` + `DESCRIBE` on the PRODUCT path; the negative half proves the conf is what enables it).
+  **A13:** `register_memory_catalog` and the `spark.sql.catalog.*.type=memory` config path set `TempFallbackAllowed.root` to the warehouse, not `$TMPDIR`. Since
+  **2026-08-10 (unit H-1c, [ADR-0006](../../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md))** the `$`-metadata rows are the **bare-session** half of the enumeration claim — the synthesized names do not enumerate, the base table still does, and a hidden name still resolves and executes. They replace the former single row that pinned the opposite (`information_schema_still_exposes_the_dollar_metadata_tables`), flipped in the same diff as the behavior.
+- `tests/a13.rs` — **A13:** `file://` / `FILE://` / `file://localhost` warehouses become a filesystem fallback root on the product path (skipping the helper reds this pin).
+- `session_catalog.rs` — **CATALOG-1 (2026-09-26):** `ReparkSession::auto_session_catalog_wanted` (the session catalog is wanted unless `repark.sql.autoMemoryCatalog` is `false` / `0` / `no` or a `spark.sql.catalog.spark_catalog[.*]` / `repark.sql.catalog.spark_catalog[.*]` key is present — other blocks and a different `spark.sql.defaultCatalog` no longer suppress it) and `current_catalog_checked` (the current catalog, or `CATALOG_NOT_FOUND`).
 
 ## Pointers
 

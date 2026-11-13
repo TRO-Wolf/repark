@@ -104,6 +104,7 @@ impl AnalyzerRule for OptimizerSeatConfig {
         }
     }
 
+    #[allow(clippy::unnecessary_literal_bound)]
     fn name(&self) -> &str {
         "repark_optimizer_seat_config"
     }
