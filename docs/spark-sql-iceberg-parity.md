@@ -1272,6 +1272,35 @@ perfectly good read.
   wrong write that blocks the full format-v2 label, not the scoped label
   (ICE-V2-FLAT-AWS-LABEL-1); the fix rides v1.5.7.
 
+#### NATIVE-CTAS-ICEBERG-REFUSE-1 — `repark.sql()` CTAS into an Iceberg table refuses (declared native-door refusal, owner ruling 2026-11-12)
+
+- **repark** — on the native door (`repark.sql()`), `CREATE TABLE … AS SELECT` whose target is
+  an Iceberg catalog refuses at planning, before any write, with `UnsupportedOperationException`
+  (the target is printed quoted where it needs quotes):
+  `repark.sql() does not support CREATE TABLE ... AS SELECT into the Iceberg table <target>:
+  create the table with its columns, CREATE TABLE <target> (<columns>), then INSERT INTO <target>
+  SELECT ...; or run the same statement through spark.sql (NATIVE-CTAS-ICEBERG-REFUSE-1)`. That
+  covers every spelling (`IF NOT EXISTS`, `OR REPLACE`, a column list, any letter case, an
+  unqualified target under an Iceberg default catalog) and `EXPLAIN`, `EXPLAIN ANALYZE` and
+  `PREPARE` of one. Nothing is created, and an existing table keeps its rows and metadata. Before
+  the refusal, a `UNION`, `DISTINCT`, `INTERSECT`, `EXCEPT` or aggregate query created the table
+  with zero rows and answered success, other shapes failed with the fork's `register_table does
+  not support tables with data`, and `OR REPLACE` dropped an existing table before the query ran.
+  CTAS into the session's in-memory catalog (or into an in-memory schema that a native `CREATE
+  SCHEMA` registers under an Iceberg catalog), a plain `CREATE TABLE`, `INSERT … SELECT` and every
+  `spark.sql` statement are unchanged. The native door is DataFusion's `CreateMemoryTable`, not
+  `crates/repark-sql/src/create_table.rs`.
+- **Apache Spark** — the same CTAS stores the query's rows, and so do RePark's `spark.sql` and the
+  native two-step workaround, for the ten step-0 shapes. Two exceptions, the same on main: a
+  native `INSERT` whose query unions an `INT` column with a bare integer literal needs a `CAST`,
+  and a CTE-shaped CTAS fails on the Spark door (CTE-TEMP-VIEW-PRECEDENCE-1). *(oracle: PySpark 4.1.2 with Iceberg
+  1.11.0 on a Hadoop catalog, 2026-11-12, `task/wo/native-ctas-iceberg-refuse-1/evidence/step0/`.)*
+- **Pin** — `python/repark/tests/sql/test_native_ctas_iceberg_refuse_1.py` and
+  `crates/repark-core/src/local_fs_policy/native_ctas/tests.rs`.
+- **Rationale** — DECLARED refusal, owner ruling 2026-11-12, verbatim "Okay go with the default"
+  (item 3, option (b)): silent data loss becomes a loud refusal. The real native CTAS waits on the
+  owner's routing decision ([card](../task/roadmap/mid-term/native-ctas-iceberg-refuse-1-card-2026-11-12.md)).
+
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
 
 - **repark** — the local catalog keeps its table pointer in process memory. That is the
@@ -5034,6 +5063,34 @@ still open is `isModifiable`.
   `…/time_travel/tests.rs::a_snapshot_bound_after_2099_reads_the_final_rule_in_both_directions`.
 - **Rationale** — FIXED 2026-10-08 (card ZONE-HORIZON-RENDER-1, the C-2d fold 1 re-verify's S2
   finding). A silent wrong wall clock over a right instant. pins: zone-horizon-render-1/C-015
+
+### NAN-PARTITION-VALUE-1 — a NaN or infinite FLOAT/DOUBLE partition value is stored as itself — **FIXED 2026-11-12 (branch, not merged)**
+
+- **repark** — Before (main `a3f8c7d9`, fork `66901f02`): `INSERT`, `writeTo(...).append()` and
+  `saveAsTable` into a table partitioned by a FLOAT or DOUBLE column wrote the NaN file's
+  partition value, and `±Infinity`'s, as NULL in the manifest; the data file kept the value.
+  RePark's own `WHERE isnan(d)` and `WHERE d = CAST('NaN' AS DOUBLE)` then returned no rows,
+  `.files` showed two `d = NULL` files and `.partitions` merged them. CTAS was not affected.
+  The seat was the fork's data-file JSON hand-off from `IcebergWriteExec` to
+  `IcebergCommitExec`: `serde_json` writes a non-finite float as `null`. After (fork PR #383,
+  merged as `92242cb4`): the hand-off writes such a slot as `"NaN"`, `"Infinity"` or `"-Infinity"`
+  (Java's `SingleValueParser.toJson` spelling) and reads it back as the float; the manifest
+  stores the Avro float with Spark's bits (`7ff8…` for NaN).
+- **spark** — Spark 4.1.2 with Iceberg 1.11.0 stores `d = NaN`, `Infinity` and `-Infinity`
+  partitions, answers `isnan` and `= NaN` with the NaN row, and reads a RePark table written
+  before the fix with the NaN row as NULL. *(oracle: measured live 2026-11-12,
+  `task/wo/nan-partition-value-1/evidence/step0/`.)*
+- **Tables written by 1.5.6 or earlier** — a file whose FLOAT/DOUBLE partition value was NaN
+  or `±Infinity` carries a NULL partition; its rows are intact. Rewriting the file with a
+  fixed build (`rewrite_data_files`, or delete and re-insert) repairs it.
+- **Pin** — `python/repark/tests/iceberg/test_nan_partition_value_1.py` (four write doors ×
+  FLOAT/DOUBLE, the infinity twin, the controls; live: Spark reads RePark's tables as its own,
+  RePark reads Spark's as Spark does); fork `crates/iceberg/src/spec/manifest/_serde.rs`
+  `test_json_transport_*` and `test_avro_manifest_keeps_nan_float_and_double_partition_values`.
+- **Rationale** — S1 wrong write; card
+  [NAN-PARTITION-VALUE-1](../task/roadmap/mid-term/nan-partition-value-1-card-2026-11-12.md),
+  fixed before ICE-V2-FLAT-AWS-LABEL-1 under the owner's 2026-11-12 ruling ("Go with the
+  defaults", two fork files or fewer).
 
 ## 5. Facade drop-in semantics (DECLARED)
 

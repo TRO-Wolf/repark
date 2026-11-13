@@ -27,6 +27,7 @@ pins.
   key names give Spark's key-name join rows (LATERAL-USING-ACCEPT-1); SQL `USING` on a non-hashable key
   stays refused (LISTVIEW-SQL-USING-1). Each key reaches its measured Arrow type. `slow`: the 13
   1000 × 1000 `big` cells run one per xdist group, the rest share one module session.
+- [test_native_ctas_iceberg_refuse_1.py](test_native_ctas_iceberg_refuse_1.py) — NATIVE-CTAS-ICEBERG-REFUSE-1: `repark.sql()` CTAS into an Iceberg table refuses, creates nothing and leaves an existing table as it was; controls: in-memory CTAS, the two-step workaround and the Spark-door CTAS store Spark's rows.
 - [test_qi1_idents.py](test_qi1_idents.py) — QI1 — quoting / path-escape single-source pins (CQ-006/007).
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) — RANGE-TVF-ID-1 — the range() table function names its column id like Spark.
 - [test_range_tvf_id_2.py](test_range_tvf_id_2.py) — RANGE-TVF-ID-2 - range() argument edge cases answer Spark 4.1.2.

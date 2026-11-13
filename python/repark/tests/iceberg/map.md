@@ -67,6 +67,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_metadata_tables.py](test_metadata_tables.py) — Oracle — Spark-style Iceberg metadata tables.
 - [test_mw5_baseline_delta.py](test_mw5_baseline_delta.py) — MW-5: re-run the MW-0 merge-on-read growth demo and pin the compact delta.
 - [test_mw8_runbook.py](test_mw8_runbook.py) — Run the documented maintenance runbook end to end and pin what each step changes.
+- [test_nan_partition_value_1.py](test_nan_partition_value_1.py) — NAN-PARTITION-VALUE-1: a NaN or infinite FLOAT/DOUBLE partition value written by `INSERT`, CTAS, `writeTo` or `saveAsTable` reads back as itself; live, Spark reads it as its own table's, and RePark reads Spark's table as Spark does.
 - [test_partname_1.py](test_partname_1.py) — WO PARTNAME-1: partition-field names stay Spark's on each door.
 - [test_rdf_schema_evo_1.py](test_rdf_schema_evo_1.py) — RDF-SCHEMA-EVO-1: rewrite_data_files after schema evolution, pinned against Spark.
 - [test_ref_branch_tag_wap.py](test_ref_branch_tag_wap.py) — REF facade pins for Iceberg branches, tags and write-audit-publish.
@@ -138,19 +139,13 @@ path expression repointed in the same unit and no other line changed:
 | `_record_branch_ops_1.py`, `_record_ice_drop_ns_1_oracle.py`, `_record_ice_procs_route_1_oracle.py`, `_record_ice_replace_columns_1_oracle.py`, `_record_ice_tt_resolve_1_oracle.py`, `_record_v3_multiarg_1.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` when run as a script. |
 | `_record_ice_column_reorder_1.py` | its usage block sets `PYTHONPATH=python/repark/tests` for the root-helper import; names its own or a sibling's new path in a docstring or recorded string. |
 | `_record_ice_hadoop_vn_1.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` when run as a script; anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_ice_mixed_case_1.py` | names its own or a sibling's new path in a docstring or recorded string; anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_mixed_case_1.py`, `test_ice_mixed_case_1.py` | names its own or a sibling's new path in a docstring or recorded string; anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `_record_ice_nan_pushdown_1.py` | names its own or a sibling's new path in a docstring or recorded string; reads the root `fixtures/` one level up. |
-| `_record_ice_nested_evo_1.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `_record_ice_page_prune_1.py` | its usage block sets `PYTHONPATH=python/repark/tests`; names its own or a sibling's new path in a docstring or recorded string; reads the root `fixtures/` one level up. |
 | `_record_ice_promote_read_1.py` | puts the tests root on `sys.path` when run as a script; anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `_record_ice_rdf_sort_parse_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string. |
-| `_record_rdf_options_1_oracle.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_ice_hadoop_vn_1.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_ice_mixed_case_1.py` | names its own or a sibling's new path in a docstring or recorded string; anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_ice_nan_pushdown_1.py` | reads the root `fixtures/` one level up. |
-| `test_ice_page_prune_1.py` | reads the root `fixtures/` one level up. |
-| `test_mw8_runbook.py`, `test_rp3_c009_write_default.py`, `test_rp4_c004_to_branch.py`, `test_sql_harden_cutover.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_v3_lineage_columns.py`, `test_v3_live_oracle.py`, `test_v3e3_fixtures.py`, `test_v3e4_refs_time_travel.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_rdf_options_1_oracle.py`, `test_ice_hadoop_vn_1.py`, `_record_ice_nested_evo_1.py`, `test_mw8_runbook.py`, `test_rp3_c009_write_default.py`, `test_rp4_c004_to_branch.py`, `test_sql_harden_cutover.py`, `test_v3_lineage_columns.py`, `test_v3_live_oracle.py`, `test_v3e3_fixtures.py`, `test_v3e4_refs_time_travel.py` | anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ice_nan_pushdown_1.py`, `test_ice_page_prune_1.py` | reads the root `fixtures/` one level up. |
 
 ## Pointers
 

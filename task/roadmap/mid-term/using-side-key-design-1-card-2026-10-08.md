@@ -124,3 +124,12 @@ These are for whichever unit the design opens. They are not the sketch's to deci
   model is a separate change, never a passenger on a fix.
 
 **Measured with struct keys (2026-11-10).** Section 1.2 of the frontier review memo of 2026-11-10: right and full joins show the left key; `WHERE k = 1` after `USING (k)` refuses with `AMBIGUOUS_REFERENCE` where Spark answers; `SELECT *` puts the key columns after the left table's columns, where Spark lists them first. All three reproduce with an `INT` key. Spark's `RIGHT JOIN … USING` shows the **right** key, carrying the right side's field names (`struct<b:int,a:int>`).
+
+**FULL-OUTER-USING-KEY-1, measured on the Spark door (2026-11-13; appended here, not a separate card).**
+SIGNED-ZERO-NORMALIZE-1 part B part 1 verifier 2, 2026-11-13, finding F5 (cell `j-using-full`), on part B's head
+`b84adbc7` and its base, main `276dc503`, identical. Through `spark.sql`,
+`SELECT k, id, id2 FROM (SELECT id, d AS k FROM t) a FULL JOIN (SELECT id2, e AS k FROM u) b USING (k)` over DOUBLE keys
+answers `k = NULL` for a row only on the right (`id2 = 15`), where Spark 4.1.2 answers the coalesced key `2.0`. The
+same class as "full joins show the left key" above, now with a scalar DOUBLE key. Severity **S2** on the Spark door: a
+silent wrong value that a CTAS or `INSERT … SELECT` would store. Filed 2026-11-13, not dispatched; the design this card
+asks for decides the fix.
