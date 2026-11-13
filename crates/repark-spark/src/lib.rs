@@ -137,7 +137,7 @@ pub(crate) use truncate::execute_truncate;
 pub(crate) use use_ddl::rename_dest;
 
 mod extension;
-pub use extension::{SparkExtension, session_catalog, struct_position};
+pub use extension::{SparkExtension, is_spark_door_session, session_catalog, struct_position};
 
 // Test-only imports provide the crate-root scope shared by the leaf modules.
 #[cfg(test)]

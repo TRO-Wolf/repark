@@ -236,16 +236,18 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   and `SparkTypePlanner` types them, in every statement kind, so `UPDATE` and `DELETE` plan them too
   (R-010). The three entry points keep their names; they still lower `TIMESTAMP_NTZ` casts, mark
   `VALUES` casts and lower empty `map()`.
-- `extension.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkExtension::type_planner`
-  hands the session builder `repark_functions::SparkTypePlanner`, so every `CAST(… AS T)`
-  and typed literal the Spark door plans takes its unit from the written name. The DDL
-  column type and `Column.cast("timestamp")` do not go through it; both already answer
-  microseconds and are pinned there.
-- `extension.rs`, `insert_by_name.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the
-  extension registers `repark_iceberg::StoreOverflowCast` AFTER the post-coercion rules
-  (it consumes `SparkExprSemantics`' guarded division shape, so it must run after it —
-  unlike `InsertStoreAssignment`, which needs the pre-cast types) plus the `store_cast`
-  UDF family; the BY NAME projection runs the conform stage (`conform_stage.rs`; formerly `wrap_store_outputs`).
+- `extension.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `SparkExtension::type_planner` hands
+  the session builder `repark_functions::SparkTypePlanner`, so every `CAST(… AS T)` and typed
+  literal the Spark door plans takes its unit from the written name. The DDL column type and
+  `Column.cast("timestamp")` do not go through it; both already answer microseconds and are pinned
+  there. **FILTER-STRING-NULL-ORDER-1 (2026-11-13):** `install_spark_session_conf` adds the
+  `SparkDoorSession` marker; `is_spark_door_session` tells the string filter a Spark-door frame from
+  a native one.
+- `extension.rs`, `insert_by_name.rs` — **CAST-OVERFLOW-INSERT-1 (2026-09-29):** the extension
+  registers `repark_iceberg::StoreOverflowCast` AFTER the post-coercion rules (it consumes
+  `SparkExprSemantics`' guarded division shape, so it must run after it — unlike
+  `InsertStoreAssignment`, which needs the pre-cast types) plus the `store_cast` UDF family; the BY
+  NAME projection runs the conform stage (`conform_stage.rs`; formerly `wrap_store_outputs`).
   **Merge origin/main v1.5.1 (2026-09-29):** both sides kept — the BY NAME and the
   stage-then-swap OVERWRITE sources pass through the conform stage (formerly `zone_stores(_by_name)`) first, then
   the overflow wrap (`conform_types`, which calls the conform stage; formerly `wrap_store_outputs`).
@@ -260,22 +262,22 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   negated NULL into a TIMESTAMP, DATE or BOOLEAN column through
   `void_type::refuse_partition_overwrite_sources` before staging; the call fits
   the 1,000-line ceiling by importing the fill call's name (net −1 line, 998).
-- `insert_overwrite.rs` — **R-FILEORDER-2 (2026-09-27, HALT, no code change):**
+  **R-FILEORDER-2 (2026-09-27, HALT, no code change):**
   Spark 4.1.2 answers `L-INSERT-OVERWRITE` `[[2,b,5,3],[3,c,6,3],[4,d,4,3]]` on a same-JVM
   triple but splits 2–4 across six fresh-JVM runs — one combined task whose file order is
   drawn per plan — so no deterministic source order equals Spark run to run and the cell
   is recorded as dated carve-out C-5 (owner ruling, 2026-09-27).
-- `insert_overwrite.rs` — **U7 PR1 round 2 (2026-09-24):** the stage-then-swap commit picks
+  **U7 PR1 round 2 (2026-09-24):** the stage-then-swap commit picks
   replace-partitions when the dynamic write's STAGED spec is partitioned
   (`staged_spec_is_partitioned`), not the table's current spec, so `output-spec-id` naming an
   older partitioned spec replaces only the written partitions; the empty-source arm validates
   `output-spec-id` against the table before its no-op or wipe, so an unknown id refuses a
   write that stages nothing, as Spark does.
-- `insert_overwrite.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** the
+  **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** the
   `OverwritePlan::RowFilter` arm hands the whole `StaticPartitionOverwrite` to
   `commit_overwrite_by_row_filter_with_summary`, so the commit resolves the files the
   filter removes and the collision oracle answers as Spark's does.
-- `insert_overwrite.rs` — INSERT OVERWRITE: empty probe/validate/provider-wipe (C1-Q-001) +
+  INSERT OVERWRITE: empty probe/validate/provider-wipe (C1-Q-001) +
   non-empty stage-then-swap; **DML-B** `PARTITION (…)` static/dynamic via
   `repark_iceberg::write::partition_overwrite`; 2 in-module tests (`assignment_type_unit_tests`).
   Named-ref targets go through `commit_overwrite_replace_all_to` / partition `_to`. Empty overwrite
@@ -826,13 +828,13 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   fragment: rendered as SQL it reached `validate_update_assignments` as `` `eventName` `` and
   refused where Spark answers (MC-UPD-01/02). No unique case-insensitive match leaves the
   requested spelling alone, so the ambiguity and missing-column refusals still fire there.
-- `spark_ast.rs` — **EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 136, 138, 140 to 142):**
+  **EXPLAIN-DML-WRITE-1 (2026-10-21, rulings 136, 138, 140 to 142):**
   `execute_passthrough_inner` calls `repark_iceberg::write::statement_writes::refuse_wrapped_write`
   right after `sql_to_statement`, before the `DfStatement` match: DataFusion's own
   `EXPLAIN ANALYZE` (the `Explain` arm, which never reached the strict pregate) and a `PREPARE` of
   any write refuse on both repark-spark doors with the ruled texts, before the strict pregate;
   the nested-NTZ gate (`router.rs`) still runs first.
-- `spark_ast.rs` — **WO CASESENS-1 slice 2 (2026-09-27):** `try_execute_identity_dml` runs the
+  **WO CASESENS-1 slice 2 (2026-09-27):** `try_execute_identity_dml` runs the
   `false` branch through `canonicalize_identity_selection` as before and the `true` branch through
   the new `check_identity_selection_exact`, which checks the selection and each SET *value* with
   `merge_fragments/exact.rs` `check_identity_exact` (single target scope, bare candidates — Spark's
@@ -840,18 +842,18 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `plan_case_sensitive` through this owned route, so without the check the `ctx.sql` identity scan
   folds `WHERE ID` under `true`. SET *targets* stay with `validate_update_assignments`, which
   already reads the flag.
-- `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** `execute_insert_source`
+  **ICE-SESSION-WRITE-CONF-1 round 4 (2026-09-20):** `execute_insert_source`
   is `execute_passthrough` stopped one step short — same parse, same rewrites, same analysis,
   but it executes the insert's INPUT instead of the insert. One pipeline answers both routes,
   so an owned INSERT cannot drift from a delegated one.
-- `spark_ast.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** `plain_identity_or_update`
+  **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** `plain_identity_or_update`
   adds the plain `UPDATE … SET … WHERE <scalar comparison>` to the owned identity-DML route when the
   session write conf is set. Without it the statement commits through the fork's DataFusion DML,
   which takes no snapshot properties and no codec, so Spark's stamp, its MoR delete-file codec and
   its summary-key refusal were all silently lost (`QS-UPDATE-MOR`, `QZ-POSDEL-UPDATE`,
   `QR-UPDATE-COW-CHANGED-PARTITION`, `SP-UPDATE`). The reroute is conf-scoped on purpose: making
   every plain UPDATE owned is a routing decision of its own, tracked outside this unit.
-- `spark_ast.rs` — **SE-1 D1:** after the SEC-02 plan guard,
+  **SE-1 D1:** after the SEC-02 plan guard,
   calls the shared belt's `repark_core::PreExecute::guard` (which owns
   `refuse_iceberg_create_of_tightened_ddl`) so `CREATE VIEW cat.ns.v AS …` and
   `SELECT … INTO cat.ns.t` — both of which reach here through the router's `_ =>` catch-all —
@@ -871,13 +873,12 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   `DEFAULT` markers and records the INSERT column list, then fills omitted
   columns from `write_default` on the planned DML (`insert_defaults`). The marker
   pass's loaded table threads into the fill call, so one INSERT loads once.
-- `spark_ast.rs` — **WO STORE-TS-DOORS-2 re-verify fold 5 (2026-10-01):**
-  the unquoted-`INTERVAL` frame-bound quoting runs before the
-  store-assignment gate, so a sibling arm is planned from exactly the text
-  the statement will plan; quoting after the gate left the arm unplannable
-  and the cell unjudged, which stored (VT5-1). DataFusion plans only
-  `SingleQuotedString` interval bounds, hence the rewrite.
-- `spark_ast.rs` — **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):** the pre-gate AST rewrite
+  **WO STORE-TS-DOORS-2 re-verify fold 5 (2026-10-01):** the unquoted-`INTERVAL`
+  frame-bound quoting runs before the store-assignment gate, so a sibling arm is planned from
+  exactly the text the statement will plan; quoting after the gate left the arm unplannable and the
+  cell unjudged, which stored (VT5-1). DataFusion plans only `SingleQuotedString` interval bounds,
+  hence the rewrite.
+  **WO STORE-TS-DOORS-2 re-verify fold 6 (2026-10-01):** the pre-gate AST rewrite
   chain is one shared pair of functions (`apply_pregate_rewrites_before_identity_dml` /
   `apply_pregate_rewrites_after_identity_dml`), called strict by the statement path and best-effort
   by the sibling judge through `apply_pregate_judge_rewrites`, so an arm or probe plans exactly what
@@ -1153,11 +1154,15 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   Spark type name `VOID` to Iceberg `unknown` at CREATE and ADD COLUMN (cell
   `TY-UNKNOWN-VOID`); v3 commits, v1 / v2 refuse at the fork's schema choke point with its
   Java-mirrored `Invalid schema for v<N>` text. `type_table.rs` names Arrow `Null` `void` on
-  every schema surface.
-- `create_table.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the declared
-  plus typed column list refuses `COLUMN_ALREADY_EXISTS` 42711 on a folded
-  duplicate under `caseSensitive=false` (R10, before the schema builds);
-  `refuse_duplicate_partition_columns` compares through `NameRule` and
+  every schema surface. It also maps the type name `UUID` to an Iceberg `uuid` column at CREATE
+  and ADD COLUMN — a RePark extension (orchestrator ruling 2026-09-25, residue R-25): Spark refuses
+  the SQL spelling, RePark's API door is that spelling. `describe_show.rs` renders DESCRIBE from the
+  catalog provider's Arrow schema, so a `uuid` column describes as `string`; `write_to_branch.rs`
+  sets the fork's `with_uuid_as_string(true)` on its two direct `IcebergTableProvider` builds
+  (stage-only and branch commit).
+- `create_table.rs` — **WO CASESENS-1 slice 4 (2026-09-27):** the declared plus typed column list
+  refuses `COLUMN_ALREADY_EXISTS` 42711 on a folded duplicate under `caseSensitive=false` (R10,
+  before the schema builds); `refuse_duplicate_partition_columns` compares through `NameRule` and
   renders through the same builder, byte-identical.
 - `void_type.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `rewrite_cast_null_to_void` turns
   `CAST(NULL AS VOID)` into a typed null; `refuse_insert_void_values` refuses a non-NULL
@@ -1224,13 +1229,6 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   the position in Unicode scalar values, the 32/36 cuts at UTF-16 code-unit offsets
   with `...` on each cut side and a `?` for a split surrogate pair — so non-ASCII SQL
   never panics the byte slice.
-- `create_table.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `iceberg_named_primitive` maps the
-  type name `UUID` to an Iceberg `uuid` column at CREATE and ADD COLUMN — a RePark extension
-  (orchestrator ruling 2026-09-25, residue R-25): Spark refuses the SQL spelling, RePark's API
-  door is that spelling. `describe_show.rs` renders DESCRIBE from the catalog provider's Arrow
-  schema, so a `uuid` column describes as `string`; `write_to_branch.rs` sets the fork's
-  `with_uuid_as_string(true)` on its two direct `IcebergTableProvider` builds (stage-only and
-  branch commit).
 - `alter_column_type.rs` — **WO U9-TYPES-1 PR2 (2026-09-26):** `ALTER COLUMN … TYPE` leaves
   `alter.rs` (1353 → 1272 lines): `schema_change_from_alter_column`,
   `is_iceberg_promotion_target`, `push_alter_column_change` (reads the column's current type)
@@ -2338,9 +2336,9 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   `write.spark.accept-any-schema=true`, runs through `execute_insert_by_name` as if it said `BY
   NAME`. Spark skips its output resolution for such a table, so Iceberg resolves the write by name.
   A table without the property keeps the positional path unchanged.
-- `write_options.rs` — `carries_only_merge_schema` says whether the statement's
-  options are all merge-schema keys. A positional INSERT with any other option
-  stays positional, as the by-name append refuses those options.
+- `write_options.rs` — `carries_only_merge_schema` says whether the statement's options are all
+  merge-schema keys. A positional INSERT with any other option stays positional, as the by-name
+  append refuses those options.
 - Critic r1 remediation (2026-09-24): `routes_positional_by_name` now returns `Result<bool>`, and
   `execute_insert_routed` propagates it with `?`. A failed table load now surfaces as the error
   instead of reading as "no property". Before, the positional path could then reload the table and
@@ -2348,9 +2346,9 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   positional path and its own answer. The `PARTITION (…)` and `REPLACE INTO` exclusions are
   measured, and they are listed in residue R-3 of the ledger.
 - `insert_overwrite.rs`, critic r2 remediation (2026-09-24):
-  `assert_empty_overwrite_types_assignment_compatible` takes `null_assignable`.
-  The by-name door passes `true`, so a NULL-typed column no longer blocks the
-  wipe Spark performs. The positional door passes `false` and is unchanged.
+  `assert_empty_overwrite_types_assignment_compatible` takes `null_assignable`. The by-name door
+  passes `true`, so a NULL-typed column no longer blocks the wipe Spark performs. The positional
+  door passes `false` and is unchanged.
 
 ## U8 WRITE-SQL PR1 (2026-09-24) — REPLACE WHERE, INSERT PARTITION, positional sources
 

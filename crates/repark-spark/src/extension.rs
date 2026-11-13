@@ -16,6 +16,14 @@ pub use crate::normalize::struct_position;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SparkExtension;
 
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct SparkDoorSession;
+
+#[must_use]
+pub fn is_spark_door_session(config: &SessionConfig) -> bool {
+    config.get_extension::<SparkDoorSession>().is_some()
+}
+
 /// Spark-door parser default (DEC-1 / U2): floating-point SQL literals parse as DECIMAL.
 pub(crate) fn apply_spark_float_as_decimal(mut config: SessionConfig) -> SessionConfig {
     config.options_mut().sql_parser.parse_float_as_decimal = true;
@@ -98,6 +106,7 @@ fn install_spark_session_conf(
     config = repark_functions::timestamp_type::with_spark_timestamp_type(config, timestamp_type);
     config = apply_spark_float_as_decimal(config);
     config = apply_spark_parser_dialect(config);
+    config = config.with_extension(Arc::new(SparkDoorSession));
     config = crate::router::door_tag::with_write_door_record(config);
     let verbatim = crate::spark_literals::escaped_string_literals_from_config_map(session.conf)?;
     config = crate::spark_literals::with_escaped_string_literals_config(config, verbatim);

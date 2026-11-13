@@ -18,6 +18,7 @@ pins.
 - [test_door_converge_1.py](test_door_converge_1.py) — DOOR-CONVERGE-1 pins: both doors answer PySpark 4.1.2 with one kernel.
 - [test_door_converge_2.py](test_door_converge_2.py) — Oracle Q12 (PySpark 4.1.2) pins for the four door-converged P1 names.
 - [test_fexpr_window_null_order_1.py](test_fexpr_window_null_order_1.py) — FEXPR-WINDOW-NULL-ORDER-1 (2026-11-12): an `F.expr` `ORDER BY` places NULLs as Spark does; 1,534 cells in [the oracle](fexpr_window_null_order_1_spark_oracle.json).
+- [test_filter_string_null_order_1.py](test_filter_string_null_order_1.py) — FILTER-STRING-NULL-ORDER-1 (2026-11-13): a string `filter` `ORDER BY` places NULLs as Spark does; 321 cells in [the oracle](filter_string_null_order_1_spark_oracle.json).
 - [test_float_agg_parity.py](test_float_agg_parity.py) — Float aggregation differential corpus (H-2 gap G7) — catastrophic-cancellation fixture.
 - [test_fn_arrays_divergence.py](test_fn_arrays_divergence.py) — Pins the Spark-equal array answers FN-FIX-1 closed for the four EX-8 rows (registry §7).
 - [test_fn_batch1.py](test_fn_batch1.py) — R-FN-BATCH1 — top scalar function wrappers (value + Arrow type + null case).
@@ -109,10 +110,7 @@ pins.
 - [fnp11a_r2_spark_oracle.json](fnp11a_r2_spark_oracle.json) — Live PySpark 4.1.2 recording (2026-09-15, orchestrator-run, run 15a): 112 cells settling the round-2 review findings L-001..L-011, both ANSI settings, UTC and America/New_York.
 - [fnp11b_spark_oracle.json](fnp11b_spark_oracle.json) — Filtered FNP-11B oracle: 315 cells from the FNP-11 recording plus 22 cells from the o245 math recording; read by `test_fnp11b_temporal_formats.py`.
 - [fnp11b_typeof_spark_oracle.json](fnp11b_typeof_spark_oracle.json) — Recorded Spark oracle (40 cells) read by `test_fnp11b_typeof.py`.
-- [fnp8_error_oracle.json](fnp8_error_oracle.json) — Recorded Spark oracle read by `test_fnp8_oracle_matrix.py`.
-- [fnp8_repark_dispositions.json](fnp8_repark_dispositions.json) — Recorded data read by `test_fnp8_oracle_matrix.py`.
-- [fnp8_repark_errors.json](fnp8_repark_errors.json) — Recorded data read by `test_fnp8_oracle_matrix.py`.
-- [fnp8_spark_oracle.json](fnp8_spark_oracle.json) — Recorded Spark oracle read by `test_fnp8_oracle_matrix.py`.
+- [fnp8_error_oracle.json](fnp8_error_oracle.json), [fnp8_spark_oracle.json](fnp8_spark_oracle.json) (recorded Spark oracles), [fnp8_repark_dispositions.json](fnp8_repark_dispositions.json), [fnp8_repark_errors.json](fnp8_repark_errors.json) (recorded data) — read by `test_fnp8_oracle_matrix.py`.
 - [fnp_agg_1_critic_spark_oracle.json](fnp_agg_1_critic_spark_oracle.json) — Recorded Spark oracle (15 cells) read by `test_fnp_agg_1_critic.py`.
 - [fnp_agg_1_spark_oracle.json](fnp_agg_1_spark_oracle.json) — Recorded Spark oracle (202 cells) read by `test_fnp_agg_1.py`.
 - [fnp_alias_1_spark_oracle.json](fnp_alias_1_spark_oracle.json) — Recorded Spark oracle (98 cells) read by `test_fnp_alias_1.py`.
@@ -123,9 +121,7 @@ pins.
 - [fnp_gen_1_spark_oracle.json](fnp_gen_1_spark_oracle.json) — Recorded Spark oracle (62 cells) read by `test_fnp_gen_1.py`.
 - [fnp_math_1_q12_q15_oracle.json](fnp_math_1_q12_q15_oracle.json) — Recorded Spark oracle, kept for the record (no test loads it).
 - [fnp_math_1_spark_oracle.json](fnp_math_1_spark_oracle.json) — Recorded Spark oracle read by `test_fnp_math_1.py`.
-- [fnp_misc_1_agg_spark_oracle.json](fnp_misc_1_agg_spark_oracle.json) — Recorded Spark oracle (202 cells) read by `test_fnp_misc_1.py`.
-- [fnp_misc_1_arrow2_spark_oracle.json](fnp_misc_1_arrow2_spark_oracle.json) — Recorded Spark oracle (13 cells) read by `test_fnp_misc_1.py`.
-- [fnp_misc_1_arrow_bucket_spark_oracle.json](fnp_misc_1_arrow_bucket_spark_oracle.json) — Recorded Spark oracle (11 cells) read by `test_fnp_misc_1.py`.
+- [fnp_misc_1_agg_spark_oracle.json](fnp_misc_1_agg_spark_oracle.json) (202 cells), [fnp_misc_1_arrow2_spark_oracle.json](fnp_misc_1_arrow2_spark_oracle.json) (13), [fnp_misc_1_arrow_bucket_spark_oracle.json](fnp_misc_1_arrow_bucket_spark_oracle.json) (11) — Recorded Spark oracles read by `test_fnp_misc_1.py`.
 - [unresolved_routine_1_spark_oracle.json](unresolved_routine_1_spark_oracle.json) — Recorded Spark oracle (42 cells) read by `test_unresolved_routine_1.py`.
 
 ## Path expressions

@@ -19,9 +19,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `(PyColumn, spark_display, sql_expr, join_sql_expr)` so the `Expr` is moved, not cloned, back to
   Python. Child fragments (including Python `str`/`repr` and `_idents` quoting) are inputs; Rust
   only concatenates. Byte identity with the pre-move Python f-strings is the contract (card D-1).
-  **LOGICAL-WIDTH-1 (2026-09-16, round 2, R-12):** `wrap_cast` is `pub(crate)` so the
-  the free `fill_expr_for_column` binding renders the fill literal's cast texts with
-  the same renderer `Column.cast` uses.
+  **LOGICAL-WIDTH-1 (2026-09-16, round 2, R-12):** `wrap_cast` is `pub(crate)` so the free
+  `fill_expr_for_column` binding renders the fill literal's cast texts with the same renderer
+  `Column.cast` uses.
   **CAST-MAP-SPELL-1 (2026-09-19):** `engine_cast` builds through `expr_build::cast_to`;
   `cast_type_token` is the facade's Spark token for a map-bearing type string
   (`repark_functions::cast_map::map_cast_token`, `ParseException` otherwise).
@@ -33,11 +33,11 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   (`apply_engine=false`) takes `Bound<PyColumn>` and returns the same handle via `unbind` — step-1
   reused `self._inner`, so no `Expr` clone. `case_when` moves `.expr` out of its arm pairs like
   `PyColumn::case_when`, and every `wrap_*` builder pre-sizes its `String` instead of `format!`.
-  **COLUMN-PARITY-1 critic round (2026-09-14):** `update_fields` (struct expr + op-tag /
-  path literals + `with` values → `update_fields(st, WithField(..))` /
-  `dropfield()` display), `repark_isnan` (`isnan(child)` display), and `in_list`
-  (`(left IN (..))` display) follow the same one-call 4-tuple shape, plus the
-  string-only `field_join_sql` helper for the join-ON bracket fragment.
+  **COLUMN-PARITY-1 critic round (2026-09-14):** `update_fields` (struct expr + op-tag / path
+  literals + `with` values → `update_fields(st, WithField(..))` / `dropfield()` display),
+  `repark_isnan` (`isnan(child)` display), and `in_list` (`(left IN (..))` display) follow the same
+  one-call 4-tuple shape, plus the string-only `field_join_sql` helper for the join-ON bracket
+  fragment.
   **FACADE-2 step 3 (2026-09-13):** `call_scalar` renders the generic `name(args)` call — the shared
   helper every `F.<fn>(...)` builder routes through — as a 4-tuple `(PyColumn, spark_display,
   sql_expr, join_sql_expr)` with an optional display override for the bespoke-name callers. Argument
@@ -48,18 +48,18 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   P2-1). The step-3 `#[pymethods]` wrappers for the Group-1 typed constructors live in this impl
   block — `#[pymethods]` cannot be split across files — while their `Expr` construction stays in
   `display/construct.rs`.
-  **DECIMAL-CACHE-1 remediation (2026-09-15):** `unary_neg` emits `Expr::Negative`
-  of the child instead of `lit(0_i32) - child`, so facade `-decimal(p,s)` keeps the
-  child type like Spark's `UnaryMinus` (the old encoding drifted through the
-  pre-coercion seat to `(11,2)` / `(38,9)`); display and SQL fragments unchanged.
+  **DECIMAL-CACHE-1 remediation (2026-09-15):** `unary_neg` emits `Expr::Negative` of the child
+  instead of `lit(0_i32) - child`, so facade `-decimal(p,s)` keeps the child type like Spark's
+  `UnaryMinus` (the old encoding drifted through the pre-coercion seat to `(11,2)` / `(38,9)`);
+  display and SQL fragments unchanged.
   **FNP-WIN-1 (2026-09-15):** `time_window` is a `#[pymethods]` wrapper in this same impl block for
   the same reason — a thin call into the `repark-functions` time-window UDFs; grouping/expansion
   live in the analyzer rule. Step 4 adds the `session_window` wrapper the same way (marker call
   aliased `session_window`).
   **ATTR-ID-1 S3a (2026-09-30):** `alias` builds through
-  `repark_core::frame_names::alias_with_fresh_id`, so a user `alias()` mints a fresh
-  attribute id in the alias's metadata. `PyColumn::alias` (the bind/facade path)
-  is untouched: binds keep the field's id.
+  `repark_core::frame_names::alias_with_fresh_id`, so a user `alias()` mints a fresh attribute id in
+  the alias's metadata. `PyColumn::alias` (the bind/facade path) is untouched: binds keep the
+  field's id.
   **POLARS-IS-DUPLICATED-1 (2026-09-28):** `is_duplicated` is one native call
   in the same 4-tuple shape (`is_duplicated(child)` display, SQL and join
   fragments) over the `expr_build::is_duplicated_expr` constructor.
@@ -113,31 +113,27 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 - [`expr_tests.rs`](expr_tests.rs) — **Re-verify fold (2026-09-30):** the `column` unit tests, moved
   verbatim from the inline module, plus the cached- level exactness battery (every operator asserts
   cached levels equal a fresh survey, with df-level pins for SQL-text and mixed shapes).
-- [`levels.rs`](levels.rs) — **Re-verify fold (2026-09-30):** the `PyColumn`
-  struct and its cached-level constructors (`from_expr`, `from_sql_text`,
-  `combine`, `combine_surveyed`, `grown_read`), moved verbatim from `mod.rs`;
-  fields are `pub(super)`, the visibility they had.
-  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** `PyColumn::sql`
-  takes the session's `keep_verbatim` flag and canonicalizes with it, so
-  `F.expr` parses like the session door (net-zero, stays 1012).
+- [`levels.rs`](levels.rs) — **Re-verify fold (2026-09-30):** the `PyColumn` struct and its cached-level
+  constructors (`from_expr`, `from_sql_text`, `combine`, `combine_surveyed`, `grown_read`), moved
+  verbatim from `mod.rs`; fields are `pub(super)`, the visibility they had.
+  **STRING-LITERAL-ESCAPE-1 verifier fold (2026-09-30):** `PyColumn::sql` takes the session's
+  `keep_verbatim` flag and canonicalizes with it, so `F.expr` parses like the session door (net-zero,
+  stays 1012).
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch. Its
   default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before refusing.
-  **FNP-BITMAP-FACADE-1 (2026-09-15):** `unary_aggregate_udaf` gains the
-  `bitmap_construct_agg` / `bitmap_or_agg` / `bitmap_and_agg` arms mapping to
-  `repark_functions::bitmap_agg::{bitmap_construct_agg_udaf, bitmap_or_agg_udaf,
-  bitmap_and_agg_udaf}` (the module flipped `pub` in `repark-functions` for the cross-crate
-  path, the same shape as the `repark_functions::aggregate` arms). The file sat at the exact
-  1000-line ceiling, so the four `datafusion::logical_expr::binary_expr` arms condense onto
-  the existing import (8 → 4 lines each, the `IsNotDistinctFrom` call staying wrapped for
-  rustfmt) before the three arms land — 1000 → 991 lines, no baseline raised.
-  **DEGREES-RUST-1 (2026-09-15, owner Q-15a-1):** `call_scalar_expr` gains the `degrees` /
-  `radians` arms onto the engine's scalar UDFs (`datafusion::functions::expr_fn`) — the
-  single-multiply `f64::to_degrees` / `f64::to_radians` form the facade measured bit-equal
-  to Spark, so reuse and not a new kernel. **Run 16a round 3:** the arms rebind to the
-  Spark-exact `repark_functions::expr_fn::degrees` / `radians` pair, which carries the
-  refusals and the ANSI switch the engine UDFs lack.
-  **FNP-11B step 2 (2026-09-15):** the `to_date` arm takes 1 or 2 args
-  (`expr_fn::to_date` widens to `Vec<Expr>`); `unix_timestamp` takes 0 to 2.
+  **FNP-BITMAP-FACADE-1 (2026-09-15):** `unary_aggregate_udaf` gains the `bitmap_construct_agg` /
+  `bitmap_or_agg` / `bitmap_and_agg` arms mapping to `repark_functions::bitmap_agg::{bitmap_construct_agg_udaf,
+  bitmap_or_agg_udaf, bitmap_and_agg_udaf}` (the module is `pub` in `repark-functions` for the
+  cross-crate path, like the `repark_functions::aggregate` arms). At the exact 1000-line ceiling, the
+  four `datafusion::logical_expr::binary_expr` arms condense onto the existing import (8 → 4
+  lines each; `IsNotDistinctFrom` stays wrapped for rustfmt): 1000 → 991 lines, no baseline raised.
+  **DEGREES-RUST-1 (2026-09-15, owner Q-15a-1):** `call_scalar_expr` gains the `degrees` / `radians`
+  arms onto the engine's scalar UDFs (`datafusion::functions::expr_fn`) — the single-multiply
+  `f64::to_degrees` / `f64::to_radians` form, measured bit-equal to Spark (reuse, no new kernel).
+  **Run 16a round 3:** the arms rebind to the Spark-exact `repark_functions::expr_fn::degrees` /
+  `radians` pair, which carries the refusals and the ANSI switch the engine UDFs lack.
+  **FNP-11B step 2 (2026-09-15):** the `to_date` arm takes 1 or 2 args (`expr_fn::to_date` widens to
+  `Vec<Expr>`); `unix_timestamp` takes 0 to 2.
   **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):** `call_scalar_expr` keeps
   its name and grows by max argument depth around a renamed inner match, so the
   arm clones of a deep argument run on a sized segment.
@@ -370,13 +366,10 @@ sync after changes.
 - Up: [src map](../map.md)
 - Crate: [repark-python map](../../map.md)
 - **FNP-4B (2026-09-15):** added `expr_build.rs` / `mod.rs` code comments removed (ruling 2026-08-26); `mod.rs` ceiling 1040 → 1038.
-- **FNP-AGG-1 slice (d) (2026-09-21):** `function_dispatch.rs` renames `binary_aggregate_udaf` to
-  `nary_aggregate_udaf` (value column plus N args; arity from the built args) and adds the
-  `grouping_id` arm (n-ary, maybe zero columns); `expr_build.rs` gains the `grouping_id_column`
-  binding behind the unsigned-to-signed cast; `mod.rs` `aggregate_binary` takes trailing columns as
-  a vector (exact baseline 1012).
+- **FNP-AGG-1 slice (d) (2026-09-21):** `function_dispatch.rs` renames `binary_aggregate_udaf` to `nary_aggregate_udaf` (value column plus N args; arity from the built args) and adds the `grouping_id` arm (n-ary, maybe zero columns); `expr_build.rs` gains the `grouping_id_column` binding behind the unsigned-to-signed cast; `mod.rs` `aggregate_binary` takes trailing columns as a vector (exact baseline 1012).
 - **`build_expr_context`:** ICE-TSNS-TYPE-PLANNER-1 (10-13) registers `repark_functions::SparkTypePlanner`,
   so `F.expr("CAST(x AS TIMESTAMP)")` and `selectExpr` type as `spark.sql`; STRUCT-SETOP-REORDER-REFUSAL-1
   (11-09) seats the set-op name check after `type_coercion`, STRUCT-COMPARE-BY-POSITION-1 struct operands
   by position before it, names bare; FEXPR-WINDOW-NULL-ORDER-1 (11-12): `default_null_ordering =
-  nulls_min`, Spark's NULL placement for a fragment `ORDER BY`. All pinned (`expr_tests.rs`).
+  nulls_min`, Spark's NULL placement for a fragment `ORDER BY`; FILTER-STRING-NULL-ORDER-1 (11-13):
+  `predicate_state` sets it for a Spark-door frame's string `filter` only. All pinned (`expr_tests.rs`).

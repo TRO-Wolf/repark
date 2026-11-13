@@ -9200,6 +9200,30 @@ the pin rather than obeying it.
   with three findings outside the unit (aggregate `ORDER BY` accepted where Spark refuses, `WITHIN
   GROUP` coverage, `F.expr('k DESC')`).
 
+### FILTER-STRING-NULL-ORDER-1 — an `ORDER BY` inside a string `filter` / `where` placed NULLs backwards — **FIXED 2026-11-13 (FILTER-STRING-NULL-ORDER-1)**
+
+- **repark** — **FIXED 2026-11-13.** On a frame from the Spark door (`spark.sql`, `spark.table`,
+  `createDataFrame` and every frame derived from one, including a join), a string `filter` / `where`
+  places NULLs first for `ASC` and last for `DESC` in the `ORDER BY` of a scalar, `IN`, `NOT IN`,
+  `EXISTS` or `NOT EXISTS` subquery and of a window inside one, when the text states no placement; an
+  explicit `NULLS FIRST` / `NULLS LAST` wins. Over `ki` = `(10, NULL, 30, 20, 40)`,
+  `filter("ki = (SELECT a FROM VALUES (NULL), (10), (20) AS q(a) ORDER BY a DESC LIMIT 1)")` keeps
+  the row with `ki = 20`. Before the fix it kept no row (DataFusion's `nulls_max` default), while
+  `filter(F.expr(<same text>))` was right. A frame from the native `repark.sql()` door keeps its own
+  dialect (`nulls_max`), by owner ruling.
+- **Apache Spark** — NULLs first for `ASC`, last for `DESC`; the row with `ki = 20`. *(oracle:
+  recorded — PySpark 4.1.2 `local[2]`, 2026-11-13, 28 predicates on INT, STRING and DOUBLE keys over
+  nine doors, 3 joined-frame cells and 12 controls.)*
+- **Pin** —
+  `python/repark/tests/functions/test_filter_string_null_order_1.py::test_every_recorded_cell_answers_as_recorded`
+  and `crates/repark-python/src/column/expr_tests.rs::a_string_predicate_takes_spark_null_placement_only_on_the_spark_door`.
+- **Rationale** — FIXED. A string predicate plans on the frame's own session state; the predicate
+  parse (`expr_build::predicate_state`) now sets `default_null_ordering` to `nulls_min` when that
+  session is the Spark door's (`repark_spark::is_spark_door_session`), the same setting
+  FEXPR-WINDOW-NULL-ORDER-1 gave the `F.expr` context. Card:
+  [FILTER-STRING-NULL-ORDER-1](../task/roadmap/mid-term/filter-string-null-order-1-card-2026-11-13.md),
+  with three findings outside the unit.
+
 ### FN-APPROXPCT-1 — `approx_percentile` / `percentile_approx` interpolate to DOUBLE — **FIXED 2026-09-03 (FN-FIX-1)**
 
 - **repark** — **FIXED 2026-09-03 (FN-FIX-1).** both names answer the discrete data

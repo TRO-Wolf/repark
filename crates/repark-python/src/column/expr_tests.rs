@@ -368,3 +368,125 @@ fn fragment_order_by_takes_spark_null_placement_unless_explicit() {
         assert_eq!(fragment_sort_options(sql), expected, "{sql}");
     }
 }
+
+fn subquery_sort_options(expr: &Expr) -> Vec<(bool, bool)> {
+    use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+    use datafusion::logical_expr::LogicalPlan;
+    let mut plans = Vec::new();
+    expr.apply(|node| {
+        match node {
+            Expr::ScalarSubquery(subquery) => plans.push(std::sync::Arc::clone(&subquery.subquery)),
+            Expr::InSubquery(in_subquery) => {
+                plans.push(std::sync::Arc::clone(&in_subquery.subquery.subquery));
+            }
+            Expr::Exists(exists) => plans.push(std::sync::Arc::clone(&exists.subquery.subquery)),
+            _ => {}
+        }
+        Ok(TreeNodeRecursion::Continue)
+    })
+    .expect("the expression walk completes");
+    let mut found = Vec::new();
+    for plan in plans {
+        plan.apply(|node| {
+            if let LogicalPlan::Sort(sort) = node {
+                found.extend(sort.expr.iter().map(|key| (key.asc, key.nulls_first)));
+            }
+            for expr in node.expressions() {
+                expr.apply(|inner| {
+                    if let Expr::WindowFunction(window) = inner {
+                        found.extend(
+                            window
+                                .params
+                                .order_by
+                                .iter()
+                                .map(|sort| (sort.asc, sort.nulls_first)),
+                        );
+                    }
+                    Ok(TreeNodeRecursion::Continue)
+                })?;
+            }
+            Ok(TreeNodeRecursion::Continue)
+        })
+        .expect("the plan walk completes");
+    }
+    found
+}
+
+fn predicate_sort_options(
+    frame: &crate::dataframe::PyDataFrame,
+    predicate: &str,
+) -> [Vec<(bool, bool)>; 2] {
+    let folded = super::expr_build::parse_canonical_predicate(frame, predicate)
+        .expect("the case-folding predicate plans");
+    let exact = super::expr_build::parse_canonical_predicate_exact(frame, predicate)
+        .expect("the exact predicate plans");
+    [
+        subquery_sort_options(&folded),
+        subquery_sort_options(&exact),
+    ]
+}
+
+#[test]
+fn a_string_predicate_takes_spark_null_placement_only_on_the_spark_door() {
+    let nulls = "VALUES (CAST(NULL AS INT)), (1) AS v(a)";
+    let cases = [
+        (
+            format!("k = (SELECT a FROM {nulls} ORDER BY a DESC LIMIT 1)"),
+            vec![(false, false)],
+            vec![(false, true)],
+        ),
+        (
+            format!("k IN (SELECT a FROM {nulls} ORDER BY a LIMIT 1)"),
+            vec![(true, true)],
+            vec![(true, false)],
+        ),
+        (
+            format!("EXISTS (SELECT a FROM {nulls} ORDER BY a DESC, a ASC LIMIT 1)"),
+            vec![(false, false), (true, true)],
+            vec![(false, true), (true, false)],
+        ),
+        (
+            format!(
+                "k = (SELECT max(r) FROM (SELECT row_number() OVER (ORDER BY a DESC) AS r FROM {nulls}))"
+            ),
+            vec![(false, false)],
+            vec![(false, true)],
+        ),
+        (
+            format!("k = (SELECT a FROM {nulls} ORDER BY a DESC NULLS FIRST LIMIT 1)"),
+            vec![(false, true)],
+            vec![(false, true)],
+        ),
+        (
+            format!("k = (SELECT a FROM {nulls} ORDER BY a ASC NULLS LAST LIMIT 1)"),
+            vec![(true, false)],
+            vec![(true, false)],
+        ),
+    ];
+    Python::attach(|py| {
+        let spark = crate::session::PyReparkSession::new(py, None, None, None, None, None)
+            .expect("the Spark-door session builds");
+        let native = crate::session::PyReparkSession::native(py, None, None, None, None)
+            .expect("the native session builds");
+        let spark_frame = spark.sql(py, "SELECT 1 AS k").expect("a Spark-door frame");
+        let native_frame = native.sql(py, "SELECT 1 AS k").expect("a native frame");
+        assert!(repark_spark::is_spark_door_session(
+            spark_frame.inner().task_ctx().session_config()
+        ));
+        assert!(!repark_spark::is_spark_door_session(
+            native_frame.inner().task_ctx().session_config()
+        ));
+        for (predicate, on_spark, on_native) in cases {
+            assert_eq!(
+                predicate_sort_options(&spark_frame, &predicate),
+                [on_spark.clone(), on_spark],
+                "Spark door: {predicate}"
+            );
+            assert_eq!(
+                predicate_sort_options(&native_frame, &predicate),
+                [on_native.clone(), on_native],
+                "native door: {predicate}"
+            );
+        }
+    });
+}
