@@ -58,7 +58,7 @@ Tests for `../iceberg_path.rs` — the `format("iceberg").load(<path>)` static-t
   `v([^.]*)\..*` stem whose canonical name is listed, so a catalog-style name never beats a `v`
   name.
 - `corpus_cells_tests.rs` — HADOOP-DISCOVERY-RULE-1's table-driven pin, rewritten by
-  CORPUS-CHECKER-REPAIR-1 (2026-11-13): every `path_select` and `path_insert` row of
+  CORPUS-CHECKER-REPAIR-1 (2026-11-13), still `path_read_cells_match_the_spark_column`: every `path_select` and `path_insert` row of
   `docs/corpus/hadoop-discovery-cells-2026-11-03.jsonl` (3820 rows, none skipped) rebuilt on a
   five-commit RePark history with the row's writer, name form, cleanup, hint and checksum
   sidecars. A row matches Spark's rows (959) or Java's missing-version body (348), or else its

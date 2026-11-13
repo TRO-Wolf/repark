@@ -526,7 +526,7 @@ fn record_observed(lines: &[String]) {
 }
 
 #[tokio::test]
-async fn every_path_row_matches_spark_or_its_carded_golden() {
+async fn path_read_cells_match_the_spark_column() {
     let (_warehouse, session, base) = base_history().await;
     let fixtures = tempfile::tempdir().expect("tempdir");
     let goldens = goldens();
