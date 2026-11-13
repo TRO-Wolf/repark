@@ -1268,6 +1268,9 @@ perfectly good read.
   live Spark cell reads the six wrong-write rows by path); the fork's
   `crates/iceberg/src/catalog/memory/hadoop_cache_invariant_tests.rs` and
   `hadoop_cache_differential_tests.rs` (cache on against cache off over 96 seeded sequences).
+- **Rationale** — FIXED 2026-11-13. Owner ruling 2026-11-12 ("Go with the defaults"): an S1
+  wrong write that blocks the full format-v2 label, not the scoped label
+  (ICE-V2-FLAT-AWS-LABEL-1); the fix rides v1.5.7.
 
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
 
