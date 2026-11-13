@@ -43,6 +43,9 @@ def error_record(e: Exception) -> dict:
             if cls:
                 break
     head = str(e).strip().splitlines()[0][:240] if str(e).strip() else ""
+    java = getattr(e, "java_exception", None)
+    if java is not None:
+        head = str(java.toString()).strip().splitlines()[0][:240]
     return {"error": type(e).__name__, "class": cls, "head": head}
 
 

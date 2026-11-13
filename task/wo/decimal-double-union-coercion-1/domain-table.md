@@ -13,11 +13,14 @@ wrote.
 | SQL `SELECT`, per ANSI mode | 1,985 | 1,193 | 306 | 368 overflow + 61 other | 200 | 256 (+2 both raise) |
 | DataFrame API, per ANSI mode | 203 | 131 | 38 | 27 overflow + 36 other | 24 | 6 |
 | Iceberg writes, per ANSI mode | 30 | 28 | **14 wrong writes** | 7 | — | 5 (+1 both raise) |
+| revision selects (nested leaves, VALUES casts, joins, recursive CTEs, zero shapes), per mode | 28 | 21 | 7 | 1 other | 1 | 4 (+1 both raise; 7 widened-form projections) |
+| revision writes (the critic's doors), per mode | 24 | 24 | **19 wrong writes** | 0 | — | 4 (+1 widened-form projection) |
 | #888 nvl-family table, replayed (ANSI on) | 612 | 2 | 0 | 0 | 0 | 2 |
 | native door (`repark.sql()`), informational | 1,985 | — | see the native matrix | | | |
 
-**Wrong reads (root, both modes): 688** (344 per mode). **Wrong writes (root, both modes): 28** (14 per
-mode). The root cells are **identical in both ANSI modes** (every root cell has the same verdict on and
+**Wrong reads (root, both modes): 702** (351 per mode: 688 in the first pass, 14 added by the revision).
+**Wrong writes (root, both modes): 66** (33 per mode: 28 in the first pass, 38 added by the revision after
+the inventory critic). The root cells are **identical in both ANSI modes** (every root cell has the same verdict on and
 off): the fault is not mode-dependent, so the fix is not either. Spark types every root cell `double`
 (or `array<double>`, `map<string,double>`, `boolean` for predicates), except `nullif(<decimal>,
 <double>)`, which Spark types as its first argument's decimal.
@@ -308,6 +311,183 @@ Outside the root: `ins_values_dec_round` (RePark rounds the double 1.255 to 1.25
 | `extra/where_dec_in_dbl` | true | `bigint` 0 | `bigint` 1 | wrong-value |
 | `extra/where_eq_literal` | true | `bigint` 0 | `bigint` 0 | equal |
 | `extra/where_in_literal` | true | `bigint` 0 | `bigint` 0 | equal |
+
+## Revision after the inventory critic (2026-11-13, both ANSI modes)
+
+The critic's doors and shapes, re-measured in both modes on the same package and Spark
+([evidence/probes/revision_cells.py](evidence/probes/revision_cells.py),
+[evidence/probes/run_revision.py](evidence/probes/run_revision.py), rendered by
+[evidence/probes/revision_table.py](evidence/probes/revision_table.py)). Every verdict is the same in both
+modes. A `_widened` cell writes by hand what proposal 1 would produce (`CAST(<decimal> AS DOUBLE)`), so it
+shows what the build would answer, not what main answers.
+
+- **New wrong writes, 19 per mode:** `INSERT OVERWRITE` from `VALUES`, from a union and from
+  `SELECT … FROM VALUES`; `INSERT … BY NAME` from `VALUES` and from a union; `INSERT … VALUES` and
+  `INSERT … SELECT … FROM VALUES` into STRING (`1.50` where Spark stores `1.5`) and `INSERT … VALUES` into
+  DECIMAL(38,18) (`…123456789` where Spark stores `…123456790`, through `double`); RTAS from `VALUES` and
+  from a union (column created `decimal(30,15)`); `DELETE`, `UPDATE … WHERE` and `MERGE … ON` with a
+  decimal column against a double column, copy-on-write and merge-on-read (1e-20 equals 0.00, so RePark
+  deletes, updates or matches the row Spark leaves alone); `MERGE … ON` of `-0.0` against `0.00` (Spark
+  4.1.2 with Iceberg 1.11.0 does not match it, RePark does); `write.insertInto` and
+  `writeTo().overwritePartitions()` of a DataFrame union.
+- **Already right (corrects the first pass's "INSERT … VALUES is right"):** `INSERT … VALUES` into DOUBLE,
+  FLOAT and BIGINT targets. It is wrong into STRING and high-precision DECIMAL targets.
+- **New wrong reads, 7 per mode:** struct, array and map leaves in `UNION ALL` and in `CASE` (six), and a
+  two-row `VALUES` of a double and a `CAST(… AS DECIMAL(30,15))` (`values_A_planner_cast`).
+- **Must stay EQUAL (pins for the build):** `values_B_user_cast` (a user cast to `decimal(30,15)` on every
+  cell: Spark keeps the decimal), `semi_join_left_type` and `anti_join_left_type` (a user `LEFT SEMI` /
+  `LEFT ANTI JOIN` keeps the left column's decimal type on both engines), `rcte_dbl_anchor_one_col`
+  (Spark keeps the anchor's `double`), `values_float`, `values_bigint`. `values_C_user_cast_vs_double`
+  is type only today (Spark `double` 0.0, 2.0); a build that unwraps the user cast would answer 1e-20.
+- **Recursive CTEs:** Spark refuses a decimal anchor with a double recursive term
+  (`CANNOT_MERGE_INCOMPATIBLE_DATA_TYPE`); RePark raises `Join Error` on both two-column forms, a separate
+  fault.
+
+### Cells proposal 1 would turn from EQUAL to WRONG before SIGNED-ZERO-NORMALIZE-1 part B
+
+A decimal zero never carries a sign; a widened `double` does, and RePark separates `-0.0` from `0.0` in
+comparisons, join keys, set operations and grouping until part B (key sites) lands. Measured in both modes,
+today's shape EQUAL and the widened shape WRONG:
+
+| shape (`0.00` against `-0.0`) | Spark | RePark today | RePark widened |
+|---|---|---|---|
+| `zero_eq` (`=`) | true | true | **false** |
+| `zero_join` (equi-join count) | 1 | 1 | **0** |
+| `zero_intersect` (count) | 1 | 1 | **0** |
+| `zero_except` (count) | 0 | 0 | **1** |
+| `zero_union_distinct` (count) | 1 | 1 | **2** |
+| `zero_group_by` (groups over a union) | 1 | 1 | **2** |
+| `zero_in_subquery` (`WHERE v IN (SELECT 0.00)`) | 1 | 1 | **0** |
+| `delete_zero` (`DELETE … WHERE v = d`, rows left) | 0 | 0 | **1** |
+
+One shape moves the other way: `merge_on_zero` is WRONG today (RePark matches, Spark does not) and EQUAL
+widened. With `ins_union_dec_round` (first pass, the store-rounding trap), **nine shapes per mode turn
+from EQUAL to WRONG** if proposal 1 lands before part B and before the store rounding.
+
+### Pruning, measured on main
+
+A three-file Iceberg table `(id INT, d DECIMAL(10,2), v DOUBLE)`; `EXPLAIN` on RePark, ANSI on (the
+`explain/*` rows in `revision-repark-ansi-true.jsonl`):
+
+| predicate | scan predicate | files |
+|---|---|---|
+| `d = 0.5` (decimal column, decimal literal) | none | 3 |
+| `d = CAST(0.5 AS DOUBLE)` (today: typed `decimal(30,15)`) | none | 3 |
+| `CAST(d AS DOUBLE) = CAST(0.5 AS DOUBLE)` (widened) | none | 3 |
+| `v = CAST(0.5 AS DOUBLE)` (double column, control) | `v = 0.5` | 1 |
+
+The fork converts no decimal literal to an Iceberg datum (inventory G7), so a decimal-column predicate
+prunes nothing today, widened or not.
+
+| cell | ANSI | Spark 4.1.2 | RePark | verdict |
+|---|---|---|---|---|
+| `struct_union` | true | `struct<a:double>` [0.1, [1e-20 | `struct<a:decimal(30,15)>` {a: dec:0.100000000000000}, {a: dec:0E-15} | wrong-value |
+| `array_union` | true | `array<double>` [0.1, [1e-20 | `array<decimal(30,15)>` [dec:0.100000000000000], [dec:0E-15] | wrong-value |
+| `map_union` | true | `map<string,double>` {k: 0.1, {k: 1e-20 | `map<string,decimal(30,15)>` {k: dec:0.100000000000000}, {k: dec:0E-15} | wrong-value |
+| `struct_case` | true | `struct<a:double>` [1e-20 | `struct<a:decimal(30,15)>` {a: dec:0E-15} | wrong-value |
+| `array_case` | true | `array<double>` [1e-20 | `array<decimal(30,15)>` [dec:0E-15] | wrong-value |
+| `map_case` | true | `map<string,double>` {k: 1e-20 | `map<string,decimal(30,15)>` {k: dec:0E-15} | wrong-value |
+| `values_A_planner_cast` | true | `double` 1e-20, 2.5 | `decimal(30,15)` dec:0E-15, dec:2.500000000000000 | wrong-value |
+| `values_B_user_cast` | true | `decimal(30,15)` dec:0E-15, dec:2.500000000000000 | `decimal(30,15)` dec:0E-15, dec:2.500000000000000 | equal |
+| `values_C_user_cast_vs_double` | true | `double` 0.0, 2.0 | `decimal(30,15)` dec:0E-15, dec:2.000000000000000 | type-only |
+| `semi_join_left_type` | true | `decimal(10,2)` dec:1.25 | `decimal(10,2)` dec:1.25 | equal |
+| `anti_join_left_type` | true | `decimal(10,2)` dec:1.25 | `decimal(10,2)` dec:1.25 | equal |
+| `rcte_dec_anchor` | true | raises org.apache.spark.SparkException: [CANNOT_MERGE_INCOMPATIBLE_DATA_TYPE] Failed to merge incompatible data types | raises Join Error | both-raise |
+| `rcte_dbl_anchor` | true | `double` 0.5, 1e-20 | raises Join Error | repark-raises-other |
+| `rcte_dbl_anchor_one_col` | true | `double` 0.5, 1e-20 | `double` 0.5, 1e-20 | equal |
+| `zero_eq_today` | true | `boolean` true | `boolean` true | equal |
+| `zero_eq_widened` | true | `boolean` true | `boolean` false | wrong-value |
+| `zero_join_today` | true | `bigint` 1 | `bigint` 1 | equal |
+| `zero_join_widened` | true | `bigint` 1 | `bigint` 0 | wrong-value |
+| `zero_intersect_today` | true | `bigint` 1 | `bigint` 1 | equal |
+| `zero_intersect_widened` | true | `bigint` 1 | `bigint` 0 | wrong-value |
+| `zero_except_today` | true | `bigint` 0 | `bigint` 0 | equal |
+| `zero_except_widened` | true | `bigint` 0 | `bigint` 1 | wrong-value |
+| `zero_union_distinct_today` | true | `bigint` 1 | `bigint` 1 | equal |
+| `zero_union_distinct_widened` | true | `bigint` 1 | `bigint` 2 | wrong-value |
+| `zero_group_by_today` | true | `bigint` 1 | `bigint` 1 | equal |
+| `zero_group_by_widened` | true | `bigint` 1 | `bigint` 2 | wrong-value |
+| `zero_in_subquery_today` | true | `bigint` 1 | `bigint` 1 | equal |
+| `zero_in_subquery_widened` | true | `bigint` 1 | `bigint` 0 | wrong-value |
+| `struct_union` | false | `struct<a:double>` [0.1, [1e-20 | `struct<a:decimal(30,15)>` {a: dec:0.100000000000000}, {a: dec:0E-15} | wrong-value |
+| `array_union` | false | `array<double>` [0.1, [1e-20 | `array<decimal(30,15)>` [dec:0.100000000000000], [dec:0E-15] | wrong-value |
+| `map_union` | false | `map<string,double>` {k: 0.1, {k: 1e-20 | `map<string,decimal(30,15)>` {k: dec:0.100000000000000}, {k: dec:0E-15} | wrong-value |
+| `struct_case` | false | `struct<a:double>` [1e-20 | `struct<a:decimal(30,15)>` {a: dec:0E-15} | wrong-value |
+| `array_case` | false | `array<double>` [1e-20 | `array<decimal(30,15)>` [dec:0E-15] | wrong-value |
+| `map_case` | false | `map<string,double>` {k: 1e-20 | `map<string,decimal(30,15)>` {k: dec:0E-15} | wrong-value |
+| `values_A_planner_cast` | false | `double` 1e-20, 2.5 | `decimal(30,15)` dec:0E-15, dec:2.500000000000000 | wrong-value |
+| `values_B_user_cast` | false | `decimal(30,15)` dec:0E-15, dec:2.500000000000000 | `decimal(30,15)` dec:0E-15, dec:2.500000000000000 | equal |
+| `values_C_user_cast_vs_double` | false | `double` 0.0, 2.0 | `decimal(30,15)` dec:0E-15, dec:2.000000000000000 | type-only |
+| `semi_join_left_type` | false | `decimal(10,2)` dec:1.25 | `decimal(10,2)` dec:1.25 | equal |
+| `anti_join_left_type` | false | `decimal(10,2)` dec:1.25 | `decimal(10,2)` dec:1.25 | equal |
+| `rcte_dec_anchor` | false | raises org.apache.spark.SparkException: [CANNOT_MERGE_INCOMPATIBLE_DATA_TYPE] Failed to merge incompatible data types | raises Join Error | both-raise |
+| `rcte_dbl_anchor` | false | `double` 0.5, 1e-20 | raises Join Error | repark-raises-other |
+| `rcte_dbl_anchor_one_col` | false | `double` 0.5, 1e-20 | `double` 0.5, 1e-20 | equal |
+| `zero_eq_today` | false | `boolean` true | `boolean` true | equal |
+| `zero_eq_widened` | false | `boolean` true | `boolean` false | wrong-value |
+| `zero_join_today` | false | `bigint` 1 | `bigint` 1 | equal |
+| `zero_join_widened` | false | `bigint` 1 | `bigint` 0 | wrong-value |
+| `zero_intersect_today` | false | `bigint` 1 | `bigint` 1 | equal |
+| `zero_intersect_widened` | false | `bigint` 1 | `bigint` 0 | wrong-value |
+| `zero_except_today` | false | `bigint` 0 | `bigint` 0 | equal |
+| `zero_except_widened` | false | `bigint` 0 | `bigint` 1 | wrong-value |
+| `zero_union_distinct_today` | false | `bigint` 1 | `bigint` 1 | equal |
+| `zero_union_distinct_widened` | false | `bigint` 1 | `bigint` 2 | wrong-value |
+| `zero_group_by_today` | false | `bigint` 1 | `bigint` 1 | equal |
+| `zero_group_by_widened` | false | `bigint` 1 | `bigint` 2 | wrong-value |
+| `zero_in_subquery_today` | false | `bigint` 1 | `bigint` 1 | equal |
+| `zero_in_subquery_widened` | false | `bigint` 1 | `bigint` 0 | wrong-value |
+
+| cell | ANSI | Spark writes; Spark reads | RePark writes; Spark reads | verdict |
+|---|---|---|---|---|
+| `ow_values` | true | `double` 1=0.1; 2=1e-20 | `double` 1=0.1; 2=0.0 | WRONG-WRITE |
+| `ow_union` | true | `double` 1=0.1; 2=1e-20 | `double` 1=0.1; 2=0.0 | WRONG-WRITE |
+| `ow_select_values` | true | `double` 1=0.1; 2=1e-20 | `double` 1=0.1; 2=0.0 | WRONG-WRITE |
+| `byname_values` | true | `double` 1=0.1; 2=1e-20 | `double` 1=0.1; 2=0.0 | WRONG-WRITE |
+| `byname_union` | true | `double` 1=0.1; 2=1e-20 | `double` 1=0.1; 2=0.0 | WRONG-WRITE |
+| `values_string` | true | `string` 1=1.5; 2=2.0 | `string` 1=1.50; 2=2.0 | WRONG-WRITE |
+| `select_values_string` | true | `string` 1=1.5; 2=2.0 | `string` 1=1.50; 2=2.0 | WRONG-WRITE |
+| `values_dec38` | true | `decimal(38,18)` 1=123456789.123456790000000000; 2=1.000000000000000000 | `decimal(38,18)` 1=123456789.123456789000000000; 2=1.000000000000000000 | WRONG-WRITE |
+| `values_float` | true | `float` 1=0.10000000149011612; 2=9.999999682655225e-21 | `float` 1=0.10000000149011612; 2=9.999999682655225e-21 | EQUAL |
+| `values_bigint` | true | `bigint` 1=1; 2=2 | `bigint` 1=1; 2=2 | EQUAL |
+| `rtas_values` | true | `double` 1=0.1; 2=1e-20 | `decimal(30,15)` 1=0.100000000000000; 2=0E-15 | WRONG-WRITE |
+| `rtas_union` | true | `double` 1=0.1; 2=1e-20 | `decimal(30,15)` 1=0.100000000000000; 2=0E-15 | WRONG-WRITE |
+| `delete_eq_cols` | true | `decimal(10,2)` 1=1e-20=0.00 | `decimal(10,2)`  | WRONG-WRITE |
+| `update_where_cols` | true | `decimal(10,2)` 1=1e-20=0.00; 12=0.5=0.50 | `decimal(10,2)` 11=1e-20=0.00; 12=0.5=0.50 | WRONG-WRITE |
+| `merge_on_cols` | true | `decimal(10,2)` 1=1e-20=0.00; 2=0.5=0.50 | `decimal(10,2)` 2=0.5=0.50; 99=1e-20=0.00 | WRONG-WRITE |
+| `delete_eq_cols_mor` | true | `decimal(10,2)` 1=1e-20=0.00 | `decimal(10,2)`  | WRONG-WRITE |
+| `update_where_cols_mor` | true | `decimal(10,2)` 1=1e-20=0.00; 12=0.5=0.50 | `decimal(10,2)` 11=1e-20=0.00; 12=0.5=0.50 | WRONG-WRITE |
+| `merge_on_cols_mor` | true | `decimal(10,2)` 1=1e-20=0.00; 2=0.5=0.50 | `decimal(10,2)` 2=0.5=0.50; 99=1e-20=0.00 | WRONG-WRITE |
+| `merge_on_zero_today` | true | `decimal(10,2)` 1=-0.0=0.00 | `decimal(10,2)` 99=-0.0=0.00 | WRONG-WRITE |
+| `merge_on_zero_widened` | true | `decimal(10,2)` 1=-0.0=0.00 | `decimal(10,2)` 1=-0.0=0.00 | EQUAL |
+| `delete_zero_today` | true | `decimal(10,2)`  | `decimal(10,2)`  | EQUAL |
+| `delete_zero_widened` | true | `decimal(10,2)`  | `decimal(10,2)` 1=-0.0=0.00 | WRONG-WRITE |
+| `df_insertinto_union` | true | `double` 1=0.1; 2=1e-20 | `double` 1=0.1; 2=0.0 | WRONG-WRITE |
+| `df_overwritepartitions_union` | true | `double` 1=0.1; 2=1e-20 | `double` 1=0.1; 2=0.0 | WRONG-WRITE |
+| `ow_values` | false | `double` 1=0.1; 2=1e-20 | `double` 1=0.1; 2=0.0 | WRONG-WRITE |
+| `ow_union` | false | `double` 1=0.1; 2=1e-20 | `double` 1=0.1; 2=0.0 | WRONG-WRITE |
+| `ow_select_values` | false | `double` 1=0.1; 2=1e-20 | `double` 1=0.1; 2=0.0 | WRONG-WRITE |
+| `byname_values` | false | `double` 1=0.1; 2=1e-20 | `double` 1=0.1; 2=0.0 | WRONG-WRITE |
+| `byname_union` | false | `double` 1=0.1; 2=1e-20 | `double` 1=0.1; 2=0.0 | WRONG-WRITE |
+| `values_string` | false | `string` 1=1.5; 2=2.0 | `string` 1=1.50; 2=2.0 | WRONG-WRITE |
+| `select_values_string` | false | `string` 1=1.5; 2=2.0 | `string` 1=1.50; 2=2.0 | WRONG-WRITE |
+| `values_dec38` | false | `decimal(38,18)` 1=123456789.123456790000000000; 2=1.000000000000000000 | `decimal(38,18)` 1=123456789.123456789000000000; 2=1.000000000000000000 | WRONG-WRITE |
+| `values_float` | false | `float` 1=0.10000000149011612; 2=9.999999682655225e-21 | `float` 1=0.10000000149011612; 2=9.999999682655225e-21 | EQUAL |
+| `values_bigint` | false | `bigint` 1=1; 2=2 | `bigint` 1=1; 2=2 | EQUAL |
+| `rtas_values` | false | `double` 1=0.1; 2=1e-20 | `decimal(30,15)` 1=0.100000000000000; 2=0E-15 | WRONG-WRITE |
+| `rtas_union` | false | `double` 1=0.1; 2=1e-20 | `decimal(30,15)` 1=0.100000000000000; 2=0E-15 | WRONG-WRITE |
+| `delete_eq_cols` | false | `decimal(10,2)` 1=1e-20=0.00 | `decimal(10,2)`  | WRONG-WRITE |
+| `update_where_cols` | false | `decimal(10,2)` 1=1e-20=0.00; 12=0.5=0.50 | `decimal(10,2)` 11=1e-20=0.00; 12=0.5=0.50 | WRONG-WRITE |
+| `merge_on_cols` | false | `decimal(10,2)` 1=1e-20=0.00; 2=0.5=0.50 | `decimal(10,2)` 2=0.5=0.50; 99=1e-20=0.00 | WRONG-WRITE |
+| `delete_eq_cols_mor` | false | `decimal(10,2)` 1=1e-20=0.00 | `decimal(10,2)`  | WRONG-WRITE |
+| `update_where_cols_mor` | false | `decimal(10,2)` 1=1e-20=0.00; 12=0.5=0.50 | `decimal(10,2)` 11=1e-20=0.00; 12=0.5=0.50 | WRONG-WRITE |
+| `merge_on_cols_mor` | false | `decimal(10,2)` 1=1e-20=0.00; 2=0.5=0.50 | `decimal(10,2)` 2=0.5=0.50; 99=1e-20=0.00 | WRONG-WRITE |
+| `merge_on_zero_today` | false | `decimal(10,2)` 1=-0.0=0.00 | `decimal(10,2)` 99=-0.0=0.00 | WRONG-WRITE |
+| `merge_on_zero_widened` | false | `decimal(10,2)` 1=-0.0=0.00 | `decimal(10,2)` 1=-0.0=0.00 | EQUAL |
+| `delete_zero_today` | false | `decimal(10,2)`  | `decimal(10,2)`  | EQUAL |
+| `delete_zero_widened` | false | `decimal(10,2)`  | `decimal(10,2)` 1=-0.0=0.00 | WRONG-WRITE |
+| `df_insertinto_union` | false | `double` 1=0.1; 2=1e-20 | `double` 1=0.1; 2=0.0 | WRONG-WRITE |
+| `df_overwritepartitions_union` | false | `double` 1=0.1; 2=1e-20 | `double` 1=0.1; 2=0.0 | WRONG-WRITE |
 
 ## #888's table, folded in
 

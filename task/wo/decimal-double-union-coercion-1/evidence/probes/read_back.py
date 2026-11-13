@@ -30,14 +30,14 @@ records = [
 ]
 for line in Path(src).read_text().splitlines():
     rec = json.loads(line)
-    if rec["key"] == "provenance":
+    if rec["key"] == "provenance" or "table" not in rec:
         continue
     t = rec["table"].replace("lc.", "rd.", 1)
     got = {"key": rec["key"], "table": rec["table"]}
     try:
-        got["spark_read"] = run_frame(s.sql(f"SELECT id, v FROM {t} ORDER BY id"))
+        got["spark_read"] = run_frame(s.sql(f"SELECT * FROM {t} ORDER BY id"))
         got["rows"] = [
-            [r[0], str(r[1])] for r in s.sql(f"SELECT id, v FROM {t} ORDER BY id").collect()
+            [str(x) for x in r] for r in s.sql(f"SELECT * FROM {t} ORDER BY id").collect()
         ]
     except Exception as e:
         got["spark_read"] = error_record(e)

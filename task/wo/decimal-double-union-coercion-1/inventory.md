@@ -62,7 +62,7 @@ less `spark_integer_literal`), and `finish_session_build` appends `signed_zero_l
 | 4 | `spark_float_stringify` (`java_double.rs:520-558`, `rewrite_coalesce_args`) | sees `coalesce` with a float argument, but folds only UTF-8 literals to the float type; a decimal argument passes untouched. |
 | 5 | `spark_decimal_precision` | no: decimal arithmetic precision; never a decimal beside a float. |
 | 6 | `spark_integral_literal` (`spark_literal_typing.rs:24-36`, `rewrite_plan` `:113`) | **partly.** `widen_decimal_against_float` (`:264-274`) casts a decimal **literal** to `Float64` in a comparison, `IN` list, `BETWEEN` and simple-`CASE` `WHEN` when the other side is FLOAT/DOUBLE. It does not see a decimal **column** or a `CAST(… AS DECIMAL)` expression (`is_decimal_literal` `:333-341`), nor set operations, `VALUES`, CASE THEN/ELSE, `IF`, `coalesce`, `nvl2`, `nullif`, `greatest`, `least`, `array`, `map`. It also runs only when the plan holds an Int64, UInt64 or decimal literal (`plan_may_narrow` `:62-80`). It rebuilds a stale `Union` with loose types (`:120-135`) and a narrowed `Values` through `LogicalPlanBuilder::values` (`:175-195`), which re-runs A4. |
-| 7–9 | `join_condition_refusals`, `spark_map_subscript`, `struct_operands_by_position` | no. |
+| 7–9 | `join_condition_refusals`, `spark_map_subscript`, `struct_operands_by_position` | 7 and 8: no. **9: yes, narrowly (corrected after the critic):** `struct_operands_by_position` and its SQL-planning `ExprPlanner` `duplicate_field_operands` (registered at `extension.rs:163`) decide the output struct type of `nullif` and comparisons over duplicate-named structs through `comparison_coercion` (`normalize/struct_position/forms.rs:258`, `struct_position.rs:954`); a decimal leaf beside a double leaf takes `(30,15)` there. Nested only; not probed. |
 | **10** | **`type_coercion`** (`datafusion-optimizer-54.1.0/src/analyzer/type_coercion.rs`) | **yes — the seat that applies A1 to every analyzed construct:** `coerce_union` `:223` (`coerce_union_schema_with_schema` `:1190`, A3 at `:1234`); `coerce_join` `:192` (INTERSECT / EXCEPT keys, A5); `InSubquery` `:483-505` (A5 `:495`); `Between` `:633`; `InList` `:660` (`get_coerce_type_for_list`, A5); `Case` `:694` → `coerce_case_expression` `:1026` (`get_coerce_type_for_case_expression`, A3, `type_coercion/other.rs:65`); `ScalarFunction` `:698` → `coerce_arguments_for_signature` `:1004` (each UDF's `coerce_types`: `coalesce.rs:137` A4, `nvl2.rs:126` A3, `greatest.rs:141` / `least.rs:154` A5 via `greatest_least_utils.rs:130`, `make_array.rs:116` A4, `nullif.rs:82` `Signature::comparable` A5; `nvl.rs:92` is `Signature::uniform` over `SUPPORTED_NVL_TYPES` `:65-80`, which lists no decimal, so `nvl` / `ifnull` cast every decimal to `Float64` and **answer Spark's `double` here by accident**). |
 | 11 | `struct_setop_names` | no: struct set operations after coercion. |
 | 12 | `sliding_frame_rescan` | no. |
@@ -93,11 +93,11 @@ casts already present at idx 0: the trace is of the second run.
 | # | seat | file:line | seen? |
 |---|---|---|---|
 | D1 | multi-row `VALUES` without a target schema | `datafusion-sql-54.1.0/src/values.rs:53-55` → `LogicalPlanBuilder::values` `builder.rs:211` → `infer_data` `:298`, A4 at `:328` | **yes — decided before the analyzer.** The `Values` node's schema is already `decimal(30,15)` when idx 0 runs; a fix must rebuild the node (as `rewrite_values` does), not only re-type its parents. |
-| D2 | `INSERT … VALUES` (target schema in the planner context) | `values.rs:53-57` → `values_with_schema` `builder.rs:243` → `infer_values_from_schema` `:269` | **no**, because each cell is cast straight to the target column type; no common type is formed. Measured: `ins_values_*` write Spark's bits. |
-| D3 | `INSERT … SELECT` | `statement.rs:2358` `insert_to_plan`; `set_table_schema` `:2463`; the source column cast to the target `:2479` | **no** at this seat: it casts the already-typed source; the loss happened in A3 / A4 inside the source query. A nested `VALUES` in the source takes the target schema too (D2 path): measured, `ins_select_values_tiny` writes Spark's bits by that accident, and `ins_case_tiny` (a one-column `VALUES` under a two-column target) raises `Inconsistent data length across values list`. |
+| D2 | `INSERT … VALUES` (target schema in the planner context) | `values.rs:53-57` → `values_with_schema` `builder.rs:243` → `infer_values_from_schema` `:269` | **yes, by omission (corrected after the critic).** Spark resolves the inline table first (a decimal beside a double gives `double`) and then store-casts to the target; RePark casts each cell straight to the target and forms no common type. Equal for DOUBLE, FLOAT and BIGINT targets (`ins_values_*`, `values_float`, `values_bigint`); **WRONG for STRING and DECIMAL(38,18) targets** (`values_string`, `values_dec38`): decimal → double → target differs from decimal → target. |
+| D3 | `INSERT … SELECT` | `statement.rs:2358` `insert_to_plan`; `set_table_schema` `:2463`; the source column cast to the target `:2479` | **no** at the projection cast: it casts the already-typed source; the loss happened in A3 / A4 inside the source query. **But the target schema leaks by position into every `VALUES` in the source** (read at `values.rs:53`), so D2's omission applies there too (`select_values_string` WRONG). This holds only for DataFusion's `insert_to_plan`: RePark's own write doors plan the source standalone (section G), so their `VALUES` take D1's `(30,15)`. A nested `VALUES` in the source takes the target schema too (D2 path): measured, `ins_select_values_tiny` writes Spark's bits by that accident, and `ins_case_tiny` (a one-column `VALUES` under a two-column target) raises `Inconsistent data length across values list`. |
 | D4 | UNION / UNION ALL / `unionByName` | `set_expr.rs:134-161` → `builder.rs:869-893` → `union` `:1907` → `Union::try_new_with_loose_types` `plan.rs:3027` | **no** at planning: the loose union takes no common type; it is chosen at idx 10 (`coerce_union`). |
 | D5 | INTERSECT / EXCEPT (DISTINCT) | `set_expr.rs:164-173` → `intersect_or_except` `builder.rs:1378` (a semi / anti join on all columns) | **no** at planning; the join keys meet A5 at idx 10 (`coerce_join`), and the output keeps the **left** side's type, so Spark's widened `double` cannot appear. The ALL forms refuse at the statement seat since #1314 (`crates/repark-core/src/pre_execute/setop_all.rs`); they were not measured here. |
-| D6 | recursive CTE | `builder.rs:176` `to_recursive_query` → `coerce_plan_expr_for_schema` (`expr_rewriter/mod.rs:221`) to the **static term's** schema | **yes, differently:** no common type; the recursive term is cast to the anchor's type. |
+| D6 | recursive CTE | `builder.rs:176` `to_recursive_query` → `coerce_plan_expr_for_schema` (`expr_rewriter/mod.rs:221`) to the **static term's** schema | **yes, differently:** no common type; the recursive term is cast to the anchor's type. **Spark does not widen here either:** it keeps a `double` anchor (`rcte_dbl_anchor_one_col` EQUAL) and refuses a decimal anchor with a double recursive term (`CANNOT_MERGE_INCOMPATIBLE_DATA_TYPE`, `rcte_dec_anchor`). A fix must exclude `RecursiveQuery`. RePark's `Join Error` on the two-column recursive CTEs is a separate fault. |
 | D7 | `IN (subquery)`, scalar subquery | planned as `InSubquery` / `ScalarSubquery`; coerced at idx 10 (`type_coercion.rs:483-505`) | no at planning. |
 
 ## E. Optimizer rules that fold or move the evidence
@@ -126,9 +126,48 @@ They never choose the type; they act on the casts idx 10 left.
 ## The one-line answer
 
 The common type is chosen in **two** places: at SQL planning for multi-row `VALUES` (D1), and at
-`type_coercion` idx 10 for everything else (B), both through DataFusion's `decimal_coercion` (A1). The
+`type_coercion` idx 10 for everything else (B), both through DataFusion's `decimal_coercion` (A1). A
+third place **skips** it: a target-typed `VALUES` (D2, and D3's leak) casts each cell straight to the
+target column, where Spark forms the common type first (corrected after the critic). The
 only existing RePark counter-seat, `widen_decimal_against_float` (B idx 6), covers decimal **literals**
 in four comparison shapes. Everything downstream (idx 28, the optimizer, the writes, the stored plans)
 inherits the decision.
+
+## G. Revision after the inventory critic (2026-11-13): the doors the first pass missed
+
+The xhigh critic (`VERDICT: GAPS`) measured these on ANSI on; this sketch re-measured each in both ANSI
+modes (domain table, section "Revision"). Every file:line below was re-read at `16974986`.
+
+| # | door | file:line | seen? |
+|---|---|---|---|
+| G1 | `INSERT OVERWRITE` (VALUES, SELECT-FROM-VALUES, UNION sources) | `crates/repark-spark/src/insert_overwrite.rs:453-455` (`overwrite_source_with_default_fills`, then `spark_ast::execute_passthrough(materialize_sql)`) | **yes:** the source is planned standalone, with no target schema in the planner context, so its `VALUES` take D1's `(30,15)` and its union takes idx 10's. Three wrong writes per mode. |
+| G2 | `INSERT INTO … BY NAME` | `crates/repark-spark/src/insert_by_name.rs:95, 217` (`execute_passthrough(projection_sql)`) | **yes**, as G1. Two wrong writes per mode. |
+| G3 | `DELETE`, `UPDATE … WHERE`, `MERGE … ON` comparing a decimal column with a double column | `crates/repark-iceberg/src/write/predicate_dml.rs:387-412`; `crates/repark-iceberg/src/write/merge/merge_sql.rs:228-238` (`ON {on}` pasted into generated SQL) | **yes:** the predicate is planned through the session list and A5 types `v = d` as `decimal(30,15)`, so `1e-20 = 0.00` holds. Six wrong writes per mode (copy-on-write and merge-on-read). The comparison seat is therefore write-bearing, not read-only. |
+| G4 | RTAS (`CREATE OR REPLACE TABLE … AS`) | the CTAS path, `crates/repark-spark/src/ctas.rs` | **yes**, as CTAS: the created column is `decimal(30,15)`. Two wrong writes per mode. |
+| G5 | DataFrame `write.insertInto`, `writeTo().overwritePartitions()` | the DataFrame union (D4 at idx 10) | **yes.** Two wrong writes per mode. |
+| G6 | nested leaves in set operations and CASE (struct, array, map) | `type_union_coercion` `binary.rs:886` recursing into struct, list and map fields (`struct_coercion`, `list_coercion`, `map_coercion` `:895-901`) at idx 10 | **yes:** each decimal leaf beside a double leaf takes `(30,15)`. Six wrong reads per mode. |
+| G7 | Iceberg pruning of a decimal predicate | DataFusion unwraps casts of decimal and integral columns only (`datafusion-expr-common-54.1.0/src/casts.rs:80-98`); the fork strips lossless integral casts only (`expr_to_predicate.rs:382-400`) and converts no decimal literal to an Iceberg datum (`scalar_value_to_datum` `:610-643`, no `Decimal128` arm) | **not a type seat; a cost seat.** Measured on main: `WHERE d = 0.5` and `WHERE d = CAST(0.5 AS DOUBLE)` over a three-file table both push **no** predicate (`predicate:[] N=3`), and a double column pushes `v = 0.5` and reads one file. Widening a decimal column therefore loses no pruning today; widening a decimal **literal** beside a double column gains it. |
+
+Checked by the critic and **not** doors (not re-checked here): MERGE's synthesized rewrite `CASE` (each
+SET is cast to the target first, `merge_sql.rs:125` → `insert.rs:330`); identity UPDATE; `meta_delete`
+(refuses DECIMAL fields, `conflict_filter.rs:317-331`); `na.fill`; DataFrame `intersect` / `subtract` (they go
+through Spark-door SQL over temp views, so the session list covers them); `CALL … rewrite_data_files(where
+=> …)` (compaction preserves values).
+
+### The Spark-door planning seats a VALUES marker must reach
+
+A multi-row `VALUES` is typed by `infer_data` / `infer_inner` before any analyzer rule, and the planner's
+cast is byte-identical to a user cast (`values_A_planner_cast` and `values_B_user_cast` print the same
+initial plan and Spark answers them differently). The revised design marks each cell in the AST, so every
+seat that plans user SQL text must apply the marker. `grep -rn --include=*.rs
+"plan_statement_with_column_repair\|\.statement_to_plan(\|create_logical_plan(\|ctx\.sql(" crates`
+lists them; the ones that plan **user** text are `crates/repark-core/src/column_resolution.rs:94, 131,
+137, 142, 193` (the passthrough, which G1 and G2 reach through `execute_passthrough`),
+`crates/repark-spark/src/merge_fragments.rs:57, 65` (the MERGE source and conditions), the CTAS / RTAS
+query, and the Spark-door view re-planning (`view_ddl/temp_view.rs:415` `plan_definition`,
+`view_ddl/read.rs` `expand_view_body`). The other hits in `crates/repark-iceberg/src/write/` plan
+generated SQL around a source the passthrough already typed; the build's inventory step confirms each.
+The existing AST rewrites of `SetExpr::Values` (`insert_arity.rs:53`, `void_type.rs:131`,
+`insert_timestamp_ns.rs:237`, `void_type/ltz_values_store.rs:33`) show the shape.
 
 Up: [map.md](map.md).

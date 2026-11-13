@@ -17,10 +17,18 @@
   <out>`; `run_frames.py <spark|repark> <true|false> <out>`; `run_write.py <spark|repark> <true|false>
   <warehouse-parent> <out> <iceberg-jar>`, then `read_back.py <warehouse> <write.jsonl> <out>
   <iceberg-jar>` on Spark for both engines' warehouses; `replay_888.py <#888 spark json> <out>`;
-  `rule_lists.py <out>`; `analyze.py <raw> <dir>` writes the verdicts; `render.py <raw>` and
+  `rule_lists.py <out>`; `run_revision.py <spark|repark> <true|false> <warehouse-parent> <out>
+  <iceberg-jar>`, then `read_back.py` over each revision warehouse; `revision_table.py <raw>`; `analyze.py <raw> <dir>` writes the verdicts; `render.py <raw>` and
   `write_table.py <raw>` print the tables in [../domain-table.md](../domain-table.md).
 - **#888's recording:** `python/repark/tests/test_nvl_type_coercion_1_spark.json` from
   `wip/fix/nvl-type-coercion-1-2026-10-01` (head `54bc9ac2`), read from the branch, not copied here.
+
+## The revision after the inventory critic
+
+The xhigh inventory critic (2026-11-13, `VERDICT: GAPS`, ANSI on only) found five missed write doors,
+two wrong "seen" answers (D2, D3) and the `VALUES` limit of an analyzer-only seat. Its cells were
+re-measured here in both ANSI modes with this unit's own probes, about 08:20 local time, under the same
+locks; its own probes and raw output stay in the scratchpad and are not copied.
 
 ## Main since `04d84ab9`
 
