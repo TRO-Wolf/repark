@@ -63,16 +63,25 @@ Spark door, the cells that reach the seat (each batch shown as its set of nullab
 ## Why `id` and `flag` never refuse
 
 **They never reach the seat.** No batch, plan or register event was printed for `id IN (4, 6)` or
-`flag IN ('f4', 'f6')`, in any cell. The Spark door sends an `UPDATE … WHERE` to the identity path only when
-`try_allowed_update_in` (an `IN (subquery)`) or `try_allowed_plain_update` accepts it
-(`crates/repark-spark/src/spark_ast.rs:387-410`, executed at line 435), and the plain route takes only a binary operator:
-`is_scalar_comparison` (`crates/repark-iceberg/src/write/predicate_dml/plain.rs:127-135`) matches `Expr::BinaryOp`,
-nested or unary forms, nothing else. An `IN` list is `Expr::InList`, so the statement falls through to DataFusion's
-planned `UPDATE` and the fork's `TableProvider::update` (`crates/integrations/datafusion/src/table/mod.rs:368` at
-fork `92242cb4`). That path rebuilds every batch with the table's declared schema
-(`physical_plan/delete.rs:753-780`, `RecordBatch::try_new(Arc::clone(table_schema), columns)`), so batch order cannot
-matter. `id = 4` is a binary operator and takes the identity path, but it matches one file, so one batch. The same
-rows written as `id = 4 OR id = 6` would take the identity path; the probe did not run that form.
+`flag IN ('f4', 'f6')`, in any cell. The Spark door sends an `UPDATE … WHERE` to the identity path through two
+routes (`crates/repark-spark/src/spark_ast.rs:387-410`, executed at line 435):
+
+- `try_allowed_update_in` (`plain.rs:185-187`, `spark_ast.rs:387-393`): `WHERE col IN (subquery)`. This route has
+  **no** fork exit, so a nested or UUID column inside `IN (SELECT …)` also stays on the seat.
+- `try_allowed_plain_identity_or_update` (`plain.rs:190-197`, `spark_ast.rs:394-396`), whose plain-update arm takes
+  only a binary operator: `is_scalar_comparison` (`plain.rs:127-135`) matches `Expr::BinaryOp`, nested or unary forms,
+  nothing else. It then has two exits back to the fork: an unregistered catalog (`spark_ast.rs:398`) and
+  `plain_identity_needs_fork` (`plain.rs:70-86`, called at `spark_ast.rs:402-407`), which sends the statement to the
+  fork when the WHERE names a non-primitive or UUID column, or the SET names a column that carries a UUID. The router
+  has the same exit (`crates/repark-sql/src/router.rs:256-265`). A nested column that is only carried, or assigned
+  without a UUID, stays on the seat.
+
+An `IN` list is `Expr::InList`, so the statement falls through to DataFusion's planned `UPDATE` and the fork's
+`TableProvider::update` (`crates/integrations/datafusion/src/table/mod.rs:368` at fork `92242cb4`). That path rebuilds
+every batch with the table's declared schema (`physical_plan/delete.rs:753-780`,
+`RecordBatch::try_new(Arc::clone(table_schema), columns)`), so batch order cannot matter. `id = 4` is a binary operator
+and takes the identity path, but it matches one file, so one batch. The same rows written as `id = 4 OR id = 6` take
+the identity path (the critic's nested cells use that form).
 
 ## The native door
 
@@ -101,7 +110,8 @@ it as well.
 |---|---|---|---|---|
 | Identity `UPDATE`, copy-on-write, v2 and v3 (Spark door; router) | `project_update_data_batch`, per batch, `array.is_nullable()` (`predicate_dml/lineage.rs:162-185`, line 176), called at `predicate_dml.rs:432` | `register_update_values_table`: `MemTable::try_new(batches[0].schema(), …)` (`predicate_dml/cow_commit.rs:97-98`) | **Yes**: measured | **Yes: the bug** |
 | Identity `UPDATE`, merge-on-read, v2 (and v3 when MOR) | the same batches | the writer, one batch at a time, cast to the declared schema (`predicate_dml/mor_commit.rs:58-66`; `merge/session_staging.rs:43-54`; `merge/mod.rs:556-576`) | Yes: measured | No (0 of 30 refused) |
-| Identity `UPDATE … WHERE col IN (subquery)` (`try_allowed_update_in`) | the same seat, `collect_identity_update_rows` | the same two consumers | Yes, when two files' rows differ in NULLs | COW: yes, by the same rule; not measured |
+| Identity `UPDATE … WHERE col IN (subquery)` (`try_allowed_update_in`; no `plain_identity_needs_fork` exit) | the same seat, `collect_identity_update_rows` | the same two consumers | Yes, when two files' rows differ in NULLs | **Yes**, measured by the critic: 3 of 10 v2 COW, 4 of 10 v3 |
+| Identity `UPDATE` carrying a nested column (struct, list, map), binary-operator WHERE that `plain_identity_needs_fork` keeps off the fork | the same seat; child nullability lives in the `DataType`, taken from the array, which equals the planned type | the same two consumers | Top-level struct NULL in one file only: yes. A NULL child (struct field, list element, map value): no | Top-level NULL: **yes**, measured by the critic: 3 of 10 v2 COW, 6 of 10 v3. Child NULL: no, 0 of 80 |
 | Identity `DELETE`, copy-on-write and merge-on-read | no value batches: `(_file, _pos)` pairs into a declared two-field schema (`predicate_dml.rs:457-472`); the survivors are a SQL plan over the scan (`predicate_dml/cow_commit.rs:113-136`) | `MemTable` with a declared schema; writer | No | No |
 | Non-identity `UPDATE` (fork `TableProvider::update`: `IN` lists, other non-binary predicates, the native door) | the declared table schema on every batch (fork `physical_plan/delete.rs:753-780`) | the fork's writer | No | No |
 | `MERGE` copy-on-write | SQL plan streams (`merge/copy_on_write.rs:26-90`); match discovery only reads | the writer, per batch | No: a plan's stream schema is fixed | No |
@@ -114,23 +124,34 @@ it as well.
 **Only one path combines a per-batch, data-derived schema with a consumer that compares batches**: the identity
 copy-on-write `UPDATE`. Merge-on-read sees the same mixed batches and is order-free because its consumer is not.
 
-## The seat I intend to use
+## The seat
 
-`project_update_data_batch` (`crates/repark-iceberg/src/write/predicate_dml/lineage.rs:162-185`). Each field's
-nullability becomes the declared value schema's (`values_schema`, built by `update_values_schema` from the table's
-current schema, `lineage.rs:58-76`) OR'd with the stream's planned field (`batch.schema().field(index + 2)`), never the
-array's data. Both inputs are fixed for the statement, so every batch gets the same schema by construction, and
-`register_update_values_table` accepts any arrival order. One product file.
+`project_update_data_batch` (`crates/repark-iceberg/src/write/predicate_dml/lineage.rs:162-185`), the seat the
+critic confirmed and the order's author ruled (2026-11-13). Each field's nullability becomes the declared value
+schema's (`values_schema`, built by `update_values_schema` from the table's current schema, `lineage.rs:58-76`) OR'd
+with the planned field of the stream's schema, captured once in `collect_identity_update_rows`
+(`predicate_dml.rs:413-417`) and passed in, never the array's data and never one batch's own schema. Both inputs are
+fixed for the statement, so every batch gets the same schema by construction, and `register_update_values_table`
+accepts any arrival order.
 
-Why the planned field is in the OR: a required column assigned NULL (`SET r = NULL`) plans a nullable field. With the
-declared value alone, `RecordBatch::try_new` inside `project_update_data_batch` would refuse first, with this
-function's own internal wrapper text. With the OR, the batch reaches the writer, which refuses with the text main gives
-in 6 of 9 attempts (`Column 'r' is declared as non-nullable but contains null values`), now on every attempt. For an
-optional column the OR changes nothing: the declared value is already true.
+**Why the planned field is in the OR (corrected after the inventory critic).** The first version of this section said
+that `SET r = NULL` would refuse inside `project_update_data_batch` under the declared value alone. It would not: a
+literal `NULL` plans `r` as `DataType::Null`, and a `NullArray` counts no physical NULLs, so `RecordBatch::try_new`
+accepts it under either choice and the refusal still comes from the writer. The OR matters for a **computed** NULL
+(`SET r = i` on the NULL row, `nullif`, `try_divide`, `if`, `coalesce`), which plans `r` as a nullable `Int32` and
+carries a real NULL. Under the declared value alone that would refuse inside `project_update_data_batch` with
+`Internal error: identity UPDATE data batch does not match the projected schema: …` (with DataFusion's file-a-bug
+suffix); under the OR it reaches the writer's `Column 'r' is declared as non-nullable but contains null values`, so
+the identity route has one text. On main, a two-batch computed NULL (`SET r = nullif(r, 1) WHERE id = 4 OR id = 6`)
+refused with the mismatch text in 11 of 12 attempts (the critic's probe).
+
+**Against Spark 4.1.2** (the critic's live oracle): Spark refuses with `NOT_NULL_ASSERT_VIOLATION` only when a NULL
+actually reaches the required column, at run time. Both choices keep RePark's outcome class equal to Spark's;
+**neither matches Spark's text.** The fork route (`SET r = NULL WHERE id IN (4, 6)`, and the native door) refuses
+with `UPDATE cannot assign NULL to required column 'r'` (9 of 9); that second text predates this unit and is left for
+the records batch.
 
 The same batches feed merge-on-read; the change only makes their schemas uniform, and the writer casts to the declared
-schema as before. No stored value changes: the arrays are untouched, only the `Field` nullability flag.
-
-**For the critic:** whether the planned-field OR belongs in the fix, or the fix should take the declared value schema
-alone and accept the required-NULL refusal moving into `project_update_data_batch`. The brief says "from the declared
-schema"; I read the planned field as declared too (by the plan, not by one batch's data).
+schema as before. No stored value changes: the arrays are untouched, only the `Field` nullability flag. Every value
+batch is checked again against the declared write schema before any file is written
+(`merge/session_staging.rs:42-54`, `merge/mod.rs:556-576`), so marking a NULL-free batch nullable lets no NULL in.
