@@ -20,8 +20,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [night-report-2026-09-20-25b.md](night-report-2026-09-20-25b.md) — **run 25b (fork lane one):** the wrong `replace` snapshot summary fixed, F-PAGE-PRUNE-2, branch-read schema merged; output-spec-id ready; WAP stage-only a draft.
 - [night-report-2026-09-20-25c.md](night-report-2026-09-20-25c.md) — **run 25c (parity, RePark side):** `REPLACE COLUMNS`, four routed procedures and `spark.wap.branch` on main; #733 session write confs ready and unmerged.
 - [night-report-2026-09-20-25d.md](night-report-2026-09-20-25d.md) — **run 25d (fork lane two):** rewrite sort and zorder, transform sort orders, `add_files` and location providers merged; a nested residual rename that silently lost rows fixed; container accessors a draft hand-over.
-- [night-report-2026-09-20-25e.md](night-report-2026-09-20-25e.md) — **run 25e (the plan packets):** thirteen
-  execution packets for the large parity units, 222 cells; four units found to need no fork work.
+- [night-report-2026-09-20-25e.md](night-report-2026-09-20-25e.md) — **run 25e (the plan packets):** thirteen execution packets for the large parity units, 222 cells; four units found to need no fork work.
 - [csv-header-default-1.md](csv-header-default-1.md) — **card CSV-HEADER-DEFAULT-1 (filed 2026-09-28 on the owner's ruling, option B):** `df.write.csv(path)` writes a header by default where Spark 4.1.2 does not; 9 of U12's 16 residues (`R-S3-CSV-HEADER`); RePark 1.5.x keeps today's default, the change waits for a minor release with a release note.
 - [s3-path-write-1-5-0.md](s3-path-write-1-5-0.md) — **card S3-PATH-WRITE-1 (filed 2026-09-22 as a v1.5.1 card; owner
   2026-09-23: in the v1.5.0 target; owner 2026-09-27: back to v1.5.1):** plain Parquet, CSV and JSON path writes to `s3://` — reads reach S3, Iceberg
@@ -35,25 +34,13 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [ns-nested-1-6.md](ns-nested-1-6.md) — **card NS-NESTED (2026-09-27, v1.6.0, owner ruling C-2):** nested namespaces leave the v1.5.0 gate (cell `D-NS-NESTED`, registry row NS-2; Spark leg recorded, RePark refusing on the two-part name) and are scheduled with the recorded Spark child-listing row, eight shapes still to measure (table in `sc.a.b`, DROP plain and CASCADE, the non-empty refusal, all four again one level deeper), then five design questions to rule (session-catalog scope, four-part resolution, DDL arity, DROP semantics, per-catalog coverage); size M, 3–5 rounds, tier terra + opus. Closes readiness finding F-6.
 - [day-report-2026-09-19-24a.md](day-report-2026-09-19-24a.md) — **run 24a (read-performance unit 0):** the bench bed, page pruning and the catalog and footer caches on main.
 - [day-report-2026-09-19-24b.md](day-report-2026-09-19-24b.md) — **run 24b (the read-performance fork lane):** fork #310, #311, #312, #316, #317 merged; a pre-existing silent wrong answer on `_pos` / `_row_id` projections fixed.
-- [day-report-2026-09-19-24c.md](day-report-2026-09-19-24c.md) — **run 24c (parity, RePark side):** time travel,
-  `DROP NAMESPACE`, overwrite partition sets and string-to-timestamp casts answer Spark on main; RP-34 and RP-35.
-- [day-report-2026-09-19-24d.md](day-report-2026-09-19-24d.md) — **run 24d (parity, fork side):** fork #308, #309,
-  #313, #315, #318, #320 merged; a strict-metrics decimal-scale defect found and fixed.
+- [day-report-2026-09-19-24c.md](day-report-2026-09-19-24c.md) — **run 24c (parity, RePark side):** time travel, `DROP NAMESPACE`, overwrite partition sets and string-to-timestamp casts answer Spark on main; RP-34 and RP-35.
+- [day-report-2026-09-19-24d.md](day-report-2026-09-19-24d.md) — **run 24d (parity, fork side):** fork #308, #309, #313, #315, #318, #320 merged; a strict-metrics decimal-scale defect found and fixed.
 - [night-report-2026-09-19-23a.md](night-report-2026-09-19-23a.md) — **run 23a (the fork residue lane):** nine fork PRs merged; #303 held for the owner.
 - [night-report-2026-09-19-23b.md](night-report-2026-09-19-23b.md) — **run 23b (the RePark side and every pin bump):** ten PRs merged, RP-29 → RP-33.
-- [night-report-2026-09-19-23c.md](night-report-2026-09-19-23c.md) — **run 23c (the Spark–Iceberg parity inventory):**
-  842 cells, 424 EQUAL, 57 DIFFERENT, 56-unit slate (see `ice-parity-inventory-2026-09-19.md`).
-- [night-report-2026-09-19-23d.md](night-report-2026-09-19-23d.md) — **run 23d (the silent top of the slate):**
-  ICE-TT-RESOLVE-1 (IPI-01 + IPI-02) a draft at r3; Spark truths re-recorded for namespaces (26 cells) and overwrite
-  modes (60 cells); briefs ready for ICE-DROP-NS-1 and ICE-OVERWRITE-MODE-1.
-- [ice-parity-inventory-2026-09-19.md](ice-parity-inventory-2026-09-19.md) — **Spark–Iceberg parity inventory
-  (2026-09-19, night run 23c, owner direction "1 to 1 parity … NO STONES LEFT"):** 842 cells enumerated from the
-  iceberg-spark-runtime 1.11.0 jar and the 1.11 docs, measured on Spark 4.1.2 and RePark main `6a140eb3` — 424 EQUAL,
-  57 DIFFERENT, 126 unregistered refusals, 28 not parsed, 87 registered refusals, 120 Spark-cannot; cross-engine
-  interop 13 of 13 shapes both ways; filter pushdown 0 silent of 369 predicate evaluations; a ranked slate of 56 units
-  led by reader `versionAsOf` / `timestampAsOf` being ignored, `TIMESTAMP AS OF <expression>`, the static-mode
-  partition overwrite (contradicts DML-1), WAP writes landing on main, and a partition column name that makes the
-  table unreadable.
+- [night-report-2026-09-19-23c.md](night-report-2026-09-19-23c.md) — **run 23c (the Spark–Iceberg parity inventory):** 842 cells, 424 EQUAL, 57 DIFFERENT, 56-unit slate (see `ice-parity-inventory-2026-09-19.md`).
+- [night-report-2026-09-19-23d.md](night-report-2026-09-19-23d.md) — **run 23d (the silent top of the slate):** ICE-TT-RESOLVE-1 (IPI-01 + IPI-02) a draft at r3; Spark truths re-recorded for namespaces (26 cells) and overwrite modes (60 cells); briefs ready for ICE-DROP-NS-1 and ICE-OVERWRITE-MODE-1.
+- [ice-parity-inventory-2026-09-19.md](ice-parity-inventory-2026-09-19.md) — **Spark–Iceberg parity inventory (2026-09-19, night run 23c, owner direction "1 to 1 parity … NO STONES LEFT"):** 842 cells enumerated from the iceberg-spark-runtime 1.11.0 jar and the 1.11 docs, measured on Spark 4.1.2 and RePark main `6a140eb3` — 424 EQUAL, 57 DIFFERENT, 126 unregistered refusals, 28 not parsed, 87 registered refusals, 120 Spark-cannot; cross-engine interop 13 of 13 shapes both ways; filter pushdown 0 silent of 369 predicate evaluations; a ranked slate of 56 units led by reader `versionAsOf` / `timestampAsOf` being ignored, `TIMESTAMP AS OF <expression>`, the static-mode partition overwrite (contradicts DML-1), WAP writes landing on main, and a partition column name that makes the table unreadable.
 - [day-report-2026-09-18-22a.md](day-report-2026-09-18-22a.md) — **run 22a (the fork lane and the pin bumps):** fork #294 to #296 merged; RP-26 to RP-28 on main.
 - [day-report-2026-09-18-22b.md](day-report-2026-09-18-22b.md) — **run 22b (the RePark pull requests and the registry):** eight PRs merged, including #676 and #701.
 - [v3-multiarg-1.md](v3-multiarg-1.md) — **card V3-MULTIARG-1 (2026-09-18, post-1.x,
@@ -68,11 +55,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [ice-read-perf-slate-2026-09-18.md](ice-read-perf-slate-2026-09-18.md) — **Iceberg read performance on S3 Tables and Glue, slate for v1.5.0 (2026-09-18, owner-instructed):** page pruning off on the DataFusion path, no shared catalog cache, an unfed footer hook; wave 1 is ICE-READ-PERF-0 plus three cache and prune cards and a re-measure gate; nothing measured yet. Owner rulings 2026-09-18: v1.5.0 waits for wave 1; AWS-managed compaction is the S3 Tables default; the bench spend is capped at $25 with a 3 GB table-size flag.
 - [overnight-report-2026-09-15-15b.md](overnight-report-2026-09-15-15b.md) — **run 15b (2026-09-15, the 1.5 facade surfaces):** Row, types, Catalog, SparkSession and DataFrame surfaces A and B merged; DF-PLAN-INTROSPECT-1 and IO-TEXT-1 end as branches.
 - [overnight-report-2026-09-14-run14.md](overnight-report-2026-09-14-run14.md) — **run 14 report:** the Iceberg production-cutover slate; fork and RePark units #587 to #590 landed, the aws-acceptance run green, owner questions Q-R14-1..6.
-- [ice-cutover-slate-2026-09-14.md](ice-cutover-slate-2026-09-14.md) — **Iceberg production-cutover slate (2026-09-14,
-  run 14, from the production assessment's G-1..G-6 and rulings Q-ICE-1..7):** F-GLUE-REPLACE-1 (fork Glue replace
-  publish), RP-20 + ICE-GOLD-TWICE-1 (repin, CREATE OR REPLACE twice in the nightly, gold dbt twice in aws-acceptance),
-  ICE-SPARK-TABLE-1 (RePark MERGE and maintenance on a Spark-created table, Spark reads back), ICE-COMMIT-UNKNOWN-1
-  (own exception class), ICE-TRINO-READ-1 (parked behind 1.8 Trino) and the pipeline-side SHADOW-1 change.
+- [ice-cutover-slate-2026-09-14.md](ice-cutover-slate-2026-09-14.md) — **Iceberg production-cutover slate (2026-09-14, run 14, from the production assessment's G-1..G-6 and rulings Q-ICE-1..7):** F-GLUE-REPLACE-1 (fork Glue replace publish), RP-20 + ICE-GOLD-TWICE-1 (repin, CREATE OR REPLACE twice in the nightly, gold dbt twice in aws-acceptance), ICE-SPARK-TABLE-1 (RePark MERGE and maintenance on a Spark-created table, Spark reads back), ICE-COMMIT-UNKNOWN-1 (own exception class), ICE-TRINO-READ-1 (parked behind 1.8 Trino) and the pipeline-side SHADOW-1 change.
 - [overnight-report-2026-09-14-run14b.md](overnight-report-2026-09-14-run14b.md) — **run 14b report (2026-09-14, day run beside run 14):** FACADE-4 step 1 merged (#582) and ARRAY-NULL-1 (#581); rulings R14b-D-1..13, incidents, owner questions Q-R14b-1..6 with recommendations.
 - [f-append-window-failloud-1-2026-10-05.md](f-append-window-failloud-1-2026-10-05.md) — **fork card (2026-10-05):** an opt-in fail-loud mode on `IncrementalAppendScan` when the window holds a non-append snapshot, with skip opt-ins mirroring Spark's `streaming-skip-overwrite-snapshots` / `-delete-snapshots`; default unchanged; consumer MB-1 (O-5: Bronze refuses deletes).
 - [f-commit-offset-property-1-2026-10-05.md](f-commit-offset-property-1-2026-10-05.md) — **fork card (2026-10-05):** the summary half of the sink's offsets already exists at the pin (both MERGE arms pass summary extras). The request is a red-first proof that a table-property update in the same `Transaction` as a row delta or overwrite survives the commit-retry and rebase path, plus a measurement of the same-key race. A fork fix lands only if the proof fails. Consumers: MB-2a and MB-2c.
@@ -111,61 +94,15 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   whose Spark result type needs the precision-overflow adjustment refuses `.eager()` / `.cache()` / `.persist()`
   with `Mismatch between schema and batches` while `collect()` succeeds; the physical batches do not carry the
   logical decimal field. Oracle `/tmp/oc-worker/qd-decimal/oracle-decimal-cells.json`. Not started.**
-- [DDL-DEPTH-1](ddl-depth-1-card-2026-09-14.md) — **card DDL-DEPTH-1 (2026-09-14, run 14b under
-  owner ruling Q-R13-13, card only):** a nesting-depth cap on the DDL type parser at `SPARK_TYPE_NAME_MAX_DEPTH` with a
-  typed refusal, measured on the Spark oracle first; no new refusal ships until the card runs.
-- [overnight-report-2026-09-14-run13b.md](overnight-report-2026-09-14-run13b.md) — **run 13b report (2026-09-14,
-  expressions, beside run 13; night window 05:19–06:30, day continuation to 12:00):** REPLACE-LINEAR-1 step 1 (#577):
-  a flat searched CASE with Spark semantics per Q-R1, 277 MB → 4.5 MiB at 16 entries on a release native, Grok
-  critic-logic (1 P1, 5 P2 remediated) and S2-21 Python reviewer (2 P2 remediated). Then ARRAY-NULL-1 and ANSI-DOOR-1,
-  with owner questions and recommendations.
-- [REPLACE-NOVALUE-1](replace-novalue-1-card-2026-09-14.md) — **card REPLACE-NOVALUE-1 (2026-09-14,
-  run 13b under owner ruling Q-13b-2, card only):** `DataFrame.replace(to_replace)` with no `value` raises PySpark's
-  `ARGUMENT_REQUIRED` through a private sentinel default; today repark reads it as a NULL replacement.
-- [overnight-report-2026-09-13-run12b.md](overnight-report-2026-09-13-run12b.md) — **run 12b report (2026-09-13,
-  cache and expressions, beside run 12):** EAGER-BUDGET-1 merged (#569: `repark.cache.max_total_bytes` refuses and
-  never evicts, distinct-buffer `repark.cache.retained_bytes`, incremental admission; the per-call slowdown did not
-  reproduce under 2/4/8 GB caps). REPLACE-LINEAR-1 step 0 merged (#571), with step 1 parked on owner question Q-R1 (nine
-  Spark divergences). ARRAY-NULL-1 and ANSI-DOOR-1 filed as cards. Owner questions Q-B1, Q-B2, Q-R1, Q-R2 with
-  recommendations.
-- [array-null-1-card-2026-09-13.md](array-null-1-card-2026-09-13.md) — **card ARRAY-NULL-1 (2026-09-13, run 12b
-  under G-5; ABS-EXPR-1's C-004 audit residue):** `F.array_append` / `F.array_prepend` compose
-  `when(isnull(arr), NULL).otherwise(flatten(array(arr, array(x))))`, embedding the array twice per level
-  (19 MB at depth 12, 66 MB at 14), because DataFusion's kernels drop the input null buffer. D-1 a
-  null-preserving native arm measured first between a wrapping `ScalarUDF` and a Rust-built single-reference CASE
-  (HALT if neither is linear); D-2 Spark oracle cells (NULL array, NULL element, empty, nested, coercion); D-3 the
-  SQL door's divergence row; step 0 measures and lands the red-first depth-40 memory pin. Not started.
-- [ansi-door-1-card-2026-09-13.md](ansi-door-1-card-2026-09-13.md) — **card ANSI-DOOR-1 (2026-09-13, run 12b,
-  card only):** the SQL door's datafusion-spark kernels read `execution.enable_ansi_mode`, which repark never sets,
-  so `spark.sql("SELECT abs(x)")` wraps on signed minimums while the facade raises `ARITHMETIC_OVERFLOW` as Spark
-  does with ANSI on. D-1 wire `spark.sql.ansi.enabled` (session build and runtime set) to that option; D-2 measure
-  every ANSI-aware door kernel against the oracle first; D-3 the `abs` row leaves `EXPECTED_DIVERGENCES`. Not started.
-- [eager-budget-1-card-2026-09-13.md](eager-budget-1-card-2026-09-13.md) — **card EAGER-BUDGET-1
-  (2026-09-13, run 11 §7; worked by run 12b):** a session cache budget and retained-bytes
-  accounting — `repark.cache.max_total_bytes` refuses (never evicts, Q-E2) when a
-  materialization would push the sum of distinct Arrow buffers across live
-  `__repark_cache_*` MemTables past the budget (D-1/D-2), admission checked incrementally
-  per batch before the next pull (D-3), `repark.cache.max_bytes` unchanged in meaning (D-4),
-  no spill (D-5), no registration or handle after a refusal or collection failure (D-6);
-  step 0 measures the 30-iteration loop under 2/4/8 GiB cgroup caps, base vs main.
-- [replace-linear-1-card-2026-09-13.md](replace-linear-1-card-2026-09-13.md) — **card
-  REPLACE-LINEAR-1 (2026-09-13, run 12b under G-5; ABS-EXPR-1's C-004 audit residue):**
-  `DataFrame.replace`'s dict loop nests the running expression once per mapping entry —
-  `when(expression == lit(old), lit(new)).otherwise(expression)` embeds the previous
-  expression twice, so N entries reference the column 2^N times (28 MB at 12, 297 MB at
-  16). D-1 builds ONE searched `CASE WHEN col = a THEN b … ELSE col END` per target
-  column (linear in entries); D-2 pins the live PySpark 4.1.2 oracle cells first (NULL
-  key/value, subset shapes, a missing column, type coercion, list vs scalar `value`,
-  the `{1: 2, 2: 3}` mapping-order case); D-3 rules that if the oracle answers 2 the
-  CASE follows Spark; D-4 keeps `core.py`'s ceiling and puts any helper in a sibling
-  module. Step 0 measures the oracle cells and lands the red-first 40-entry memory
-  pin; step 1 rewrites.
-- [eager-own-1-card-2026-09-13.md](eager-own-1-card-2026-09-13.md) — **card EAGER-OWN-1
-  (2026-09-13, owner charter; run 11):** eager results own their materialization — a refcounted
-  handle held by every frame that scans a cache view (D-2), eager-on-eager reuses the backing
-  (D-4), no plan-equivalence caching (D-5), budget deferred to EAGER-BUDGET-1 (D-6); step 0
-  measures the million-row TA loop first; owner questions Q-E1 (cache()/persist() lifetime) and
-  Q-E2 (session budget policy).
+- [DDL-DEPTH-1](ddl-depth-1-card-2026-09-14.md) — **card DDL-DEPTH-1 (2026-09-14, run 14b under owner ruling Q-R13-13, card only):** a nesting-depth cap on the DDL type parser at `SPARK_TYPE_NAME_MAX_DEPTH` with a typed refusal, measured on the Spark oracle first; no new refusal ships until the card runs.
+- [overnight-report-2026-09-14-run13b.md](overnight-report-2026-09-14-run13b.md) — **run 13b report (2026-09-14, expressions, beside run 13; night window 05:19–06:30, day continuation to 12:00):** REPLACE-LINEAR-1 step 1 (#577): a flat searched CASE with Spark semantics per Q-R1, 277 MB → 4.5 MiB at 16 entries on a release native, Grok critic-logic (1 P1, 5 P2 remediated) and S2-21 Python reviewer (2 P2 remediated). Then ARRAY-NULL-1 and ANSI-DOOR-1, with owner questions and recommendations.
+- [REPLACE-NOVALUE-1](replace-novalue-1-card-2026-09-14.md) — **card REPLACE-NOVALUE-1 (2026-09-14, run 13b under owner ruling Q-13b-2, card only):** `DataFrame.replace(to_replace)` with no `value` raises PySpark's `ARGUMENT_REQUIRED` through a private sentinel default; today repark reads it as a NULL replacement.
+- [overnight-report-2026-09-13-run12b.md](overnight-report-2026-09-13-run12b.md) — **run 12b report (2026-09-13, cache and expressions, beside run 12):** EAGER-BUDGET-1 merged (#569: `repark.cache.max_total_bytes` refuses and never evicts, distinct-buffer `repark.cache.retained_bytes`, incremental admission; the per-call slowdown did not reproduce under 2/4/8 GB caps). REPLACE-LINEAR-1 step 0 merged (#571), with step 1 parked on owner question Q-R1 (nine Spark divergences). ARRAY-NULL-1 and ANSI-DOOR-1 filed as cards. Owner questions Q-B1, Q-B2, Q-R1, Q-R2 with recommendations.
+- [array-null-1-card-2026-09-13.md](array-null-1-card-2026-09-13.md) — **card ARRAY-NULL-1 (2026-09-13, run 12b under G-5; ABS-EXPR-1's C-004 audit residue):** `F.array_append` / `F.array_prepend` compose `when(isnull(arr), NULL).otherwise(flatten(array(arr, array(x))))`, embedding the array twice per level (19 MB at depth 12, 66 MB at 14), because DataFusion's kernels drop the input null buffer. D-1 a null-preserving native arm measured first between a wrapping `ScalarUDF` and a Rust-built single-reference CASE (HALT if neither is linear); D-2 Spark oracle cells (NULL array, NULL element, empty, nested, coercion); D-3 the SQL door's divergence row; step 0 measures and lands the red-first depth-40 memory pin. Not started.
+- [ansi-door-1-card-2026-09-13.md](ansi-door-1-card-2026-09-13.md) — **card ANSI-DOOR-1 (2026-09-13, run 12b, card only):** the SQL door's datafusion-spark kernels read `execution.enable_ansi_mode`, which repark never sets, so `spark.sql("SELECT abs(x)")` wraps on signed minimums while the facade raises `ARITHMETIC_OVERFLOW` as Spark does with ANSI on. D-1 wire `spark.sql.ansi.enabled` (session build and runtime set) to that option; D-2 measure every ANSI-aware door kernel against the oracle first; D-3 the `abs` row leaves `EXPECTED_DIVERGENCES`. Not started.
+- [eager-budget-1-card-2026-09-13.md](eager-budget-1-card-2026-09-13.md) — **card EAGER-BUDGET-1 (2026-09-13, run 11 §7; worked by run 12b):** a session cache budget and retained-bytes accounting — `repark.cache.max_total_bytes` refuses (never evicts, Q-E2) when a materialization would push the sum of distinct Arrow buffers across live `__repark_cache_*` MemTables past the budget (D-1/D-2), admission checked incrementally per batch before the next pull (D-3), `repark.cache.max_bytes` unchanged in meaning (D-4), no spill (D-5), no registration or handle after a refusal or collection failure (D-6); step 0 measures the 30-iteration loop under 2/4/8 GiB cgroup caps, base vs main.
+- [replace-linear-1-card-2026-09-13.md](replace-linear-1-card-2026-09-13.md) — **card REPLACE-LINEAR-1 (2026-09-13, run 12b under G-5; ABS-EXPR-1's C-004 audit residue):** `DataFrame.replace`'s dict loop nests the running expression once per mapping entry — `when(expression == lit(old), lit(new)).otherwise(expression)` embeds the previous expression twice, so N entries reference the column 2^N times (28 MB at 12, 297 MB at 16). D-1 builds ONE searched `CASE WHEN col = a THEN b … ELSE col END` per target column (linear in entries); D-2 pins the live PySpark 4.1.2 oracle cells first (NULL key/value, subset shapes, a missing column, type coercion, list vs scalar `value`, the `{1: 2, 2: 3}` mapping-order case); D-3 rules that if the oracle answers 2 the CASE follows Spark; D-4 keeps `core.py`'s ceiling and puts any helper in a sibling module. Step 0 measures the oracle cells and lands the red-first 40-entry memory pin; step 1 rewrites.
+- [eager-own-1-card-2026-09-13.md](eager-own-1-card-2026-09-13.md) — **card EAGER-OWN-1 (2026-09-13, owner charter; run 11):** eager results own their materialization — a refcounted handle held by every frame that scans a cache view (D-2), eager-on-eager reuses the backing (D-4), no plan-equivalence caching (D-5), budget deferred to EAGER-BUDGET-1 (D-6); step 0 measures the million-row TA loop first; owner questions Q-E1 (cache()/persist() lifetime) and Q-E2 (session budget policy).
 - [eager-materialization-retention-review-2026-09-13.md](../../../docs/history/eager-own-1/eager-materialization-retention-review-2026-09-13.md)
   — **the owner's source review behind EAGER-OWN-1 (2026-09-13, verbatim):** bare `eager()`
   calls each register an unowned `__repark_cache_*` MemTable, the findings table, usage guidance,
@@ -205,10 +142,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   morning report, and the launch command the owner runs. Standing instructions added 2026-09-16 (morning): the Rust-first decision sentence, whole-suite gates, the commit as a numbered step, the box rules and the run-17 rulings.
 - [overnight-report-2026-09-09.md](overnight-report-2026-09-09.md) — **the first unattended run (2026-09-08/09):** BALLISTA-AUDIT-0 #426 and DF-EXPLAIN-1 #427 merged; SQL-DESCRIBE-1 parked on D-3 (#428 draft).
 - [overnight-report-2026-09-09-night2.md](overnight-report-2026-09-09-night2.md) — **the second unattended run (2026-09-09):** LEDGER-READING-1 #432, SQL-DESCRIBE-1 #428 and PREFLIGHT-PARITY-1 #433 merged; DISPLAY-POLARS-1 step 2 parked (#434 draft).
-- [overnight-report-2026-09-10-run6.md](overnight-report-2026-09-10-run6.md) — run 6 (2026-09-10
-  15:06 → 2026-09-11, the review-fix run, one orchestrator across two processes): review-fix-slate
-  §1 rows 1–11 plus M-0 and O-1, with every size-baseline question answered by a comment-funded
-  ratchet down rather than a raise, and the evening grant change to Devin SWE-2 for M-tier rounds.
+- [overnight-report-2026-09-10-run6.md](overnight-report-2026-09-10-run6.md) — run 6 (2026-09-10 15:06 → 2026-09-11, the review-fix run, one orchestrator across two processes): review-fix-slate §1 rows 1–11 plus M-0 and O-1, with every size-baseline question answered by a comment-funded ratchet down rather than a raise, and the evening grant change to Devin SWE-2 for M-tier rounds.
 - [overnight-report-2026-09-11-run7.md](overnight-report-2026-09-11-run7.md) — **run 7:** REVIEW-FIX-15b, TORTURE-1 steps 3–5, AP-1 step 2 and BALLISTA-M2-A steps 1–2 merged (#496–#501, #503); NEVEROOM-1 step 2 merged.
 - [overnight-report-2026-09-13-run12.md](overnight-report-2026-09-13-run12.md) — run 12 (2026-09-13, Devin actor + Grok S2-21 Rust/Python reviewers + Grok critic-logic, beside run 12b): FACADE-3 step 3 (Row/dict lists into native, abi3 temporal route; rows −54 %, dicts −55 %, tuples −47 % at 1e5; three P1 subclass/cache bugs found and fixed before the PR), the FACADE-4/5 briefs not opened, the remaining switchover measured in lines, owner questions Q-R12-1..3.
 - [overnight-report-2026-09-14-run13.md](overnight-report-2026-09-14-run13.md) — run 13 (2026-09-14, Devin actor, beside run 13b): FACADE-4 step 0 (conversion baseline: no wall, so step 1 is a correctness consolidation; three-table census D1–D21; DDL/Arrow goldens), PR left for the per-PR critic-logic round; FACADE-5 not opened, its step-0 brief written; owner questions Q-R13-1..11.
@@ -218,15 +152,9 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [overnight-report-2026-09-11-run8.md](overnight-report-2026-09-11-run8.md) — run 8 overnight report (2026-09-11).
 - [overnight-report-2026-09-15-15c.md](overnight-report-2026-09-15-15c.md) — **run 15c (2026-09-15, the 1.5 Spark-parity SQL door):** SQL-SET-DOOR-1 #601 and FNP-6D #609 merged; DOOR-CONVERGE-1 #616, JAVA-DOUBLE-STR-1 #612 and FNP-4B #611 left as PRs for the owner.
 - [overnight-report-2026-09-12-run9.md](overnight-report-2026-09-12-run9.md) — run 9 overnight report (2026-09-12).
-- [overnight-report-2026-09-10-run5.md](overnight-report-2026-09-10-run5.md) — run 5 (2026-09-10,
-  orchestrator A): seven units merged and one parked green as a draft (NEVEROOM-1 step 1). AP-0's
-  O-run refuted P-3's byte model; a live-Spark run narrowed TORTURE-1's `DATE-INTERVAL-NSBOUND-1`
-  to a day width. The runbook corrections are in the report.
+- [overnight-report-2026-09-10-run5.md](overnight-report-2026-09-10-run5.md) — run 5 (2026-09-10, orchestrator A): seven units merged and one parked green as a draft (NEVEROOM-1 step 1). AP-0's O-run refuted P-3's byte model; a live-Spark run narrowed TORTURE-1's `DATE-INTERVAL-NSBOUND-1` to a day width. The runbook corrections are in the report.
 - [overnight-report-2026-09-09-run4.md](overnight-report-2026-09-09-run4.md) — **run 4:** seven merged (CFG-1 steps 1b to 4; DISPLAY-POLARS-1 steps 4 and 5; DF-EAGER-1 steps 2 and 3); DISPLAY-BRIDGE-1 #454 parked on a merge conflict with DF-EAGER-1; CFG-1's ledger waits on one clause.
-- [overnight-report-2026-09-09-run3.md](overnight-report-2026-09-09-run3.md) — run 3 (2026-09-09,
-  08:56–15:00 local): five merged (DISPLAY-POLARS-1 steps 2 and 3, DOCS-LINKS-1, the
-  PREFLIGHT-PARITY-1 close, CFG-1 seed + step 1), two open at the stop (PROFILES-1 step 0,
-  DF-EAGER-1 step 1), none parked. Eight §6 decisions, three questions for the owner.
+- [overnight-report-2026-09-09-run3.md](overnight-report-2026-09-09-run3.md) — run 3 (2026-09-09, 08:56–15:00 local): five merged (DISPLAY-POLARS-1 steps 2 and 3, DOCS-LINKS-1, the PREFLIGHT-PARITY-1 close, CFG-1 seed + step 1), two open at the stop (PROFILES-1 step 0, DF-EAGER-1 step 1), none parked. Eight §6 decisions, three questions for the owner.
 - [iceberg-rust-handoff-2026-08-23.md](iceberg-rust-handoff-2026-08-23.md) — **the fork-side
   handoff (2026-08-23; F-3 / V3-DANGLE-1 errata 2026-08-31, V3-5; RP-5 consumed F-6b/F-6c / F-8 / F-16r / F-0 follow-up):** the document handed to the owned `iceberg-rust` fork's orchestrator —
   every fork-side item the 2026-08-23 intake surfaced (position-delete rewrite admission gate,
@@ -277,11 +205,8 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 ## Pointers
 - Up: [../map.md](../map.md)
 - [overnight-report-2026-09-15-15a.md](overnight-report-2026-09-15-15a.md) — run 15a (1.5 Spark-parity campaign, THE FUNCTIONS): census slice before/after, per-PR table with reviewer verdicts and costs, rulings, owner questions.
-- [overnight-report-2026-09-15-16b.md](overnight-report-2026-09-15-16b.md) — run 16b day report (the facade surfaces and IO of the
-  1.5 Spark-parity campaign): census slice 17 → 7 missing names, #610 / #621 / #626 / #630 merged, rulings R-16b-1..44, owner questions
-  Q-16b-1..4, the Rust-first roll-call, and the carry-overs DF-RUST-3, DF-SUBQUERY-1, IO-ORC-1, DF-METADATA-COL-1 with their oracles.
-- [overnight-report-2026-09-16-17b.md](overnight-report-2026-09-16-17b.md) — run 17b overnight report (2026-09-15/16): the 1.5 Spark-parity facade surfaces, IO and type widths (DataFrame census 108 → 114 of 115), rulings R-17b-1…24 and owner questions Q-17b-1…5; its lesson: a review finding can be real while its diagnosis is wrong.
-  The live oracle showed freqItems key equality is primitive IEEE `==`, not the `doubleToLongBits` reasoning the critic filed.
+- [overnight-report-2026-09-15-16b.md](overnight-report-2026-09-15-16b.md) — run 16b day report (the facade surfaces and IO of the 1.5 Spark-parity campaign): census slice 17 → 7 missing names, #610 / #621 / #626 / #630 merged, rulings R-16b-1..44, owner questions Q-16b-1..4, the Rust-first roll-call, and the carry-overs DF-RUST-3, DF-SUBQUERY-1, IO-ORC-1, DF-METADATA-COL-1 with their oracles.
+- [overnight-report-2026-09-16-17b.md](overnight-report-2026-09-16-17b.md) — run 17b overnight report (2026-09-15/16): the 1.5 Spark-parity facade surfaces, IO and type widths (DataFrame census 108 → 114 of 115), rulings R-17b-1…24 and owner questions Q-17b-1…5; its lesson: a review finding can be real while its diagnosis is wrong. The live oracle showed freqItems key equality is primitive IEEE `==`, not the `doubleToLongBits` reasoning the critic filed.
 - [overnight-report-2026-09-17-20c.md](overnight-report-2026-09-17-20c.md) — **run 20c morning report:** Iceberg maintenance and writer-knob slice; six fork and RePark PRs merged, the AWS acceptance run green.
 - [overnight-report-2026-09-16-18c.md](overnight-report-2026-09-16-18c.md) — **run 18c day report:** the SQL door, planner contracts and registry backlog; #654 and #656 merged, three cards for run 19.
 - [overnight-report-2026-09-17-20a.md](overnight-report-2026-09-17-20a.md) — run 20a morning report (2026-09-17): the Iceberg remediation read path, DML planner, writer paths and conflict detection; merges, rulings Q-20a-1…7 and owner questions. Central lesson: three of six reviewed heads needed remediation on defects no gate could see.
@@ -310,8 +235,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [v1-5-2-release-notes-2026-10-03.md](v1-5-2-release-notes-2026-10-03.md) — **v1.5.2 release notes (2026-10-03):** the notes for the second patch on 1.5.0, from `db3a1f37` (v1.5.1): TA-CHAIN-1, POLARS-IS-DUPLICATED-1, DEEP-FILTER-CHAIN-CRASH-1, STORE-TS-DOORS-2, STRING-LITERAL-ESCAPE-1, CAST-OVERFLOW-INSERT-1 and TEXT-WRITE-TIMESTAMP-ZONE-1, the RP-56 fork repin, CI-1 wheel-smoke sharding and the C-0 disposable Postgres harness.
 - [v1-5-3-release-notes-2026-10-07.md](v1-5-3-release-notes-2026-10-07.md) — **v1.5.3 release notes (2026-10-07):** the notes for the third patch on 1.5.0, from `d0c50405` (v1.5.2) to `392f2350`: SOURCE-URL-REDACT-1, -1-FN and -2, ATTR-ID-1 with its ruled release note and the STAMP-2 gate record (1.0812), the TA single-series slices S0 to S3, the ANSI -0.0 division, GROWN-STACK-GATE-1, the connect and micro-batch groundwork that is not exposed, and the rerun matrix.
 - [v1-5-4-release-notes-2026-10-10.md](v1-5-4-release-notes-2026-10-10.md) — **v1.5.4 release notes (2026-10-10):** the fourth patch on 1.5.0, after v1.5.3 (`7a8fcf1a`): the cross-join condition fix (#1010), the pyarrow floor 25.0.1 (#1015), `COUNT(*)` over the changelog, incremental and lineage readers (#1017), the nanosecond wall on every write door (#1018, R-007), the `encryption.key-id` refusal (#1019, ENC-1), the SQL door's `timestamp_*` family (#1012), and the known issues carried to v1.5.5. Tag, PyPI and matrix: `TODO(owner)` or `TODO(orchestrator)`.
-- [v1-5-5-release-notes-2026-10-13.md](v1-5-5-release-notes-2026-10-13.md) — **v1.5.5 release notes (2026-10-13):** the fifth patch on 1.5.0, after v1.5.4 (`f4e424c1`): the `timestamptz_ns` wall on every write door (R-008), the pandas/polars nanosecond frame door with its three behaviour changes (R-019), `current_date` in the session zone, the Postgres write core with both-door routing, the merge module split, two lock-only dependency bumps, and the known issues carried to v1.5.6. Tag, PyPI and matrix rerun: `TODO(owner)` or `TODO(orchestrator)`.
-  Reconciled 2026-10-22: the section "Added by the re-pointed tag" lists what the 2026-10-20 re-tag to `7fb5f6b2` shipped (U-1, U-3, U-5, U-6, U-7, the subquery refusals, the fork repins) and "Known issues in this release" what the wheel carries that main has since fixed.
+- [v1-5-5-release-notes-2026-10-13.md](v1-5-5-release-notes-2026-10-13.md) — **v1.5.5 release notes (2026-10-13):** the fifth patch on 1.5.0, after v1.5.4 (`f4e424c1`): the `timestamptz_ns` wall on every write door (R-008), the pandas/polars nanosecond frame door with its three behaviour changes (R-019), `current_date` in the session zone, the Postgres write core with both-door routing, the merge module split, two lock-only dependency bumps, and the known issues carried to v1.5.6. Tag, PyPI and matrix rerun: `TODO(owner)` or `TODO(orchestrator)`. Reconciled 2026-10-22: the section "Added by the re-pointed tag" lists what the 2026-10-20 re-tag to `7fb5f6b2` shipped (U-1, U-3, U-5, U-6, U-7, the subquery refusals, the fork repins) and "Known issues in this release" what the wheel carries that main has since fixed.
 - [v1-5-6-release-notes-2026-11-08.md](v1-5-6-release-notes-2026-11-08.md) — **v1.5.6 release notes (2026-11-08):** the empty-DML guard as the data-safety lead, the ruling D divergences, what the release does not carry (the v2 and v3 labels, see [ice-v2-label-1-card-2026-11-05.md](ice-v2-label-1-card-2026-11-05.md)), one line per change since `v1.5.5`. The [qualification record](v1-5-6-qualification-record.md) holds the source, lock, CI, verdicts, gates and owner actions.
 - [v1-5-3-card-2026-10-04.md](v1-5-3-card-2026-10-04.md) — **card v1.5.3 (2026-10-04):** the third patch on 1.5.0, from main after `d0c50405`: PARITY-LIVE-STOP-1 (clerk grade) and SOURCE-URL-REDACT-1 and -2 (security, a release item, masking a password in URL- or DSN-shaped values); the folds and the re-verify findings are on the card.
 - [release-diff-1-5-1-pre-existing.md](release-diff-1-5-1-pre-existing.md) — **RELEASE-DIFF-1-5-1-PE (2026-09-29):** the wrong answers found on main by the v1.5.1 release differential and the per-PR verifiers that were already there before this release. PE-3 to PE-26 each carry a severity, Spark's answer and a card name, with the silent rows (S1) first.
@@ -451,23 +375,9 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   QUALIFIED-TWIN-BIND-1 (2026-10-02, record only, from ATTR-ID-1 S3e):** single-id
   multi-hit qualified binds against Spark's two-attribute refusal under the settled
   S1/C-038 select-dup model; target "revisit if a cell disagrees".
-- [df-metadata-col-1-card-2026-10-02.md](df-metadata-col-1-card-2026-10-02.md) — **card
-  DF-METADATA-COL-1 (2026-10-02, re-cut from closed draft PR #662):**
-  `DataFrame.metadataColumn` and the hidden `_metadata` struct on file scans, two weeks
-  stale with review findings open (P1 L-501 + 3 P2 + 1 P3, R-18b-16..19, Spark cells
-  recorded); kept branch `feat/df-metadata-col-1` at `e07acb9c`, round-4 tree saved as a
-  patch.
-- [java-regex-features-1-card-2026-10-02.md](java-regex-features-1-card-2026-10-02.md) — **card
-  JAVA-REGEX-FEATURES-1 (2026-10-02, re-cut from closed draft PR #658):** `split` /
-  `regexp_*` / `rlike` answer Java lookaround, backreferences and possessive quantifiers
-  via `fancy-regex 0.11`, verification-clean but never queued; kept branch
-  `feat/java-regex-features-1` at `4c36c6f6`; three declared residue cells with recorded
-  Spark answers.
-- [fnp-agg-1-card-2026-10-02.md](fnp-agg-1-card-2026-10-02.md) — **card FNP-AGG-1
-  (2026-10-02, re-cut from closed draft PR #625, step 1 of 5):** the aggregate names
-  still only on the branch — slice (d) (`grouping_id` + foundation) landed as `41534851`,
-  slices (a)–(c) unbuilt with 10 names remaining per the 09-21 rescue report; kept branch
-  `feat/fnp-agg-1` at `4a3379fe`; oracle recorded.
+- [df-metadata-col-1-card-2026-10-02.md](df-metadata-col-1-card-2026-10-02.md) — **card DF-METADATA-COL-1 (2026-10-02, re-cut from closed draft PR #662):** `DataFrame.metadataColumn` and the hidden `_metadata` struct on file scans, two weeks stale with review findings open (P1 L-501 + 3 P2 + 1 P3, R-18b-16..19, Spark cells recorded); kept branch `feat/df-metadata-col-1` at `e07acb9c`, round-4 tree saved as a patch.
+- [java-regex-features-1-card-2026-10-02.md](java-regex-features-1-card-2026-10-02.md) — **card JAVA-REGEX-FEATURES-1 (2026-10-02, re-cut from closed draft PR #658):** `split` / `regexp_*` / `rlike` answer Java lookaround, backreferences and possessive quantifiers via `fancy-regex 0.11`, verification-clean but never queued; kept branch `feat/java-regex-features-1` at `4c36c6f6`; three declared residue cells with recorded Spark answers.
+- [fnp-agg-1-card-2026-10-02.md](fnp-agg-1-card-2026-10-02.md) — **card FNP-AGG-1 (2026-10-02, re-cut from closed draft PR #625, step 1 of 5):** the aggregate names still only on the branch — slice (d) (`grouping_id` + foundation) landed as `41534851`, slices (a)–(c) unbuilt with 10 names remaining per the 09-21 rescue report; kept branch `feat/fnp-agg-1` at `4a3379fe`; oracle recorded.
 - [ta-chain-1-card-2026-10-03.md](ta-chain-1-card-2026-10-03.md) — **card TA-CHAIN-1
   (2026-10-03, owner ruling, v1.5.2):** `ta.ema` over `ta.trange` answers all-NaN because a
   leading lookback NaN propagates through C-faithful kernels; polars_talib skips the leading
@@ -557,13 +467,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   25.0.0's bundled mimalloc (apache/arrow GH-50471, fixed in 25.0.1), reproduced without RePark; the
   threaded test is in the facade suite and the floor awaits the owner.
 - [CROSS-JOIN-CONDITION-1](cross-join-condition-1-card-2026-10-08.md) — **card CROSS-JOIN-CONDITION-1 (closed 2026-10-08 by its unit, sequenced after PR #997):** a cross with a condition now takes the inner path on both routes.
-- [join-condition-refusals-1-card-2026-10-08.md](join-condition-refusals-1-card-2026-10-08.md) — **card
-  JOIN-CONDITION-REFUSALS-1 (2026-10-08, closed 2026-10-08 by CROSS-JOIN-CONDITION-1 fold 2,
-  re-opened 2026-10-09 by fold 3 narrowed to residues R-CJC-1..R-CJC-5,
-  from the CROSS-JOIN-CONDITION-1 Opus verifier):** every join door answered conditions
-  Spark 4.1.2 refuses (non-deterministic expressions, an untyped NULL condition); the fold's
-  `JoinConditionRefusals` analyzer rule now refuses them with Spark's class, condition and
-  text on every `how` of both doors.
+- [join-condition-refusals-1-card-2026-10-08.md](join-condition-refusals-1-card-2026-10-08.md) — **card JOIN-CONDITION-REFUSALS-1 (2026-10-08, closed 2026-10-08 by CROSS-JOIN-CONDITION-1 fold 2, re-opened 2026-10-09 by fold 3 narrowed to residues R-CJC-1..R-CJC-5, from the CROSS-JOIN-CONDITION-1 Opus verifier):** every join door answered conditions Spark 4.1.2 refuses (non-deterministic expressions, an untyped NULL condition); the fold's `JoinConditionRefusals` analyzer rule now refuses them with Spark's class, condition and text on every `how` of both doors.
 - [c-3-null-stride-1-card-2026-10-08.md](c-3-null-stride-1-card-2026-10-08.md) — **card
   C-3-NULL-STRIDE-1 (2026-10-08, filed, not scheduled, from C-3 question Q3, PR #998):** the first
   stride's `OR col IS NULL` arm is a sequential scan of the whole table (about 1.1 s of a 7.3 s
@@ -698,11 +602,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   ICE-TSNS-COERCION-1 (2026-10-10, open, no release assigned):** nanosecond-aware type coercion so `coalesce`, `nvl`,
   `array`, `CASE ... ELSE NULL` and `if` keep nanoseconds beside a `timestamp_ns` operand (parity row R-017). Turns the
   refusals of ICE-TSNS-NARROW-REFUSE-1 back into stores. Sibling: ICE-TSNS-NARROW-REFUSE-1.
-- [ice-ntz-nested-wall-1-card-2026-10-10.md](ice-ntz-nested-wall-1-card-2026-10-10.md) — **card
-  ICE-NTZ-NESTED-WALL-1 (2026-10-10, open, target v1.5.5, own unit):** a nested microsecond `TIMESTAMP_NTZ` field stores
-  the session wall through field assignment (28 cells) and the UTC wall through every other door (106 cells) (parity row
-  R-011). The release note must say that nested NTZ values written by INSERT before the fix hold the UTC wall. Sibling:
-  ICE-TSNS-NESTED-1. **2026-10-20:** the stopgap refusal shipped by U-8 (ICE-NTZ-NESTED-REFUSE-1); the lift is 1.5.7.
+- [ice-ntz-nested-wall-1-card-2026-10-10.md](ice-ntz-nested-wall-1-card-2026-10-10.md) — **card ICE-NTZ-NESTED-WALL-1 (2026-10-10, open, target v1.5.5, own unit):** a nested microsecond `TIMESTAMP_NTZ` field stores the session wall through field assignment (28 cells) and the UTC wall through every other door (106 cells) (parity row R-011). The release note must say that nested NTZ values written by INSERT before the fix hold the UTC wall. Sibling: ICE-TSNS-NESTED-1. **2026-10-20:** the stopgap refusal shipped by U-8 (ICE-NTZ-NESTED-REFUSE-1); the lift is 1.5.7.
 - [write-body-carriers-1-card-2026-10-10.md](write-body-carriers-1-card-2026-10-10.md) — **card
   WRITE-BODY-CARRIERS-1 (2026-10-10, build round 1 landed 2026-10-14):** owner ruling 2026-10-10 that `CREATE [OR REPLACE] TABLE
   z AS INSERT INTO t ...` refuses at parse, as Spark does; today it commits the inner INSERT and then fails with
@@ -732,13 +632,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   `[INCOMPATIBLE_DATA_FOR_TABLE.AMBIGUOUS_COLUMN_NAME]` at `` `st`.`a` `` (parity row
   R-021; owner ruling, question 37, 2026-10-14). Format v3 not measured; non-struct
   case twins already covered by ID-1a.
-- [ice-tsns-update-ntz-cast-1-card-2026-10-15.md](ice-tsns-update-ntz-cast-1-card-2026-10-15.md) —
-  card ICE-TSNS-UPDATE-NTZ-CAST-1 (2026-10-15, filed by U-1's carry-over fix round from Q1 and
-  the orchestrator's provisional ruling on it): a written `CAST(ns AS TIMESTAMP_NTZ)` in
-  `UPDATE … WHERE` truncates where the no-`WHERE` form floors; outside ruling 91, four dated
-  rows on U-1's branch (red on today's main), no code in U-1.
-  **2026-10-14:** the measured shape closed by ICE-STRUCT-PAIRING-1 (R-021 CLOSED, cell
-  `by_name_case_twins`); the card's wider scope waits on the owner.
+- [ice-tsns-update-ntz-cast-1-card-2026-10-15.md](ice-tsns-update-ntz-cast-1-card-2026-10-15.md) — card ICE-TSNS-UPDATE-NTZ-CAST-1 (2026-10-15, filed by U-1's carry-over fix round from Q1 and the orchestrator's provisional ruling on it): a written `CAST(ns AS TIMESTAMP_NTZ)` in `UPDATE … WHERE` truncates where the no-`WHERE` form floors; outside ruling 91, four dated rows on U-1's branch (red on today's main), no code in U-1. **2026-10-14:** the measured shape closed by ICE-STRUCT-PAIRING-1 (R-021 CLOSED, cell `by_name_case_twins`); the card's wider scope waits on the owner.
 - [ns-encoded-nested-floor-1-card-2026-10-14.md](ns-encoded-nested-floor-1-card-2026-10-14.md) —
   **card NS-ENCODED-NESTED-FLOOR-1 (2026-10-14, open, target v1.5.7, nanosecond
   carve-out):** floor a dictionary-encoded or run-end-encoded nanosecond source, and a
@@ -747,19 +641,8 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   R-024; owner ruling, question 53, 2026-10-14). From finding F4 of the verifier of PR
   #1059: same on main in every cell. Reconciles with the R-015 refusal of a nested
   `timestamp_ns` target leaf.
-- [ice-commit-rebase-dup-1-card-2026-10-15.md](ice-commit-rebase-dup-1-card-2026-10-15.md) —
-  **card ICE-COMMIT-REBASE-DUP-1 (2026-10-15; fork half done via fork #368 and RePark #1095, pin now `d80a2884`; U-9 drill half open):** the fork's
-  re-base after a CAS rejection can append the same rows twice (a lost reply, an
-  SDK re-send, a stale rejection, then the re-base), from the owner's ruling 84;
-  fork work (refresh and check for our snapshot id before re-basing, SDK retry
-  off on the two commit calls), retired by a pin running the exact sequence
-  with no double append in U-9's live drill.
-- [commit-unknown-operation-id-1-card-2026-10-15.md](commit-unknown-operation-id-1-card-2026-10-15.md) —
-  **card COMMIT-UNKNOWN-OPERATION-ID-1 (2026-10-15, open, not scheduled):** thread
-  the fork's minted operation id to the plain `INSERT` unknown-outcome error,
-  which raises with `operation_id = None` today, from the owner's ruling 85;
-  the error text keeps the snapshot-list read-back, retired when the id
-  reaches the error, pinned.
+- [ice-commit-rebase-dup-1-card-2026-10-15.md](ice-commit-rebase-dup-1-card-2026-10-15.md) — **card ICE-COMMIT-REBASE-DUP-1 (2026-10-15; fork half done via fork #368 and RePark #1095, pin now `d80a2884`; U-9 drill half open):** the fork's re-base after a CAS rejection can append the same rows twice (a lost reply, an SDK re-send, a stale rejection, then the re-base), from the owner's ruling 84; fork work (refresh and check for our snapshot id before re-basing, SDK retry off on the two commit calls), retired by a pin running the exact sequence with no double append in U-9's live drill.
+- [commit-unknown-operation-id-1-card-2026-10-15.md](commit-unknown-operation-id-1-card-2026-10-15.md) — **card COMMIT-UNKNOWN-OPERATION-ID-1 (2026-10-15, open, not scheduled):** thread the fork's minted operation id to the plain `INSERT` unknown-outcome error, which raises with `operation_id = None` today, from the owner's ruling 85; the error text keeps the snapshot-list read-back, retired when the id reaches the error, pinned.
 - [facade-hang-98-1-card-2026-10-14.md](facade-hang-98-1-card-2026-10-14.md) — **card
   FACADE-HANG-98-1 (2026-10-14, open, not scheduled):** the facade suite (`pytest -n 8`
   over `python/repark/tests/`) sometimes stalls at 98–99 % with idle xdist workers on CI
@@ -815,14 +698,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   `f8f1d252` flake shape) or does something else. Proposed fix is one shared helper
   that picks by the version number in the file name, as `f8f1d252`'s
   `_metadata_version` does. Retires when every listed use is converted.
-- [mb-fence-body-flake-1-card-2026-10-18.md](mb-fence-body-flake-1-card-2026-10-18.md) — **card
-  MB-FENCE-BODY-FLAKE-1 (2026-10-18, fixed in the unit's PR, one open question):**
-  `two_drivers_on_one_sink_land_each_epoch_exactly_once` failed on CI (run 39157958057,
-  main's tree) with `left: [0, 0, 1, 2]`: a fenced driver's `foreachBatch` body ran epoch 0.
-  Cause: `enter_scope` loaded the sink before it entered the sink's scope, against MB-3 D-19.
-  A deterministic pin reproduces it; the fix enters the scope first. Open: the same pin also
-  misses its 10 s bound on a slow disk (the PA-15 family), measured to `fsync`; the owner
-  keeps the bound or rules otherwise.
+- [mb-fence-body-flake-1-card-2026-10-18.md](mb-fence-body-flake-1-card-2026-10-18.md) — **card MB-FENCE-BODY-FLAKE-1 (2026-10-18, fixed in the unit's PR, one open question):** `two_drivers_on_one_sink_land_each_epoch_exactly_once` failed on CI (run 39157958057, main's tree) with `left: [0, 0, 1, 2]`: a fenced driver's `foreachBatch` body ran epoch 0. Cause: `enter_scope` loaded the sink before it entered the sink's scope, against MB-3 D-19. A deterministic pin reproduces it; the fix enters the scope first. Open: the same pin also misses its 10 s bound on a slow disk (the PA-15 family), measured to `fsync`; the owner keeps the bound or rules otherwise.
 - [parity-live-drift-1-card-2026-10-20.md](parity-live-drift-1-card-2026-10-20.md) — **card
   PARITY-LIVE-DRIFT-1 (2026-10-20, open, not scheduled):** the `parity-live` nightly is red every
   morning since 2026-10-14 on one test, `test_ice_meta_delete_1.py::test_live_oracle_fixture_reproduces`:
@@ -874,12 +750,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
   resident before any result on main `c516c54a` (112 GB measured by U-8's verifier; stopped by
   the OOM killer at a 40 G scope cap after 166 s in fix round 3). It predates U-8 and is not its
   gate. Probes of this shape run under a memory cap.
-- [ice-resource-bound-1-card-2026-10-20.md](ice-resource-bound-1-card-2026-10-20.md) — **card
-  ICE-RESOURCE-BOUND-1 (U-11, 2026-10-20, built on the branch 2026-10-26, verifiers passed on head 76bd5891, PR #1191 open for the merge):** a stated resource bound for ordered writes (PP-01) and merge-on-read MERGE
-  (PP-02), measured on the acceptance sizes and written in docs; above it the statement refuses
-  with one text and the old snapshot stands, under #1044's "refuses cleanly where it cannot
-  spill"; PA-10 and PA-11 declared or closed. Follows U-9, whose kill pin keeps a crash and a
-  refusal two pinned outcomes. Order under `task/wo/ice-resource-bound-1/`.
+- [ice-resource-bound-1-card-2026-10-20.md](ice-resource-bound-1-card-2026-10-20.md) — **card ICE-RESOURCE-BOUND-1 (U-11, 2026-10-20, built on the branch 2026-10-26, verifiers passed on head 76bd5891, PR #1191 open for the merge):** a stated resource bound for ordered writes (PP-01) and merge-on-read MERGE (PP-02), measured on the acceptance sizes and written in docs; above it the statement refuses with one text and the old snapshot stands, under #1044's "refuses cleanly where it cannot spill"; PA-10 and PA-11 declared or closed. Follows U-9, whose kill pin keeps a crash and a refusal two pinned outcomes. Order under `task/wo/ice-resource-bound-1/`.
 - [write-door-classifier-d8-d9-1-card-2026-10-26.md](write-door-classifier-d8-d9-1-card-2026-10-26.md) — **card WRITE-DOOR-CLASSIFIER-D8-D9-1 (2026-10-26, open, clerk grade):** the static door classifier answers D8 for a MERGE `UPDATE SET t.a = s.a` where the per-session runtime record answers D9, found by the ICE-RESOURCE-BOUND-1 step 0 probe; retires when the two agree under a pin; linked to WRITE-SPINE-1.
 - [pa-10-constrained-process-test-1-card-2026-10-26.md](pa-10-constrained-process-test-1-card-2026-10-26.md) — **card PA-10-CONSTRAINED-PROCESS-TEST-1 (2026-10-26, open, not scheduled, clerk grade):** a disposable constrained process under a nested memory cap proves the default pool follows the cap; the O-13 acceptance-only residue of PA-10 (ICE-RESOURCE-BOUND-1 Q-C7). The fixture cells are in `repark-core` `spill.rs`.
 - [pa-10-headroom-doc-1-card-2026-10-26.md](pa-10-headroom-doc-1-card-2026-10-26.md) — **card PA-10-HEADROOM-DOC-1 (2026-10-26, open, not scheduled, clerk grade):** a dated, measured document of the memory outside the pool for decoded batches, Arrow results, caches, writer buffers and several sessions, which the PA-10 row requires.
@@ -920,7 +791,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [temp-view-name-validation-1-card-2026-10-30.md](temp-view-name-validation-1-card-2026-10-30.md) — **card TEMP-VIEW-NAME-VALIDATION-1 (filed 2026-10-30, grade C, open, awaiting the owner's charter):** two name-level differences from Spark 4.1.2: an unquoted digit-led name is refused where Spark accepts it, and the `createOrReplaceTempView` name check disagrees with Spark's parser both ways. Loud or harmless; no table changes. Leaves when pinned to Spark's parser or declined.
 - [ddl-over-temp-view-1-card-2026-10-30.md](ddl-over-temp-view-1-card-2026-10-30.md) — **card DDL-OVER-TEMP-VIEW-1 (filed 2026-10-30, grade C, open, awaiting the owner's charter):** `CREATE OR REPLACE TABLE t AS SELECT` and `DROP TABLE t` with a temporary view `t` in scope, both outside the six write routes that SPARK-DOOR-TEMP-VIEW-TARGET-1 refuses; Spark measured both shapes equal on 2026-11-01. Leaves when both shapes match Spark 4.1.2 on the probe and are pinned, or the charter declines them.
 - [ICE-HADOOP-GZIP-METADATA-1](ice-hadoop-gzip-metadata-1-card-2026-10-29.md) — **card ICE-HADOOP-GZIP-METADATA-1 (2026-10-29; PR #1218, closed):** gzip metadata names no longer return a deleted row or hide a current file (AUD-007, AUD-010).
-- [HADOOP-HINT-CATALOG-STYLE-NAME-1](hadoop-hint-catalog-style-name-1-card-2026-11-01.md), [HADOOP-HINT-UNREADABLE-FALLBACK-1](hadoop-hint-unreadable-fallback-1-card-2026-11-01.md), [HADOOP-HINT-NEGATIVE-1](hadoop-hint-negative-1-card-2026-10-29.md), [HADOOP-DISCOVERY-RULE-1](hadoop-discovery-rule-1-card-2026-11-03.md), [HADOOP-HINT-MISSING-VERSION-TEXT-1](hadoop-hint-missing-version-text-1-card-2026-11-03.md), [f-struct-empty-child-panic-1-card-2026-10-29.md](f-struct-empty-child-panic-1-card-2026-10-29.md), [f-idless-struct-child-remap-1-card-2026-10-31.md](f-idless-struct-child-remap-1-card-2026-10-31.md), [f-idless-toplevel-positional-1-card-2026-11-01.md](f-idless-toplevel-positional-1-card-2026-11-01.md) and [rp-65-idless-repin-1-card-2026-11-03.md](rp-65-idless-repin-1-card-2026-11-03.md) — **cards (closed 2026-10-31 to 2026-11-03):** the hadoop group by PR #1251; the id-less residues (AUD-008, S-11, S-16, S-20, S-26), leads L1 and L2 in the RP-65 card; ledger [hadoop-discovery-rule-1-ledger.md](../../ledgers/completed/hadoop-discovery-rule-1-ledger.md).
+- [HADOOP-HINT-CATALOG-STYLE-NAME-1](hadoop-hint-catalog-style-name-1-card-2026-11-01.md), [HADOOP-HINT-UNREADABLE-FALLBACK-1](hadoop-hint-unreadable-fallback-1-card-2026-11-01.md), [HADOOP-HINT-NEGATIVE-1](hadoop-hint-negative-1-card-2026-10-29.md), [HADOOP-DISCOVERY-RULE-1](hadoop-discovery-rule-1-card-2026-11-03.md), [HADOOP-HINT-MISSING-VERSION-TEXT-1](hadoop-hint-missing-version-text-1-card-2026-11-03.md), [F-STRUCT-EMPTY-CHILD-PANIC-1](f-struct-empty-child-panic-1-card-2026-10-29.md), [F-IDLESS-STRUCT-CHILD-REMAP-1](f-idless-struct-child-remap-1-card-2026-10-31.md), [F-IDLESS-TOPLEVEL-POSITIONAL-1](f-idless-toplevel-positional-1-card-2026-11-01.md) and [RP-65-IDLESS-REPIN-1](rp-65-idless-repin-1-card-2026-11-03.md) — **cards (closed 2026-10-31 to 2026-11-03):** the hadoop group by PR #1251; the id-less residues (AUD-008, S-11, S-16, S-20, S-26), leads L1 and L2 in the RP-65 card; ledger [hadoop-discovery-rule-1-ledger.md](../../ledgers/completed/hadoop-discovery-rule-1-ledger.md).
 - [f-map-key-drop-alter-1-card-2026-10-31.md](f-map-key-drop-alter-1-card-2026-10-31.md) — **fork card F-MAP-KEY-DROP-ALTER-1 (filed 2026-10-31, grade C, P3, not dispatched):** the fork accepts `drop m.key.a` where Spark refuses the ALTER (S-14); the read is correct. RePark refuses at both doors since MAP-KEY-ALTER-1 (2026-11-04).
 - [MAP-KEY-ALTER-1](map-key-alter-1-card-2026-11-04.md) — **card MAP-KEY-ALTER-1 (2026-11-04, closed at PR #1256):** every ALTER and union under a map key refuses as Spark does; [ledger](../../ledgers/completed/map-key-alter-1-ledger.md).
 - [df-append-map-key-union-1-card-2026-11-04.md](df-append-map-key-union-1-card-2026-11-04.md) — **card DF-APPEND-MAP-KEY-UNION-1 (2026-11-04, S3, not dispatched):** a DataFrame append that differs only inside a map key skips the union; the owner decides the scope.
@@ -1002,6 +873,7 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [facade-ingest-arrow-normalize-1-card-2026-11-09.md](facade-ingest-arrow-normalize-1-card-2026-11-09.md) — **card FACADE-INGEST-ARROW-NORMALIZE-1 (filed 2026-11-09, unscheduled):** narrow the Arrow list kinds and run-end encoding at `createDataFrame` to Spark's plain types; costs offset narrowing and the 2^31 limit; needs a sketch and a measurement.
 - [LISTVIEW-INNER-JOIN-KEY-1](listview-inner-join-key-1-card-2026-11-11.md) — **card LISTVIEW-INNER-JOIN-KEY-1 (filed 2026-11-11, S1, owner ruled the fix 2026-11-11, blocks v1.5.7, not dispatched):** a DataFrame key-name inner join on a `ListView` key returns the cross product (Q2059, Q2063).
 - [S3T-CTAS-SHELL-CREATE-1](s3t-ctas-shell-create-1-card-2026-11-12.md) — **card S3T-CTAS-SHELL-CREATE-1 (filed 2026-11-12, after the scoped label, not dispatched):** an S3 Tables CTAS creates its entry with no first version and adopts such an entry on retry, as the AWS jar does.
+- [NAN-PARTITION-VALUE-1](nan-partition-value-1-card-2026-11-12.md) — **card NAN-PARTITION-VALUE-1 (2026-11-12, S1, fixed on branch, not merged):** a NaN or ±Infinity FLOAT/DOUBLE partition value written by `INSERT`, `writeTo` or `saveAsTable` reached the manifest as NULL.
 - [struct-position-grouping-sets-1-card-2026-11-11.md](struct-position-grouping-sets-1-card-2026-11-11.md), [not-between-dml-cse-1-card-2026-11-11.md](not-between-dml-cse-1-card-2026-11-11.md), [struct-compare-family-residue-1-card-2026-11-11.md](struct-compare-family-residue-1-card-2026-11-11.md), [struct-position-error-names-1-card-2026-11-11.md](struct-position-error-names-1-card-2026-11-11.md) and [map-nested-ordering-on-1-card-2026-11-11.md](map-nested-ordering-on-1-card-2026-11-11.md) — **cards (filed 2026-11-11, not dispatched):** S3 except STRUCT-POSITION-ERROR-NAMES-1 (S4). Each leaves when fixed or declined.
 - [using-scalar-struct-key-class-1-card-2026-11-11.md](using-scalar-struct-key-class-1-card-2026-11-11.md), [struct-setop-control-class-1-card-2026-11-11.md](struct-setop-control-class-1-card-2026-11-11.md), [using-chain-ambiguous-1-card-2026-11-11.md](using-chain-ambiguous-1-card-2026-11-11.md), [natural-existence-join-accept-1-card-2026-11-11.md](natural-existence-join-accept-1-card-2026-11-11.md) and [map-ordering-forms-1-card-2026-11-11.md](map-ordering-forms-1-card-2026-11-11.md) — **cards (filed 2026-11-11, S3, not dispatched):** the class-only gaps and the NATURAL (X0001 to X0060) and map-ordering acceptances; each leaves when fixed or declined.
 - [struct-case-name-cast-1-card-2026-11-11.md](struct-case-name-cast-1-card-2026-11-11.md), [struct-typed-form-schema-1-card-2026-11-11.md](struct-typed-form-schema-1-card-2026-11-11.md) and [facade-dup-field-row-1-card-2026-11-11.md](facade-dup-field-row-1-card-2026-11-11.md) — **cards (filed 2026-11-11, S3, not dispatched):** head-leg class gaps from the pin file; FACADE-DUP-FIELD-ROW-1's true card for X0030 and X0032 is NATURAL-EXISTENCE-JOIN-ACCEPT-1.
