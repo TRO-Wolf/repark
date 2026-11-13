@@ -7,7 +7,7 @@ critic. Evidence: [task/wo/nan-write-canonical-1/](../../wo/nan-write-canonical-
 
 **Severity:** none of its own; it closes NAN-PARTITION-RAW-BITS-1 (S2) and NAN-PARTITION-FILE-SPLIT-1 (S4). **Status:**
 FIXED on branch `fix/nan-write-canonical-1` in both repositories (RePark `e100717f` on main `1d9d2808`; fork
-`d6592644`, fork PR #384). Not merged at filing.
+`d6592644`, fork PR #384, merged as `8b6ff921` with the same tree). RePark not merged at filing.
 
 ## What was wrong
 
@@ -27,9 +27,11 @@ FIXED on branch `fix/nan-write-canonical-1` in both repositories (RePark `e10071
 |---|---|---|---|
 | data values, nested leaves included | canonical | canonical | raw bits kept |
 | partition values | canonical, one file | canonical, one file | canonical, one file |
-| `rewrite_data_files` of an old file | repairs | repairs | keeps raw |
+| `rewrite_data_files` of an old unpartitioned file | repairs | repairs | keeps raw |
 
-RePark's head does the same on every cell.
+RePark's head does the same on every cell measured. A rewrite of an old Avro table partitioned by the float column was
+measured after filing and is unlike Spark: [NAN-AVRO-REWRITE-PARTITION-1](nan-avro-rewrite-partition-1-card-2026-11-13.md)
+(S3, pre-existing).
 
 ## The inventory and the seat
 
@@ -52,16 +54,23 @@ Each data file goes through the fork's `AnyFileWriter`, and each partition value
 
 - **Float map keys keep their bits.** Spark stores one NaN map key canonical in Parquet and ORC, but refuses a map
   with two NaN keys (`DUPLICATED_MAP_KEY`), which RePark writes. Rewriting keys would give such a map two identical
-  keys, so a single sign-set or payload NaN key in a Parquet or ORC map stays unlike Spark.
+  keys, so a single sign-set or payload NaN key in a Parquet or ORC map stays unlike Spark. On Avro, Spark stores a
+  computed sign-set NaN key canonical and keeps a payload key raw; RePark keeps both raw (verifier 2).
 - **The plain Parquet path write** (`df.write.parquet(<dir>)`, DataFusion's writer, not Iceberg) still stores raw bits.
 - **In-query answers** over a sign-set NaN computed in the same query (`max`, `min`, `greatest`, `least`, comparisons)
   still differ: that is option (B), the first unit after the label.
+- **Filters over stored Avro NaNs.** Avro data keeps the raw NaN bits, as Spark's does, and RePark compares by bits.
+  On a non-partition column of an Avro table RePark has just written, `d = CAST('NaN' AS DOUBLE)` finds 1 of 6 or 7
+  NaN rows and `d > CAST('Infinity' AS DOUBLE)` finds 3 of 6, where Spark finds all of them (verifiers 1 and 2). Main's
+  build answers the same. It belongs to [NAN-COMPARE-SPARK-1](nan-compare-spark-1-card-2026-11-13.md), and the pin's
+  strict xfail on the Avro `f` column holds it.
 
 ## Old tables
 
 A table written by RePark before this fix keeps its bits. A RePark rewrite with a fixed build (`CALL …
 rewrite_data_files`, or any copy-on-write rewrite of the file) repairs Parquet and ORC data files and the NaN
-partition value. Avro data files stay raw, as Spark's do. Data written by another engine is read as written.
+partition value. Avro data files of an unpartitioned table stay raw, as Spark's do; a rewrite of an Avro table
+partitioned by the float column is NAN-AVRO-REWRITE-PARTITION-1. Data written by another engine is read as written.
 
 ## Measured
 
@@ -71,6 +80,11 @@ partition value. Avro data files stay raw, as Spark's do. Data written by anothe
 - **Pins:** `python/repark/tests/iceberg/test_nan_write_canonical_1.py` (10 RePark cells, 10 live cells against
   Spark's own table), red 20/20 on main's build and green 20/20 on the head; the fork's
   `partition_value_calculator.rs` tests over every NaN pattern, the controls and all three formats.
+  - The `avro-insert` cell seeds row 8's `d` as 2.5, so no partition holds both zeros: on one or two cores
+    ZERO-PARTITION-MERGE-1 puts `0.0` in the `-0.0` partition. Its `f` column keeps both zero controls.
+  - A strict xfail, `test_repark_filters_stored_avro_nan_as_spark_does`, asserts Spark's answer (rows 1–6, measured)
+    for `f = CAST('NaN' AS FLOAT)` and `f > CAST('Infinity' AS FLOAT)` on the Avro table; the head answers `[4]` and
+    `[4, 5]`. NAN-COMPARE-SPARK-1 turns it green.
 - **Cost** ([cost/](../../wo/nan-write-canonical-1/evidence/cost/map.md)): 10 M DOUBLE rows, plain and partitioned, no NaN
   and 1 % NaN, six alternated pairs: head/base median 1.005x to 1.048x per case, 1.032x over the sum, under the
   1.05x bar; base/base noise 0.90x to 1.08x.

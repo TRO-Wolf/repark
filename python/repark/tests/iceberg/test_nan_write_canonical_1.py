@@ -39,6 +39,9 @@ _ROWS = (
     (10, "x", "y", "-Infinity"),
     (11, "x", "y", "1.5"),
 )
+_ONE_ZERO_CELLS = {("avro", "insert")}
+_ONE_ZERO_ROW = (8, "x + 2.5", "y", "0.0")
+_ONE_ZERO_CONTROL = ("4004000000000000", "00000000")
 _NAN_IDS = [1, 2, 3, 4, 5, 6]
 _CONTROLS = {
     7: ("8000000000000000", "80000000"),
@@ -79,7 +82,7 @@ def _bits(value: float | None, width: int) -> str | None:
     return struct.pack(">f" if width == 4 else ">d", value).hex()
 
 
-def _source(session: Any) -> str:
+def _source(session: Any) -> None:
     payload = [(key, _double(d), _double(f)) for key, d, f, _ in _PAYLOADS]
     session.createDataFrame(payload, schema="k STRING, x DOUBLE, y FLOAT").createOrReplaceTempView(
         "nanwrite_payload"
@@ -89,11 +92,22 @@ def _source(session: Any) -> str:
         f"SELECT k, x, y FROM (VALUES {values}) AS v(k, x, y) "
         "UNION ALL SELECT k, x, y FROM nanwrite_payload"
     ).createOrReplaceTempView("nanwrite_src")
+
+
+def _rows(fmt: str, door: str) -> str:
+    one_zero = (fmt, door) in _ONE_ZERO_CELLS
+    rows = [_ONE_ZERO_ROW if one_zero and row[0] == _ONE_ZERO_ROW[0] else row for row in _ROWS]
     return " UNION ALL ".join(
         f"SELECT CAST({i} AS BIGINT) AS id, CAST({d} AS DOUBLE) AS d, CAST({f} AS FLOAT) AS f "
         f"FROM nanwrite_src WHERE k = '{k}'"
-        for i, d, f, k in _ROWS
+        for i, d, f, k in rows
     )
+
+
+def _controls(fmt: str, door: str) -> dict[int, tuple[str, str]]:
+    if (fmt, door) not in _ONE_ZERO_CELLS:
+        return _CONTROLS
+    return {**_CONTROLS, _ONE_ZERO_ROW[0]: _ONE_ZERO_CONTROL}
 
 
 def _props(fmt: str, mode: str = "copy-on-write") -> str:
@@ -174,6 +188,17 @@ def _answers(session: Any, root: Path, table: str) -> dict[str, Any]:
     }
 
 
+def _avro_f_answers(session: Any, table: str) -> dict[str, list[int]]:
+    ids = "SELECT id FROM {t} WHERE {c} ORDER BY id"
+    return {
+        name: [r[0] for r in session.sql(ids.format(t=table, c=cond)).collect()]
+        for name, cond in (
+            ("eq_nan", "f = CAST('NaN' AS FLOAT)"),
+            ("gt_inf", "f > CAST('Infinity' AS FLOAT)"),
+        )
+    }
+
+
 def _name(catalog: str, fmt: str, door: str) -> str:
     return f"{catalog}.{_NS}.t_{fmt}_{door}"
 
@@ -189,14 +214,15 @@ def repark_side(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
     )
     try:
         session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_RP}.{_NS}").collect()
-        rows = _source(session)
+        _source(session)
         out: dict[Any, Any] = {"root": root}
         for fmt, door in _CELLS:
             table = _name(_RP, fmt, door)
-            _write(session, table, fmt, door, rows)
+            _write(session, table, fmt, door, _rows(fmt, door))
             out[(fmt, door)] = _answers(
                 session, root / "repark" / _NS / table.split(".")[-1], table
             )
+        out["avro_f"] = _avro_f_answers(session, _name(_RP, "avro", "insert"))
         return out
     finally:
         session.stop()
@@ -208,12 +234,23 @@ def test_repark_stores_nan_as_spark_does(repark_side: dict[str, Any], fmt: str, 
     for row_id in _NAN_IDS:
         expected = (_CANONICAL[0], _RAW[row_id][1]) if fmt == "avro" else _CANONICAL
         assert got["stored"][row_id] == expected, (row_id, got["stored"][row_id])
-    for row_id, bits in _CONTROLS.items():
+    for row_id, bits in _controls(fmt, door).items():
         assert got["stored"][row_id] == bits
     assert got["nan_partition"] == [_CANONICAL[0]]
     assert got["nan_partition_records"] == ([1, 5] if door == "update" else [len(_NAN_IDS)])
     assert got["eq_nan"] == _NAN_IDS
     assert got["isnan"] == _NAN_IDS
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "NAN-COMPARE-SPARK-1: RePark compares a stored Avro NaN by its bits; "
+        "Spark finds every NaN row"
+    ),
+)
+def test_repark_filters_stored_avro_nan_as_spark_does(repark_side: dict[str, Any]) -> None:
+    assert repark_side["avro_f"] == {"eq_nan": _NAN_IDS, "gt_inf": _NAN_IDS}
 
 
 def _live_spark(warehouse: Path) -> tuple[Any, str]:
@@ -255,11 +292,11 @@ def spark_side(repark_side: dict[str, Any]) -> dict[Any, Any]:
     warehouse = repark_side["root"] / "spark"
     spark, catalog = _live_spark(warehouse)
     spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.{_NS}")
-    rows = _source(spark)
+    _source(spark)
     out: dict[Any, Any] = {}
     for fmt, door in _CELLS:
         table = _name(catalog, fmt, door)
-        _write(spark, table, fmt, door, rows)
+        _write(spark, table, fmt, door, _rows(fmt, door))
         out[(fmt, door)] = _answers(spark, warehouse / _NS / table.split(".")[-1], table)
     return out
 
