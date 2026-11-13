@@ -1,0 +1,204 @@
+{"ansi": "true", "engine": "spark", "key": "provenance", "version": "4.1.2"}
+{"key": "df_union/dec_0.1/dbl_1e-20", "type": "double", "values": ["0.1|3fb999999999999a", "1e-20|3bc79ca10c924223"]}
+{"key": "df_union/dec_0.1/dbl_1e30", "type": "double", "values": ["0.1|3fb999999999999a", "1e+30|46293e5939a08cea"]}
+{"key": "df_union/dec_0.1/dbl_neg0", "type": "double", "values": ["-0.0|8000000000000000", "0.1|3fb999999999999a"]}
+{"key": "df_union/dec_0.1/dbl_nan", "type": "double", "values": ["0.1|3fb999999999999a", "NaN"]}
+{"key": "df_union/dec_0.1/dbl_col", "type": "double", "values": ["0.1|3fb999999999999a", "1e-20|3bc79ca10c924223"]}
+{"key": "df_union/dec_0.1/flt_1e-20", "type": "double", "values": ["0.1|3fb999999999999a", "9.999999682655225e-21|3bc79ca100000000"]}
+{"key": "df_union/dec_18_9/dbl_1e-20", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75", "1e-20|3bc79ca10c924223"]}
+{"key": "df_union/dec_18_9/dbl_1e30", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75", "1e+30|46293e5939a08cea"]}
+{"key": "df_union/dec_18_9/dbl_neg0", "type": "double", "values": ["-0.0|8000000000000000", "123456789.12345679|419d6f34547e6b75"]}
+{"key": "df_union/dec_18_9/dbl_nan", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75", "NaN"]}
+{"key": "df_union/dec_18_9/dbl_col", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75", "1e-20|3bc79ca10c924223"]}
+{"key": "df_union/dec_18_9/flt_1e-20", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75", "9.999999682655225e-21|3bc79ca100000000"]}
+{"key": "df_union/dec_col/dbl_1e-20", "type": "double", "values": ["1.25|3ff4000000000000", "1e-20|3bc79ca10c924223"]}
+{"key": "df_union/dec_col/dbl_1e30", "type": "double", "values": ["1.25|3ff4000000000000", "1e+30|46293e5939a08cea"]}
+{"key": "df_union/dec_col/dbl_neg0", "type": "double", "values": ["-0.0|8000000000000000", "1.25|3ff4000000000000"]}
+{"key": "df_union/dec_col/dbl_nan", "type": "double", "values": ["1.25|3ff4000000000000", "NaN"]}
+{"key": "df_union/dec_col/dbl_col", "type": "double", "values": ["1.25|3ff4000000000000", "1e-20|3bc79ca10c924223"]}
+{"key": "df_union/dec_col/flt_1e-20", "type": "double", "values": ["1.25|3ff4000000000000", "9.999999682655225e-21|3bc79ca100000000"]}
+{"key": "df_union/int/dbl_1e-20", "type": "double", "values": ["1.0|3ff0000000000000", "1e-20|3bc79ca10c924223"]}
+{"key": "df_union/int/dbl_1e30", "type": "double", "values": ["1.0|3ff0000000000000", "1e+30|46293e5939a08cea"]}
+{"key": "df_union/int/dbl_neg0", "type": "double", "values": ["-0.0|8000000000000000", "1.0|3ff0000000000000"]}
+{"key": "df_union/int/dbl_nan", "type": "double", "values": ["1.0|3ff0000000000000", "NaN"]}
+{"key": "df_union/int/dbl_col", "type": "double", "values": ["1.0|3ff0000000000000", "1e-20|3bc79ca10c924223"]}
+{"key": "df_union/int/flt_1e-20", "type": "double", "values": ["1.0|3ff0000000000000", "9.999999682655225e-21|3bc79ca100000000"]}
+{"key": "df_union/null/dbl_1e-20", "type": "double", "values": ["1e-20|3bc79ca10c924223", null]}
+{"key": "df_union/null/dbl_1e30", "type": "double", "values": ["1e+30|46293e5939a08cea", null]}
+{"key": "df_union/null/dbl_neg0", "type": "double", "values": ["-0.0|8000000000000000", null]}
+{"key": "df_union/null/dbl_nan", "type": "double", "values": ["NaN", null]}
+{"key": "df_union/null/dbl_col", "type": "double", "values": ["1e-20|3bc79ca10c924223", null]}
+{"key": "df_union/null/flt_1e-20", "type": "float", "values": ["9.999999682655225e-21|3bc79ca100000000", null]}
+{"key": "df_unionByName/dec_0.1/dbl_1e-20", "type": "double", "values": ["0.1|3fb999999999999a", "1e-20|3bc79ca10c924223"]}
+{"key": "df_unionByName/dec_0.1/dbl_1e30", "type": "double", "values": ["0.1|3fb999999999999a", "1e+30|46293e5939a08cea"]}
+{"key": "df_unionByName/dec_0.1/dbl_neg0", "type": "double", "values": ["-0.0|8000000000000000", "0.1|3fb999999999999a"]}
+{"key": "df_unionByName/dec_0.1/dbl_nan", "type": "double", "values": ["0.1|3fb999999999999a", "NaN"]}
+{"key": "df_unionByName/dec_0.1/dbl_col", "type": "double", "values": ["0.1|3fb999999999999a", "1e-20|3bc79ca10c924223"]}
+{"key": "df_unionByName/dec_0.1/flt_1e-20", "type": "double", "values": ["0.1|3fb999999999999a", "9.999999682655225e-21|3bc79ca100000000"]}
+{"key": "df_unionByName/dec_18_9/dbl_1e-20", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75", "1e-20|3bc79ca10c924223"]}
+{"key": "df_unionByName/dec_18_9/dbl_1e30", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75", "1e+30|46293e5939a08cea"]}
+{"key": "df_unionByName/dec_18_9/dbl_neg0", "type": "double", "values": ["-0.0|8000000000000000", "123456789.12345679|419d6f34547e6b75"]}
+{"key": "df_unionByName/dec_18_9/dbl_nan", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75", "NaN"]}
+{"key": "df_unionByName/dec_18_9/dbl_col", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75", "1e-20|3bc79ca10c924223"]}
+{"key": "df_unionByName/dec_18_9/flt_1e-20", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75", "9.999999682655225e-21|3bc79ca100000000"]}
+{"key": "df_unionByName/dec_col/dbl_1e-20", "type": "double", "values": ["1.25|3ff4000000000000", "1e-20|3bc79ca10c924223"]}
+{"key": "df_unionByName/dec_col/dbl_1e30", "type": "double", "values": ["1.25|3ff4000000000000", "1e+30|46293e5939a08cea"]}
+{"key": "df_unionByName/dec_col/dbl_neg0", "type": "double", "values": ["-0.0|8000000000000000", "1.25|3ff4000000000000"]}
+{"key": "df_unionByName/dec_col/dbl_nan", "type": "double", "values": ["1.25|3ff4000000000000", "NaN"]}
+{"key": "df_unionByName/dec_col/dbl_col", "type": "double", "values": ["1.25|3ff4000000000000", "1e-20|3bc79ca10c924223"]}
+{"key": "df_unionByName/dec_col/flt_1e-20", "type": "double", "values": ["1.25|3ff4000000000000", "9.999999682655225e-21|3bc79ca100000000"]}
+{"key": "df_unionByName/int/dbl_1e-20", "type": "double", "values": ["1.0|3ff0000000000000", "1e-20|3bc79ca10c924223"]}
+{"key": "df_unionByName/int/dbl_1e30", "type": "double", "values": ["1.0|3ff0000000000000", "1e+30|46293e5939a08cea"]}
+{"key": "df_unionByName/int/dbl_neg0", "type": "double", "values": ["-0.0|8000000000000000", "1.0|3ff0000000000000"]}
+{"key": "df_unionByName/int/dbl_nan", "type": "double", "values": ["1.0|3ff0000000000000", "NaN"]}
+{"key": "df_unionByName/int/dbl_col", "type": "double", "values": ["1.0|3ff0000000000000", "1e-20|3bc79ca10c924223"]}
+{"key": "df_unionByName/int/flt_1e-20", "type": "double", "values": ["1.0|3ff0000000000000", "9.999999682655225e-21|3bc79ca100000000"]}
+{"key": "df_unionByName/null/dbl_1e-20", "type": "double", "values": ["1e-20|3bc79ca10c924223", null]}
+{"key": "df_unionByName/null/dbl_1e30", "type": "double", "values": ["1e+30|46293e5939a08cea", null]}
+{"key": "df_unionByName/null/dbl_neg0", "type": "double", "values": ["-0.0|8000000000000000", null]}
+{"key": "df_unionByName/null/dbl_nan", "type": "double", "values": ["NaN", null]}
+{"key": "df_unionByName/null/dbl_col", "type": "double", "values": ["1e-20|3bc79ca10c924223", null]}
+{"key": "df_unionByName/null/flt_1e-20", "type": "float", "values": ["9.999999682655225e-21|3bc79ca100000000", null]}
+{"key": "df_intersect/dec_0.1/dbl_1e-20", "type": "double", "values": []}
+{"key": "df_intersect/dec_0.1/dbl_1e30", "type": "double", "values": []}
+{"key": "df_intersect/dec_0.1/dbl_neg0", "type": "double", "values": []}
+{"key": "df_intersect/dec_0.1/dbl_nan", "type": "double", "values": []}
+{"key": "df_intersect/dec_0.1/dbl_col", "type": "double", "values": []}
+{"key": "df_intersect/dec_0.1/flt_1e-20", "type": "double", "values": []}
+{"key": "df_intersect/dec_18_9/dbl_1e-20", "type": "double", "values": []}
+{"key": "df_intersect/dec_18_9/dbl_1e30", "type": "double", "values": []}
+{"key": "df_intersect/dec_18_9/dbl_neg0", "type": "double", "values": []}
+{"key": "df_intersect/dec_18_9/dbl_nan", "type": "double", "values": []}
+{"key": "df_intersect/dec_18_9/dbl_col", "type": "double", "values": []}
+{"key": "df_intersect/dec_18_9/flt_1e-20", "type": "double", "values": []}
+{"key": "df_intersect/dec_col/dbl_1e-20", "type": "double", "values": []}
+{"key": "df_intersect/dec_col/dbl_1e30", "type": "double", "values": []}
+{"key": "df_intersect/dec_col/dbl_neg0", "type": "double", "values": []}
+{"key": "df_intersect/dec_col/dbl_nan", "type": "double", "values": []}
+{"key": "df_intersect/dec_col/dbl_col", "type": "double", "values": []}
+{"key": "df_intersect/dec_col/flt_1e-20", "type": "double", "values": []}
+{"key": "df_intersect/int/dbl_1e-20", "type": "double", "values": []}
+{"key": "df_intersect/int/dbl_1e30", "type": "double", "values": []}
+{"key": "df_intersect/int/dbl_neg0", "type": "double", "values": []}
+{"key": "df_intersect/int/dbl_nan", "type": "double", "values": []}
+{"key": "df_intersect/int/dbl_col", "type": "double", "values": []}
+{"key": "df_intersect/int/flt_1e-20", "type": "double", "values": []}
+{"key": "df_intersect/null/dbl_1e-20", "type": "double", "values": []}
+{"key": "df_intersect/null/dbl_1e30", "type": "double", "values": []}
+{"key": "df_intersect/null/dbl_neg0", "type": "double", "values": []}
+{"key": "df_intersect/null/dbl_nan", "type": "double", "values": []}
+{"key": "df_intersect/null/dbl_col", "type": "double", "values": []}
+{"key": "df_intersect/null/flt_1e-20", "type": "float", "values": []}
+{"key": "df_subtract/dec_0.1/dbl_1e-20", "type": "double", "values": ["0.1|3fb999999999999a"]}
+{"key": "df_subtract/dec_0.1/dbl_1e30", "type": "double", "values": ["0.1|3fb999999999999a"]}
+{"key": "df_subtract/dec_0.1/dbl_neg0", "type": "double", "values": ["0.1|3fb999999999999a"]}
+{"key": "df_subtract/dec_0.1/dbl_nan", "type": "double", "values": ["0.1|3fb999999999999a"]}
+{"key": "df_subtract/dec_0.1/dbl_col", "type": "double", "values": ["0.1|3fb999999999999a"]}
+{"key": "df_subtract/dec_0.1/flt_1e-20", "type": "double", "values": ["0.1|3fb999999999999a"]}
+{"key": "df_subtract/dec_18_9/dbl_1e-20", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75"]}
+{"key": "df_subtract/dec_18_9/dbl_1e30", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75"]}
+{"key": "df_subtract/dec_18_9/dbl_neg0", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75"]}
+{"key": "df_subtract/dec_18_9/dbl_nan", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75"]}
+{"key": "df_subtract/dec_18_9/dbl_col", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75"]}
+{"key": "df_subtract/dec_18_9/flt_1e-20", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75"]}
+{"key": "df_subtract/dec_col/dbl_1e-20", "type": "double", "values": ["1.25|3ff4000000000000"]}
+{"key": "df_subtract/dec_col/dbl_1e30", "type": "double", "values": ["1.25|3ff4000000000000"]}
+{"key": "df_subtract/dec_col/dbl_neg0", "type": "double", "values": ["1.25|3ff4000000000000"]}
+{"key": "df_subtract/dec_col/dbl_nan", "type": "double", "values": ["1.25|3ff4000000000000"]}
+{"key": "df_subtract/dec_col/dbl_col", "type": "double", "values": ["1.25|3ff4000000000000"]}
+{"key": "df_subtract/dec_col/flt_1e-20", "type": "double", "values": ["1.25|3ff4000000000000"]}
+{"key": "df_subtract/int/dbl_1e-20", "type": "double", "values": ["1.0|3ff0000000000000"]}
+{"key": "df_subtract/int/dbl_1e30", "type": "double", "values": ["1.0|3ff0000000000000"]}
+{"key": "df_subtract/int/dbl_neg0", "type": "double", "values": ["1.0|3ff0000000000000"]}
+{"key": "df_subtract/int/dbl_nan", "type": "double", "values": ["1.0|3ff0000000000000"]}
+{"key": "df_subtract/int/dbl_col", "type": "double", "values": ["1.0|3ff0000000000000"]}
+{"key": "df_subtract/int/flt_1e-20", "type": "double", "values": ["1.0|3ff0000000000000"]}
+{"key": "df_subtract/null/dbl_1e-20", "type": "double", "values": [null]}
+{"key": "df_subtract/null/dbl_1e30", "type": "double", "values": [null]}
+{"key": "df_subtract/null/dbl_neg0", "type": "double", "values": [null]}
+{"key": "df_subtract/null/dbl_nan", "type": "double", "values": [null]}
+{"key": "df_subtract/null/dbl_col", "type": "double", "values": [null]}
+{"key": "df_subtract/null/flt_1e-20", "type": "float", "values": [null]}
+{"key": "df_intersectAll/dec_0.1/dbl_1e-20", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_0.1/dbl_1e30", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_0.1/dbl_neg0", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_0.1/dbl_nan", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_0.1/dbl_col", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_0.1/flt_1e-20", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_18_9/dbl_1e-20", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_18_9/dbl_1e30", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_18_9/dbl_neg0", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_18_9/dbl_nan", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_18_9/dbl_col", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_18_9/flt_1e-20", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_col/dbl_1e-20", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_col/dbl_1e30", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_col/dbl_neg0", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_col/dbl_nan", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_col/dbl_col", "type": "double", "values": []}
+{"key": "df_intersectAll/dec_col/flt_1e-20", "type": "double", "values": []}
+{"key": "df_intersectAll/int/dbl_1e-20", "type": "double", "values": []}
+{"key": "df_intersectAll/int/dbl_1e30", "type": "double", "values": []}
+{"key": "df_intersectAll/int/dbl_neg0", "type": "double", "values": []}
+{"key": "df_intersectAll/int/dbl_nan", "type": "double", "values": []}
+{"key": "df_intersectAll/int/dbl_col", "type": "double", "values": []}
+{"key": "df_intersectAll/int/flt_1e-20", "type": "double", "values": []}
+{"key": "df_intersectAll/null/dbl_1e-20", "type": "double", "values": []}
+{"key": "df_intersectAll/null/dbl_1e30", "type": "double", "values": []}
+{"key": "df_intersectAll/null/dbl_neg0", "type": "double", "values": []}
+{"key": "df_intersectAll/null/dbl_nan", "type": "double", "values": []}
+{"key": "df_intersectAll/null/dbl_col", "type": "double", "values": []}
+{"key": "df_intersectAll/null/flt_1e-20", "type": "float", "values": []}
+{"key": "df_exceptAll/dec_0.1/dbl_1e-20", "type": "double", "values": ["0.1|3fb999999999999a"]}
+{"key": "df_exceptAll/dec_0.1/dbl_1e30", "type": "double", "values": ["0.1|3fb999999999999a"]}
+{"key": "df_exceptAll/dec_0.1/dbl_neg0", "type": "double", "values": ["0.1|3fb999999999999a"]}
+{"key": "df_exceptAll/dec_0.1/dbl_nan", "type": "double", "values": ["0.1|3fb999999999999a"]}
+{"key": "df_exceptAll/dec_0.1/dbl_col", "type": "double", "values": ["0.1|3fb999999999999a"]}
+{"key": "df_exceptAll/dec_0.1/flt_1e-20", "type": "double", "values": ["0.1|3fb999999999999a"]}
+{"key": "df_exceptAll/dec_18_9/dbl_1e-20", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75"]}
+{"key": "df_exceptAll/dec_18_9/dbl_1e30", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75"]}
+{"key": "df_exceptAll/dec_18_9/dbl_neg0", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75"]}
+{"key": "df_exceptAll/dec_18_9/dbl_nan", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75"]}
+{"key": "df_exceptAll/dec_18_9/dbl_col", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75"]}
+{"key": "df_exceptAll/dec_18_9/flt_1e-20", "type": "double", "values": ["123456789.12345679|419d6f34547e6b75"]}
+{"key": "df_exceptAll/dec_col/dbl_1e-20", "type": "double", "values": ["1.25|3ff4000000000000"]}
+{"key": "df_exceptAll/dec_col/dbl_1e30", "type": "double", "values": ["1.25|3ff4000000000000"]}
+{"key": "df_exceptAll/dec_col/dbl_neg0", "type": "double", "values": ["1.25|3ff4000000000000"]}
+{"key": "df_exceptAll/dec_col/dbl_nan", "type": "double", "values": ["1.25|3ff4000000000000"]}
+{"key": "df_exceptAll/dec_col/dbl_col", "type": "double", "values": ["1.25|3ff4000000000000"]}
+{"key": "df_exceptAll/dec_col/flt_1e-20", "type": "double", "values": ["1.25|3ff4000000000000"]}
+{"key": "df_exceptAll/int/dbl_1e-20", "type": "double", "values": ["1.0|3ff0000000000000"]}
+{"key": "df_exceptAll/int/dbl_1e30", "type": "double", "values": ["1.0|3ff0000000000000"]}
+{"key": "df_exceptAll/int/dbl_neg0", "type": "double", "values": ["1.0|3ff0000000000000"]}
+{"key": "df_exceptAll/int/dbl_nan", "type": "double", "values": ["1.0|3ff0000000000000"]}
+{"key": "df_exceptAll/int/dbl_col", "type": "double", "values": ["1.0|3ff0000000000000"]}
+{"key": "df_exceptAll/int/flt_1e-20", "type": "double", "values": ["1.0|3ff0000000000000"]}
+{"key": "df_exceptAll/null/dbl_1e-20", "type": "double", "values": [null]}
+{"key": "df_exceptAll/null/dbl_1e30", "type": "double", "values": [null]}
+{"key": "df_exceptAll/null/dbl_neg0", "type": "double", "values": [null]}
+{"key": "df_exceptAll/null/dbl_nan", "type": "double", "values": [null]}
+{"key": "df_exceptAll/null/dbl_col", "type": "double", "values": [null]}
+{"key": "df_exceptAll/null/flt_1e-20", "type": "float", "values": [null]}
+{"key": "dfcol/coalesce_dd_dc", "type": "double", "values": ["1e-20|3bc79ca10c924223"]}
+{"key": "dfcol/coalesce_dbig_dc", "type": "double", "values": ["1e+30|46293e5939a08cea"]}
+{"key": "dfcol/coalesce_dd_litdec", "type": "double", "values": ["1e-20|3bc79ca10c924223"]}
+{"key": "dfcol/greatest_dc_dbig", "type": "double", "values": ["1e+30|46293e5939a08cea"]}
+{"key": "dfcol/least_dc_dd", "type": "double", "values": ["1e-20|3bc79ca10c924223"]}
+{"key": "dfcol/when_dc_dd", "type": "double", "values": ["1e-20|3bc79ca10c924223"]}
+{"key": "dfcol/when_dc_dbig", "type": "double", "values": ["1e+30|46293e5939a08cea"]}
+{"key": "dfcol/array_dc_dd", "type": "array<double>", "values": ["[1.25|3ff4000000000000, 1e-20|3bc79ca10c924223]"]}
+{"key": "dfcol/map_dc_dd", "type": "map<string,double>", "values": ["{a: 1.25|3ff4000000000000, b: 1e-20|3bc79ca10c924223}"]}
+{"key": "dfcol/nvl_dd_dc", "type": "double", "values": ["1e-20|3bc79ca10c924223"]}
+{"key": "dfcol/ifnull_dd_dc", "type": "double", "values": ["1e-20|3bc79ca10c924223"]}
+{"key": "dfcol/nvl2_id_dd_dc", "type": "double", "values": ["1e-20|3bc79ca10c924223"]}
+{"key": "dfcol/nullif_dd_zero", "type": "double", "values": ["1e-20|3bc79ca10c924223"]}
+{"key": "dfcol/isin_dd_litdec", "type": "boolean", "values": ["false"]}
+{"key": "dfcol/isin_dc_dd", "type": "boolean", "values": ["false"]}
+{"key": "dfcol/fexpr_coalesce", "type": "double", "values": ["1e-20|3bc79ca10c924223"]}
+{"key": "dfcol/fexpr_greatest_big", "type": "double", "values": ["1e+30|46293e5939a08cea"]}
+{"key": "dfcol/fexpr_case", "type": "double", "values": ["1e-20|3bc79ca10c924223"]}
+{"key": "dfcol/fexpr_array", "type": "array<double>", "values": ["[0.1|3fb999999999999a, 1e-20|3bc79ca10c924223]"]}
+{"key": "dfcol/selectexpr_if", "type": "double", "values": ["1e-20|3bc79ca10c924223"]}
+{"key": "dfcol/filter_dd_eq_zero", "type": "bigint", "values": ["0"]}
+{"key": "dfcol/filter_zero_in_dd", "type": "bigint", "values": ["0"]}
+{"key": "dfcol/withcolumn_union_view", "type": "double", "values": ["0.5|3fe0000000000000", "1e-20|3bc79ca10c924223"]}

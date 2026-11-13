@@ -1,0 +1,31 @@
+{"engine": "spark-reader", "key": "provenance", "warehouse": "wh-repark-false-affz_v91", "written_by": "write-repark-ansi-false.jsonl"}
+{"key": "ins_union_tiny", "rows": [[1, "0.1"], [2, "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "0.1|3fb999999999999a"]}, "table": "lc.ns.w00"}
+{"key": "ins_union_big", "rows": [], "spark_read": {"type": "double", "values": []}, "table": "lc.ns.w01"}
+{"key": "ins_union_neg0", "rows": [[1, "0.1"], [2, "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "0.1|3fb999999999999a"]}, "table": "lc.ns.w02"}
+{"key": "ins_union_nan", "rows": [], "spark_read": {"type": "double", "values": []}, "table": "lc.ns.w03"}
+{"key": "ins_union_rev_tiny", "rows": [], "spark_read": {"type": "double", "values": []}, "table": "lc.ns.w04"}
+{"key": "ins_union_distinct_tiny", "rows": [[1, "0.1"], [2, "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "0.1|3fb999999999999a"]}, "table": "lc.ns.w05"}
+{"key": "ins_values_tiny", "rows": [[1, "0.1"], [2, "1e-20"]], "spark_read": {"type": "double", "values": ["0.1|3fb999999999999a", "1e-20|3bc79ca10c924223"]}, "table": "lc.ns.w06"}
+{"key": "ins_values_big", "rows": [[1, "0.1"], [2, "1e+30"]], "spark_read": {"type": "double", "values": ["0.1|3fb999999999999a", "1e+30|46293e5939a08cea"]}, "table": "lc.ns.w07"}
+{"key": "ins_select_values_tiny", "rows": [[1, "0.1"], [2, "1e-20"]], "spark_read": {"type": "double", "values": ["0.1|3fb999999999999a", "1e-20|3bc79ca10c924223"]}, "table": "lc.ns.w08"}
+{"key": "ins_case_tiny", "rows": [], "spark_read": {"type": "double", "values": []}, "table": "lc.ns.w09"}
+{"key": "ins_coalesce_tiny", "rows": [[2, "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000"]}, "table": "lc.ns.w10"}
+{"key": "ins_greatest_big", "rows": [], "spark_read": {"type": "double", "values": []}, "table": "lc.ns.w11"}
+{"key": "ins_array_elem_tiny", "rows": [[2, "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000"]}, "table": "lc.ns.w12"}
+{"key": "ins_union_float_tiny", "rows": [[1, "0.10000000149011612"], [2, "0.0"]], "spark_read": {"type": "float", "values": ["0.0|0000000000000000", "0.10000000149011612|3fb99999a0000000"]}, "table": "lc.ns.w13"}
+{"key": "ins_union_float_big", "rows": [], "spark_read": {"type": "float", "values": []}, "table": "lc.ns.w14"}
+{"key": "ins_union_dec_round", "rows": [[1, "0.10"], [2, "1.26"]], "spark_read": {"type": "decimal(10,2)", "values": ["dec:0.10", "dec:1.26"]}, "table": "lc.ns.w15"}
+{"key": "ins_union_dec_tiny", "rows": [[1, "0.10"], [2, "0.00"]], "spark_read": {"type": "decimal(10,2)", "values": ["dec:0.00", "dec:0.10"]}, "table": "lc.ns.w16"}
+{"key": "ins_union_dec_big", "rows": [], "spark_read": {"type": "decimal(10,2)", "values": []}, "table": "lc.ns.w17"}
+{"key": "ins_values_dec_round", "rows": [[1, "0.10"], [2, "1.25"]], "spark_read": {"type": "decimal(10,2)", "values": ["dec:0.10", "dec:1.25"]}, "table": "lc.ns.w18"}
+{"key": "upd_case_tiny", "rows": [[1, "0.1"], [2, "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "0.1|3fb999999999999a"]}, "table": "lc.ns.w19"}
+{"key": "upd_coalesce_tiny", "rows": [[1, "9.0"], [2, "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "9.0|4022000000000000"]}, "table": "lc.ns.w20"}
+{"key": "upd_if_big", "rows": [[1, "9.0"], [2, "9.0"]], "spark_read": {"type": "double", "values": ["9.0|4022000000000000", "9.0|4022000000000000"]}, "table": "lc.ns.w21"}
+{"key": "upd_where_in_union", "rows": [[1, "9.0"], [2, "9.0"]], "spark_read": {"type": "double", "values": ["9.0|4022000000000000", "9.0|4022000000000000"]}, "table": "lc.ns.w22"}
+{"key": "merge_union_src", "rows": [[1, "0.1"], [2, "0.0"], [3, "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "0.0|0000000000000000", "0.1|3fb999999999999a"]}, "table": "lc.ns.w23"}
+{"key": "merge_union_big", "rows": [[1, "9.0"], [2, "9.0"]], "spark_read": {"type": "double", "values": ["9.0|4022000000000000", "9.0|4022000000000000"]}, "table": "lc.ns.w24"}
+{"key": "merge_values_src", "rows": [[1, "0.1"], [2, "0.0"], [3, "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "0.0|0000000000000000", "0.1|3fb999999999999a"]}, "table": "lc.ns.w25"}
+{"key": "merge_set_case", "rows": [[1, "9.0"], [2, "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "9.0|4022000000000000"]}, "table": "lc.ns.w26"}
+{"key": "merge_insert_coalesce", "rows": [[1, "9.0"], [2, "9.0"], [3, "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "9.0|4022000000000000", "9.0|4022000000000000"]}, "table": "lc.ns.w27"}
+{"key": "ctas_union_tiny", "rows": [[1, "0.100000000000000"], [2, "0E-15"]], "spark_read": {"type": "decimal(30,15)", "values": ["dec:0.100000000000000", "dec:0E-15"]}, "table": "lc.ns.w28"}
+{"key": "df_union_append", "rows": [[1, "0.1"], [2, "0.0"]], "spark_read": {"type": "double", "values": ["0.0|0000000000000000", "0.1|3fb999999999999a"]}, "table": "lc.ns.w29"}
