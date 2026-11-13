@@ -1,0 +1,16 @@
+{"naaj": "true", "broadcast_threshold": "10485760", "query": "not-in", "ids": [2, 6], "joins": ["BroadcastHashJoin"]}
+{"naaj": "true", "broadcast_threshold": "10485760", "query": "in", "ids": [1, 2], "joins": ["BroadcastHashJoin"]}
+{"naaj": "true", "broadcast_threshold": "10485760", "query": "not-exists", "ids": [6], "joins": ["BroadcastHashJoin"]}
+{"naaj": "true", "broadcast_threshold": "10485760", "query": "literal-not-in", "ids": [6], "joins": []}
+{"naaj": "true", "broadcast_threshold": "-1", "query": "not-in", "ids": [2, 6], "joins": ["BroadcastHashJoin"]}
+{"naaj": "true", "broadcast_threshold": "-1", "query": "in", "ids": [1, 2], "joins": ["SortMergeJoin"]}
+{"naaj": "true", "broadcast_threshold": "-1", "query": "not-exists", "ids": [6], "joins": ["SortMergeJoin"]}
+{"naaj": "true", "broadcast_threshold": "-1", "query": "literal-not-in", "ids": [6], "joins": []}
+{"naaj": "false", "broadcast_threshold": "10485760", "query": "not-in", "ids": [6], "joins": ["BroadcastNestedLoopJoin"]}
+{"naaj": "false", "broadcast_threshold": "10485760", "query": "in", "ids": [1, 2], "joins": ["BroadcastHashJoin"]}
+{"naaj": "false", "broadcast_threshold": "10485760", "query": "not-exists", "ids": [6], "joins": ["BroadcastHashJoin"]}
+{"naaj": "false", "broadcast_threshold": "10485760", "query": "literal-not-in", "ids": [6], "joins": []}
+{"naaj": "false", "broadcast_threshold": "-1", "query": "not-in", "ids": [6], "joins": ["BroadcastNestedLoopJoin"]}
+{"naaj": "false", "broadcast_threshold": "-1", "query": "in", "ids": [1, 2], "joins": ["SortMergeJoin"]}
+{"naaj": "false", "broadcast_threshold": "-1", "query": "not-exists", "ids": [6], "joins": ["SortMergeJoin"]}
+{"naaj": "false", "broadcast_threshold": "-1", "query": "literal-not-in", "ids": [6], "joins": []}

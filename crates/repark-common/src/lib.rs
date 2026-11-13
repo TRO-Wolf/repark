@@ -1,5 +1,6 @@
 //! Shared domain types and the crate-wide error type for the repark engine.
 
+pub mod float_canon;
 pub mod java_case;
 pub mod java_double;
 pub mod names;

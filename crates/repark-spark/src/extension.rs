@@ -143,6 +143,13 @@ impl SessionExtension for SparkExtension {
         Some(repark_functions::spark_type_planner())
     }
 
+    fn signed_zero_policy(&self) -> repark_core::extension::SignedZeroPolicy {
+        repark_core::extension::SignedZeroPolicy {
+            literals: true,
+            keys: true,
+        }
+    }
+
     fn configure_analyzer_rules(
         &self,
         rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,

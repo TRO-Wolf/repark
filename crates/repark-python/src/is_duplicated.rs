@@ -135,26 +135,14 @@ pub(crate) fn dup_key_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(DupKey::new()))
 }
 
-fn normalize_f32(value: f32) -> f32 {
-    if value.is_nan() {
-        f32::NAN
-    } else {
-        value + 0.0
-    }
-}
-
-fn normalize_f64(value: f64) -> f64 {
-    if value.is_nan() {
-        f64::NAN
-    } else {
-        value + 0.0
-    }
-}
-
 fn normalize_scalar(scalar: ScalarValue) -> ScalarValue {
     match scalar {
-        ScalarValue::Float32(Some(value)) => ScalarValue::Float32(Some(normalize_f32(value))),
-        ScalarValue::Float64(Some(value)) => ScalarValue::Float64(Some(normalize_f64(value))),
+        ScalarValue::Float32(Some(value)) => {
+            ScalarValue::Float32(Some(repark_core::float_canon::canonical_f32(value)))
+        }
+        ScalarValue::Float64(Some(value)) => {
+            ScalarValue::Float64(Some(repark_core::float_canon::canonical_f64(value)))
+        }
         other => other,
     }
 }
@@ -169,7 +157,8 @@ fn normalize_array(array: &ArrayRef) -> ArrayRef {
                 if values.is_null(row) {
                     builder.append_null();
                 } else {
-                    builder.append_value(normalize_f32(values.value(row)));
+                    builder
+                        .append_value(repark_core::float_canon::canonical_f32(values.value(row)));
                 }
             }
             Arc::new(builder.finish())
@@ -181,7 +170,8 @@ fn normalize_array(array: &ArrayRef) -> ArrayRef {
                 if values.is_null(row) {
                     builder.append_null();
                 } else {
-                    builder.append_value(normalize_f64(values.value(row)));
+                    builder
+                        .append_value(repark_core::float_canon::canonical_f64(values.value(row)));
                 }
             }
             Arc::new(builder.finish())

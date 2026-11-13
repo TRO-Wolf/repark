@@ -1,0 +1,617 @@
+{"cid": "GB-1|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "GB-1|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "GB-1|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "GB-1|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "GB-1|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "GB-1|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "GB-2|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "GB-2|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "GB-2|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "GB-2|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "GB-2|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "GB-2|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "GB-3|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,d] predicate:[] N=1"]}
+{"cid": "GB-3|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,d] predicate:[] N=1"]}
+{"cid": "GB-3|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,f] predicate:[] N=1"]}
+{"cid": "GB-3|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,f] predicate:[] N=1"]}
+{"cid": "GB-3|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,m] predicate:[] N=1"]}
+{"cid": "GB-3|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,m] predicate:[] N=1"]}
+{"cid": "GB-4|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "GB-4|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "GB-4|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "GB-4|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "GB-4|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "GB-4|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "GB-5|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,d] predicate:[] N=1"]}
+{"cid": "GB-5|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,d] predicate:[] N=1"]}
+{"cid": "GB-5|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,f] predicate:[] N=1"]}
+{"cid": "GB-5|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,f] predicate:[] N=1"]}
+{"cid": "GB-5|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,m] predicate:[] N=1"]}
+{"cid": "GB-5|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,m] predicate:[] N=1"]}
+{"cid": "GB-6|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,d] predicate:[] N=1"]}
+{"cid": "GB-6|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,d] predicate:[] N=1"]}
+{"cid": "GB-6|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,f] predicate:[] N=1"]}
+{"cid": "GB-6|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,f] predicate:[] N=1"]}
+{"cid": "GB-6|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,m] predicate:[] N=1"]}
+{"cid": "GB-6|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,m] predicate:[] N=1"]}
+{"cid": "GB-7|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "GB-7|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "GB-7|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "GB-7|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "GB-7|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "GB-7|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "GB-8|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,d] predicate:[] N=1"]}
+{"cid": "GB-8|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,d] predicate:[] N=1"]}
+{"cid": "GB-8|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,f] predicate:[] N=1"]}
+{"cid": "GB-8|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,f] predicate:[] N=1"]}
+{"cid": "GB-8|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,m] predicate:[] N=1"]}
+{"cid": "GB-8|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,m] predicate:[] N=1"]}
+{"cid": "GB-9|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "GB-9|double", "error": null, "label": "276dc503", "route": "native", "scans": []}
+{"cid": "GB-9|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "GB-9|float", "error": null, "label": "276dc503", "route": "native", "scans": []}
+{"cid": "GB-9|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "GB-9|decimal", "error": null, "label": "276dc503", "route": "native", "scans": []}
+{"cid": "GB-10|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": []}
+{"cid": "GB-10|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "GB-10|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": []}
+{"cid": "GB-10|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "GB-10|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": []}
+{"cid": "GB-10|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "GB-11|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g] predicate:[] N=1"]}
+{"cid": "GB-11|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g] predicate:[] N=1"]}
+{"cid": "GB-11|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g] predicate:[] N=1"]}
+{"cid": "GB-11|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g] predicate:[] N=1"]}
+{"cid": "GB-11|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g] predicate:[] N=1"]}
+{"cid": "GB-11|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g] predicate:[] N=1"]}
+{"cid": "DI-1|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "DI-1|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "DI-1|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "DI-1|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "DI-1|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "DI-1|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "DI-2|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,d] predicate:[] N=1"]}
+{"cid": "DI-2|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,d] predicate:[] N=1"]}
+{"cid": "DI-2|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,f] predicate:[] N=1"]}
+{"cid": "DI-2|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,f] predicate:[] N=1"]}
+{"cid": "DI-2|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,m] predicate:[] N=1"]}
+{"cid": "DI-2|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,m] predicate:[] N=1"]}
+{"cid": "DI-3|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "DI-3|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "DI-3|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "DI-3|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "DI-3|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "DI-3|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "DI-4|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,d] predicate:[] N=1"]}
+{"cid": "DI-4|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,d] predicate:[] N=1"]}
+{"cid": "DI-4|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,f] predicate:[] N=1"]}
+{"cid": "DI-4|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,f] predicate:[] N=1"]}
+{"cid": "DI-4|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,m] predicate:[] N=1"]}
+{"cid": "DI-4|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,m] predicate:[] N=1"]}
+{"cid": "DI-5|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,d] predicate:[] N=1"]}
+{"cid": "DI-5|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,d] predicate:[] N=1"]}
+{"cid": "DI-5|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,f] predicate:[] N=1"]}
+{"cid": "DI-5|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,f] predicate:[] N=1"]}
+{"cid": "DI-5|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,m] predicate:[] N=1"]}
+{"cid": "DI-5|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,m] predicate:[] N=1"]}
+{"cid": "DI-6|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "DI-6|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "DI-6|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "DI-7|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,d] predicate:[id != 5] N=1"]}
+{"cid": "DI-7|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,d] predicate:[id != 5] N=1"]}
+{"cid": "DI-7|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,f] predicate:[id != 5] N=1"]}
+{"cid": "DI-7|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,f] predicate:[id != 5] N=1"]}
+{"cid": "DI-7|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,m] predicate:[id != 5] N=1"]}
+{"cid": "DI-7|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,m] predicate:[id != 5] N=1"]}
+{"cid": "WI-1|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "WI-1|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "WI-1|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "WI-1|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "WI-1|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "WI-1|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "WI-2|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "WI-2|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "WI-2|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "WI-2|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "WI-2|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "WI-2|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "WI-3|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "WI-3|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "WI-3|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "WI-3|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "WI-3|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "WI-3|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "WI-4|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "WI-4|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "WI-4|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "WI-4|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "WI-4|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "WI-4|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "WI-5|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "WI-5|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "WI-5|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "WI-5|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "WI-5|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "WI-5|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "WI-6|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "WI-6|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "WI-6|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "WI-6|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "WI-6|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "WI-6|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "OB-1|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "OB-1|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "OB-1|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "OB-1|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "OB-1|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "OB-1|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "OB-2|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "OB-2|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "OB-2|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "OB-2|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "OB-2|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "OB-2|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "OB-3|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "OB-3|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "OB-3|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "OB-3|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "OB-3|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "OB-3|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "OB-4|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[id <= 4] N=1"]}
+{"cid": "OB-4|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[id <= 4] N=1"]}
+{"cid": "OB-4|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[id <= 4] N=1"]}
+{"cid": "OB-4|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[id <= 4] N=1"]}
+{"cid": "OB-4|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[id <= 4] N=1"]}
+{"cid": "OB-4|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[id <= 4] N=1"]}
+{"cid": "MM-1|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[id <= 4] N=1"]}
+{"cid": "MM-1|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[id <= 4] N=1"]}
+{"cid": "MM-1|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[id <= 4] N=1"]}
+{"cid": "MM-1|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[id <= 4] N=1"]}
+{"cid": "MM-1|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[id <= 4] N=1"]}
+{"cid": "MM-1|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[id <= 4] N=1"]}
+{"cid": "CM-1|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-1|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-1|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-1|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-1|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-1|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-2|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-2|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-2|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-2|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-2|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-2|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-3|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-3|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-3|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-3|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-3|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-3|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-4|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-4|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-4|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-4|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-4|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-4|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-5|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-5|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-5|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-5|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-5|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-5|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-6|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-6|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-6|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-6|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-6|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-6|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-7|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-7|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-7|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-7|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-7|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-7|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-8|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-8|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-8|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-8|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-8|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-8|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-9|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "CM-9|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "CM-9|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "CM-9|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "CM-9|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "CM-9|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "CM-10|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-10|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-10|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-10|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-10|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-10|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-11|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-11|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1"]}
+{"cid": "CM-11|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-11|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1"]}
+{"cid": "CM-11|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "CM-11|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1"]}
+{"cid": "JN-inner|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-inner|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-inner|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-inner|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-inner|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-inner|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-inner|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-inner|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-inner|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-inner|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-inner|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-inner|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-left|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-left|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-left|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-left|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-left|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-left|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-left|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-left|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-left|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-left|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-left|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-left|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-right|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-right|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-right|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-right|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-right|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-right|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-right|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-right|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-right|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-right|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-right|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-right|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-full|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-full|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-full|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-full|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-full|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-full|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-full|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-full|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-full|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-full|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-full|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-full|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-semi|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "JN-semi|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "JN-semi|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "JN-semi|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "JN-semi|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "JN-semi|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "JN-semi|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "JN-semi|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "JN-semi|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "JN-semi|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "JN-semi|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "JN-semi|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "JN-anti|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "JN-anti|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "JN-anti|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "JN-anti|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "JN-anti|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "JN-anti|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "JN-anti|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "JN-anti|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "JN-anti|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "JN-anti|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "JN-anti|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "JN-anti|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "JN-using|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-using|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-using|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-using|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-using|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-using|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-using|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-using|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-using|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-using|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-using|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-using|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-keylist|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,d] predicate:[] N=1", "IcebergTableScan projection:[uid,g,d] predicate:[] N=1"]}
+{"cid": "JN-keylist|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,d] predicate:[] N=1", "IcebergTableScan projection:[uid,g,d] predicate:[] N=1"]}
+{"cid": "JN-keylist|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,d] predicate:[] N=1", "IcebergTableScan projection:[uid,g,d] predicate:[] N=1"]}
+{"cid": "JN-keylist|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,d] predicate:[] N=1", "IcebergTableScan projection:[uid,g,d] predicate:[] N=1"]}
+{"cid": "JN-keylist|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,f] predicate:[] N=1", "IcebergTableScan projection:[uid,g,f] predicate:[] N=1"]}
+{"cid": "JN-keylist|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,f] predicate:[] N=1", "IcebergTableScan projection:[uid,g,f] predicate:[] N=1"]}
+{"cid": "JN-keylist|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,f] predicate:[] N=1", "IcebergTableScan projection:[uid,g,f] predicate:[] N=1"]}
+{"cid": "JN-keylist|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,f] predicate:[] N=1", "IcebergTableScan projection:[uid,g,f] predicate:[] N=1"]}
+{"cid": "JN-keylist|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,m] predicate:[] N=1", "IcebergTableScan projection:[uid,g,m] predicate:[] N=1"]}
+{"cid": "JN-keylist|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,m] predicate:[] N=1", "IcebergTableScan projection:[uid,g,m] predicate:[] N=1"]}
+{"cid": "JN-keylist|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,m] predicate:[] N=1", "IcebergTableScan projection:[uid,g,m] predicate:[] N=1"]}
+{"cid": "JN-keylist|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,m] predicate:[] N=1", "IcebergTableScan projection:[uid,g,m] predicate:[] N=1"]}
+{"cid": "JN-twofloat|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1", "IcebergTableScan projection:[uid,d,e] predicate:[] N=1"]}
+{"cid": "JN-twofloat|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1", "IcebergTableScan projection:[uid,d,e] predicate:[] N=1"]}
+{"cid": "JN-twofloat|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1", "IcebergTableScan projection:[uid,d,e] predicate:[] N=1"]}
+{"cid": "JN-twofloat|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d,e] predicate:[] N=1", "IcebergTableScan projection:[uid,d,e] predicate:[] N=1"]}
+{"cid": "JN-twofloat|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1", "IcebergTableScan projection:[uid,f,fe] predicate:[] N=1"]}
+{"cid": "JN-twofloat|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1", "IcebergTableScan projection:[uid,f,fe] predicate:[] N=1"]}
+{"cid": "JN-twofloat|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1", "IcebergTableScan projection:[uid,f,fe] predicate:[] N=1"]}
+{"cid": "JN-twofloat|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f,fe] predicate:[] N=1", "IcebergTableScan projection:[uid,f,fe] predicate:[] N=1"]}
+{"cid": "JN-twofloat|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1", "IcebergTableScan projection:[uid,m,me] predicate:[] N=1"]}
+{"cid": "JN-twofloat|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1", "IcebergTableScan projection:[uid,m,me] predicate:[] N=1"]}
+{"cid": "JN-twofloat|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1", "IcebergTableScan projection:[uid,m,me] predicate:[] N=1"]}
+{"cid": "JN-twofloat|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m,me] predicate:[] N=1", "IcebergTableScan projection:[uid,m,me] predicate:[] N=1"]}
+{"cid": "JN-nullsafe|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-nullsafe|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-nullsafe|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-nullsafe|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-nullsafe|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-nullsafe|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-nullsafe|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-nullsafe|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-nullsafe|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-nullsafe|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-nullsafe|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-nullsafe|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-comma|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-comma|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-comma|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-comma|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-comma|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-comma|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-comma|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-comma|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-comma|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-comma|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-comma|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-comma|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-sortmerge|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-sortmerge|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-sortmerge|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-sortmerge|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-sortmerge|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-sortmerge|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-sortmerge|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-sortmerge|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-sortmerge|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-sortmerge|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-sortmerge|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-sortmerge|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-nonequi|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-nonequi|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-nonequi|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-nonequi|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-nonequi|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-nonequi|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-nonequi|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-nonequi|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-nonequi|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-nonequi|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-nonequi|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-nonequi|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-filter|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,d] predicate:[] N=1", "IcebergTableScan projection:[uid,g,e] predicate:[] N=1"]}
+{"cid": "JN-filter|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,d] predicate:[] N=1", "IcebergTableScan projection:[uid,g,e] predicate:[] N=1"]}
+{"cid": "JN-filter|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,d] predicate:[] N=1", "IcebergTableScan projection:[uid,g,e] predicate:[] N=1"]}
+{"cid": "JN-filter|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,d] predicate:[] N=1", "IcebergTableScan projection:[uid,g,e] predicate:[] N=1"]}
+{"cid": "JN-filter|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,f] predicate:[] N=1", "IcebergTableScan projection:[uid,g,fe] predicate:[] N=1"]}
+{"cid": "JN-filter|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,f] predicate:[] N=1", "IcebergTableScan projection:[uid,g,fe] predicate:[] N=1"]}
+{"cid": "JN-filter|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,f] predicate:[] N=1", "IcebergTableScan projection:[uid,g,fe] predicate:[] N=1"]}
+{"cid": "JN-filter|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,f] predicate:[] N=1", "IcebergTableScan projection:[uid,g,fe] predicate:[] N=1"]}
+{"cid": "JN-filter|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,m] predicate:[] N=1", "IcebergTableScan projection:[uid,g,me] predicate:[] N=1"]}
+{"cid": "JN-filter|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,m] predicate:[] N=1", "IcebergTableScan projection:[uid,g,me] predicate:[] N=1"]}
+{"cid": "JN-filter|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,g,m] predicate:[] N=1", "IcebergTableScan projection:[uid,g,me] predicate:[] N=1"]}
+{"cid": "JN-filter|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,g,m] predicate:[] N=1", "IcebergTableScan projection:[uid,g,me] predicate:[] N=1"]}
+{"cid": "SQ-in|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-in|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-in|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-in|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-in|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-in|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-in|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-in|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-in|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-in|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-in|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-in|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-notin|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-notin|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-notin|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-notin|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-notin|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-notin|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-notin|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-notin|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-notin|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-notin|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-notin|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-notin|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-notin-ieee|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-notin-ieee|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-notin-ieee|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-notin-ieee|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-notin-ieee|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-notin-ieee|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-notin-ieee|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-notin-ieee|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-notin-ieee|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-notin-ieee|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-notin-ieee|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-notin-ieee|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-exists|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-exists|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-exists|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-exists|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-exists|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-exists|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-exists|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-exists|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-exists|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-exists|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-exists|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-exists|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-notexists|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-notexists|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-notexists|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-notexists|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-notexists|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-notexists|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-notexists|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-notexists|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-notexists|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-notexists|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-notexists|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-notexists|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-scalar|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-scalar|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-scalar|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-scalar|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-scalar|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-scalar|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-scalar|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-scalar|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-scalar|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-scalar|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "SQ-scalar|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-scalar|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1"]}
+{"cid": "SQ-any|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-any|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-any|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-any|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "SQ-any|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-any|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-any|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-any|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[id,f] predicate:[] N=1"]}
+{"cid": "SQ-any|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-any|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-any|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SQ-any|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-union|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-union|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-union|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-union|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-union|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-union|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-union|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-union|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-union|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-union|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-union|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-union|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-unionall|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-unionall|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-unionall|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-unionall|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-unionall|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-unionall|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-unionall|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-unionall|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-unionall|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-unionall|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-unionall|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-unionall|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-intersect|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-intersect|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-intersect|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-intersect|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-intersect|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-intersect|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-intersect|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-intersect|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-intersect|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-intersect|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-intersect|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-intersect|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-intersectall|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-intersectall|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-intersectall|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-intersectall|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-intersectall|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-intersectall|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-intersectall|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-intersectall|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-intersectall|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-intersectall|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-intersectall|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-intersectall|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-except|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-except|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-except|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-except|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-except|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-except|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-except|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-except|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-except|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-except|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-except|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-except|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-exceptall|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-exceptall|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-exceptall|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-exceptall|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-exceptall|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-exceptall|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-exceptall|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-exceptall|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-exceptall|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-exceptall|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-exceptall|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-exceptall|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-union-in|double|ub", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-union-in|double|ub", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1", "IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "SO-union-in|float|ub", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-union-in|float|ub", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[f] predicate:[] N=1", "IcebergTableScan projection:[f] predicate:[] N=1"]}
+{"cid": "SO-union-in|decimal|ub", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-union-in|decimal|ub", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[m] predicate:[] N=1", "IcebergTableScan projection:[m] predicate:[] N=1"]}
+{"cid": "SO-recursive|double", "error": "Error during planning: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `n` cannot be resolved. Did you mean one of the following? [`Utf8(\"-0.0\")`]. SQLSTATE: 42", "label": "276dc503", "route": "spark-sql", "scans": []}
+{"cid": "SO-recursive|double", "error": "Schema error: No field named n. Valid fields are r.\"Utf8(\"\"-0.0\"\")\".", "label": "276dc503", "route": "native", "scans": []}
+{"cid": "PR-1|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[d >= -1] N=1"]}
+{"cid": "PR-1|double", "error": null, "label": "276dc503", "route": "native", "scans": []}
+{"cid": "PR-1|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[f] predicate:[f >= -1] N=1"]}
+{"cid": "PR-1|float", "error": null, "label": "276dc503", "route": "native", "scans": []}
+{"cid": "PR-2|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[d >= -1] N=1", "IcebergTableScan projection:[uid,d] predicate:[d >= -1] N=1"]}
+{"cid": "PR-2|double|up", "error": null, "label": "276dc503", "route": "native", "scans": []}
+{"cid": "PR-2|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[d >= -1] N=1", "IcebergTableScan projection:[uid,d] predicate:[d >= -1] N=1"]}
+{"cid": "PR-2|double|un", "error": null, "label": "276dc503", "route": "native", "scans": []}
+{"cid": "PR-2|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[f >= -1] N=1", "IcebergTableScan projection:[uid,f] predicate:[f >= -1] N=1"]}
+{"cid": "PR-2|float|up", "error": null, "label": "276dc503", "route": "native", "scans": []}
+{"cid": "PR-2|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[f >= -1] N=1", "IcebergTableScan projection:[uid,f] predicate:[f >= -1] N=1"]}
+{"cid": "PR-2|float|un", "error": null, "label": "276dc503", "route": "native", "scans": []}
+{"cid": "CM-12|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,d,e] predicate:[] N=1"]}
+{"cid": "CM-12|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,d,e] predicate:[] N=1"]}
+{"cid": "CM-12|float", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,f,fe] predicate:[] N=1"]}
+{"cid": "CM-12|float", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,f,fe] predicate:[] N=1"]}
+{"cid": "CM-12|decimal", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[g,m,me] predicate:[] N=1"]}
+{"cid": "CM-12|decimal", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[g,m,me] predicate:[] N=1"]}
+{"cid": "JN-natural|double|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-natural|double|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-natural|double|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-natural|double|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[uid,d] predicate:[] N=1"]}
+{"cid": "JN-natural|float|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-natural|float|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-natural|float|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-natural|float|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,f] predicate:[] N=1", "IcebergTableScan projection:[uid,f] predicate:[] N=1"]}
+{"cid": "JN-natural|decimal|up", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-natural|decimal|up", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-natural|decimal|un", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "JN-natural|decimal|un", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,m] predicate:[] N=1", "IcebergTableScan projection:[uid,m] predicate:[] N=1"]}
+{"cid": "TV-1|double", "error": "Error during planning: table 'datafusion.public.vtk' not found", "label": "276dc503", "route": "spark-sql", "scans": []}
+{"cid": "TV-1|double", "error": "Error during planning: table 'datafusion.public.vtk' not found", "label": "276dc503", "route": "native", "scans": []}
+{"cid": "TV-1|float", "error": "Error during planning: table 'datafusion.public.vtk' not found", "label": "276dc503", "route": "spark-sql", "scans": []}
+{"cid": "TV-1|float", "error": "Error during planning: table 'datafusion.public.vtk' not found", "label": "276dc503", "route": "native", "scans": []}
+{"cid": "TV-1|decimal", "error": "Error during planning: table 'datafusion.public.vtk' not found", "label": "276dc503", "route": "spark-sql", "scans": []}
+{"cid": "TV-1|decimal", "error": "Error during planning: table 'datafusion.public.vtk' not found", "label": "276dc503", "route": "native", "scans": []}
+{"cid": "NN-1|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "NN-1|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "NN-2|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "NN-2|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "NN-3|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "NN-3|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1", "IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "NN-4|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "NN-4|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "NN-5|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "NN-5|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[id,d] predicate:[] N=1"]}
+{"cid": "NN-6|double", "error": null, "label": "276dc503", "route": "spark-sql", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
+{"cid": "NN-6|double", "error": null, "label": "276dc503", "route": "native", "scans": ["IcebergTableScan projection:[d] predicate:[] N=1"]}
