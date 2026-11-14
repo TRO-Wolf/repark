@@ -1,8 +1,12 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use arrow::array::{Array, AsArray, Decimal128Array, Decimal256Array, as_boolean_array};
-use arrow::datatypes::{Decimal128Type, DecimalType, Float32Type, Float64Type, i256};
+use arrow::array::{
+    Array, AsArray, Decimal128Array, Decimal256Array, PrimitiveArray, as_boolean_array,
+};
+use arrow::datatypes::{
+    ArrowPrimitiveType, Decimal128Type, DecimalType, Float32Type, Float64Type, i256,
+};
 use arrow::error::ArrowError;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::config::ConfigOptions;
@@ -306,16 +310,25 @@ impl FloatToDecimal {
         Err(overflow().into())
     }
 
-    fn convert(&self, values: impl Iterator<Item = Option<f64>>) -> Result<Decimal128Array> {
+    fn convert<T>(&self, values: &PrimitiveArray<T>) -> Result<Decimal128Array>
+    where
+        T: ArrowPrimitiveType,
+        T::Native: Into<f64>,
+    {
         let (precision, scale) = self.precision_scale();
-        let mut out = Vec::with_capacity(values.size_hint().0);
-        for value in values {
-            out.push(match value {
-                Some(value) => self.unscaled_of(value, precision, scale)?,
-                None => None,
-            });
-        }
-        Ok(Decimal128Array::from(out).with_precision_and_scale(precision, scale)?)
+        let converted: Decimal128Array = if self.safe {
+            values.unary_opt(|value| {
+                self.unscaled_of(value.into(), precision, scale)
+                    .ok()
+                    .flatten()
+            })
+        } else {
+            values.try_unary(|value| {
+                self.unscaled_of(value.into(), precision, scale)?
+                    .ok_or_else(|| DataFusionError::Internal(String::new()))
+            })?
+        };
+        Ok(converted.with_precision_and_scale(precision, scale)?)
     }
 }
 
@@ -377,15 +390,8 @@ impl ScalarUDFImpl for FloatToDecimal {
             }
             Some(ColumnarValue::Array(array)) => {
                 let converted = match array.data_type() {
-                    DataType::Float64 => {
-                        self.convert(array.as_primitive::<Float64Type>().iter())?
-                    }
-                    DataType::Float32 => self.convert(
-                        array
-                            .as_primitive::<Float32Type>()
-                            .iter()
-                            .map(|value| value.map(f64::from)),
-                    )?,
+                    DataType::Float64 => self.convert(array.as_primitive::<Float64Type>())?,
+                    DataType::Float32 => self.convert(array.as_primitive::<Float32Type>())?,
                     _ => {
                         return Err(DataFusionError::Execution(format!(
                             "'{FLOAT_TO_DECIMAL_NAME}' expects a FLOAT or DOUBLE argument"

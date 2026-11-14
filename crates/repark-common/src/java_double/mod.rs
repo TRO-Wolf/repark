@@ -671,10 +671,13 @@ pub fn java_double_unscaled(value: f64, scale: i8) -> Option<i128> {
     if !value.is_finite() {
         return None;
     }
+    if value == 0.0 {
+        return Some(0);
+    }
     if let Some(unscaled) = product_unscaled(value, scale) {
         return Some(unscaled);
     }
-    with_java_double_text(value, |text| text_unscaled(text, scale))
+    digits_unscaled(&dtoa_double_bits(value.to_bits()), scale)
 }
 
 #[allow(clippy::cast_possible_truncation)]
@@ -683,9 +686,6 @@ fn product_unscaled(value: f64, scale: i8) -> Option<i128> {
     let magnitude = (value * factor).abs();
     if magnitude >= PRODUCT_LIMIT {
         return None;
-    }
-    if magnitude == 0.0 {
-        return Some(0);
     }
     let spacing = ulp_of(magnitude);
     if ((magnitude.fract() - 0.5).abs()) <= ULP_MARGIN * spacing {
@@ -707,30 +707,16 @@ fn ulp_of(magnitude: f64) -> f64 {
     f64::from_bits((exponent - 52) << EXP_SHIFT)
 }
 
-fn text_unscaled(text: &str, scale: i8) -> Option<i128> {
-    let (negative, body) = match text.strip_prefix('-') {
-        Some(rest) => (true, rest),
-        None => (false, text),
-    };
-    let (mantissa, exponent) = match body.split_once('E') {
-        Some((mantissa, exponent)) => (mantissa, exponent.parse::<i32>().ok()?),
-        None => (body, 0),
-    };
+fn digits_unscaled(converter: &Dtoa, scale: i8) -> Option<i128> {
+    let shown = converter
+        .digits
+        .get(converter.first..converter.first + converter.n_digits)?;
     let mut digits: u128 = 0;
-    let mut fraction: i32 = 0;
-    let mut after_point = false;
-    for byte in mantissa.bytes() {
-        if byte == b'.' {
-            after_point = true;
-            continue;
-        }
-        let digit = byte.checked_sub(b'0').filter(|digit| *digit <= 9)?;
-        digits = digits.checked_mul(10)?.checked_add(u128::from(digit))?;
-        if after_point {
-            fraction += 1;
-        }
+    for byte in shown {
+        digits = digits * 10 + u128::from(byte.checked_sub(b'0')?);
     }
-    let shift = i32::from(scale) + exponent - fraction;
+    let shift =
+        i32::from(scale) + converter.dec_exponent - i32::try_from(converter.n_digits).ok()?;
     let magnitude = if digits == 0 {
         0
     } else if shift >= 0 {
@@ -750,5 +736,9 @@ fn text_unscaled(text: &str, scale: i8) -> Option<i128> {
         }
     };
     let magnitude = i128::try_from(magnitude).ok()?;
-    Some(if negative { -magnitude } else { magnitude })
+    Some(if converter.negative {
+        -magnitude
+    } else {
+        magnitude
+    })
 }

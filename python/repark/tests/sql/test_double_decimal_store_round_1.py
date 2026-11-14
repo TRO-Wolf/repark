@@ -308,3 +308,17 @@ def test_an_overflowing_store_still_refuses(spark: Any) -> None:
     with pytest.raises(Exception, match="too large to store"):
         spark.sql("INSERT INTO ice.ns.over SELECT id, v FROM ice.ns.big").collect()
     assert spark.sql("SELECT count(*) FROM ice.ns.over").collect()[0][0] == 0
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "DECIMAL-DOUBLE-UNION-COERCION-1 retires it: RePark compares a DECIMAL with a DOUBLE as "
+        "decimal(30,15), Spark as DOUBLE; accepted by the owner's 2026-11-13 ruling"
+    ),
+)
+def test_a_decimal_compared_with_a_double_answers_as_spark(spark: Any) -> None:
+    spark.sql("CREATE TABLE ice.ns.cmp (v DOUBLE) USING iceberg").collect()
+    spark.sql("INSERT INTO ice.ns.cmp VALUES (CAST('2.6750000000000003' AS DOUBLE))").collect()
+    row = spark.sql("SELECT CAST(ROUND(v, 3) AS DECIMAL(10,3)) = v FROM ice.ns.cmp").collect()[0]
+    assert row[0] is False

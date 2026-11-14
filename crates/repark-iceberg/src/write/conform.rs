@@ -6,11 +6,11 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, ArrayRef, AsArray, Decimal128Array, RecordBatch};
+use datafusion::arrow::array::{ArrayRef, AsArray, Decimal128Array, PrimitiveArray, RecordBatch};
 use datafusion::arrow::compute::{CastOptions, cast_with_options};
 use datafusion::arrow::datatypes::{
-    DataType, Decimal128Type, DecimalType, Field, Float32Type, Float64Type, Schema as ArrowSchema,
-    SchemaRef, TimeUnit,
+    ArrowPrimitiveType, DataType, Decimal128Type, DecimalType, Field, Float32Type, Float64Type,
+    Schema as ArrowSchema, SchemaRef, TimeUnit,
 };
 use datafusion::arrow::error::ArrowError;
 use datafusion::error::{DataFusionError, Result};
@@ -280,46 +280,42 @@ fn entry_store_cast(
     refuse_unpaired_struct(table, entry, name, column.data_type(), target)?;
     refuse_coarser_timestamp(name, column.data_type(), target)?;
     if let DataType::Decimal128(precision, scale) = target {
-        let values: Option<Vec<Option<f64>>> = match column.data_type() {
-            DataType::Float64 => Some(column.as_primitive::<Float64Type>().iter().collect()),
-            DataType::Float32 => Some(
-                column
-                    .as_primitive::<Float32Type>()
-                    .iter()
-                    .map(|value| value.map(f64::from))
-                    .collect(),
-            ),
-            _ => None,
-        };
-        if let Some(values) = values {
-            return Ok(Arc::new(float_store_decimal(&values, *precision, *scale)?));
+        match column.data_type() {
+            DataType::Float64 => {
+                let floats = column.as_primitive::<Float64Type>();
+                return Ok(Arc::new(float_store_decimal(floats, *precision, *scale)?));
+            }
+            DataType::Float32 => {
+                let floats = column.as_primitive::<Float32Type>();
+                return Ok(Arc::new(float_store_decimal(floats, *precision, *scale)?));
+            }
+            _ => {}
         }
     }
     Ok(cast_with_options(column, target, &strict_cast())?)
 }
 
-fn float_store_decimal(
-    values: &[Option<f64>],
+fn float_store_decimal<T>(
+    values: &PrimitiveArray<T>,
     precision: u8,
     scale: i8,
-) -> Result<Decimal128Array> {
-    let mut out = Vec::with_capacity(values.len());
-    for value in values {
-        let Some(value) = *value else {
-            out.push(None);
-            continue;
-        };
-        let overflow = || {
-            ArrowError::CastError(format!(
-                "Cannot cast to Decimal128({precision}, {scale}). Overflowing on {value:?}"
-            ))
-        };
+) -> Result<Decimal128Array>
+where
+    T: ArrowPrimitiveType,
+    T::Native: Into<f64>,
+{
+    let stored: Decimal128Array = values.try_unary(|value| {
+        let value: f64 = value.into();
         let unscaled =
-            repark_common::java_double::java_double_unscaled(value, scale).ok_or_else(overflow)?;
+            repark_common::java_double::java_double_unscaled(value, scale).ok_or_else(|| {
+                ArrowError::CastError(format!(
+                    "Cannot cast to Decimal128({precision}, {scale}). Overflowing on {value:?}"
+                ))
+            })?;
         Decimal128Type::validate_decimal_precision(unscaled, precision, scale)?;
-        out.push(Some(unscaled));
-    }
-    Ok(Decimal128Array::from(out).with_precision_and_scale(precision, scale)?)
+        Ok::<i128, ArrowError>(unscaled)
+    })?;
+    Ok(stored.with_precision_and_scale(precision, scale)?)
 }
 
 #[allow(clippy::missing_errors_doc)]
