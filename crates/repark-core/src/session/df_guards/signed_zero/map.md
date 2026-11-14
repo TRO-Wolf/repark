@@ -38,7 +38,7 @@ under `task/wo/signed-zero-normalize-1/`.
   the set itself is invalid (delta, verifier B1); a bare float key stays part B's. It visits `Filter`, `TableScan.filters` (prepared plans), join
   filters, projections and subqueries. As seat 1b it re-runs `SimplifyExpressions` on each node it
   rewrites, so a fold-made zero leaves nothing for the next pass: an `IS NOT NULL` on a non-null
-  operand used to cost a third optimizer pass (cost case (b), `evidence/item4/cost.md`).
+  operand used to cost a third optimizer pass (cost case (b), `evidence/item4/cost.md`). **SIGNED-ZERO-CONST-COMPARE-1 (2026-11-14):** the optimizer form also sits before `simplify_expressions` (`df_guards.rs`), where it first folds each column-free, non-volatile float operand of a comparison alone (`ExprSimplifier` on the session config) and substitutes the result only when it is a float zero; a folded NaN or other non-zero is never substituted. Foldable kinds: literal, alias, cast, try-cast, negation, binary and scalar function. The analyzer form is unchanged.
 - [udf.rs](udf.rs) — `__repark_normalize_zero__` (name in `repark_common::udf_names`): one
   `Float32`/`Float64` argument, the input's field and nullability, `Immutable`. NULL passes, any NaN
   becomes the canonical positive NaN, `-0.0` becomes `+0.0`, every other value keeps its bits
@@ -78,7 +78,7 @@ under `task/wo/signed-zero-normalize-1/`.
   fixpoint of both seats; seat 1b on a folded zero; seat 1b's output costs no further pass; one
   pin per grouping-set kind against the Spark truth, and their names; a volatile operand
   (`random()`) under `=`, `<>`, `<=>`, `IN`, `BETWEEN` and simple `CASE` stays unrewritten while
-  `random() < 0.0` rewrites, so the operand is never repeated.
+  `random() < 0.0` rewrites, so the operand is never repeated. **SIGNED-ZERO-CONST-COMPARE-1 (2026-11-14):** four more pins: `two_folded_constant_zeros_compare_as_one_value_on_both_float_types` (21 shapes: the operators, `IN`, `BETWEEN`, both `CASE` forms, a scalar subquery, `nested`/`dec`, FLOAT, and two must-not-move cells), `a_folded_constant_comparison_keeps_its_output_name`, `a_folded_nan_operand_is_not_rewritten` (the first three failed on main) and `an_aliased_constant_operand_folds_like_a_bare_one`; `seat_1b_hands_the_next_pass_a_simplified_plan` now counts four seat runs, two per pass.
 
 ## Part B part 1 outside this directory (their maps are at their size baselines)
 

@@ -53,6 +53,7 @@ pins.
   the canonical-NaN output bits, and `dropDuplicates(subset)` keeping the normalised key, read and written.
   Delta 2 (2026-11-13): every `SET` spelling the delta re-check found (quoted keys, comments, spacing) leaves the next
   query refused on both doors; the dedup pins assert the key classes and normalised bits, not which tied row survives.
+- [test_signed_zero_const_compare_1.py](test_signed_zero_const_compare_1.py) — SIGNED-ZERO-CONST-COMPARE-1 (131 tests): every constant zero pair under every comparison operator answers like Spark on `spark.sql`, `F.expr`, the DataFrame and native doors, both ANSI modes; the contexts (WHERE, HAVING, joins, `OR`, scalar subquery), `filter(str)`, a temp view and `PREPARE`; constant-condition DELETE, UPDATE and MERGE on copy-on-write and merge-on-read; native DELETE and UPDATE; must-not-move column and NaN cells.
 - [test_struct_compare_seat_family_1.py](test_struct_compare_seat_family_1.py) — STRUCT-COMPARE-SEAT-FAMILY-1 — every
   DataFrame typed and string door cell of the family table matches Spark: its rows, or Spark's class on a
   refusal (a carded class gap: a refusal; other known cells: no panic). Generated names never show the

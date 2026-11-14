@@ -152,7 +152,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **CATALOG-1 (2026-09-26):** `note_catalog_refusal` / `check_catalog_refusal` (the refused-kind placeholder: stored beside the entries, never listed, every use raises its refusal; a later long-form block replaces it). The singular late path reports a refusal as `false`; the plural path reports refused names in neither list.
   **CSV-INFER-PERF-1 (2026-09-06):** `read_csv` body moved to `read_options.rs`; `session.rs` 1002 → 988 and the CAP-1 exception retired.
 - `df_guards.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `context_with_df_54_1_rule_guards` takes the dialect beside the extension: it
-  registers a handed-in `TypePlanner` (`with_type_planner`; with neither in, DataFusion's type mapping stands) and runs the dialect's `configure_analyzer_rules` after the extension's. **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** re-exports `insert_struct_setop_after_coercion` toward the root; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the list. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `session.rs` calls `finish_session_build` (dialect hook, then seat 1). **Part B part 1, delta 2 (2026-11-13):** `finish_session_build` adds the analyzer rule `OptimizerSeatConfig` (`repark_optimizer_seat_config`): per plan, while the live config has `optimizer.max_passes` 0 or `optimizer.skip_failed_rules` true, it refuses all but a statement, empty relation or bare `VALUES` (the analyzer runs before the optimizer loop and reads neither key). Detail: `task/wo/signed-zero-normalize-1/evidence/part-b/after/delta2/delta2.md`.
+  registers a handed-in `TypePlanner` (`with_type_planner`; with neither in, DataFusion's type mapping stands) and runs the dialect's `configure_analyzer_rules` after the extension's. **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** re-exports `insert_struct_setop_after_coercion` toward the root; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the list. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `session.rs` calls `finish_session_build` (dialect hook, then seat 1). **Part B part 1, delta 2 (2026-11-13):** `finish_session_build` adds the analyzer rule `OptimizerSeatConfig` (`repark_optimizer_seat_config`): per plan, while the live config has `optimizer.max_passes` 0 or `optimizer.skip_failed_rules` true, it refuses all but a statement, empty relation or bare `VALUES` (the analyzer runs before the optimizer loop and reads neither key). Detail: `task/wo/signed-zero-normalize-1/evidence/part-b/after/delta2/delta2.md`. **SIGNED-ZERO-CONST-COMPARE-1 (2026-11-14):** `signed_zero_literals` now sits on both sides of `simplify_expressions` (before it, the constant-operand fold; [df_guards/signed_zero/map.md](df_guards/signed_zero/map.md)).
 - `df_guards.rs` — the DataFusion **54.1 regression guards**, owned and constructed by CORE
   (design G8). The wrapper preserves DataFusion's rule name and order. **NAN-MINMAX-1 (2026-11-13):** `apply_df_54_1_config_guards` sets `optimizer.enable_aggregate_dynamic_filter_pushdown = false`; the umbrella `enable_dynamic_filter_pushdown = true` is refused on SET and the builder.
   **PERF-UNPIVOT-1 (2026-09-12):** every core session installs `StackQueryPlanner` and
@@ -199,11 +199,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   physical-optimizer rule (guard 3, same family as two above): after DataFusion's own physical rules
   it wraps each nested-loop-join build side so the OOM fallback's second `execute(0)` meets fresh
   `RepartitionExec` channels. Full design in `../map.md` (`nlj_build_reset.rs`).
-  **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** one more physical rule, `ParallelWindowRule`
-  after `NljBuildSideReset`, reading the session's `repark.parallel` carrier; a no-op when built
-  with `parallel_single_partition(false)`. Full design in `../parallel_window/map.md`.
-  **S3 (2026-10-04):** `ParallelProjectionRule` is appended right after `ParallelWindowRule`
-  and reads the same carrier.
+  **TA-SINGLE-SERIES-PARALLEL-1 S2b and S3 (2026-10-04):** `ParallelWindowRule`, then `ParallelProjectionRule`, follow `NljBuildSideReset` and read the `repark.parallel` carrier (a no-op with `parallel_single_partition(false)`; design in `../parallel_window/map.md`).
   **CONF-UNREAD-1 step 1 (2026-09-11):** `df_guards.rs` also owns
   `DEAD_DATAFUSION_54_1_KEYS` (today only `datafusion.execution.coalesce_batches`,
   which 54.1.0 defines but no engine path reads) with its refusal constructor;
@@ -236,13 +232,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **ATTR-ID-1 S4 (2026-10-02):** `df_guards.rs` also declares the private
   `df_guards/attr_lineage.rs`, a pure move of the projection lineage out of
   `attr_id.rs` (row in `df_guards/map.md`).
-  **ATTR-ID-1 SJ-1a (2026-10-02):** `df_guards.rs` also declares the private
-  `df_guards/frame_lineage.rs`, the self-join lineage core (`FrameNode` and the
-  ambiguity walk), whose public items leave through `frame_names` (row in
-  `df_guards/map.md`). No facade calls it yet.
-  **ATTR-ID-1 SJ-1b (2026-10-02):** it also declares the private `df_guards/self_join.rs`,
-  the self-join condition preparer and post-join reference check (row in
-  `df_guards/map.md`); its items leave through `frame_names`. No facade calls it yet.
+  **ATTR-ID-1 SJ-1a and SJ-1b (2026-10-02):** the private `df_guards/frame_lineage.rs` (the self-join lineage core, `FrameNode` and the ambiguity walk) and `df_guards/self_join.rs` (condition preparer, post-join reference check); public items leave through `frame_names`; no facade calls them yet (`df_guards/map.md`).
 - `tests/df_guard.rs` — the seven `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   cohort pushed that file past the 1500-line ceiling (the sanctioned "split the module" out, not
   an EXCEPTIONS row). Guard 1: a bare no-extension session carries the scalar-subquery config
