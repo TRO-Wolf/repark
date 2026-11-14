@@ -166,7 +166,9 @@ and its records moved.
     the frame's order from the view under it.
   - **Quoting:** a name is written bare only when it is lowercase and the session's parser
     reads `SELECT <name>` back as that column. So `current_date`, mixed case and an embedded
-    quote are quoted.
+    quote are quoted. A reserved word (`order`, `group`, `select` and 20 more) passes that check but
+    is a keyword inside the column list, so it is left bare and the statement fails to parse: carded
+    [NATIVE-WRITE-ROUTE-QUOTE-1](native-write-route-quote-1-card-2026-11-14.md).
   - **`insertInto` keeps the positional form**, `SELECT * FROM <view>`, as Spark's `insertInto`
     is positional.
   - **The in-memory overwrite:** it names `CREATE OR REPLACE TABLE … AS SELECT <frame column>

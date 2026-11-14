@@ -1372,7 +1372,9 @@ perfectly good read.
     table <target>: the write would return without storing any rows, so nothing was written;
     <workaround> (NATIVE-DATAFRAME-WRITE-SILENT-1)`. The workaround is `register the frame as a
     temporary view <view> and run <statement> through repark.sql(...) and collect the result`,
-    and each statement stores the Spark door's rows when followed literally:
+    and each statement stores the Spark door's rows when followed literally, except a column
+    named by a reserved word (NATIVE-WRITE-ROUTE-QUOTE-1) and the in-memory replace's types and
+    `NOT NULL` (below):
     - an append: `INSERT INTO <target> (<columns>) SELECT <columns> FROM <view>` for a verb that
       writes by name, listing the frame's columns in the frame's order and quoting a name that
       does not read as a bare column; `INSERT INTO <target> SELECT * FROM <view>` for
