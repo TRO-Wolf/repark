@@ -29,6 +29,9 @@ _INTERLEAVED = ((1, "pos"), (2, "neg"), (3, "pos"), (4, "neg"))
 _CROSS_SEED = ((10, "neg"), (11, "one"))
 _CROSS_NEW = ((1, "pos"),)
 _FILLER = ((99, "two"),)
+_SUMMARY_SEED = ((10, "neg"), (11, "pos"), (12, "one"), (13, "neg"))
+_SUMMARY_KEY = "deleted-data-files"
+_SUMMARY_SPARK = {"pos": "1", "neg": "2"}
 _PAIR_ROWS = tuple((i, k) for a, b, k in _PAIRS for i in (a, b))
 
 
@@ -196,6 +199,23 @@ def _write_ordered(door: _Door, extra: str) -> None:
     door.sql(f"INSERT INTO {door.table} {_select(_INTERLEAVED)}")
 
 
+def _spark_fanout_off(door: _Door) -> None:
+    door.create("copy-on-write", ", 'write.spark.fanout.enabled' = 'false'")
+    door.sql(f"INSERT INTO {door.table} {_select(_BASE)}")
+
+
+def _overwrite_with_summary_key(door: _Door, kind: str) -> str:
+    door.create()
+    door.seed(_SUMMARY_SEED)
+    frame = door.session.sql(_select(((1, kind),)))
+    writer = frame.writeTo(door.table).option(f"snapshot-property.{_SUMMARY_KEY}", "77")
+    try:
+        writer.overwritePartitions()
+    except Exception as error:
+        return f"{type(error).__name__}: {error}"
+    return "committed"
+
+
 _PAIR_SURVIVORS = tuple(row for row in _PAIR_ROWS if row[0] < 7)
 _PAIR_MINUS_78 = tuple(row for row in _PAIR_ROWS if row[0] not in (7, 8))
 _CELLS: dict[str, tuple[int, str, Callable[[_Door], None], tuple[tuple[int, str], ...], bool]] = {
@@ -235,6 +255,7 @@ _CELLS: dict[str, tuple[int, str, Callable[[_Door], None], tuple[tuple[int, str]
         _INTERLEAVED,
         False,
     ),
+    "spark_fanout_off": (2, "parquet", _spark_fanout_off, _BASE, False),
 }
 _COLUMNS = ("d", "f")
 _WRITERS = ("1", "16")
@@ -291,18 +312,22 @@ def warehouse(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return tmp_path_factory.mktemp("zero_partition_merge_1")
 
 
+def _repark_session(root: Path, name: str, writers: str) -> Any:
+    return (
+        ReparkSession.builder.appName(f"zero-partition-merge-1-{name}")
+        .config("repark.sql.allowCreateFormatVersion3", "true")
+        .config("spark.sql.shuffle.partitions", writers)
+        .config(f"spark.sql.catalog.{_RP}.type", "hadoop")
+        .config(f"spark.sql.catalog.{_RP}.warehouse", str(root))
+        .getOrCreate()
+    )
+
+
 @pytest.fixture(scope="module")
 def repark_side(warehouse: Path) -> dict[Any, Any]:
     out: dict[Any, Any] = {}
     for writers in _WRITERS:
-        session = (
-            ReparkSession.builder.appName(f"zero-partition-merge-1-w{writers}")
-            .config("repark.sql.allowCreateFormatVersion3", "true")
-            .config("spark.sql.shuffle.partitions", writers)
-            .config(f"spark.sql.catalog.{_RP}.type", "hadoop")
-            .config(f"spark.sql.catalog.{_RP}.warehouse", str(warehouse / f"repark_w{writers}"))
-            .getOrCreate()
-        )
+        session = _repark_session(warehouse / f"repark_w{writers}", f"w{writers}", writers)
         try:
             session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_RP}.{_NS}").collect()
             for cell, (version, fmt, run, _rows, _deletes) in _CELLS.items():
@@ -333,6 +358,35 @@ def test_repark_keeps_the_two_zero_partitions_apart(
     assert got["zeros"][0] == want[0]
     if deletes:
         assert got["zeros"][1] == want[1]
+
+
+@pytest.fixture(scope="module")
+def summary_side(warehouse: Path) -> dict[Any, Any]:
+    out: dict[Any, Any] = {}
+    session = _repark_session(warehouse / "repark_summary", "summary", "1")
+    try:
+        session.sql(f"CREATE NAMESPACE IF NOT EXISTS {_RP}.{_NS}").collect()
+        for col in _COLUMNS:
+            for kind in _SUMMARY_SPARK:
+                table = f"{_RP}.{_NS}.summary_{kind}_{col}"
+                outcome = _overwrite_with_summary_key(
+                    _Door(session, table, col, 2, "parquet"), kind
+                )
+                out[(col, kind)] = {"outcome": outcome, "rows": _read(session, table, False)}
+    finally:
+        session.stop()
+    return out
+
+
+@pytest.mark.parametrize(("col", "kind"), [(c, k) for c in _COLUMNS for k in _SUMMARY_SPARK])
+def test_overwrite_partitions_summary_counts_only_the_replaced_zeros_files(
+    summary_side: dict[Any, Any], col: str, kind: str
+) -> None:
+    got = summary_side[(col, kind)]
+    want = _SUMMARY_SPARK[kind]
+    collision = f"Multiple entries with same key: {_SUMMARY_KEY}={want} and {_SUMMARY_KEY}=77"
+    assert collision in got["outcome"], got
+    assert got["rows"] == _expected_rows(_SUMMARY_SEED)
 
 
 def _live_spark(root: Path) -> tuple[Any, str]:
@@ -409,3 +463,14 @@ def test_spark_refuses_interleaved_zeros_on_a_write_ordered_table(
     door = _Door(spark, f"{catalog}.{_NS}.ordered_{col}", col, 2, "parquet")
     with pytest.raises(Exception, match="clustered"):
         _write_ordered(door, "")
+
+
+@pytest.mark.parametrize("col", _COLUMNS)
+def test_spark_refuses_interleaved_zeros_with_its_fanout_off(warehouse: Path, col: str) -> None:
+    if not _LIVE:
+        pytest.skip(_LIVE_SKIP)
+    spark, catalog = _live_spark(warehouse / "spark_own")
+    spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {catalog}.{_NS}")
+    door = _Door(spark, f"{catalog}.{_NS}.fanout_off_{col}", col, 2, "parquet")
+    with pytest.raises(Exception, match="clustered"):
+        _spark_fanout_off(door)

@@ -58,7 +58,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_views_6_temp.py](test_ice_views_6_temp.py) — IPI-40 views PR6a1 battery — SQL ``CREATE [OR REPLACE] TEMPORARY VIEW``.
 - [test_ice_views_6_temp_errors.py](test_ice_views_6_temp_errors.py) — IPI-40 views PR6 error-path battery — every temp-view refusal, complete text.
 - [test_iceberg_hygiene.py](test_iceberg_hygiene.py) — R-ICEBERG-HYGIENE oracles — column-def CREATE + ref DDL time-travel pins.
-- [test_iceberg_load_path.py](test_iceberg_load_path.py) — R-DF-LOAD-PATH / R-DF-LOAD-METADATA-JSON — ``format("iceberg").load(<path>)`` reads. Hadoop hint pins (2026-10-28, 10-29): after a committed `DELETE` on a `type=hadoop` table, a stale hint or gzip-named newer metadata reads the newest rows (ICE-HADOOP-GZIP-METADATA-1, ICE-HADOOP-HINT-WINDOW-1). Merge facts: the sidecar.
+- [test_iceberg_load_path.py](test_iceberg_load_path.py) — R-DF-LOAD-PATH / R-DF-LOAD-METADATA-JSON — ``format("iceberg").load(<path>)`` reads. Hadoop hint pins (2026-10-28, 10-29): after a committed `DELETE` on `type=hadoop`, a stale hint or gzip-named newer metadata reads the newest rows (ICE-HADOOP-GZIP-METADATA-1, ICE-HADOOP-HINT-WINDOW-1). Merge facts: the sidecar.
 - [test_local_drop_recreate_stale_write_1.py](test_local_drop_recreate_stale_write_1.py) — LOCAL-DROP-RECREATE-STALE-WRITE-1 — a Hadoop drop and recreate reads and writes the new table, three reads a cell; live Spark reads the six wrong-write rows.
 - [test_maintenance_call.py](test_maintenance_call.py) — R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
 - [test_maintenance_policy_1.py](test_maintenance_policy_1.py) — `run_maintenance` policy surface: dry-run default, override kwargs, refusal without a policy.
@@ -66,7 +66,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_metadata_tables.py](test_metadata_tables.py) — Oracle — Spark-style Iceberg metadata tables.
 - [test_mw5_baseline_delta.py](test_mw5_baseline_delta.py) — MW-5: re-run the MW-0 merge-on-read growth demo and pin the compact delta.
 - [test_mw8_runbook.py](test_mw8_runbook.py) — Run the documented maintenance runbook end to end and pin what each step changes.
-- [test_nan_partition_value_1.py](test_nan_partition_value_1.py) — NAN-PARTITION-VALUE-1: a NaN or infinite FLOAT/DOUBLE partition value written by `INSERT`, CTAS, `writeTo` or `saveAsTable` reads back as itself; live: each engine reads the other's table as its own.
+- [test_nan_partition_value_1.py](test_nan_partition_value_1.py) — NAN-PARTITION-VALUE-1: a NaN or infinite FLOAT/DOUBLE partition value written by `INSERT`, CTAS, `writeTo` or `saveAsTable` reads back as itself; live: each engine reads the other's as its own.
 - [test_nan_write_canonical_1.py](test_nan_write_canonical_1.py) — NAN-WRITE-CANONICAL-1: NaN bits and partition files per door and format; live = Spark's; xfail: Avro filters.
 - [test_partname_1.py](test_partname_1.py) — WO PARTNAME-1: partition-field names stay Spark's on each door.
 - [test_rdf_schema_evo_1.py](test_rdf_schema_evo_1.py) — RDF-SCHEMA-EVO-1: rewrite_data_files after schema evolution, pinned against Spark.
@@ -82,7 +82,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_u5_alter_ddl.py](test_u5_alter_ddl.py) — nested struct/list/map-value TYPE promotions read the current Iceberg metadata file and the SQL DESCRIBE type.
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — V3 facade `.sql()` v3 DML pins: UPDATE, sequential COW DELETE, and MERGE keep `_row_id`.
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — V3-2: CREATE/CTAS format-version=3 behind ``repark.sql.allowCreateFormatVersion3``.
-- [test_update_schema_batch_mismatch_1.py](test_update_schema_batch_mismatch_1.py) — UPDATE-SCHEMA-BATCH-MISMATCH-1 — a two-file `UPDATE` answers in either batch order; [test_zero_partition_merge_1.py](test_zero_partition_merge_1.py) — ZERO-PARTITION-MERGE-1: two zero partitions, 18 doors; live = Spark's.
+- [test_update_schema_batch_mismatch_1.py](test_update_schema_batch_mismatch_1.py) — UPDATE-SCHEMA-BATCH-MISMATCH-1: a two-file `UPDATE` answers in any batch order; [test_zero_partition_merge_1.py](test_zero_partition_merge_1.py) — ZERO-PARTITION-MERGE-1: two zero partitions, 19 doors, summary count; live = Spark's.
 - [test_v3_dv_compaction.py](test_v3_dv_compaction.py) — V3-5: facade rewrite_data_files drops in-scope v3 deletion vectors.
 - [test_v3_dv_container_close.py](test_v3_dv_container_close.py) — RP-7 — the shared-Puffin deletion-vector container close vs live Spark.
 - [test_v3_legacy_delete_merge.py](test_v3_legacy_delete_merge.py) — V3-12 — a legacy parquet position delete merges into the DV on the next MoR write.

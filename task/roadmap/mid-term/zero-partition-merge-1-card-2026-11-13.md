@@ -40,9 +40,12 @@ at filing (`e51927b1`) reseeds that cell so no partition holds both zeros.
 
 - ICEBERG-PARTITIONS-TABLE-FLOAT-1 (S3, filed on #1326's branch, not on main): the `.partitions` read side, which
   groups the two zero partitions into one row. [NAN-PARTITION-VALUE-1](nan-partition-value-1-card-2026-11-12.md)
-  names it under "Related".
+  names it under "Related". After this fix `.partitions` lists two zero rows, as Spark does.
 - [SIGNED-ZERO-WRITE-METADATA-1](signed-zero-write-metadata-1-card-2026-11-13.md): the other signed-zero write
-  differences from the same verifier.
+  differences from the same verifier. This fix closed its `.partitions` half.
+- [SIGNED-ZERO-PARTITION-FILTER-1](signed-zero-partition-filter-1-card-2026-11-14.md): a filter on a float zero
+  partition answers by partition on Spark-on-Iceberg and by IEEE on RePark (verifier 2, C1). This fix did not cause
+  it; the old merge hid it on RePark's tables.
 
 ## Close
 
@@ -64,7 +67,9 @@ tests, four ordering helpers) and the records are in [the unit's directory](../.
   - Fork `crates/integrations/datafusion/src/physical_plan/sort.rs`: the write-order sort key on `_partition`
     canonicalises NaN only, so a write-ordered table sorts the two zeros apart instead of interleaving them.
   - RePark `crates/repark-iceberg/src/write/summary_collision.rs`: the dynamic-overwrite summary check matches
-    replaced files by `(spec id, Struct)`, so its refusal counts only the replaced partition's files.
+    replaced files by `(spec id, Struct)`, so its refusal counts only the replaced partition's files. Spark's count
+    is `1` for a `0.0` row over one `0.0` file and `2` for a `-0.0` row over two `-0.0` files; main counts `3`
+    (verifier 1, B1).
 - **Pins.**
   - Fork unit tests at both seats.
   - Two fork tests that pinned the merge now assert two partitions:
@@ -77,18 +82,54 @@ tests, four ordering helpers) and the records are in [the unit's directory](../.
     - Red on main: 60 of 72.
     - Green on the fix: 72 of 72, on 1 CPU and on 10 CPUs.
     - Live tier: 146 of 146 green; main fails 120.
-- **Orderings, not changed (follow-up, not carded).** Four hand-written comparators still answer `Equal` for the
-  two zeros: fork `inspect/partition_values.rs:203-236`, `maintenance/partition_stats.rs:800-821` and
-  `maintenance/rewrite_data_files_plan.rs:246-250`, and RePark `write/file_order.rs:25-31`. The two zero rows or
-  groups come out in hash order there, where Java orders `-0.0` first. No pin depends on that order.
+  - **Added in the delta round (2026-11-14), after both verifiers' FAIL:**
+    - `test_overwrite_partitions_summary_counts_only_the_replaced_zeros_files` pins the RePark seat: the two cells
+      first cited for it never reach `replaced_data_files` (verifier 1, B1). It asserts Spark's count in the
+      refusal and the unchanged rows, on DOUBLE and FLOAT.
+    - Door `spark_fanout_off`, a table with no write order and `write.spark.fanout.enabled = false` (ZPM-1's second
+      half), and its live twin `test_spark_refuses_interleaved_zeros_with_its_fanout_off`.
+    - The file on 16 CPUs: main fails 66 of 80 (the 60, the two 1-writer `spark_fanout_off` cells and the four
+      summary cells, each answering `3`); the fix passes 80 of 80. The live cells, run once: Spark refuses on DOUBLE
+      and FLOAT and reads RePark's `spark_fanout_off` tables with each row's own zero (10 of 10).
+- **Orderings, not changed (follow-up, not carded).** Five hand-written comparators still answer `Equal` for the
+  two zeros, through `PrimitiveLiteral::partial_cmp`. The lines were re-checked in the delta round on fork
+  `bc5a9211` and RePark `1bf566ee`; the two verifiers had cited different ranges.
+  - Fork `crates/iceberg/src/inspect/partition_values.rs:203-237`, used by `inspect/partitions.rs:314`.
+  - Fork `crates/iceberg/src/maintenance/partition_stats.rs:788-822`, used at `:485` and `:875-876`, and by a
+    test at `:3233-3234`.
+  - Fork `crates/iceberg/src/maintenance/rewrite_data_files_plan.rs:223-256`, the primitive arm at `:248-249`,
+    used at `:188`.
+  - Fork `crates/iceberg/src/writer/partitioning/fanout_writer.rs:126-149` `ascending_partition_order` (verifier
+    2, F2). Its three callers:
+    - `FanoutWriter::close` (`:107-123`, the sort at `:110`): the file emission order;
+    - datafusion `physical_plan/delete_position_deletes.rs:94-100`: the order of position-delete groups;
+    - datafusion `physical_plan/commit.rs:341-344`: the data-file order, with a positional tiebreak.
+  - RePark `crates/repark-iceberg/src/write/file_order.rs:10-32` (`compare_partitions`, `compare_values`), used by
+    `ascending_partition_order` (`:5-8`) and `stable_commit_order` (`:34-43`).
+
+  The two zero rows or groups come out in hash order there, where Java orders `-0.0` first. No pin depends on that
+  order. The follow-up also carries verifier 2's F3: on head, the v3 `_row_id` of zero-partition rows varies from
+  run to run. In four identical one-core runs of one `INSERT`, the DOUBLE `-0.0` rows took `_row_id` 1 and 2 once
+  and 3 and 4 three times; FLOAT flips too. The cause is `ascending_partition_order` plus `write/file_order.rs`
+  keeping the `HashMap` order of the two zero files. Main was deterministic (one merged file). Spark's `_row_id`
+  order already differed from RePark's on every partition, so `_row_id` parity was absent before the fix.
 - **Owner rulings**, 2026-11-13, about 19:53 UTC, verbatim "Defaults, merge #1325 and #1327 when green":
   - **Q1, release note.** A table RePark wrote before this fix may hold a partition-granularity position-delete
-    file stamped `+0.0` that covers rows in the `-0.0` partition. After this fix, RePark reads those deleted
-    `-0.0` rows again, as Spark already does. Nothing hides them. A partition-stats file computed before the fix
-    may seed a merged row.
+    file stamped with one of the two zeros, covering rows in both. Either zero can carry the stamp: main's
+    partition-granularity DELETE stamps `-0.0`, and main's `rewrite_position_delete_files` stamps `+0.0`. After
+    this fix, rows deleted in the other zero's partition read again, as on Spark. Nothing hides them. A
+    partition-stats file computed before the fix may seed a merged row. The owner ruled the note's existence; the
+    delta round corrected its facts (verifier 2, F1, measured on main's build).
   - **Q2, declared divergence.** On a write-ordered table, rows that interleave `-0.0` and `0.0` are refused by
     Spark 4.1.2's clustered writer (`ClusteredWriter.java:96`). RePark writes both partitions. See the parity
     registry row ZPM-1.
   - **Q3.** #1325 merged first. The pin to fork `bc5a9211` sits on fork main `8b6ff921`.
+- **Owner words owed, PROPOSED (asked 2026-11-14).** Neither is ruled.
+  - **ZPM-1's second half** (verifier 1, B2). Spark 4.1.2 also refuses interleaved zeros on a table with no write
+    order whenever `write.spark.fanout.enabled = false`. RePark writes both partitions, and Spark reads them back
+    with each row's own zero. ZPM-1 now states that half; whether Q2 covers it is the owner's word.
+  - **ZPM-2** (verifier 2, F4). Remove-dangling-deletes drops the `-0.0` partition's dangling delete file, which
+    Spark's own action keeps because it groups the two zeros. Reads are identical; on the `1.5`/`2.0` control both
+    engines remove it. Parity row ZPM-2.
 - **Not explained, confined to merged files.** Spark read the other float column of a merged ORC file as `-0.0`.
   After the fix no file holds both zeros.

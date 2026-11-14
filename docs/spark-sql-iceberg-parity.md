@@ -1039,24 +1039,59 @@ perfectly good read.
   not a bug. Open residue: V1-door `.option("isolation-level","serializable")`
   honoring is unmeasured (Spark side) and stays with the V2-29 options surface.
 
-#### ZPM-1 — a write-ordered table given interleaved `-0.0` and `0.0` rows — **DECLARED 2026-11-13**
+#### ZPM-1 — a clustered Spark write given interleaved `-0.0` and `0.0` rows — **DECLARED 2026-11-13 (write-ordered tables); the no-write-order half PROPOSED, owner word owed (asked 2026-11-14)**
 
-- **repark** — on an identity-partitioned FLOAT or DOUBLE column of a table with a write order
-  (`WRITE ORDERED BY id`), an `INSERT` whose rows interleave `-0.0` and `0.0` writes a `-0.0`
-  partition and a `0.0` partition, each row reading its own zero, with fan-out on or off.
-- **Apache Spark** — Spark 4.1.2 with Iceberg 1.11.0 refuses the write: its write sort treats the
-  two zeros as equal, and the clustered writer (`ClusteredWriter.java:96`) raises "Incoming records
-  violate the writer assumption that records are clustered by spec and by partition within each
-  spec". With `write.spark.fanout.enabled = true` it writes two partitions. *(oracle: live, PySpark
-  4.1.2 + Iceberg 1.11.0, 2026-11-13.)*
+- **repark** — on an identity-partitioned FLOAT or DOUBLE column, an `INSERT` whose rows interleave
+  `-0.0` and `0.0` writes a `-0.0` partition and a `0.0` partition, each row reading its own zero,
+  with fan-out on or off. That holds on a table with a write order (`WRITE ORDERED BY id`), and on a
+  table with no write order whose `write.spark.fanout.enabled` is `false`, a property RePark's writer
+  does not read. Spark reads RePark's tables back with each row's own zero.
+- **Apache Spark** — Spark 4.1.2 with Iceberg 1.11.0 refuses both writes. Its Iceberg writer is
+  clustered there: on a write-ordered table unless `write.spark.fanout.enabled = true`, and on any
+  partitioned table when it is `false`. The sort Spark runs ahead of a clustered writer (the write
+  order, or the partition order Iceberg asks for when Spark's fan-out is off) treats the two zeros as
+  equal, so they reach the writer interleaved, and it raises (`ClusteredWriter.java:96`) "Incoming
+  records violate the writer assumption that records are clustered by spec and by partition within
+  each spec". Without the property a table with no write order writes two partitions, and with
+  `write.spark.fanout.enabled = true` so does a write-ordered one. *(oracle: live, PySpark 4.1.2 +
+  Iceberg 1.11.0, 2026-11-13; the no-write-order half from ZERO-PARTITION-MERGE-1 verifier 1's cells
+  `fo_off`, `dist_none_off`, `dist_hash_off`, `dist_range_off` and `fo_off6` (refused) and `plain10`
+  and `spark_fo10` (written), 2026-11-13, and this row's live cell, 2026-11-14: refused on DOUBLE and
+  FLOAT. Control, 2026-11-14: `1.5` and `2.0` rows interleaved the same way, with Spark's fan-out
+  off, are written as two partitions, so the refusal is the zeros'.)*
 - **Pin** — `python/repark/tests/iceberg/test_zero_partition_merge_1.py::test_repark_keeps_the_two_zero_partitions_apart`
-  cells `write_ordered` and `write_ordered_clustered`; Spark's refusal in
-  `test_spark_refuses_interleaved_zeros_on_a_write_ordered_table` (live tier).
-- **Rationale** — DECLARED by the owner's ruling of 2026-11-13, about 19:53 UTC, verbatim "Defaults,
-  merge #1325 and #1327 when green" (ZERO-PARTITION-MERGE-1 question Q2): RePark answers where Spark
-  refuses. The same ruling (Q1) records that a table RePark wrote before ZERO-PARTITION-MERGE-1 may
-  hold a partition-granularity delete file stamped `+0.0` over rows of the `-0.0` partition; after
-  the fix RePark reads those deleted rows again, as Spark already does, and nothing hides them
+  cells `write_ordered`, `write_ordered_clustered` and `spark_fanout_off`; Spark's refusal in
+  `test_spark_refuses_interleaved_zeros_on_a_write_ordered_table` and
+  `test_spark_refuses_interleaved_zeros_with_its_fanout_off` (live tier).
+- **Rationale** — the write-ordered half is DECLARED by the owner's ruling of 2026-11-13, about 19:53
+  UTC, verbatim "Defaults, merge #1325 and #1327 when green" (ZERO-PARTITION-MERGE-1 question Q2):
+  RePark answers where Spark refuses. The no-write-order half is the same class, found by verifier 1
+  (B2); it is **PROPOSED, owner word owed (asked 2026-11-14)**, and is not ruled. The same ruling
+  (Q1) records that a table RePark wrote before ZERO-PARTITION-MERGE-1 may hold a
+  partition-granularity delete file stamped with one of the two zeros, covering rows in both: main's
+  partition-granularity DELETE stamps `-0.0`, and its `rewrite_position_delete_files` stamps `+0.0`.
+  After the fix, rows deleted in the other zero's partition read again, as on Spark, and nothing hides
+  them ([card](../task/roadmap/mid-term/zero-partition-merge-1-card-2026-11-13.md)).
+
+#### ZPM-2 — remove-dangling-deletes drops a dangling delete in the `-0.0` partition that Spark's own action keeps — **PROPOSED, owner word owed (asked 2026-11-14)**
+
+- **repark** — on a merge-on-read table identity-partitioned on a FLOAT or DOUBLE column, with
+  partition-granularity position deletes in both the `-0.0` and the `0.0` partition,
+  `CALL rewrite_data_files(where => 'id = 1', options => map('rewrite-all', 'true',
+  'remove-dangling-deletes', 'true'))` rewrites the `-0.0` data file and removes that partition's
+  now-dangling delete file, adding a `replace` snapshot with `removed-delete-files=1`. It does so since
+  ZERO-PARTITION-MERGE-1; before it the two zeros were one partition, and RePark matched Spark.
+- **Apache Spark** — Spark 4.1.2 with Iceberg 1.11.0 keeps both delete files and writes no removal
+  snapshot: its action groups the two zeros together. **Control:** with partitions `1.5` and `2.0`
+  in their place, both engines remove the dangling delete. *(oracle: live, PySpark 4.1.2 + Iceberg
+  1.11.0, 2026-11-13, ZERO-PARTITION-MERGE-1 verifier 2's scenarios `dangling` and `dangling_ctrl`,
+  1 and 16 writers.)*
+- **Reads** — identical on both engines; the removed file covers no live row.
+- **Diverges in** — the delete-file listing and the snapshot history only.
+- **Pin** — none yet; the owner's word decides between a declared row with a pin and a fix.
+- **Rationale** — **PROPOSED, owner word owed (asked 2026-11-14)**, not ruled. RePark's removal
+  keys partitions as Java's `PartitionMap` does, and Spark's action groups the two zeros, so RePark
+  is the more exact of the two (verifier 2, F4)
   ([card](../task/roadmap/mid-term/zero-partition-merge-1-card-2026-11-13.md)).
 
 #### V3-COV-1 — static `PARTITION (k = v)` overwrite from a `SELECT` source
