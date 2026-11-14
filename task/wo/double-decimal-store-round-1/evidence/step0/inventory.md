@@ -80,6 +80,6 @@ UPDATE SET), and a batch cast (D1, D5). *Corrected after the critic:* a seat at 
 SELECT, INSERT, CTAS, DataFrame and no-WHERE UPDATE doors, not MERGE, the identity UPDATE (both table
 kinds) or the batch doors; it does not reach the F.expr fold (C2), container leaves (C6) or the
 Postgres chokepoint (D3). The built seats (owner, 2026-11-13, option A) are in
-[../build/seats.md](../build/seats.md).
+[../fix/seats.md](../fix/seats.md).
 
 Up: [map.md](map.md).

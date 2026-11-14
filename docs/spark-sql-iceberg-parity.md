@@ -5364,7 +5364,9 @@ still open is `isModifiable`.
 - **Rationale** — the owner's 2026-11-13 rulings ("Defaults, and merge #1323 when green", Q5′; "defaults", option
   A; "Go with defaults" on the coercion cell); card
   [DOUBLE-DECIMAL-STORE-ROUND-1](../task/roadmap/mid-term/double-decimal-store-round-1-card-2026-11-13.md). Closes
-  the scalar part of CAST-DOUBLE-TO-DECIMAL-ROUNDING-1.
+  the scalar part of CAST-DOUBLE-TO-DECIMAL-ROUNDING-1. A plan that casts a FLOAT or DOUBLE to a DECIMAL pays JDK 17's
+  exact digits (up to 2.5x on a 10M-row cast at scale 18); that cost exception is owner word owed (asked 2026-11-14),
+  with card [DOUBLE-DECIMAL-CAST-PERF-1](../task/roadmap/mid-term/double-decimal-cast-perf-1-card-2026-11-14.md).
 
 ## 5. Facade drop-in semantics (DECLARED)
 
