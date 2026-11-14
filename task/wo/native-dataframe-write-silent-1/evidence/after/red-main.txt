@@ -1,0 +1,17 @@
+facade pin on main 1d9d2808 (pkg-base): pytest python/repark/tests/writes/test_native_dataframe_write_silent_1.py -n 6
+      1 test_a_dot_path_is_named_by_its_name_or_its_staging_url[..-\\.\\.]
+      1 test_a_dot_path_is_named_by_its_name_or_its_staging_url[.-repark-staging-[0-9a-f]{32}-out]
+    399 test_a_native_write_that_would_store_nothing_refuses_before_any_effect[<guarded cell>]
+      1 test_a_relative_path_is_named_as_the_user_wrote_it[deep/er/-deep/er]
+      1 test_a_relative_path_is_named_as_the_user_wrote_it[relx-relx]
+      1 test_a_relative_path_is_named_as_the_user_wrote_it[sub/-sub]
+      1 test_the_named_workaround_stores_the_rows[INSERT INTO]
+      1 test_the_named_workaround_stores_the_rows[INSERT OVERWRITE]
+406 failed, 2042 passed, 6 warnings in 49.10s
+
+Rust pins with the guard call removed: cargo test --locked -p repark-python --lib session_write_options
+test session_write_options::tests::copy_destination_strips_only_an_exact_staging_segment ... ok
+test session_write_options::tests::native_pending_inserts_refuse_before_any_effect ... FAILED
+test session_write_options::tests::native_pending_copy_refuses_naming_the_destination_and_writes_nothing ... FAILED
+test session_write_options::tests::native_reads_and_spark_door_writes_pass_the_guard ... ok
+test result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 178 filtered out; finished in 0.33s

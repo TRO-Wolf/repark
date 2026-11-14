@@ -1363,20 +1363,68 @@ perfectly good read.
   (item 3, option (b)): silent data loss becomes a loud refusal. The real native CTAS waits on the
   owner's routing decision ([card](../task/roadmap/mid-term/native-ctas-iceberg-refuse-1-card-2026-11-12.md)).
 
-#### NATIVE-DATAFRAME-WRITE-SILENT-1 — `repark.sql()` DataFrame appends report success and store nothing (known issue in 1.5.6; the fix rides v1.5.7)
+#### NATIVE-DATAFRAME-WRITE-SILENT-1 — a `repark.sql()` frame's DataFrame write that would store nothing refuses (declared native-door refusal; silent in 1.5.6, fixed for v1.5.7)
 
-- **repark** — on the native door, a frame from `repark.sql(…)` written with
-  `.write.mode("append").saveAsTable(…)`, `.write.insertInto(…)` or `.writeTo(…).append()` returns without an error,
-  and the target's rows are unchanged afterwards. Measured on the memory catalog only; the other target kinds and
-  the overwrite forms are unmeasured. On the same door `writeTo(…).create()`, `writeTo(…).createOrReplace()` and
-  `saveAsTable` into a new table or with overwrite fail to parse on `USING`. Measured on main `a3f8c7d9` and on
-  #1317's head `ed9f678c`, identical; the surface ships in 1.5.6. The cause is not known.
-- **Apache Spark** — each append stores the frame's rows. *(documented: the writer API's contract; no Spark cell
-  was run for this row. The fix's measured table attaches the oracle.)*
-- **Pin** — none yet; the fix lands one per verb and target kind.
-- **Rationale** — a silent lost write (S1), a known issue on the shipped 1.5.6 wheel. Owner ruling 2026-11-13,
-  verbatim "Defaults": first measure every writer verb on every target kind, the overwrite forms included, then a
-  refusal guard like NATIVE-CTAS-ICEBERG-REFUSE-1's; it rides v1.5.7. ([card](../task/roadmap/mid-term/native-dataframe-write-silent-1-card-2026-11-13.md);
+- **repark** — on the native door, a DataFrame writer verb whose statement would plan to a
+  pending write refuses before any effect, with `UnsupportedOperationException`. A pending write
+  is an `INSERT` or `COPY` that `repark.sql()` leaves lazy and the writer would drop.
+  - **For a table:** `DataFrame.write and writeTo cannot write a repark.sql() frame into the
+    table <target>: the write would return without storing any rows, so nothing was written;
+    <workaround> (NATIVE-DATAFRAME-WRITE-SILENT-1)`. The workaround is `register the frame as a
+    temporary view <view> and run <statement> through repark.sql(...) and collect the result`,
+    and each statement stores the Spark door's rows when followed literally, except a column
+    named by a reserved word (NATIVE-WRITE-ROUTE-QUOTE-1) and the in-memory replace's types and
+    `NOT NULL` (below):
+    - an append: `INSERT INTO <target> (<columns>) SELECT <columns> FROM <view>` for a verb that
+      writes by name, listing the frame's columns in the frame's order and quoting a name that
+      does not read as a bare column; `INSERT INTO <target> SELECT * FROM <view>` for
+      `insertInto`, which writes by position;
+    - a static overwrite, or `overwritePartitions` (every table this door can create is
+      unpartitioned): `INSERT OVERWRITE` in the same two forms, on an Iceberg table;
+    - either overwrite of an in-memory table, where `INSERT OVERWRITE` is not implemented:
+      `CREATE OR REPLACE TABLE <target> AS SELECT <frame column> AS <table column>, ... FROM
+      <view>`, pairing the columns as the verb does. The replaced table takes the frame's column types and drops `NOT NULL`, so a NULL row is stored where the Spark door refuses.
+  - **For a view or a database-source table:** `... into <target>: it is a view, and the native
+    door cannot write through a view, so nothing was written (...)`, or the same naming the
+    database source. No statement is named, since none can store; Spark refuses a write into a
+    view too. In 1.5.6 `insertInto` on a native view returned and stored nothing. No database
+    source was reachable here (no server), so that branch is pinned on a planned statement.
+  - **For a path:** the same shape, naming the path as the user wrote it (`out`, `.`, `..`
+    included). The workaround is `spark.createDataFrame(frame.collect(), frame.schema)` on a
+    `ReparkSession`, written there, which holds every row in memory. It fails loudly, with nothing written, for a decimal value with 11 or more integer digits, at any declared precision, and for ±Infinity in a DOUBLE or FLOAT column, on the head build and on 1.5.6.
+  - **The verbs:**
+    - `saveAsTable` append;
+    - `format("iceberg").save(name)` append and overwrite;
+    - `insertInto` (both forms, and with `partitionBy`);
+    - `writeTo().append()` (plain, `tableProperty`, `partitionedBy`) and
+      `overwritePartitions()`;
+    - every Parquet/CSV/JSON path write, through `.parquet`/`.csv`/`.json`, `save(p)` or
+      `option("path", p).save()`.
+  - **The targets:** existing Iceberg tables (memory and hadoop catalogs), in-memory tables and
+    paths, from any frame shape.
+  - **What 1.5.6 did:** these returned success and stored nothing, and an overwrite of an
+    existing path deleted its rows and left one empty file. The append form was first measured
+    on main `a3f8c7d9` and on #1317's head `ed9f678c`, identical.
+  - **An empty frame:** its native write refuses too, where 1.5.6 was vacuously right; the
+    Spark door stores it.
+  - **Unchanged:** every verb that already refused or stored, `repark.sql()` statements
+    themselves, `mergeInto` (still refused on this door) and every Spark-door write.
+  - **Not measured:** a partitioned Iceberg table cannot be reached natively, and Glue, S3
+    Tables and REST were not run.
+- **Apache Spark** — each of these writes stores the frame's rows. RePark's Spark door does the
+  same in every reachable cell, and so does the collected native `INSERT`. *(documented: the
+  writer API's contract, with RePark's Spark door measured beside it; no Spark JVM cell was run.
+  `task/wo/native-dataframe-write-silent-1/evidence/`.)*
+- **Pin** — `python/repark/tests/writes/test_native_dataframe_write_silent_1.py` (2436 cells:
+  399 refuse, the rest keep main's outcome, rows, snapshots and files; each workaround followed
+  from the message, with a reordered frame on every by-name and by-position verb matching the
+  Spark door's rows; native views; the path route on a native-table frame, an append and an
+  empty frame; nine path spellings) and
+  `crates/repark-python/src/session_write_options_tests.rs`.
+- **Rationale** — DECLARED refusal. Owner ruling 2026-11-13, verbatim "Defaults": measure every
+  verb on every target kind, then a refusal guard like NATIVE-CTAS-ICEBERG-REFUSE-1's, riding
+  v1.5.7. A silent lost write (S1), and a silent delete on path overwrites, become a loud
+  refusal. ([card](../task/roadmap/mid-term/native-dataframe-write-silent-1-card-2026-11-13.md);
   [ruling](../task/wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-13.md), item 5.)
 
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit

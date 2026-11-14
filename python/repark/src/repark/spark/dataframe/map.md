@@ -13,19 +13,10 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 - `writer_readwriter.py` — **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `DataFrameWriterV2._existing_table_ref` calls `writer_layout._refuse_temp_view_write_target` first, so `writeTo(...).append()`, `overwritePartitions()` and `overwrite()` refuse a view name. `create` and `createOrReplace` are unchanged (C-012).
 - `writer_readwriter.py` — **CATALOG-1 (2026-09-26):** `_resolve_writer_table` passes only the
   current catalog and database to `resolve_table_name` (no known-catalog alias). **IDENT-DIALECT-1/1B (2026-11-03):** the identifier grammar runs first (writeTo, mergeInto, insertInto, saveAsTable, `save`).
-- `writer_readwriter.py` — **S3-PATH-WRITE-1 step 0 (2026-09-28, oracle, no code change):**
-  Spark 4.1.2 path-write behaviour on S3 recorded in 38 `W-PATH-S3-*` cells against a local
-  moto emulator; the evidence and the design answers live in `task/ledgers/staging/u12-probes/`.
-- `writer_readwriter.py` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the
-  temporal options leave the CSV/JSON unsupported sets for
-  `_TEMPORAL_WRITE_OPTIONS` (skipped in COPY option SQL, honored through the
-  SELECT builder), and the local CSV/JSON COPY inner `SELECT` comes from
-  `_build_text_write_select` (other formats keep `SELECT *`, so parquet
-  stays binary).
-  **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** the local
-  COPY statement comes from `writer_layout.text_write_copy_sql` (plain
-  inner `SELECT`, resolved `STORED AS` name, merged spec OPTIONS); the
-  `_build_text_write_select` entry is gone.
+- `writer_readwriter.py` — **S3-PATH-WRITE-1 step 0 (2026-09-28, oracle, no code change):** Spark 4.1.2 path-write behaviour on S3 recorded in 38 `W-PATH-S3-*` cells against a local moto emulator; evidence and design answers: `task/ledgers/staging/u12-probes/`.
+- `writer_readwriter.py` — **NATIVE-DATAFRAME-WRITE-SILENT-1 (2026-11-13):** `.` stages with no name suffix.
+- `writer_readwriter.py` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the temporal options leave the CSV/JSON unsupported sets for `_TEMPORAL_WRITE_OPTIONS` (skipped in COPY option SQL, honored through the SELECT builder), and the local CSV/JSON COPY inner `SELECT` comes from `_build_text_write_select` (other formats keep `SELECT *`, so parquet stays binary).
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** the local COPY statement comes from `writer_layout.text_write_copy_sql` (plain inner `SELECT`, resolved `STORED AS` name, merged spec OPTIONS); the `_build_text_write_select` entry is gone.
 - `writer_layout.py`, `writer_readwriter.py`, `writer_save.py` — **ICE-STRUCT-PAIRING-1 step 4
   (2026-10-14), parity row R-016:** the three DataFrame doors Spark pairs by name set
   `source_by_name=True`: `writeTo(t).append()` and the `saveAsTable` append through the new
@@ -1542,7 +1533,6 @@ that held the comment.
 | Plan rewrites and display | [`plan_collapse.py`](plan_collapse.py) |
 | Writes and statistics | [`writer_readwriter.py`](writer_readwriter.py) |
 | Writer layout bodies and write helpers | [`writer_layout.py`](writer_layout.py) |
-| `foreach` / `foreachPartition` / `observe` | [`surface_b.py`](surface_b.py) |
 | `foreach` / `foreachPartition` / `observe` | [`surface_b.py`](surface_b.py) |
 | `scalar` / `exists` / `lateralJoin` / `asTable` | [`subquery.py`](subquery.py) |
 | Parent navigation | [`../map.md`](../map.md) |

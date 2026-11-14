@@ -409,9 +409,8 @@ class DataFrameWriter:
         partition_clause = writer_layout.partitioned_by_sql_clause(
             list(self._dataframe.columns), self._partition_columns
         )
-        staging = destination.parent / (
-            f"repark-staging-{uuid.uuid4().hex}-{destination.name or 'out'}"
-        )
+        named = f"-{destination.name}" if destination.name else ""
+        staging = destination.parent / f"repark-staging-{uuid.uuid4().hex}{named}"
         escaped_staging = escape_sql_single_quotes(str(staging))
         options_clause = self._copy_options_sql(stored_as)
         self._dataframe._session.note_local_write_root(escaped_staging)
