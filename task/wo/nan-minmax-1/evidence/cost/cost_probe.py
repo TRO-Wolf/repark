@@ -18,7 +18,10 @@ QUERIES = {
     "count_all": "SELECT count(*) FROM many",
     "count_selective": f"SELECT count(*) FROM many WHERE {SELECTIVE}",
     "max_stats": "SELECT max(d) FROM single",
+    "topk": "SELECT id, d FROM many ORDER BY d DESC LIMIT 10",
+    "max_descending": "SELECT max(d) FROM many_desc",
 }
+VIEWS = ("many", "single", "many_desc")
 METRICS = (
     "row_groups_pruned_statistics",
     "files_ranges_pruned_statistics",
@@ -44,6 +47,14 @@ def write_data(root: Path) -> None:
     ids = np.arange(STATS_ROWS, dtype=np.int64)
     table = pa.table({"id": ids, "d": ids.astype(np.float64) * 0.5})
     pq.write_table(table, single / "part-000.parquet", row_group_size=1_000_000)
+    descending = root / "many_desc"
+    descending.mkdir(parents=True, exist_ok=True)
+    for index in range(FILES):
+        start = (FILES - 1 - index) * ROWS_PER_FILE
+        ids = np.arange(start, start + ROWS_PER_FILE, dtype=np.int64)
+        table = pa.table({"id": ids, "d": ids.astype(np.float64)})
+        name = descending / f"part-{index:03d}.parquet"
+        pq.write_table(table, name, row_group_size=ROW_GROUP_ROWS)
 
 
 def metric_values(text: str) -> dict[str, list[str]]:
@@ -53,21 +64,27 @@ def metric_values(text: str) -> dict[str, list[str]]:
     return found
 
 
-def explain(session: Any, query: str) -> dict[str, Any]:
+def explain(session: Any, query: str, root: Path) -> dict[str, Any]:
     rows = session.sql(f"EXPLAIN ANALYZE {query}").collect()
     text = "\n".join(str(value) for row in rows for value in row)
+    for prefix in (str(root.resolve()), str(root)):
+        text = text.replace(prefix, "cost-data").replace(prefix.lstrip("/"), "cost-data")
     scans = [line.strip() for line in text.splitlines() if "DataSourceExec" in line]
     return {"metrics": metric_values("\n".join(scans)), "scan_lines": scans}
 
 
 def run(build: str, root: Path, out: Path) -> None:
-    from repark import ReparkSession
+    from repark import ReparkSession, _native
 
+    package = Path(_native.__file__).resolve().parent.parent.name
     session = ReparkSession.builder.appName("nan-minmax-cost").getOrCreate()
-    session.read.parquet(str(root / "many")).createOrReplaceTempView("many")
-    session.read.parquet(str(root / "single")).createOrReplaceTempView("single")
-    record: dict[str, Any] = {"build": build, "queries": {}}
+    for view in VIEWS:
+        if (root / view).exists():
+            session.read.parquet(str(root / view)).createOrReplaceTempView(view)
+    record: dict[str, Any] = {"build": build, "package": package, "queries": {}}
     for name, query in QUERIES.items():
+        if not all((root / view).exists() for view in VIEWS if f" {view}" in query):
+            continue
         answer = [list(row) for row in session.sql(query).collect()]
         for _ in range(3):
             session.sql(query).collect()
@@ -80,7 +97,7 @@ def run(build: str, root: Path, out: Path) -> None:
             "answer": answer,
             "median_s": statistics.median(samples),
             "samples_s": samples,
-            **explain(session, query),
+            **explain(session, query, root),
         }
     with out.open("a") as sink:
         sink.write(json.dumps(record, sort_keys=True) + "\n")
@@ -97,7 +114,7 @@ def report(raw: Path, base: str, head: str) -> None:
     print("| query | answer | main median (ms) | head median (ms) ", end="")
     print("| head / main (median of pair ratios) |")
     print("|---|---|---|---|---|")
-    for name in QUERIES:
+    for name in [q for q in QUERIES if q in pairs[0][0]["queries"]]:
         ratios = [h["queries"][name]["median_s"] / b["queries"][name]["median_s"] for b, h in pairs]
         main_ms = statistics.median(b["queries"][name]["median_s"] for b, _ in pairs) * 1000
         head_ms = statistics.median(h["queries"][name]["median_s"] for _, h in pairs) * 1000
@@ -109,7 +126,7 @@ def report(raw: Path, base: str, head: str) -> None:
         "| query | build | row groups (pruned by statistics) | file ranges (pruned by statistics) |"
     )
     print("|---|---|---|---|")
-    for name in QUERIES:
+    for name in [q for q in QUERIES if q in pairs[0][0]["queries"]]:
         for tag in (base, head):
             metrics = builds[tag][0]["queries"][name]["metrics"]
             groups = "; ".join(metrics["row_groups_pruned_statistics"]) or "none"

@@ -9,8 +9,10 @@ questions, among them Q3 (the statistics seat first, as its own PR, S1), Q4 (an 
 half moves here). Evidence: [task/wo/nan-minmax-1/](../../wo/nan-minmax-1/map.md).
 
 **Severity:** S1, label-blocking. **Status:** part 1 **FIXED** on branch `fix/nan-minmax-stats-1` (not merged), after
-one delta round: both verifiers failed #1333 on records (class (b), no class (a) S1/S2), and the delta fixed verifier
-1's F1. Items (i) and (ii) below are **owner words owed**. Part 2 **open**.
+two delta rounds: both verifiers failed #1333 on records (class (b), no class (a) S1/S2), and the first delta fixed
+verifier 1's F1. Its re-check failed the head on **N1**, a class (a) S1 that part 1 introduced, and the second delta,
+a cap exception on the #1261 precedent, fixed it (below). Items (i) and (ii) are **ruled** (owner, 2026-11-14, about
+09:50 UTC, "Go with defaults"). Part 2 **open**.
 
 ## Part 1: the float statistics seat (FIXED, unmerged)
 
@@ -61,29 +63,94 @@ ran 1.166x main. The sketch's "file pruning: Inexact is enough" does not hold in
 
 - **file pruning** of the user's predicate, which cuts no row that row-group pruning by the same footers would keep;
   Spark's reader prunes by those footers too (Q5);
-- **DataFusion's aggregate dynamic filter** for `max`/`min`, which Spark does not have (verifier 2's B2). Over nine
-  high files and one low spread file whose last row is NaN, `max(d)` missed the NaN in 29 of 30 runs; Spark answers
-  NaN. Part 2's I8 owes it, and a strict xfail pins it.
+- **DataFusion's aggregate dynamic filter** for `max`/`min`: that consumer is **off by default** since the second
+  delta, because it prunes where Spark's reader does not (Q5 (E)). Spark has no such filter. It was wrong twice:
+  - **B2** (verifier 2): over nine high files and one low spread file whose last row is NaN, `max(d)` missed the NaN
+    in 29 of 30 runs; Spark answers NaN. With the filter off it answers NaN in 10 of 10 runs on both doors.
+  - **N1** (the re-check), below.
+
+**N1: found by the re-check, fixed in the second delta.** An ungrouped `max`/`min` over plain Parquet **with no NaN**,
+where a file range or row group is all NULL, answered a wrong `min`, sometimes run to run. The cause is a **typed
+NULL, not NaN**: in DataFusion 54.1.0 (`datafusion-physical-plan-54.1.0/src/aggregates/no_grouping.rs:254-262`),
+`scalar_cmp_null_short_circuit` matches only the untyped `ScalarValue::Null`. A partition that has seen only NULLs
+evaluates to `Float64(None)` (or `Int64(None)`: any type), which `scalar_min` ranks below every value and keeps, so
+the shared `min` bound becomes NULL. The filter then narrows from `d < min OR d > max` to `d > max`, and file and
+row-group pruning drop the rows that hold the true `min`.
+
+| cell (10 runs, each door) | Spark 4.1.2 | main `631d283c` | head `1a8f2749` | delta 2 `d7ae795a` |
+|---|---|---|---|---|
+| three files `[3,4]`, `[NULL,NULL \| 1,2]`, `[5,6]`: `max(d), min(d)`, `max(f), min(f)`, `min(d), max(id)` | `min` 1.0 | right (the footer) | `min` 3.0 | right |
+| one 1 M-row file, first row group of 100,000 all NULL: the same three queries | `min` 100010 | right (the footer) | `min` 200010 to 500010 in some runs | right |
+| P1: the same file, integer `max(k), min(k) WHERE id >= 0` | 1000009, 100010 | `min` 200010 | `min` 600010 | right |
+
+- Main never hit it unfiltered: it answered `max`/`min` from the footer. Part 1 removed that shortcut for float
+  columns, so the filter ran. Main is wrong only where its shortcut cannot fire: **P1**, a filtered `max`/`min` of
+  any type, which the same switch fixes.
+- **The fix** (`crates/repark-core/src/session/df_guards.rs`, `apply_df_54_1_config_guards`, the seat the two
+  DataFusion 54.1 regression guards use): `datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown = false` as a
+  RePark session default. A user still opts in with that key (`spark.conf.set`, SQL `SET` or the builder), and a pin
+  shows the filter returns to the plan.
+- **The umbrella key.** DataFusion's `ConfigOptions::set` writes all four dynamic-filter keys from
+  `datafusion.optimizer.enable_dynamic_filter_pushdown` (`datafusion-common-54.1.0/src/config.rs:1556-1561`).
+  Measured on `1a8f2749` ([umbrella-1a8f2749.txt](../../wo/nan-minmax-1/evidence/delta2/umbrella-1a8f2749.txt)):
+  after the specific key was set `false`, the umbrella set `true` brought `min` 3.0 back on the three files while
+  `spark.conf.get` of the specific key still answered `false`. So RePark refuses the umbrella
+  at `true` on every door (SQL `SET`, `spark.conf.set`, the builder), naming the specific keys; `false` stays
+  allowed, since it turns every dynamic filter off.
+- **Residual, measured, not fixed:** `RESET` of the specific key, and `spark.conf.unset` of it, restore DataFusion's
+  own default `true` and turn the filter back on: `min` 3.0 in 10 of 10 runs on both doors, and after the SQL `RESET`
+  `spark.conf.get` still answers `false`
+  ([umbrella-d7ae795a.txt](../../wo/nan-minmax-1/evidence/delta2/umbrella-d7ae795a.txt)).
+  Neither reaches the guard's seat; a third product file would. An owner word is owed on whether a later unit
+  closes it.
+- **Upstream:** the DataFusion defect (`no_grouping.rs:254-262`; the same function is at
+  `aggregate_stream.rs:254-262` in 55.2.0) is to be reported upstream: the short circuit should catch a typed NULL
+  (`is_null()`). No issue is filed yet.
+- Spark's answers were measured live on the pins' own files (Spark 4.1.2, 2026-11-14,
+  [spark-4.1.2.txt](../../wo/nan-minmax-1/evidence/delta2/spark-4.1.2.txt)); the main and head columns are the
+  re-check's and the red runs of the pins.
 
 **After** (the head): 126 of main's 136 unequal cells equal Spark; the other ten are the four refused paths and the
 six sign-set cells below. The delta adds verifier 1's three files with such a row group (`R_one`, `R_many`,
-`R_nullnan`): `d > 5.0` and `= NaN` equal Spark on both doors. The pins:
-`crates/repark-core/src/spark_nullable/float_bounds_tests.rs` (each demotion and the factory fail alone when removed)
-and `python/repark/tests/io/test_nan_minmax_stats_1.py`.
+`R_nullnan`): `d > 5.0` and `= NaN` equal Spark on both doors. The second delta adds N1's and P1's cells, B2 as a
+positive pin, and the switch pins, each over 10 runs on both doors. The pins:
+`crates/repark-core/src/spark_nullable/float_bounds_tests.rs` (each demotion and the factory fail alone when removed;
+the three-file `min` fails with the default removed; the umbrella refusal and the specific key's opt-in) and
+`python/repark/tests/io/test_nan_minmax_stats_1.py`.
 
-**Cost** ([cost](../../wo/nan-minmax-1/evidence/cost/map.md)): six alternating pairs on the delta head `1a8f2749`.
-`count(*)` over 100 Parquet files 1.024x and a selective filter 1.034x main (#1333's head: 1.040x and 0.958x), the
-filter pruning exactly as main (108 of 109 file ranges, then 1 of 2 row groups). `max(d)` over a ten-million-row file
-with statistics now reads the column: 2 ms to 21 ms (reported, not held to 1.05x). On verifier 1's five 100-file
-sets, file ranges and row groups equal main's; they move only on the three files with an unbounded row group.
+**Cost** ([cost](../../wo/nan-minmax-1/evidence/cost/map.md)): six alternating rounds of main `631d283c`, the first
+delta `1a8f2749` and the second delta `d7ae795a` (release wheels; each sample under the exclusive measure lock, then
+both cargo locks, on cores 48-57; raw `cost-raw-d7ae795a.jsonl`; the C-012 table
+[delta2/c012-l4l.md](../../wo/nan-minmax-1/evidence/delta2/c012-l4l.md)). Second delta against main, median of pair
+ratios:
 
-## Owner words owed
+| row | main (ms) | `1a8f2749` (ms) | `d7ae795a` (ms) | `d7ae795a` / main |
+|---|---|---|---|---|
+| `count(*)`, 100 files (held) | 4.50 | 4.37 | 4.26 | 0.963 |
+| selective filter, 100 files (held) | 10.52 | 10.22 | 10.27 | 0.977 |
+| TopK `ORDER BY d DESC LIMIT 10`, 100 files (held; its own dynamic filter, untouched) | 75.72 | 75.58 | 75.82 | 0.999 |
+| C-012 like-for-like set, 43,889 cells, five runs (held; summed work, s) | 73.5 | — | 73.5 | 1.001 |
+| `max(d)`, one ten-million-row file (reported) | 1.89 | 21.06 | 31.15 | 16.2 |
+| `max(d)`, 100 files written in descending order (reported) | 4.20 | 10.16 | 24.76 | 5.9 |
 
-**(i) The seat shape.** The middle shape above: per file, equal float bounds and float bounds with an unbounded row
-group turn inexact; per scan, every float bound. A spread file keeps file pruning (the cost rows), and its exact bounds
-still feed the aggregate dynamic filter (part 2, I8).
+- The held rows have no `max`/`min`, so the switch cannot reach them; the selective filter prunes as main (109 → 1
+  file ranges, 2 → 1 row groups). The first delta measured 1.024x and 1.034x on the first two.
+- The two reported rows are where the switch costs. Main answers both from the footer. With the filter on,
+  `1a8f2749` pruned the single file's ranges 10 → 7 and the descending set's 109 → 1; with it off, `d7ae795a` reads
+  every range: 1.50x and 2.43x the first delta.
+- On verifier 1's five 100-file sets, file ranges and row groups equal main's; they move only on the three files with
+  an unbounded row group.
 
-**(ii) The cells that move from equal-to-Spark to unequal: a family, not one cell.** Counts are from the two verdicts
+## Owner rulings (2026-11-14, about 09:50 UTC, "Go with defaults")
+
+**(i) The seat shape: RULED, accepted.** The middle shape above: per file, equal float bounds and float bounds with
+an unbounded row group turn inexact; per scan, every float bound. A spread file keeps file pruning (the cost rows). Its
+exact bounds also fed DataFusion's aggregate dynamic filter; that consumer is off by default because it prunes where
+Spark's reader does not (Q5 (E)).
+
+**(ii) The cells that move from equal-to-Spark to unequal: RULED, accepted.** A family, not one cell. N1 is not one of
+them: it was a regression of this unit's own, fixed in the second delta, not a cell left unequal. Counts are from the
+two verdicts
 (verifier 1's grid of 2,577 head cells, verifier 2's of 4,784; a cell is one query's whole answer):
 
 | family | verifier 1 | verifier 2 | why main was equal | owed by |
@@ -111,13 +178,12 @@ The rest of sketch §4.2(a), a later brief:
 - a float `max`/`min` UDAF whose grouped accumulator starts from no value (inventory I1: `max` of a `-Infinity`-only
   group answers `-1.7976931348623157e+308`) and orders every NaN as one value above `+Infinity` (B1–B3), ungrouped and
   in sliding windows, and `array_min`/`array_max`;
-- its internal name not `max`/`min`, so DataFusion's aggregate dynamic filter does not attach (I8);
+- its internal name not `max`/`min`, so DataFusion's aggregate dynamic filter does not attach (I8). Belt and braces
+  since the second delta: the filter is off by default, and the name keeps it off for a user who opts back in;
 - quantiles: `median` and `percentile_approx` over a sign-set NaN (I4);
-- the pins on the TopK dynamic filter (I3) and on a multi-file ungrouped `max` with dynamic filters on: verifier 2's
-  B2 (nine high files and one low spread file holding a NaN; `max(d)` NaN on Spark) is the strict xfail
-  `test_max_over_many_files_with_a_nan_in_a_spread_file_equals_spark`.
+- the pins on the TopK dynamic filter (I3).
 
 ## Close
 
-Part 2 merged with its pins, and the sign-set `max`/`min` and the multi-file `max` xfails in
-`test_nan_minmax_stats_1.py` turned green. The `d >= 1.0` xfail closes with NAN-COMPARE-LITERAL-1.
+Part 2 merged with its pins, and the sign-set `max`/`min` xfails in `test_nan_minmax_stats_1.py` turned green (the
+multi-file `max` is a positive pin since the second delta). The `d >= 1.0` xfail closes with NAN-COMPARE-LITERAL-1.

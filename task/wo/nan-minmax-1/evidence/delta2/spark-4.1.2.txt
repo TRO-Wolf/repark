@@ -1,0 +1,9 @@
+spark 4.1.2
+three_files | SELECT max(d), min(d) FROM nan_minmax_src | [(6.0, 1.0)]
+three_files | SELECT max(f), min(f) FROM nan_minmax_src | [(6.0, 1.0)]
+three_files | SELECT min(d), max(id) FROM nan_minmax_src | [(1.0, 8)]
+one_file | SELECT max(d), min(d) FROM nan_minmax_src | [(1000009.0, 100010.0)]
+one_file | SELECT max(f), min(f) FROM nan_minmax_src | [(1000009.0, 100010.0)]
+one_file | SELECT min(d), max(id) FROM nan_minmax_src | [(100010.0, 999999)]
+one_file | SELECT max(k), min(k) FROM nan_minmax_src WHERE id >= 0 | [(1000009, 100010)]
+dynamic | SELECT max(d) FROM nan_minmax_src | [('NaN',)]

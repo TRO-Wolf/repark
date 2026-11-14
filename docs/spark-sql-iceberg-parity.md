@@ -5338,7 +5338,7 @@ still open is `isModifiable`.
   [NAN-WRITE-CANONICAL-1](../task/roadmap/mid-term/nan-write-canonical-1-card-2026-11-13.md). Closes
   NAN-PARTITION-RAW-BITS-1 and NAN-PARTITION-FILE-SPLIT-1.
 
-### NAN-MINMAX-1 part 1 — a plain Parquet file's NaN reads as NaN, and its footer no longer answers `max`/`min` (a multi-file `max` can still miss a NaN) — **FIXED 2026-11-13 (branch, not merged)**
+### NAN-MINMAX-1 part 1 — a plain Parquet file's NaN reads as NaN, its footer no longer answers `max`/`min`, and an all-NULL row group no longer narrows `min` — **FIXED 2026-11-13 (branch, not merged)**
 
 - **repark** — Before (main `631d283c`): Parquet's footer min and max leave NaN out, and DataFusion took them as
   exact. A file whose other FLOAT or DOUBLE values are one value read every NaN as that value (the constant-column
@@ -5349,15 +5349,26 @@ still open is `isModifiable`.
   `FileFormat` (`spark_nullable.rs`, on both seats) reports a file's float bounds as inexact where they are equal
   or a row group has none (all NaN, or NULL and NaN), and every float bound of the scan as inexact, so neither
   consumer fires; the NaN rows read, round-trip and ingest as NaN, and file pruning keeps the exact bounds of every
-  other file.
+  other file. A RePark session also turns DataFusion's aggregate dynamic filter off by default
+  (`datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown = false`, `df_guards.rs`), because it prunes where
+  Spark's reader does not:
+  - **N1**, found by the re-check of #1333 and fixed in its second delta: an ungrouped `max`/`min` over NaN-free
+    Parquet with an all-NULL file range or row group answered a wrong `min` (three files `[3,4]`, `[NULL,NULL | 1,2]`,
+    `[5,6]`: `min` 3.0 where Spark answers 1.0). The cause is a typed NULL, not NaN: DataFusion 54.1.0
+    (`no_grouping.rs:254-262`) takes a NULL-only partition's `Float64(None)` as the shared `min` bound, and the
+    filter keeps only `d > max`. To be reported upstream.
+  - **P1**, the same defect on main for a filtered `max`/`min` of any type (integer `max(k), min(k) WHERE id >= 0`:
+    `min` 200010 where Spark answers 100010), fixed by the same switch.
+  - the multi-file `max(d)` that missed a NaN in a spread file (verifier 2's B2) now answers NaN.
+
+  A user opts back in with the specific key; `datafusion.optimizer.enable_dynamic_filter_pushdown = true`, which
+  DataFusion applies to all four dynamic-filter keys, is refused.
 - **spark** — Spark 4.1.2 reads the NaN rows of the same files, answers `max` NaN and `min` 1.0, and writes the NaN
   rows back. *(oracle: measured live 2026-11-13, `task/wo/nan-minmax-1/evidence/step0/`.)*
 - **Still unlike Spark** (each cell below that main answered as Spark did, it answered so only by reading NaN as a
   number or skipping it; the family and its counts are in the card):
   - `max`/`min` over a sign-set NaN (`fff8…`) answer `max 1.0, min NaN` (Arrow's total order); grouped `min` over a
     canonical NaN depends on row order. Part 2 (RePark's float `max`/`min`) owes them.
-  - A multi-file `max(d)` misses a NaN in a spread file: that file's exact bounds feed DataFusion's aggregate dynamic
-    filter, which Spark does not have. Part 2's I8 owes it.
   - `>` and `>=` over a sign-set NaN in a constant file drop the NaN rows, as on every spread file;
     NAN-COMPARE-SPARK-1's literal unit owes it.
   - A join to a NaN literal over a constant file keeps the NaN rows, as on every spread file; Spark keeps none, by
@@ -5367,11 +5378,12 @@ still open is `isModifiable`.
   (PARQUET-NAN-EQUALITY-1's pruning half, re-scoped as equal to Spark). A row group with no footer bounds is kept.
 - **Pin** — `python/repark/tests/io/test_nan_minmax_stats_1.py` (both doors, every NaN shape and layout, the round
   trip, the Iceberg ingestion, the native external table, three files with an unbounded row group, a 100-file
-  row-group control, and strict xfails for the sign-set `max`/`min`, `d >= 1.0` over a sign-set constant file and
-  the multi-file `max`); `crates/repark-core/src/spark_nullable/float_bounds_tests.rs`.
+  row-group control; N1's and P1's cells, the multi-file `max` and the switch, each over 10 runs; strict xfails for
+  the sign-set `max`/`min` and `d >= 1.0` over a sign-set constant file);
+  `crates/repark-core/src/spark_nullable/float_bounds_tests.rs`.
 - **Rationale** — S1 wrong read and wrong write, label-blocking (owner, 2026-11-13, "Go with default"; the sketch's
-  Q3, Q4, Q10 ruled "defaults"); card
-  [NAN-MINMAX-1](../task/roadmap/mid-term/nan-minmax-1-card-2026-11-13.md).
+  Q3, Q4, Q10 ruled "defaults"); the second delta and the card's items (i) and (ii) ruled 2026-11-14 ("Go with
+  defaults"); card [NAN-MINMAX-1](../task/roadmap/mid-term/nan-minmax-1-card-2026-11-13.md).
 
 ## 5. Facade drop-in semantics (DECLARED)
 

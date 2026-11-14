@@ -1,0 +1,25 @@
+native pkg-head4
+spark default {"{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 1.0}": 10} False {'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown': None, 'datafusion.optimizer.enable_dynamic_filter_pushdown': None}
+native default {"{'max(t.d)': 6.0, 'min(t.d)': 1.0}": 10} False
+spark set A=false accepted
+spark A=false {"{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 1.0}": 10} False {'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown': 'false', 'datafusion.optimizer.enable_dynamic_filter_pushdown': None}
+spark set U=true REFUSED [INVALID_CONF_VALUE.REQUIREMENT] The value 'true' in the config 'datafusion.optimizer.enable_dynamic_filter_pushdown' is invalid. repark config error: unsupported DataFusion session config 'datafusion.optimizer.enable_dynamic_filter_pushdown' = 'true': it would also set 'datafusion.optimizer.enable_
+spark then U=true {"{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 1.0}": 10} False {'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown': 'false', 'datafusion.optimizer.enable_dynamic_filter_pushdown': None}
+spark set U=false accepted
+spark then U=false {"{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 1.0}": 10} False {'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown': 'false', 'datafusion.optimizer.enable_dynamic_filter_pushdown': 'false'}
+spark set A=true accepted
+spark then A=true {"{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 3.0}": 10} True {'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown': 'true', 'datafusion.optimizer.enable_dynamic_filter_pushdown': 'false'}
+spark unset A accepted
+spark then unset A {"{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 3.0}": 10} True {'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown': None, 'datafusion.optimizer.enable_dynamic_filter_pushdown': 'false'}
+spark set A=false accepted
+spark RESET A accepted
+spark then RESET A {"{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 3.0}": 10} True {'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown': 'false', 'datafusion.optimizer.enable_dynamic_filter_pushdown': 'false'}
+native SET A=false accepted
+native A=false {"{'max(t.d)': 6.0, 'min(t.d)': 1.0}": 10} False
+native SET U=true REFUSED repark config error: unsupported DataFusion session config 'datafusion.optimizer.enable_dynamic_filter_pushdown' = 'true': it would also set 'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown' to true, and RePark keeps that filter off because DataFusion 54.1's aggregate dynamic filter ca
+native then U=true {"{'max(t.d)': 6.0, 'min(t.d)': 1.0}": 10} False
+native SET A=false accepted
+native RESET U accepted
+native then RESET U {"{'max(t.d)': 6.0, 'min(t.d)': 1.0}": 10} False
+native RESET A accepted
+native then RESET A {"{'max(t.d)': 6.0, 'min(t.d)': 3.0}": 10} True
