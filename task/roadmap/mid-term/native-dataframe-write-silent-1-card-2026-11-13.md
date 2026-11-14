@@ -102,7 +102,7 @@ under its `step0/`.
   - a static overwrite or `overwritePartitions` on an Iceberg table: `INSERT OVERWRITE` in the
     same two forms, which on an unpartitioned table replaces what `overwritePartitions` would;
   - either overwrite of an in-memory table: a collected `CREATE OR REPLACE TABLE <t> AS SELECT
-    <frame column> AS <table column>, … FROM <view>`;
+    <frame column> AS <table column>, … FROM <view>` (the replaced table takes the frame's column types and drops `NOT NULL`; delta-2 re-check F8);
   - a path: `spark.createDataFrame(frame.collect(), frame.schema)` on a `ReparkSession`.
 - **A view or a database-source table** gets no statement: the message says the native door
   cannot write it.
@@ -171,14 +171,14 @@ and its records moved.
     is positional.
   - **The in-memory overwrite:** it names `CREATE OR REPLACE TABLE … AS SELECT <frame column>
     AS <table column>, …`, so the columns pair as the verb pairs them and the table keeps its
-    column names and order.
+    column names and order. It does not keep the table's column types or `NOT NULL`: the replaced table takes the frame's column types and drops `NOT NULL`, so a NULL row is stored where the Spark door refuses (delta-2 re-check F8).
 - **F5 (S3), views.** `insertInto` on a native view (`datafusion.public.<view>`,
   `ice.ms.<view>`) refuses with "it is a view, and the native door cannot write through a view".
   It names no statement, since no route can store. The 1.5.6 wheel returns and stores nothing
   for both forms.
 - **F6 (S3), the path route.** `spark.sql(…)` cannot read a table made in the native session.
   The message and the notes now name a conversion, `spark.createDataFrame(frame.collect(),
-  frame.schema)` on a `ReparkSession`. Its limit is that it holds every row in memory.
+  frame.schema)` on a `ReparkSession`. Its limit is that it holds every row in memory. It also fails loudly, with nothing written, on the head build and on the 1.5.6 wheel, for a decimal value with 11 or more integer digits at any declared precision, and for ±Infinity in a DOUBLE or FLOAT column (delta-2 re-check F9).
   - **Measured on the head build and on the published 1.5.6 wheel:** it stores the frame's rows
     and column types. That covers int, string, date, both timestamps, decimal, boolean, double
     with NaN, array, struct, map and binary, an empty frame, a reordered frame, NULLs, and an
@@ -208,3 +208,4 @@ and its records moved.
     - native views, both forms;
     - the path route over a native-table frame: an overwrite, an append onto int32 files, and
       an empty frame, keeping int32.
+- **Owner ruling and records (2026-11-14, about 09:50 UTC):** verbatim "Go with defaults", adopting option B. F8 and F9 of the delta-2 re-check are corrected in these records, and its F7 is carded as [NATIVE-WRITE-ROUTE-QUOTE-1](native-write-route-quote-1-card-2026-11-14.md).

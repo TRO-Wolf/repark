@@ -1381,7 +1381,7 @@ perfectly good read.
       unpartitioned): `INSERT OVERWRITE` in the same two forms, on an Iceberg table;
     - either overwrite of an in-memory table, where `INSERT OVERWRITE` is not implemented:
       `CREATE OR REPLACE TABLE <target> AS SELECT <frame column> AS <table column>, ... FROM
-      <view>`, pairing the columns as the verb does.
+      <view>`, pairing the columns as the verb does. The replaced table takes the frame's column types and drops `NOT NULL`, so a NULL row is stored where the Spark door refuses.
   - **For a view or a database-source table:** `... into <target>: it is a view, and the native
     door cannot write through a view, so nothing was written (...)`, or the same naming the
     database source. No statement is named, since none can store; Spark refuses a write into a
@@ -1389,7 +1389,7 @@ perfectly good read.
     source was reachable here (no server), so that branch is pinned on a planned statement.
   - **For a path:** the same shape, naming the path as the user wrote it (`out`, `.`, `..`
     included). The workaround is `spark.createDataFrame(frame.collect(), frame.schema)` on a
-    `ReparkSession`, written there, which holds every row in memory.
+    `ReparkSession`, written there, which holds every row in memory. It fails loudly, with nothing written, for a decimal value with 11 or more integer digits, at any declared precision, and for ±Infinity in a DOUBLE or FLOAT column, on the head build and on 1.5.6.
   - **The verbs:**
     - `saveAsTable` append;
     - `format("iceberg").save(name)` append and overwrite;
