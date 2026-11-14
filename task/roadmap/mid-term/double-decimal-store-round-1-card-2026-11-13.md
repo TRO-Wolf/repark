@@ -5,8 +5,10 @@ design sketch (#1324, Q5′; [sketch](../../wo/decimal-double-union-coercion-1/s
 [domain table](../../wo/decimal-double-union-coercion-1/domain-table.md)); owner, 2026-11-13, about 14:52 UTC, verbatim
 "Defaults, and merge #1323 when green".
 
-**Status:** filed 2026-11-13; **FIXED 2026-11-13** on branch `fix/double-decimal-store-round-1` (see the append below; not merged at writing); its cast cost exception is **owner word owed (asked 2026-11-14)**, see [Cost](#cost). Severity **S1**, a wrong write. **Label-blocking** as the decimal unit's
-prerequisite: the owner's ruling of Q5′ puts it before the DECIMAL-DOUBLE-UNION-COERCION-1 build.
+**Status:** filed 2026-11-13; **FIXED 2026-11-13** on branch `fix/double-decimal-store-round-1`; **NARROWED TO STORES
+2026-11-14** (step 1 of the split plan, see [Narrowed to stores](#narrowed-to-stores-2026-11-14); not merged at writing).
+Severity **S1**, a wrong write. **Label-blocking** as the decimal unit's prerequisite: the owner's ruling of Q5′ puts it
+before the DECIMAL-DOUBLE-UNION-COERCION-1 build.
 
 ## Measured (main `04d84ab9`, Spark 4.1.2, both ANSI modes)
 
@@ -28,6 +30,68 @@ Likely the same mechanism on the store door; not measured as one.
 
 A DOUBLE stored into a DECIMAL column rounds as Spark does (`1.255` to `1.26`), pinned on `INSERT … VALUES` and the
 `UNION` source in both ANSI modes.
+
+**Narrowed 2026-11-14:** the card closes on the implicit store doors listed below, both doors, both ANSI modes. `ins_values_dec_round` (a VALUES cell the planner types to the target) stays wrong until step 5 of the split plan (seat V), and the written casts until step 4; both are strict xfails in the pin file.
+
+## Narrowed to stores (2026-11-14)
+
+**Ruling.** The owner, 2026-11-14, about 13:38 UTC, verbatim: "Merge and go with the split plan", adopting Fable's
+guidance (`Fable reply — DECIMAL-DOUBLE stack 2026-11-14.md`). Also ruled: the cost exception covers stores only; Q2
+stands; Q8 is re-ruled (Spark's MERGE `-0.0` miss is declared in the PRUNED-WRONG class; the coercion unit's record).
+
+**The split plan:**
+
+1. this card, narrowed to stores: JDK 17's kernel (K1) runs only where a FLOAT/DOUBLE is stored into a DECIMAL column;
+   the float branch leaves `bool_decimal_cast`, so no comparison or written cast moves;
+2. [ROUND-DOUBLE-EXACT-1](round-double-exact-1-card-2026-11-14.md), after this merges;
+3. the signed-zero constant comparison, its own unit;
+4. coercion part 1: seat E, the exact DECIMAL→DOUBLE cast (K2), and K1 on written casts;
+5. coercion part 2: seat V and a tripwire.
+
+**The seats** (five product files: `java_double/mod.rs` keeps K1; `conform.rs`, `conform_stage.rs`,
+`store_overflow.rs`, `repark-core` `df_guards.rs`; `bool_decimal.rs` is main's code with one more pin):
+
+- the batch store (`conform.rs`) and a store UDF over K1, `__repark_store_float_decimal__`;
+- the conform stage's `leaf_store` calls it for a FLOAT/DOUBLE leaf with a DECIMAL target;
+- the store expression seat (`store_overflow.rs` `conform_one_store_expr`, used by the Spark door's DML store rule and
+  the stage's output conform) stores a FLOAT/DOUBLE, its cast to exactly the target DECIMAL, or a `CASE` whose
+  branches are such casts (MERGE `UPDATE SET` and `NOT MATCHED BY SOURCE … UPDATE` wrap the value in one);
+- `FloatDecimalStoreRule` (installed on every session in `df_guards.rs`) does the same for a DML input's top-level
+  store columns, the only store seat the native door's `INSERT` has.
+
+Only a store's value is rewritten, never a predicate or a `CASE` condition. The stage and the batch store alone left
+`INSERT … SELECT`, the `CASE` UPDATE, MERGE UPDATE and every DataFrame writer at main's value (the pin file: 34 failed,
+22 passed); the store expression seat brought the doors to 177/245, and the `CASE` branches and the rule to 201/245.
+
+**Doors** (verifier 2's 245 door-group cells per mode, Spark 4.1.2 on JDK 17; main `d843d37e` 49/245, the narrowed head
+201/245, both ANSI modes; [stores.md](../../wo/double-decimal-store-round-1/evidence/fix/stores.md)):
+
+- **Fixed, equal to Spark:** `INSERT … SELECT` (positional, by name, NOT NULL), `INSERT … UNION`, `INSERT OVERWRITE`
+  (static, dynamic, a static partition), a table partitioned by the DECIMAL column, `UPDATE SET` (copy-on-write,
+  merge-on-read, NOT NULL, a `CASE` over every row, a column), MERGE `UPDATE SET` and `INSERT` on both table kinds
+  (`*`, an expression, mixed, NOT NULL, `NOT MATCHED BY SOURCE`), `writeTo().append()`, `overwrite(cond)`,
+  `overwritePartitions()`, `saveAsTable`, `insertInto` (also with overwrite); on the native door `INSERT … SELECT`,
+  `INSERT … UNION` and `UPDATE SET`. The native door's SQL `MERGE` refuses on main and the head alike ("Unsupported SQL
+  statement"), so it has no MERGE store.
+- **Still wrong until step 4 (written casts):** `CAST`, `TRY_CAST`, `arrow_cast` and `F.col().cast` to DECIMAL in a
+  SELECT or a `WHERE`, CTAS and RTAS with a cast, `CAST(TIMESTAMP AS DECIMAL(38,18))` (it answers main's
+  `1704067200.123454970761576448` again; verifier 2's F2), and CAST-DOUBLE-TO-DECIMAL-ROUNDING-1's cells.
+- **Still wrong until step 5 (seat V):** `INSERT … VALUES` of a DOUBLE cell the planner types to the target
+  (`ins_values_dec_round`), also NOT NULL, and the card row `VALUES (1, 0.1), (2, CAST(1.255 AS DOUBLE))`.
+
+**No comparison moves.** Against main, cell for cell, both ANSI modes: verifier 2's coercion fuzz (165,846 cells per
+mode) is byte-identical; the structured `d = v` set (60,000 cells) keeps the same 2,501 matches; the DML cells
+(`flip.py`, Spark door, and its native-door copy [flip_native.py](../../wo/double-decimal-store-round-1/evidence/fix/flip_native.py))
+are identical, apart from the native copy's store line. The accepted strict xfail
+(`CAST(ROUND(v, 3) AS DECIMAL(10,3)) = v`) now answers `false` as main and Spark do; the xfail is removed because the
+comparison is main's again, and the pin stays as a plain test.
+
+**Pins.** Rust: `bool_decimal::tests::a_float_cast_to_decimal_is_left_to_its_cast` (red on `ade7c628`'s rule: the
+plan showed `__repark_float_to_decimal__`), `conform_stage::tests::every_stage_site_stores_a_float_leaf_by_the_jdk_17_kernel`
+(red: the plan showed `CAST(d AS Decimal128(10, 2))`), the kernel tests moved to
+`repark-functions/src/java_double/tests_unscaled.rs`. Facade
+`python/repark/tests/sql/test_double_decimal_store_round_1.py`: on main 36 failed, 10 passed, 16 xfailed; on the head
+46 passed, 16 xfailed (the written-cast and VALUES doors, strict xfails that name steps 4 and 5).
 
 ## FIXED (appended 2026-11-13 by the builder, `claude-opus-5-5`)
 
@@ -57,6 +121,33 @@ NaN, ±Infinity and ANSI-off overflow keep today's refusals; JDK 17's text; the 
 - **Cost:** see [Cost](#cost) below.
 
 ## Cost
+
+### Stores only (2026-11-14, the narrowed head)
+
+The owner's 2026-11-14 ruling puts the cost exception on stores only. Main `d843d37e` against the stores head
+`d2b517c6`, 10M rows, five alternating pairs under `flock -x` measure then both cargo locks, cores 32-47 (16 cores);
+[stores.md](../../wo/double-decimal-store-round-1/evidence/fix/stores.md#cost):
+
+| case | query | base median (5) | head median (5) | head/base | pairwise head/base |
+|---|---|---|---|---|---|
+| cast | `select_cast_10_2` | 0.0629 | 0.0549 | **0.873** | 0.816, 0.956, 0.821, 1.189, 1.005 |
+| cast | `select_cast_38_18` | 0.0604 | 0.0618 | **1.023** | 0.966, 0.886, 0.871, 1.258, 1.324 |
+| cast | `filter_decimal_eq_double` | 0.0902 | 0.0893 | **0.991** | 0.94, 1.111, 0.857, 1.051, 0.946 |
+| cast | `store_10_2` | 0.1784 | 0.1617 | **0.906** | 1.098, 0.781, 0.738, 1.397, 1.108 |
+| cast | `store_38_18` | 0.2995 | 0.3944 | **1.317** | 1.911, 0.598, 1.299, 2.444, 1.328 |
+| mixed | `project_decimal` | 0.0770 | 0.0728 | **0.945** | 1.047, 0.989, 1.039, 0.912, 0.928 |
+| mixed | `project_double` | 0.0464 | 0.0456 | **0.983** | 0.995, 1.002, 1.09, 0.98, 0.981 |
+| mixed | `filter_decimal` | 0.0433 | 0.0441 | **1.019** | 0.968, 1.025, 1.035, 0.95, 0.967 |
+| mixed | `filter_double` | 0.0325 | 0.0324 | **0.998** | 0.977, 1.032, 0.976, 1.011, 1.007 |
+| mixed | `aggregate_both` | 0.1177 | 0.1171 | **0.994** | 0.982, 0.947, 0.977, 0.994, 1.043 |
+| mixed | `store_decimal_20_6` | 0.2466 | 0.2411 | **0.977** | 0.976, 0.761, 0.975, 0.978, 0.663 |
+| double | `project_double` | 0.0516 | 0.0506 | **0.981** | 0.989, 0.984, 1.034, 0.93, 0.999 |
+| double | `store_double` | 0.1816 | 0.1782 | **0.982** | 1.028, 0.734, 0.965, 1.288, 1.015 |
+
+The store into DECIMAL(38,18) is the exception (1.32x, about +0.095 s per 10M rows on 16 cores). Both `CAST` rows and
+the `decimal = double` filter equal main again; every no-cast row holds 1.05x.
+
+### The earlier runs (all casts, before the narrowing)
 
 10M rows, median seconds; each sample a fresh process under `flock -x` measure, then opus-cargo and opus2-cargo.
 `base-aa` is main measured again, the noise control. Evidence:
@@ -93,7 +184,7 @@ of every no-cast query is identical on base and head, and the fifteen-repeat re-
 row at 1.015x or below. The plan rewrite fires only on a FLOAT/DOUBLE operand cast to `Decimal128`, the store seats
 only on a float source with a DECIMAL target.
 
-**Owner word owed (asked 2026-11-14, about 01:06 UTC; not ruled).** The cast rows sit above 1.05x because Spark's
+**Superseded 2026-11-14 by the split plan** (the exception covers stores only, above). The question as asked (about 01:06 UTC): The cast rows sit above 1.05x because Spark's
 value needs JDK 17's exact digits per row. The options put to the owner:
 
 - **A:** accept a cost exception for plans that cast a FLOAT/DOUBLE to a DECIMAL, provided the standard sets and the
@@ -102,5 +193,3 @@ value needs JDK 17's exact digits per row. The options put to the owner:
 - **B:** shortest digits (a Ryu-class algorithm), much cheaper, which reverses Q6 (`1e23` into DECIMAL(38,0) would
   store `10^23`, where Spark 4.1.2 on JDK 17 stores `99999999999999990000000`);
 - **C:** a faster exact JDK 17 path first (that card's work, before this unit merges).
-
-This branch is made merge-ready under A; it merges only on the owner's word.

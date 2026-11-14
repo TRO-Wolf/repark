@@ -5,33 +5,30 @@
 [evidence](../../wo/double-decimal-store-round-1/evidence/fix/cost-finish.md)); the owner question of 2026-11-14,
 about 01:06 UTC, option C.
 
-**Status:** **PROPOSED**, not dispatched. **Owner word owed (asked 2026-11-14):** the question offers A (accept a
-cost exception for plans that cast a FLOAT/DOUBLE to a DECIMAL, with this card as the performance card), B (shortest
-digits, reversing Q6) or C (this card first, before the unit merges). Severity **S4** (performance; the answers are
-right).
+**Status:** **PROPOSED**, not dispatched; **re-scoped 2026-11-14 to stores.** The owner's "Merge and go with the
+split plan" (2026-11-14, about 13:38 UTC) puts DOUBLE-DECIMAL-STORE-ROUND-1's cost exception on stores only, with this
+card as its performance card. Severity **S4** (performance; the answers are right). When step 4 of the split plan puts
+the kernel on written casts, the cast rows come back here with that unit's own measurement.
 
-## Measured
+## Measured (stores only)
 
-Main `6f9f2aaa` against the merged DOUBLE-DECIMAL-STORE-ROUND-1 head `3eed6799`, 10M rows, five rotated runs, median
-seconds (the unit card's [Cost](double-decimal-store-round-1-card-2026-11-13.md#cost) has both runs):
+Main `d843d37e` against the narrowed DOUBLE-DECIMAL-STORE-ROUND-1 head `d2b517c6`, 10M rows, five alternating pairs,
+median seconds, cores 32-47 (16 cores) ([stores.md](../../wo/double-decimal-store-round-1/evidence/fix/stores.md#cost)):
 
 | query | main | head | head/main |
 |---|---|---|---|
-| `SELECT max(CAST(v AS DECIMAL(10,2)))` | 0.0615 | 0.0692 | 1.13 |
-| `SELECT max(CAST(v AS DECIMAL(38,18)))` | 0.0625 | 0.1556 | 2.49 |
-| `count(*) WHERE d = v` (DECIMAL(16,4) = DOUBLE) | 0.0990 | 0.1771 | 1.79 |
-| `INSERT … SELECT` into DECIMAL(10,2) | 0.1508 | 0.1657 | 1.10 |
-| `INSERT … SELECT` into DECIMAL(38,18) | 0.3121 | 0.4024 | 1.29 |
+| `INSERT … SELECT` into DECIMAL(10,2) | 0.1784 | 0.1617 | 0.91 |
+| `INSERT … SELECT` into DECIMAL(38,18) | 0.2995 | 0.3944 | 1.32 |
 
-Plans without that cast and the C-012 like-for-like set hold 1.05x on the same head. The `decimal = double` row goes
-away when DECIMAL-DOUBLE-UNION-COERCION-1 compares as DOUBLE (no float-to-DECIMAL cast is left in that plan).
+`CAST` to DECIMAL(10,2) and (38,18) and the `decimal = double` filter equal main on that head (0.87x to 1.02x), so they
+left this card; the plans without a store hold 1.05x. The earlier all-casts table (main `6f9f2aaa`, head `3eed6799`) is
+in the unit card's [Cost](double-decimal-store-round-1-card-2026-11-13.md#cost).
 
 ## Where the time goes
 
 `java_double_unscaled` (`crates/repark-common/src/java_double/mod.rs`) is Spark's value: JDK 17's `Double.toString`
 digits of the double, rounded half up at the target scale. A binary fast path answers a row whose product `10^s·v` is
-below `2^52` and more than four ulps from a half; every other row runs the ported `FloatingDecimal` digit generation. At scale 18,
-and at the `decimal(30,15)` a `decimal = double` comparison coerces to, the product is past `2^52` for any
+below `2^52` and more than four ulps from a half; every other row runs the ported `FloatingDecimal` digit generation. At scale 18 the product is past `2^52` for any
 `|v| ≥ 0.005`, so nearly every row takes the digit path. At scale 2 the fast path covers most rows and the store row
 holds the bar.
 
@@ -46,8 +43,7 @@ holds the bar.
 
 ## Close
 
-The cast rows of the cost table (`CAST` to DECIMAL(10,2) and (38,18), `decimal(16,4) = double`, the stores into
-DECIMAL(10,2) and (38,18)) hold 1.05x against main before DOUBLE-DECIMAL-STORE-ROUND-1, with that unit's pins
-unchanged.
+The store rows (`INSERT … SELECT` into DECIMAL(10,2) and (38,18)) hold 1.05x against main before
+DOUBLE-DECIMAL-STORE-ROUND-1, with that unit's pins unchanged.
 
 Up: [map.md](map.md).

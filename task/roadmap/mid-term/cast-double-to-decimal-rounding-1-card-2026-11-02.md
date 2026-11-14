@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-02. **Filed by:** `claude-haiku-5-5` (records clerk) for the orchestrator, from the MAP-STRUCT-KEY-SUBSCRIPT-1 round-3 verifier verdict (F2).
 
-**Status:** filed; grade C, P3. **Scalar casts FIXED 2026-11-13 by [DOUBLE-DECIMAL-STORE-ROUND-1](double-decimal-store-round-1-card-2026-11-13.md)** (the same mechanism, measured as one: `CAST(1.005D AS DECIMAL(5,2))` and `CAST(CAST('1.005' AS DOUBLE) AS DECIMAL(5,2))` give `1.01` on the Spark door, both ANSI modes, pinned); the subscript and array-element cells move to [DOUBLE-DECIMAL-NESTED-LEAF-1](double-decimal-nested-leaf-1-card-2026-11-13.md). Originally: Engine-wide: the subscript inherits it, and the subscript fix does not change it.
+**Status:** filed; grade C, P3; not dispatched. Engine-wide: the subscript inherits it, and the subscript fix does not change it. **Not fixed by [DOUBLE-DECIMAL-STORE-ROUND-1](double-decimal-store-round-1-card-2026-11-13.md)**: that unit was narrowed to stores on 2026-11-14 (the owner's "Merge and go with the split plan"), so `CAST(1.005D AS DECIMAL(5,2))` still gives `1.00`; K1 on written casts is step 4 of the split plan, with the coercion unit. The subscript and array-element cells are [DOUBLE-DECIMAL-NESTED-LEAF-1](double-decimal-nested-leaf-1-card-2026-11-13.md).
 
 **Why:** Spark 4.1.2 casts a DOUBLE to DECIMAL through the double's shortest decimal text, so `1.005` rounds half up to `1.01`. RePark rounds the binary value, and `1.00499...` gives `1.00`. The divergence depends on the value: `2.675` agrees in both engines.
 

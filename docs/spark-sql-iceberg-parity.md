@@ -5433,35 +5433,37 @@ still open is `isModifiable`.
   Q3, Q4, Q10 ruled "defaults"); the second delta and the card's items (i) and (ii) ruled 2026-11-14 ("Go with
   defaults"); card [NAN-MINMAX-1](../task/roadmap/mid-term/nan-minmax-1-card-2026-11-13.md).
 
-### DOUBLE-DECIMAL-STORE-ROUND-1 — a FLOAT or DOUBLE into DECIMAL rounds the double's text half up, as Spark's does — **FIXED 2026-11-13 (branch, not merged)**
+### DOUBLE-DECIMAL-STORE-ROUND-1 — a FLOAT or DOUBLE stored into a DECIMAL column rounds the double's text half up, as Spark's does — **FIXED 2026-11-14 for stores (branch, not merged)**
 
-- **repark** — Before (main `69aba5df`): every door rounded Arrow's f64 product `10^s · v` half away from zero, so
-  `1.255` stored into DECIMAL(10,2) as `1.25`, `1.005` cast to DECIMAL(5,2) as `1.00`, `1.005` at scale 18 as
-  `1.004999999999999872`, and `1e23` at scale 0 as `99999999999999991611392`; the copy-on-write UPDATE rounded through
-  its `UNION`'s `decimal(30,15)`/`(14,7)` first. After: `CAST`, `TRY_CAST` and `arrow_cast` to `Decimal128`, every
-  Iceberg write door (INSERT VALUES/SELECT/UNION, CTAS, UPDATE on both table kinds, MERGE UPDATE SET and INSERT,
-  `writeTo`, `saveAsTable`, `insertInto`, `overwritePartitions`, INSERT OVERWRITE and its static partition) and
-  `F.col().cast` round JDK 17's `Double.toString` text half up (a FLOAT widened to double first). NaN, ±Infinity and
-  overflow still refuse (an ANSI-off SELECT overflow too), with Arrow's texts.
+- **repark** — Before (main `d843d37e`): every store rounded Arrow's f64 product `10^s · v` half away from zero, so
+  `1.255` stored into DECIMAL(10,2) as `1.25`, `1.005` as `1.00`, and `1e23` into DECIMAL(38,0) as
+  `99999999999999991611392`; the copy-on-write UPDATE rounded through its `UNION`'s `decimal(30,15)` first. After: every
+  store of a FLOAT/DOUBLE into a DECIMAL column rounds JDK 17's `Double.toString` text half up (a FLOAT widened to
+  double first): `INSERT … SELECT` (by position and by name), `INSERT … UNION`, `INSERT OVERWRITE` (static, dynamic, a
+  static partition), `UPDATE SET` on both table kinds, MERGE `UPDATE SET`, `INSERT` and `NOT MATCHED BY SOURCE …
+  UPDATE` on both table kinds, `writeTo` (`append`, `overwrite`, `overwritePartitions`), `saveAsTable`, `insertInto`,
+  NOT NULL targets, and the native door's `INSERT … SELECT`, `UNION` and `UPDATE SET`. NaN, ±Infinity and overflow
+  still refuse, with Arrow's texts. Casts and comparisons are main's.
 - **spark** — Spark 4.1.2 on JDK 17 converts through `Decimal(Double)` = `BigDecimal(Double.toString(d))` and
   `changePrecision` `ROUND_HALF_UP`; NaN and ±Infinity are NULL in both modes; a store raises on overflow in both
-  modes; an ANSI-off SELECT `CAST` overflow is NULL. *(oracle: source v4.1.2 and measured live 2026-11-13,
+  modes. *(oracle: source v4.1.2 and measured live 2026-11-13 and 2026-11-14,
   `task/wo/double-decimal-store-round-1/evidence/`.)*
-- **Still unlike Spark** — NaN and ±Infinity refuse where Spark answers NULL (CAST-INFINITY-TO-DECIMAL-NULL-1); an
-  ANSI-off SELECT overflow refuses where Spark answers NULL; a DECIMAL compared with a DOUBLE is compared as
-  `decimal(30,15)`, so `CAST(ROUND(v, 3) AS DECIMAL(10,3)) = v` for `v = 2.6750000000000003` is `true` where Spark
-  answers `false` (accepted by the owner's ruling, a strict xfail; DECIMAL-DOUBLE-UNION-COERCION-1 retires it);
-  `F.expr` float literals and `fillna` on a DECIMAL column (DOUBLE-DECIMAL-DATAFRAME-1); struct, array and map
-  leaves (DOUBLE-DECIMAL-NESTED-LEAF-1).
-- **Pin** — `python/repark/tests/sql/test_double_decimal_store_round_1.py` (21 doors × 12 cells, both ANSI modes,
-  every value measured on Spark); Rust pins in `repark-functions` `bool_decimal`, `repark-iceberg` `conform` and
-  `conform_stage`.
-- **Rationale** — the owner's 2026-11-13 rulings ("Defaults, and merge #1323 when green", Q5′; "defaults", option
-  A; "Go with defaults" on the coercion cell); card
-  [DOUBLE-DECIMAL-STORE-ROUND-1](../task/roadmap/mid-term/double-decimal-store-round-1-card-2026-11-13.md). Closes
-  the scalar part of CAST-DOUBLE-TO-DECIMAL-ROUNDING-1. A plan that casts a FLOAT or DOUBLE to a DECIMAL pays JDK 17's
-  exact digits (up to 2.5x on a 10M-row cast at scale 18); that cost exception is owner word owed (asked 2026-11-14),
-  with card [DOUBLE-DECIMAL-CAST-PERF-1](../task/roadmap/mid-term/double-decimal-cast-perf-1-card-2026-11-14.md).
+- **Still unlike Spark** — until step 4 of the split plan, a written `CAST`, `TRY_CAST`, `arrow_cast` or `F.col().cast`
+  to DECIMAL (in a SELECT, a `WHERE`, CTAS or RTAS, and `CAST(TIMESTAMP AS DECIMAL(38,18))`) rounds the binary value
+  (CAST-DOUBLE-TO-DECIMAL-ROUNDING-1), and a DECIMAL compared with a DOUBLE is compared as `decimal(30,15)`
+  (DECIMAL-DOUBLE-UNION-COERCION-1); until step 5, an `INSERT … VALUES` DOUBLE cell the planner types to the target
+  rounds the binary value; NaN and ±Infinity refuse where Spark stores NULL (CAST-INFINITY-TO-DECIMAL-NULL-1); `F.expr`
+  float literals and `fillna` on a DECIMAL column (DOUBLE-DECIMAL-DATAFRAME-1); struct, array and map leaves
+  (DOUBLE-DECIMAL-NESTED-LEAF-1).
+- **Pin** — `python/repark/tests/sql/test_double_decimal_store_round_1.py` (the store doors × 12 cells and the
+  native-door stores, both ANSI modes, every value measured on Spark; the written-cast and VALUES doors are strict xfails
+  naming steps 4 and 5); Rust pins in `repark-functions` `bool_decimal` (a float cast is left alone) and
+  `java_double/tests_unscaled.rs`, `repark-iceberg` `conform` and `conform_stage`.
+- **Rationale** — the owner's 2026-11-13 rulings ("Defaults, and merge #1323 when green", Q5′; "defaults", option A)
+  and 2026-11-14 "Merge and go with the split plan" (the kernel only at stores; the cost exception covers stores only);
+  card [DOUBLE-DECIMAL-STORE-ROUND-1](../task/roadmap/mid-term/double-decimal-store-round-1-card-2026-11-13.md). A store
+  of a FLOAT/DOUBLE into a DECIMAL pays JDK 17's exact digits, as card
+  [DOUBLE-DECIMAL-CAST-PERF-1](../task/roadmap/mid-term/double-decimal-cast-perf-1-card-2026-11-14.md) records.
 
 ## 5. Facade drop-in semantics (DECLARED)
 
