@@ -248,13 +248,13 @@ fn fold_operand(expr: Expr, folder: &ExprSimplifier) -> Expr {
         return expr;
     }
     match folder.simplify(expr.clone()) {
-        Ok(folded @ Expr::Literal(_, _)) if zero_type(&folded).is_some() => folded,
+        Ok(literal @ Expr::Literal(_, _)) if zero_type(&literal).is_some() => literal,
         _ => expr,
     }
 }
 
-fn fold_boxed(expr: Box<Expr>, folder: &ExprSimplifier) -> Box<Expr> {
-    Box::new(fold_operand(*expr, folder))
+fn fold_boxed(expr: Expr, folder: &ExprSimplifier) -> Box<Expr> {
+    Box::new(fold_operand(expr, folder))
 }
 
 fn fold_operands(expr: Expr, folder: Option<&ExprSimplifier>) -> Expr {
@@ -266,16 +266,16 @@ fn fold_operands(expr: Expr, folder: Option<&ExprSimplifier>) -> Expr {
     }
     match expr {
         Expr::BinaryExpr(BinaryExpr { left, op, right }) => Expr::BinaryExpr(BinaryExpr::new(
-            fold_boxed(left, folder),
+            fold_boxed(*left, folder),
             op,
-            fold_boxed(right, folder),
+            fold_boxed(*right, folder),
         )),
         Expr::InList(InList {
             expr,
             list,
             negated,
         }) => Expr::InList(InList::new(
-            fold_boxed(expr, folder),
+            fold_boxed(*expr, folder),
             list.into_iter()
                 .map(|item| fold_operand(item, folder))
                 .collect(),
@@ -287,20 +287,20 @@ fn fold_operands(expr: Expr, folder: Option<&ExprSimplifier>) -> Expr {
             low,
             high,
         }) => Expr::Between(Between::new(
-            fold_boxed(expr, folder),
+            fold_boxed(*expr, folder),
             negated,
-            fold_boxed(low, folder),
-            fold_boxed(high, folder),
+            fold_boxed(*low, folder),
+            fold_boxed(*high, folder),
         )),
         Expr::Case(Case {
             expr: Some(operand),
             when_then_expr,
             else_expr,
         }) => Expr::Case(Case {
-            expr: Some(fold_boxed(operand, folder)),
+            expr: Some(fold_boxed(*operand, folder)),
             when_then_expr: when_then_expr
                 .into_iter()
-                .map(|(when, then)| (fold_boxed(when, folder), then))
+                .map(|(when, then)| (fold_boxed(*when, folder), then))
                 .collect(),
             else_expr,
         }),
