@@ -6,5 +6,6 @@
   statistics, main against the head.
 - [delta/](delta/map.md) — the delta round: F1 red and green, the new xfails, and pruning on the fix against main
   over verifier 1's sets.
+- [delta2/](delta2/map.md) — the second delta round (`d7ae795a`): the Spark 4.1.2 answers for the pinned all-NULL and spread cells, the umbrella-key and `RESET` probe on both heads, and the C-012 like-for-like table.
 
 Up: [../map.md](../map.md).

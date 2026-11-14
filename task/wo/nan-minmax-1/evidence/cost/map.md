@@ -74,10 +74,11 @@ It lost file-level pruning (109 file ranges opened, 1 of 200 row groups scanned)
 but the selective filter ran 1.166x main, over the hold. DataFusion's file pruner reads only exact bounds, so the head
 keeps a spread file's bounds exact and demotes only equal ones, plus every float bound at the scan.
 
-- `cost_probe.py` — data, the per-sample runner, the report.
+- `cost_probe.py` — data, the per-sample runner, the report. Second delta: a `topk` row (`ORDER BY d DESC LIMIT 10` over `many`), `max_descending` (`max(d)` over `many_desc`, written in descending order by `data`), the package name in each record, and scan lines with the data root rewritten to `cost-data`.
 - `cost-raw.jsonl` — the head's twelve samples (one JSON record per sample; `build` `base` or `head2`). The
   three raw files carry data paths relative to the scratch directory (rewritten 2026-11-14, verifier 2's A1).
 - `cost-raw-first-head.jsonl` — the first head's twelve samples (`build` `base` or `head`).
 - `cost-raw-head3.jsonl` — the delta head's twelve samples (`build` `base` or `head3`).
+- `cost-raw-d7ae795a.jsonl` — the second delta's raw samples (`pkg-base`, `pkg-head3`, `pkg-head4`; six rounds, one JSON record per sample). Claim: the cost table in the card. Pins: none (evidence).
 
 Up: [../map.md](../map.md).

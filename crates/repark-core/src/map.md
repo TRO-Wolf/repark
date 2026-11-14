@@ -7,7 +7,7 @@ U7 PR1 (2026-09-24): `session.rs` declares `session/writer_layout.rs` (the DataF
 ICE-MIXED-CASE-1 round 3 (2026-09-17, Q-20b-1): `rewrite_fragment_case` takes `unqualified_scope` — bare references resolve against one MERGE side only while qualified references keep validating against both.
 ICE-MIXED-CASE-1 round 4 (2026-09-17): red-first `dataframe_filter_binds_projection_alias` reproduces the L-01 DataFrame filter regression at the Rust level.
 
-CC-3 and CC-4 (2026-08-30): comments condensed to one line, banners removed (CC-4: the remaining banner files), truncated and wrapped-line comments rewritten as complete sentences (D-001, D-002), clippy doc_markdown backticks added. CC-2 closing-critic remediation: review-round label narration swept from prose; safety and accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+CC-3 and CC-4 (2026-08-30): comments condensed to one line, banners removed (CC-4: remaining banners), truncated and wrapped comments rewritten as complete sentences (D-001, D-002), clippy doc_markdown backticks added. CC-2 closing-critic remediation: review-round label narration swept from prose; safety and accuracy contracts restored (see the unit ledger's findings).
 
 ## Purpose
 
@@ -89,7 +89,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the install line is paid for by one shed comment, so the file holds 1000 of 1000.
   `build` carries `#[allow(clippy::too_many_lines)]` (one config line per wired product),
   paid for by a second shed comment.
-- `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** session build registers the `repark_text_csv` / `repark_text_json` sink formats instead of the retired `repark_write_format_text` UDF. **G-6:** rustdoc
+- `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** session build registers the `repark_text_csv` / `repark_text_json` sink formats, not the retired `repark_write_format_text` UDF. **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). **SIGNED-ZERO-NORMALIZE-1:** `build`
   calls `df_guards::finish_session_build` (dialect hook, then seat 1). **ICE-READ-PERF-0 (2026-09-19):**
@@ -132,7 +132,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `named_sources.rs`), carries the **two DF-54.1 regression guards** (`session/df_guards.rs`) at
   two altitudes — a config default,
   `optimizer.enable_physical_uncorrelated_scalar_subquery = false` (the 54.1 physical
-  scalar-subquery path drops a top-level Sort), and, since DEFECT-2 2026-08-18, a **scoped
+  scalar-subquery path drops a top-level Sort), `optimizer.enable_aggregate_dynamic_filter_pushdown = false`, and, since DEFECT-2 2026-08-18, a **scoped
   optimizer rule**: DataFusion's rule list with `push_down_leaf_projections` wrapped so it
   declines on the `Unnest`-carrying plans it miscompiles (the shape every repeated `explode` /
   `dynamicFlatten` builds) and runs untouched everywhere else — installs a
@@ -202,7 +202,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `redact_dump_rows`.
   **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the DataFusion conf refusal moved to `df_guards::invalid_datafusion_config`,
   which masks the echoed value.
-  **SOURCE-URL-REDACT-2 (2026-10-06):** `build()` registers every config-map value (builder pairs plus the merged `repark.toml` pairs) before validation, in one line (the file sits at the 1000-line ceiling).
+  **SOURCE-URL-REDACT-2 (2026-10-06):** `build()` registers every config-map value (builder pairs plus the merged `repark.toml` pairs) before validation, in one line (at the 1000-line ceiling).
 - `session_owner.rs` — the session-built DESCRIBE owner: `DescribeOwnerConfig`
   (`repark.describe` prefix, `owner`, default `unknown`), the build-time
   `session_owner_snapshot` (`USER`, then `USERNAME`, then `unknown`), and the

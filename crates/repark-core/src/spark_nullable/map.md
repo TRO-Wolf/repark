@@ -19,7 +19,7 @@ and the `max`/`min` statistics shortcut. `FloatBoundsInexactFormat` wraps DataFu
 
 A spread file whose row groups all carry bounds keeps them exact, so DataFusion's file pruner (exact bounds only)
 still prunes it, as row-group pruning by the same footers would. Those bounds also feed DataFusion's aggregate dynamic
-filter, which can skip a NaN file under a multi-file `max` (NAN-MINMAX-1 part 2, I8). Row counts, null counts and
+filter, which can skip a NaN file under a multi-file `max` (NAN-MINMAX-1 part 2, I8) once a session turns it on; RePark sessions keep it off by default (`../session/df_guards.rs`). Row counts, null counts and
 every non-float statistic are untouched. `read_parquet_nullable` builds its listing with the wrapper;
 `FloatBoundsInexactFactory` replaces the session's `parquet` file-format factory (registered in
 `../session/df_guards.rs`), which the native `CREATE EXTERNAL TABLE … STORED AS PARQUET` uses. Evidence:
@@ -33,6 +33,6 @@ every non-float statistic are untouched. `read_parquet_nullable` builds its list
   and `read_parquet` keeps those NaN rows under `> 5.0` and `= NaN`; `read_parquet` and the external table read
   every NaN back, `max` answers NaN and `min` the smallest number, on a
   constant and a spread file, one and two row groups. Removing the per-file demotion, the per-scan demotion or the
-  factory registration, or the row-group check, each turns a pin red.
+  factory registration, or the row-group check, each turns a pin red. The aggregate dynamic filter (NAN-MINMAX-1 N1): three files `[3,4]`, `[NULL,NULL | 1,2]` and `[5,6]` answer `max(d), min(d)` 6.0, 1.0 and `min(d), max(id)` 1.0, 8 in 10 of 10 runs (red with the default removed: `min` 3.0); the umbrella key at `true` is refused on four `SET` forms and at build, `false` is accepted, and the specific key turns the filter on at runtime and at build.
 
 Up: [../map.md](../map.md).
