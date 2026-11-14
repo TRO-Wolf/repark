@@ -19,6 +19,7 @@ use super::{
     last_stage_sites, table_targets, zone_partial,
 };
 use crate::write::concurrency::WriteConcurrency;
+use crate::write::conform::STORE_FLOAT_DECIMAL_NAME;
 use crate::write::merge::session_staging::write_new_data_files_from_stream_with;
 use crate::write::struct_pairing::StructPairing;
 use crate::write::write_options::WriterStagingOverrides;
@@ -329,7 +330,7 @@ async fn the_staging_sink_pairs_on_every_branch() {
 }
 
 #[tokio::test]
-async fn every_stage_site_casts_a_float_leaf_to_its_decimal_target_in_the_plan() {
+async fn every_stage_site_stores_a_float_leaf_by_the_jdk_17_kernel() {
     let ctx = SessionContext::new();
     let targets = vec![
         ("d".to_string(), DataType::Decimal128(10, 2)),
@@ -344,33 +345,61 @@ async fn every_stage_site_casts_a_float_leaf_to_its_decimal_target_in_the_plan()
         StageSite::PredicateUpdate,
         StageSite::MicroBatchAppend,
     ] {
-        let frame = ctx
-            .sql("SELECT CAST(1.255 AS DOUBLE) AS d, CAST(1.255 AS FLOAT) AS f")
-            .await
-            .expect("frame");
-        let request = StageRequest {
-            site,
-            targets: &targets,
-            by_name: true,
-            fold: false,
-            gate_op: None,
-            pairing: StructPairing::by_name(false),
-            table: "``",
-        };
-        let plan = conform_stage(&ctx, frame.logical_plan().clone(), &request).expect("stage");
-        let types: Vec<DataType> = plan
-            .schema()
-            .fields()
-            .iter()
-            .map(|field| field.data_type().clone())
-            .collect();
-        assert_eq!(
-            types,
-            vec![DataType::Decimal128(10, 2), DataType::Decimal128(38, 18)],
-            "{site:?}"
-        );
-        let shown = plan.display_indent().to_string();
-        assert!(shown.contains("AS Decimal128(10, 2)"), "{site:?}: {shown}");
-        assert!(shown.contains("AS Decimal128(38, 18)"), "{site:?}: {shown}");
+        for sql in [
+            "SELECT CAST(1.255 AS DOUBLE) AS d, CAST(1.255 AS FLOAT) AS f",
+            "SELECT CAST(CAST(1.255 AS DOUBLE) AS DECIMAL(10,2)) AS d, \
+             CAST(CAST(1.255 AS FLOAT) AS DECIMAL(38,18)) AS f",
+        ] {
+            stores_a_float_leaf_by_the_kernel(&ctx, &targets, site, sql).await;
+        }
     }
+}
+
+async fn stores_a_float_leaf_by_the_kernel(
+    ctx: &SessionContext,
+    targets: &[(String, DataType)],
+    site: StageSite,
+    sql: &str,
+) {
+    let frame = ctx.sql(sql).await.expect("frame");
+    let request = StageRequest {
+        site,
+        targets,
+        by_name: true,
+        fold: false,
+        gate_op: None,
+        pairing: StructPairing::by_name(false),
+        table: "``",
+    };
+    let plan = conform_stage(ctx, frame.logical_plan().clone(), &request).expect("stage");
+    let types: Vec<DataType> = plan
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.data_type().clone())
+        .collect();
+    assert_eq!(
+        types,
+        vec![DataType::Decimal128(10, 2), DataType::Decimal128(38, 18)],
+        "{site:?}"
+    );
+    let shown = plan.display_indent().to_string();
+    assert_eq!(
+        shown.matches(STORE_FLOAT_DECIMAL_NAME).count(),
+        2,
+        "{site:?} {sql}: {shown}"
+    );
+    assert!(!shown.contains("AS Decimal128("), "{site:?}: {shown}");
+    let batches = datafusion::prelude::DataFrame::new(ctx.state(), plan)
+        .collect()
+        .await
+        .expect("stores");
+    let shown = datafusion::arrow::util::pretty::pretty_format_batches(&batches)
+        .expect("renders")
+        .to_string();
+    assert!(shown.contains("| 1.26 "), "{site:?}: {shown}");
+    assert!(
+        shown.contains("| 1.254999995231628400 "),
+        "{site:?}: {shown}"
+    );
 }

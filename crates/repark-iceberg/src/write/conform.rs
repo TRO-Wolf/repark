@@ -4,21 +4,32 @@
 //! of bulk append, kept next to its name-resolution and store-assignment dependencies.
 
 use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::{ArrayRef, AsArray, Decimal128Array, PrimitiveArray, RecordBatch};
+use datafusion::arrow::array::{
+    Array, ArrayRef, AsArray, Decimal128Array, PrimitiveArray, RecordBatch,
+};
 use datafusion::arrow::compute::{CastOptions, cast_with_options};
 use datafusion::arrow::datatypes::{
-    ArrowPrimitiveType, DataType, Decimal128Type, DecimalType, Field, Float32Type, Float64Type,
-    Schema as ArrowSchema, SchemaRef, TimeUnit,
+    ArrowPrimitiveType, DataType, Decimal128Type, DecimalType, Field, FieldRef, Float32Type,
+    Float64Type, Schema as ArrowSchema, SchemaRef, TimeUnit,
 };
 use datafusion::arrow::error::ArrowError;
 use datafusion::error::{DataFusionError, Result};
+use datafusion::logical_expr::expr::ScalarFunction;
+use datafusion::logical_expr::{
+    ColumnarValue, Expr, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
+    Volatility,
+};
+use datafusion::scalar::ScalarValue;
 
 use crate::catalog::uuid_presentation::{convert_uuid_column, presents_uuid};
 use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
 use crate::write::store_assign::refuse_unless_write_store_assignable;
 use crate::write::struct_pairing::{StoreEntry, refuse_unpaired_struct};
+
+pub(crate) const STORE_FLOAT_DECIMAL_NAME: &str = "__repark_store_float_decimal__";
 
 /// Conform batches to the Iceberg write schema: every target column takes its source column.
 /// Columns carrying an Iceberg `write-default` may be absent — the fork's `DataFileWriter::write`
@@ -279,20 +290,114 @@ fn entry_store_cast(
 ) -> Result<ArrayRef> {
     refuse_unpaired_struct(table, entry, name, column.data_type(), target)?;
     refuse_coarser_timestamp(name, column.data_type(), target)?;
-    if let DataType::Decimal128(precision, scale) = target {
-        match column.data_type() {
-            DataType::Float64 => {
-                let floats = column.as_primitive::<Float64Type>();
-                return Ok(Arc::new(float_store_decimal(floats, *precision, *scale)?));
-            }
-            DataType::Float32 => {
-                let floats = column.as_primitive::<Float32Type>();
-                return Ok(Arc::new(float_store_decimal(floats, *precision, *scale)?));
-            }
-            _ => {}
-        }
+    if let Some(stored) = float_store_array(column, target)? {
+        return Ok(stored);
     }
     Ok(cast_with_options(column, target, &strict_cast())?)
+}
+
+pub(crate) fn float_decimal_store_expr(value: Expr, target: &DataType) -> Expr {
+    Expr::ScalarFunction(ScalarFunction::new_udf(
+        Arc::new(ScalarUDF::from(FloatDecimalStore::new(target.clone()))),
+        vec![value],
+    ))
+}
+
+#[derive(Debug)]
+struct FloatDecimalStore {
+    signature: Signature,
+    target: DataType,
+}
+
+impl FloatDecimalStore {
+    fn new(target: DataType) -> Self {
+        Self {
+            signature: Signature::any(1, Volatility::Immutable),
+            target,
+        }
+    }
+}
+
+impl PartialEq for FloatDecimalStore {
+    fn eq(&self, other: &Self) -> bool {
+        self.target == other.target
+    }
+}
+
+impl Eq for FloatDecimalStore {}
+
+impl Hash for FloatDecimalStore {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        STORE_FLOAT_DECIMAL_NAME.hash(state);
+        self.target.hash(state);
+    }
+}
+
+impl ScalarUDFImpl for FloatDecimalStore {
+    fn name(&self) -> &str {
+        STORE_FLOAT_DECIMAL_NAME
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(self.target.clone())
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
+        let nullable = args
+            .arg_fields
+            .first()
+            .is_none_or(|field| field.is_nullable());
+        Ok(Arc::new(Field::new(
+            self.name(),
+            self.target.clone(),
+            nullable,
+        )))
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let Some(value) = args.args.first() else {
+            return Err(DataFusionError::Execution(format!(
+                "'{STORE_FLOAT_DECIMAL_NAME}' expects one argument"
+            )));
+        };
+        let rows = match value {
+            ColumnarValue::Scalar(_) => 1,
+            ColumnarValue::Array(array) => array.len(),
+        };
+        let Some(stored) = float_store_array(&value.to_array(rows)?, &self.target)? else {
+            return Err(DataFusionError::Execution(format!(
+                "'{STORE_FLOAT_DECIMAL_NAME}' stores a FLOAT or DOUBLE into a DECIMAL, not {} into {}",
+                value.data_type(),
+                self.target
+            )));
+        };
+        match value {
+            ColumnarValue::Scalar(_) => Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
+                &stored, 0,
+            )?)),
+            ColumnarValue::Array(_) => Ok(ColumnarValue::Array(stored)),
+        }
+    }
+}
+
+fn float_store_array(column: &ArrayRef, target: &DataType) -> Result<Option<ArrayRef>> {
+    let DataType::Decimal128(precision, scale) = target else {
+        return Ok(None);
+    };
+    let stored = match column.data_type() {
+        DataType::Float64 => {
+            float_store_decimal(column.as_primitive::<Float64Type>(), *precision, *scale)?
+        }
+        DataType::Float32 => {
+            float_store_decimal(column.as_primitive::<Float32Type>(), *precision, *scale)?
+        }
+        _ => return Ok(None),
+    };
+    Ok(Some(Arc::new(stored)))
 }
 
 fn float_store_decimal<T>(

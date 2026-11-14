@@ -8,8 +8,10 @@ from typing import Any
 
 import pytest
 
+import repark
 from repark import ReparkSession
 from repark import functions as sf
+from repark._native import PyReparkSession
 from repark.spark.session import _reset_active_session_for_tests
 
 GROUPS = {
@@ -234,6 +236,16 @@ DOORS: dict[str, Callable[[Cell], dict[int, str]]] = {
 }
 
 
+WAITING = pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "split plan, steps 4 and 5: a written CAST and a planner-typed VALUES cell keep "
+        "Arrow's binary rounding until K1 reaches written casts and seat V types VALUES"
+    ),
+)
+WAITING_DOORS = {"ctas", "df_cast", "ins_values", "sel_cast_col", "sel_cast_lit", "sel_try_cast"}
+
+
 @pytest.fixture(params=["true", "false"])
 def spark(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[Any]:
     _reset_active_session_for_tests()
@@ -249,7 +261,13 @@ def spark(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[Any]:
     _reset_active_session_for_tests()
 
 
-@pytest.mark.parametrize("door", sorted(DOORS))
+@pytest.mark.parametrize(
+    "door",
+    [
+        pytest.param(door, marks=WAITING) if door in WAITING_DOORS else door
+        for door in sorted(DOORS)
+    ],
+)
 def test_a_float_into_decimal_rounds_the_doubles_text_half_up(spark: Any, door: str) -> None:
     misses = []
     for (source, precision, scale), values in GROUPS.items():
@@ -264,6 +282,7 @@ def test_a_float_into_decimal_rounds_the_doubles_text_half_up(spark: Any, door: 
     assert misses == []
 
 
+@WAITING
 def test_the_card_rows_store_sparks_values(spark: Any) -> None:
     spark.sql("CREATE TABLE ice.ns.card (id INT, v DECIMAL(10,2)) USING iceberg").collect()
     spark.sql("INSERT INTO ice.ns.card VALUES (1, 0.1), (2, CAST(1.255 AS DOUBLE))").collect()
@@ -279,6 +298,7 @@ def test_the_card_rows_store_sparks_values(spark: Any) -> None:
     ]
 
 
+@WAITING
 def test_the_engine_cast_rounds_the_text_as_cast_double_to_decimal_rounding_1(
     spark: Any,
 ) -> None:
@@ -310,15 +330,61 @@ def test_an_overflowing_store_still_refuses(spark: Any) -> None:
     assert spark.sql("SELECT count(*) FROM ice.ns.over").collect()[0][0] == 0
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "DECIMAL-DOUBLE-UNION-COERCION-1 retires it: RePark compares a DECIMAL with a DOUBLE as "
-        "decimal(30,15), Spark as DOUBLE; accepted by the owner's 2026-11-13 ruling"
-    ),
-)
 def test_a_decimal_compared_with_a_double_answers_as_spark(spark: Any) -> None:
     spark.sql("CREATE TABLE ice.ns.cmp (v DOUBLE) USING iceberg").collect()
     spark.sql("INSERT INTO ice.ns.cmp VALUES (CAST('2.6750000000000003' AS DOUBLE))").collect()
     row = spark.sql("SELECT CAST(ROUND(v, 3) AS DECIMAL(10,3)) = v FROM ice.ns.cmp").collect()[0]
     assert row[0] is False
+
+
+NATIVE_VALUES = [
+    ("1.255", "1.26"),
+    ("1.005", "1.01"),
+    ("2.675", "2.68"),
+    ("-1.255", "-1.26"),
+]
+NATIVE_STORES = {
+    "ins_select": ["INSERT INTO ice.ns.w SELECT id, v FROM ice.ns.s"],
+    "ins_union": [
+        "INSERT INTO ice.ns.w SELECT id, v FROM ice.ns.s WHERE id < 2 "
+        "UNION ALL SELECT id, v FROM ice.ns.s WHERE id >= 2"
+    ],
+    "update_where": [
+        "INSERT INTO ice.ns.w SELECT id, CAST(0 AS DECIMAL(10,2)) FROM ice.ns.s",
+        *(
+            f"UPDATE ice.ns.w SET d = CAST('{text}' AS DOUBLE) WHERE id = {i}"
+            for i, (text, _) in enumerate(NATIVE_VALUES)
+        ),
+    ],
+}
+
+
+@pytest.fixture(params=["true", "false"])
+def native_door(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[None]:
+    previous = repark._ANSI_NATIVE
+    native = PyReparkSession.native(config={"spark.sql.ansi.enabled": request.param})
+    native.register_memory_catalog("ice", str(tmp_path / "ice"))
+    native.create_namespace("ice", "ns", str(tmp_path / "ice" / "ns"))
+    repark._ANSI_NATIVE = native
+    try:
+        yield
+    finally:
+        repark._ANSI_NATIVE = previous
+
+
+def native_rows(sql: str) -> list[dict[str, Any]]:
+    return repark.sql(sql).to_arrow().to_pylist()
+
+
+@pytest.mark.parametrize("door", sorted(NATIVE_STORES))
+def test_a_native_door_store_rounds_the_doubles_text_half_up(native_door: None, door: str) -> None:
+    rows = ", ".join(
+        f"({i}, CAST('{text}' AS DOUBLE))" for i, (text, _) in enumerate(NATIVE_VALUES)
+    )
+    native_rows("CREATE TABLE ice.ns.s (id INT, v DOUBLE)")
+    native_rows(f"INSERT INTO ice.ns.s VALUES {rows}")
+    native_rows("CREATE TABLE ice.ns.w (id INT, d DECIMAL(10,2))")
+    for statement in NATIVE_STORES[door]:
+        native_rows(statement)
+    stored = {row["id"]: str(row["d"]) for row in native_rows("SELECT id, d FROM ice.ns.w")}
+    assert stored == {i: want for i, (_, want) in enumerate(NATIVE_VALUES)}

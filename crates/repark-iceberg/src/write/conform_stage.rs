@@ -1,31 +1,87 @@
 use std::sync::{Arc, Mutex, PoisonError};
 
 use datafusion::arrow::datatypes::{DataType, Field, Fields, Schema as ArrowSchema, TimeUnit};
+use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{Column, DFSchema, ScalarValue};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::FunctionRegistry;
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{
-    Cast, Expr, ExprSchemable, LogicalPlan, LogicalPlanBuilder, Projection, ScalarUDF,
+    Cast, Expr, ExprSchemable, LogicalPlan, LogicalPlanBuilder, Projection, ScalarUDF, WriteOp,
 };
+use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::{DataFrame, SessionContext};
 use iceberg::table::Table;
 use repark_common::udf_names::{NARROW_TIMESTAMP_NS_NAME, STORE_PAIR_KERNEL_NAME, ZONE_SEAM_NAME};
 
+use super::conform::float_decimal_store_expr;
 use super::ntz_store::{
     is_ltz_instant_target, needs_ltz_instant_cast, store_kernel_udf_name, wall_kernel_input,
     wall_kernel_reads,
 };
 use super::store_assign::{refuse_unless_write_store_assignable, without_field_metadata};
 use super::store_overflow::{
-    ConformStoreFlags, PairSite, conform_one_store_expr, rewrap_aliases, split_aliases,
-    store_output_name,
+    ConformStoreFlags, PairSite, conform_one_store_expr, float_decimal_store, rewrap_aliases,
+    split_aliases, store_output_name,
 };
 use super::struct_pairing::{StructPairing, holds_struct_type, pair_store_value};
 
 const ARROW_CAST_NAME: &str = "arrow_cast";
 const SPARK_NONNULL_NAME: &str = "__repark_spark_nonnull__";
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct FloatDecimalStoreRule;
+
+impl AnalyzerRule for FloatDecimalStoreRule {
+    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
+        plan.transform_up_with_subqueries(store_dml_floats).data()
+    }
+
+    fn name(&self) -> &'static str {
+        "repark_float_decimal_store"
+    }
+}
+
+fn store_dml_floats(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    let LogicalPlan::Dml(mut dml) = plan else {
+        return Ok(Transformed::no(plan));
+    };
+    let LogicalPlan::Projection(projection) = dml.input.as_ref() else {
+        return Ok(Transformed::no(LogicalPlan::Dml(dml)));
+    };
+    if !matches!(dml.op, WriteOp::Insert(_) | WriteOp::Update) {
+        return Ok(Transformed::no(LogicalPlan::Dml(dml)));
+    }
+    let target = dml.target.schema();
+    let schema = projection.input.schema();
+    let mut changed = false;
+    let mut exprs = Vec::with_capacity(projection.expr.len());
+    for (position, expr) in projection.expr.iter().enumerate() {
+        let named = projection
+            .schema
+            .fields()
+            .get(position)
+            .zip(target.fields().get(position))
+            .filter(|(output, field)| output.name().eq_ignore_ascii_case(field.name()));
+        let (inner, frames) = split_aliases(expr);
+        let stored = named
+            .and_then(|(_, field)| float_decimal_store(inner, schema.as_ref(), field.data_type()));
+        match stored {
+            Some(stored) => {
+                changed = true;
+                exprs.push(rewrap_aliases(stored, &frames));
+            }
+            None => exprs.push(expr.clone()),
+        }
+    }
+    if !changed {
+        return Ok(Transformed::no(LogicalPlan::Dml(dml)));
+    }
+    let input = Arc::clone(&projection.input);
+    dml.input = Arc::new(LogicalPlan::Projection(Projection::try_new(exprs, input)?));
+    Ok(Transformed::yes(LogicalPlan::Dml(dml)))
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum StageSite {
@@ -306,11 +362,7 @@ fn leaf_store(
     if matches!(source, DataType::Float32 | DataType::Float64)
         && matches!(target, DataType::Decimal128(_, _))
     {
-        let stored = Field::new(field.name(), target.clone(), field.is_nullable());
-        return Ok(Some(Expr::Cast(Cast::new_from_field(
-            Box::new(column),
-            Arc::new(stored),
-        ))));
+        return Ok(Some(float_decimal_store_expr(column, target)));
     }
     if !(is_ltz_instant_target(target) && needs_ltz_instant_cast(source)) {
         return Ok(None);
