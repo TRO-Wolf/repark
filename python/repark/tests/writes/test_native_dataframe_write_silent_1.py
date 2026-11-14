@@ -8,13 +8,18 @@ from typing import Any
 
 import pytest
 from _native_dataframe_write_silent_1_cells import (
+    BY_NAME_VERBS,
     EXPECTED_FILE,
     PATH_KINDS,
+    PATH_ROUTE,
+    TABLE_VERBS,
     Door,
+    hadoop_config,
     path_refusal,
     scrub,
     shape,
     table_refusal,
+    view_refusal,
 )
 
 import repark
@@ -124,9 +129,17 @@ def rows(sql: str) -> list[tuple[Any, ...]]:
 
 
 WORKAROUND = re.compile(
-    r"run ((?:INSERT INTO|INSERT OVERWRITE|CREATE OR REPLACE TABLE) (\S+) (?:AS )?SELECT \.\.\.) "
+    r"register the frame as a temporary view <view> and run (.+?) "
     r"through repark\.sql\(\.\.\.\) and collect the result"
 )
+
+
+def followed(message: str, view: str) -> str:
+    named = WORKAROUND.search(message)
+    assert named is not None, message
+    return named.group(1).replace("<view>", view)
+
+
 WORKAROUND_CASES = {
     "iceberg_append": ("ice.ns.t", "ice_existing", "ins_append", [(7,), (8,), (9,)]),
     "iceberg_overwrite": ("ice.ns.t", "ice_existing", "ins_overwrite", [(9,)]),
@@ -155,21 +168,123 @@ def test_the_named_workaround_stores_the_rows_when_followed_literally(
     rows("INSERT INTO ice.ns.src VALUES (9)")
     frame = repark.sql("SELECT id FROM ice.ns.src")
     with pytest.raises(repark.errors.UnsupportedOperationException) as refused:
-        if verb == "v2_overwrite_partitions":
-            frame.writeTo(target).overwritePartitions()
-        elif verb == "save_name_overwrite":
-            frame.write.format("iceberg").mode("overwrite").save(target)
-        else:
-            frame.write.insertInto(target, overwrite=verb == "ins_overwrite")
+        TABLE_VERBS[verb](frame, target)
     message = str(refused.value)
-    assert message == table_refusal(verb, target, kind)
+    assert message == table_refusal(verb, target, kind, ("id",), ("id",))
     assert rows(f"SELECT id FROM {target}") == [(7,), (8,)]
-    named = WORKAROUND.search(message)
-    assert named is not None, message
-    assert named.group(2) == target
     frame.createOrReplaceTempView("frame_rows")
-    rows(named.group(1).replace("SELECT ...", "SELECT * FROM frame_rows"))
+    rows(followed(message, "frame_rows"))
     assert rows(f"SELECT id FROM {target}") == expected
+
+
+REORDERED = ("p", "id")
+POSITIONAL_VERBS = ("ins_append", "ins_overwrite", "ins_partition_by")
+REORDER_CELLS = [
+    (verb, kind)
+    for verb in sorted(BY_NAME_VERBS) + list(POSITIONAL_VERBS)
+    for kind in ("ice_existing", "hd_existing")
+] + [
+    (verb, kind) for verb in POSITIONAL_VERBS for kind in ("ice_memory_schema", "memory_qualified")
+]
+SEED = [(7, 1), (8, 2)]
+SOURCE = [(9, 1), (10, 3)]
+
+
+def expected_rows(verb: str) -> list[tuple[int, int]]:
+    stored = SOURCE if verb in BY_NAME_VERBS else [(p, i) for i, p in SOURCE]
+    overwrite = verb in ("ins_overwrite", "save_name_overwrite", "v2_overwrite_partitions")
+    return sorted(stored if overwrite else SEED + stored)
+
+
+@pytest.fixture(scope="module")
+def spark_door_rows(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Iterator[dict[str, list[tuple[int, int]]]]:
+    _reset_active_session_for_tests()
+    root = tmp_path_factory.mktemp("native-dataframe-write-silent-1-reordered")
+    builder = ReparkSession.builder.appName("native-dataframe-write-silent-1-reordered")
+    for key, value in hadoop_config(root).items():
+        builder = builder.config(key, value)
+    spark = builder.getOrCreate()
+    stored: dict[str, list[tuple[int, int]]] = {}
+    try:
+        spark.sql("CREATE NAMESPACE IF NOT EXISTS hd.ns").collect()
+        spark.sql("CREATE TABLE hd.ns.src (id INT, p INT) USING iceberg").collect()
+        spark.sql("INSERT INTO hd.ns.src VALUES (9, 1), (10, 3)").collect()
+        for n, verb in enumerate(sorted(BY_NAME_VERBS) + list(POSITIONAL_VERBS)):
+            target = f"hd.ns.t{n}"
+            spark.sql(f"CREATE TABLE {target} (id INT, p INT) USING iceberg").collect()
+            spark.sql(f"INSERT INTO {target} VALUES (7, 1), (8, 2)").collect()
+            TABLE_VERBS[verb](spark.sql("SELECT p, id FROM hd.ns.src"), target)
+            result = spark.sql(f"SELECT id, p FROM {target}").collect()
+            stored[verb] = sorted((row[0], row[1]) for row in result)
+    finally:
+        spark.stop()
+        _reset_active_session_for_tests()
+    yield stored
+
+
+@pytest.fixture
+def both_catalogs(tmp_path: Path) -> Iterator[Path]:
+    previous = repark._ANSI_NATIVE
+    native = PyReparkSession.native(config=hadoop_config(tmp_path))
+    native.register_memory_catalog("ice", str(tmp_path / "ice"))
+    native.create_namespace("ice", "ns", str(tmp_path / "ice" / "ns"))
+    native.create_namespace("hd", "ns", None)
+    repark._ANSI_NATIVE = native
+    try:
+        rows("CREATE SCHEMA ice.ms")
+        yield tmp_path
+    finally:
+        repark._ANSI_NATIVE = previous
+
+
+NATIVE_TARGETS = {
+    "ice_existing": "ice.ns.t",
+    "hd_existing": "hd.ns.t",
+    "ice_memory_schema": "ice.ms.t",
+    "memory_qualified": "datafusion.public.t",
+}
+
+
+@pytest.mark.parametrize(("verb", "kind"), REORDER_CELLS)
+def test_a_reordered_frame_stores_the_spark_doors_rows_when_the_route_is_followed(
+    both_catalogs: Path,
+    spark_door_rows: dict[str, list[tuple[int, int]]],
+    verb: str,
+    kind: str,
+) -> None:
+    target = NATIVE_TARGETS[kind]
+    catalog = "hd" if kind == "hd_existing" else "ice"
+    rows(f"CREATE TABLE {target} (id INT, p INT)")
+    rows(f"INSERT INTO {target} VALUES (7, 1), (8, 2)")
+    rows(f"CREATE TABLE {catalog}.ns.src (id INT, p INT)")
+    rows(f"INSERT INTO {catalog}.ns.src VALUES (9, 1), (10, 3)")
+    frame = repark.sql(f"SELECT p, id FROM {catalog}.ns.src")
+    with pytest.raises(repark.errors.UnsupportedOperationException) as refused:
+        TABLE_VERBS[verb](frame, target)
+    message = str(refused.value)
+    assert message == table_refusal(verb, target, kind, REORDERED)
+    assert rows(f"SELECT id, p FROM {target}") == SEED
+    frame.createOrReplaceTempView("frame_rows")
+    rows(followed(message, "frame_rows"))
+    assert rows(f"SELECT id, p FROM {target}") == expected_rows(verb)
+    assert spark_door_rows[verb] == expected_rows(verb)
+
+
+@pytest.mark.parametrize("target", ["datafusion.public.v1", "ice.ms.v2"])
+@pytest.mark.parametrize("overwrite", [False, True])
+def test_a_native_view_refuses_without_naming_a_statement(
+    native_door: Path, target: str, overwrite: bool
+) -> None:
+    rows("CREATE SCHEMA ice.ms")
+    rows(f"CREATE VIEW {target} AS SELECT * FROM (VALUES (7, 1), (8, 2)) AS x(id, p)")
+    frame = repark.sql("SELECT 9 AS id, 1 AS p")
+    with pytest.raises(repark.errors.UnsupportedOperationException) as refused:
+        frame.write.insertInto(target, overwrite=overwrite)
+    assert str(refused.value) == view_refusal(target)
+    assert "INSERT" not in str(refused.value)
+    assert rows(f"SELECT id, p FROM {target}") == SEED
 
 
 ABSOLUTE = "<absolute>"
@@ -207,17 +322,41 @@ def test_a_path_is_named_as_the_user_wrote_it(
     assert sorted(str(p) for p in native_door.rglob("*")) == before
 
 
-def test_the_path_workaround_stores_the_rows(native_door: Path) -> None:
+@pytest.mark.parametrize(
+    ("query", "mode"),
+    [
+        ("SELECT id, p FROM ice.ns.src", "overwrite"),
+        ("SELECT id, p FROM ice.ns.src", "append"),
+        ("SELECT id, p FROM ice.ns.src WHERE id < 0", "overwrite"),
+        ("SELECT id, p FROM ice.ns.src WHERE id < 0", "append"),
+    ],
+)
+def test_the_path_workaround_stores_the_rows(native_door: Path, query: str, mode: str) -> None:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    rows("CREATE TABLE ice.ns.src (id INT, p INT)")
+    rows("INSERT INTO ice.ns.src VALUES (9, 1), (10, 3)")
     destination = native_door / "out"
-    frame = repark.sql("SELECT 9 AS id")
+    seed = pa.table({"id": pa.array([7], pa.int32()), "p": pa.array([1], pa.int32())})
+    if mode == "append":
+        destination.mkdir()
+        pq.write_table(seed, destination / "part-seed.parquet")
+    frame = repark.sql(query)
     with pytest.raises(repark.errors.UnsupportedOperationException) as refused:
-        frame.write.mode("overwrite").parquet(str(destination))
+        frame.write.mode(mode).parquet(str(destination))
     assert str(refused.value) == path_refusal(str(destination))
-    assert "write the frame from a ReparkSession" in str(refused.value)
+    assert PATH_ROUTE in str(refused.value)
+    expected = sorted(tuple(row.values()) for row in frame.to_arrow().to_pylist())
+    if mode == "append":
+        expected = sorted([(7, 1), *expected])
     spark = ReparkSession.builder.appName("native-dataframe-write-silent-1").getOrCreate()
     try:
-        spark.sql("SELECT 9 AS id").write.mode("overwrite").parquet(str(destination))
-        stored = sorted(tuple(row) for row in spark.read.parquet(str(destination)).collect())
+        spark.createDataFrame(frame.collect(), frame.schema).write.mode(mode).parquet(
+            str(destination)
+        )
+        stored = pq.read_table(destination)
     finally:
         spark.stop()
-    assert stored == [(9,)]
+    assert sorted(tuple(row.values()) for row in stored.to_pylist()) == expected
+    assert [str(field.type) for field in stored.schema] == ["int32", "int32"]

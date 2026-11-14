@@ -93,39 +93,93 @@ MEMORY_KINDS = frozenset({"ice_memory_schema", "memory_qualified", "memory_bare"
 FRAMES = ("sql", "filter", "select", "union", "cache", "local_checkpoint", "join")
 OVERWRITE_VERBS = frozenset({"ins_overwrite", "save_name_overwrite"})
 DYNAMIC_VERBS = frozenset({"v2_overwrite_partitions"})
+BY_NAME_VERBS = frozenset(
+    {
+        "sat_append",
+        "save_name",
+        "save_name_overwrite",
+        "v2_append",
+        "v2_property_append",
+        "v2_partitioned_append",
+        "v2_overwrite_partitions",
+    }
+)
 CARD = "NATIVE-DATAFRAME-WRITE-SILENT-1"
+TABLE_COLUMNS = ("id", "p")
 
 
-def table_refusal(verb: str, target: str, kind: str) -> str:
+def collected(statement: str) -> str:
+    return (
+        f"register the frame as a temporary view <view> and run {statement} through "
+        "repark.sql(...) and collect the result"
+    )
+
+
+def insert_statement(verb: str, target: str, sql_verb: str, frame: tuple[str, ...]) -> str:
+    if verb not in BY_NAME_VERBS:
+        return f"{sql_verb} {target} SELECT * FROM <view>"
+    columns = ", ".join(frame)
+    return f"{sql_verb} {target} ({columns}) SELECT {columns} FROM <view>"
+
+
+def replace_statement(
+    verb: str, target: str, frame: tuple[str, ...], table: tuple[str, ...]
+) -> str:
+    sources = table if verb in BY_NAME_VERBS else frame
+    items = ", ".join(
+        column if source == column else f"{source} AS {column}"
+        for source, column in zip(sources, table, strict=True)
+    )
+    return f"CREATE OR REPLACE TABLE {target} AS SELECT {items} FROM <view>"
+
+
+def table_refusal(
+    verb: str,
+    target: str,
+    kind: str,
+    frame: tuple[str, ...] = TABLE_COLUMNS,
+    table: tuple[str, ...] = TABLE_COLUMNS,
+) -> str:
     lead = (
         "DataFrame.write and writeTo cannot write a repark.sql() frame into the table "
         f"{target}: the write would return without storing any rows, so nothing was written; "
     )
-    collect = "through repark.sql(...) and collect the result"
     if verb not in OVERWRITE_VERBS | DYNAMIC_VERBS:
-        tail = f"run INSERT INTO {target} SELECT ... {collect}"
+        tail = collected(insert_statement(verb, target, "INSERT INTO", frame))
     elif kind in MEMORY_KINDS:
         tail = (
-            f"{target} is an in-memory table, where INSERT OVERWRITE is not implemented: run "
-            f"CREATE OR REPLACE TABLE {target} AS SELECT ... {collect}, which replaces the "
+            f"{target} is an in-memory table, where INSERT OVERWRITE is not implemented: "
+            f"{collected(replace_statement(verb, target, frame, table))}, which replaces the "
             "table with the query's columns and rows"
         )
     elif verb in DYNAMIC_VERBS:
         tail = (
             "on an unpartitioned table, which is every table repark.sql(...) can create, "
-            f"overwritePartitions replaces every row: run INSERT OVERWRITE {target} SELECT ... "
-            f"{collect}"
+            "overwritePartitions replaces every row: "
+            f"{collected(insert_statement(verb, target, 'INSERT OVERWRITE', frame))}"
         )
     else:
-        tail = f"run INSERT OVERWRITE {target} SELECT ... {collect}"
+        tail = collected(insert_statement(verb, target, "INSERT OVERWRITE", frame))
     return f"{lead}{tail} ({CARD})"
+
+
+def view_refusal(target: str) -> str:
+    return (
+        f"DataFrame.write and writeTo cannot write a repark.sql() frame into {target}: it is a "
+        "view, and the native door cannot write through a view, so nothing was written "
+        f"({CARD})"
+    )
+
+
+PATH_ROUTE = "spark.createDataFrame(frame.collect(), frame.schema)"
 
 
 def path_refusal(path: str) -> str:
     return (
         f"DataFrame.write cannot write a repark.sql() frame to the path {path}: the write would "
-        "return without storing any rows, so nothing was written; write the frame from a "
-        f"ReparkSession ({CARD})"
+        "return without storing any rows, so nothing was written; convert the frame on a "
+        f"ReparkSession and write the result: {PATH_ROUTE}, which holds every row in memory "
+        f"({CARD})"
     )
 
 
