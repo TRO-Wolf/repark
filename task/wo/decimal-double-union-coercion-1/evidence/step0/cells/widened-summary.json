@@ -1,0 +1,386 @@
+{
+ "coerce": {
+  "false": {
+   "all/all": {
+    "cells": 186570,
+    "head right, both wrong": 69320,
+    "head wrong": 22924,
+    "head wrong, ff34 right": 1561,
+    "head wrong, main right": 2761
+   },
+   "coalesce/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 3201,
+    "head wrong": 0,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "coalesce/other": {
+    "cells": 17275,
+    "head right, both wrong": 15215,
+    "head wrong": 0,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "eq/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 337,
+    "head wrong": 554,
+    "head wrong, ff34 right": 256,
+    "head wrong, main right": 554
+   },
+   "eq/other": {
+    "cells": 17275,
+    "head right, both wrong": 2351,
+    "head wrong": 3273,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "eqf/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 357,
+    "head wrong": 771,
+    "head wrong, ff34 right": 535,
+    "head wrong, main right": 535
+   },
+   "eqf/other": {
+    "cells": 17275,
+    "head right, both wrong": 3031,
+    "head wrong": 3350,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "greatest/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 3201,
+    "head wrong": 0,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "greatest/other": {
+    "cells": 17275,
+    "head right, both wrong": 15215,
+    "head wrong": 0,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "if/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 3201,
+    "head wrong": 0,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "if/other": {
+    "cells": 17275,
+    "head right, both wrong": 15215,
+    "head wrong": 0,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "in/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 337,
+    "head wrong": 554,
+    "head wrong, ff34 right": 256,
+    "head wrong, main right": 554
+   },
+   "in/other": {
+    "cells": 17275,
+    "head right, both wrong": 2351,
+    "head wrong": 3273,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "le/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 154,
+    "head wrong": 294,
+    "head wrong, ff34 right": 129,
+    "head wrong, main right": 282
+   },
+   "le/other": {
+    "cells": 17275,
+    "head right, both wrong": 1156,
+    "head wrong": 3276,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "lt/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 154,
+    "head wrong": 294,
+    "head wrong, ff34 right": 129,
+    "head wrong, main right": 282
+   },
+   "lt/other": {
+    "cells": 17275,
+    "head right, both wrong": 1156,
+    "head wrong": 3276,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "ns/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 337,
+    "head wrong": 554,
+    "head wrong, ff34 right": 256,
+    "head wrong, main right": 554
+   },
+   "ns/other": {
+    "cells": 17275,
+    "head right, both wrong": 2351,
+    "head wrong": 3455,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   }
+  },
+  "true": {
+   "all/all": {
+    "cells": 165846,
+    "head right, both wrong": 69320,
+    "head wrong": 3110,
+    "head wrong, ff34 right": 1561,
+    "head wrong, main right": 2761
+   },
+   "coalesce/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 3201,
+    "head wrong": 0,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "coalesce/other": {
+    "cells": 17275,
+    "head right, both wrong": 15215,
+    "head wrong": 0,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "eq/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 337,
+    "head wrong": 554,
+    "head wrong, ff34 right": 256,
+    "head wrong, main right": 554
+   },
+   "eq/other": {
+    "cells": 13821,
+    "head right, both wrong": 2351,
+    "head wrong": 1,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "eqf/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 357,
+    "head wrong": 771,
+    "head wrong, ff34 right": 535,
+    "head wrong, main right": 535
+   },
+   "eqf/other": {
+    "cells": 13821,
+    "head right, both wrong": 3031,
+    "head wrong": 78,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "greatest/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 3201,
+    "head wrong": 0,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "greatest/other": {
+    "cells": 17275,
+    "head right, both wrong": 15215,
+    "head wrong": 0,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "if/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 3201,
+    "head wrong": 0,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "if/other": {
+    "cells": 17275,
+    "head right, both wrong": 15215,
+    "head wrong": 0,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "in/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 337,
+    "head wrong": 554,
+    "head wrong, ff34 right": 256,
+    "head wrong, main right": 554
+   },
+   "in/other": {
+    "cells": 13821,
+    "head right, both wrong": 2351,
+    "head wrong": 1,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "le/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 154,
+    "head wrong": 294,
+    "head wrong, ff34 right": 129,
+    "head wrong, main right": 282
+   },
+   "le/other": {
+    "cells": 13821,
+    "head right, both wrong": 1156,
+    "head wrong": 4,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "lt/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 154,
+    "head wrong": 294,
+    "head wrong, ff34 right": 129,
+    "head wrong, main right": 282
+   },
+   "lt/other": {
+    "cells": 13821,
+    "head right, both wrong": 1156,
+    "head wrong": 4,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   },
+   "ns/d38_18": {
+    "cells": 3455,
+    "head right, both wrong": 337,
+    "head wrong": 554,
+    "head wrong, ff34 right": 256,
+    "head wrong, main right": 554
+   },
+   "ns/other": {
+    "cells": 13821,
+    "head right, both wrong": 2351,
+    "head wrong": 1,
+    "head wrong, ff34 right": 0,
+    "head wrong, main right": 0
+   }
+  }
+ },
+ "decimal_to_double": {
+  "ff34": {
+   "d10_2": "0 of 5455",
+   "d20_6": "0 of 5455",
+   "d30_15": "724 of 5455",
+   "d38_10": "118 of 5455",
+   "d38_18": "967 of 5455"
+  },
+  "main": {
+   "d10_2": "0 of 5455",
+   "d20_6": "0 of 5455",
+   "d30_15": "724 of 5455",
+   "d38_10": "118 of 5455",
+   "d38_18": "967 of 5455"
+  }
+ },
+ "dml": {
+  "false|native": {
+   "cells": 56,
+   "head right, both wrong": 8,
+   "head wrong": 27,
+   "head wrong, ff34 right": 9,
+   "head wrong, main right": 2
+  },
+  "false|repark": {
+   "cells": 97,
+   "head right, both wrong": 19,
+   "head wrong": 30,
+   "head wrong, ff34 right": 26,
+   "head wrong, main right": 2
+  },
+  "true|native": {
+   "cells": 56,
+   "head right, both wrong": 8,
+   "head wrong": 27,
+   "head wrong, ff34 right": 9,
+   "head wrong, main right": 2
+  },
+  "true|repark": {
+   "cells": 97,
+   "head right, both wrong": 19,
+   "head wrong": 30,
+   "head wrong, ff34 right": 26,
+   "head wrong, main right": 2
+  }
+ },
+ "faithful": {
+  "coerce_spark_true": {
+   "cells": 165846,
+   "widened_differs": 0
+  },
+  "dml_spark_true": {
+   "cells": 97,
+   "widened_differs": []
+  },
+  "family_spark_true": {
+   "eq": 0,
+   "in": 0,
+   "lt": 0,
+   "ns": 0
+  }
+ },
+ "family": {
+  "false|eq": {
+   "cells": 60000,
+   "head wrong": 0,
+   "head wrong, ff34 right": 0,
+   "head wrong, main right": 0
+  },
+  "false|in": {
+   "cells": 60000,
+   "head wrong": 0,
+   "head wrong, ff34 right": 0,
+   "head wrong, main right": 0
+  },
+  "false|lt": {
+   "cells": 60000,
+   "head wrong": 0,
+   "head wrong, ff34 right": 0,
+   "head wrong, main right": 0
+  },
+  "false|ns": {
+   "cells": 60000,
+   "head wrong": 0,
+   "head wrong, ff34 right": 0,
+   "head wrong, main right": 0
+  },
+  "true|eq": {
+   "cells": 60000,
+   "head wrong": 0,
+   "head wrong, ff34 right": 0,
+   "head wrong, main right": 0
+  },
+  "true|in": {
+   "cells": 60000,
+   "head wrong": 0,
+   "head wrong, ff34 right": 0,
+   "head wrong, main right": 0
+  },
+  "true|lt": {
+   "cells": 60000,
+   "head wrong": 0,
+   "head wrong, ff34 right": 0,
+   "head wrong, main right": 0
+  },
+  "true|ns": {
+   "cells": 60000,
+   "head wrong": 0,
+   "head wrong, ff34 right": 0,
+   "head wrong, main right": 0
+  }
+ }
+}

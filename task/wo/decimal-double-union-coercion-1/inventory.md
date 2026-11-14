@@ -170,4 +170,70 @@ generated SQL around a source the passthrough already typed; the build's invento
 The existing AST rewrites of `SetExpr::Values` (`insert_arity.rs:53`, `void_type.rs:131`,
 `insert_timestamp_ns.rs:237`, `void_type/ltz_values_store.rs:33`) show the shape.
 
+## H. Step 0 of the build, on the stack base `ff34baf5` (2026-11-14): seen at seat V / seat E
+
+The owner's stack ruling (2026-11-14, "Go with recommendation") builds this unit on DOUBLE-DECIMAL-STORE-ROUND-1's
+reviewed head `ff34baf5` (main `6f9f2aaa` plus the store fix). Every RePark line in this section was re-read at
+`ff34baf5`; the cites in A–G hold there except where this section moves them. Main is now `340aba98`: #1331 adds
+a native-door write refusal (`crates/repark-python/src/session_write_options.rs`, views, database sources and
+in-memory overwrites) and touches no seat here, so main's package is the `6f9f2aaa` build. The re-measured table
+is [evidence/step0/table.md](evidence/step0/table.md).
+
+### What moved since `16974986`
+
+- **`ff34baf5` adds a consumer of every comparison and union cast.** `bool_decimal_cast`
+  (`crates/repark-functions/src/bool_decimal.rs:41-115`; `float_decimal_cast` `:78-115`) is the last rule of
+  every Python session's list (installed at `crates/repark-python/src/session.rs:26`: Spark-door idx 44,
+  native-door idx 10). It turns every float-to-`Decimal128` cast into `__repark_float_to_decimal__`, the JDK 17
+  text kernel, without asking who made the cast: a written cast, a store cast and a **coercion** cast alike. So
+  `d = v` now compares `d` with the text-rounded `v`, which is verifier 2's F1 family (it matches Spark for
+  some cells and not others; main's Arrow cast does the same with different cells). It is absent from the
+  F.expr context (`crates/repark-python/src/column/expr_build.rs:288-322`).
+- **#1326 (SIGNED-ZERO-NORMALIZE-1 part B part 1)** adds `repark_optimizer_seat_config`
+  (`crates/repark-core/src/session/df_guards.rs:83-145`, installed `:180`), Spark-door idx 41; float-key
+  normalisation runs as optimizer rules (`df_guards.rs:158, 169`) on both doors (`extension.rs:146-151`,
+  `session_runtime.rs:408-413`). Six of the eight signed-zero shapes moved; the table's signed-zero section
+  gives each.
+- **Lines that shifted:** `df_guards.rs` context build `:147-159`, `finish_session_build` `:174-181`, the list
+  helper `:184-187`; `crates/repark-spark/src/view_ddl/temp_view.rs` scan `:115-143`, `conform_to_creation_schema`
+  `:490`, `plan_definition` `:424`.
+- **The live lists** ([evidence/step0/rule-lists.md](evidence/step0/rule-lists.md)) are identical on main and
+  `ff34baf5`: the Spark door runs 45 rules (6 `spark_integral_literal`; 10 and 28 `type_coercion`; 41
+  `repark_optimizer_seat_config`; 42 `signed_zero_literals`; 44 `bool_decimal_cast`), the native door 12 (no
+  `spark_integral_literal`; `type_coercion` at 3).
+
+### How this section was searched
+
+- The seven searches above, re-run at `ff34baf5`.
+- `grep -rn --include=*.rs "plan_statement_with_column_repair\|\.statement_to_plan(\|create_logical_plan(\|ctx\.sql(\|sql_to_statement\|sql_to_expr" crates`:
+  165 hits, 37 outside test modules, each read.
+- The Spark-door dispatch, `crates/repark-spark/src/router.rs:292-422`, read arm by arm.
+- `grep -rn --include=*.rs "source_from_sql\|selection_sql\|render_for_reparse" crates`, to follow the text
+  the write doors re-plan.
+- Every "yes" or "no" below that a cell can show is measured in the step-0 table, on main and on `ff34baf5`.
+
+### The answers
+
+| # | door | where the type is created or consumed | seen at seat V | seen at seat E |
+|---|---|---|---|---|
+| H1 | Spark-door SQL (every statement the router passes through) | `router.rs:292` `execute_inner` → `crates/repark-spark/src/spark_ast.rs:190` `execute_passthrough_inner`: parse `:204`, AST rewrites `:211-235`, plan `:249`, `analyze_eagerly` `:273`, execute `:295` (the second analyzer pass) | **yes, but the pass needs two positions.** `refuse_insert_void_values` (`:222`), `timestamp_typed_values_cells` (`:224`) and `rewrite_insert_markers` (`:227-235`) read literal `VALUES` cells and must see them unwrapped, so for an INSERT the pass sits after `:235` and before `:249`. A `DELETE` or `UPDATE` leaves earlier, at `try_execute_identity_dml` (`:213`), so for those the pass sits before `:213` (their `VALUES` can only be in a subquery, which the INSERT rewrites never read). **A second parse seat:** `restate_range_frames_and_replan` (`spark_ast.rs:551-573`) re-parses the original text for RANGE frames over datetimes and needs the same pass. | **yes**, both passes. **But not through `spark_integral_literal`'s gate.** That rule returns at once unless the plan holds an Int64, UInt64 or decimal literal or a `count(*)` (`crates/repark-spark/src/spark_literal_typing.rs:25-27`, `plan_may_narrow` `:62-80`), so `WHERE d = v` is never walked. The sketch's "shares the existing walk" must read: shares the walk, with its own gate (a DECIMAL and a FLOAT or DOUBLE operand at a unifying node). |
+| H2 | DataFrame API | `union` / `unionByName`: `python/repark/src/repark/spark/dataframe/core.py:2581, 2596` → `crates/repark-python/src/dataframe/mod.rs:658, 683` (DataFusion's loose union). `intersect` / `subtract`: `core.py:2608-2628, 2664` (`_sql_binary_set_op` → `sql_built`, Spark-door SQL over temp views). Column functions (`coalesce`, `greatest`, `least`, `when`, `nvl2`, `isin`, `between`) and join conditions build `Expr`s typed only at analysis. The writes (`insertInto`, `writeTo(...).append()` / `overwritePartitions()`) carry the frame's analyzed plan. | no `VALUES` here (an `s.sql("… VALUES …")` frame is H1) | **yes**, every one: the frame plan is analyzed by the session list. Measured: `df_*`, `dfcol/*` and the new `dfx/*` cells. `createDataFrame` forms no engine common type (Python schema inference): not a seat, not measured. |
+| H3 | `F.expr`, `selectExpr`, string `filter` | `expr_build.rs:288-322` `build_expr_context`: its own list carries `insert_literal_rule_before_coercion` (`:297`); the fragment is then analyzed again by the session list | **no**: `sql_to_expr_with_alias` (`expr_build.rs:94`) parses an expression outside the passthrough, so a `VALUES` in a fragment's subquery is not marked (not measured; a lead) | **yes**, if the seat-E rule is inserted with `insert_literal_rule_before_coercion` (or beside it in both lists). **Correction to the sketch:** "the F.expr fragments are already right" holds only for a decimal **literal**, because this context does not set `parse_float_as_decimal` and `0.1` is a DOUBLE there. A decimal column or an explicit `CAST(… AS DECIMAL)` in a fragment is wrong on main and on `ff34baf5` (the `dfx/*` cells). |
+| H4 | `VALUES`: seat V's planning seats | Through the passthrough (H1): standalone `VALUES`; `INSERT … VALUES` and `INSERT … SELECT` (`router.rs:426` → `:493` `execute_passthrough_by`); CTAS and RTAS (`crates/repark-spark/src/ctas.rs:204`); `INSERT OVERWRITE` (`insert_overwrite.rs:224, 455, 550, 603, 709, 724`); `BY NAME` (`insert_by_name.rs:217`); view bodies (`temp_view.rs:424` → `view_ddl/read.rs:286` → `view_dispatch.rs` `execute_view_body_query` → the passthrough); `DELETE` and `UPDATE` (`router/delete_update.rs:39, 90` → the passthrough → `try_execute_identity_dml`, `spark_ast.rs:373`). | **yes** for all of these, through H1's pass (the DML position for `DELETE` / `UPDATE`). They re-render their predicate and SET text (`render_for_reparse`, `crates/repark-iceberg/src/write/predicate_dml/plain.rs:176, 253`) and re-plan it with `ctx.sql` (`predicate_dml.rs:376`, `predicate_dml/cow_commit.rs:60, 131`); a marker call survives the rendering as a function call and reaches the consumer in the session list. **MERGE: no, not at the sketch's seat.** MERGE leaves the router at `router.rs:388-389` for `crates/repark-spark/src/merge.rs:46` with the parsed AST and never enters the passthrough. Its source text is rendered at `merge.rs:537-560` (`source_table`, `render_for_reparse` `:553`) and executed by `ctx.sql` of generated SQL (`crates/repark-iceberg/src/write/merge/mod.rs:516`, `merge/insert.rs:122`); `merge_fragments.rs:55-65`, which the sketch names, plans only `SELECT * … LIMIT 0` to read the source's column names. **The MERGE marker seat is `merge.rs`, before `source_table` (`:147`).** Seats that plan a source alone to decide void, NULL or timestamp types (`void_type.rs:379, 421, 529`, `void_type/insert_source_types.rs:52, 138`, `void_type/ltz_values_store.rs:471-482`, `update_cast.rs:160`, `insert_overwrite.rs:95`, `scan_prune.rs:280`) read planner types before analysis, which a marker leaves as today's, and decide nothing between DECIMAL and DOUBLE: no. | n/a: seat E never types a `Values` node; it sees the parents after seat V. |
+| H5 | set operations | UNION and UNION ALL loose at planning (D4); INTERSECT / EXCEPT DISTINCT as a semi or anti join (D5); recursive CTE (D6) | n/a | **yes**: idx 6 sees the loose `Union` before idx 10 (`rewrite_plan` already rebuilds a stale union, `spark_literal_typing.rs:120-135`) and the semi or anti join (the discriminator, `crates/repark-core/src/session/df_guards/struct_setop.rs:116-160`). `RecursiveQuery` is excluded by design. |
+| H6 | CASE, `IF`, `coalesce`, `nvl2`, `nullif`, `greatest`, `least`, `array`, `map` | `Expr::Case` and each UDF's `coerce_types` at idx 10 (A3–A5) | n/a | **yes**: each is an `Expr` the idx-6 walk reaches (`transform_up_with_subqueries`, `spark_literal_typing.rs:28`). `nvl` / `ifnull` stay `double` by accident. |
+| H7 | comparisons, `IN`, `BETWEEN`, `IN (subquery)`, join keys | `BinaryExpr`, `InList`, `Between`, `InSubquery` (subquery plans through `transform_up_with_subqueries`), `Join.on` pairs and `filter` | n/a | **yes**, with H1's gate. |
+| H8 | the DML predicates | `DELETE` / `UPDATE … WHERE` (H4's re-render, `ctx.sql` on the session context); `MERGE … ON` (`on_sql` rendered at `merge.rs:176`, pasted at `crates/repark-iceberg/src/write/merge/merge_sql.rs:138, 166, 211, 233, 325`) | as H4 | **yes**: every re-plan is `ctx.sql` on the session context, so the session list analyzes it. `scan_prune.rs` prunes integer keys only (`identical_int_key_width` `:248`): not a seat. |
+| H9 | consumers after the type is chosen (new at `ff34baf5`) | `bool_decimal_cast` (above); the Iceberg conform stage stores a float leaf into a DECIMAL target through the same kernel (`crates/repark-iceberg/src/write/conform_stage.rs:306-314`, `conform.rs`) | the target branch's `CAST(CAST(x AS DOUBLE) AS DECIMAL(p,s))` is a store cast, which this kernel rounds as Spark does (`values_dec38`) | after seat E no comparison or union casts a float to a decimal, so `bool_decimal_cast` sees only written casts and stores, where it matches Spark. |
+| H10 | native door (record only, Q2) | the `repark.sql()` list (`crates/repark-python/src/session_runtime.rs:420-432`; 12 rules, `type_coercion` at 3, `bool_decimal_cast` at 10) | no (no marker; Q2) | no (no idx-6 rule; Q2). **Moved by `ff34baf5`:** the native door's `d = v` now text-rounds `v` through `bool_decimal_cast`, and its `SELECT` / `DELETE` / `UPDATE … WHERE d = v` lose rows that main and Spark keep (the `dml-native` cells). Seat E does not reach this door, so the head keeps them unless the owner rules otherwise (step-0 question N1). |
+| H11 | Rust-embedded ANSI door (`crates/repark-sql/src/dialect.rs:21-29`) | plain `type_coercion`; no Python session, so no `bool_decimal_cast` | no | no; unchanged by `ff34baf5`. |
+| H12 | **the widening cast itself** (new; every seat-E answer runs through it) | `CAST(<decimal> AS DOUBLE)` is Arrow's `cast_decimal_to_float` (`arrow-cast-58.4.1/src/cast/mod.rs:2319-2321`, the version `Cargo.lock` pins): the unscaled `i128` is rounded to `f64` and then divided by an `f64` power of ten, two roundings. Spark's `Decimal.toDouble` is `BigDecimal.doubleValue()`, correctly rounded. No RePark rule replaces it on either build. | n/a | **yes, and it is wrong at high scales.** Measured ([evidence/step0/table.md](evidence/step0/table.md), `dec_to_double.py`, 5,455 plain-text values): RePark's DECIMAL→DOUBLE differs from Spark's in 967 values at DECIMAL(38,18), 724 at (30,15) and 118 at (38,10), and in none at (20,6) or (10,2), identically on main and `ff34baf5`. A widened comparison or union over a decimal of scale 10 or more therefore inherits a one-ulp error that main's decimal comparison did not have. Seat E is not correct at those scales until this cast is (step-0 question N3). |
+
+### The MERGE … WHEN NOT MATCHED BY SOURCE control
+
+A copy-on-write `MERGE … WHEN NOT MATCHED BY SOURCE THEN DELETE` whose source matches one target row twice
+writes that row twice on Spark 4.1.2 with Iceberg 1.11.0 as on RePark (`ctl/cow/merge_by_source_dupkey`: `[1, 1]`
+on both; merge-on-read keeps one). So `z/cow/merge_by_source` (`[1, 1, 2, 3, 3]` on main, `[1, 2, 3]` on Spark)
+is this unit's coercion fault (1e-20 matches 0.00 under `decimal(30,15)`), not a MERGE fault.
+
 Up: [map.md](map.md).

@@ -2,6 +2,8 @@
 
 - [probes/](probes/map.md) — the cell definitions and the runners (comment-free Python).
 - [raw/](raw/map.md) — one JSON object per cell and engine, as the runners wrote them.
+- [step0/](step0/map.md) — step 0 of the build on the stack base `ff34baf5` (2026-11-14): the table re-measured
+  on main and `ff34baf5` against Spark, verifier 2's fuzz and family sets, the DML cells, the emulated head.
 
 ## Provenance
 

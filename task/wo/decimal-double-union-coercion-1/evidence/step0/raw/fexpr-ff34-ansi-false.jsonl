@@ -1,0 +1,13 @@
+{"ansi": "false", "engine": "repark", "key": "provenance"}
+{"key": "dfx/fexpr_coalesce_cols", "type": "decimal(30,15)", "values": ["dec:0E-15"]}
+{"class": null, "error": "PySparkException", "head": "Arrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing on 1e30", "key": "dfx/fexpr_greatest_cols"}
+{"key": "dfx/fexpr_case_cols", "type": "decimal(30,15)", "values": ["dec:0E-15"]}
+{"key": "dfx/fexpr_eq_cols", "type": "boolean", "values": ["false"]}
+{"key": "dfx/fexpr_cast_dec_lit", "type": "decimal(30,15)", "values": ["dec:0E-15"]}
+{"key": "dfx/fexpr_dec_lit_vs_dbl", "type": "boolean", "values": ["true"]}
+{"key": "dfx/selectexpr_in_cols", "type": "boolean", "values": ["false"]}
+{"key": "dfx/filter_cols_eq", "type": "bigint", "values": ["1"]}
+{"key": "dfx/col_eq_cols", "type": "boolean", "values": ["true"]}
+{"key": "dfx/col_between_cols", "type": "boolean", "values": ["true"]}
+{"key": "dfx/df_join_dec_dbl", "type": "bigint", "values": ["1"]}
+{"key": "dfx/df_when_col_dec", "type": "decimal(30,15)", "values": ["dec:0E-15"]}

@@ -1,0 +1,98 @@
+{"ansi": "false", "engine": "repark", "key": "provenance", "native": "<scratchpad>/ddu-work/pkg-ff34/repark/_native.abi3.so", "warehouse": "dml-repark-false-dgweucrx"}
+{"answer": "false", "key": "flip/c1/-22.129547339983247"}
+{"answer": "false", "key": "flip/c3/-22.129547339983247"}
+{"answer": "false", "key": "flip/c5/-22.129547339983247"}
+{"answer": "false", "key": "flip/c6/-22.129547339983247"}
+{"answer": "false", "key": "flip/c7/-22.129547339983247"}
+{"answer": "true", "key": "flip/c1/1.0000000000000004"}
+{"answer": "true", "key": "flip/c3/1.0000000000000004"}
+{"answer": "true", "key": "flip/c5/1.0000000000000004"}
+{"answer": "false", "key": "flip/c6/1.0000000000000004"}
+{"answer": "true", "key": "flip/c7/1.0000000000000004"}
+{"answer": "true", "key": "flip/c1/2.2300000000000004"}
+{"answer": "true", "key": "flip/c3/2.2300000000000004"}
+{"answer": "true", "key": "flip/c5/2.2300000000000004"}
+{"answer": "false", "key": "flip/c6/2.2300000000000004"}
+{"answer": "true", "key": "flip/c7/2.2300000000000004"}
+{"ids": [4], "key": "t/cow/select_eq", "sql": "SELECT id FROM lc.ns.x001 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [1, 2, 3], "key": "t/cow/select_lt", "sql": "SELECT id FROM lc.ns.x002 WHERE CAST(d AS DOUBLE) < v"}
+{"ids": [4], "key": "t/cow/select_ns", "sql": "SELECT id FROM lc.ns.x003 WHERE CAST(d AS DOUBLE) <=> v"}
+{"ids": [4], "key": "t/cow/select_in", "sql": "SELECT id FROM lc.ns.x004 WHERE v IN (CAST(d AS DOUBLE))"}
+{"ids": [4], "key": "t/cow/select_between", "sql": "SELECT id FROM lc.ns.x005 WHERE v BETWEEN CAST(d AS DOUBLE) AND CAST(d AS DOUBLE)"}
+{"ids": [1, 2, 3], "key": "t/cow/delete_eq", "sql": "DELETE FROM lc.ns.x006 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [1, 2, 3, 104], "key": "t/cow/update_eq", "sql": "UPDATE lc.ns.x007 SET id = id + 100 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [1, 2, 3, 104], "key": "t/cow/update_in", "sql": "UPDATE lc.ns.x008 SET id = id + 100 WHERE v IN (CAST(d AS DOUBLE))"}
+{"ids": [1, 2, 3, 104], "key": "t/cow/merge_on_dv", "sql": "MERGE INTO lc.ns.x009 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s009) s ON CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"ids": [1, 2, 3, 104], "key": "t/cow/merge_on_vd", "sql": "MERGE INTO lc.ns.x010 t USING (SELECT id AS sid, d AS sd FROM lc.ns.s010) s ON t.v = CAST(s.sd AS DOUBLE) WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"ids": [1, 2, 3, 51, 52, 53, 104], "key": "t/cow/merge_on_key_and", "sql": "MERGE INTO lc.ns.x011 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s011) s ON t.id = s.sid AND CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100 WHEN NOT MATCHED THEN INSERT (id, d, v) VALUES (s.sid + 50, 0, 0)"}
+{"ids": [1, 2, 3], "key": "t/cow/merge_delete", "sql": "MERGE INTO lc.ns.x012 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s012) s ON CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN DELETE"}
+{"ids": [4], "key": "t/cow/merge_by_source", "sql": "MERGE INTO lc.ns.x013 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s013) s ON CAST(t.d AS DOUBLE) = s.sv WHEN NOT MATCHED BY SOURCE THEN DELETE"}
+{"ids": [4], "key": "t/mor/select_eq", "sql": "SELECT id FROM lc.ns.x014 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [1, 2, 3], "key": "t/mor/select_lt", "sql": "SELECT id FROM lc.ns.x015 WHERE CAST(d AS DOUBLE) < v"}
+{"ids": [4], "key": "t/mor/select_ns", "sql": "SELECT id FROM lc.ns.x016 WHERE CAST(d AS DOUBLE) <=> v"}
+{"ids": [4], "key": "t/mor/select_in", "sql": "SELECT id FROM lc.ns.x017 WHERE v IN (CAST(d AS DOUBLE))"}
+{"ids": [4], "key": "t/mor/select_between", "sql": "SELECT id FROM lc.ns.x018 WHERE v BETWEEN CAST(d AS DOUBLE) AND CAST(d AS DOUBLE)"}
+{"ids": [1, 2, 3], "key": "t/mor/delete_eq", "sql": "DELETE FROM lc.ns.x019 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [1, 2, 3, 104], "key": "t/mor/update_eq", "sql": "UPDATE lc.ns.x020 SET id = id + 100 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [1, 2, 3, 104], "key": "t/mor/update_in", "sql": "UPDATE lc.ns.x021 SET id = id + 100 WHERE v IN (CAST(d AS DOUBLE))"}
+{"ids": [1, 2, 3, 104], "key": "t/mor/merge_on_dv", "sql": "MERGE INTO lc.ns.x022 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s022) s ON CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"ids": [1, 2, 3, 104], "key": "t/mor/merge_on_vd", "sql": "MERGE INTO lc.ns.x023 t USING (SELECT id AS sid, d AS sd FROM lc.ns.s023) s ON t.v = CAST(s.sd AS DOUBLE) WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"ids": [1, 2, 3, 51, 52, 53, 104], "key": "t/mor/merge_on_key_and", "sql": "MERGE INTO lc.ns.x024 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s024) s ON t.id = s.sid AND CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100 WHEN NOT MATCHED THEN INSERT (id, d, v) VALUES (s.sid + 50, 0, 0)"}
+{"ids": [1, 2, 3], "key": "t/mor/merge_delete", "sql": "MERGE INTO lc.ns.x025 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s025) s ON CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN DELETE"}
+{"ids": [4], "key": "t/mor/merge_by_source", "sql": "MERGE INTO lc.ns.x026 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s026) s ON CAST(t.d AS DOUBLE) = s.sv WHEN NOT MATCHED BY SOURCE THEN DELETE"}
+{"ids": [2, 3], "key": "u/cow/select_eq", "sql": "SELECT id FROM lc.ns.x027 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [], "key": "u/cow/select_lt", "sql": "SELECT id FROM lc.ns.x028 WHERE CAST(d AS DOUBLE) < v"}
+{"ids": [2, 3], "key": "u/cow/select_ns", "sql": "SELECT id FROM lc.ns.x029 WHERE CAST(d AS DOUBLE) <=> v"}
+{"ids": [2, 3], "key": "u/cow/select_in", "sql": "SELECT id FROM lc.ns.x030 WHERE v IN (CAST(d AS DOUBLE))"}
+{"ids": [2, 3], "key": "u/cow/select_between", "sql": "SELECT id FROM lc.ns.x031 WHERE v BETWEEN CAST(d AS DOUBLE) AND CAST(d AS DOUBLE)"}
+{"ids": [1], "key": "u/cow/delete_eq", "sql": "DELETE FROM lc.ns.x032 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [1, 102, 103], "key": "u/cow/update_eq", "sql": "UPDATE lc.ns.x033 SET id = id + 100 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [1, 102, 103], "key": "u/cow/update_in", "sql": "UPDATE lc.ns.x034 SET id = id + 100 WHERE v IN (CAST(d AS DOUBLE))"}
+{"ids": [1, 102, 103], "key": "u/cow/merge_on_dv", "sql": "MERGE INTO lc.ns.x035 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s035) s ON CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"ids": [1, 102, 103], "key": "u/cow/merge_on_vd", "sql": "MERGE INTO lc.ns.x036 t USING (SELECT id AS sid, d AS sd FROM lc.ns.s036) s ON t.v = CAST(s.sd AS DOUBLE) WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"ids": [1, 51, 102, 103], "key": "u/cow/merge_on_key_and", "sql": "MERGE INTO lc.ns.x037 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s037) s ON t.id = s.sid AND CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100 WHEN NOT MATCHED THEN INSERT (id, d, v) VALUES (s.sid + 50, 0, 0)"}
+{"ids": [1], "key": "u/cow/merge_delete", "sql": "MERGE INTO lc.ns.x038 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s038) s ON CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN DELETE"}
+{"ids": [2, 3], "key": "u/cow/merge_by_source", "sql": "MERGE INTO lc.ns.x039 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s039) s ON CAST(t.d AS DOUBLE) = s.sv WHEN NOT MATCHED BY SOURCE THEN DELETE"}
+{"ids": [2, 3], "key": "u/mor/select_eq", "sql": "SELECT id FROM lc.ns.x040 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [], "key": "u/mor/select_lt", "sql": "SELECT id FROM lc.ns.x041 WHERE CAST(d AS DOUBLE) < v"}
+{"ids": [2, 3], "key": "u/mor/select_ns", "sql": "SELECT id FROM lc.ns.x042 WHERE CAST(d AS DOUBLE) <=> v"}
+{"ids": [2, 3], "key": "u/mor/select_in", "sql": "SELECT id FROM lc.ns.x043 WHERE v IN (CAST(d AS DOUBLE))"}
+{"ids": [2, 3], "key": "u/mor/select_between", "sql": "SELECT id FROM lc.ns.x044 WHERE v BETWEEN CAST(d AS DOUBLE) AND CAST(d AS DOUBLE)"}
+{"ids": [1], "key": "u/mor/delete_eq", "sql": "DELETE FROM lc.ns.x045 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [1, 102, 103], "key": "u/mor/update_eq", "sql": "UPDATE lc.ns.x046 SET id = id + 100 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [1, 102, 103], "key": "u/mor/update_in", "sql": "UPDATE lc.ns.x047 SET id = id + 100 WHERE v IN (CAST(d AS DOUBLE))"}
+{"ids": [1, 102, 103], "key": "u/mor/merge_on_dv", "sql": "MERGE INTO lc.ns.x048 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s048) s ON CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"ids": [1, 102, 103], "key": "u/mor/merge_on_vd", "sql": "MERGE INTO lc.ns.x049 t USING (SELECT id AS sid, d AS sd FROM lc.ns.s049) s ON t.v = CAST(s.sd AS DOUBLE) WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"ids": [1, 51, 102, 103], "key": "u/mor/merge_on_key_and", "sql": "MERGE INTO lc.ns.x050 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s050) s ON t.id = s.sid AND CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100 WHEN NOT MATCHED THEN INSERT (id, d, v) VALUES (s.sid + 50, 0, 0)"}
+{"ids": [1], "key": "u/mor/merge_delete", "sql": "MERGE INTO lc.ns.x051 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s051) s ON CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN DELETE"}
+{"ids": [2, 3], "key": "u/mor/merge_by_source", "sql": "MERGE INTO lc.ns.x052 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s052) s ON CAST(t.d AS DOUBLE) = s.sv WHEN NOT MATCHED BY SOURCE THEN DELETE"}
+{"ids": [1, 2], "key": "z/cow/select_eq", "sql": "SELECT id FROM lc.ns.x053 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [3], "key": "z/cow/select_lt", "sql": "SELECT id FROM lc.ns.x054 WHERE CAST(d AS DOUBLE) < v"}
+{"ids": [1, 2], "key": "z/cow/select_ns", "sql": "SELECT id FROM lc.ns.x055 WHERE CAST(d AS DOUBLE) <=> v"}
+{"ids": [1, 2], "key": "z/cow/select_in", "sql": "SELECT id FROM lc.ns.x056 WHERE v IN (CAST(d AS DOUBLE))"}
+{"ids": [1, 2], "key": "z/cow/select_between", "sql": "SELECT id FROM lc.ns.x057 WHERE v BETWEEN CAST(d AS DOUBLE) AND CAST(d AS DOUBLE)"}
+{"ids": [3], "key": "z/cow/delete_eq", "sql": "DELETE FROM lc.ns.x058 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [3, 101, 102], "key": "z/cow/update_eq", "sql": "UPDATE lc.ns.x059 SET id = id + 100 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [1, 3, 102], "key": "z/cow/update_in", "sql": "UPDATE lc.ns.x060 SET id = id + 100 WHERE v IN (CAST(d AS DOUBLE))"}
+{"ids": [101, 102, 103], "key": "z/cow/merge_on_dv", "sql": "MERGE INTO lc.ns.x061 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s061) s ON CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"error": "AnalysisException", "head": "Error during planning: [MERGE_CARDINALITY_VIOLATION] The ON search condition of the MERGE statement matched a single row from the target table with multiple rows of the source table.", "key": "z/cow/merge_on_vd", "sql": "MERGE INTO lc.ns.x062 t USING (SELECT id AS sid, d AS sd FROM lc.ns.s062) s ON t.v = CAST(s.sd AS DOUBLE) WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"ids": [3, 53, 101, 102], "key": "z/cow/merge_on_key_and", "sql": "MERGE INTO lc.ns.x063 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s063) s ON t.id = s.sid AND CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100 WHEN NOT MATCHED THEN INSERT (id, d, v) VALUES (s.sid + 50, 0, 0)"}
+{"ids": [], "key": "z/cow/merge_delete", "sql": "MERGE INTO lc.ns.x064 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s064) s ON CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN DELETE"}
+{"ids": [1, 2, 3], "key": "z/cow/merge_by_source", "sql": "MERGE INTO lc.ns.x065 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s065) s ON CAST(t.d AS DOUBLE) = s.sv WHEN NOT MATCHED BY SOURCE THEN DELETE"}
+{"ids": [1, 2], "key": "z/mor/select_eq", "sql": "SELECT id FROM lc.ns.x066 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [3], "key": "z/mor/select_lt", "sql": "SELECT id FROM lc.ns.x067 WHERE CAST(d AS DOUBLE) < v"}
+{"ids": [1, 2], "key": "z/mor/select_ns", "sql": "SELECT id FROM lc.ns.x068 WHERE CAST(d AS DOUBLE) <=> v"}
+{"ids": [1, 2], "key": "z/mor/select_in", "sql": "SELECT id FROM lc.ns.x069 WHERE v IN (CAST(d AS DOUBLE))"}
+{"ids": [1, 2], "key": "z/mor/select_between", "sql": "SELECT id FROM lc.ns.x070 WHERE v BETWEEN CAST(d AS DOUBLE) AND CAST(d AS DOUBLE)"}
+{"ids": [3], "key": "z/mor/delete_eq", "sql": "DELETE FROM lc.ns.x071 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [3, 101, 102], "key": "z/mor/update_eq", "sql": "UPDATE lc.ns.x072 SET id = id + 100 WHERE CAST(d AS DOUBLE) = v"}
+{"ids": [1, 3, 102], "key": "z/mor/update_in", "sql": "UPDATE lc.ns.x073 SET id = id + 100 WHERE v IN (CAST(d AS DOUBLE))"}
+{"ids": [101, 102, 103], "key": "z/mor/merge_on_dv", "sql": "MERGE INTO lc.ns.x074 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s074) s ON CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"error": "AnalysisException", "head": "Error during planning: [MERGE_CARDINALITY_VIOLATION] The ON search condition of the MERGE statement matched a single row from the target table with multiple rows of the source table.", "key": "z/mor/merge_on_vd", "sql": "MERGE INTO lc.ns.x075 t USING (SELECT id AS sid, d AS sd FROM lc.ns.s075) s ON t.v = CAST(s.sd AS DOUBLE) WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"ids": [3, 53, 101, 102], "key": "z/mor/merge_on_key_and", "sql": "MERGE INTO lc.ns.x076 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s076) s ON t.id = s.sid AND CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100 WHEN NOT MATCHED THEN INSERT (id, d, v) VALUES (s.sid + 50, 0, 0)"}
+{"ids": [], "key": "z/mor/merge_delete", "sql": "MERGE INTO lc.ns.x077 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s077) s ON CAST(t.d AS DOUBLE) = s.sv WHEN MATCHED THEN DELETE"}
+{"ids": [1, 2, 3], "key": "z/mor/merge_by_source", "sql": "MERGE INTO lc.ns.x078 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s078) s ON CAST(t.d AS DOUBLE) = s.sv WHEN NOT MATCHED BY SOURCE THEN DELETE"}
+{"ids": [1, 1], "key": "ctl/cow/merge_by_source_dupkey", "sql": "MERGE INTO lc.ns.x079 t USING (SELECT 1 AS sid UNION ALL SELECT 1) s ON t.id = s.sid WHEN NOT MATCHED BY SOURCE THEN DELETE"}
+{"ids": [1], "key": "ctl/cow/merge_by_source_onekey", "sql": "MERGE INTO lc.ns.x080 t USING (SELECT 1 AS sid) s ON t.id = s.sid WHEN NOT MATCHED BY SOURCE THEN DELETE"}
+{"ids": [1], "key": "ctl/mor/merge_by_source_dupkey", "sql": "MERGE INTO lc.ns.x081 t USING (SELECT 1 AS sid UNION ALL SELECT 1) s ON t.id = s.sid WHEN NOT MATCHED BY SOURCE THEN DELETE"}
+{"ids": [1], "key": "ctl/mor/merge_by_source_onekey", "sql": "MERGE INTO lc.ns.x082 t USING (SELECT 1 AS sid) s ON t.id = s.sid WHEN NOT MATCHED BY SOURCE THEN DELETE"}
