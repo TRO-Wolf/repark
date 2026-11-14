@@ -12,4 +12,6 @@
   cost-finish-samples-hires.jsonl — the finishing cost run (the merged head against main `6f9f2aaa`) and its
   fifteen-repeat no-cast re-run: one JSON line per probe sample, and each sample's exit code, wall time and load.
 
+- stores-cost-cast-raw.jsonl, stores-cost-nocast-raw.jsonl, stores-cost-samples.jsonl — the stores-only cost records behind stores.md.
+
 Up: [../map.md](../map.md).

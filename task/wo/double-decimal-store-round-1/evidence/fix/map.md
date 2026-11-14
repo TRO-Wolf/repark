@@ -16,6 +16,10 @@
   like-for-like ratio from the replay harness's per-cell work times, and the per-sample load table.
 - [cost-finish.md](cost-finish.md) — the finishing cost run on the merged head against main: the no-cast rows,
   the cast rows re-run, the C-012 like-for-like set.
+- [stores.md](stores.md) — the stores-only narrowing: the door table, the comparison check, red and green, the stores-only cost table.
+- [small-cells.md](small-cells.md) — the `ROUND` and `TRY_CAST(TIMESTAMP …)` cells on main, the head and Spark 4.1.2 (cards ROUND-DOUBLE-EXACT-1 and TRY-CAST-TIMESTAMP-NUMERIC-1).
+- [small_cells.py](small_cells.py) — the probe behind small-cells.md (one engine, one mode).
+- [flip_native.py](flip_native.py) — verifier 2's DML cells on the native door, plus a native store.
 - [raw/](raw/map.md) — the runs' records.
 
 Up: [../map.md](../map.md).
