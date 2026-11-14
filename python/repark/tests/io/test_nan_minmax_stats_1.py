@@ -31,10 +31,6 @@ _COMPARE = (
     "NAN-COMPARE-SPARK-1: a comparison orders a sign-set NaN below every number (Arrow's total "
     "order); the constant-column replacement that hid it on main is gone"
 )
-_DYNAMIC = (
-    "NAN-MINMAX-1 part 2 (I8): DataFusion's aggregate dynamic filter for max prunes the NaN "
-    "file by its exact footer bounds"
-)
 _NAN_GROUP_SETS = {
     "R_one": [["N", "N", 1.0, 2.0]],
     "R_many": [["N", "N", 1.0, 2.0], [3.0, 4.0, 5.5, 6.0]],
@@ -50,7 +46,22 @@ _NAN_GROUP_QUERIES = {
     "eqnan": "SELECT count(*) FROM nan_minmax_src WHERE d = CAST('NaN' AS DOUBLE)",
 }
 _DYNAMIC_ROWS = 200_000
-_DYNAMIC_RUNS = 5
+_RUNS = 10
+_NULL_PARTITION_FILES = [[3.0, 4.0], [None, None, 1.0, 2.0], [5.0, 6.0]]
+_NULL_GROUP_ROWS = 1_000_000
+_NULL_GROUP_SIZE = 100_000
+_NULL_PARTITION_CELLS = [
+    ("three_files", "SELECT max(d), min(d) FROM nan_minmax_src", [[6.0, 1.0]]),
+    ("three_files", "SELECT max(f), min(f) FROM nan_minmax_src", [[6.0, 1.0]]),
+    ("three_files", "SELECT min(d), max(id) FROM nan_minmax_src", [[1.0, 8]]),
+    ("one_file", "SELECT max(d), min(d) FROM nan_minmax_src", [[1000009.0, 100010.0]]),
+    ("one_file", "SELECT max(f), min(f) FROM nan_minmax_src", [[1000009.0, 100010.0]]),
+    ("one_file", "SELECT min(d), max(id) FROM nan_minmax_src", [[100010.0, 999999]]),
+    ("one_file", "SELECT max(k), min(k) FROM nan_minmax_src WHERE id >= 0", [[1000009, 100010]]),
+]
+_AGGREGATE_KEY = "datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown"
+_UMBRELLA_KEY = "datafusion.optimizer.enable_dynamic_filter_pushdown"
+_DYNAMIC_FILTER = "DynamicFilter"
 
 
 def _column(count: int, shape: str, wide: bool) -> pa.Array:
@@ -222,11 +233,8 @@ def test_a_row_group_without_footer_bounds_keeps_its_nan_rows_on_both_doors(
     assert native_door == _NAN_GROUP_SPARK[name]
 
 
-@pytest.mark.xfail(strict=True, reason=_DYNAMIC)
-def test_max_over_many_files_with_a_nan_in_a_spread_file_equals_spark(
-    spark: ReparkSession, tmp_path: Path
-) -> None:
-    folder = tmp_path / "dynamic"
+def _write_spread_nan_set(root: Path) -> Path:
+    folder = root / "dynamic"
     folder.mkdir()
     for index in range(9):
         d = 1000.0 + index + np.arange(_DYNAMIC_ROWS, dtype=np.float64) * 1e-6
@@ -236,12 +244,99 @@ def test_max_over_many_files_with_a_nan_in_a_spread_file_equals_spark(
     low[-1] = math.nan
     ids = np.arange(9 * _DYNAMIC_ROWS, 10 * _DYNAMIC_ROWS, dtype=np.int64)
     pq.write_table(pa.table({"id": ids, "d": low}), folder / "low.parquet")
-    spark.read.parquet(str(folder)).createOrReplaceTempView("nan_minmax_dynamic")
-    answers = [
-        _rows(spark.sql("SELECT max(d) FROM nan_minmax_dynamic").toArrow())
-        for _ in range(_DYNAMIC_RUNS)
-    ]
-    assert answers == [[["NaN"]]] * _DYNAMIC_RUNS
+    return folder
+
+
+def test_max_over_many_files_with_a_nan_in_a_spread_file_equals_spark_on_both_doors(
+    spark: ReparkSession, native: Any, tmp_path: Path
+) -> None:
+    folder = _write_spread_nan_set(tmp_path)
+    text = "SELECT max(d) FROM nan_minmax_src"
+    spark_door = [_spark_door(spark, folder, text) for _ in range(_RUNS)]
+    native_door = [_native_door(native, folder, text) for _ in range(_RUNS)]
+    assert spark_door == [[["NaN"]]] * _RUNS
+    assert native_door == [[["NaN"]]] * _RUNS
+
+
+def _write_null_partition_sets(root: Path) -> dict[str, Path]:
+    three = root / "three_files"
+    three.mkdir()
+    next_id = 1
+    for index, values in enumerate(_NULL_PARTITION_FILES):
+        mask = np.array([v is None for v in values])
+        ids = pa.array(range(next_id, next_id + len(values)), pa.int64())
+        next_id += len(values)
+        table = pa.table(
+            {
+                "id": ids,
+                "d": pa.array(values, pa.float64(), mask=mask),
+                "f": pa.array(values, pa.float32(), mask=mask),
+            }
+        )
+        pq.write_table(table, three / f"part-{index:03d}.parquet", row_group_size=2)
+    one = root / "one_file"
+    one.mkdir()
+    values = np.arange(_NULL_GROUP_ROWS, dtype=np.int64) + 10
+    mask = np.zeros(_NULL_GROUP_ROWS, dtype=bool)
+    mask[:_NULL_GROUP_SIZE] = True
+    table = pa.table(
+        {
+            "id": pa.array(np.arange(_NULL_GROUP_ROWS, dtype=np.int64)),
+            "d": pa.array(values.astype(np.float64), mask=mask),
+            "f": pa.array(values.astype(np.float32), mask=mask),
+            "k": pa.array(values, mask=mask),
+        }
+    )
+    pq.write_table(table, one / "part-000.parquet", row_group_size=_NULL_GROUP_SIZE)
+    return {"three_files": three, "one_file": one}
+
+
+@pytest.fixture(scope="module")
+def null_partition_sets(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
+    return _write_null_partition_sets(tmp_path_factory.mktemp("nan_minmax_null_partition"))
+
+
+@pytest.mark.parametrize(("name", "text", "expected"), _NULL_PARTITION_CELLS)
+def test_an_all_null_row_group_keeps_max_and_min_equal_to_spark_on_both_doors(
+    spark: ReparkSession,
+    native: Any,
+    null_partition_sets: dict[str, Path],
+    name: str,
+    text: str,
+    expected: list[list[Any]],
+) -> None:
+    folder = null_partition_sets[name]
+    spark_door = [_spark_door(spark, folder, text) for _ in range(_RUNS)]
+    native_door = [_native_door(native, folder, text) for _ in range(_RUNS)]
+    assert spark_door == [expected] * _RUNS
+    assert native_door == [expected] * _RUNS
+
+
+def _plan(rows: list[list[Any]]) -> str:
+    return "\n".join(str(value) for row in rows for value in row)
+
+
+def test_only_the_specific_key_turns_the_aggregate_dynamic_filter_on_on_both_doors(
+    spark: ReparkSession, native: Any, null_partition_sets: dict[str, Path]
+) -> None:
+    folder = null_partition_sets["three_files"]
+    explain = "EXPLAIN ANALYZE SELECT max(d), min(d) FROM nan_minmax_src"
+    assert _DYNAMIC_FILTER not in _plan(_spark_door(spark, folder, explain))
+    assert _DYNAMIC_FILTER not in _plan(_native_door(native, folder, explain))
+    with pytest.raises(Exception, match=_AGGREGATE_KEY):
+        spark.conf.set(_UMBRELLA_KEY, "true")
+    with pytest.raises(Exception, match=_AGGREGATE_KEY):
+        pa.table(native.sql(f"SET {_UMBRELLA_KEY} = true"))
+    assert _DYNAMIC_FILTER not in _plan(_spark_door(spark, folder, explain))
+    assert _DYNAMIC_FILTER not in _plan(_native_door(native, folder, explain))
+    spark.conf.set(_UMBRELLA_KEY, "false")
+    pa.table(native.sql(f"SET {_UMBRELLA_KEY} = false"))
+    assert _DYNAMIC_FILTER not in _plan(_spark_door(spark, folder, explain))
+    assert _DYNAMIC_FILTER not in _plan(_native_door(native, folder, explain))
+    spark.conf.set(_AGGREGATE_KEY, "true")
+    pa.table(native.sql(f"SET {_AGGREGATE_KEY} = true"))
+    assert _DYNAMIC_FILTER in _plan(_spark_door(spark, folder, explain))
+    assert _DYNAMIC_FILTER in _plan(_native_door(native, folder, explain))
 
 
 def test_format_load_equals_spark(spark: ReparkSession, sources: dict[str, Path]) -> None:

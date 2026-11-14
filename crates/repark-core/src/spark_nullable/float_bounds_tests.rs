@@ -372,3 +372,134 @@ async fn read_parquet_keeps_a_nan_row_group_under_a_range_and_a_nan_filter() {
         }
     }
 }
+
+const NULL_PARTITION_FILES: [&[Option<f64>]; 3] = [
+    &[Some(3.0), Some(4.0)],
+    &[None, None, Some(1.0), Some(2.0)],
+    &[Some(5.0), Some(6.0)],
+];
+const UMBRELLA_KEY: &str = "datafusion.optimizer.enable_dynamic_filter_pushdown";
+const AGGREGATE_KEY: &str = "datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown";
+
+fn write_null_partition_files(dir: &Path) {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, true),
+        Field::new("d", DataType::Float64, true),
+    ]));
+    let mut first_id = 1;
+    for (index, values) in NULL_PARTITION_FILES.into_iter().enumerate() {
+        let ids: Vec<i64> = (first_id..).take(values.len()).collect();
+        first_id = ids.last().map_or(first_id, |last| last + 1);
+        let batch = RecordBatch::try_new(
+            Arc::clone(&schema),
+            vec![
+                Arc::new(Int64Array::from(ids)),
+                Arc::new(Float64Array::from(values.to_vec())),
+            ],
+        )
+        .expect("the id and d batch is well formed");
+        let file = std::fs::File::create(dir.join(format!("part-{index}.parquet")))
+            .expect("create the parquet file");
+        let properties = WriterProperties::builder()
+            .set_max_row_group_row_count(Some(2))
+            .build();
+        let mut writer = ArrowWriter::try_new(file, Arc::clone(&schema), Some(properties))
+            .expect("open the parquet writer");
+        writer.write(&batch).expect("write the batch");
+        writer.close().expect("close the parquet writer");
+    }
+}
+
+async fn first_row(session: &ReparkSession, query: &str) -> Vec<String> {
+    let batches = session
+        .sql(query)
+        .await
+        .expect("plan the query")
+        .collect()
+        .await
+        .expect("run the query");
+    let batch = batches
+        .iter()
+        .find(|batch| batch.num_rows() > 0)
+        .expect("one row");
+    batch
+        .columns()
+        .iter()
+        .map(|column| {
+            arrow::util::display::array_value_to_string(column, 0).expect("display the value")
+        })
+        .collect()
+}
+
+fn aggregate_filter_on(session: &ReparkSession) -> bool {
+    session
+        .context()
+        .state()
+        .config()
+        .options()
+        .optimizer
+        .enable_aggregate_dynamic_filter_pushdown
+}
+
+#[tokio::test]
+async fn an_all_null_row_group_cannot_narrow_an_ungrouped_min() {
+    let dir = tempfile::tempdir().expect("a temp dir");
+    write_null_partition_files(dir.path());
+    let session = ReparkSession::new().expect("a session");
+    let frame = session
+        .read_parquet(dir.path().to_str().expect("a utf-8 path"))
+        .await
+        .expect("read the three files");
+    session
+        .context()
+        .register_table("null_partition", frame.into_view())
+        .expect("register the view");
+    for _ in 0..10 {
+        for (query, expected) in [
+            ("SELECT max(d), min(d) FROM null_partition", ["6.0", "1.0"]),
+            ("SELECT min(d), max(id) FROM null_partition", ["1.0", "8"]),
+        ] {
+            assert_eq!(first_row(&session, query).await, expected, "{query}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn the_dynamic_filter_umbrella_key_cannot_turn_the_aggregate_filter_on() {
+    let session = ReparkSession::new().expect("a session");
+    assert!(!aggregate_filter_on(&session));
+    for statement in [
+        format!("SET {UMBRELLA_KEY} = true"),
+        format!("SET {UMBRELLA_KEY} = 'true'"),
+        format!("SET {UMBRELLA_KEY} TO true"),
+        format!("SET VARIABLE {UMBRELLA_KEY} = TRUE"),
+    ] {
+        let message = match session.sql(&statement).await {
+            Ok(_) => panic!("{statement} was accepted"),
+            Err(error) => error.to_string(),
+        };
+        assert!(message.contains(AGGREGATE_KEY), "{statement}: {message}");
+        assert!(!aggregate_filter_on(&session), "{statement}");
+    }
+    assert!(
+        ReparkSession::builder()
+            .config(UMBRELLA_KEY, "true")
+            .build()
+            .is_err()
+    );
+    session
+        .sql(&format!("SET {UMBRELLA_KEY} = false"))
+        .await
+        .expect("the umbrella key turns every dynamic filter off");
+    assert!(!aggregate_filter_on(&session));
+    session
+        .sql(&format!("SET {AGGREGATE_KEY} = true"))
+        .await
+        .expect("the specific key opts in");
+    assert!(aggregate_filter_on(&session));
+    let opted = ReparkSession::builder()
+        .config(AGGREGATE_KEY, "true")
+        .build()
+        .expect("the specific key opts in at build");
+    assert!(aggregate_filter_on(&opted));
+}

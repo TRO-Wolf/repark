@@ -56,8 +56,31 @@ pub(super) const OPTIMIZER_SEAT_KEYS: &[&str] = &[
     "datafusion.optimizer.skip_failed_rules",
 ];
 
+const AGGREGATE_DYNAMIC_FILTER_KEY: &str =
+    "datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown";
+
+const DYNAMIC_FILTER_UMBRELLA_KEY: &str = "datafusion.optimizer.enable_dynamic_filter_pushdown";
+
+fn dynamic_filter_umbrella_refusal(key: &str, value: &str) -> Option<Error> {
+    if key != DYNAMIC_FILTER_UMBRELLA_KEY || !value.trim().eq_ignore_ascii_case("true") {
+        return None;
+    }
+    Some(Error::Config(format!(
+        "unsupported DataFusion session config '{key}' = '{}': it would also set \
+         '{AGGREGATE_DYNAMIC_FILTER_KEY}' to true, and RePark keeps that filter off because \
+         DataFusion 54.1's aggregate dynamic filter can prune the rows that hold a column's \
+         true min or max; set datafusion.optimizer.enable_topk_dynamic_filter_pushdown and \
+         datafusion.optimizer.enable_join_dynamic_filter_pushdown directly, and set \
+         '{AGGREGATE_DYNAMIC_FILTER_KEY}' = true only to opt into the aggregate filter",
+        repark_common::redaction::mask_value_credentials(value)
+    )))
+}
+
 pub(super) fn optimizer_seat_refusal(key: &str, value: &str) -> Option<Error> {
     let key = key.to_ascii_lowercase();
+    if let Some(refusal) = dynamic_filter_umbrella_refusal(&key, value) {
+        return Some(refusal);
+    }
     if !OPTIMIZER_SEAT_KEYS.contains(&key.as_str()) {
         return None;
     }
@@ -130,10 +153,9 @@ pub(super) fn invalid_datafusion_config(
 
 /// DF 54.1 regression guard 1 of 2 — applied as a CORE `SessionConfig` default.
 pub(super) fn apply_df_54_1_config_guards(config: &mut SessionConfig) {
-    config
-        .options_mut()
-        .optimizer
-        .enable_physical_uncorrelated_scalar_subquery = false;
+    let optimizer = &mut config.options_mut().optimizer;
+    optimizer.enable_physical_uncorrelated_scalar_subquery = false;
+    optimizer.enable_aggregate_dynamic_filter_pushdown = false;
 }
 
 /// The session context, built with DF 54.1 regression guard 2 of 2 installed.
