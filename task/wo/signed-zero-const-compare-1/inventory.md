@@ -34,7 +34,7 @@ operand (for example `CAST(0 AS DOUBLE) * -1` against `-CAST(0 AS DOUBLE) * -1`)
 | A2 | `ConstEvaluator::can_evaluate` | `expr_simplifier.rs:625-702` | yes | `BinaryExpr`, `InList`, `Between`, `Case`, `Negative`, `Cast` and `Immutable` scalar functions are all evaluable, so every constant form in the table is folded |
 | A3 | `ConstEvaluator::evaluate_to_scalar` | `expr_simplifier.rs:705-760` | yes | builds the physical expression and evaluates it on `DUMMY_BATCH`; the answer comes from Arrow (F1–F3) |
 | A4 | the simplify loop | `expr_simplifier.rs:208-243` | yes | `const_evaluator`, then `simplifier`, then guarantees, repeated; constant folding always runs first in a cycle |
-| A5 | where the loop runs | `datafusion-optimizer/src/optimizer.rs:285` (`SimplifyExpressions` is the first rule of each pass) | yes | also run by RePark's seat 1b after its rewrite (`crates/repark-core/src/session/df_guards/signed_zero/literals.rs:46-52`) |
+| A5 | where the loop runs | `datafusion-optimizer/src/optimizer.rs:285` (`SimplifyExpressions` is the fourth rule of each pass, after `RewriteSetComparison`, `OptimizeUnions` and `UnionsToFilter`) | yes | also run by RePark's seat 1b after its rewrite (`crates/repark-core/src/session/df_guards/signed_zero/literals.rs:46-52`) |
 
 ### B. The expression simplifier's comparison rules
 
@@ -130,3 +130,23 @@ One position, two files, both in `repark-core`:
 **The alternative** (for the critic to weigh): wrap each column-free float comparison operand in
 `__repark_normalize_zero__` at the same position, and let A1 fold it. This also canonicalises NaN in constant
 comparisons, which is NAN-COMPARE-LITERAL-1's scope. It is therefore not the proposal.
+
+## After the inventory critic (2026-11-14, `VERDICT: GAPS`)
+
+The critic agreed with the seat. The orchestrator ruled within the unit: take the recogniser extension, reject the
+`__repark_normalize_zero__` wrap (it would move NaN cells that NAN-COMPARE-LITERAL-1 owns), keep NaN unchanged and
+keep the volatility guard. The critic's items and what the build does with them:
+
+| item | finding | in the build |
+|---|---|---|
+| M1 | `MERGE … WHEN MATCHED AND p` re-plans the clause predicate as SQL text (`crates/repark-iceberg/src/write/merge/merge_sql.rs:44-150`) | measured (`merge_clause` in the DML part) and pinned; no new seat |
+| M2 | a `TEMP VIEW` and a `PREPARE` body with a constant comparison are wrong on the Spark door | pinned; both re-optimize on use |
+| M3 | `d BETWEEN <constant zero> AND <constant zero>` is right on main | pinned as a must-not-move cell |
+| M4 | `IS DISTINCT FROM` and `IS NOT DISTINCT FROM` | named; the seat's operator set includes both (`literals.rs:68-80`) |
+| M5 | searched `CASE` and `IF` are reached through their inner comparison | named and pinned |
+| M6 | a scalar-subquery constant comparison | the optimizer applies a rule with an apply order through `rewrite_with_subqueries` (`datafusion-optimizer-54.1.0/src/optimizer.rs:403`), so the seat reaches subquery plans; pinned |
+| M7 | no door binds a float zero to a placeholder after analysis (`EXECUTE … USING` is unsupported) | recorded; the earlier open item 4 is withdrawn |
+| M8 | `nullif` and the `greatest`/`least` ties are FUNC-FLOAT-EQ-1 cells; `array_contains` belongs to the collection card; `greatest`/`least` keep Spark's first argument deterministically, so they are not a SIGN-ONLY declaration | recorded on those cards |
+| W1 | the native door's wrong pairs are every pair with no recognised operand, not only those that meet `arith` | `step0-ready.md` corrected |
+| W2 | A5's position | corrected above |
+| §4 | native DML was a probe artifact (uncollected `INSERT`) | re-measured; the table is republished |

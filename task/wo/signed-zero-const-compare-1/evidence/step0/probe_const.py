@@ -216,6 +216,7 @@ DML_PAIRS = [
     ("DOUBLE", "neg.nested", "pos.dec"),
     ("DOUBLE", "neg.arith", "pos.cast"),
     ("FLOAT", "neg.str", "pos.str"),
+    ("DOUBLE", "neg.arith", "pos.arith"),
 ]
 DML_OPS = ("eq", "ne", "nseq", "lt")
 DML_STMTS = {
@@ -225,6 +226,11 @@ DML_STMTS = {
     "merge": (
         "MERGE INTO {tbl} AS t USING (SELECT CAST(1 AS BIGINT) AS id, 'm' AS v) AS s "
         "ON t.id = s.id AND {p} WHEN MATCHED THEN UPDATE SET v = s.v "
+        "WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+    ),
+    "merge_clause": (
+        "MERGE INTO {tbl} AS t USING (SELECT CAST(1 AS BIGINT) AS id, 'm' AS v) AS s "
+        "ON t.id = s.id WHEN MATCHED AND {p} THEN UPDATE SET v = s.v "
         "WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
     ),
 }
@@ -532,12 +538,14 @@ def dml_cells(ctx: dict[str, Any], emit: Any) -> None:
                         }
                         setup = attempt(
                             lambda c=create, tbl=tbl, run=run: (
-                                run(c),
-                                run(f"INSERT INTO {tbl} VALUES (1, 'a'), (2, 'b'), (3, 'c')"),
+                                rows_of(run(c)),
+                                rows_of(
+                                    run(f"INSERT INTO {tbl} VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+                                ),
                                 run(f"SELECT count(*) FROM {tbl}"),
                             )[2]
                         )
-                        if setup["outcome"] != "ANSWERED":
+                        if setup["outcome"] != "ANSWERED" or setup["rows"] != [[3]]:
                             emit({**cell, "outcome": "SETUP-REFUSED", "error": setup.get("error")})
                             continue
                         effect = attempt(lambda s=text, run=run: run(s))
