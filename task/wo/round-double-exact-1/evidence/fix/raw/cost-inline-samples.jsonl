@@ -1,0 +1,15 @@
+{"build":"base","case":"round","run":1,"rc":0,"wall":1.91,"load_before":4.91,"load_at_sample":2.89,"waited":1,"load_after":2.89}
+{"build":"head4","case":"round","run":1,"rc":0,"wall":2.48,"load_before":2.89,"load_at_sample":2.89,"waited":0,"load_after":2.89}
+{"build":"base-aa","case":"round","run":1,"rc":0,"wall":1.78,"load_before":2.89,"load_at_sample":2.89,"waited":0,"load_after":2.82}
+{"build":"head4","case":"round","run":2,"rc":0,"wall":2.11,"load_before":2.82,"load_at_sample":2.82,"waited":0,"load_after":2.82}
+{"build":"base-aa","case":"round","run":2,"rc":0,"wall":1.96,"load_before":2.82,"load_at_sample":2.82,"waited":0,"load_after":3.96}
+{"build":"base","case":"round","run":2,"rc":0,"wall":3.1,"load_before":3.96,"load_at_sample":3.96,"waited":0,"load_after":3.96}
+{"build":"base-aa","case":"round","run":3,"rc":0,"wall":2.68,"load_before":3.96,"load_at_sample":3.96,"waited":0,"load_after":3.96}
+{"build":"base","case":"round","run":3,"rc":0,"wall":2.5,"load_before":3.96,"load_at_sample":3.96,"waited":0,"load_after":3.96}
+{"build":"head4","case":"round","run":3,"rc":0,"wall":3.09,"load_before":3.96,"load_at_sample":3.96,"waited":0,"load_after":5.57}
+{"build":"base","case":"round","run":4,"rc":0,"wall":1.83,"load_before":5.57,"load_at_sample":3.23,"waited":1,"load_after":3.23}
+{"build":"head4","case":"round","run":4,"rc":0,"wall":2.12,"load_before":3.23,"load_at_sample":3.23,"waited":0,"load_after":3.86}
+{"build":"base-aa","case":"round","run":4,"rc":0,"wall":1.84,"load_before":3.86,"load_at_sample":3.86,"waited":0,"load_after":3.86}
+{"build":"head4","case":"round","run":5,"rc":0,"wall":2.23,"load_before":3.86,"load_at_sample":3.86,"waited":0,"load_after":3.63}
+{"build":"base-aa","case":"round","run":5,"rc":0,"wall":1.84,"load_before":3.63,"load_at_sample":3.63,"waited":0,"load_after":3.63}
+{"build":"base","case":"round","run":5,"rc":0,"wall":1.88,"load_before":3.63,"load_at_sample":3.63,"waited":0,"load_after":3.63}
