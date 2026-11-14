@@ -1,17 +1,19 @@
 use std::num::FpCategory;
+use std::sync::Arc;
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{
     Transformed, TransformedResult, TreeNode, TreeNodeIterator, TreeNodeRecursion,
 };
-use datafusion::common::{Result, ScalarValue};
+use datafusion::common::{DFSchema, Result, ScalarValue};
 use datafusion::logical_expr::expr::{Case, GroupingSet, InList, TryCast};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
+use datafusion::logical_expr::simplify::SimplifyContext;
 use datafusion::logical_expr::{
-    Between, BinaryExpr, Cast, Expr, LogicalPlan, Operator, and, lit, or,
+    Between, BinaryExpr, Cast, Expr, ExprSchemable, LogicalPlan, Operator, and, lit, or,
 };
-use datafusion::optimizer::simplify_expressions::SimplifyExpressions;
+use datafusion::optimizer::simplify_expressions::{ExprSimplifier, SimplifyExpressions};
 use datafusion::optimizer::{AnalyzerRule, ApplyOrder, OptimizerConfig, OptimizerRule};
 
 const RULE_NAME: &str = "signed_zero_literals";
@@ -21,7 +23,8 @@ pub(crate) struct SignedZeroLiterals;
 
 impl AnalyzerRule for SignedZeroLiterals {
     fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up_with_subqueries(rewrite_node).data()
+        plan.transform_up_with_subqueries(|node| rewrite_node(node, None))
+            .data()
     }
 
     fn name(&self) -> &str {
@@ -43,7 +46,14 @@ impl OptimizerRule for SignedZeroLiterals {
         plan: LogicalPlan,
         config: &dyn OptimizerConfig,
     ) -> Result<Transformed<LogicalPlan>> {
-        let rewritten = rewrite_node(plan)?;
+        let folder = ExprSimplifier::new(
+            SimplifyContext::builder()
+                .with_schema(Arc::new(DFSchema::empty()))
+                .with_config_options(config.options())
+                .with_query_execution_start_time(config.query_execution_start_time())
+                .build(),
+        );
+        let rewritten = rewrite_node(plan, Some(&folder))?;
         if !rewritten.transformed {
             return Ok(rewritten);
         }
@@ -106,10 +116,13 @@ struct ZeroComparison {
     form: Form,
 }
 
-fn rewrite_node(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+fn rewrite_node(
+    plan: LogicalPlan,
+    folder: Option<&ExprSimplifier>,
+) -> Result<Transformed<LogicalPlan>> {
     let mut carries = false;
     plan.apply_expressions(|expr| {
-        carries = carries_rewrite(expr)?;
+        carries = carries_rewrite(expr, folder.is_some())?;
         Ok(if carries {
             TreeNodeRecursion::Stop
         } else {
@@ -122,48 +135,177 @@ fn rewrite_node(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let preserver = NamePreserver::new(&plan);
     plan.map_expressions(|expr| match expr {
         Expr::GroupingSet(set) => {
-            Ok(rewrite_grouping_set(set, &preserver)?.update_data(Expr::GroupingSet))
+            Ok(rewrite_grouping_set(set, &preserver, folder)?.update_data(Expr::GroupingSet))
         }
-        other => rewrite_named(other, &preserver),
+        other => rewrite_named(other, &preserver, folder),
     })
 }
 
-fn rewrite_named(expr: Expr, preserver: &NamePreserver) -> Result<Transformed<Expr>> {
-    if !carries_rewrite(&expr)? {
+fn rewrite_named(
+    expr: Expr,
+    preserver: &NamePreserver,
+    folder: Option<&ExprSimplifier>,
+) -> Result<Transformed<Expr>> {
+    if !carries_rewrite(&expr, folder.is_some())? {
         return Ok(Transformed::no(expr));
     }
     let saved = preserver.save(&expr);
     Ok(expr
-        .transform_up(|node| Ok(rewrite_expr(node)))?
+        .transform_up(|node| Ok(rewrite_expr(fold_operands(node, folder))))?
         .update_data(|node| saved.restore(node)))
 }
 
 fn rewrite_grouping_set(
     set: GroupingSet,
     preserver: &NamePreserver,
+    folder: Option<&ExprSimplifier>,
 ) -> Result<Transformed<GroupingSet>> {
     Ok(match set {
         GroupingSet::Rollup(exprs) => {
-            rewrite_members(exprs, preserver)?.update_data(GroupingSet::Rollup)
+            rewrite_members(exprs, preserver, folder)?.update_data(GroupingSet::Rollup)
         }
         GroupingSet::Cube(exprs) => {
-            rewrite_members(exprs, preserver)?.update_data(GroupingSet::Cube)
+            rewrite_members(exprs, preserver, folder)?.update_data(GroupingSet::Cube)
         }
         GroupingSet::GroupingSets(sets) => sets
             .into_iter()
-            .map_until_stop_and_collect(|exprs| rewrite_members(exprs, preserver))?
+            .map_until_stop_and_collect(|exprs| rewrite_members(exprs, preserver, folder))?
             .update_data(GroupingSet::GroupingSets),
     })
 }
 
-fn rewrite_members(exprs: Vec<Expr>, preserver: &NamePreserver) -> Result<Transformed<Vec<Expr>>> {
+fn rewrite_members(
+    exprs: Vec<Expr>,
+    preserver: &NamePreserver,
+    folder: Option<&ExprSimplifier>,
+) -> Result<Transformed<Vec<Expr>>> {
     exprs
         .into_iter()
-        .map_until_stop_and_collect(|expr| rewrite_named(expr, preserver))
+        .map_until_stop_and_collect(|expr| rewrite_named(expr, preserver, folder))
 }
 
-fn carries_rewrite(expr: &Expr) -> Result<bool> {
-    expr.exists(|node| Ok(rewrites(node)))
+fn carries_rewrite(expr: &Expr, folds: bool) -> Result<bool> {
+    expr.exists(|node| Ok(rewrites(node) || (folds && has_constant_operand(node))))
+}
+
+fn comparison_operands(expr: &Expr) -> Vec<&Expr> {
+    match expr {
+        Expr::BinaryExpr(binary) if Form::of(binary.op).is_some() => {
+            vec![binary.left.as_ref(), binary.right.as_ref()]
+        }
+        Expr::InList(in_list) => std::iter::once(in_list.expr.as_ref())
+            .chain(in_list.list.iter())
+            .collect(),
+        Expr::Between(between) => vec![
+            between.expr.as_ref(),
+            between.low.as_ref(),
+            between.high.as_ref(),
+        ],
+        Expr::Case(Case {
+            expr: Some(operand),
+            when_then_expr,
+            ..
+        }) => std::iter::once(operand.as_ref())
+            .chain(when_then_expr.iter().map(|(when, _)| when.as_ref()))
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+fn has_constant_operand(expr: &Expr) -> bool {
+    comparison_operands(expr)
+        .into_iter()
+        .any(is_constant_float_operand)
+}
+
+fn is_constant_float_operand(expr: &Expr) -> bool {
+    if matches!(expr, Expr::Literal(_, _)) || expr.is_volatile() {
+        return false;
+    }
+    let constant = !expr
+        .exists(|node| {
+            Ok(!matches!(
+                node,
+                Expr::Literal(_, _)
+                    | Expr::Alias(_)
+                    | Expr::Cast(_)
+                    | Expr::TryCast(_)
+                    | Expr::Negative(_)
+                    | Expr::BinaryExpr(_)
+                    | Expr::ScalarFunction(_)
+            ))
+        })
+        .unwrap_or(true);
+    constant
+        && matches!(
+            expr.get_type(&DFSchema::empty()),
+            Ok(DataType::Float32 | DataType::Float64)
+        )
+}
+
+fn fold_operand(expr: Expr, folder: &ExprSimplifier) -> Expr {
+    if !is_constant_float_operand(&expr) {
+        return expr;
+    }
+    match folder.simplify(expr.clone()) {
+        Ok(folded @ Expr::Literal(_, _)) if zero_type(&folded).is_some() => folded,
+        _ => expr,
+    }
+}
+
+fn fold_boxed(expr: Box<Expr>, folder: &ExprSimplifier) -> Box<Expr> {
+    Box::new(fold_operand(*expr, folder))
+}
+
+fn fold_operands(expr: Expr, folder: Option<&ExprSimplifier>) -> Expr {
+    let Some(folder) = folder else {
+        return expr;
+    };
+    if !has_constant_operand(&expr) {
+        return expr;
+    }
+    match expr {
+        Expr::BinaryExpr(BinaryExpr { left, op, right }) => Expr::BinaryExpr(BinaryExpr::new(
+            fold_boxed(left, folder),
+            op,
+            fold_boxed(right, folder),
+        )),
+        Expr::InList(InList {
+            expr,
+            list,
+            negated,
+        }) => Expr::InList(InList::new(
+            fold_boxed(expr, folder),
+            list.into_iter()
+                .map(|item| fold_operand(item, folder))
+                .collect(),
+            negated,
+        )),
+        Expr::Between(Between {
+            expr,
+            negated,
+            low,
+            high,
+        }) => Expr::Between(Between::new(
+            fold_boxed(expr, folder),
+            negated,
+            fold_boxed(low, folder),
+            fold_boxed(high, folder),
+        )),
+        Expr::Case(Case {
+            expr: Some(operand),
+            when_then_expr,
+            else_expr,
+        }) => Expr::Case(Case {
+            expr: Some(fold_boxed(operand, folder)),
+            when_then_expr: when_then_expr
+                .into_iter()
+                .map(|(when, then)| (fold_boxed(when, folder), then))
+                .collect(),
+            else_expr,
+        }),
+        other => other,
+    }
 }
 
 fn rewrites(expr: &Expr) -> bool {

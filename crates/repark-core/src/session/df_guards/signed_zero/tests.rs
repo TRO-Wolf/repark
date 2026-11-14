@@ -4,6 +4,7 @@ use std::sync::Arc;
 use datafusion::arrow::array::{BooleanArray, Float32Array, Float64Array, Int64Array, RecordBatch};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::datasource::MemTable;
+use datafusion::logical_expr::{cast, lit};
 use datafusion::optimizer::{AnalyzerRule, OptimizerContext, OptimizerRule};
 
 use super::SignedZeroLiterals;
@@ -381,7 +382,7 @@ async fn seat_1b_hands_the_next_pass_a_simplified_plan() {
         .expect("optimize");
     let rendered = format!("{}", optimized.display_indent());
     assert!(!rendered.contains("IS NOT NULL"), "{rendered}");
-    assert_eq!(passes, 2, "{rendered}");
+    assert_eq!(passes, 4, "{rendered}");
 }
 
 async fn grouped(session: &ReparkSession, sql: &str) -> Vec<(Option<bool>, i64)> {
@@ -468,4 +469,112 @@ async fn a_volatile_operand_is_never_repeated() {
         );
         assert_eq!(rendered.matches("random()").count(), 1, "{sql}\n{rendered}");
     }
+}
+
+const NEGATIVE_DOUBLE: &str = "(CAST(0 AS DOUBLE) * -1)";
+const POSITIVE_DOUBLE: &str = "(-CAST(0 AS DOUBLE) * -1)";
+
+fn zero_ids() -> Vec<i64> {
+    (1..=8)
+        .zip(DOUBLES)
+        .filter(|(_, value)| *value == Some(0.0))
+        .map(|(id, _)| id)
+        .collect()
+}
+
+#[tokio::test]
+async fn two_folded_constant_zeros_compare_as_one_value_on_both_float_types() {
+    let session = seeded_session();
+    let (n, p) = (NEGATIVE_DOUBLE, POSITIVE_DOUBLE);
+    let nested = "CAST(CAST('-0.0' AS FLOAT) AS DOUBLE)";
+    let decimal = "CAST(CAST(0 AS DECIMAL(10,2)) AS DOUBLE)";
+    let (nf, pf) = ("(CAST(0 AS FLOAT) * -1)", "(-CAST(0 AS FLOAT) * -1)");
+    let every: Vec<i64> = (1..=8).collect();
+    let cases: Vec<(String, Vec<i64>)> = vec![
+        (format!("{n} = {p}"), every.clone()),
+        (format!("{p} = {n}"), every.clone()),
+        (format!("{n} <> {p}"), vec![]),
+        (format!("{n} < {p}"), vec![]),
+        (format!("{p} > {n}"), vec![]),
+        (format!("{n} <= {p}"), every.clone()),
+        (format!("{p} >= {n}"), every.clone()),
+        (format!("{n} IS NOT DISTINCT FROM {p}"), every.clone()),
+        (format!("{n} IS DISTINCT FROM {p}"), vec![]),
+        (format!("{n} IN ({p}, 1.5)"), every.clone()),
+        (format!("{n} NOT IN ({p})"), vec![]),
+        (format!("{n} BETWEEN {p} AND {p}"), every.clone()),
+        (format!("{n} NOT BETWEEN {p} AND {p}"), vec![]),
+        (
+            format!("CASE {n} WHEN {p} THEN true ELSE false END"),
+            every.clone(),
+        ),
+        (
+            format!("CASE WHEN {n} = {p} THEN true ELSE false END"),
+            every.clone(),
+        ),
+        (format!("(SELECT {n} = {p})"), every.clone()),
+        (format!("{nested} = {decimal}"), every.clone()),
+        (format!("{nf} = {pf}"), every.clone()),
+        (format!("{nf} < {pf}"), vec![]),
+        (format!("d BETWEEN {n} AND {p}"), zero_ids()),
+        (format!("d = {n} * {p}"), zero_ids()),
+    ];
+    for (pred, expected) in cases {
+        let sql = format!("SELECT id FROM t WHERE {pred}");
+        assert_eq!(ids(&session, &sql).await, expected, "{sql}");
+    }
+}
+
+#[tokio::test]
+async fn a_folded_constant_comparison_keeps_its_output_name() {
+    let session = seeded_session();
+    let sql = format!("SELECT {NEGATIVE_DOUBLE} = {POSITIVE_DOUBLE}, id FROM t WHERE id = 1");
+    let frame = session.sql(&sql).await.expect("plan");
+    let planned = frame.schema().field(0).name().clone();
+    let batches = frame.collect().await.expect("collect");
+    let column = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<BooleanArray>()
+        .expect("boolean column");
+    assert_eq!(batches[0].schema().field(0).name(), &planned);
+    assert!(column.value(0), "{sql}");
+}
+
+#[tokio::test]
+async fn a_folded_nan_operand_is_not_rewritten() {
+    let session = seeded_session();
+    let sql = "SELECT id FROM t WHERE sqrt(CAST(-1 AS DOUBLE)) = CAST('NaN' AS DOUBLE)";
+    let state = session.context().state();
+    let logical = state.create_logical_plan(sql).await.expect("plan");
+    let analyzed = state
+        .analyzer()
+        .execute_and_check(logical, state.config_options(), |_, _| {})
+        .expect("analyze");
+    let optimized = state.optimize(&analyzed).expect("optimize");
+    let rendered = format!("{}", optimized.display_indent());
+    assert!(!rendered.contains("Float64(-0)"), "{rendered}");
+    assert_eq!(ids(&session, sql).await, Vec::<i64>::new(), "{sql}");
+}
+
+#[tokio::test]
+async fn an_aliased_constant_operand_folds_like_a_bare_one() {
+    let session = seeded_session();
+    let zero = || cast(lit(0_i64), DataType::Float64);
+    let negative = (-zero()).alias("n");
+    let positive = (-zero()).alias("n") * lit(-1.0_f64);
+    let batches = session
+        .context()
+        .table("t")
+        .await
+        .expect("table")
+        .filter(negative.eq(positive))
+        .expect("filter")
+        .select_columns(&["id"])
+        .expect("select")
+        .collect()
+        .await
+        .expect("collect");
+    let rows: usize = batches.iter().map(RecordBatch::num_rows).sum();
+    assert_eq!(rows, 8);
 }

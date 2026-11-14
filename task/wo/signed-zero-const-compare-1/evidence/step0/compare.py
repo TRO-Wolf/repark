@@ -52,17 +52,18 @@ def main() -> None:
     raw = Path(sys.argv[1])
     label = sys.argv[2]
     out = Path(sys.argv[3])
+    oracle = Path(sys.argv[4]) if len(sys.argv) > 4 else raw
     joined = []
     for part in PARTS:
         for ansi in ("true", "false"):
             spark = {}
-            for cell in load(raw / f"spark-{part}-ansi-{ansi}.jsonl"):
+            for cell in load(oracle / f"spark-{part}-ansi-{ansi}.jsonl"):
                 spark[key(cell, cell["door"])] = cell
             for cell in load(raw / f"{label}-{part}-ansi-{ansi}.jsonl"):
                 door = cell["door"]
                 truth = spark.get(key(cell, truth_door(door)))
                 if door == "native":
-                    other = load_cached(raw, part)
+                    other = load_cached(oracle, part)
                     truth = other.get(key(cell, "spark-sql"), truth)
                 joined.append(
                     {
