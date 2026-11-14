@@ -1,0 +1,51 @@
+## SELECT CAST('0.0' AS DOUBLE) = CAST('-0.0' AS DOUBLE) AS r
+spark-sql door:
+  initial_logical_plan: Projection: CAST(Utf8("0.0") AS Float64) = CAST(Utf8("-0.0") AS Float64) AS r |   EmptyRelation: rows=1
+  logical_plan after resolve_grouping_function: Projection: __repark_parse_java_double__(__repark_decimal_cast_nullable__(Utf8("0.0"))) = __repark_parse_java_double__(__repark_decimal_cast_nullable__(Utf8("-0.0"))) AS r |   EmptyRelation: rows=1
+  logical_plan after simplify_expressions: Projection: Boolean(false) AS r |   EmptyRelation: rows=1
+  logical_plan: Projection: Boolean(false) AS r |   EmptyRelation: rows=1
+native door:
+  initial_logical_plan: Projection: CAST(Utf8("0.0") AS Float64) = CAST(Utf8("-0.0") AS Float64) AS r |   EmptyRelation: rows=1
+  logical_plan after signed_zero_literals: Projection: CAST(Utf8("0.0") AS Float64) >= Float64(-0) AND CAST(Utf8("0.0") AS Float64) <= Float64(0) AS r |   EmptyRelation: rows=1
+  logical_plan after simplify_expressions: Projection: Boolean(true) AS r |   EmptyRelation: rows=1
+  logical_plan: Projection: Boolean(true) AS r |   EmptyRelation: rows=1
+
+## SELECT CAST(CAST(0 AS DECIMAL(10,2)) AS DOUBLE) = CAST('-0.0' AS DOUBLE) AS r
+spark-sql door:
+  initial_logical_plan: Projection: CAST(CAST(Int64(0) AS Decimal128(10, 2)) AS Float64) = CAST(Utf8("-0.0") AS Float64) AS r |   EmptyRelation: rows=1
+  logical_plan after resolve_grouping_function: Projection: CAST(CAST(__repark_decimal_cast_nullable__(Int32(0)) AS Decimal128(10, 2)) AS Float64) = __repark_parse_java_double__(__repark_decimal_cast_nullable__(Utf8("-0.0"))) AS r |   EmptyRelation: rows=1
+  logical_plan after simplify_expressions: Projection: Boolean(false) AS r |   EmptyRelation: rows=1
+  logical_plan: Projection: Boolean(false) AS r |   EmptyRelation: rows=1
+native door:
+  initial_logical_plan: Projection: CAST(CAST(Int64(0) AS Decimal128(10, 2)) AS Float64) = CAST(Utf8("-0.0") AS Float64) AS r |   EmptyRelation: rows=1
+  logical_plan after signed_zero_literals: Projection: CAST(CAST(Int64(0) AS Decimal128(10, 2)) AS Float64) >= Float64(-0) AND CAST(CAST(Int64(0) AS Decimal128(10, 2)) AS Float64) <= Float64(0) AS r |   EmptyRelation: rows=1
+  logical_plan after simplify_expressions: Projection: Boolean(true) AS r |   EmptyRelation: rows=1
+  logical_plan: Projection: Boolean(true) AS r |   EmptyRelation: rows=1
+
+## SELECT (CAST(0 AS DOUBLE) * -1) = (-CAST(0 AS DOUBLE) * -1) AS r
+spark-sql door:
+  initial_logical_plan: Projection: CAST(Int64(0) AS Float64) * Int64(-1) = (- CAST(Int64(0) AS Float64)) * Int64(-1) AS r |   EmptyRelation: rows=1
+  logical_plan after resolve_grouping_function: Projection: Float64(0) * Float64(-1) = (- Float64(0)) * Float64(-1) AS r |   EmptyRelation: rows=1
+  logical_plan after simplify_expressions: Projection: Boolean(false) AS r |   EmptyRelation: rows=1
+  logical_plan: Projection: Boolean(false) AS r |   EmptyRelation: rows=1
+native door:
+  initial_logical_plan: Projection: CAST(Int64(0) AS Float64) * Int64(-1) = (- CAST(Int64(0) AS Float64)) * Int64(-1) AS r |   EmptyRelation: rows=1
+  logical_plan after type_coercion: Projection: CAST(Int64(0) AS Float64) * CAST(Int64(-1) AS Float64) = (- CAST(Int64(0) AS Float64)) * CAST(Int64(-1) AS Float64) AS r |   EmptyRelation: rows=1
+  logical_plan after simplify_expressions: Projection: Boolean(false) AS r |   EmptyRelation: rows=1
+  logical_plan: Projection: Boolean(false) AS r |   EmptyRelation: rows=1
+
+## SELECT CAST('-0.0' AS DOUBLE) = d AS r FROM (VALUES (CAST(1.5 AS DOUBLE))) AS t(d)
+spark-sql door:
+  initial_logical_plan: Projection: CAST(Utf8("-0.0") AS Float64) = t.d AS r |   SubqueryAlias: t |     Projection: column1 AS d |       Values: (CAST(Decimal128(Some(15),2,1) AS Float64))
+  logical_plan after resolve_grouping_function: Projection: __repark_parse_java_double__(__repark_decimal_cast_nullable__(Utf8("-0.0"))) = t.d AS r |   SubqueryAlias: t |     Projection: column1 AS d |       Values: (Float64(1.5) AS Decimal128(Some(15),2,1))
+  logical_plan after simplify_expressions: Projection: Float64(-0) = t.d AS r |   SubqueryAlias: t |     Projection: column1 AS d |       Values: (Float64(1.5) AS Decimal128(Some(15),2,1))
+  logical_plan after signed_zero_literals: Projection: t.d >= Float64(-0) AND t.d <= Float64(0) AS r |   SubqueryAlias: t |     Projection: column1 AS d |       Values: (Float64(1.5) AS Decimal128(Some(15),2,1))
+  logical_plan: Projection: t.d >= Float64(-0) AND t.d <= Float64(0) AS r |   SubqueryAlias: t |     Projection: column1 AS d |       Values: (Float64(1.5) AS Decimal128(Some(15),2,1))
+native door:
+  initial_logical_plan: Projection: CAST(Utf8("-0.0") AS Float64) = t.d AS r |   SubqueryAlias: t |     Projection: column1 AS d |       Values: (CAST(Float64(1.5) AS Float64))
+  logical_plan after signed_zero_literals: Projection: t.d >= Float64(-0) AND t.d <= Float64(0) AS r |   SubqueryAlias: t |     Projection: column1 AS d |       Values: (CAST(Float64(1.5) AS Float64))
+  logical_plan after simplify_expressions: Projection: t.d >= Float64(-0) AND t.d <= Float64(0) AS r |   SubqueryAlias: t |     Projection: column1 AS d |       Values: (Float64(1.5))
+  logical_plan: Projection: t.d >= Float64(-0) AND t.d <= Float64(0) AS r |   SubqueryAlias: t |     Projection: column1 AS d |       Values: (Float64(1.5))
+
+## dataframe: fn.lit('0.0').cast('double') == fn.lit('-0.0').cast('double')
+  answer: [(False,)]
