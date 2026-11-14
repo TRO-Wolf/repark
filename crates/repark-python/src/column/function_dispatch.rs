@@ -249,11 +249,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "round" => {
             need_at_least(1)?;
-            if exprs.len() == 1 {
-                expr_fn::round(vec![exprs[0].clone()])
-            } else {
-                expr_fn::round(vec![exprs[0].clone(), exprs[1].clone()])
-            }
+            repark_functions::spark_math::call_round(exprs.iter().take(2).cloned().collect())
         }
         "ln" => {
             need(1)?;

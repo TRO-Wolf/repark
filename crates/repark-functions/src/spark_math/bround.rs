@@ -2,15 +2,18 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use datafusion::arrow::array::{
-    Array, ArrayRef, AsArray, Decimal128Array, Float64Array, Int32Array, PrimitiveBuilder,
+    Array, ArrayRef, AsArray, Decimal128Array, Int32Array, PrimitiveBuilder, new_null_array,
 };
 use datafusion::arrow::compute::cast;
-use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Float64Type};
-use datafusion::common::{Result, ScalarValue, exec_err};
+use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Float32Type, Float64Type};
+use datafusion::arrow::error::ArrowError;
+use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err};
 use datafusion::logical_expr::{
     ColumnarValue, Expr, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     Volatility,
 };
+use datafusion_spark::function::math::round::SparkRound;
+use repark_common::java_double::{JavaRounding, java_double_round, java_float_round};
 
 use crate::spark_math::unexpected_input_type;
 
@@ -64,6 +67,100 @@ pub fn bround_udf() -> Arc<ScalarUDF> {
 #[must_use]
 pub fn call_bround(args: Vec<Expr>) -> Expr {
     crate::expr_fn::call(crate::spark_math::bround_udf(), args)
+}
+
+#[must_use]
+pub fn round_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkExactRound {
+        inner: SparkRound::new(),
+    }))
+}
+
+#[must_use]
+pub fn call_round(args: Vec<Expr>) -> Expr {
+    crate::expr_fn::call(crate::spark_math::round_udf(), args)
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+struct SparkExactRound {
+    inner: SparkRound,
+}
+
+impl ScalarUDFImpl for SparkExactRound {
+    fn name(&self) -> &'static str {
+        "round"
+    }
+
+    fn signature(&self) -> &Signature {
+        self.inner.signature()
+    }
+
+    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
+        self.inner.return_type(arg_types)
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let Some(first) = args.args.first() else {
+            return self.inner.invoke_with_args(args);
+        };
+        if !matches!(first.data_type(), DataType::Float32 | DataType::Float64) {
+            return self.inner.invoke_with_args(args);
+        }
+        let scale = literal_scale(&args, "round")?;
+        let input = first.to_array(args.number_rows)?;
+        float_round(&input, scale, JavaRounding::HalfUp)
+    }
+}
+
+fn non_foldable_scale(name: &str, fields: &[FieldRef]) -> DataFusionError {
+    let names: Vec<&str> = fields.iter().map(|field| field.name().as_str()).collect();
+    let scale = names.get(1).copied().unwrap_or("scale");
+    DataFusionError::Plan(format!(
+        "[DATATYPE_MISMATCH.NON_FOLDABLE_INPUT] Cannot resolve \"{name}({})\" due to data type \
+         mismatch: the input `scale` should be a foldable \"INT\" expression; however, got \
+         \"{scale}\". SQLSTATE: 42K09",
+        names.join(", ")
+    ))
+}
+
+fn literal_scale(args: &ScalarFunctionArgs, name: &str) -> Result<Option<i32>> {
+    match args.args.get(1) {
+        None => Ok(Some(0)),
+        Some(ColumnarValue::Array(_)) => Err(non_foldable_scale(name, &args.arg_fields)),
+        Some(ColumnarValue::Scalar(value)) if value.is_null() => Ok(None),
+        Some(ColumnarValue::Scalar(value)) => scalar_to_scale(value).map_or_else(
+            || exec_err!("'{name}' scale {value} is not an INT"),
+            |scale| Ok(Some(scale)),
+        ),
+    }
+}
+
+fn float_round(input: &ArrayRef, scale: Option<i32>, mode: JavaRounding) -> Result<ColumnarValue> {
+    let Some(scale) = scale else {
+        return Ok(ColumnarValue::Array(new_null_array(
+            input.data_type(),
+            input.len(),
+        )));
+    };
+    let unconverted = || ArrowError::ComputeError("round could not convert a value".to_owned());
+    let rounded: ArrayRef = match input.data_type() {
+        DataType::Float64 => Arc::new(
+            input
+                .as_primitive::<Float64Type>()
+                .try_unary::<_, Float64Type, _>(|value| {
+                    java_double_round(value, scale, mode).ok_or_else(unconverted)
+                })?,
+        ),
+        DataType::Float32 => Arc::new(
+            input
+                .as_primitive::<Float32Type>()
+                .try_unary::<_, Float32Type, _>(|value| {
+                    java_float_round(value, scale, mode).ok_or_else(unconverted)
+                })?,
+        ),
+        other => return exec_err!("round does not support {other}"),
+    };
+    Ok(ColumnarValue::Array(rounded))
 }
 
 #[derive(Debug)]
@@ -142,7 +239,8 @@ fn scalar_to_scale(value: &ScalarValue) -> Option<i32> {
 
 fn bround_output_type(input: &DataType, scale: Option<i32>) -> DataType {
     match input {
-        DataType::Float32 | DataType::Float64 => DataType::Float64,
+        DataType::Float32 => DataType::Float32,
+        DataType::Float64 => DataType::Float64,
         DataType::Decimal128(precision, scale_in) => {
             if scale.is_none_or(|k| k >= i32::from(*scale_in)) {
                 input.clone()
@@ -168,26 +266,6 @@ fn round_half_even_quotient(value: i128, divisor: i128) -> i128 {
         quotient + 1
     } else {
         quotient
-    }
-}
-
-fn round_float(value: f64, scale: i32) -> f64 {
-    if !value.is_finite() {
-        return value;
-    }
-    if scale >= 0 {
-        let factor = 10f64.powi(scale.min(308));
-        let shifted = value * factor;
-        if !shifted.is_finite() {
-            return value;
-        }
-        shifted.round_ties_even() / factor
-    } else {
-        if scale < -323 {
-            return value.signum() * 0.0;
-        }
-        let factor = 10f64.powi(-scale);
-        (value / factor).round_ties_even() * factor
     }
 }
 
@@ -310,6 +388,7 @@ impl ScalarUDFImpl for SparkBround {
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let ScalarFunctionArgs {
             args: arg_values,
+            arg_fields,
             number_rows,
             return_field,
             config_options,
@@ -320,6 +399,9 @@ impl ScalarUDFImpl for SparkBround {
                 "'bround' expects (col[, scale]), got {} argument(s)",
                 arg_values.len()
             );
+        }
+        if matches!(arg_values.get(1), Some(ColumnarValue::Array(_))) {
+            return Err(non_foldable_scale("bround", &arg_fields));
         }
         let scales = read_scales(arg_values.get(1), number_rows)?;
         let input = arg_values[0].to_array(number_rows)?;
@@ -362,17 +444,16 @@ fn apply_bround(
     output_type: &DataType,
     ansi: bool,
 ) -> Result<ColumnarValue> {
-    use datafusion::arrow::array::new_null_array;
     match input.data_type() {
         DataType::Null => Ok(ColumnarValue::Array(new_null_array(
             output_type,
             input.len(),
         ))),
-        DataType::Float32 => {
-            let shaped = cast(input.as_ref(), &DataType::Float64)?;
-            apply_float_bround(&shaped, scales)
-        }
-        DataType::Float64 => apply_float_bround(input, scales),
+        DataType::Float32 | DataType::Float64 => float_round(
+            input,
+            scales.first().copied().flatten(),
+            JavaRounding::HalfEven,
+        ),
         DataType::Decimal128(_, scale_in) => {
             apply_decimal_bround(input, *scale_in, scales, output_type, ansi)
         }
@@ -434,27 +515,6 @@ fn apply_bround(
         ),
         other => exec_err!("'bround' does not support {other}"),
     }
-}
-
-fn apply_float_bround(input: &ArrayRef, scales: &[Option<i32>]) -> Result<ColumnarValue> {
-    let values = input
-        .as_any()
-        .downcast_ref::<Float64Array>()
-        .ok_or_else(|| {
-            datafusion::common::DataFusionError::Execution("bround needs float64 values".to_owned())
-        })?;
-    let mut out = PrimitiveBuilder::<Float64Type>::with_capacity(values.len());
-    for row in 0..values.len() {
-        if values.is_null(row) {
-            out.append_null();
-            continue;
-        }
-        match scales.get(row).copied().flatten() {
-            None => out.append_null(),
-            Some(scale) => out.append_value(round_float(values.value(row), scale)),
-        }
-    }
-    Ok(ColumnarValue::Array(Arc::new(out.finish())))
 }
 
 fn apply_decimal_bround(

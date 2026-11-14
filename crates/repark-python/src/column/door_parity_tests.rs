@@ -28,11 +28,6 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
     ("ceiling", FacadeShape::Kernel(1), "alias of ceil"),
     ("floor", FacadeShape::Kernel(1), "mirror of ceil"),
     (
-        "round",
-        FacadeShape::Kernel(1),
-        "DF-core round vs spark HALF_UP with a decimal target scale",
-    ),
-    (
         "like",
         FacadeShape::Composed,
         "DF-core LIKE vs spark like with an explicit escape argument",
@@ -284,10 +279,11 @@ fn facade_avg_is_the_repark_retracting_kernel_not_datafusion_core() {
 fn expected_divergences_are_all_still_real() {
     assert_eq!(
         EXPECTED_DIVERGENCES.len(),
-        15,
+        14,
         "DOOR-CONVERGE-1 closed abs/ascii/base64/unbase64/length/character_length/size/\
          array_contains — both doors now resolve the same kernel; ratchet 22 → 14. \
-         DOOR-CONVERGE-2 adds generate_series (facade sequence-alias vs door native) → 15"
+         DOOR-CONVERGE-2 adds generate_series (facade sequence-alias vs door native) → 15. \
+         ROUND-DOUBLE-EXACT-1 closes round (both doors build the exact round) → 14"
     );
     let ctx = registered_session();
     let mut already_fixed = Vec::new();

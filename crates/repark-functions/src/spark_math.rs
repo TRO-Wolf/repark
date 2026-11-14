@@ -19,7 +19,9 @@ use datafusion::logical_expr::{
 };
 
 mod bround;
-pub use bround::{bround_udf, call_bround};
+#[cfg(test)]
+mod round_tests;
+pub use bround::{bround_udf, call_bround, call_round, round_udf};
 mod conv;
 pub use conv::{call_conv, conv_udf};
 
@@ -57,6 +59,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         rint_udf(),
         factorial_udf(),
         bround_udf(),
+        round_udf(),
         conv_udf(),
     ]
 }
