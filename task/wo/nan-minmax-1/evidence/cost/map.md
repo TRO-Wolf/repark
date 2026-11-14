@@ -39,6 +39,27 @@ Pairs: 6 (base `base`, head `head2`), 15 timed runs per query per sample.
 does: 108 of 109 file ranges by file statistics, then 1 of 2 row groups. `max(d)` now reads the column (about 9x: 21 ms
 over ten million rows, from 2 ms); DataFusion's aggregate dynamic filter skips 3 of its 10 file ranges.
 
+## The delta head (`1a8f2749`, module `516c9cba…`)
+
+The delta adds the unbounded-row-group demotion (verifier 1's F1). Six alternating main/head pairs, the same method
+and data, every sample under `flock -x measure.lock` then both cargo locks (`cost-raw-head3.jsonl`, `build` `base` or
+`head3`):
+
+| query | answer | main median (ms) | head median (ms) | head / main (median of pair ratios) |
+|---|---|---|---|---|
+| `count_all` | [[10000000]] | 4.21 | 4.42 | 1.024 |
+| `count_selective` | [[50000]] | 10.74 | 11.01 | 1.034 |
+| `max_stats` | [[4999999.5]] | 1.90 | 21.38 | 11.276 |
+
+- **Pair ratios:** `count_all` 0.910, 1.028, 1.020, 1.118, 0.988, 1.228; `count_selective` 0.961, 1.030, 1.048,
+  0.980, 1.039, 1.161.
+- **Pruning equals main's:** `count_selective` 109 → 1 file ranges, then 2 → 1 row groups, on both builds. The
+  data's files carry bounds in every row group, so the delta's demotion does not fire on them.
+- **`max_stats`** reads the column on the head (row groups 10 → 10, file ranges 10 → 8 under the aggregate dynamic
+  filter); main answers it from the footer.
+
+Both held rows stay under 1.05x.
+
 ## The first head (replaced)
 
 The first head demoted every float bound per file. Its six pairs (`cost-raw-first-head.jsonl`, the same method):
@@ -54,7 +75,9 @@ but the selective filter ran 1.166x main, over the hold. DataFusion's file prune
 keeps a spread file's bounds exact and demotes only equal ones, plus every float bound at the scan.
 
 - `cost_probe.py` — data, the per-sample runner, the report.
-- `cost-raw.jsonl` — the head's twelve samples (one JSON record per sample; `build` `base` or `head2`).
+- `cost-raw.jsonl` — the head's twelve samples (one JSON record per sample; `build` `base` or `head2`). The
+  three raw files carry data paths relative to the scratch directory (rewritten 2026-11-14, verifier 2's A1).
 - `cost-raw-first-head.jsonl` — the first head's twelve samples (`build` `base` or `head`).
+- `cost-raw-head3.jsonl` — the delta head's twelve samples (`build` `base` or `head3`).
 
 Up: [../map.md](../map.md).

@@ -6,7 +6,8 @@
 **Status:** filed 2026-11-13, not dispatched. Severity **S2**: a silent wrong read, no error. **Re-scoped 2026-11-13**
 (owner, "defaults", Q10 of the NAN-COMPARE-SPARK-1 sketch; see "Re-scope" below): the pruning half is recorded as
 equal to Spark on the same file, with no writer change; the constant-column half moved to
-[NAN-MINMAX-1](nan-minmax-1-card-2026-11-13.md) and is FIXED by its part 1 (unmerged). Nothing else stays open here.
+[NAN-MINMAX-1](nan-minmax-1-card-2026-11-13.md) and is FIXED by its part 1 (unmerged), as is a third case its verifier
+1 found (F1, below). Nothing else stays open here.
 
 ## Re-scope (2026-11-13, owner Q10)
 
@@ -20,6 +21,14 @@ The [NAN-COMPARE-SPARK-1 sketch](../../wo/nan-compare-spark-1/sketch.md) §3 fou
 2. **The constant-column read** (inventory I2). On a file whose other float values are one value, RePark read every
    NaN as that value and Spark reads NaN. **Moved to NAN-MINMAX-1** and fixed by its part 1, the `Inexact` float
    statistics seat.
+3. **A row group with no footer min or max** (NAN-MINMAX-1 verifier 1, F1). In a file whose float row group is all
+   NaN, or NULL and NaN, DataFusion merged the other row groups' bounds into an exact file bound, and the file pruner
+   dropped the whole file: `= NaN` answered 0 where Spark answers 2 (`R_one`). Spark's reader keeps that row group,
+   so case 1's "equal to Spark on the same file" did not hold there. **Fixed by NAN-MINMAX-1 part 1's delta** (the
+   file's float bounds turn inexact; pinned in `test_nan_minmax_stats_1.py`).
+
+`= NaN` over an all-NaN file of sign-set or payload NaN (Spark 2, RePark 0) is RePark's comparison by bits,
+NAN-COMPARE-SPARK-1's, not this card's.
 
 ## Measured
 

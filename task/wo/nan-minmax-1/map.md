@@ -7,6 +7,6 @@ the footer. Card [NAN-MINMAX-1](../../roadmap/mid-term/nan-minmax-1-card-2026-11
 [nan-compare-spark-1/](../nan-compare-spark-1/map.md) §4.2(a).
 
 - [evidence/](evidence/map.md) — step 0 on main `631d283c` against Spark 4.1.2 (the constant-file table and every read
-  path), then the head; the cost rows.
+  path), then the head; the cost rows; the delta round.
 
 Up: [../map.md](../map.md).

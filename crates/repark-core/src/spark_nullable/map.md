@@ -18,11 +18,12 @@ and the `max`/`min` statistics shortcut. `FloatBoundsInexactFormat` wraps DataFu
   shortcut reads.
 
 A spread file whose row groups all carry bounds keeps them exact, so DataFusion's file pruner (exact bounds only)
-still prunes it, as row-group pruning by the same footers would. Those bounds also feed DataFusion's aggregate
-dynamic filter, which can skip a NaN file under a multi-file `max` (NAN-MINMAX-1 part 2, I8). Row counts, null
-counts and every non-float statistic are untouched. `read_parquet_nullable` builds its listing with the wrapper; `FloatBoundsInexactFactory` replaces the
-session's `parquet` file-format factory (registered in `../session/df_guards.rs`), which the native `CREATE EXTERNAL
-TABLE … STORED AS PARQUET` uses. Evidence: `task/wo/nan-minmax-1/`.
+still prunes it, as row-group pruning by the same footers would. Those bounds also feed DataFusion's aggregate dynamic
+filter, which can skip a NaN file under a multi-file `max` (NAN-MINMAX-1 part 2, I8). Row counts, null counts and
+every non-float statistic are untouched. `read_parquet_nullable` builds its listing with the wrapper;
+`FloatBoundsInexactFactory` replaces the session's `parquet` file-format factory (registered in
+`../session/df_guards.rs`), which the native `CREATE EXTERNAL TABLE … STORED AS PARQUET` uses. Evidence:
+`task/wo/nan-minmax-1/`.
 
 ## Files
 

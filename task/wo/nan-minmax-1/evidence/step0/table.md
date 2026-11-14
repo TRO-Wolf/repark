@@ -48,9 +48,11 @@ replaced on cost (see the card). Ten cells stay unequal:
 - **Six `max`/`min` cells over a sign-set NaN** (`one_s`, `rg_s`, `many_s`, both doors): the head answers
   `max 1.0, min NaN` where Spark answers `max NaN, min 1.0`. Main answered `1.0, 1.0` from the footer, so its `min`
   was right by accident of the shortcut. Without the shortcut, `max` and `min` order a sign-set NaN below every
-  number (Arrow's total order); main already answers so whenever the shortcut does not fire (a filter in the
-  query, data in memory). That is NAN-MINMAX-1 part 2's float accumulator (sketch §4.2(a), inventory B1/B3); the
-  facade test holds these cells as a strict xfail.
+  number (Arrow's total order). **Corrected after both verifiers (B3):** main answers so on a spread file when the
+  shortcut does not fire, but on these constant files main answers `min 1.0` with a filter in the query too,
+  through the constant-column replacement; the ad-hoc check behind the first text used a spread file. These are
+  not the only cells that move: the card lists the family. That is NAN-MINMAX-1 part 2's float accumulator
+  (sketch §4.2(a), inventory B1/B3); the facade test holds these cells as a strict xfail.
 
 The row `rt_by_repark base:…` is the head reading main's round-trip files, which hold `1.0`; Spark reads the same.
 

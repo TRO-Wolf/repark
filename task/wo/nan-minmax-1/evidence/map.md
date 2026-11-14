@@ -4,5 +4,7 @@
   ingestion) on main and the head against Spark 4.1.2, and every read path with file:line.
 - [cost/](cost/map.md) — `count(*)` and a selective filter over 100 Parquet files, and `max(d)` over a file with
   statistics, main against the head.
+- [delta/](delta/map.md) — the delta round: F1 red and green, the new xfails, and pruning on the fix against main
+  over verifier 1's sets.
 
 Up: [../map.md](../map.md).
