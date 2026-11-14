@@ -1,0 +1,30 @@
+== nwc/pkg-base ansi=true
+nwc/pkg-base/repark/_native.abi3.so
+ERR Error during planning: '__repark_float_to_string__' expects a FLOAT or DOUBLE argument, got Decimal128(30, 15)
+ERR Error during planning: '__repark_float_to_string__' expects a FLOAT or DOUBLE argument, got Decimal128(30, 15)
+OK [('0.000000000000000',), ('1.255000000000000',)]
+== nwc/pkg-base ansi=false
+nwc/pkg-base/repark/_native.abi3.so
+ERR Error during planning: '__repark_float_to_string__' expects a FLOAT or DOUBLE argument, got Decimal128(30, 15)
+ERR Error during planning: '__repark_float_to_string__' expects a FLOAT or DOUBLE argument, got Decimal128(30, 15)
+OK [('0.000000000000000',), ('1.255000000000000',)]
+== ddr-pkg-base ansi=true
+ddr-pkg-base/repark/_native.abi3.so
+ERR Error during planning: '__repark_float_to_string__' expects a FLOAT or DOUBLE argument, got Decimal128(30, 15)
+ERR Error during planning: '__repark_float_to_string__' expects a FLOAT or DOUBLE argument, got Decimal128(30, 15)
+OK [('0.000000000000000',), ('1.255000000000000',)]
+== ddr-pkg-base ansi=false
+ddr-pkg-base/repark/_native.abi3.so
+ERR Error during planning: '__repark_float_to_string__' expects a FLOAT or DOUBLE argument, got Decimal128(30, 15)
+ERR Error during planning: '__repark_float_to_string__' expects a FLOAT or DOUBLE argument, got Decimal128(30, 15)
+OK [('0.000000000000000',), ('1.255000000000000',)]
+== ddr-pkg-head ansi=true
+ddr-pkg-head/repark/_native.abi3.so
+ERR Error during planning: '__repark_float_to_string__' expects a FLOAT or DOUBLE argument, got Decimal128(30, 15)
+ERR Error during planning: '__repark_float_to_string__' expects a FLOAT or DOUBLE argument, got Decimal128(30, 15)
+OK [('0.000000000000000',), ('1.255000000000000',)]
+== ddr-pkg-head ansi=false
+ddr-pkg-head/repark/_native.abi3.so
+ERR Error during planning: '__repark_float_to_string__' expects a FLOAT or DOUBLE argument, got Decimal128(30, 15)
+ERR Error during planning: '__repark_float_to_string__' expects a FLOAT or DOUBLE argument, got Decimal128(30, 15)
+OK [('0.000000000000000',), ('1.255000000000000',)]

@@ -55,6 +55,7 @@ sets an ALT flag that appends `.` when precision is 0.
   doubles + 100 seeded random rows; 579 non-shortest floats + 100 seeded random
   rows) so CI holds the claim without the fixture file.
 - `tests_corpus.rs` — the corpus byte-equality test and the in-tree table test.
+- `tests_unscaled.rs` — **DOUBLE-DECIMAL-STORE-ROUND-1 (2026-11-13):** new. The kernel `repark_common::java_double::java_double_unscaled` against the JDK 17 values, and against this crate's JDK 17 text port over a dense sweep (the fast path agrees with the digit path). Pins `the_kernel_rounds_the_jdk_17_text_half_up` and `the_fast_path_agrees_with_the_text_on_a_dense_sweep` (moved here from `bool_decimal.rs`).
 - `tests_suffix_marker.rs` — **Fix round 1 (2026-09-15, R-17c-2):** pins the
   `__repark_suffix_literal__` exemption with a stub marker UDF (identity,
   always-nullable field, the door's real contract) — the cast survives

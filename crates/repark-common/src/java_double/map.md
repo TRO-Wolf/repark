@@ -17,7 +17,9 @@ and UDFs and re-exports these scalars, so every existing importer is untouched.
   `insignificantDigitsForPow2`, `roundup`) with the `toJavaFormatString`
   layout, for `f64` and `f32`: `with_java_double_text` / `with_java_float_text`
   plus the `java_double_text`, `java_float_text` and length helpers. No
-  `unsafe`, no new dependency. Behaviour pins stay beside the callers in
+  `unsafe`, no new dependency. **DOUBLE-DECIMAL-STORE-ROUND-1 (2026-11-13):**
+  `java_double_unscaled` is Spark's FLOAT/DOUBLE-to-DECIMAL value: the JDK 17 text rounded half
+  up at the target scale, with a binary fast path away from a half. Behaviour pins stay beside the callers in
   `repark-functions` (the corpus byte-equality test over the recorded JDK
   17.0.15 fixture and the in-tree tables).
 - `bigint.rs` — the ported `FDBigInteger` magnitude arithmetic, little-endian

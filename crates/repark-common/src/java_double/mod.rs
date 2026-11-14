@@ -658,3 +658,87 @@ pub fn java_double_text_len(value: f64) -> usize {
 pub fn java_float_text_len(value: f32) -> usize {
     with_java_float_text(value, str::len)
 }
+
+const POW10_F64: [f64; 23] = [
+    1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16,
+    1e17, 1e18, 1e19, 1e20, 1e21, 1e22,
+];
+const PRODUCT_LIMIT: f64 = 4_503_599_627_370_496.0;
+const ULP_MARGIN: f64 = 4.0;
+
+#[must_use]
+pub fn java_double_unscaled(value: f64, scale: i8) -> Option<i128> {
+    if !value.is_finite() {
+        return None;
+    }
+    if value == 0.0 {
+        return Some(0);
+    }
+    if let Some(unscaled) = product_unscaled(value, scale) {
+        return Some(unscaled);
+    }
+    digits_unscaled(&dtoa_double_bits(value.to_bits()), scale)
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn product_unscaled(value: f64, scale: i8) -> Option<i128> {
+    let factor = POW10_F64.get(usize::try_from(scale).ok()?)?;
+    let magnitude = (value * factor).abs();
+    if magnitude >= PRODUCT_LIMIT {
+        return None;
+    }
+    let spacing = ulp_of(magnitude);
+    if ((magnitude.fract() - 0.5).abs()) <= ULP_MARGIN * spacing {
+        return None;
+    }
+    let rounded = magnitude.round() as i128;
+    Some(if value.is_sign_negative() {
+        -rounded
+    } else {
+        rounded
+    })
+}
+
+fn ulp_of(magnitude: f64) -> f64 {
+    let exponent = (magnitude.to_bits() & EXP_MASK) >> EXP_SHIFT;
+    if exponent <= 52 {
+        return f64::from_bits(1);
+    }
+    f64::from_bits((exponent - 52) << EXP_SHIFT)
+}
+
+fn digits_unscaled(converter: &Dtoa, scale: i8) -> Option<i128> {
+    let shown = converter
+        .digits
+        .get(converter.first..converter.first + converter.n_digits)?;
+    let mut digits: u128 = 0;
+    for byte in shown {
+        digits = digits * 10 + u128::from(byte.checked_sub(b'0')?);
+    }
+    let shift =
+        i32::from(scale) + converter.dec_exponent - i32::try_from(converter.n_digits).ok()?;
+    let magnitude = if digits == 0 {
+        0
+    } else if shift >= 0 {
+        digits.checked_mul(10u128.checked_pow(u32::try_from(shift).ok()?)?)?
+    } else {
+        let dropped = u32::try_from(-shift).ok()?;
+        match 10u128.checked_pow(dropped) {
+            Some(divisor) if dropped <= 38 => {
+                let kept = digits / divisor;
+                if (digits % divisor) * 2 >= divisor {
+                    kept + 1
+                } else {
+                    kept
+                }
+            }
+            _ => 0,
+        }
+    };
+    let magnitude = i128::try_from(magnitude).ok()?;
+    Some(if converter.negative {
+        -magnitude
+    } else {
+        magnitude
+    })
+}

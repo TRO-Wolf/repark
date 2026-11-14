@@ -324,8 +324,8 @@ repark-core's error map.
   sites through them (unpartitioned staging, partitioned fanout, partitioned lineage,
   unpartitioned MERGE, position deletes), and WO3a opened `validate_write_format` to
   orc/avro.
-- `data_format.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28), reverted by RP-61 (2026-10-28):** `resolve_delete_format` returns PUFFIN on format-version 3, else an explicit per-write `delete-format` option or the `write.delete.format.default` property (through `parse_format`, so `avro` and `orc` are honoured), else the data format. The guard's helpers and constants are removed with their callers. The file is the pre-guard state on `3d24ad40` plus one unit test, `explicit_avro_or_orc_delete_format_is_honoured_on_parquet_data`; the fallback's test `delete_falls_back_to_data_format` is back.
-- [staged_publish.rs](staged_publish.rs) — **STAGED-PUBLISH-CLEANUP-1 (2026-11-04):** the staged CTAS, RTAS and CREATE TABLE publish. `commit_staged` records the table handed to the publish through a forwarding `PublishCapture` catalog; `publish_applied` wraps the options path. A rejected publish (not `CommitStateUnknown`) is cleaned after a `load_table` probe shows it did not land (the handed location in the current metadata log, a publish-added snapshot among the current snapshots, or a create's uuid). The cleanup keeps every file the current table references, and keeps everything on a walk read failure. `pins: staged-publish-cleanup-1/C-001`.
+- `data_format.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28), reverted by RP-61 (2026-10-28):** `resolve_delete_format` returns PUFFIN on format-version 3, else an explicit per-write `delete-format` option or the `write.delete.format.default` property (via `parse_format`), else the data format. Its helpers and constants go with their callers. The file is the pre-guard state on `3d24ad40` plus one unit test, `explicit_avro_or_orc_delete_format_is_honoured_on_parquet_data`; the fallback's test `delete_falls_back_to_data_format` is back.
+- [staged_publish.rs](staged_publish.rs) — **STAGED-PUBLISH-CLEANUP-1 (2026-11-04):** the staged CTAS, RTAS and CREATE TABLE publish. `commit_staged` records the table handed to the publish through a forwarding `PublishCapture` catalog; `publish_applied` wraps the options path. A rejected publish (not `CommitStateUnknown`) is cleaned after a `load_table` probe shows it did not land (the handed location in the current metadata log, a publish-added snapshot among the current snapshots, or a create's uuid). The cleanup keeps every file the current table references, and everything on a walk read failure. `pins: staged-publish-cleanup-1/C-001`.
   **CTAS-QUERY-FAILURE-CLEANUP-1 (2026-11-11):** `discard_unpublished_create` removes the begin-create `00000` file when the CTAS query fails before any publish — create mode only, since replace mode writes no file. It deletes exactly `staged.table().metadata_location()` through the table's `FileIO`: no catalog call, no listing. A failed delete warns and never replaces the caller's error.
 - `map_key_change.rs` — **MAP-KEY-ALTER-1 (2026-11-03):** Java `ApplyChanges.map`'s key rule for
   both DDL doors and both `schema_evolution.rs` unions: a drop, any rename, add, widening or
@@ -515,21 +515,8 @@ repark-core's error map.
   `MicroBatchError::EncryptedSinkRefused` from any depth. The per-seat entry checks stay
   where they refuse earlier and more clearly; nothing depends on them for safety: the
   guard in `../catalog/encryption_guard.rs` holds without them.
-- `conform.rs`, `partition_overwrite.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the guard of hint H-1 is one check in front
-  of the three batch casts: `strict_store_cast` (S1 `conform_batch_scoped`, S2 the two
-  positional maps of `overwrite.rs`) and `strict_partition_store_cast` (S3, the static-partition
-  overwrite) call `struct_pairing::refuse_unpaired_struct` before the leaf cast, so a struct whose
-  field names are not the target's in order is refused and no batch cast pairs fields by a rule
-  of its own. The static-partition hint names the route and the workaround (owner, question 34).
-  `overwrite.rs` is unchanged: its two casts already go through `strict_store_cast`.
-- `conform.rs`, `overwrite.rs`, `partition_overwrite.rs`, `merge/mod.rs` — **ICE-TSNS-FLOOR-DOORS-1
-  guard (2026-10-14, provisional, the order's lean A):** `conform::strict_store_cast(name, column,
-  target)` is today's strict cast unless a top-level timestamp's unit would get coarser, where
-  `refuse_coarser_timestamp` returns an internal error naming the column. The five batch casts
-  that narrowed a nanosecond source on main use it (`conform.rs`, both `overwrite.rs` positional
-  maps, `partition_overwrite.rs`'s store assignment; `merge/mod.rs` calls the refusal before
-  `convert_uuid_column`). A door that misses the routers fails instead of storing a second answer.
-  Nested leaves stay as on main. Ships as its own last commit with a revert-alone run.
+- `conform.rs`, `partition_overwrite.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** the guard of hint H-1 is one check in front of the three batch casts: `strict_store_cast` (S1 `conform_batch_scoped`, S2 the two positional maps of `overwrite.rs`) and `strict_partition_store_cast` (S3, static-partition overwrite) call `struct_pairing::refuse_unpaired_struct` before the leaf cast, so an unpaired struct is refused and no batch cast pairs fields by its own rule. The static-partition hint names the route and workaround (owner, question 34). `overwrite.rs` is unchanged (its two casts already use `strict_store_cast`).
+- `conform.rs`, `overwrite.rs`, `partition_overwrite.rs`, `merge/mod.rs` — **ICE-TSNS-FLOOR-DOORS-1 guard (2026-10-14, provisional):** `conform::strict_store_cast(name, column, target)` is the strict cast unless a top-level timestamp's unit would get coarser, where `refuse_coarser_timestamp` returns an internal error naming the column. The five batch casts that narrowed a nanosecond source on main use it (`conform.rs`, both `overwrite.rs` positional maps, `partition_overwrite.rs`'s store assignment; `merge/mod.rs` calls the refusal before `convert_uuid_column`). A door missing the routers fails instead of storing a second answer. Nested leaves stay as on main.
 - `conform.rs` — batch conforming for the append write path (name resolution, WI-1 store
   assignment, strict casts), split from `append.rs` (file-size ratchet, 2026-09-01;
   append.rs baseline 1886). A missing
@@ -538,6 +525,7 @@ repark-core's error map.
   **CTAS-VIEW-1 (2026-09-03):** `conform_batch_retaining_unmapped_columns` is the unpartitioned
   stream-writer map; it calls `conform_batch` then keeps MERGE lineage extras (`_row_id`).
   Matching types skip `try_new` so CAST-NULL empty overwrite keeps source nullability.
+  **DOUBLE-DECIMAL-STORE-ROUND-1 (2026-11-13):** a FLOAT/DOUBLE batch into `Decimal128` stores the JDK 17 text, half up, through `__repark_store_float_decimal__`; NaN, ±Infinity and overflow refuse; pin `conform::tests::a_float_batch_stores_into_decimal_by_the_doubles_text`.
   **ICE-PROMOTE-READ-1 (2026-09-16):** `promoted_scan_column` widens a scanned column written
   before a legal Iceberg promotion (`Int32 → Int64`, `Float32 → Float64`,
   `Decimal128(p,s) → Decimal128(p',s)`) to the current type with a strict cast and returns every
@@ -547,90 +535,18 @@ repark-core's error map.
   `retaining_unmapped_columns_scoped` take the session case flag so a CTAS over twins
   resolves written names the way the door resolved them. The unscoped retaining wrapper is
   deleted — every caller passes the flag explicitly now.
-- `append_fanout_serial.rs` — **ICE-WRITE-OPTIONS-1 round 3 (2026-09-17):** the serial
-  conformed fanout (`fanout_conformed_stream_serial[_with_abort]`), split out of
-  `append.rs` under the file-size gate; re-exported there so callers keep their paths.
-  Run 22b rebase (2026-09-18): the fanout builder is wrapped in `distribution::stamp`, the
-  ICE-SORTED-INSERT-1 change main made to the pre-split `append.rs` body, so both the
-  option-free and the option-carrying fanout stamp the default sort order id.
-- `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform
-  ([conform.rs](conform.rs): missing /
-  extra / duplicate column = loud error, except a missing column whose Iceberg field carries a
-  `write-default`: conform builds that batch against the reduced schema and the fork's
-  `DataFileWriter::write` fills it — **V3-6 C-005**; **WI-1** ANSI store-assignment gate then
-  strict casts, overflow never NULLs) → identity-partition fanout write → ONE stamped
-  `merge_append` commit
-  (append×append commutes via the fork's refresh-and-re-apply retry; empty input commits an
-  empty stamped snapshot). Also `write_partitioned_data_files(_from_stream)` — the partitioned
-  staged-write core. **V3-1 / RP-3 C-008:** `iceberg_err` goes through
-  `catalog::iceberg_to_datafusion`; Hadoop `vN.metadata.json` writes bump to `v(N+1)`
-  (registry `V3-ADOPT-1` FIXED).
-  **WRITE-DISTRIBUTION-2 (2026-09-06):** the concurrent dispatcher no longer deals whole
-  batches round-robin. It routes each batch through `distribution/router.rs::PartitionRouter`, which
-  splits the batch's rows by hash of the writer's partition values, and sends each part to its
-  slot's worker — one partition value lands in one writer on every partitioned stream write
-  (INSERT OVERWRITE, MERGE inserts, staged appends). The serial path and the unpartitioned
-  path are untouched by this unit.
-  **WRITE-ORDER-DIST-1 (2026-09-06):** the concurrency entry delegates to the distribution
-  module's sorted drivers, so a declared default sort order sorts every partitioned staged
-  write at no behaviour change when no order is declared.
-  **RP-56 DIFF-PROBE fold (2026-09-29):** the `write_partitioned_data_files*`
-  family moved to `partitioned_files.rs` (re-exported here; baseline 1804 → 1737).
-- `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): `commit_truncate` is
-  `commit_overwrite_replace_all` with no added files (fork stamps `Operation::Delete`).
-  `commit_truncate_to` commits onto a named branch.
-- `update_cast.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `store_assignment_cast_sql` renders `__repark_store_pair__` (by
-  name, case-insensitive) in front of the leaf cast when the target holds a struct;
-  `paired_assignment_cast_sql` and `paired_nested_cast_sql` take the mode and the column path
-  from the MERGE and UPDATE fold. The struct and map arms of `incompatible_nested_message` and
-  `struct_member` are deleted: a nested pair is paired by the seam (`incompatible_paired_message`)
-  and its leaves are judged by the flat matrix with their paths.
-- `update_cast.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_cast_sql` is the one
-  home of the `arrow_cast((expr), '<type>')` store-assignment cast, with the field ids
-  stripped from the type name. MERGE's `insert.rs` and the Spark door's nested-assignment fold
-  both call it.
-- `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** `incompatible_update_message` renders
-  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000` through the shared
-  `ansi_store_assignable` predicate (never a second matrix) with uppercase Spark type
-  names; an unlisted type falls through to `None`. Both doors call it before executing
-  a positional UPDATE. pins: ipi-51/W-UPDATE-TYPE-ERR
-- `update_cast.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** `spark_update_type_name`
-  names Arrow `Null` `VOID`, so `incompatible_update_message` renders a value written into a
-  `VOID` column with Spark's `CANNOT_SAFELY_CAST` text, `"INT"` to `"VOID"`.
-- `update_cast.rs` — **WO NTZ-1 slice 2 (2026-09-27):** `spark_update_type_name` answers
-  `TIMESTAMP_NTZ` for a naive timestamp and `TIMESTAMP` for a zoned one, so NTZ store
-  refusals name Spark's type; `store_assignment_cast_sql` emits the `ntz_store` wall-cast
-  UDF call for a naive-microsecond target instead of `arrow_cast` (every other target
-  keeps `arrow_cast`).
-  **WO NTZ-1 verifier fold (2026-09-28):** only microsecond-naive timestamps name
-  `TIMESTAMP_NTZ`; the nanosecond zoneless form of an unlocalized `TIMESTAMP'…'`
-  literal names `TIMESTAMP` again.
-  **WO NTZ-STORE-DOORS-1 (2026-09-28):** a `Timestamp(µs, zone)` target renders
-  `arrow_cast((CAST((expr) AS TIMESTAMP)), '<type>')`, so a naive or `DATE` value
-  stores the session-zone instant on MERGE UPDATE SET (and the nested-assignment
-  fold); the ANSI door and bare sessions read it as UTC as before.
+- `append_fanout_serial.rs` — **ICE-WRITE-OPTIONS-1 round 3 (2026-09-17):** the serial conformed fanout (`fanout_conformed_stream_serial[_with_abort]`), split out of `append.rs` under the file-size gate; re-exported there so callers keep their paths. Run 22b rebase (2026-09-18): the fanout builder is wrapped in `distribution::stamp`, the ICE-SORTED-INSERT-1 change main made to the pre-split `append.rs` body, so both the option-free and the option-carrying fanout stamp the default sort order id.
+- `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform ([conform.rs](conform.rs): missing / extra / duplicate column = loud error, except a missing column whose Iceberg field carries a `write-default`: conform builds that batch against the reduced schema and the fork's `DataFileWriter::write` fills it — **V3-6 C-005**; **WI-1** ANSI store-assignment gate then strict casts, overflow never NULLs) → identity-partition fanout write → ONE stamped `merge_append` commit (append×append commutes via the fork's refresh-and-re-apply retry; empty input commits an empty snapshot). Also `write_partitioned_data_files(_from_stream)` — the partitioned staged-write core. **V3-1 / RP-3 C-008:** `iceberg_err` goes through `catalog::iceberg_to_datafusion`; Hadoop `vN.metadata.json` writes bump to `v(N+1)` (registry `V3-ADOPT-1` FIXED). **WRITE-DISTRIBUTION-2 (2026-09-06):** the concurrent dispatcher routes each batch through `distribution/router.rs::PartitionRouter`, which splits rows by partition-value hash and sends each part to its slot's worker — one partition value lands in one writer on every partitioned stream write (INSERT OVERWRITE, MERGE inserts, staged appends). The serial and unpartitioned paths are untouched. **WRITE-ORDER-DIST-1 (2026-09-06):** the concurrency entry delegates to the distribution module's sorted drivers, so a declared default sort order sorts every partitioned staged write at no behaviour change when no order is declared. **RP-56 DIFF-PROBE fold (2026-09-29):** the `write_partitioned_data_files*` family moved to `partitioned_files.rs` (re-exported here; baseline 1804 → 1737).
+- `truncate.rs` — whole-table `TRUNCATE TABLE` (DML-C): `commit_truncate` is `commit_overwrite_replace_all` with no added files (fork stamps `Operation::Delete`). `commit_truncate_to` commits onto a named branch.
+- `update_cast.rs` — **ICE-STRUCT-PAIRING-1 step 3 (2026-10-14), parity row R-016:** `store_assignment_cast_sql` renders `__repark_store_pair__` (by name, case-insensitive) in front of the leaf cast when the target holds a struct; `paired_assignment_cast_sql` and `paired_nested_cast_sql` take the mode and the column path from the MERGE and UPDATE fold. Their struct and map arms (`incompatible_nested_message`, `struct_member`) are deleted: the seam pairs a nested pair (`incompatible_paired_message`) and the flat matrix judges its leaves by path.
+- `update_cast.rs` — **U8 WRITE-SQL PR2 (2026-09-25):** `store_assignment_cast_sql` is the one home of the `arrow_cast((expr), '<type>')` store-assignment cast, with the field ids stripped from the type name. MERGE's `insert.rs` and the Spark door's nested-assignment fold both call it.
+- `update_cast.rs` — **IPI-51 PR10 (2026-09-22):** `incompatible_update_message` renders `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]`/`KD000` through the shared `ansi_store_assignable` predicate (never a second matrix) with uppercase Spark type names; an unlisted type falls through to `None`. Both doors call it before executing a positional UPDATE. pins: ipi-51/W-UPDATE-TYPE-ERR
+- `update_cast.rs` — **WO U9-TYPES-1 round-1 fixer (2026-09-26):** `spark_update_type_name` names Arrow `Null` `VOID`, so `incompatible_update_message` renders a value written into a `VOID` column with Spark's `CANNOT_SAFELY_CAST` text, `"INT"` to `"VOID"`.
+- `update_cast.rs` — **WO NTZ-1 slice 2 (2026-09-27):** `spark_update_type_name` answers `TIMESTAMP_NTZ` for a naive timestamp and `TIMESTAMP` for a zoned one, so NTZ refusals name Spark's type; `store_assignment_cast_sql` emits the `ntz_store` wall-cast UDF call for a naive-microsecond target instead of `arrow_cast` (every other target keeps `arrow_cast`). **WO NTZ-1 verifier fold (2026-09-28):** only microsecond-naive timestamps name `TIMESTAMP_NTZ`; the nanosecond zoneless form of an unlocalized `TIMESTAMP'…'` literal names `TIMESTAMP` again. **WO NTZ-STORE-DOORS-1 (2026-09-28):** a `Timestamp(µs, zone)` target renders `arrow_cast((CAST((expr) AS TIMESTAMP)), '<type>')`, so a naive or `DATE` value stores the session-zone instant on MERGE UPDATE SET (and the nested fold); the ANSI door and bare sessions read it as UTC.
 - `ntz_store.rs` — **WRITE-SPINE-1 step 2 (2026-10-25):** `zone_stores`, `zone_stores_by_name`, `zone_store_frame`, `registered_store_kernel` and `analyzed_types` are deleted from this file; the zone store rule now lives once in `conform_stage.rs`. The entries below name those functions as they stood on their dates. The type helpers and `refuse_ntz_writes` stay here.
-- `ntz_store.rs`, `store_cast.rs`, `struct_pairing.rs` — **WRITE-SPINE-1 step 1a (2026-10-24):**
-  the kernel names these files carried as their own strings are re-exports from
-  `repark_common::udf_names` under the existing identifiers: `NTZ_WALL_CAST_UDF_NAME`,
-  `NS_WALL_CAST_UDF_NAME` and `NS_INSTANT_CAST_UDF_NAME` (`ntz_store.rs`),
-  `STORE_INT_GUARD_NAME` (`store_cast.rs`) and `STORE_PAIR_KERNEL_NAME` (`struct_pairing.rs`).
-  No call site changed. Why: `repark-functions` registers the wall kernels under the same
-  strings, and two copies across the crate line could drift without a compile error. Details in
-  [../../../repark-common/src/map.md](../../../repark-common/src/map.md).
-- `ntz_store.rs` — **WRITE-SPINE-1 step 1b (2026-10-24):** the store-kernel lookup of
-  `zone_store_frame` fails closed. `registered_store_kernel` answers `Ok(None)` when the target
-  needs no kernel (`wall_kernel_reads` false, or `store_kernel_udf_name` names none), and a
-  `DataFusionError::Internal` naming the kernel when the session does not hold the kernel it
-  names. The expression map collects into `Result<Vec<Expr>>` and `zone_stores` returns the
-  error. Why: the lookup called `.ok()`, so a session without the kernel took the plain-cast arm
-  and the sink stored an instant into a `TIMESTAMP_NTZ` column as its UTC wall. The internal
-  class is the one the sink's `refuse_coarser_timestamp` (`conform.rs`) uses; Spark has no such
-  statement. Ledger: [write-spine-1](../../../../task/ledgers/staging/write-spine-1-ledger.md).
-- `ntz_store.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** the two router predicates
-  gain one arm each, so every staged door reaches `repark-functions`'
-  `timestamp_ns_cast::store_micros` by type, as INSERT does. `needs_ltz_instant_cast` accepts
-  `Timestamp(Nanosecond, _)`: `zone_store_frame` (every INSERT OVERWRITE spelling, the static
+- `ntz_store.rs`, `store_cast.rs`, `struct_pairing.rs` — **WRITE-SPINE-1 step 1a (2026-10-24):** the kernel names these files carried as their own strings are re-exports from `repark_common::udf_names` under the existing identifiers: `NTZ_WALL_CAST_UDF_NAME`, `NS_WALL_CAST_UDF_NAME` and `NS_INSTANT_CAST_UDF_NAME` (`ntz_store.rs`), `STORE_INT_GUARD_NAME` (`store_cast.rs`) and `STORE_PAIR_KERNEL_NAME` (`struct_pairing.rs`). No call site changed. Why: `repark-functions` registers the wall kernels under the same strings; two copies could drift unnoticed. Details in [../../../repark-common/src/map.md](../../../repark-common/src/map.md).
+- `ntz_store.rs` — **WRITE-SPINE-1 step 1b (2026-10-24):** the store-kernel lookup of `zone_store_frame` fails closed. `registered_store_kernel` answers `Ok(None)` when the target needs no kernel (`wall_kernel_reads` false, or `store_kernel_udf_name` names none), and a `DataFusionError::Internal` naming the kernel when the session does not hold the kernel it names. The expression map collects into `Result<Vec<Expr>>` and `zone_stores` returns the error. Why: `.ok()` let a session without the kernel take the plain-cast arm, storing an instant into a `TIMESTAMP_NTZ` column as its UTC wall. The internal class is `refuse_coarser_timestamp`'s (`conform.rs`); Spark has no such statement. Ledger: [write-spine-1](../../../../task/ledgers/staging/write-spine-1-ledger.md).
+- `ntz_store.rs` — **ICE-TSNS-FLOOR-DOORS-1 (2026-10-14, R-009):** the two router predicates gain one arm each, so every staged door reaches `repark-functions`' `timestamp_ns_cast::store_micros` by type, as INSERT does. `needs_ltz_instant_cast` accepts `Timestamp(Nanosecond, _)`: `zone_store_frame` (every INSERT OVERWRITE spelling, the static
   `PARTITION` door, INSERT … BY NAME, `overwritePartitions`, `insertInto(overwrite=True)`) and
   the MERGE insert wrapper (`merge/insert.rs`) emit the cast to the column type that INSERT
   plans, and the analyzer turns it into the narrowing kernel. `wall_kernel_reads` accepts a
@@ -1232,7 +1148,7 @@ repark-core's error map.
   unless the DataFrame door carried `source_by_name`, by name for an UPDATE) and labels the
   table (`table_label`; Spark's empty label for an UPDATE); `conform_values_rows` pairs a
   `VALUES` row the same way. The conform stage (`conform_stage.rs`; formerly `wrap_store_outputs`) takes the mode and the label from its
-  caller. The test module moved to `store_overflow/tests.rs` (file-size ceiling).
+  caller. The test module moved to `store_overflow/tests.rs` (file-size ceiling). **DOUBLE-DECIMAL-STORE-ROUND-1 (2026-11-13):** `float_decimal_store` stores a FLOAT/DOUBLE store value, or its exact-DECIMAL `CAST`/`CASE`, through the store UDF; pinned by the facade MERGE and UPDATE doors.
   **Exception round (2026-10-15, verifier 2's V2-02):** `conform_values_rows` first runs
   `refuse_disagreeing_values_rows`. When two rows of a multi-row `VALUES` give a column struct
   types whose field names disagree (by position, at every depth, inside arrays and map
@@ -1884,7 +1800,7 @@ repark-core's error map.
   since the fork resolves the removal set inside the commit. `engine-name` / `engine-version` are
   reserved (Spark stamps both on every write; RePark writes neither): they refuse with
   `<engine-reserved>` as the engine half (R-21c-1).
-- [conform_stage.rs](conform_stage.rs) — **WRITE-SPINE-1 step 2 (2026-10-25):** the one plan-time conform stage (`conform_stage`, `conform_frame`, `conform_table_frame`, `table_targets`, the stage record). Every routed Iceberg write door passes it, and it applies the leaf zone rule, the floor, pairing, overflow and the nested zone seam, refusing when a kernel is missing. The seam rewrites only an `arrow_cast` whose argument reads a column (findings F-2, F-3). **NESTED-LITERAL-SEAM-1 (2026-10-27):** the zone half of the stage is `zone_partial_for`, rules R1 to R12: a date literal under the row-merge CASE (a wall literal under it, or in a constant, stays refused, R3), the date leaves of a constant nested value (partitioned or not), a date literal or column into a MAP timestamp key on D3, D8 and D10, and, on D10, the `TRY_CAST` date and wall leaves convert through the seam, with a per-leaf exclusion for an instant `TRY_CAST` to a wall leaf; the read-path CAST of a map with a timestamp key reads the same key arm (C-015). The CASE that holds a scalar-foldable seamed argument is wrapped in a CAST to the metadata-free container type (`wrap_scalar_seam_case`, ruling NLS-2). The file is 827 lines; its pins are in [conform_stage/seam_pins.rs](conform_stage/seam_pins.rs).
+- [conform_stage.rs](conform_stage.rs) — **WRITE-SPINE-1 step 2 (2026-10-25):** the one plan-time conform stage (`conform_stage`, `conform_frame`, `conform_table_frame`, `table_targets`, the stage record). Every routed Iceberg write door passes it: leaf zone rule, floor, pairing, overflow and nested zone seam, refusing when a kernel is missing. The seam rewrites only an `arrow_cast` whose argument reads a column (findings F-2, F-3). **DOUBLE-DECIMAL-STORE-ROUND-1 (2026-11-13):** `leaf_store` and `FloatDecimalStoreRule` (`repark_float_decimal_store`) store float leaves through the store UDF; pin `conform_stage::tests::every_stage_site_stores_a_float_leaf_by_the_jdk_17_kernel`. **NESTED-LITERAL-SEAM-1 (2026-10-27):** the zone half of the stage is `zone_partial_for`, rules R1 to R12: a date literal under the row-merge CASE (a wall literal under it, or in a constant, stays refused, R3), the date leaves of a constant nested value, a date literal or column into a MAP timestamp key on D3, D8 and D10, and, on D10, the `TRY_CAST` date and wall leaves convert through the seam, with a per-leaf exclusion for an instant `TRY_CAST` to a wall leaf; the read-path CAST of a map with a timestamp key reads the same key arm (C-015). A CASE holding a scalar-foldable seamed argument is wrapped in a CAST to the metadata-free container type (`wrap_scalar_seam_case`, ruling NLS-2). The file is 827 lines; its pins are in [conform_stage/seam_pins.rs](conform_stage/seam_pins.rs).
 
 ## I want to...
 
@@ -1935,7 +1851,7 @@ repark-core's error map.
 First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). Escalate to:
 [../../map.md#debug](../../map.md).
 
-- **Fixture/doc scrubs (outcome-neutral):** EC-9 (2026-08-08, phase-3 PR-5) replaced private fixture/doc literals with `example-team` equivalents (enumerated in docs/history/port-v2/p3e-facade-ledger.md); the neutral-fixture scrub (2026-08-10, hardening-prep, owner-approved, forward-only) moved doc text and example literals to neutral placeholders (the mirrored job named generically; site here: the example table literal in `append.rs`, now `"t"`); FNP-4B (2026-09-15) removed the unit's added code comments under the 2026-08-26 ruling (facts stay in this map).
+- **Fixture/doc scrubs (outcome-neutral):** EC-9 (2026-08-08, phase-3 PR-5) replaced private fixture/doc literals with `example-team` equivalents (enumerated in docs/history/port-v2/p3e-facade-ledger.md); the neutral-fixture scrub (2026-08-10, owner-approved, forward-only) moved doc text and examples to placeholders (here: `append.rs`'s example table literal, now `"t"`); FNP-4B (2026-09-15) removed the unit's added code comments under the 2026-08-26 ruling (facts stay in this map).
 
 ## IPI-19 + IPI-37 (2026-09-20) — schema evolution on write
 
