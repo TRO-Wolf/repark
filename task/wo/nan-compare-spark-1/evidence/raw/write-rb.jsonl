@@ -1,0 +1,14 @@
+{"built_from": "nwc/pkg-base", "engine": "repark", "native_file": "<scratchpad>/nwc/pkg-base/repark/_native.abi3.so", "python": "3.12.3", "record": "leg"}
+{"path": "pa_l1", "record": "parquet"}
+{"path": "pa_l5", "record": "parquet"}
+{"name": "sc.ns.rb_parquet_l1", "record": "table"}
+{"name": "sc.ns.rb_parquet_l5", "record": "table"}
+{"name": "sc.ns.rb_parquet_part", "record": "table"}
+{"name": "sc.ns.rb_orc_l1", "record": "table"}
+{"name": "sc.ns.rb_orc_l5", "record": "table"}
+{"name": "sc.ns.rb_orc_part", "record": "table"}
+{"name": "sc.ns.rb_avro_l1", "record": "table"}
+{"name": "sc.ns.rb_avro_l5", "record": "table"}
+{"name": "sc.ns.rb_avro_part", "record": "table"}
+{"path": "rb_l1", "record": "parquet"}
+{"path": "rb_l5", "record": "parquet"}
