@@ -1,8 +1,9 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use datafusion::error::Result;
 use iceberg::spec::{
-    DataContentType, DataFile, ManifestContentType, SnapshotSummaryCollector, TableProperties,
+    DataContentType, DataFile, ManifestContentType, SnapshotSummaryCollector, Struct,
+    TableProperties,
 };
 use iceberg::table::Table;
 
@@ -177,14 +178,14 @@ pub async fn replaced_data_files(
     branch: Option<&str>,
     staged: &[DataFile],
 ) -> Result<Vec<DataFile>> {
-    let replaced: Vec<PartitionKey> = staged
+    let replaced: HashSet<(i32, Struct)> = staged
         .iter()
-        .map(|file| partition_key_of(table, file))
+        .map(|file| (file.partition_spec_id(), file.partition().clone()))
         .collect();
     let live = live_data_files(table, branch).await?;
     Ok(live
         .into_iter()
-        .filter(|file| replaced.contains(&partition_key_of(table, file)))
+        .filter(|file| replaced.contains(&(file.partition_spec_id(), file.partition().clone())))
         .collect())
 }
 
