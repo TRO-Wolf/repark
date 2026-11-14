@@ -1039,7 +1039,7 @@ perfectly good read.
   not a bug. Open residue: V1-door `.option("isolation-level","serializable")`
   honoring is unmeasured (Spark side) and stays with the V2-29 options surface.
 
-#### ZPM-1 — a clustered Spark write given interleaved `-0.0` and `0.0` rows — **DECLARED 2026-11-13 (write-ordered tables); the no-write-order half PROPOSED, owner word owed (asked 2026-11-14)**
+#### ZPM-1 — a clustered Spark write given interleaved `-0.0` and `0.0` rows — **DECLARED 2026-11-13 (write-ordered tables) and 2026-11-14 (fan-out off)**
 
 - **repark** — on an identity-partitioned FLOAT or DOUBLE column, an `INSERT` whose rows interleave
   `-0.0` and `0.0` writes a `-0.0` partition and a `0.0` partition, each row reading its own zero,
@@ -1073,14 +1073,14 @@ perfectly good read.
 - **Rationale** — the write-ordered half is DECLARED by the owner's ruling of 2026-11-13, about 19:53
   UTC, verbatim "Defaults, merge #1325 and #1327 when green" (ZERO-PARTITION-MERGE-1 question Q2):
   RePark answers where Spark refuses. The no-write-order half is the same class, found by verifier 1
-  (B2); it is **PROPOSED, owner word owed (asked 2026-11-14)**, and is not ruled. The same ruling
+  (B2), and is DECLARED by the owner, 2026-11-14, about 00:55 UTC, verbatim "merge and defaults", adopting the default to widen ZPM-1. The 2026-11-13 ruling
   (Q1) records that a table RePark wrote before ZERO-PARTITION-MERGE-1 may hold a
   partition-granularity delete file stamped with one of the two zeros, covering rows in both: main's
   partition-granularity DELETE stamps `-0.0`, and its `rewrite_position_delete_files` stamps `+0.0`.
   After the fix, rows deleted in the other zero's partition read again, as on Spark, and nothing hides
   them ([card](../task/roadmap/mid-term/zero-partition-merge-1-card-2026-11-13.md)).
 
-#### ZPM-2 — remove-dangling-deletes drops a dangling delete in the `-0.0` partition that Spark's own action keeps — **PROPOSED, owner word owed (asked 2026-11-14)**
+#### ZPM-2 — remove-dangling-deletes drops a dangling delete in the `-0.0` partition that Spark's own action keeps — **DECLARED 2026-11-14**
 
 - **repark** — on a merge-on-read table identity-partitioned on a FLOAT or DOUBLE column, with
   partition-granularity position deletes in both the `-0.0` and the `0.0` partition,
@@ -1095,8 +1095,8 @@ perfectly good read.
   1 and 16 writers.)*
 - **Reads** — identical on both engines; the removed file covers no live row.
 - **Diverges in** — the delete-file listing and the snapshot history only.
-- **Pin** — none yet; the owner's word decides between a declared row with a pin and a fix.
-- **Rationale** — **PROPOSED, owner word owed (asked 2026-11-14)**, not ruled. RePark's removal
+- **Pin** — none yet; owed with the card's ordering follow-up.
+- **Rationale** — DECLARED by the owner, 2026-11-14, about 00:55 UTC, verbatim "merge and defaults", adopting the default to declare it. RePark's removal
   keys partitions as Java's `PartitionMap` does, and Spark's action groups the two zeros, so RePark
   is the more exact of the two (verifier 2, F4)
   ([card](../task/roadmap/mid-term/zero-partition-merge-1-card-2026-11-13.md)).

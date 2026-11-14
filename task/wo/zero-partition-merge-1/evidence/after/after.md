@@ -110,6 +110,6 @@ and base `pkg-base` (main `1d9d2808`), run on 16 CPUs.
 - **Control probe** (Spark 4.1.2 with Iceberg 1.11.0, `local[2]`, one table per cell): with
   `write.spark.fanout.enabled = false` and no write order, `1.5` and `2.0` rows interleaved like the zeros are
   written as two files, and the zeros are refused. Without the property, both are written as two files.
-- **Records:** ZPM-1 widened and ZPM-2 added, both PROPOSED with the owner's word owed; the card's Q1 text, its five
+- **Records:** ZPM-1 widened and ZPM-2 added, both DECLARED 2026-11-14 by the owner's "merge and defaults"; the card's Q1 text, its five
   comparators and F3; SIGNED-ZERO-WRITE-METADATA-1's `.partitions` half marked fixed; the new card
   SIGNED-ZERO-PARTITION-FILTER-1.

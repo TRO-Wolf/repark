@@ -4,7 +4,7 @@
 1, 2026-11-13 (#1325, finding C1, class (c), and its probe `sz.py`); NAN-WRITE-CANONICAL-1 verifier 2, 2026-11-13
 (#1325, finding C1); owner, 2026-11-13, about 16:45 UTC, verbatim "Go with default".
 
-**Status:** filed 2026-11-13, ruled label-blocking; **FIXED 2026-11-13** by this unit (fork `bc5a9211`, see "Fixed" below). Severity **S1**: a wrong value through every
+**Status:** filed 2026-11-13, ruled label-blocking; **FIXED 2026-11-13** by this unit (fork `bc5a9211`, merged as `b6e578dc` with the same tree, #385; see "Fixed" below). Severity **S1**: a wrong value through every
 reader. The owner's ruling makes it label-blocking for the scoped label ICE-V2-FLAT-AWS-LABEL-1: a small fork unit
 after the current lanes free. Pre-existing: base and head of #1325 store the same layout.
 
@@ -124,15 +124,14 @@ tests, four ordering helpers) and the records are in [the unit's directory](../.
     Spark 4.1.2's clustered writer (`ClusteredWriter.java:96`). RePark writes both partitions. See the parity
     registry row ZPM-1.
   - **Q3.** #1325 merged first. The pin to fork `bc5a9211` sits on fork main `8b6ff921`.
-- **Owner words owed, PROPOSED (asked 2026-11-14).** Neither is ruled.
+- **Ruled 2026-11-14** (owner, 2026-11-14, about 00:55 UTC, verbatim "merge and defaults"): both defaults adopted.
   - **ZPM-1's second half** (verifier 1, B2). Spark 4.1.2 also refuses interleaved zeros on a table with no write
     order when `write.spark.fanout.enabled = false` and `write.distribution-mode` is `hash` (the default) or
     `range`. Under `none` it refuses only when one input partition holds the zeros interleaved (the delta
     re-check: refused at `local[1]`, written at `local[2]` and `local[4]` for six VALUES rows). RePark writes
-    both partitions, and Spark reads them back with each row's own zero. ZPM-1 now states that half; whether Q2
-    covers it is the owner's word.
+    both partitions, and Spark reads them back with each row's own zero. ZPM-1 states that half, DECLARED.
   - **ZPM-2** (verifier 2, F4). Remove-dangling-deletes drops the `-0.0` partition's dangling delete file, which
     Spark's own action keeps because it groups the two zeros. Reads are identical; on the `1.5`/`2.0` control both
-    engines remove it. Parity row ZPM-2.
+    engines remove it. Parity row ZPM-2, DECLARED.
 - **Not explained, confined to merged files.** Spark read the other float column of a merged ORC file as `-0.0`.
   After the fix no file holds both zeros.
