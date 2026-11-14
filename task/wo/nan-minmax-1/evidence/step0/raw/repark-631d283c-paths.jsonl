@@ -1,0 +1,9 @@
+{"engine": "repark", "python": "3.12.3", "record": "leg", "tag": "base"}
+{"cell": "read_parquet", "door": "sql", "group": "path", "nan_bits": [], "ok": true, "record": "cell", "rows": [[1, "1.0", "1.0"], [2, "1.0", "1.0"], [3, "1.0", "1.0"], [4, "1.0", "1.0"]], "source": "one_c"}
+{"cell": "format_load", "door": "sql", "group": "path", "nan_bits": [], "ok": true, "record": "cell", "rows": [[1, "1.0", "1.0"], [2, "1.0", "1.0"], [3, "1.0", "1.0"], [4, "1.0", "1.0"]], "source": "one_c"}
+{"cell": "sql_parquet_path", "door": "sql", "error": "AnalysisException: Error during planning: table 'datafusion.parquet.<root>/src/one_c' not found", "group": "path", "ok": false, "record": "cell", "source": "one_c"}
+{"cell": "create_using_parquet", "door": "sql", "error": "AnalysisException: Error during planning: CREATE TABLE without AS SELECT requires a column list (e.g. CREATE TABLE c.ns.t (id BIGINT, name STRING) USING iceberg)", "group": "path", "ok": false, "record": "cell", "source": "one_c"}
+{"cell": "create_external_stored_parquet", "door": "sql", "error": "UnsupportedOperationException: This feature is not implemented: CREATE EXTERNAL TABLE is not supported for Iceberg column-def CREATE yet", "group": "path", "ok": false, "record": "cell", "source": "one_c"}
+{"cell": "read_parquet", "door": "native", "group": "path", "nan_bits": [], "ok": true, "record": "cell", "rows": [[1, "1.0", "1.0"], [2, "1.0", "1.0"], [3, "1.0", "1.0"], [4, "1.0", "1.0"]], "source": "one_c"}
+{"cell": "create_external_stored_parquet", "door": "native", "error": "AnalysisException: Error during planning: CREATE EXTERNAL TABLE to local filesystem path `<root>/src/one_c/` is refused:", "group": "path", "ok": false, "record": "cell", "source": "one_c"}
+{"cell": "create_external_under_warehouse", "door": "native", "group": "path", "nan_bits": [], "ok": true, "record": "cell", "rows": [[1, "1.0", "1.0"], [2, "1.0", "1.0"], [3, "1.0", "1.0"], [4, "1.0", "1.0"]], "source": "one_c"}

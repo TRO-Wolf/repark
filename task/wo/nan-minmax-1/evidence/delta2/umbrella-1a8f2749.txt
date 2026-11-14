@@ -1,0 +1,25 @@
+native pkg-head3
+spark default {"{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 3.0}": 10} True {'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown': None, 'datafusion.optimizer.enable_dynamic_filter_pushdown': None}
+native default {"{'max(t.d)': 6.0, 'min(t.d)': 5.0}": 1, "{'max(t.d)': 6.0, 'min(t.d)': 3.0}": 9} True
+spark set A=false accepted
+spark A=false {"{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 1.0}": 10} False {'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown': 'false', 'datafusion.optimizer.enable_dynamic_filter_pushdown': None}
+spark set U=true accepted
+spark then U=true {"{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 3.0}": 8, "{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 1.0}": 2} True {'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown': 'false', 'datafusion.optimizer.enable_dynamic_filter_pushdown': 'true'}
+spark set U=false accepted
+spark then U=false {"{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 1.0}": 10} False {'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown': 'false', 'datafusion.optimizer.enable_dynamic_filter_pushdown': 'false'}
+spark set A=true accepted
+spark then A=true {"{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 3.0}": 9, "{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 1.0}": 1} True {'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown': 'true', 'datafusion.optimizer.enable_dynamic_filter_pushdown': 'false'}
+spark unset A accepted
+spark then unset A {"{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 3.0}": 9, "{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 1.0}": 1} True {'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown': None, 'datafusion.optimizer.enable_dynamic_filter_pushdown': 'false'}
+spark set A=false accepted
+spark RESET A accepted
+spark then RESET A {"{'max(datafusion.public.t.d)': 6.0, 'min(datafusion.public.t.d)': 3.0}": 10} True {'datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown': 'false', 'datafusion.optimizer.enable_dynamic_filter_pushdown': 'false'}
+native SET A=false accepted
+native A=false {"{'max(t.d)': 6.0, 'min(t.d)': 1.0}": 10} False
+native SET U=true accepted
+native then U=true {"{'max(t.d)': 6.0, 'min(t.d)': 3.0}": 10} True
+native SET A=false accepted
+native RESET U accepted
+native then RESET U {"{'max(t.d)': 6.0, 'min(t.d)': 1.0}": 10} False
+native RESET A accepted
+native then RESET A {"{'max(t.d)': 6.0, 'min(t.d)': 3.0}": 10} True

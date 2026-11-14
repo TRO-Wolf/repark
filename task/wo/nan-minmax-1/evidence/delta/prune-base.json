@@ -1,0 +1,235 @@
+{
+ "P_const_nan|eqnan": [
+  [
+   0
+  ]
+ ],
+ "P_const_nan|isnan": [
+  [
+   1
+  ]
+ ],
+ "P_const_nan|metrics": {
+  "files_ranges_pruned_statistics": [
+   [
+    "100",
+    "99"
+   ]
+  ],
+  "row_groups_pruned_statistics": [
+   [
+    "198",
+    "2"
+   ]
+  ]
+ },
+ "P_const_nan|sel": [
+  [
+   20
+  ]
+ ],
+ "P_const|eqnan": [
+  [
+   0
+  ]
+ ],
+ "P_const|isnan": [
+  [
+   0
+  ]
+ ],
+ "P_const|metrics": {
+  "files_ranges_pruned_statistics": [
+   [
+    "100",
+    "99"
+   ]
+  ],
+  "row_groups_pruned_statistics": [
+   [
+    "198",
+    "2"
+   ]
+  ]
+ },
+ "P_const|sel": [
+  [
+   20
+  ]
+ ],
+ "P_mix|eqnan": [
+  [
+   0
+  ]
+ ],
+ "P_mix|isnan": [
+  [
+   0
+  ]
+ ],
+ "P_mix|metrics": {
+  "files_ranges_pruned_statistics": [
+   [
+    "100",
+    "51"
+   ]
+  ],
+  "row_groups_pruned_statistics": [
+   [
+    "102",
+    "3"
+   ]
+  ]
+ },
+ "P_mix|sel": [
+  [
+   25
+  ]
+ ],
+ "P_spread_nan|eqnan": [
+  [
+   0
+  ]
+ ],
+ "P_spread_nan|isnan": [
+  [
+   100
+  ]
+ ],
+ "P_spread_nan|metrics": {
+  "files_ranges_pruned_statistics": [
+   [
+    "100",
+    "1"
+   ]
+  ],
+  "row_groups_pruned_statistics": [
+   [
+    "2",
+    "2"
+   ]
+  ]
+ },
+ "P_spread_nan|sel": [
+  [
+   15
+  ]
+ ],
+ "P_spread|eqnan": [
+  [
+   0
+  ]
+ ],
+ "P_spread|isnan": [
+  [
+   0
+  ]
+ ],
+ "P_spread|metrics": {
+  "files_ranges_pruned_statistics": [
+   [
+    "100",
+    "1"
+   ]
+  ],
+  "row_groups_pruned_statistics": [
+   [
+    "2",
+    "1"
+   ]
+  ]
+ },
+ "P_spread|sel": [
+  [
+   10
+  ]
+ ],
+ "R_many|eqnan": [
+  [
+   0
+  ]
+ ],
+ "R_many|isnan": [
+  [
+   2
+  ]
+ ],
+ "R_many|metrics": {
+  "files_ranges_pruned_statistics": [
+   [
+    "2",
+    "1"
+   ]
+  ],
+  "row_groups_pruned_statistics": [
+   [
+    "2",
+    "1"
+   ]
+  ]
+ },
+ "R_many|sel": [
+  [
+   2
+  ]
+ ],
+ "R_nullnan|eqnan": [
+  [
+   0
+  ]
+ ],
+ "R_nullnan|isnan": [
+  [
+   1
+  ]
+ ],
+ "R_nullnan|metrics": {
+  "files_ranges_pruned_statistics": [
+   [
+    "1",
+    "0"
+   ]
+  ],
+  "row_groups_pruned_statistics": [
+   [
+    "0",
+    "0"
+   ]
+  ]
+ },
+ "R_nullnan|sel": [
+  [
+   0
+  ]
+ ],
+ "R_one|eqnan": [
+  [
+   0
+  ]
+ ],
+ "R_one|isnan": [
+  [
+   2
+  ]
+ ],
+ "R_one|metrics": {
+  "files_ranges_pruned_statistics": [
+   [
+    "1",
+    "0"
+   ]
+  ],
+  "row_groups_pruned_statistics": [
+   [
+    "0",
+    "0"
+   ]
+  ]
+ },
+ "R_one|sel": [
+  [
+   0
+  ]
+ ],
+ "native_sha256": "3f6032403204912193ac9c9acd7e3e89e56c0d4cb8cdd64f3400a0dfff2e89f9"
+}
