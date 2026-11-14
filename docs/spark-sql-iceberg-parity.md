@@ -5276,6 +5276,32 @@ still open is `isModifiable`.
   [NAN-WRITE-CANONICAL-1](../task/roadmap/mid-term/nan-write-canonical-1-card-2026-11-13.md). Closes
   NAN-PARTITION-RAW-BITS-1 and NAN-PARTITION-FILE-SPLIT-1.
 
+### NAN-MINMAX-1 part 1 — a plain Parquet file's NaN reads as NaN, and `max`/`min` no longer answer from its footer — **FIXED 2026-11-13 (branch, not merged)**
+
+- **repark** — Before (main `631d283c`): Parquet's footer min and max leave NaN out, and DataFusion took them as
+  exact. A file whose other FLOAT or DOUBLE values are one value read every NaN as that value (the constant-column
+  replacement), and `max`/`min` answered from the footer without the NaN. Measured on `spark.read.parquet`,
+  `read.format("parquet").load`, the native `read_parquet` and the native `CREATE EXTERNAL TABLE … STORED AS PARQUET`,
+  with canonical, sign-set and payload NaN, one file, row groups and many files: every NaN read as `1.0`. RePark's
+  round trip (`write.parquet`) and its Iceberg ingestion (`writeTo`) then stored `1.0`. After: RePark's plain-Parquet
+  `FileFormat` (`spark_nullable.rs`, on both seats) reports a file's float bounds as inexact where they are equal,
+  and every float bound of the scan as inexact, so neither consumer fires; the NaN rows read, round-trip and ingest
+  as NaN, and file pruning keeps the exact bounds of every other file.
+- **spark** — Spark 4.1.2 reads the NaN rows of the same files, answers `max` NaN and `min` 1.0, and writes the NaN
+  rows back. *(oracle: measured live 2026-11-13, `task/wo/nan-minmax-1/evidence/step0/`.)*
+- **Still unlike Spark** — `max`/`min` over a sign-set NaN (`fff8…`) answer `max 1.0, min NaN` (Arrow's total order),
+  as main already did whenever the footer shortcut did not fire; main's footer `min` was right by accident. Part 2
+  (RePark's float `max`/`min`) owes it.
+- **Pruning** — row-group and page pruning of the user's predicate keep reading the footers, as Spark's reader does;
+  `= CAST('NaN' AS DOUBLE)` keeps no row over such a file on both engines (PARQUET-NAN-EQUALITY-1's pruning half,
+  re-scoped as equal to Spark).
+- **Pin** — `python/repark/tests/io/test_nan_minmax_stats_1.py` (both doors, every NaN shape and layout, the round
+  trip, the Iceberg ingestion, the native external table, a strict xfail for the sign-set `max`/`min`, a 100-file
+  row-group control); `crates/repark-core/src/spark_nullable/float_bounds_tests.rs`.
+- **Rationale** — S1 wrong read and wrong write, label-blocking (owner, 2026-11-13, "Go with default"; the sketch's
+  Q3, Q4, Q10 ruled "defaults"); card
+  [NAN-MINMAX-1](../task/roadmap/mid-term/nan-minmax-1-card-2026-11-13.md).
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`

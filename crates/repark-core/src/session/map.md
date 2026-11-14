@@ -154,13 +154,13 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `df_guards.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `context_with_df_54_1_rule_guards` takes the dialect beside the extension: it
   registers a handed-in `TypePlanner` (`with_type_planner`; with neither in, DataFusion's type mapping stands) and runs the dialect's `configure_analyzer_rules` after the extension's. **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** re-exports `insert_struct_setop_after_coercion` toward the root; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the list. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `session.rs` calls `finish_session_build` (dialect hook, then seat 1). **Part B part 1, delta 2 (2026-11-13):** `finish_session_build` adds the analyzer rule `OptimizerSeatConfig` (`repark_optimizer_seat_config`): per plan, while the live config has `optimizer.max_passes` 0 or `optimizer.skip_failed_rules` true, however set, it refuses all but a statement, empty relation or bare `VALUES` (the analyzer runs before the optimizer loop and reads neither key). Detail: `task/wo/signed-zero-normalize-1/evidence/part-b/after/delta2/delta2.md`.
 - `df_guards.rs` — the DataFusion **54.1 regression guards**, owned and constructed by CORE
-  (design G8). Guard 1 is a configurable scalar-subquery default; guard 2 wraps
-  `push_down_leaf_projections`, declining failed rewrites only on an `Unnest` path while keeping
-  unrelated siblings loud. The wrapper preserves DataFusion's rule name and order.
+  (design G8). The wrapper preserves DataFusion's rule name and order.
   **PERF-UNPIVOT-1 (2026-09-12):** every core session installs `StackQueryPlanner` and
   registers the marker `stack` UDF.
   **COLUMN-PARITY-1 critic round (2026-09-14):** every core session also registers the
   `update_fields` and `repark_isnan` UDFs beside `stack`.
+  **NAN-MINMAX-1 (2026-11-13):** and `spark_nullable`'s float-statistics Parquet factory over
+  DataFusion's `parquet` factory, every door ([../spark_nullable/](../spark_nullable/map.md)).
   **FNP-8 (2026-09-07):** core hands the complete analyzer vector to the session extension before
   building `SessionState`; the identity hook preserves every guard and its position. The two guards
   sit at **different altitudes**, because the two bugs are: * **Guard 1, a config default:**

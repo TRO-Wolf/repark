@@ -166,6 +166,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
     crate::stack::register_stack(&context);
     crate::update_fields::register_update_fields(&context);
     crate::isnan::register_repark_isnan(&context);
+    crate::spark_nullable::register_float_bounds_inexact_parquet(&context)?;
     signed_zero::register_normalize_zero(&context);
     subquery::register_single_row_guard(&context);
     Ok(context)

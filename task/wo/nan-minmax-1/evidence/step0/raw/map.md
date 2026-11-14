@@ -10,5 +10,8 @@ One JSONL file per leg, written by `probe.py`; the first line is the leg header.
 - `repark-631d283c.jsonl` — main's legs `reads`, `paths`, `roundtrip`, `ingest`, `cross`.
 - `repark-631d283c-paths.jsonl` — main's `paths` leg again, with the native `CREATE EXTERNAL TABLE` under a
   registered warehouse.
+- `repark-head.jsonl` — the head's legs `reads`, `paths` (with the warehouse cell), `roundtrip`, `ingest`, `cross`.
+- `spark-4.1.2-cross-head.jsonl` — Spark's `cross` leg after the head ran: its read of main's and the head's
+  round-trip files and Iceberg tables.
 
 Up: [../map.md](../map.md).

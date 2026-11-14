@@ -45,6 +45,8 @@ def spark_key(key: Key, spark: dict[Key, dict[str, Any]]) -> Key:
         return own if own in spark else ("path", source, "sql", "read_parquet")
     if group == "read":
         return ("read", source, "sql", cell)
+    if group == "rt_by_repark" and ("rt_by_spark", source, "sql", "read") in spark:
+        return ("rt_by_spark", source, "sql", "read")
     if group in ("rt_by_spark", "rt_by_repark"):
         return ("roundtrip", source.split(":", 1)[1], "sql", "read_back")
     if group == "ingest_by_spark":

@@ -3,7 +3,23 @@
 **Date:** 2026-11-13. **Filed by:** the records clerk (`claude-opus-5-5`). **Source:** FILTER-STRING-NULL-ORDER-1
 (#1321) verifier 1, 2026-11-13, finding C1 (class (c), pre-existing; the verifier found no card for it).
 
-**Status:** filed 2026-11-13, not dispatched. Severity **S2**: a silent wrong read, no error.
+**Status:** filed 2026-11-13, not dispatched. Severity **S2**: a silent wrong read, no error. **Re-scoped 2026-11-13**
+(owner, "defaults", Q10 of the NAN-COMPARE-SPARK-1 sketch; see "Re-scope" below): the pruning half is recorded as
+equal to Spark on the same file, with no writer change; the constant-column half moved to
+[NAN-MINMAX-1](nan-minmax-1-card-2026-11-13.md) and is FIXED by its part 1 (unmerged). Nothing else stays open here.
+
+## Re-scope (2026-11-13, owner Q10)
+
+The [NAN-COMPARE-SPARK-1 sketch](../../wo/nan-compare-spark-1/sketch.md) §3 found two causes:
+
+1. **Pruning by NaN-free footer statistics** (inventory F2). `= NaN` keeps no row because the row group's min and max
+   leave NaN out. Spark's own Parquet reader prunes the same files the same way: `= NaN` keeps nothing on Spark too
+   (sketch §6 `pq_*_l1`, §9 `pa_const48_eq_nan`; NAN-MINMAX-1's step 0 `eq_nan_d`, 0 on both engines over every
+   constant file). Recorded as **equal to Spark on the same file**; no writer change (Q10). The source's "Spark keeps
+   the NaN row" does not hold when Spark reads the same Parquet file.
+2. **The constant-column read** (inventory I2). On a file whose other float values are one value, RePark read every
+   NaN as that value and Spark reads NaN. **Moved to NAN-MINMAX-1** and fixed by its part 1, the `Inexact` float
+   statistics seat.
 
 ## Measured
 

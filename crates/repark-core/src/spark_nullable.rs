@@ -1,8 +1,25 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
-use arrow::datatypes::{DataType, Field, Fields, Schema};
+use arrow::datatypes::{DataType, Field, Fields, Schema, SchemaRef};
+use async_trait::async_trait;
+use datafusion::catalog::Session;
+use datafusion::common::stats::Precision;
+use datafusion::common::{ColumnStatistics, GetExt, ScalarValue, Statistics};
+use datafusion::datasource::file_format::file_compression_type::FileCompressionType;
+use datafusion::datasource::file_format::options::ReadOptions;
+use datafusion::datasource::file_format::parquet::ParquetFormatFactory;
+use datafusion::datasource::file_format::{FileFormat, FileFormatFactory, FileMeta};
+use datafusion::datasource::listing::{ListingTable, ListingTableConfig, ListingTableUrl};
+use datafusion::datasource::physical_plan::{
+    FileScanConfig, FileScanConfigBuilder, FileSinkConfig, FileSource,
+};
+use datafusion::datasource::table_schema::TableSchema;
 use datafusion::error::Result as DataFusionResult;
+use datafusion::physical_expr_common::sort_expr::{LexOrdering, LexRequirement};
+use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionContext};
+use object_store::{ObjectMeta, ObjectStore};
 
 const MAX_NESTED_TYPE_DEPTH: usize = 32;
 
@@ -28,9 +45,231 @@ pub(crate) async fn read_parquet_nullable(
         .await?;
     let relaxed = relax_schema_to_nullable(inferred.schema().as_arrow());
     let sparked = promote_parquet_null_types(&relaxed);
+    read_parquet_float_bounds_inexact(context, &resolved, &sparked)
+}
+
+fn read_parquet_float_bounds_inexact(
+    context: &SessionContext,
+    path: &str,
+    schema: &Schema,
+) -> DataFusionResult<DataFrame> {
+    let mut options = ParquetReadOptions::default()
+        .schema(schema)
+        .to_listing_options(&context.copied_config(), context.copied_table_options());
+    options.format = Arc::new(FloatBoundsInexactFormat::new(options.format));
+    let config = ListingTableConfig::new(ListingTableUrl::parse(path)?)
+        .with_listing_options(options)
+        .with_schema(Arc::new(schema.clone()));
+    let provider = ListingTable::try_new(config)?.with_cache(
+        context
+            .runtime_env()
+            .cache_manager
+            .get_file_statistic_cache(),
+    );
+    context.read_table(Arc::new(provider))
+}
+
+pub(crate) fn register_float_bounds_inexact_parquet(
+    context: &SessionContext,
+) -> DataFusionResult<()> {
     context
-        .read_parquet(&resolved, ParquetReadOptions::default().schema(&sparked))
-        .await
+        .state_ref()
+        .write()
+        .register_file_format(Arc::new(FloatBoundsInexactFactory::new()), true)
+}
+
+#[derive(Debug)]
+pub(crate) struct FloatBoundsInexactFactory {
+    inner: ParquetFormatFactory,
+}
+
+impl FloatBoundsInexactFactory {
+    pub(crate) fn new() -> Self {
+        Self {
+            inner: ParquetFormatFactory::new(),
+        }
+    }
+}
+
+impl GetExt for FloatBoundsInexactFactory {
+    fn get_ext(&self) -> String {
+        self.inner.get_ext()
+    }
+}
+
+impl FileFormatFactory for FloatBoundsInexactFactory {
+    fn create(
+        &self,
+        state: &dyn Session,
+        format_options: &HashMap<String, String>,
+    ) -> DataFusionResult<Arc<dyn FileFormat>> {
+        let inner = self.inner.create(state, format_options)?;
+        Ok(Arc::new(FloatBoundsInexactFormat::new(inner)))
+    }
+
+    fn default(&self) -> Arc<dyn FileFormat> {
+        Arc::new(FloatBoundsInexactFormat::new(self.inner.default()))
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct FloatBoundsInexactFormat {
+    inner: Arc<dyn FileFormat>,
+}
+
+impl FloatBoundsInexactFormat {
+    pub(crate) fn new(inner: Arc<dyn FileFormat>) -> Self {
+        Self { inner }
+    }
+}
+
+#[async_trait]
+impl FileFormat for FloatBoundsInexactFormat {
+    fn get_ext(&self) -> String {
+        self.inner.get_ext()
+    }
+
+    fn get_ext_with_compression(
+        &self,
+        file_compression_type: &FileCompressionType,
+    ) -> DataFusionResult<String> {
+        self.inner.get_ext_with_compression(file_compression_type)
+    }
+
+    fn compression_type(&self) -> Option<FileCompressionType> {
+        self.inner.compression_type()
+    }
+
+    async fn infer_schema(
+        &self,
+        state: &dyn Session,
+        store: &Arc<dyn ObjectStore>,
+        objects: &[ObjectMeta],
+    ) -> DataFusionResult<SchemaRef> {
+        self.inner.infer_schema(state, store, objects).await
+    }
+
+    async fn infer_stats(
+        &self,
+        state: &dyn Session,
+        store: &Arc<dyn ObjectStore>,
+        table_schema: SchemaRef,
+        object: &ObjectMeta,
+    ) -> DataFusionResult<Statistics> {
+        let statistics = self
+            .inner
+            .infer_stats(state, store, table_schema, object)
+            .await?;
+        Ok(constant_float_bounds_inexact(statistics))
+    }
+
+    async fn infer_ordering(
+        &self,
+        state: &dyn Session,
+        store: &Arc<dyn ObjectStore>,
+        table_schema: SchemaRef,
+        object: &ObjectMeta,
+    ) -> DataFusionResult<Option<LexOrdering>> {
+        self.inner
+            .infer_ordering(state, store, table_schema, object)
+            .await
+    }
+
+    async fn infer_stats_and_ordering(
+        &self,
+        state: &dyn Session,
+        store: &Arc<dyn ObjectStore>,
+        table_schema: SchemaRef,
+        object: &ObjectMeta,
+    ) -> DataFusionResult<FileMeta> {
+        let meta = self
+            .inner
+            .infer_stats_and_ordering(state, store, table_schema, object)
+            .await?;
+        Ok(
+            FileMeta::new(constant_float_bounds_inexact(meta.statistics))
+                .with_ordering(meta.ordering),
+        )
+    }
+
+    async fn create_physical_plan(
+        &self,
+        state: &dyn Session,
+        conf: FileScanConfig,
+    ) -> DataFusionResult<Arc<dyn ExecutionPlan>> {
+        self.inner
+            .create_physical_plan(state, scan_float_bounds_inexact(conf))
+            .await
+    }
+
+    async fn create_writer_physical_plan(
+        &self,
+        input: Arc<dyn ExecutionPlan>,
+        state: &dyn Session,
+        conf: FileSinkConfig,
+        order_requirements: Option<LexRequirement>,
+    ) -> DataFusionResult<Arc<dyn ExecutionPlan>> {
+        self.inner
+            .create_writer_physical_plan(input, state, conf, order_requirements)
+            .await
+    }
+
+    fn file_source(&self, table_schema: TableSchema) -> Arc<dyn FileSource> {
+        self.inner.file_source(table_schema)
+    }
+}
+
+fn scan_float_bounds_inexact(mut conf: FileScanConfig) -> FileScanConfig {
+    for group in &mut conf.file_groups {
+        if let Some(statistics) = group.statistics_mut() {
+            statistics
+                .column_statistics
+                .iter_mut()
+                .for_each(float_column_bounds_inexact);
+        }
+    }
+    if conf.file_source().filter().is_some() {
+        return conf;
+    }
+    let statistics = float_bounds_inexact(conf.statistics());
+    FileScanConfigBuilder::from(conf)
+        .with_statistics(statistics)
+        .build()
+}
+
+pub(crate) fn float_bounds_inexact(mut statistics: Statistics) -> Statistics {
+    statistics
+        .column_statistics
+        .iter_mut()
+        .for_each(float_column_bounds_inexact);
+    statistics
+}
+
+pub(crate) fn constant_float_bounds_inexact(mut statistics: Statistics) -> Statistics {
+    for column in &mut statistics.column_statistics {
+        let constant = matches!(
+            (&column.min_value, &column.max_value),
+            (Precision::Exact(min), Precision::Exact(max)) if min == max
+        );
+        if constant {
+            float_column_bounds_inexact(column);
+        }
+    }
+    statistics
+}
+
+fn float_column_bounds_inexact(column: &mut ColumnStatistics) {
+    if is_float_bound(&column.min_value) || is_float_bound(&column.max_value) {
+        column.min_value = column.min_value.clone().to_inexact();
+        column.max_value = column.max_value.clone().to_inexact();
+    }
+}
+
+fn is_float_bound(bound: &Precision<ScalarValue>) -> bool {
+    matches!(
+        bound.get_value(),
+        Some(ScalarValue::Float16(_) | ScalarValue::Float32(_) | ScalarValue::Float64(_))
+    )
 }
 
 fn promote_parquet_null_types(schema: &Schema) -> Schema {
@@ -240,6 +479,9 @@ fn rebuild_map_entries(entries: &Field, key: &Field, value: &Field, kids: Vec<Fi
         .clone()
         .with_data_type(DataType::Struct(Fields::from(vec![key.clone(), relaxed])))
 }
+
+#[cfg(test)]
+mod float_bounds_tests;
 
 #[cfg(test)]
 mod tests {
