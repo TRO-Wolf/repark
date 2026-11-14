@@ -28,6 +28,7 @@ Part of the FACADE-TESTS-LAYOUT-1 (2026-10-19) layout; the directory rules live 
 - [test_ice_merge_schema_1.py](test_ice_merge_schema_1.py) — IPI-19 + IPI-56 + IPI-37 — schema evolution on write.
 - [test_ice_meta_delete_1.py](test_ice_meta_delete_1.py) — ICE-META-DELETE-1 — a DELETE that covers whole data files deletes the files, on both modes. Its live leg runs the recorder's `--check` in its own interpreter (a subprocess), never in-process; see "PARITY-LIVE-RERECORD-1 (2026-10-20)".
 - [test_empty_dml_shared_guard_1.py](test_empty_dml_shared_guard_1.py) — **EMPTY-DML-SHARED-GUARD-1 (2026-11-08):** the Step 0.3 empty-DML table through the wheel on `repark.sql()` and `spark.sql()` over v2-cow, v2-mor and v3, the uuid tables and the refused wrappers; each expectation traces to a cell in [empty_dml_shared_guard_1_spark_oracle.json](empty_dml_shared_guard_1_spark_oracle.json), 75 Spark 4.1.2 cells.
+- [test_native_dataframe_write_silent_1.py](test_native_dataframe_write_silent_1.py), [_native_dataframe_write_silent_1_cells.py](_native_dataframe_write_silent_1_cells.py), [native_dataframe_write_silent_1_main.json](native_dataframe_write_silent_1_main.json) — **NATIVE-DATAFRAME-WRITE-SILENT-1 (2026-11-13):** 2436 cells, both doors: 399 native pending writes refuse unchanged; the rest keep main's outcome, rows, snapshots, files; workarounds (a reordered frame matches the Spark door), views, paths pinned.
 - [test_ice_occ_scoped_1.py](test_ice_occ_scoped_1.py) — ICE-OCC-SCOPED-1 — concurrent Iceberg DML storms commit and refuse exactly where Spark does.
 - [test_ice_orc_avro_1.py](test_ice_orc_avro_1.py) — IPI-41 — ORC and Avro data files: write, read, DELETE / UPDATE / MERGE. **RP-61 (2026-10-28):** `test_mor_delete_on_orc_writes_orc_delete_file` expects `[[0, "ORC", 3], [1, "ORC", 1]]` for `DELETE … WHERE id = 1` on an ORC merge-on-read table. `test_mor_delete_on_avro_or_orc_reads_back` is the AUD-003 shape through the facade: insert 0 to 4, `DELETE … BETWEEN 1 AND 3`, read back `[0, 4]`, files `[[0, FORMAT, 5], [1, FORMAT, 3]]`. ICE-DELETE-FORMAT-GUARD-1 C-007 is superseded in its ledger.
 - [test_ice_overwrite_mode_1.py](test_ice_overwrite_mode_1.py) — ICE-OVERWRITE-MODE-1 — Spark's overwrite partition set on every facade overwrite door.
@@ -132,43 +133,16 @@ path expression repointed in the same unit and no other line changed:
 
 | file | change |
 |---|---|
-| `_record_dml_subquery_goldens.py` | names its own or a sibling's new path in a docstring or recorded string. |
-| `_record_ice_append_storm_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_ice_array_insert_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_ice_avro_name_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
-| `_record_ice_evo_dml_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_ice_list_null_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_ice_meta_delete_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script. |
-| `_record_ice_overwrite_mode_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
-| `_record_ice_overwrite_mode_1_transform.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
-| `_record_ice_rowid_order_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_ice_rtas_byname_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
-| `_record_ice_session_write_conf_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_dml_subquery_goldens.py`, `test_dml_subquery_parity.py`, `test_merge_differential_parity.py`, `test_partition_value_audit.py` | names its own or a sibling's new path in a docstring or recorded string. |
+| `_record_ice_append_storm_1.py`, `_record_ice_array_insert_1.py`, `_record_ice_evo_dml_1.py`, `_record_ice_list_null_1.py`, `_record_ice_rowid_order_1.py`, `_record_ice_write_options_rp_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `_record_ice_avro_name_1_oracle.py`, `_record_ice_overwrite_mode_1_oracle.py`, `_record_ice_overwrite_mode_1_transform.py`, `_record_ice_rtas_byname_1_oracle.py`, `_record_ice_session_write_conf_1_oracle.py`, `_record_ice_wap_branch_1_oracle.py`, `_record_ice_write_options_1_oracle.py`, `_record_ice_write_options_2_oracle.py`, `_record_ice_write_options_3_oracle.py`, `_record_merge_differential_goldens.py`, `_record_partition_value_goldens.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
+| `_record_ice_meta_delete_1.py`, `_record_ice_sorted_insert_2_oracle.py`, `_record_ice_struct_pairing_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script. |
 | `_record_ice_sorted_insert_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; reads the root `fixtures/` one level up. |
-| `_record_ice_sorted_insert_2_oracle.py` | puts the tests root on `sys.path` for its root-helper import when run as a script. |
-| `_record_ice_struct_pairing_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script. |
-| `_record_ice_wap_branch_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
-| `_record_ice_write_options_1_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
-| `_record_ice_write_options_2_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
-| `_record_ice_write_options_3_oracle.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
-| `_record_ice_write_options_rp_1.py` | puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `_record_merge_differential_goldens.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
-| `_record_partition_value_goldens.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script. |
 | `_record_write_body_carriers_1_main.py` | names its own or a sibling's new path in a docstring or recorded string; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `_record_write_body_carriers_1_spark.py` | names its own or a sibling's new path in a docstring or recorded string; puts the tests root on `sys.path` for its root-helper import when run as a script; repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_dml_subquery_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
-| `test_ice_dyn_overwrite_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_ice_dyn_overwrite_1_by_name.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_ice_occ_scoped_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_ice_rowid_order_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
+| `test_ice_dyn_overwrite_1.py`, `test_ice_dyn_overwrite_1_by_name.py`, `test_ice_occ_scoped_1.py`, `test_ice_rowid_order_1.py`, `test_ice_spark_table_1.py`, `test_ice_v3_write_default_1.py`, `test_ice_write_options_1.py`, `test_ice_write_options_rp_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `test_ice_sorted_insert_1.py` | reads the root `fixtures/` one level up. |
-| `test_ice_spark_table_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_ice_v3_write_default_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_ice_write_options_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
-| `test_ice_write_options_rp_1.py` | repository-relative anchors gain one level (`parents[N]` to `parents[N+1]`). |
 | `test_io_bucket_cluster_1.py` | reads the root `facade_reader_writer_oracle.json` one level up. |
-| `test_merge_differential_parity.py` | names its own or a sibling's new path in a docstring or recorded string. |
-| `test_partition_value_audit.py` | names its own or a sibling's new path in a docstring or recorded string. |
 
 ## PARITY-LIVE-RERECORD-1 (2026-10-20)
 

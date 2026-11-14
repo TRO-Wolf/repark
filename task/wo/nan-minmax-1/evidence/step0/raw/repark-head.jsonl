@@ -1,0 +1,211 @@
+{"engine": "repark", "python": "3.12.3", "record": "leg", "tag": "head"}
+{"cell": "rows", "door": "sql", "group": "read", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[1, "NaN", "NaN"], [2, "1.0", "1.0"], [3, "NaN", "NaN"], [4, "1.0", "1.0"]], "source": "one_c"}
+{"cell": "count", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "one_c"}
+{"cell": "isnan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[2]], "source": "one_c"}
+{"cell": "isnan_f", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[2]], "source": "one_c"}
+{"cell": "minmax", "door": "sql", "group": "read", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [["NaN", "1.0", "NaN", "1.0"]], "source": "one_c"}
+{"cell": "eq_nan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "one_c"}
+{"cell": "rows", "door": "native", "group": "read", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[1, "NaN", "NaN"], [2, "1.0", "1.0"], [3, "NaN", "NaN"], [4, "1.0", "1.0"]], "source": "one_c"}
+{"cell": "count", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "one_c"}
+{"cell": "isnan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[2]], "source": "one_c"}
+{"cell": "isnan_f", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[2]], "source": "one_c"}
+{"cell": "minmax", "door": "native", "group": "read", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [["NaN", "1.0", "NaN", "1.0"]], "source": "one_c"}
+{"cell": "eq_nan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "one_c"}
+{"cell": "rows", "door": "sql", "group": "read", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [[5, "NaN", "NaN"], [6, "1.0", "1.0"], [7, "NaN", "NaN"], [8, "1.0", "1.0"]], "source": "one_s"}
+{"cell": "count", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "one_s"}
+{"cell": "isnan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[2]], "source": "one_s"}
+{"cell": "isnan_f", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[2]], "source": "one_s"}
+{"cell": "minmax", "door": "sql", "group": "read", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [["1.0", "NaN", "1.0", "NaN"]], "source": "one_s"}
+{"cell": "eq_nan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "one_s"}
+{"cell": "rows", "door": "native", "group": "read", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [[5, "NaN", "NaN"], [6, "1.0", "1.0"], [7, "NaN", "NaN"], [8, "1.0", "1.0"]], "source": "one_s"}
+{"cell": "count", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "one_s"}
+{"cell": "isnan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[2]], "source": "one_s"}
+{"cell": "isnan_f", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[2]], "source": "one_s"}
+{"cell": "minmax", "door": "native", "group": "read", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [["1.0", "NaN", "1.0", "NaN"]], "source": "one_s"}
+{"cell": "eq_nan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "one_s"}
+{"cell": "rows", "door": "sql", "group": "read", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [[9, "NaN", "NaN"], [10, "1.0", "1.0"], [11, "NaN", "NaN"], [12, "1.0", "1.0"]], "source": "one_p"}
+{"cell": "count", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "one_p"}
+{"cell": "isnan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[2]], "source": "one_p"}
+{"cell": "isnan_f", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[2]], "source": "one_p"}
+{"cell": "minmax", "door": "sql", "group": "read", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [["NaN", "1.0", "NaN", "1.0"]], "source": "one_p"}
+{"cell": "eq_nan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "one_p"}
+{"cell": "rows", "door": "native", "group": "read", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [[9, "NaN", "NaN"], [10, "1.0", "1.0"], [11, "NaN", "NaN"], [12, "1.0", "1.0"]], "source": "one_p"}
+{"cell": "count", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "one_p"}
+{"cell": "isnan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[2]], "source": "one_p"}
+{"cell": "isnan_f", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[2]], "source": "one_p"}
+{"cell": "minmax", "door": "native", "group": "read", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [["NaN", "1.0", "NaN", "1.0"]], "source": "one_p"}
+{"cell": "eq_nan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "one_p"}
+{"cell": "rows", "door": "sql", "group": "read", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[13, "NaN", "NaN"], [14, "1.0", "1.0"], [15, "NaN", "NaN"], [16, "1.0", "1.0"], [17, "NaN", "NaN"], [18, "1.0", "1.0"]], "source": "rg_c"}
+{"cell": "count", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[6]], "source": "rg_c"}
+{"cell": "isnan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[3]], "source": "rg_c"}
+{"cell": "isnan_f", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[3]], "source": "rg_c"}
+{"cell": "minmax", "door": "sql", "group": "read", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [["NaN", "1.0", "NaN", "1.0"]], "source": "rg_c"}
+{"cell": "eq_nan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "rg_c"}
+{"cell": "rows", "door": "native", "group": "read", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[13, "NaN", "NaN"], [14, "1.0", "1.0"], [15, "NaN", "NaN"], [16, "1.0", "1.0"], [17, "NaN", "NaN"], [18, "1.0", "1.0"]], "source": "rg_c"}
+{"cell": "count", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[6]], "source": "rg_c"}
+{"cell": "isnan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[3]], "source": "rg_c"}
+{"cell": "isnan_f", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[3]], "source": "rg_c"}
+{"cell": "minmax", "door": "native", "group": "read", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [["NaN", "1.0", "NaN", "1.0"]], "source": "rg_c"}
+{"cell": "eq_nan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "rg_c"}
+{"cell": "rows", "door": "sql", "group": "read", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [[19, "NaN", "NaN"], [20, "1.0", "1.0"], [21, "NaN", "NaN"], [22, "1.0", "1.0"], [23, "NaN", "NaN"], [24, "1.0", "1.0"]], "source": "rg_s"}
+{"cell": "count", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[6]], "source": "rg_s"}
+{"cell": "isnan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[3]], "source": "rg_s"}
+{"cell": "isnan_f", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[3]], "source": "rg_s"}
+{"cell": "minmax", "door": "sql", "group": "read", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [["1.0", "NaN", "1.0", "NaN"]], "source": "rg_s"}
+{"cell": "eq_nan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "rg_s"}
+{"cell": "rows", "door": "native", "group": "read", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [[19, "NaN", "NaN"], [20, "1.0", "1.0"], [21, "NaN", "NaN"], [22, "1.0", "1.0"], [23, "NaN", "NaN"], [24, "1.0", "1.0"]], "source": "rg_s"}
+{"cell": "count", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[6]], "source": "rg_s"}
+{"cell": "isnan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[3]], "source": "rg_s"}
+{"cell": "isnan_f", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[3]], "source": "rg_s"}
+{"cell": "minmax", "door": "native", "group": "read", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [["1.0", "NaN", "1.0", "NaN"]], "source": "rg_s"}
+{"cell": "eq_nan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "rg_s"}
+{"cell": "rows", "door": "sql", "group": "read", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [[25, "NaN", "NaN"], [26, "1.0", "1.0"], [27, "NaN", "NaN"], [28, "1.0", "1.0"], [29, "NaN", "NaN"], [30, "1.0", "1.0"]], "source": "rg_p"}
+{"cell": "count", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[6]], "source": "rg_p"}
+{"cell": "isnan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[3]], "source": "rg_p"}
+{"cell": "isnan_f", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[3]], "source": "rg_p"}
+{"cell": "minmax", "door": "sql", "group": "read", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [["NaN", "1.0", "NaN", "1.0"]], "source": "rg_p"}
+{"cell": "eq_nan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "rg_p"}
+{"cell": "rows", "door": "native", "group": "read", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [[25, "NaN", "NaN"], [26, "1.0", "1.0"], [27, "NaN", "NaN"], [28, "1.0", "1.0"], [29, "NaN", "NaN"], [30, "1.0", "1.0"]], "source": "rg_p"}
+{"cell": "count", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[6]], "source": "rg_p"}
+{"cell": "isnan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[3]], "source": "rg_p"}
+{"cell": "isnan_f", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[3]], "source": "rg_p"}
+{"cell": "minmax", "door": "native", "group": "read", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [["NaN", "1.0", "NaN", "1.0"]], "source": "rg_p"}
+{"cell": "eq_nan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "rg_p"}
+{"cell": "rows", "door": "sql", "group": "read", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[31, "NaN", "NaN"], [32, "1.0", "1.0"], [33, "NaN", "NaN"], [34, "1.0", "1.0"], [35, "NaN", "NaN"], [36, "1.0", "1.0"], [37, "NaN", "NaN"], [38, "1.0", "1.0"]], "source": "many_c"}
+{"cell": "count", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[8]], "source": "many_c"}
+{"cell": "isnan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "many_c"}
+{"cell": "isnan_f", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "many_c"}
+{"cell": "minmax", "door": "sql", "group": "read", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [["NaN", "1.0", "NaN", "1.0"]], "source": "many_c"}
+{"cell": "eq_nan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "many_c"}
+{"cell": "rows", "door": "native", "group": "read", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[31, "NaN", "NaN"], [32, "1.0", "1.0"], [33, "NaN", "NaN"], [34, "1.0", "1.0"], [35, "NaN", "NaN"], [36, "1.0", "1.0"], [37, "NaN", "NaN"], [38, "1.0", "1.0"]], "source": "many_c"}
+{"cell": "count", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[8]], "source": "many_c"}
+{"cell": "isnan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "many_c"}
+{"cell": "isnan_f", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "many_c"}
+{"cell": "minmax", "door": "native", "group": "read", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [["NaN", "1.0", "NaN", "1.0"]], "source": "many_c"}
+{"cell": "eq_nan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "many_c"}
+{"cell": "rows", "door": "sql", "group": "read", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [[39, "NaN", "NaN"], [40, "1.0", "1.0"], [41, "NaN", "NaN"], [42, "1.0", "1.0"], [43, "NaN", "NaN"], [44, "1.0", "1.0"], [45, "NaN", "NaN"], [46, "1.0", "1.0"]], "source": "many_s"}
+{"cell": "count", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[8]], "source": "many_s"}
+{"cell": "isnan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "many_s"}
+{"cell": "isnan_f", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "many_s"}
+{"cell": "minmax", "door": "sql", "group": "read", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [["1.0", "NaN", "1.0", "NaN"]], "source": "many_s"}
+{"cell": "eq_nan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "many_s"}
+{"cell": "rows", "door": "native", "group": "read", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [[39, "NaN", "NaN"], [40, "1.0", "1.0"], [41, "NaN", "NaN"], [42, "1.0", "1.0"], [43, "NaN", "NaN"], [44, "1.0", "1.0"], [45, "NaN", "NaN"], [46, "1.0", "1.0"]], "source": "many_s"}
+{"cell": "count", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[8]], "source": "many_s"}
+{"cell": "isnan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "many_s"}
+{"cell": "isnan_f", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "many_s"}
+{"cell": "minmax", "door": "native", "group": "read", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [["1.0", "NaN", "1.0", "NaN"]], "source": "many_s"}
+{"cell": "eq_nan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "many_s"}
+{"cell": "rows", "door": "sql", "group": "read", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [[47, "NaN", "NaN"], [48, "1.0", "1.0"], [49, "NaN", "NaN"], [50, "1.0", "1.0"], [51, "NaN", "NaN"], [52, "1.0", "1.0"], [53, "NaN", "NaN"], [54, "1.0", "1.0"]], "source": "many_p"}
+{"cell": "count", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[8]], "source": "many_p"}
+{"cell": "isnan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "many_p"}
+{"cell": "isnan_f", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "many_p"}
+{"cell": "minmax", "door": "sql", "group": "read", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [["NaN", "1.0", "NaN", "1.0"]], "source": "many_p"}
+{"cell": "eq_nan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "many_p"}
+{"cell": "rows", "door": "native", "group": "read", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [[47, "NaN", "NaN"], [48, "1.0", "1.0"], [49, "NaN", "NaN"], [50, "1.0", "1.0"], [51, "NaN", "NaN"], [52, "1.0", "1.0"], [53, "NaN", "NaN"], [54, "1.0", "1.0"]], "source": "many_p"}
+{"cell": "count", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[8]], "source": "many_p"}
+{"cell": "isnan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "many_p"}
+{"cell": "isnan_f", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[4]], "source": "many_p"}
+{"cell": "minmax", "door": "native", "group": "read", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [["NaN", "1.0", "NaN", "1.0"]], "source": "many_p"}
+{"cell": "eq_nan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "many_p"}
+{"cell": "rows", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[1, "1.0", "1.0"], [2, "1.0", "1.0"]], "source": "ctl"}
+{"cell": "count", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[2]], "source": "ctl"}
+{"cell": "isnan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "ctl"}
+{"cell": "isnan_f", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "ctl"}
+{"cell": "minmax", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [["1.0", "1.0", "1.0", "1.0"]], "source": "ctl"}
+{"cell": "eq_nan_d", "door": "sql", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "ctl"}
+{"cell": "rows", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[1, "1.0", "1.0"], [2, "1.0", "1.0"]], "source": "ctl"}
+{"cell": "count", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[2]], "source": "ctl"}
+{"cell": "isnan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "ctl"}
+{"cell": "isnan_f", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "ctl"}
+{"cell": "minmax", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [["1.0", "1.0", "1.0", "1.0"]], "source": "ctl"}
+{"cell": "eq_nan_d", "door": "native", "group": "read", "nan_bits": [], "ok": true, "record": "cell", "rows": [[0]], "source": "ctl"}
+{"cell": "read_parquet", "door": "sql", "group": "path", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[1, "NaN", "NaN"], [2, "1.0", "1.0"], [3, "NaN", "NaN"], [4, "1.0", "1.0"]], "source": "one_c"}
+{"cell": "format_load", "door": "sql", "group": "path", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[1, "NaN", "NaN"], [2, "1.0", "1.0"], [3, "NaN", "NaN"], [4, "1.0", "1.0"]], "source": "one_c"}
+{"cell": "sql_parquet_path", "door": "sql", "error": "AnalysisException: Error during planning: table 'datafusion.parquet.<root>/src/one_c' not found", "group": "path", "ok": false, "record": "cell", "source": "one_c"}
+{"cell": "create_using_parquet", "door": "sql", "error": "AnalysisException: Error during planning: CREATE TABLE without AS SELECT requires a column list (e.g. CREATE TABLE c.ns.t (id BIGINT, name STRING) USING iceberg)", "group": "path", "ok": false, "record": "cell", "source": "one_c"}
+{"cell": "create_external_stored_parquet", "door": "sql", "error": "UnsupportedOperationException: This feature is not implemented: CREATE EXTERNAL TABLE is not supported for Iceberg column-def CREATE yet", "group": "path", "ok": false, "record": "cell", "source": "one_c"}
+{"cell": "read_parquet", "door": "native", "group": "path", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[1, "NaN", "NaN"], [2, "1.0", "1.0"], [3, "NaN", "NaN"], [4, "1.0", "1.0"]], "source": "one_c"}
+{"cell": "create_external_stored_parquet", "door": "native", "error": "AnalysisException: Error during planning: CREATE EXTERNAL TABLE to local filesystem path `<root>/src/one_c/` is refused:", "group": "path", "ok": false, "record": "cell", "source": "one_c"}
+{"cell": "create_external_under_warehouse", "door": "native", "group": "path", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[1, "NaN", "NaN"], [2, "1.0", "1.0"], [3, "NaN", "NaN"], [4, "1.0", "1.0"]], "source": "one_c"}
+{"cell": "write", "door": "sql", "group": "roundtrip", "ok": true, "record": "cell", "source": "one_c"}
+{"cell": "stored", "door": "file", "group": "roundtrip", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[1, "NaN", "NaN"], [2, "1.0", "1.0"], [3, "NaN", "NaN"], [4, "1.0", "1.0"]], "source": "one_c"}
+{"cell": "read_back", "door": "sql", "group": "roundtrip", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[1, "NaN", "NaN"], [2, "1.0", "1.0"], [3, "NaN", "NaN"], [4, "1.0", "1.0"]], "source": "one_c"}
+{"cell": "write", "door": "sql", "group": "roundtrip", "ok": true, "record": "cell", "source": "one_s"}
+{"cell": "stored", "door": "file", "group": "roundtrip", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [[5, "NaN", "NaN"], [6, "1.0", "1.0"], [7, "NaN", "NaN"], [8, "1.0", "1.0"]], "source": "one_s"}
+{"cell": "read_back", "door": "sql", "group": "roundtrip", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [[5, "NaN", "NaN"], [6, "1.0", "1.0"], [7, "NaN", "NaN"], [8, "1.0", "1.0"]], "source": "one_s"}
+{"cell": "write", "door": "sql", "group": "roundtrip", "ok": true, "record": "cell", "source": "one_p"}
+{"cell": "stored", "door": "file", "group": "roundtrip", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [[9, "NaN", "NaN"], [10, "1.0", "1.0"], [11, "NaN", "NaN"], [12, "1.0", "1.0"]], "source": "one_p"}
+{"cell": "read_back", "door": "sql", "group": "roundtrip", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [[9, "NaN", "NaN"], [10, "1.0", "1.0"], [11, "NaN", "NaN"], [12, "1.0", "1.0"]], "source": "one_p"}
+{"cell": "write", "door": "sql", "group": "roundtrip", "ok": true, "record": "cell", "source": "rg_c"}
+{"cell": "stored", "door": "file", "group": "roundtrip", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[13, "NaN", "NaN"], [14, "1.0", "1.0"], [15, "NaN", "NaN"], [16, "1.0", "1.0"], [17, "NaN", "NaN"], [18, "1.0", "1.0"]], "source": "rg_c"}
+{"cell": "read_back", "door": "sql", "group": "roundtrip", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[13, "NaN", "NaN"], [14, "1.0", "1.0"], [15, "NaN", "NaN"], [16, "1.0", "1.0"], [17, "NaN", "NaN"], [18, "1.0", "1.0"]], "source": "rg_c"}
+{"cell": "write", "door": "sql", "group": "roundtrip", "ok": true, "record": "cell", "source": "rg_s"}
+{"cell": "stored", "door": "file", "group": "roundtrip", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [[19, "NaN", "NaN"], [20, "1.0", "1.0"], [21, "NaN", "NaN"], [22, "1.0", "1.0"], [23, "NaN", "NaN"], [24, "1.0", "1.0"]], "source": "rg_s"}
+{"cell": "read_back", "door": "sql", "group": "roundtrip", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [[19, "NaN", "NaN"], [20, "1.0", "1.0"], [21, "NaN", "NaN"], [22, "1.0", "1.0"], [23, "NaN", "NaN"], [24, "1.0", "1.0"]], "source": "rg_s"}
+{"cell": "write", "door": "sql", "group": "roundtrip", "ok": true, "record": "cell", "source": "rg_p"}
+{"cell": "stored", "door": "file", "group": "roundtrip", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [[25, "NaN", "NaN"], [26, "1.0", "1.0"], [27, "NaN", "NaN"], [28, "1.0", "1.0"], [29, "NaN", "NaN"], [30, "1.0", "1.0"]], "source": "rg_p"}
+{"cell": "read_back", "door": "sql", "group": "roundtrip", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [[25, "NaN", "NaN"], [26, "1.0", "1.0"], [27, "NaN", "NaN"], [28, "1.0", "1.0"], [29, "NaN", "NaN"], [30, "1.0", "1.0"]], "source": "rg_p"}
+{"cell": "write", "door": "sql", "group": "roundtrip", "ok": true, "record": "cell", "source": "many_c"}
+{"cell": "stored", "door": "file", "group": "roundtrip", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[31, "NaN", "NaN"], [32, "1.0", "1.0"], [33, "NaN", "NaN"], [34, "1.0", "1.0"], [35, "NaN", "NaN"], [36, "1.0", "1.0"], [37, "NaN", "NaN"], [38, "1.0", "1.0"]], "source": "many_c"}
+{"cell": "read_back", "door": "sql", "group": "roundtrip", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[31, "NaN", "NaN"], [32, "1.0", "1.0"], [33, "NaN", "NaN"], [34, "1.0", "1.0"], [35, "NaN", "NaN"], [36, "1.0", "1.0"], [37, "NaN", "NaN"], [38, "1.0", "1.0"]], "source": "many_c"}
+{"cell": "write", "door": "sql", "group": "roundtrip", "ok": true, "record": "cell", "source": "many_s"}
+{"cell": "stored", "door": "file", "group": "roundtrip", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [[39, "NaN", "NaN"], [40, "1.0", "1.0"], [41, "NaN", "NaN"], [42, "1.0", "1.0"], [43, "NaN", "NaN"], [44, "1.0", "1.0"], [45, "NaN", "NaN"], [46, "1.0", "1.0"]], "source": "many_s"}
+{"cell": "read_back", "door": "sql", "group": "roundtrip", "nan_bits": ["ffc00000", "fff8000000000000"], "ok": true, "record": "cell", "rows": [[39, "NaN", "NaN"], [40, "1.0", "1.0"], [41, "NaN", "NaN"], [42, "1.0", "1.0"], [43, "NaN", "NaN"], [44, "1.0", "1.0"], [45, "NaN", "NaN"], [46, "1.0", "1.0"]], "source": "many_s"}
+{"cell": "write", "door": "sql", "group": "roundtrip", "ok": true, "record": "cell", "source": "many_p"}
+{"cell": "stored", "door": "file", "group": "roundtrip", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [[47, "NaN", "NaN"], [48, "1.0", "1.0"], [49, "NaN", "NaN"], [50, "1.0", "1.0"], [51, "NaN", "NaN"], [52, "1.0", "1.0"], [53, "NaN", "NaN"], [54, "1.0", "1.0"]], "source": "many_p"}
+{"cell": "read_back", "door": "sql", "group": "roundtrip", "nan_bits": ["7fc00123", "7ff8deadbeef0001"], "ok": true, "record": "cell", "rows": [[47, "NaN", "NaN"], [48, "1.0", "1.0"], [49, "NaN", "NaN"], [50, "1.0", "1.0"], [51, "NaN", "NaN"], [52, "1.0", "1.0"], [53, "NaN", "NaN"], [54, "1.0", "1.0"]], "source": "many_p"}
+{"cell": "write", "door": "sql", "group": "roundtrip", "ok": true, "record": "cell", "source": "ctl"}
+{"cell": "stored", "door": "file", "group": "roundtrip", "nan_bits": [], "ok": true, "record": "cell", "rows": [[1, "1.0", "1.0"], [2, "1.0", "1.0"]], "source": "ctl"}
+{"cell": "read_back", "door": "sql", "group": "roundtrip", "nan_bits": [], "ok": true, "record": "cell", "rows": [[1, "1.0", "1.0"], [2, "1.0", "1.0"]], "source": "ctl"}
+{"cell": "write", "door": "sql", "group": "ingest", "ok": true, "record": "cell", "source": "one_c_parquet"}
+{"cell": "read_back", "door": "sql", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[1, "NaN", "NaN"], [2, "1.0", "1.0"], [3, "NaN", "NaN"], [4, "1.0", "1.0"]], "source": "one_c_parquet"}
+{"cell": "stored", "door": "file", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[1, "NaN", "NaN"], [2, "1.0", "1.0"], [3, "NaN", "NaN"], [4, "1.0", "1.0"]], "source": "one_c_parquet"}
+{"cell": "write", "door": "sql", "group": "ingest", "ok": true, "record": "cell", "source": "one_c_avro"}
+{"cell": "read_back", "door": "sql", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[1, "NaN", "NaN"], [2, "1.0", "1.0"], [3, "NaN", "NaN"], [4, "1.0", "1.0"]], "source": "one_c_avro"}
+{"cell": "write", "door": "sql", "group": "ingest", "ok": true, "record": "cell", "source": "one_s_parquet"}
+{"cell": "read_back", "door": "sql", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[5, "NaN", "NaN"], [6, "1.0", "1.0"], [7, "NaN", "NaN"], [8, "1.0", "1.0"]], "source": "one_s_parquet"}
+{"cell": "stored", "door": "file", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[5, "NaN", "NaN"], [6, "1.0", "1.0"], [7, "NaN", "NaN"], [8, "1.0", "1.0"]], "source": "one_s_parquet"}
+{"cell": "write", "door": "sql", "group": "ingest", "ok": true, "record": "cell", "source": "one_p_parquet"}
+{"cell": "read_back", "door": "sql", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[9, "NaN", "NaN"], [10, "1.0", "1.0"], [11, "NaN", "NaN"], [12, "1.0", "1.0"]], "source": "one_p_parquet"}
+{"cell": "stored", "door": "file", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[9, "NaN", "NaN"], [10, "1.0", "1.0"], [11, "NaN", "NaN"], [12, "1.0", "1.0"]], "source": "one_p_parquet"}
+{"cell": "write", "door": "sql", "group": "ingest", "ok": true, "record": "cell", "source": "rg_c_parquet"}
+{"cell": "read_back", "door": "sql", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[13, "NaN", "NaN"], [14, "1.0", "1.0"], [15, "NaN", "NaN"], [16, "1.0", "1.0"], [17, "NaN", "NaN"], [18, "1.0", "1.0"]], "source": "rg_c_parquet"}
+{"cell": "stored", "door": "file", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[13, "NaN", "NaN"], [14, "1.0", "1.0"], [15, "NaN", "NaN"], [16, "1.0", "1.0"], [17, "NaN", "NaN"], [18, "1.0", "1.0"]], "source": "rg_c_parquet"}
+{"cell": "write", "door": "sql", "group": "ingest", "ok": true, "record": "cell", "source": "rg_s_parquet"}
+{"cell": "read_back", "door": "sql", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[19, "NaN", "NaN"], [20, "1.0", "1.0"], [21, "NaN", "NaN"], [22, "1.0", "1.0"], [23, "NaN", "NaN"], [24, "1.0", "1.0"]], "source": "rg_s_parquet"}
+{"cell": "stored", "door": "file", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[19, "NaN", "NaN"], [20, "1.0", "1.0"], [21, "NaN", "NaN"], [22, "1.0", "1.0"], [23, "NaN", "NaN"], [24, "1.0", "1.0"]], "source": "rg_s_parquet"}
+{"cell": "write", "door": "sql", "group": "ingest", "ok": true, "record": "cell", "source": "rg_p_parquet"}
+{"cell": "read_back", "door": "sql", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[25, "NaN", "NaN"], [26, "1.0", "1.0"], [27, "NaN", "NaN"], [28, "1.0", "1.0"], [29, "NaN", "NaN"], [30, "1.0", "1.0"]], "source": "rg_p_parquet"}
+{"cell": "stored", "door": "file", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[25, "NaN", "NaN"], [26, "1.0", "1.0"], [27, "NaN", "NaN"], [28, "1.0", "1.0"], [29, "NaN", "NaN"], [30, "1.0", "1.0"]], "source": "rg_p_parquet"}
+{"cell": "write", "door": "sql", "group": "ingest", "ok": true, "record": "cell", "source": "many_c_parquet"}
+{"cell": "read_back", "door": "sql", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[31, "NaN", "NaN"], [32, "1.0", "1.0"], [33, "NaN", "NaN"], [34, "1.0", "1.0"], [35, "NaN", "NaN"], [36, "1.0", "1.0"], [37, "NaN", "NaN"], [38, "1.0", "1.0"]], "source": "many_c_parquet"}
+{"cell": "stored", "door": "file", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[31, "NaN", "NaN"], [32, "1.0", "1.0"], [33, "NaN", "NaN"], [34, "1.0", "1.0"], [35, "NaN", "NaN"], [36, "1.0", "1.0"], [37, "NaN", "NaN"], [38, "1.0", "1.0"]], "source": "many_c_parquet"}
+{"cell": "write", "door": "sql", "group": "ingest", "ok": true, "record": "cell", "source": "many_s_parquet"}
+{"cell": "read_back", "door": "sql", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[39, "NaN", "NaN"], [40, "1.0", "1.0"], [41, "NaN", "NaN"], [42, "1.0", "1.0"], [43, "NaN", "NaN"], [44, "1.0", "1.0"], [45, "NaN", "NaN"], [46, "1.0", "1.0"]], "source": "many_s_parquet"}
+{"cell": "stored", "door": "file", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[39, "NaN", "NaN"], [40, "1.0", "1.0"], [41, "NaN", "NaN"], [42, "1.0", "1.0"], [43, "NaN", "NaN"], [44, "1.0", "1.0"], [45, "NaN", "NaN"], [46, "1.0", "1.0"]], "source": "many_s_parquet"}
+{"cell": "write", "door": "sql", "group": "ingest", "ok": true, "record": "cell", "source": "many_p_parquet"}
+{"cell": "read_back", "door": "sql", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[47, "NaN", "NaN"], [48, "1.0", "1.0"], [49, "NaN", "NaN"], [50, "1.0", "1.0"], [51, "NaN", "NaN"], [52, "1.0", "1.0"], [53, "NaN", "NaN"], [54, "1.0", "1.0"]], "source": "many_p_parquet"}
+{"cell": "stored", "door": "file", "group": "ingest", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[47, "NaN", "NaN"], [48, "1.0", "1.0"], [49, "NaN", "NaN"], [50, "1.0", "1.0"], [51, "NaN", "NaN"], [52, "1.0", "1.0"], [53, "NaN", "NaN"], [54, "1.0", "1.0"]], "source": "many_p_parquet"}
+{"cell": "write", "door": "sql", "group": "ingest", "ok": true, "record": "cell", "source": "ctl_parquet"}
+{"cell": "read_back", "door": "sql", "group": "ingest", "nan_bits": [], "ok": true, "record": "cell", "rows": [[1, "1.0", "1.0"], [2, "1.0", "1.0"]], "source": "ctl_parquet"}
+{"cell": "stored", "door": "file", "group": "ingest", "nan_bits": [], "ok": true, "record": "cell", "rows": [[1, "1.0", "1.0"], [2, "1.0", "1.0"]], "source": "ctl_parquet"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": [], "ok": true, "record": "cell", "rows": [[1, "1.0", "1.0"], [2, "1.0", "1.0"], [3, "1.0", "1.0"], [4, "1.0", "1.0"]], "source": "base:one_c"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": [], "ok": true, "record": "cell", "rows": [[5, "1.0", "1.0"], [6, "1.0", "1.0"], [7, "1.0", "1.0"], [8, "1.0", "1.0"]], "source": "base:one_s"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": [], "ok": true, "record": "cell", "rows": [[9, "1.0", "1.0"], [10, "1.0", "1.0"], [11, "1.0", "1.0"], [12, "1.0", "1.0"]], "source": "base:one_p"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": [], "ok": true, "record": "cell", "rows": [[13, "1.0", "1.0"], [14, "1.0", "1.0"], [15, "1.0", "1.0"], [16, "1.0", "1.0"], [17, "1.0", "1.0"], [18, "1.0", "1.0"]], "source": "base:rg_c"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": [], "ok": true, "record": "cell", "rows": [[19, "1.0", "1.0"], [20, "1.0", "1.0"], [21, "1.0", "1.0"], [22, "1.0", "1.0"], [23, "1.0", "1.0"], [24, "1.0", "1.0"]], "source": "base:rg_s"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": [], "ok": true, "record": "cell", "rows": [[25, "1.0", "1.0"], [26, "1.0", "1.0"], [27, "1.0", "1.0"], [28, "1.0", "1.0"], [29, "1.0", "1.0"], [30, "1.0", "1.0"]], "source": "base:rg_p"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": [], "ok": true, "record": "cell", "rows": [[31, "1.0", "1.0"], [32, "1.0", "1.0"], [33, "1.0", "1.0"], [34, "1.0", "1.0"], [35, "1.0", "1.0"], [36, "1.0", "1.0"], [37, "1.0", "1.0"], [38, "1.0", "1.0"]], "source": "base:many_c"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": [], "ok": true, "record": "cell", "rows": [[39, "1.0", "1.0"], [40, "1.0", "1.0"], [41, "1.0", "1.0"], [42, "1.0", "1.0"], [43, "1.0", "1.0"], [44, "1.0", "1.0"], [45, "1.0", "1.0"], [46, "1.0", "1.0"]], "source": "base:many_s"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": [], "ok": true, "record": "cell", "rows": [[47, "1.0", "1.0"], [48, "1.0", "1.0"], [49, "1.0", "1.0"], [50, "1.0", "1.0"], [51, "1.0", "1.0"], [52, "1.0", "1.0"], [53, "1.0", "1.0"], [54, "1.0", "1.0"]], "source": "base:many_p"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": [], "ok": true, "record": "cell", "rows": [[1, "1.0", "1.0"], [2, "1.0", "1.0"]], "source": "base:ctl"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[1, "NaN", "NaN"], [2, "1.0", "1.0"], [3, "NaN", "NaN"], [4, "1.0", "1.0"]], "source": "spark:one_c"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[5, "NaN", "NaN"], [6, "1.0", "1.0"], [7, "NaN", "NaN"], [8, "1.0", "1.0"]], "source": "spark:one_s"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[9, "NaN", "NaN"], [10, "1.0", "1.0"], [11, "NaN", "NaN"], [12, "1.0", "1.0"]], "source": "spark:one_p"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[13, "NaN", "NaN"], [14, "1.0", "1.0"], [15, "NaN", "NaN"], [16, "1.0", "1.0"], [17, "NaN", "NaN"], [18, "1.0", "1.0"]], "source": "spark:rg_c"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[19, "NaN", "NaN"], [20, "1.0", "1.0"], [21, "NaN", "NaN"], [22, "1.0", "1.0"], [23, "NaN", "NaN"], [24, "1.0", "1.0"]], "source": "spark:rg_s"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[25, "NaN", "NaN"], [26, "1.0", "1.0"], [27, "NaN", "NaN"], [28, "1.0", "1.0"], [29, "NaN", "NaN"], [30, "1.0", "1.0"]], "source": "spark:rg_p"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[31, "NaN", "NaN"], [32, "1.0", "1.0"], [33, "NaN", "NaN"], [34, "1.0", "1.0"], [35, "NaN", "NaN"], [36, "1.0", "1.0"], [37, "NaN", "NaN"], [38, "1.0", "1.0"]], "source": "spark:many_c"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[39, "NaN", "NaN"], [40, "1.0", "1.0"], [41, "NaN", "NaN"], [42, "1.0", "1.0"], [43, "NaN", "NaN"], [44, "1.0", "1.0"], [45, "NaN", "NaN"], [46, "1.0", "1.0"]], "source": "spark:many_s"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": ["7fc00000", "7ff8000000000000"], "ok": true, "record": "cell", "rows": [[47, "NaN", "NaN"], [48, "1.0", "1.0"], [49, "NaN", "NaN"], [50, "1.0", "1.0"], [51, "NaN", "NaN"], [52, "1.0", "1.0"], [53, "NaN", "NaN"], [54, "1.0", "1.0"]], "source": "spark:many_p"}
+{"cell": "read", "door": "sql", "group": "rt_by_repark", "nan_bits": [], "ok": true, "record": "cell", "rows": [[1, "1.0", "1.0"], [2, "1.0", "1.0"]], "source": "spark:ctl"}

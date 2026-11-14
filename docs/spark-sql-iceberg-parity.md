@@ -1363,20 +1363,68 @@ perfectly good read.
   (item 3, option (b)): silent data loss becomes a loud refusal. The real native CTAS waits on the
   owner's routing decision ([card](../task/roadmap/mid-term/native-ctas-iceberg-refuse-1-card-2026-11-12.md)).
 
-#### NATIVE-DATAFRAME-WRITE-SILENT-1 — `repark.sql()` DataFrame appends report success and store nothing (known issue in 1.5.6; the fix rides v1.5.7)
+#### NATIVE-DATAFRAME-WRITE-SILENT-1 — a `repark.sql()` frame's DataFrame write that would store nothing refuses (declared native-door refusal; silent in 1.5.6, fixed for v1.5.7)
 
-- **repark** — on the native door, a frame from `repark.sql(…)` written with
-  `.write.mode("append").saveAsTable(…)`, `.write.insertInto(…)` or `.writeTo(…).append()` returns without an error,
-  and the target's rows are unchanged afterwards. Measured on the memory catalog only; the other target kinds and
-  the overwrite forms are unmeasured. On the same door `writeTo(…).create()`, `writeTo(…).createOrReplace()` and
-  `saveAsTable` into a new table or with overwrite fail to parse on `USING`. Measured on main `a3f8c7d9` and on
-  #1317's head `ed9f678c`, identical; the surface ships in 1.5.6. The cause is not known.
-- **Apache Spark** — each append stores the frame's rows. *(documented: the writer API's contract; no Spark cell
-  was run for this row. The fix's measured table attaches the oracle.)*
-- **Pin** — none yet; the fix lands one per verb and target kind.
-- **Rationale** — a silent lost write (S1), a known issue on the shipped 1.5.6 wheel. Owner ruling 2026-11-13,
-  verbatim "Defaults": first measure every writer verb on every target kind, the overwrite forms included, then a
-  refusal guard like NATIVE-CTAS-ICEBERG-REFUSE-1's; it rides v1.5.7. ([card](../task/roadmap/mid-term/native-dataframe-write-silent-1-card-2026-11-13.md);
+- **repark** — on the native door, a DataFrame writer verb whose statement would plan to a
+  pending write refuses before any effect, with `UnsupportedOperationException`. A pending write
+  is an `INSERT` or `COPY` that `repark.sql()` leaves lazy and the writer would drop.
+  - **For a table:** `DataFrame.write and writeTo cannot write a repark.sql() frame into the
+    table <target>: the write would return without storing any rows, so nothing was written;
+    <workaround> (NATIVE-DATAFRAME-WRITE-SILENT-1)`. The workaround is `register the frame as a
+    temporary view <view> and run <statement> through repark.sql(...) and collect the result`,
+    and each statement stores the Spark door's rows when followed literally, except a column
+    named by a reserved word (NATIVE-WRITE-ROUTE-QUOTE-1) and the in-memory replace's types and
+    `NOT NULL` (below):
+    - an append: `INSERT INTO <target> (<columns>) SELECT <columns> FROM <view>` for a verb that
+      writes by name, listing the frame's columns in the frame's order and quoting a name that
+      does not read as a bare column; `INSERT INTO <target> SELECT * FROM <view>` for
+      `insertInto`, which writes by position;
+    - a static overwrite, or `overwritePartitions` (every table this door can create is
+      unpartitioned): `INSERT OVERWRITE` in the same two forms, on an Iceberg table;
+    - either overwrite of an in-memory table, where `INSERT OVERWRITE` is not implemented:
+      `CREATE OR REPLACE TABLE <target> AS SELECT <frame column> AS <table column>, ... FROM
+      <view>`, pairing the columns as the verb does. The replaced table takes the frame's column types and drops `NOT NULL`, so a NULL row is stored where the Spark door refuses.
+  - **For a view or a database-source table:** `... into <target>: it is a view, and the native
+    door cannot write through a view, so nothing was written (...)`, or the same naming the
+    database source. No statement is named, since none can store; Spark refuses a write into a
+    view too. In 1.5.6 `insertInto` on a native view returned and stored nothing. No database
+    source was reachable here (no server), so that branch is pinned on a planned statement.
+  - **For a path:** the same shape, naming the path as the user wrote it (`out`, `.`, `..`
+    included). The workaround is `spark.createDataFrame(frame.collect(), frame.schema)` on a
+    `ReparkSession`, written there, which holds every row in memory. It fails loudly, with nothing written, for a decimal value with 11 or more integer digits, at any declared precision, and for ±Infinity in a DOUBLE or FLOAT column, on the head build and on 1.5.6.
+  - **The verbs:**
+    - `saveAsTable` append;
+    - `format("iceberg").save(name)` append and overwrite;
+    - `insertInto` (both forms, and with `partitionBy`);
+    - `writeTo().append()` (plain, `tableProperty`, `partitionedBy`) and
+      `overwritePartitions()`;
+    - every Parquet/CSV/JSON path write, through `.parquet`/`.csv`/`.json`, `save(p)` or
+      `option("path", p).save()`.
+  - **The targets:** existing Iceberg tables (memory and hadoop catalogs), in-memory tables and
+    paths, from any frame shape.
+  - **What 1.5.6 did:** these returned success and stored nothing, and an overwrite of an
+    existing path deleted its rows and left one empty file. The append form was first measured
+    on main `a3f8c7d9` and on #1317's head `ed9f678c`, identical.
+  - **An empty frame:** its native write refuses too, where 1.5.6 was vacuously right; the
+    Spark door stores it.
+  - **Unchanged:** every verb that already refused or stored, `repark.sql()` statements
+    themselves, `mergeInto` (still refused on this door) and every Spark-door write.
+  - **Not measured:** a partitioned Iceberg table cannot be reached natively, and Glue, S3
+    Tables and REST were not run.
+- **Apache Spark** — each of these writes stores the frame's rows. RePark's Spark door does the
+  same in every reachable cell, and so does the collected native `INSERT`. *(documented: the
+  writer API's contract, with RePark's Spark door measured beside it; no Spark JVM cell was run.
+  `task/wo/native-dataframe-write-silent-1/evidence/`.)*
+- **Pin** — `python/repark/tests/writes/test_native_dataframe_write_silent_1.py` (2436 cells:
+  399 refuse, the rest keep main's outcome, rows, snapshots and files; each workaround followed
+  from the message, with a reordered frame on every by-name and by-position verb matching the
+  Spark door's rows; native views; the path route on a native-table frame, an append and an
+  empty frame; nine path spellings) and
+  `crates/repark-python/src/session_write_options_tests.rs`.
+- **Rationale** — DECLARED refusal. Owner ruling 2026-11-13, verbatim "Defaults": measure every
+  verb on every target kind, then a refusal guard like NATIVE-CTAS-ICEBERG-REFUSE-1's, riding
+  v1.5.7. A silent lost write (S1), and a silent delete on path overwrites, become a loud
+  refusal. ([card](../task/roadmap/mid-term/native-dataframe-write-silent-1-card-2026-11-13.md);
   [ruling](../task/wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-13.md), item 5.)
 
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
@@ -5337,6 +5385,53 @@ still open is `isModifiable`.
 - **Rationale** — the owner's 2026-11-13 ruling on Q11 ("Defaults", option C before the label); card
   [NAN-WRITE-CANONICAL-1](../task/roadmap/mid-term/nan-write-canonical-1-card-2026-11-13.md). Closes
   NAN-PARTITION-RAW-BITS-1 and NAN-PARTITION-FILE-SPLIT-1.
+
+### NAN-MINMAX-1 part 1 — a plain Parquet file's NaN reads as NaN, its footer no longer answers `max`/`min`, and an all-NULL row group no longer narrows `min` — **FIXED 2026-11-13 (branch, not merged)**
+
+- **repark** — Before (main `631d283c`): Parquet's footer min and max leave NaN out, and DataFusion took them as
+  exact. A file whose other FLOAT or DOUBLE values are one value read every NaN as that value (the constant-column
+  replacement), and `max`/`min` answered from the footer without the NaN. Measured on `spark.read.parquet`,
+  `read.format("parquet").load`, the native `read_parquet` and the native `CREATE EXTERNAL TABLE … STORED AS PARQUET`,
+  with canonical, sign-set and payload NaN, one file, row groups and many files: every NaN read as `1.0`. RePark's
+  round trip (`write.parquet`) and its Iceberg ingestion (`writeTo`) then stored `1.0`. After: RePark's plain-Parquet
+  `FileFormat` (`spark_nullable.rs`, on both seats) reports a file's float bounds as inexact where they are equal
+  or a row group has none (all NaN, or NULL and NaN), and every float bound of the scan as inexact, so neither
+  consumer fires; the NaN rows read, round-trip and ingest as NaN, and file pruning keeps the exact bounds of every
+  other file. A RePark session also turns DataFusion's aggregate dynamic filter off by default
+  (`datafusion.optimizer.enable_aggregate_dynamic_filter_pushdown = false`, `df_guards.rs`), because it prunes where
+  Spark's reader does not:
+  - **N1**, found by the re-check of #1333 and fixed in its second delta: an ungrouped `max`/`min` over NaN-free
+    Parquet with an all-NULL file range or row group answered a wrong `min` (three files `[3,4]`, `[NULL,NULL | 1,2]`,
+    `[5,6]`: `min` 3.0 where Spark answers 1.0). The cause is a typed NULL, not NaN: DataFusion 54.1.0
+    (`no_grouping.rs:254-262`) takes a NULL-only partition's `Float64(None)` as the shared `min` bound, and the
+    filter keeps only `d > max`. To be reported upstream.
+  - **P1**, the same defect on main for a filtered `max`/`min` of any type (integer `max(k), min(k) WHERE id >= 0`:
+    `min` 200010 where Spark answers 100010), fixed by the same switch.
+  - the multi-file `max(d)` that missed a NaN in a spread file (verifier 2's B2) now answers NaN.
+
+  A user opts back in with the specific key; `datafusion.optimizer.enable_dynamic_filter_pushdown = true`, which
+  DataFusion applies to all four dynamic-filter keys, is refused.
+- **spark** — Spark 4.1.2 reads the NaN rows of the same files, answers `max` NaN and `min` 1.0, and writes the NaN
+  rows back. *(oracle: measured live 2026-11-13, `task/wo/nan-minmax-1/evidence/step0/`.)*
+- **Still unlike Spark** (each cell below that main answered as Spark did, it answered so only by reading NaN as a
+  number or skipping it; the family and its counts are in the card):
+  - `max`/`min` over a sign-set NaN (`fff8…`) answer `max 1.0, min NaN` (Arrow's total order); grouped `min` over a
+    canonical NaN depends on row order. Part 2 (RePark's float `max`/`min`) owes them.
+  - `>` and `>=` over a sign-set NaN in a constant file drop the NaN rows, as on every spread file;
+    NAN-COMPARE-SPARK-1's literal unit owes it.
+  - A join to a NaN literal over a constant file keeps the NaN rows, as on every spread file; Spark keeps none, by
+    pruning the join-inferred `d = NaN` by the NaN-free footer (NAN-COMPARE-SPARK-1, sketch §6).
+- **Pruning** — file, row-group and page pruning of the user's predicate keep reading the footers, as Spark's reader
+  does; `= CAST('NaN' AS DOUBLE)` keeps no row over a file whose NaN rows sit in bounded row groups, on both engines
+  (PARQUET-NAN-EQUALITY-1's pruning half, re-scoped as equal to Spark). A row group with no footer bounds is kept.
+- **Pin** — `python/repark/tests/io/test_nan_minmax_stats_1.py` (both doors, every NaN shape and layout, the round
+  trip, the Iceberg ingestion, the native external table, three files with an unbounded row group, a 100-file
+  row-group control; N1's and P1's cells, the multi-file `max` and the switch, each over 10 runs; strict xfails for
+  the sign-set `max`/`min` and `d >= 1.0` over a sign-set constant file);
+  `crates/repark-core/src/spark_nullable/float_bounds_tests.rs`.
+- **Rationale** — S1 wrong read and wrong write, label-blocking (owner, 2026-11-13, "Go with default"; the sketch's
+  Q3, Q4, Q10 ruled "defaults"); the second delta and the card's items (i) and (ii) ruled 2026-11-14 ("Go with
+  defaults"); card [NAN-MINMAX-1](../task/roadmap/mid-term/nan-minmax-1-card-2026-11-13.md).
 
 ### DOUBLE-DECIMAL-STORE-ROUND-1 — a FLOAT or DOUBLE into DECIMAL rounds the double's text half up, as Spark's does — **FIXED 2026-11-13 (branch, not merged)**
 
