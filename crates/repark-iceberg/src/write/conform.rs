@@ -4,17 +4,32 @@
 //! of bulk append, kept next to its name-resolution and store-assignment dependencies.
 
 use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::{ArrayRef, RecordBatch};
+use datafusion::arrow::array::{
+    Array, ArrayRef, AsArray, Decimal128Array, PrimitiveArray, RecordBatch,
+};
 use datafusion::arrow::compute::{CastOptions, cast_with_options};
-use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, SchemaRef, TimeUnit};
+use datafusion::arrow::datatypes::{
+    ArrowPrimitiveType, DataType, Decimal128Type, DecimalType, Field, FieldRef, Float32Type,
+    Float64Type, Schema as ArrowSchema, SchemaRef, TimeUnit,
+};
+use datafusion::arrow::error::ArrowError;
 use datafusion::error::{DataFusionError, Result};
+use datafusion::logical_expr::expr::ScalarFunction;
+use datafusion::logical_expr::{
+    ColumnarValue, Expr, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
+    Volatility,
+};
+use datafusion::scalar::ScalarValue;
 
 use crate::catalog::uuid_presentation::{convert_uuid_column, presents_uuid};
 use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
 use crate::write::store_assign::refuse_unless_write_store_assignable;
 use crate::write::struct_pairing::{StoreEntry, refuse_unpaired_struct};
+
+pub(crate) const STORE_FLOAT_DECIMAL_NAME: &str = "__repark_store_float_decimal__";
 
 /// Conform batches to the Iceberg write schema: every target column takes its source column.
 /// Columns carrying an Iceberg `write-default` may be absent — the fork's `DataFileWriter::write`
@@ -275,7 +290,137 @@ fn entry_store_cast(
 ) -> Result<ArrayRef> {
     refuse_unpaired_struct(table, entry, name, column.data_type(), target)?;
     refuse_coarser_timestamp(name, column.data_type(), target)?;
+    if let Some(stored) = float_store_array(column, target)? {
+        return Ok(stored);
+    }
     Ok(cast_with_options(column, target, &strict_cast())?)
+}
+
+pub(crate) fn float_decimal_store_expr(value: Expr, target: &DataType) -> Expr {
+    Expr::ScalarFunction(ScalarFunction::new_udf(
+        Arc::new(ScalarUDF::from(FloatDecimalStore::new(target.clone()))),
+        vec![value],
+    ))
+}
+
+#[derive(Debug)]
+struct FloatDecimalStore {
+    signature: Signature,
+    target: DataType,
+}
+
+impl FloatDecimalStore {
+    fn new(target: DataType) -> Self {
+        Self {
+            signature: Signature::any(1, Volatility::Immutable),
+            target,
+        }
+    }
+}
+
+impl PartialEq for FloatDecimalStore {
+    fn eq(&self, other: &Self) -> bool {
+        self.target == other.target
+    }
+}
+
+impl Eq for FloatDecimalStore {}
+
+impl Hash for FloatDecimalStore {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        STORE_FLOAT_DECIMAL_NAME.hash(state);
+        self.target.hash(state);
+    }
+}
+
+impl ScalarUDFImpl for FloatDecimalStore {
+    fn name(&self) -> &str {
+        STORE_FLOAT_DECIMAL_NAME
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(self.target.clone())
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
+        let nullable = args
+            .arg_fields
+            .first()
+            .is_none_or(|field| field.is_nullable());
+        Ok(Arc::new(Field::new(
+            self.name(),
+            self.target.clone(),
+            nullable,
+        )))
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let Some(value) = args.args.first() else {
+            return Err(DataFusionError::Execution(format!(
+                "'{STORE_FLOAT_DECIMAL_NAME}' expects one argument"
+            )));
+        };
+        let rows = match value {
+            ColumnarValue::Scalar(_) => 1,
+            ColumnarValue::Array(array) => array.len(),
+        };
+        let Some(stored) = float_store_array(&value.to_array(rows)?, &self.target)? else {
+            return Err(DataFusionError::Execution(format!(
+                "'{STORE_FLOAT_DECIMAL_NAME}' stores a FLOAT or DOUBLE into a DECIMAL, not {} into {}",
+                value.data_type(),
+                self.target
+            )));
+        };
+        match value {
+            ColumnarValue::Scalar(_) => Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
+                &stored, 0,
+            )?)),
+            ColumnarValue::Array(_) => Ok(ColumnarValue::Array(stored)),
+        }
+    }
+}
+
+fn float_store_array(column: &ArrayRef, target: &DataType) -> Result<Option<ArrayRef>> {
+    let DataType::Decimal128(precision, scale) = target else {
+        return Ok(None);
+    };
+    let stored = match column.data_type() {
+        DataType::Float64 => {
+            float_store_decimal(column.as_primitive::<Float64Type>(), *precision, *scale)?
+        }
+        DataType::Float32 => {
+            float_store_decimal(column.as_primitive::<Float32Type>(), *precision, *scale)?
+        }
+        _ => return Ok(None),
+    };
+    Ok(Some(Arc::new(stored)))
+}
+
+fn float_store_decimal<T>(
+    values: &PrimitiveArray<T>,
+    precision: u8,
+    scale: i8,
+) -> Result<Decimal128Array>
+where
+    T: ArrowPrimitiveType,
+    T::Native: Into<f64>,
+{
+    let stored: Decimal128Array = values.try_unary(|value| {
+        let value: f64 = value.into();
+        let unscaled =
+            repark_common::java_double::java_double_unscaled(value, scale).ok_or_else(|| {
+                ArrowError::CastError(format!(
+                    "Cannot cast to Decimal128({precision}, {scale}). Overflowing on {value:?}"
+                ))
+            })?;
+        Decimal128Type::validate_decimal_precision(unscaled, precision, scale)?;
+        Ok::<i128, ArrowError>(unscaled)
+    })?;
+    Ok(stored.with_precision_and_scale(precision, scale)?)
 }
 
 #[allow(clippy::missing_errors_doc)]
@@ -376,5 +521,42 @@ mod tests {
                 .value(0),
             "s1"
         );
+    }
+
+    #[test]
+    fn a_float_batch_stores_into_decimal_by_the_doubles_text() {
+        let doubles: ArrayRef = Arc::new(datafusion::arrow::array::Float64Array::from(vec![
+            Some(1.255),
+            Some(-1.255),
+            Some(1.254_999_999_999_999_7),
+            None,
+        ]));
+        let stored =
+            strict_store_cast("v", &doubles, &DataType::Decimal128(10, 2)).expect("stores");
+        let stored = stored.as_primitive::<Decimal128Type>();
+        assert_eq!(
+            stored.iter().collect::<Vec<_>>(),
+            vec![Some(126), Some(-126), Some(125), None]
+        );
+        let floats: ArrayRef = Arc::new(datafusion::arrow::array::Float32Array::from(vec![
+            1.255_f32,
+        ]));
+        let stored = strict_partition_store_cast("v", &floats, &DataType::Decimal128(10, 2))
+            .expect("stores");
+        assert_eq!(stored.as_primitive::<Decimal128Type>().value(0), 125);
+        for (value, text) in [
+            (f64::NAN, "Overflowing on NaN"),
+            (
+                1e10,
+                "is too large to store in a Decimal128 of precision 10",
+            ),
+        ] {
+            let column: ArrayRef =
+                Arc::new(datafusion::arrow::array::Float64Array::from(vec![value]));
+            let error = strict_store_cast("v", &column, &DataType::Decimal128(10, 2))
+                .expect_err("refuses")
+                .to_string();
+            assert!(error.contains(text), "{error}");
+        }
     }
 }

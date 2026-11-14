@@ -9,6 +9,8 @@ mod tables_floats;
 mod tests_corpus;
 #[cfg(test)]
 mod tests_suffix_marker;
+#[cfg(test)]
+mod tests_unscaled;
 
 pub(crate) use dtoa::{java_double_strings, java_float_strings, with_java_double_text};
 pub use dtoa::{

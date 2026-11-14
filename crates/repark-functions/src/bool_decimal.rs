@@ -268,6 +268,34 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_float_cast_to_decimal_is_left_to_its_cast() {
+        let ctx = ctx_with(Some(true));
+        for sql in [
+            "SELECT CAST(v AS DECIMAL(10,2)) FROM (VALUES (CAST('1.255' AS DOUBLE))) t(v)",
+            "SELECT TRY_CAST(v AS DECIMAL(38,18)) FROM (VALUES (CAST('1.255' AS DOUBLE))) t(v)",
+            "SELECT CAST(v AS DECIMAL(10,2)) FROM (VALUES (CAST('1.255' AS FLOAT))) t(v)",
+            "SELECT arrow_cast(v, 'Decimal128(10, 2)') FROM (VALUES (CAST('1.255' AS DOUBLE))) t(v)",
+            "SELECT CAST(1.26 AS DECIMAL(10,2)) = v FROM (VALUES (CAST('1.255' AS DOUBLE))) t(v)",
+        ] {
+            let plan = ctx.state().create_logical_plan(sql).await.unwrap();
+            let shown = crate::analyze_eagerly(&ctx.state(), plan)
+                .unwrap()
+                .display_indent()
+                .to_string();
+            assert!(!shown.contains("__repark_"), "{sql}: {shown}");
+            assert!(shown.contains("Decimal128("), "{sql}: {shown}");
+        }
+        assert_eq!(
+            values(
+                &ctx,
+                "SELECT CAST(true AS DECIMAL(10,2)) FROM (VALUES (CAST('1.255' AS DOUBLE))) t(v)"
+            )
+            .await,
+            vec!["1.00".to_string()]
+        );
+    }
+
+    #[tokio::test]
     async fn wide_targets_are_nonnull_with_one_and_zero() {
         let ctx = ctx_with(Some(true));
         assert_eq!(

@@ -200,6 +200,9 @@ pub(super) fn finish_session_build(
     extension: &Arc<dyn SessionExtension>,
 ) {
     dialect.on_session_built(context);
+    context.add_analyzer_rule(Arc::new(
+        repark_iceberg::write::conform_stage::FloatDecimalStoreRule,
+    ));
     context.add_analyzer_rule(Arc::new(OptimizerSeatConfig));
     signed_zero::install_literal_seat(context, extension.signed_zero_policy());
 }
