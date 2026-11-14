@@ -96,7 +96,7 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "docs/guide/map.md": (243, 18311),
     "docs/map.md": (373, 31128),
     "docs/perf/map.md": (478, 35483),
-    "map.md": (302, 42805),
+    "map.md": (302, 42774),
     "python/repark-parity/tests/live_spark/map.md": (304, 20290),
     "python/repark-parity/tests/map.md": (1098, 118304),
     "python/repark-parity/tests/spill/map.md": (212, 13184),
@@ -104,13 +104,13 @@ EXCEPTIONS: dict[str, tuple[int, int]] = {
     "python/repark/src/repark/spark/map.md": (892, 90442),
     "python/repark/src/repark/spark/session/map.md": (147, 86244),
     "python/repark/tests/functions/map.md": (139, 18667),
-    "python/repark/tests/iceberg/map.md": (152, 21445),
+    "python/repark/tests/iceberg/map.md": (152, 21432),
     "python/repark/tests/timestamps/map.md": (221, 39701),
     "python/repark/tests/writes/map.md": (187, 29179),
     "scripts/map.md": (528, 56024),
     "task/map.md": (224, 24514),
-    "task/roadmap/mid-term/map.md": (794, 150182),
-    "task/wo/map.md": (60, 16573),
+    "task/roadmap/mid-term/map.md": (794, 150163),
+    "task/wo/map.md": (60, 16563),
 }
 
 
