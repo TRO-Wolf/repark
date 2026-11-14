@@ -51,8 +51,41 @@ fn float_batch(values: Floats) -> RecordBatch {
     .expect("the float batch is well formed")
 }
 
+fn optional_batch(wide: [Option<f64>; 4], narrow: [Option<f32>; 4]) -> RecordBatch {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, true),
+        Field::new("d", DataType::Float64, true),
+        Field::new("f", DataType::Float32, true),
+    ]));
+    RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Int64Array::from(vec![1, 2, 3, 4])),
+            Arc::new(Float64Array::from(wide.to_vec())),
+            Arc::new(Float32Array::from(narrow.to_vec())),
+        ],
+    )
+    .expect("the optional float batch is well formed")
+}
+
+const NAN_GROUP: ([Option<f64>; 4], [Option<f32>; 4]) = (
+    [Some(f64::NAN), Some(f64::NAN), Some(1.0), Some(2.0)],
+    [Some(f32::NAN), Some(f32::NAN), Some(1.0), Some(2.0)],
+);
+const NULL_NAN_GROUP: ([Option<f64>; 4], [Option<f32>; 4]) = (
+    [None, Some(f64::NAN), Some(1.0), Some(2.0)],
+    [None, Some(f32::NAN), Some(1.0), Some(2.0)],
+);
+const NULL_GROUP: ([Option<f64>; 4], [Option<f32>; 4]) = (
+    [None, None, Some(1.0), Some(2.0)],
+    [None, None, Some(1.0), Some(2.0)],
+);
+
 fn write_float_file(dir: &Path, values: Floats, row_group_rows: usize) -> std::path::PathBuf {
-    let batch = float_batch(values);
+    write_batch_file(dir, &float_batch(values), row_group_rows)
+}
+
+fn write_batch_file(dir: &Path, batch: &RecordBatch, row_group_rows: usize) -> std::path::PathBuf {
     let path = dir.join("part-0.parquet");
     let file = std::fs::File::create(&path).expect("create the parquet file");
     let properties = WriterProperties::builder()
@@ -60,7 +93,7 @@ fn write_float_file(dir: &Path, values: Floats, row_group_rows: usize) -> std::p
         .build();
     let mut writer = ArrowWriter::try_new(file, batch.schema(), Some(properties))
         .expect("open the parquet writer");
-    writer.write(&batch).expect("write the batch");
+    writer.write(batch).expect("write the batch");
     writer.close().expect("close the parquet writer");
     path
 }
@@ -71,8 +104,15 @@ async fn file_meta(store: &Arc<dyn ObjectStore>, path: &Path) -> ObjectMeta {
 }
 
 async fn stats_pair(values: Floats, row_group_rows: usize) -> (Statistics, Statistics, Statistics) {
+    stats_of(&float_batch(values), row_group_rows).await
+}
+
+async fn stats_of(
+    batch: &RecordBatch,
+    row_group_rows: usize,
+) -> (Statistics, Statistics, Statistics) {
     let dir = tempfile::tempdir().expect("a temp dir");
-    let path = write_float_file(dir.path(), values, row_group_rows);
+    let path = write_batch_file(dir.path(), batch, row_group_rows);
     let store: Arc<dyn ObjectStore> = Arc::new(LocalFileSystem::new());
     let meta = file_meta(&store, &path).await;
     let context = SessionContext::new();
@@ -257,5 +297,78 @@ async fn create_external_table_keeps_every_nan_and_reads_max_from_the_column() {
             .await
             .expect("create the external table");
         assert_view_keeps_nan(&session, "float_ext", values).await;
+    }
+}
+
+fn assert_float_bounds_only_inexact(plain: &Statistics, wrapped: &Statistics) {
+    assert_eq!(wrapped.num_rows, plain.num_rows);
+    for (index, (before, after)) in plain
+        .column_statistics
+        .iter()
+        .zip(&wrapped.column_statistics)
+        .enumerate()
+    {
+        assert_eq!(after.null_count, before.null_count, "column {index}");
+        if index == 0 {
+            assert_eq!(after, before, "column {index}");
+        } else {
+            assert!(
+                matches!(before.max_value, Precision::Exact(_)),
+                "column {index}: {before:?}"
+            );
+            assert_eq!(after.min_value, before.min_value.clone().to_inexact());
+            assert_eq!(after.max_value, before.max_value.clone().to_inexact());
+        }
+    }
+}
+
+#[tokio::test]
+async fn a_row_group_without_float_bounds_turns_the_file_bounds_inexact() {
+    for (wide, narrow) in [NAN_GROUP, NULL_NAN_GROUP] {
+        let (plain, demoted, combined) = stats_of(&optional_batch(wide, narrow), 2).await;
+        assert_float_bounds_only_inexact(&plain, &demoted);
+        assert_float_bounds_only_inexact(&plain, &combined);
+    }
+}
+
+#[tokio::test]
+async fn an_all_null_row_group_keeps_the_file_bounds_exact() {
+    let (wide, narrow) = NULL_GROUP;
+    let (plain, demoted, combined) = stats_of(&optional_batch(wide, narrow), 2).await;
+    assert_eq!(demoted, plain);
+    assert_eq!(combined, plain);
+    assert!(matches!(
+        plain.column_statistics[1].max_value,
+        Precision::Exact(_)
+    ));
+}
+
+#[tokio::test]
+async fn read_parquet_keeps_a_nan_row_group_under_a_range_and_a_nan_filter() {
+    for ((wide, narrow), nans) in [(NAN_GROUP, 2.0), (NULL_NAN_GROUP, 1.0)] {
+        let dir = tempfile::tempdir().expect("a temp dir");
+        write_batch_file(dir.path(), &optional_batch(wide, narrow), 2);
+        let session = ReparkSession::new().expect("a session");
+        let frame = session
+            .read_parquet(dir.path().to_str().expect("a utf-8 path"))
+            .await
+            .expect("read the nan row group file");
+        session
+            .context()
+            .register_table("nan_group", frame.into_view())
+            .expect("register the view");
+        for column in ["d", "f"] {
+            for filter in [
+                format!("{column} > 5.0"),
+                format!("{column} = CAST('NaN' AS DOUBLE)"),
+            ] {
+                let count = first_column_floats(
+                    &session,
+                    &format!("SELECT count(*) FROM nan_group WHERE {filter}"),
+                )
+                .await;
+                assert_eq!(count, vec![nans], "{filter}");
+            }
+        }
     }
 }

@@ -11,11 +11,13 @@ use datafusion::datasource::file_format::options::ReadOptions;
 use datafusion::datasource::file_format::parquet::ParquetFormatFactory;
 use datafusion::datasource::file_format::{FileFormat, FileFormatFactory, FileMeta};
 use datafusion::datasource::listing::{ListingTable, ListingTableConfig, ListingTableUrl};
+use datafusion::datasource::physical_plan::parquet::metadata::DFParquetMetadata;
 use datafusion::datasource::physical_plan::{
     FileScanConfig, FileScanConfigBuilder, FileSinkConfig, FileSource,
 };
 use datafusion::datasource::table_schema::TableSchema;
 use datafusion::error::Result as DataFusionResult;
+use datafusion::parquet::file::metadata::{PageIndexPolicy, ParquetMetaData, RowGroupMetaData};
 use datafusion::physical_expr_common::sort_expr::{LexOrdering, LexRequirement};
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionContext};
@@ -158,9 +160,10 @@ impl FileFormat for FloatBoundsInexactFormat {
     ) -> DataFusionResult<Statistics> {
         let statistics = self
             .inner
-            .infer_stats(state, store, table_schema, object)
+            .infer_stats(state, store, Arc::clone(&table_schema), object)
             .await?;
-        Ok(constant_float_bounds_inexact(statistics))
+        let unbounded = unbounded_float_columns(state, store, &table_schema, object).await;
+        Ok(file_float_bounds_inexact(statistics, &unbounded))
     }
 
     async fn infer_ordering(
@@ -184,10 +187,11 @@ impl FileFormat for FloatBoundsInexactFormat {
     ) -> DataFusionResult<FileMeta> {
         let meta = self
             .inner
-            .infer_stats_and_ordering(state, store, table_schema, object)
+            .infer_stats_and_ordering(state, store, Arc::clone(&table_schema), object)
             .await?;
+        let unbounded = unbounded_float_columns(state, store, &table_schema, object).await;
         Ok(
-            FileMeta::new(constant_float_bounds_inexact(meta.statistics))
+            FileMeta::new(file_float_bounds_inexact(meta.statistics, &unbounded))
                 .with_ordering(meta.ordering),
         )
     }
@@ -256,6 +260,78 @@ pub(crate) fn constant_float_bounds_inexact(mut statistics: Statistics) -> Stati
         }
     }
     statistics
+}
+
+fn file_float_bounds_inexact(statistics: Statistics, unbounded: &[bool]) -> Statistics {
+    let mut statistics = constant_float_bounds_inexact(statistics);
+    for (column, demote) in statistics.column_statistics.iter_mut().zip(unbounded) {
+        if *demote {
+            float_column_bounds_inexact(column);
+        }
+    }
+    statistics
+}
+
+async fn unbounded_float_columns(
+    state: &dyn Session,
+    store: &Arc<dyn ObjectStore>,
+    table_schema: &Schema,
+    object: &ObjectMeta,
+) -> Vec<bool> {
+    let floats = table_schema
+        .fields()
+        .iter()
+        .map(|field| field.data_type().is_floating())
+        .collect::<Vec<bool>>();
+    if !floats.contains(&true) {
+        return floats;
+    }
+    let cache = state.runtime_env().cache_manager.get_file_metadata_cache();
+    let fetched = DFParquetMetadata::new(store.as_ref(), object)
+        .with_file_metadata_cache(Some(cache))
+        .with_page_index_policy(Some(PageIndexPolicy::Skip))
+        .fetch_metadata()
+        .await;
+    let Ok(metadata) = fetched else {
+        return floats;
+    };
+    table_schema
+        .fields()
+        .iter()
+        .zip(floats)
+        .map(|(field, float)| float && column_lacks_bounds(&metadata, field.name()))
+        .collect()
+}
+
+fn column_lacks_bounds(metadata: &ParquetMetaData, name: &str) -> bool {
+    let Some(leaf) = metadata
+        .file_metadata()
+        .schema_descr()
+        .columns()
+        .iter()
+        .position(|column| matches!(column.path().parts(), [only] if only == name))
+    else {
+        return false;
+    };
+    metadata
+        .row_groups()
+        .iter()
+        .any(|group| row_group_lacks_bounds(group, leaf))
+}
+
+fn row_group_lacks_bounds(group: &RowGroupMetaData, leaf: usize) -> bool {
+    let rows = u64::try_from(group.num_rows()).unwrap_or(u64::MAX);
+    match group
+        .columns()
+        .get(leaf)
+        .and_then(|column| column.statistics())
+    {
+        None => rows > 0,
+        Some(statistics) => {
+            (statistics.min_bytes_opt().is_none() || statistics.max_bytes_opt().is_none())
+                && statistics.null_count_opt() != Some(rows)
+        }
+    }
 }
 
 fn float_column_bounds_inexact(column: &mut ColumnStatistics) {

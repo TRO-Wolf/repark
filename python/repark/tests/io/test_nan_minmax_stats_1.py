@@ -27,6 +27,30 @@ _PART_2 = (
 _SELECTIVE_FILES = 100
 _SELECTIVE_ROWS = 20
 _SELECTIVE_GROUP = 10
+_COMPARE = (
+    "NAN-COMPARE-SPARK-1: a comparison orders a sign-set NaN below every number (Arrow's total "
+    "order); the constant-column replacement that hid it on main is gone"
+)
+_DYNAMIC = (
+    "NAN-MINMAX-1 part 2 (I8): DataFusion's aggregate dynamic filter for max prunes the NaN "
+    "file by its exact footer bounds"
+)
+_NAN_GROUP_SETS = {
+    "R_one": [["N", "N", 1.0, 2.0]],
+    "R_many": [["N", "N", 1.0, 2.0], [3.0, 4.0, 5.5, 6.0]],
+    "R_nullnan": [[None, "N", 1.0, 2.0]],
+}
+_NAN_GROUP_SPARK = {
+    "R_one": {"gt5": [[1], [2]], "eqnan": [[2]]},
+    "R_many": {"gt5": [[1], [2], [7], [8]], "eqnan": [[2]]},
+    "R_nullnan": {"gt5": [[2]], "eqnan": [[1]]},
+}
+_NAN_GROUP_QUERIES = {
+    "gt5": "SELECT id FROM nan_minmax_src WHERE d > 5.0 ORDER BY id",
+    "eqnan": "SELECT count(*) FROM nan_minmax_src WHERE d = CAST('NaN' AS DOUBLE)",
+}
+_DYNAMIC_ROWS = 200_000
+_DYNAMIC_RUNS = 5
 
 
 def _column(count: int, shape: str, wide: bool) -> pa.Array:
@@ -158,6 +182,66 @@ def test_max_min_over_a_sign_set_nan_equals_spark(
     spark: ReparkSession, sources: dict[str, Path], source: str
 ) -> None:
     assert _spark_door(spark, sources[source], _MINMAX) == _SPARK_MINMAX
+
+
+@pytest.mark.xfail(strict=True, reason=_COMPARE)
+def test_range_filter_over_a_constant_sign_set_file_equals_spark(
+    spark: ReparkSession, sources: dict[str, Path]
+) -> None:
+    text = "SELECT id FROM nan_minmax_src WHERE d >= 1.0 ORDER BY id"
+    assert _spark_door(spark, sources["one_s"], text) == [[1], [2], [3], [4]]
+
+
+def _write_nan_group_set(root: Path, name: str) -> Path:
+    folder = root / name
+    folder.mkdir(parents=True)
+    next_id = 1
+    for index, values in enumerate(_NAN_GROUP_SETS[name]):
+        d = pa.array(
+            [math.nan if v == "N" else v for v in values],
+            pa.float64(),
+            mask=np.array([v is None for v in values]),
+        )
+        ids = pa.array(range(next_id, next_id + len(values)), pa.int64())
+        next_id += len(values)
+        table = pa.table({"id": ids, "d": d})
+        pq.write_table(table, folder / f"part-{index:03d}.parquet", row_group_size=2)
+    return folder
+
+
+@pytest.mark.parametrize("name", list(_NAN_GROUP_SETS))
+def test_a_row_group_without_footer_bounds_keeps_its_nan_rows_on_both_doors(
+    spark: ReparkSession, native: Any, tmp_path: Path, name: str
+) -> None:
+    folder = _write_nan_group_set(tmp_path, name)
+    first = pq.ParquetFile(folder / "part-000.parquet").metadata
+    assert not first.row_group(0).column(1).statistics.has_min_max
+    spark_door = {q: _spark_door(spark, folder, text) for q, text in _NAN_GROUP_QUERIES.items()}
+    native_door = {q: _native_door(native, folder, text) for q, text in _NAN_GROUP_QUERIES.items()}
+    assert spark_door == _NAN_GROUP_SPARK[name]
+    assert native_door == _NAN_GROUP_SPARK[name]
+
+
+@pytest.mark.xfail(strict=True, reason=_DYNAMIC)
+def test_max_over_many_files_with_a_nan_in_a_spread_file_equals_spark(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    folder = tmp_path / "dynamic"
+    folder.mkdir()
+    for index in range(9):
+        d = 1000.0 + index + np.arange(_DYNAMIC_ROWS, dtype=np.float64) * 1e-6
+        ids = np.arange(index * _DYNAMIC_ROWS, (index + 1) * _DYNAMIC_ROWS, dtype=np.int64)
+        pq.write_table(pa.table({"id": ids, "d": d}), folder / f"high-{index}.parquet")
+    low = np.arange(_DYNAMIC_ROWS, dtype=np.float64) / _DYNAMIC_ROWS
+    low[-1] = math.nan
+    ids = np.arange(9 * _DYNAMIC_ROWS, 10 * _DYNAMIC_ROWS, dtype=np.int64)
+    pq.write_table(pa.table({"id": ids, "d": low}), folder / "low.parquet")
+    spark.read.parquet(str(folder)).createOrReplaceTempView("nan_minmax_dynamic")
+    answers = [
+        _rows(spark.sql("SELECT max(d) FROM nan_minmax_dynamic").toArrow())
+        for _ in range(_DYNAMIC_RUNS)
+    ]
+    assert answers == [[["NaN"]]] * _DYNAMIC_RUNS
 
 
 def test_format_load_equals_spark(spark: ReparkSession, sources: dict[str, Path]) -> None:
