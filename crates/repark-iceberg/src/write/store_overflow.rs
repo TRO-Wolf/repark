@@ -12,6 +12,7 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::scalar::ScalarValue;
 
+use super::conform::float_decimal_store_expr;
 use super::store_fold::{
     check_folded_store_input, expr_references_column, store_guard_expr, wrap_store_expr,
 };
@@ -528,6 +529,9 @@ pub(crate) fn conform_one_store_expr(
     {
         return Ok(None);
     }
+    if let Some(stored) = float_decimal_store(inner, schema, target_type) {
+        return Ok(Some(stored));
+    }
     let nested = rewrite_nested_arrow_casts(
         inner.clone(),
         schema,
@@ -555,6 +559,90 @@ pub(crate) fn conform_one_store_expr(
         &issue,
         swap_guards_in_expr(value, &issue),
     )))
+}
+
+pub(crate) fn float_decimal_store(
+    inner: &Expr,
+    schema: &DFSchema,
+    target: &DataType,
+) -> Option<Expr> {
+    if !matches!(target, DataType::Decimal128(..)) {
+        return None;
+    }
+    if let Expr::Case(case) = inner {
+        return float_decimal_case_store(case, schema, target);
+    }
+    let value = match cast_float_value(inner, target) {
+        Some(value) => value,
+        None if matches!(inner, Expr::Cast(_)) || is_arrow_cast(inner) => return None,
+        None => inner,
+    };
+    if !matches!(
+        value.get_type(schema),
+        Ok(DataType::Float32 | DataType::Float64)
+    ) {
+        return None;
+    }
+    Some(float_decimal_store_expr(value.clone(), target))
+}
+
+fn float_decimal_case_store(
+    case: &datafusion::logical_expr::expr::Case,
+    schema: &DFSchema,
+    target: &DataType,
+) -> Option<Expr> {
+    let mut case = case.clone();
+    if Expr::Case(case.clone()).get_type(schema).ok().as_ref() != Some(target) {
+        return None;
+    }
+    let mut changed = false;
+    let mut store_branch = |branch: &mut Box<Expr>| {
+        let stored = match branch.as_ref() {
+            Expr::Case(_) => float_decimal_store(branch, schema, target),
+            other => cast_float_value(other, target)
+                .filter(|value| {
+                    matches!(
+                        value.get_type(schema),
+                        Ok(DataType::Float32 | DataType::Float64)
+                    )
+                })
+                .map(|value| float_decimal_store_expr(value.clone(), target)),
+        };
+        if let Some(stored) = stored {
+            **branch = stored;
+            changed = true;
+        }
+    };
+    for (_, then) in &mut case.when_then_expr {
+        store_branch(then);
+    }
+    if let Some(otherwise) = case.else_expr.as_mut() {
+        store_branch(otherwise);
+    }
+    changed.then_some(Expr::Case(case))
+}
+
+fn cast_float_value<'a>(expr: &'a Expr, target: &DataType) -> Option<&'a Expr> {
+    match expr {
+        Expr::Cast(cast) if cast.field.data_type() == target => Some(cast.expr.as_ref()),
+        Expr::ScalarFunction(function) if is_arrow_cast(expr) => {
+            let (Some(value), Some(Expr::Literal(ScalarValue::Utf8(Some(name)), _))) =
+                (function.args.first(), function.args.get(1))
+            else {
+                return None;
+            };
+            (name.parse::<DataType>().ok().as_ref() == Some(target)).then_some(value)
+        }
+        _ => None,
+    }
+}
+
+fn is_arrow_cast(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::ScalarFunction(function)
+            if function.func.name() == ARROW_CAST_NAME && function.args.len() == 2
+    )
 }
 
 fn store_cast_parts(

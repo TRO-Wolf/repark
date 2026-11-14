@@ -75,7 +75,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   fixes RE-1 and LOG-1 to Spark. One-arg is the natural log;
   two-arg is `log(base, expr)`. Both arities return NULL on Spark's domain edges (zero,
   negative, null, base <= 0). Overwrites DataFusion's base-10 `LogFunc` from `register_all`.
-  Native ANSI `repark.sql()` does not load this kernel.
+  Native ANSI `repark.sql()` never loads this kernel.
 - `spark_isnan.rs` — **FN-FIX-1 (2026-09-03):** Spark `isnan`; NULL → false, non-nullable bool.
 - `spark_initcap.rs` — **FN-FIX-2 (2026-09-04):** Spark `initcap`; a word starts only after
   SPACE (U+0020). `'a-b'` → `'A-b'`.
@@ -123,7 +123,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **Round 5 (2026-09-16):** `abs` accepts STRING per Spark's implicit STRING→DOUBLE
   cast — `coerce_types` passes the utf8 type through and the kernel safe-casts
   itself so a malformed value raises `[CAST_INVALID_INPUT]` under ANSI (NULL under
-  ANSI-off) instead of a bare Arrow cast error (fixtures-batch11.json
+  ANSI-off), not a bare Arrow cast error (fixtures-batch11.json
   A11-sql-abs-1/-x, A11-api-abs-x, A11-callfn-abs-x).
   **SQL-LITERAL-TYPING-1 remediation round 1 (2026-09-16):** `Factorial`
   shadows upstream `factorial` the same way (`user_defined` + integer widths
@@ -350,10 +350,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   raw because the bound needs the compiled regex; `coerce_regexp_args` takes
   the caller's name. Ledger: `task/sem-4-regexp-messages-ledger.md`. **SEM-1
   (2026-08-21):** the two-argument default is capture group **1**, Spark's,
-  not the whole match — one knob for both doors, closing registry row `RE-1`.
+  not the whole match — one knob for both doors, closing registry `RE-1`.
   Ledger: `task/sem-1-extract-all-group-default-ledger.md`. **SEM-6 (2026-08-21):**
   `invoke_substr` returns NULL for a ZERO-WIDTH match, not `''` — Spark takes
-  the first match and nulls it when empty, closing registry row `RE-3`.
+  the first match and nulls it when empty, closing registry `RE-3`.
   Ledger: `task/sem-6-substr-zero-width-null-ledger.md`.
   **DOOR-CONVERGE-2 round 3 (2026-09-15):** the shared compiler gains `translate_java_pattern`
   (`\Q…\E` quoting; lookaround/backreference/possessive refuse naming the feature) and the
@@ -841,18 +841,16 @@ scalars live under [`try_invert/`](try_invert/map.md).
   router's ZS-9 gate (`repark-spark/src/router/nested_ns.rs`) can look through the non-null
   marker around a `named_struct` when it reads an UPDATE's assigned struct leaf by leaf.
 - `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
-  rule, installed on BOTH doors via `install_shared_analyzer_rules` (defined here since FNP-11B step 3 and re-exported from the crate root, so `repark_functions::install_shared_analyzer_rules` and run 16b's `session.rs` call are unchanged; the session The function carries no doc line by the comment rule; this row is its description: the analyzer rules both doors install (integer overflow, boolean-to-decimal casts; the TIME guard left for `analyzer_rules()` in remediation round 1).
-  installer calls it in place of the integer-only one — same line count, so the
-  session map needs no ratchet): `CAST(bool AS DECIMAL(p,s))` becomes a
-  precision-carrying UDF (true → 1, false → 0 at scale; per-row nulls). The UDF
-  reads ANSI once at plan time for the overflow edge (`(2,2)`: raise vs NULL);
-  its return field marks overflow-exposed targets nullable. Registry
-  `CAST-BOOL-DEC-1`.
+  rule, on BOTH doors via `install_shared_analyzer_rules` (here since FNP-11B step 3, re-exported at the crate root: `repark_functions::install_shared_analyzer_rules` no doc line: the rules both doors install (integer overflow, decimal casts); TIME guard left to `analyzer_rules()` (remediation round 1)).
+  The session installer calls it in place of the integer-only one. `CAST(bool AS DECIMAL(p,s))` becomes a precision-carrying UDF (true 1, false 0;
+  per-row nulls) reading ANSI at plan time for the overflow (`(2,2)`: raise vs NULL),
+  overflow-exposed targets nullable; registry `CAST-BOOL-DEC-1`. **DOUBLE-DECIMAL-STORE-ROUND-1
+  (2026-11-13):** main's BOOLEAN-to-DECIMAL cast again; a FLOAT/DOUBLE `CAST`, `TRY_CAST` or `arrow_cast` to DECIMAL is left alone (pin `bool_decimal::tests::a_float_cast_to_decimal_is_left_to_its_cast`).
 - `int_to_binary.rs` — **BL-11 (2026-09-16):** the `IntToBinaryCast` analyzer rule,
   slotted after `SparkExprSemantics` so `SparkIntegerLiteral` has already narrowed bare
   literals: a `CAST(<integral> AS BINARY)` becomes the `__repark_int_to_binary__` UDF
   (big-endian bytes of natural width, NULL propagates, nullability follows the input)
-  only when ANSI is off; the same rule refuses every other `→ BINARY` cast with Spark's
+  only with ANSI off; the same rule refuses every other `→ BINARY` cast with Spark's
   `DATATYPE_MISMATCH` (`CAST_WITH_CONF_SUGGESTION` plus the conf remedy for integrals
   under ANSI on, `CAST_WITHOUT_SUGGESTION` otherwise, `TRY_CAST` always without). The
   rule sees both doors because the SQL door analyzes eagerly at build and the native
@@ -994,7 +992,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   digit engine and `bigint.rs` moved to `repark-common`'s `java_double/` so the
   Postgres write chokepoint calls the one function; `dtoa.rs` keeps the two
   array wrappers and re-exports the scalars, so every importer is untouched and
-  no second formatter exists. The behaviour pins stay here.
+  no second formatter exists. The behaviour pins stay here. The `mod tests_unscaled;` line is test-only.
   **JAVA-DOUBLE-FD-1 port (2026-09-15):**
   `dtoa.rs` (independent JDK 17 `FloatingDecimal` port) + `bigint.rs` (ported
   `FDBigInteger`), `tests_corpus.rs` (byte-equality over
@@ -1270,7 +1268,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   neutral. `values_column_needs_rewrite` skips the per-cell rewrite only when no cell holds
   a cast, a timestamp or date literal, a column, or a non-NTZ scalar call, which keeps the
   skip equivalent to classifying every cell. A user `CAST` of a naive value to `TIMESTAMP`
-  beside a bare `DATE` plans identically to the coerced pair, so that exotic mix follows the
+  beside a bare `DATE` plans identically to the coerced pair, so the exotic mix follows the
   date side; see the unit ledger's RD2-1 paragraph.
   **WO NTZ-STORE-DOORS-1 second re-verify fold (2026-09-29, RD3-1/RD3-2):** the exotic mix
   above is no longer ambiguous. The Spark door's keyword lowering wraps a written
@@ -1505,7 +1503,7 @@ Validation functions preserve binary-vs-UTF8 representation behavior; `assert_tr
   first argument is cast to `TIMESTAMP` in the session zone, as Spark's implicit cast does, and
   the function returns `TIMESTAMP`. Not converted (ZONE-ORACLE-1 holds no Spark answer): numeric
   targets other than `BIGINT`, a timestamp map key, a container cast to a scalar `STRING`,
-  `timestamp_ns`. Pins: `tests/zone_seam_pairs.rs`. **NESTED-LITERAL-SEAM-1 (2026-10-27):** the Map arms of `partial_type` and `convert` convert the key as well as the value (ruling NLS-1 Q1), so a `MAP<TIMESTAMP, …>` key reaches the seam; the file is 677 lines.
+  `timestamp_ns`. Pins: `tests/zone_seam_pairs.rs`. **NESTED-LITERAL-SEAM-1 (2026-10-27):** the Map arms of `partial_type` and `convert` convert the key and the value (ruling NLS-1 Q1), so a `MAP<TIMESTAMP, …>` key reaches the seam; the file is 677 lines.
 
 ## Pointers
 

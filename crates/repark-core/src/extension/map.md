@@ -9,7 +9,7 @@ wire up (with `extension.rs` itself) when the session module wires.
 
 ## Contents
 
-- `tests.rs` — configure-then-analyzer-rules-then-register order pin + default-noop-hooks pin (the default list ends with seat 1, `signed_zero_literals`, SIGNED-ZERO-NORMALIZE-1)
+- `tests.rs` — configure-then-analyzer-rules-then-register order pin + default-noop-hooks pin (the default list ends with seat 1, `signed_zero_literals`, SIGNED-ZERO-NORMALIZE-1; `repark_float_decimal_store` sits after `sliding_frame_rescan`, before `repark_optimizer_seat_config`)
   (`#[cfg(test)] mod tests;` in `../extension.rs`). The order pin also asserts the H-1a split B
   addition: `configure` receives a `SessionBuildConf` carrying the RESOLVED
   `spark.sql.session.timeZone` beside the raw conf map, and the test sets a PADDED value so a
