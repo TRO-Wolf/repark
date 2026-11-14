@@ -76,8 +76,12 @@ fn rewrite_cast(expr: Expr, schema: &DFSchema, null_on_overflow: bool) -> Transf
 }
 
 fn float_decimal_cast(expr: &Expr, schema: &DFSchema) -> Option<Expr> {
-    let (operand, target, safe) = match expr {
-        Expr::Cast(cast) => (cast.expr.as_ref(), cast.field.data_type().clone(), false),
+    let (operand, target, nullable) = match expr {
+        Expr::Cast(cast) => (
+            cast.expr.as_ref(),
+            cast.field.data_type().clone(),
+            crate::decimal_cast::nullable_spark_cast(cast, schema).is_some(),
+        ),
         Expr::TryCast(cast) => (cast.expr.as_ref(), cast.field.data_type().clone(), true),
         Expr::ScalarFunction(function)
             if function.func.name() == ARROW_CAST_NAME && function.args.len() == 2 =>
@@ -101,7 +105,11 @@ fn float_decimal_cast(expr: &Expr, schema: &DFSchema) -> Option<Expr> {
         return None;
     }
     Some(Expr::ScalarFunction(ScalarFunction::new_udf(
-        Arc::new(ScalarUDF::from(FloatToDecimal::new(target, safe))),
+        Arc::new(ScalarUDF::from(FloatToDecimal::new(
+            target,
+            matches!(expr, Expr::TryCast(_)),
+            nullable,
+        ))),
         vec![operand.clone()],
     )))
 }
@@ -269,14 +277,16 @@ pub struct FloatToDecimal {
     signature: Signature,
     target: DataType,
     safe: bool,
+    nullable: bool,
 }
 
 impl FloatToDecimal {
-    fn new(target: DataType, safe: bool) -> Self {
+    fn new(target: DataType, safe: bool, nullable: bool) -> Self {
         Self {
             signature: Signature::any(1, Volatility::Immutable),
             target,
             safe,
+            nullable,
         }
     }
 
@@ -334,7 +344,7 @@ impl FloatToDecimal {
 
 impl PartialEq for FloatToDecimal {
     fn eq(&self, other: &Self) -> bool {
-        self.target == other.target && self.safe == other.safe
+        self.target == other.target && self.safe == other.safe && self.nullable == other.nullable
     }
 }
 
@@ -345,6 +355,7 @@ impl Hash for FloatToDecimal {
         self.name().hash(state);
         self.target.hash(state);
         self.safe.hash(state);
+        self.nullable.hash(state);
     }
 }
 
@@ -362,7 +373,7 @@ impl ScalarUDFImpl for FloatToDecimal {
         Ok(Field::new(
             self.name(),
             self.target.clone(),
-            first.is_nullable() || self.safe,
+            first.is_nullable() || self.nullable,
         )
         .into())
     }
@@ -453,6 +464,33 @@ mod tests {
             }
         }
         out
+    }
+
+    #[test]
+    fn a_float_cast_to_decimal_of_a_nonnull_operand_is_nullable_as_spark() {
+        use datafusion::arrow::datatypes::Schema;
+        use datafusion::logical_expr::{Cast, TryCast, col};
+        let target = DataType::Decimal128(20, 0);
+        for nullable in [false, true] {
+            let schema = DFSchema::try_from(Schema::new(vec![Field::new(
+                "x",
+                DataType::Float64,
+                nullable,
+            )]))
+            .unwrap();
+            for expr in [
+                Expr::Cast(Cast::new(Box::new(col("x")), target.clone())),
+                Expr::TryCast(TryCast::new(Box::new(col("x")), target.clone())),
+            ] {
+                let rewritten = rewrite_cast(expr, &schema, false).data;
+                let Expr::ScalarFunction(function) = &rewritten else {
+                    panic!("not rewritten: {rewritten}");
+                };
+                assert_eq!(function.func.name(), FLOAT_TO_DECIMAL_NAME);
+                let (_, field) = rewritten.to_field(&schema).unwrap();
+                assert!(field.is_nullable(), "{rewritten} on nullable={nullable}");
+            }
+        }
     }
 
     #[tokio::test]
