@@ -1308,15 +1308,26 @@ perfectly good read.
   is an `INSERT` or `COPY` that `repark.sql()` leaves lazy and the writer would drop.
   - **For a table:** `DataFrame.write and writeTo cannot write a repark.sql() frame into the
     table <target>: the write would return without storing any rows, so nothing was written;
-    <workaround> (NATIVE-DATAFRAME-WRITE-SILENT-1)`. The workaround is a statement collected
-    through `repark.sql(...)`, and each one stores when followed literally:
-    - an append: `INSERT INTO <target> SELECT ...`;
+    <workaround> (NATIVE-DATAFRAME-WRITE-SILENT-1)`. The workaround is `register the frame as a
+    temporary view <view> and run <statement> through repark.sql(...) and collect the result`,
+    and each statement stores the Spark door's rows when followed literally:
+    - an append: `INSERT INTO <target> (<columns>) SELECT <columns> FROM <view>` for a verb that
+      writes by name, listing the frame's columns in the frame's order and quoting a name that
+      does not read as a bare column; `INSERT INTO <target> SELECT * FROM <view>` for
+      `insertInto`, which writes by position;
     - a static overwrite, or `overwritePartitions` (every table this door can create is
-      unpartitioned): `INSERT OVERWRITE <target> SELECT ...` on an Iceberg table;
+      unpartitioned): `INSERT OVERWRITE` in the same two forms, on an Iceberg table;
     - either overwrite of an in-memory table, where `INSERT OVERWRITE` is not implemented:
-      `CREATE OR REPLACE TABLE <target> AS SELECT ...`.
+      `CREATE OR REPLACE TABLE <target> AS SELECT <frame column> AS <table column>, ... FROM
+      <view>`, pairing the columns as the verb does.
+  - **For a view or a database-source table:** `... into <target>: it is a view, and the native
+    door cannot write through a view, so nothing was written (...)`, or the same naming the
+    database source. No statement is named, since none can store; Spark refuses a write into a
+    view too. In 1.5.6 `insertInto` on a native view returned and stored nothing. No database
+    source was reachable here (no server), so that branch is pinned on a planned statement.
   - **For a path:** the same shape, naming the path as the user wrote it (`out`, `.`, `..`
-    included), with a `ReparkSession` frame as the workaround.
+    included). The workaround is `spark.createDataFrame(frame.collect(), frame.schema)` on a
+    `ReparkSession`, written there, which holds every row in memory.
   - **The verbs:**
     - `saveAsTable` append;
     - `format("iceberg").save(name)` append and overwrite;
@@ -1342,7 +1353,9 @@ perfectly good read.
   `task/wo/native-dataframe-write-silent-1/evidence/`.)*
 - **Pin** — `python/repark/tests/writes/test_native_dataframe_write_silent_1.py` (2436 cells:
   399 refuse, the rest keep main's outcome, rows, snapshots and files; each workaround followed
-  from the message; nine path spellings) and
+  from the message, with a reordered frame on every by-name and by-position verb matching the
+  Spark door's rows; native views; the path route on a native-table frame, an append and an
+  empty frame; nine path spellings) and
   `crates/repark-python/src/session_write_options_tests.rs`.
 - **Rationale** — DECLARED refusal. Owner ruling 2026-11-13, verbatim "Defaults": measure every
   verb on every target kind, then a refusal guard like NATIVE-CTAS-ICEBERG-REFUSE-1's, riding

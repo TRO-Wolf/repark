@@ -4,8 +4,8 @@
 (PR #1317) verifier 2, 2026-11-13, finding F4.
 
 **Status:** **FIXED 2026-11-13** by this unit (branch `fix/native-dataframe-write-silent-1`, PR #1331): every
-native-door DataFrame write that would store nothing refuses before any effect. See "Step 0", "Fix" and "Delta"
-below. Filed and ruled the same day. Severity **S1**, a silent lost write, as rated at filing; the verifier
+native-door DataFrame write that would store nothing refuses before any effect. See "Step 0", "Fix", "Delta"
+and "Delta 2" below. Filed and ruled the same day. Severity **S1**, a silent lost write, as rated at filing; the verifier
 recorded it as S2 and outside its unit's scope.
 **Ruled 2026-11-13** (below): measure first, then a refusal guard; it rides v1.5.7.
 
@@ -95,13 +95,17 @@ under its `step0/`.
   - a path as the user wrote it, recovered from the staging segment: `repark-staging-<32 hex>-<name>`,
     or `repark-staging-<32 hex>` with no suffix for a nameless destination (`.`). Any other URL is
     named raw.
-- **The workaround is one that stores when followed literally** (delta, below):
-  - an append: a collected native `INSERT INTO … SELECT`;
-  - a static overwrite or `overwritePartitions` on an Iceberg table: a collected
-    `INSERT OVERWRITE … SELECT`, which on an unpartitioned table replaces what
-    `overwritePartitions` would;
-  - either overwrite of an in-memory table: a collected `CREATE OR REPLACE TABLE … AS SELECT`;
-  - a path: a `ReparkSession` frame.
+- **The workaround is one that stores when followed literally** (delta and delta 2, below):
+  register the frame as a temporary view `<view>`, then
+  - an append: a collected native `INSERT INTO <t> (<frame columns>) SELECT <frame columns> FROM
+    <view>` for a by-name verb, or `INSERT INTO <t> SELECT * FROM <view>` for `insertInto`;
+  - a static overwrite or `overwritePartitions` on an Iceberg table: `INSERT OVERWRITE` in the
+    same two forms, which on an unpartitioned table replaces what `overwritePartitions` would;
+  - either overwrite of an in-memory table: a collected `CREATE OR REPLACE TABLE <t> AS SELECT
+    <frame column> AS <table column>, … FROM <view>`;
+  - a path: `spark.createDataFrame(frame.collect(), frame.schema)` on a `ReparkSession`.
+- **A view or a database-source table** gets no statement: the message says the native door
+  cannot write it.
 - Plain `repark.sql()` and the Spark door do not pass the check, and neither does `mergeInto`.
   `mergeInto` keeps its loud native refusal as a control pin.
 - **Pins:**
@@ -137,6 +141,70 @@ effect; nothing else moved) and failed three S3 records-and-message findings, fi
   frame (a new path, an existing path's append or overwrite, a table append) refuses, where
   main was vacuously right and the Spark door stores. This follows from the ruling's "stored
   nothing": the guard reads the planned statement before any row exists, and on this door that
-  statement is dropped whatever the frame holds. Workaround: for a path, write the frame from a
-  `ReparkSession`, which is the Spark door and stores it; for a table, run the collected
-  statement the message names.
+  statement is dropped whatever the frame holds. Workaround: for a path, the conversion the
+  message names, `spark.createDataFrame(frame.collect(), frame.schema)`, which keeps an empty
+  frame's columns and stores it; for a table, run the collected statement the message names.
+
+## Delta 2 (2026-11-14, the owner's cap exception)
+
+The one re-check of #1331 (head `b49403ee`) held F1–F3 and found the guard sound, with no class
+(a) finding. It failed three new class (b) findings, all about the routes the message and the
+1.5.6 notes name. The owner granted a second targeted delta on 2026-11-14 (about 00:55 UTC),
+verbatim "merge and defaults", adopting option A: "a second, message-only fix round … A short
+re-check follows". This follows the #1261 precedent. The guard is unchanged: the same 399 cells
+refuse, before any effect, and every other cell keeps main's outcome. Only the message text
+and its records moved.
+
+- **F4 (S2), the by-name verbs.** `saveAsTable` append, `format("iceberg").save(name)` append
+  and overwrite, `writeTo().append()` and `overwritePartitions()` pair columns by name, but the
+  named `INSERT … SELECT` was positional, so a frame whose columns are in another order stored
+  swapped values. The message now lists the frame's columns, in the frame's order, in both
+  places: `INSERT INTO t (p, id) SELECT p, id FROM <view>`, and the same for
+  `INSERT OVERWRITE`. `BY NAME` does not parse on this door.
+  - **How the seat knows:** the writer's own statement names its columns exactly when it binds
+    by name, so the seat parses it. It reads the pairs from the planned insert's projection and
+    the frame's order from the view under it.
+  - **Quoting:** a name is written bare only when it is lowercase and the session's parser
+    reads `SELECT <name>` back as that column. So `current_date`, mixed case and an embedded
+    quote are quoted.
+  - **`insertInto` keeps the positional form**, `SELECT * FROM <view>`, as Spark's `insertInto`
+    is positional.
+  - **The in-memory overwrite:** it names `CREATE OR REPLACE TABLE … AS SELECT <frame column>
+    AS <table column>, …`, so the columns pair as the verb pairs them and the table keeps its
+    column names and order.
+- **F5 (S3), views.** `insertInto` on a native view (`datafusion.public.<view>`,
+  `ice.ms.<view>`) refuses with "it is a view, and the native door cannot write through a view".
+  It names no statement, since no route can store. The 1.5.6 wheel returns and stores nothing
+  for both forms.
+- **F6 (S3), the path route.** `spark.sql(…)` cannot read a table made in the native session.
+  The message and the notes now name a conversion, `spark.createDataFrame(frame.collect(),
+  frame.schema)` on a `ReparkSession`. Its limit is that it holds every row in memory.
+  - **Measured on the head build and on the published 1.5.6 wheel:** it stores the frame's rows
+    and column types. That covers int, string, date, both timestamps, decimal, boolean, double
+    with NaN, array, struct, map and binary, an empty frame, a reordered frame, NULLs, and an
+    append onto files of the frame's own types.
+  - **`createDataFrame(frame.toPandas())` without the schema** widens int32 to int64, and an
+    int with NULL to double, so that append refuses loudly. It also fails on an empty frame
+    (`CANNOT_INFER_EMPTY_SCHEMA`).
+  - **With `frame.schema`,** `toPandas()` turns NaN into NULL and fails on arrays and maps.
+- **Postgres database sources.** A mounted Postgres source's table has no `insert_into`, and
+  native DML into it is not refused before the seat, so the guard could reach one and would
+  have named a failing `INSERT`.
+  - The seat now gives such a target F5's wording ("it is a table of the database source
+    <name>, and the native door cannot write into a database source"). It detects the target
+    by its catalog being a registered database source.
+  - **Not measured end to end:** no database server was used, and planning a write needs one to
+    resolve the table. The branch is pinned on a planned statement over a source declared with
+    an unroutable host, whose registration opens no connection.
+- **Pins:**
+  - Rust (`session_write_options_tests.rs`): the by-name and positional forms; the in-memory
+    replace with positional aliases; each named statement followed and its rows checked; the
+    quoting; a view; a database source.
+  - Facade (`test_native_dataframe_write_silent_1.py`):
+    - a frame in `(p, id)` order against a `(id, p)` table, on every by-name verb and on
+      `insertInto`, on `ice` and `hd`, and `insertInto` on both in-memory kinds. Each follows
+      the message literally and checks the rows against fixed expectations and against the
+      Spark door's rows for the same verb;
+    - native views, both forms;
+    - the path route over a native-table frame: an overwrite, an append onto int32 files, and
+      an empty frame, keeping int32.
