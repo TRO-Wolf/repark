@@ -56,5 +56,6 @@ outside the repo. Since 2026-10-01 orders are committed here, not in a `/tmp` wo
 - [update-schema-batch-mismatch-1/](update-schema-batch-mismatch-1/map.md), [zero-partition-merge-1/](zero-partition-merge-1/map.md) — **UPDATE-SCHEMA-BATCH-MISMATCH-1 (S3, 2026-11-13):** a two-file copy-on-write `UPDATE` refused by batch order: step 0, fix; **ZERO-PARTITION-MERGE-1 (S1, 2026-11-13):** `0.0`/`-0.0` partitions apart: step 0, inventory, fix; [NAN-WRITE-CANONICAL-1](nan-write-canonical-1/map.md) — **(Q11 C):** write doors, stored NaN bits vs Spark 4.1.2, the seat.
 - [NAN-MINMAX-1](nan-minmax-1/map.md) — **(part 1, S1, 2026-11-13):** constant-file NaN reads vs Spark 4.1.2, read paths, the Inexact seat, cost.
 - [decimal-double-union-coercion-1/](decimal-double-union-coercion-1/map.md) — **DECIMAL-DOUBLE-UNION-COERCION-1 sketch (2026-11-13):** DECIMAL by FLOAT/DOUBLE types `decimal(30,15)` (Spark `double`); [nan-compare-spark-1/](nan-compare-spark-1/map.md) — **NAN-COMPARE-SPARK-1 sketch (2026-11-13):** NaN by bits, not Spark's one greatest value; both: table, inventory, seats, split, owner Qs.
+- [signed-zero-const-compare-1/](signed-zero-const-compare-1/map.md) — **SIGNED-ZERO-CONST-COMPARE-1 (2026-11-14):** float constants `0.0`/`-0.0` folded by bits: step 0 table, inventory, seat.
 
 Up: [../map.md](../map.md).
