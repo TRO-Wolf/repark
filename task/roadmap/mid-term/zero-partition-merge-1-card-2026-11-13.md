@@ -126,8 +126,11 @@ tests, four ordering helpers) and the records are in [the unit's directory](../.
   - **Q3.** #1325 merged first. The pin to fork `bc5a9211` sits on fork main `8b6ff921`.
 - **Owner words owed, PROPOSED (asked 2026-11-14).** Neither is ruled.
   - **ZPM-1's second half** (verifier 1, B2). Spark 4.1.2 also refuses interleaved zeros on a table with no write
-    order whenever `write.spark.fanout.enabled = false`. RePark writes both partitions, and Spark reads them back
-    with each row's own zero. ZPM-1 now states that half; whether Q2 covers it is the owner's word.
+    order when `write.spark.fanout.enabled = false` and `write.distribution-mode` is `hash` (the default) or
+    `range`. Under `none` it refuses only when one input partition holds the zeros interleaved (the delta
+    re-check: refused at `local[1]`, written at `local[2]` and `local[4]` for six VALUES rows). RePark writes
+    both partitions, and Spark reads them back with each row's own zero. ZPM-1 now states that half; whether Q2
+    covers it is the owner's word.
   - **ZPM-2** (verifier 2, F4). Remove-dangling-deletes drops the `-0.0` partition's dangling delete file, which
     Spark's own action keeps because it groups the two zeros. Reads are identical; on the `1.5`/`2.0` control both
     engines remove it. Parity row ZPM-2.

@@ -1046,19 +1046,26 @@ perfectly good read.
   with fan-out on or off. That holds on a table with a write order (`WRITE ORDERED BY id`), and on a
   table with no write order whose `write.spark.fanout.enabled` is `false`, a property RePark's writer
   does not read. Spark reads RePark's tables back with each row's own zero.
-- **Apache Spark** — Spark 4.1.2 with Iceberg 1.11.0 refuses both writes. Its Iceberg writer is
+- **Apache Spark** — Spark 4.1.2 with Iceberg 1.11.0 refuses these writes. Its Iceberg writer is
   clustered there: on a write-ordered table unless `write.spark.fanout.enabled = true`, and on any
   partitioned table when it is `false`. The sort Spark runs ahead of a clustered writer (the write
   order, or the partition order Iceberg asks for when Spark's fan-out is off) treats the two zeros as
   equal, so they reach the writer interleaved, and it raises (`ClusteredWriter.java:96`) "Incoming
   records violate the writer assumption that records are clustered by spec and by partition within
-  each spec". Without the property a table with no write order writes two partitions, and with
-  `write.spark.fanout.enabled = true` so does a write-ordered one. *(oracle: live, PySpark 4.1.2 +
-  Iceberg 1.11.0, 2026-11-13; the no-write-order half from ZERO-PARTITION-MERGE-1 verifier 1's cells
-  `fo_off`, `dist_none_off`, `dist_hash_off`, `dist_range_off` and `fo_off6` (refused) and `plain10`
-  and `spark_fo10` (written), 2026-11-13, and this row's live cell, 2026-11-14: refused on DOUBLE and
-  FLOAT. Control, 2026-11-14: `1.5` and `2.0` rows interleaved the same way, with Spark's fan-out
-  off, are written as two partitions, so the refusal is the zeros'.)*
+  each spec". With fan-out off on a table with no write order, that happens under
+  `write.distribution-mode` `hash` (the default) or `range`, whose exchange brings both zeros into one
+  write task. Under `none` there is no exchange, and Spark refuses only when one input partition holds
+  the zeros interleaved: it refused at `local[1]` and 40 alternating rows at `local[2]` and
+  `local[4]`, and wrote the six-row VALUES insert at `local[2]` and `local[4]`, splitting each zero
+  over two files with the rows right. Without the property a table with no write order writes two
+  partitions, and with `write.spark.fanout.enabled = true` so does a write-ordered one. *(oracle:
+  live, PySpark 4.1.2 + Iceberg 1.11.0, 2026-11-13; the no-write-order half from ZERO-PARTITION-MERGE-1
+  verifier 1's cells `fo_off`, `dist_none_off` (at `local[1]`), `dist_hash_off`, `dist_range_off` and
+  `fo_off6` (refused) and `plain10` and `spark_fo10` (written), 2026-11-13; this row's live cell,
+  2026-11-14, default `hash` mode: refused on DOUBLE and FLOAT; the delta re-check's `none` cells at
+  `local[1]`, `local[2]` and `local[4]`, 2026-11-14. Control, 2026-11-14: `1.5` and `2.0` rows
+  interleaved the same way, with Spark's fan-out off, are written as two partitions, so the refusal
+  is the zeros'.)*
 - **Pin** — `python/repark/tests/iceberg/test_zero_partition_merge_1.py::test_repark_keeps_the_two_zero_partitions_apart`
   cells `write_ordered`, `write_ordered_clustered` and `spark_fanout_off`; Spark's refusal in
   `test_spark_refuses_interleaved_zeros_on_a_write_ordered_table` and
