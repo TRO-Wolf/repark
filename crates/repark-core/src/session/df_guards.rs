@@ -228,6 +228,7 @@ fn unnest_safe_optimizer_rules(
                 rules.push(rule);
             }
             "simplify_expressions" => {
+                rules.push(signed_zero::literal_optimizer_seat(policy));
                 rules.push(rule);
                 rules.push(signed_zero::literal_optimizer_seat(policy));
             }

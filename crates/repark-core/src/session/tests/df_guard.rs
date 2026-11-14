@@ -77,6 +77,7 @@ async fn bare_session_without_extension_scopes_leaf_projection_pushdown() {
         .position(|name| name == "simplify_expressions")
         .expect("simplify_expressions is a stock rule");
     expected.insert(simplify + 1, "signed_zero_literals".to_string());
+    expected.insert(simplify, "signed_zero_literals".to_string());
     expected.insert(0, "repark_strip_attribute_ids".to_string());
     expected.push("signed_zero_keys".to_string());
     assert_eq!(

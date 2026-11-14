@@ -5433,6 +5433,32 @@ still open is `isModifiable`.
   Q3, Q4, Q10 ruled "defaults"); the second delta and the card's items (i) and (ii) ruled 2026-11-14 ("Go with
   defaults"); card [NAN-MINMAX-1](../task/roadmap/mid-term/nan-minmax-1-card-2026-11-13.md).
 
+### SIGNED-ZERO-CONST-COMPARE-1 — two FLOAT/DOUBLE constant zeros compare as one value — **FIXED 2026-11-14 (branch `fix/signed-zero-const-compare-1`, merge pending)**
+
+- **repark** — Before (main `d843d37e`): a comparison whose two operands are both constants folded at plan time
+  by Arrow's total order, so `CAST('0.0' AS DOUBLE) = CAST('-0.0' AS DOUBLE)` was false and `-0.0 < 0.0` true. It
+  happened wherever neither operand was a zero the literal seat recognises: on the Spark door and the DataFrame API
+  every string, nested or decimal cast (they become function calls before the seat), and on every door constant
+  arithmetic. On the step-0 table (33,458 cells, five doors, both ANSI modes) 4,096 comparison cells were WRONG,
+  including `DELETE`, `UPDATE` and `MERGE` with a constant condition on copy-on-write and merge-on-read tables.
+  Over a column nothing was wrong. After: the literal seat also runs before `simplify_expressions`, and there it
+  folds each column-free, non-volatile float operand of a comparison alone; an operand that folds to a zero is
+  substituted, and the bound form of SIGNED-ZERO-NORMALIZE-1 part A applies. Every door shares the seat. All 4,096
+  cells reach the truth and no EQUAL cell moves (`task/wo/signed-zero-const-compare-1/evidence/after/table.md`).
+- **Not changed** — a NaN operand is never substituted (NAN-COMPARE-LITERAL-1 owns NaN constants). `nullif`,
+  `greatest`/`least` ties and `array_contains` compare inside the function; they stay as they were and are carded
+  ([SIGNED-ZERO-CONST-COMPARE-1](../task/roadmap/mid-term/signed-zero-const-compare-1-card-2026-11-14.md)).
+- **Apache Spark** — Spark 4.1.2 compares both zeros as one value in every comparison operator, in both ANSI modes.
+  *(oracle: recorded PySpark 4.1.2, 2026-11-14, `task/wo/signed-zero-const-compare-1/evidence/step0/raw/spark-*.jsonl.gz`.)*
+- **Pin** — `python/repark/tests/sql/test_signed_zero_const_compare_1.py` (every constant pair on the Spark SQL,
+  `F.expr`, DataFrame and native doors; the contexts; `filter(str)`; the temp view and `PREPARE`; the DML cells on
+  both write modes and the native door; the column and NaN must-not-move cells);
+  `crates/repark-core/src/session/df_guards/signed_zero/tests.rs::two_folded_constant_zeros_compare_as_one_value_on_both_float_types`,
+  `::a_folded_constant_comparison_keeps_its_output_name`, `::a_folded_nan_operand_is_not_rewritten`,
+  `::an_aliased_constant_operand_folds_like_a_bare_one`.
+- **Rationale** — FIXED 2026-11-14: step 2b of the DECIMAL-DOUBLE split plan (owner, 2026-11-14, "Merge and go
+  with the split plan").
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`
