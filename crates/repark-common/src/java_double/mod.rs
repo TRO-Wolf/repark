@@ -1,4 +1,7 @@
 mod bigint;
+mod decimal_double;
+
+pub use decimal_double::java_decimal_to_double;
 
 use std::cmp::Ordering;
 

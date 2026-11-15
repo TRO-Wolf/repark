@@ -41,13 +41,14 @@ fn analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_
     assert_eq!(configured_names[position + 1], "spark_float_stringify");
     assert_eq!(configured_names[position + 2], "spark_decimal_precision");
     assert_eq!(configured_names[position + 3], "spark_integral_literal");
-    assert_eq!(configured_names[position + 4], "join_condition_refusals");
-    assert_eq!(configured_names[position + 5], "spark_map_subscript");
+    assert_eq!(configured_names[position + 4], "spark_decimal_float_widen");
+    assert_eq!(configured_names[position + 5], "join_condition_refusals");
+    assert_eq!(configured_names[position + 6], "spark_map_subscript");
     assert_eq!(
-        configured_names[position + 6],
+        configured_names[position + 7],
         "struct_operands_by_position"
     );
-    assert_eq!(configured_names[position + 7], "type_coercion");
+    assert_eq!(configured_names[position + 8], "type_coercion");
     let without_insertions: Vec<String> = configured_names
         .into_iter()
         .filter(|name| {
@@ -59,6 +60,7 @@ fn analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_
                 && name != "spark_float_stringify"
                 && name != "spark_decimal_precision"
                 && name != "spark_integral_literal"
+                && name != "spark_decimal_float_widen"
                 && name != "spark_negate_null_decimal"
                 && name != "spark_timestamp_unit_widen"
         })
