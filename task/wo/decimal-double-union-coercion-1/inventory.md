@@ -299,4 +299,74 @@ is byte-identical to `ff34baf5`, so section H's `repark-spark` cites hold. The r
   - The rule stays last, after `repark_float_decimal_store`, so a store cast is never rewritten as a written
     cast.
 
+## J. Part 2 step 0 on main `a06c1088` (2026-11-15): seat V, the tripwire and the `IN` rewrite
+
+Every RePark line in this section was re-read at `a06c1088` (part 1 merged). The cites in H and I hold there except
+where this section moves them; `spark_ast.rs` is unchanged (parse `:204`, identity DML `:213`, plan `:249`,
+`analyze_eagerly` `:273`, `restate_range_frames_and_replan` `:551`). The measured table is
+[evidence/part2-step0/table.md](evidence/part2-step0/table.md).
+
+### What part 1 left that part 2 owns, measured
+
+- **A decimal-first multi-branch union is still wrong** (`union/all3_dec_first`, `all4_dec_first`,
+  `distinct3_dec_first`, `all3_in_subquery`, and every MERGE over such a source, views included). The SQL planner
+  builds `A UNION ALL B UNION ALL C` as `Union(Union(A, B), C)` with loose types
+  (`datafusion-sql-54.1.0/src/set_expr.rs:144`, `Union::try_new_with_loose_types`), so the outer union's schema
+  takes the first input's `decimal`. Seat E widens the inner union, but `rewrite_union`
+  (`crates/repark-spark/src/extension/decimal_float_widen.rs:300`) returns the outer union unchanged when its own
+  inputs no longer mix, and `rewrite_plan` (`:636-640`) returns before `recompute_schema`. The outer schema stays
+  `decimal(30,15)` and `type_coercion` (idx 11) casts the widened branch back to it. This is seat E's, not
+  `merge.rs`'s: part 1 attributed `merge_union_src` / `merge_union_big` to the MERGE source seat, and the two-branch
+  MERGE union is right on `a06c1088`.
+- **Three cells part 1 moved from EQUAL to WRONG** (`frag/fexpr_filter_z_in_values`,
+  `frag/fexpr_filter_exists_values`, `frag/filter_str_z_in_values`): a DOUBLE tested against a mixed `VALUES`. Both
+  sides truncated together on `dc6b4c94`; seat E now compares in `double` against the planner's truncated cells.
+  Seat V fixes all three.
+- **The DML `IN (VALUES …)` link has no door today.** Every `DELETE` / `UPDATE` with a subquery in `WHERE` refuses
+  on RePark (copy-on-write and merge-on-read, both modes; Spark answers), so no `VALUES` reaches
+  `try_execute_identity_dml` (`spark_ast.rs:213`) or the re-rendered predicate (`predicate_dml.rs:376`). The link pin
+  is therefore "refuses, unchanged", and the tripwire is what catches it if the refusal is ever lifted.
+
+### The seats that plan user SQL text on the Spark door, and the marker each needs
+
+| # | seat | file:line at `a06c1088` | needs the marker? | how the tripwire catches a miss |
+|---|---|---|---|---|
+| J1 | the passthrough, every statement the router passes through: standalone `VALUES`, `INSERT … VALUES` / `SELECT`, CTAS and RTAS (`ctas.rs:204`), `INSERT OVERWRITE` (`insert_overwrite.rs:52, 85, 114, 131, 150, 224, 455, 550, 603, 709, 724`), `BY NAME` (`insert_by_name.rs:217`, `insert_by_name/evolution.rs:195`), `replaceWhere` (`router/insert_positional/replace_where.rs:399`), partition append (`partition_append.rs:256`), catalog ops (`catalog_ops.rs:94`), temp and Iceberg views (`view_ddl/temp_view.rs:424` → `view_ddl/read.rs:286` → `view_dispatch.rs:56`) | `crates/repark-spark/src/spark_ast.rs:190` `execute_passthrough_inner`; one AST pass after the INSERT rewrites (`:222-235`) and before the plan (`:249`) | **yes**, one position. The second position the sketch proposed (before `:213` for `DELETE` / `UPDATE`) is not needed: their only `VALUES` would be in a `WHERE` subquery, which refuses today | the plan reaches the session list at `:273`; an unmarked mixed `VALUES` refuses there |
+| J2 | `restate_range_frames_and_replan` | `spark_ast.rs:551-573` re-parses the original text | **yes**: the same pass after its rewrites (`:566`), before `plan_statement_with_column_repair` (`:568`) | its plan returns to `:258` and reaches `:273`; measured: `range/*` are wrong on main, so a miss would refuse, not answer |
+| J3 | the MERGE source | `crates/repark-spark/src/merge.rs:147` → `source_table` `:537-560`, rendered at `:553` and re-planned by `ctx.sql` (`repark-iceberg/src/write/merge/mod.rs:402, 412, 516`, `merge/insert.rs:122`) | **yes**: the pass runs over `rendered` before `render_for_reparse` (`:553`). The marker renders as a function call and survives into every `ctx.sql`. `merge.rs` is at 991 lines of the 1,000 ceiling, so the call is one line | `ctx.sql` uses the session context, so the list at idx 1 sees an unmarked mixed `VALUES` and refuses. `merge_fragments.rs:57, 65` plans `SELECT * … LIMIT 0` with `statement_to_plan` for names only: no analyzer, no type read, not a seat |
+| J4 | `F.expr` and `selectExpr` fragments | `crates/repark-python/src/column/mod.rs:41-46` → `expr_build.rs:274-322` (`sql_context`, the door-free `build_expr_context`) → `plan_expr_column` | **yes**: the pass over the parsed fragment expression before it is planned. The marker UDF is registered in `build_expr_context` so the fragment plans | the fragment's subquery plan is re-analyzed by the frame's own list (Spark door), where the tripwire sees it. A fragment on a native-door frame keeps an identity marker call: answers unchanged (Q2), pinned |
+| J5 | `filter(str)` and string predicates | `expr_build.rs:53, 109` `predicate_state(frame)` → `state.create_logical_expr` (the frame's Spark-door state; text in, no AST hook) | **yes**: parse to an AST (`sql_to_expr_with_alias`), mark, then `create_logical_expr_from_sql_expr` (the shape `folded_qualifier_predicate` `:88-100` already uses) | as J4: the frame's list analyzes the predicate's subquery |
+| J6 | `insert_overwrite.rs:95` `ctx.sql(sql)` validation of an empty-probe overwrite | user text through `ctx.sql`, not the passthrough | **yes** (or plan it through J1) | the session list at idx 1 would refuse an unmarked mixed `VALUES` here: the build must mark it or route it, and pin `INSERT OVERWRITE … VALUES` into an empty target |
+| J7 | PREPARE / EXECUTE | `crates/repark-core/src/pre_execute.rs:94-104` runs the session analyzer over the prepared input (`execute_and_check`); EXECUTE re-plans through the passthrough | through J1 | the session analyzer at PREPARE |
+| J8 | the native door, `repark.sql()` | `crates/repark-python/src/session_runtime.rs:421-432` | **no** (Q2) | not installed there: no consumer, no tripwire |
+
+Not seats (they plan generated SQL or read names only): the `void_type` / `ltz_values_store` / `update_cast` /
+`scan_prune` source probes (section H4), `merge_fragments.rs:57, 65`, and every `repark-iceberg/src/write/` `ctx.sql`
+that wraps a source the passthrough or `merge.rs` already marked.
+
+### Seen at the seat: seat V's marker, seat V's consumer and the tripwire
+
+| place | seat V marker | seat V consumer | tripwire |
+|---|---|---|---|
+| Spark-door session list (`SparkExtension::configure_analyzer_rules`, `crates/repark-spark/src/extension.rs:153-164`; live list in [raw/rule-lists-a06c.json](evidence/part2-step0/raw/rule-lists-a06c.json), 47 rules) | n/a (AST) | **yes, at idx 1**: inserted before `spark_timestamp_unit_widen` (idx 1, whose `widen_values_dates`, `crates/repark-functions/src/timestamp_unit_widen.rs:548`, reads `Values` cells) and after `resolve_grouping_function` (idx 0). Both analyzer passes (`spark_ast.rs:273`, then execute) run it; the second finds no marker | **yes**, the same rule: an unmarked multi-row `Values` with a FLOAT/DOUBLE cell under a planner-shaped cast to `Decimal128` refuses with a plan error naming the unit |
+| `build_expr_context` (`expr_build.rs:283-322`), the only other production list (`with_analyzer_rules` at `expr_build.rs:311`; `df_guards.rs:181` is the session list itself; the four in `repark-functions` are test modules) | yes, J4 | **no, because** the fragment's plan is re-analyzed by the frame's list, where the consumer runs; adding it here would consume markers door-free and widen native-door frames (Q2) | no, as the consumer |
+| DataFusion `create_view` `apply_type_coercion` (`datafusion-54.1.0/src/execution/context/mod.rs:931, 957, 965`) | **no, because** the Spark door never reaches it: `CREATE [TEMP] VIEW` goes to `view_ddl` (J1), whose body is re-planned through the passthrough at each scan | no | no |
+| the PREPARE arm (`pre_execute.rs:94-104`) | through J1 | yes (the session analyzer) | yes |
+| `to_recursive_query` (`datafusion-expr-54.1.0/src/logical_plan/builder.rs:176-198`, `coerce_plan_expr_for_schema` `:193-194`) | yes (J1 marks every `VALUES`) | **must skip a `Values` under `RecursiveQuery`**: the recursive term is already cast to the anchor's planned type, so rebuilding the anchor would leave it stale. Drop the markers there and keep the planner's type (excluded by design; RECURSIVE-CTE-JOIN-ERROR-1) | no refusal under `RecursiveQuery` |
+| `insert_to_plan` (`datafusion-sql-54.1.0/src/statement.rs:2358`; the projection without a cast) | yes | yes: the target-typed branch keeps the target schema, so the projection stays valid | yes |
+| `SimplifyExpressions`, `OptimizeUnions`, `PushDownFilter` into `TableScan.filters`, `OptimizeProjections` | n/a | **no, because** the consumer runs in the analyzer and leaves no marker; these see the typed plan | no |
+| stored plans: views (re-planned text, J1), prepared plans (J7), `CACHE TABLE` (unsupported on the Spark door), DataFrame temp views (`createOrReplaceTempView` stores the analyzed plan: consumed already) | as listed | consumed before storage, or re-planned | as listed |
+
+### The `IN` rewrite: where it sits
+
+- **The form it rewrites** is the per-row form seat E and K2 already produce: `__repark_decimal_to_double__(d) [NOT]
+  IN (…)`, whose items `simplify_expressions` has folded to `Float64` literals (the `plan/*` rows).
+- **The seat:** an optimizer rule defined in seat E's module (`crates/repark-spark/src/extension/decimal_float_widen.rs`,
+  or a child file of it to keep the file under the ceiling), added on the Spark door only by `ctx.add_optimizer_rule`
+  in `SparkExtension::register` (`extension.rs:170`). It runs after the first pass's `simplify_expressions`; the next
+  pass simplifies and pushes the rewritten predicate. An analyzer seat cannot do it: at idx 7 the items are still
+  `CAST(…)` expressions, and folding them there would use Arrow's DECIMAL→DOUBLE, not K2.
+- **The decision** is a pure function beside the bound search in
+  `crates/repark-common/src/java_double/decimal_double.rs` (`decimal_preimage_of_double` `:79`).
+
 Up: [map.md](map.md).
