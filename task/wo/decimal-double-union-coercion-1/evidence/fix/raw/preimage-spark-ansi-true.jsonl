@@ -1,0 +1,1210 @@
+{"prov": {"engine": "spark", "version": "4.1.2"}, "ansi": "true", "warehouse": "preimage-spark-true-m0li0llz"}
+{"key": "where/d10/half/eq/r", "answer": [4]}
+{"key": "held/d10/half/eq/r", "answer": [4]}
+{"key": "value/d10/half/eq/r", "answer": [[1, false], [2, false], [3, false], [4, true], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/half/eq/l", "answer": [4]}
+{"key": "held/d10/half/eq/l", "answer": [4]}
+{"key": "value/d10/half/eq/l", "answer": [[1, false], [2, false], [3, false], [4, true], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/half/ne/r", "answer": [1, 2, 3, 5, 6, 7, 9, 10]}
+{"key": "held/d10/half/ne/r", "answer": [1, 2, 3, 5, 6, 7, 9, 10]}
+{"key": "value/d10/half/ne/r", "answer": [[1, true], [2, true], [3, true], [4, false], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/half/ne/l", "answer": [1, 2, 3, 5, 6, 7, 9, 10]}
+{"key": "held/d10/half/ne/l", "answer": [1, 2, 3, 5, 6, 7, 9, 10]}
+{"key": "value/d10/half/ne/l", "answer": [[1, true], [2, true], [3, true], [4, false], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/half/lt/r", "answer": [1, 2, 3, 7, 10]}
+{"key": "held/d10/half/lt/r", "answer": [1, 2, 3, 7, 10]}
+{"key": "value/d10/half/lt/r", "answer": [[1, true], [2, true], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/half/lt/l", "answer": [5, 6, 9]}
+{"key": "held/d10/half/lt/l", "answer": [5, 6, 9]}
+{"key": "value/d10/half/lt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/half/le/r", "answer": [1, 2, 3, 4, 7, 10]}
+{"key": "held/d10/half/le/r", "answer": [1, 2, 3, 4, 7, 10]}
+{"key": "value/d10/half/le/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/half/le/l", "answer": [4, 5, 6, 9]}
+{"key": "held/d10/half/le/l", "answer": [4, 5, 6, 9]}
+{"key": "value/d10/half/le/l", "answer": [[1, false], [2, false], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/half/gt/r", "answer": [5, 6, 9]}
+{"key": "held/d10/half/gt/r", "answer": [5, 6, 9]}
+{"key": "value/d10/half/gt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/half/gt/l", "answer": [1, 2, 3, 7, 10]}
+{"key": "held/d10/half/gt/l", "answer": [1, 2, 3, 7, 10]}
+{"key": "value/d10/half/gt/l", "answer": [[1, true], [2, true], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/half/ge/r", "answer": [4, 5, 6, 9]}
+{"key": "held/d10/half/ge/r", "answer": [4, 5, 6, 9]}
+{"key": "value/d10/half/ge/r", "answer": [[1, false], [2, false], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/half/ge/l", "answer": [1, 2, 3, 4, 7, 10]}
+{"key": "held/d10/half/ge/l", "answer": [1, 2, 3, 4, 7, 10]}
+{"key": "value/d10/half/ge/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/half/dist/r", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/half/dist/r", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/half/dist/r", "answer": [[1, true], [2, true], [3, true], [4, false], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/half/dist/l", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/half/dist/l", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/half/dist/l", "answer": [[1, true], [2, true], [3, true], [4, false], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/half/ns/r", "answer": [4]}
+{"key": "held/d10/half/ns/r", "answer": [4]}
+{"key": "value/d10/half/ns/r", "answer": [[1, false], [2, false], [3, false], [4, true], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/half/ns/l", "answer": [4]}
+{"key": "held/d10/half/ns/l", "answer": [4]}
+{"key": "value/d10/half/ns/l", "answer": [[1, false], [2, false], [3, false], [4, true], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/exact/eq/r", "answer": [5]}
+{"key": "held/d10/exact/eq/r", "answer": [5]}
+{"key": "value/d10/exact/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, true], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/exact/eq/l", "answer": [5]}
+{"key": "held/d10/exact/eq/l", "answer": [5]}
+{"key": "value/d10/exact/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, true], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/exact/ne/r", "answer": [1, 2, 3, 4, 6, 7, 9, 10]}
+{"key": "held/d10/exact/ne/r", "answer": [1, 2, 3, 4, 6, 7, 9, 10]}
+{"key": "value/d10/exact/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, false], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/exact/ne/l", "answer": [1, 2, 3, 4, 6, 7, 9, 10]}
+{"key": "held/d10/exact/ne/l", "answer": [1, 2, 3, 4, 6, 7, 9, 10]}
+{"key": "value/d10/exact/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, false], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/exact/lt/r", "answer": [1, 2, 3, 4, 7, 10]}
+{"key": "held/d10/exact/lt/r", "answer": [1, 2, 3, 4, 7, 10]}
+{"key": "value/d10/exact/lt/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/exact/lt/l", "answer": [6, 9]}
+{"key": "held/d10/exact/lt/l", "answer": [6, 9]}
+{"key": "value/d10/exact/lt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/exact/le/r", "answer": [1, 2, 3, 4, 5, 7, 10]}
+{"key": "held/d10/exact/le/r", "answer": [1, 2, 3, 4, 5, 7, 10]}
+{"key": "value/d10/exact/le/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/exact/le/l", "answer": [5, 6, 9]}
+{"key": "held/d10/exact/le/l", "answer": [5, 6, 9]}
+{"key": "value/d10/exact/le/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/exact/gt/r", "answer": [6, 9]}
+{"key": "held/d10/exact/gt/r", "answer": [6, 9]}
+{"key": "value/d10/exact/gt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/exact/gt/l", "answer": [1, 2, 3, 4, 7, 10]}
+{"key": "held/d10/exact/gt/l", "answer": [1, 2, 3, 4, 7, 10]}
+{"key": "value/d10/exact/gt/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/exact/ge/r", "answer": [5, 6, 9]}
+{"key": "held/d10/exact/ge/r", "answer": [5, 6, 9]}
+{"key": "value/d10/exact/ge/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/exact/ge/l", "answer": [1, 2, 3, 4, 5, 7, 10]}
+{"key": "held/d10/exact/ge/l", "answer": [1, 2, 3, 4, 5, 7, 10]}
+{"key": "value/d10/exact/ge/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/exact/dist/r", "answer": [1, 2, 3, 4, 6, 7, 8, 9, 10]}
+{"key": "held/d10/exact/dist/r", "answer": [1, 2, 3, 4, 6, 7, 8, 9, 10]}
+{"key": "value/d10/exact/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, false], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/exact/dist/l", "answer": [1, 2, 3, 4, 6, 7, 8, 9, 10]}
+{"key": "held/d10/exact/dist/l", "answer": [1, 2, 3, 4, 6, 7, 8, 9, 10]}
+{"key": "value/d10/exact/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, false], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/exact/ns/r", "answer": [5]}
+{"key": "held/d10/exact/ns/r", "answer": [5]}
+{"key": "value/d10/exact/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, true], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/exact/ns/l", "answer": [5]}
+{"key": "held/d10/exact/ns/l", "answer": [5]}
+{"key": "value/d10/exact/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, true], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/between/eq/r", "answer": []}
+{"key": "held/d10/between/eq/r", "answer": []}
+{"key": "value/d10/between/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/between/eq/l", "answer": []}
+{"key": "held/d10/between/eq/l", "answer": []}
+{"key": "value/d10/between/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/between/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/between/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/between/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/between/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/between/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/between/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/between/lt/r", "answer": [1, 3, 7, 10]}
+{"key": "held/d10/between/lt/r", "answer": [1, 3, 7, 10]}
+{"key": "value/d10/between/lt/r", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/between/lt/l", "answer": [2, 4, 5, 6, 9]}
+{"key": "held/d10/between/lt/l", "answer": [2, 4, 5, 6, 9]}
+{"key": "value/d10/between/lt/l", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/between/le/r", "answer": [1, 3, 7, 10]}
+{"key": "held/d10/between/le/r", "answer": [1, 3, 7, 10]}
+{"key": "value/d10/between/le/r", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/between/le/l", "answer": [2, 4, 5, 6, 9]}
+{"key": "held/d10/between/le/l", "answer": [2, 4, 5, 6, 9]}
+{"key": "value/d10/between/le/l", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/between/gt/r", "answer": [2, 4, 5, 6, 9]}
+{"key": "held/d10/between/gt/r", "answer": [2, 4, 5, 6, 9]}
+{"key": "value/d10/between/gt/r", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/between/gt/l", "answer": [1, 3, 7, 10]}
+{"key": "held/d10/between/gt/l", "answer": [1, 3, 7, 10]}
+{"key": "value/d10/between/gt/l", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/between/ge/r", "answer": [2, 4, 5, 6, 9]}
+{"key": "held/d10/between/ge/r", "answer": [2, 4, 5, 6, 9]}
+{"key": "value/d10/between/ge/r", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/between/ge/l", "answer": [1, 3, 7, 10]}
+{"key": "held/d10/between/ge/l", "answer": [1, 3, 7, 10]}
+{"key": "value/d10/between/ge/l", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/between/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/between/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/between/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/between/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/between/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/between/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/between/ns/r", "answer": []}
+{"key": "held/d10/between/ns/r", "answer": []}
+{"key": "value/d10/between/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/between/ns/l", "answer": []}
+{"key": "held/d10/between/ns/l", "answer": []}
+{"key": "value/d10/between/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/between_neg/eq/r", "answer": []}
+{"key": "held/d10/between_neg/eq/r", "answer": []}
+{"key": "value/d10/between_neg/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/between_neg/eq/l", "answer": []}
+{"key": "held/d10/between_neg/eq/l", "answer": []}
+{"key": "value/d10/between_neg/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/between_neg/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/between_neg/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/between_neg/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/between_neg/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/between_neg/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/between_neg/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/between_neg/lt/r", "answer": [3, 7, 10]}
+{"key": "held/d10/between_neg/lt/r", "answer": [3, 7, 10]}
+{"key": "value/d10/between_neg/lt/r", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/between_neg/lt/l", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "held/d10/between_neg/lt/l", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "value/d10/between_neg/lt/l", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/between_neg/le/r", "answer": [3, 7, 10]}
+{"key": "held/d10/between_neg/le/r", "answer": [3, 7, 10]}
+{"key": "value/d10/between_neg/le/r", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/between_neg/le/l", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "held/d10/between_neg/le/l", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "value/d10/between_neg/le/l", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/between_neg/gt/r", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "held/d10/between_neg/gt/r", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "value/d10/between_neg/gt/r", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/between_neg/gt/l", "answer": [3, 7, 10]}
+{"key": "held/d10/between_neg/gt/l", "answer": [3, 7, 10]}
+{"key": "value/d10/between_neg/gt/l", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/between_neg/ge/r", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "held/d10/between_neg/ge/r", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "value/d10/between_neg/ge/r", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/between_neg/ge/l", "answer": [3, 7, 10]}
+{"key": "held/d10/between_neg/ge/l", "answer": [3, 7, 10]}
+{"key": "value/d10/between_neg/ge/l", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/between_neg/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/between_neg/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/between_neg/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/between_neg/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/between_neg/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/between_neg/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/between_neg/ns/r", "answer": []}
+{"key": "held/d10/between_neg/ns/r", "answer": []}
+{"key": "value/d10/between_neg/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/between_neg/ns/l", "answer": []}
+{"key": "held/d10/between_neg/ns/l", "answer": []}
+{"key": "value/d10/between_neg/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/pzero/eq/r", "answer": [1]}
+{"key": "held/d10/pzero/eq/r", "answer": [1]}
+{"key": "value/d10/pzero/eq/r", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/pzero/eq/l", "answer": [1]}
+{"key": "held/d10/pzero/eq/l", "answer": [1]}
+{"key": "value/d10/pzero/eq/l", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/pzero/ne/r", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/pzero/ne/r", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/pzero/ne/r", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/pzero/ne/l", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/pzero/ne/l", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/pzero/ne/l", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/pzero/lt/r", "answer": [3, 7, 10]}
+{"key": "held/d10/pzero/lt/r", "answer": [3, 7, 10]}
+{"key": "value/d10/pzero/lt/r", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/pzero/lt/l", "answer": [2, 4, 5, 6, 9]}
+{"key": "held/d10/pzero/lt/l", "answer": [2, 4, 5, 6, 9]}
+{"key": "value/d10/pzero/lt/l", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/pzero/le/r", "answer": [1, 3, 7, 10]}
+{"key": "held/d10/pzero/le/r", "answer": [1, 3, 7, 10]}
+{"key": "value/d10/pzero/le/r", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/pzero/le/l", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "held/d10/pzero/le/l", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "value/d10/pzero/le/l", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/pzero/gt/r", "answer": [2, 4, 5, 6, 9]}
+{"key": "held/d10/pzero/gt/r", "answer": [2, 4, 5, 6, 9]}
+{"key": "value/d10/pzero/gt/r", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/pzero/gt/l", "answer": [3, 7, 10]}
+{"key": "held/d10/pzero/gt/l", "answer": [3, 7, 10]}
+{"key": "value/d10/pzero/gt/l", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/pzero/ge/r", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "held/d10/pzero/ge/r", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "value/d10/pzero/ge/r", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/pzero/ge/l", "answer": [1, 3, 7, 10]}
+{"key": "held/d10/pzero/ge/l", "answer": [1, 3, 7, 10]}
+{"key": "value/d10/pzero/ge/l", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/pzero/dist/r", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/pzero/dist/r", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/pzero/dist/r", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/pzero/dist/l", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/pzero/dist/l", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/pzero/dist/l", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/pzero/ns/r", "answer": [1]}
+{"key": "held/d10/pzero/ns/r", "answer": [1]}
+{"key": "value/d10/pzero/ns/r", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/pzero/ns/l", "answer": [1]}
+{"key": "held/d10/pzero/ns/l", "answer": [1]}
+{"key": "value/d10/pzero/ns/l", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/nzero/eq/r", "answer": [1]}
+{"key": "held/d10/nzero/eq/r", "answer": [1]}
+{"key": "value/d10/nzero/eq/r", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/nzero/eq/l", "answer": [1]}
+{"key": "held/d10/nzero/eq/l", "answer": [1]}
+{"key": "value/d10/nzero/eq/l", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/nzero/ne/r", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/nzero/ne/r", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/nzero/ne/r", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/nzero/ne/l", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/nzero/ne/l", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/nzero/ne/l", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/nzero/lt/r", "answer": [3, 7, 10]}
+{"key": "held/d10/nzero/lt/r", "answer": [3, 7, 10]}
+{"key": "value/d10/nzero/lt/r", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/nzero/lt/l", "answer": [2, 4, 5, 6, 9]}
+{"key": "held/d10/nzero/lt/l", "answer": [2, 4, 5, 6, 9]}
+{"key": "value/d10/nzero/lt/l", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/nzero/le/r", "answer": [1, 3, 7, 10]}
+{"key": "held/d10/nzero/le/r", "answer": [1, 3, 7, 10]}
+{"key": "value/d10/nzero/le/r", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/nzero/le/l", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "held/d10/nzero/le/l", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "value/d10/nzero/le/l", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/nzero/gt/r", "answer": [2, 4, 5, 6, 9]}
+{"key": "held/d10/nzero/gt/r", "answer": [2, 4, 5, 6, 9]}
+{"key": "value/d10/nzero/gt/r", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/nzero/gt/l", "answer": [3, 7, 10]}
+{"key": "held/d10/nzero/gt/l", "answer": [3, 7, 10]}
+{"key": "value/d10/nzero/gt/l", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/nzero/ge/r", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "held/d10/nzero/ge/r", "answer": [1, 2, 4, 5, 6, 9]}
+{"key": "value/d10/nzero/ge/r", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d10/nzero/ge/l", "answer": [1, 3, 7, 10]}
+{"key": "held/d10/nzero/ge/l", "answer": [1, 3, 7, 10]}
+{"key": "value/d10/nzero/ge/l", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d10/nzero/dist/r", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/nzero/dist/r", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/nzero/dist/r", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/nzero/dist/l", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/nzero/dist/l", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/nzero/dist/l", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/nzero/ns/r", "answer": [1]}
+{"key": "held/d10/nzero/ns/r", "answer": [1]}
+{"key": "value/d10/nzero/ns/r", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/nzero/ns/l", "answer": [1]}
+{"key": "held/d10/nzero/ns/l", "answer": [1]}
+{"key": "value/d10/nzero/ns/l", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/nan/eq/r", "answer": []}
+{"key": "held/d10/nan/eq/r", "answer": []}
+{"key": "value/d10/nan/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/nan/eq/l", "answer": []}
+{"key": "held/d10/nan/eq/l", "answer": []}
+{"key": "value/d10/nan/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/nan/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/nan/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/nan/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/nan/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/nan/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/nan/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/nan/lt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/nan/lt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/nan/lt/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/nan/lt/l", "answer": []}
+{"key": "held/d10/nan/lt/l", "answer": []}
+{"key": "value/d10/nan/lt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/nan/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/nan/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/nan/le/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/nan/le/l", "answer": []}
+{"key": "held/d10/nan/le/l", "answer": []}
+{"key": "value/d10/nan/le/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/nan/gt/r", "answer": []}
+{"key": "held/d10/nan/gt/r", "answer": []}
+{"key": "value/d10/nan/gt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/nan/gt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/nan/gt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/nan/gt/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/nan/ge/r", "answer": []}
+{"key": "held/d10/nan/ge/r", "answer": []}
+{"key": "value/d10/nan/ge/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/nan/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/nan/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/nan/ge/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/nan/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/nan/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/nan/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/nan/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/nan/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/nan/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/nan/ns/r", "answer": []}
+{"key": "held/d10/nan/ns/r", "answer": []}
+{"key": "value/d10/nan/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/nan/ns/l", "answer": []}
+{"key": "held/d10/nan/ns/l", "answer": []}
+{"key": "value/d10/nan/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/pinf/eq/r", "answer": []}
+{"key": "held/d10/pinf/eq/r", "answer": []}
+{"key": "value/d10/pinf/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/pinf/eq/l", "answer": []}
+{"key": "held/d10/pinf/eq/l", "answer": []}
+{"key": "value/d10/pinf/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/pinf/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/pinf/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/pinf/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/pinf/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/pinf/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/pinf/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/pinf/lt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/pinf/lt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/pinf/lt/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/pinf/lt/l", "answer": []}
+{"key": "held/d10/pinf/lt/l", "answer": []}
+{"key": "value/d10/pinf/lt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/pinf/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/pinf/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/pinf/le/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/pinf/le/l", "answer": []}
+{"key": "held/d10/pinf/le/l", "answer": []}
+{"key": "value/d10/pinf/le/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/pinf/gt/r", "answer": []}
+{"key": "held/d10/pinf/gt/r", "answer": []}
+{"key": "value/d10/pinf/gt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/pinf/gt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/pinf/gt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/pinf/gt/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/pinf/ge/r", "answer": []}
+{"key": "held/d10/pinf/ge/r", "answer": []}
+{"key": "value/d10/pinf/ge/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/pinf/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/pinf/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/pinf/ge/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/pinf/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/pinf/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/pinf/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/pinf/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/pinf/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/pinf/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/pinf/ns/r", "answer": []}
+{"key": "held/d10/pinf/ns/r", "answer": []}
+{"key": "value/d10/pinf/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/pinf/ns/l", "answer": []}
+{"key": "held/d10/pinf/ns/l", "answer": []}
+{"key": "value/d10/pinf/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/ninf/eq/r", "answer": []}
+{"key": "held/d10/ninf/eq/r", "answer": []}
+{"key": "value/d10/ninf/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/ninf/eq/l", "answer": []}
+{"key": "held/d10/ninf/eq/l", "answer": []}
+{"key": "value/d10/ninf/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/ninf/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/ninf/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/ninf/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/ninf/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/ninf/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/ninf/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/ninf/lt/r", "answer": []}
+{"key": "held/d10/ninf/lt/r", "answer": []}
+{"key": "value/d10/ninf/lt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/ninf/lt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/ninf/lt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/ninf/lt/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/ninf/le/r", "answer": []}
+{"key": "held/d10/ninf/le/r", "answer": []}
+{"key": "value/d10/ninf/le/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/ninf/le/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/ninf/le/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/ninf/le/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/ninf/gt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/ninf/gt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/ninf/gt/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/ninf/gt/l", "answer": []}
+{"key": "held/d10/ninf/gt/l", "answer": []}
+{"key": "value/d10/ninf/gt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/ninf/ge/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/ninf/ge/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/ninf/ge/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/ninf/ge/l", "answer": []}
+{"key": "held/d10/ninf/ge/l", "answer": []}
+{"key": "value/d10/ninf/ge/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/ninf/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/ninf/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/ninf/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/ninf/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/ninf/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/ninf/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/ninf/ns/r", "answer": []}
+{"key": "held/d10/ninf/ns/r", "answer": []}
+{"key": "value/d10/ninf/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/ninf/ns/l", "answer": []}
+{"key": "held/d10/ninf/ns/l", "answer": []}
+{"key": "value/d10/ninf/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/top/eq/r", "answer": [6]}
+{"key": "held/d10/top/eq/r", "answer": [6]}
+{"key": "value/d10/top/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/top/eq/l", "answer": [6]}
+{"key": "held/d10/top/eq/l", "answer": [6]}
+{"key": "value/d10/top/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/top/ne/r", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "held/d10/top/ne/r", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "value/d10/top/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/top/ne/l", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "held/d10/top/ne/l", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "value/d10/top/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/top/lt/r", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "held/d10/top/lt/r", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "value/d10/top/lt/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/top/lt/l", "answer": []}
+{"key": "held/d10/top/lt/l", "answer": []}
+{"key": "value/d10/top/lt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/top/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/top/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/top/le/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/top/le/l", "answer": [6]}
+{"key": "held/d10/top/le/l", "answer": [6]}
+{"key": "value/d10/top/le/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/top/gt/r", "answer": []}
+{"key": "held/d10/top/gt/r", "answer": []}
+{"key": "value/d10/top/gt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/top/gt/l", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "held/d10/top/gt/l", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "value/d10/top/gt/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/top/ge/r", "answer": [6]}
+{"key": "held/d10/top/ge/r", "answer": [6]}
+{"key": "value/d10/top/ge/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/top/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/top/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/top/ge/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/top/dist/r", "answer": [1, 2, 3, 4, 5, 7, 8, 9, 10]}
+{"key": "held/d10/top/dist/r", "answer": [1, 2, 3, 4, 5, 7, 8, 9, 10]}
+{"key": "value/d10/top/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/top/dist/l", "answer": [1, 2, 3, 4, 5, 7, 8, 9, 10]}
+{"key": "held/d10/top/dist/l", "answer": [1, 2, 3, 4, 5, 7, 8, 9, 10]}
+{"key": "value/d10/top/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/top/ns/r", "answer": [6]}
+{"key": "held/d10/top/ns/r", "answer": [6]}
+{"key": "value/d10/top/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/top/ns/l", "answer": [6]}
+{"key": "held/d10/top/ns/l", "answer": [6]}
+{"key": "value/d10/top/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/above/eq/r", "answer": []}
+{"key": "held/d10/above/eq/r", "answer": []}
+{"key": "value/d10/above/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/above/eq/l", "answer": []}
+{"key": "held/d10/above/eq/l", "answer": []}
+{"key": "value/d10/above/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/above/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/above/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/above/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/above/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/above/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/above/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/above/lt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/above/lt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/above/lt/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/above/lt/l", "answer": []}
+{"key": "held/d10/above/lt/l", "answer": []}
+{"key": "value/d10/above/lt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/above/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/above/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/above/le/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/above/le/l", "answer": []}
+{"key": "held/d10/above/le/l", "answer": []}
+{"key": "value/d10/above/le/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/above/gt/r", "answer": []}
+{"key": "held/d10/above/gt/r", "answer": []}
+{"key": "value/d10/above/gt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/above/gt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/above/gt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/above/gt/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/above/ge/r", "answer": []}
+{"key": "held/d10/above/ge/r", "answer": []}
+{"key": "value/d10/above/ge/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/above/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/above/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/above/ge/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/above/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/above/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/above/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/above/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/above/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/above/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/above/ns/r", "answer": []}
+{"key": "held/d10/above/ns/r", "answer": []}
+{"key": "value/d10/above/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/above/ns/l", "answer": []}
+{"key": "held/d10/above/ns/l", "answer": []}
+{"key": "value/d10/above/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/below/eq/r", "answer": []}
+{"key": "held/d10/below/eq/r", "answer": []}
+{"key": "value/d10/below/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/below/eq/l", "answer": []}
+{"key": "held/d10/below/eq/l", "answer": []}
+{"key": "value/d10/below/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/below/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/below/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/below/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/below/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/below/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/below/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/below/lt/r", "answer": []}
+{"key": "held/d10/below/lt/r", "answer": []}
+{"key": "value/d10/below/lt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/below/lt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/below/lt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/below/lt/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/below/le/r", "answer": []}
+{"key": "held/d10/below/le/r", "answer": []}
+{"key": "value/d10/below/le/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/below/le/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/below/le/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/below/le/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/below/gt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/below/gt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/below/gt/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/below/gt/l", "answer": []}
+{"key": "held/d10/below/gt/l", "answer": []}
+{"key": "value/d10/below/gt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/below/ge/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d10/below/ge/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d10/below/ge/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d10/below/ge/l", "answer": []}
+{"key": "held/d10/below/ge/l", "answer": []}
+{"key": "value/d10/below/ge/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d10/below/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/below/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/below/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/below/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d10/below/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d10/below/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d10/below/ns/r", "answer": []}
+{"key": "held/d10/below/ns/r", "answer": []}
+{"key": "value/d10/below/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d10/below/ns/l", "answer": []}
+{"key": "held/d10/below/ns/l", "answer": []}
+{"key": "value/d10/below/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/half/eq/r", "answer": [4]}
+{"key": "held/d38/half/eq/r", "answer": [4]}
+{"key": "value/d38/half/eq/r", "answer": [[1, false], [2, false], [3, false], [4, true], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/half/eq/l", "answer": [4]}
+{"key": "held/d38/half/eq/l", "answer": [4]}
+{"key": "value/d38/half/eq/l", "answer": [[1, false], [2, false], [3, false], [4, true], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/half/ne/r", "answer": [1, 2, 3, 5, 6, 7, 9, 10]}
+{"key": "held/d38/half/ne/r", "answer": [1, 2, 3, 5, 6, 7, 9, 10]}
+{"key": "value/d38/half/ne/r", "answer": [[1, true], [2, true], [3, true], [4, false], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/half/ne/l", "answer": [1, 2, 3, 5, 6, 7, 9, 10]}
+{"key": "held/d38/half/ne/l", "answer": [1, 2, 3, 5, 6, 7, 9, 10]}
+{"key": "value/d38/half/ne/l", "answer": [[1, true], [2, true], [3, true], [4, false], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/half/lt/r", "answer": [1, 2, 3, 7]}
+{"key": "held/d38/half/lt/r", "answer": [1, 2, 3, 7]}
+{"key": "value/d38/half/lt/r", "answer": [[1, true], [2, true], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/half/lt/l", "answer": [5, 6, 9, 10]}
+{"key": "held/d38/half/lt/l", "answer": [5, 6, 9, 10]}
+{"key": "value/d38/half/lt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/half/le/r", "answer": [1, 2, 3, 4, 7]}
+{"key": "held/d38/half/le/r", "answer": [1, 2, 3, 4, 7]}
+{"key": "value/d38/half/le/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/half/le/l", "answer": [4, 5, 6, 9, 10]}
+{"key": "held/d38/half/le/l", "answer": [4, 5, 6, 9, 10]}
+{"key": "value/d38/half/le/l", "answer": [[1, false], [2, false], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/half/gt/r", "answer": [5, 6, 9, 10]}
+{"key": "held/d38/half/gt/r", "answer": [5, 6, 9, 10]}
+{"key": "value/d38/half/gt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/half/gt/l", "answer": [1, 2, 3, 7]}
+{"key": "held/d38/half/gt/l", "answer": [1, 2, 3, 7]}
+{"key": "value/d38/half/gt/l", "answer": [[1, true], [2, true], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/half/ge/r", "answer": [4, 5, 6, 9, 10]}
+{"key": "held/d38/half/ge/r", "answer": [4, 5, 6, 9, 10]}
+{"key": "value/d38/half/ge/r", "answer": [[1, false], [2, false], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/half/ge/l", "answer": [1, 2, 3, 4, 7]}
+{"key": "held/d38/half/ge/l", "answer": [1, 2, 3, 4, 7]}
+{"key": "value/d38/half/ge/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/half/dist/r", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/half/dist/r", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/half/dist/r", "answer": [[1, true], [2, true], [3, true], [4, false], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/half/dist/l", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/half/dist/l", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/half/dist/l", "answer": [[1, true], [2, true], [3, true], [4, false], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/half/ns/r", "answer": [4]}
+{"key": "held/d38/half/ns/r", "answer": [4]}
+{"key": "value/d38/half/ns/r", "answer": [[1, false], [2, false], [3, false], [4, true], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/half/ns/l", "answer": [4]}
+{"key": "held/d38/half/ns/l", "answer": [4]}
+{"key": "value/d38/half/ns/l", "answer": [[1, false], [2, false], [3, false], [4, true], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/exact/eq/r", "answer": [10]}
+{"key": "held/d38/exact/eq/r", "answer": [10]}
+{"key": "value/d38/exact/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, true]]}
+{"key": "where/d38/exact/eq/l", "answer": [10]}
+{"key": "held/d38/exact/eq/l", "answer": [10]}
+{"key": "value/d38/exact/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, true]]}
+{"key": "where/d38/exact/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9]}
+{"key": "held/d38/exact/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9]}
+{"key": "value/d38/exact/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, false]]}
+{"key": "where/d38/exact/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9]}
+{"key": "held/d38/exact/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9]}
+{"key": "value/d38/exact/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, false]]}
+{"key": "where/d38/exact/lt/r", "answer": [1, 2, 3, 4, 5, 7]}
+{"key": "held/d38/exact/lt/r", "answer": [1, 2, 3, 4, 5, 7]}
+{"key": "value/d38/exact/lt/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/exact/lt/l", "answer": [6, 9]}
+{"key": "held/d38/exact/lt/l", "answer": [6, 9]}
+{"key": "value/d38/exact/lt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d38/exact/le/r", "answer": [1, 2, 3, 4, 5, 7, 10]}
+{"key": "held/d38/exact/le/r", "answer": [1, 2, 3, 4, 5, 7, 10]}
+{"key": "value/d38/exact/le/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d38/exact/le/l", "answer": [6, 9, 10]}
+{"key": "held/d38/exact/le/l", "answer": [6, 9, 10]}
+{"key": "value/d38/exact/le/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/exact/gt/r", "answer": [6, 9]}
+{"key": "held/d38/exact/gt/r", "answer": [6, 9]}
+{"key": "value/d38/exact/gt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, null], [9, true], [10, false]]}
+{"key": "where/d38/exact/gt/l", "answer": [1, 2, 3, 4, 5, 7]}
+{"key": "held/d38/exact/gt/l", "answer": [1, 2, 3, 4, 5, 7]}
+{"key": "value/d38/exact/gt/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/exact/ge/r", "answer": [6, 9, 10]}
+{"key": "held/d38/exact/ge/r", "answer": [6, 9, 10]}
+{"key": "value/d38/exact/ge/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/exact/ge/l", "answer": [1, 2, 3, 4, 5, 7, 10]}
+{"key": "held/d38/exact/ge/l", "answer": [1, 2, 3, 4, 5, 7, 10]}
+{"key": "value/d38/exact/ge/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, null], [9, false], [10, true]]}
+{"key": "where/d38/exact/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9]}
+{"key": "held/d38/exact/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9]}
+{"key": "value/d38/exact/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, false]]}
+{"key": "where/d38/exact/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9]}
+{"key": "held/d38/exact/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9]}
+{"key": "value/d38/exact/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, false]]}
+{"key": "where/d38/exact/ns/r", "answer": [10]}
+{"key": "held/d38/exact/ns/r", "answer": [10]}
+{"key": "value/d38/exact/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, true]]}
+{"key": "where/d38/exact/ns/l", "answer": [10]}
+{"key": "held/d38/exact/ns/l", "answer": [10]}
+{"key": "value/d38/exact/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, true]]}
+{"key": "where/d38/between/eq/r", "answer": []}
+{"key": "held/d38/between/eq/r", "answer": []}
+{"key": "value/d38/between/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/between/eq/l", "answer": []}
+{"key": "held/d38/between/eq/l", "answer": []}
+{"key": "value/d38/between/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/between/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/between/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/between/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/between/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/between/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/between/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/between/lt/r", "answer": [1, 3, 7]}
+{"key": "held/d38/between/lt/r", "answer": [1, 3, 7]}
+{"key": "value/d38/between/lt/r", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/between/lt/l", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/between/lt/l", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/between/lt/l", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/between/le/r", "answer": [1, 3, 7]}
+{"key": "held/d38/between/le/r", "answer": [1, 3, 7]}
+{"key": "value/d38/between/le/r", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/between/le/l", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/between/le/l", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/between/le/l", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/between/gt/r", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/between/gt/r", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/between/gt/r", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/between/gt/l", "answer": [1, 3, 7]}
+{"key": "held/d38/between/gt/l", "answer": [1, 3, 7]}
+{"key": "value/d38/between/gt/l", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/between/ge/r", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/between/ge/r", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/between/ge/r", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/between/ge/l", "answer": [1, 3, 7]}
+{"key": "held/d38/between/ge/l", "answer": [1, 3, 7]}
+{"key": "value/d38/between/ge/l", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/between/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/between/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/between/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/between/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/between/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/between/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/between/ns/r", "answer": []}
+{"key": "held/d38/between/ns/r", "answer": []}
+{"key": "value/d38/between/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/between/ns/l", "answer": []}
+{"key": "held/d38/between/ns/l", "answer": []}
+{"key": "value/d38/between/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/between_neg/eq/r", "answer": []}
+{"key": "held/d38/between_neg/eq/r", "answer": []}
+{"key": "value/d38/between_neg/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/between_neg/eq/l", "answer": []}
+{"key": "held/d38/between_neg/eq/l", "answer": []}
+{"key": "value/d38/between_neg/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/between_neg/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/between_neg/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/between_neg/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/between_neg/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/between_neg/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/between_neg/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/between_neg/lt/r", "answer": [3, 7]}
+{"key": "held/d38/between_neg/lt/r", "answer": [3, 7]}
+{"key": "value/d38/between_neg/lt/r", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/between_neg/lt/l", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/between_neg/lt/l", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/between_neg/lt/l", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/between_neg/le/r", "answer": [3, 7]}
+{"key": "held/d38/between_neg/le/r", "answer": [3, 7]}
+{"key": "value/d38/between_neg/le/r", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/between_neg/le/l", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/between_neg/le/l", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/between_neg/le/l", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/between_neg/gt/r", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/between_neg/gt/r", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/between_neg/gt/r", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/between_neg/gt/l", "answer": [3, 7]}
+{"key": "held/d38/between_neg/gt/l", "answer": [3, 7]}
+{"key": "value/d38/between_neg/gt/l", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/between_neg/ge/r", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/between_neg/ge/r", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/between_neg/ge/r", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/between_neg/ge/l", "answer": [3, 7]}
+{"key": "held/d38/between_neg/ge/l", "answer": [3, 7]}
+{"key": "value/d38/between_neg/ge/l", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/between_neg/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/between_neg/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/between_neg/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/between_neg/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/between_neg/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/between_neg/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/between_neg/ns/r", "answer": []}
+{"key": "held/d38/between_neg/ns/r", "answer": []}
+{"key": "value/d38/between_neg/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/between_neg/ns/l", "answer": []}
+{"key": "held/d38/between_neg/ns/l", "answer": []}
+{"key": "value/d38/between_neg/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/pzero/eq/r", "answer": [1]}
+{"key": "held/d38/pzero/eq/r", "answer": [1]}
+{"key": "value/d38/pzero/eq/r", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/pzero/eq/l", "answer": [1]}
+{"key": "held/d38/pzero/eq/l", "answer": [1]}
+{"key": "value/d38/pzero/eq/l", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/pzero/ne/r", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/pzero/ne/r", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/pzero/ne/r", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/pzero/ne/l", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/pzero/ne/l", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/pzero/ne/l", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/pzero/lt/r", "answer": [3, 7]}
+{"key": "held/d38/pzero/lt/r", "answer": [3, 7]}
+{"key": "value/d38/pzero/lt/r", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/pzero/lt/l", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/pzero/lt/l", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/pzero/lt/l", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/pzero/le/r", "answer": [1, 3, 7]}
+{"key": "held/d38/pzero/le/r", "answer": [1, 3, 7]}
+{"key": "value/d38/pzero/le/r", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/pzero/le/l", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/pzero/le/l", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/pzero/le/l", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/pzero/gt/r", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/pzero/gt/r", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/pzero/gt/r", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/pzero/gt/l", "answer": [3, 7]}
+{"key": "held/d38/pzero/gt/l", "answer": [3, 7]}
+{"key": "value/d38/pzero/gt/l", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/pzero/ge/r", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/pzero/ge/r", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/pzero/ge/r", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/pzero/ge/l", "answer": [1, 3, 7]}
+{"key": "held/d38/pzero/ge/l", "answer": [1, 3, 7]}
+{"key": "value/d38/pzero/ge/l", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/pzero/dist/r", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/pzero/dist/r", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/pzero/dist/r", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/pzero/dist/l", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/pzero/dist/l", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/pzero/dist/l", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/pzero/ns/r", "answer": [1]}
+{"key": "held/d38/pzero/ns/r", "answer": [1]}
+{"key": "value/d38/pzero/ns/r", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/pzero/ns/l", "answer": [1]}
+{"key": "held/d38/pzero/ns/l", "answer": [1]}
+{"key": "value/d38/pzero/ns/l", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/nzero/eq/r", "answer": [1]}
+{"key": "held/d38/nzero/eq/r", "answer": [1]}
+{"key": "value/d38/nzero/eq/r", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/nzero/eq/l", "answer": [1]}
+{"key": "held/d38/nzero/eq/l", "answer": [1]}
+{"key": "value/d38/nzero/eq/l", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/nzero/ne/r", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/nzero/ne/r", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/nzero/ne/r", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/nzero/ne/l", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/nzero/ne/l", "answer": [2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/nzero/ne/l", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/nzero/lt/r", "answer": [3, 7]}
+{"key": "held/d38/nzero/lt/r", "answer": [3, 7]}
+{"key": "value/d38/nzero/lt/r", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/nzero/lt/l", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/nzero/lt/l", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/nzero/lt/l", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/nzero/le/r", "answer": [1, 3, 7]}
+{"key": "held/d38/nzero/le/r", "answer": [1, 3, 7]}
+{"key": "value/d38/nzero/le/r", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/nzero/le/l", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/nzero/le/l", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/nzero/le/l", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/nzero/gt/r", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/nzero/gt/r", "answer": [2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/nzero/gt/r", "answer": [[1, false], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/nzero/gt/l", "answer": [3, 7]}
+{"key": "held/d38/nzero/gt/l", "answer": [3, 7]}
+{"key": "value/d38/nzero/gt/l", "answer": [[1, false], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/nzero/ge/r", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "held/d38/nzero/ge/r", "answer": [1, 2, 4, 5, 6, 9, 10]}
+{"key": "value/d38/nzero/ge/r", "answer": [[1, true], [2, true], [3, false], [4, true], [5, true], [6, true], [7, false], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/nzero/ge/l", "answer": [1, 3, 7]}
+{"key": "held/d38/nzero/ge/l", "answer": [1, 3, 7]}
+{"key": "value/d38/nzero/ge/l", "answer": [[1, true], [2, false], [3, true], [4, false], [5, false], [6, false], [7, true], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/nzero/dist/r", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/nzero/dist/r", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/nzero/dist/r", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/nzero/dist/l", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/nzero/dist/l", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/nzero/dist/l", "answer": [[1, false], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/nzero/ns/r", "answer": [1]}
+{"key": "held/d38/nzero/ns/r", "answer": [1]}
+{"key": "value/d38/nzero/ns/r", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/nzero/ns/l", "answer": [1]}
+{"key": "held/d38/nzero/ns/l", "answer": [1]}
+{"key": "value/d38/nzero/ns/l", "answer": [[1, true], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/nan/eq/r", "answer": []}
+{"key": "held/d38/nan/eq/r", "answer": []}
+{"key": "value/d38/nan/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/nan/eq/l", "answer": []}
+{"key": "held/d38/nan/eq/l", "answer": []}
+{"key": "value/d38/nan/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/nan/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/nan/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/nan/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/nan/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/nan/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/nan/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/nan/lt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/nan/lt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/nan/lt/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/nan/lt/l", "answer": []}
+{"key": "held/d38/nan/lt/l", "answer": []}
+{"key": "value/d38/nan/lt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/nan/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/nan/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/nan/le/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/nan/le/l", "answer": []}
+{"key": "held/d38/nan/le/l", "answer": []}
+{"key": "value/d38/nan/le/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/nan/gt/r", "answer": []}
+{"key": "held/d38/nan/gt/r", "answer": []}
+{"key": "value/d38/nan/gt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/nan/gt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/nan/gt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/nan/gt/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/nan/ge/r", "answer": []}
+{"key": "held/d38/nan/ge/r", "answer": []}
+{"key": "value/d38/nan/ge/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/nan/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/nan/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/nan/ge/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/nan/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/nan/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/nan/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/nan/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/nan/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/nan/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/nan/ns/r", "answer": []}
+{"key": "held/d38/nan/ns/r", "answer": []}
+{"key": "value/d38/nan/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/nan/ns/l", "answer": []}
+{"key": "held/d38/nan/ns/l", "answer": []}
+{"key": "value/d38/nan/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/pinf/eq/r", "answer": []}
+{"key": "held/d38/pinf/eq/r", "answer": []}
+{"key": "value/d38/pinf/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/pinf/eq/l", "answer": []}
+{"key": "held/d38/pinf/eq/l", "answer": []}
+{"key": "value/d38/pinf/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/pinf/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/pinf/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/pinf/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/pinf/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/pinf/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/pinf/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/pinf/lt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/pinf/lt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/pinf/lt/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/pinf/lt/l", "answer": []}
+{"key": "held/d38/pinf/lt/l", "answer": []}
+{"key": "value/d38/pinf/lt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/pinf/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/pinf/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/pinf/le/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/pinf/le/l", "answer": []}
+{"key": "held/d38/pinf/le/l", "answer": []}
+{"key": "value/d38/pinf/le/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/pinf/gt/r", "answer": []}
+{"key": "held/d38/pinf/gt/r", "answer": []}
+{"key": "value/d38/pinf/gt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/pinf/gt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/pinf/gt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/pinf/gt/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/pinf/ge/r", "answer": []}
+{"key": "held/d38/pinf/ge/r", "answer": []}
+{"key": "value/d38/pinf/ge/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/pinf/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/pinf/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/pinf/ge/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/pinf/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/pinf/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/pinf/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/pinf/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/pinf/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/pinf/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/pinf/ns/r", "answer": []}
+{"key": "held/d38/pinf/ns/r", "answer": []}
+{"key": "value/d38/pinf/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/pinf/ns/l", "answer": []}
+{"key": "held/d38/pinf/ns/l", "answer": []}
+{"key": "value/d38/pinf/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/ninf/eq/r", "answer": []}
+{"key": "held/d38/ninf/eq/r", "answer": []}
+{"key": "value/d38/ninf/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/ninf/eq/l", "answer": []}
+{"key": "held/d38/ninf/eq/l", "answer": []}
+{"key": "value/d38/ninf/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/ninf/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/ninf/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/ninf/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/ninf/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/ninf/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/ninf/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/ninf/lt/r", "answer": []}
+{"key": "held/d38/ninf/lt/r", "answer": []}
+{"key": "value/d38/ninf/lt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/ninf/lt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/ninf/lt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/ninf/lt/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/ninf/le/r", "answer": []}
+{"key": "held/d38/ninf/le/r", "answer": []}
+{"key": "value/d38/ninf/le/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/ninf/le/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/ninf/le/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/ninf/le/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/ninf/gt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/ninf/gt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/ninf/gt/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/ninf/gt/l", "answer": []}
+{"key": "held/d38/ninf/gt/l", "answer": []}
+{"key": "value/d38/ninf/gt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/ninf/ge/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/ninf/ge/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/ninf/ge/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/ninf/ge/l", "answer": []}
+{"key": "held/d38/ninf/ge/l", "answer": []}
+{"key": "value/d38/ninf/ge/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/ninf/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/ninf/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/ninf/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/ninf/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/ninf/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/ninf/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/ninf/ns/r", "answer": []}
+{"key": "held/d38/ninf/ns/r", "answer": []}
+{"key": "value/d38/ninf/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/ninf/ns/l", "answer": []}
+{"key": "held/d38/ninf/ns/l", "answer": []}
+{"key": "value/d38/ninf/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/top/eq/r", "answer": [6]}
+{"key": "held/d38/top/eq/r", "answer": [6]}
+{"key": "value/d38/top/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/top/eq/l", "answer": [6]}
+{"key": "held/d38/top/eq/l", "answer": [6]}
+{"key": "value/d38/top/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/top/ne/r", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "held/d38/top/ne/r", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "value/d38/top/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/top/ne/l", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "held/d38/top/ne/l", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "value/d38/top/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/top/lt/r", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "held/d38/top/lt/r", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "value/d38/top/lt/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/top/lt/l", "answer": []}
+{"key": "held/d38/top/lt/l", "answer": []}
+{"key": "value/d38/top/lt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/top/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/top/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/top/le/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/top/le/l", "answer": [6]}
+{"key": "held/d38/top/le/l", "answer": [6]}
+{"key": "value/d38/top/le/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/top/gt/r", "answer": []}
+{"key": "held/d38/top/gt/r", "answer": []}
+{"key": "value/d38/top/gt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/top/gt/l", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "held/d38/top/gt/l", "answer": [1, 2, 3, 4, 5, 7, 9, 10]}
+{"key": "value/d38/top/gt/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/top/ge/r", "answer": [6]}
+{"key": "held/d38/top/ge/r", "answer": [6]}
+{"key": "value/d38/top/ge/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/top/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/top/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/top/ge/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/top/dist/r", "answer": [1, 2, 3, 4, 5, 7, 8, 9, 10]}
+{"key": "held/d38/top/dist/r", "answer": [1, 2, 3, 4, 5, 7, 8, 9, 10]}
+{"key": "value/d38/top/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/top/dist/l", "answer": [1, 2, 3, 4, 5, 7, 8, 9, 10]}
+{"key": "held/d38/top/dist/l", "answer": [1, 2, 3, 4, 5, 7, 8, 9, 10]}
+{"key": "value/d38/top/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, false], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/top/ns/r", "answer": [6]}
+{"key": "held/d38/top/ns/r", "answer": [6]}
+{"key": "value/d38/top/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/top/ns/l", "answer": [6]}
+{"key": "held/d38/top/ns/l", "answer": [6]}
+{"key": "value/d38/top/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, true], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/above/eq/r", "answer": []}
+{"key": "held/d38/above/eq/r", "answer": []}
+{"key": "value/d38/above/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/above/eq/l", "answer": []}
+{"key": "held/d38/above/eq/l", "answer": []}
+{"key": "value/d38/above/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/above/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/above/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/above/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/above/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/above/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/above/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/above/lt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/above/lt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/above/lt/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/above/lt/l", "answer": []}
+{"key": "held/d38/above/lt/l", "answer": []}
+{"key": "value/d38/above/lt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/above/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/above/le/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/above/le/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/above/le/l", "answer": []}
+{"key": "held/d38/above/le/l", "answer": []}
+{"key": "value/d38/above/le/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/above/gt/r", "answer": []}
+{"key": "held/d38/above/gt/r", "answer": []}
+{"key": "value/d38/above/gt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/above/gt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/above/gt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/above/gt/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/above/ge/r", "answer": []}
+{"key": "held/d38/above/ge/r", "answer": []}
+{"key": "value/d38/above/ge/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/above/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/above/ge/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/above/ge/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/above/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/above/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/above/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/above/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/above/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/above/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/above/ns/r", "answer": []}
+{"key": "held/d38/above/ns/r", "answer": []}
+{"key": "value/d38/above/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/above/ns/l", "answer": []}
+{"key": "held/d38/above/ns/l", "answer": []}
+{"key": "value/d38/above/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/below/eq/r", "answer": []}
+{"key": "held/d38/below/eq/r", "answer": []}
+{"key": "value/d38/below/eq/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/below/eq/l", "answer": []}
+{"key": "held/d38/below/eq/l", "answer": []}
+{"key": "value/d38/below/eq/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/below/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/below/ne/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/below/ne/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/below/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/below/ne/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/below/ne/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/below/lt/r", "answer": []}
+{"key": "held/d38/below/lt/r", "answer": []}
+{"key": "value/d38/below/lt/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/below/lt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/below/lt/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/below/lt/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/below/le/r", "answer": []}
+{"key": "held/d38/below/le/r", "answer": []}
+{"key": "value/d38/below/le/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/below/le/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/below/le/l", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/below/le/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/below/gt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/below/gt/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/below/gt/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/below/gt/l", "answer": []}
+{"key": "held/d38/below/gt/l", "answer": []}
+{"key": "value/d38/below/gt/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/below/ge/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "held/d38/below/ge/r", "answer": [1, 2, 3, 4, 5, 6, 7, 9, 10]}
+{"key": "value/d38/below/ge/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, null], [9, true], [10, true]]}
+{"key": "where/d38/below/ge/l", "answer": []}
+{"key": "held/d38/below/ge/l", "answer": []}
+{"key": "value/d38/below/ge/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, null], [9, false], [10, false]]}
+{"key": "where/d38/below/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/below/dist/r", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/below/dist/r", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/below/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "held/d38/below/dist/l", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "value/d38/below/dist/l", "answer": [[1, true], [2, true], [3, true], [4, true], [5, true], [6, true], [7, true], [8, true], [9, true], [10, true]]}
+{"key": "where/d38/below/ns/r", "answer": []}
+{"key": "held/d38/below/ns/r", "answer": []}
+{"key": "value/d38/below/ns/r", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "where/d38/below/ns/l", "answer": []}
+{"key": "held/d38/below/ns/l", "answer": []}
+{"key": "value/d38/below/ns/l", "answer": [[1, false], [2, false], [3, false], [4, false], [5, false], [6, false], [7, false], [8, false], [9, false], [10, false]]}
+{"key": "frame/df_gt", "answer": [6]}
+{"key": "frame/df_eq", "answer": [9]}
+{"key": "frame/df_lt_half", "answer": [1, 2, 3, 7, 10]}
+{"key": "frame/df_d38_ge", "answer": [4, 5, 6, 9, 10]}
+{"key": "frame/df_d38_eq_nzero", "answer": [1]}
+{"key": "list/d10/in3", "answer": [3, 4, 9]}
+{"key": "list/d10/in4", "answer": [3, 4, 9]}
+{"key": "list/d10/in3_zero", "answer": [1, 9]}
+{"key": "list/d10/notin3", "answer": [1, 2, 5, 6, 7, 10]}
+{"key": "list/d10/notin4", "answer": [1, 2, 5, 6, 7, 10]}
+{"key": "list/d10/between", "answer": [2, 4, 5, 9]}
+{"key": "list/d10/between_zero", "answer": [1, 2, 4]}
+{"key": "list/d10/not_between", "answer": [3, 5, 6, 7, 9, 10]}
+{"key": "list/d38/in3", "answer": [4, 9]}
+{"key": "list/d38/in4", "answer": [4, 9]}
+{"key": "list/d38/in3_zero", "answer": [1, 9]}
+{"key": "list/d38/notin3", "answer": [1, 2, 3, 5, 6, 7, 10]}
+{"key": "list/d38/notin4", "answer": [1, 2, 3, 5, 6, 7, 10]}
+{"key": "list/d38/between", "answer": [4, 5, 9, 10]}
+{"key": "list/d38/between_zero", "answer": [1, 2, 4]}
+{"key": "list/d38/not_between", "answer": [5, 6, 7, 9, 10]}
+{"key": "dml/cow/d10/delete/half", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/cow/d10/delete/nzero", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/cow/d10/delete/between", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/cow/d10/update/half", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10, 104]}
+{"key": "dml/cow/d10/update/nzero", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10, 101]}
+{"key": "dml/cow/d10/update/between", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/cow/d10/merge_on/half", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10, 104]}
+{"key": "dml/cow/d10/merge_on/nzero", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10, 101]}
+{"key": "dml/cow/d10/merge_on/between", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/cow/d38/delete/half", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/cow/d38/delete/nzero", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/cow/d38/delete/between", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/cow/d38/update/half", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10, 104]}
+{"key": "dml/cow/d38/update/nzero", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10, 101]}
+{"key": "dml/cow/d38/update/between", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/cow/d38/merge_on/half", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10, 104]}
+{"key": "dml/cow/d38/merge_on/nzero", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10, 101]}
+{"key": "dml/cow/d38/merge_on/between", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/mor/d10/delete/half", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/mor/d10/delete/nzero", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/mor/d10/delete/between", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/mor/d10/update/half", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10, 104]}
+{"key": "dml/mor/d10/update/nzero", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10, 101]}
+{"key": "dml/mor/d10/update/between", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/mor/d10/merge_on/half", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10, 104]}
+{"key": "dml/mor/d10/merge_on/nzero", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10, 101]}
+{"key": "dml/mor/d10/merge_on/between", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/mor/d38/delete/half", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/mor/d38/delete/nzero", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/mor/d38/delete/between", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/mor/d38/update/half", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10, 104]}
+{"key": "dml/mor/d38/update/nzero", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10, 101]}
+{"key": "dml/mor/d38/update/between", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+{"key": "dml/mor/d38/merge_on/half", "answer": [1, 2, 3, 5, 6, 7, 8, 9, 10, 104]}
+{"key": "dml/mor/d38/merge_on/nzero", "answer": [2, 3, 4, 5, 6, 7, 8, 9, 10, 101]}
+{"key": "dml/mor/d38/merge_on/between", "answer": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}

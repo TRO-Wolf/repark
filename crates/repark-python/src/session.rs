@@ -23,7 +23,8 @@ use crate::to_py_err;
 /// Build the engine session, register catalogs, wrap in the Python handle.
 fn finish_session(py: Python<'_>, builder: ReparkSessionBuilder) -> PyResult<PyReparkSession> {
     let session = builder.build().map_err(to_py_err)?;
-    repark_functions::install_shared_analyzer_rules(session.context());
+    let spark_door = repark_spark::is_spark_door_session(session.context().state().config());
+    repark_functions::install_shared_analyzer_rules(session.context(), spark_door);
     let runtime = shared_runtime()?;
     py.detach(|| runtime.block_on(session.register_configured_catalogs()))
         .map_err(to_py_err)?;

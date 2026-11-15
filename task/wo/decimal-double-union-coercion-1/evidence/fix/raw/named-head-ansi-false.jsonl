@@ -1,0 +1,15 @@
+{"answer": {"rows": [[1, "0.1"], [2, "1e-20"]], "type": "double"}, "key": "save_as_table_union"}
+{"answer": {"rows": [[1, "0.1"], [2, "1e-20"]], "type": "double"}, "key": "write_to_append_union"}
+{"answer": {"rows": [[1, "0.1"], [2, "1e-20"]], "type": "double"}, "key": "create_or_replace_union"}
+{"answer": {"rows": [[1, "0.1"], [2, "1e-20"]], "type": "double"}, "key": "overwrite_where_union"}
+{"answer": ["1", "2"], "key": "v3_delete_eq"}
+{"answer": {"type": "double", "values": ["0.1", "1e-20"]}, "key": "non_ascii_union"}
+{"answer": {"type": "double", "values": ["0.1"]}, "key": "non_ascii_union_name"}
+{"answer": {"type": "int", "values": ["1"]}, "key": "lit_eq"}
+{"answer": {"type": "int", "values": ["1"]}, "key": "lit_in"}
+{"answer": {"type": "int", "values": ["1", "3"]}, "key": "lit_between"}
+{"answer": {"type": "string", "values": ["a", "c", "c"]}, "key": "lit_case"}
+{"answer": "ERR [DATATYPE_MISMATCH.BINARY_OP_DIFF_TYPES] Cannot resolve \"(named_struct(a, 0.1) = named_struct(a, 0.00000000000000000001))\" due to data type mismatch: the left and right operands of the binary operator", "key": "struct_compare_refusal"}
+{"answer": {"type": "double", "values": ["-22.129547339983247"]}, "key": "k2_written_cast"}
+{"answer": {"type": "decimal(5,2)", "values": ["1.01"]}, "key": "k1_written_cast"}
+{"answer": {"type": "double", "values": ["-22.129547339983247"]}, "key": "k2_arith"}

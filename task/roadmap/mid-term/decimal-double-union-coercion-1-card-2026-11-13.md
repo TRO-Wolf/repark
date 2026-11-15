@@ -56,3 +56,103 @@ the read and write doors.
 - **One more shape (#1325 verifier 1, C2, pre-existing).** `UPDATE t SET d = 2.5 WHERE …` on a DOUBLE column that
   holds a NaN fails with "Cannot cast to Decimal128(30, 15). Overflowing on NaN"; Spark coerces the literal to
   DOUBLE. The same root as the `UNION` write, seen on an `UPDATE` assignment.
+
+## Append (2026-11-15): part 1 built on the Spark door; Q8 and Q2 restated; what part 2 owes
+
+**Sources:**
+- the owner's split plan, 2026-11-14, about 13:38 UTC, verbatim "Merge and go with the split plan";
+- step 0′ on main `dc6b4c94` ([evidence/step0b/table.md](../../wo/decimal-double-union-coercion-1/evidence/step0b/table.md));
+- the orchestrator's rulings at the step 0′ check, 2026-11-15;
+- the build on branch `fix/decimal-double-coercion-part1` ([evidence/fix/](../../wo/decimal-double-union-coercion-1/evidence/fix/map.md)).
+
+**Status: part 1 FIXED on the Spark door (branch, not merged); part 2 open.** Part 1 has three pieces:
+- **Seat E** (`SparkDecimalFloatWiden`, before `type_coercion` on the Spark-door list). A DECIMAL beside a FLOAT
+  or DOUBLE unifies to `double` in:
+  - comparisons, `IN`, `BETWEEN`, CASE, `coalesce` / `nvl` / `nvl2` / `if`, `greatest` / `least`, and the
+    `array` and map constructors;
+  - `IN (subquery)`, join keys, loose unions and the `INTERSECT` / `EXCEPT DISTINCT` join;
+  - `nullif`, which widens its comparison and keeps its first argument's type.
+- **K2:** an exact DECIMAL→DOUBLE, JDK 17's `BigDecimal.doubleValue()`.
+- **K1 on written casts.**
+
+On the head against Spark 4.1.2, both ANSI modes:
+- **Joined cells:** 0 of the 6,855 that match on main move. 1,826 are fixed (913 per mode).
+- **Coercion fuzz:** 0 held. 72,452 fixed per mode.
+- **Structured `d = v` set:** 0 wrong.
+- **Spark-door DML:** 46 of 48 fixed per mode. The two left are SIGNED-ZERO-UPDATE-IN-LIST-1.
+
+**Q8 is re-ruled PRUNED-WRONG** (2026-11-14, Fable §5).
+- Spark's `MERGE … ON` miss of `-0.0` against `0.00` from a constant source is Iceberg file pruning.
+- Main's match (`[99]`) is kept on the head and pinned (`test_merge_on_zero_keeps_mains_match_as_q8_rules`).
+
+**Q2, the native door:**
+- It is not widened, and a native `CAST(v AS DECIMAL(10,2))` or `CAST(d AS DOUBLE)` keeps DataFusion's and
+  Arrow's answers.
+- Stores follow Spark on both doors (#1335), so what a table holds does not depend on the door that wrote it.
+- The head answers all 56 native DML cells as main does. N1's cells match Spark on main since #1335 and stay so.
+
+**What part 2 still owes** (seat V and the tripwire):
+- **The `VALUES` cells:** 83 per mode, wrong on main and the head. `ins_values_dec_round` is now fixed, because
+  K1 rounds the planner's cast of a `VALUES` cell to its target.
+- **The MERGE source seat `merge.rs`:** `merge_union_src` and `merge_union_big`, whose union source is typed
+  before analysis.
+- **The `F.expr` fragment subqueries** (critic M1).
+- **The DML `IN (VALUES …)` link pin** (critic item 5).
+- **`restate_range_frames_and_replan`.**
+- **The tripwire:** a Spark-door unmarked multi-row `VALUES` refuses.
+- **Retiring `widen_decimal_against_float`**, which seat E subsumes. It stays for part 2 under the six-file cap.
+  Its four literal shapes are pinned to Spark's answers with both rules in place.
+- **The `IN` list of four or more DOUBLE constants against a DECIMAL column** (owner, 2026-11-15 evening; see the
+  last append). Seat E rewrites it at plan time with the delta's bound search:
+  - a decimal `IN` list where every constant's range holds at most one decimal;
+  - otherwise the ranges joined by `OR`, under a size limit;
+  - the per-row form beyond that limit.
+
+  Part 1 measured the row at 3.86x (100M rows).
+
+**Still unlike Spark, outside both parts:**
+- the select-list `IN (subquery)` (IN-SUBQUERY-PROJECTION-1);
+- DataFrame `intersectAll` / `exceptAll`, which refuse by design;
+- nested leaves (DECIMAL-DOUBLE-NESTED-1);
+- `decimal + FLOAT` (DECIMAL-FLOAT-ARITH-1);
+- the recursive CTEs;
+- [STRING-DECIMAL-EXPONENT-1](string-decimal-exponent-1-card-2026-11-15.md) and
+  [CAST-FLOAT-DECIMAL-OVERFLOW-NULL-1](cast-float-decimal-overflow-null-1-card-2026-11-15.md), both new and
+  pre-existing.
+
+**Cost:** see the evidence; the written-cast and DECIMAL(38,18) K2 rows go to the owner at merge.
+
+
+## Append (2026-11-15 afternoon): the owner's ruling on the cost halt, and the delta
+
+**Sources:** owner, 2026-11-15, about 13:59 UTC; Fable's guidance on the cost halt (advice only); the delta's cost
+section in [evidence/fix/cost.md](../../wo/decimal-double-union-coercion-1/evidence/fix/cost.md).
+
+**The owner's ruling, verbatim:** "Merge 1338, proceed with A and yes to 3".
+
+- **(A), the delta:** a DECIMAL column against a DOUBLE constant is rewritten into a pure decimal comparison at plan
+  time. The K2 UDF answers DataFusion's `preimage` hook with the decimal range whose K2 doubles equal the constant,
+  found by binary search over K2 itself, so the rewritten form cannot disagree with the per-row form. NaN,
+  ±Infinity and a constant at or above the column's largest double keep the per-row form. The two halted rows
+  move from 3.95x and 10.47x to 1.015x and 1.015x; every held row is at or under 1.05x and every answer is unchanged.
+- **"Yes to 3": the three reported rows are this unit's cost exception.** Measured before the delta, at 100M rows,
+  and not touched by it:
+
+  | row | head/main | per value |
+  |---|---|---|
+  | `d38 < v`, column against column (K2's exact refinement at `DECIMAL(38,18)`) | 1.662 | +2.82 ns |
+  | written `CAST(v AS DECIMAL(10,2))` (K1) | 1.341 | +0.66 ns |
+  | written `CAST(v AS DECIMAL(38,18))` (K1) | 3.361 | +4.27 ns |
+
+  Their speed card is [DOUBLE-DECIMAL-CAST-PERF-1](double-decimal-cast-perf-1-card-2026-11-14.md).
+- **Reported, not held:** an `IN` of four or more DOUBLE constants does not reach the hook (3.86x at 100M); an `IN`
+  of three and a `BETWEEN` do (1.06x and 0.98x).
+
+## Append (2026-11-15 evening): the owner's ruling on the `IN` row
+
+**The owner's ruling** (2026-11-15, about 17:27 UTC), verbatim: "Okay awesome, go with your recommendation". The
+recommendation it adopts:
+- part 1 merges as it is once both verifiers pass;
+- an `IN` of four or more DOUBLE constants against a DECIMAL column is part 1's temporary cost exception. It
+  answers correctly and measures 3.862x at 100M rows (`d10`, four constants);
+- part 2 owes the rewrite, listed under "What part 2 still owes" above.

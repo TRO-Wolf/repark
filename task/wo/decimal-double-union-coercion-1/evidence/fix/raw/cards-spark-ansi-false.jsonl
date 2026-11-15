@@ -1,0 +1,38 @@
+{"answer": [101, 102], "key": "f3/cow/update/v IN (w)"}
+{"answer": [1, 2], "key": "f3/cow/select/v IN (w)"}
+{"answer": [101, 102], "key": "f3/cow/update/v IN (w, 5.0D)"}
+{"answer": [1, 2], "key": "f3/cow/select/v IN (w, 5.0D)"}
+{"answer": [101, 102], "key": "f3/cow/update/v = w"}
+{"answer": [1, 2], "key": "f3/cow/select/v = w"}
+{"answer": [2, 101], "key": "f3/cow/update/v IN (0.0D)"}
+{"answer": [1], "key": "f3/cow/select/v IN (0.0D)"}
+{"answer": [101, 102], "key": "f3/cow/update/NOT (v NOT IN (w))"}
+{"answer": [1, 2], "key": "f3/cow/select/NOT (v NOT IN (w))"}
+{"answer": [101, 102], "key": "f3/mor/update/v IN (w)"}
+{"answer": [1, 2], "key": "f3/mor/select/v IN (w)"}
+{"answer": [101, 102], "key": "f3/mor/update/v IN (w, 5.0D)"}
+{"answer": [1, 2], "key": "f3/mor/select/v IN (w, 5.0D)"}
+{"answer": [101, 102], "key": "f3/mor/update/v = w"}
+{"answer": [1, 2], "key": "f3/mor/select/v = w"}
+{"answer": [2, 101], "key": "f3/mor/update/v IN (0.0D)"}
+{"answer": [1], "key": "f3/mor/select/v IN (0.0D)"}
+{"answer": [101, 102], "key": "f3/mor/update/NOT (v NOT IN (w))"}
+{"answer": [1, 2], "key": "f3/mor/select/NOT (v NOT IN (w))"}
+{"answer": "0.00", "key": "f1/CAST/1.0E-4"}
+{"answer": "0.00", "key": "f1/TRY_CAST/1.0E-4"}
+{"answer": "ERR [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `lc`.`ns`.`f1_21`: Cannot safely cast `d` \"STRING\" to \"DECIMAL(10,", "key": "f1/store/1.0E-4"}
+{"answer": "100.00", "key": "f1/CAST/1E2"}
+{"answer": "100.00", "key": "f1/TRY_CAST/1E2"}
+{"answer": "ERR [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `lc`.`ns`.`f1_22`: Cannot safely cast `d` \"STRING\" to \"DECIMAL(10,", "key": "f1/store/1E2"}
+{"answer": "15.00", "key": "f1/CAST/1.5e1"}
+{"answer": "15.00", "key": "f1/TRY_CAST/1.5e1"}
+{"answer": "ERR [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `lc`.`ns`.`f1_23`: Cannot safely cast `d` \"STRING\" to \"DECIMAL(10,", "key": "f1/store/1.5e1"}
+{"answer": "0.00", "key": "f1/CAST/-2.5E-3"}
+{"answer": "0.00", "key": "f1/TRY_CAST/-2.5E-3"}
+{"answer": "ERR [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `lc`.`ns`.`f1_24`: Cannot safely cast `d` \"STRING\" to \"DECIMAL(10,", "key": "f1/store/-2.5E-3"}
+{"answer": "0.00", "key": "f1/CAST/1.0E-20"}
+{"answer": "0.00", "key": "f1/TRY_CAST/1.0E-20"}
+{"answer": "ERR [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `lc`.`ns`.`f1_25`: Cannot safely cast `d` \"STRING\" to \"DECIMAL(10,", "key": "f1/store/1.0E-20"}
+{"answer": "None", "key": "f1/CAST/1e40"}
+{"answer": "None", "key": "f1/TRY_CAST/1e40"}
+{"answer": "ERR [INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST] Cannot write incompatible data for the table `lc`.`ns`.`f1_26`: Cannot safely cast `d` \"STRING\" to \"DECIMAL(10,", "key": "f1/store/1e40"}

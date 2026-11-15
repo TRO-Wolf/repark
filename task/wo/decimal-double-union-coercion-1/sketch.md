@@ -255,4 +255,22 @@ default:
 - **Q7:** pruning comes later; today's "no decimal pushdown" is pinned.
 - **Q8:** `MERGE … ON` follows Spark, and both forms are pinned.
 
+## Step 0 of the build (2026-11-14, on the stack base `ff34baf5`)
+
+The owner's stack ruling (2026-11-14, "Go with recommendation") builds this unit on DOUBLE-DECIMAL-STORE-ROUND-1's
+head `ff34baf5`. Step 0 re-measured the table on main and on `ff34baf5` against Spark and re-read the inventory
+there ([inventory.md](inventory.md) section H; [evidence/step0/table.md](evidence/step0/table.md)). Four things in
+this sketch change, pending the inventory critic:
+
+- **Seat V's MERGE seat** is `crates/repark-spark/src/merge.rs` (the source is rendered there and re-planned by
+  `ctx.sql`), not `merge_fragments.rs`; and the marker pass needs two positions in `execute_passthrough_inner`
+  (before the identity-DML exit for `DELETE` / `UPDATE`, after the INSERT `VALUES` rewrites for the rest), plus
+  `restate_range_frames_and_replan`.
+- **Seat E cannot share `spark_integral_literal`'s gate** (`plan_may_narrow`): a column-only `d = v` is never
+  walked. It shares the walk with a gate of its own.
+- **The widening cast is not Spark's at high scales:** Arrow's DECIMAL→DOUBLE rounds twice, so a widened
+  comparison over a decimal of scale 10 or more can differ from Spark by one ulp (inventory H12).
+- **The native door moved under the stack base:** `bool_decimal_cast` now text-rounds the native door's
+  comparison casts too, and seat E does not reach that door (inventory H10).
+
 Up: [map.md](map.md).

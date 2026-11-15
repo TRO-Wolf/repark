@@ -1,8 +1,14 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use arrow::array::{Array, Decimal128Array, Decimal256Array, as_boolean_array};
-use arrow::datatypes::i256;
+use arrow::array::{
+    Array, AsArray, Decimal128Array, Decimal256Array, Float64Array, PrimitiveArray,
+    as_boolean_array,
+};
+use arrow::datatypes::{
+    ArrowPrimitiveType, Decimal128Type, DecimalType, Float32Type, Float64Type, i256,
+};
+use arrow::error::ArrowError;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
@@ -10,6 +16,9 @@ use datafusion::common::{DFSchema, Result, ScalarValue};
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
+use datafusion::logical_expr::interval_arithmetic::Interval;
+use datafusion::logical_expr::preimage::PreimageResult;
+use datafusion::logical_expr::simplify::SimplifyContext;
 use datafusion::logical_expr::{
     ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
     ScalarUDF, ScalarUDFImpl, Signature, Volatility,
@@ -20,23 +29,29 @@ use datafusion::prelude::SessionContext;
 use crate::ansi::spark_ansi_enabled_from_options;
 
 pub(crate) const BOOL_TO_DECIMAL_NAME: &str = "__repark_bool_to_decimal__";
+pub(crate) const FLOAT_TO_DECIMAL_NAME: &str = "__repark_float_to_decimal__";
+pub(crate) const DECIMAL_TO_DOUBLE_NAME: &str = "__repark_decimal_to_double__";
+const ARROW_CAST_NAME: &str = "arrow_cast";
 
-pub fn install_bool_decimal_cast(ctx: &SessionContext) {
-    ctx.add_analyzer_rule(Arc::new(BoolDecimalCast));
+pub fn install_bool_decimal_cast(ctx: &SessionContext, spark_door: bool) {
+    ctx.add_analyzer_rule(Arc::new(BoolDecimalCast { spark_door }));
 }
 
-pub fn install_shared_analyzer_rules(ctx: &SessionContext) {
+pub fn install_shared_analyzer_rules(ctx: &SessionContext, spark_door: bool) {
     crate::integer_spark::install_integer_overflow(ctx);
-    install_bool_decimal_cast(ctx);
+    install_bool_decimal_cast(ctx, spark_door);
 }
 
 #[derive(Debug, Default)]
-pub struct BoolDecimalCast;
+pub struct BoolDecimalCast {
+    pub spark_door: bool,
+}
 
 impl AnalyzerRule for BoolDecimalCast {
     fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
         let null_on_overflow = !spark_ansi_enabled_from_options(config);
-        plan.transform_up_with_subqueries(|node| rewrite_plan(node, null_on_overflow))
+        let spark_door = self.spark_door;
+        plan.transform_up_with_subqueries(|node| rewrite_plan(node, null_on_overflow, spark_door))
             .data()
     }
 
@@ -46,7 +61,11 @@ impl AnalyzerRule for BoolDecimalCast {
     }
 }
 
-fn rewrite_plan(plan: LogicalPlan, null_on_overflow: bool) -> Result<Transformed<LogicalPlan>> {
+fn rewrite_plan(
+    plan: LogicalPlan,
+    null_on_overflow: bool,
+    spark_door: bool,
+) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -54,11 +73,89 @@ fn rewrite_plan(plan: LogicalPlan, null_on_overflow: bool) -> Result<Transformed
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten =
-            expr.transform_down(|node| Ok(rewrite_bool_cast(node, &schema, null_on_overflow)))?;
+        let rewritten = expr
+            .transform_down(|node| Ok(rewrite_cast(node, &schema, null_on_overflow, spark_door)))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed.map_data(LogicalPlan::recompute_schema)
+}
+
+fn rewrite_cast(
+    expr: Expr,
+    schema: &DFSchema,
+    null_on_overflow: bool,
+    spark_door: bool,
+) -> Transformed<Expr> {
+    if !spark_door {
+        return rewrite_bool_cast(expr, schema, null_on_overflow);
+    }
+    match float_decimal_cast(&expr, schema).or_else(|| decimal_double_cast(&expr, schema)) {
+        Some(rewritten) => Transformed::yes(rewritten),
+        None => rewrite_bool_cast(expr, schema, null_on_overflow),
+    }
+}
+
+fn decimal_double_cast(expr: &Expr, schema: &DFSchema) -> Option<Expr> {
+    let (Expr::Cast(datafusion::logical_expr::Cast {
+        expr: operand,
+        field,
+    })
+    | Expr::TryCast(datafusion::logical_expr::TryCast {
+        expr: operand,
+        field,
+    })) = expr
+    else {
+        return None;
+    };
+    if field.data_type() != &DataType::Float64 {
+        return None;
+    }
+    if !matches!(operand.get_type(schema), Ok(DataType::Decimal128(_, _))) {
+        return None;
+    }
+    Some(Expr::ScalarFunction(ScalarFunction::new_udf(
+        Arc::new(ScalarUDF::from(DecimalToDouble::new())),
+        vec![operand.as_ref().clone()],
+    )))
+}
+
+fn float_decimal_cast(expr: &Expr, schema: &DFSchema) -> Option<Expr> {
+    let (operand, target, nullable) = match expr {
+        Expr::Cast(cast) => (
+            cast.expr.as_ref(),
+            cast.field.data_type().clone(),
+            crate::decimal_cast::nullable_spark_cast(cast, schema).is_some(),
+        ),
+        Expr::TryCast(cast) => (cast.expr.as_ref(), cast.field.data_type().clone(), true),
+        Expr::ScalarFunction(function)
+            if function.func.name() == ARROW_CAST_NAME && function.args.len() == 2 =>
+        {
+            let (Some(operand), Some(Expr::Literal(ScalarValue::Utf8(Some(text)), _))) =
+                (function.args.first(), function.args.get(1))
+            else {
+                return None;
+            };
+            (operand, text.parse::<DataType>().ok()?, false)
+        }
+        _ => return None,
+    };
+    if !matches!(target, DataType::Decimal128(_, _)) {
+        return None;
+    }
+    if !matches!(
+        operand.get_type(schema),
+        Ok(DataType::Float32 | DataType::Float64)
+    ) {
+        return None;
+    }
+    Some(Expr::ScalarFunction(ScalarFunction::new_udf(
+        Arc::new(ScalarUDF::from(FloatToDecimal::new(
+            target,
+            matches!(expr, Expr::TryCast(_)),
+            nullable,
+        ))),
+        vec![operand.clone()],
+    )))
 }
 
 fn rewrite_bool_cast(expr: Expr, schema: &DFSchema, null_on_overflow: bool) -> Transformed<Expr> {
@@ -219,6 +316,239 @@ impl ScalarUDFImpl for BoolToDecimal {
     }
 }
 
+#[derive(Debug)]
+pub struct FloatToDecimal {
+    signature: Signature,
+    target: DataType,
+    safe: bool,
+    nullable: bool,
+}
+
+impl FloatToDecimal {
+    fn new(target: DataType, safe: bool, nullable: bool) -> Self {
+        Self {
+            signature: Signature::any(1, Volatility::Immutable),
+            target,
+            safe,
+            nullable,
+        }
+    }
+
+    fn precision_scale(&self) -> (u8, i8) {
+        match self.target {
+            DataType::Decimal128(precision, scale) => (precision, scale),
+            _ => (38, 0),
+        }
+    }
+
+    fn unscaled_of(&self, value: f64, precision: u8, scale: i8) -> Result<Option<i128>> {
+        let overflow = || {
+            ArrowError::CastError(format!(
+                "Cannot cast to Decimal128({precision}, {scale}). Overflowing on {value:?}"
+            ))
+        };
+        let Some(unscaled) = repark_common::java_double::java_double_unscaled(value, scale) else {
+            return if self.safe {
+                Ok(None)
+            } else {
+                Err(overflow().into())
+            };
+        };
+        if Decimal128Type::is_valid_decimal_precision(unscaled, precision) {
+            return Ok(Some(unscaled));
+        }
+        if self.safe {
+            return Ok(None);
+        }
+        Decimal128Type::validate_decimal_precision(unscaled, precision, scale)?;
+        Err(overflow().into())
+    }
+
+    fn convert<T>(&self, values: &PrimitiveArray<T>) -> Result<Decimal128Array>
+    where
+        T: ArrowPrimitiveType,
+        T::Native: Into<f64>,
+    {
+        let (precision, scale) = self.precision_scale();
+        let converted: Decimal128Array = if self.safe {
+            values.unary_opt(|value| {
+                self.unscaled_of(value.into(), precision, scale)
+                    .ok()
+                    .flatten()
+            })
+        } else {
+            values.try_unary(|value| {
+                self.unscaled_of(value.into(), precision, scale)?
+                    .ok_or_else(|| DataFusionError::Internal(String::new()))
+            })?
+        };
+        Ok(converted.with_precision_and_scale(precision, scale)?)
+    }
+}
+
+impl PartialEq for FloatToDecimal {
+    fn eq(&self, other: &Self) -> bool {
+        self.target == other.target && self.safe == other.safe && self.nullable == other.nullable
+    }
+}
+
+impl Eq for FloatToDecimal {}
+
+impl Hash for FloatToDecimal {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+        self.target.hash(state);
+        self.safe.hash(state);
+        self.nullable.hash(state);
+    }
+}
+
+impl ScalarUDFImpl for FloatToDecimal {
+    crate::shim_udf_boilerplate!("__repark_float_to_decimal__");
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(self.target.clone())
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
+        let first = args.arg_fields.first().ok_or_else(|| {
+            DataFusionError::Plan(format!("'{FLOAT_TO_DECIMAL_NAME}' expects one argument"))
+        })?;
+        Ok(Field::new(
+            self.name(),
+            self.target.clone(),
+            first.is_nullable() || self.nullable,
+        )
+        .into())
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let (precision, scale) = self.precision_scale();
+        match args.args.first() {
+            Some(ColumnarValue::Scalar(scalar)) => {
+                let value = match scalar {
+                    ScalarValue::Float64(value) => *value,
+                    ScalarValue::Float32(value) => value.map(f64::from),
+                    _ => {
+                        return Err(DataFusionError::Execution(format!(
+                            "'{FLOAT_TO_DECIMAL_NAME}' expects a FLOAT or DOUBLE argument"
+                        )));
+                    }
+                };
+                let unscaled = match value {
+                    Some(value) => self.unscaled_of(value, precision, scale)?,
+                    None => None,
+                };
+                Ok(ColumnarValue::Scalar(ScalarValue::Decimal128(
+                    unscaled, precision, scale,
+                )))
+            }
+            Some(ColumnarValue::Array(array)) => {
+                let converted = match array.data_type() {
+                    DataType::Float64 => self.convert(array.as_primitive::<Float64Type>())?,
+                    DataType::Float32 => self.convert(array.as_primitive::<Float32Type>())?,
+                    _ => {
+                        return Err(DataFusionError::Execution(format!(
+                            "'{FLOAT_TO_DECIMAL_NAME}' expects a FLOAT or DOUBLE argument"
+                        )));
+                    }
+                };
+                Ok(ColumnarValue::Array(Arc::new(converted)))
+            }
+            None => Err(DataFusionError::Execution(format!(
+                "'{FLOAT_TO_DECIMAL_NAME}' expects one argument"
+            ))),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct DecimalToDouble {
+    signature: Signature,
+}
+
+impl DecimalToDouble {
+    fn new() -> Self {
+        Self {
+            signature: Signature::any(1, Volatility::Immutable),
+        }
+    }
+}
+
+impl ScalarUDFImpl for DecimalToDouble {
+    crate::shim_udf_boilerplate!("__repark_decimal_to_double__");
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Float64)
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs) -> Result<FieldRef> {
+        let first = args.arg_fields.first().ok_or_else(|| {
+            DataFusionError::Plan(format!("'{DECIMAL_TO_DOUBLE_NAME}' expects one argument"))
+        })?;
+        Ok(Field::new(self.name(), DataType::Float64, first.is_nullable()).into())
+    }
+
+    fn preimage(
+        &self,
+        args: &[Expr],
+        lit_expr: &Expr,
+        info: &SimplifyContext,
+    ) -> Result<PreimageResult> {
+        let [argument] = args else {
+            return Ok(PreimageResult::None);
+        };
+        let Expr::Literal(ScalarValue::Float64(Some(constant)), _) = lit_expr else {
+            return Ok(PreimageResult::None);
+        };
+        let Ok(DataType::Decimal128(precision, scale)) = info.get_data_type(argument) else {
+            return Ok(PreimageResult::None);
+        };
+        if argument.is_volatile() {
+            return Ok(PreimageResult::None);
+        }
+        let Some((lower, upper)) =
+            repark_common::java_double::decimal_preimage_of_double(*constant, precision, scale)
+        else {
+            return Ok(PreimageResult::None);
+        };
+        let interval = Interval::try_new(
+            ScalarValue::Decimal128(Some(lower), precision, scale),
+            ScalarValue::Decimal128(Some(upper), precision, scale),
+        )?;
+        Ok(PreimageResult::Range {
+            expr: argument.clone(),
+            interval: Box::new(interval),
+        })
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let expects = || {
+            DataFusionError::Execution(format!(
+                "'{DECIMAL_TO_DOUBLE_NAME}' expects one DECIMAL argument"
+            ))
+        };
+        match args.args.first() {
+            Some(ColumnarValue::Scalar(ScalarValue::Decimal128(unscaled, _, scale))) => {
+                Ok(ColumnarValue::Scalar(ScalarValue::Float64(unscaled.map(
+                    |unscaled| repark_common::java_double::java_decimal_to_double(unscaled, *scale),
+                ))))
+            }
+            Some(ColumnarValue::Array(array)) => {
+                let DataType::Decimal128(_, scale) = *array.data_type() else {
+                    return Err(expects());
+                };
+                let converted: Float64Array =
+                    array.as_primitive::<Decimal128Type>().unary(|unscaled| {
+                        repark_common::java_double::java_decimal_to_double(unscaled, scale)
+                    });
+                Ok(ColumnarValue::Array(Arc::new(converted)))
+            }
+            _ => Err(expects()),
+        }
+    }
+}
+
 fn pow10(scale: i8) -> i128 {
     let mut value = 1i128;
     for _ in 0..scale.max(0) {
@@ -228,136 +558,4 @@ fn pow10(scale: i8) -> i128 {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    use datafusion::arrow::util::display::array_value_to_string;
-    use datafusion::prelude::SessionConfig;
-
-    fn ctx_with(ansi: Option<bool>) -> SessionContext {
-        let config = match ansi {
-            Some(enabled) => crate::ansi::with_spark_ansi_config(SessionConfig::new(), enabled),
-            None => SessionConfig::new(),
-        };
-        let ctx = SessionContext::new_with_config(config);
-        ctx.add_analyzer_rule(Arc::new(BoolDecimalCast));
-        ctx
-    }
-
-    async fn flags(ctx: &SessionContext, sql: &str) -> Vec<bool> {
-        let plan = ctx.state().create_logical_plan(sql).await.unwrap();
-        crate::analyze_eagerly(&ctx.state(), plan)
-            .unwrap()
-            .schema()
-            .fields()
-            .iter()
-            .map(|field| field.is_nullable())
-            .collect()
-    }
-
-    async fn values(ctx: &SessionContext, sql: &str) -> Vec<String> {
-        let batches = ctx.sql(sql).await.unwrap().collect().await.unwrap();
-        let mut out = Vec::new();
-        for batch in batches {
-            let column = batch.column(0);
-            for row in 0..batch.num_rows() {
-                out.push(array_value_to_string(column, row).unwrap());
-            }
-        }
-        out
-    }
-
-    #[tokio::test]
-    async fn a_float_cast_to_decimal_is_left_to_its_cast() {
-        let ctx = ctx_with(Some(true));
-        for sql in [
-            "SELECT CAST(v AS DECIMAL(10,2)) FROM (VALUES (CAST('1.255' AS DOUBLE))) t(v)",
-            "SELECT TRY_CAST(v AS DECIMAL(38,18)) FROM (VALUES (CAST('1.255' AS DOUBLE))) t(v)",
-            "SELECT CAST(v AS DECIMAL(10,2)) FROM (VALUES (CAST('1.255' AS FLOAT))) t(v)",
-            "SELECT arrow_cast(v, 'Decimal128(10, 2)') FROM (VALUES (CAST('1.255' AS DOUBLE))) t(v)",
-            "SELECT CAST(1.26 AS DECIMAL(10,2)) = v FROM (VALUES (CAST('1.255' AS DOUBLE))) t(v)",
-        ] {
-            let plan = ctx.state().create_logical_plan(sql).await.unwrap();
-            let shown = crate::analyze_eagerly(&ctx.state(), plan)
-                .unwrap()
-                .display_indent()
-                .to_string();
-            assert!(!shown.contains("__repark_"), "{sql}: {shown}");
-            assert!(shown.contains("Decimal128("), "{sql}: {shown}");
-        }
-        assert_eq!(
-            values(
-                &ctx,
-                "SELECT CAST(true AS DECIMAL(10,2)) FROM (VALUES (CAST('1.255' AS DOUBLE))) t(v)"
-            )
-            .await,
-            vec!["1.00".to_string()]
-        );
-    }
-
-    #[tokio::test]
-    async fn wide_targets_are_nonnull_with_one_and_zero() {
-        let ctx = ctx_with(Some(true));
-        assert_eq!(
-            flags(&ctx, "SELECT CAST(true AS DECIMAL(10,2)) AS v").await,
-            vec![false]
-        );
-        assert_eq!(
-            values(&ctx, "SELECT CAST(true AS DECIMAL(10,2)) AS v").await,
-            vec!["1.00".to_string()]
-        );
-        assert_eq!(
-            values(&ctx, "SELECT CAST(false AS DECIMAL(10,2)) AS v").await,
-            vec!["0.00".to_string()]
-        );
-        assert_eq!(
-            values(&ctx, "SELECT CAST(true AS DECIMAL(1,0)) AS v").await,
-            vec!["1".to_string()]
-        );
-    }
-
-    #[tokio::test]
-    async fn narrow_target_nulls_or_raises_by_ansi() {
-        let legacy = ctx_with(Some(false));
-        assert_eq!(
-            flags(&legacy, "SELECT CAST(true AS DECIMAL(2,2)) AS v").await,
-            vec![true]
-        );
-        assert_eq!(
-            values(&legacy, "SELECT CAST(true AS DECIMAL(2,2)) AS v").await,
-            vec![String::new()]
-        );
-        let ansi = ctx_with(Some(true));
-        assert_eq!(
-            flags(&ansi, "SELECT CAST(true AS DECIMAL(2,2)) AS v").await,
-            vec![true]
-        );
-        let error = ansi
-            .sql("SELECT CAST(true AS DECIMAL(2,2)) AS v")
-            .await
-            .unwrap()
-            .collect()
-            .await
-            .unwrap_err()
-            .to_string();
-        assert!(error.contains("NUMERIC_VALUE_OUT_OF_RANGE"), "{error}");
-    }
-
-    #[tokio::test]
-    async fn native_door_defaults_to_ansi() {
-        let native = ctx_with(None);
-        let error = native
-            .sql("SELECT CAST(true AS DECIMAL(2,2)) AS v")
-            .await
-            .unwrap()
-            .collect()
-            .await
-            .unwrap_err()
-            .to_string();
-        assert!(error.contains("NUMERIC_VALUE_OUT_OF_RANGE"), "{error}");
-        assert_eq!(
-            values(&native, "SELECT CAST(true AS DECIMAL(10,2)) AS v").await,
-            vec!["1.00".to_string()]
-        );
-    }
-}
+mod tests;

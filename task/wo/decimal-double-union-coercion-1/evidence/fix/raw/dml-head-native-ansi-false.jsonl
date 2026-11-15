@@ -1,0 +1,57 @@
+{"ansi": "false", "engine": "native", "key": "provenance", "native": "<scratchpad>/ddu-work/pkg-head/repark/_native.abi3.so", "warehouse": "dml-native-false-ktxslla4"}
+{"answer": "false", "key": "flip/c1/-22.129547339983247"}
+{"answer": "true", "key": "flip/c3/-22.129547339983247"}
+{"answer": "false", "key": "flip/c5/-22.129547339983247"}
+{"answer": "false", "key": "flip/c6/-22.129547339983247"}
+{"answer": "true", "key": "flip/c7/-22.129547339983247"}
+{"answer": "true", "key": "flip/c1/1.0000000000000004"}
+{"answer": "true", "key": "flip/c3/1.0000000000000004"}
+{"answer": "false", "key": "flip/c5/1.0000000000000004"}
+{"answer": "false", "key": "flip/c6/1.0000000000000004"}
+{"answer": "true", "key": "flip/c7/1.0000000000000004"}
+{"answer": "true", "key": "flip/c1/2.2300000000000004"}
+{"answer": "true", "key": "flip/c3/2.2300000000000004"}
+{"answer": "false", "key": "flip/c5/2.2300000000000004"}
+{"answer": "false", "key": "flip/c6/2.2300000000000004"}
+{"answer": "true", "key": "flip/c7/2.2300000000000004"}
+{"ids": [4], "key": "t/cow/select_eq", "sql": "SELECT id FROM lc.ns.x001 WHERE d = v"}
+{"ids": [1, 2, 3], "key": "t/cow/select_lt", "sql": "SELECT id FROM lc.ns.x002 WHERE d < v"}
+{"ids": [4], "key": "t/cow/select_ns", "sql": "SELECT id FROM lc.ns.x003 WHERE d <=> v"}
+{"ids": [4], "key": "t/cow/select_in", "sql": "SELECT id FROM lc.ns.x004 WHERE v IN (d)"}
+{"ids": [4], "key": "t/cow/select_between", "sql": "SELECT id FROM lc.ns.x005 WHERE v BETWEEN d AND d"}
+{"ids": [1, 2, 3], "key": "t/cow/delete_eq", "sql": "DELETE FROM lc.ns.x006 WHERE d = v"}
+{"ids": [1, 2, 3, 104], "key": "t/cow/update_eq", "sql": "UPDATE lc.ns.x007 SET id = id + 100 WHERE d = v"}
+{"ids": [1, 2, 3, 104], "key": "t/cow/update_in", "sql": "UPDATE lc.ns.x008 SET id = id + 100 WHERE v IN (d)"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x009 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s009) s ON t.d = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100", "key": "t/cow/merge_on_dv", "sql": "MERGE INTO lc.ns.x009 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s009) s ON t.d = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x010 t USING (SELECT id AS sid, d AS sd FROM lc.ns.s010) s ON t.v = s.sd WHEN MATCHED THEN UPDATE SET id = t.id + 100", "key": "t/cow/merge_on_vd", "sql": "MERGE INTO lc.ns.x010 t USING (SELECT id AS sid, d AS sd FROM lc.ns.s010) s ON t.v = s.sd WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x011 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s011) s ON t.id = s.sid AND t.d = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100 WHEN NOT MATCHED THEN INSERT", "key": "t/cow/merge_on_key_and", "sql": "MERGE INTO lc.ns.x011 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s011) s ON t.id = s.sid AND t.d = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100 WHEN NOT MATCHED THEN INSERT (id, d, v) VALUES (s.sid + 50, 0, 0)"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x012 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s012) s ON t.d = s.sv WHEN MATCHED THEN DELETE", "key": "t/cow/merge_delete", "sql": "MERGE INTO lc.ns.x012 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s012) s ON t.d = s.sv WHEN MATCHED THEN DELETE"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x013 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s013) s ON t.d = s.sv WHEN NOT MATCHED BY SOURCE THEN DELETE", "key": "t/cow/merge_by_source", "sql": "MERGE INTO lc.ns.x013 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s013) s ON t.d = s.sv WHEN NOT MATCHED BY SOURCE THEN DELETE"}
+{"ids": [2], "key": "u/cow/select_eq", "sql": "SELECT id FROM lc.ns.x014 WHERE d = v"}
+{"ids": [], "key": "u/cow/select_lt", "sql": "SELECT id FROM lc.ns.x015 WHERE d < v"}
+{"ids": [2], "key": "u/cow/select_ns", "sql": "SELECT id FROM lc.ns.x016 WHERE d <=> v"}
+{"ids": [2], "key": "u/cow/select_in", "sql": "SELECT id FROM lc.ns.x017 WHERE v IN (d)"}
+{"ids": [2], "key": "u/cow/select_between", "sql": "SELECT id FROM lc.ns.x018 WHERE v BETWEEN d AND d"}
+{"ids": [1, 3], "key": "u/cow/delete_eq", "sql": "DELETE FROM lc.ns.x019 WHERE d = v"}
+{"ids": [1, 3, 102], "key": "u/cow/update_eq", "sql": "UPDATE lc.ns.x020 SET id = id + 100 WHERE d = v"}
+{"ids": [1, 3, 102], "key": "u/cow/update_in", "sql": "UPDATE lc.ns.x021 SET id = id + 100 WHERE v IN (d)"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x022 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s022) s ON t.d = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100", "key": "u/cow/merge_on_dv", "sql": "MERGE INTO lc.ns.x022 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s022) s ON t.d = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x023 t USING (SELECT id AS sid, d AS sd FROM lc.ns.s023) s ON t.v = s.sd WHEN MATCHED THEN UPDATE SET id = t.id + 100", "key": "u/cow/merge_on_vd", "sql": "MERGE INTO lc.ns.x023 t USING (SELECT id AS sid, d AS sd FROM lc.ns.s023) s ON t.v = s.sd WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x024 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s024) s ON t.id = s.sid AND t.d = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100 WHEN NOT MATCHED THEN INSERT", "key": "u/cow/merge_on_key_and", "sql": "MERGE INTO lc.ns.x024 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s024) s ON t.id = s.sid AND t.d = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100 WHEN NOT MATCHED THEN INSERT (id, d, v) VALUES (s.sid + 50, 0, 0)"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x025 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s025) s ON t.d = s.sv WHEN MATCHED THEN DELETE", "key": "u/cow/merge_delete", "sql": "MERGE INTO lc.ns.x025 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s025) s ON t.d = s.sv WHEN MATCHED THEN DELETE"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x026 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s026) s ON t.d = s.sv WHEN NOT MATCHED BY SOURCE THEN DELETE", "key": "u/cow/merge_by_source", "sql": "MERGE INTO lc.ns.x026 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s026) s ON t.d = s.sv WHEN NOT MATCHED BY SOURCE THEN DELETE"}
+{"ids": [1, 2, 3], "key": "z/cow/select_eq", "sql": "SELECT id FROM lc.ns.x027 WHERE d = v"}
+{"ids": [], "key": "z/cow/select_lt", "sql": "SELECT id FROM lc.ns.x028 WHERE d < v"}
+{"ids": [1, 2, 3], "key": "z/cow/select_ns", "sql": "SELECT id FROM lc.ns.x029 WHERE d <=> v"}
+{"ids": [1, 2, 3], "key": "z/cow/select_in", "sql": "SELECT id FROM lc.ns.x030 WHERE v IN (d)"}
+{"ids": [1, 2, 3], "key": "z/cow/select_between", "sql": "SELECT id FROM lc.ns.x031 WHERE v BETWEEN d AND d"}
+{"ids": [], "key": "z/cow/delete_eq", "sql": "DELETE FROM lc.ns.x032 WHERE d = v"}
+{"ids": [101, 102, 103], "key": "z/cow/update_eq", "sql": "UPDATE lc.ns.x033 SET id = id + 100 WHERE d = v"}
+{"ids": [101, 102, 103], "key": "z/cow/update_in", "sql": "UPDATE lc.ns.x034 SET id = id + 100 WHERE v IN (d)"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x035 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s035) s ON t.d = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100", "key": "z/cow/merge_on_dv", "sql": "MERGE INTO lc.ns.x035 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s035) s ON t.d = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x036 t USING (SELECT id AS sid, d AS sd FROM lc.ns.s036) s ON t.v = s.sd WHEN MATCHED THEN UPDATE SET id = t.id + 100", "key": "z/cow/merge_on_vd", "sql": "MERGE INTO lc.ns.x036 t USING (SELECT id AS sid, d AS sd FROM lc.ns.s036) s ON t.v = s.sd WHEN MATCHED THEN UPDATE SET id = t.id + 100"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x037 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s037) s ON t.id = s.sid AND t.d = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100 WHEN NOT MATCHED THEN INSERT", "key": "z/cow/merge_on_key_and", "sql": "MERGE INTO lc.ns.x037 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s037) s ON t.id = s.sid AND t.d = s.sv WHEN MATCHED THEN UPDATE SET id = t.id + 100 WHEN NOT MATCHED THEN INSERT (id, d, v) VALUES (s.sid + 50, 0, 0)"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x038 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s038) s ON t.d = s.sv WHEN MATCHED THEN DELETE", "key": "z/cow/merge_delete", "sql": "MERGE INTO lc.ns.x038 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s038) s ON t.d = s.sv WHEN MATCHED THEN DELETE"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x039 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s039) s ON t.d = s.sv WHEN NOT MATCHED BY SOURCE THEN DELETE", "key": "z/cow/merge_by_source", "sql": "MERGE INTO lc.ns.x039 t USING (SELECT id AS sid, v AS sv FROM lc.ns.s039) s ON t.d = s.sv WHEN NOT MATCHED BY SOURCE THEN DELETE"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x040 t USING (SELECT 1 AS sid UNION ALL SELECT 1) s ON t.id = s.sid WHEN NOT MATCHED BY SOURCE THEN DELETE", "key": "ctl/cow/merge_by_source_dupkey", "sql": "MERGE INTO lc.ns.x040 t USING (SELECT 1 AS sid UNION ALL SELECT 1) s ON t.id = s.sid WHEN NOT MATCHED BY SOURCE THEN DELETE"}
+{"error": "UnsupportedOperationException", "head": "This feature is not implemented: Unsupported SQL statement: MERGE INTO lc.ns.x041 t USING (SELECT 1 AS sid) s ON t.id = s.sid WHEN NOT MATCHED BY SOURCE THEN DELETE", "key": "ctl/cow/merge_by_source_onekey", "sql": "MERGE INTO lc.ns.x041 t USING (SELECT 1 AS sid) s ON t.id = s.sid WHEN NOT MATCHED BY SOURCE THEN DELETE"}
