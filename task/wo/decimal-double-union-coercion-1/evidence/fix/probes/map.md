@@ -15,5 +15,6 @@ Comment-free Python. The commands are in [../map.md](../map.md).
 - [cost_data.py](cost_data.py) writes the cost tables as Parquet with main's package: 100M rows and 20M rows of
   `id`, `d10 DECIMAL(10,2)`, `d38 DECIMAL(38,18)` and `v DOUBLE`.
 - [cost_probe.py](cost_probe.py) runs one timed cost case for one build (the rows in [../cost.md](../cost.md)).
+- [preimage_cells.py](preimage_cells.py) runs the preimage pin cells on Spark or RePark (`<engine> <ansi> <warehouse parent> <jar> <out>`); its raw output is in [../raw/map.md](../raw/map.md).
 
 Up: [../map.md](../map.md).
