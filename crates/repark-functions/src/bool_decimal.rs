@@ -16,6 +16,9 @@ use datafusion::common::{DFSchema, Result, ScalarValue};
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
+use datafusion::logical_expr::interval_arithmetic::Interval;
+use datafusion::logical_expr::preimage::PreimageResult;
+use datafusion::logical_expr::simplify::SimplifyContext;
 use datafusion::logical_expr::{
     ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
     ScalarUDF, ScalarUDFImpl, Signature, Volatility,
@@ -484,6 +487,39 @@ impl ScalarUDFImpl for DecimalToDouble {
             DataFusionError::Plan(format!("'{DECIMAL_TO_DOUBLE_NAME}' expects one argument"))
         })?;
         Ok(Field::new(self.name(), DataType::Float64, first.is_nullable()).into())
+    }
+
+    fn preimage(
+        &self,
+        args: &[Expr],
+        lit_expr: &Expr,
+        info: &SimplifyContext,
+    ) -> Result<PreimageResult> {
+        let [argument] = args else {
+            return Ok(PreimageResult::None);
+        };
+        let Expr::Literal(ScalarValue::Float64(Some(constant)), _) = lit_expr else {
+            return Ok(PreimageResult::None);
+        };
+        let Ok(DataType::Decimal128(precision, scale)) = info.get_data_type(argument) else {
+            return Ok(PreimageResult::None);
+        };
+        if argument.is_volatile() {
+            return Ok(PreimageResult::None);
+        }
+        let Some((lower, upper)) =
+            repark_common::java_double::decimal_preimage_of_double(*constant, precision, scale)
+        else {
+            return Ok(PreimageResult::None);
+        };
+        let interval = Interval::try_new(
+            ScalarValue::Decimal128(Some(lower), precision, scale),
+            ScalarValue::Decimal128(Some(upper), precision, scale),
+        )?;
+        Ok(PreimageResult::Range {
+            expr: argument.clone(),
+            interval: Box::new(interval),
+        })
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {

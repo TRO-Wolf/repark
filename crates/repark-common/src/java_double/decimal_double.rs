@@ -75,6 +75,44 @@ pub fn java_decimal_to_double(unscaled: i128, scale: i8) -> f64 {
     if unscaled < 0 { -magnitude } else { magnitude }
 }
 
+#[must_use]
+pub fn decimal_preimage_of_double(constant: f64, precision: u8, scale: i8) -> Option<(i128, i128)> {
+    if !constant.is_finite() {
+        return None;
+    }
+    let top = POW10_U128
+        .get(usize::from(precision))
+        .and_then(|power| power.checked_sub(1))
+        .and_then(|top| i128::try_from(top).ok())
+        .filter(|&top| top > 0)?;
+    let lower = least_reaching(-top, top, |unscaled| {
+        java_decimal_to_double(unscaled, scale)
+            .total_cmp(&constant)
+            .is_ge()
+    })?;
+    let upper = least_reaching(lower, top, |unscaled| {
+        java_decimal_to_double(unscaled, scale)
+            .total_cmp(&constant)
+            .is_gt()
+    })?;
+    Some((lower, upper))
+}
+
+fn least_reaching(mut low: i128, mut high: i128, reaches: impl Fn(i128) -> bool) -> Option<i128> {
+    if !reaches(high) {
+        return None;
+    }
+    while low < high {
+        let middle = low.checked_add_unsigned(low.abs_diff(high) / 2)?;
+        if reaches(middle) {
+            high = middle;
+        } else {
+            low = middle.checked_add(1)?;
+        }
+    }
+    Some(low)
+}
+
 #[allow(clippy::cast_precision_loss)]
 fn correctly_rounded(magnitude: u128, scale: i8) -> f64 {
     if magnitude == 0 {

@@ -446,3 +446,225 @@ fn only_decimal128_to_double_is_rewritten() {
     assert!(decimal_double_cast(&cast("i", DataType::Float64), &schema).is_none());
     assert!(!rewrite_cast(cast("d", DataType::Float64), &schema, false, false).transformed);
 }
+
+fn preimage_ctx() -> SessionContext {
+    use datafusion::arrow::datatypes::Schema;
+    use datafusion::arrow::record_batch::RecordBatch;
+    use datafusion::datasource::MemTable;
+    let ctx = ctx_with(None);
+    let top38 = 10i128.pow(38) - 1;
+    let d10: Vec<Option<i128>> = vec![
+        None,
+        Some(0),
+        Some(1),
+        Some(-1),
+        Some(50),
+        Some(51),
+        Some(-50),
+        Some(450),
+        Some(9_999_999_999),
+        Some(-9_999_999_999),
+    ];
+    let d38: Vec<Option<i128>> = vec![
+        None,
+        Some(0),
+        Some(1),
+        Some(-1),
+        Some(500_000_000_000_000_000),
+        Some(1_000_000_000_000_000_400),
+        Some(-22_129_547_339_983_247_000),
+        Some(4_500_000_000_000_000_000),
+        Some(top38),
+        Some(-top38),
+    ];
+    let ids: Vec<i32> = (0..10).collect();
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int32, false),
+        Field::new("d10", DataType::Decimal128(10, 2), true),
+        Field::new("d38", DataType::Decimal128(38, 18), true),
+    ]));
+    let batch = RecordBatch::try_new(
+        schema.clone(),
+        vec![
+            Arc::new(datafusion::arrow::array::Int32Array::from(ids)),
+            Arc::new(
+                Decimal128Array::from(d10)
+                    .with_precision_and_scale(10, 2)
+                    .unwrap(),
+            ),
+            Arc::new(
+                Decimal128Array::from(d38)
+                    .with_precision_and_scale(38, 18)
+                    .unwrap(),
+            ),
+        ],
+    )
+    .unwrap();
+    ctx.register_table(
+        "t",
+        Arc::new(MemTable::try_new(schema, vec![vec![batch]]).unwrap()),
+    )
+    .unwrap();
+    ctx
+}
+
+async fn optimized(ctx: &SessionContext, sql: &str) -> String {
+    ctx.sql(sql)
+        .await
+        .unwrap()
+        .into_optimized_plan()
+        .unwrap()
+        .display_indent()
+        .to_string()
+}
+
+async fn ids(ctx: &SessionContext, sql: &str) -> Vec<String> {
+    let mut out = values(ctx, sql).await;
+    out.sort();
+    out
+}
+
+const PREIMAGE_OPERATORS: [&str; 8] = [
+    "=",
+    "<>",
+    "<",
+    "<=",
+    ">",
+    ">=",
+    "IS DISTINCT FROM",
+    "IS NOT DISTINCT FROM",
+];
+
+#[tokio::test]
+async fn a_decimal_column_against_a_double_constant_plans_no_conversion() {
+    let ctx = preimage_ctx();
+    for column in ["d10", "d38"] {
+        for operator in PREIMAGE_OPERATORS {
+            for sql in [
+                format!("SELECT id FROM t WHERE CAST({column} AS DOUBLE) {operator} 0.5"),
+                format!("SELECT id FROM t WHERE 0.5 {operator} CAST({column} AS DOUBLE)"),
+                format!("SELECT id FROM t WHERE CAST({column} AS DOUBLE) {operator} -0.0"),
+                format!(
+                    "SELECT id FROM t WHERE CAST({column} AS DOUBLE) {operator} CAST(0.505 AS DOUBLE)"
+                ),
+            ] {
+                let plan = optimized(&ctx, &sql).await;
+                assert!(!plan.contains(DECIMAL_TO_DOUBLE_NAME), "{sql}\n{plan}");
+                assert!(plan.contains(column), "{sql}\n{plan}");
+            }
+        }
+        let listed =
+            format!("SELECT id FROM t WHERE CAST({column} AS DOUBLE) IN (0.5, 4.5, -0.01)");
+        assert!(
+            !optimized(&ctx, &listed)
+                .await
+                .contains(DECIMAL_TO_DOUBLE_NAME),
+            "{listed}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_constant_the_type_cannot_bound_keeps_the_per_row_conversion() {
+    let ctx = preimage_ctx();
+    for (column, above) in [("d10", "1e8"), ("d38", "1e20"), ("d38", "1e300")] {
+        for constant in [
+            "CAST('NaN' AS DOUBLE)",
+            "CAST('inf' AS DOUBLE)",
+            "CAST('-inf' AS DOUBLE)",
+            above,
+        ] {
+            for operator in PREIMAGE_OPERATORS {
+                for sql in [
+                    format!(
+                        "SELECT id FROM t WHERE CAST({column} AS DOUBLE) {operator} {constant}"
+                    ),
+                    format!(
+                        "SELECT id FROM t WHERE {constant} {operator} CAST({column} AS DOUBLE)"
+                    ),
+                ] {
+                    let plan = optimized(&ctx, &sql).await;
+                    assert!(plan.contains(DECIMAL_TO_DOUBLE_NAME), "{sql}\n{plan}");
+                }
+            }
+        }
+    }
+    let four = "SELECT id FROM t WHERE CAST(d10 AS DOUBLE) IN (0.5, 4.5, -0.01, 1.0)";
+    assert!(optimized(&ctx, four).await.contains(DECIMAL_TO_DOUBLE_NAME));
+}
+
+#[tokio::test]
+async fn the_rewritten_comparison_answers_as_the_per_row_form() {
+    use datafusion::arrow::datatypes::Schema;
+    use datafusion::arrow::record_batch::RecordBatch;
+    use datafusion::datasource::MemTable;
+    let ctx = preimage_ctx();
+    let constants = [
+        0.5,
+        0.505,
+        -0.5,
+        0.0,
+        -0.0,
+        0.01,
+        -0.01,
+        0.005,
+        4.5,
+        1e-18,
+        -1e-18,
+        5e-19,
+        1.000_000_000_000_000_4,
+        -22.129_547_339_983_247,
+        99_999_999.99,
+        -99_999_999.99,
+        -1e300,
+        1e20,
+        1e100,
+        f64::NAN,
+        f64::INFINITY,
+        f64::NEG_INFINITY,
+    ];
+    for constant in constants {
+        let schema = Arc::new(Schema::new(vec![Field::new("c", DataType::Float64, false)]));
+        let batch = RecordBatch::try_new(
+            schema.clone(),
+            vec![Arc::new(Float64Array::from(vec![constant]))],
+        )
+        .unwrap();
+        ctx.deregister_table("k").unwrap();
+        ctx.register_table(
+            "k",
+            Arc::new(MemTable::try_new(schema, vec![vec![batch]]).unwrap()),
+        )
+        .unwrap();
+        let written = format!("CAST('{constant:?}' AS DOUBLE)");
+        for column in ["d10", "d38"] {
+            for operator in PREIMAGE_OPERATORS {
+                for (folded, held) in [
+                    (
+                        format!(
+                            "SELECT id FROM t WHERE CAST({column} AS DOUBLE) {operator} {written}"
+                        ),
+                        format!(
+                            "SELECT t.id FROM t, k WHERE CAST(t.{column} AS DOUBLE) {operator} k.c"
+                        ),
+                    ),
+                    (
+                        format!(
+                            "SELECT id FROM t WHERE {written} {operator} CAST({column} AS DOUBLE)"
+                        ),
+                        format!(
+                            "SELECT t.id FROM t, k WHERE k.c {operator} CAST(t.{column} AS DOUBLE)"
+                        ),
+                    ),
+                ] {
+                    assert!(
+                        optimized(&ctx, &held)
+                            .await
+                            .contains(DECIMAL_TO_DOUBLE_NAME)
+                    );
+                    assert_eq!(ids(&ctx, &folded).await, ids(&ctx, &held).await, "{folded}");
+                }
+            }
+        }
+    }
+}
