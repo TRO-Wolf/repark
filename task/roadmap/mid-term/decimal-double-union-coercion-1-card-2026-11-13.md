@@ -102,6 +102,13 @@ On the head against Spark 4.1.2, both ANSI modes:
 - **The tripwire:** a Spark-door unmarked multi-row `VALUES` refuses.
 - **Retiring `widen_decimal_against_float`**, which seat E subsumes. It stays for part 2 under the six-file cap.
   Its four literal shapes are pinned to Spark's answers with both rules in place.
+- **The `IN` list of four or more DOUBLE constants against a DECIMAL column** (owner, 2026-11-15 evening; see the
+  last append). Seat E rewrites it at plan time with the delta's bound search:
+  - a decimal `IN` list where every constant's range holds at most one decimal;
+  - otherwise the ranges joined by `OR`, under a size limit;
+  - the per-row form beyond that limit.
+
+  Part 1 measured the row at 3.86x (100M rows).
 
 **Still unlike Spark, outside both parts:**
 - the select-list `IN (subquery)` (IN-SUBQUERY-PROJECTION-1);
@@ -140,3 +147,12 @@ section in [evidence/fix/cost.md](../../wo/decimal-double-union-coercion-1/evide
   Their speed card is [DOUBLE-DECIMAL-CAST-PERF-1](double-decimal-cast-perf-1-card-2026-11-14.md).
 - **Reported, not held:** an `IN` of four or more DOUBLE constants does not reach the hook (3.86x at 100M); an `IN`
   of three and a `BETWEEN` do (1.06x and 0.98x).
+
+## Append (2026-11-15 evening): the owner's ruling on the `IN` row
+
+**The owner's ruling** (2026-11-15, about 17:27 UTC), verbatim: "Okay awesome, go with your recommendation". The
+recommendation it adopts:
+- part 1 merges as it is once both verifiers pass;
+- an `IN` of four or more DOUBLE constants against a DECIMAL column is part 1's temporary cost exception. It
+  answers correctly and measures 3.862x at 100M rows (`d10`, four constants);
+- part 2 owes the rewrite, listed under "What part 2 still owes" above.

@@ -130,6 +130,9 @@ delta in every row.
 An `IN` list of four or more constants does not reach the hook (DataFusion 54.1.0 applies it to lists of at most
 three, `THRESHOLD_INLINE_INLIST`), so it keeps the per-row form, slower and correct.
 
+**Owner, 2026-11-15, about 17:27 UTC:** the four-constant row is part 1's temporary cost exception, and part 2 owes
+the rewrite (the card's "What part 2 still owes").
+
 ### Not re-run
 
 The C-012 set and the three ruled rows (`d38 < v`, written `CAST(v AS DECIMAL(10,2))` and

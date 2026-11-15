@@ -5581,7 +5581,8 @@ still open is `isModifiable`.
 - **Cost** — the DOUBLE-constant shape is held at main's speed. Three rows are the unit's cost exception (owner,
   2026-11-15, "yes to 3"): `d38 < v` 1.66x, written `CAST(v AS DECIMAL(10,2))` 1.34x and
   `CAST(v AS DECIMAL(38,18))` 3.36x, whose speed work is
-  [DOUBLE-DECIMAL-CAST-PERF-1](../task/roadmap/mid-term/double-decimal-cast-perf-1-card-2026-11-14.md).
+  [DOUBLE-DECIMAL-CAST-PERF-1](../task/roadmap/mid-term/double-decimal-cast-perf-1-card-2026-11-14.md). An `IN` of four
+  or more DOUBLE constants (3.86x) is a temporary exception (owner, 2026-11-15 evening); part 2 owes its rewrite.
 - **Rationale** — the owner's 2026-11-13 rulings, with Q8 re-ruled PRUNED-WRONG and Q2 kept on 2026-11-14,
   2026-11-14 "Merge and go with the split plan" (step 3), and 2026-11-15 "Merge 1338, proceed with A and yes to 3";
   card
