@@ -1,0 +1,1148 @@
+{
+ "coerce": {
+  "false": {
+   "all/all": {
+    "cells": 186570,
+    "k1 fixed vs main": 72452,
+    "k1 held vs main": 2761,
+    "k1 held vs main or ff34": 2761,
+    "k1 wrong": 22581,
+    "k1k2 fixed vs main": 72452,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 19820,
+    "main wrong": 92272,
+    "old emulated head held (right on main or ff34)": 3104,
+    "old emulated head wrong": 22924,
+    "seat_e fixed vs main": 72452,
+    "seat_e held vs main": 1521,
+    "seat_e held vs main or ff34": 1521,
+    "seat_e wrong": 21341
+   },
+   "coalesce/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 3276,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 0,
+    "k1k2 fixed vs main": 3276,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 3276,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 0,
+    "seat_e fixed vs main": 3276,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 0
+   },
+   "coalesce/other": {
+    "cells": 17275,
+    "k1 fixed vs main": 15880,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 0,
+    "k1k2 fixed vs main": 15880,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 15880,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 0,
+    "seat_e fixed vs main": 15880,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 0
+   },
+   "eq/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 337,
+    "k1 held vs main": 553,
+    "k1 held vs main or ff34": 553,
+    "k1 wrong": 553,
+    "k1k2 fixed vs main": 337,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 337,
+    "old emulated head held (right on main or ff34)": 554,
+    "old emulated head wrong": 554,
+    "seat_e fixed vs main": 337,
+    "seat_e held vs main": 298,
+    "seat_e held vs main or ff34": 298,
+    "seat_e wrong": 298
+   },
+   "eq/other": {
+    "cells": 17275,
+    "k1 fixed vs main": 2575,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 3273,
+    "k1k2 fixed vs main": 2575,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 3273,
+    "main wrong": 5848,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 3273,
+    "seat_e fixed vs main": 2575,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 3273
+   },
+   "eqf/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 378,
+    "k1 held vs main": 552,
+    "k1 held vs main or ff34": 552,
+    "k1 wrong": 552,
+    "k1k2 fixed vs main": 378,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 378,
+    "old emulated head held (right on main or ff34)": 771,
+    "old emulated head wrong": 771,
+    "seat_e fixed vs main": 378,
+    "seat_e held vs main": 333,
+    "seat_e held vs main or ff34": 333,
+    "seat_e wrong": 333
+   },
+   "eqf/other": {
+    "cells": 17275,
+    "k1 fixed vs main": 3036,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 3273,
+    "k1k2 fixed vs main": 3036,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 3273,
+    "main wrong": 6309,
+    "old emulated head held (right on main or ff34)": 77,
+    "old emulated head wrong": 3350,
+    "seat_e fixed vs main": 3036,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 3273
+   },
+   "greatest/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 3276,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 0,
+    "k1k2 fixed vs main": 3276,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 3276,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 0,
+    "seat_e fixed vs main": 3276,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 0
+   },
+   "greatest/other": {
+    "cells": 17275,
+    "k1 fixed vs main": 15880,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 0,
+    "k1k2 fixed vs main": 15880,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 15880,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 0,
+    "seat_e fixed vs main": 15880,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 0
+   },
+   "if/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 3276,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 0,
+    "k1k2 fixed vs main": 3276,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 3276,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 0,
+    "seat_e fixed vs main": 3276,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 0
+   },
+   "if/other": {
+    "cells": 17275,
+    "k1 fixed vs main": 15880,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 0,
+    "k1k2 fixed vs main": 15880,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 15880,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 0,
+    "seat_e fixed vs main": 15880,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 0
+   },
+   "in/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 337,
+    "k1 held vs main": 553,
+    "k1 held vs main or ff34": 553,
+    "k1 wrong": 553,
+    "k1k2 fixed vs main": 337,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 337,
+    "old emulated head held (right on main or ff34)": 554,
+    "old emulated head wrong": 554,
+    "seat_e fixed vs main": 337,
+    "seat_e held vs main": 298,
+    "seat_e held vs main or ff34": 298,
+    "seat_e wrong": 298
+   },
+   "in/other": {
+    "cells": 17275,
+    "k1 fixed vs main": 2575,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 3273,
+    "k1k2 fixed vs main": 2575,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 3273,
+    "main wrong": 5848,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 3273,
+    "seat_e fixed vs main": 2575,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 3273
+   },
+   "le/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 154,
+    "k1 held vs main": 275,
+    "k1 held vs main or ff34": 275,
+    "k1 wrong": 275,
+    "k1k2 fixed vs main": 154,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 154,
+    "old emulated head held (right on main or ff34)": 294,
+    "old emulated head wrong": 294,
+    "seat_e fixed vs main": 154,
+    "seat_e held vs main": 147,
+    "seat_e held vs main or ff34": 147,
+    "seat_e wrong": 147
+   },
+   "le/other": {
+    "cells": 17275,
+    "k1 fixed vs main": 1263,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 3273,
+    "k1k2 fixed vs main": 1263,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 3273,
+    "main wrong": 4536,
+    "old emulated head held (right on main or ff34)": 3,
+    "old emulated head wrong": 3276,
+    "seat_e fixed vs main": 1263,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 3273
+   },
+   "lt/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 154,
+    "k1 held vs main": 275,
+    "k1 held vs main or ff34": 275,
+    "k1 wrong": 275,
+    "k1k2 fixed vs main": 154,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 154,
+    "old emulated head held (right on main or ff34)": 294,
+    "old emulated head wrong": 294,
+    "seat_e fixed vs main": 154,
+    "seat_e held vs main": 147,
+    "seat_e held vs main or ff34": 147,
+    "seat_e wrong": 147
+   },
+   "lt/other": {
+    "cells": 17275,
+    "k1 fixed vs main": 1263,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 3273,
+    "k1k2 fixed vs main": 1263,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 3273,
+    "main wrong": 4536,
+    "old emulated head held (right on main or ff34)": 3,
+    "old emulated head wrong": 3276,
+    "seat_e fixed vs main": 1263,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 3273
+   },
+   "ns/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 337,
+    "k1 held vs main": 553,
+    "k1 held vs main or ff34": 553,
+    "k1 wrong": 553,
+    "k1k2 fixed vs main": 337,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 337,
+    "old emulated head held (right on main or ff34)": 554,
+    "old emulated head wrong": 554,
+    "seat_e fixed vs main": 337,
+    "seat_e held vs main": 298,
+    "seat_e held vs main or ff34": 298,
+    "seat_e wrong": 298
+   },
+   "ns/other": {
+    "cells": 17275,
+    "k1 fixed vs main": 2575,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 3455,
+    "k1k2 fixed vs main": 2575,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 3455,
+    "main wrong": 6030,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 3455,
+    "seat_e fixed vs main": 2575,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 3455
+   }
+  },
+  "true": {
+   "all/all": {
+    "cells": 165846,
+    "k1 fixed vs main": 72452,
+    "k1 held vs main": 2761,
+    "k1 held vs main or ff34": 2761,
+    "k1 wrong": 2767,
+    "k1k2 fixed vs main": 72452,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 6,
+    "main wrong": 72458,
+    "old emulated head held (right on main or ff34)": 3104,
+    "old emulated head wrong": 3110,
+    "seat_e fixed vs main": 72452,
+    "seat_e held vs main": 1521,
+    "seat_e held vs main or ff34": 1521,
+    "seat_e wrong": 1527
+   },
+   "coalesce/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 3276,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 0,
+    "k1k2 fixed vs main": 3276,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 3276,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 0,
+    "seat_e fixed vs main": 3276,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 0
+   },
+   "coalesce/other": {
+    "cells": 17275,
+    "k1 fixed vs main": 15880,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 0,
+    "k1k2 fixed vs main": 15880,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 15880,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 0,
+    "seat_e fixed vs main": 15880,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 0
+   },
+   "eq/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 337,
+    "k1 held vs main": 553,
+    "k1 held vs main or ff34": 553,
+    "k1 wrong": 553,
+    "k1k2 fixed vs main": 337,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 337,
+    "old emulated head held (right on main or ff34)": 554,
+    "old emulated head wrong": 554,
+    "seat_e fixed vs main": 337,
+    "seat_e held vs main": 298,
+    "seat_e held vs main or ff34": 298,
+    "seat_e wrong": 298
+   },
+   "eq/other": {
+    "cells": 13821,
+    "k1 fixed vs main": 2575,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 1,
+    "k1k2 fixed vs main": 2575,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 1,
+    "main wrong": 2576,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 1,
+    "seat_e fixed vs main": 2575,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 1
+   },
+   "eqf/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 378,
+    "k1 held vs main": 552,
+    "k1 held vs main or ff34": 552,
+    "k1 wrong": 552,
+    "k1k2 fixed vs main": 378,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 378,
+    "old emulated head held (right on main or ff34)": 771,
+    "old emulated head wrong": 771,
+    "seat_e fixed vs main": 378,
+    "seat_e held vs main": 333,
+    "seat_e held vs main or ff34": 333,
+    "seat_e wrong": 333
+   },
+   "eqf/other": {
+    "cells": 13821,
+    "k1 fixed vs main": 3036,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 1,
+    "k1k2 fixed vs main": 3036,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 1,
+    "main wrong": 3037,
+    "old emulated head held (right on main or ff34)": 77,
+    "old emulated head wrong": 78,
+    "seat_e fixed vs main": 3036,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 1
+   },
+   "greatest/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 3276,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 0,
+    "k1k2 fixed vs main": 3276,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 3276,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 0,
+    "seat_e fixed vs main": 3276,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 0
+   },
+   "greatest/other": {
+    "cells": 17275,
+    "k1 fixed vs main": 15880,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 0,
+    "k1k2 fixed vs main": 15880,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 15880,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 0,
+    "seat_e fixed vs main": 15880,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 0
+   },
+   "if/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 3276,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 0,
+    "k1k2 fixed vs main": 3276,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 3276,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 0,
+    "seat_e fixed vs main": 3276,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 0
+   },
+   "if/other": {
+    "cells": 17275,
+    "k1 fixed vs main": 15880,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 0,
+    "k1k2 fixed vs main": 15880,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 15880,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 0,
+    "seat_e fixed vs main": 15880,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 0
+   },
+   "in/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 337,
+    "k1 held vs main": 553,
+    "k1 held vs main or ff34": 553,
+    "k1 wrong": 553,
+    "k1k2 fixed vs main": 337,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 337,
+    "old emulated head held (right on main or ff34)": 554,
+    "old emulated head wrong": 554,
+    "seat_e fixed vs main": 337,
+    "seat_e held vs main": 298,
+    "seat_e held vs main or ff34": 298,
+    "seat_e wrong": 298
+   },
+   "in/other": {
+    "cells": 13821,
+    "k1 fixed vs main": 2575,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 1,
+    "k1k2 fixed vs main": 2575,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 1,
+    "main wrong": 2576,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 1,
+    "seat_e fixed vs main": 2575,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 1
+   },
+   "le/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 154,
+    "k1 held vs main": 275,
+    "k1 held vs main or ff34": 275,
+    "k1 wrong": 275,
+    "k1k2 fixed vs main": 154,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 154,
+    "old emulated head held (right on main or ff34)": 294,
+    "old emulated head wrong": 294,
+    "seat_e fixed vs main": 154,
+    "seat_e held vs main": 147,
+    "seat_e held vs main or ff34": 147,
+    "seat_e wrong": 147
+   },
+   "le/other": {
+    "cells": 13821,
+    "k1 fixed vs main": 1263,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 1,
+    "k1k2 fixed vs main": 1263,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 1,
+    "main wrong": 1264,
+    "old emulated head held (right on main or ff34)": 3,
+    "old emulated head wrong": 4,
+    "seat_e fixed vs main": 1263,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 1
+   },
+   "lt/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 154,
+    "k1 held vs main": 275,
+    "k1 held vs main or ff34": 275,
+    "k1 wrong": 275,
+    "k1k2 fixed vs main": 154,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 154,
+    "old emulated head held (right on main or ff34)": 294,
+    "old emulated head wrong": 294,
+    "seat_e fixed vs main": 154,
+    "seat_e held vs main": 147,
+    "seat_e held vs main or ff34": 147,
+    "seat_e wrong": 147
+   },
+   "lt/other": {
+    "cells": 13821,
+    "k1 fixed vs main": 1263,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 1,
+    "k1k2 fixed vs main": 1263,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 1,
+    "main wrong": 1264,
+    "old emulated head held (right on main or ff34)": 3,
+    "old emulated head wrong": 4,
+    "seat_e fixed vs main": 1263,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 1
+   },
+   "ns/d38_18": {
+    "cells": 3455,
+    "k1 fixed vs main": 337,
+    "k1 held vs main": 553,
+    "k1 held vs main or ff34": 553,
+    "k1 wrong": 553,
+    "k1k2 fixed vs main": 337,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 0,
+    "main wrong": 337,
+    "old emulated head held (right on main or ff34)": 554,
+    "old emulated head wrong": 554,
+    "seat_e fixed vs main": 337,
+    "seat_e held vs main": 298,
+    "seat_e held vs main or ff34": 298,
+    "seat_e wrong": 298
+   },
+   "ns/other": {
+    "cells": 13821,
+    "k1 fixed vs main": 2575,
+    "k1 held vs main": 0,
+    "k1 held vs main or ff34": 0,
+    "k1 wrong": 1,
+    "k1k2 fixed vs main": 2575,
+    "k1k2 held vs main": 0,
+    "k1k2 held vs main or ff34": 0,
+    "k1k2 wrong": 1,
+    "main wrong": 2576,
+    "old emulated head held (right on main or ff34)": 0,
+    "old emulated head wrong": 1,
+    "seat_e fixed vs main": 2575,
+    "seat_e held vs main": 0,
+    "seat_e held vs main or ff34": 0,
+    "seat_e wrong": 1
+   }
+  }
+ },
+ "dml": {
+  "false|native|k1k2": {
+   "cells": 56,
+   "fixed vs main": 18,
+   "head wrong": 18,
+   "held vs main": 1,
+   "held vs main or ff34": 1,
+   "main wrong": 35
+  },
+  "false|native|seat_e": {
+   "cells": 56,
+   "fixed vs main": 10,
+   "head wrong": 27,
+   "held vs main": 2,
+   "held vs main or ff34": 10,
+   "main wrong": 35
+  },
+  "false|repark|k1k2": {
+   "cells": 97,
+   "fixed vs main": 46,
+   "head wrong": 2,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 48
+  },
+  "false|repark|seat_e": {
+   "cells": 97,
+   "fixed vs main": 21,
+   "head wrong": 29,
+   "held vs main": 2,
+   "held vs main or ff34": 27,
+   "main wrong": 48
+  },
+  "true|native|k1k2": {
+   "cells": 56,
+   "fixed vs main": 18,
+   "head wrong": 18,
+   "held vs main": 1,
+   "held vs main or ff34": 1,
+   "main wrong": 35
+  },
+  "true|native|seat_e": {
+   "cells": 56,
+   "fixed vs main": 10,
+   "head wrong": 27,
+   "held vs main": 2,
+   "held vs main or ff34": 10,
+   "main wrong": 35
+  },
+  "true|repark|k1k2": {
+   "cells": 97,
+   "fixed vs main": 46,
+   "head wrong": 2,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 48
+  },
+  "true|repark|seat_e": {
+   "cells": 97,
+   "fixed vs main": 21,
+   "head wrong": 29,
+   "held vs main": 2,
+   "held vs main or ff34": 27,
+   "main wrong": 48
+  }
+ },
+ "faithful": {
+  "coerce|k1k2|false": {
+   "cells": 186570,
+   "spark_form_differs": 0
+  },
+  "coerce|k1k2|true": {
+   "cells": 165846,
+   "spark_form_differs": 1
+  },
+  "coerce|k1|false": {
+   "cells": 186570,
+   "spark_form_differs": 0
+  },
+  "coerce|k1|true": {
+   "cells": 165846,
+   "spark_form_differs": 1
+  },
+  "coerce|seat_e|false": {
+   "cells": 186570,
+   "spark_form_differs": 0
+  },
+  "coerce|seat_e|true": {
+   "cells": 165846,
+   "spark_form_differs": 0
+  },
+  "dml|k1k2|true": {
+   "cells": 97,
+   "spark_form_differs": []
+  },
+  "dml|seat_e|true": {
+   "cells": 97,
+   "spark_form_differs": []
+  }
+ },
+ "family": {
+  "false|k1k2|eq": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 2501
+  },
+  "false|k1k2|in": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 2501
+  },
+  "false|k1k2|lt": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 1084
+  },
+  "false|k1k2|ns": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 2501
+  },
+  "false|seat_e|eq": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 2501
+  },
+  "false|seat_e|in": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 2501
+  },
+  "false|seat_e|lt": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 1084
+  },
+  "false|seat_e|ns": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 2501
+  },
+  "true|k1k2|eq": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 2501
+  },
+  "true|k1k2|in": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 2501
+  },
+  "true|k1k2|lt": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 1084
+  },
+  "true|k1k2|ns": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 2501
+  },
+  "true|seat_e|eq": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 2501
+  },
+  "true|seat_e|in": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 2501
+  },
+  "true|seat_e|lt": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 1084
+  },
+  "true|seat_e|ns": {
+   "cells": 60000,
+   "head wrong": 0,
+   "held vs main": 0,
+   "held vs main or ff34": 0,
+   "main wrong": 2501
+  }
+ },
+ "kernels": {
+  "false|k1f|d10_2": {
+   "main direct cast differs from spark": 0,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 329,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k1f|d16_4": {
+   "main direct cast differs from spark": 0,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 329,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k1f|d20_6": {
+   "main direct cast differs from spark": 0,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 329,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k1f|d30_15": {
+   "main direct cast differs from spark": 3384,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 329,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k1f|d38_10": {
+   "main direct cast differs from spark": 0,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 329,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k1f|d38_18": {
+   "main direct cast differs from spark": 4726,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 329,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k1|d10_2": {
+   "main direct cast differs from spark": 1,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 332,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k1|d16_4": {
+   "main direct cast differs from spark": 1,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 332,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k1|d20_6": {
+   "main direct cast differs from spark": 0,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 332,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k1|d30_15": {
+   "main direct cast differs from spark": 3430,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 332,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k1|d38_10": {
+   "main direct cast differs from spark": 300,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 332,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k1|d38_18": {
+   "main direct cast differs from spark": 4601,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 332,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k2|d10_2": {
+   "main direct cast differs from spark": 0,
+   "main text route differs from spark": 0,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k2|d16_4": {
+   "main direct cast differs from spark": 0,
+   "main text route differs from spark": 0,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k2|d20_6": {
+   "main direct cast differs from spark": 0,
+   "main text route differs from spark": 0,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k2|d30_15": {
+   "main direct cast differs from spark": 724,
+   "main text route differs from spark": 0,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k2|d38_10": {
+   "main direct cast differs from spark": 118,
+   "main text route differs from spark": 0,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "false|k2|d38_18": {
+   "main direct cast differs from spark": 967,
+   "main text route differs from spark": 0,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k1f|d10_2": {
+   "main direct cast differs from spark": 0,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 329,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k1f|d16_4": {
+   "main direct cast differs from spark": 0,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 329,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k1f|d20_6": {
+   "main direct cast differs from spark": 0,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 329,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k1f|d30_15": {
+   "main direct cast differs from spark": 3384,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 329,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k1f|d38_10": {
+   "main direct cast differs from spark": 0,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 329,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k1f|d38_18": {
+   "main direct cast differs from spark": 4726,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 329,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k1|d10_2": {
+   "main direct cast differs from spark": 1,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 332,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k1|d16_4": {
+   "main direct cast differs from spark": 1,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 332,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k1|d20_6": {
+   "main direct cast differs from spark": 0,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 332,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k1|d30_15": {
+   "main direct cast differs from spark": 3430,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 332,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k1|d38_10": {
+   "main direct cast differs from spark": 300,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 332,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k1|d38_18": {
+   "main direct cast differs from spark": 4601,
+   "main python half-up route differs from spark": 0,
+   "main text route differs from spark": 332,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k2|d10_2": {
+   "main direct cast differs from spark": 0,
+   "main text route differs from spark": 0,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k2|d16_4": {
+   "main direct cast differs from spark": 0,
+   "main text route differs from spark": 0,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k2|d20_6": {
+   "main direct cast differs from spark": 0,
+   "main text route differs from spark": 0,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k2|d30_15": {
+   "main direct cast differs from spark": 724,
+   "main text route differs from spark": 0,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k2|d38_10": {
+   "main direct cast differs from spark": 118,
+   "main text route differs from spark": 0,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  },
+  "true|k2|d38_18": {
+   "main direct cast differs from spark": 967,
+   "main text route differs from spark": 0,
+   "spark text route differs from spark": 0,
+   "values": 5455
+  }
+ }
+}

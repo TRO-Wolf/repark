@@ -4,6 +4,9 @@
 - [raw/](raw/map.md) — one JSON object per cell and engine, as the runners wrote them.
 - [step0/](step0/map.md) — step 0 of the build on the stack base `ff34baf5` (2026-11-14): the table re-measured
   on main and `ff34baf5` against Spark, verifier 2's fuzz and family sets, the DML cells, the emulated head.
+- [step0b/](step0b/map.md) — step 0′ of part 1 on main `dc6b4c94` (2026-11-15, the split plan): the table
+  re-measured against Spark, every cell beside the recorded `ff34baf5` and `6f9f2aaa` answers and tagged by part,
+  the emulated part-1 head (seat E, K1, K2) on the fuzz, structured and DML sets, the kernel checks, and the zero fold.
 
 ## Provenance
 

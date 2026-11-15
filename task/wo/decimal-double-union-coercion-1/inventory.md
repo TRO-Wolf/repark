@@ -236,4 +236,67 @@ writes that row twice on Spark 4.1.2 with Iceberg 1.11.0 as on RePark (`ctl/cow/
 on both; merge-on-read keeps one). So `z/cow/merge_by_source` (`[1, 1, 2, 3, 3]` on main, `[1, 2, 3]` on Spark)
 is this unit's coercion fault (1e-20 matches 0.00 under `decimal(30,15)`), not a MERGE fault.
 
+## I. Step 0′ on main `dc6b4c94` (2026-11-15): the split plan's part 1, part 2 and the native door
+
+The owner's split plan (2026-11-14, "Merge and go with the split plan") builds this unit in two parts on main.
+Steps 1, 2 and 2b are merged: #1335 (K1 at the stores), #1337 (an exact `round` / `bround`) and #1336 (signed-zero
+constant comparison). Part 1 is seat E, K2 (an exact DECIMAL→DOUBLE cast) and K1 on written casts, Spark door only.
+Part 2 is seat V and the tripwire. Every RePark line in this section was re-read at `dc6b4c94`. `crates/repark-spark`
+is byte-identical to `ff34baf5`, so section H's `repark-spark` cites hold. The re-measured table is
+[evidence/step0b/table.md](evidence/step0b/table.md).
+
+### What moved since `ff34baf5`
+
+- **#1335 narrowed K1 to the stores.** The float branch left `bool_decimal_cast`: the rule's only branch is the
+  bool one (`crates/repark-functions/src/bool_decimal.rs:24-31`, `rewrite_bool_cast`). The stores call the
+  kernel through `repark_float_decimal_store` (`crates/repark-iceberg/src/write/conform_stage.rs:33-85`,
+  installed for both doors at `crates/repark-core/src/session/df_guards.rs:202-205`) and the conform stage
+  (`crates/repark-iceberg/src/write/conform.rs:415`). So H9 and H10 no longer hold: no comparison, union or
+  written cast runs K1 on main, on either door. The 8 native-door cells of N1 match main's `6f9f2aaa` answers again.
+- **#1336** adds the `signed_zero_literals` optimizer seat on both sides of `simplify_expressions`
+  (`df_guards.rs:233-237`; `crates/repark-core/src/session/df_guards/signed_zero/literals.rs:221, 260`). It folds a
+  constant FLOAT/DOUBLE comparison with zeros as Spark does. All eight widened signed-zero shapes are EQUAL on
+  main (critic item 7, in step0b/table.md).
+- **The live lists** (`evidence/step0b/raw/rule-lists-dc6b.json`): the Spark door runs 46 analyzer rules
+  (`repark_float_decimal_store` 41, `repark_optimizer_seat_config` 42, `signed_zero_literals` 43,
+  `spark_integer_overflow` 44, `bool_decimal_cast` 45, last). The native door runs 13 (`bool_decimal_cast` 11, then
+  `planned_timestamp_cast` 12, which `register_native_door_functions` adds after `finish_session`).
+- **#1337** makes `ROUND(double, s)` Spark's. Flip `c1` (`ROUND(-22.129547339983247, 18) = v`) is EQUAL, and
+  N2's 1,200 `ROUND` cells are gone.
+
+### The doors, by part
+
+| # | door | where (at `dc6b4c94`) | seat | part |
+|---|---|---|---|---|
+| I1 | Spark-door comparisons, `IN`, `BETWEEN`, simple-CASE `WHEN`, the `IN (subquery)` operand, equi-join keys | H1, H7; both analyzer passes (`crates/repark-spark/src/spark_ast.rs:273`, and the execute pass after it) | E | **part 1** |
+| I2 | loose `UNION` / `UNION ALL`, `INTERSECT` / `EXCEPT DISTINCT` (the `struct_setop` discriminator, `crates/repark-core/src/session/df_guards/struct_setop.rs:116`) | H5 | E | **part 1** |
+| I3 | CASE, `IF`, `coalesce`, `nvl2`, `nullif` (comparison only), `greatest`, `least`, `array`, `map` | H6 | E | **part 1** |
+| I4 | `DELETE`, `UPDATE … WHERE`, `MERGE … ON` with `d = v`, copy-on-write and merge-on-read | H8: `crates/repark-iceberg/src/write/predicate_dml.rs:376`, `predicate_dml/cow_commit.rs:60, 131`, `merge/mod.rs:516`, all `ctx.sql` on the session context | E | **part 1**. The `MERGE … ON` `-0.0` against `0.00` constant-source cells are **Q8 PRUNED-WRONG**: main's match is kept and pinned. |
+| I5 | writes fed by a unifying expression: `INSERT … SELECT … UNION`, `coalesce` / `CASE` / `greatest` / `array` sources, a FLOAT target, `UPDATE SET CASE` / `coalesce`, `MERGE` from a union source, `MERGE … SET CASE`, `MERGE … INSERT VALUES (coalesce(…))`, CTAS and RTAS over a union, `INSERT OVERWRITE` / `BY NAME` of a union | G1, G2, G4, H4 (the union half) | E | **part 1** |
+| I6 | DataFrame `union`, `unionByName`, `intersect`, `subtract`, column functions, `insertInto`, `writeTo(...).append()`, `overwritePartitions()`, `saveAsTable`, `createOrReplace` / `replace`, `replaceWhere` (critic M5) | H2; the writers compose Spark-door SQL over temp views (`python/repark/src/repark/spark/dataframe/writer_save.py`, `writer_layout.py`, `writer_schema.py`) | E | **part 1**, pinned by name |
+| I7 | `F.expr`, `selectExpr`, `filter(str)`: column expressions on a Spark-door frame | the frame's own session list types the expression (`crates/repark-python/src/column/expr_build.rs:74-85`, `predicate_state`) | E | **part 1** |
+| I8 | `F.expr` fragment subqueries (`VALUES` or a union inside a fragment's subquery, critic M1) | the door-free fragment context `expr_build.rs:272, 288-322` | V (and E in that context) | **part 2** |
+| I9 | `VALUES`: standalone, `INSERT … VALUES` into any target, `INSERT OVERWRITE` / `BY NAME` / CTAS / RTAS from `VALUES`, the MERGE `VALUES` source (`crates/repark-spark/src/merge.rs:147`), `restate_range_frames_and_replan` (`spark_ast.rs:551`), the DML `IN (VALUES …)` link (critic item 5) | H1, H4 | V, plus the tripwire | **part 2**. Part 1 must not move them; they are pinned as main has them. |
+| I10 | written `CAST(float AS DECIMAL(p,s))`, `TRY_CAST`, `arrow_cast` on the Spark door | `bool_decimal_cast`, last on the list (`crates/repark-python/src/session.rs:26`) | K1 (ff34's float branch, door-gated) | **part 1** |
+| I11 | written `CAST(decimal AS DOUBLE)` on the Spark door, and every widening cast seat E inserts | `bool_decimal_cast` | K2 (door-gated; the kernel is in `crates/repark-common/src/java_double/`) | **part 1** |
+| I12 | the implicit stores | #1335 (`conform_stage.rs`, `conform.rs`), both doors | K1 | merged; unchanged |
+| I13 | the native door, `repark.sql()` | `NativeDoorTypes::configure_analyzer_rules` (`crates/repark-python/src/session_runtime.rs:421-432`); `bool_decimal_cast` without the door flag | none | **native (Q2)**. Not widened. A native `CAST(v AS DECIMAL(10,2))` and `CAST(d AS DOUBLE)` keep DataFusion's and Arrow's answers. N1's cells are carded, not fixed. |
+| I14 | the Rust-embedded ANSI door | H11 | none | **native (Q2)**, unchanged |
+| I15 | nested struct, array and map leaves in `UNION` and `CASE` | G6 | none | card DECIMAL-DOUBLE-NESTED-1; pinned unchanged |
+| I16 | recursive CTEs | D6 | excluded by design | carded (RECURSIVE-CTE-JOIN-ERROR-1) |
+| I17 | v3 tables | the coercion seat is planning-time and version-independent (critic M6) | E | **part 1**, one v3 control |
+
+### How the door switch reaches each branch (item 3 of step 0′)
+
+- **Seat E** is installed in `SparkExtension::configure_analyzer_rules` (`crates/repark-spark/src/extension.rs:153-163`),
+  after `insert_literal_rule_before_coercion` (`:158`). That list is the Spark door's only (`session.rs:126-129`).
+  The native door's list is `session_runtime.rs:421-432`.
+- **K1 on casts and K2** are branches of `bool_decimal_cast`. Every Python session installs it through
+  `finish_session` (`session.rs:24-36`, the call at `:26`).
+  - The rule gets a door flag at that call from `repark_spark::is_spark_door_session` (`extension.rs:22-25`),
+    which reads the `SparkDoorSession` mark set at `extension.rs:109`.
+  - With the flag off, the rule keeps its bool branch only.
+  - The rule stays last, after `repark_float_decimal_store`, so a store cast is never rewritten as a written
+    cast.
+
 Up: [map.md](map.md).
