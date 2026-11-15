@@ -89,10 +89,10 @@ fn correctly_rounded(magnitude: u128, scale: i8) -> f64 {
     else {
         return by_text(magnitude, scale);
     };
-    if magnitude < EXACT_LIMIT {
-        if let Some(divisor) = POW10_EXACT.get(digits) {
-            return magnitude as f64 / divisor;
-        }
+    if magnitude < EXACT_LIMIT
+        && let Some(divisor) = POW10_EXACT.get(digits)
+    {
+        return magnitude as f64 / divisor;
     }
     let divisor = POW10_EXACT
         .get(digits)
@@ -119,10 +119,7 @@ fn refine(magnitude: u128, digits: usize, start: f64) -> Option<f64> {
         }
         let above = candidate.next_up();
         match against_midpoint(magnitude, digits, candidate, above)? {
-            std::cmp::Ordering::Greater => {
-                candidate = above;
-                continue;
-            }
+            std::cmp::Ordering::Greater => candidate = above,
             std::cmp::Ordering::Equal => return Some(even_of(candidate, above)),
             std::cmp::Ordering::Less => return Some(candidate),
         }

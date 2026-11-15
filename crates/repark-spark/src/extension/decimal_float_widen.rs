@@ -40,10 +40,6 @@ impl AnalyzerRule for SparkDecimalFloatWiden {
     }
 }
 
-#[expect(
-    clippy::missing_errors_doc,
-    reason = "The error contract is documented in map.md under the owner comment ban."
-)]
 pub fn insert_decimal_float_widen_before_coercion(
     mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
 ) -> Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {

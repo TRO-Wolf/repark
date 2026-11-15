@@ -8,7 +8,7 @@ use datafusion::prelude::{SessionConfig, SessionContext};
 use repark_core::{SessionBuildConf, SessionExtension};
 use repark_ta::TaExtension;
 
-pub mod decimal_float_widen;
+pub(crate) mod decimal_float_widen;
 pub mod session_catalog;
 
 pub use crate::normalize::struct_position;

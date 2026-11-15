@@ -236,16 +236,6 @@ DOORS: dict[str, Callable[[Cell], dict[int, str]]] = {
 }
 
 
-WAITING = pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "split plan, steps 4 and 5: a written CAST and a planner-typed VALUES cell keep "
-        "Arrow's binary rounding until K1 reaches written casts and seat V types VALUES"
-    ),
-)
-WAITING_DOORS = {"ctas", "df_cast", "ins_values", "sel_cast_col", "sel_cast_lit", "sel_try_cast"}
-
-
 @pytest.fixture(params=["true", "false"])
 def spark(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[Any]:
     _reset_active_session_for_tests()
@@ -261,13 +251,7 @@ def spark(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[Any]:
     _reset_active_session_for_tests()
 
 
-@pytest.mark.parametrize(
-    "door",
-    [
-        pytest.param(door, marks=WAITING) if door in WAITING_DOORS else door
-        for door in sorted(DOORS)
-    ],
-)
+@pytest.mark.parametrize("door", sorted(DOORS))
 def test_a_float_into_decimal_rounds_the_doubles_text_half_up(spark: Any, door: str) -> None:
     misses = []
     for (source, precision, scale), values in GROUPS.items():
@@ -282,7 +266,6 @@ def test_a_float_into_decimal_rounds_the_doubles_text_half_up(spark: Any, door: 
     assert misses == []
 
 
-@WAITING
 def test_the_card_rows_store_sparks_values(spark: Any) -> None:
     spark.sql("CREATE TABLE ice.ns.card (id INT, v DECIMAL(10,2)) USING iceberg").collect()
     spark.sql("INSERT INTO ice.ns.card VALUES (1, 0.1), (2, CAST(1.255 AS DOUBLE))").collect()
@@ -298,7 +281,6 @@ def test_the_card_rows_store_sparks_values(spark: Any) -> None:
     ]
 
 
-@WAITING
 def test_the_engine_cast_rounds_the_text_as_cast_double_to_decimal_rounding_1(
     spark: Any,
 ) -> None:
