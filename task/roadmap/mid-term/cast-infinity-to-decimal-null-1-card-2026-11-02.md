@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-02. **Filed by:** `claude-haiku-5-5` (records clerk) for the orchestrator, from the MAP-STRUCT-KEY-SUBSCRIPT-1 round-4 verifier verdict (its F2).
 
-**Status:** filed; grade C, P3; not dispatched. Pre-existing: head equals base. The subscript inherits the cast; the cast itself is outside the subscript.
+**Status:** filed; grade C, P3; not dispatched. Pre-existing: head equals base. The subscript inherits the cast; the cast itself is outside the subscript. **Related (2026-11-15):** the finite-overflow half, a FLOAT or DOUBLE too large for the DECIMAL with ANSI off, is [CAST-FLOAT-DECIMAL-OVERFLOW-NULL-1](cast-float-decimal-overflow-null-1-card-2026-11-15.md); both are the cast kernel's overflow contract.
 
 **Why:** Spark 4.1.2 casts an infinite or NaN DOUBLE or FLOAT to DECIMAL as NULL, in both ANSI modes (its decimal conversion of the non-finite value raises an internal number-format error, which the cast maps to NULL). RePark's CAST refuses the same value with Arrow's overflow text on the head and on the base. A struct-key or array-key lookup whose DECIMAL key field or element receives such a leaf therefore refuses where Spark answers NULL. The cause is the cast, not the subscript: the subscript casts each leaf with the door's own CAST, as Spark's rule does.
 

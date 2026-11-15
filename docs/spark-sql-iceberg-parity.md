@@ -5474,16 +5474,14 @@ still open is `isModifiable`.
   `changePrecision` `ROUND_HALF_UP`; NaN and ±Infinity are NULL in both modes; a store raises on overflow in both
   modes. *(oracle: source v4.1.2 and measured live 2026-11-13 and 2026-11-14,
   `task/wo/double-decimal-store-round-1/evidence/`.)*
-- **Still unlike Spark** — until step 4 of the split plan, a written `CAST`, `TRY_CAST`, `arrow_cast` or `F.col().cast`
-  to DECIMAL (in a SELECT, a `WHERE`, CTAS or RTAS, and `CAST(TIMESTAMP AS DECIMAL(38,18))`) rounds the binary value
-  (CAST-DOUBLE-TO-DECIMAL-ROUNDING-1), and a DECIMAL compared with a DOUBLE is compared as `decimal(30,15)`
-  (DECIMAL-DOUBLE-UNION-COERCION-1); until step 5, an `INSERT … VALUES` DOUBLE cell the planner types to the target
-  rounds the binary value; NaN and ±Infinity refuse where Spark stores NULL (CAST-INFINITY-TO-DECIMAL-NULL-1); `F.expr`
+- **Still unlike Spark** — on the Spark door the written casts and the `INSERT … VALUES` cell the planner types to
+  the target round the text since DECIMAL-DOUBLE-UNION-COERCION-1 part 1 (below); the native door's written casts
+  keep DataFusion's binary rounding (Q2); NaN and ±Infinity refuse where Spark stores NULL (CAST-INFINITY-TO-DECIMAL-NULL-1); `F.expr`
   float literals and `fillna` on a DECIMAL column (DOUBLE-DECIMAL-DATAFRAME-1); struct, array and map leaves
   (DOUBLE-DECIMAL-NESTED-LEAF-1).
 - **Pin** — `python/repark/tests/sql/test_double_decimal_store_round_1.py` (the store doors × 12 cells and the
-  native-door stores, both ANSI modes, every value measured on Spark; the written-cast and VALUES doors are strict xfails
-  naming steps 4 and 5); Rust pins in `repark-functions` `bool_decimal` (a float cast is left alone) and
+  native-door stores, both ANSI modes, every value measured on Spark; the written-cast and VALUES doors pass since
+  DECIMAL-DOUBLE-UNION-COERCION-1 part 1); Rust pins in `repark-functions` `bool_decimal` (a float cast is left alone) and
   `java_double/tests_unscaled.rs`, `repark-iceberg` `conform` and `conform_stage`.
 - **Rationale** — the owner's 2026-11-13 rulings ("Defaults, and merge #1323 when green", Q5′; "defaults", option A)
   and 2026-11-14 "Merge and go with the split plan" (the kernel only at stores; the cost exception covers stores only);
@@ -5518,6 +5516,61 @@ still open is `isModifiable`.
 - **Rationale** — the owner's 2026-11-14 "Merge and go with the split plan" (step 2) and the orchestrator's rulings
   at step 0 (four product files, the native door unchanged, a column scale refused, a FLOAT `bround` returning
   FLOAT); card [ROUND-DOUBLE-EXACT-1](../task/roadmap/mid-term/round-double-exact-1-card-2026-11-14.md).
+
+### DECIMAL-DOUBLE-UNION-COERCION-1 (part 1) — a DECIMAL beside a FLOAT or DOUBLE unifies to `double`, and DECIMAL→DOUBLE rounds once, as Spark's do — **FIXED 2026-11-15 on the Spark door (branch, not merged); part 2 (`VALUES`) open**
+
+- **repark** — Before (main `dc6b4c94`): DataFusion's `decimal_coercion` typed a DECIMAL beside a DOUBLE as
+  `decimal(30,15)` (or wider). This applied in comparisons, `IN`, `BETWEEN`, CASE, `coalesce`, `nvl2`, `nullif`,
+  `greatest` / `least`, `array` / map constructors, `IN (subquery)`, join keys, `UNION` and `INTERSECT` / `EXCEPT`.
+  - So `1e-20 = 0.00` held. `DELETE` / `UPDATE` / `MERGE … ON d = v` touched rows Spark leaves, and a `UNION` write
+    stored `0.0` for `1e-20`.
+  - Arrow's DECIMAL→DOUBLE rounded twice: `CAST(-22.129547339983247 AS DECIMAL(38,18))` gave `-22.129547339983244`.
+  - A written `CAST(double AS DECIMAL)` rounded the binary value.
+
+  After, on the Spark door:
+  - seat E (`spark_decimal_float_widen`, before `type_coercion`) casts the DECIMAL side to `double` in every one of
+    those contexts. `nullif` widens its comparison and keeps its first argument's type, and the user `LEFT SEMI` /
+    `LEFT ANTI` output type is kept;
+  - K2 (`java_decimal_to_double`) is JDK 17's `BigDecimal.doubleValue()`;
+  - a written `CAST` / `TRY_CAST` / `arrow_cast` of a FLOAT or DOUBLE to DECIMAL rounds the double's text half up (K1).
+  - The writes they feed store Spark's values: `INSERT … SELECT … UNION`, CTAS / RTAS, `saveAsTable`,
+    `writeTo.append`, `createOrReplace`, `replaceWhere`, `insertInto`, `overwritePartitions`, and v3 tables.
+- **spark** — Spark 4.1.2:
+  - `findWiderTypeForTwo` unifies a DECIMAL with a FLOAT or DOUBLE to `DoubleType`, pairwise in a comparison and
+    over all operands in a set operation or a function;
+  - `Decimal.toDouble` is `BigDecimal.doubleValue()`;
+  - `Cast` to DECIMAL is `BigDecimal(Double.toString(d))` rounded `HALF_UP`.
+
+  *(oracle: measured live 2026-11-15, `task/wo/decimal-double-union-coercion-1/evidence/step0b/` and `evidence/fix/`.)*
+- **Still unlike Spark** — a multi-row `VALUES` mixing them (part 2, seat V). Also:
+  - a `MERGE` whose union source `merge.rs` types before analysis (part 2);
+  - an `F.expr` fragment subquery (part 2);
+  - nested leaves (DECIMAL-DOUBLE-NESTED-1);
+  - `decimal + FLOAT` (DECIMAL-FLOAT-ARITH-1);
+  - a select-list `IN (subquery)` (IN-SUBQUERY-PROJECTION-1);
+  - `UPDATE … WHERE v IN (w)` over DOUBLE columns with `-0.0` (SIGNED-ZERO-UPDATE-IN-LIST-1);
+  - an E-notation STRING to DECIMAL (STRING-DECIMAL-EXPONENT-1);
+  - an ANSI-off finite overflow refusing (CAST-FLOAT-DECIMAL-OVERFLOW-NULL-1).
+
+  **The native door is not widened (Q2):** its comparisons, unions and casts keep DataFusion's and Arrow's answers.
+  **`MERGE … ON` of `-0.0` against `0.00` from a constant source keeps the match** where Spark's file pruning misses
+  it (Q8, PRUNED-WRONG).
+- **Pin** — `python/repark/tests/sql/test_decimal_double_coercion_1.py`, both ANSI modes:
+  - the Spark-door DML cells, copy-on-write and merge-on-read, and the flip casts;
+  - the signed-zero shapes, and Q8 at main's answer;
+  - a coercion-fuzz sample;
+  - the named writer doors, a v3 DELETE, a non-ASCII union, and the struct refusal;
+  - the four literal shapes with both rules in place, the written casts, and the `VALUES` cells at main's answer;
+  - the native door.
+
+  Rust pins:
+  - `repark-spark` `extension/decimal_float_widen/tests.rs`;
+  - `repark-functions` `bool_decimal/tests.rs`;
+  - `repark-common` `java_double/decimal_double/tests.rs` (the text-free path against the digit path, at halfway
+    points too).
+- **Rationale** — the owner's 2026-11-13 rulings, with Q8 re-ruled PRUNED-WRONG and Q2 kept on 2026-11-14, and
+  2026-11-14 "Merge and go with the split plan" (step 3); card
+  [DECIMAL-DOUBLE-UNION-COERCION-1](../task/roadmap/mid-term/decimal-double-union-coercion-1-card-2026-11-13.md).
 
 ## 5. Facade drop-in semantics (DECLARED)
 
