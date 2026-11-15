@@ -64,10 +64,14 @@ ANSI modes, with the cost row recorded.
 - **Measured.** The step 0 table re-run on the head: on the Spark doors every cell answers Spark's value, in
   both ANSI modes. 94,712 cells per mode turn EQUAL, and no cell that was EQUAL on main moves.
   The evidence is in [the unit's fix/ directory](../../wo/round-double-exact-1/evidence/fix/fix.md).
-- **Cost (the brief's 1.05x halt fires).** The C-012 set holds at 0.997 and 1.004, as do `round(v, 18)` at
-  1.021 and `bround` at 0.974. A 10M-row `round(v, 2)` projection is 1.49x for DOUBLE, 1.72x for FLOAT and
-  1.91x for prices with exact halves, and a `DECIMAL(10,2)` store of `round(v, 2)` is 1.09x. The cost is in
-  the kernel, against a 3-flop binary round; five alternating runs, in [fix.md](../../wo/round-double-exact-1/evidence/fix/fix.md).
+- **Cost (the brief's 1.05x halt fires).** Only the C-012 set holds, at 0.997 and 1.004. The builder's 10M-row
+  rows put `round(v, 2)` at 1.49x for DOUBLE, 1.72x for FLOAT and 1.91x for prices with exact halves, and a
+  `DECIMAL(10,2)` store at 1.09x. Both PR #1337 verifiers re-ran every row at 100M rows (20M for stores),
+  where fixed overhead dilutes less: `round(v, 2)` 1.72x to 1.75x, FLOAT 2.44x to 2.70x, prices 2.26x to
+  2.39x, `round(v, 18)` 1.15x to 1.17x, `bround` 1.05x to 1.06x, the DOUBLE store 1.18x to 1.19x and the
+  `DECIMAL(10,2)` store 1.12x to 1.16x. So `round(v, 18)`, `bround` and the stores do not hold 1.05x either.
+  The added cost is about +1.5 to +2.0 ns per DOUBLE value and +1.7 to +2.3 ns per FLOAT value, in the kernel,
+  against a 3-flop binary round. Both tables are in [fix.md](../../wo/round-double-exact-1/evidence/fix/fix.md).
   The owner rules on the cost before this merges.
 - **The native gap** (orchestrator ruling, 2026-11-14, after the owner's Q2 and native-gap rulings).
   `repark.sql` keeps DataFusion's own `round`: 11,158 `round` cells per mode still differ from Spark,

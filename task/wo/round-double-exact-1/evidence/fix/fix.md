@@ -108,8 +108,31 @@ The ratio column is the median of the per-run head/base ratios.
 - **Prices** pay the digit path at every exact half (one value in ten).
 - **The `DECIMAL(10,2)` store:** 1.09x.
 
-**What holds 1.05x:** the C-012 set, `round(v, 18)` (the unchanged guard) and `bround`, which was already
-paying a per-row builder.
+**What holds 1.05x at 10M rows:** the C-012 set, `round(v, 18)` (the unchanged guard) and `bround`, which was
+already paying a per-row builder. At 100M rows only the C-012 set holds (below).
+
+**The verifiers' re-run at 100M rows.** Both PR #1337 verifiers (Muse 1.3, xhigh, both PASS) re-ran `cost.py`
+with `ROWS = 100,000,000` and `STORE_ROWS = 20,000,000`. Each ran five alternating runs of main `d1679e4f`, the
+head `d859b961` and a second copy of main as the control, under the exclusive measure lock, verifier 1 on 16
+cores and verifier 2 on 10. The ratio is the median of the per-run head/base ratios.
+
+| row | verifier 1 head/base | control | verifier 2 head/base | control |
+|---|---|---|---|---|
+| `sum(round(v, 2))` | **1.751** | 1.013 | **1.717** | 1.012 |
+| `sum(round(v, 18))` | **1.168** | 0.984 | **1.145** | 1.019 |
+| `sum(bround(v, 2))` | **1.057** | 0.990 | **1.051** | 0.954 |
+| `sum(round(f, 2))`, FLOAT | **2.440** | 1.019 | **2.702** | 0.979 |
+| `sum(round(p, 2))`, prices | **2.264** | 1.010 | **2.393** | 1.010 |
+| store into DOUBLE, 20M | **1.177** | 1.015 | **1.190** | 1.018 |
+| store into `DECIMAL(10,2)`, 20M | **1.164** | 1.021 | **1.116** | 0.980 |
+
+- **The added time per value matches the 10M rows:** +1.5 to +2.0 ns per DOUBLE value and +1.7 to +2.3 ns per
+  FLOAT value.
+- **The ratios are higher** because fixed overhead dilutes less at 100M rows.
+- **So `round(v, 18)`, `bround` and both stores do not hold 1.05x** at this length.
+- **Noise:** verifier 1's control was within 0.984 to 1.021. Verifier 2's control spread on the DOUBLE store
+  reached 0.912 to 1.250, so that verifier calls its store row inconclusive.
+- **The raw samples** are in the verifiers' scratch work, outside the repository.
 
 **A tried and dropped optimisation.** `#[inline]` and `#[cold]` hints on the kernel changed nothing beyond
 noise: 1.50x, 2.17x and 1.67x on the same three rows ([raw/cost-inline-samples.jsonl](raw/cost-inline-samples.jsonl),
