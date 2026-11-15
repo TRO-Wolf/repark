@@ -22,6 +22,7 @@ const ALL_ARGUMENTS: &[&str] = &[
     "make_array",
 ];
 const AFTER_FIRST_ARGUMENT: &[&str] = &["if", "nvl2"];
+const MAP_CONSTRUCTOR: &str = "__repark_create_map__";
 
 #[derive(Debug, Default)]
 pub struct SparkDecimalFloatWiden;
@@ -95,12 +96,15 @@ fn is_comparison(op: Operator) -> bool {
     )
 }
 
-fn function_positions(name: &str, arity: usize) -> Option<std::ops::Range<usize>> {
+fn function_positions(name: &str, arity: usize) -> Option<Vec<usize>> {
     if ALL_ARGUMENTS.contains(&name) {
-        return Some(0..arity);
+        return Some((0..arity).collect());
     }
     if AFTER_FIRST_ARGUMENT.contains(&name) {
-        return Some(1.min(arity)..arity);
+        return Some((1..arity).collect());
+    }
+    if name == MAP_CONSTRUCTOR {
+        return Some((1..arity).step_by(2).collect());
     }
     None
 }
@@ -150,8 +154,9 @@ fn expr_widens(expr: &Expr, schema: &DFSchema) -> bool {
             }
             function_positions(name, function.args.len()).is_some_and(|positions| {
                 mixed(
-                    &function.args[positions]
+                    &positions
                         .iter()
+                        .filter_map(|&position| function.args.get(position))
                         .map(|arg| expr_class(arg, schema))
                         .collect::<Vec<_>>(),
                 )
@@ -568,27 +573,32 @@ fn widen_function(
     let name = function.func.name().to_string();
     let mut args = function.args;
     if name == "nullif" && args.len() == 2 {
-        let first = expr_class(&args[0], schema);
-        if first == Class::Decimal && expr_class(&args[1], schema) == Class::Float {
-            let second = args.remove(1);
-            let value = args.remove(0);
-            return Expr::Case(Case::new(
-                None,
-                vec![(
-                    Box::new(Expr::BinaryExpr(BinaryExpr::new(
-                        Box::new(to_double(value.clone())),
-                        Operator::Eq,
-                        Box::new(second),
-                    ))),
-                    Box::new(Expr::Literal(ScalarValue::Null, None)),
-                )],
-                Some(Box::new(value)),
-            ));
+        let second = args.remove(1);
+        let value = args.remove(0);
+        let (left, right) = widen_pair(value.clone(), second, schema);
+        return Expr::Case(Case::new(
+            None,
+            vec![(
+                Box::new(Expr::BinaryExpr(BinaryExpr::new(
+                    Box::new(left),
+                    Operator::Eq,
+                    Box::new(right),
+                ))),
+                Box::new(Expr::Literal(ScalarValue::Null, None)),
+            )],
+            Some(Box::new(value)),
+        ));
+    }
+    if let Some(positions) = function_positions(&name, args.len()) {
+        let chosen = positions
+            .iter()
+            .filter_map(|&position| args.get(position).cloned())
+            .collect::<Vec<_>>();
+        for (position, widened) in positions.into_iter().zip(widen_all(chosen, schema)) {
+            if let Some(slot) = args.get_mut(position) {
+                *slot = widened;
+            }
         }
-        args = widen_all(args, schema);
-    } else if let Some(positions) = function_positions(&name, args.len()) {
-        let tail = args.split_off(positions.start);
-        args.extend(widen_all(tail, schema));
     }
     Expr::ScalarFunction(datafusion::logical_expr::expr::ScalarFunction::new_udf(
         function.func,

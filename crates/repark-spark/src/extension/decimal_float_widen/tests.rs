@@ -147,6 +147,8 @@ async fn expressions_unify_a_decimal_and_a_double_to_double() {
             DataType::Decimal128(10, 2),
             "0.00",
         ),
+        ("SELECT nullif(ff, dbig) FROM src", DataType::Float32, ""),
+        ("SELECT nullif(ff, dc) FROM src", DataType::Float32, "0.5"),
         (
             "SELECT count(*) FROM src a JOIN src b ON a.dc = b.dd",
             DataType::Int64,
