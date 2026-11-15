@@ -27,7 +27,9 @@ def dml_map(path: Path) -> dict:
     for r in lines(path):
         if r["key"] == "provenance":
             continue
-        out[r["key"]] = ("ERR", r.get("head", "")[:60]) if "error" in r else r.get("ids", r.get("answer"))
+        out[r["key"]] = (
+            ("ERR", r.get("head", "")[:60]) if "error" in r else r.get("ids", r.get("answer"))
+        )
     return out
 
 
@@ -64,15 +66,21 @@ for mode in MODES:
         mn_direct = {k[1]: a for k, a in mn.items() if k[0] == f"{kern}_direct_{dec}"}
         report["kernels"][f"{mode}|{kern}|{dec}"] = {
             "values": len(direct),
-            "spark text route differs from spark": sum(1 for t, a in direct.items() if sp_text.get(t) != a),
-            "main text route differs from spark": sum(1 for t, a in direct.items() if mn_text.get(t) != a),
-            "main direct cast differs from spark": sum(1 for t, a in direct.items() if mn_direct.get(t) != a),
+            "spark text route differs from spark": sum(
+                1 for t, a in direct.items() if sp_text.get(t) != a
+            ),
+            "main text route differs from spark": sum(
+                1 for t, a in direct.items() if mn_text.get(t) != a
+            ),
+            "main direct cast differs from spark": sum(
+                1 for t, a in direct.items() if mn_direct.get(t) != a
+            ),
         }
         if kern in ("k1", "k1f"):
             route = {k[1]: a for k, a in mr.items() if k[0] == f"{kern}_route_{dec}"}
-            report["kernels"][f"{mode}|{kern}|{dec}"]["main python half-up route differs from spark"] = sum(
-                1 for t, a in direct.items() if route.get(t) != a
-            )
+            report["kernels"][f"{mode}|{kern}|{dec}"][
+                "main python half-up route differs from spark"
+            ] = sum(1 for t, a in direct.items() if route.get(t) != a)
 for mode in MODES:
     sp = cmap(SPARK / f"coerce-spark-ansi-{mode}.jsonl")
     mn = cmap(MAIN / f"coerce-repark-ansi-{mode}.jsonl")
@@ -96,8 +104,19 @@ for mode in MODES:
                 c[f"{v} fixed vs main"] += h and not m
         for v, hd in heads.items():
             if v == "k1k2" and hd.get(k) != s and not (mode == "false" and k[0].endswith("d5_0")):
-                held.append({"set": "coerce", "variant": v, "ansi": mode, "shape": k[0], "value": k[1],
-                             "spark": s, "main": mn.get(k), "ff34": ff.get(k), "head": hd.get(k)})
+                held.append(
+                    {
+                        "set": "coerce",
+                        "variant": v,
+                        "ansi": mode,
+                        "shape": k[0],
+                        "value": k[1],
+                        "spark": s,
+                        "main": mn.get(k),
+                        "ff34": ff.get(k),
+                        "head": hd.get(k),
+                    }
+                )
     report["coerce"][mode] = {k: dict(c) for k, c in sorted(by.items())}
 for mode in MODES:
     sp = json.loads((SPARK / f"family-spark-ansi-{mode}.json").read_text())
@@ -144,10 +163,22 @@ for mode in MODES:
                 c["held vs main or ff34"] += (not h) and (m or f)
                 c["fixed vs main"] += h and not m
                 if not h:
-                    held.append({"set": f"dml-{door}", "variant": v, "ansi": mode, "key": k, "spark": s,
-                                 "main": mn[k], "ff34": ff.get(k), "head": hd.get(k)})
+                    held.append(
+                        {
+                            "set": f"dml-{door}",
+                            "variant": v,
+                            "ansi": mode,
+                            "key": k,
+                            "spark": s,
+                            "main": mn[k],
+                            "ff34": ff.get(k),
+                            "head": hd.get(k),
+                        }
+                    )
             report["dml"][f"{mode}|{door}|{v}"] = dict(c)
-(OUT / "head-summary.json").write_text(json.dumps(report, indent=1, sort_keys=True, default=str) + "\n")
+(OUT / "head-summary.json").write_text(
+    json.dumps(report, indent=1, sort_keys=True, default=str) + "\n"
+)
 with (OUT / "head-wrong.jsonl").open("w") as fh:
     for row in held:
         fh.write(json.dumps(row, sort_keys=True, default=str) + "\n")

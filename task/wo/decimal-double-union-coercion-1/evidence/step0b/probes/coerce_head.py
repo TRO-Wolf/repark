@@ -2,6 +2,7 @@ import json
 import math
 import random
 import sys
+from pathlib import Path
 
 engine, ansi, out, variant = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 if engine == "spark":
@@ -34,11 +35,20 @@ for _ in range(500):
         vals.append(y)
 for _ in range(200):
     vals.append(rng.uniform(-100, 100))
-texts = sorted(set(repr(v) for v in vals))
+texts = sorted({repr(v) for v in vals})
 rows = [(i, t) for i, t in enumerate(texts)]
 s.createDataFrame(rows, "id INT, t STRING").createOrReplaceTempView("raw")
-s.sql("SELECT id, CAST(t AS DOUBLE) AS v, CAST(CAST(t AS DOUBLE) AS FLOAT) AS f FROM raw").createOrReplaceTempView("x")
-DECS = ["DECIMAL(10,2)", "DECIMAL(10,3)", "DECIMAL(16,4)", "DECIMAL(20,6)", "DECIMAL(38,18)", "DECIMAL(5,0)"]
+s.sql(
+    "SELECT id, CAST(t AS DOUBLE) AS v, CAST(CAST(t AS DOUBLE) AS FLOAT) AS f FROM raw"
+).createOrReplaceTempView("x")
+DECS = [
+    "DECIMAL(10,2)",
+    "DECIMAL(10,3)",
+    "DECIMAL(16,4)",
+    "DECIMAL(20,6)",
+    "DECIMAL(38,18)",
+    "DECIMAL(5,0)",
+]
 K1 = variant in ("k1", "k1k2")
 K2 = variant == "k1k2"
 
@@ -60,7 +70,9 @@ for d in DECS:
     SHAPES[f"lt_round_{k}"] = f"CAST({w} < v AS STRING)"
     SHAPES[f"le_round_{k}"] = f"CAST(v <= {w} AS STRING)"
     SHAPES[f"ns_round_{k}"] = f"CAST({w} <=> v AS STRING)"
-    SHAPES[f"eqf_round_{k}"] = f"CAST({to_dbl(to_dec(f'ROUND(f, {r})', d))} = CAST(f AS DOUBLE) AS STRING)"
+    SHAPES[f"eqf_round_{k}"] = (
+        f"CAST({to_dbl(to_dec(f'ROUND(f, {r})', d))} = CAST(f AS DOUBLE) AS STRING)"
+    )
     SHAPES[f"coalesce_{k}"] = f"CAST(coalesce({to_dbl(f'CAST(NULL AS {d})')}, v) AS STRING)"
     SHAPES[f"if_{k}"] = f"CAST(IF(id < 0, {to_dbl(f'CAST(0 AS {d})')}, v) AS STRING)"
     SHAPES[f"greatest_{k}"] = f"CAST(greatest({to_dbl(f'CAST(-1000 AS {d})')}, v) AS STRING)"
@@ -72,8 +84,10 @@ for name, expr in SHAPES.items():
         for i, t in enumerate(texts):
             records.append({"shape": name, "value": t, "answer": got.get(i)})
     except Exception as e:
-        records.append({"shape": name, "value": None, "answer": "ERR " + str(e).strip().splitlines()[0][:200]})
-with open(out, "w") as fh:
+        records.append(
+            {"shape": name, "value": None, "answer": "ERR " + str(e).strip().splitlines()[0][:200]}
+        )
+with Path(out).open("w") as fh:
     for r in records:
         fh.write(json.dumps(r) + "\n")
 print(engine, ansi, variant, len(records), len(texts))

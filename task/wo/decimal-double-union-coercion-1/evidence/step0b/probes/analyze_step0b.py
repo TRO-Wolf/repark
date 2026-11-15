@@ -6,7 +6,13 @@ from pathlib import Path
 NEW, OLD, OUT = (Path(p) for p in sys.argv[1:4])
 OUT.mkdir(parents=True, exist_ok=True)
 OK = ("equal", "EQUAL", "BOTH-RAISE", "both-raise")
-NESTED = ("select/struct_", "select/array_union", "select/array_case", "select/map_union", "select/map_case")
+NESTED = (
+    "select/struct_",
+    "select/array_union",
+    "select/array_case",
+    "select/map_union",
+    "select/map_case",
+)
 Q8 = ("merge_on_zero_today", "merge_on_zero_widened")
 
 
@@ -63,7 +69,9 @@ for r in lines(NEW / "cells.jsonl"):
             c["broken since 6f9f"] += (not m) and ok(o["main_verdict"])
     if not m:
         counts[("wrong on main by part", r["ansi"])][r["part"]] += 1
-        counts[("wrong on main by part and section", r["ansi"] + "|" + r["part"])][r["section"]] += 1
+        counts[("wrong on main by part and section", r["ansi"] + "|" + r["part"])][
+            r["section"]
+        ] += 1
 with (OUT / "cells.jsonl").open("w") as fh:
     for r in rows:
         fh.write(json.dumps(r, sort_keys=True) + "\n")
@@ -71,6 +79,7 @@ with (OUT / "moved-since-6f9f.jsonl").open("w") as fh:
     for r in moved:
         fh.write(json.dumps(r, sort_keys=True) + "\n")
 (OUT / "summary.json").write_text(
-    json.dumps({"|".join(k): dict(v) for k, v in sorted(counts.items())}, indent=1, sort_keys=True) + "\n"
+    json.dumps({"|".join(k): dict(v) for k, v in sorted(counts.items())}, indent=1, sort_keys=True)
+    + "\n"
 )
 print("cells", len(rows), "moved since 6f9f", len(moved))

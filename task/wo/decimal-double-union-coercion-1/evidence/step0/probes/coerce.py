@@ -2,6 +2,7 @@ import json
 import math
 import random
 import sys
+from pathlib import Path
 
 engine, ansi, out = sys.argv[1], sys.argv[2], sys.argv[3]
 if engine == "spark":
@@ -34,11 +35,20 @@ for _ in range(500):
         vals.append(y)
 for _ in range(200):
     vals.append(rng.uniform(-100, 100))
-texts = sorted(set(repr(v) for v in vals))
+texts = sorted({repr(v) for v in vals})
 rows = [(i, t) for i, t in enumerate(texts)]
 s.createDataFrame(rows, "id INT, t STRING").createOrReplaceTempView("raw")
-s.sql("SELECT id, CAST(t AS DOUBLE) AS v, CAST(CAST(t AS DOUBLE) AS FLOAT) AS f FROM raw").createOrReplaceTempView("x")
-DECS = ["DECIMAL(10,2)", "DECIMAL(10,3)", "DECIMAL(16,4)", "DECIMAL(20,6)", "DECIMAL(38,18)", "DECIMAL(5,0)"]
+s.sql(
+    "SELECT id, CAST(t AS DOUBLE) AS v, CAST(CAST(t AS DOUBLE) AS FLOAT) AS f FROM raw"
+).createOrReplaceTempView("x")
+DECS = [
+    "DECIMAL(10,2)",
+    "DECIMAL(10,3)",
+    "DECIMAL(16,4)",
+    "DECIMAL(20,6)",
+    "DECIMAL(38,18)",
+    "DECIMAL(5,0)",
+]
 SHAPES = {}
 for d in DECS:
     k = d.replace("DECIMAL", "d").replace(",", "_").replace("(", "").replace(")", "")
@@ -59,8 +69,10 @@ for name, expr in SHAPES.items():
         for i, t in enumerate(texts):
             records.append({"shape": name, "value": t, "answer": got.get(i)})
     except Exception as e:
-        records.append({"shape": name, "value": None, "answer": "ERR " + str(e).strip().splitlines()[0][:200]})
-with open(out, "w") as fh:
+        records.append(
+            {"shape": name, "value": None, "answer": "ERR " + str(e).strip().splitlines()[0][:200]}
+        )
+with Path(out).open("w") as fh:
     for r in records:
         fh.write(json.dumps(r) + "\n")
 print(engine, ansi, len(records), len(texts))

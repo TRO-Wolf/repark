@@ -24,7 +24,10 @@ if engine == "native":
     sql = repark.sql
     using = ""
     modes = {"cow": ""}
-    prov = {"engine": "native", "native": "<scratchpad>/" + native.__file__.split("/scratchpad/", 1)[-1]}
+    prov = {
+        "engine": "native",
+        "native": "<scratchpad>/" + native.__file__.split("/scratchpad/", 1)[-1],
+    }
 else:
     if engine == "spark":
         import pyspark
@@ -43,7 +46,10 @@ else:
         from repark import ReparkSession as Builder
 
         b = Builder.builder.appName("ddu-dml")
-        prov = {"engine": "repark", "native": "<scratchpad>/" + native.__file__.split("/scratchpad/", 1)[-1]}
+        prov = {
+            "engine": "repark",
+            "native": "<scratchpad>/" + native.__file__.split("/scratchpad/", 1)[-1],
+        }
     s = (
         b.config("spark.sql.catalog.lc", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.lc.type", "hadoop")
@@ -66,7 +72,8 @@ TABLES = {
     ),
     "u": (
         "DECIMAL(38,18)",
-        "(1, CAST('-22.129547339983247' AS DECIMAL(38,18)), CAST('-22.129547339983247' AS DOUBLE)), "
+        "(1, CAST('-22.129547339983247' AS DECIMAL(38,18)), CAST('-22.129547339983247' AS "
+        "DOUBLE)), "
         "(2, CAST(1.5 AS DECIMAL(38,18)), CAST('1.5' AS DOUBLE)), "
         "(3, CAST('1.0000000000000004' AS DECIMAL(38,18)), CAST('1.0000000000000004' AS DOUBLE))",
     ),
@@ -97,7 +104,8 @@ STATEMENTS = {
         "WHEN MATCHED THEN UPDATE SET id = t.id + 100"
     ),
     "merge_on_key_and": (
-        "MERGE INTO {t} t USING (SELECT id AS sid, v AS sv FROM {s}) s ON t.id = s.sid AND t.d = s.sv "
+        "MERGE INTO {t} t USING (SELECT id AS sid, v AS sv FROM {s}) s ON t.id = s.sid AND t.d = "
+        "s.sv "
         "WHEN MATCHED THEN UPDATE SET id = t.id + 100 "
         "WHEN NOT MATCHED THEN INSERT (id, d, v) VALUES (s.sid + 50, 0, 0)"
     ),

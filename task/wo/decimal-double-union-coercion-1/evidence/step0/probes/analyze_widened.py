@@ -20,7 +20,9 @@ def dml_map(path: Path) -> dict:
     for r in lines(path):
         if r["key"] == "provenance":
             continue
-        out[r["key"]] = ("ERR", r.get("head", "")[:60]) if "error" in r else r.get("ids", r.get("answer"))
+        out[r["key"]] = (
+            ("ERR", r.get("head", "")[:60]) if "error" in r else r.get("ids", r.get("answer"))
+        )
     return out
 
 
@@ -54,8 +56,18 @@ for mode in ("true", "false"):
         c["head wrong, ff34 right"] += (not h) and f
         c["head right, both wrong"] += h and not m and not f
         if not h and (m or f):
-            held.append({"set": "coerce", "ansi": mode, "shape": k[0], "value": k[1], "spark": s,
-                         "main": mn.get(k), "ff34": ff.get(k), "head_emulated": hd.get(k)})
+            held.append(
+                {
+                    "set": "coerce",
+                    "ansi": mode,
+                    "shape": k[0],
+                    "value": k[1],
+                    "spark": s,
+                    "main": mn.get(k),
+                    "ff34": ff.get(k),
+                    "head_emulated": hd.get(k),
+                }
+            )
     total = Counter()
     for c in by.values():
         total.update(c)
@@ -103,8 +115,17 @@ for mode in ("true", "false"):
             c["head wrong, ff34 right"] += (not h) and f
             c["head right, both wrong"] += h and not m and not f
             if not h and (m or f):
-                held.append({"set": f"dml-{door}", "ansi": mode, "key": k, "spark": s, "main": mn[k],
-                             "ff34": ff[k], "head_emulated": hd[k]})
+                held.append(
+                    {
+                        "set": f"dml-{door}",
+                        "ansi": mode,
+                        "key": k,
+                        "spark": s,
+                        "main": mn[k],
+                        "ff34": ff[k],
+                        "head_emulated": hd[k],
+                    }
+                )
         report["dml"][f"{mode}|{door}"] = dict(c)
 report["decimal_to_double"] = {}
 d2d_sp = coerce_map(WIDE / "d2d-spark-ansi-true.jsonl")
@@ -112,11 +133,24 @@ for build in ("main", "ff34"):
     got = coerce_map(WIDE / f"d2d-{build}-ansi-true.jsonl")
     wrong = Counter(k[0] for k, v in d2d_sp.items() if got.get(k) != v)
     cells = Counter(k[0] for k in d2d_sp)
-    report["decimal_to_double"][build] = {s: f"{wrong.get(s, 0)} of {n}" for s, n in sorted(cells.items())}
+    report["decimal_to_double"][build] = {
+        s: f"{wrong.get(s, 0)} of {n}" for s, n in sorted(cells.items())
+    }
     for k, v in d2d_sp.items():
         if got.get(k) != v and len(held) < 100000:
-            held.append({"set": "decimal-to-double", "build": build, "shape": k[0], "value": k[1], "spark": v, "repark": got.get(k)})
-(OUT / "widened-summary.json").write_text(json.dumps(report, indent=1, sort_keys=True, default=str) + "\n")
+            held.append(
+                {
+                    "set": "decimal-to-double",
+                    "build": build,
+                    "shape": k[0],
+                    "value": k[1],
+                    "spark": v,
+                    "repark": got.get(k),
+                }
+            )
+(OUT / "widened-summary.json").write_text(
+    json.dumps(report, indent=1, sort_keys=True, default=str) + "\n"
+)
 with (OUT / "widened-held-wrong.jsonl").open("w") as fh:
     for row in held:
         fh.write(json.dumps(row, sort_keys=True, default=str) + "\n")

@@ -1,6 +1,7 @@
 import json
 import math
 import sys
+from pathlib import Path
 
 engine, ansi, out = sys.argv[1:4]
 if engine == "spark":
@@ -32,6 +33,6 @@ if len(sys.argv) > 4 and sys.argv[4] == "widened":
     PREDS = tuple((n, p.replace("d", "CAST(d AS DOUBLE)")) for n, p in PREDS)
 for name, pred in PREDS:
     result[name] = sorted(r[0] for r in s.sql(f"SELECT id FROM t WHERE {pred}").collect())
-with open(out, "w") as fh:
+with Path(out).open("w") as fh:
     json.dump(result, fh)
 print(engine, ansi, {k: len(v) for k, v in result.items() if isinstance(v, list)})

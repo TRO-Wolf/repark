@@ -92,7 +92,9 @@ def record(section: str, key: str, mode: str, sp_shown: str, verdicts: dict, sho
         row[f"{b}_verdict"] = verdicts[b]
         summary[(section, mode, b)][verdicts[b]] += 1
     m, f = ok(verdicts["main"]), ok(verdicts["ff34"])
-    trans = "both-ok" if m and f else "fixed-on-ff34" if f else "broken-on-ff34" if m else "both-wrong"
+    trans = (
+        "both-ok" if m and f else "fixed-on-ff34" if f else "broken-on-ff34" if m else "both-wrong"
+    )
     if not (m and f) and shows["main"] != shows["ff34"] and not m and not f:
         trans = "both-wrong-differently"
     row["transition"] = trans
@@ -110,13 +112,27 @@ for mode in MODES:
             if key in ("provenance", "elapsed"):
                 continue
             vs = {b: verdict(s, reps[b][key]) if key in reps[b] else "missing" for b, _ in BUILDS}
-            record(f"{section}-{root(key)}", key, mode, shown(s), vs, {b: shown(reps[b].get(key)) for b, _ in BUILDS})
+            record(
+                f"{section}-{root(key)}",
+                key,
+                mode,
+                shown(s),
+                vs,
+                {b: shown(reps[b].get(key)) for b, _ in BUILDS},
+            )
     sp = load(SPARK / f"revision-spark-ansi-{mode}.jsonl")
     reps = {b: load(d / f"revision-repark-ansi-{mode}.jsonl") for b, d in BUILDS}
     for key, s in sp.items():
         if key.startswith("select/"):
             vs = {b: verdict(s, reps[b][key]) for b, _ in BUILDS}
-            record("revision-select", key, mode, shown(s), vs, {b: shown(reps[b][key]) for b, _ in BUILDS})
+            record(
+                "revision-select",
+                key,
+                mode,
+                shown(s),
+                vs,
+                {b: shown(reps[b][key]) for b, _ in BUILDS},
+            )
     for prefix, section in (("write", "write"), ("revision", "revision-write")):
         sw = load(SPARK / f"{prefix}-spark-ansi-{mode}.jsonl")
         rb = "readback" if prefix == "write" else "revision-readback"
@@ -142,7 +158,9 @@ for mode in MODES:
             if key == "provenance" or key not in reps["main"]:
                 continue
             vs = {b: ids_verdict(s, reps[b][key]) for b, _ in BUILDS}
-            section = ("dml-flip" if key.startswith("flip/") else "dml") + ("" if door == "repark" else "-native")
+            section = ("dml-flip" if key.startswith("flip/") else "dml") + (
+                "" if door == "repark" else "-native"
+            )
             record(section, key, mode, shown(s), vs, {b: shown(reps[b][key]) for b, _ in BUILDS})
 
 native_main = load(MAIN / "select-native.jsonl")
@@ -152,7 +170,14 @@ for key, s in sp_true.items():
     if key in ("provenance", "elapsed") or key not in native_main:
         continue
     vs = {"main": verdict(s, native_main[key]), "ff34": verdict(s, native_ff34[key])}
-    record(f"native-{root(key)}", key, "native", shown(s), vs, {"main": shown(native_main[key]), "ff34": shown(native_ff34[key])})
+    record(
+        f"native-{root(key)}",
+        key,
+        "native",
+        shown(s),
+        vs,
+        {"main": shown(native_main[key]), "ff34": shown(native_ff34[key])},
+    )
 
 family = {}
 for mode in MODES:
@@ -182,12 +207,27 @@ for mode in MODES:
         scale = "d38_18" if shape.endswith("d38_18") else "other"
         a = {b: (rp[b].get(key) or {}).get("answer", "MISSING") for b, _ in BUILDS}
         m, f = a["main"] == s["answer"], a["ff34"] == s["answer"]
-        t = "both-ok" if m and f else "fixed-on-ff34" if f else "broken-on-ff34" if m else "both-wrong"
+        t = (
+            "both-ok"
+            if m and f
+            else "fixed-on-ff34"
+            if f
+            else "broken-on-ff34"
+            if m
+            else "both-wrong"
+        )
         by_shape[(fam, scale)][t] += 1
         by_shape[("all", "all")][t] += 1
         if t != "both-ok" and t != "both-wrong":
             coerce_moves.append(
-                {"ansi": mode, "shape": shape, "value": key[1], "spark": s["answer"], **a, "transition": t}
+                {
+                    "ansi": mode,
+                    "shape": shape,
+                    "value": key[1],
+                    "spark": s["answer"],
+                    **a,
+                    "transition": t,
+                }
             )
     coerce[mode] = {f"{k[0]}/{k[1]}": dict(v) for k, v in sorted(by_shape.items())}
 
@@ -202,7 +242,16 @@ for key, r in replay["main"].items():
     replay_counts[(r.get("root"), "main")][r.get("verdict")] += 1
     replay_counts[(r.get("root"), "ff34")][f.get("verdict")] += 1
     if r.get("got") != f.get("got") or r.get("verdict") != f.get("verdict"):
-        replay_moves.append({"key": key, "expect": r.get("expect"), "main": r.get("got"), "ff34": f.get("got"), "main_verdict": r.get("verdict"), "ff34_verdict": f.get("verdict")})
+        replay_moves.append(
+            {
+                "key": key,
+                "expect": r.get("expect"),
+                "main": r.get("got"),
+                "ff34": f.get("got"),
+                "main_verdict": r.get("verdict"),
+                "ff34_verdict": f.get("verdict"),
+            }
+        )
 
 with (OUT / "cells.jsonl").open("w") as fh:
     for row in cells:

@@ -3,6 +3,7 @@ import math
 import random
 import sys
 from decimal import Decimal
+from pathlib import Path
 
 engine, ansi, out = sys.argv[1:4]
 if engine == "spark":
@@ -34,7 +35,7 @@ for _ in range(200):
     vals.append(rng.uniform(-100, 100))
 for _ in range(2000):
     vals.append(rng.uniform(-1e6, 1e6))
-texts = sorted(set(format(Decimal(repr(v)), "f") for v in vals))
+texts = sorted({format(Decimal(repr(v)), "f") for v in vals})
 s.createDataFrame(list(enumerate(texts)), "id INT, t STRING").createOrReplaceTempView("raw")
 SHAPES = {
     "d38_18": "CAST(TRY_CAST(t AS DECIMAL(38,18)) AS DOUBLE)",
@@ -50,8 +51,10 @@ for name, expr in SHAPES.items():
         for i, t in enumerate(texts):
             records.append({"shape": name, "value": t, "answer": got.get(i)})
     except Exception as e:
-        records.append({"shape": name, "value": None, "answer": "ERR " + str(e).strip().splitlines()[0][:200]})
-with open(out, "w") as fh:
+        records.append(
+            {"shape": name, "value": None, "answer": "ERR " + str(e).strip().splitlines()[0][:200]}
+        )
+with Path(out).open("w") as fh:
     for r in records:
         fh.write(json.dumps(r) + "\n")
 print(engine, ansi, len(records), len(texts))

@@ -12,7 +12,10 @@ if engine == "spark":
         Builder.builder.master("local[1]")
         .config("spark.ui.enabled", "false")
         .config("spark.jars", jar)
-        .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+        .config(
+            "spark.sql.extensions",
+            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+        )
         .config("spark.sql.shuffle.partitions", "1")
     )
 else:
@@ -40,7 +43,7 @@ def err(e: Exception) -> str:
     return "ERR " + (head.strip().splitlines() or [""])[0][:160]
 
 
-def run(key, fn):
+def run(key, fn) -> None:
     try:
         records.append({"key": key, "answer": fn()})
     except Exception as e:
@@ -53,9 +56,15 @@ for mode, props in MODES.items():
         n += 1
         t = f"lc.ns.z{n}"
 
-        def update(t=t, props=props, pred=pred):
-            s.sql(f"CREATE TABLE {t} (id INT, v DOUBLE, w DOUBLE) USING iceberg TBLPROPERTIES ({props})").collect()
-            s.sql(f"INSERT INTO {t} VALUES (1, CAST('-0.0' AS DOUBLE), CAST('0.0' AS DOUBLE)), (2, 0.5D, 0.5D)").collect()
+        def update(t: object = t, props: object = props, pred: object = pred) -> object:
+            s.sql(
+                f"CREATE TABLE {t} (id INT, v DOUBLE, w DOUBLE) USING iceberg TBLPROPERTIES "
+                f"({props})"
+            ).collect()
+            s.sql(
+                f"INSERT INTO {t} VALUES (1, CAST('-0.0' AS DOUBLE), CAST('0.0' AS DOUBLE)), (2, "
+                "0.5D, 0.5D)"
+            ).collect()
             s.sql(f"UPDATE {t} SET id = id + 100 WHERE {pred}").collect()
             return sorted(int(r[0]) for r in s.sql(f"SELECT id FROM {t}").collect())
 
@@ -63,19 +72,30 @@ for mode, props in MODES.items():
         n += 1
         t2 = f"lc.ns.zs{n}"
 
-        def select(t=t2, props=props, pred=pred):
-            s.sql(f"CREATE TABLE {t} (id INT, v DOUBLE, w DOUBLE) USING iceberg TBLPROPERTIES ({props})").collect()
-            s.sql(f"INSERT INTO {t} VALUES (1, CAST('-0.0' AS DOUBLE), CAST('0.0' AS DOUBLE)), (2, 0.5D, 0.5D)").collect()
+        def select(t: object = t2, props: object = props, pred: object = pred) -> object:
+            s.sql(
+                f"CREATE TABLE {t} (id INT, v DOUBLE, w DOUBLE) USING iceberg TBLPROPERTIES "
+                f"({props})"
+            ).collect()
+            s.sql(
+                f"INSERT INTO {t} VALUES (1, CAST('-0.0' AS DOUBLE), CAST('0.0' AS DOUBLE)), (2, "
+                "0.5D, 0.5D)"
+            ).collect()
             return sorted(int(r[0]) for r in s.sql(f"SELECT id FROM {t} WHERE {pred}").collect())
 
         run(f"f3/{mode}/select/{pred}", select)
 for text in ("1.0E-4", "1E2", "1.5e1", "-2.5E-3", "1.0E-20", "1e40"):
     for fn in ("CAST", "TRY_CAST"):
-        run(f"f1/{fn}/{text}", lambda fn=fn, text=text: str(s.sql(f"SELECT {fn}('{text}' AS DECIMAL(10,2))").collect()[0][0]))
+        run(
+            f"f1/{fn}/{text}",
+            lambda fn=fn, text=text: str(
+                s.sql(f"SELECT {fn}('{text}' AS DECIMAL(10,2))").collect()[0][0]
+            ),
+        )
     n += 1
     t = f"lc.ns.f1_{n}"
 
-    def store(t=t, text=text):
+    def store(t: object = t, text: object = text) -> object:
         s.sql(f"CREATE TABLE {t} (id INT, d DECIMAL(10,2)) USING iceberg").collect()
         s.sql(f"INSERT INTO {t} SELECT 1, '{text}'").collect()
         return [str(r[0]) for r in s.sql(f"SELECT d FROM {t}").collect()]

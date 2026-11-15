@@ -12,6 +12,7 @@ for name, rows in (("big", 100_000_000), ("mid", 20_000_000)):
     ).createOrReplaceTempView("g")
     s.sql(
         "SELECT id, CAST(d10raw AS DECIMAL(10,2)) AS d10, "
-        "CAST(d10raw AS DECIMAL(38,18)) + CAST(id % 1000 AS DECIMAL(38,18)) / 1000000000000 AS d38, v FROM g"
+        "CAST(d10raw AS DECIMAL(38,18)) + CAST(id % 1000 AS DECIMAL(38,18)) / 1000000000000 AS "
+        "d38, v FROM g"
     ).write.mode("overwrite").parquet(f"{out}/{name}")
 print("ok")
