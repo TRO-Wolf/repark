@@ -1,6 +1,7 @@
 import json
 import sys
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 
 engine, ansi, wh_parent, jar, out = sys.argv[1:6]
@@ -43,7 +44,7 @@ def err(e: Exception) -> str:
     return "ERR " + (head.strip().splitlines() or [""])[0][:160]
 
 
-def run(key, fn) -> None:
+def run(key: str, fn: Callable[[], object]) -> None:
     try:
         records.append({"key": key, "answer": fn()})
     except Exception as e:

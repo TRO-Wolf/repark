@@ -1,6 +1,7 @@
 import json
 import sys
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 
 engine, ansi, wh_parent, jar, out = sys.argv[1:6]
@@ -46,7 +47,7 @@ def shown(rows: list) -> list:
     return sorted(str(v) for r in rows for v in r)
 
 
-def record(key: str, fn) -> None:
+def record(key: str, fn: Callable[[], object]) -> None:
     try:
         records.append({"key": key, "answer": fn()})
     except Exception as e:
