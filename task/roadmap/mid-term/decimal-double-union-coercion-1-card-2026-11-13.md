@@ -115,3 +115,28 @@ On the head against Spark 4.1.2, both ANSI modes:
 
 **Cost:** see the evidence; the written-cast and DECIMAL(38,18) K2 rows go to the owner at merge.
 
+
+## Append (2026-11-15 afternoon): the owner's ruling on the cost halt, and the delta
+
+**Sources:** owner, 2026-11-15, about 13:59 UTC; Fable's guidance on the cost halt (advice only); the delta's cost
+section in [evidence/fix/cost.md](../../wo/decimal-double-union-coercion-1/evidence/fix/cost.md).
+
+**The owner's ruling, verbatim:** "Merge 1338, proceed with A and yes to 3".
+
+- **(A), the delta:** a DECIMAL column against a DOUBLE constant is rewritten into a pure decimal comparison at plan
+  time. The K2 UDF answers DataFusion's `preimage` hook with the decimal range whose K2 doubles equal the constant,
+  found by binary search over K2 itself, so the rewritten form cannot disagree with the per-row form. NaN,
+  ±Infinity and a constant at or above the column's largest double keep the per-row form. The two halted rows
+  move from 3.95x and 10.47x to 1.015x and 1.015x; every held row is at or under 1.05x and every answer is unchanged.
+- **"Yes to 3": the three reported rows are this unit's cost exception.** Measured before the delta, at 100M rows,
+  and not touched by it:
+
+  | row | head/main | per value |
+  |---|---|---|
+  | `d38 < v`, column against column (K2's exact refinement at `DECIMAL(38,18)`) | 1.662 | +2.82 ns |
+  | written `CAST(v AS DECIMAL(10,2))` (K1) | 1.341 | +0.66 ns |
+  | written `CAST(v AS DECIMAL(38,18))` (K1) | 3.361 | +4.27 ns |
+
+  Their speed card is [DOUBLE-DECIMAL-CAST-PERF-1](double-decimal-cast-perf-1-card-2026-11-14.md).
+- **Reported, not held:** an `IN` of four or more DOUBLE constants does not reach the hook (3.86x at 100M); an `IN`
+  of three and a `BETWEEN` do (1.06x and 0.98x).

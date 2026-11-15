@@ -68,6 +68,73 @@ The answers equal between main and the head in every row except where the fix ch
 - `CAST(v AS DECIMAL(38,18))` of `999.99` is `999.990000000000000000` on the head, as on Spark, where main gives
   `999.990000000000065536`.
 
+## Delta, 2026-11-15: the DOUBLE constant compares as a decimal range
+
+The tables above are the record of the head before the delta (`de214524`, product `120e9d8a`). The owner ruled
+(2026-11-15, about 13:59 UTC) "Merge 1338, proceed with A and yes to 3": (A) is this delta, and "yes to 3" makes the
+three reported rows this unit's cost exception (the card's append).
+
+**The change.** The K2 UDF `__repark_decimal_to_double__` answers DataFusion's `ScalarUDFImpl::preimage`: for a
+finite DOUBLE constant `c` and a `DECIMAL(p, s)` argument it returns `[lower, upper)`, the least unscaled values whose
+K2 double is `>= c` and `> c`, found by binary search over K2. The simplifier then plans
+`d10 = CAST(0.5 AS DOUBLE)` as `d10 >= 0.50 AND d10 < 0.51`, an integer comparison like main's `d10 = 0.50`. NaN,
+±Infinity and a constant at or above the column's largest double keep the per-row form.
+
+**Method:** as above, measured by the builder (`claude-opus-5-5`) on the delta's release package
+(`ddu-work/pkg-head-delta`, built before the commit from a tree whose product files are `4b98bae7`'s) against main `dc6b4c94` and main again, 16 of the box's 64 cores
+(32-47), each sample under the exclusive measure lock, the link lock and both cargo locks. Five alternating runs. The
+literal rows time six executions per sample (at least 200 ms) and take the median of three samples; the 20M-row
+pruning rows do the same (`_x6`), and were run a second time with ten runs because the first five-run ratio of
+`prune_d_dbl` sat inside its own control's range. The runners are `ddu-work/cost-delta/` (`run3.sh` with
+`lit_probe.py`, `run.sh` with [probes/cost_probe.py](probes/cost_probe.py), `run_prune.sh` with `prune_probe.py`);
+the raw sets are [raw/delta-cost-raw.jsonl](raw/delta-cost-raw.jsonl) and
+[raw/delta-cost-samples.jsonl](raw/delta-cost-samples.jsonl). The answers are equal on main, main again and the
+delta in every row.
+
+### Held rows (1.05x)
+
+| row | main (s) | delta (s) | delta/main | control | ns/value |
+|---|---|---|---|---|---|
+| `WHERE d10 = CAST(0.5 AS DOUBLE)`, 100M | 0.0486 | 0.0494 | 1.015 | 0.973 to 1.025 | +0.01 |
+| `WHERE d38 = CAST(0.5 AS DOUBLE)`, 100M | 0.0470 | 0.0478 | 1.015 | 1.008 to 1.076 | +0.01 |
+| `WHERE d10 < CAST(0.5 AS DOUBLE)`, 100M | 0.0919 | 0.0899 | 0.989 | 0.969 to 1.067 | -0.02 |
+| `WHERE d10 > CAST(0.5 AS DOUBLE)`, 100M | 0.0881 | 0.0866 | 0.984 | 0.976 to 1.091 | -0.01 |
+| `WHERE d38 < CAST(0.5 AS DOUBLE)`, 100M | 0.1183 | 0.1203 | 1.017 | 1.013 to 1.088 | +0.02 |
+| `df.filter(F.col("d10") > 4.5)`, 100M | 0.0864 | 0.0860 | 0.996 | 0.959 to 1.064 | -0.00 |
+| `WHERE d10 = 0.5` (DECIMAL literal, the control), 100M | 0.0456 | 0.0457 | 1.002 | 0.980 to 1.048 | +0.00 |
+| `filter_eq_d10` (`d10 = v`), 100M | 0.3829 | 0.3077 | 0.795 | 0.978 to 1.057 | -0.75 |
+| `filter_lt_d10` (`d10 < v`), 100M | 0.3895 | 0.3226 | 0.842 | 0.967 to 1.071 | -0.67 |
+| `delete_d_v`, 20M | 2.7856 | 2.8239 | 1.005 | 0.974 to 1.025 | +1.92 |
+| `prune_v_declit_x6`, 20M, 5 runs / 10 runs | 0.0356 / 0.0332 | 0.0364 / 0.0349 | 0.986 / 1.043 | 0.871 to 1.017 / 0.840 to 1.122 | +0.04 / +0.08 |
+| `prune_d_dbl_x6`, 20M, 5 runs / 10 runs | 0.0352 / 0.0371 | 0.0395 / 0.0374 | 1.060 / 1.007 | 0.994 to 1.134 / 0.880 to 1.137 | +0.21 / +0.01 |
+| `plan_free200` (planning, per plan) | 0.1393 | 0.1396 | 0.999 | 0.988 to 1.028 | |
+| `plan_wide_dd` (planning, per plan) | 0.1101 | 0.1101 | 1.000 | 0.994 to 1.026 | |
+| 200 DECIMAL-against-DOUBLE-constant comparisons (planning, per plan) | 0.1370 | 0.1045 | 0.762 | 0.990 to 0.998 | |
+
+- **The two halted rows are closed:** 3.95x and 10.47x before the delta, 1.015x and 1.015x after.
+- **Pruning:** both builds read all 16 files in both pruning rows (`IcebergTableScan … N=16`). Main plans
+  `d10 = Some(50),10,2` and the delta `d10 >= Some(50),10,2 AND d10 < Some(51),10,2`, and neither pushes a predicate
+  into the Iceberg scan (`predicate:[]`), so the files read do not change. `prune_d_dbl`'s first five-run ratio,
+  1.060, is inside the main-against-main range of the same runs (up to 1.134); its ten-run ratio is 1.007.
+- **Planning:** the bound search costs less than main's decimal cast of the constant: a 200-comparison plan takes
+  0.76 of main's time.
+
+### Reported rows (not held)
+
+| row | main (s) | delta (s) | delta/main | control | ns/value |
+|---|---|---|---|---|---|
+| `d10 IN` 3 DOUBLE constants, 100M | 0.0452 | 0.0478 | 1.060 | 0.954 to 1.070 | +0.03 |
+| `d10 IN` 4 DOUBLE constants, 100M | 0.0502 | 0.1998 | 3.862 | 0.952 to 1.049 | +1.50 |
+| `d10 BETWEEN` two DOUBLE constants, 100M | 0.0453 | 0.0436 | 0.980 | 0.901 to 1.131 | -0.02 |
+
+An `IN` list of four or more constants does not reach the hook (DataFusion 54.1.0 applies it to lists of at most
+three, `THRESHOLD_INLINE_INLIST`), so it keeps the per-row form, slower and correct.
+
+### Not re-run
+
+The C-012 set and the three ruled rows (`d38 < v`, written `CAST(v AS DECIMAL(10,2))` and
+`CAST(v AS DECIMAL(38,18))`): the delta does not reach them.
+
 ## Side finding
 
 A CASE nested 50 deep does not parse on main or on the head (`Expected: ), found: WHEN at Line: 1, Column: 17`);

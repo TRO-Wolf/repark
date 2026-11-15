@@ -5532,7 +5532,13 @@ still open is `isModifiable`.
     those contexts. `nullif` widens its comparison and keeps its first argument's type, and the user `LEFT SEMI` /
     `LEFT ANTI` output type is kept;
   - K2 (`java_decimal_to_double`) is JDK 17's `BigDecimal.doubleValue()`;
-  - a written `CAST` / `TRY_CAST` / `arrow_cast` of a FLOAT or DOUBLE to DECIMAL rounds the double's text half up (K1).
+  - a written `CAST` / `TRY_CAST` / `arrow_cast` of a FLOAT or DOUBLE to DECIMAL rounds the double's text half up (K1);
+  - a DECIMAL column against a DOUBLE constant (`d = CAST(0.5 AS DOUBLE)`, `df.filter(F.col("d") > 4.5)`, the eight
+    comparison operators on either side, an `IN` of up to three constants, `BETWEEN`, and DELETE / UPDATE
+    predicates) is planned as a decimal range: K2's `preimage` hook gives the unscaled values whose double equals
+    the constant, found by binary search over K2, so the answer is the per-row form's at main's speed. NaN,
+    ±Infinity, a constant at or above the column's largest double, and an `IN` of four or more constants keep the
+    per-row form.
   - The writes they feed store Spark's values: `INSERT … SELECT … UNION`, CTAS / RTAS, `saveAsTable`,
     `writeTo.append`, `createOrReplace`, `replaceWhere`, `insertInto`, `overwritePartitions`, and v3 tables.
 - **spark** — Spark 4.1.2:
@@ -5563,13 +5569,22 @@ still open is `isModifiable`.
   - the four literal shapes with both rules in place, the written casts, and the `VALUES` cells at main's answer;
   - the native door.
 
+  `python/repark/tests/sql/test_decimal_double_preimage_1.py`, both ANSI modes: the DOUBLE-constant comparisons
+  against Spark (edge rows × 12 constants × 8 operators × both sides, and the same constant held in a DOUBLE
+  column), their plan shape, `IN`, `BETWEEN`, DataFrame filters and DML.
+
   Rust pins:
   - `repark-spark` `extension/decimal_float_widen/tests.rs`;
-  - `repark-functions` `bool_decimal/tests.rs`;
+  - `repark-functions` `bool_decimal/tests.rs` (the preimage's plan shape and its per-row agreement too);
   - `repark-common` `java_double/decimal_double/tests.rs` (the text-free path against the digit path, at halfway
-    points too).
-- **Rationale** — the owner's 2026-11-13 rulings, with Q8 re-ruled PRUNED-WRONG and Q2 kept on 2026-11-14, and
-  2026-11-14 "Merge and go with the split plan" (step 3); card
+    points too; the preimage search against the per-row form by brute force).
+- **Cost** — the DOUBLE-constant shape is held at main's speed. Three rows are the unit's cost exception (owner,
+  2026-11-15, "yes to 3"): `d38 < v` 1.66x, written `CAST(v AS DECIMAL(10,2))` 1.34x and
+  `CAST(v AS DECIMAL(38,18))` 3.36x, whose speed work is
+  [DOUBLE-DECIMAL-CAST-PERF-1](../task/roadmap/mid-term/double-decimal-cast-perf-1-card-2026-11-14.md).
+- **Rationale** — the owner's 2026-11-13 rulings, with Q8 re-ruled PRUNED-WRONG and Q2 kept on 2026-11-14,
+  2026-11-14 "Merge and go with the split plan" (step 3), and 2026-11-15 "Merge 1338, proceed with A and yes to 3";
+  card
   [DECIMAL-DOUBLE-UNION-COERCION-1](../task/roadmap/mid-term/decimal-double-union-coercion-1-card-2026-11-13.md).
 
 ## 5. Facade drop-in semantics (DECLARED)
