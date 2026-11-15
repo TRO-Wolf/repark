@@ -30,12 +30,18 @@ ROWS = {
     ),
     "cast_v_d10": ("SELECT max(CAST(v AS DECIMAL(10,2))) FROM t", 100_000_000),
     "cast_v_d38": ("SELECT max(CAST(v AS DECIMAL(38,18))) FROM t", 100_000_000),
-    "case50": (
+    "case30": (
         "SELECT sum("
-        + "".join(f"CASE WHEN id % 50 = {i} THEN d10 " for i in range(50))
-        + "ELSE v"
-        + " END" * 50
+        + "".join(f"CASE WHEN id % 50 = {i} THEN d10 ELSE " for i in range(30))
+        + "v"
+        + " END" * 30
         + ") FROM t",
+        100_000_000,
+    ),
+    "case50_flat": (
+        "SELECT sum(CASE "
+        + "".join(f"WHEN id % 50 = {i} THEN d10 " for i in range(50))
+        + "ELSE v END) FROM t",
         100_000_000,
     ),
     "plan_free200": (
@@ -111,7 +117,7 @@ elif case in ("prune_v_declit", "prune_d_dbl", "delete_d_v"):
             "label": label,
             "seconds": elapsed,
             "values": 20_000_000,
-            "answer": str(got[0][0]) if got else "",
+            "answer": str(list(got[0])) if got else "",
             "plan": plan,
         }
     )
