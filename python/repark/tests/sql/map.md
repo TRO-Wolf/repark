@@ -32,6 +32,7 @@ pins.
 - [test_qi1_idents.py](test_qi1_idents.py) — QI1 — quoting / path-escape single-source pins (CQ-006/007).
 - [test_range_tvf_id_1.py](test_range_tvf_id_1.py) — RANGE-TVF-ID-1 — the range() table function names its column id like Spark.
 - [test_range_tvf_id_2.py](test_range_tvf_id_2.py) — RANGE-TVF-ID-2 - range() argument edge cases answer Spark 4.1.2.
+- [test_round_double_exact_1.py](test_round_double_exact_1.py) — ROUND-DOUBLE-EXACT-1 — the step 0 `round`/`bround` table on every Spark door in both ANSI modes, with the native-door gap pin; oracle [round_double_exact_1_spark_oracle.json](round_double_exact_1_spark_oracle.json).
 - [test_scalar_subquery_sort_pin.py](test_scalar_subquery_sort_pin.py) — DF 54.1 regression pin: ORDER BY must survive an uncorrelated scalar subquery.
 - [test_spark_sql_grammar_1.py](test_spark_sql_grammar_1.py) — SPARK-SQL-GRAMMAR-1 door pins — Spark operators, keywords and type names.
 - [test_sql_alias.py](test_sql_alias.py) — Q1 re-home pins — ``import repark.sql`` fails; ``repark.sql()`` is the ANSI door.

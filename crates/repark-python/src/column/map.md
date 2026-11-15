@@ -120,7 +120,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `keep_verbatim` flag and canonicalizes with it, so `F.expr` parses like the session door (net-zero,
   stays 1012).
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch. Its
-  default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before refusing.
+  default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before refusing. **ROUND-DOUBLE-EXACT-1 (2026-11-14):** `F.round` and `Column.round` build `call_round`, not DataFusion's `expr_fn::round`.
   **FNP-BITMAP-FACADE-1 (2026-09-15):** `unary_aggregate_udaf` gains the `bitmap_construct_agg` /
   `bitmap_or_agg` / `bitmap_and_agg` arms mapping to `repark_functions::bitmap_agg::{bitmap_construct_agg_udaf,
   bitmap_or_agg_udaf, bitmap_and_agg_udaf}` (the module is `pub` in `repark-functions` for the
@@ -270,7 +270,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   run on a sized segment.
   **Re-verify fold (2026-09-30):** the `over` constructor composes through
   `combine` (fixed shape); the grown wrapper stays.
-- [`door_parity_tests.rs`](door_parity_tests.rs) pins standalone facade UDF behavior against SQL.
+- [`door_parity_tests.rs`](door_parity_tests.rs) pins standalone facade UDF behavior against SQL. **ROUND-DOUBLE-EXACT-1 (2026-11-14):** `round` leaves `EXPECTED_DIVERGENCES` (15 → 14).
   **DOOR-CONVERGE-1 (2026-09-15):** `EXPECTED_DIVERGENCES` ratchets 22 → 14 — `abs`, `hypot`, `bin`,
   `rint`, `base64`, `unbase64`, `size`, `cardinality`, `array_contains`/`array_has`, `ascii`,
   `length`, `character_length` leave the table and join `SCALAR_NAMES`; the facade arms for them
@@ -288,10 +288,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   keeps it as a `sequence` alias on `SparkSequence` while the SQL door keeps DataFusion's
   native spelling for its table-function callers — C-003's reroute exposed the split,
   overwriting the door would break `FROM generate_series` users.
-  **ABS-EXPR-1 (2026-09-13):** `EXPECTED_DIVERGENCES` gains `abs` — the facade's core `checked_abs`
-  raises on integer-min (Spark ANSI-on answer); the door's `SparkAbs` wraps because repark never
-  sets `execution.enable_ansi_mode` — measured on typed int8/16/32/64 columns (each minimum returns
-  unchanged) and value-pinned by `test_abs_door_parity_integer_min`. Table 21 → 22.
+  **ABS-EXPR-1 (2026-09-13):** `EXPECTED_DIVERGENCES` gains `abs` (`SparkAbs` wraps on integer-min), pinned by `test_abs_door_parity_integer_min`. Table 21 → 22.
   **TYPES-1 (2026-09-05):** `from_unixtime` left EXPECTED_DIVERGENCES (ratchet 22 → 21).
   **CASESENS-1 S3 (2026-09-27):** `column_keeps_the_written_spelling` pins
   `written_column` (`ID` bare, `t.ID` qualified, `` `a.b` `` dotted).

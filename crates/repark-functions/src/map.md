@@ -111,9 +111,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (2026-09-15):** Spark `abs` / `hypot` / `bin` / `rint` kernels shared by both
   doors. **FNP-MATH-1 (2026-09-16, run 18a):** `spark_math/bround.rs` adds the
   `bround` HALF_EVEN kernel (double, decimal, integral; negative scale; Spark
-  result types; `scalar_arguments` scale literal; always-nullable display field)
+  result types; always-nullable display field)
   and `spark_math/conv.rs` the `conv` base-conversion kernel (ANSI-carried
-  overflow).
+  overflow). **ROUND-DOUBLE-EXACT-1 (2026-11-14):** `round_udf()` joins `functions()`; the SQL, `F.expr`, `selectExpr` and `filter(str)` doors resolve Spark's `round`.
   `abs` keeps the input width, refuses BOOLEAN, and
   reads the ANSI carrier (`repark.ansi` extension via
   `ansi::spark_ansi_enabled_from_options`) to raise Spark-shaped `[ARITHMETIC_OVERFLOW]`
@@ -128,8 +128,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **SQL-LITERAL-TYPING-1 remediation round 1 (2026-09-16):** `Factorial`
   shadows upstream `factorial` the same way (`user_defined` + integer widths
   down to Int32, kernel delegated to `spark_factorial`) so `factorial(5)`
-  survives plan construction. Unit tests pin the literal, the explicit
-  `CAST(5 AS BIGINT)`, and the text refusal.
+  survives plan construction.
   pins: sql-literal-typing-1/L-002
   **FNP-MATH-1 step 7 (2026-09-16, run 18a, D-9):** `bin` / `rint` gain
   `schema_name` overrides so the display reads Spark's `bin(1)` (the D-9
@@ -141,8 +140,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   and accepts unpadded input. String and binary input; NULL propagates.
   **Round 2 (2026-09-16):** malformed endings raise the Java decoder's texts
   (`incorrect ending byte at N`, `wrong 4-byte ending unit`, `Last unit does not have
-  enough valid bits`); encode writes one `StringBuilder`, decode uses a `static`
-  table into a single batch buffer with the input null bitmap.
+  enough valid bits`).
 - `spark_result_types.rs` (+ `spark_result_types/tests.rs`) — **TYPES-1 (2026-09-05):**
   `SparkIntegerLiteral` narrows in-range `Int64` literals to `Int32` (first in
   `analyzer_rules()`, after DataFusion's own `TypeCoercion`; `LIMIT` fetch/skip stay `Int64`
