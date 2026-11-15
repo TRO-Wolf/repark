@@ -130,7 +130,8 @@ s.sql(
 for key, sql in {
     "non_ascii_union": "SELECT 0.1 AS `名前` UNION ALL SELECT CAST(1e-20 AS DOUBLE)",
     "non_ascii_union_name": (
-        "SELECT * FROM (SELECT 0.1 AS `名前` UNION ALL SELECT CAST(1e-20 AS DOUBLE)) WHERE `名前` > "
+        "SELECT * FROM (SELECT 0.1 AS `名前` UNION ALL SELECT CAST(1e-20 AS DOUBLE)) "
+        "WHERE `名前` > "
         "0.05"
     ),
     "lit_eq": "SELECT id FROM lt WHERE v = 0.1",

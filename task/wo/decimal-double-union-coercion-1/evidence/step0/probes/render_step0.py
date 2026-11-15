@@ -16,7 +16,8 @@ for r in rows:
     by[k]["ff34 wrong"] += r["ff34_verdict"] not in GOOD
     by[k][r["transition"]] += 1
 print(
-    "| section | ANSI | cells | main wrong | ff34 wrong | matched on main, wrong on ff34 | fixed on ff34 | wrong on both |"
+    "| section | ANSI | cells | main wrong | ff34 wrong | matched on main, wrong on ff34 | "
+    "fixed on ff34 | wrong on both |"
 )
 print("|---|---|---|---|---|---|---|---|")
 tot = Counter()
@@ -35,7 +36,8 @@ print(
 )
 print()
 print(
-    "| family predicate | ANSI | cells | main wrong | ff34 wrong | matched on main, wrong on ff34 | fixed on ff34 | wrong on both |"
+    "| family predicate | ANSI | cells | main wrong | ff34 wrong | "
+    "matched on main, wrong on ff34 | fixed on ff34 | wrong on both |"
 )
 print("|---|---|---|---|---|---|---|---|")
 for key, v in summary["family"].items():
@@ -46,7 +48,8 @@ for key, v in summary["family"].items():
     )
 print()
 print(
-    "| coercion fuzz shape family | scale | ANSI | cells | matched on main, wrong on ff34 | fixed on ff34 | wrong on both |"
+    "| coercion fuzz shape family | scale | ANSI | cells | matched on main, wrong on ff34 | "
+    "fixed on ff34 | wrong on both |"
 )
 print("|---|---|---|---|---|---|---|")
 for mode, fams in summary["coerce"].items():
@@ -73,7 +76,8 @@ print("|---|---|---|---|---|---|")
 for r in rows:
     if r["transition"] == "broken-on-ff34":
         print(
-            f"| {r['section']} | `{r['key']}` | {r['ansi']} | {r['spark'][:70]} | {r['main'][:70]} | {r['ff34'][:70]} |"
+            f"| {r['section']} | `{r['key']}` | {r['ansi']} | {r['spark'][:70]} | "
+            f"{r['main'][:70]} | {r['ff34'][:70]} |"
         )
 print()
 print("### Every cell fixed on ff34 (outside the two fuzz sets)")
@@ -83,7 +87,8 @@ print("|---|---|---|---|---|---|")
 for r in rows:
     if r["transition"] == "fixed-on-ff34":
         print(
-            f"| {r['section']} | `{r['key']}` | {r['ansi']} | {r['spark'][:70]} | {r['main'][:70]} | {r['ff34'][:70]} |"
+            f"| {r['section']} | `{r['key']}` | {r['ansi']} | {r['spark'][:70]} | "
+            f"{r['main'][:70]} | {r['ff34'][:70]} |"
         )
 print()
 print("### Every wrong write and DML cell, per build")
@@ -104,7 +109,8 @@ print("|---|---|---|---|---|")
 for r in rows:
     if "zero" in r["key"] and r["section"].startswith("revision"):
         print(
-            f"| `{r['key']}` | {r['ansi']} | {r['spark'][:50]} | {r['main_verdict']} | {r['ff34_verdict']} |"
+            f"| `{r['key']}` | {r['ansi']} | {r['spark'][:50]} | {r['main_verdict']} | "
+            f"{r['ff34_verdict']} |"
         )
 print()
 print("### Verdict categories per section and build")
@@ -132,20 +138,23 @@ if wide_path.exists():
     )
     print()
     print(
-        "| set | ANSI | family | cells | head wrong | head wrong, main right | head wrong, ff34 right | head right, both wrong |"
+        "| set | ANSI | family | cells | head wrong | head wrong, main right | "
+        "head wrong, ff34 right | head right, both wrong |"
     )
     print("|---|---|---|---|---|---|---|---|")
     for mode, fams in wide["coerce"].items():
         for fam, c in fams.items():
             print(
-                f"| coercion fuzz | {mode} | {fam} | {c.get('cells', 0)} | {c.get('head wrong', 0)} | "
+                f"| coercion fuzz | {mode} | {fam} | {c.get('cells', 0)} | "
+                f"{c.get('head wrong', 0)} | "
                 f"{c.get('head wrong, main right', 0)} | {c.get('head wrong, ff34 right', 0)} | "
                 f"{c.get('head right, both wrong', 0)} |"
             )
     for key, c in wide["family"].items():
         mode, pred = key.split("|")
         print(
-            f"| `d {pred}` family | {mode} | | {c['cells']} | {c['head wrong']} | {c['head wrong, main right']} | "
+            f"| `d {pred}` family | {mode} | | {c['cells']} | {c['head wrong']} | "
+            f"{c['head wrong, main right']} | "
             f"{c['head wrong, ff34 right']} | |"
         )
     for key, c in wide["dml"].items():
