@@ -5,7 +5,7 @@
 owner on 2026-11-14, about 13:38 UTC, verbatim "Merge and go with the split plan"; this builder's re-measure on main
 `d843d37e` ([small-cells.md](../../wo/double-decimal-store-round-1/evidence/fix/small-cells.md)).
 
-**Status:** **FIXED 2026-11-14 on the Spark doors** (branch `fix/round-double-exact-1`, not merged; builder
+**Status:** **FIXED on the Spark doors, merged 2026-11-15 in #1337** (`dc6b4c94`; builder
 `claude-opus-5-5`). The native door is a recorded gap (below). **Step 2 of the split plan**, after
 [DOUBLE-DECIMAL-STORE-ROUND-1](double-decimal-store-round-1-card-2026-11-13.md). Severity **S1**: a wrong value
 for ordinary inputs, and a wrong write wherever the result is stored.
@@ -72,7 +72,11 @@ ANSI modes, with the cost row recorded.
   `DECIMAL(10,2)` store 1.12x to 1.16x. So `round(v, 18)`, `bround` and the stores do not hold 1.05x either.
   The added cost is about +1.5 to +2.0 ns per DOUBLE value and +1.7 to +2.3 ns per FLOAT value, in the kernel,
   against a 3-flop binary round. Both tables are in [fix.md](../../wo/round-double-exact-1/evidence/fix/fix.md).
-  The owner rules on the cost before this merges.
+  **Cost exception (owner, 2026-11-15, about 09:30 UTC, verbatim "Merge it. Defaults").** It covers `round` and
+  `bround` of a FLOAT or DOUBLE on the Spark doors in every context: projections, `round(v, 18)`, `bround`, and
+  stores into DOUBLE and DECIMAL. It is this unit's exception, not a widening of DOUBLE-DECIMAL-STORE-ROUND-1's
+  store exception. The C-012 set stays held at 1.05x. The speed work is
+  [DOUBLE-DECIMAL-CAST-PERF-1](double-decimal-cast-perf-1-card-2026-11-14.md), widened to this kernel.
 - **The native gap** (orchestrator ruling, 2026-11-14, after the owner's Q2 and native-gap rulings).
   `repark.sql` keeps DataFusion's own `round`: 11,158 `round` cells per mode still differ from Spark,
   `bround` is missing there (71,763 cells), and `ROUND(v, 309)` answers NaN.

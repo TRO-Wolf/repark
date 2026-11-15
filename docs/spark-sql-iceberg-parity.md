@@ -5491,7 +5491,7 @@ still open is `isModifiable`.
   of a FLOAT/DOUBLE into a DECIMAL pays JDK 17's exact digits, as card
   [DOUBLE-DECIMAL-CAST-PERF-1](../task/roadmap/mid-term/double-decimal-cast-perf-1-card-2026-11-14.md) records.
 
-### ROUND-DOUBLE-EXACT-1 — `round` and `bround` of a FLOAT or DOUBLE round the value's text, as Spark's do — **FIXED 2026-11-14 on the Spark doors (branch, not merged)**
+### ROUND-DOUBLE-EXACT-1 — `round` and `bround` of a FLOAT or DOUBLE round the value's text, as Spark's do — **FIXED 2026-11-14 on the Spark doors (#1337, merged 2026-11-15)**
 
 - **repark** — Before (main `954423e0`): the SQL and `F.expr` doors reached datafusion-spark's `round`, while
   `F.round` and the native door reached DataFusion's. Both multiply by `10^s`, round and divide in binary.

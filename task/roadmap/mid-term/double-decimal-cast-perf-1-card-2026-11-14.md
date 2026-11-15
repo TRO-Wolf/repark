@@ -1,4 +1,4 @@
-# Card DOUBLE-DECIMAL-CAST-PERF-1: a faster exact path for FLOAT/DOUBLE into DECIMAL
+# Card DOUBLE-DECIMAL-CAST-PERF-1: a faster exact path for the JDK 17 digit kernels (DECIMAL stores, `round`)
 
 **Date:** 2026-11-14. **Filed by:** the DOUBLE-DECIMAL-STORE-ROUND-1 finishing builder (`claude-opus-5-5`).
 **Sources:** that unit's cost tables ([card](double-decimal-store-round-1-card-2026-11-13.md#cost),
@@ -9,6 +9,14 @@ about 01:06 UTC, option C.
 split plan" (2026-11-14, about 13:38 UTC) puts DOUBLE-DECIMAL-STORE-ROUND-1's cost exception on stores only, with this
 card as its performance card. Severity **S4** (performance; the answers are right). When step 4 of the split plan puts
 the kernel on written casts, the cast rows come back here with that unit's own measurement.
+
+**Widened 2026-11-15 to the shared kernel.** The owner's "Merge it. Defaults" (2026-11-15, about 09:30 UTC) merged
+[ROUND-DOUBLE-EXACT-1](round-double-exact-1-card-2026-11-14.md) (#1337) with a cost exception for `round`/`bround` of a
+FLOAT or DOUBLE, and adopted Fable's advice (`Fable reply — ROUND-DOUBLE-EXACT-1 cost 2026-11-14.md`, §2.3) to
+fold that unit's speed work into this card rather than open a second one. The store kernel and the round kernel
+share one shape: a binary fast path, and the digit path near a half. Step 3 of the split plan adds the exact
+DECIMAL→DOUBLE cast, a third kernel of that shape. **Order:** one unit after steps 3 and 4 covers all three; it blocks
+no label.
 
 ## Measured (stores only)
 
@@ -24,6 +32,25 @@ median seconds, cores 32-47 (16 cores) ([stores.md](../../wo/double-decimal-stor
 left this card; the plans without a store hold 1.05x. The earlier all-casts table (main `6f9f2aaa`, head `3eed6799`) is
 in the unit card's [Cost](double-decimal-store-round-1-card-2026-11-13.md#cost).
 
+## Measured (`round` and `bround`, from ROUND-DOUBLE-EXACT-1)
+
+Main `d1679e4f` against the #1337 head `d859b961`, 100M rows (20M for the stores), five alternating runs with a
+main-against-main control, the two verifiers' medians of per-run ratios (verifier 1 on 16 cores, verifier 2 on 10;
+[fix.md](../../wo/round-double-exact-1/evidence/fix/fix.md)):
+
+| row | head/main |
+|---|---|
+| `sum(round(v, 2))` DOUBLE | 1.72 to 1.75 |
+| `sum(round(f, 2))` FLOAT | 2.44 to 2.70 |
+| `sum(round(p, 2))`, prices with an exact half every tenth value | 2.26 to 2.39 |
+| `sum(round(v, 18))` | 1.15 to 1.17 |
+| `sum(bround(v, 2))` | 1.05 to 1.06 |
+| store `round(v, 2)` into DOUBLE | 1.18 to 1.19 |
+| store `round(v, 2)` into DECIMAL(10,2) | 1.12 to 1.16 |
+
+The added time is about +1.5 to +2.0 ns per DOUBLE value and +1.7 to +2.3 ns per FLOAT value, against
+datafusion-spark's three-operation binary round. The C-012 set holds (0.997 and 1.004).
+
 ## Where the time goes
 
 `java_double_unscaled` (`crates/repark-common/src/java_double/mod.rs`) is Spark's value: JDK 17's `Double.toString`
@@ -34,6 +61,13 @@ holds the bar.
 
 ## Candidates (unmeasured)
 
+- **For `round` (the builder's design, which Fable judged plausible):** the scale is constant per batch, but the
+  kernel re-reads the power table and re-branches on the scale's sign, the guard, the limit and the margin for every
+  value. A batch kernel with a branch-free first pass that computes the binary answer and flags the values near a
+  half, then an exact second pass over the flagged ones.
+- **The exact halves are a different problem:** every exact half needs JDK 17's text, which is not always the
+  shortest, so the tie cannot be decided from the bits without a proof against the JDK.
+
 - Profile the digit path per row (allocation, the big-integer steps of the port, the text-free digit hand-off) and
   remove what the cast does not need.
 - A wider exact fast path: decide from the double's bits when JDK 17's digits rounded at scale `s` must equal the
@@ -43,7 +77,11 @@ holds the bar.
 
 ## Close
 
-The store rows (`INSERT … SELECT` into DECIMAL(10,2) and (38,18)) hold 1.05x against main before
-DOUBLE-DECIMAL-STORE-ROUND-1, with that unit's pins unchanged.
+- The store rows (`INSERT … SELECT` into DECIMAL(10,2) and (38,18)) hold 1.05x against main before
+  DOUBLE-DECIMAL-STORE-ROUND-1, with that unit's pins unchanged.
+- The `round`/`bround` rows above, except the exact-halves row, hold 1.05x against main before ROUND-DOUBLE-EXACT-1
+  at 100M rows, with that unit's pins unchanged.
+- The exact-halves row gets its own close bar, which the owner sets when the unit is dispatched, because 1.05x may
+  not be reachable there.
 
 Up: [map.md](map.md).
