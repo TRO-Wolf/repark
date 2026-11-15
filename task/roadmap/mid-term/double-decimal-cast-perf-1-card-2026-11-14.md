@@ -18,6 +18,8 @@ share one shape: a binary fast path, and the digit path near a half. Step 3 of t
 DECIMAL→DOUBLE cast, a third kernel of that shape. **Order:** one unit after steps 3 and 4 covers all three; it blocks
 no label.
 
+**Widened 2026-11-15 to DECIMAL-DOUBLE-UNION-COERCION-1 part 1's cost exception.** The owner's ruling (2026-11-15, about 13:59 UTC), verbatim: "Merge 1338, proceed with A and yes to 3". Here "3" means these three rows are that exception, and their speed work belongs to this card: `WHERE d38 < v` (K2 at `DECIMAL(38,18)`) at 1.66x, written `CAST(v AS DECIMAL(10,2))` (K1) at 1.34x and written `CAST(v AS DECIMAL(38,18))` (K1) at 3.36x, head/main at 100M rows on part 1's head before the delta, which the delta does not reach ([cost](../../wo/decimal-double-union-coercion-1/evidence/fix/cost.md); PR #1339). The Close section sets no bar for these three rows yet.
+
 ## Measured (stores only)
 
 Main `d843d37e` against the narrowed DOUBLE-DECIMAL-STORE-ROUND-1 head `d2b517c6`, 10M rows, five alternating pairs,
