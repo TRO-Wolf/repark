@@ -1,0 +1,7 @@
+test spark_math::round_tests::round_double_rounds_the_jdk_text_half_up ... FAILED
+test spark_math::round_tests::float_stays_float_and_rounds_the_widened_text ... FAILED
+test spark_math::round_tests::a_column_scale_is_refused_as_spark_does ... FAILED
+test spark_math::round_tests::integer_and_decimal_arms_keep_their_kernel ... ok
+test spark_math::round_tests::null_scale_answers_null_of_the_input_type ... FAILED
+test spark_math::round_tests::bround_double_rounds_the_jdk_text_half_even ... FAILED
+test result: FAILED. 1 passed; 5 failed; 0 ignored; 0 measured; 976 filtered out; finished in 0.03s

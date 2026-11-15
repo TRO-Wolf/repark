@@ -742,3 +742,218 @@ fn digits_unscaled(converter: &Dtoa, scale: i8) -> Option<i128> {
         magnitude
     })
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum JavaRounding {
+    HalfUp,
+    HalfEven,
+}
+
+const POW10_F32: [f32; 11] = [1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10];
+const UNCHANGED_FLOOR: f64 = 2.0e16;
+const F64_EXACT_LIMIT: u128 = 1 << 53;
+const F32_EXACT_LIMIT: u128 = 1 << 24;
+
+enum Rounded {
+    Unchanged,
+    Kept(u128),
+}
+
+#[must_use]
+pub fn java_double_round(value: f64, scale: i32, mode: JavaRounding) -> Option<f64> {
+    if !value.is_finite() {
+        return Some(value);
+    }
+    if value == 0.0 {
+        return Some(0.0);
+    }
+    let kept = match round_wide(value, scale, mode) {
+        Rounded::Unchanged => return Some(value),
+        Rounded::Kept(kept) => kept,
+    };
+    let magnitude = unscaled_f64(kept, scale)?;
+    Some(if magnitude == 0.0 {
+        0.0
+    } else if value.is_sign_negative() {
+        -magnitude
+    } else {
+        magnitude
+    })
+}
+
+#[must_use]
+pub fn java_float_round(value: f32, scale: i32, mode: JavaRounding) -> Option<f32> {
+    if !value.is_finite() {
+        return Some(value);
+    }
+    if value == 0.0 {
+        return Some(0.0);
+    }
+    let kept = match round_wide(f64::from(value), scale, mode) {
+        Rounded::Unchanged => return Some(value),
+        Rounded::Kept(kept) => kept,
+    };
+    let magnitude = unscaled_f32(kept, scale)?;
+    Some(if magnitude == 0.0 {
+        0.0
+    } else if value.is_sign_negative() {
+        -magnitude
+    } else {
+        magnitude
+    })
+}
+
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss
+)]
+fn round_wide(value: f64, scale: i32, mode: JavaRounding) -> Rounded {
+    let power = usize::try_from(scale.unsigned_abs())
+        .ok()
+        .and_then(|index| POW10_F64.get(index));
+    if let Some(power) = power {
+        let magnitude = value.abs();
+        let scaled = if scale >= 0 {
+            magnitude * power
+        } else {
+            magnitude / power
+        };
+        if scaled >= UNCHANGED_FLOOR {
+            return Rounded::Unchanged;
+        }
+        if scaled < PRODUCT_LIMIT {
+            let whole = scaled as u64;
+            let fraction = scaled - whole as f64;
+            if (fraction - 0.5).abs() > ULP_MARGIN * ulp_of(scaled) {
+                return Rounded::Kept(u128::from(whole) + u128::from(fraction > 0.5));
+            }
+        }
+    }
+    digits_round(&dtoa_double_bits(value.to_bits()), scale, mode)
+}
+
+fn digits_round(converter: &Dtoa, scale: i32, mode: JavaRounding) -> Rounded {
+    let shown = converter
+        .digits
+        .get(converter.first..converter.first + converter.n_digits)
+        .unwrap_or(&[]);
+    let mut digits: u128 = 0;
+    for byte in shown {
+        digits = digits * 10 + u128::from(byte.saturating_sub(b'0'));
+    }
+    let n_digits = i64::try_from(converter.n_digits).unwrap_or(i64::MAX);
+    let shift = i64::from(scale) + i64::from(converter.dec_exponent) - n_digits;
+    if shift >= 0 {
+        return Rounded::Unchanged;
+    }
+    let Some(divisor) = u32::try_from(-shift)
+        .ok()
+        .filter(|dropped| *dropped <= 38)
+        .map(|dropped| 10u128.pow(dropped))
+    else {
+        return Rounded::Kept(0);
+    };
+    let kept = digits / divisor;
+    let twice = (digits % divisor) * 2;
+    let up = match mode {
+        JavaRounding::HalfUp => twice >= divisor,
+        JavaRounding::HalfEven => twice > divisor || (twice == divisor && kept % 2 == 1),
+    };
+    Rounded::Kept(kept + u128::from(up))
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn unscaled_f64(kept: u128, scale: i32) -> Option<f64> {
+    if kept == 0 {
+        return Some(0.0);
+    }
+    if scale == 0 {
+        return Some(kept as f64);
+    }
+    if let Some(small) = u64::try_from(kept).ok().filter(|_| kept < F64_EXACT_LIMIT) {
+        let power = usize::try_from(scale.unsigned_abs())
+            .ok()
+            .and_then(|index| POW10_F64.get(index));
+        if let Some(power) = power {
+            let exact = small as f64;
+            return Some(if scale > 0 {
+                exact / power
+            } else {
+                exact * power
+            });
+        }
+    }
+    with_decimal_text(kept, scale, |text| text.parse::<f64>().ok())
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn unscaled_f32(kept: u128, scale: i32) -> Option<f32> {
+    if kept == 0 {
+        return Some(0.0);
+    }
+    if scale == 0 {
+        return Some(kept as f32);
+    }
+    if let Some(small) = u32::try_from(kept).ok().filter(|_| kept < F32_EXACT_LIMIT) {
+        let power = usize::try_from(scale.unsigned_abs())
+            .ok()
+            .and_then(|index| POW10_F32.get(index));
+        if let Some(power) = power {
+            let exact = small as f32;
+            return Some(if scale > 0 {
+                exact / power
+            } else {
+                exact * power
+            });
+        }
+    }
+    with_decimal_text(kept, scale, |text| text.parse::<f32>().ok())
+}
+
+fn with_decimal_text<R>(
+    kept: u128,
+    scale: i32,
+    parse: impl FnOnce(&str) -> Option<R>,
+) -> Option<R> {
+    let mut text = [0u8; 64];
+    let mut reversed = [0u8; 40];
+    let mut count = 0usize;
+    let mut rest = kept;
+    while rest > 0 {
+        *reversed.get_mut(count)? = b'0' + u8::try_from(rest % 10).ok()?;
+        rest /= 10;
+        count += 1;
+    }
+    let mut pos = 0usize;
+    for index in (0..count).rev() {
+        *text.get_mut(pos)? = *reversed.get(index)?;
+        pos += 1;
+    }
+    *text.get_mut(pos)? = b'e';
+    pos += 1;
+    let exponent = -i64::from(scale);
+    if exponent < 0 {
+        *text.get_mut(pos)? = b'-';
+        pos += 1;
+    }
+    let mut magnitude = exponent.unsigned_abs();
+    let mut exponent_digits = [0u8; 20];
+    let mut exponent_count = 0usize;
+    loop {
+        *exponent_digits.get_mut(exponent_count)? = b'0' + u8::try_from(magnitude % 10).ok()?;
+        magnitude /= 10;
+        exponent_count += 1;
+        if magnitude == 0 {
+            break;
+        }
+    }
+    for index in (0..exponent_count).rev() {
+        *text.get_mut(pos)? = *exponent_digits.get(index)?;
+        pos += 1;
+    }
+    parse(str::from_utf8(text.get(..pos)?).ok()?)
+}
+
+#[cfg(test)]
+mod round_tests;

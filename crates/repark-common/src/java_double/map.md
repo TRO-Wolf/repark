@@ -21,6 +21,7 @@ and UDFs and re-exports these scalars, so every existing importer is untouched.
   `java_double_unscaled` is Spark's FLOAT/DOUBLE-to-DECIMAL value: the JDK 17 text rounded half
   up at the target scale, with a binary fast path away from a half. Behaviour pins stay beside the callers in
   `repark-functions` (the corpus byte-equality test over the recorded JDK
-  17.0.15 fixture and the in-tree tables).
+  17.0.15 fixture and the in-tree tables). **ROUND-DOUBLE-EXACT-1 (2026-11-14):** `java_double_round` and `java_float_round` (`JavaRounding`, half up or half even) round the JDK 17 text at an `i32` scale; a FLOAT rounds its widened double and converts once, straight to `f32`.
 - `bigint.rs` — the ported `FDBigInteger` magnitude arithmetic, little-endian
   `u32` limbs, no `unsafe`.
+- `round_tests.rs` — ROUND-DOUBLE-EXACT-1 pins: Spark-measured cells, zero sign, non-finite values, FLOAT cells, and the fast path against the digit path over random values and half points.

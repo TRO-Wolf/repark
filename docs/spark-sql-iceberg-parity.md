@@ -5491,6 +5491,34 @@ still open is `isModifiable`.
   of a FLOAT/DOUBLE into a DECIMAL pays JDK 17's exact digits, as card
   [DOUBLE-DECIMAL-CAST-PERF-1](../task/roadmap/mid-term/double-decimal-cast-perf-1-card-2026-11-14.md) records.
 
+### ROUND-DOUBLE-EXACT-1 — `round` and `bround` of a FLOAT or DOUBLE round the value's text, as Spark's do — **FIXED 2026-11-14 on the Spark doors (branch, not merged)**
+
+- **repark** — Before (main `954423e0`): the SQL and `F.expr` doors reached datafusion-spark's `round`, while
+  `F.round` and the native door reached DataFusion's. Both multiply by `10^s`, round and divide in binary.
+  `bround` was RePark's own binary kernel, and it answered DOUBLE for a FLOAT. So `ROUND(1.005, 2)` was `1.0`,
+  `ROUND(-22.129547339983247, 18)` was `-22.12954733998325`, `ROUND(1e307, 2)` was `inf`, `ROUND(-0.0, 2)` was
+  `-0.0`, and `ROUND(CAST('1.255' AS FLOAT), 2)` was `1.26`. After: on the SQL, `F.round`/`Column.round`, `F.bround`,
+  `F.expr`, `selectExpr` and `filter(str)` doors, `round` and `bround` of a FLOAT or DOUBLE answer Spark's value. This
+  holds in a SELECT, a folded literal, `WHERE`, `GROUP BY`, a view and every store, at any scale and in both ANSI
+  modes. A FLOAT stays a FLOAT, a zero result is `+0.0`, a NULL scale answers NULL, and a column scale refuses with
+  `DATATYPE_MISMATCH.NON_FOLDABLE_INPUT`. The INT and DECIMAL arms are unchanged.
+- **spark** — Spark 4.1.2 `RoundBase` takes `BigDecimal(Double.toString(d))` (a FLOAT widened to a double first) and
+  applies `setScale(s, HALF_UP)` (`round`) or `HALF_EVEN` (`bround`). It then calls `doubleValue` or `floatValue`,
+  which rounds once. NaN and ±Infinity pass through, a NULL scale answers NULL, and the scale must be foldable.
+  *(oracle: source v4.1.2 with Scala 2.13.17 and JDK 17.0.15, measured live 2026-11-14,
+  `task/wo/round-double-exact-1/evidence/`.)*
+- **Still unlike Spark** — the native door `repark.sql` keeps DataFusion's `round` and has no `bround`, and its
+  `ROUND(v, 309)` answers NaN (the recorded native gap). An integral `round` with ANSI on wraps where Spark raises
+  (ROUND-INT-ANSI-OVERFLOW-1). A DECIMAL `round` keeps the input type where Spark narrows the scale. A string
+  argument is refused where Spark with ANSI on casts it.
+- **Pin** — `python/repark/tests/sql/test_round_double_exact_1.py`: the step 0 values × 34 scales on every Spark
+  door and context, both ANSI modes, Spark's answers from `round_double_exact_1_spark_oracle.json`, and the native
+  gap. Rust pins: `repark-common` `java_double/round_tests.rs` (every fast path against the digit path) and
+  `repark-functions` `spark_math/round_tests.rs`.
+- **Rationale** — the owner's 2026-11-14 "Merge and go with the split plan" (step 2) and the orchestrator's rulings
+  at step 0 (four product files, the native door unchanged, a column scale refused, a FLOAT `bround` returning
+  FLOAT); card [ROUND-DOUBLE-EXACT-1](../task/roadmap/mid-term/round-double-exact-1-card-2026-11-14.md).
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`
