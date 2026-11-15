@@ -517,6 +517,14 @@ def test_written_casts_round_once_as_spark(spark: Any) -> None:
     assert [str(value) for value in row] == ["-22.129547339983247", "1.01", "-22.129547339983247"]
 
 
+def test_a_dataframe_map_of_a_decimal_and_a_double_value_is_double(spark: Any) -> None:
+    frame = spark.sql(
+        "SELECT CAST(1.25 AS DECIMAL(10,2)) AS dc, CAST('1e-20' AS DOUBLE) AS dd"
+    ).select(sf.create_map(sf.lit("a"), sf.col("dc"), sf.lit("b"), sf.col("dd")).alias("c"))
+    assert frame.dtypes == [("c", "map<string,double>")]
+    assert frame.collect()[0][0] == {"a": 1.25, "b": 1e-20}
+
+
 def test_a_dataframe_column_comparison_widens_as_spark(spark: Any) -> None:
     frame = spark.sql(
         "SELECT CAST(1.00 AS DECIMAL(10,2)) AS d, CAST('1.0000000000000004' AS DOUBLE) AS v"

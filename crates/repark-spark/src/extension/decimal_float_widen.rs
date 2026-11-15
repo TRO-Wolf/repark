@@ -22,7 +22,7 @@ const ALL_ARGUMENTS: &[&str] = &[
     "make_array",
 ];
 const AFTER_FIRST_ARGUMENT: &[&str] = &["if", "nvl2"];
-const MAP_CONSTRUCTOR: &str = "__repark_create_map__";
+const MAP_CONSTRUCTORS: &[&str] = &["__repark_create_map__", "create_map"];
 
 #[derive(Debug, Default)]
 pub struct SparkDecimalFloatWiden;
@@ -103,7 +103,7 @@ fn function_positions(name: &str, arity: usize) -> Option<Vec<usize>> {
     if AFTER_FIRST_ARGUMENT.contains(&name) {
         return Some((1..arity).collect());
     }
-    if name == MAP_CONSTRUCTOR {
+    if MAP_CONSTRUCTORS.contains(&name) {
         return Some((1..arity).step_by(2).collect());
     }
     None
