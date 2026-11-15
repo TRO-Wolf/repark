@@ -25,3 +25,4 @@ and UDFs and re-exports these scalars, so every existing importer is untouched.
 - `bigint.rs` — the ported `FDBigInteger` magnitude arithmetic, little-endian
   `u32` limbs, no `unsafe`.
 - `round_tests.rs` — ROUND-DOUBLE-EXACT-1 pins: Spark-measured cells, zero sign, non-finite values, FLOAT cells, and the fast path against the digit path over random values and half points.
+- `decimal_double.rs` (declared and re-exported by `mod.rs`) — **DECIMAL-DOUBLE-UNION-COERCION-1 part 1 (2026-11-15), K2:** `java_decimal_to_double(unscaled, scale)` is JDK 17 `BigDecimal.doubleValue()`, the correctly rounded double. Below 2^53 at scale 1 to 22 it is one division; otherwise Arrow's quotient is refined against the exact halfway point in 256-bit integers, half even. A negative scale or one above 38 uses the text parse. `decimal_double/tests.rs` (6 tests) pins it against the Spark cells, the digit path and the halfway points.

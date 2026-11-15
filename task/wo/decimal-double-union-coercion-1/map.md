@@ -15,6 +15,6 @@ against Spark 4.1.2; documents and probes only, no product code.
 - [inventory.md](inventory.md) — the insertion inventory: every seat where a DECIMAL meets a FLOAT or
   DOUBLE and a common type is chosen, "seen: yes / no, because", with file:line in DataFusion 54.1.0 and
   RePark, how it was searched, and section G: the doors the critic found.
-- [evidence/](evidence/map.md) — the probes, the raw cells and the provenance; `step0/` holds the build's step 0.
+- [evidence/](evidence/map.md) — the probes, the raw cells and the provenance; `step0/` holds the build's step 0, `step0b/` step 0′, `fix/` the part-1 probes, raw cells and cost.
 
 Up: [../map.md](../map.md).

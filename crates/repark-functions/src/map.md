@@ -838,11 +838,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   *ZONE-SEAM-1 fix round 3 (2026-10-23):* `decimal_cast::SPARK_NONNULL_NAME` is `pub`, so the
   router's ZS-9 gate (`repark-spark/src/router/nested_ns.rs`) can look through the non-null
   marker around a `named_struct` when it reads an UPDATE's assigned struct leaf by leaf.
-- `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer
-  rule, on BOTH doors via `install_shared_analyzer_rules` (here since FNP-11B step 3, re-exported at the crate root: `repark_functions::install_shared_analyzer_rules` no doc line: the rules both doors install (integer overflow, decimal casts); TIME guard left to `analyzer_rules()` (remediation round 1)).
-  The session installer calls it in place of the integer-only one. `CAST(bool AS DECIMAL(p,s))` becomes a precision-carrying UDF (true 1, false 0;
-  per-row nulls) reading ANSI at plan time for the overflow (`(2,2)`: raise vs NULL),
-  overflow-exposed targets nullable; registry `CAST-BOOL-DEC-1`. **DOUBLE-DECIMAL-STORE-ROUND-1
+- `bool_decimal.rs` — **NULLABILITY-2 (2026-09-05):** the `BoolDecimalCast` analyzer rule, on BOTH doors via `install_shared_analyzer_rules` (here since FNP-11B step 3; TIME guard left to `analyzer_rules()`, remediation round 1). `CAST(bool AS DECIMAL(p,s))` becomes a precision-carrying UDF (true 1, false 0; per-row nulls) reading ANSI at plan time for the overflow (`(2,2)`: raise vs NULL), overflow-exposed targets nullable; registry `CAST-BOOL-DEC-1`. **DOUBLE-DECIMAL-STORE-ROUND-1 (2026-11-13):** main's BOOLEAN-to-DECIMAL cast again; a FLOAT/DOUBLE `CAST`, `TRY_CAST` or `arrow_cast` to DECIMAL is left alone (pin `bool_decimal::tests::a_float_cast_to_decimal_is_left_to_its_cast`). **DECIMAL-DOUBLE-UNION-COERCION-1 part 1 (2026-11-15):** a door flag: on the Spark door FLOAT/DOUBLE to `Decimal128` casts run K1 (`__repark_float_to_decimal__`) and `Decimal128` to `Float64` casts run K2 (`__repark_decimal_to_double__`); the native door keeps the bool branch only (`bool_decimal/tests.rs`, 17 tests).
   (2026-11-13):** main's BOOLEAN-to-DECIMAL cast again; a FLOAT/DOUBLE `CAST`, `TRY_CAST` or `arrow_cast` to DECIMAL is left alone (pin `bool_decimal::tests::a_float_cast_to_decimal_is_left_to_its_cast`).
 - `int_to_binary.rs` — **BL-11 (2026-09-16):** the `IntToBinaryCast` analyzer rule,
   slotted after `SparkExprSemantics` so `SparkIntegerLiteral` has already narrowed bare
@@ -986,49 +982,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
 - **octo C1-Q-004:** `perf_measure_date_format_compile_once` /
   `perf_measure_substring_char_indices` gated on `REPARK_PERF_MEASURE=1` (not default suite tax).
 - **octo C2-Q-001:** `compile_java_pattern` apostrophe/punct edges + unterminated-quote Err pin.
-- `java_double.rs` + `java_double/` — **C-4 fold 3 item 2 (2026-10-11):** the scalar
-  digit engine and `bigint.rs` moved to `repark-common`'s `java_double/` so the
-  Postgres write chokepoint calls the one function; `dtoa.rs` keeps the two
-  array wrappers and re-exports the scalars, so every importer is untouched and
-  no second formatter exists. The behaviour pins stay here. The `mod tests_unscaled;` line is test-only.
-  **JAVA-DOUBLE-FD-1 port (2026-09-15):**
-  `dtoa.rs` (independent JDK 17 `FloatingDecimal` port) + `bigint.rs` (ported
-  `FDBigInteger`), `tests_corpus.rs` (byte-equality over
-  `REPARK_JDK17_TOSTRING_CORPUS`, green on all 39,427 rows) with full
-  `tables_doubles.rs` (82 non-shortest + 100 random) / `tables_floats.rs`
-  (579 non-shortest + 100 random). `format_float.rs` (C-003:
-  `__repark_format_float__` exact-decimal HALF_UP for single-verb `%f`/`%F`);
-  the rule also folds Java-suffixed string literals to DOUBLE/FLOAT with
-  one-level projection propagation (C-006).
-  **JAVA-DOUBLE-STR-1 (2026-09-15):** the single home of
-  Java float spellings — `java_double_text` / `java_float_text` (moved from
-  `json/reader.rs`; `reader.rs`, `decode.rs` and `to_json.rs` import from here,
-  so no second formatter exists) plus the Spark-door `CAST(<FLOAT|DOUBLE> AS
-  <string>)` rewrite. `SparkFloatToStringCast` (registered in
-  `analyzer_rules()` right after `SparkExprSemantics`) turns the cast into the
-  embedded `__repark_float_to_string__` UDF, so SQL, `selectExpr`, `F.expr` and
-  `col.cast` all answer Java text typed `Utf8`; the native ANSI door never
-  installs the rule and keeps Arrow text. Shortest-`e` rendering with Java
-  thresholds (plain decimal for `1e-3 <= |x| < 1e7`, `d.dddEn` outside, one
-  digit after the point); `Double.MIN_VALUE` (±bit pattern 1) spells
-  `4.9E-324` and `Float.MIN_VALUE` spells `1.4E-45` where Rust shortest prints
-  shorter (oracle BL7-16 / JD-cast-13, J10-float-min). Round 2 formats into
-  caller stack buffers (`with_java_double_text` / `with_java_float_text`, len
-  helpers for the length kernels) so no per-value `String` is allocated; the
-  rule is now `SparkFloatStringify` with `TRY_CAST`, `LIKE`, `CASE`,
-  `format_string` `%s`-only and single-verb `%f` arms, `array_join`, suffixed-literal
-  folding and one-level projection propagation, non-literal STRING to FLOAT/DOUBLE
-  casts routed to the column parse kernel, plus bad-literal folding to
-  `CAST_INVALID_INPUT` (ANSI on) or `NULL`. It rides pre-coercion (one slot in
-  the shared insertion) and post-coercion (in `analyzer_rules()`); both seats
-  are idempotent. The JDK-longhand remainder is JAVA-DOUBLE-FD-1.
-  **FNP-4B round 8 (2026-09-15):** the text helpers are `pub` (module `pub`) so the
-  Spark door names suffix-literal fields from value text.
-  **JAVA-DOUBLE-FD-1 fix round 1 (2026-09-15, R-17c-2):** `rewrite_float_cast`
-  exempts `CAST(__repark_suffix_literal__(…) AS FLOAT|DOUBLE)` from the
-  non-literal parse-kernel route so the door's `FoldSparkNumericCasts` still
-  folds it to a non-null literal; `SUFFIX_LITERAL_NAME` is the `pub` single
-  source here that repark-spark re-exports. Round 2 made `rewrite_float_cast` `pub(crate)`; round 3 (2026-11-02) reverted it.
+- `java_double.rs` + `java_double/` — **C-4 fold 3 item 2 (2026-10-11):** the scalar digit engine and `bigint.rs` moved to `repark-common`'s `java_double/`, so the Postgres write chokepoint calls the same function; `dtoa.rs` keeps the array wrappers and re-exports the scalars. The behaviour pins stay here.
+  **JAVA-DOUBLE-FD-1 port (2026-09-15):** `dtoa.rs` (independent JDK 17 `FloatingDecimal` port) and `bigint.rs` (ported `FDBigInteger`); `tests_corpus.rs` is byte-equal to `REPARK_JDK17_TOSTRING_CORPUS` on all 39,427 rows; `tables_doubles.rs` (82 non-shortest + 100 random) and `tables_floats.rs` (579 + 100); `format_float.rs` (C-003: `__repark_format_float__`, exact-decimal HALF_UP for single-verb `%f`/`%F`); the rule folds Java-suffixed literals to DOUBLE/FLOAT with one-level projection propagation (C-006).
+  **JAVA-DOUBLE-STR-1 (2026-09-15):** the single home of Java float spellings (`java_double_text` / `java_float_text`, moved from `json/reader.rs`, which with `decode.rs` and `to_json.rs` imports from here) plus the Spark-door `CAST(<FLOAT|DOUBLE> AS <string>)` rewrite: `SparkFloatToStringCast` (after `SparkExprSemantics` in `analyzer_rules()`) turns it into `__repark_float_to_string__`, so SQL, `selectExpr`, `F.expr` and `col.cast` answer Java text typed `Utf8`; the native ANSI door keeps Arrow text. Shortest-`e` rendering uses Java thresholds (plain decimal for `1e-3 <= |x| < 1e7`, `d.dddEn` outside); `Double.MIN_VALUE` spells `4.9E-324` and `Float.MIN_VALUE` `1.4E-45` (oracle BL7-16 / JD-cast-13, J10-float-min). Round 2 formats into caller stack buffers (`with_java_double_text` / `with_java_float_text`, length helpers), and the rule is `SparkFloatStringify` with `TRY_CAST`, `LIKE`, `CASE`, `format_string` `%s` and single-verb `%f` arms, `array_join`, suffixed-literal folding, one-level projection propagation, non-literal STRING to FLOAT/DOUBLE casts on the column parse kernel, and bad-literal folding to `CAST_INVALID_INPUT` (ANSI on) or `NULL`. It rides pre-coercion (one slot in the shared insertion) and post-coercion (in `analyzer_rules()`); both seats are idempotent. The JDK-longhand remainder is JAVA-DOUBLE-FD-1.
+  **FNP-4B round 8 (2026-09-15):** the text helpers are `pub` so the Spark door names suffix-literal fields from value text. **JAVA-DOUBLE-FD-1 fix round 1 (2026-09-15, R-17c-2):** `rewrite_float_cast` exempts `CAST(__repark_suffix_literal__(…) AS FLOAT|DOUBLE)` from the non-literal parse-kernel route so `FoldSparkNumericCasts` still folds it to a non-null literal; `SUFFIX_LITERAL_NAME` is the `pub` single source here. Round 2 made `rewrite_float_cast` `pub(crate)`; round 3 (2026-11-02) reverted it.
 - `string.rs` — `SparkSubstring` (`substring`, alias `substr`; audit #6): Spark's
   `UTF8String.substringSQL` character-based semantics — pos 0 acts as 1, negative pos counts
   from the end, the window clips (never errors), negative len → `''`, NULL args → NULL.
