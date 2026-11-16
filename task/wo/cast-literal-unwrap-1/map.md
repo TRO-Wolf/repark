@@ -1,4 +1,4 @@
-# task/wo/cast-literal-unwrap-1/ — CAST-LITERAL-UNWRAP-1, step 0
+# task/wo/cast-literal-unwrap-1/ — CAST-LITERAL-UNWRAP-1, step 0 and the build
 
 The owner's "defaults" of 2026-11-16 (about 14:40 UTC): its own S1 unit, label-blocking, step 0 now, measurement
 only, beside #1341's delta round. Measured on main `83df6be1` against Spark 4.1.2; documents and probes only, no
@@ -14,6 +14,7 @@ product code. Card: [../../roadmap/mid-term/cast-literal-unwrap-1-card-2026-11-1
 - [inventory.md](inventory.md) — every seat that can move a cast across a comparison or prune by one, "seen: yes /
   no, because", in DataFusion 54.1.0 and 55.2.0, the Iceberg fork, RePark and #1341.
 - [rulings-2026-11-16.md](rulings-2026-11-16.md) — the owner's word verbatim and the five rulings.
-- [evidence/](evidence/map.md) — the probes, the raw cells, the verdicts and the provenance.
+- [evidence/](evidence/map.md) — the probes, the raw cells, the verdicts and the provenance; `evidence/built/` holds
+  the build's bar and cost (seat W, both placements, head `88999454`; rulings of about 16:25 UTC in the card).
 
 Up: [../map.md](../map.md).

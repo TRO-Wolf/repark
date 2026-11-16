@@ -1,0 +1,102 @@
+{
+ "between": [
+  2,
+  3,
+  4,
+  5,
+  9
+ ],
+ "big5_eq1": [
+  1
+ ],
+ "big_eq1": "ERR [CAST_OVERFLOW] The value 2147483648L of the type \"BIGINT\" cannot be cast to \"INT\" due to an overflow. Use `try_cast` to tolerate overflow a",
+ "big_eq5": "ERR [CAST_OVERFLOW] The value 2147483648L of the type \"BIGINT\" cannot be cast to \"INT\" due to an overflow. Use `try_cast` to tolerate overflow a",
+ "big_try": [
+  1
+ ],
+ "bottom_lt": "ERR [CAST_OVERFLOW] The value 128.00BD of the type \"DECIMAL(10,2)\" cannot be cast to \"TINYINT\" due to an overflow. Use `try_cast` to tolerate ov",
+ "constant_left": [
+  9,
+  11
+ ],
+ "control_abs": [
+  2,
+  3,
+  4,
+  5,
+  7,
+  8
+ ],
+ "control_arith": [
+  2,
+  3,
+  4,
+  5
+ ],
+ "decimal_constant": [
+  2,
+  3,
+  4,
+  5
+ ],
+ "double_constant": [
+  3
+ ],
+ "double_in": [
+  3,
+  9
+ ],
+ "double_int": [
+  2,
+  3,
+  4
+ ],
+ "float_int": [
+  2,
+  3,
+  4
+ ],
+ "in_past_cap": [
+  9
+ ],
+ "int_in": [
+  2,
+  3,
+  4,
+  5
+ ],
+ "non_ascii": [
+  2,
+  3,
+  4,
+  5
+ ],
+ "not_in": [
+  7,
+  8,
+  9,
+  11,
+  12
+ ],
+ "null_safe_zero": [
+  1,
+  6,
+  10
+ ],
+ "sel_true": [
+  2,
+  3,
+  4,
+  5
+ ],
+ "string_int": [
+  1
+ ],
+ "tiny_eq1": "ERR [CAST_OVERFLOW] The value 99999999.99BD of the type \"DECIMAL(10,2)\" cannot be cast to \"TINYINT\" due to an overflow. Use `try_cast` to tolera",
+ "top_gt": "ERR [CAST_OVERFLOW] The value 128.00BD of the type \"DECIMAL(10,2)\" cannot be cast to \"TINYINT\" due to an overflow. Use `try_cast` to tolerate ov",
+ "top_lt": "ERR [CAST_OVERFLOW] The value 128.00BD of the type \"DECIMAL(10,2)\" cannot be cast to \"TINYINT\" due to an overflow. Use `try_cast` to tolerate ov",
+ "ts_date": [
+  1,
+  2
+ ]
+}

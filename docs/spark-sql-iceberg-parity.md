@@ -5610,6 +5610,45 @@ still open is `isModifiable`.
   card
   [DECIMAL-DOUBLE-UNION-COERCION-1](../task/roadmap/mid-term/decimal-double-union-coercion-1-card-2026-11-13.md).
 
+### CAST-LITERAL-UNWRAP-1 — a narrowing cast compared with a constant keeps its cast — **FIXED 2026-11-16 (branch `fix/cast-literal-unwrap-1`, not merged)**
+
+- **repark** — Before (main `cb7d3943`): DataFusion 54.1.0's simplifier rewrote `CAST(c AS T) <op> k` as `c <op> k'`
+  whenever `k` converted exactly to `c`'s type, without asking whether the cast loses information. So
+  `CAST(c AS INT) = 1` over a `DECIMAL(10,2)` ran as `c = 1.00`, `CAST(c AS DECIMAL(10,1)) = 1.3` found no row, `DELETE` /
+  `UPDATE` / `MERGE` with such a predicate wrote the wrong rows, and with ANSI on the overflowing values were never cast,
+  so Spark's `CAST_OVERFLOW` never happened. Every door, position, storage and DML verb.
+
+  After, on every door (Spark, DataFrame, `F.expr`, `filter(str)`, native):
+  - a core rule wraps each narrowing `Cast` / `TryCast` (integer to a narrower integer; DECIMAL to an integer type
+    when it has a scale or its integer part may not fit; DECIMAL to a smaller scale or fewer integer digits) that is
+    compared with a column-free side, directly or under widening casts, in an identity function the simplifiers cannot
+    unwrap;
+  - the function's `preimage` gives the exact range on the column when the cast cannot overflow (truncation toward zero
+    for an integer target, half away from zero for a smaller scale), so the filter prunes as the hand-written range; an
+    `IN` of up to 32 constants becomes its ranges;
+  - a cast that can overflow runs per row, so ANSI on raises as Spark does;
+  - the rule runs last among the analyzer rules, before every `simplify_expressions` pass and the signed-zero re-run,
+    and last in the optimizer, so a filter moved onto a cast (a subquery's or a view's cast column, `withColumn` then
+    `filter`) is shielded before any simplifier sees it.
+- **spark** — Spark 4.1.2 evaluates the cast per row (truncation to an integer, `HALF_UP` to a smaller scale), raising
+  `CAST_OVERFLOW` / `NUMERIC_VALUE_OUT_OF_RANGE` with ANSI on and wrapping or answering NULL with it off.
+  *(oracle: measured live 2026-11-16, `task/wo/cast-literal-unwrap-1/evidence/` and `evidence/built/`.)*
+- **Still unlike Spark:**
+  - **with ANSI off, a narrowing cast that overflows refuses** in the kernel where Spark wraps or answers NULL
+    (named class EQUAL→REFUSE (Q2), 122 cells that main answered right by luck, and WRONG→REFUSE (Q2), 648 cells);
+    [ANSI-OFF-NARROWING-OVERFLOW-1](../task/roadmap/mid-term/ansi-off-narrowing-overflow-1-card-2026-11-16.md), S2;
+  - **a comparison with the target type's top or bottom** (`CAST(c AS TINYINT) > 127`) refuses per row where Spark
+    answers no rows without casting (WRONG→REFUSE (Q4), 33 cells);
+    [CAST-TOP-OF-TYPE-FOLD-1](../task/roadmap/mid-term/cast-top-of-type-fold-1-card-2026-11-16.md), S3;
+  - STRING casts are held for their own sizing; an Iceberg scan does not prune by a DECIMAL predicate at all, hand-written
+    or shielded (the fork converts no decimal literal), while Parquet prunes both alike.
+- **Pin** — `python/repark/tests/types/test_cast_literal_unwrap_1.py`, both ANSI modes; Rust `repark-core`
+  `session/df_guards/cast_shield/tests.rs` (the `preimage` table, and the four filter-moved shapes red with the
+  optimizer placement stripped).
+- **Cost** — [evidence/built/cost.md](../task/wo/cast-literal-unwrap-1/evidence/built/cost.md).
+- **Rationale** — the owner's 2026-11-16 rulings ("defaults"; "adopt Fable's, run the string-cast sizing"); card
+  [CAST-LITERAL-UNWRAP-1](../task/roadmap/mid-term/cast-literal-unwrap-1-card-2026-11-16.md).
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`

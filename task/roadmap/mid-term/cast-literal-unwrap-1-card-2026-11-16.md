@@ -52,4 +52,59 @@ depends on this unit for its cells with a constant. [CAST-FLOAT-DECIMAL-OVERFLOW
 and [CAST-INFINITY-TO-DECIMAL-NULL-1](cast-infinity-to-decimal-null-1-card-2026-11-02.md) are kernel refusals of
 FLOAT and DOUBLE casts; no card names the unwrap.
 
+## Append (2026-11-16): built (seat W, both placements; branch `fix/cast-literal-unwrap-1`, not merged)
+
+**Rulings.** Owner, about 14:40 UTC, verbatim "defaults" (S1, label-blocking; #1341, then this unit, then
+DECIMAL-COMMON-TYPE-1). Owner, about 16:25 UTC, verbatim "adopt Fable's, run the string-cast sizing", on step 0's six
+questions: (1) seat W, with the shield rule also in the optimizer, before every `SimplifyExpressions` (the signed-zero
+re-run included) and last; (2) the ANSI-off overflow refusal accepted with a disclosure, carded
+[ANSI-OFF-NARROWING-OVERFLOW-1](ansi-off-narrowing-overflow-1-card-2026-11-16.md) (S2); (3) STRING casts held for
+their own sizing; (4) the top-of-type comparison out of the unit, pinned, carded
+[CAST-TOP-OF-TYPE-FOLD-1](cast-top-of-type-fold-1-card-2026-11-16.md) (S3); (5) cost bars 1.05x with both placements
+in; (6) the four side cards to the records clerk.
+
+**Seat.** `repark_cast_shield` wraps each narrowing `Cast` / `TryCast` compared with a column-free side (`=`, `<>`, `<`,
+`<=`, `>`, `>=`, `<=>`, `IS [NOT] DISTINCT FROM`, `[NOT] IN`, `[NOT] BETWEEN`; directly, under widening casts, or under
+`__repark_decimal_to_double__`) in `__repark_cast_shield__`, an identity UDF whose `preimage` gives the exact range on
+the column: truncation toward zero to an integer type, half away from zero to a smaller scale, the lower bound clipped
+to the column's range, declining for every cast that can overflow (the cast then runs per row). A shielded `[NOT] IN`
+of up to 32 literals becomes its ranges; past 32 it stays per row. **Placements:** last among the analyzer rules
+(`finish_session_build`), and in the optimizer before each `simplify_expressions`, before `signed_zero_literals`'
+internal re-run, and last. A plan with no cast under a comparison pays one `exists` walk per placement.
+
+**Files (4 of the 8-file cap):** `crates/repark-core/src/session/df_guards/cast_shield.rs` (the rule) and
+`cast_shield/udf.rs` (the UDF, `preimage`, the narrowing / lossless / overflow predicates), both new;
+`session/df_guards.rs` (module, registration, both placements); `session/df_guards/signed_zero/literals.rs` (the
+shield before the re-run). One-line exports and registrations: `session.rs`, `lib.rs`, the `F.expr` context in
+`repark-python` `column/expr_build.rs`. The UDF lives in `repark-core`, not `repark-functions`, because the core rule
+builds it and `repark-core` (tier 2) may not depend on `repark-functions` (tier 3).
+
+**Bar** ([evidence/built/bar.md](../../wo/cast-literal-unwrap-1/evidence/built/bar.md)), head `88999454` against main
+`cb7d3943` and Spark 4.1.2, step 0's domain table, its shapes and the critic's four sets, both modes, 9,569 cells:
+- main 4,573 EQUAL / 2,728 WRONG / 1,119 MISSED-RAISE / 1,149 REFUSE; head 7,593 / 24 / 0 / 1,952;
+- **0 EQUAL→WRONG, 0 MISSED-RAISE**; EQUAL→REFUSE only in the named class **EQUAL→REFUSE (Q2), 122 cells** (ANSI off,
+  overflow-capable casts over overflowing values, kernel refusals where Spark wraps or answers NULL);
+- **WRONG→REFUSE (Q2), 648 cells**; **WRONG→REFUSE (Q4), 33 cells** (top-of-type);
+- the 24 head WRONG cells are step 0's DataFrame `datetime`-literal exclusions and three `EXPLAIN` texts;
+- 1,149 refusals unchanged (kernel refusals carded apart, `int()` / `bigint()`, the `createDataFrame` view chain);
+- the native door moves as the Spark door (334 WRONG and 344 MISSED-RAISE to EQUAL).
+
+**Cost** ([evidence/built/cost.md](../../wo/cast-literal-unwrap-1/evidence/built/cost.md)), 5 alternating runs:
+
+| row | ratio | bar |
+|---|---|---|
+| C-012 `c012p6` / `c012rest` | 1.008 / 1.008 | 1.05x |
+| `plan_pred200` / `plan_values10k` / `plan_union200` / `plan_free200` / `plan_wide_dd` | 1.009 / 1.011 / 1.004 / 1.027 / 1.045 | 1.05x |
+| C2 `= 1` / `< 1`, cast vs hand-written range | 0.959 / 1.027 | 1.05x |
+| C3 CoW and MoR, scan tasks cast vs hand-written | 16 = 16 | equal |
+| `DELETE … CAST(c AS INT) = 1`, CoW / MoR, vs hand-written | 0.980 / 1.012 | 1.05x |
+| C4 per row, `BIGINT`→`INT` Parquet / Iceberg; `DECIMAL(10,2)`→`TINYINT` Parquet / Iceberg | 0.960 / 1.036; 1.711 / 1.279 | reported |
+| `IN` of 40, per row | 1.193 | reported |
+
+**Pins:** `python/repark/tests/types/test_cast_literal_unwrap_1.py` (both modes; 177 of its 193 tests red on main, the
+other 16 the controls and the one cell main already answered), and `repark-core` `session/df_guards/cast_shield/tests.rs`,
+whose `the_ruling_one_shapes_need_the_optimizer_placement` shows s17, s16, s21 and s22 answering `[2]` with the
+optimizer placement stripped and `[2, 3, 4, 5]` with both. **Found:** the Iceberg scan prunes no DECIMAL predicate,
+shielded or hand-written (the fork converts no decimal literal).
+
 Up: [map.md](map.md).

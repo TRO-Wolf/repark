@@ -1,6 +1,7 @@
 # task/wo/cast-literal-unwrap-1/evidence/ — probes, raw cells, provenance
 
 - [probes/](probes/map.md) — the cell definitions, the runners and the analysis (comment-free Python).
+- [built/](built/map.md) — the build's bar and cost (head `88999454`).
 - [raw/](raw/map.md) — one JSON object per cell and engine, the verdicts, the summary tables, the `EXPLAIN` side
   observation on both engines, and the DataFusion 54.1.0 / 55.2.0 diff.
 
