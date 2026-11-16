@@ -47,7 +47,7 @@ Measured 2026-11-16 on main `83df6be1`'s package against Spark 4.1.2, ANSI off a
 ## Exclusions
 
 The ten `date_ts` DataFrame cells per mode with a Python `datetime` literal disagree because PySpark reads a naive
-`datetime` in the driver's zone (America/New_York) and RePark in the session zone (UTC). That is not this unit; the
+`datetime` in the driver's local zone, which is not UTC, and RePark in the session zone (UTC). That is not this unit; the
 same kind agrees on every SQL, `F.expr` and `filter(str)` cell. They are counted below as they fell.
 
 

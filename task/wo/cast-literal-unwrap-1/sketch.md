@@ -232,7 +232,7 @@ integer to a narrower integer.
    - STRING to `INT`, DECIMAL and `DATE` refuse on the texts Spark trims or parses; the native door also refuses
      STRING to `DOUBLE`, which the Spark door answers.
 4. **A DataFrame `datetime` literal.** `F.col("c").cast("timestamp") == datetime(2024, 1, 1)`: PySpark reads the naive
-   `datetime` in the driver's zone (America/New_York here), RePark in the session zone (UTC), so the ten `date_ts`
+   `datetime` in the driver's local zone (not UTC here), RePark in the session zone (UTC), so the ten `date_ts`
    DataFrame cells per mode differ. Excluded from this unit's counts' meaning; see owner question 6.
 5. **A SQL temp view over a `createDataFrame` view raises** (the critic's s16, re-measured): `CREATE OR REPLACE
    TEMP VIEW w AS SELECT id, CAST(c AS INT) AS k FROM <createDataFrame view>`, then `SELECT … FROM w`, raises

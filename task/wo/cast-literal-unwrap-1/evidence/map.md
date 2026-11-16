@@ -18,7 +18,7 @@
 - **When:** 2026-11-16, about 14:55–15:35 UTC (09:55–10:35 local), beside PR #1341's delta round. Every probe ran
   under the shared measure lock on cores 48–57 with a 48 GiB address-space cap, and every Spark JVM under the Spark
   lock, one command at a time.
-- **Box zone:** America/New_York. Every session sets `spark.sql.session.timeZone` to UTC; see the DataFrame
+- **Box zone:** the box's local zone, which is not UTC. Every session sets `spark.sql.session.timeZone` to UTC; see the DataFrame
   datetime note in [../domain-table.md](../domain-table.md#exclusions).
 - **Commands** (from `probes/`, `<out>` a scratch directory, `<wh>` a scratch warehouse parent):
   - `run_cells.py repark <false|true> <wh> <jar> <out>/repark-<ansi>.jsonl`;
