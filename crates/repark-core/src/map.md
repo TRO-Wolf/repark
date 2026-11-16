@@ -21,29 +21,74 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 
 ## Contents
 
-- `local_fs_policy.rs` (+ [local_fs_policy/](local_fs_policy/map.md)) — **PA-LOCAL-FS-POLICY-1 (2026-10-15, audit PA-02 to PA-04; fix rounds of 2026-10-15 and 2026-10-16, owner rulings 103, 104 and 114 (b)):** the one local-filesystem write policy, beside `CatalogRegistry`. The guard judges where
-  the bytes land. The location is read the way the write reads it: `ListingTableUrl::parse`, the call DataFusion's `COPY` planner and `CREATE EXTERNAL TABLE` factory make, gives the written path (a URL's dot segments, `%2e` forms included, removed lexically; one percent decode; `file:x` as `/x`; a
-  bare relative or leading-space path read against the cwd; a bare path cut at its first glob character, as DataFusion cuts it); any other scheme is remote; a parse failure or a `file://<host>` is unreadable and refuses. `resolve_physical_destination` makes a path absolute, finds the nearest
-  ancestor `symlink_metadata` reports, `canonicalize`s it and appends the remaining components; a `..` in those components, a dangling symlink, a loop or a metadata read failing other than not-found is indeterminate (`None`). `location_under_any_warehouse` holds when the written path resolved so
-  lies under a warehouse root, each root read as a plain path or `file:` URL with no glob split (`catalog_state::memory_warehouse_fallback_root`, the repo's one reading of a warehouse string) and resolved the same way. `local_filesystem_path` returns the written path.
-  `refuse_local_filesystem_writes` walks the plan with `TreeNode::apply` and checks every `Copy` and `CreateExternalTable` node at any depth (`Analyze` and `Prepare` inputs included), skipping below a plain `Explain`. `allow_local_filesystem_ddl` reads the opt-in from the `repark.sql` config
-  extension only, accepting its field unprefixed (the real `extensions_options!` shape) or prefixed; absent means closed. `refuse_local_filesystem_plan` is the read plus the walk, for the two doors. `LocalFsGuardedDialect` (ruling 113, 2026-10-16) wraps the dialect it is handed (`wrapping`): it
-  plans the statement on the session's state, runs the walk with no conf read, and on a pass hands the statement to the inner dialect; `execute_with_write_options`, `on_session_built`, `type_planner` and `configure_analyzer_rules` forward to it, so the inner dialect's planner and analyzer rules
-  shape both plans. `ReparkSessionBuilder::with_local_fs_guard` sets `local_fs_guard`, and `session_dialect` wraps, at build, the dialect the builder would otherwise use (the one handed in, else `DataFusionDialect`); the native door uses it. Its refusal says `repark.sql() does not allow local-file
-  DDL` and that the entry has no opt-in (`NATIVE_ENTRY_REFUSAL`). `catalog_state.rs` imports `strip_ascii_prefix_ci` from here. Then `native_ctas` (NATIVE-CTAS-ICEBERG-REFUSE-1).
-- `microbatch/` + [microbatch/](microbatch/map.md) — **MB-3 (2026-10-07):** the Session-owned micro-batch driver (1.7): the `StreamingQueryManager` installed as a config extension through `Session::context()`, the `QueryHandle`, the trigger loop and the progress surface. One `pub mod microbatch;`
-  line in `lib.rs`.
-- `silver.rs` + [silver/](silver/map.md) — typed `SilverPlan` (SILVER-S1, 2026-09-12): TOML parse with key-path refusals, closed operation enums, parse-time structural validation, canonical identity bytes, deterministic `explain()`. `pub` from this crate, not bound into Python, unstable until
-  SIL-1..SIL-10. No data execution.
-- `config_file.rs` + [config_file/](config_file/map.md) — the `repark.toml` loader (CFG-1, steps 1–2 landed 2026-09-09). The module owns `ConfigFile` (`profiles: BTreeMap<String, Profile>` over the D-1 tables), the public `load()` entry (discovery, then the file read, then `parse()`), and the
-  `parse()` reader over `toml::Table`; unknown keys refuse as `Error::Config` with the key path. Discovery, the profile merge and `${VAR}` interpolation live in `config_file/{discovery,profile,interpolate}.rs`; step 2 landed `sources.rs` (`[<profile>.catalog.<name>]` re-bridged through
-  `parse_catalog_specs` for byte-identical specs, `[<profile>.database.<kind>.<name>]` into the crate-private `SourceSpec`, per-profile cross-family name uniqueness) and `redact.rs` (`redact_value`/`redact_config` over `catalog_config::prop_key_is_secret`, widened to `pub(crate)` this step). Step 3
-  wired the builder (`wiring.rs`: forced-or-discovered load, `REPARK_ENV` profile, merge, interpolation, translation to flat pairs, the `(key, redacted value, source)` dump rows) and took the now-live `#[allow(dead_code)]` attributes off; the ones still unreachable (`load`, `redact_config`, the
-  spec-field carriers) stay, and the crate is built with warnings denied. The facade round added the `config_file_pairs` entry (translated pairs for the binding fold) and nested-`conf` dot-join flattening. MAINT-POLICY-1 step 1 (2026-09-10) added `config_file/maintenance.rs` (the typed
-  `[<profile>.maintenance]` policy: `MaintenancePolicy` + `TablePolicy`, the D-2 duration parser, key-by-key table resolution, `adaptive_partitioning` reserved) and the raw `maintenance` slot on `Profile`. **REVIEW-FIX-7 step 1 (2026-09-10):** `parse()` sanitizes TOML failures to `message()` plus
-  the locally computed line and column, never the echoed source line.
-- `session.rs` — **C-2d fold 1 (2026-10-07), N5:** `table_exists` asks `source_table_exists` first, so a three-part name under a mounted source resolves through the source. Three comment lines were shed to pay for the three new lines; the file holds 999 of 1000. **C-4 step 2 (2026-10-09):** the
-  builder installs the last-Postgres-write-report carrier; the install line is paid for by one shed comment, so the file holds 1000 of 1000. `build` carries `#[allow(clippy::too_many_lines)]` (one config line per wired product), paid for by a second shed comment.
+- `local_fs_policy.rs` (+ [local_fs_policy/](local_fs_policy/map.md)) — **PA-LOCAL-FS-POLICY-1
+  (2026-10-15, audit PA-02 to PA-04; fix rounds of 2026-10-15 and 2026-10-16, owner rulings 103,
+  104 and 114 (b)):** the one local-filesystem write policy, beside `CatalogRegistry`. The guard
+  judges where the bytes land. The location is read the way the write reads it:
+  `ListingTableUrl::parse`, the call DataFusion's `COPY` planner and `CREATE EXTERNAL TABLE`
+  factory make, gives the written path (a URL's dot segments, `%2e` forms included, removed
+  lexically; one percent decode; `file:x` as `/x`; a bare relative or leading-space path read
+  against the cwd; a bare path cut at its first glob character, as DataFusion cuts it); any other
+  scheme is remote; a parse failure or a `file://<host>` is unreadable and refuses.
+  `resolve_physical_destination` makes a path absolute, finds the nearest ancestor
+  `symlink_metadata` reports, `canonicalize`s it and appends the remaining components; a `..` in
+  those components, a dangling symlink, a loop or a metadata read failing other than not-found is
+  indeterminate (`None`). `location_under_any_warehouse` holds when the written path resolved so
+  lies under a warehouse root, each root read as a plain path or `file:` URL with no glob split
+  (`catalog_state::memory_warehouse_fallback_root`, the repo's one reading of a warehouse string)
+  and resolved the same way. `local_filesystem_path` returns the written path.
+  `refuse_local_filesystem_writes` walks the plan with `TreeNode::apply` and checks every `Copy`
+  and `CreateExternalTable` node at any depth (`Analyze` and `Prepare` inputs included), skipping
+  below a plain `Explain`. `allow_local_filesystem_ddl` reads the opt-in from the `repark.sql`
+  config extension only, accepting its field unprefixed (the real `extensions_options!` shape) or
+  prefixed; absent means closed. `refuse_local_filesystem_plan` is the read plus the walk, for the
+  two doors. `LocalFsGuardedDialect` (ruling 113, 2026-10-16) wraps the dialect it is handed
+  (`wrapping`): it plans the statement on the session's state, runs the walk with no conf read,
+  and on a pass hands the statement to the inner dialect; `execute_with_write_options`,
+  `on_session_built`, `type_planner` and `configure_analyzer_rules` forward to it, so the inner
+  dialect's planner and analyzer rules shape both plans. `ReparkSessionBuilder::with_local_fs_guard`
+  sets `local_fs_guard`, and `session_dialect` wraps, at build, the dialect the
+  builder would otherwise use (the one handed in, else `DataFusionDialect`); the
+  native door uses it. Its refusal says `repark.sql() does not allow local-file DDL` and that the
+  entry has no opt-in (`NATIVE_ENTRY_REFUSAL`). `catalog_state.rs` imports `strip_ascii_prefix_ci`
+  from here. Then `native_ctas` (NATIVE-CTAS-ICEBERG-REFUSE-1).
+- `microbatch/` + [microbatch/](microbatch/map.md) — **MB-3 (2026-10-07):** the Session-owned
+  micro-batch driver (1.7): the `StreamingQueryManager` installed as a config extension through
+  `Session::context()`, the `QueryHandle`, the trigger loop and the progress surface. One
+  `pub mod microbatch;` line in `lib.rs`.
+- `silver.rs` + [silver/](silver/map.md) — typed `SilverPlan` (SILVER-S1, 2026-09-12): TOML
+  parse with key-path refusals, closed operation enums, parse-time structural validation,
+  canonical identity bytes, deterministic `explain()`. `pub` from this crate, not bound
+  into Python, unstable until SIL-1..SIL-10. No data execution.
+- `config_file.rs` + [config_file/](config_file/map.md) — the `repark.toml` loader (CFG-1,
+  steps 1–2 landed 2026-09-09). The module owns `ConfigFile` (`profiles: BTreeMap<String,
+  Profile>` over the D-1 tables), the public `load()` entry (discovery, then the file read,
+  then `parse()`), and the `parse()` reader over `toml::Table`; unknown keys refuse as
+  `Error::Config` with the key path. Discovery, the profile merge and `${VAR}`
+  interpolation live in `config_file/{discovery,profile,interpolate}.rs`; step 2 landed
+  `sources.rs` (`[<profile>.catalog.<name>]` re-bridged through `parse_catalog_specs` for
+  byte-identical specs, `[<profile>.database.<kind>.<name>]` into the crate-private
+  `SourceSpec`, per-profile cross-family name uniqueness) and `redact.rs`
+  (`redact_value`/`redact_config` over `catalog_config::prop_key_is_secret`, widened to
+  `pub(crate)` this step). Step 3 wired the builder (`wiring.rs`: forced-or-discovered load,
+  `REPARK_ENV` profile, merge, interpolation, translation to flat pairs, the `(key, redacted
+  value, source)` dump rows) and took the now-live `#[allow(dead_code)]` attributes off;
+  the ones still unreachable (`load`, `redact_config`, the spec-field carriers) stay, and
+  the crate is built with warnings denied. The facade round added the `config_file_pairs`
+  entry (translated pairs for the binding fold) and nested-`conf` dot-join flattening.
+  MAINT-POLICY-1 step 1 (2026-09-10) added `config_file/maintenance.rs` (the typed
+  `[<profile>.maintenance]` policy: `MaintenancePolicy` + `TablePolicy`, the D-2
+  duration parser, key-by-key table resolution, `adaptive_partitioning` reserved) and
+  the raw `maintenance` slot on `Profile`.
+  **REVIEW-FIX-7 step 1 (2026-09-10):** `parse()` sanitizes TOML failures to
+  `message()` plus the locally computed line and column, never the echoed source line.
+- `session.rs` — **C-2d fold 1 (2026-10-07), N5:** `table_exists` asks `source_table_exists` first, so a
+  three-part name under a mounted source resolves through the source. Three comment lines
+  were shed to pay for the three new lines; the file holds 999 of 1000.
+  **C-4 step 2 (2026-10-09):** the builder installs the last-Postgres-write-report carrier;
+  the install line is paid for by one shed comment, so the file holds 1000 of 1000.
+  `build` carries `#[allow(clippy::too_many_lines)]` (one config line per wired product),
+  paid for by a second shed comment.
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** session build registers the `repark_text_csv` / `repark_text_json` sink formats, not the retired `repark_write_format_text` UDF. **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). **SIGNED-ZERO-NORMALIZE-1:** `build`
@@ -240,14 +285,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `dynamic_flatten` is the same rewrite. Depth-3 pin: 4 passes, 10 walks, 3
   expansions, 20 fields visited.
 - `lib.rs` — **IPI-40 PR6 (2026-09-24):** re-exports `TempViewSession` beside `EngineContext` / `SqlDialect`.
-  **PERF-DYNFLATTEN-1:** `built_with_debug_assertions()` gates the measurement report, so an H-3 number never comes from a debug build.
+  **PERF-DYNFLATTEN-1:** `built_with_debug_assertions()` gates the measurement report, so no H-3 number comes from a debug build.
   **U10 / R-DF-LOAD-PATH (2026-09-23):** `mod iceberg_path;` joined the module list; the stale half-comment above the
   `error_map` re-export (already noted in `session.rs`) was the shed line.
   **ATTR-ID-1 S3d (2026-10-01):** `string_lower_equal` / `fold_b_equal` join the `session` list (R-S3d-1 landed them as `fold_a_equal` /
   `fold_b_equal`, follow-up 3 merged the alias).
-  **SOURCE-URL-REDACT-1 (2026-10-06):** re-exports `repark_common::redaction` as `repark_core::redaction`, the binding's path to the redactor (no new crate edge).
-  **STRUCT-SETOP-REORDER-REFUSAL-1 delta #2 (2026-11-09):** `insert_struct_setop_after_coercion` joins the `session` list (CAST-LITERAL-UNWRAP-1: `cast_shield_udf` too); the `write_postgres` fold holds at 156.
-  **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the `session` list.
+  **SOURCE-URL-REDACT-1 (2026-10-06):** re-exports `repark_common::redaction` as `repark_core::redaction`, the binding's redactor path (no new crate edge).
+  **STRUCT-SETOP-REORDER-REFUSAL-1 delta #2 (2026-11-09):** `insert_struct_setop_after_coercion` joins the `session` list; the `write_postgres` fold holds at 156.
+  **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk`, and CAST-LITERAL-UNWRAP-1's `cast_shield_udf`, join it.
 - `iceberg_path.rs` (+ [iceberg_path/](iceberg_path/map.md)) — **U10 / R-DF-LOAD-PATH +
   R-DF-LOAD-METADATA-JSON (2026-09-23):** `ReparkSession::read_iceberg_path`, the
   `format("iceberg").load(<path>)` arm — Spark's `IcebergSource` rule applied at the
@@ -988,8 +1033,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   registration positions; `NoopSessionExtension` is the
   no-extension baseline. `configure` takes a `SessionBuildConf` — the builder's raw conf map PLUS
   the values `build()` has already resolved from it (today: the session timezone, H-1a split B).
-  A door reads the resolved value instead of re-parsing the map, which is what keeps
-  "resolved once, at construction" literally true rather than approximately true.
+  A door reads the resolved value instead of re-parsing the map, which keeps
+  "resolved once, at construction" literally true.
   **FNP-8 (2026-09-07):** the analyzer hook receives the core-owned guarded rule list and returns
   it unchanged by default. The Spark door uses it to insert one HOF preparation rule before the
   first default type-coercion pass.
@@ -1316,7 +1361,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **Round 4 (Y-2):** the `get_logical_plan` follow is unreachable from any SQL-door
   statement on DataFusion 54.1 (`LogicalPlanBuilder::scan` inlines a source that has a
   logical plan) — measured, all four lazy-view pins stayed green with the follow deleted.
-  It is live for a scan the builder does NOT inline (non-empty `filters`), which is what
+  It is live for a scan the builder does NOT inline (non-empty `filters`), as
   `filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse` pins.
 
   The public door is `session.rs::declare_temp_view_sorted(..., tighten_nulls)`: verify
