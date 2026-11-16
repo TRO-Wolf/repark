@@ -174,8 +174,11 @@ part 2's; Q4 accepted on the critic's condition. The orchestrator capped the uni
   validation, the `F.expr` / `selectExpr` fragment, and a Spark-door `filter(str)`. `spark_values_typing`, at index 1
   of the Spark-door analyzer list, types a column whose marked cells hold a DECIMAL and a FLOAT or DOUBLE as `double`
   (a target-typed column casts through `double` to its target) and drops every other marker. A `VALUES` under
-  `RecursiveQuery` keeps the planner's type. **The tripwire:** an unmarked mixed multi-row `VALUES` and a stray
-  marker refuse with a plan error naming this unit.
+  `RecursiveQuery` keeps the planner's type. **The tripwire:** an unmarked mixed multi-row `VALUES` refuses with a
+  plan error naming this unit, and so does a marker a seat left outside a `VALUES` cell. *(Corrected by the delta,
+  below: as built, a user-written marker answered; since the delta the marker's name is per process, so a user's
+  `__repark_values_cell` is an unresolved routine on both doors, as on main. Since the delta a seat also casts, or
+  marks, only a column that can mix; see the delta.)*
 - **The stale outer union** (seat E, `decimal_float_widen.rs`): a union whose inputs no longer mix but whose schema
   differs from its first input's is rebuilt, so three or more branches with the DECIMAL first are `double`.
 - **The `IN` rewrite** (`DecimalInRanges`, `decimal_float_widen.rs`): an optimizer rule appended by
@@ -220,3 +223,82 @@ execute correctly. Cards: `repark-sql-update-subquery-where-1` (WHERE) and `UPDA
 - `<lit> IS DISTINCT FROM <col>` ([DISTINCT-FROM-LITERAL-LEFT-1](distinct-from-literal-left-1-card-2026-11-15.md)).
 - A `VALUES` nested in an insert source whose target type equals the planner's own common type is typed standalone
   (no measured cell reaches it); no card, named here.
+
+## Append (2026-11-16): part 2, delta
+
+**Sources:** the owner's "Proceed", 2026-11-16, about 11:00 UTC, after two verifiers returned FAIL on PR #1341 (head
+`d78d669f`) with three behaviour findings, and the build's cost runs halted on held rows. One delta under the
+one-round cap. Evidence: [evidence/part2/](../../wo/decimal-double-union-coercion-1/evidence/part2/map.md)
+(`bar.md`, the delta section; `cost.md`).
+
+**Status: part 2 BUILT, delta applied (commit `12101e9b`, not merged).** The delta's package is `pkg-p2-12101e9b`.
+
+**F3, a wrong answer (S1).** `bare.filter(F.expr("CAST('1e-20' AS DOUBLE) IN (SELECT c FROM VALUES (dec), (dbl)
+…)"))` and its `EXISTS` twin answered `[]`; Spark and a06c answer `[1]`.
+- **Cause:** a literal-only `F.expr` fragment is analyzed in the door-free `build_expr_context`
+  (`expr_build.rs`, `plan_expr_column`), which has no consumer, so the probe was coerced to the planner's
+  `decimal(30,15)` and folded to `0`. The frame's Spark-door analyzer then retyped the `VALUES` to `double` and
+  compared `0.0` with `1e-20`. A column probe never hit this: it misses a column in that context and is planned
+  unresolved.
+- **Fix:** `plan_marked_fragment` reports a fragment whose `VALUES` has a mixing column, and `plan_expr_column` plans
+  it unresolved, as a column-referencing fragment is, so the frame's own analyzer types the probe. The native door
+  is unchanged (160 native cells identical to a06c).
+- **Family:** 4 fragment seats and `filter(str)` × `IN`, `NOT IN`, `EXISTS`, `NOT EXISTS`, a scalar comparison × the
+  probes `1e-20`, `0.0`, `-0.0`, `0.1`, and 7 pins: 107 cells per mode, 33 EQUAL → EQUAL, 50 fixed, 24 still wrong
+  as on a06c (the select-list `IN` subquery the physical planner refuses), 0 EQUAL → WRONG.
+
+**F2, an internal error.** `LATERAL` over a mixed `VALUES` raised `Optimizer rule 'eliminate_cross_join' failed`.
+- **Cause:** seat V retyped the `VALUES` column, but every `OuterReferenceColumn` to it (planned by the SQL planner
+  with the old type) kept `decimal(30,15)`, and so did the schemas built over it.
+- **Fix:** after a retype, `refresh_outer_references` (`consume.rs`) gives each outer reference its column's current
+  type, innermost scope first, a join's right side seeing its left, and recomputes every schema above. A `VALUES`
+  whose column the AST types fully no longer needs a retype at all (the cost fix below), so the planner's outer
+  references are right from the start.
+- **Family:** `LATERAL` (comma, `JOIN`, `CROSS JOIN`, `LEFT JOIN … ON true`, with a `WHERE`, two columns, over a CTE,
+  under and inside a `UNION`), correlated scalar subqueries in the select list and the `WHERE`, `EXISTS`, `NOT EXISTS`,
+  correlated `IN`, `HAVING EXISTS`, two levels: 25 cells per mode, 21 now equal Spark (20 fixed), 4 still refuse with
+  a06c's own text, 0 internal errors.
+
+**F1, a user-written marker answered.** `SELECT __repark_values_cell(1)` answered `[1]`; a06c and Spark refuse
+`[UNRESOLVED_ROUTINE]`.
+- **Cause:** the marker was a registered UDF named `__repark_values_cell`, on the Spark door, the native door and the
+  fragment context. `consume.rs:24` skipped plans without a `VALUES`, and `marked_argument` (`consume.rs:228-244`)
+  took a user's marker inside a cell as a seat's.
+- **Fix:** the marker's name is `__repark_values_cell_<16 hex>`, drawn once per process from `RandomState` (as
+  `repark-core`'s attribute ids are). No user text names it, so a user's `__repark_values_cell`, in any case or
+  position, on either door, plans as on main and refuses with main's error class and text. No plan pays for it.
+- **Pins:** 21 shapes on each door and 6 fragment shapes on both, both modes; every stray cell of both verdicts is
+  now EQUAL → EQUAL with a06c's exact text.
+
+**The cost.** Seat V marked every cell of every multi-row `VALUES`. All of its time sat in `spark.sql` (parse, mark,
+plan, eager analysis); `collect` of a planned frame cost the same as a06c's. A phase timing of 10,000 rows
+(`values_marker/tests.rs`, `seat_v_phase_timing`, debug profile) puts about 87% of the extra in the SQL planner's
+handling of the 20,000 marker calls (each `get_type` of a function call builds its field and its display name), about
+13% in the analyzer, and the AST pass at about 18 ms. The delta:
+- the AST pass leaves alone a column that cannot hold both a DECIMAL and a FLOAT or DOUBLE (a cell it cannot type
+  counts as both);
+- a mixing column whose cells it types fully (decimal and integer literals, `CAST`s to a numeric type, `NULL`) is cast
+  to `DOUBLE` in the AST, cell by cell, which is what the consumer wrote; no marker is planned;
+- only a mixing column with a cell it cannot type is marked, as before;
+- otherwise one non-`NULL` cell carries a witness marker, so the tripwire still knows a seat saw the `VALUES`;
+- the `F.expr` fragment form marks a mixing column instead of casting it, so a native frame keeps DataFusion's answer;
+- `decimal_in_form` returns the per-row form at the 33rd distinct wide range instead of computing every constant's
+  preimage on each optimizer pass.
+
+**The cost, after** (5 alternating runs for the held and `VALUES` rows, 3 for `IN` and C-012, on `pkg-p2-12101e9b`;
+`evidence/part2/cost.md`): `plan_values10k` 1.026 (was 1.132), `plan_values10k_none` 1.008 (1.115),
+`plan_values10k_dbl` 1.033 (1.145), `ins_values10k_dec` 1.010 (1.153), `ins_values10k_dbl` 1.005 (1.089),
+`merge_values1000` 1.004 (1.306), `in_dbl:d38:1000` 1.028 (1.083), `notin_dbl:d38:1000` 1.046 (1.134): every held
+row at most 1.05×. Reported: `ins_values10k_dec_mixed` 1.379 (was 1.504; Spark's cast through `double`, then the
+store cast), `ins_values10k_dbl_mixed` 1.001, `merge_values1000_mixed` 1.074. `prune_d_dbl` reads 1.090 inside its
+control band (0.871 to 1.288; a 55 ms sample). C-012: 1.010 and 1.004. No halt.
+
+**Files:** the delta changes 4 product files, all among the build's 9 (`values_marker.rs`,
+`values_marker/consume.rs`, `extension/decimal_float_widen.rs` in `repark-spark`, `column/expr_build.rs` in
+`repark-python`); the cap stays at 9 of 10. Pins: `python/repark/tests/sql/test_decimal_double_coercion_2_delta.py`
+(336 cells: red on a06c for the family and on the build's head for F1, F2 and F3, green on the delta) and four new
+Rust tests in `values_marker/tests.rs`.
+
+**The bar** (`evidence/part2/bar.md`, the delta section): the build's sets give the build's counts cell for cell;
+part 1's 1,209 preimage cells and step 0's 6,855 joined cells move 0; both verifiers' sets, re-run on the delta
+against their own Spark and a06c raw sets, give 0 EQUAL → WRONG, 0 EQUAL → RAISE and 0 native moves.

@@ -1,0 +1,171 @@
+{"key": "provenance", "engine": "spark", "version": "4.1.2", "ansi": "false"}
+{"key": "f3/in/tiny/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/in/tiny/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/in/tiny/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "True"]]}
+{"key": "f3/in/tiny/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/in/tiny/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/in/zero/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/in/zero/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/in/zero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/in/zero/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/in/zero/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/in/negzero/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/in/negzero/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/in/negzero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/in/negzero/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/in/negzero/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/in/dec01/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/in/dec01/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/in/dec01/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "True"]]}
+{"key": "f3/in/dec01/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/in/dec01/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notin/tiny/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/notin/tiny/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/notin/tiny/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/notin/tiny/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/notin/tiny/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/notin/zero/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notin/zero/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/notin/zero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "True"]]}
+{"key": "f3/notin/zero/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/notin/zero/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notin/negzero/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notin/negzero/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/notin/negzero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "True"]]}
+{"key": "f3/notin/negzero/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/notin/negzero/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notin/dec01/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/notin/dec01/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/notin/dec01/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/notin/dec01/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/notin/dec01/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/exists/tiny/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/exists/tiny/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/exists/tiny/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "True"]]}
+{"key": "f3/exists/tiny/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/exists/tiny/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/exists/zero/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/exists/zero/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/exists/zero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/exists/zero/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/exists/zero/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/exists/negzero/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/exists/negzero/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/exists/negzero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/exists/negzero/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/exists/negzero/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/exists/dec01/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/exists/dec01/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/exists/dec01/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "True"]]}
+{"key": "f3/exists/dec01/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/exists/dec01/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notexists/tiny/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/notexists/tiny/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/notexists/tiny/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/notexists/tiny/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/notexists/tiny/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/notexists/zero/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notexists/zero/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/notexists/zero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "True"]]}
+{"key": "f3/notexists/zero/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/notexists/zero/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notexists/negzero/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notexists/negzero/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/notexists/negzero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "True"]]}
+{"key": "f3/notexists/negzero/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/notexists/negzero/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notexists/dec01/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/notexists/dec01/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/notexists/dec01/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/notexists/dec01/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/notexists/dec01/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/scalar/tiny/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/scalar/tiny/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/scalar/tiny/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "True"]]}
+{"key": "f3/scalar/tiny/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/scalar/tiny/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/scalar/zero/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/scalar/zero/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/scalar/zero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/scalar/zero/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/scalar/zero/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/scalar/negzero/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/scalar/negzero/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/scalar/negzero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/scalar/negzero/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/scalar/negzero/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/scalar/dec01/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/scalar/dec01/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/scalar/dec01/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/scalar/dec01/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/scalar/dec01/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/pin/sql_in", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/pin/sql_exists", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/pin/fexpr_column_probe", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/pin/fexpr_scalar_min", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "f3/pin/fexpr_two_values", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/pin/fexpr_plain_values", "types": ["int"], "rows": []}
+{"key": "f3/pin/fexpr_all_double_values", "types": ["int"], "rows": [["1"]]}
+{"key": "f2/comma", "types": ["double", "double"], "rows": [["1e-20", "1.0"], ["0.1", "1.1"]]}
+{"key": "f2/join_lateral", "types": ["double", "double"], "rows": [["1e-20", "1.0"], ["0.1", "1.1"]]}
+{"key": "f2/join_lateral_on", "types": ["double", "double"], "rows": [["1e-20", "1.0"], ["0.1", "1.1"]]}
+{"key": "f2/cross_join_lateral", "types": ["double", "double"], "rows": [["1e-20", "2e-20"], ["0.1", "0.2"]]}
+{"key": "f2/left_join_lateral", "types": ["double", "double"], "rows": [["1e-20", "1.0"], ["0.1", "1.1"]]}
+{"key": "f2/lateral_where", "types": ["double", "decimal(2,2)"], "rows": [["1e-20", "0.05"], ["1e-20", "0.50"], ["0.1", "0.50"]]}
+{"key": "f2/lateral_eq", "types": ["double", "double"], "rows": [["1e-20", "1e-20"]]}
+{"key": "f2/lateral_two_cols", "types": ["int", "double", "double"], "rows": [["1", "0.1", "1.1"], ["2", "1e-20", "2.0"]]}
+{"key": "f2/lateral_cte", "types": ["double", "double"], "rows": [["1e-20", "1.0"], ["0.1", "1.1"]]}
+{"key": "f2/lateral_in_union_branch", "types": ["double", "double"], "rows": [["1e-20", "1.0"], ["0.1", "1.1"], ["0.5", "1.5"]]}
+{"key": "f2/lateral_union_inside", "types": ["double", "double"], "rows": [["1e-20", "1e-20"], ["1e-20", "2e-20"], ["0.1", "0.1"], ["0.1", "0.2"]]}
+{"key": "f2/lateral_under_union_first", "types": ["double", "double"], "rows": [["1e-20", "1.0"], ["0.1", "1.1"], ["0.5", "1.5"]]}
+{"key": "f2/lateral_agg", "types": ["double", "bigint"], "rows": [["1e-20", "2"], ["0.1", "2"]]}
+{"key": "f2/scalar_select", "types": ["double", "double"], "rows": [["1e-20", "1.0"], ["0.1", "1.1"]]}
+{"key": "f2/scalar_select_agg", "types": ["double", "decimal(2,2)"], "rows": [["1e-20", "0.50"], ["0.1", "0.50"]]}
+{"key": "f2/scalar_select_count", "types": ["double", "bigint"], "rows": [["1e-20", "1"], ["0.1", "1"]]}
+{"key": "f2/exists_where", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "f2/not_exists_where", "types": ["double"], "rows": [["0.1"]]}
+{"key": "f2/in_where_correlated", "types": ["double"], "rows": [["1e-20"], ["0.1"]]}
+{"key": "f2/in_where_outer_only", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "f2/scalar_where", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "f2/exists_in_having", "types": ["double", "bigint"], "rows": [["1e-20", "1"]]}
+{"key": "f2/nested_two_levels", "error": "AnalysisException: [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `t`.`c` cannot be resolved. Did you mean one of the following? [`w`.`z`]. SQLSTATE: 42703; line 1 pos 215;\n'Sort ['t.c ASC NULLS FIRST], true\n+- 'Project ['t.c]\n   +- 'Filter exists#762 []\n      :  +- 'Project [unresolvedalias(1)]\n      :     +- 'Filter exists#761 []\n      :        :  +- 'Project [unresolvedali"}
+{"key": "f2/inner_values_outer_ref", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "f2/lateral_inner_values", "types": ["double", "double"], "rows": [["1e-20", "1e-20"]]}
+{"key": "f1/plain", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"key": "f1/double", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"key": "f1/decimal", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"key": "f1/upper", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__REPARK_VALUES_CELL` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"key": "f1/mixed_case", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__Repark_Values_Cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"key": "f1/backquoted", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"key": "f1/nested", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"key": "f1/nested_fn", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 11"}
+{"key": "f1/zero_arg", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"key": "f1/two_arg", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"key": "f1/alias", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"key": "f1/order_by", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 23"}
+{"key": "f1/order_alias", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"key": "f1/where_no_values", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 21"}
+{"key": "f1/having_no_values", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 60"}
+{"key": "f1/group_by", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 66"}
+{"key": "f1/in_cell_mixed", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 22"}
+{"key": "f1/in_cell_mixed_dec", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 23"}
+{"key": "f1/in_cell_plain", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 23"}
+{"key": "f1/in_cell_nested", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 26"}
+{"key": "f1/in_cell_upper", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__REPARK_VALUES_CELL` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 22"}
+{"key": "f1/in_single_row_values", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 22"}
+{"key": "f1/proj_with_values", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"key": "f1/proj_with_plain_values", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"key": "f1/where_with_values", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 95"}
+{"key": "f1/having_with_values", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 103"}
+{"key": "f1/in_pred_with_values", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 97"}
+{"key": "f1/subquery", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 56"}
+{"key": "f1/cte", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 18"}
+{"key": "f1/insert_values", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 34"}
+{"key": "f1/explain", "types": ["string"], "rows": [["Error occurred during query planning: "], ["[UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 15"]]}
+{"key": "f1/fexpr_filter", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 0"}
+{"key": "f1/fexpr_select", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 0"}
+{"key": "f1/fexpr_in_cell", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 50"}
+{"key": "f1/selectexpr", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 0"}
+{"key": "f1/filter_str", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__repark_values_cell` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 0"}
+{"key": "f1/withcolumn", "error": "AnalysisException: [UNRESOLVED_ROUTINE] Cannot resolve routine `__REPARK_VALUES_CELL` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 0"}
+{"key": "f1/insert_values_readback", "rows": []}
