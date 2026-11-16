@@ -19,6 +19,8 @@ use crate::extension::SessionExtension;
 pub(crate) mod attr_id;
 pub(crate) mod attr_lineage;
 pub mod case_bind;
+mod cast_shield;
+pub use cast_shield::cast_shield_udf;
 pub(crate) mod duplicate_names;
 pub(crate) mod frame_lineage;
 pub(crate) mod join_exact;
@@ -190,6 +192,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
     crate::isnan::register_repark_isnan(&context);
     crate::spark_nullable::register_float_bounds_inexact_parquet(&context)?;
     signed_zero::register_normalize_zero(&context);
+    context.register_udf(cast_shield::cast_shield_udf().as_ref().clone());
     subquery::register_single_row_guard(&context);
     Ok(context)
 }
@@ -205,6 +208,7 @@ pub(super) fn finish_session_build(
     ));
     context.add_analyzer_rule(Arc::new(OptimizerSeatConfig));
     signed_zero::install_literal_seat(context, extension.signed_zero_policy());
+    context.add_analyzer_rule(Arc::new(cast_shield::CastShieldRule));
 }
 
 pub(super) fn analyzer_rules_with_df_54_1_rule_guards()
@@ -231,6 +235,7 @@ fn unnest_safe_optimizer_rules(
                 rules.push(rule);
             }
             "simplify_expressions" => {
+                rules.push(Arc::new(cast_shield::CastShieldRule));
                 rules.push(signed_zero::literal_optimizer_seat(policy));
                 rules.push(rule);
                 rules.push(signed_zero::literal_optimizer_seat(policy));
@@ -242,6 +247,7 @@ fn unnest_safe_optimizer_rules(
         }
     }
     rules.push(signed_zero::key_seat(policy));
+    rules.push(Arc::new(cast_shield::CastShieldRule));
     rules
 }
 

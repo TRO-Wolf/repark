@@ -154,16 +154,16 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `df_guards.rs` — **ICE-TSNS-TYPE-PLANNER-1 (2026-10-13):** `context_with_df_54_1_rule_guards` takes the dialect beside the extension: it
   registers a handed-in `TypePlanner` (`with_type_planner`; with neither in, DataFusion's type mapping stands) and runs the dialect's `configure_analyzer_rules` after the extension's. **STRUCT-SETOP-REORDER-REFUSAL-1 delta 2 (2026-11-09):** re-exports `insert_struct_setop_after_coercion` toward the root; **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the list. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `session.rs` calls `finish_session_build` (dialect hook, then seat 1). **Part B part 1, delta 2 (2026-11-13):** `finish_session_build` adds the analyzer rule `OptimizerSeatConfig` (`repark_optimizer_seat_config`): per plan, while the live config has `optimizer.max_passes` 0 or `optimizer.skip_failed_rules` true, it refuses all but a statement, empty relation or bare `VALUES` (the analyzer runs before the optimizer loop and reads neither key). Detail: `task/wo/signed-zero-normalize-1/evidence/part-b/after/delta2/delta2.md`. **DOUBLE-DECIMAL-STORE-ROUND-1 (2026-11-13):** installs `FloatDecimalStoreRule` on every session (the native door's INSERT); pin: the facade native-door test. **SIGNED-ZERO-CONST-COMPARE-1 (2026-11-14):** `signed_zero_literals` now sits on both sides of `simplify_expressions` (before it, the constant-operand fold; [df_guards/signed_zero/map.md](df_guards/signed_zero/map.md)).
 - `df_guards.rs` — the DataFusion **54.1 regression guards**, owned and constructed by CORE
-  (design G8). The wrapper preserves DataFusion's rule name and order. **NAN-MINMAX-1 (2026-11-13):** `apply_df_54_1_config_guards` sets `optimizer.enable_aggregate_dynamic_filter_pushdown = false`; the umbrella `enable_dynamic_filter_pushdown = true` is refused on SET and the builder.
+  (design G8). The wrapper preserves DataFusion's rule name and order. **CAST-LITERAL-UNWRAP-1:** the cast shield (`df_guards/`). **NAN-MINMAX-1 (2026-11-13):** `apply_df_54_1_config_guards` sets `optimizer.enable_aggregate_dynamic_filter_pushdown = false`; the umbrella `enable_dynamic_filter_pushdown = true` is refused on SET and the builder.
   **PERF-UNPIVOT-1 (2026-09-12):** every core session installs `StackQueryPlanner` and
   registers the marker `stack` UDF.
-  **COLUMN-PARITY-1 critic round (2026-09-14):** every core session also registers the
+  **COLUMN-PARITY-1 critic round (2026-09-14):** every core session registers the
   `update_fields` and `repark_isnan` UDFs beside `stack`.
   **NAN-MINMAX-1 (2026-11-13):** and `spark_nullable`'s float-statistics Parquet factory over
   DataFusion's `parquet` factory, every door ([../spark_nullable/](../spark_nullable/map.md)).
   **FNP-8 (2026-09-07):** core hands the complete analyzer vector to the session extension before
   building `SessionState`; the identity hook preserves every guard and its position. The two guards
-  sit at **different altitudes**, because the two bugs are: * **Guard 1, a config default:**
+  sit at **different altitudes**, as the two bugs are: * **Guard 1, a config default:**
   `optimizer.enable_physical_uncorrelated_scalar_subquery =
     false` — the 54.1 physical scalar-subquery path drops a top-level Sort (fuzz-42-1/2). The
     mode is bad, so the flag is the switch; it stays a *default*, not a lock (the
@@ -191,7 +191,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
     `get_field` over a `SubqueryAlias` of a LEFT JOIN under a filter, which a MERGE insert query
     over a derived source builds; stock 54.1 fails it outright. Only a `Projection` is cloned
     for the decline, and every other inner error stays loud.
-  Pins: all nine live in `tests/df_guard.rs`, not `tests/session.rs`;
+  Pins: all nine live in `tests/df_guard.rs`;
   ledger `task/c25-bugfix-ledger.md` → DEFECT-2; the eighth,
   `a_left_join_projection_the_rule_cannot_rewrite_keeps_its_field_access`, and ninth,
   `a_projection_inner_error_that_is_not_an_extraction_collision_stays_loud`.
@@ -207,7 +207,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   **OFFSET-NESTED-SORT-1 (2026-10-08):** `df_guards.rs` installs
   `skipping_limit::skip_safe_physical_optimizer_rules()` as the physical rule list, ahead of
   the three RePark physical rules: DataFusion's list with `EnforceSorting` wrapped. Design,
-  cost and the retirement event are in the `df_guards/` directory map.
+  cost and retirement: `df_guards/map.md`.
   **DF-SUBQUERY-1 (2026-09-15):** `df_guards.rs` declares `subquery/`'s module, registers the
   `__repark_single_row` guard UDAF on every core session beside `stack`/`repark_isnan`, and inserts
   `repark_projection_exists` + `repark_scalar_subquery_guard` just ahead of

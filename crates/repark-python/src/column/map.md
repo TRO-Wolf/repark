@@ -26,10 +26,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `cast_type_token` is the facade's Spark token for a map-bearing type string
   (`repark_functions::cast_map::map_cast_token`, `ParseException` otherwise).
   **Step-2b remediation (2026-09-12, review F1–F5):** operand parts extract as borrowed `&str`
-  tuples, not owned `String`s — PyO3 borrows the UTF-8 cache instead of copying the growing SQL
+  tuples, not owned `String`s — PyO3 borrows the UTF-8 cache, not copying the growing SQL
   fragments across the boundary per op. `alias` returns a 2-tuple `(PyColumn, spark_display)`: its
   `sql_expr` is the child's unchanged string, so Python passes the existing `sql_expr_part()`
-  through rather than round-tripping a copy through Rust. The generator arm of `cast`
+  through, not a copy round-tripped through Rust. The generator arm of `cast`
   (`apply_engine=false`) takes `Bound<PyColumn>` and returns the same handle via `unbind` — step-1
   reused `self._inner`, so no `Expr` clone. `case_when` moves `.expr` out of its arm pairs like
   `PyColumn::case_when`, and every `wrap_*` builder pre-sizes its `String` instead of `format!`.
@@ -129,9 +129,9 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   lines each; `IsNotDistinctFrom` stays wrapped for rustfmt): 1000 → 991 lines, no baseline raised.
   **DEGREES-RUST-1 (2026-09-15, owner Q-15a-1):** `call_scalar_expr` gains the `degrees` / `radians`
   arms onto the engine's scalar UDFs (`datafusion::functions::expr_fn`) — the single-multiply
-  `f64::to_degrees` / `f64::to_radians` form, measured bit-equal to Spark (reuse, no new kernel).
+  `f64::to_degrees` / `f64::to_radians` form, bit-equal to Spark, measured (reuse, no new kernel).
   **Run 16a round 3:** the arms rebind to the Spark-exact `repark_functions::expr_fn::degrees` /
-  `radians` pair, which carries the refusals and the ANSI switch the engine UDFs lack.
+  `radians` pair, with the refusals and ANSI switch the engine UDFs lack.
   **FNP-11B step 2 (2026-09-15):** the `to_date` arm takes 1 or 2 args (`expr_fn::to_date` widens to
   `Vec<Expr>`); `unix_timestamp` takes 0 to 2.
   **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):** `call_scalar_expr` keeps
@@ -152,7 +152,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   **FNP-9/10 (2026-09-05):** arms for `get_json_object`, `json_array_length`, `json_object_keys`,
   `schema_of_json`, `to_json`, `from_json`, `array_insert`, `arrays_zip` and `map_concat`, plus
   `create_map`, which lowers the facade's alternating key/value arguments to DataFusion's `map(keys,
-  values)` — the same shape the Spark door already builds for `map(...)`, so the facade still makes
+  values)` — the shape the Spark door builds for `map(...)`, so the facade makes
   one engine call. The arms live here and not in `function_dispatch.rs` because that file was at 992
   of its 1000-line ceiling; the cohesive `column/dispatch/` split the campaign charter names is
   FNP-Z's, and the slate forbids doing it piecemeal inside a feature unit. LOG1P-1: `log1p` /
@@ -177,7 +177,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   is pinned). `cbrt` wraps its argument as `arg * lit(1.0f64)` — Spark's `cbrt` is a
   UnaryMathExpression (always DoubleType, computed in f64); the multiply coerces f32/int/decimal to
   f64 while bool/string still refuse (no numeric coercion).
-- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection. **ATTR-ID-1 SJ-1b (2026-10-02):** `register(module)` adds `grouping_id_column`. **DDU-1 part 2:** seat V marks `F.expr`, `selectExpr`, Spark-door `filter(str)` (`values_marker`). Its delta: a fragment over a mixed `VALUES` plans unresolved; the frame's rules type it (F3). **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `reciprocal_trig_or_inf` maps a zero divisor to `cot(divisor)` (±Inf). **R-CS2P-1 (2026-10-03):** `parse_canonical_predicate` (the insensitive filter door) keeps its plan over in-schema columns, else `folded_qualifier_predicate` re-parses, folds qualifiers (`frame_names::fold_frame_qualifiers`, `IgnoreCase`) and plans the folded tree, so an alias qualifier binds in any case.
+- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection; its context registers the CAST-LITERAL-UNWRAP-1 shield. **ATTR-ID-1 SJ-1b (2026-10-02):** `register(module)` adds `grouping_id_column`. **DDU-1 part 2:** seat V marks `F.expr`, `selectExpr`, Spark-door `filter(str)` (`values_marker`). Its delta: a fragment over a mixed `VALUES` plans unresolved; the frame's rules type it (F3). **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `reciprocal_trig_or_inf` maps a zero divisor to `cot(divisor)` (±Inf). **R-CS2P-1 (2026-10-03):** `parse_canonical_predicate` (the insensitive filter door) keeps its plan over in-schema columns, else `folded_qualifier_predicate` re-parses, folds qualifiers (`frame_names::fold_frame_qualifiers`, `IgnoreCase`) and plans the folded tree, so an alias qualifier binds in any case.
   **POLARS-IS-DUPLICATED-1 (2026-09-28):** `is_duplicated_expr` builds
   `count(1) OVER (PARTITION BY dup_key(receiver)) > 1` on a user window's path
   (`count_aggregate` + `build_over_expression`, matching the unordered full-partition frame), wrapped in the `dup_mask_udf`
@@ -264,7 +264,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   shape its own SQL planner produces) and passes any other scalar through untouched — and a bound
   whose type does not match the key degrades silently to UNBOUNDED PRECEDING, so `rangeBetween(-2,
   0)` over an `IntegerType` or `DoubleType` key answered the cumulative column. `ROWS` / `GROUPS`
-  bounds stay `UInt64`, which is already the coercion target. Registry: `WIN-RANGE-DF-1`.
+  bounds stay `UInt64`, already the coercion target. Registry: `WIN-RANGE-DF-1`.
   **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):** `build_over_expression` keeps its name and
   grows by subject depth around a renamed inner body, so the aggregate sub-clones of a deep subject
   run on a sized segment.
@@ -306,10 +306,10 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   A Python `int` that fits in Int32 is an Int32 literal (Spark `IntegerType`), so
   `col(int32) + 1` stays Int32.
 - `sql` analyzes standalone expressions before handoff; parse errors map to `ParseException` and
-  unresolved names map to `AnalysisException`. This path bypasses the Spark SQL router, so FNP-15/16
+  unresolved names to `AnalysisException`. This path bypasses the Spark SQL router, so FNP-15/16
   declared-function names refuse through `refuse_sql_fragment` (collation + declared-absent).
-- Higher-order lambda variables are resolved against the consuming DataFrame schema.
-- Nested higher-order functions refuse loudly rather than producing an invalid plan.
+- Higher-order lambda variables resolve against the consuming DataFrame schema.
+- Nested higher-order functions refuse loudly, never building an invalid plan.
 - `concat` embeds the door-converged `repark_functions::string::concat_udf` (DOOR-CONVERGE-2):
   string, binary and array arms with any-NULL → NULL, one kernel on both doors.
 - `reverse` routes through `function_dispatch/dispatch_spark.rs` (DOOR-CONVERGE-2): the

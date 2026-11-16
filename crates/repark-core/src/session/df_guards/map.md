@@ -11,10 +11,10 @@ wrapped optimizer rule) and declares this directory.
 - [struct_setop.rs](struct_setop.rs), [struct_walk.rs](struct_walk.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** `struct_setop_names` refuses struct operands differing in field-name order or set, any depth. Delta #2 seats it after `type_coercion`, reading beneath stacked casts; the `RecursiveQuery` arm checks recursive-term types against the static term. **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** all three arms call the shared `struct_walk` (peel encodings, recurse list kinds, refuse unpaired pairs). **STRUCT-COMPARE-BY-POSITION-1:** equal types never mismatch (F-1).
   **Delta 1 (2026-11-08):** `insert_struct_setop_after_coercion` reaches the crate root for Python's expression context. **Item #5:** refusals name `INTERSECT ALL` / `EXCEPT ALL` without `Distinct` left.
 - [signed_zero.rs](signed_zero.rs), [signed_zero/](signed_zero/map.md) — **SIGNED-ZERO-NORMALIZE-1 part A (2026-11-11):** seats 1 and 1b.
-- `skipping_limit.rs` — **OFFSET-NESTED-SORT-1 (2026-10-08):** a guard for a DataFusion 54.1.0
-  defect. DataFusion's `EnforceSorting` rule (its sort pushdown,
+- [cast_shield.rs](cast_shield.rs), [cast_shield/](cast_shield/map.md) — **CAST-LITERAL-UNWRAP-1 (2026-11-16):** the cast shield.
+- `skipping_limit.rs` — **OFFSET-NESTED-SORT-1 (2026-10-08):** a guard for DataFusion 54.1.0's `EnforceSorting` rule (its sort pushdown,
   `datafusion-physical-optimizer` `enforce_sorting/sort_pushdown.rs`) treats a
-  `GlobalLimitExec` as if it had no `skip`. Two wrong plans follow. (1) It reads the limit's
+  `GlobalLimitExec` as if it had no `skip`. Two wrong plans: (1) It reads the limit's
   `fetch` as a row cap for the plan below, so `GlobalLimitExec: skip=4990, fetch=5` over
   `SortExec: TopK(fetch=4995)` becomes `TopK(fetch=5)`, and the statement answers no rows.
   (2) A limit with a `skip` and no `fetch` maintains its input order, so the rule moves an outer
@@ -24,27 +24,27 @@ wrapped optimizer rule) and declares this directory.
   position. `../df_guards.rs` installs the list before the three RePark physical rules.
   Without a `GlobalLimitExec` with `skip > 0` the wrapper runs the inner rule unchanged;
   the only added work is one plan walk (`TreeNode::exists`). Otherwise it
-  goes bottom-up: the inner rule runs on each skipping limit's input as a plan
-  of its own; the limit is rebuilt over the result and replaced with
+  goes bottom-up: the inner rule runs on each skipping limit's input as its own
+  plan; the limit is rebuilt over the result and replaced with
   `SealedSkippingLimitExec`, a leaf reporting the limit's own properties (ordering,
-  one partition) with no children, so the rule has nothing below the seal to push a row cap
-  or a sort into: the seal is a leaf. (Verifier mutation D, the seal reporting the limit's `fetch`,
+  one partition), so the rule has nothing below the seal to push a row cap
+  or a sort into. (Verifier mutation D, the seal reporting the limit's `fetch`,
   left the lane pins, 1356 answered cells and every plan without an `OFFSET` still: the missing
   `fetch` does not hold the cap back.) The wrapper then runs the inner rule on the sealed plan and puts every limit
   back top-down. A seal never leaves the rule: later rules cannot see the plan a seal
   holds (`OutputRequirements` puts its marker node below a top-level limit, so the marker would
   stay), so `execute` on a seal is an internal error and `no_seal_survives_into_a_final_plan`
   pins the removal.
-  Why this is correct: a `GlobalLimitExec` wants no input ordering, and EnforceDistribution
+  Correct because a `GlobalLimitExec` wants no input ordering, and EnforceDistribution
   already met its one-partition requirement, so a skipping limit's input is a complete plan
   the rule optimizes alone. What the guard gives up: DataFusion could merge a refining
-  outer sort (`ORDER BY v, k` over `ORDER BY v`) into the sort below the limit; stock's one-sort plan for that shape answered rightly.
-  The guard's plan is two sorts, the inner `SortExec` and a second `SortExec` above the `GlobalLimitExec`; with a small `OFFSET` the second re-sorts nearly the whole relation.
+  outer sort (`ORDER BY v, k` over `ORDER BY v`) into the sort below the limit; stock's one-sort plan answered rightly.
+  The guard's plan is two sorts, the inner one and a second `SortExec` above the `GlobalLimitExec`; with a small `OFFSET` the second re-sorts nearly the whole relation.
   Verifier-measured (2026-10-08, `ci` profile, 11 rounds, guard vs stock): over a 1M-row
   memory table at 8 partitions the refining outer sort ran +78.4% guarded (second run
   +83.7%; stock-vs-stock floor +2.3%). **OPEN for the owner:** accept the cost, or a
   follow-up merging the two sorts when the outer refines the inner. Statements without
-  an `OFFSET` pay none of it (full table in the unit ledger, section 9).
+  an `OFFSET` pay none of it (full table: the unit ledger, §9).
   Routes not taken: a repair after the rule (the original `fetch` is gone by then); splitting
   the limit into `skip` over `fetch` (the rule then pushes the sort through the skip-only half).
   **Retire** at the DataFusion bump that fixes the pushdown: the two
@@ -59,7 +59,7 @@ wrapped optimizer rule) and declares this directory.
   `skip > 1` (verifier mutation A, repeated on the committed pins) it answers `[2,3,4,5]`
   for Spark's `[2,3,4,5,6]`, and 3 of the 16 pins go red:
   `one_partition_family_answers_spark_rows_at_one_partition` (on `m`, one partition) and the parquet
-  and Iceberg grids (at 1, 2 and 16); the other 13 stay green. Before the cell, all 16 passed.
+  and Iceberg grids (at 1, 2 and 16). Before the cell, all 16 passed.
 - [window_rescan.rs](window_rescan.rs) — **WIN-SLIDE-1 (2026-09-04):** the `sliding_frame_rescan` analyzer rule.
   Its design note, the DataFusion contracts it reads, and the routes it does not take are in
   [../map.md](../map.md); its pins are `../tests/window_rescan.rs` and

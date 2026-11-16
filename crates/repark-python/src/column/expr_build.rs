@@ -340,6 +340,7 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
         .with_analyzer_rules(rules)
         .build();
     let context = SessionContext::new_with_state(state);
+    context.register_udf(repark_core::cast_shield_udf().as_ref().clone());
     context.register_udf(repark_spark::spark_as_udf().as_ref().clone());
     context.register_udf(repark_spark::suffix_literal_udf().as_ref().clone());
     context.register_udf(

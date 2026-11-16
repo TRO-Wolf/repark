@@ -285,14 +285,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `dynamic_flatten` is the same rewrite. Depth-3 pin: 4 passes, 10 walks, 3
   expansions, 20 fields visited.
 - `lib.rs` — **IPI-40 PR6 (2026-09-24):** re-exports `TempViewSession` beside `EngineContext` / `SqlDialect`.
-  **PERF-DYNFLATTEN-1:** `built_with_debug_assertions()` gates the measurement report, so an H-3 number never comes from a debug build.
+  **PERF-DYNFLATTEN-1:** `built_with_debug_assertions()` gates the measurement report, so no H-3 number comes from a debug build.
   **U10 / R-DF-LOAD-PATH (2026-09-23):** `mod iceberg_path;` joined the module list; the stale half-comment above the
   `error_map` re-export (already noted in `session.rs`) was the shed line.
   **ATTR-ID-1 S3d (2026-10-01):** `string_lower_equal` / `fold_b_equal` join the `session` list (R-S3d-1 landed them as `fold_a_equal` /
   `fold_b_equal`, follow-up 3 merged the alias).
-  **SOURCE-URL-REDACT-1 (2026-10-06):** re-exports `repark_common::redaction` as `repark_core::redaction`, the binding's path to the redactor (no new crate edge).
+  **SOURCE-URL-REDACT-1 (2026-10-06):** re-exports `repark_common::redaction` as `repark_core::redaction`, the binding's redactor path (no new crate edge).
   **STRUCT-SETOP-REORDER-REFUSAL-1 delta #2 (2026-11-09):** `insert_struct_setop_after_coercion` joins the `session` list; the `write_postgres` fold holds at 156.
-  **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk` joins the `session` list.
+  **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** `struct_walk`, and CAST-LITERAL-UNWRAP-1's `cast_shield_udf`, join it.
 - `iceberg_path.rs` (+ [iceberg_path/](iceberg_path/map.md)) — **U10 / R-DF-LOAD-PATH +
   R-DF-LOAD-METADATA-JSON (2026-09-23):** `ReparkSession::read_iceberg_path`, the
   `format("iceberg").load(<path>)` arm — Spark's `IcebergSource` rule applied at the
@@ -1033,8 +1033,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   registration positions; `NoopSessionExtension` is the
   no-extension baseline. `configure` takes a `SessionBuildConf` — the builder's raw conf map PLUS
   the values `build()` has already resolved from it (today: the session timezone, H-1a split B).
-  A door reads the resolved value instead of re-parsing the map, which is what keeps
-  "resolved once, at construction" literally true rather than approximately true.
+  A door reads the resolved value instead of re-parsing the map, which keeps
+  "resolved once, at construction" literally true.
   **FNP-8 (2026-09-07):** the analyzer hook receives the core-owned guarded rule list and returns
   it unchanged by default. The Spark door uses it to insert one HOF preparation rule before the
   first default type-coercion pass.
@@ -1361,7 +1361,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **Round 4 (Y-2):** the `get_logical_plan` follow is unreachable from any SQL-door
   statement on DataFusion 54.1 (`LogicalPlanBuilder::scan` inlines a source that has a
   logical plan) — measured, all four lazy-view pins stayed green with the follow deleted.
-  It is live for a scan the builder does NOT inline (non-empty `filters`), which is what
+  It is live for a scan the builder does NOT inline (non-empty `filters`), as
   `filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse` pins.
 
   The public door is `session.rs::declare_temp_view_sorted(..., tighten_nulls)`: verify

@@ -14,6 +14,7 @@ pins.
 - [test_ansi_negative_zero_divisor_1.py](test_ansi_negative_zero_divisor_1.py) — TA-SERIES-S0b P-S0b-1 — ANSI division by negative zero matches Spark 4.1.2.
 - [test_bl_11_numeric_binary.py](test_bl_11_numeric_binary.py) — BL-11 numeric to BINARY under runtime ANSI — batch-17 oracle pins.
 - [test_cast_failure_parity.py](test_cast_failure_parity.py) — Cast-failure semantics differential corpus (H-2 gap G6) vs live Spark 4.1.2 ANSI ON.
+- [test_cast_literal_unwrap_1.py](test_cast_literal_unwrap_1.py) — CAST-LITERAL-UNWRAP-1 (2026-11-16) — a narrowing cast compared with a constant answers Spark 4.1.2 (step 0's and the critic's sets: headline cells on the SQL, DataFrame, `F.expr`, `filter(str)` and native doors; nested, `TRY_CAST`, `::`, non-ASCII, spelled-out and double-constant shapes; the four filter-moved shapes; negative halves; `DELETE` / `UPDATE` / `MERGE`, CoW and MoR), both ANSI modes; ranges plan without the shield and prune as the hand-written range; the `IN` cap; the Q2 overflow and Q4 top-of-type refusals; FLOAT, DOUBLE, STRING and timestamp-to-date controls unshielded. Evidence: `task/wo/cast-literal-unwrap-1/evidence/built/`.
 - [test_cast_map_spell_1.py](test_cast_map_spell_1.py) — CAST-MAP-SPELL-1 — ``CAST(… AS MAP<…>)`` and ``.cast(MapType)`` answer Spark 4.1.2.
 - [test_collation_refuse.py](test_collation_refuse.py) — G15 — collation refuses loudly.
 - [test_decimal128_parity.py](test_decimal128_parity.py) — Decimal128 differential corpus (gap G2) + expression overflow (gap G13).

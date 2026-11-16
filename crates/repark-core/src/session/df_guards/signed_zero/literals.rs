@@ -57,7 +57,8 @@ impl OptimizerRule for SignedZeroLiterals {
         if !rewritten.transformed {
             return Ok(rewritten);
         }
-        let simplified = SimplifyExpressions::default().rewrite(rewritten.data, config)?;
+        let shielded = super::super::cast_shield::shield_plan(rewritten.data)?.data;
+        let simplified = SimplifyExpressions::default().rewrite(shielded, config)?;
         Ok(Transformed::yes(simplified.data))
     }
 }
