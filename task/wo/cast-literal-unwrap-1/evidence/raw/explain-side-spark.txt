@@ -1,0 +1,18 @@
+WARNING: Using incubator modules: jdk.incubator.vector
+Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties
+26/11/16 10:19:03 WARN Utils: Your hostname, Johns-Linux-Mint, resolves to a loopback address: 127.0.1.1; using 192.168.4.23 instead (on interface enp1s0)
+26/11/16 10:19:03 WARN Utils: Set SPARK_LOCAL_IP if you need to bind to another address
+Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+26/11/16 10:19:14 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+
+[Stage 0:>                                                          (0 + 1) / 1]
+
+                                                                                
+SELECT c FROM p WHERE CAST(c AS INT) = 1 ORDER BY c -> ['1.00', '1.25', '1.50']
+EXPLAIN SELECT c FROM p WHERE CAST(c AS INT) = 1 -> ['== Physical Plan == *(1) Filter (isnotnull(c#3) AND (cast(c#3 as int) = 1)) +- *(1) ColumnarToRow +- FileScan parquet spark_catalog.default.p[c#3] Batched: true, DataFilters: [isnotnull(c#3), (cast(c#3 as int) = 1)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:<tmp>']
+EXPLAIN SELECT c FROM p -> ['== Physical Plan == *(1) ColumnarToRow +- FileScan parquet spark_catalog.default.p[c#3] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:<tmp> PartitionFilters: [], PushedFilters: [], ReadSchema']
+EXPLAIN EXTENDED SELECT c FROM p -> ["== Parsed Logical Plan == 'Project ['c] +- 'UnresolvedRelation [p], [], false == Analyzed Logical Plan == c: decimal(10,2) Project [c#3] +- SubqueryAlias spark_catalog.default.p +- Relation spark_catalog.default.p[id#2L,c#3] parquet == Optimized Logical Plan == Project [c#3] +- Relation spark_catalo"]
+EXPLAIN SELECT c FROM default.p -> ['== Physical Plan == *(1) ColumnarToRow +- FileScan parquet spark_catalog.default.p[c#3] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:<tmp> PartitionFilters: [], PushedFilters: [], ReadSchema']
+EXPLAIN SELECT c FROM spark_catalog.default.p -> ['== Physical Plan == *(1) ColumnarToRow +- FileScan parquet spark_catalog.default.p[c#3] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:<tmp> PartitionFilters: [], PushedFilters: [], ReadSchema']

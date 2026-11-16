@@ -1,0 +1,10 @@
+native <scratchpad>/pkg-ddu1-7b21bde3/repark/_native.abi3.so
+string append 1 ok
+string append 2 ok
+string rows 2
+cast_string append 1 ok
+cast_string append 2 RAISE AnalysisException cannot append column 'c': type mismatch source=string vs path=string_view (path mode('append') refuses type-incompatible merge)
+cast_string rows 1
+int append 1 ok
+int append 2 ok
+int rows 2

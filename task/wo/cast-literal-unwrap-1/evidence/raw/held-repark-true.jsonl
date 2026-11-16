@@ -1,0 +1,233 @@
+{"ansi": "true", "engine": "repark", "key": "provenance", "native": "<scratchpad>/pkg-ddu1-7b21bde3/repark/_native.abi3.so"}
+{"key": "dec_int/view/where/c0/eq/r", "kind": "dec_int", "result": [2, 3, 4, 5]}
+{"key": "dec_int/view/where/c0/lt/r", "kind": "dec_int", "result": [1, 6, 7, 8, 10, 12]}
+{"key": "dec_int/view/where/c0/gt/r", "kind": "dec_int", "result": [9, 11]}
+{"key": "dec_int/view/where/c0/ns/r", "kind": "dec_int", "result": [2, 3, 4, 5]}
+{"key": "dec_int/view/where/c1/eq/r", "kind": "dec_int", "result": [1, 6, 10]}
+{"key": "dec_int/view/where/c1/lt/r", "kind": "dec_int", "result": [7, 8, 12]}
+{"key": "dec_int/view/where/c1/gt/r", "kind": "dec_int", "result": [2, 3, 4, 5, 9, 11]}
+{"key": "dec_int/view/where/c1/ns/r", "kind": "dec_int", "result": [1, 6, 10]}
+{"key": "dec_tinyint/view/where/c0/eq/r", "kind": "dec_tinyint", "result": [2, 3, 4, 5]}
+{"key": "dec_tinyint/view/where/c0/lt/r", "kind": "dec_tinyint", "result": [1, 6, 7, 8, 10]}
+{"key": "dec_tinyint/view/where/c0/gt/r", "kind": "dec_tinyint", "result": [9]}
+{"key": "dec_tinyint/view/where/c0/ns/r", "kind": "dec_tinyint", "result": [2, 3, 4, 5]}
+{"key": "dec_tinyint/view/where/c1/eq/r", "kind": "dec_tinyint", "result": [7, 8]}
+{"key": "dec_tinyint/view/where/c1/lt/r", "kind": "dec_tinyint", "result": []}
+{"key": "dec_tinyint/view/where/c1/gt/r", "kind": "dec_tinyint", "result": [1, 2, 3, 4, 5, 6, 9, 10]}
+{"key": "dec_tinyint/view/where/c1/ns/r", "kind": "dec_tinyint", "result": [7, 8]}
+{"key": "dec_smallint/view/where/c0/eq/r", "kind": "dec_smallint", "result": [2, 3, 4, 5]}
+{"key": "dec_smallint/view/where/c0/lt/r", "kind": "dec_smallint", "result": [1, 6, 7, 8, 10]}
+{"key": "dec_smallint/view/where/c0/gt/r", "kind": "dec_smallint", "result": [9]}
+{"key": "dec_smallint/view/where/c0/ns/r", "kind": "dec_smallint", "result": [2, 3, 4, 5]}
+{"key": "dec_smallint/view/where/c1/eq/r", "kind": "dec_smallint", "result": [7, 8]}
+{"key": "dec_smallint/view/where/c1/lt/r", "kind": "dec_smallint", "result": []}
+{"key": "dec_smallint/view/where/c1/gt/r", "kind": "dec_smallint", "result": [1, 2, 3, 4, 5, 6, 9, 10]}
+{"key": "dec_smallint/view/where/c1/ns/r", "kind": "dec_smallint", "result": [7, 8]}
+{"key": "dec_bigint/view/where/c0/eq/r", "kind": "dec_bigint", "result": [2, 3, 4, 5]}
+{"key": "dec_bigint/view/where/c0/lt/r", "kind": "dec_bigint", "result": [1, 6, 7, 8, 10, 12]}
+{"key": "dec_bigint/view/where/c0/gt/r", "kind": "dec_bigint", "result": [9, 11]}
+{"key": "dec_bigint/view/where/c0/ns/r", "kind": "dec_bigint", "result": [2, 3, 4, 5]}
+{"key": "dec_bigint/view/where/c1/eq/r", "kind": "dec_bigint", "result": [7, 8]}
+{"key": "dec_bigint/view/where/c1/lt/r", "kind": "dec_bigint", "result": [12]}
+{"key": "dec_bigint/view/where/c1/gt/r", "kind": "dec_bigint", "result": [1, 2, 3, 4, 5, 6, 9, 10, 11]}
+{"key": "dec_bigint/view/where/c1/ns/r", "kind": "dec_bigint", "result": [7, 8]}
+{"key": "dec_tinyint_overflow/view/where/c0/eq/r", "kind": "dec_tinyint_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 128 is out of range"}
+{"key": "dec_tinyint_overflow/view/where/c0/lt/r", "kind": "dec_tinyint_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 128 is out of range"}
+{"key": "dec_tinyint_overflow/view/where/c0/gt/r", "kind": "dec_tinyint_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 128 is out of range"}
+{"key": "dec_tinyint_overflow/view/where/c0/ns/r", "kind": "dec_tinyint_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 128 is out of range"}
+{"key": "dec_tinyint_overflow/view/where/c1/eq/r", "kind": "dec_tinyint_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 128 is out of range"}
+{"key": "dec_tinyint_overflow/view/where/c1/lt/r", "kind": "dec_tinyint_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 128 is out of range"}
+{"key": "dec_tinyint_overflow/view/where/c1/gt/r", "kind": "dec_tinyint_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 128 is out of range"}
+{"key": "dec_tinyint_overflow/view/where/c1/ns/r", "kind": "dec_tinyint_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 128 is out of range"}
+{"key": "dec38_int_overflow/view/where/c0/eq/r", "kind": "dec38_int_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 3000000000 is out of range"}
+{"key": "dec38_int_overflow/view/where/c0/lt/r", "kind": "dec38_int_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 3000000000 is out of range"}
+{"key": "dec38_int_overflow/view/where/c0/gt/r", "kind": "dec38_int_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 3000000000 is out of range"}
+{"key": "dec38_int_overflow/view/where/c0/ns/r", "kind": "dec38_int_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 3000000000 is out of range"}
+{"key": "dec38_int_overflow/view/where/c1/eq/r", "kind": "dec38_int_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 3000000000 is out of range"}
+{"key": "dec38_int_overflow/view/where/c1/lt/r", "kind": "dec38_int_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 3000000000 is out of range"}
+{"key": "dec38_int_overflow/view/where/c1/gt/r", "kind": "dec38_int_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 3000000000 is out of range"}
+{"key": "dec38_int_overflow/view/where/c1/ns/r", "kind": "dec38_int_overflow", "result": "ERR:PySparkException:Arrow error: Cast error: value of 3000000000 is out of range"}
+{"key": "dec_dec0/view/where/c0/eq/r", "kind": "dec_dec0", "result": [1, 2, 3]}
+{"key": "dec_dec0/view/where/c0/lt/r", "kind": "dec_dec0", "result": [6, 7, 8, 10, 12]}
+{"key": "dec_dec0/view/where/c0/gt/r", "kind": "dec_dec0", "result": [4, 5, 9, 11]}
+{"key": "dec_dec0/view/where/c0/ns/r", "kind": "dec_dec0", "result": [1, 2, 3]}
+{"key": "dec_dec0/view/where/c1/eq/r", "kind": "dec_dec0", "result": [10]}
+{"key": "dec_dec0/view/where/c1/lt/r", "kind": "dec_dec0", "result": [6, 7, 8, 12]}
+{"key": "dec_dec0/view/where/c1/gt/r", "kind": "dec_dec0", "result": [1, 2, 3, 4, 5, 9, 11]}
+{"key": "dec_dec0/view/where/c1/ns/r", "kind": "dec_dec0", "result": [10]}
+{"key": "dec_dec1/view/where/c0/eq/r", "kind": "dec_dec1", "result": [3]}
+{"key": "dec_dec1/view/where/c0/lt/r", "kind": "dec_dec1", "result": [1, 2, 6, 7, 8, 10, 12]}
+{"key": "dec_dec1/view/where/c0/gt/r", "kind": "dec_dec1", "result": [4, 5, 9, 11]}
+{"key": "dec_dec1/view/where/c0/ns/r", "kind": "dec_dec1", "result": [3]}
+{"key": "dec_dec1/view/where/c1/eq/r", "kind": "dec_dec1", "result": [7]}
+{"key": "dec_dec1/view/where/c1/lt/r", "kind": "dec_dec1", "result": [8, 12]}
+{"key": "dec_dec1/view/where/c1/gt/r", "kind": "dec_dec1", "result": [1, 2, 3, 4, 5, 6, 9, 10, 11]}
+{"key": "dec_dec1/view/where/c1/ns/r", "kind": "dec_dec1", "result": [7]}
+{"key": "dec_prec_overflow/view/where/c0/eq/r", "kind": "dec_prec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_prec_overflow/view/where/c0/lt/r", "kind": "dec_prec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_prec_overflow/view/where/c0/gt/r", "kind": "dec_prec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_prec_overflow/view/where/c0/ns/r", "kind": "dec_prec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_prec_overflow/view/where/c1/eq/r", "kind": "dec_prec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_prec_overflow/view/where/c1/lt/r", "kind": "dec_prec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_prec_overflow/view/where/c1/gt/r", "kind": "dec_prec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_prec_overflow/view/where/c1/ns/r", "kind": "dec_prec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_round_overflow/view/where/c0/eq/r", "kind": "dec_round_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_round_overflow/view/where/c0/lt/r", "kind": "dec_round_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_round_overflow/view/where/c0/gt/r", "kind": "dec_round_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_round_overflow/view/where/c0/ns/r", "kind": "dec_round_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_round_overflow/view/where/c1/eq/r", "kind": "dec_round_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_round_overflow/view/where/c1/lt/r", "kind": "dec_round_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_round_overflow/view/where/c1/gt/r", "kind": "dec_round_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "dec_round_overflow/view/where/c1/ns/r", "kind": "dec_round_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 10.00 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "bigint_int/view/where/c0/eq/r", "kind": "bigint_int", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 2147483648 to type"}
+{"key": "bigint_int/view/where/c0/lt/r", "kind": "bigint_int", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 2147483648 to type"}
+{"key": "bigint_int/view/where/c0/gt/r", "kind": "bigint_int", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 2147483648 to type"}
+{"key": "bigint_int/view/where/c0/ns/r", "kind": "bigint_int", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 2147483648 to type"}
+{"key": "bigint_int/view/where/c1/eq/r", "kind": "bigint_int", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 2147483648 to type"}
+{"key": "bigint_int/view/where/c1/lt/r", "kind": "bigint_int", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 2147483648 to type"}
+{"key": "bigint_int/view/where/c1/gt/r", "kind": "bigint_int", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 2147483648 to type"}
+{"key": "bigint_int/view/where/c1/ns/r", "kind": "bigint_int", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 2147483648 to type"}
+{"key": "int_smallint/view/where/c0/eq/r", "kind": "int_smallint", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 32768 to type"}
+{"key": "int_smallint/view/where/c0/lt/r", "kind": "int_smallint", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 32768 to type"}
+{"key": "int_smallint/view/where/c0/gt/r", "kind": "int_smallint", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 32768 to type"}
+{"key": "int_smallint/view/where/c0/ns/r", "kind": "int_smallint", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 32768 to type"}
+{"key": "int_smallint/view/where/c1/eq/r", "kind": "int_smallint", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 32768 to type"}
+{"key": "int_smallint/view/where/c1/lt/r", "kind": "int_smallint", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 32768 to type"}
+{"key": "int_smallint/view/where/c1/gt/r", "kind": "int_smallint", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 32768 to type"}
+{"key": "int_smallint/view/where/c1/ns/r", "kind": "int_smallint", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value 32768 to type"}
+{"key": "double_int/view/where/c0/eq/r", "kind": "double_int", "result": [2, 3, 4, 5]}
+{"key": "double_int/view/where/c0/lt/r", "kind": "double_int", "result": [1, 6, 7]}
+{"key": "double_int/view/where/c0/gt/r", "kind": "double_int", "result": [8]}
+{"key": "double_int/view/where/c0/ns/r", "kind": "double_int", "result": [2, 3, 4, 5]}
+{"key": "double_int/view/where/c1/eq/r", "kind": "double_int", "result": [1, 6]}
+{"key": "double_int/view/where/c1/lt/r", "kind": "double_int", "result": [7]}
+{"key": "double_int/view/where/c1/gt/r", "kind": "double_int", "result": [2, 3, 4, 5, 8]}
+{"key": "double_int/view/where/c1/ns/r", "kind": "double_int", "result": [1, 6]}
+{"key": "double_int_edge/view/where/c0/eq/r", "kind": "double_int_edge", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value NaN to type"}
+{"key": "double_int_edge/view/where/c0/lt/r", "kind": "double_int_edge", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value NaN to type"}
+{"key": "double_int_edge/view/where/c0/gt/r", "kind": "double_int_edge", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value NaN to type"}
+{"key": "double_int_edge/view/where/c0/ns/r", "kind": "double_int_edge", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value NaN to type"}
+{"key": "double_int_edge/view/where/c1/eq/r", "kind": "double_int_edge", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value NaN to type"}
+{"key": "double_int_edge/view/where/c1/lt/r", "kind": "double_int_edge", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value NaN to type"}
+{"key": "double_int_edge/view/where/c1/gt/r", "kind": "double_int_edge", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value NaN to type"}
+{"key": "double_int_edge/view/where/c1/ns/r", "kind": "double_int_edge", "result": "ERR:PySparkException:Arrow error: Cast error: Can't cast value NaN to type"}
+{"key": "double_bigint/view/where/c0/eq/r", "kind": "double_bigint", "result": [2, 3, 4, 5]}
+{"key": "double_bigint/view/where/c0/lt/r", "kind": "double_bigint", "result": [1, 6, 7]}
+{"key": "double_bigint/view/where/c0/gt/r", "kind": "double_bigint", "result": [8]}
+{"key": "double_bigint/view/where/c0/ns/r", "kind": "double_bigint", "result": [2, 3, 4, 5]}
+{"key": "double_bigint/view/where/c1/eq/r", "kind": "double_bigint", "result": [7]}
+{"key": "double_bigint/view/where/c1/lt/r", "kind": "double_bigint", "result": []}
+{"key": "double_bigint/view/where/c1/gt/r", "kind": "double_bigint", "result": [1, 2, 3, 4, 5, 6, 8]}
+{"key": "double_bigint/view/where/c1/ns/r", "kind": "double_bigint", "result": [7]}
+{"key": "float_int/view/where/c0/eq/r", "kind": "float_int", "result": [2, 3, 4, 5]}
+{"key": "float_int/view/where/c0/lt/r", "kind": "float_int", "result": [1, 6, 7]}
+{"key": "float_int/view/where/c0/gt/r", "kind": "float_int", "result": [8]}
+{"key": "float_int/view/where/c0/ns/r", "kind": "float_int", "result": [2, 3, 4, 5]}
+{"key": "float_int/view/where/c1/eq/r", "kind": "float_int", "result": [1, 6]}
+{"key": "float_int/view/where/c1/lt/r", "kind": "float_int", "result": [7]}
+{"key": "float_int/view/where/c1/gt/r", "kind": "float_int", "result": [2, 3, 4, 5, 8]}
+{"key": "float_int/view/where/c1/ns/r", "kind": "float_int", "result": [1, 6]}
+{"key": "double_float/view/where/c0/eq/r", "kind": "double_float", "result": [1, 2]}
+{"key": "double_float/view/where/c0/lt/r", "kind": "double_float", "result": [6]}
+{"key": "double_float/view/where/c0/gt/r", "kind": "double_float", "result": [3, 4, 5]}
+{"key": "double_float/view/where/c0/ns/r", "kind": "double_float", "result": [1, 2]}
+{"key": "double_float/view/where/c1/eq/r", "kind": "double_float", "result": [4]}
+{"key": "double_float/view/where/c1/lt/r", "kind": "double_float", "result": [1, 2, 3, 5, 6]}
+{"key": "double_float/view/where/c1/gt/r", "kind": "double_float", "result": []}
+{"key": "double_float/view/where/c1/ns/r", "kind": "double_float", "result": [4]}
+{"key": "double_dec/view/where/c0/eq/r", "kind": "double_dec", "result": [1, 6]}
+{"key": "double_dec/view/where/c0/lt/r", "kind": "double_dec", "result": [3, 4, 5]}
+{"key": "double_dec/view/where/c0/gt/r", "kind": "double_dec", "result": [2]}
+{"key": "double_dec/view/where/c0/ns/r", "kind": "double_dec", "result": [1, 6]}
+{"key": "double_dec/view/where/c1/eq/r", "kind": "double_dec", "result": [2]}
+{"key": "double_dec/view/where/c1/lt/r", "kind": "double_dec", "result": [1, 3, 4, 5, 6]}
+{"key": "double_dec/view/where/c1/gt/r", "kind": "double_dec", "result": []}
+{"key": "double_dec/view/where/c1/ns/r", "kind": "double_dec", "result": [2]}
+{"key": "double_dec_overflow/view/where/c0/eq/r", "kind": "double_dec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 100.0 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "double_dec_overflow/view/where/c0/lt/r", "kind": "double_dec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 100.0 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "double_dec_overflow/view/where/c0/gt/r", "kind": "double_dec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 100.0 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "double_dec_overflow/view/where/c0/ns/r", "kind": "double_dec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 100.0 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "double_dec_overflow/view/where/c1/eq/r", "kind": "double_dec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 100.0 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "double_dec_overflow/view/where/c1/lt/r", "kind": "double_dec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 100.0 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "double_dec_overflow/view/where/c1/gt/r", "kind": "double_dec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 100.0 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "double_dec_overflow/view/where/c1/ns/r", "kind": "double_dec_overflow", "result": "ERR:PySparkException:Arrow error: Invalid argument error: 100.0 is too large to store in a Decimal128 of precision 3. Max is"}
+{"key": "str_int/view/where/c0/eq/r", "kind": "str_int", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 1' to value of Int32"}
+{"key": "str_int/view/where/c0/lt/r", "kind": "str_int", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 1' to value of Int32"}
+{"key": "str_int/view/where/c0/gt/r", "kind": "str_int", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 1' to value of Int32"}
+{"key": "str_int/view/where/c0/ns/r", "kind": "str_int", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 1' to value of Int32"}
+{"key": "str_int/view/where/c1/eq/r", "kind": "str_int", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 1' to value of Int32"}
+{"key": "str_int/view/where/c1/lt/r", "kind": "str_int", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 1' to value of Int32"}
+{"key": "str_int/view/where/c1/gt/r", "kind": "str_int", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 1' to value of Int32"}
+{"key": "str_int/view/where/c1/ns/r", "kind": "str_int", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 1' to value of Int32"}
+{"key": "str_int_invalid/view/where/c0/eq/r", "kind": "str_int_invalid", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Int32"}
+{"key": "str_int_invalid/view/where/c0/lt/r", "kind": "str_int_invalid", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Int32"}
+{"key": "str_int_invalid/view/where/c0/gt/r", "kind": "str_int_invalid", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Int32"}
+{"key": "str_int_invalid/view/where/c0/ns/r", "kind": "str_int_invalid", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Int32"}
+{"key": "str_int_invalid/view/where/c1/eq/r", "kind": "str_int_invalid", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Int32"}
+{"key": "str_int_invalid/view/where/c1/lt/r", "kind": "str_int_invalid", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Int32"}
+{"key": "str_int_invalid/view/where/c1/gt/r", "kind": "str_int_invalid", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Int32"}
+{"key": "str_int_invalid/view/where/c1/ns/r", "kind": "str_int_invalid", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Int32"}
+{"key": "str_dec/view/where/c0/eq/r", "kind": "str_dec", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Decimal128(38, 10)"}
+{"key": "str_dec/view/where/c0/lt/r", "kind": "str_dec", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Decimal128(38, 10)"}
+{"key": "str_dec/view/where/c0/gt/r", "kind": "str_dec", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Decimal128(38, 10)"}
+{"key": "str_dec/view/where/c0/ns/r", "kind": "str_dec", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Decimal128(38, 10)"}
+{"key": "str_dec/view/where/c1/eq/r", "kind": "str_dec", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Decimal128(38, 10)"}
+{"key": "str_dec/view/where/c1/lt/r", "kind": "str_dec", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Decimal128(38, 10)"}
+{"key": "str_dec/view/where/c1/gt/r", "kind": "str_dec", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Decimal128(38, 10)"}
+{"key": "str_dec/view/where/c1/ns/r", "kind": "str_dec", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string '1e0' to value of Decimal128(38, 10)"}
+{"key": "str_double/view/where/c0/eq/r", "kind": "str_double", "result": [1, 2, 3, 4, 5, 6, 10]}
+{"key": "str_double/view/where/c0/lt/r", "kind": "str_double", "result": []}
+{"key": "str_double/view/where/c0/gt/r", "kind": "str_double", "result": [7, 8, 9]}
+{"key": "str_double/view/where/c0/ns/r", "kind": "str_double", "result": [1, 2, 3, 4, 5, 6, 10]}
+{"key": "str_double/view/where/c1/eq/r", "kind": "str_double", "result": [7]}
+{"key": "str_double/view/where/c1/lt/r", "kind": "str_double", "result": [1, 2, 3, 4, 5, 6, 10]}
+{"key": "str_double/view/where/c1/gt/r", "kind": "str_double", "result": [8, 9]}
+{"key": "str_double/view/where/c1/ns/r", "kind": "str_double", "result": [7]}
+{"key": "str_date/view/where/c0/eq/r", "kind": "str_date", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 2024-01-01' to value of Date32"}
+{"key": "str_date/view/where/c0/lt/r", "kind": "str_date", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 2024-01-01' to value of Date32"}
+{"key": "str_date/view/where/c0/gt/r", "kind": "str_date", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 2024-01-01' to value of Date32"}
+{"key": "str_date/view/where/c0/ns/r", "kind": "str_date", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 2024-01-01' to value of Date32"}
+{"key": "str_date/view/where/c1/eq/r", "kind": "str_date", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 2024-01-01' to value of Date32"}
+{"key": "str_date/view/where/c1/lt/r", "kind": "str_date", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 2024-01-01' to value of Date32"}
+{"key": "str_date/view/where/c1/gt/r", "kind": "str_date", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 2024-01-01' to value of Date32"}
+{"key": "str_date/view/where/c1/ns/r", "kind": "str_date", "result": "ERR:PySparkException:Arrow error: Cast error: Cannot cast string ' 2024-01-01' to value of Date32"}
+{"key": "ts_date/view/where/c0/eq/r", "kind": "ts_date", "result": [1, 2, 3]}
+{"key": "ts_date/view/where/c0/lt/r", "kind": "ts_date", "result": [5]}
+{"key": "ts_date/view/where/c0/gt/r", "kind": "ts_date", "result": [4]}
+{"key": "ts_date/view/where/c0/ns/r", "kind": "ts_date", "result": [1, 2, 3]}
+{"key": "ts_date/view/where/c1/eq/r", "kind": "ts_date", "result": [1, 2, 3]}
+{"key": "ts_date/view/where/c1/lt/r", "kind": "ts_date", "result": [5]}
+{"key": "ts_date/view/where/c1/gt/r", "kind": "ts_date", "result": [4]}
+{"key": "ts_date/view/where/c1/ns/r", "kind": "ts_date", "result": [1, 2, 3]}
+{"key": "ntz_date/view/where/c0/eq/r", "kind": "ntz_date", "result": [1, 2, 3]}
+{"key": "ntz_date/view/where/c0/lt/r", "kind": "ntz_date", "result": [5]}
+{"key": "ntz_date/view/where/c0/gt/r", "kind": "ntz_date", "result": [4]}
+{"key": "ntz_date/view/where/c0/ns/r", "kind": "ntz_date", "result": [1, 2, 3]}
+{"key": "ntz_date/view/where/c1/eq/r", "kind": "ntz_date", "result": [1, 2, 3]}
+{"key": "ntz_date/view/where/c1/lt/r", "kind": "ntz_date", "result": [5]}
+{"key": "ntz_date/view/where/c1/gt/r", "kind": "ntz_date", "result": [4]}
+{"key": "ntz_date/view/where/c1/ns/r", "kind": "ntz_date", "result": [1, 2, 3]}
+{"key": "int_bigint/view/where/c0/eq/r", "kind": "int_bigint", "result": [1]}
+{"key": "int_bigint/view/where/c0/lt/r", "kind": "int_bigint", "result": [3, 5]}
+{"key": "int_bigint/view/where/c0/gt/r", "kind": "int_bigint", "result": [2, 4]}
+{"key": "int_bigint/view/where/c0/ns/r", "kind": "int_bigint", "result": [1]}
+{"key": "int_bigint/view/where/c1/eq/r", "kind": "int_bigint", "result": [1]}
+{"key": "int_bigint/view/where/c1/lt/r", "kind": "int_bigint", "result": [3, 5]}
+{"key": "int_bigint/view/where/c1/gt/r", "kind": "int_bigint", "result": [2, 4]}
+{"key": "int_bigint/view/where/c1/ns/r", "kind": "int_bigint", "result": [1]}
+{"key": "dec_wide/view/where/c0/eq/r", "kind": "dec_wide", "result": [3]}
+{"key": "dec_wide/view/where/c0/lt/r", "kind": "dec_wide", "result": [1, 2, 6, 7, 8, 10, 12]}
+{"key": "dec_wide/view/where/c0/gt/r", "kind": "dec_wide", "result": [4, 5, 9, 11]}
+{"key": "dec_wide/view/where/c0/ns/r", "kind": "dec_wide", "result": [3]}
+{"key": "dec_wide/view/where/c1/eq/r", "kind": "dec_wide", "result": [2]}
+{"key": "dec_wide/view/where/c1/lt/r", "kind": "dec_wide", "result": [1, 6, 7, 8, 10, 12]}
+{"key": "dec_wide/view/where/c1/gt/r", "kind": "dec_wide", "result": [3, 4, 5, 9, 11]}
+{"key": "dec_wide/view/where/c1/ns/r", "kind": "dec_wide", "result": [2]}
+{"key": "date_ts/view/where/c0/eq/r", "kind": "date_ts", "result": [1]}
+{"key": "date_ts/view/where/c0/lt/r", "kind": "date_ts", "result": [3]}
+{"key": "date_ts/view/where/c0/gt/r", "kind": "date_ts", "result": [2]}
+{"key": "date_ts/view/where/c0/ns/r", "kind": "date_ts", "result": [1]}
+{"key": "date_ts/view/where/c1/eq/r", "kind": "date_ts", "result": []}
+{"key": "date_ts/view/where/c1/lt/r", "kind": "date_ts", "result": [1, 3]}
+{"key": "date_ts/view/where/c1/gt/r", "kind": "date_ts", "result": [2]}
+{"key": "date_ts/view/where/c1/ns/r", "kind": "date_ts", "result": []}

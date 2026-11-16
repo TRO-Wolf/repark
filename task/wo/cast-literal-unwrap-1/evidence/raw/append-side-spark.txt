@@ -1,0 +1,9 @@
+string append 1 ok
+string append 2 ok
+string rows 2
+cast_string append 1 ok
+cast_string append 2 ok
+cast_string rows 2
+int append 1 ok
+int append 2 ok
+int rows 2
