@@ -48,4 +48,13 @@ The seat: a Spark-semantics cast kernel for the ANSI-off narrowing family (wrap 
 DECIMAL one), beside [CAST-FLOAT-DECIMAL-OVERFLOW-NULL-1](cast-float-decimal-overflow-null-1-card-2026-11-15.md),
 which is the FLOAT and DOUBLE source twin.
 
+## Append (2026-11-16): FLOAT and DOUBLE sources, from Fable's sweep
+
+This card's kinds are integer and DECIMAL sources. Fable's type-pair sweep of 2026-11-16 (family 12) measured the same ANSI-off refusal from FLOAT and DOUBLE to integer targets, on the overflowing rows:
+
+- `CAST` of FLOAT `1e10` to TINYINT: Spark answers `-1`; main refuses, `Can't cast value 10000000000.0 to type Int8` (cell `f:cast:FLOAT:TINYINT`, class R).
+- `CAST` of DOUBLE `9007199254740992.0` to INT: Spark answers `2147483647`; main refuses, `Can't cast value 9007199254740992.0 to type Int32` (cell `f:cast:DOUBLE:INT`, class R).
+
+Spark's values follow Java's narrowing: the value saturates to an int, then narrows for TINYINT. The card does not rule the mechanism. With ANSI on both engines raise (class B for these cells). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2. Reproduction: `python3 <scratchpad>/sweep/v.py f:cast:FLOAT:TINYINT f:cast:DOUBLE:INT`, with `<scratchpad>` the Fable sweep scratch folder (not committed).
+
 Up: [map.md](map.md).

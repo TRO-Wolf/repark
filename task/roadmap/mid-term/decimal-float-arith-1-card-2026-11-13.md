@@ -21,3 +21,7 @@ owner, 2026-11-13, about 14:52 UTC, verbatim "Defaults, and merge #1323 when gre
 
 `decimal + FLOAT` (and the other arithmetic operators) types `double` and answers Spark's value, pinned on the `ctl_add`
 FLOAT cells in both ANSI modes.
+
+## Append (2026-11-16): an integer beside a FLOAT, from Fable's sweep
+
+Fable's type-pair sweep of 2026-11-16 (family 3) measured an integer beside a FLOAT, which this card's Close covers as "the other arithmetic operators". With ANSI on, `INT + FLOAT` answers `double` on Spark and `float` on main, with different values: `1 + 0.1` answers `1.1000000014901161` on Spark and `1.100000023841858` on main (cell `t:add:INT:FLOAT`, class T). With ANSI off both answer `float` with the same values (cell `f:add:INT:FLOAT`, class E). So for an integer beside a FLOAT the Spark type depends on the mode, which the decimal cells above do not show. Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2. Reproduction: `python3 <scratchpad>/sweep/v.py t:add:INT:FLOAT f:add:INT:FLOAT`, with `<scratchpad>` the Fable sweep scratch folder (not committed).

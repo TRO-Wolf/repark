@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DataFusion Parity Findings</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+:root{
+  --bg:#F2F5F7; --panel:#FFFFFF; --fg:#16232B; --muted:#55666F; --line:#D6DEE3;
+  --accent:#0E6C88; --accent-soft:#DCEDF3;
+  --ok:#1E7A4C; --ok-soft:#DDF1E6; --warn:#9A6200; --warn-soft:#F7ECD6; --crit:#A3302A; --crit-soft:#F6E0DE;
+  --track:#E3E9ED; --both:#9AAAB3; --type:#7A5BB5;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1418; --panel:#152027; --fg:#E3ECF0; --muted:#97A9B2; --line:#26353E;
+  --accent:#4DB1CF; --accent-soft:#16323D;
+  --ok:#5CC48E; --ok-soft:#173226; --warn:#E0A84A; --warn-soft:#352914; --crit:#E8817A; --crit-soft:#3A1E1C;
+  --track:#1E2B33; --both:#5C6E78; --type:#A98FE0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --panel:#152027; --fg:#E3ECF0; --muted:#97A9B2; --line:#26353E;
+  --accent:#4DB1CF; --accent-soft:#16323D;
+  --ok:#5CC48E; --ok-soft:#173226; --warn:#E0A84A; --warn-soft:#352914; --crit:#E8817A; --crit-soft:#3A1E1C;
+  --track:#1E2B33; --both:#5C6E78; --type:#A98FE0; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 56px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:2rem;font-weight:700;letter-spacing:.01em}
+h2{font-size:1.25rem;font-weight:600;color:var(--accent)}
+h3{font-size:1.05rem;font-weight:600}
+p{margin:0;max-width:72ch}
+.eyebrow{font:500 .74rem/1.4 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lede{color:var(--muted)}
+code,.mono{font-family:var(--mono);font-size:.86em}
+code{background:var(--accent-soft);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+header,section{display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;min-width:0}
+ul.plain,ol.plain{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;max-width:76ch}
+.chip{display:inline-block;font:500 .72rem/1.6 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:0 8px;border-radius:999px;white-space:nowrap}
+.ok{background:var(--ok-soft);color:var(--ok)} .warn{background:var(--warn-soft);color:var(--warn)} .crit{background:var(--crit-soft);color:var(--crit)} .info{background:var(--accent-soft);color:var(--accent)} .open{background:var(--track);color:var(--muted)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 .78rem var(--display);letter-spacing:.04em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;white-space:nowrap}
+td.c{min-width:230px} td.w{min-width:200px}
+.bars{display:flex;flex-direction:column;gap:14px}
+.barrow{display:flex;flex-direction:column;gap:6px}
+.barlabel{font:500 .8rem var(--mono);color:var(--muted)}
+.bar{display:flex;height:22px;border-radius:5px;overflow:hidden;background:var(--track)}
+.bar span{display:block;height:100%}
+.s-eq{background:var(--ok)} .s-both{background:var(--both)} .s-val{background:var(--crit)} .s-type{background:var(--type)} .s-ref{background:var(--warn)} .s-ans{background:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.84rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:baseline}
+.foot{color:var(--muted);font-size:.84rem;display:flex;flex-direction:column;gap:6px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:520px){h1{font-size:1.6rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">Planning board · 2026-11-16 · main before #1341 · one sweep and one audit</span>
+  <h1>DataFusion parity findings</h1>
+  <p class="lede">What a type-pair sweep and a rewrite audit measured about where RePark answers unlike Spark 4.1.2 on scalar SQL, and what the planning agent recommends doing about it.</p>
+</header>
+
+<section>
+  <h2>Verdict</h2>
+  <div class="panel">
+    <p><strong>DataFusion's engine is sound. Its semantic layer differs from Spark in three ways, and the differences are now counted.</strong> On scalar SQL through the Spark door, 2,000 of 8,442 cells differ with ANSI off and 859 with ANSI on. They sort into 17 families, plus six simplifier rewrites that change an answer.</p>
+    <p><strong>The recommendation is to stop fixing these one family at a time</strong> and to narrow what the label promises: scope the label to ANSI on, build one Spark common-type rule and one Spark cast unit, and size a patched simplifier for the upstream bugs.</p>
+  </div>
+</section>
+
+<section>
+  <h2>The count</h2>
+  <p>18 scalar types in every ordered pair, 26 positions, 8,442 cells per ANSI mode. Each bar is all 8,442 cells.</p>
+  <div class="panel">
+    <div class="bars">
+      <div class="barrow">
+        <span class="barlabel">ANSI off · 2,000 cells differ</span>
+        <div class="bar" role="img" aria-label="ANSI off: 3,269 equal, 3,173 both refuse, 103 different values, 331 different type, 1,470 RePark refuses, 96 RePark answers alone">
+          <span class="s-eq" style="width:38.72%"></span><span class="s-both" style="width:37.59%"></span><span class="s-val" style="width:1.22%"></span><span class="s-type" style="width:3.92%"></span><span class="s-ref" style="width:17.41%"></span><span class="s-ans" style="width:1.14%"></span>
+        </div>
+      </div>
+      <div class="barrow">
+        <span class="barlabel">ANSI on · 859 cells differ</span>
+        <div class="bar" role="img" aria-label="ANSI on: 2,786 equal, 4,797 both refuse, 7 different values, 328 different type, 355 RePark refuses, 169 RePark answers alone">
+          <span class="s-eq" style="width:33.00%"></span><span class="s-both" style="width:56.82%"></span><span class="s-val" style="width:0.08%"></span><span class="s-type" style="width:3.89%"></span><span class="s-ref" style="width:4.21%"></span><span class="s-ans" style="width:2.00%"></span>
+        </div>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i class="s-eq"></i>Equal</span>
+      <span><i class="s-both"></i>Both refuse</span>
+      <span><i class="s-val"></i>Different values</span>
+      <span><i class="s-type"></i>Different result type</span>
+      <span><i class="s-ref"></i>RePark refuses, Spark answers</span>
+      <span><i class="s-ans"></i>RePark answers, Spark refuses</span>
+    </div>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Class</th><th class="n">ANSI off</th><th class="n">ANSI on</th></tr></thead>
+      <tbody>
+        <tr><td>Equal</td><td class="n">3,269</td><td class="n">2,786</td></tr>
+        <tr><td>Both refuse (messages not compared)</td><td class="n">3,173</td><td class="n">4,797</td></tr>
+        <tr><td>Same type, different values</td><td class="n">103</td><td class="n">7</td></tr>
+        <tr><td>Different result type</td><td class="n">331</td><td class="n">328</td></tr>
+        <tr><td>RePark refuses, Spark answers</td><td class="n">1,470</td><td class="n">355</td></tr>
+        <tr><td>RePark answers, Spark refuses</td><td class="n">96</td><td class="n">169</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="lede">36 randomly chosen cells were re-run with a separate script; all 36 matched.</p>
+</section>
+
+<section>
+  <h2>Kind 1: which type Spark picks for two operands</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Finding</th><th>Example</th><th>Spark</th><th>main</th><th>State</th></tr></thead>
+      <tbody>
+        <tr><td class="c">Decimal pairs past 38 digits</td><td><code>DECIMAL(38,0) 1 = DECIMAL(10,2) 1.25</code></td><td>true</td><td>false</td><td><span class="chip info">ruled</span></td></tr>
+        <tr><td class="c">An integer beside a FLOAT under ANSI</td><td><code>int + float</code></td><td><code>double</code></td><td><code>float</code>, other values</td><td><span class="chip crit">silent</span></td></tr>
+        <tr><td class="c">A string beside a DOUBLE in <code>IN</code></td><td><code>'1' IN (1.0)</code></td><td>false</td><td>true</td><td><span class="chip crit">silent</span></td></tr>
+        <tr><td class="c"><code>EXCEPT</code> and <code>INTERSECT</code> keep the left side's type</td><td><code>tinyint EXCEPT bigint</code></td><td><code>bigint</code></td><td><code>tinyint</code></td><td><span class="chip warn">type only</span></td></tr>
+        <tr><td class="c"><code>nullif</code> answers the common type</td><td><code>nullif(int, bigint)</code></td><td><code>int</code></td><td><code>bigint</code></td><td><span class="chip warn">type only</span></td></tr>
+        <tr><td class="c">FLOAT beside DECIMAL in arithmetic; <code>float / float</code></td><td><code>float * decimal</code></td><td><code>double</code></td><td><code>float</code></td><td><span class="chip open">card may exist</span></td></tr>
+        <tr><td class="c">A BOOLEAN beside a number, ANSI off</td><td><code>bool_col = int_col</code></td><td>answers</td><td>refuses</td><td><span class="chip warn">loud</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Kind 2: how Spark converts a value</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Finding</th><th>Example</th><th>Spark</th><th>main</th><th>State</th></tr></thead>
+      <tbody>
+        <tr><td class="c">Text beside a number, boolean or date</td><td><code>int_col = '1.25'</code>, <code>' 2 '</code>, <code>'abc'</code></td><td>answers</td><td>refuses</td><td><span class="chip warn">loud</span></td></tr>
+        <tr><td class="c">A FLOAT or DECIMAL cast to <code>TIMESTAMP</code></td><td><code>CAST(1.5 AS TIMESTAMP)</code></td><td>1.5 s after the epoch</td><td>1 µs after it</td><td><span class="chip crit">silent</span></td></tr>
+        <tr><td class="c">Narrowing and overflowing casts, ANSI off</td><td><code>CAST(bigint AS INT)</code> past the range</td><td>wraps or NULL</td><td>refuses</td><td><span class="chip warn">loud</span></td></tr>
+        <tr><td class="c"><code>createDataFrame</code> with a wide DECIMAL schema</td><td><code>DECIMAL(20,0)</code>, <code>DECIMAL(38,0)</code></td><td>accepts</td><td>refuses</td><td><span class="chip warn">loud</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Text is the largest family by count: 1,229 of the 1,470 ANSI-off refusals have a string on one side.</p>
+</section>
+
+<section>
+  <h2>Kind 3: rewrites and functions that are wrong</h2>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Finding</th><th>Example</th><th>Spark</th><th>main</th><th>State</th></tr></thead>
+      <tbody>
+        <tr><td class="c">A lossy cast against a constant</td><td><code>WHERE CAST(c AS INT) = 1</code></td><td>1.00, 1.25, 1.50</td><td>1.00</td><td><span class="chip info">in work</span></td></tr>
+        <tr><td class="c"><code>(-A) &amp; A</code> folded to 0</td><td><code>(-id) &amp; id</code> for 1, 2, 3</td><td>1, 2, 1</td><td>0, 0, 0</td><td><span class="chip crit">silent</span></td></tr>
+        <tr><td class="c"><code>A ^ A</code> folded to 0</td><td><code>a ^ a</code>, <code>a</code> NULL</td><td>NULL</td><td>0</td><td><span class="chip crit">silent</span></td></tr>
+        <tr><td class="c"><code>-(A &amp; B)</code> rewritten as <code>(-A) | (-B)</code></td><td><code>-(a &amp; b)</code> for (3, 2)</td><td>-2</td><td>-1</td><td><span class="chip crit">silent</span></td></tr>
+        <tr><td class="c"><code>IN</code> and <code>NOT IN</code> lists merged, ignoring a NULL item</td><td><code>a IN (1, 2, 3) AND a NOT IN (2, NULL)</code></td><td>no rows</td><td>two rows</td><td><span class="chip crit">silent</span></td></tr>
+        <tr><td class="c"><code>power(a, 0)</code> folded to 1</td><td><code>power(NULL, 0)</code></td><td>NULL</td><td>1.0</td><td><span class="chip crit">silent</span></td></tr>
+        <tr><td class="c"><code>AND</code> does not protect its right side under ANSI</td><td><code>WHERE b &lt;&gt; 0 AND a / b &gt; 1</code></td><td>two rows</td><td>raises division by zero</td><td><span class="chip warn">loud</span></td></tr>
+        <tr><td class="c"><code>extract</code> and <code>date_part</code> ignore the session time zone</td><td><code>extract(YEAR FROM ts)</code>, Los Angeles session</td><td>2023</td><td>2024</td><td><span class="chip crit">silent</span></td></tr>
+        <tr><td class="c"><code>TINYINT</code> and <code>SMALLINT</code> arithmetic under ANSI</td><td><code>127Y + 127Y</code></td><td>raises</td><td>-2</td><td><span class="chip crit">silent</span></td></tr>
+        <tr><td class="c">Two <code>rand()</code> calls in one row</td><td>rows where <code>x = y</code>, of 100</td><td>0</td><td>100</td><td><span class="chip crit">silent</span></td></tr>
+        <tr><td class="c">Two casts of one column in a select list</td><td><code>SELECT CAST(x AS BIGINT), CAST(x AS DOUBLE)</code></td><td>answers</td><td>refuses</td><td><span class="chip warn">loud</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The five folded rewrites are wrong by DataFusion's own rules too, so they are upstream bugs. <code>year(ts)</code> and <code>hour(ts)</code> are right on main; only the <code>extract</code> and <code>date_part</code> spellings are wrong.</p>
+</section>
+
+<section>
+  <h2>Recommendations, in priority order</h2>
+  <ol class="plain">
+    <li><strong>Scope the label to ANSI on.</strong> It is Spark 4's default, and it cuts the differing cells from 2,000 to 859 and the refusals from 1,470 to 355. ANSI-off behaviour becomes a named exclusion and a later unit.</li>
+    <li><strong>Rule severity on the silent, everyday findings first:</strong> <code>extract</code> ignoring the session zone, the number-to-timestamp cast, small-integer wrap under ANSI, and an integer beside a FLOAT under ANSI. The <code>AND</code> guard is loud but very common and belongs on the same list.</li>
+    <li><strong>Build DECIMAL-COMMON-TYPE-1 as the first slice of one Spark common-type rule:</strong> one shared function and one walk, so the other type families become additions to that seat.</li>
+    <li><strong>Plan one Spark cast unit</strong> for text parsing and the number-to-timestamp cast. Text-to-number parsing under ANSI on should come before the label, because ingestion casts are what the label is for.</li>
+    <li><strong>Size a patched DataFusion simplifier</strong> for the five upstream bugs before writing five guards, and report them upstream. The wrap stays the fix for the lossy cast, because it also keeps pruning.</li>
+    <li><strong>Keep the sweep as a standing check.</strong> Rerun it on current main now and after each coercion unit.</li>
+  </ol>
+  <p class="lede">Not recommended: switching engines or forking DataFusion wholesale. Nothing here touches execution or speed.</p>
+</section>
+
+<section>
+  <h2>Decisions waiting on you</h2>
+  <div class="panel">
+    <ul class="plain">
+      <li>Whether the label is scoped to ANSI on.</li>
+      <li>Severity, and label-blocking or not, for each new finding once the orchestrator has matched them against the existing cards.</li>
+      <li>Whether text-to-number casts block the label.</li>
+      <li>Whether to size a patched simplifier, and whether to report the five bugs upstream.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2>How far to trust this</h2>
+  <ul class="plain">
+    <li><strong>Narrow surface.</strong> Scalar SQL on the Spark door over temp views. No Iceberg table, no DataFrame door, no store, no NaN or <code>-0.0</code> values.</li>
+    <li><strong>Stale cells.</strong> The package predates #1341, so its decimal-beside-double <code>VALUES</code>, union and <code>IN</code> cells need a rerun.</li>
+    <li><strong>Card matching is by name only.</strong> Some findings may already be carded.</li>
+    <li><strong>The agents were Haiku 5.5 and Sonnet 5.5.</strong> The planning agent re-measured the sweep's sample and every finding in the third table. Eight further audit findings were not re-measured and are left off this page.</li>
+    <li><strong>One audit claim was dropped.</strong> <code>date_trunc</code> does not ignore the session zone; the agent had compared rendered timestamps.</li>
+  </ul>
+</section>
+
+<footer class="foot">
+  <span>Sources: three reports of 2026-11-16 in <span class="mono">ALLAGENTS/</span> (the type-pair sweep, the rewrite audit, and the review of CAST-LITERAL-UNWRAP-1 step 0), with their scripts and raw outputs; Spark 4.1.2; main's package from before #1341.</span>
+  <span>Recommendations are the planning agent's. Nothing here is a ruling until you give it in your own words.</span>
+</footer>
+
+</div>
+</body>
+</html>
