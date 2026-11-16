@@ -106,7 +106,7 @@ fn fragment_logical_expr(
     let state = context.state();
     let dialect = state.config().options().sql_parser.dialect;
     let mut parsed = state.sql_to_expr_with_alias(sql, &dialect)?;
-    repark_spark::values_marker::mark_values_cells(&mut parsed.expr);
+    repark_spark::values_marker::mark_fragment_cells(&mut parsed.expr);
     state.create_logical_expr_from_sql_expr(parsed, schema)
 }
 
@@ -175,8 +175,12 @@ pub(crate) async fn plan_expr_column(
     let rewritten = repark_functions::cast_map::rewrite_map_casts(canonical);
     let canonical = rewritten.as_deref().unwrap_or(canonical);
     let select_sql = format!("SELECT ({canonical}) AS _repark_expr");
-    let plan = match repark_spark::values_marker::plan_marked_sql(context, &select_sql).await {
-        Ok(logical) => {
+    let plan = match repark_spark::values_marker::plan_marked_fragment(context, &select_sql).await {
+        Ok(None) => {
+            return parse_unresolved_expr(context, canonical)
+                .map_err(|inner| crate::unknown_routine_to_py_err(original, inner));
+        }
+        Ok(Some(logical)) => {
             let planned = crate::deep_stack::plan_depths(&logical);
             let owned =
                 crate::deep_stack::grown_clone_plan(&logical, planned.plan, planned.expression);

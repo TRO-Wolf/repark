@@ -87,7 +87,9 @@ function-registry + analyzer-rule installation + the composed
     one decimal wide (always for precision 15 or less); form 2, the members plus `d >= lo AND d < hi` per wider
     range joined by `OR`, while those ranges number at most `DECIMAL_IN_RANGE_LIMIT` (32, owner Q1 (a)); otherwise
     the per-row form. A NULL item adds `OR NULL`, an emptied list is `CASE WHEN d IS NULL THEN NULL ELSE FALSE END`,
-    and `NOT IN` is `NOT` of the same build. A column or subquery item keeps the per-row form.
+    and `NOT IN` is `NOT` of the same build. A column or subquery item keeps the per-row form. **Part 2 delta
+    (2026-11-16):** `decimal_in_form` stops at the 33rd distinct wide range and returns the per-row form, so a long
+    list that ends per-row no longer computes every constant's preimage on each optimizer pass.
   - `tests.rs` adds the three-or-more-branch unions and, in `in_ranges`, the brute force: lengths 1 to 64 at
     `(10,2)`, `(20,6)`, `(38,18)` and `(38,10)`, `IN` and `NOT IN`, against a Rust oracle over K2 row for row, the
     plan shape per form, form 1 for every `(p, s)` with `p <= 15`, and the limit of 32.

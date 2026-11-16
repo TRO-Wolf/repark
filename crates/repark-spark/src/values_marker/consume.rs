@@ -3,7 +3,7 @@ use std::sync::Arc;
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
-use datafusion::common::{DFSchema, Result, ScalarValue};
+use datafusion::common::{DFSchema, DFSchemaRef, Result, ScalarValue};
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::expr::Alias;
 use datafusion::logical_expr::type_coercion::binary::type_union_resolution;
@@ -12,7 +12,7 @@ use datafusion::logical_expr::{
 };
 use datafusion::optimizer::AnalyzerRule;
 
-use super::{VALUES_CELL_NAME, values_cell_argument};
+use super::{values_cell_argument, values_cell_name};
 
 const UNIT: &str = "DECIMAL-DOUBLE-UNION-COERCION-1";
 
@@ -25,8 +25,13 @@ impl AnalyzerRule for SparkValuesTyping {
             return Ok(plan);
         }
         let mut retyped = false;
-        plan.transform_down_up_with_subqueries(type_down, |node| type_up(node, &mut retyped))
-            .data()
+        let typed = plan
+            .transform_down_up_with_subqueries(type_down, |node| type_up(node, &mut retyped))?
+            .data;
+        if !retyped {
+            return Ok(typed);
+        }
+        refresh_outer_references(typed, &[]).data()
     }
 
     #[allow(clippy::unnecessary_literal_bound)]
@@ -160,24 +165,27 @@ fn refuse_stray_marker(plan: &LogicalPlan) -> Result<()> {
     })?;
     if stray {
         return Err(DataFusionError::Plan(format!(
-            "{UNIT}: the VALUES cell marker {VALUES_CELL_NAME} appeared outside a VALUES cell; \
-             a Spark-door seat marked a statement the VALUES typing rule cannot consume"
+            "{UNIT}: the VALUES cell marker {} appeared outside a VALUES cell; a Spark-door seat \
+             marked a statement the VALUES typing rule cannot consume",
+            values_cell_name()
         )));
     }
     Ok(())
 }
 
+fn holds_marker(cell: &Expr) -> bool {
+    cell.exists(|node| Ok(values_cell_argument(node).is_some()))
+        .unwrap_or(false)
+}
+
 fn values_marked(values: &Values) -> bool {
-    values.values.iter().flatten().any(|cell| {
-        cell.exists(|node| Ok(values_cell_argument(node).is_some()))
-            .unwrap_or(false)
-    })
+    values.values.iter().flatten().any(holds_marker)
 }
 
 fn strip_marker(expr: Expr) -> Transformed<Expr> {
     match expr {
         Expr::ScalarFunction(function)
-            if function.func.name() == VALUES_CELL_NAME && function.args.len() == 1 =>
+            if function.args.len() == 1 && function.func.name() == values_cell_name() =>
         {
             let mut args = function.args;
             Transformed::yes(args.remove(0))
@@ -361,7 +369,9 @@ fn type_values(values: Values, forced: Placement) -> Result<Values> {
             continue;
         }
         for row in &mut rows {
-            if let Some(cell) = row.get_mut(column) {
+            if let Some(cell) = row.get_mut(column)
+                && holds_marker(cell)
+            {
                 *cell = stripped_cell(cell)?;
             }
         }
@@ -440,4 +450,91 @@ fn refuse_unmarked_mix(values: &Values) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn refresh_outer_references(
+    plan: LogicalPlan,
+    outer: &[DFSchemaRef],
+) -> Result<Transformed<LogicalPlan>> {
+    let node = match plan {
+        LogicalPlan::Join(join) => {
+            let left = refresh_outer_references(Arc::unwrap_or_clone(join.left), outer)?;
+            let mut beside = Vec::with_capacity(outer.len() + 1);
+            beside.push(Arc::clone(left.data.schema()));
+            beside.extend(outer.iter().cloned());
+            let right = refresh_outer_references(Arc::unwrap_or_clone(join.right), &beside)?;
+            let transformed = left.transformed || right.transformed;
+            Transformed::new_transformed(
+                LogicalPlan::Join(datafusion::logical_expr::Join {
+                    left: Arc::new(left.data),
+                    right: Arc::new(right.data),
+                    ..join
+                }),
+                transformed,
+            )
+        }
+        LogicalPlan::Subquery(subquery) => {
+            let inner = refresh_outer_references(Arc::unwrap_or_clone(subquery.subquery), outer)?;
+            let mut moved = inner.transformed;
+            let mut references = Vec::with_capacity(subquery.outer_ref_columns.len());
+            for reference in subquery.outer_ref_columns {
+                let retyped = retype_outer_reference(reference, outer);
+                moved |= retyped.transformed;
+                references.push(retyped.data);
+            }
+            return Ok(Transformed::new_transformed(
+                LogicalPlan::Subquery(datafusion::logical_expr::Subquery {
+                    subquery: Arc::new(inner.data),
+                    outer_ref_columns: references,
+                    ..subquery
+                }),
+                moved,
+            ));
+        }
+        other => other.map_children(|child| refresh_outer_references(child, outer))?,
+    };
+    let mut scope = Vec::with_capacity(outer.len() + 1);
+    let mut inputs = DFSchema::empty();
+    for input in node.data.inputs() {
+        inputs.merge(input.schema());
+    }
+    scope.push(Arc::new(inputs));
+    scope.extend(outer.iter().cloned());
+    let node = node
+        .transform_data(|plan| {
+            plan.map_subqueries(|subquery| refresh_outer_references(subquery, &scope))
+        })?
+        .transform_data(|plan| {
+            plan.map_expressions(|expr| {
+                expr.transform_up(|expr| Ok(retype_outer_reference(expr, outer)))
+            })
+        })?;
+    if !node.transformed {
+        return Ok(node);
+    }
+    node.map_data(|plan| match plan {
+        LogicalPlan::Union(union) => rebuild_stale_union(union).map(|rebuilt| rebuilt.data),
+        other => other.recompute_schema(),
+    })
+}
+
+fn retype_outer_reference(expr: Expr, outer: &[DFSchemaRef]) -> Transformed<Expr> {
+    let Expr::OuterReferenceColumn(field, column) = expr else {
+        return Transformed::no(expr);
+    };
+    let current = outer.iter().find_map(|schema| {
+        schema
+            .maybe_index_of_column(&column)
+            .map(|index| schema.field(index))
+    });
+    match current {
+        Some(found) if found.data_type() != field.data_type() => {
+            let retyped = field
+                .as_ref()
+                .clone()
+                .with_data_type(found.data_type().clone());
+            Transformed::yes(Expr::OuterReferenceColumn(Arc::new(retyped), column))
+        }
+        _ => Transformed::no(Expr::OuterReferenceColumn(field, column)),
+    }
 }

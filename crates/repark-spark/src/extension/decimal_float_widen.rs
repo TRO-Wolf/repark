@@ -1,3 +1,4 @@
+use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use datafusion::arrow::datatypes::DataType;
@@ -722,10 +723,17 @@ pub fn decimal_range_of_double(constant: f64, precision: u8, scale: i8) -> Optio
 
 #[must_use]
 pub fn decimal_in_form(constants: &[f64], precision: u8, scale: i8, limit: usize) -> DecimalInForm {
-    let mut ranges: Vec<(i128, i128)> = constants
-        .iter()
-        .filter_map(|&constant| decimal_range_of_double(constant, precision, scale))
-        .collect();
+    let mut ranges: Vec<(i128, i128)> = Vec::with_capacity(constants.len());
+    let mut wide_seen = BTreeSet::new();
+    for &constant in constants {
+        let Some(range) = decimal_range_of_double(constant, precision, scale) else {
+            continue;
+        };
+        if range.1 - range.0 != 1 && wide_seen.insert(range) && wide_seen.len() > limit {
+            return DecimalInForm::PerRow;
+        }
+        ranges.push(range);
+    }
     ranges.sort_unstable();
     ranges.dedup();
     let (singles, wide): (Vec<_>, Vec<_>) = ranges
