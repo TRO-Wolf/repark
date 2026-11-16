@@ -35,6 +35,7 @@ impl AnalyzerRule for SparkValuesTyping {
     }
 }
 
+#[allow(clippy::missing_errors_doc)]
 pub fn insert_values_typing_first(
     mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
 ) -> Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
@@ -68,7 +69,7 @@ fn type_down(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     match plan {
         LogicalPlan::RecursiveQuery(_) => {
             let stripped = plan.transform_up_with_subqueries(|node| {
-                node.map_expressions(|expr| expr.transform_up(strip_marker))
+                node.map_expressions(|expr| expr.transform_up(|expr| Ok(strip_marker(expr))))
             })?;
             Ok(Transformed::new(
                 stripped.data,
@@ -173,15 +174,15 @@ fn values_marked(values: &Values) -> bool {
     })
 }
 
-fn strip_marker(expr: Expr) -> Result<Transformed<Expr>> {
+fn strip_marker(expr: Expr) -> Transformed<Expr> {
     match expr {
         Expr::ScalarFunction(function)
             if function.func.name() == VALUES_CELL_NAME && function.args.len() == 1 =>
         {
             let mut args = function.args;
-            Ok(Transformed::yes(args.remove(0)))
+            Transformed::yes(args.remove(0))
         }
-        other => Ok(Transformed::no(other)),
+        other => Transformed::no(other),
     }
 }
 
@@ -328,7 +329,9 @@ fn stripped_cell(cell: &Expr) -> Result<Expr> {
         let typed = Expr::Literal(ScalarValue::try_from(cast.field.data_type())?, None);
         return Ok(realiased(cell, typed));
     }
-    cell.clone().transform_up(strip_marker).data()
+    cell.clone()
+        .transform_up(|expr| Ok(strip_marker(expr)))
+        .data()
 }
 
 fn type_values(values: Values, forced: Placement) -> Result<Values> {

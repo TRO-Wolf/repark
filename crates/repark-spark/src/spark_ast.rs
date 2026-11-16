@@ -187,6 +187,7 @@ fn under_analyze(plan: &LogicalPlan) -> &LogicalPlan {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 async fn execute_passthrough_inner(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,

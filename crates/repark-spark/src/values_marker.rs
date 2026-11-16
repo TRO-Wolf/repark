@@ -96,6 +96,7 @@ pub(crate) fn mark_df_statement(statement: &mut DfStatement) {
     }
 }
 
+#[allow(clippy::missing_errors_doc)]
 pub async fn plan_marked_sql(
     ctx: &datafusion::prelude::SessionContext,
     sql: &str,

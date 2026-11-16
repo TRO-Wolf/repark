@@ -697,6 +697,7 @@ fn decimal_top(precision: u8) -> Option<i128> {
 }
 
 #[must_use]
+#[allow(clippy::float_cmp)]
 pub fn decimal_range_of_double(constant: f64, precision: u8, scale: i8) -> Option<(i128, i128)> {
     if !constant.is_finite() {
         return None;
@@ -727,7 +728,7 @@ pub fn decimal_in_form(constants: &[f64], precision: u8, scale: i8, limit: usize
         .collect();
     ranges.sort_unstable();
     ranges.dedup();
-    let (singles, wide): (Vec<(i128, i128)>, Vec<(i128, i128)>) = ranges
+    let (singles, wide): (Vec<_>, Vec<_>) = ranges
         .into_iter()
         .partition(|(lower, upper)| upper - lower == 1);
     let members = singles.into_iter().map(|(lower, _)| lower).collect();

@@ -365,7 +365,7 @@ mod in_ranges {
                     return String::new();
                 };
                 let double = repark_common::java_double::java_decimal_to_double(*unscaled, scale);
-                let member = items.iter().any(|&item| item == double);
+                let member = items.contains(&double);
                 let answer = match (member, null_item) {
                     (true, _) => Some(!negated),
                     (false, true) => None,
