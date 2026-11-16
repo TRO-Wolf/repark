@@ -1,0 +1,331 @@
+{"key": "provenance", "engine": "repark", "native": "<scratchpad>/ddu-work/pkg-p2-7906b0e3/repark/_native.abi3.so", "ansi": "true"}
+{"key": "f3/in/tiny/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/in/tiny/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0), None), subquery: <subquery>, negated: false })"}
+{"key": "f3/in/tiny/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0), None), subquery: <subquery>, negated: false })"}
+{"key": "f3/in/tiny/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0.00000000000000000001), None), subquery: <subquery>, negated: false })"}
+{"key": "f3/in/tiny/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/in/zero/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/in/zero/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0), None), subquery: <subquery>, negated: false })"}
+{"key": "f3/in/zero/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0), None), subquery: <subquery>, negated: false })"}
+{"key": "f3/in/zero/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0), None), subquery: <subquery>, negated: false })"}
+{"key": "f3/in/zero/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/in/negzero/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/in/negzero/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0), None), subquery: <subquery>, negated: false })"}
+{"key": "f3/in/negzero/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0), None), subquery: <subquery>, negated: false })"}
+{"key": "f3/in/negzero/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(-0), None), subquery: <subquery>, negated: false })"}
+{"key": "f3/in/negzero/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/in/dec01/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/in/dec01/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0.1), None), subquery: <subquery>, negated: false })"}
+{"key": "f3/in/dec01/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0.1), None), subquery: <subquery>, negated: false })"}
+{"key": "f3/in/dec01/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0.1), None), subquery: <subquery>, negated: false })"}
+{"key": "f3/in/dec01/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notin/tiny/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notin/tiny/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0), None), subquery: <subquery>, negated: true })"}
+{"key": "f3/notin/tiny/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0), None), subquery: <subquery>, negated: true })"}
+{"key": "f3/notin/tiny/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0.00000000000000000001), None), subquery: <subquery>, negated: true })"}
+{"key": "f3/notin/tiny/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/notin/zero/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notin/zero/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0), None), subquery: <subquery>, negated: true })"}
+{"key": "f3/notin/zero/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0), None), subquery: <subquery>, negated: true })"}
+{"key": "f3/notin/zero/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0), None), subquery: <subquery>, negated: true })"}
+{"key": "f3/notin/zero/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notin/negzero/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notin/negzero/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0), None), subquery: <subquery>, negated: true })"}
+{"key": "f3/notin/negzero/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0), None), subquery: <subquery>, negated: true })"}
+{"key": "f3/notin/negzero/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(-0), None), subquery: <subquery>, negated: true })"}
+{"key": "f3/notin/negzero/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notin/dec01/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/notin/dec01/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0.1), None), subquery: <subquery>, negated: true })"}
+{"key": "f3/notin/dec01/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0.1), None), subquery: <subquery>, negated: true })"}
+{"key": "f3/notin/dec01/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Float64(0.1), None), subquery: <subquery>, negated: true })"}
+{"key": "f3/notin/dec01/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/exists/tiny/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/exists/tiny/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/exists/tiny/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/exists/tiny/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/exists/tiny/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/exists/zero/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/exists/zero/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/exists/zero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/exists/zero/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/exists/zero/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/exists/negzero/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/exists/negzero/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/exists/negzero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/exists/negzero/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/exists/negzero/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/exists/dec01/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/exists/dec01/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/exists/dec01/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "True"]]}
+{"key": "f3/exists/dec01/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/exists/dec01/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notexists/tiny/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notexists/tiny/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/notexists/tiny/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "True"]]}
+{"key": "f3/notexists/tiny/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/notexists/tiny/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/notexists/zero/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notexists/zero/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/notexists/zero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "True"]]}
+{"key": "f3/notexists/zero/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/notexists/zero/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notexists/negzero/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notexists/negzero/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/notexists/negzero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "True"]]}
+{"key": "f3/notexists/negzero/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/notexists/negzero/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/notexists/dec01/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/notexists/dec01/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/notexists/dec01/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/notexists/dec01/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/notexists/dec01/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/scalar/tiny/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/scalar/tiny/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/scalar/tiny/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/scalar/tiny/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "f3/scalar/tiny/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/scalar/zero/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/scalar/zero/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/scalar/zero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/scalar/zero/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/scalar/zero/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/scalar/negzero/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/scalar/negzero/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/scalar/negzero/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/scalar/negzero/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/scalar/negzero/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/scalar/dec01/fexpr_filter", "types": ["int"], "rows": []}
+{"key": "f3/scalar/dec01/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/scalar/dec01/fexpr_withcolumn", "types": ["int", "boolean"], "rows": [["1", "False"]]}
+{"key": "f3/scalar/dec01/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "f3/scalar/dec01/filter_str", "types": ["int"], "rows": []}
+{"key": "f3/pin/sql_in", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/pin/sql_exists", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/pin/fexpr_column_probe", "types": ["int"], "rows": [["1"]]}
+{"key": "f3/pin/fexpr_scalar_min", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "f3/pin/fexpr_two_values", "types": ["int"], "rows": []}
+{"key": "f3/pin/fexpr_plain_values", "types": ["int"], "rows": []}
+{"key": "f3/pin/fexpr_all_double_values", "types": ["int"], "rows": [["1"]]}
+{"key": "f2/comma", "error": "PySparkException: datafusion engine error: Optimizer rule 'eliminate_cross_join' failed\ncaused by\nCheck optimizer-specific invariants after optimizer rule: eliminate_cross_join\ncaused by\nInternal error: Assertion failed: compatible: Failed due to a difference in schemas: original schema: DFSchema { inner: Schema { fields: [Field { name: \"c\", data_type: Float64, nullable: true }, Field { name: \"x\", data_type: Decima"}
+{"key": "f2/join_lateral", "error": "PySparkException: datafusion engine error: Optimizer rule 'eliminate_cross_join' failed\ncaused by\nCheck optimizer-specific invariants after optimizer rule: eliminate_cross_join\ncaused by\nInternal error: Assertion failed: compatible: Failed due to a difference in schemas: original schema: DFSchema { inner: Schema { fields: [Field { name: \"c\", data_type: Float64, nullable: true }, Field { name: \"x\", data_type: Decima"}
+{"key": "f2/join_lateral_on", "error": "PySparkException: datafusion engine error: Optimizer rule 'eliminate_cross_join' failed\ncaused by\nCheck optimizer-specific invariants after optimizer rule: eliminate_cross_join\ncaused by\nInternal error: Assertion failed: compatible: Failed due to a difference in schemas: original schema: DFSchema { inner: Schema { fields: [Field { name: \"c\", data_type: Float64, nullable: true }, Field { name: \"x\", data_type: Decima"}
+{"key": "f2/cross_join_lateral", "error": "PySparkException: datafusion engine error: Optimizer rule 'eliminate_cross_join' failed\ncaused by\nCheck optimizer-specific invariants after optimizer rule: eliminate_cross_join\ncaused by\nInternal error: Assertion failed: compatible: Failed due to a difference in schemas: original schema: DFSchema { inner: Schema { fields: [Field { name: \"c\", data_type: Float64, nullable: true }, Field { name: \"x\", data_type: Decima"}
+{"key": "f2/left_join_lateral", "error": "PySparkException: datafusion engine error: Optimizer rule 'optimize_projections' failed\ncaused by\nCheck optimizer-specific invariants after optimizer rule: optimize_projections\ncaused by\nInternal error: Assertion failed: compatible: Failed due to a difference in schemas: original schema: DFSchema { inner: Schema { fields: [Field { name: \"c\", data_type: Float64, nullable: true }, Field { name: \"x\", data_type: Decima"}
+{"key": "f2/lateral_where", "error": "PySparkException: Arrow error: Invalid argument error: Invalid comparison operation: Decimal128(30, 15) > Float64"}
+{"key": "f2/lateral_eq", "error": "PySparkException: Execution error: '__repark_decimal_to_double__' expects one DECIMAL argument"}
+{"key": "f2/lateral_two_cols", "error": "PySparkException: datafusion engine error: Optimizer rule 'eliminate_cross_join' failed\ncaused by\nCheck optimizer-specific invariants after optimizer rule: eliminate_cross_join\ncaused by\nInternal error: Assertion failed: compatible: Failed due to a difference in schemas: original schema: DFSchema { inner: Schema { fields: [Field { name: \"id\", data_type: Int32, nullable: true }, Field { name: \"c\", data_type: Float64"}
+{"key": "f2/lateral_cte", "error": "PySparkException: datafusion engine error: Optimizer rule 'eliminate_cross_join' failed\ncaused by\nCheck optimizer-specific invariants after optimizer rule: eliminate_cross_join\ncaused by\nInternal error: Assertion failed: compatible: Failed due to a difference in schemas: original schema: DFSchema { inner: Schema { fields: [Field { name: \"c\", data_type: Float64, nullable: true }, Field { name: \"x\", data_type: Decima"}
+{"key": "f2/lateral_in_union_branch", "error": "PySparkException: Arrow error: Invalid argument error: Invalid arithmetic operation: Float64 + Decimal128(1, 0)"}
+{"key": "f2/lateral_union_inside", "error": "AnalysisException: Optimizer rule 'repark_lateral_projection_hoist' failed\ncaused by\nError during planning: [UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.CORRELATED_REFERENCE] Unsupported subquery expression: Expressions referencing the outer query are not supported outside of WHERE/HAVING clauses: \"x\". SQLSTATE: 0A000"}
+{"key": "f2/lateral_under_union_first", "error": "PySparkException: Arrow error: Invalid argument error: Invalid arithmetic operation: Float64 + Decimal128(1, 0)"}
+{"key": "f2/lateral_agg", "error": "AnalysisException: Optimizer rule 'decorrelate_lateral_join' failed\ncaused by\nSchema error: No field named u.column1."}
+{"key": "f2/scalar_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression ScalarSubquery(<subquery>)"}
+{"key": "f2/scalar_select_agg", "error": "AnalysisException: Optimizer rule 'scalar_subquery_to_join' failed\ncaused by\nSchema error: No field named u.column1. Valid fields are u.y."}
+{"key": "f2/scalar_select_count", "error": "PySparkException: Execution error: '__repark_decimal_to_double__' expects one DECIMAL argument"}
+{"key": "f2/exists_where", "error": "PySparkException: Execution error: '__repark_decimal_to_double__' expects one DECIMAL argument"}
+{"key": "f2/not_exists_where", "error": "PySparkException: Execution error: '__repark_decimal_to_double__' expects one DECIMAL argument"}
+{"key": "f2/in_where_correlated", "error": "PySparkException: Execution error: '__repark_decimal_to_double__' expects one DECIMAL argument"}
+{"key": "f2/in_where_outer_only", "error": "PySparkException: Arrow error: Invalid argument error: Invalid comparison operation: Float64 < Decimal128(30, 15)"}
+{"key": "f2/scalar_where", "error": "PySparkException: Execution error: '__repark_decimal_to_double__' expects one DECIMAL argument"}
+{"key": "f2/exists_in_having", "error": "PySparkException: Execution error: '__repark_decimal_to_double__' expects one DECIMAL argument"}
+{"key": "f2/nested_two_levels", "error": "AnalysisException: Schema error: No field named t.c. Valid fields are __correlated_sq_1.z."}
+{"key": "f2/inner_values_outer_ref", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "f2/lateral_inner_values", "types": ["double", "double"], "rows": [["1e-20", "1e-20"]]}
+{"key": "f1/plain", "types": ["int"], "rows": [["1"]]}
+{"key": "f1/double", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "f1/decimal", "types": ["decimal(1,1)"], "rows": [["0.1"]]}
+{"key": "f1/upper", "types": ["int"], "rows": [["1"]]}
+{"key": "f1/mixed_case", "types": ["int"], "rows": [["1"]]}
+{"key": "f1/backquoted", "types": ["int"], "rows": [["1"]]}
+{"key": "f1/nested", "types": ["decimal(1,1)"], "rows": [["0.1"]]}
+{"key": "f1/nested_fn", "types": ["decimal(2,1)"], "rows": [["1.5"]]}
+{"key": "f1/zero_arg", "error": "AnalysisException: Error during planning: '__repark_values_cell' does not support zero arguments. No function matches the given name and argument types '__repark_values_cell()'. You might need to add explicit type casts.\n\tCandidate functions:\n\t__repark_values_cell(Any)"}
+{"key": "f1/two_arg", "error": "AnalysisException: Error during planning: The function '__repark_values_cell' expected 1 arguments but received 2. No function matches the given name and argument types '__repark_values_cell(Int64, Int64)'. You might need to add explicit type casts.\n\tCandidate functions:\n\t__repark_values_cell(Any)"}
+{"key": "f1/alias", "types": ["decimal(10,2)"], "rows": [["0.10"]]}
+{"key": "f1/order_by", "types": ["int"], "rows": [["1"]]}
+{"key": "f1/order_alias", "types": ["int"], "rows": [["1"]]}
+{"key": "f1/where_no_values", "types": ["int"], "rows": [["1"]]}
+{"key": "f1/having_no_values", "types": ["bigint"], "rows": [["1"]]}
+{"key": "f1/group_by", "types": ["int"], "rows": [["1"]]}
+{"key": "f1/in_cell_mixed", "types": ["double"], "rows": [["0.1"], ["1e-20"]]}
+{"key": "f1/in_cell_mixed_dec", "types": ["double"], "rows": [["0.1"], ["1e-20"]]}
+{"key": "f1/in_cell_plain", "types": ["decimal(2,1)"], "rows": [["1.0"], ["2.0"]]}
+{"key": "f1/in_cell_nested", "types": ["double"], "rows": [["0.1"], ["1e-20"]]}
+{"key": "f1/in_cell_upper", "types": ["double"], "rows": [["0.1"], ["1e-20"]]}
+{"key": "f1/in_single_row_values", "types": ["decimal(1,1)"], "rows": [["0.1"]]}
+{"key": "f1/proj_with_values", "error": "AnalysisException: spark_values_typing\ncaused by\nError during planning: DECIMAL-DOUBLE-UNION-COERCION-1: the VALUES cell marker __repark_values_cell appeared outside a VALUES cell; a Spark-door seat marked a statement the VALUES typing rule cannot consume"}
+{"key": "f1/proj_with_plain_values", "error": "AnalysisException: spark_values_typing\ncaused by\nError during planning: DECIMAL-DOUBLE-UNION-COERCION-1: the VALUES cell marker __repark_values_cell appeared outside a VALUES cell; a Spark-door seat marked a statement the VALUES typing rule cannot consume"}
+{"key": "f1/where_with_values", "error": "AnalysisException: spark_values_typing\ncaused by\nError during planning: DECIMAL-DOUBLE-UNION-COERCION-1: the VALUES cell marker __repark_values_cell appeared outside a VALUES cell; a Spark-door seat marked a statement the VALUES typing rule cannot consume"}
+{"key": "f1/having_with_values", "error": "AnalysisException: spark_values_typing\ncaused by\nError during planning: DECIMAL-DOUBLE-UNION-COERCION-1: the VALUES cell marker __repark_values_cell appeared outside a VALUES cell; a Spark-door seat marked a statement the VALUES typing rule cannot consume"}
+{"key": "f1/in_pred_with_values", "error": "AnalysisException: spark_values_typing\ncaused by\nError during planning: DECIMAL-DOUBLE-UNION-COERCION-1: the VALUES cell marker __repark_values_cell appeared outside a VALUES cell; a Spark-door seat marked a statement the VALUES typing rule cannot consume"}
+{"key": "f1/subquery", "error": "AnalysisException: spark_values_typing\ncaused by\nError during planning: DECIMAL-DOUBLE-UNION-COERCION-1: the VALUES cell marker __repark_values_cell appeared outside a VALUES cell; a Spark-door seat marked a statement the VALUES typing rule cannot consume"}
+{"key": "f1/cte", "types": ["int"], "rows": [["1"]]}
+{"key": "f1/insert_values", "types": ["bigint"], "rows": [["2"]]}
+{"key": "f1/explain", "types": ["string", "string"], "rows": [["logical_plan", "Projection: Int32(1) AS __repark_values_cell(Int64(1))\n  EmptyRelation: rows=1"], ["physical_plan", "ProjectionExec: expr=[1 as __repark_values_cell(Int64(1))]\n  PlaceholderRowExec\n"]]}
+{"key": "f1/fexpr_filter", "types": ["int"], "rows": [["1"]]}
+{"key": "f1/fexpr_select", "types": ["int"], "rows": [["1"]]}
+{"key": "f1/fexpr_in_cell", "types": ["int"], "rows": [["1"]]}
+{"key": "f1/selectexpr", "types": ["int"], "rows": [["1"]]}
+{"key": "f1/filter_str", "types": ["int"], "rows": [["1"]]}
+{"key": "f1/withcolumn", "types": ["int", "int"], "rows": [["1", "1"]]}
+{"key": "f1/insert_values_readback", "rows": [["0.1"], ["0.2"]]}
+{"key": "nat/f3/in/tiny/fexpr_filter", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/in/tiny/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: false })"}
+{"key": "nat/f3/in/tiny/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: false })"}
+{"key": "nat/f3/in/tiny/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: false })"}
+{"key": "nat/f3/in/tiny/filter_str", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/in/zero/fexpr_filter", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/in/zero/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: false })"}
+{"key": "nat/f3/in/zero/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: false })"}
+{"key": "nat/f3/in/zero/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: false })"}
+{"key": "nat/f3/in/zero/filter_str", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/in/negzero/fexpr_filter", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/in/negzero/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: false })"}
+{"key": "nat/f3/in/negzero/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: false })"}
+{"key": "nat/f3/in/negzero/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: false })"}
+{"key": "nat/f3/in/negzero/filter_str", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/in/dec01/fexpr_filter", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/in/dec01/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(100000000000000),30,15), None), subquery: <subquery>, negated: false })"}
+{"key": "nat/f3/in/dec01/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(100000000000000),30,15), None), subquery: <subquery>, negated: false })"}
+{"key": "nat/f3/in/dec01/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(100000000000000),30,15), None), subquery: <subquery>, negated: false })"}
+{"key": "nat/f3/in/dec01/filter_str", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/notin/tiny/fexpr_filter", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/notin/tiny/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: true })"}
+{"key": "nat/f3/notin/tiny/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: true })"}
+{"key": "nat/f3/notin/tiny/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: true })"}
+{"key": "nat/f3/notin/tiny/filter_str", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/notin/zero/fexpr_filter", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/notin/zero/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: true })"}
+{"key": "nat/f3/notin/zero/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: true })"}
+{"key": "nat/f3/notin/zero/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: true })"}
+{"key": "nat/f3/notin/zero/filter_str", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/notin/negzero/fexpr_filter", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/notin/negzero/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: true })"}
+{"key": "nat/f3/notin/negzero/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: true })"}
+{"key": "nat/f3/notin/negzero/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: true })"}
+{"key": "nat/f3/notin/negzero/filter_str", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/notin/dec01/fexpr_filter", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/notin/dec01/fexpr_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(100000000000000),30,15), None), subquery: <subquery>, negated: true })"}
+{"key": "nat/f3/notin/dec01/fexpr_withcolumn", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(100000000000000),30,15), None), subquery: <subquery>, negated: true })"}
+{"key": "nat/f3/notin/dec01/selectexpr", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(100000000000000),30,15), None), subquery: <subquery>, negated: true })"}
+{"key": "nat/f3/notin/dec01/filter_str", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/exists/tiny/fexpr_filter", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/exists/tiny/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "nat/f3/exists/tiny/fexpr_withcolumn", "types": ["bigint", "boolean"], "rows": [["1", "True"]]}
+{"key": "nat/f3/exists/tiny/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "nat/f3/exists/tiny/filter_str", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/exists/zero/fexpr_filter", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/exists/zero/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "nat/f3/exists/zero/fexpr_withcolumn", "types": ["bigint", "boolean"], "rows": [["1", "True"]]}
+{"key": "nat/f3/exists/zero/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "nat/f3/exists/zero/filter_str", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/exists/negzero/fexpr_filter", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/exists/negzero/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "nat/f3/exists/negzero/fexpr_withcolumn", "types": ["bigint", "boolean"], "rows": [["1", "True"]]}
+{"key": "nat/f3/exists/negzero/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "nat/f3/exists/negzero/filter_str", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/exists/dec01/fexpr_filter", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/exists/dec01/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "nat/f3/exists/dec01/fexpr_withcolumn", "types": ["bigint", "boolean"], "rows": [["1", "True"]]}
+{"key": "nat/f3/exists/dec01/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "nat/f3/exists/dec01/filter_str", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/notexists/tiny/fexpr_filter", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/notexists/tiny/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "nat/f3/notexists/tiny/fexpr_withcolumn", "types": ["bigint", "boolean"], "rows": [["1", "False"]]}
+{"key": "nat/f3/notexists/tiny/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "nat/f3/notexists/tiny/filter_str", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/notexists/zero/fexpr_filter", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/notexists/zero/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "nat/f3/notexists/zero/fexpr_withcolumn", "types": ["bigint", "boolean"], "rows": [["1", "False"]]}
+{"key": "nat/f3/notexists/zero/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "nat/f3/notexists/zero/filter_str", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/notexists/negzero/fexpr_filter", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/notexists/negzero/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "nat/f3/notexists/negzero/fexpr_withcolumn", "types": ["bigint", "boolean"], "rows": [["1", "False"]]}
+{"key": "nat/f3/notexists/negzero/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "nat/f3/notexists/negzero/filter_str", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/notexists/dec01/fexpr_filter", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/notexists/dec01/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "nat/f3/notexists/dec01/fexpr_withcolumn", "types": ["bigint", "boolean"], "rows": [["1", "False"]]}
+{"key": "nat/f3/notexists/dec01/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "nat/f3/notexists/dec01/filter_str", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/scalar/tiny/fexpr_filter", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/scalar/tiny/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "nat/f3/scalar/tiny/fexpr_withcolumn", "types": ["bigint", "boolean"], "rows": [["1", "True"]]}
+{"key": "nat/f3/scalar/tiny/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "nat/f3/scalar/tiny/filter_str", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/scalar/zero/fexpr_filter", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/scalar/zero/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "nat/f3/scalar/zero/fexpr_withcolumn", "types": ["bigint", "boolean"], "rows": [["1", "True"]]}
+{"key": "nat/f3/scalar/zero/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "nat/f3/scalar/zero/filter_str", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/scalar/negzero/fexpr_filter", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/scalar/negzero/fexpr_select", "types": ["boolean"], "rows": [["True"]]}
+{"key": "nat/f3/scalar/negzero/fexpr_withcolumn", "types": ["bigint", "boolean"], "rows": [["1", "True"]]}
+{"key": "nat/f3/scalar/negzero/selectexpr", "types": ["boolean"], "rows": [["True"]]}
+{"key": "nat/f3/scalar/negzero/filter_str", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f3/scalar/dec01/fexpr_filter", "types": ["bigint"], "rows": []}
+{"key": "nat/f3/scalar/dec01/fexpr_select", "types": ["boolean"], "rows": [["False"]]}
+{"key": "nat/f3/scalar/dec01/fexpr_withcolumn", "types": ["bigint", "boolean"], "rows": [["1", "False"]]}
+{"key": "nat/f3/scalar/dec01/selectexpr", "types": ["boolean"], "rows": [["False"]]}
+{"key": "nat/f3/scalar/dec01/filter_str", "types": ["bigint"], "rows": []}
+{"key": "nat/f2/comma", "types": ["decimal(30,15)", "decimal(36,15)"], "rows": [["0E-15", "1.000000000000000"], ["0.100000000000000", "1.100000000000000"]]}
+{"key": "nat/f2/join_lateral", "types": ["decimal(30,15)", "decimal(36,15)"], "rows": [["0E-15", "1.000000000000000"], ["0.100000000000000", "1.100000000000000"]]}
+{"key": "nat/f2/join_lateral_on", "types": ["decimal(30,15)", "decimal(36,15)"], "rows": [["0E-15", "1.000000000000000"], ["0.100000000000000", "1.100000000000000"]]}
+{"key": "nat/f2/cross_join_lateral", "types": ["decimal(30,15)", "decimal(38,15)"], "rows": [["0E-15", "0E-15"], ["0.100000000000000", "0.200000000000000"]]}
+{"key": "nat/f2/left_join_lateral", "types": ["decimal(30,15)", "decimal(36,15)"], "rows": [["0E-15", "1.000000000000000"], ["0.100000000000000", "1.100000000000000"]]}
+{"key": "nat/f2/lateral_where", "types": ["decimal(30,15)", "double"], "rows": [["0E-15", "0.05"], ["0E-15", "0.5"], ["0.100000000000000", "0.5"]]}
+{"key": "nat/f2/lateral_eq", "types": ["decimal(30,15)", "double"], "rows": [["0E-15", "1e-20"], ["0E-15", "0.0"]]}
+{"key": "nat/f2/lateral_two_cols", "types": ["bigint", "decimal(30,15)", "decimal(36,15)"], "rows": [["1", "0.100000000000000", "1.100000000000000"], ["2", "0E-15", "2.000000000000000"]]}
+{"key": "nat/f2/lateral_cte", "types": ["decimal(30,15)", "decimal(36,15)"], "rows": [["0E-15", "1.000000000000000"], ["0.100000000000000", "1.100000000000000"]]}
+{"key": "nat/f2/lateral_in_union_branch", "types": ["decimal(30,15)", "decimal(36,15)"], "rows": [["0E-15", "1.000000000000000"], ["0.100000000000000", "1.100000000000000"], ["0.500000000000000", "1.500000000000000"]]}
+{"key": "nat/f2/lateral_union_inside", "error": "AnalysisException: Optimizer rule 'repark_lateral_projection_hoist' failed\ncaused by\nError during planning: [UNSUPPORTED_SUBQUERY_EXPRESSION_CATEGORY.CORRELATED_REFERENCE] Unsupported subquery expression: Expressions referencing the outer query are not supported outside of WHERE/HAVING clauses: \"x\". SQLSTATE: 0A000"}
+{"key": "nat/f2/lateral_under_union_first", "types": ["decimal(30,15)", "decimal(36,15)"], "rows": [["0E-15", "1.000000000000000"], ["0.100000000000000", "1.100000000000000"], ["0.500000000000000", "1.500000000000000"]]}
+{"key": "nat/f2/lateral_agg", "error": "AnalysisException: Optimizer rule 'decorrelate_lateral_join' failed\ncaused by\nSchema error: No field named u.column1."}
+{"key": "nat/f2/scalar_select", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression ScalarSubquery(<subquery>)"}
+{"key": "nat/f2/scalar_select_agg", "error": "AnalysisException: Optimizer rule 'scalar_subquery_to_join' failed\ncaused by\nSchema error: No field named u.column1. Valid fields are u.y."}
+{"key": "nat/f2/scalar_select_count", "types": ["decimal(30,15)", "bigint"], "rows": [["0E-15", "1"], ["0.100000000000000", "1"]]}
+{"key": "nat/f2/exists_where", "types": ["decimal(30,15)"], "rows": [["0E-15"]]}
+{"key": "nat/f2/not_exists_where", "types": ["decimal(30,15)"], "rows": [["0.100000000000000"]]}
+{"key": "nat/f2/in_where_correlated", "error": "AnalysisException: Optimizer rule 'decorrelate_predicate_subquery' failed\ncaused by\nError during planning: Projections require unique expression names but the expression \"CAST(u.y AS Decimal128(30, 15))\" at position 0 and \"u.y\" at position 1 have the same name. Consider aliasing (\"AS\") one of them."}
+{"key": "nat/f2/in_where_outer_only", "types": ["decimal(30,15)"], "rows": [["0E-15"]]}
+{"key": "nat/f2/scalar_where", "types": ["decimal(30,15)"], "rows": [["0E-15"]]}
+{"key": "nat/f2/exists_in_having", "types": ["decimal(30,15)", "bigint"], "rows": [["0E-15", "1"]]}
+{"key": "nat/f2/nested_two_levels", "error": "AnalysisException: Schema error: No field named t.c. Valid fields are __correlated_sq_1.z."}
+{"key": "nat/f2/inner_values_outer_ref", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "nat/f2/lateral_inner_values", "types": ["double", "decimal(30,15)"], "rows": [["1e-20", "0E-15"]]}
+{"key": "nat/f1/plain", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f1/double", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "nat/f1/decimal", "types": ["double"], "rows": [["0.1"]]}
+{"key": "nat/f1/upper", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f1/mixed_case", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f1/backquoted", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f1/nested", "types": ["double"], "rows": [["0.1"]]}
+{"key": "nat/f1/nested_fn", "types": ["double"], "rows": [["1.5"]]}
+{"key": "nat/f1/zero_arg", "error": "AnalysisException: Error during planning: '__repark_values_cell' does not support zero arguments. No function matches the given name and argument types '__repark_values_cell()'. You might need to add explicit type casts.\n\tCandidate functions:\n\t__repark_values_cell(Any)"}
+{"key": "nat/f1/two_arg", "error": "AnalysisException: Error during planning: The function '__repark_values_cell' expected 1 arguments but received 2. No function matches the given name and argument types '__repark_values_cell(Int64, Int64)'. You might need to add explicit type casts.\n\tCandidate functions:\n\t__repark_values_cell(Any)"}
+{"key": "nat/f1/alias", "types": ["decimal(10,2)"], "rows": [["0.10"]]}
+{"key": "nat/f1/order_by", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f1/order_alias", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f1/where_no_values", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f1/having_no_values", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f1/group_by", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f1/in_cell_mixed", "types": ["double"], "rows": [["0.1"], ["1e-20"]]}
+{"key": "nat/f1/in_cell_mixed_dec", "types": ["decimal(30,15)"], "rows": [["0.100000000000000"], ["0E-15"]]}
+{"key": "nat/f1/in_cell_plain", "types": ["double"], "rows": [["1.0"], ["2.0"]]}
+{"key": "nat/f1/in_cell_nested", "types": ["double"], "rows": [["0.1"], ["1e-20"]]}
+{"key": "nat/f1/in_cell_upper", "types": ["double"], "rows": [["0.1"], ["1e-20"]]}
+{"key": "nat/f1/in_single_row_values", "types": ["double"], "rows": [["0.1"]]}
+{"key": "nat/f1/proj_with_values", "types": ["bigint", "decimal(30,15)"], "rows": [["1", "0E-15"], ["1", "0.100000000000000"]]}
+{"key": "nat/f1/proj_with_plain_values", "types": ["bigint", "double"], "rows": [["1", "0.1"], ["1", "0.2"]]}
+{"key": "nat/f1/where_with_values", "types": ["decimal(30,15)"], "rows": [["0.100000000000000"]]}
+{"key": "nat/f1/having_with_values", "types": ["decimal(30,15)"], "rows": [["0.100000000000000"], ["0E-15"]]}
+{"key": "nat/f1/in_pred_with_values", "types": ["decimal(30,15)"], "rows": [["0.100000000000000"]]}
+{"key": "nat/f1/subquery", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f1/cte", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f1/explain", "types": ["string", "string"], "rows": [["logical_plan", "Projection: Int64(1) AS __repark_values_cell(Int64(1))\n  EmptyRelation: rows=1"], ["physical_plan", "ProjectionExec: expr=[1 as __repark_values_cell(Int64(1))]\n  PlaceholderRowExec\n"]]}
+{"key": "nat/f1/fexpr_filter", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f1/fexpr_select", "types": ["int"], "rows": [["1"]]}
+{"key": "nat/f1/fexpr_in_cell", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f1/filter_str", "types": ["bigint"], "rows": [["1"]]}
+{"key": "nat/f1/selectexpr", "types": ["bigint"], "rows": [["1"]]}

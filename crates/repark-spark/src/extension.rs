@@ -161,7 +161,9 @@ impl SessionExtension for SparkExtension {
         let rules =
             crate::normalize::join_condition::insert_join_condition_rule_before_coercion(rules)?;
         let rules = repark_functions::collection::insert_map_subscript_before_coercion(rules)?;
-        crate::normalize::struct_position::insert_struct_position_rule_before_coercion(rules)
+        let rules =
+            crate::normalize::struct_position::insert_struct_position_rule_before_coercion(rules)?;
+        crate::values_marker::insert_values_typing_first(rules)
     }
 
     /// Register Spark functions and analyzer rules, then compose the TA window extension.
@@ -175,6 +177,8 @@ impl SessionExtension for SparkExtension {
         )?;
         ctx.register_udf(crate::spark_typed::spark_as_udf().as_ref().clone());
         ctx.register_udf(crate::spark_typed::suffix_literal_udf().as_ref().clone());
+        ctx.register_udf(crate::values_marker::values_cell_udf().as_ref().clone());
+        ctx.add_optimizer_rule(Arc::new(decimal_float_widen::DecimalInRanges));
         // WI-2: the plain-INSERT ANSI store-assignment gate, BEFORE the Spark expression semantics.
         ctx.add_analyzer_rule(Arc::new(repark_iceberg::InsertStoreAssignment));
         repark_iceberg::write::store_cast::register_store_cast_udfs(ctx);

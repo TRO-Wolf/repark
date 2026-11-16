@@ -51,7 +51,7 @@ pub(crate) fn parse_canonical_predicate(
     let canonical = repark_spark::spark_literals::canonicalize_verbatim(predicate, verbatim)?;
     let schema = frame.inner().schema();
     let state = predicate_state(frame);
-    let parsed = match state.create_logical_expr(canonical.as_ref(), schema) {
+    let parsed = match marked_logical_expr(&state, canonical.as_ref(), schema) {
         Ok(expr)
             if expr
                 .column_refs()
@@ -85,6 +85,31 @@ pub(crate) fn predicate_state(frame: &crate::dataframe::PyDataFrame) -> SessionS
     state
 }
 
+fn marked_logical_expr(
+    state: &SessionState,
+    sql: &str,
+    schema: &DFSchema,
+) -> datafusion::error::Result<Expr> {
+    let dialect = state.config().options().sql_parser.dialect;
+    let mut parsed = state.sql_to_expr_with_alias(sql, &dialect)?;
+    if repark_spark::is_spark_door_session(state.config()) {
+        repark_spark::values_marker::mark_values_cells(&mut parsed.expr);
+    }
+    state.create_logical_expr_from_sql_expr(parsed, schema)
+}
+
+fn fragment_logical_expr(
+    context: &SessionContext,
+    sql: &str,
+    schema: &DFSchema,
+) -> datafusion::error::Result<Expr> {
+    let state = context.state();
+    let dialect = state.config().options().sql_parser.dialect;
+    let mut parsed = state.sql_to_expr_with_alias(sql, &dialect)?;
+    repark_spark::values_marker::mark_fragment_cells(&mut parsed.expr);
+    state.create_logical_expr_from_sql_expr(parsed, schema)
+}
+
 fn folded_qualifier_predicate(
     state: &SessionState,
     schema: &DFSchema,
@@ -92,6 +117,9 @@ fn folded_qualifier_predicate(
 ) -> Option<datafusion::error::Result<Expr>> {
     let dialect = state.config().options().sql_parser.dialect;
     let mut parsed = state.sql_to_expr_with_alias(canonical, &dialect).ok()?;
+    if repark_spark::is_spark_door_session(state.config()) {
+        repark_spark::values_marker::mark_values_cells(&mut parsed.expr);
+    }
     repark_core::frame_names::fold_frame_qualifiers(
         &mut parsed.expr,
         schema,
@@ -112,7 +140,7 @@ pub(crate) fn parse_canonical_predicate_exact(
         .options_mut()
         .sql_parser
         .enable_ident_normalization = false;
-    match state.create_logical_expr(canonical.as_ref(), frame.inner().schema()) {
+    match marked_logical_expr(&state, canonical.as_ref(), frame.inner().schema()) {
         Ok(expr) => Ok(expr),
         Err(error) => {
             if let Some((relation, name)) = missing_column(&error) {
@@ -147,14 +175,15 @@ pub(crate) async fn plan_expr_column(
     let rewritten = repark_functions::cast_map::rewrite_map_casts(canonical);
     let canonical = rewritten.as_deref().unwrap_or(canonical);
     let select_sql = format!("SELECT ({canonical}) AS _repark_expr");
-    let plan = match context.sql(&select_sql).await {
-        Ok(frame) => {
-            let planned = crate::deep_stack::plan_depths(frame.logical_plan());
-            let owned = crate::deep_stack::grown_clone_plan(
-                frame.logical_plan(),
-                planned.plan,
-                planned.expression,
-            );
+    let plan = match repark_spark::values_marker::plan_marked_fragment(context, &select_sql).await {
+        Ok(None) => {
+            return parse_unresolved_expr(context, canonical)
+                .map_err(|inner| crate::unknown_routine_to_py_err(original, inner));
+        }
+        Ok(Some(logical)) => {
+            let planned = crate::deep_stack::plan_depths(&logical);
+            let owned =
+                crate::deep_stack::grown_clone_plan(&logical, planned.plan, planned.expression);
             match repark_functions::analyze_eagerly(&context.state(), owned) {
                 Ok(analyzed) => analyzed,
                 Err(error) => {
@@ -245,7 +274,7 @@ fn parse_unresolved_expr(
                     "F.expr discovered-column schema failed: {error}"
                 ))
             })?;
-        match context.state().create_logical_expr(canonical, &schema) {
+        match fragment_logical_expr(context, canonical, &schema) {
             Ok(expr) => return Ok(expr),
             Err(error) => {
                 let Some((relation, name)) = missing_column(&error) else {
@@ -313,6 +342,11 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
     let context = SessionContext::new_with_state(state);
     context.register_udf(repark_spark::spark_as_udf().as_ref().clone());
     context.register_udf(repark_spark::suffix_literal_udf().as_ref().clone());
+    context.register_udf(
+        repark_spark::values_marker::values_cell_udf()
+            .as_ref()
+            .clone(),
+    );
     repark_functions::register_all(&context);
     datafusion::execution::FunctionRegistry::register_expr_planner(
         &mut *context.state_ref().write(),

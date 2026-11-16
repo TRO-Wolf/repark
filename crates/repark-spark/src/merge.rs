@@ -90,7 +90,11 @@ pub(crate) async fn execute_merge(
     let folded =
         nested_assign::fold_merge_clauses(ctx, catalogs, table, source, clauses, schema_evolution)
             .await?;
-    let (catalog_name, mut spec) = lower(table, source, on, folded.as_deref().unwrap_or(clauses))?;
+    let mut source = source.clone();
+    if crate::values_marker::session_marks_values(&ctx.state()) {
+        crate::values_marker::mark_values_cells(&mut source);
+    }
+    let (catalog_name, mut spec) = lower(table, &source, on, folded.as_deref().unwrap_or(clauses))?;
     spec.schema_evolution = schema_evolution;
     if let TableFactor::Table { name, .. } = table
         && let Some(target) = crate::dml_target::resolve_dml_target(ctx, catalogs, name).await?

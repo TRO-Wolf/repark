@@ -1,0 +1,63 @@
+{"key": "provenance", "engine": "repark", "native": "<scratchpad>/pkg-main-dc6b4c94/repark/_native.abi3.so", "warehouse": "critfam-o16tm1qc", "ansi": "true"}
+{"key": "sql/in/tiny", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/in_cte/tiny", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/exists/tiny", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/eq_scalar/tiny", "types": ["int"], "rows": []}
+{"key": "sql/join/tiny", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/intersect/tiny", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "sql/union_branch/tiny", "types": ["decimal(30,15)"], "rows": [["0E-15"]]}
+{"key": "sql/in/negtiny", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/in_cte/negtiny", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/exists/negtiny", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/eq_scalar/negtiny", "types": ["int"], "rows": []}
+{"key": "sql/join/negtiny", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/intersect/negtiny", "types": ["double"], "rows": [["-1e-20"]]}
+{"key": "sql/union_branch/negtiny", "types": ["decimal(30,15)"], "rows": [["0E-15"]]}
+{"key": "sql/in/exact", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/in_cte/exact", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/exists/exact", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/eq_scalar/exact", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/join/exact", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/intersect/exact", "types": ["double"], "rows": [["0.1"]]}
+{"key": "sql/union_branch/exact", "types": ["decimal(30,15)"], "rows": [["0.100000000000000"]]}
+{"key": "sql/in/round16", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/in_cte/round16", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/exists/round16", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/eq_scalar/round16", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/join/round16", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/intersect/round16", "types": ["double"], "rows": [["0.10000000000000002"]]}
+{"key": "sql/union_branch/round16", "types": ["decimal(30,15)"], "rows": [["0.100000000000000"]]}
+{"key": "sql/in/negzero", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/in_cte/negzero", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/exists/negzero", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/eq_scalar/negzero", "types": ["int"], "rows": []}
+{"key": "sql/join/negzero", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/intersect/negzero", "types": ["double"], "rows": [["0.0"]]}
+{"key": "sql/union_branch/negzero", "types": ["decimal(30,15)"], "rows": [["0E-15"]]}
+{"key": "sql/in/half", "types": ["int"], "rows": []}
+{"key": "sql/in_cte/half", "types": ["int"], "rows": []}
+{"key": "sql/exists/half", "types": ["int"], "rows": []}
+{"key": "sql/eq_scalar/half", "types": ["int"], "rows": []}
+{"key": "sql/join/half", "types": ["int"], "rows": []}
+{"key": "sql/intersect/half", "types": ["double"], "rows": []}
+{"key": "sql/union_branch/half", "types": ["decimal(30,15)"], "rows": []}
+{"key": "sql/in/big", "error": "PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed\ncaused by\nArrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing on 1e30"}
+{"key": "sql/in_cte/big", "error": "PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed\ncaused by\nArrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing on 1e30"}
+{"key": "sql/exists/big", "error": "PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed\ncaused by\nArrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing on 1e30"}
+{"key": "sql/eq_scalar/big", "error": "PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed\ncaused by\nArrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing on 1e30"}
+{"key": "sql/join/big", "error": "PySparkException: Arrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing on 1e30"}
+{"key": "sql/intersect/big", "error": "PySparkException: Arrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing on 1e30"}
+{"key": "sql/union_branch/big", "error": "PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed\ncaused by\nArrow error: Cast error: Cannot cast to Decimal128(30, 15). Overflowing on 1e30"}
+{"key": "sql/view_join/tiny", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/view_in/tiny", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/view_join/exact", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/view_in/exact", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/view_join/round16", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/view_in/round16", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/view_join/negzero", "types": ["int"], "rows": [["1"]]}
+{"key": "sql/view_in/negzero", "types": ["int"], "rows": [["1"]]}
+{"key": "frag/fexpr_filter_z_in_values", "types": ["int"], "rows": [["1"]]}
+{"key": "frag/fexpr_filter_exists_values", "types": ["int"], "rows": [["1"]]}
+{"key": "frag/filter_str_z_in_values", "types": ["int"], "rows": [["1"]]}
+{"key": "frag/selectexpr_z_in_values", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Cast(Cast { expr: Column(Column { relation: Some(Full { catalog: \"datafusion\", schema: "}
+{"key": "df/from_values_join", "types": ["int"], "rows": [["1"]]}

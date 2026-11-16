@@ -1,16 +1,11 @@
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
-use datafusion::common::{DFSchema, Result, ScalarValue};
+use datafusion::common::{Result, ScalarValue};
 use datafusion::error::DataFusionError;
-use datafusion::logical_expr::expr::{Case, InList};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
-use datafusion::logical_expr::{
-    Between, BinaryExpr, Cast, Expr, ExprSchemable, LogicalPlan, LogicalPlanBuilder, Operator,
-    Union, Values,
-};
+use datafusion::logical_expr::{Expr, LogicalPlan, LogicalPlanBuilder, Union, Values};
 use datafusion::optimizer::AnalyzerRule;
 use repark_functions::spark_result_types::{
     needs_count_star_expansion, transform_keeping_count_star,
@@ -133,23 +128,11 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         let rebuilt = Union::try_new_with_loose_types(union.inputs)?;
         return Ok(Transformed::yes(LogicalPlan::Union(rebuilt)));
     }
-    let mut schema = DFSchema::empty();
-    for input in plan.inputs() {
-        schema.merge(input.schema());
-    }
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
         let narrowed = transform_keeping_count_star(expr, &spark_integral_literal)?;
-        let widened = narrowed
-            .data
-            .transform_down(|node| Ok(widen_decimal_against_float(node, &schema)))?;
-        let combined = Transformed::new(
-            widened.data,
-            narrowed.transformed || widened.transformed,
-            TreeNodeRecursion::Continue,
-        );
-        Ok(combined.update_data(|node| saved_name.restore(node)))
+        Ok(narrowed.update_data(|node| saved_name.restore(node)))
     })?;
     let narrowed_flag = transformed.transformed;
     let narrowed = transformed.map_data(LogicalPlan::recompute_schema)?.data;
@@ -258,171 +241,6 @@ pub(crate) fn spark_integral_literal(expr: Expr) -> Result<Transformed<Expr>> {
             )))
         }
         other => Ok(Transformed::no(other)),
-    }
-}
-
-fn widen_decimal_against_float(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
-    match expr {
-        Expr::BinaryExpr(binary) if is_float_comparison(binary.op) => {
-            widen_comparison(binary, schema)
-        }
-        Expr::InList(in_list) => widen_in_list(in_list, schema),
-        Expr::Between(between) => widen_between(between, schema),
-        Expr::Case(case) => widen_case(case, schema),
-        other => Transformed::no(other),
-    }
-}
-
-fn widen_case(case: Case, schema: &DFSchema) -> Transformed<Expr> {
-    let float_operand = case.expr.as_ref().is_some_and(|operand| {
-        operand
-            .get_type(schema)
-            .is_ok_and(|data_type| is_float_type(&data_type))
-    });
-    if !float_operand
-        || !case
-            .when_then_expr
-            .iter()
-            .any(|(when, _)| is_decimal_literal(when))
-    {
-        return Transformed::no(Expr::Case(case));
-    }
-    let Case {
-        expr,
-        when_then_expr,
-        else_expr,
-    } = case;
-    let when_then_expr = when_then_expr
-        .into_iter()
-        .map(|(when, then)| {
-            if is_decimal_literal(&when) {
-                (
-                    Box::new(Expr::Cast(Cast::new(when, DataType::Float64))),
-                    then,
-                )
-            } else {
-                (when, then)
-            }
-        })
-        .collect();
-    Transformed::yes(Expr::Case(Case {
-        expr,
-        when_then_expr,
-        else_expr,
-    }))
-}
-
-fn is_float_comparison(operator: Operator) -> bool {
-    matches!(
-        operator,
-        Operator::Eq
-            | Operator::NotEq
-            | Operator::Lt
-            | Operator::LtEq
-            | Operator::Gt
-            | Operator::GtEq
-            | Operator::IsDistinctFrom
-            | Operator::IsNotDistinctFrom
-    )
-}
-
-fn is_float_type(data_type: &DataType) -> bool {
-    matches!(data_type, DataType::Float32 | DataType::Float64)
-}
-
-fn is_decimal_literal(expr: &Expr) -> bool {
-    match expr {
-        Expr::Literal(ScalarValue::Decimal128(_, _, _) | ScalarValue::Decimal256(_, _, _), _) => {
-            true
-        }
-        Expr::Negative(inner) => is_decimal_literal(inner),
-        _ => false,
-    }
-}
-
-fn widen_comparison(binary: BinaryExpr, schema: &DFSchema) -> Transformed<Expr> {
-    let (Ok(left_type), Ok(right_type)) =
-        (binary.left.get_type(schema), binary.right.get_type(schema))
-    else {
-        return Transformed::no(Expr::BinaryExpr(binary));
-    };
-    let operator = binary.op;
-    if is_decimal_literal(&binary.left) && is_float_type(&right_type) {
-        let widened = Expr::Cast(Cast::new(binary.left, DataType::Float64));
-        return Transformed::yes(Expr::BinaryExpr(BinaryExpr::new(
-            Box::new(widened),
-            operator,
-            binary.right,
-        )));
-    }
-    if is_decimal_literal(&binary.right) && is_float_type(&left_type) {
-        let widened = Expr::Cast(Cast::new(binary.right, DataType::Float64));
-        return Transformed::yes(Expr::BinaryExpr(BinaryExpr::new(
-            binary.left,
-            operator,
-            Box::new(widened),
-        )));
-    }
-    Transformed::no(Expr::BinaryExpr(binary))
-}
-
-fn widen_in_list(in_list: InList, schema: &DFSchema) -> Transformed<Expr> {
-    let InList {
-        expr,
-        list,
-        negated,
-    } = in_list;
-    let Ok(expr_type) = expr.get_type(schema) else {
-        return Transformed::no(Expr::InList(InList::new(expr, list, negated)));
-    };
-    if !is_float_type(&expr_type) {
-        return Transformed::no(Expr::InList(InList::new(expr, list, negated)));
-    }
-    let mut changed = false;
-    let mut widened_list = Vec::with_capacity(list.len());
-    for item in list {
-        if is_decimal_literal(&item) {
-            widened_list.push(Expr::Cast(Cast::new(Box::new(item), DataType::Float64)));
-            changed = true;
-        } else {
-            widened_list.push(item);
-        }
-    }
-    let rebuilt = Expr::InList(InList::new(expr, widened_list, negated));
-    if changed {
-        Transformed::yes(rebuilt)
-    } else {
-        Transformed::no(rebuilt)
-    }
-}
-
-fn widen_between(between: Between, schema: &DFSchema) -> Transformed<Expr> {
-    let Between {
-        expr,
-        negated,
-        low,
-        high,
-    } = between;
-    let Ok(expr_type) = expr.get_type(schema) else {
-        return Transformed::no(Expr::Between(Between::new(expr, negated, low, high)));
-    };
-    if !is_float_type(&expr_type) {
-        return Transformed::no(Expr::Between(Between::new(expr, negated, low, high)));
-    }
-    let mut changed = false;
-    let mut bound = |side: Box<Expr>| {
-        if is_decimal_literal(&side) {
-            changed = true;
-            Box::new(Expr::Cast(Cast::new(side, DataType::Float64)))
-        } else {
-            side
-        }
-    };
-    let rebuilt = Expr::Between(Between::new(expr, negated, bound(low), bound(high)));
-    if changed {
-        Transformed::yes(rebuilt)
-    } else {
-        Transformed::no(rebuilt)
     }
 }
 
@@ -796,107 +614,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn decimal_eq_double_casts_the_literal() {
-        let ctx = decimal_float_ctx();
-        let rendered = analyzed_render(&ctx, "SELECT id FROM v WHERE d = 0.0").await;
-        assert!(
-            rendered.contains("CAST(Decimal128(Some(0),1,1) AS Float64)"),
-            "{rendered}"
-        );
-        assert!(!rendered.contains("CAST(v.d AS"), "{rendered}");
-    }
-
-    #[tokio::test]
-    async fn decimal_eq_float_casts_the_literal_to_double() {
-        let ctx = decimal_float_ctx();
-        let rendered = analyzed_render(&ctx, "SELECT id FROM v WHERE f = 0.1").await;
-        assert!(
-            rendered.contains("CAST(Decimal128(Some(1),1,1) AS Float64)"),
-            "{rendered}"
-        );
-        let plan = ctx
-            .state()
-            .create_logical_plan("SELECT id FROM v WHERE f = 0.1")
-            .await
-            .unwrap();
-        let config = ctx.state().config_options().clone();
-        let analyzed = SparkIntegralLiteral.analyze(plan, &config).unwrap();
-        let coerced = TypeCoercion::new().analyze(analyzed, &config).unwrap();
-        let rendered = format!("{}", coerced.display_indent());
-        assert!(rendered.contains("CAST(v.f AS Float64)"), "{rendered}");
-        assert!(!rendered.contains(" AS Decimal"), "{rendered}");
-    }
-
-    #[tokio::test]
-    async fn decimal_comparison_forms_all_widen_the_literal() {
-        let ctx = decimal_float_ctx();
-        let cases: Vec<(&str, &str)> = vec![
-            (
-                "SELECT id FROM v WHERE 0.0 = d",
-                "CAST(Decimal128(Some(0),1,1) AS Float64) = v.d",
-            ),
-            (
-                "SELECT id FROM v WHERE d > 1.0",
-                "v.d > CAST(Decimal128(Some(10),2,1) AS Float64)",
-            ),
-            (
-                "SELECT id FROM v WHERE d <= 1.0",
-                "v.d <= CAST(Decimal128(Some(10),2,1) AS Float64)",
-            ),
-            (
-                "SELECT id FROM v WHERE d <> 0.0",
-                "v.d != CAST(Decimal128(Some(0),1,1) AS Float64)",
-            ),
-            (
-                "SELECT id FROM v WHERE d = -0.5",
-                "v.d = CAST(Decimal128(Some(-5),1,1) AS Float64)",
-            ),
-            (
-                "SELECT id FROM v WHERE d IN (0.0, 1.5)",
-                "v.d IN ([CAST(Decimal128(Some(0),1,1) AS Float64), CAST(Decimal128(Some(15),2,1) AS Float64)])",
-            ),
-            (
-                "SELECT id FROM v WHERE d NOT IN (0.0, 1.5)",
-                "v.d NOT IN ([CAST(Decimal128(Some(0),1,1) AS Float64), CAST(Decimal128(Some(15),2,1) AS Float64)])",
-            ),
-            (
-                "SELECT id FROM v WHERE d BETWEEN 0.0 AND 2.0",
-                "v.d BETWEEN CAST(Decimal128(Some(0),1,1) AS Float64) AND CAST(Decimal128(Some(20),2,1) AS Float64)",
-            ),
-            (
-                "SELECT id FROM v WHERE d NOT BETWEEN 0.0 AND 2.0",
-                "v.d NOT BETWEEN CAST(Decimal128(Some(0),1,1) AS Float64) AND CAST(Decimal128(Some(20),2,1) AS Float64)",
-            ),
-            (
-                "SELECT id FROM v WHERE f BETWEEN 0.0 AND 1.5",
-                "v.f BETWEEN CAST(Decimal128(Some(0),1,1) AS Float64) AND CAST(Decimal128(Some(15),2,1) AS Float64)",
-            ),
-            (
-                "SELECT id FROM v WHERE d <=> 0.0",
-                "v.d IS NOT DISTINCT FROM CAST(Decimal128(Some(0),1,1) AS Float64)",
-            ),
-            (
-                "SELECT id FROM v WHERE d IS DISTINCT FROM 1.5",
-                "v.d IS DISTINCT FROM CAST(Decimal128(Some(15),2,1) AS Float64)",
-            ),
-            (
-                "SELECT CASE d WHEN 0.0 THEN 'z' WHEN id THEN 'i' END FROM v",
-                "CASE v.d WHEN CAST(Decimal128(Some(0),1,1) AS Float64) THEN Utf8(\"z\") WHEN v.id THEN",
-            ),
-            (
-                "SELECT CASE f WHEN -1.5 THEN 'n' END FROM v",
-                "CASE v.f WHEN CAST(Decimal128(Some(-15),2,1) AS Float64) THEN",
-            ),
-        ];
-        for (sql, needle) in cases {
-            let rendered = analyzed_render(&ctx, sql).await;
-            assert!(rendered.contains(needle), "{sql}: {rendered}");
-            assert!(!rendered.contains(" AS Decimal"), "{sql}: {rendered}");
-        }
-    }
-
-    #[tokio::test]
-    async fn decimal_against_decimal_or_integral_is_untouched() {
+    async fn the_literal_rule_leaves_every_decimal_beside_a_float_to_seat_e() {
         let ctx = decimal_float_ctx();
         for sql in [
             "SELECT id FROM v WHERE dec = 0.0",
@@ -907,33 +625,16 @@ mod tests {
             "SELECT CASE dec WHEN 0.0 THEN 'z' END FROM v",
             "SELECT CASE WHEN dec = 0.0 THEN 'z' END FROM v",
             "SELECT 0.0 AS v",
+            "SELECT id FROM v WHERE d = 0.0",
+            "SELECT id FROM v WHERE 0.0 = d",
+            "SELECT id FROM v WHERE f > 1.0",
+            "SELECT id FROM v WHERE d IN (0.1, 0.3)",
+            "SELECT id FROM v WHERE d BETWEEN 0.1 AND 0.2",
+            "SELECT CASE d WHEN 0.1 THEN 'a' END FROM v",
         ] {
             let rendered = analyzed_render(&ctx, sql).await;
             assert!(!rendered.contains("Float64"), "{sql}: {rendered}");
         }
-    }
-
-    #[tokio::test]
-    async fn decimal_widening_is_idempotent() {
-        let ctx = decimal_float_ctx();
-        let plan = ctx
-            .state()
-            .create_logical_plan("SELECT id FROM v WHERE d = 0.0 AND f > 1.0")
-            .await
-            .unwrap();
-        let config = ctx.state().config_options().clone();
-        let once = SparkIntegralLiteral.analyze(plan, &config).unwrap();
-        let rendered = format!("{}", once.display_indent());
-        assert!(
-            rendered.contains("v.d = CAST(Decimal128(Some(0),1,1) AS Float64)"),
-            "{rendered}"
-        );
-        assert!(
-            rendered.contains("v.f > CAST(Decimal128(Some(10),2,1) AS Float64)"),
-            "{rendered}"
-        );
-        let twice = SparkIntegralLiteral.analyze(once.clone(), &config).unwrap();
-        assert_eq!(rendered, format!("{}", twice.display_indent()));
     }
 
     #[tokio::test]

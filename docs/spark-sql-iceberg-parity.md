@@ -5517,7 +5517,7 @@ still open is `isModifiable`.
   at step 0 (four product files, the native door unchanged, a column scale refused, a FLOAT `bround` returning
   FLOAT); card [ROUND-DOUBLE-EXACT-1](../task/roadmap/mid-term/round-double-exact-1-card-2026-11-14.md).
 
-### DECIMAL-DOUBLE-UNION-COERCION-1 (part 1) — a DECIMAL beside a FLOAT or DOUBLE unifies to `double`, and DECIMAL→DOUBLE rounds once, as Spark's do — **FIXED 2026-11-15 on the Spark door (branch, not merged); part 2 (`VALUES`) open**
+### DECIMAL-DOUBLE-UNION-COERCION-1 (part 1) — a DECIMAL beside a FLOAT or DOUBLE unifies to `double`, and DECIMAL→DOUBLE rounds once, as Spark's do — **FIXED 2026-11-15 on the Spark door; part 2 (`VALUES`, unions, the `IN` rewrite) built 2026-11-16 (branch, not merged)**
 
 - **repark** — Before (main `dc6b4c94`): DataFusion's `decimal_coercion` typed a DECIMAL beside a DOUBLE as
   `decimal(30,15)` (or wider). This applied in comparisons, `IN`, `BETWEEN`, CASE, `coalesce`, `nvl2`, `nullif`,
@@ -5548,9 +5548,30 @@ still open is `isModifiable`.
   - `Cast` to DECIMAL is `BigDecimal(Double.toString(d))` rounded `HALF_UP`.
 
   *(oracle: measured live 2026-11-15, `task/wo/decimal-double-union-coercion-1/evidence/step0b/` and `evidence/fix/`.)*
-- **Still unlike Spark** — a multi-row `VALUES` mixing them (part 2, seat V). Also:
-  - a `MERGE` whose union source `merge.rs` types before analysis (part 2);
-  - an `F.expr` fragment subquery (part 2);
+- **Part 2 (2026-11-16, branch `fix/decimal-double-coercion-part2`)** — on the Spark door:
+  - **seat V:** every Spark-door seat that plans user text (the passthrough and its `EXPLAIN`, the RANGE-frame
+    re-plan, the MERGE `USING` source, the `INSERT OVERWRITE` validation, `F.expr` / `selectExpr` and `filter(str)`)
+    wraps each cell of a multi-row `VALUES` in an identity marker, and `spark_values_typing`, first on the analyzer
+    list, types a column whose cells hold a DECIMAL and a FLOAT or DOUBLE as `double`. A `VALUES` typed to an insert
+    target casts through `double` to the target, in Spark's order. A user's cast, a single row, a recursive CTE and
+    every column without the mix keep the planner's type. An unmarked mixed `VALUES` refuses, naming the unit (the
+    tripwire), so a seat that forgets the marker fails loudly;
+  - **unions of three or more branches with the DECIMAL first** are `double` (seat E rebuilds a stale outer union),
+    in plain `SELECT`, subqueries, CTEs, views and MERGE sources;
+  - **an `IN` list of DOUBLE constants against a DECIMAL** is planned as a decimal `IN` list when every constant's
+    range holds one decimal (always for precision 15 or less), else as at most 32 decimal ranges joined by `OR`,
+    else per row; NaN and ±Infinity match nothing and `-0.0` matches `0.00`, as in Spark;
+  - `widen_decimal_against_float` is retired: seat E answers its four literal shapes.
+
+  Pins: `python/repark/tests/sql/test_decimal_double_coercion_2.py` and `test_decimal_double_in_ranges_2.py`, both
+  ANSI modes; Rust `repark-spark` `values_marker/tests.rs` and `extension/decimal_float_widen/tests.rs` (`in_ranges`).
+- **Still unlike Spark** — also:
+  - `INTERSECT ALL` / `EXCEPT ALL` over a mixed `VALUES` leg still refuse (SQL-SETOP-ALL-REFUSE-1);
+  - a `DELETE` / `UPDATE` whose `WHERE` holds a subquery the identity path declines (every `VALUES` source among
+    them) still refuses (repark-sql-update-subquery-where-1, UPDATE-SUBQUERY-STORE-1);
+  - `<lit> IS DISTINCT FROM <col>` with the literal on the left refuses on the Spark door
+    ([DISTINCT-FROM-LITERAL-LEFT-1](../task/roadmap/mid-term/distinct-from-literal-left-1-card-2026-11-15.md));
+  - a native-door frame over an `F.expr` `VALUES` subquery keeps DataFusion's `decimal(30,15)` (Q2, Q4);
   - nested leaves (DECIMAL-DOUBLE-NESTED-1);
   - `decimal + FLOAT` (DECIMAL-FLOAT-ARITH-1);
   - a select-list `IN (subquery)` (IN-SUBQUERY-PROJECTION-1);
@@ -5581,8 +5602,9 @@ still open is `isModifiable`.
 - **Cost** — the DOUBLE-constant shape is held at main's speed. Three rows are the unit's cost exception (owner,
   2026-11-15, "yes to 3"): `d38 < v` 1.66x, written `CAST(v AS DECIMAL(10,2))` 1.34x and
   `CAST(v AS DECIMAL(38,18))` 3.36x, whose speed work is
-  [DOUBLE-DECIMAL-CAST-PERF-1](../task/roadmap/mid-term/double-decimal-cast-perf-1-card-2026-11-14.md). An `IN` of four
-  or more DOUBLE constants (3.86x) is a temporary exception (owner, 2026-11-15 evening); part 2 owes its rewrite.
+  [DOUBLE-DECIMAL-CAST-PERF-1](../task/roadmap/mid-term/double-decimal-cast-perf-1-card-2026-11-14.md). The `IN`
+  exception closes for precision 15 or less and narrows at 16 or more to the figures in
+  `task/wo/decimal-double-union-coercion-1/evidence/part2/cost.md` (owner, 2026-11-16, "Defaults", Q1 (a)).
 - **Rationale** — the owner's 2026-11-13 rulings, with Q8 re-ruled PRUNED-WRONG and Q2 kept on 2026-11-14,
   2026-11-14 "Merge and go with the split plan" (step 3), and 2026-11-15 "Merge 1338, proceed with A and yes to 3";
   card
