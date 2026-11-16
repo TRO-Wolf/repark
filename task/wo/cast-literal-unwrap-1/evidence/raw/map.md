@@ -8,6 +8,8 @@ Written by the probes in [../probes/](../probes/map.md); the SQL text of a cell 
 - `native.jsonl` — the native door `repark.sql()` over a view per kind; the Parquet setup rows record its refusal.
 - `held-spark-false.jsonl`, `held-spark-true.jsonl`, `held-repark-false.jsonl`, `held-repark-true.jsonl` — the
   kernel check (`run_held.py`).
+- `shapes-spark-false.jsonl`, `shapes-spark-true.jsonl`, `shapes-repark-false.jsonl`, `shapes-repark-true.jsonl` —
+  `run_shapes.py` (these keep their SQL text).
 - `verdicts.jsonl` — `analyze.py`'s pairing: one row per RePark or native cell and ANSI mode, with both answers and
   the verdict (`agree`, `both_raise`, `wrong_answer`, `wrong_write`, `missed_raise`, `over_raise`).
 - `summary.md` — `analyze.py`'s tables: by kind, family, storage, door and position; the DML list; the kernel check;

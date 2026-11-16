@@ -13,6 +13,9 @@ Run from this directory; `cells` is imported by the runners. Commands and proven
 - `run_held.py` — the kernel check: the same casts compared with a column holding the constant, which no
   simplifier can unwrap.
 - `explain_side.py` — the side observation: `EXPLAIN` of a table the `SELECT` reads.
+- `run_shapes.py` — after the critic: its seven uncovered shapes, the spelled-out operators, the negative half, the
+  top-of-type cells (owner question 4) and the three side findings, one engine and ANSI mode per run.
+- `shapes_table.py` — prints the shapes table of `domain-table.md` from the raw files.
 - `compact.py` — copies the raw outputs into [../raw/](../raw/map.md) without the SQL text and the timings, and with
   scratch and home paths replaced by placeholders.
 - `analyze.py` — pairs every cell with Spark's, writes `verdicts.jsonl` and `summary.md`; the tables in

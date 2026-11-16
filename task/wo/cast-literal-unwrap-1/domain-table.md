@@ -425,4 +425,76 @@ The temp view, `CAST(c AS T) = <first constant>`, constant on the right. Ids ind
 | dec_wide | `CAST(c AS DECIMAL(20,4)) = 1.25` | `[3]` | `[3]` | `[3]` | `[3]` |
 | date_ts | `CAST(c AS TIMESTAMP) = TIMESTAMP'2024-01-01 00:00:00'` | `[1]` | `[1]` | `[1]` | `[1]` |
 
+## After the critic: the uncovered shapes, re-measured
+
+The Muse inventory critic of `b05846e9` (verdict GAPS: no missed seat, no contradicted cell; its probes and raw
+outputs are in the orchestrator's scratch folder `cast-unwrap-critic/`, `shapes.py` and `out/shapes-*.jsonl`) named
+seven shapes the grid lacked. Re-measured here on the same fixtures as the grid (`dec_int`, `dec_dec0`,
+`bigint_int`, `dec_tinyint_overflow`, `int_smallint` from [evidence/probes/cells.py](evidence/probes/cells.py)),
+on main and Spark 4.1.2, both modes, by [evidence/probes/run_shapes.py](evidence/probes/run_shapes.py)
+(raw: `evidence/raw/shapes-{spark,repark}-{false,true}.jsonl`; table: `shapes_table.py`). The critic's shape ids
+are kept (`s02`, `s03`, …); `spelled/` are the spelled-out operators, `neg_half/` the negative-half edge, `q4/` the
+top-of-type cells of owner question 4.
+
+- **Every critic shape reproduces in both modes**, the same direction as the critic measured: nested casts, `TRY_CAST`,
+  `::`, a cast column filtered outside its subquery, `withColumn` then `filter`, a non-ASCII column name, the
+  spelled-out `IS [NOT] DISTINCT FROM` and `NOT BETWEEN`. `TRY_CAST(b AS INT) = 1` over `BIGINT` agrees (Spark's
+  `TRY_CAST` answers NULL on overflow, so no wrapped row matches).
+- **Negative halves:** `CAST(c AS DECIMAL(10,0)) = -1` keeps -0.50 and -1.25 on Spark (half away from zero) and
+  nothing on main; `< -1` adds -1.25 on main. The same cell is `dec_dec0/view/where/c2/eq/r` in the grid.
+- **s16 differs from the critic's report on views over SQL views:** a SQL temp view over a `range` view, over a
+  Parquet view, or over a plain SQL view answers on main (with the unwrap's wrong rows). Only a SQL temp view over a
+  **`createDataFrame`** view raises `TABLE_OR_VIEW_NOT_FOUND` (`__repark_cdf_…`) where Spark answers.
+- **s26:** `EXPLAIN` over a `read.parquet` temp view explains on main. The failing form is the table name created by
+  `CREATE TABLE … USING parquet` (sketch §6, item 1), which is what the critic's `pq` was.
+
+| key | shape | Spark off | main off | Spark on | main on |
+|---|---|---|---|---|---|
+| `s02/nested_int_bigint` | `SELECT id FROM v_dec_int WHERE CAST(CAST(c AS INT) AS BIGINT) = 1` | `[2, 3, 4, 5]` | `[2]` | `[2, 3, 4, 5]` | `[2]` |
+| `s02/nested_dec0_dec20` | `SELECT id FROM v_dec_dec0 WHERE CAST(CAST(c AS DECIMAL(10,0)) AS DECIMAL(20,0)) = 1` | `[1, 2, 3]` | `[2]` | `[1, 2, 3]` | `[2]` |
+| `s03/try_cast_int` | `SELECT id FROM v_dec_int WHERE TRY_CAST(c AS INT) = 1` | `[2, 3, 4, 5]` | `[2]` | `[2, 3, 4, 5]` | `[2]` |
+| `s03/try_cast_dec0` | `SELECT id FROM v_dec_dec0 WHERE TRY_CAST(c AS DECIMAL(10,0)) = 1` | `[1, 2, 3]` | `[2]` | `[1, 2, 3]` | `[2]` |
+| `s03/try_cast_bigint_int` | `SELECT id FROM v_bigint_int WHERE TRY_CAST(c AS INT) = 1` | `[1]` | `[1]` | `[1]` | `[1]` |
+| `s04/colon_int` | `SELECT id FROM v_dec_int WHERE c::int = 1` | `[2, 3, 4, 5]` | `[2]` | `[2, 3, 4, 5]` | `[2]` |
+| `s04/colon_dec0` | `SELECT id FROM v_dec_dec0 WHERE c::decimal(10,0) = 1` | `[1, 2, 3]` | `[2]` | `[1, 2, 3]` | `[2]` |
+| `s17/subquery` | `SELECT id FROM (SELECT id, CAST(c AS INT) AS k FROM v_dec_int) WHERE k = 1` | `[2, 3, 4, 5]` | `[2]` | `[2, 3, 4, 5]` | `[2]` |
+| `s23/non_ascii` | `SELECT id FROM v_cafe WHERE CAST(`café` AS INT) = 1` | `[2, 3, 4, 5]` | `[2]` | `[2, 3, 4, 5]` | `[2]` |
+| `spelled/is_distinct_c0` | `SELECT id FROM v_dec_int WHERE CAST(c AS INT) IS DISTINCT FROM 1` | `[1, 6, 7, 8, 9, 10, 11, 12, 13]` | `[1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]` | `[1, 6, 7, 8, 9, 10, 11, 12, 13]` | `[1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]` |
+| `spelled/is_not_distinct_c0` | `SELECT id FROM v_dec_int WHERE CAST(c AS INT) IS NOT DISTINCT FROM 1` | `[2, 3, 4, 5]` | `[2]` | `[2, 3, 4, 5]` | `[2]` |
+| `spelled/is_distinct_c1` | `SELECT id FROM v_dec_int WHERE CAST(c AS INT) IS DISTINCT FROM 0` | `[2, 3, 4, 5, 7, 8, 9, 11, 12, 13]` | `[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13]` | `[2, 3, 4, 5, 7, 8, 9, 11, 12, 13]` | `[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13]` |
+| `spelled/is_not_distinct_c1` | `SELECT id FROM v_dec_int WHERE CAST(c AS INT) IS NOT DISTINCT FROM 0` | `[1, 6, 10]` | `[10]` | `[1, 6, 10]` | `[10]` |
+| `spelled/not_between` | `SELECT id FROM v_dec_int WHERE CAST(c AS INT) NOT BETWEEN 1 AND 2` | `[1, 6, 7, 8, 10, 11, 12]` | `[1, 6, 7, 8, 9, 10, 11, 12]` | `[1, 6, 7, 8, 10, 11, 12]` | `[1, 6, 7, 8, 9, 10, 11, 12]` |
+| `neg_half/dec0_eq_minus1` | `SELECT id FROM v_dec_dec0 WHERE CAST(c AS DECIMAL(10,0)) = -1` | `[6, 7]` | `[]` | `[6, 7]` | `[]` |
+| `neg_half/dec0_lt_minus1` | `SELECT id FROM v_dec_dec0 WHERE CAST(c AS DECIMAL(10,0)) < -1` | `[8, 12]` | `[7, 8, 12]` | `[8, 12]` | `[7, 8, 12]` |
+| `s21/with_column_filter_str` | `withColumn("k", col("c").cast("int")).filter("k = 1")` | `[2, 3, 4, 5]` | `[2]` | `[2, 3, 4, 5]` | `[2]` |
+| `s22/with_column_filter_col` | `withColumn("k", col("c").cast("int")).filter(col("k") == 1)` | `[2, 3, 4, 5]` | `[2]` | `[2, 3, 4, 5]` | `[2]` |
+| `q4/tinyint/gt_top` | `SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) > 127` | `[]` | `[3, 4, 6]` | `[]` | `[3, 4, 6]` |
+| `q4/tinyint/top_lt` | `SELECT id FROM v_dec_tinyint_overflow WHERE 127 < CAST(c AS TINYINT)` | `[]` | `[3, 4, 6]` | `[]` | `[3, 4, 6]` |
+| `q4/tinyint/ge_top` | `SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) >= 127` | `[2, 3, 5]` | `[2, 3, 4, 6]` | raises CAST_OVERFLOW | `[2, 3, 4, 6]` |
+| `q4/tinyint/le_top` | `SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) <= 127` | `[1, 2, 3, 4, 5, 6]` | `[1, 2, 5]` | raises CAST_OVERFLOW | `[1, 2, 5]` |
+| `q4/tinyint/lt_bottom` | `SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) < -128` | `[]` | `[5]` | `[]` | `[5]` |
+| `q4/tinyint/ge_bottom` | `SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) >= -128` | `[1, 2, 3, 4, 5, 6]` | `[1, 2, 3, 4, 6]` | raises CAST_OVERFLOW | `[1, 2, 3, 4, 6]` |
+| `q4/tinyint/eq_top_plus` | `SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) = 128` | `[]` | raises PySparkException | `[]` | raises PySparkException |
+| `q4/smallint/gt_top` | `SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) > 32767` | `[]` | `[4, 5]` | `[]` | `[4, 5]` |
+| `q4/smallint/top_lt` | `SELECT id FROM v_int_smallint WHERE 32767 < CAST(c AS SMALLINT)` | `[]` | `[4, 5]` | `[]` | `[4, 5]` |
+| `q4/smallint/ge_top` | `SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) >= 32767` | `[3, 6]` | `[3, 4, 5]` | raises CAST_OVERFLOW | `[3, 4, 5]` |
+| `q4/smallint/le_top` | `SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) <= 32767` | `[1, 2, 3, 4, 5, 6]` | `[1, 2, 3, 6]` | raises CAST_OVERFLOW | `[1, 2, 3, 6]` |
+| `q4/smallint/lt_bottom` | `SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) < -32768` | `[]` | `[6]` | `[]` | `[6]` |
+| `q4/smallint/ge_bottom` | `SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) >= -32768` | `[1, 2, 3, 4, 5, 6]` | `[1, 2, 3, 4, 5]` | raises CAST_OVERFLOW | `[1, 2, 3, 4, 5]` |
+| `q4/smallint/eq_top_plus` | `SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) = 32768` | `[]` | raises PySparkException | `[]` | raises PySparkException |
+| `q4/int/gt_top` | `SELECT id FROM v_bigint_int WHERE CAST(c AS INT) > 2147483647` | `[]` | `[6, 7]` | raises CAST_OVERFLOW | `[6, 7]` |
+| `q4/int/top_lt` | `SELECT id FROM v_bigint_int WHERE 2147483647 < CAST(c AS INT)` | `[]` | `[6, 7]` | raises CAST_OVERFLOW | `[6, 7]` |
+| `q4/int/ge_top` | `SELECT id FROM v_bigint_int WHERE CAST(c AS INT) >= 2147483647` | `[5, 8]` | `[5, 6, 7]` | raises CAST_OVERFLOW | `[5, 6, 7]` |
+| `q4/int/le_top` | `SELECT id FROM v_bigint_int WHERE CAST(c AS INT) <= 2147483647` | `[1, 2, 3, 4, 5, 6, 7, 8, 9]` | `[1, 2, 3, 4, 5, 8, 9]` | raises CAST_OVERFLOW | `[1, 2, 3, 4, 5, 8, 9]` |
+| `q4/int/lt_bottom` | `SELECT id FROM v_bigint_int WHERE CAST(c AS INT) < -2147483648` | `[]` | `[8, 9]` | raises CAST_OVERFLOW | `[8, 9]` |
+| `q4/int/ge_bottom` | `SELECT id FROM v_bigint_int WHERE CAST(c AS INT) >= -2147483648` | `[1, 2, 3, 4, 5, 6, 7, 8, 9]` | `[1, 2, 3, 4, 5, 6, 7]` | raises CAST_OVERFLOW | `[1, 2, 3, 4, 5, 6, 7]` |
+| `q4/int/eq_top_plus` | `SELECT id FROM v_bigint_int WHERE CAST(c AS INT) = 2147483648` | `[]` | raises PySparkException | `[]` | raises PySparkException |
+| `s16/view_over_view` | `CREATE OR REPLACE TEMP VIEW w16 AS SELECT id, CAST(c AS INT) AS k FROM v_dec_int; SELECT id FROM w16 WHERE k = 1` | `[2, 3, 4, 5]` | `[2]` | `[2, 3, 4, 5]` | `[2]` |
+| `s16/view_over_view_plain` | `CREATE TEMP VIEW w16b AS SELECT id, c FROM v_dec_int; SELECT id FROM w16b WHERE CAST(c AS INT) = 1` | `[2, 3, 4, 5]` | `[2]` | `[2, 3, 4, 5]` | `[2]` |
+| `s16/view_over_base_table` | `CREATE TEMP VIEW w16c AS SELECT id, CAST(c AS INT) AS k FROM p16; SELECT id FROM w16c WHERE k = 1` | `[2, 3, 4, 5]` | `[2]` | `[2, 3, 4, 5]` | `[2]` |
+| `s16/view_over_create_dataframe` | `createDataFrame view, then a SQL temp view over it` | `[1, 3]` | raises TABLE_OR_VIEW_NOT_FOUND | `[1, 3]` | raises TABLE_OR_VIEW_NOT_FOUND |
+| `s05/int_fn` | `SELECT id FROM v_dec_int WHERE int(c) = 1` | `[2, 3, 4, 5]` | raises UNRESOLVED_ROUTINE | `[2, 3, 4, 5]` | raises UNRESOLVED_ROUTINE |
+| `s06/bigint_fn` | `SELECT id FROM v_dec_int WHERE bigint(c) = 1` | `[2, 3, 4, 5]` | raises UNRESOLVED_ROUTINE | `[2, 3, 4, 5]` | raises UNRESOLVED_ROUTINE |
+| `s26/explain_parquet_view` | `EXPLAIN SELECT id FROM p16 WHERE CAST(c AS INT) = 1` | plan | plan | plan | plan |
+
 Up: [map.md](map.md).

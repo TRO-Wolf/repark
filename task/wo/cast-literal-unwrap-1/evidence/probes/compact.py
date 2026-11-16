@@ -21,14 +21,15 @@ for path in sorted(source.glob("*.jsonl")):
     rows = []
     for line in path.read_text().splitlines():
         r = json.loads(scrub(line))
-        kept = {k: v for k, v in r.items() if k not in DROP}
+        drop = ("ms",) if path.name.startswith("shapes-") else DROP
+        kept = {k: v for k, v in r.items() if k not in drop}
         for k, v in kept.items():
             if isinstance(v, str) and v.startswith(("ERR:", "SETUP-ERR:")):
                 kept[k] = v[:CAP].rsplit(" ", 1)[0]
         rows.append(kept)
     with (target / path.name).open("w") as fh:
         for r in rows:
-            fh.write(json.dumps(r, sort_keys=True) + "\n")
+            fh.write(json.dumps(r, sort_keys=True, ensure_ascii=False) + "\n")
     print(path.name, len(rows))
 for path in sorted(source.glob("*.txt")):
     (target / path.name).write_text(scrub(path.read_text()))

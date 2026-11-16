@@ -188,14 +188,23 @@ integer to a narrower integer.
    **card it as STRING-CAST-LENIENT-1, S2** (a refusal on an ordinary cast, not silent), **not label-blocking**.
    Rests on: `str_int`, `str_int_invalid`, `str_dec`, `str_date` (all doors), `str_double` (native only), the
    `str_int` / `str_date` DML rows.
-4. **Spark's top-of-type comparison.** With ANSI on, Spark answers `CAST(c AS TINYINT) > 127` with no rows and
-   no raise over values that overflow; with W the cast is evaluated and raises. Default: **leave it out of this
-   unit and pin it as a known divergence**, carded S3. Rests on: `dec_tinyint_overflow` `c1/gt/r`, `c1/lt/l` and
-   the DataFrame `col_gt` cells; `int_smallint` `c1/gt/r`, `c1/lt/l`; the kernel check's 7-of-8 rows.
+4. **Spark's top-of-type comparison (re-measured after the critic; it stands, sharper).** Spark answers
+   `CAST(c AS T) > MAX`, `MAX < CAST(c AS T)`, `< MIN` and `= MAX+1` with no rows, without casting, in both modes
+   for `TINYINT` (from DECIMAL) and `SMALLINT` (from `INT`), and for `INT` from `BIGINT` with ANSI off only (ANSI on
+   raises `CAST_OVERFLOW` there). Main answers the unwrap's wrong rows for the first three and **refuses** `= MAX+1`
+   (Arrow `out of range` on the constant) in both modes. With W the cast stays per row, so those cells refuse
+   instead of answering no rows. Default unchanged: **leave the fold out of this unit and pin it**, carded S3,
+   the `= MAX+1` refusal included. Rests on: [domain-table.md](domain-table.md#after-the-critic-the-uncovered-shapes-re-measured)
+   `q4/*` (21 cells per mode), the grid's `dec_tinyint_overflow` `c1/gt/r`, `c1/lt/l`, DataFrame `col_gt`, and
+   `int_smallint` `c1/gt/r`, `c1/lt/l`; the kernel check's 7-of-8 rows.
 5. **The cost bar.** Default: C1 at **1.05x** on planning for plans with no narrowing cast; C2 and C3 at 1.05x of
    the hand-written range; C4 reported without a bar. Rests on: §3's cost cases.
-6. **The side observations** (§6). Default: card EXPLAIN-TABLE-RESOLVE-1 (S3) and PARQUET-APPEND-STRING-VIEW-1
-   (S3); check the zone records for the DataFrame `datetime` literal and card it only if none covers it.
+6. **The side observations** (§6). Defaults: card EXPLAIN-TABLE-RESOLVE-1 (S3; the critic's s26 is a second
+   instance, so consider folding it into the open BARE-READ-DEFAULT-NAMESPACE-1) and PARQUET-APPEND-STRING-VIEW-1
+   (S3); a SQL temp view over a `createDataFrame` view, card S2 as its own lead beside TEMP-VIEW-SURFACE-LEADS-1
+   (no card covers it); `int(c)` / `bigint(c)`, append to SPARK-STRING-TS-FUNCTIONS-1 (S3); check the zone records
+   for the DataFrame `datetime` literal and card it only if none covers it. Rests on: §6 items 1, 2, 4-7;
+   `s16/*`, `s05/int_fn`, `s06/bigint_fn`, `s26/*`. None is filed by this step.
 
 ## 6. Side observations
 
@@ -225,6 +234,19 @@ integer to a narrower integer.
 4. **A DataFrame `datetime` literal.** `F.col("c").cast("timestamp") == datetime(2024, 1, 1)`: PySpark reads the naive
    `datetime` in the driver's zone (America/New_York here), RePark in the session zone (UTC), so the ten `date_ts`
    DataFrame cells per mode differ. Excluded from this unit's counts' meaning; see owner question 6.
+5. **A SQL temp view over a `createDataFrame` view raises** (the critic's s16, re-measured): `CREATE OR REPLACE
+   TEMP VIEW w AS SELECT id, CAST(c AS INT) AS k FROM <createDataFrame view>`, then `SELECT … FROM w`, raises
+   `TABLE_OR_VIEW_NOT_FOUND` naming the internal `__repark_cdf_…` view, both modes; Spark answers. Over a `range`,
+   Parquet or plain SQL view the same chain answers on main. `grep -ril` of `task/roadmap` finds `__repark_cdf_`
+   only in TEMP-VIEW-SURFACE-LEADS-1 (lead 1, `SHOW VIEWS` lists those names), which does not cover a failed
+   resolution. Default: **card it S2** (a refusal of an ordinary view chain), not label-blocking.
+6. **`int(c)` and `bigint(c)` raise `UNRESOLVED_ROUTINE`** (the critic's s05/s06, re-measured), both modes; Spark
+   answers as `CAST`. SPARK-STRING-TS-FUNCTIONS-1 names `string()` and `timestamp()` only. Default: **append the
+   integer cast-name functions to that card** (S3). Once registered they must lower to the same `Cast`, so seat W
+   shields them too.
+7. **`EXPLAIN` of a `CREATE TABLE … USING parquet` table, a second instance** (the critic's s26, on its `pq`
+   table): the same `datafusion.public` resolution as item 1. An `EXPLAIN` over a `read.parquet` temp view
+   explains. Default: as item 1.
 
 ## 7. What step 0 did not do
 
@@ -234,5 +256,41 @@ integer to a narrower integer.
   54.1 pin, so they are expected to answer as main.
 - Upstream DataFusion past 55.2.0 was not read (no network); a search of the 55.2.0 sources shows no narrowing
   guard.
+
+## 8. After the critic
+
+The Muse inventory critic of `b05846e9` returned GAPS: no missed seat, no contradicted cell, no wrong citation,
+no departure from the rulings; every DML wrong write reproduced. The gaps are shapes and build-brief items, folded
+in here; the shapes are re-measured in [domain-table.md](domain-table.md#after-the-critic-the-uncovered-shapes-re-measured).
+
+**What the build brief must add (the critic's §7, in its order):**
+
+1. **Pins** for every re-measured shape: nested `CAST(CAST(c AS INT) AS BIGINT) = 1` (and the decimal twin),
+   `TRY_CAST`, `c::int`, a cast column filtered outside its subquery, `withColumn` then `filter(str)` and
+   `filter(col == …)`, a non-ASCII column name, the spelled-out `IS [NOT] DISTINCT FROM`, and `NOT BETWEEN`; each
+   red on main in both modes, green on the head.
+2. **A negative-half decimal pin:** `CAST(c AS DECIMAL(10,0)) = -1` over -0.50, -1.25, -1.50 (Spark keeps -0.50 and
+   -1.25), and `< -1`, to lock the half-away-from-zero edge of the `preimage` formula.
+3. **An `IN`-list expansion cap with a per-row fallback.** DataFusion's preimage `IN` arm turns each item into a
+   range and joins them by `OR`; past a cap (mirror #1341's `DECIMAL_IN_RANGE_LIMIT`, 32) the shield stays per
+   row, and the build reports the fallback count.
+4. **More cost cases:** C3 also on merge-on-read (delete files change the scan accounting); C4 also on Iceberg (it
+   was Parquet only); and one DML statement's cost (`DELETE … WHERE CAST(c AS INT) = 1` on the C3 table).
+
+**Notes on seat W from the critic, adopted:**
+
+- **The walk order on nested casts.** The rule wraps the narrowing cast, not the outer widening one; DataFusion's
+  unwrap of the outer lossless cast then exposes the shield to the `preimage` arm. The walk must therefore find a
+  narrowing cast under any chain of lossless casts, `TRY_CAST` and `::` included (both plan as the same `Cast` /
+  `TryCast`), and wrap once (the walk recognises its own name).
+- **Negative halves against the kernel.** The half-away-from-zero ranges for `k < 0` must be checked against the
+  kernel's rounding of each value, not only against Spark's answer (item 2).
+- **Seat P,** if chosen, must cover the batch-adapter path too (the same `PhysicalExprSimplifier`), and its per-row
+  cast brings the kernel's refusals and ANSI raises back at scan time (wanted) with a per-row cost on every
+  filtered scan (measured in C4).
+
+**What changed:** owner questions 4 and 6 (§5) carry the new cells; no default changed. The unit split stands
+(the new shapes are all numeric). Shapes that agree and stay out of scope, measured by the critic: a cast inside
+arithmetic (`CAST(c AS INT) + 1 = 2`) and under a function (`ABS(CAST(c AS INT)) = 1`).
 
 Up: [map.md](map.md).

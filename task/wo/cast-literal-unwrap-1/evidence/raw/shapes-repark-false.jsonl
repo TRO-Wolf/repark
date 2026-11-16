@@ -1,0 +1,47 @@
+{"ansi": "false", "engine": "repark", "key": "provenance", "native": "<scratchpad>/pkg-ddu1-7b21bde3/repark/_native.abi3.so"}
+{"key": "s02/nested_int_bigint", "result": [2], "sql": "SELECT id FROM v_dec_int WHERE CAST(CAST(c AS INT) AS BIGINT) = 1"}
+{"key": "s02/nested_dec0_dec20", "result": [2], "sql": "SELECT id FROM v_dec_dec0 WHERE CAST(CAST(c AS DECIMAL(10,0)) AS DECIMAL(20,0)) = 1"}
+{"key": "s03/try_cast_int", "result": [2], "sql": "SELECT id FROM v_dec_int WHERE TRY_CAST(c AS INT) = 1"}
+{"key": "s03/try_cast_dec0", "result": [2], "sql": "SELECT id FROM v_dec_dec0 WHERE TRY_CAST(c AS DECIMAL(10,0)) = 1"}
+{"key": "s03/try_cast_bigint_int", "result": [1], "sql": "SELECT id FROM v_bigint_int WHERE TRY_CAST(c AS INT) = 1"}
+{"key": "s04/colon_int", "result": [2], "sql": "SELECT id FROM v_dec_int WHERE c::int = 1"}
+{"key": "s04/colon_dec0", "result": [2], "sql": "SELECT id FROM v_dec_dec0 WHERE c::decimal(10,0) = 1"}
+{"key": "s17/subquery", "result": [2], "sql": "SELECT id FROM (SELECT id, CAST(c AS INT) AS k FROM v_dec_int) WHERE k = 1"}
+{"key": "s23/non_ascii", "result": [2], "sql": "SELECT id FROM v_cafe WHERE CAST(`café` AS INT) = 1"}
+{"key": "spelled/is_distinct_c0", "result": [1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], "sql": "SELECT id FROM v_dec_int WHERE CAST(c AS INT) IS DISTINCT FROM 1"}
+{"key": "spelled/is_not_distinct_c0", "result": [2], "sql": "SELECT id FROM v_dec_int WHERE CAST(c AS INT) IS NOT DISTINCT FROM 1"}
+{"key": "spelled/is_distinct_c1", "result": [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13], "sql": "SELECT id FROM v_dec_int WHERE CAST(c AS INT) IS DISTINCT FROM 0"}
+{"key": "spelled/is_not_distinct_c1", "result": [10], "sql": "SELECT id FROM v_dec_int WHERE CAST(c AS INT) IS NOT DISTINCT FROM 0"}
+{"key": "spelled/not_between", "result": [1, 6, 7, 8, 9, 10, 11, 12], "sql": "SELECT id FROM v_dec_int WHERE CAST(c AS INT) NOT BETWEEN 1 AND 2"}
+{"key": "neg_half/dec0_eq_minus1", "result": [], "sql": "SELECT id FROM v_dec_dec0 WHERE CAST(c AS DECIMAL(10,0)) = -1"}
+{"key": "neg_half/dec0_lt_minus1", "result": [7, 8, 12], "sql": "SELECT id FROM v_dec_dec0 WHERE CAST(c AS DECIMAL(10,0)) < -1"}
+{"key": "s21/with_column_filter_str", "result": [2], "sql": "withColumn(\"k\", col(\"c\").cast(\"int\")).filter(\"k = 1\")"}
+{"key": "s22/with_column_filter_col", "result": [2], "sql": "withColumn(\"k\", col(\"c\").cast(\"int\")).filter(col(\"k\") == 1)"}
+{"key": "q4/tinyint/gt_top", "result": [3, 4, 6], "sql": "SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) > 127"}
+{"key": "q4/tinyint/top_lt", "result": [3, 4, 6], "sql": "SELECT id FROM v_dec_tinyint_overflow WHERE 127 < CAST(c AS TINYINT)"}
+{"key": "q4/tinyint/ge_top", "result": [2, 3, 4, 6], "sql": "SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) >= 127"}
+{"key": "q4/tinyint/le_top", "result": [1, 2, 5], "sql": "SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) <= 127"}
+{"key": "q4/tinyint/lt_bottom", "result": [5], "sql": "SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) < -128"}
+{"key": "q4/tinyint/ge_bottom", "result": [1, 2, 3, 4, 6], "sql": "SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) >= -128"}
+{"key": "q4/tinyint/eq_top_plus", "result": "ERR:PySparkException:None:Arrow error: Cast error: value of 128 is out of range", "sql": "SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) = 128"}
+{"key": "q4/smallint/gt_top", "result": [4, 5], "sql": "SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) > 32767"}
+{"key": "q4/smallint/top_lt", "result": [4, 5], "sql": "SELECT id FROM v_int_smallint WHERE 32767 < CAST(c AS SMALLINT)"}
+{"key": "q4/smallint/ge_top", "result": [3, 4, 5], "sql": "SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) >= 32767"}
+{"key": "q4/smallint/le_top", "result": [1, 2, 3, 6], "sql": "SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) <= 32767"}
+{"key": "q4/smallint/lt_bottom", "result": [6], "sql": "SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) < -32768"}
+{"key": "q4/smallint/ge_bottom", "result": [1, 2, 3, 4, 5], "sql": "SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) >= -32768"}
+{"key": "q4/smallint/eq_top_plus", "result": "ERR:PySparkException:None:Arrow error: Cast error: Can't cast value 32768 to type", "sql": "SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) = 32768"}
+{"key": "q4/int/gt_top", "result": [6, 7], "sql": "SELECT id FROM v_bigint_int WHERE CAST(c AS INT) > 2147483647"}
+{"key": "q4/int/top_lt", "result": [6, 7], "sql": "SELECT id FROM v_bigint_int WHERE 2147483647 < CAST(c AS INT)"}
+{"key": "q4/int/ge_top", "result": [5, 6, 7], "sql": "SELECT id FROM v_bigint_int WHERE CAST(c AS INT) >= 2147483647"}
+{"key": "q4/int/le_top", "result": [1, 2, 3, 4, 5, 8, 9], "sql": "SELECT id FROM v_bigint_int WHERE CAST(c AS INT) <= 2147483647"}
+{"key": "q4/int/lt_bottom", "result": [8, 9], "sql": "SELECT id FROM v_bigint_int WHERE CAST(c AS INT) < -2147483648"}
+{"key": "q4/int/ge_bottom", "result": [1, 2, 3, 4, 5, 6, 7], "sql": "SELECT id FROM v_bigint_int WHERE CAST(c AS INT) >= -2147483648"}
+{"key": "q4/int/eq_top_plus", "result": "ERR:PySparkException:None:Arrow error: Cast error: Can't cast value 2147483648 to type", "sql": "SELECT id FROM v_bigint_int WHERE CAST(c AS INT) = 2147483648"}
+{"key": "s16/view_over_view", "result": [2], "sql": "CREATE OR REPLACE TEMP VIEW w16 AS SELECT id, CAST(c AS INT) AS k FROM v_dec_int; SELECT id FROM w16 WHERE k = 1"}
+{"key": "s16/view_over_view_plain", "result": [2], "sql": "CREATE TEMP VIEW w16b AS SELECT id, c FROM v_dec_int; SELECT id FROM w16b WHERE CAST(c AS INT) = 1"}
+{"key": "s16/view_over_base_table", "result": [2], "sql": "CREATE TEMP VIEW w16c AS SELECT id, CAST(c AS INT) AS k FROM p16; SELECT id FROM w16c WHERE k = 1"}
+{"key": "s16/view_over_create_dataframe", "result": "ERR:AnalysisException:TABLE_OR_VIEW_NOT_FOUND:Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view", "sql": "createDataFrame view, then a SQL temp view over it"}
+{"key": "s05/int_fn", "result": "ERR:AnalysisException:UNRESOLVED_ROUTINE:[UNRESOLVED_ROUTINE] Cannot resolve routine `int` on search path [`system`.`builtin`, `system`.`session`,", "sql": "SELECT id FROM v_dec_int WHERE int(c) = 1"}
+{"key": "s06/bigint_fn", "result": "ERR:AnalysisException:UNRESOLVED_ROUTINE:[UNRESOLVED_ROUTINE] Cannot resolve routine `bigint` on search path [`system`.`builtin`, `system`.`session`,", "sql": "SELECT id FROM v_dec_int WHERE bigint(c) = 1"}
+{"key": "s26/explain_parquet_view", "result": ["SubqueryAlias: p16 Projection: ?table?.id Filter: ?table?.c = Decimal128(Some(100),10,2) TableScan: ?table? projection=[id, c], partial_filters=[?table?.c = Decimal128(Some(100),10,2)]", "FilterExec: c@1 = Some(100),10,2, projection=[id@0] DataSourceExec: file_groups={1 group: [[tmp/claude-1000/-home-john-CodeRepos-LocalRepark-repark/55a01d79-eed2-4007-bd58-d2a80eea197d/scratchpad/cast"], "sql": "EXPLAIN SELECT id FROM p16 WHERE CAST(c AS INT) = 1"}
