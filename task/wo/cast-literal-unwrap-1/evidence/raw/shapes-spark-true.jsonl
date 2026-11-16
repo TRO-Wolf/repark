@@ -1,0 +1,47 @@
+{"ansi": "true", "engine": "spark", "key": "provenance", "version": "4.1.2"}
+{"key": "s02/nested_int_bigint", "result": [2, 3, 4, 5], "sql": "SELECT id FROM v_dec_int WHERE CAST(CAST(c AS INT) AS BIGINT) = 1"}
+{"key": "s02/nested_dec0_dec20", "result": [1, 2, 3], "sql": "SELECT id FROM v_dec_dec0 WHERE CAST(CAST(c AS DECIMAL(10,0)) AS DECIMAL(20,0)) = 1"}
+{"key": "s03/try_cast_int", "result": [2, 3, 4, 5], "sql": "SELECT id FROM v_dec_int WHERE TRY_CAST(c AS INT) = 1"}
+{"key": "s03/try_cast_dec0", "result": [1, 2, 3], "sql": "SELECT id FROM v_dec_dec0 WHERE TRY_CAST(c AS DECIMAL(10,0)) = 1"}
+{"key": "s03/try_cast_bigint_int", "result": [1], "sql": "SELECT id FROM v_bigint_int WHERE TRY_CAST(c AS INT) = 1"}
+{"key": "s04/colon_int", "result": [2, 3, 4, 5], "sql": "SELECT id FROM v_dec_int WHERE c::int = 1"}
+{"key": "s04/colon_dec0", "result": [1, 2, 3], "sql": "SELECT id FROM v_dec_dec0 WHERE c::decimal(10,0) = 1"}
+{"key": "s17/subquery", "result": [2, 3, 4, 5], "sql": "SELECT id FROM (SELECT id, CAST(c AS INT) AS k FROM v_dec_int) WHERE k = 1"}
+{"key": "s23/non_ascii", "result": [2, 3, 4, 5], "sql": "SELECT id FROM v_cafe WHERE CAST(`café` AS INT) = 1"}
+{"key": "spelled/is_distinct_c0", "result": [1, 6, 7, 8, 9, 10, 11, 12, 13], "sql": "SELECT id FROM v_dec_int WHERE CAST(c AS INT) IS DISTINCT FROM 1"}
+{"key": "spelled/is_not_distinct_c0", "result": [2, 3, 4, 5], "sql": "SELECT id FROM v_dec_int WHERE CAST(c AS INT) IS NOT DISTINCT FROM 1"}
+{"key": "spelled/is_distinct_c1", "result": [2, 3, 4, 5, 7, 8, 9, 11, 12, 13], "sql": "SELECT id FROM v_dec_int WHERE CAST(c AS INT) IS DISTINCT FROM 0"}
+{"key": "spelled/is_not_distinct_c1", "result": [1, 6, 10], "sql": "SELECT id FROM v_dec_int WHERE CAST(c AS INT) IS NOT DISTINCT FROM 0"}
+{"key": "spelled/not_between", "result": [1, 6, 7, 8, 10, 11, 12], "sql": "SELECT id FROM v_dec_int WHERE CAST(c AS INT) NOT BETWEEN 1 AND 2"}
+{"key": "neg_half/dec0_eq_minus1", "result": [6, 7], "sql": "SELECT id FROM v_dec_dec0 WHERE CAST(c AS DECIMAL(10,0)) = -1"}
+{"key": "neg_half/dec0_lt_minus1", "result": [8, 12], "sql": "SELECT id FROM v_dec_dec0 WHERE CAST(c AS DECIMAL(10,0)) < -1"}
+{"key": "s21/with_column_filter_str", "result": [2, 3, 4, 5], "sql": "withColumn(\"k\", col(\"c\").cast(\"int\")).filter(\"k = 1\")"}
+{"key": "s22/with_column_filter_col", "result": [2, 3, 4, 5], "sql": "withColumn(\"k\", col(\"c\").cast(\"int\")).filter(col(\"k\") == 1)"}
+{"key": "q4/tinyint/gt_top", "result": [], "sql": "SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) > 127"}
+{"key": "q4/tinyint/top_lt", "result": [], "sql": "SELECT id FROM v_dec_tinyint_overflow WHERE 127 < CAST(c AS TINYINT)"}
+{"key": "q4/tinyint/ge_top", "result": "ERR:ArithmeticException:CAST_OVERFLOW:[CAST_OVERFLOW] The value 128.00BD of the type \"DECIMAL(10,2)\" cannot be cast to \"TINYINT\" due to an overflow. Use", "sql": "SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) >= 127"}
+{"key": "q4/tinyint/le_top", "result": "ERR:ArithmeticException:CAST_OVERFLOW:[CAST_OVERFLOW] The value 128.00BD of the type \"DECIMAL(10,2)\" cannot be cast to \"TINYINT\" due to an overflow. Use", "sql": "SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) <= 127"}
+{"key": "q4/tinyint/lt_bottom", "result": [], "sql": "SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) < -128"}
+{"key": "q4/tinyint/ge_bottom", "result": "ERR:ArithmeticException:CAST_OVERFLOW:[CAST_OVERFLOW] The value 128.00BD of the type \"DECIMAL(10,2)\" cannot be cast to \"TINYINT\" due to an overflow. Use", "sql": "SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) >= -128"}
+{"key": "q4/tinyint/eq_top_plus", "result": [], "sql": "SELECT id FROM v_dec_tinyint_overflow WHERE CAST(c AS TINYINT) = 128"}
+{"key": "q4/smallint/gt_top", "result": [], "sql": "SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) > 32767"}
+{"key": "q4/smallint/top_lt", "result": [], "sql": "SELECT id FROM v_int_smallint WHERE 32767 < CAST(c AS SMALLINT)"}
+{"key": "q4/smallint/ge_top", "result": "ERR:ArithmeticException:CAST_OVERFLOW:[CAST_OVERFLOW] The value 32768 of the type \"INT\" cannot be cast to \"SMALLINT\" due to an overflow. Use `try_cast` to", "sql": "SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) >= 32767"}
+{"key": "q4/smallint/le_top", "result": "ERR:ArithmeticException:CAST_OVERFLOW:[CAST_OVERFLOW] The value 32768 of the type \"INT\" cannot be cast to \"SMALLINT\" due to an overflow. Use `try_cast` to", "sql": "SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) <= 32767"}
+{"key": "q4/smallint/lt_bottom", "result": [], "sql": "SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) < -32768"}
+{"key": "q4/smallint/ge_bottom", "result": "ERR:ArithmeticException:CAST_OVERFLOW:[CAST_OVERFLOW] The value 32768 of the type \"INT\" cannot be cast to \"SMALLINT\" due to an overflow. Use `try_cast` to", "sql": "SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) >= -32768"}
+{"key": "q4/smallint/eq_top_plus", "result": [], "sql": "SELECT id FROM v_int_smallint WHERE CAST(c AS SMALLINT) = 32768"}
+{"key": "q4/int/gt_top", "result": "ERR:ArithmeticException:CAST_OVERFLOW:[CAST_OVERFLOW] The value 2147483648L of the type \"BIGINT\" cannot be cast to \"INT\" due to an overflow. Use `try_cast` to", "sql": "SELECT id FROM v_bigint_int WHERE CAST(c AS INT) > 2147483647"}
+{"key": "q4/int/top_lt", "result": "ERR:ArithmeticException:CAST_OVERFLOW:[CAST_OVERFLOW] The value 2147483648L of the type \"BIGINT\" cannot be cast to \"INT\" due to an overflow. Use `try_cast` to", "sql": "SELECT id FROM v_bigint_int WHERE 2147483647 < CAST(c AS INT)"}
+{"key": "q4/int/ge_top", "result": "ERR:ArithmeticException:CAST_OVERFLOW:[CAST_OVERFLOW] The value 2147483648L of the type \"BIGINT\" cannot be cast to \"INT\" due to an overflow. Use `try_cast` to", "sql": "SELECT id FROM v_bigint_int WHERE CAST(c AS INT) >= 2147483647"}
+{"key": "q4/int/le_top", "result": "ERR:ArithmeticException:CAST_OVERFLOW:[CAST_OVERFLOW] The value 2147483648L of the type \"BIGINT\" cannot be cast to \"INT\" due to an overflow. Use `try_cast` to", "sql": "SELECT id FROM v_bigint_int WHERE CAST(c AS INT) <= 2147483647"}
+{"key": "q4/int/lt_bottom", "result": "ERR:ArithmeticException:CAST_OVERFLOW:[CAST_OVERFLOW] The value 2147483648L of the type \"BIGINT\" cannot be cast to \"INT\" due to an overflow. Use `try_cast` to", "sql": "SELECT id FROM v_bigint_int WHERE CAST(c AS INT) < -2147483648"}
+{"key": "q4/int/ge_bottom", "result": "ERR:ArithmeticException:CAST_OVERFLOW:[CAST_OVERFLOW] The value 2147483648L of the type \"BIGINT\" cannot be cast to \"INT\" due to an overflow. Use `try_cast` to", "sql": "SELECT id FROM v_bigint_int WHERE CAST(c AS INT) >= -2147483648"}
+{"key": "q4/int/eq_top_plus", "result": [], "sql": "SELECT id FROM v_bigint_int WHERE CAST(c AS INT) = 2147483648"}
+{"key": "s16/view_over_view", "result": [2, 3, 4, 5], "sql": "CREATE OR REPLACE TEMP VIEW w16 AS SELECT id, CAST(c AS INT) AS k FROM v_dec_int; SELECT id FROM w16 WHERE k = 1"}
+{"key": "s16/view_over_view_plain", "result": [2, 3, 4, 5], "sql": "CREATE TEMP VIEW w16b AS SELECT id, c FROM v_dec_int; SELECT id FROM w16b WHERE CAST(c AS INT) = 1"}
+{"key": "s16/view_over_base_table", "result": [2, 3, 4, 5], "sql": "CREATE TEMP VIEW w16c AS SELECT id, CAST(c AS INT) AS k FROM p16; SELECT id FROM w16c WHERE k = 1"}
+{"key": "s16/view_over_create_dataframe", "result": [1, 3], "sql": "createDataFrame view, then a SQL temp view over it"}
+{"key": "s05/int_fn", "result": [2, 3, 4, 5], "sql": "SELECT id FROM v_dec_int WHERE int(c) = 1"}
+{"key": "s06/bigint_fn", "result": [2, 3, 4, 5], "sql": "SELECT id FROM v_dec_int WHERE bigint(c) = 1"}
+{"key": "s26/explain_parquet_view", "result": ["== Physical Plan == *(1) Project [id#28] +- *(1) Filter (isnotnull(c#29) AND (cast(c#29 as int) = 1)) +- *(1) ColumnarToRow +- FileScan parquet [id#28,c#29] Batched: true, DataFilters: [isnotnull(c#29"], "sql": "EXPLAIN SELECT id FROM p16 WHERE CAST(c AS INT) = 1"}

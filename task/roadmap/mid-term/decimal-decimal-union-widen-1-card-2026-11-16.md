@@ -56,4 +56,23 @@ The seat. From reading, the candidate is the set-operation decimal coercion besi
 path the DECIMAL-DOUBLE-UNION-COERCION-1 card names: step 0 must find where a union of two decimals computes a common
 type past precision 38 instead of narrowing as Spark does, and why the narrower pairs keep full scale.
 
+## Append (2026-11-16): ruled
+
+The owner's word, 2026-11-16 about 14:40 UTC, verbatim: "defaults". The rulings are recorded in full at
+[../../wo/cast-literal-unwrap-1/rulings-2026-11-16.md](../../wo/cast-literal-unwrap-1/rulings-2026-11-16.md).
+What they change for this card:
+
+- **Renamed DECIMAL-COMMON-TYPE-1.** This file keeps its name. The unit is one unit for Spark's whole decimal
+  least-common-type family: unions, comparisons, `IN`, `CASE`, `coalesce` and the other positions where Spark picks
+  one decimal type for several operands, not `UNION ALL` alone.
+- **Label-blocking.** It blocks the scoped label ICE-V2-FLAT-AWS-LABEL-1. Severity stays S1.
+- **Lossy comparison matches Spark.** RePark compares as Spark does, rounding to the common type: `DECIMAL(38,0)` 1
+  equals `DECIMAL(10,2)` 1.25, because both become `decimal(38,0)`.
+- **The order.** #1341 (DECIMAL-DOUBLE-UNION-COERCION-1 part 2), then CAST-LITERAL-UNWRAP-1, then this unit, then
+  NAN-MINMAX-1 part 2, DOUBLE-DECIMAL-DATAFRAME-1 and SIGNED-ZERO-UPDATE-IN-LIST-1.
+- **Depends on CAST-LITERAL-UNWRAP-1 for every cell with a constant.** Where a column is the operand that loses
+  digits in the common type and the other side is a constant, DataFusion's simplifier moves the rounding cast onto
+  the constant and compares exactly ([CAST-LITERAL-UNWRAP-1](cast-literal-unwrap-1-card-2026-11-16.md)). Those
+  cells cannot pass until that unit lands; column-against-column cells do not depend on it.
+
 Up: [map.md](map.md).

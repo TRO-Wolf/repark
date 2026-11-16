@@ -1,0 +1,7 @@
+native <scratchpad>/pkg-ddu1-7b21bde3/repark/_native.abi3.so
+SELECT c FROM p WHERE CAST(c AS INT) = 1 ORDER BY c -> ['1.00']
+EXPLAIN SELECT c FROM p WHERE CAST(c AS INT) = 1 RAISE AnalysisException Error during planning: table 'datafusion.public.p' not found
+EXPLAIN SELECT c FROM p RAISE AnalysisException Error during planning: table 'datafusion.public.p' not found
+EXPLAIN EXTENDED SELECT c FROM p RAISE ParseException SQL error: ParserError("Expected: an SQL statement, found: EXTENDED at Line: 1, Column: 9")
+EXPLAIN SELECT c FROM default.p RAISE AnalysisException Error during planning: table 'datafusion.default.p' not found
+EXPLAIN SELECT c FROM spark_catalog.default.p -> ['logical_plan', 'TableScan: spark_catalog.default.p projection=[c]', 'physical_plan', 'CooperativeExec IcebergTableScan projection:[c] predicate:[] N=1']
