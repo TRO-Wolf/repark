@@ -1,6 +1,6 @@
 # Card STRING-IN-COERCE-1: a STRING beside a DOUBLE or DECIMAL list in IN answers a different boolean, or refuses, where Spark answers
 
-**Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from Fable's type-pair sweep of 2026-11-16 (family 7). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2.
+**Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from Fable's type-pair sweep of 2026-11-16 (family 7). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2. Re-run on main `e50ed17f` (RePark side): unchanged; only family 10's 32 `VALUES` cells moved to equal (#1341).
 
 **Status:** PROPOSED, not dispatched; severity and label-blocking: owner to rule.
 

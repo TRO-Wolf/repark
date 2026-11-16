@@ -2,6 +2,8 @@
 
 Nineteen cards from Fable's type-pair sweep and DataFusion simplifier audit of 2026-11-16, the reports titled "Fable sweep — type-pair coercion 2026-11-16" and "Fable audit — DataFusion rewrites against Spark 2026-11-16". Both were measured before #1341 and #1345, on main's package against Spark 4.1.2, and nothing is ruled: each card is PROPOSED, not dispatched, and its severity is a proposal for the owner to rule. The five dated appends to existing cards stay in `task/roadmap/mid-term/`.
 
+Re-run on main `e50ed17f` (RePark's side only, Spark's answers kept): 16,884 cells, of which 32 moved, all to equal and all in the `values` position (sweep family 10, fixed by #1341). Every sweep cell behind the ten sweep cards is unchanged on that main; the seven audit cards were not re-run.
+
 ## Cards
 
 - [TINYINT-SMALLINT-ARITH-ANSI-1](tinyint-smallint-arith-ansi-1-card-2026-11-16.md) (proposed S1) — **card (2026-11-16, Fable's sweep family 1; not dispatched):** with ANSI on, TINYINT and SMALLINT products and sums wrap where Spark raises; INT and BIGINT already raise.

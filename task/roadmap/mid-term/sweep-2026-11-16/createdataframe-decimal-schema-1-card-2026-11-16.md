@@ -1,6 +1,6 @@
 # Card CREATEDATAFRAME-DECIMAL-SCHEMA-1: createDataFrame with a DECIMAL(20,0) or DECIMAL(38,0) schema refuses, as reported
 
-**Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from Fable's type-pair sweep report of 2026-11-16 (family 15). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3`, as the report states.
+**Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from Fable's type-pair sweep report of 2026-11-16 (family 15). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3`, as the report states. It is not a sweep matrix cell, so the re-run on main `e50ed17f` does not cover it.
 
 **Status:** PROPOSED, not dispatched; severity and label-blocking: owner to rule. **Unverified:** this clerk did not reproduce it.
 

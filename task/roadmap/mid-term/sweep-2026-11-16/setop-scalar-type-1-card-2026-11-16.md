@@ -1,6 +1,6 @@
 # Card SETOP-SCALAR-TYPE-1: EXCEPT and INTERSECT keep the left operand's integer type where Spark widens
 
-**Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from Fable's type-pair sweep of 2026-11-16 (family 5). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2.
+**Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from Fable's type-pair sweep of 2026-11-16 (family 5). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2. Re-run on main `e50ed17f` (RePark side): unchanged; only family 10's 32 `VALUES` cells moved to equal (#1341).
 
 **Status:** PROPOSED, not dispatched; severity and label-blocking: owner to rule.
 
