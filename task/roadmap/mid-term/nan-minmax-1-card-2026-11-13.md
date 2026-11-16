@@ -8,11 +8,13 @@ questions, among them Q3 (the statistics seat first, as its own PR, S1), Q4 (an 
 `collect_statistics` off), Q5 (pruning follows Spark's own reader) and Q10 (PARQUET-NAN-EQUALITY-1's constant-column
 half moves here). Evidence: [task/wo/nan-minmax-1/](../../wo/nan-minmax-1/map.md).
 
-**Severity:** S1, label-blocking. **Status:** part 1 **FIXED** on branch `fix/nan-minmax-stats-1` (not merged), after
+**Severity:** S1, label-blocking. **Status:** part 1 **MERGED** as #1333 (`d843d37e`); part 2 **open**. Part 1 was **FIXED** on branch `fix/nan-minmax-stats-1` before the merge, after
 two delta rounds: both verifiers failed #1333 on records (class (b), no class (a) S1/S2), and the first delta fixed
 verifier 1's F1. Its re-check failed the head on **N1**, a class (a) S1 that part 1 introduced, and the second delta,
 a cap exception on the #1261 precedent, fixed it (below). Items (i) and (ii) are **ruled** (owner, 2026-11-14, about
 09:50 UTC, "Go with defaults"). Part 2 **open**.
+
+**2026-11-16:** the Status line above is corrected: it read part 1 as unmerged. Part 1 merged as #1333 (`d843d37e`), and part 2 is open (records clerk, `claude-haiku-5-5`).
 
 ## Part 1: the float statistics seat (FIXED, unmerged)
 

@@ -4,11 +4,13 @@
 2026-11-11, against Spark 4.1.2; Fable guidance, 2026-11-13, which flagged it as a label blocker missing from the
 xhigh inquiry.
 
-**Status:** filed 2026-11-13, not dispatched; ruled 2026-11-13 (see the append). First put to the owner on the 2026-11-12 morning board
+**Status:** part 2 **merged** as #1341, `cb7d3943`. Filed 2026-11-13, not dispatched; ruled 2026-11-13 (see the append). First put to the owner on the 2026-11-12 morning board
 ([page](../../../docs/artifacts/morning-board-2026-11-12.html), item 2, "New S1") without a ruling. The board's
 default was to open it as the next lane unit, after signed-zero part B or ahead of it. Severity **S1**, a wrong
 write. **Label-blocking:** it is on scalar columns, so it is inside the scoped label ICE-V2-FLAT-AWS-LABEL-1 and the
 full format-v2 label.
+
+**2026-11-16:** the Status line above is corrected: part 2 merged as #1341, `cb7d3943`; it read "not dispatched" before this date (records clerk, `claude-haiku-5-5`).
 
 ## Measured (2026-11-11; not re-measured since)
 

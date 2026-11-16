@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iceberg Label Status</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --ground: #F2F5F7;
+  --panel: #FFFFFF;
+  --ink: #15232B;
+  --muted: #56666F;
+  --rule: #D5DEE3;
+  --accent: #0E6C88;
+  --accent-soft: #DCEEF3;
+  --ok: #1E7A4C;
+  --ok-soft: #DDF1E6;
+  --part: #8A6100;
+  --part-soft: #FBEFD3;
+  --hold: #A3322B;
+  --hold-soft: #F8E1DF;
+  --wait: #4F5D75;
+  --wait-soft: #E4E8F0;
+  --f-head: "IBM Plex Sans Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0E1418; --panel: #151E24; --ink: #E3EAEE; --muted: #9AAAB3; --rule: #2A3740;
+    --accent: #4DB1CF; --accent-soft: #15323D;
+    --ok: #5FC892; --ok-soft: #13301F; --part: #E0B44F; --part-soft: #332811;
+    --hold: #EE8279; --hold-soft: #3A1A17; --wait: #A9B6CC; --wait-soft: #232B38;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0E1418; --panel: #151E24; --ink: #E3EAEE; --muted: #9AAAB3; --rule: #2A3740;
+  --accent: #4DB1CF; --accent-soft: #15323D;
+  --ok: #5FC892; --ok-soft: #13301F; --part: #E0B44F; --part-soft: #332811;
+  --hold: #EE8279; --hold-soft: #3A1A17; --wait: #A9B6CC; --wait-soft: #232B38;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--ground); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 34px; }
+h1, h2, h3 { font-family: var(--f-head); text-wrap: balance; margin: 0; letter-spacing: 0.005em; }
+h1 { font-size: 2.15rem; font-weight: 700; line-height: 1.1; }
+h2 { font-size: 1.35rem; font-weight: 600; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+p { margin: 0; }
+.mono, code { font-family: var(--f-mono); font-size: 0.86em; }
+code { background: var(--accent-soft); padding: 0 4px; border-radius: 3px; overflow-wrap: anywhere; }
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.eyebrow { font-family: var(--f-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+header { display: grid; gap: 10px; border-bottom: 2px solid var(--ink); padding-bottom: 18px; }
+.scope { color: var(--muted); max-width: 68ch; }
+.asof { font-family: var(--f-mono); font-size: 0.8rem; color: var(--muted); }
+section { display: grid; gap: 14px; min-width: 0; }
+.sechead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--rule); padding-bottom: 6px; }
+.sechead .note { color: var(--muted); font-size: 0.85rem; }
+.labels { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.lab { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.lab .name { font-family: var(--f-head); font-weight: 600; font-size: 1.02rem; }
+.lab p { color: var(--muted); font-size: 0.9rem; }
+.lab.focus { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.chip { display: inline-block; font-family: var(--f-mono); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; white-space: nowrap; justify-self: start; }
+.c-ok { color: var(--ok); background: var(--ok-soft); }
+.c-part { color: var(--part); background: var(--part-soft); }
+.c-hold { color: var(--hold); background: var(--hold-soft); }
+.c-wait { color: var(--wait); background: var(--wait-soft); }
+.c-acc { color: var(--accent); background: var(--accent-soft); }
+.meter { display: grid; gap: 8px; }
+.bar { display: flex; height: 14px; border-radius: 3px; overflow: hidden; border: 1px solid var(--rule); background: var(--panel); }
+.bar span { display: block; height: 100%; }
+.bar .b-ok { background: var(--ok); }
+.bar .b-part { background: var(--part); }
+.bar .b-wait { background: var(--wait-soft); }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.85rem; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.tablebox { overflow-x: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--rule); }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--f-mono); font-size: 0.72rem; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--ground); }
+td.id { font-family: var(--f-mono); font-size: 0.8rem; white-space: nowrap; }
+td.state { white-space: nowrap; }
+.unit { font-family: var(--f-mono); font-size: 0.78rem; color: var(--accent); overflow-wrap: anywhere; }
+.blockers { display: grid; gap: 10px; counter-reset: b; }
+.blk { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; display: grid; grid-template-columns: 2.2rem 1fr; gap: 4px 12px; min-width: 0; }
+.blk::before { counter-increment: b; content: counter(b); grid-row: span 3; font-family: var(--f-head); font-weight: 700; font-size: 1.5rem; color: var(--accent); line-height: 1.1; }
+.blk .top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; min-width: 0; }
+.blk .what { color: var(--ink); }
+.blk .next { color: var(--muted); font-size: 0.88rem; }
+.blk.live { border-color: var(--accent); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.ask { border: 1px solid var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 14px 16px; display: grid; gap: 10px; }
+.ask ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.sources { color: var(--muted); font-size: 0.85rem; display: grid; gap: 4px; }
+.num { font-variant-numeric: tabular-nums; }
+@media (max-width: 520px) { h1 { font-size: 1.7rem; } th, td { padding: 8px 9px; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">RePark · Iceberg · status board</span>
+  <h1>Iceberg label status</h1>
+  <p class="scope">The scoped production label, <span class="mono">ICE-V2-FLAT-AWS-LABEL-1</span>: format-v2 tables with scalar columns, on AWS Glue and Amazon S3 Tables, through the Spark door, with one RePark writer. The owner said "Go" on 2026-11-11.</p>
+  <p class="asof">As of 2026-11-16 13:50 UTC · main <span class="mono">9062a3ca</span> · oracle Spark 4.1.2 / Iceberg 1.11.0</p>
+</header>
+
+<section aria-labelledby="h-labels">
+  <div class="sechead"><h2 id="h-labels">Where each label stands</h2></div>
+  <div class="labels">
+    <div class="lab focus">
+      <span class="chip c-part">In progress</span>
+      <span class="name">Scoped v2 label (flat, Glue + S3 Tables)</span>
+      <p>5 of 10 gates met, 1 partly met. 4 label-blocking fixes are still open; the first is in its fix round now.</p>
+    </div>
+    <div class="lab">
+      <span class="chip c-hold">Withdrawn</span>
+      <span class="name">Full format-v2 label</span>
+      <p>Withdrawn 2026-10-29. It follows the scoped label; AUD-022 and AUD-023 (nested expressions through DML) wait for it.</p>
+    </div>
+    <div class="lab">
+      <span class="chip c-wait">Hardened-narrow</span>
+      <span class="name">Format-v3 core</span>
+      <p>Unchanged until V3-LABEL-1. Nanosecond columns and struct writes stay experimental.</p>
+    </div>
+    <div class="lab">
+      <span class="chip c-acc">v1.5.6 shipped</span>
+      <span class="name">Releases</span>
+      <p>v1.5.6 tagged 2026-11-08 (<span class="mono">ae60c359</span>). The v1.5.7 tag is gate G4; it is queued after the label blockers.</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="h-gates">
+  <div class="sechead"><h2 id="h-gates">The ten gates</h2><span class="note">Ruled 2026-11-11; float keys ruled in scope the same day</span></div>
+  <div class="meter" aria-label="5 gates met, 1 partly met, 4 waiting">
+    <div class="bar"><span class="b-ok" style="width:50%"></span><span class="b-part" style="width:10%"></span><span class="b-wait" style="width:40%"></span></div>
+    <div class="legend"><span><i style="background:var(--ok)"></i>Met · 5</span><span><i style="background:var(--part)"></i>Partly met · 1</span><span><i style="background:var(--wait-soft);border:1px solid var(--rule)"></i>Waiting · 4</span></div>
+  </div>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>Gate</th><th>What it needs</th><th>State</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td class="id">G1</td><td>Signed zero, part A: float comparisons against zero match both signs</td><td class="state"><span class="chip c-ok">Met</span></td><td>#1298 <span class="mono">04d84ab9</span></td></tr>
+        <tr><td class="id">G2</td><td>A <code>ListView</code> key's inner join joins on the key (ships in v1.5.7; did not block)</td><td class="state"><span class="chip c-ok">Met</span></td><td>#1304 <span class="mono">aacefc82</span></td></tr>
+        <tr><td class="id">G3</td><td>Signed zero, part B: float grouping and join keys use one zero and one NaN</td><td class="state"><span class="chip c-ok">Met</span></td><td>#1326 <span class="mono">42284f3c</span>; the delta re-check passed on every commit</td></tr>
+        <tr><td class="id">G4</td><td>v1.5.7 released</td><td class="state"><span class="chip c-wait">Waiting</span></td><td>Queued after the label blockers (ruling of 2026-11-13, item 5)</td></tr>
+        <tr><td class="id">G5</td><td>A failed CTAS leaves nothing a catalog reader can see, on both catalogs</td><td class="state"><span class="chip c-ok">Met</span></td><td>AUD-025 fix #1303; live runs 43250430606 (Glue) and 43254301360 (S3 Tables), all green</td></tr>
+        <tr><td class="id">G6</td><td>The flat live matrix on both catalogs</td><td class="state"><span class="chip c-part">Partly met</span></td><td>Glue green (run 43364971824). S3 Tables 29 of 30 (run 43368025158); the one red seat is declared but its harness change is not built. The float-key cells need a re-run on main.</td></tr>
+        <tr><td class="id">G7</td><td>C-090, the twelve names cells</td><td class="state"><span class="chip c-ok">Met</span></td><td>Closed by citation in C-109 (2026-11-05). The audit still samples the cells on Glue.</td></tr>
+        <tr><td class="id">G8</td><td>The owner's workload, run on both catalogs</td><td class="state"><span class="chip c-wait">Waiting</span></td><td>Not run yet</td></tr>
+        <tr><td class="id">G9</td><td>The label audit: Opus 5.5, one round</td><td class="state"><span class="chip c-wait">Waiting</span></td><td>Runs after the blockers close</td></tr>
+        <tr><td class="id">G10</td><td>The label PR, with the final text and exclusions signed by the owner</td><td class="state"><span class="chip c-wait">Waiting</span></td><td>STATUS.md needs a compaction first (it was at 24,974 of its 25,000-byte limit on 11-11)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section aria-labelledby="h-open">
+  <div class="sechead"><h2 id="h-open">What still stands between main and the label</h2><span class="note">Code first, then harness and records work</span></div>
+  <div class="blockers">
+    <div class="blk live">
+      <div class="top"><h3>Mixed DECIMAL/DOUBLE unions, <code>VALUES</code> and <code>IN</code> lists</h3><span class="chip c-part">Fix round running</span></div>
+      <p class="what"><span class="unit">DECIMAL-DOUBLE-UNION-COERCION-1 part 2</span> · PR #1341 · S1. Step 4 of the DECIMAL-DOUBLE split plan; steps 1, 2, 2b and 3 are merged. Two verifiers reproduced the correctness bar with 0 regressions, but found three new defects and a cost halt: a literal <code>IN</code> through <code>F.expr</code> answers <code>[]</code> where Spark answers <code>[1]</code>, <code>LATERAL</code> over a mixed <code>VALUES</code> errors, and the internal marker function answers when a user calls it. Planning a 10,000-row <code>VALUES</code> costs 1.13x to 1.15x, against a 1.05x limit.</p>
+      <p class="next">Next: the delta builder (Opus 5.5) fixes all three and the cost, or halts to you. Then I verify, push, wait for CI, and run one Muse re-check before asking for your merge word.</p>
+    </div>
+    <div class="blk">
+      <div class="top"><h3>RePark's own float <code>max</code> and <code>min</code></h3><span class="chip c-wait">Not dispatched</span></div>
+      <p class="what"><span class="unit">NAN-MINMAX-1 part 2</span> · S1. Part 1 merged (#1333). Still open: a grouped <code>max</code> over only <code>-Infinity</code> answers <code>-1.797e308</code>, NaN must sort above <code>+Infinity</code> in grouped, ungrouped and window forms and in <code>array_min</code>/<code>array_max</code>, and <code>median</code> and <code>percentile_approx</code> over a sign-set NaN.</p>
+      <p class="next">Next: a builder brief after #1341. The RESET gap found in part 1 is its own unit (NAN-MINMAX-RESET-1, PR #1342) and does not block the label.</p>
+    </div>
+    <div class="blk">
+      <div class="top"><h3>A DOUBLE written into DECIMAL through two DataFrame doors</h3><span class="chip c-wait">Not dispatched</span></div>
+      <p class="what"><span class="unit">DOUBLE-DECIMAL-DATAFRAME-1</span> · S1 wrong write through <code>writeTo</code>. The SQL and DML stores already round the double's JDK 17 text, as Spark does (#1335). The <code>F.expr</code> literal fold and <code>fillna</code> into a DECIMAL still round by Arrow's product.</p>
+      <p class="next">Next: a builder brief; it is not ordered against the next item yet.</p>
+    </div>
+    <div class="blk">
+      <div class="top"><h3>An <code>UPDATE … WHERE v IN (w)</code> misses a <code>-0.0</code> row</h3><span class="chip c-wait">Not dispatched</span></div>
+      <p class="what"><span class="unit">SIGNED-ZERO-UPDATE-IN-LIST-1</span> · S1 wrong write, filed 2026-11-15. Over DOUBLE columns, the <code>UPDATE</code> leaves a <code>-0.0</code> row unchanged where Spark matches it against <code>0.0</code>. Main and part 1 answer alike, so it predates the coercion work.</p>
+      <p class="next">Next: a builder brief.</p>
+    </div>
+    <div class="blk">
+      <div class="top"><h3>Harness and records work before the audit</h3><span class="chip c-wait">Not started</span></div>
+      <p class="what">Three items are owed. <span class="unit">S3T-STAGE-CREATE-ORACLE-1</span> grades the S3 Tables <code>create-or-replace</code> seat as declared, but only on Spark's exact HTTP 400 and a read-back equal to Glue's. The float-key live cells need a re-run on main: 28 were known-open at the last run, which came before part B merged. Last, the measured text of the NaN exclusion you accepted: <code>max</code>, <code>min</code>, <code>greatest</code>, <code>least</code> and comparisons over a NaN computed in the same query.</p>
+      <p class="next">Next: test-only PRs, plus one <code>aws-acceptance</code> dispatch per catalog. The measurement can run now, since main has part B and the NaN write.</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="h-ask">
+  <div class="ask">
+    <h2 id="h-ask">Waiting on you</h2>
+    <ol>
+      <li><strong>Merge PR #1342</strong>, the NAN-MINMAX-RESET-1 card. It is records only, and CI is green: 24 checks pass and 2 skip.</li>
+      <li><strong>A ruling: does DECIMAL-DECIMAL-UNION-WIDEN-1 block the label?</strong> It was filed 2026-11-16 as S1. A <code>UNION ALL</code> of mixed DECIMAL types refuses where Spark narrows to fit, and neighbouring cells answer with the wrong type and values (1.25 becomes 1). Main answers the same way. My recommendation: label-blocking, since it is a wrong value on scalar columns inside the scope, and queued right after #1341, which works in the same union-typing seat.</li>
+      <li><strong>Later, not yet:</strong> approval to file the upstream DataFusion issue behind NAN-MINMAX-1. The draft is ready, but I will run its reproduction in plain DataFusion 54.1.0 before asking you.</li>
+    </ol>
+  </div>
+</section>
+
+<section aria-labelledby="h-shipped">
+  <div class="sechead"><h2 id="h-shipped">On main since the "Go" of 2026-11-11</h2><span class="note">The label path: 16 fixes plus gate G2</span></div>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>PR</th><th>Unit</th><th>What it fixed</th><th>Merge</th></tr></thead>
+      <tbody>
+        <tr><td class="id">#1298</td><td class="unit">SIGNED-ZERO-NORMALIZE-1 A</td><td>Float comparisons against zero match both signs (G1)</td><td class="id">04d84ab9</td></tr>
+        <tr><td class="id">#1303</td><td class="unit">CTAS-QUERY-FAILURE-CLEANUP-1</td><td>A CTAS whose query fails leaves no metadata behind (AUD-025, G5)</td><td class="id">ae247767</td></tr>
+        <tr><td class="id">#1304</td><td class="unit">LISTVIEW-INNER-JOIN-KEY-1</td><td>A non-hashable key joins on the key, not the cross product (G2)</td><td class="id">aacefc82</td></tr>
+        <tr><td class="id">#1313</td><td class="unit">LOCAL-DROP-RECREATE-STALE-WRITE-1</td><td>A Hadoop drop and recreate reads and writes the new table (with fork #382)</td><td class="id">59f39160</td></tr>
+        <tr><td class="id">#1314</td><td class="unit">SQL-SETOP-ALL-REFUSE-1</td><td>SQL <code>INTERSECT ALL</code> / <code>EXCEPT ALL</code> refuse instead of answering wrong</td><td class="id">6bd248ad</td></tr>
+        <tr><td class="id">#1316</td><td class="unit">FEXPR-WINDOW-NULL-ORDER-1</td><td>An <code>F.expr</code> <code>ORDER BY</code> places NULLs as Spark does</td><td class="id">51285c62</td></tr>
+        <tr><td class="id">#1319</td><td class="unit">NAN-PARTITION-VALUE-1</td><td>A NaN or infinite partition value is stored as itself, not NULL (with fork #383)</td><td class="id">7dd0ca20</td></tr>
+        <tr><td class="id">#1321</td><td class="unit">FILTER-STRING-NULL-ORDER-1</td><td>A string filter's subquery <code>ORDER BY</code> places NULLs as Spark does</td><td class="id">1d9d2808</td></tr>
+        <tr><td class="id">#1325</td><td class="unit">NAN-WRITE-CANONICAL-1</td><td>Every NaN RePark stores matches Spark's, per data-file format</td><td class="id">69aba5df</td></tr>
+        <tr><td class="id">#1326</td><td class="unit">SIGNED-ZERO-NORMALIZE-1 B</td><td>Float keys group, join and deduplicate with one zero and one NaN (G3)</td><td class="id">42284f3c</td></tr>
+        <tr><td class="id">#1327</td><td class="unit">UPDATE-SCHEMA-BATCH-MISMATCH-1</td><td>A copy-on-write <code>UPDATE</code> answers in any batch order</td><td class="id">13728631</td></tr>
+        <tr><td class="id">#1332</td><td class="unit">ZERO-PARTITION-MERGE-1</td><td><code>-0.0</code> and <code>0.0</code> keep two partitions on every write door (fork <span class="mono">bc5a9211</span>)</td><td class="id">6f9f2aae</td></tr>
+        <tr><td class="id">#1333</td><td class="unit">NAN-MINMAX-1 part 1</td><td>A plain Parquet file's NaN reads as NaN; float <code>max</code>/<code>min</code> no longer answer from the footer</td><td class="id">d843d37e</td></tr>
+        <tr><td class="id">#1335</td><td class="unit">DOUBLE-DECIMAL-STORE-ROUND-1</td><td>A DOUBLE stored into DECIMAL rounds its JDK 17 text half up (stores only)</td><td class="id">954423e0</td></tr>
+        <tr><td class="id">#1336</td><td class="unit">SIGNED-ZERO-CONST-COMPARE-1</td><td>Two constant float zeros compare as one value (split-plan step 2b)</td><td class="id">d1679e4f</td></tr>
+        <tr><td class="id">#1337</td><td class="unit">ROUND-DOUBLE-EXACT-1</td><td><code>round</code> and <code>bround</code> of a FLOAT or DOUBLE round its JDK 17 text (step 2)</td><td class="id">dc6b4c94</td></tr>
+        <tr><td class="id">#1339</td><td class="unit">DECIMAL-DOUBLE-UNION-COERCION-1 part 1</td><td>A DECIMAL beside a FLOAT or DOUBLE unifies to double and rounds once (step 3)</td><td class="id">a06c1088</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="sources">Also on main for v1.5.7, outside the label's scope: native-door writes that would store nothing now refuse (#1331), and <code>repark.sql()</code> refuses CTAS into Iceberg (#1317). Test-only PRs #1297–#1311 and #1315 put the G5 and G6 live cells on main.</p>
+</section>
+
+<section aria-labelledby="h-after">
+  <div class="sechead"><h2 id="h-after">Ruled for after the label</h2></div>
+  <div class="two">
+    <div class="panel">
+      <h3>First after the label</h3>
+      <ul class="plain">
+        <li><span class="unit">NAN-COMPARE-SPARK-1</span>: Spark's NaN comparison semantics, with <span class="unit">SIGNED-ZERO-PARTITION-FILTER-1</span> as its pruning unit</li>
+        <li><span class="unit">SQL-SETOP-ALL-MULTISET-1</span> (S2): <code>INTERSECT ALL</code> / <code>EXCEPT ALL</code> answer Spark's multiset in place of today's refusal</li>
+        <li><span class="unit">S3T-CTAS-SHELL-CREATE-1</span>: an S3 Tables CTAS creates its entry the way the AWS jar does</li>
+        <li><span class="unit">AGG-ORDER-BY-ACCEPTED-1</span> (S3): refuse aggregate <code>ORDER BY</code> on every door</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Not blocking, queued</h3>
+      <ul class="plain">
+        <li><span class="unit">NAN-MINMAX-RESET-1</span>: <code>RESET</code> of a guarded key returns to RePark's default (after #1341; PR #1342 cards it)</li>
+        <li><span class="unit">DOUBLE-DECIMAL-CAST-PERF-1</span> (S4): the speed work behind the round and store cost exceptions</li>
+        <li>Six cards from the 11-15 backlog (#1340), all pre-existing on main: <code>ceil</code>/<code>floor</code> with a scale, float division type, decimal <code>round</code> type, <code>CASE</code> depth, a float-to-decimal overflow, and the decimal union above</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="h-src">
+  <div class="sechead"><h2 id="h-src">Sources</h2></div>
+  <div class="sources">
+    <p><code>git log origin/main</code> at <span class="mono">9062a3ca</span>; <code>gh pr list</code> and <code>gh pr checks 1342</code>, both 2026-11-16 13:50 UTC.</p>
+    <p><code>STATUS.md</code> (Iceberg maturity, release state); <code>task/wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-13.md</code>; <code>task/roadmap/mid-term/map.md</code> and the cards named above.</p>
+    <p>The live <code>aws-acceptance</code> run ids are as the orchestrator log recorded them. The #1341 findings come from both verifier verdicts and the orchestrator's own reproduction against Spark 4.1.2.</p>
+  </div>
+</section>
+
+</div>
+</body>
+</html>
