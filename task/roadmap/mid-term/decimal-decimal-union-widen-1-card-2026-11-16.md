@@ -75,4 +75,8 @@ What they change for this card:
   the constant and compares exactly ([CAST-LITERAL-UNWRAP-1](cast-literal-unwrap-1-card-2026-11-16.md)). Those
   cells cannot pass until that unit lands; column-against-column cells do not depend on it.
 
+## Append 2026-11-16: the c2 cell (records clerk, `claude-haiku-5-5`)
+
+`VALUES (1), (decimal(10,2))` types `decimal(22,2)` on both repark builds of the #1341 re-check, where Spark types `decimal(12,2)`. The values are equal in both. The verdict classes it as a pre-existing int and decimal precision gap (class c, reproduced in both ANSI modes). It is a step 0 cell for this unit, the unit this card's rename note names DECIMAL-COMMON-TYPE-1. Source: the #1341 re-check verdict, held outside the repository. The text above is unchanged.
+
 Up: [map.md](map.md).
