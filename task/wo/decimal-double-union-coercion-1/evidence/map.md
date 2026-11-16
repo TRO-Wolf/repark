@@ -10,6 +10,8 @@
 - [fix/](fix/map.md) — part 1's build evidence.
 - [part2-step0/](part2-step0/map.md) — step 0 of part 2 on main `a06c1088` (2026-11-15): the seat-V cells
   re-measured, the new `IN`, union, fragment, MERGE, RANGE-frame and tripwire cells, and the `IN` cost rows.
+- [part2/](part2/map.md) — part 2's build (2026-11-16): the pins' red and green runs, the bar (the joined cells,
+  `p2_cells`, the critic's probes, part 1's preimage set) and the cost table ([part2/cost.md](part2/cost.md)).
 
 ## Provenance
 

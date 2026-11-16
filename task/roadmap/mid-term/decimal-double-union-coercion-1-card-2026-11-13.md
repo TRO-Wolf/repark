@@ -156,3 +156,67 @@ recommendation it adopts:
 - an `IN` of four or more DOUBLE constants against a DECIMAL column is part 1's temporary cost exception. It
   answers correctly and measures 3.862x at 100M rows (`d10`, four constants);
 - part 2 owes the rewrite, listed under "What part 2 still owes" above.
+
+## Append (2026-11-16): part 2, built
+
+**Sources:** the owner's ruling, 2026-11-16, about 01:54 UTC, verbatim: "Defaults. Go ahead and proceed with any
+defaults for the next 8 hours". It adopts the default of each step 0 question: the #1339 regression is fixed inside
+part 2 by seat V (not reverted); Q1 (a), `L = 32`; Q2 yes, no DML marker position; Q3 yes, the stale outer union is
+part 2's; Q4 accepted on the critic's condition. The orchestrator capped the unit at 10 product files. Evidence:
+[evidence/part2/](../../wo/decimal-double-union-coercion-1/evidence/part2/map.md); inventory section J's build note.
+
+**Status: part 2 BUILT on the Spark door (branch `fix/decimal-double-coercion-part2`, not merged).**
+
+**What each seat does:**
+- **Seat V** (`crates/repark-spark/src/values_marker.rs`, `values_marker/consume.rs`). Every Spark-door seat that plans
+  user text wraps each cell of a multi-row `VALUES` in an identity marker before planning: the passthrough (and its
+  `EXPLAIN` arm), `restate_range_frames_and_replan`, the MERGE `USING` source, the `INSERT OVERWRITE` empty-target
+  validation, the `F.expr` / `selectExpr` fragment, and a Spark-door `filter(str)`. `spark_values_typing`, at index 1
+  of the Spark-door analyzer list, types a column whose marked cells hold a DECIMAL and a FLOAT or DOUBLE as `double`
+  (a target-typed column casts through `double` to its target) and drops every other marker. A `VALUES` under
+  `RecursiveQuery` keeps the planner's type. **The tripwire:** an unmarked mixed multi-row `VALUES` and a stray
+  marker refuse with a plan error naming this unit.
+- **The stale outer union** (seat E, `decimal_float_widen.rs`): a union whose inputs no longer mix but whose schema
+  differs from its first input's is rebuilt, so three or more branches with the DECIMAL first are `double`.
+- **The `IN` rewrite** (`DecimalInRanges`, `decimal_float_widen.rs`): an optimizer rule appended by
+  `ctx.add_optimizer_rule`, so it runs at the end of each optimizer pass, after `push_down_filter`, and rewrites every
+  node's expressions, `TableScan.filters` included. Form 1 (a decimal `IN` list) when every constant's range holds one
+  decimal, which always holds for precision 15 or less; form 2 (the members plus up to 32 ranges joined by `OR`); else
+  the per-row form.
+- **The retirement:** `widen_decimal_against_float` is removed; seat E answers its four literal shapes. The gate pinned
+  them through `F.expr` on a Spark-door and a native-door frame before and after; no native answer moved.
+
+**Files (9 product files of the cap of 10, plus the `lib.rs` `mod` line and the native registration line):**
+`values_marker.rs` (new), `values_marker/consume.rs` (new), `extension.rs`, `spark_ast.rs`, `merge.rs`,
+`insert_overwrite.rs`, `extension/decimal_float_widen.rs`, `spark_literal_typing.rs` (repark-spark), and
+`column/expr_build.rs` (repark-python); `lib.rs` and `session_runtime.rs` take one line each.
+`decimal_double.rs` is not touched: the `IN` decision sits beside the rule and calls the public bound search.
+
+**Correction to #1339's claim.** Part 1's records said loose unions were fixed. A union of three or more branches whose
+first branch is the DECIMAL stayed wrong until part 2 (finding 1): the SQL planner builds `Union(Union(A, B), C)`
+with loose types and the outer schema kept `decimal(30,15)`. Part 1's `merge_union_src` / `merge_union_big`
+attribution to `merge.rs` was this shape.
+
+**The cells part 1 moved and part 2 restores.** Part 1 moved 11 cells from EQUAL to WRONG, all one class: a DOUBLE whose
+`decimal(30,15)` image collides with a truncated `VALUES` cell (`z = 1e-20` against `VALUES (0.1), (1e-20)`): plain
+`IN (subquery)`, `IN` through a CTE, correlated `EXISTS`, an equi-join on a `VALUES` derived table, `INTERSECT`
+against a `VALUES` leg, `IN` and a join against a temp view over `VALUES`, the three fragment cells, and a DataFrame
+join over a `VALUES` frame. Seat V restores all 11, and the `0.0` / seven `-0.0` neighbours wrong on both mains. Part 1
+fixed 25 cells in the same family (`negtiny`, `round16`, `big` across the same shapes); they stay fixed.
+
+**The `IN` exception** closes for precision 15 or less. At precision 16 or more with 5 or more ranges it narrows to the
+measured figures in [evidence/part2/cost.md](../../wo/decimal-double-union-coercion-1/evidence/part2/cost.md) (Q1 (a)).
+
+**Finding 3, qualified:** every `WHERE` subquery the identity path declines refuses, and a `VALUES` source is always
+declined, so `DELETE` / `UPDATE … WHERE v IN (SELECT … VALUES …)` refuses, unchanged (copy-on-write and merge-on-read).
+Identity-admissible table-backed forms (`DELETE … WHERE id IN (SELECT id FROM src)`, a qualified correlated `EXISTS`)
+execute correctly. Cards: `repark-sql-update-subquery-where-1` (WHERE) and `UPDATE-SUBQUERY-STORE-1` (SET).
+
+**What part 2 leaves undone:**
+- `INTERSECT ALL` / `EXCEPT ALL` over a mixed `VALUES` leg refuse by design (SQL-SETOP-ALL-REFUSE-1).
+- The DML `WHERE`-subquery refusal above (its two cards).
+- A native-door frame over an `F.expr` `VALUES` subquery keeps DataFusion's answer (Q2, Q4).
+- The recursive CTE over `VALUES` keeps main's refusal (RECURSIVE-CTE-JOIN-ERROR-1).
+- `<lit> IS DISTINCT FROM <col>` ([DISTINCT-FROM-LITERAL-LEFT-1](distinct-from-literal-left-1-card-2026-11-15.md)).
+- A `VALUES` nested in an insert source whose target type equals the planner's own common type is typed standalone
+  (no measured cell reaches it); no card, named here.

@@ -331,7 +331,7 @@ where this section moves them; `spark_ast.rs` is unchanged (parse `:204`, identi
 
 | # | seat | file:line at `a06c1088` | needs the marker? | how the tripwire catches a miss |
 |---|---|---|---|---|
-| J1 | the passthrough, every statement the router passes through: standalone `VALUES`, `INSERT … VALUES` / `SELECT`, CTAS and RTAS (`ctas.rs:204`), `INSERT OVERWRITE` (`insert_overwrite.rs:52, 85, 114, 131, 150, 224, 455, 550, 603, 709, 724`), `BY NAME` (`insert_by_name.rs:217`, `insert_by_name/evolution.rs:195`), `replaceWhere` (`router/insert_positional/replace_where.rs:399`), partition append (`partition_append.rs:256`), catalog ops (`catalog_ops.rs:94`), temp and Iceberg views (`view_ddl/temp_view.rs:424` → `view_ddl/read.rs:286` → `view_dispatch.rs:56`) | `crates/repark-spark/src/spark_ast.rs:190` `execute_passthrough_inner`; one AST pass after the INSERT rewrites (`:222-235`) and before the plan (`:249`) | **yes**, one position. The second position the sketch proposed (before `:213` for `DELETE` / `UPDATE`) is not needed: their only `VALUES` would be in a `WHERE` subquery, which refuses today | the plan reaches the session list at `:273`; an unmarked mixed `VALUES` refuses there |
+| J1 | the passthrough, every statement the router passes through: standalone `VALUES`, `INSERT … VALUES` / `SELECT`, CTAS and RTAS (`ctas.rs:204`), `INSERT OVERWRITE` (`insert_overwrite.rs:52, 85, 114, 131, 150, 224, 455, 550, 603, 709, 724`), `BY NAME` (`insert_by_name.rs:217`, `insert_by_name/evolution.rs:195`), `replaceWhere` (`router/insert_positional/replace_where.rs:399`), partition append (`crates/repark-spark/src/router/insert_positional/partition_append.rs:256`), catalog ops (`catalog_ops.rs:94`), temp and Iceberg views (`view_ddl/temp_view.rs:424` → `view_ddl/read.rs:286` → `view_dispatch.rs:56`) | `crates/repark-spark/src/spark_ast.rs:190` `execute_passthrough_inner`; one AST pass after the INSERT rewrites (`:222-235`) and before the plan (`:249`) | **yes**, one position. The second position the sketch proposed (before `:213` for `DELETE` / `UPDATE`) is not needed: their only `VALUES` would be in a `WHERE` subquery, which refuses today | the plan reaches the session list at `:273`; an unmarked mixed `VALUES` refuses there |
 | J2 | `restate_range_frames_and_replan` | `spark_ast.rs:551-573` re-parses the original text | **yes**: the same pass after its rewrites (`:566`), before `plan_statement_with_column_repair` (`:568`) | its plan returns to `:258` and reaches `:273`; measured: `range/*` are wrong on main, so a miss would refuse, not answer |
 | J3 | the MERGE source | `crates/repark-spark/src/merge.rs:147` → `source_table` `:537-560`, rendered at `:553` and re-planned by `ctx.sql` (`repark-iceberg/src/write/merge/mod.rs:402, 412, 516`, `merge/insert.rs:122`) | **yes**: the pass runs over `rendered` before `render_for_reparse` (`:553`). The marker renders as a function call and survives into every `ctx.sql`. `merge.rs` is at 991 lines of the 1,000 ceiling, so the call is one line | `ctx.sql` uses the session context, so the list at idx 1 sees an unmarked mixed `VALUES` and refuses. `merge_fragments.rs:57, 65` plans `SELECT * … LIMIT 0` with `statement_to_plan` for names only: no analyzer, no type read, not a seat |
 | J4 | `F.expr` and `selectExpr` fragments | `crates/repark-python/src/column/mod.rs:41-46` → `expr_build.rs:274-322` (`sql_context`, the door-free `build_expr_context`) → `plan_expr_column` | **yes**: the pass over the parsed fragment expression before it is planned. The marker UDF is registered in `build_expr_context` so the fragment plans | the fragment's subquery plan is re-analyzed by the frame's own list (Spark door), where the tripwire sees it. A fragment on a native-door frame keeps an identity marker call: answers unchanged (Q2), pinned |
@@ -353,7 +353,7 @@ that wraps a source the passthrough or `merge.rs` already marked.
 | DataFusion `create_view` `apply_type_coercion` (`datafusion-54.1.0/src/execution/context/mod.rs:931, 957, 965`) | **no, because** the Spark door never reaches it: `CREATE [TEMP] VIEW` goes to `view_ddl` (J1), whose body is re-planned through the passthrough at each scan | no | no |
 | the PREPARE arm (`pre_execute.rs:94-104`) | through J1 | yes (the session analyzer) | yes |
 | `to_recursive_query` (`datafusion-expr-54.1.0/src/logical_plan/builder.rs:176-198`, `coerce_plan_expr_for_schema` `:193-194`) | yes (J1 marks every `VALUES`) | **must skip a `Values` under `RecursiveQuery`**: the recursive term is already cast to the anchor's planned type, so rebuilding the anchor would leave it stale. Drop the markers there and keep the planner's type (excluded by design; RECURSIVE-CTE-JOIN-ERROR-1) | no refusal under `RecursiveQuery` |
-| `insert_to_plan` (`datafusion-sql-54.1.0/src/statement.rs:2358`; the projection without a cast) | yes | yes: the target-typed branch keeps the target schema, so the projection stays valid | yes |
+| `insert_to_plan` (`datafusion-sql-54.1.0/src/statement.rs:2358`, re-read 2026-11-16: the `fn insert_to_plan(` line is 2358, its parameter list closes at 2365 and the body opens at 2366; the projection without a cast is `:2475-2480`) | yes | yes: the target-typed branch keeps the target schema, so the projection stays valid | yes |
 | `SimplifyExpressions`, `OptimizeUnions`, `PushDownFilter` into `TableScan.filters`, `OptimizeProjections` | n/a | **no, because** the consumer runs in the analyzer and leaves no marker; these see the typed plan | no |
 | stored plans: views (re-planned text, J1), prepared plans (J7), `CACHE TABLE` (unsupported on the Spark door), DataFrame temp views (`createOrReplaceTempView` stores the analyzed plan: consumed already) | as listed | consumed before storage, or re-planned | as listed |
 
@@ -368,5 +368,23 @@ that wraps a source the passthrough or `merge.rs` already marked.
   `CAST(…)` expressions, and folding them there would use Arrow's DECIMAL→DOUBLE, not K2.
 - **The decision** is a pure function beside the bound search in
   `crates/repark-common/src/java_double/decimal_double.rs` (`decimal_preimage_of_double` `:79`).
+
+### Part 2 build (2026-11-16): what the build changed in this section
+
+- **Citations corrected** (critic §3): J1's partition append is
+  `crates/repark-spark/src/router/insert_positional/partition_append.rs:256`, and the `insert_to_plan` line is read
+  above.
+- **The marker seats as built:** J1 marks after the INSERT rewrites in `execute_passthrough_inner` and inside the
+  `EXPLAIN` arm (`values_marker::mark_df_statement`); J2 marks after `rewrite(inner)`; J3 marks the `USING` factor in
+  `execute_merge` before `lower`, not inside `source_table` (`lower` has no session), so it is two lines, not one; J4
+  plans the fragment through `plan_marked_sql` and marks the unresolved-column fallback; J5 marks a Spark-door
+  `filter(str)` and the folded-qualifier re-parse; J6 plans the validation through `plan_marked_sql`. Every seat
+  marks only when the session registers the marker (`session_marks_values`), so a context built without
+  `SparkExtension` (the crate's own test sessions) plans as before.
+- **Seen at the seat, as built:** a `F.expr` fragment analyzed by `build_expr_context` reaches the frame's list with
+  its cells aliased and, for a DOUBLE cell, the marker under `__repark_decimal_cast_nullable__`; the consumer finds
+  the one marker anywhere in a cell under its alias. A `VALUES` inside an `INSERT … SELECT` source is typed to the
+  target by the planner (the table schema reaches nested `VALUES`), so the consumer chooses the placement by type: a
+  column whose type is the planner's own common type is standalone, any other is target-typed.
 
 Up: [map.md](map.md).
