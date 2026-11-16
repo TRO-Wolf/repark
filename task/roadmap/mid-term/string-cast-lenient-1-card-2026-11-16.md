@@ -46,4 +46,8 @@ The seats are in [STRING-CAST-SILENT-1](string-cast-silent-1-card-2026-11-16.md#
 
 One build with STRING-CAST-SILENT-1, queued at the end of the current blocker list, after SIGNED-ZERO-UPDATE-IN-LIST-1. Until that build lands, these refusals are exclusions in the scoped label ICE-V2-FLAT-AWS-LABEL-1. If the build lands before the label, the exclusions drop.
 
+## Append (2026-11-16): the comparison positions, from Fable's sweep
+
+Fable's type-pair sweep of 2026-11-16 (family 11) found the same loud refusal in comparisons, which the list above (CAST, the write statements and the readers) does not name. With ANSI off, `int_col = '1.25'`, `int_col IN ('1.25')` and `int_col < '1.25'` refuse on main with `Cannot cast string '1.25' to value of Int32 type`, where Spark answers (cells `f:eq:INT:STR_NUM`, `f:in:INT:STR_NUM`, `f:lt:INT:STR_NUM`, class R). With ANSI on both engines refuse (class B). The cited cells use INT; other pairs in the sweep are not quoted here. The silent cells stay on STRING-CAST-SILENT-1. Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2. Reproduction: `python3 <scratchpad>/sweep/v.py f:eq:INT:STR_NUM f:in:INT:STR_NUM`, with `<scratchpad>` the Fable sweep scratch folder (not committed).
+
 Up: [map.md](map.md).

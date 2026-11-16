@@ -78,3 +78,9 @@ COALESCE-ANSI-WIDEN-1, not to this unit.
   · Experiment (evidence location):
   `/tmp/oc-worker/direct/wo/review-888-fable/README.md` with
   `exp-rule-before-coercion.diff` and `p12-exp.json`
+
+
+
+## Append (2026-11-16): nullif takes the common type, from Fable's sweep
+
+Fable's type-pair sweep of 2026-11-16 (family 6) measured `nullif` beside two integer widths: `nullif(INT, BIGINT)` types `int` on Spark and `bigint` on main, in both ANSI modes (cells `f:nullif:INT:BIGINT` and `t:nullif:INT:BIGINT`, class T). The values agree in the measured rows, so only the type differs. This card names `nullif` in the nvl family's per-mode typing, so the cell belongs to this seat. Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2. Reproduction: `python3 <scratchpad>/sweep/v.py f:nullif:INT:BIGINT`, with `<scratchpad>` the Fable sweep scratch folder (not committed).
