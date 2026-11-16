@@ -29,7 +29,7 @@ the Spark-door analyzer list.
   - a target-typed column (an `INSERT … VALUES` source directly under the insert projection, or a `VALUES` the
     planner typed to the target inside an insert source) becomes `CAST(CAST(x AS DOUBLE) AS <target>)` and keeps
     its type: the inline table first, then the store cast, in Spark's order;
-  - otherwise the markers are dropped and the planner's type stays (a marked `NULL` under a planner cast becomes
+  - otherwise the markers are dropped and the planner's type stays (a planner cast over a marked bare `NULL` becomes
     the typed null literal the planner writes for an unmarked one). A user's cast from DOUBLE to DECIMAL beside a
     decimal cell gets a same-type outer cast, so the second analyzer pass cannot read it as a planner cast.
 

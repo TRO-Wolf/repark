@@ -321,14 +321,14 @@ fn widened_value(cell: &Expr, target: &DataType, placement: Placement, empty: &D
 }
 
 fn stripped_cell(cell: &Expr) -> Result<Expr> {
-    let stripped = cell.clone().transform_up(strip_marker).data()?;
-    if let Expr::Cast(cast) = unaliased(&stripped)
-        && matches!(cast.expr.as_ref(), Expr::Literal(ScalarValue::Null, _))
+    if let Expr::Cast(cast) = unaliased(cell)
+        && values_cell_argument(&cast.expr)
+            .is_some_and(|argument| matches!(argument, Expr::Literal(ScalarValue::Null, _)))
     {
         let typed = Expr::Literal(ScalarValue::try_from(cast.field.data_type())?, None);
-        return Ok(realiased(&stripped, typed));
+        return Ok(realiased(cell, typed));
     }
-    Ok(stripped)
+    cell.clone().transform_up(strip_marker).data()
 }
 
 fn type_values(values: Values, forced: Placement) -> Result<Values> {
