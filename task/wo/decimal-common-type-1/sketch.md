@@ -23,9 +23,10 @@ Every statement below rests on cells in the [domain table](domain-table.md):
    fits 38, else `(38, max(0, scale − (range + scale − 38)))`. All 14 pairs' union types match it.
 2. **An integer operand** takes Spark's decimal form: `TINYINT` (3,0), `SMALLINT` (5,0), `INT` (10,0), `BIGINT`
    (20,0) — `i64h`, `i32w30`, `i16w34`, `i8w36` and `h = CAST(1 AS BIGINT)` round as these predict.
-3. **An integer literal in a comparison** takes its own digits, not its type's form: `w30 = 1` and `h = 1` do not
-   round on Spark (with `INT`'s (10,0), `w30 = 1` would be true at row 1). The function needs the literal, not only
-   its type.
+3. **An integer literal in a binary comparison** (`=`, `<=>`, simple `CASE`, `BETWEEN`) takes its own digits, not
+   its type's form: `w30 = 1` and `h = 1` do not round on Spark (with `INT`'s (10,0), `w30 = 1` would be true at
+   row 1). **In an `IN` list or `IN` subquery it takes the integer's form** (revision M3: `w30 IN (1)` is true at
+   rows 1 and 5 on Spark). The function needs the literal and the position, not only the type.
 4. **Unions round once per binary node, bottom up.** `c ∪ d ∪ a` rounds 0.49 → 0.5 → 1 and 1.45 → 1.5 → 2 (through
    the inner node's `(38,1)`); `a ∪ c ∪ d` rounds 0.49 → 0 and 1.45 → 1. The DataFrame chain `union().union()` does
    the same. RePark's initial plan nests binary unions in Spark's shape
@@ -46,6 +47,11 @@ cells, 612 wrong. Controls: 161 of 161 agree in the core positions. Per door: Sp
 132 of 136, `F.expr` 38 of 40, Iceberg 43 of 43 (38 wrong writes, 5 wrong partitioned reads). Every wrong write is
 named in [domain-table.md](domain-table.md#iceberg-local-v2-hadoop-catalog-every-wrong-write).
 
+**Revised after the critic** ([domain-table.md](domain-table.md#after-the-critic-revision-2026-11-16)): 946
+common-type cells per mode, **890 wrong** with ANSI off and 884 plus 8 both-raise with ANSI on, once the set-operation
+membership cells and the 52 revision cells (map keys, `USING`, `IN` literals, set operations, pin candidates) are
+counted; native 632 of 675.
+
 **Reach (measured, not reasoned):** a plain literal beside a `DECIMAL(38,0)` column (`a = 1.25`, `a > 0.5`,
 `a IN (1.25, 2.5)`) answers unlike Spark, and **raises** on main when the column holds 37 or 38 integer digits;
 `HAVING sum(k28) = <DECIMAL(10,4)>` and `avg(k28) = max(a)` miss Spark's groups; `BIGINT` beside a `DECIMAL(38,20)`
@@ -57,7 +63,9 @@ raises for any value past 18 digits.
 under the 912-line `decimal_float_widen.rs`), with one entry, `spark_decimal_common_type(operands) ->
 Option<DataType>`:
 
-- inputs are the operand types plus, per operand, whether it is an integer literal and its digits (§2 rule 3);
+- inputs are the operand types, the position's mode (binary comparison, `IN`, or unification), and per operand
+  whether it is an integer literal and its digits (§2 rule 3: own digits in a binary comparison, the type's form in
+  the `IN` mode);
 - integers map to Spark's forms (§2 rule 2), then the fold of §2 rule 1 runs over all operands at once;
 - it returns `None` (no rewrite) when every operand already has the result type, or when DataFusion's rule gives
   the same type, so the rewrite only fires when `range + scale > 38` or an integer literal needs its own digits;
@@ -80,6 +88,15 @@ and its single rewrite walk (`transform_up_with_subqueries(rewrite_plan)`, `:37`
   `array_union` stays out, since Spark refuses two element types there (§9);
 - decimal beside float keeps priority: a position with a float is part 1's `double`, unchanged.
 
+**The five explicit changes** beyond today's lists (after the critic): (1) seat V's gate at `consume.rs:278`;
+(2) `map_concat` and `array_contains` join the function lists; (3) struct fields recurse in `union_positions`
+(`:250`) and the function; (4) **map keys**: `MAP_CONSTRUCTORS` (`:27`, `function_positions` `:108-110`) gains the
+key positions `(0..arity).step_by(2)` and `map_concat`'s argument maps their key type, and a key collision after
+rounding raises `DUPLICATED_MAP_KEY` as Spark does (revision M1); (5) an **`IN` mode** in the shared function, so an
+integer literal in an `IN` list or `IN` subquery takes its type's form while `=` keeps its own digits (revision M3).
+Aliased `USING` joins and set-operation membership need no new seat (`rewrite_join`, `:395`, already sees their keys;
+revision M2, M4), only pins.
+
 **Seat V.** `column_placement` (`values_marker/consume.rs:254`) calls the same function for an all-decimal or
 integer column (today it returns `None` at `:278` unless decimal and float mix). `Standalone` retypes the field and
 casts each cell; `Target` (`INSERT … VALUES`, `type_insert_source`, `:90`) casts each cell to Spark's type and then
@@ -95,12 +112,15 @@ and wraps the column-loses-digits casts against constants (inventory). No change
 |---|---|
 | `=`, `<>`, `<`, `<=`, `>`, `>=`, `<=>`, `BETWEEN`, `IN` list, `NOT IN`, simple and searched `CASE`, `if`, `nvl2`, `coalesce`, `greatest`, `least`, `array`, `map`, `nullif` | today's expression positions |
 | `array_contains`, `map_concat` | added to the function lists |
+| `map` and `map_concat` **keys** | change (4); collisions raise `DUPLICATED_MAP_KEY` |
+| `IN` lists and `IN` subqueries with integer literals or integer columns | change (5), the `IN` mode |
+| aliased `JOIN … USING (k)` (inner, left, full), DataFrame `join(…, "k")` | `rewrite_join` on the `USING` keys |
 | `nvl` / `ifnull` | the walk casts, but DataFusion's `nvl` then makes `double` (§9, a separate card); the cast is harmless |
 | `UNION`, `UNION ALL`, nested, `EXCEPT`, `INTERSECT`, struct fields in a union | `rewrite_union` per binary node; `rewrite_join`'s set-operation form; the function's struct recursion |
 | join keys, `IN (subquery)`, `NOT IN (subquery)`, scalar subquery, correlated `EXISTS` | `rewrite_join`; `widen_in_subquery`; the comparison inside the subquery's filter |
 | `HAVING`, grouping keys (`GROUPING SETS`, `ROLLUP` over `coalesce`) | the filter's and projection's expressions |
 | multi-row `VALUES`, `INSERT … VALUES` | seat V |
-| `lag`/`lead` defaults, `USING` on a full outer join, `RANGE` offsets, `PIVOT` | refused on main for other causes (§9); the rewrite applies once those land (`lag`'s default is an argument after the first) |
+| `lag`/`lead` defaults, `USING` over two unaliased derived tables, `RANGE` offsets, `PIVOT` | refused on main for other causes (§9); the rewrite applies once those land (`lag`'s default is an argument after the first) |
 | DataFrame, `F.expr`, Iceberg `INSERT`/CTAS/RTAS/`DELETE`/`UPDATE`/`MERGE` | the same session analyzer (inventory) |
 | native `repark.sql()` | not covered (no Spark extension); carded, as parts 1 and 2 did |
 
@@ -152,6 +172,12 @@ carries no such value, the build adds the carrier with `SET`/`RESET` pins (NAN-M
   `DECIMAL(10,2)` column, `WHERE c = CAST('1' AS DECIMAL(38,0))`: files scanned equal those of the hand-written
   range `c >= 0.50 AND c < 1.50`.
 
+- **K4, wide `CASE` (after the critic), held at 1.05x:** planning time of a 200-branch searched `CASE` over
+  `DECIMAL(10,2)` and `DECIMAL(12,4)` results (the walk visits every branch), head over main.
+- **K5, DML planning (after the critic), held at 1.05x:** planning plus execution of a `DELETE` and an `UPDATE` with
+  a 200-comparison predicate on an Iceberg v2 table of no pair past 38: `predicate_dml.rs:376` re-plans the predicate
+  through the session, so the walk runs again on that path.
+
 ## 8. How sweep families 3 to 6 (and 10) join the same function later
 
 The function's contract is "Spark's least common type of these operands at this position". Each family is a new
@@ -172,14 +198,20 @@ input class or a new position rule behind the same entry, not a new walk:
 
 **Recommendation: one unit for the core family now**, the Spark door only, with these positions carded:
 
-- **In the unit** (825 wrong cells per mode on the Spark door, all 38 wrong writes): comparisons, `IN`, `BETWEEN`,
-  `CASE`, `if`, `coalesce`, `greatest`/`least`, `array`, `map`, `map_concat`, `array_contains`, `nvl2`, `nullif`'s
-  comparison, unions and set operations (with struct fields), joins and subqueries, `HAVING` and grouping keys,
+- **In the unit** (890 wrong cells per mode on the Spark door after the critic, all 38 wrong writes): comparisons,
+  `IN` (with integer literals in the `IN` mode), `BETWEEN`, `CASE`, `if`, `coalesce`, `greatest`/`least`, `array`,
+  `map` and `map_concat` keys and values, `array_contains`, `nvl2`, `nullif`'s comparison, unions (`UNION DISTINCT`
+  too) and set operations with their **membership rows** (`INTERSECT`, `EXCEPT`, DataFrame `intersect`/`subtract`),
+  struct fields, joins including **aliased `USING`** (inner, left, full) and DataFrame `join(…, "k")`, subqueries,
+  `HAVING`, aggregates over `CASE` and unions, and grouping keys,
   multi-row `VALUES` and `INSERT … VALUES`, the DataFrame and `F.expr` doors, and every Iceberg statement named in
   the domain table. They share one function and one walk; splitting them would put two rules on one seat.
 - **Carded, other causes** (each refuses or answers unlike Spark for the control pair too): `nvl`/`ifnull` making
-  `double` (NVL-DECIMAL-DOUBLE-1, wrong type, S2); `lag`/`lead` with a column default (refuses); `FULL OUTER JOIN …
-  USING` of two same-named subquery columns (refuses); `RANGE` frames with a decimal offset (refuses);
+  `double` (NVL-DECIMAL-DOUBLE-1, wrong type, S2, **linked to the parked
+  [NVL-TYPE-COERCION-2](../../roadmap/mid-term/nvl-type-coercion-2-card-2026-10-02.md)**, whose mode-aware `nvl`
+  rewrite is the other half of the same function's typing, so `nvl` is fixed once, one way); `lag`/`lead` with a
+  column default (refuses); `JOIN … USING` over two **unaliased** derived tables (refuses for every join type and
+  same types too; the card is scoped to exactly that shape); `RANGE` frames with a decimal offset (refuses);
   `UPDATE … SET x = coalesce(CASE …)` (`__common_expr_1`, refuses); `avg` of a decimal truncating instead of
   rounding half up (AVG-DECIMAL-ROUND-1, **wrong answer**, S2); `array_union` accepting two element types (S3);
   `PIVOT` (existing gap).
@@ -188,9 +220,11 @@ input class or a new position rule behind the same entry, not a new walk:
 
 ## 10. Owner questions
 
-1. **Scope: one unit, Spark door, with the carded positions in §9?** Default **yes**. Cells: the grid (every
-   position wrong on the same seat), the 38 wrong writes, and the control rows showing the carded causes are
-   independent (`nvl_same`, `range_same_type`, `using_same_type`, `lag_same_type_default`, `avg_k28`).
+1. **Scope: one unit, Spark door, with the carded positions in §9?** Default **yes**, now including aliased
+   `USING`, set-operation membership, `IN` literals and map keys. Cells: the grid (every position wrong on the same
+   seat), the 38 wrong writes, the revision cells `rev/m1/*`–`rev/m4/*`, and the control rows showing the carded
+   causes are independent (`nvl_same`, `range_same_type`, `using_same_type`, `rev/m2/using_full_dup_names_same_type`,
+   `lag_same_type_default`, `avg_k28`).
 2. **Double rounding of nested unions: match Spark?** Default **yes, match it** (one rounding per binary node, so
    `c ∪ d ∪ a` stores 1 for 0.49 and 2 for 1.45, while `a ∪ c ∪ d` stores 0 and 1). Cells: `three/u3_flat`,
    `side/union_flat_a_c_d`, `side/df_union_chain_c_d_a`, `three/coalesce_nested`. The alternative, one rounding
@@ -201,23 +235,56 @@ input class or a new position rule behind the same entry, not a new walk:
 4. **The c2 cell (an `INT` literal in `VALUES` typed `BIGINT`) in this unit?** Default **yes**, through seat V's
    integer-literal input: it is one line of the same function and seat V is changed anyway. Cells: `values/v_int_c`
    (`decimal(22,2)` against Spark's `decimal(12,2)`). The alternative leaves it to sweep family 10.
-5. **Struct fields in this unit?** Default **yes for unions** (measured `literal/u_struct`), a build pin for struct
-   comparisons (not measured).
+5. **Struct fields in this unit?** Default **yes for unions** (measured `literal/u_struct`, two-field
+   `rev/pin/struct_pos`); struct comparisons raise on both engines (`rev/pin/struct_cmp`), a both-raise pin only.
 6. **The overflow literals:** main refuses at planning in both modes where Spark answers NULL (ANSI off) or raises
    (ANSI on). Default: **the unit's casts make them answer as Spark's cast does** (ANSI off: the literal is NULL; ANSI
    on: `NUMERIC_VALUE_OUT_OF_RANGE`), pinned; if the planning refusal comes from the literal's own cast and not the
-   common type, card it instead of growing the unit. Cells: `literal/u_overflow_lit`, `where_overflow_lit`,
-   `u_overflow39`, `coalesce_overflow_lit`.
-7. **New cards** for the side findings (NVL-DECIMAL-DOUBLE-1 S2, AVG-DECIMAL-ROUND-1 S2, the four refusals S3,
+   common type, card it instead of growing the unit. An overflow literal in an `IN` list follows the `IN` mode
+   (integer forms). Cells: `literal/u_overflow_lit`, `where_overflow_lit`, `u_overflow39`, `coalesce_overflow_lit`.
+7. **New cards** for the side findings (NVL-DECIMAL-DOUBLE-1 S2 linked to NVL-TYPE-COERCION-2, AVG-DECIMAL-ROUND-1
+   S2 (a wrong answer), the four refusals S3 with the `USING` card scoped to unaliased derived tables,
    ARRAY-UNION-TYPES-1 S3, DECIMAL-COMMON-TYPE-NATIVE-1 S2, LEGACY-DECIMAL-TRUNCATE-OVERFLOW-1 S3): file them in the
    records round after this step 0. Default **yes**; none is label-blocking by this step 0's evidence except
    AVG-DECIMAL-ROUND-1, which is a wrong answer on a scalar decimal column and is put to the owner.
 
-## 11. What this step 0 did not settle
+## 11. After the critic
+
+The Muse inventory critic's verdict was `GAPS`: no table cell contradicted, about 40 citations checked and none wrong,
+all seven owner-question defaults supported, seat A's bottom-up exactness verified by reading code, and seat B's
+rejection strengthened (the analyzer's union schema is one n-ary left-to-right fold,
+`coerce_union_schema_with_schema`, `type_coercion.rs:1190`, so per-node rounding cannot be recovered after it). Its
+four findings were re-measured here ([domain-table.md](domain-table.md#after-the-critic-revision-2026-11-16)); one
+was corrected by the re-measure: inner `USING` plans only when the derived tables are aliased — unaliased, every
+join type refuses, same types too.
+
+Priority list for the build brief:
+
+- **P1, `IN` literals:** the `IN` mode (change 5) with pins `w30 IN (1)` (select and `WHERE`), `w30 IN (1, 2)`,
+  `NOT IN`, `w30 IN (i32)`, `w30 IN (SELECT i32 …)`, `CAST('1.0…049' AS DECIMAL(38,30)) IN (1)` / `IN (id)` /
+  `= id`, DataFrame `isin(1)`; and the agreeing `w30 = 1`, `CASE w30 WHEN 1`, `BETWEEN 1 AND 1` stay agreeing.
+- **P2, `USING`:** aliased inner, left and full `USING` and DataFrame `join(…, "k")` in the unit with pins; the
+  refusal card scoped to `USING` over two unaliased derived tables.
+- **P3, map keys:** change (4) with a `DUPLICATED_MAP_KEY` pin for `map(a,'x', c,'y')` and `map_concat` at id 1,
+  and answer pins for the non-colliding `c + 5` shapes (main raises `NULL_MAP_KEY` there today).
+- **P4, set operations:** `INTERSECT`/`EXCEPT` membership pins (SQL `DISTINCT` and plain spellings, both orders,
+  DataFrame `intersect`/`subtract`, `i64 ∩ h`) and one `UNION DISTINCT` pin.
+- **P5, the shield and the fold:** the 18 column-loses-digits constant cells of step 0 (the critic's `shield_*`
+  cells among them) pinned on the head; and a benign interaction to pin, not change: `FoldSparkNumericCasts`
+  (`spark_typed.rs:22`, after coercion) folds a cast literal, so the walk's cast of `CAST(1.5 AS DECIMAL(10,2))` to
+  `decimal(38,0)` is folded there and must round half up (`rev/pin/fold_rounded_literal`: Spark id 2).
+- **P6, cost:** K4 (wide `CASE`) and K5 (DML planning) beside K1–K3.
+- **P7, `nvl`:** NVL-DECIMAL-DOUBLE-1 links the parked NVL-TYPE-COERCION-2 so `nvl` is fixed once, one way.
+
+Further pin candidates the critic named, all measured different on main: the two-field struct union, `max`/`min`/`sum`
+over a mixed `CASE`, `sum` over a mixed union, the literal `BETWEEN` two decimal columns, `map` and `map_concat`
+values, and `unionByName(allowMissingColumns=True)`.
+
+## 12. What this step 0 did not settle
 
 - Whether the analyzer can read the legacy flag (§6).
-- Struct comparisons, `MERGE` source unions of three types, and `IN` lists mixing an integer literal with decimals
-  (`w30 IN (1)`: Spark's `IN` may use `INT`'s form, unlike `=`); the build's step 0 measures them.
+- `MERGE` source unions of three types; the build's step 0 measures them. (Struct comparisons and `IN` lists with
+  integer literals were measured after the critic.)
 - DataFusion 55 (the next bump) was not read for this seat.
 
 Up: [map.md](map.md).

@@ -11,13 +11,12 @@ WRITE_GROUPS = {"iceberg", "icedml"}
 CONFOUNDED = {
     "nvl",
     "nullif",
-    "except",
-    "intersect",
     "array_union",
     "lag",
     "lead",
     "join_full_using",
 }
+CONTROL_KEYS = ("_control", "_same_type")
 SINGLE = {
     "agg/sum_type": "avg-round",
     "values/v_int_c": "int-literal-type",
@@ -28,6 +27,12 @@ SINGLE = {
 def cause(key: str, group: str, pos: str) -> str:
     if key.startswith("legacy/"):
         return "legacy"
+    if key.startswith("rev/"):
+        if key.startswith("rev/m2/using_") and "aliased" not in key:
+            return "using-unaliased-refusal"
+        if key.endswith(CONTROL_KEYS):
+            return "control:revision"
+        return "common-type"
     for prefix, name in SINGLE.items():
         if key.startswith(prefix):
             return name
@@ -103,18 +108,27 @@ def verdict(rp: dict, sp: dict) -> str:
     return "wrong_answer"
 
 
+def clip(res: object) -> str:
+    return json.dumps(res)[:200].rsplit(" ", 1)[0]
+
+
 def short(res: object) -> object:
     if isinstance(res, str):
-        return res[:160]
+        return res[:160].rsplit(" ", 1)[0]
     return res
 
 
 def main() -> None:
     verdicts = []
     for ansi in ("false", "true"):
-        sp = load(f"spark-{ansi}.jsonl")
-        for engine, name in (("repark", f"repark-{ansi}.jsonl"), ("native", "native.jsonl")):
+        sources = (
+            ("repark", f"repark-{ansi}.jsonl", f"spark-{ansi}.jsonl"),
+            ("native", "native.jsonl", f"spark-{ansi}.jsonl"),
+            ("repark", f"revision-repark-{ansi}.jsonl", f"revision-spark-{ansi}.jsonl"),
+        )
+        for engine, name, spark_name in sources:
             rp = load(name)
+            sp = load(spark_name)
             for key, rec in rp.items():
                 if "result" not in rec or key.startswith(("provenance", "data/", "elapsed")):
                     continue
@@ -226,7 +240,7 @@ def main() -> None:
         ):
             lines.append(
                 f"- `{v['engine']}` ansi={v['ansi']} `{v['key']}`: **{v['verdict']}**; "
-                f"RePark `{json.dumps(v['repark'])[:200]}`; Spark `{json.dumps(v['spark'])[:200]}`"
+                f"RePark `{clip(v['repark'])}`; Spark `{clip(v['spark'])}`"
             )
     lines.append("")
     (out / "summary.md").write_text("\n".join(lines) + "\n")

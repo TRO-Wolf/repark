@@ -13,6 +13,9 @@ Run from this directory; `cells` and `run_cells_lib` are imported by the runners
 - `run_native.py` — the native door `repark.sql()` over views of the same rows.
 - `run_side.py` — the controls for the other causes (same-type `USING`, `nvl`, `nullif`, `EXCEPT`, `avg`, `lag`,
   `RANGE`, the union shapes, `UPDATE … SET`) and the legacy flag's `SET`/`RESET` round trip.
+- `run_revision.py` — after the inventory critic: its four findings (map keys, `USING` joins aliased and not,
+  `IN`-list integer literals, set-operation membership and `UNION DISTINCT`), the controls for each, and its pin
+  candidates, SQL and DataFrame, one engine and ANSI mode per run.
 - `explain_union.py` — the initial plan's union nesting on RePark.
 - `compact.py` — copies the raw outputs into [../raw/](../raw/map.md) without the SQL text (kept for the side
   probes) and the timings, with scratch and home paths replaced by placeholders.

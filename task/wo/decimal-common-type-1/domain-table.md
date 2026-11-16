@@ -59,6 +59,10 @@ stores and DML, the legacy flag) and 907 native-door cells, each paired with Spa
 | native `repark.sql()` | off | 655 | 43 | 258 | 7 | — | 347 | 0 |
 | native `repark.sql()` | on | 655 | 43 | 258 | 7 | — | 341 | 6 |
 
+- **Revised after the critic** ([§After the critic](#after-the-critic-revision-2026-11-16)): with the `EXCEPT`/`INTERSECT`
+  membership cells counted in the family and 52 new cells, the Spark door has **946 common-type cells per mode, 890
+  wrong with ANSI off** (402 wrong answers, 9 wrong types, 38 wrong writes, 439 refusals, 2 missed refusals) and 884
+  wrong plus 8 both-raise with ANSI on; the native door 632 of 675. The rest of this section is the first count.
 - **825 of 874 Spark-door cells are wrong in each mode** (819 plus 6 that both engines raise with ANSI on). The 49
   that agree are rows whose values cannot tell the two types apart (`lt` on `ad` and `ef`), the three integer
   literal controls (`h = 1`, `w30 = 1`, `c = CAST(1 AS BIGINT)`), `v_control`, and the constant cells over `tx` whose
@@ -308,15 +312,104 @@ Each is a cause the control pair `c0c` (or a same-type cell) shows too, so it is
 |---|---|---|---|---|
 | `nvl` / `ifnull` over decimals | `nvl` row, side `nvl_same`, `nvl_c0c`, `ifnull_c0c` | the decimal common type | **`double`** (DataFusion's `nvl` signature lists no decimal) — wrong type, and wrong values past 15–17 digits | new card |
 | `nullif(x, y)` result type | `nullif` row | `x`'s type | the comparison's common type | sweep family 6 |
-| `EXCEPT` / `INTERSECT` result type | `except`, `intersect` rows | the common type | the left side's type | sweep family 5 |
+| `EXCEPT` / `INTERSECT` result type | `except`, `intersect` rows of `c0c` | the common type | the left side's type | sweep family 5; the past-38 rows are **wrong membership**, this unit's (revision M4) |
 | `array_union` of two element types | `array_union` row | refuses (`BINARY_ARRAY_DIFF_TYPES`) | answers | new card (S3) |
 | `lag`/`lead` with a column default | `lag`, `lead` rows | answers | refuses (`only support Literal types`), same type too | new card |
-| `FULL OUTER JOIN … USING (k)` of two `k` subqueries | `join_full_using` row, side `using_same_type` | answers | refuses (`duplicate unqualified field name k`), same type too | new card |
+| `JOIN … USING (k)` over two **unaliased** derived tables | `join_full_using` row, side `using_same_type`, revision `m2/using_*` without an alias | answers | refuses (`duplicate unqualified field name k`) for every join type, same type too | new card, scoped to this shape; aliased `USING` plans and is this unit's (revision M2) |
 | `RANGE` frame with a decimal offset | `w_range_*_dec`, side `range_same_type` | answers | refuses, same type too | new card |
 | `PIVOT` | `pivot_*` | answers | refuses the syntax | existing gap |
 | `UPDATE … SET x = coalesce(CASE …, y)` | `update_set_coalesce`, side | answers | refuses (`__common_expr_1`), same type too | new card |
 | `avg` of a decimal | `agg/sum_type`, side `avg_k28` | 2.51 / 3 = **0.836667** | **0.836666** (truncates) | new card (wrong answer, S2) |
 | an `INT` literal in `VALUES` | `values/v_int_c` (the c2 cell) | `INT` → `decimal(12,2)` | the literal is `BIGINT` → `decimal(22,2)` | joins this unit's function (integer forms), below 38 |
+
+## After the critic (revision, 2026-11-16)
+
+The Muse inventory critic (`VERDICT: GAPS`, no cell contradicted, no citation wrong) named four missed seats or
+shapes and a list of pin candidates. Each was re-measured here, on main and Spark 4.1.2, both ANSI modes, by
+[evidence/probes/run_revision.py](evidence/probes/run_revision.py) (63 cells per run; raw in
+`evidence/raw/revision-*.jsonl`). **No verdict depends on the ANSI mode.** The first step-0 grid's `except` and
+`intersect` rows of the past-38 pairs are also moved from "other causes" into the family: they are wrong **rows**,
+not only a wrong type (its `union` row, already in the family, is `UNION DISTINCT`).
+
+**Revised totals, Spark door, per mode:** 946 common-type cells (874 + 20 set-operation cells + 52 revision cells);
+ANSI off 54 agree, 402 wrong answers, 9 wrong types, 38 wrong writes, 439 refusals, 2 missed refusals, 2 both-raise
+(**890 wrong**); ANSI on the same with 433 refusals and 8 both-raise (**884 wrong**). Native door: 632 of 675.
+
+### M1 — decimal map keys (`create_map`, `map_concat`)
+
+The walk's `MAP_CONSTRUCTORS` takes value positions only (`decimal_float_widen.rs:27`, `:108-110`); keys reach
+`comparison_coercion` in `create_map.rs:63` and `map_concat.rs:80` unseen.
+
+| cell (`t`) | Spark | main |
+|---|---|---|
+| `map_concat(map(a,'x'), map(c,'y'))`, id 1 | raises `DUPLICATED_MAP_KEY` (1.25 rounds to 1) | `map<decimal(38,2),string>` {1.00, 1.25} |
+| `map(a,'x', c,'y')`, id 1 | raises `DUPLICATED_MAP_KEY` | {1.00, 1.25} |
+| the same over ids 1–5 | raises `DUPLICATED_MAP_KEY` | raises `NULL_MAP_KEY` (no key is NULL in those rows) |
+| `map_concat(map(a,'x'), map(c+5,'y'))`, `map(a,'x', c+5,'y')`, `map_keys(…)`, ids 1–5 | `map<decimal(38,0),…>` {1, 6}… | raises `NULL_MAP_KEY` |
+| controls: `map_concat(map(a,'x'), map(a+5,'y'))`, `map(a,'x')`, ids 1–5 | answers | agrees |
+
+So the keys are in the family twice over: a rounded collision must raise as Spark does, and the mixed-key shape
+raises a NULL-key error on main that the same-type control does not.
+
+### M2 — `USING` joins
+
+| cell (`a` beside `c` as `k`) | Spark | main |
+|---|---|---|
+| `(…) l JOIN (…) r USING (k)`, aliased, inner | 9 matches, key `decimal(38,0)` | **no rows**, key `decimal(38,0)` |
+| aliased `LEFT JOIN … USING (k)` | 10 rows, matched | every left row unmatched |
+| aliased `FULL OUTER JOIN … USING (k)` | 10 rows, matched | 12 rows, none matched |
+| aliased `FULL OUTER … USING (k)` selecting only `k` | `-2 0 1×6 2 null` | `-2 0 1 1 2` and 7 NULLs |
+| aliased inner, `BIGINT` beside `DECIMAL(38,20)` | ids (1, 5), (5, 5) | no rows |
+| aliased inner, same type (control) | answers | agrees |
+| **unaliased** derived tables, inner, left, full, distinct or duplicate names, same type too (7 cells) | answers | refuses (`duplicate unqualified field name k`) |
+| DataFrame `l.join(r, "k")` | 9 matches | no rows |
+
+The refusal is the unaliased shape, any join type and any types; it is a card of its own. Aliased `USING` and the
+DataFrame `join(…, "k")` plan through `coerce_join` and are this unit's (the walk's `rewrite_join` sees the keys).
+
+### M3 — integer literals in `IN` take the integer's form
+
+| cell (`t`) | Spark | main |
+|---|---|---|
+| `CAST('1.0…049' AS DECIMAL(38,30)) IN (1)` | true, every row | false |
+| `CAST('1.0…049' AS DECIMAL(38,30)) IN (id)` and `… = id` | true at id 1 | false |
+| `w30 IN (1)` (select and `WHERE`), `w30 IN (1, 2)`, `w30 IN (CAST(1 AS BIGINT))`, DataFrame `isin(1)` | ids 1, 5 | none |
+| `w30 NOT IN (1)` | 2, 3, 4 | 1–5 |
+| `w30 IN (i32)`, `w30 IN (SELECT i32 FROM t)` | 1, 4, 5 | 4 |
+| `w36 IN (1)` | 1, 5 | none |
+| `w30 = 1`, `w36 = 1`, `CASE w30 WHEN 1`, `w30 BETWEEN 1 AND 1`, `h IN (1)` | agree | agree |
+
+So Spark's literal exception (rule 3 of the sketch) holds for `=`, `<=>`, simple `CASE` and `BETWEEN` but **not for
+`IN`**: an `IN` list (and an `IN` subquery) folds an integer literal at `INT`'s `decimal(10,0)` form, so
+`w30 IN (1)` rounds `w30` to 28 places. The shared function needs an `IN` mode. `h IN (1)` agrees because
+`(10,0)` beside `(38,20)` still fits 38.
+
+### M4 — set-operation membership, and `UNION DISTINCT`
+
+| cell | Spark | main |
+|---|---|---|
+| `a INTERSECT DISTINCT c`, `c INTERSECT a`, DataFrame `intersect` | `-2, 0, 1, 2` (`decimal(38,0)`) | no rows (`c INTERSECT a` keeps `decimal(10,2)`) |
+| `a EXCEPT DISTINCT c`, DataFrame `subtract` | `null` only | `-2, 0, 1, 2, null` |
+| `c EXCEPT a` | no rows | all six `c` values |
+| `i64 INTERSECT h` | `1.000000000000000000`, `null` (`decimal(38,18)`) | `null` (`bigint`) |
+| `a UNION DISTINCT c` | `-2, 0, 1, 2, null` | 11 exact rows (`decimal(38,2)`) |
+
+The first grid's `union` position is already `UNION DISTINCT` on six pairs; the explicit spelling answers alike.
+
+### Pin candidates (each differs on main, both modes)
+
+| cell | Spark | main | seat |
+|---|---|---|---|
+| two-field struct union `named_struct('f', a, 'g', c) ∪ named_struct('f', c, 'g', a)` | `struct<f:decimal(38,0),g:decimal(38,0)>` [1,1] [2,2] | `decimal(38,2)` fields | struct recursion |
+| `named_struct('f', a) = named_struct('f', c)` | raises | raises | **agrees**: a both-raise pin only |
+| `max(CASE … a ELSE c END)`, `min(…)` | `decimal(38,0)` 2 / −2 | `decimal(38,2)` 2.00 / −2.00 | `CASE` inside an aggregate |
+| `sum(CASE … a ELSE c END)` | 2 | 2.25 | the same |
+| `sum(v)` over `a UNION ALL c` | 5 | 5.69 | union under an aggregate |
+| `CAST('1' AS DECIMAL(38,0)) BETWEEN c AND c` | 1, 4, 6 | none | `widen_between` (step 0's `a1_between_c`) |
+| `map('k', a, 'j', c)`, `map_concat(map('x', a), map('y', c))` | `map<string,decimal(38,0)>` 1, 1 | `decimal(38,2)` 1.00, 1.25 | map values |
+| `c = CAST('1' AS DECIMAL(38,0))` and mirror; `a = CAST('1.25' AS DECIMAL(10,2))` and mirror | 1, 4, 6 / 1, 4 | none | #1345's shield (step 0's 18 cells) |
+| `a = CAST(1.5 AS DECIMAL(10,2))` | id 2 | none | `FoldSparkNumericCasts` folds the cast literal after coercion: the fold must round half up |
+| DataFrame `unionByName(…, allowMissingColumns=True)` | `decimal(38,0)` | `decimal(38,2)` | `union_by_name` |
 
 ## Exclusions and sampling
 

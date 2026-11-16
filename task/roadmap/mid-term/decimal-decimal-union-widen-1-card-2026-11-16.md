@@ -97,5 +97,8 @@ The text above is unchanged.
   Spark with ANSI off where main raises.
 - **Recommended seat:** one shared Spark common-type function inside `SparkDecimalFloatWiden`'s walk, called by
   seat V too; one unit on the Spark door, with the other causes found beside it carded.
+- **Revised after the inventory critic** (no cell contradicted): map keys, aliased `USING` joins, integer literals in
+  `IN` lists and `INTERSECT`/`EXCEPT` membership are in the family too; with them, 890 of 946 Spark-door cells per
+  mode are wrong with ANSI off (884 plus 8 both-raise with ANSI on).
 
 Up: [map.md](map.md).

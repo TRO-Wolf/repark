@@ -14,6 +14,8 @@ least-common-type family, matching Spark's lossy comparison and union; step 0 "g
   every Iceberg wrong write, the legacy flag and the other causes measured beside the family.
 - [inventory.md](inventory.md) — every seat that picks a decimal common type, "seen: yes / no, because", in
   DataFusion 54.1.0 and RePark main, with the doors.
+- After the inventory critic (`GAPS`, no cell contradicted): map keys, aliased `USING`, `IN`-list integer
+  literals and set-operation membership re-measured and added to the table, sketch §11 and the inventory.
 - [evidence/](evidence/map.md) — the probes, the raw cells, the verdicts and the provenance.
 
 Up: [../map.md](../map.md).

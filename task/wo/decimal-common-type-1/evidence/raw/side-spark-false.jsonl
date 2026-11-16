@@ -18,8 +18,8 @@
 {"key": "side/update_set_coalesce_same", "result": {"rows": ["1|1.00", "2|2.00", "3|-2.00", "4|1.00", "5|0.00", "6|null"], "types": ["int", "decimal(38,2)"]}, "sql": "UPDATE lc.ns.side_update SET a2 = coalesce(CASE WHEN id % 2 = 0 THEN NULL ELSE a END, a)", "statement": "ok"}
 {"key": "side/update_set_case_ac", "result": {"rows": ["1|1.00", "2|2.00", "3|-2.00", "4|1.00", "5|0.00", "6|null"], "types": ["int", "decimal(38,2)"]}, "sql": "UPDATE lc.ns.side_update SET a2 = CASE WHEN id % 2 = 0 THEN a ELSE c END", "statement": "ok"}
 {"key": "side/update_set_coalesce_ac", "result": {"rows": ["1|1.00", "2|2.00", "3|-2.00", "4|1.00", "5|0.00", "6|1.00"], "types": ["int", "decimal(38,2)"]}, "sql": "UPDATE lc.ns.side_update SET a2 = coalesce(c, a)", "statement": "ok"}
-{"key": "side/legacy_get_default", "result": "ERR:IllegalArgumentException:INVALID_CONF_VALUE.TYPE_MISMATCH:[INVALID_CONF_VALUE.TYPE_MISMATCH] The value 'unset' in the config \"spark.sql.legacy.decimal.retainFractionDigitsOnTruncate\" is invalid. It should be a/an 'boolean' value. SQLSTATE: 22022"}
+{"key": "side/legacy_get_default", "result": "ERR:IllegalArgumentException:INVALID_CONF_VALUE.TYPE_MISMATCH:[INVALID_CONF_VALUE.TYPE_MISMATCH] The value 'unset' in the config \"spark.sql.legacy.decimal.retainFractionDigitsOnTruncate\" is invalid. It should be a/an 'boolean' value. SQLSTATE:"}
 {"key": "side/legacy_set_sql", "result": "ok"}
 {"key": "side/legacy_get_after_set", "result": "true"}
 {"key": "side/legacy_reset_sql", "result": "ok"}
-{"key": "side/legacy_get_after_reset", "result": "ERR:IllegalArgumentException:INVALID_CONF_VALUE.TYPE_MISMATCH:[INVALID_CONF_VALUE.TYPE_MISMATCH] The value 'unset' in the config \"spark.sql.legacy.decimal.retainFractionDigitsOnTruncate\" is invalid. It should be a/an 'boolean' value. SQLSTATE: 22022"}
+{"key": "side/legacy_get_after_reset", "result": "ERR:IllegalArgumentException:INVALID_CONF_VALUE.TYPE_MISMATCH:[INVALID_CONF_VALUE.TYPE_MISMATCH] The value 'unset' in the config \"spark.sql.legacy.decimal.retainFractionDigitsOnTruncate\" is invalid. It should be a/an 'boolean' value. SQLSTATE:"}

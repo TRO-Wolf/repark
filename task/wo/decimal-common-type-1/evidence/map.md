@@ -24,6 +24,8 @@
   - `run_native.py <out>/native.jsonl`;
   - `run_side.py <spark|repark> <false|true> <wh> <jar> <out>/side-<engine>-<ansi>.jsonl`;
   - `explain_union.py <out>/explain-union-repark.txt <wh>`;
+  - after the inventory critic, about 22:00–22:10 UTC: `run_revision.py <spark|repark> <false|true> <wh> <jar>
+    <out>/revision-<engine>-<ansi>.jsonl`;
   - `compact.py <out> ../raw`, then `analyze.py ../raw ../raw` and `grids.py ../raw`.
 
 Up: [../map.md](../map.md).
