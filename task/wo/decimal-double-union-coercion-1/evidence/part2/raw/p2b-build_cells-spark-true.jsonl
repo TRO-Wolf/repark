@@ -1,0 +1,65 @@
+{"key": "provenance", "engine": "spark", "version": "4.1.2", "warehouse": "p2b-spark-true-b5dfbojj", "ansi": "true"}
+{"key": "union/right_deep3", "types": ["int", "double"], "rows": [["1", "0.1"], ["2", "1e-20"], ["3", "-1e-20"]]}
+{"key": "union/mixed_nest4", "types": ["int", "double"], "rows": [["1", "0.1"], ["2", "1e-20"], ["3", "-1e-20"], ["4", "0.25"]]}
+{"key": "union/all5_dec_first", "types": ["int", "double"], "rows": [["1", "0.1"], ["2", "1e-20"], ["3", "-1e-20"], ["4", "2e-20"], ["5", "0.25"]]}
+{"key": "union/all3_cte", "types": ["int", "double"], "rows": [["1", "0.1"], ["2", "1e-20"], ["3", "-1e-20"]]}
+{"key": "union/all3_view", "types": ["int", "double"], "rows": [["1", "0.1"], ["2", "1e-20"], ["3", "-1e-20"]]}
+{"key": "setop/intersect", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "setop/intersect_all", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "setop/except", "types": ["double"], "rows": [["0.1"]]}
+{"key": "setop/except_all", "types": ["double"], "rows": [["0.1"]]}
+{"key": "setop/values_leg_first_intersect", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "values/standalone", "types": ["double"], "rows": [["0.1"], ["1e-20"]]}
+{"key": "values/two_cols", "types": ["int", "double"], "rows": [["1", "0.1"], ["2", "1e-20"]]}
+{"key": "values/null_first", "types": ["double"], "rows": [["NULL"], ["0.1"], ["1e-20"]]}
+{"key": "values/int_dec_double", "types": ["double"], "rows": [["1.0"], ["0.5"], ["1e-20"]]}
+{"key": "values/float", "types": ["double"], "rows": [["0.1"], ["9.999999682655225e-21"]]}
+{"key": "values/user_cast_both", "types": ["decimal(30,15)"], "rows": [["0.100000000000000"], ["0E-15"]]}
+{"key": "values/user_cast_dec_beside_dec", "types": ["decimal(10,2)"], "rows": [["0.50"], ["0.00"], ["1.50"]]}
+{"key": "values/string_beside", "error": "ParseException: \n[INVALID_INLINE_TABLE.INCOMPATIBLE_TYPES_IN_INLINE_TABLE] Invalid inline table. Found incompatible types in the column `c` for inline table. SQLSTATE: 42000\n== SQL (line 1, position 15) ==\nSELECT c FROM VALUES ('a'), (CAST(0.1 AS DECIMAL(10,2))) AS t(c)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"}
+{"key": "values/cte_in", "types": ["int"], "rows": [["1"]]}
+{"key": "values/rcte_anchor", "types": ["int", "decimal(10,2)"], "rows": [["1", "0.50"], ["2", "1.50"], ["3", "0.50"], ["4", "1.50"]]}
+{"key": "values/scalar_min", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "zero/in_zero", "types": ["int"], "rows": []}
+{"key": "zero/in_2e16", "types": ["int"], "rows": []}
+{"key": "zero/in_1e16", "types": ["int"], "rows": []}
+{"key": "df/values_filter_eq", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "df/values_filter_str", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "df/values_join", "types": ["int"], "rows": [["1"]]}
+{"key": "df/values_union_double", "types": ["double"], "rows": [["0.1"], ["1e-20"], ["1e-20"]]}
+{"key": "df/values_select", "types": ["double"], "rows": [["0.2"], ["2e-20"]]}
+{"key": "lit/spark/cmp", "types": ["int", "boolean"], "rows": [["1", "True"], ["2", "False"], ["3", "False"]]}
+{"key": "lit/spark/in", "types": ["int", "boolean"], "rows": [["1", "True"], ["2", "False"], ["3", "False"]]}
+{"key": "lit/spark/between", "types": ["int", "boolean"], "rows": [["1", "True"], ["2", "False"], ["3", "True"]]}
+{"key": "lit/spark/case", "types": ["int", "string"], "rows": [["1", "a"], ["2", "c"], ["3", "c"]]}
+{"key": "lit/spark/cmp_typed", "types": ["int", "boolean"], "rows": [["1", "True"], ["2", "False"], ["3", "False"]]}
+{"key": "lit/spark/in_typed", "types": ["int", "boolean"], "rows": [["1", "True"], ["2", "False"], ["3", "False"]]}
+{"key": "dml/delete_in_values_v/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["3", "0.00", "0.0", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/update_in_values_v/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "9"], ["2", "0.00", "1e-20", "9"], ["3", "0.00", "0.0", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/delete_in_table/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/delete_exists_table/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_union_src/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_union_right_deep/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_values_src/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_values_insert/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "0.0", "3"], ["4", "0.10", "0.10000000000000002", "4"], ["7", "0.00", "0.1", "0"], ["8", "0.00", "1e-20", "0"]]}
+{"key": "dml/merge_values_on/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["3", "0.00", "0.0", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_values_view/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/delete_in_values_v/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["3", "0.00", "0.0", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/update_in_values_v/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "9"], ["2", "0.00", "1e-20", "9"], ["3", "0.00", "0.0", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/delete_in_table/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/delete_exists_table/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_union_src/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_union_right_deep/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_values_src/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_values_insert/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "0.0", "3"], ["4", "0.10", "0.10000000000000002", "4"], ["7", "0.00", "0.1", "0"], ["8", "0.00", "1e-20", "0"]]}
+{"key": "dml/merge_values_on/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["3", "0.00", "0.0", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_values_view/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "write/insert_dec38", "types": ["decimal(38,18)"], "rows": [["0E-18"], ["0.100000000000000000"]]}
+{"key": "write/insert_string", "types": ["string"], "rows": [["0.1"], ["1.0E-20"]]}
+{"key": "write/insert_double", "types": ["double"], "rows": [["1e-20"], ["0.1"]]}
+{"key": "write/insert_dec10", "types": ["decimal(10,2)"], "rows": [["1.26"], ["1.26"]]}
+{"key": "write/insert_select_values", "types": ["string"], "rows": [["0.1"], ["1.0E-20"]]}
+{"key": "write/overwrite_values", "types": ["double"], "rows": [["1e-20"], ["0.1"]]}
+{"key": "write/overwrite_empty_values", "types": ["double"], "rows": []}
+{"key": "write/user_cast_into_dec", "types": ["decimal(10,2)"], "rows": [["1.26"], ["1.50"]]}
+{"key": "write/ctas_values", "types": ["double"], "rows": [["1e-20"], ["0.1"]]}

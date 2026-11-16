@@ -1,0 +1,12 @@
+{"key": "provenance", "engine": "spark", "version": "4.1.2", "warehouse": "critf3-nitmtt6x", "ansi": "false"}
+{"key": "del_in_sub", "rows": []}
+{"key": "del_exists", "rows": []}
+{"key": "del_scalar", "rows": [["2", "0.00", "1e-20"]]}
+{"key": "upd_in_sub", "rows": [["1", "9.99", "0.1"], ["2", "9.99", "1e-20"]]}
+{"key": "upd_exists", "rows": [["1", "9.99", "0.1"], ["2", "9.99", "1e-20"]]}
+{"key": "plan/in3", "rows": [["== Physical Plan ==\nLocalTableScan <empty>, [id#744]\n\n"]]}
+{"key": "plan/in4", "rows": [["== Physical Plan ==\nLocalTableScan <empty>, [id#744]\n\n"]]}
+{"key": "in/spot_null4", "rows": [["1", "NULL"], ["2", "NULL"], ["3", "NULL"]]}
+{"key": "in/spot_nan4", "rows": [["1", "False"], ["2", "False"], ["3", "False"]]}
+{"key": "in/spot_notin4", "rows": [["1", "True"], ["2", "True"], ["3", "True"]]}
+{"key": "in/spot_mixed4", "rows": [["1", "False"], ["2", "False"], ["3", "False"]]}
