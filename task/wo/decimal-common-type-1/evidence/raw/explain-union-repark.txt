@@ -1,0 +1,13 @@
+provenance: {'engine': 'repark', 'native': '<scratchpad>/ddu-work/pkg-cu-88999454/repark/_native.abi3.so'}
+== sql_flat / initial_logical_plan
+Union
+  Union
+    Projection: t.c AS v
+    Projection: t.d
+  Projection: t.a
+== sql_paren_right / initial_logical_plan
+Union
+  Projection: t.a AS v
+  Union
+    Projection: t.c
+    Projection: t.d

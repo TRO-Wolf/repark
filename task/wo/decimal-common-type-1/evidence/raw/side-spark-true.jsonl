@@ -1,0 +1,25 @@
+{"ansi": "true", "engine": "spark", "jar": "org.apache.iceberg_iceberg-spark-runtime-4.1_2.13-1.11.0.jar", "key": "provenance", "version": "4.1.2"}
+{"key": "side/using_same_type", "result": {"rows": ["-2", "0", "1", "1", "1", "1", "2", "null", "null"], "types": ["decimal(38,0)"]}, "sql": "SELECT k FROM (SELECT a AS k FROM t) FULL OUTER JOIN (SELECT a AS k FROM t) USING (k)"}
+{"key": "side/using_aliased", "result": {"rows": ["-2", "0", "1", "1", "1", "1", "1", "1", "2", "null"], "types": ["decimal(38,0)"]}, "sql": "SELECT coalesce(l.k, r.k) AS k FROM (SELECT a AS k FROM t) l FULL OUTER JOIN (SELECT c AS k FROM t) r ON l.k = r.k"}
+{"key": "side/nvl_same", "result": {"rows": ["1|1.25", "2|1.50", "3|-1.50", "4|0.50", "5|0.49", "6|1.45"], "types": ["int", "decimal(10,2)"]}, "sql": "SELECT id, nvl(c, c) AS r FROM t"}
+{"key": "side/nvl_c0c", "result": {"rows": ["1|1.25", "2|1.50", "3|-1.50", "4|0.50", "5|0.49", "6|1.45"], "types": ["int", "decimal(12,2)"]}, "sql": "SELECT id, nvl(c, c0) AS r FROM t"}
+{"key": "side/ifnull_c0c", "result": {"rows": ["1|1.25", "2|1.50", "3|-1.50", "4|0.50", "5|0.49", "6|1.45"], "types": ["int", "decimal(12,2)"]}, "sql": "SELECT id, ifnull(c, c0) AS r FROM t"}
+{"key": "side/nullif_c0c", "result": {"rows": ["1|1", "2|2", "3|-2", "4|1", "5|0", "6|null"], "types": ["int", "decimal(10,0)"]}, "sql": "SELECT id, nullif(c0, c) AS r FROM t"}
+{"key": "side/except_c0c", "result": {"rows": ["-2.00", "0.00", "1.00", "2.00", "null"], "types": ["decimal(12,2)"]}, "sql": "SELECT c0 AS v FROM t EXCEPT SELECT c FROM t"}
+{"key": "side/avg_k28", "result": {"rows": ["0.836667"], "types": ["decimal(32,6)"]}, "sql": "SELECT avg(k28) AS m FROM t WHERE id IN (1, 3, 5)"}
+{"key": "side/avg_c", "result": {"rows": ["1.400000"], "types": ["decimal(14,6)"]}, "sql": "SELECT avg(c) AS m FROM t WHERE id IN (1, 2, 6)"}
+{"key": "side/lag_literal_default", "result": {"rows": ["1|0", "2|1", "3|2", "4|-2", "5|1", "6|0"], "types": ["int", "decimal(38,0)"]}, "sql": "SELECT id, lag(a, 1, 0) OVER (ORDER BY id) AS r FROM t"}
+{"key": "side/lag_same_type_default", "result": {"rows": ["1|1", "2|1", "3|2", "4|-2", "5|1", "6|0"], "types": ["int", "decimal(38,0)"]}, "sql": "SELECT id, lag(a, 1, a) OVER (ORDER BY id) AS r FROM t"}
+{"key": "side/range_same_type", "result": {"rows": ["1|1", "2|3", "3|1", "4|2", "5|1", "6|2"], "types": ["int", "bigint"]}, "sql": "SELECT id, count(*) OVER (ORDER BY c RANGE BETWEEN CAST('0.5' AS DECIMAL(10,2)) PRECEDING AND CURRENT ROW) AS n FROM t"}
+{"key": "side/union_nested_cd_a", "result": {"rows": ["-1", "-2", "-2", "-3", "0", "1", "1", "1", "1", "1", "1", "1", "2", "2", "2", "2", "3", "null"], "types": ["decimal(38,0)"]}, "sql": "SELECT v FROM (SELECT c AS v FROM t UNION ALL SELECT d FROM t) UNION ALL SELECT a FROM t"}
+{"key": "side/union_nested_a_cd_paren", "result": {"rows": ["-1", "-2", "-2", "-3", "0", "1", "1", "1", "1", "1", "1", "1", "2", "2", "2", "2", "3", "null"], "types": ["decimal(38,0)"]}, "sql": "SELECT a AS v FROM t UNION ALL (SELECT c FROM t UNION ALL SELECT d FROM t)"}
+{"key": "side/union_flat_a_c_d", "result": {"rows": ["-1", "-2", "-2", "-3", "0", "0", "1", "1", "1", "1", "1", "1", "1", "2", "2", "2", "3", "null"], "types": ["decimal(38,0)"]}, "sql": "SELECT a AS v FROM t UNION ALL SELECT c FROM t UNION ALL SELECT d FROM t"}
+{"key": "side/df_union_chain_c_d_a", "result": {"rows": ["-1", "-2", "-2", "-3", "0", "1", "1", "1", "1", "1", "1", "1", "2", "2", "2", "2", "3", "null"], "types": ["decimal(38,0)"]}}
+{"key": "side/update_set_coalesce_same", "result": {"rows": ["1|1.00", "2|2.00", "3|-2.00", "4|1.00", "5|0.00", "6|null"], "types": ["int", "decimal(38,2)"]}, "sql": "UPDATE lc.ns.side_update SET a2 = coalesce(CASE WHEN id % 2 = 0 THEN NULL ELSE a END, a)", "statement": "ok"}
+{"key": "side/update_set_case_ac", "result": {"rows": ["1|1.00", "2|2.00", "3|-2.00", "4|1.00", "5|0.00", "6|null"], "types": ["int", "decimal(38,2)"]}, "sql": "UPDATE lc.ns.side_update SET a2 = CASE WHEN id % 2 = 0 THEN a ELSE c END", "statement": "ok"}
+{"key": "side/update_set_coalesce_ac", "result": {"rows": ["1|1.00", "2|2.00", "3|-2.00", "4|1.00", "5|0.00", "6|1.00"], "types": ["int", "decimal(38,2)"]}, "sql": "UPDATE lc.ns.side_update SET a2 = coalesce(c, a)", "statement": "ok"}
+{"key": "side/legacy_get_default", "result": "ERR:IllegalArgumentException:INVALID_CONF_VALUE.TYPE_MISMATCH:[INVALID_CONF_VALUE.TYPE_MISMATCH] The value 'unset' in the config \"spark.sql.legacy.decimal.retainFractionDigitsOnTruncate\" is invalid. It should be a/an 'boolean' value. SQLSTATE: 22022"}
+{"key": "side/legacy_set_sql", "result": "ok"}
+{"key": "side/legacy_get_after_set", "result": "true"}
+{"key": "side/legacy_reset_sql", "result": "ok"}
+{"key": "side/legacy_get_after_reset", "result": "ERR:IllegalArgumentException:INVALID_CONF_VALUE.TYPE_MISMATCH:[INVALID_CONF_VALUE.TYPE_MISMATCH] The value 'unset' in the config \"spark.sql.legacy.decimal.retainFractionDigitsOnTruncate\" is invalid. It should be a/an 'boolean' value. SQLSTATE: 22022"}
