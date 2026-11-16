@@ -177,7 +177,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   is pinned). `cbrt` wraps its argument as `arg * lit(1.0f64)` — Spark's `cbrt` is a
   UnaryMathExpression (always DoubleType, computed in f64); the multiply coerces f32/int/decimal to
   f64 while bool/string still refuse (no numeric coercion).
-- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection. **ATTR-ID-1 SJ-1b (2026-10-02):** `register(module)` adds the `grouping_id_column` pyfunction, moved from `lib.rs`, paying for its two `frame_lineage` lines. **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `reciprocal_trig_or_inf` maps a zero divisor to `cot(divisor)` (±Inf). **R-CS2P-1 (2026-10-03):** `parse_canonical_predicate` (the insensitive filter door) keeps its plan over in-schema columns, else `folded_qualifier_predicate` re-parses to a SQL AST, folds qualifiers via `frame_names::fold_frame_qualifiers` under `IgnoreCase`, and plans the rewritten tree when one folded, so an alias qualifier binds in any case now that `subquery_alias` keeps the alias spelling.
+- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection. **ATTR-ID-1 SJ-1b (2026-10-02):** `register(module)` adds `grouping_id_column`. **DDU-1 part 2:** seat V marks `F.expr`, `selectExpr` and Spark-door `filter(str)` (`values_marker`). **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `reciprocal_trig_or_inf` maps a zero divisor to `cot(divisor)` (±Inf). **R-CS2P-1 (2026-10-03):** `parse_canonical_predicate` (the insensitive filter door) keeps its plan over in-schema columns, else `folded_qualifier_predicate` re-parses to a SQL AST, folds qualifiers via `frame_names::fold_frame_qualifiers` under `IgnoreCase`, and plans the rewritten tree when one folded, so an alias qualifier binds in any case now that `subquery_alias` keeps the alias spelling.
   **POLARS-IS-DUPLICATED-1 (2026-09-28):** `is_duplicated_expr` builds
   `count(1) OVER (PARTITION BY dup_key(receiver)) > 1` on a user window's path
   (`count_aggregate` + `build_over_expression`, matching the unordered full-partition frame), wrapped in the `dup_mask_udf`
@@ -362,7 +362,7 @@ sync after changes.
 
 - Up: [src map](../map.md)
 - Crate: [repark-python map](../../map.md)
-- **FNP-4B (2026-09-15):** added `expr_build.rs` / `mod.rs` code comments removed (ruling 2026-08-26); `mod.rs` ceiling 1040 → 1038.
+- **FNP-4B (2026-09-15):** `expr_build.rs` / `mod.rs` comments removed (2026-08-26); `mod.rs` ceiling 1038.
 - **FNP-AGG-1 slice (d) (2026-09-21):** `function_dispatch.rs` renames `binary_aggregate_udaf` to `nary_aggregate_udaf` (value column plus N args; arity from the built args) and adds the `grouping_id` arm (n-ary, maybe zero columns); `expr_build.rs` gains the `grouping_id_column` binding behind the unsigned-to-signed cast; `mod.rs` `aggregate_binary` takes trailing columns as a vector (exact baseline 1012).
 - **`build_expr_context`:** ICE-TSNS-TYPE-PLANNER-1 (10-13) registers `repark_functions::SparkTypePlanner`,
   so `F.expr("CAST(x AS TIMESTAMP)")` and `selectExpr` type as `spark.sql`; STRUCT-SETOP-REORDER-REFUSAL-1

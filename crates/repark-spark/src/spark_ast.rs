@@ -246,6 +246,9 @@ async fn execute_passthrough_inner(
         }
         _ => {}
     }
+    if crate::values_marker::session_marks_values(&state) {
+        crate::values_marker::mark_df_statement(statement.as_mut());
+    }
     let plan = repark_core::column_resolution::plan_statement_with_column_repair(
         &state,
         *statement,
@@ -564,6 +567,9 @@ async fn restate_range_frames_and_replan(
         crate::keyword_lower::lower_spark_keywords(inner);
         window_range::quote_unquoted_interval_range_bounds(inner);
         rewrite(inner);
+        if crate::values_marker::session_marks_values(state) {
+            crate::values_marker::mark_values_cells(inner.as_mut());
+        }
     }
     repark_core::column_resolution::plan_statement_with_column_repair(
         state,

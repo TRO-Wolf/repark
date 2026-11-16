@@ -73,6 +73,28 @@ function-registry + analyzer-rule installation + the composed
   `USE` / `SHOW … IN|FROM` operand position, or as the first part of a two- or three-part
   dotted name, raises its refusal first (skipped entirely when no refusal is stored).
 - `decimal_float_widen.rs` (and `decimal_float_widen/tests.rs`) — **DECIMAL-DOUBLE-UNION-COERCION-1 part 1 (2026-11-15):** seat E, `SparkDecimalFloatWiden` (`spark_decimal_float_widen`). On the Spark door it casts a DECIMAL operand beside a FLOAT/DOUBLE to `double` in comparisons, `IN`, `BETWEEN`, CASE, `coalesce` / `nvl` / `greatest` / `least` / `array`, `if` and `nvl2`, `__repark_create_map__` values, `IN (subquery)`, equi-join keys, set-operation inputs and the `INTERSECT` / `EXCEPT DISTINCT` semi or anti join; `nullif` keeps `a`'s type, and a plan with no pair comes back untouched. `tests.rs` (5 tests) runs over a plain DataFusion context; the facade pins are `python/repark/tests/sql/test_decimal_double_coercion_1.py`.
+  **DECIMAL-DOUBLE-UNION-COERCION-1 part 2 (2026-11-16):**
+  - **The stale outer union (Q3):** `rewrite_union` rebuilds a union whose own inputs no longer mix but whose schema
+    still differs from its first input's, so a child seat E already widened is never cast back (left-deep, right-deep
+    and mixed `UNION` / `UNION ALL` of three or more branches with the DECIMAL first, in subqueries, CTEs, views and
+    MERGE sources).
+  - **`DecimalInRanges` (`spark_decimal_in_ranges`)**, an optimizer rule added by `ctx.add_optimizer_rule` in
+    `SparkExtension::register`, so it runs at the **end** of each optimizer pass, after `push_down_filter`. Bottom
+    up, on every node's expressions (`Filter`, `Projection`, join `ON` and filters, `TableScan.filters`), it rewrites
+    `__repark_decimal_to_double__(d) [NOT] IN (<Float64 literals>)` by `decimal_in_form` over
+    `decimal_range_of_double` (the K2 preimage, with `-0.0` searched as `+0.0`, NaN and ±Infinity matching nothing,
+    and a constant at the column's largest double reaching the top): form 1, a decimal `IN` list, when every range is
+    one decimal wide (always for precision 15 or less); form 2, the members plus `d >= lo AND d < hi` per wider
+    range joined by `OR`, while those ranges number at most `DECIMAL_IN_RANGE_LIMIT` (32, owner Q1 (a)); otherwise
+    the per-row form. A NULL item adds `OR NULL`, an emptied list is `CASE WHEN d IS NULL THEN NULL ELSE FALSE END`,
+    and `NOT IN` is `NOT` of the same build. A column or subquery item keeps the per-row form.
+  - `tests.rs` adds the three-or-more-branch unions and, in `in_ranges`, the brute force: lengths 1 to 64 at
+    `(10,2)`, `(20,6)`, `(38,18)` and `(38,10)`, `IN` and `NOT IN`, against a Rust oracle over K2 row for row, the
+    plan shape per form, form 1 for every `(p, s)` with `p <= 15`, and the limit of 32.
+  - **The retirement (critic item 9):** `widen_decimal_against_float` is gone from `../spark_literal_typing.rs`; seat E
+    answers its four literal shapes (comparison, `IN`, `BETWEEN`, simple `CASE`). The gate pinned them through
+    `F.expr` on both doors before and after; no native-door answer moved, so no fallback was kept.
+
 
 - `../extension.rs` — **STRUCT-COMPARE-BY-POSITION-1 (2026-11-10):** seats
   `struct_operands_by_position` after `spark_map_subscript`, registers `DuplicateFieldOperands`

@@ -53,6 +53,7 @@ fn analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_
         .into_iter()
         .filter(|name| {
             name != "join_condition_refusals"
+                && name != "spark_values_typing"
                 && name != "spark_map_subscript"
                 && name != "struct_operands_by_position"
                 && name != "higher_order_preparation"

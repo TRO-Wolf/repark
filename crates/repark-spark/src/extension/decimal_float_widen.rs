@@ -10,7 +10,8 @@ use datafusion::logical_expr::{
     Between, BinaryExpr, Cast, Distinct, Expr, ExprSchemable, Join, JoinType, LogicalPlan,
     Operator, Projection, Subquery, Union,
 };
-use datafusion::optimizer::AnalyzerRule;
+use datafusion::optimizer::optimizer::ApplyOrder;
+use datafusion::optimizer::{AnalyzerRule, OptimizerConfig, OptimizerRule};
 
 const ALL_ARGUMENTS: &[&str] = &[
     "coalesce",
@@ -300,7 +301,7 @@ fn project_to_double(input: Arc<LogicalPlan>, positions: &[usize]) -> Result<(Lo
 fn rewrite_union(union: Union) -> Result<Transformed<LogicalPlan>> {
     let positions = union_positions(&union);
     if positions.is_empty() {
-        return Ok(Transformed::no(LogicalPlan::Union(union)));
+        return rebuild_stale_union(union);
     }
     let mut inputs = Vec::with_capacity(union.inputs.len());
     for input in union.inputs {
@@ -309,6 +310,24 @@ fn rewrite_union(union: Union) -> Result<Transformed<LogicalPlan>> {
     }
     Ok(Transformed::yes(LogicalPlan::Union(
         Union::try_new_with_loose_types(inputs)?,
+    )))
+}
+
+fn rebuild_stale_union(union: Union) -> Result<Transformed<LogicalPlan>> {
+    let stale = union.inputs.first().is_some_and(|first| {
+        let mine = first.schema().fields();
+        let merged = union.schema.fields();
+        mine.len() == merged.len()
+            && mine
+                .iter()
+                .zip(merged.iter())
+                .any(|(mine, merged)| mine.data_type() != merged.data_type())
+    });
+    if !stale {
+        return Ok(Transformed::no(LogicalPlan::Union(union)));
+    }
+    Ok(Transformed::yes(LogicalPlan::Union(
+        Union::try_new_with_loose_types(union.inputs)?,
     )))
 }
 
@@ -655,6 +674,229 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         changed,
         TreeNodeRecursion::Continue,
     ))
+}
+
+pub const DECIMAL_IN_RANGE_LIMIT: usize = 32;
+const DECIMAL_TO_DOUBLE: &str = "__repark_decimal_to_double__";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DecimalInForm {
+    Members(Vec<i128>),
+    Ranges {
+        members: Vec<i128>,
+        ranges: Vec<(i128, i128)>,
+    },
+    PerRow,
+}
+
+fn decimal_top(precision: u8) -> Option<i128> {
+    10i128
+        .checked_pow(u32::from(precision))
+        .and_then(|power| power.checked_sub(1))
+        .filter(|&top| top > 0)
+}
+
+#[must_use]
+pub fn decimal_range_of_double(constant: f64, precision: u8, scale: i8) -> Option<(i128, i128)> {
+    if !constant.is_finite() {
+        return None;
+    }
+    let constant = if constant == 0.0 { 0.0 } else { constant };
+    let top = decimal_top(precision)?;
+    if let Some((lower, upper)) =
+        repark_common::java_double::decimal_preimage_of_double(constant, precision, scale)
+    {
+        return (lower < upper).then_some((lower, upper));
+    }
+    if repark_common::java_double::java_decimal_to_double(top, scale) != constant {
+        return None;
+    }
+    let (_, lower) = repark_common::java_double::decimal_preimage_of_double(
+        constant.next_down(),
+        precision,
+        scale,
+    )?;
+    Some((lower, top + 1))
+}
+
+#[must_use]
+pub fn decimal_in_form(constants: &[f64], precision: u8, scale: i8, limit: usize) -> DecimalInForm {
+    let mut ranges: Vec<(i128, i128)> = constants
+        .iter()
+        .filter_map(|&constant| decimal_range_of_double(constant, precision, scale))
+        .collect();
+    ranges.sort_unstable();
+    ranges.dedup();
+    let (singles, wide): (Vec<(i128, i128)>, Vec<(i128, i128)>) = ranges
+        .into_iter()
+        .partition(|(lower, upper)| upper - lower == 1);
+    let members = singles.into_iter().map(|(lower, _)| lower).collect();
+    if wide.is_empty() {
+        return DecimalInForm::Members(members);
+    }
+    if wide.len() > limit {
+        return DecimalInForm::PerRow;
+    }
+    DecimalInForm::Ranges {
+        members,
+        ranges: wide,
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct DecimalInRanges;
+
+impl OptimizerRule for DecimalInRanges {
+    #[allow(clippy::unnecessary_literal_bound)]
+    fn name(&self) -> &str {
+        "spark_decimal_in_ranges"
+    }
+
+    fn apply_order(&self) -> Option<ApplyOrder> {
+        Some(ApplyOrder::BottomUp)
+    }
+
+    fn rewrite(
+        &self,
+        plan: LogicalPlan,
+        _config: &dyn OptimizerConfig,
+    ) -> Result<Transformed<LogicalPlan>> {
+        if !node_has_decimal_in(&plan)? {
+            return Ok(Transformed::no(plan));
+        }
+        let schema = match &plan {
+            LogicalPlan::TableScan(scan) => DFSchema::try_from_qualified_schema(
+                scan.table_name.clone(),
+                scan.source.schema().as_ref(),
+            )?,
+            other => merged_input_schema(other),
+        };
+        let name_preserver = NamePreserver::new(&plan);
+        plan.map_expressions(|expr| {
+            let saved_name = name_preserver.save(&expr);
+            let rewritten = expr.transform_up(|node| Ok(rewrite_decimal_in(node, &schema)))?;
+            Ok(rewritten.update_data(|node| saved_name.restore(node)))
+        })
+    }
+}
+
+fn decimal_to_double_argument(expr: &Expr) -> Option<&Expr> {
+    match expr {
+        Expr::ScalarFunction(function)
+            if function.func.name() == DECIMAL_TO_DOUBLE && function.args.len() == 1 =>
+        {
+            function.args.first()
+        }
+        _ => None,
+    }
+}
+
+fn is_decimal_in(expr: &Expr) -> bool {
+    match expr {
+        Expr::InList(in_list) => {
+            decimal_to_double_argument(&in_list.expr).is_some()
+                && in_list
+                    .list
+                    .iter()
+                    .all(|item| matches!(item, Expr::Literal(ScalarValue::Float64(_), _)))
+        }
+        _ => false,
+    }
+}
+
+fn node_has_decimal_in(plan: &LogicalPlan) -> Result<bool> {
+    let mut found = false;
+    plan.apply_expressions(|expr| {
+        found = expr.exists(|node| Ok(is_decimal_in(node)))?;
+        Ok(if found {
+            TreeNodeRecursion::Stop
+        } else {
+            TreeNodeRecursion::Continue
+        })
+    })?;
+    Ok(found)
+}
+
+fn rewrite_decimal_in(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+    if !is_decimal_in(&expr) {
+        return Transformed::no(expr);
+    }
+    let Expr::InList(in_list) = &expr else {
+        return Transformed::no(expr);
+    };
+    let Some(argument) = decimal_to_double_argument(&in_list.expr) else {
+        return Transformed::no(expr);
+    };
+    let Ok(DataType::Decimal128(precision, scale)) = argument.get_type(schema) else {
+        return Transformed::no(expr);
+    };
+    if argument.is_volatile() {
+        return Transformed::no(expr);
+    }
+    let mut constants = Vec::with_capacity(in_list.list.len());
+    let mut has_null = false;
+    for item in &in_list.list {
+        match item {
+            Expr::Literal(ScalarValue::Float64(Some(constant)), _) => constants.push(*constant),
+            _ => has_null = true,
+        }
+    }
+    let form = decimal_in_form(&constants, precision, scale, DECIMAL_IN_RANGE_LIMIT);
+    let Some(top) = decimal_top(precision) else {
+        return Transformed::no(expr);
+    };
+    let decimal = |unscaled: i128| {
+        Expr::Literal(
+            ScalarValue::Decimal128(Some(unscaled), precision, scale),
+            None,
+        )
+    };
+    let mut terms = Vec::new();
+    let push_members = |members: Vec<i128>, terms: &mut Vec<Expr>| match members.as_slice() {
+        [] => {}
+        [only] => terms.push(argument.clone().eq(decimal(*only))),
+        _ => terms.push(Expr::InList(InList::new(
+            Box::new(argument.clone()),
+            members.into_iter().map(decimal).collect(),
+            false,
+        ))),
+    };
+    match form {
+        DecimalInForm::PerRow => return Transformed::no(expr),
+        DecimalInForm::Members(members) => push_members(members, &mut terms),
+        DecimalInForm::Ranges { members, ranges } => {
+            push_members(members, &mut terms);
+            for (lower, upper) in ranges {
+                let low = argument.clone().gt_eq(decimal(lower));
+                terms.push(if upper > top {
+                    low
+                } else {
+                    low.and(argument.clone().lt(decimal(upper)))
+                });
+            }
+        }
+    }
+    if has_null {
+        terms.push(Expr::Literal(ScalarValue::Boolean(None), None));
+    }
+    let combined = terms.into_iter().reduce(Expr::or).unwrap_or_else(|| {
+        Expr::Case(Case::new(
+            None,
+            vec![(
+                Box::new(argument.clone().is_null()),
+                Box::new(Expr::Literal(ScalarValue::Boolean(None), None)),
+            )],
+            Some(Box::new(Expr::Literal(
+                ScalarValue::Boolean(Some(false)),
+                None,
+            ))),
+        ))
+    });
+    Transformed::yes(if in_list.negated {
+        Expr::Not(Box::new(combined))
+    } else {
+        combined
+    })
 }
 
 #[cfg(test)]

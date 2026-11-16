@@ -26,6 +26,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
 
 ## Contents
 
+- `values_marker.rs`, `values_marker/` — DDU-1 part 2, seat V: [values_marker/map.md](values_marker/map.md).
 - `lib.rs` — re-exports G15 collation valves and FNP-15/16 `refuse_declared_function_in_*`
   from `repark-functions`, plus `refuse_sql_fragment` for `F.expr` / `filter_sql`, which also ends in `repark_core::refuse_multiset_set_operation` (SQL-SETOP-ALL-REFUSE-1).
   **STAMP-2-R5P6-2 (2026-10-07):** re-exports `normalize/map_ordering.rs`'s `analyze_built_plan` on
@@ -428,8 +429,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   list. Anything else — overwrite, column list, partition clause, non-VALUES source,
   mixed-length rows, equal-or-wider VALUES, a missing table — falls through untouched.
   Pins: [tests/insert_arity.rs](tests/insert_arity.rs).
-- `void_type/ltz_values_store.rs` — **WO LTZ-STORE-INT-1 (2026-09-28):** the VALUES-door
-  store-assignment gate for `TIMESTAMP` (LTZ) targets, a child module of `void_type.rs` reached from
+- `void_type/ltz_values_store.rs` — **WO LTZ-STORE-INT-1 (2026-09-28):** the VALUES-door store-assignment gate for `TIMESTAMP` (LTZ) targets, a child module of `void_type.rs` reached from
   `refuse_insert_void_values`, before planning conforms VALUES literals inside the `Values` node
   where the analyzer rule can no longer see them: each cell mapped to a microsecond `Timestamp`
   column is judged through the shared `incompatible_update_message` gate — bare literals by their
@@ -810,7 +810,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   **WO U5 PR2b round 3 (2026-09-25):** `commit_write_on_branch` checks that an explicit `t.branch_x`
   target exists, so a missing branch on a format v1 table answers REF-1's `Cannot use branch (does
   not exist): x` (Spark's text). WO RP50-A keeps the check with the v1 kernel removed.
-- `write_to_branch.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28), delete-format check reverted by RP-61 (2026-10-28):** `commit_write_on_branch` no longer runs the delete-format check: the DML arm's owned-head and fork-parse checks and the MERGE arm are gone, with the `data_format` import. Its BUG-001 valve for DML still runs before `create_wap_branch_from_main`, so that refusal creates no branch. `branch_write_kind` (`BranchWriteKind::{Dml, Merge}`) still classifies the statement from its tokenised head (`statement_head`), so a leading comment does not hide its kind; UPDATE, DELETE, MERGE, INSERT and TRUNCATE classify, and any other head refuses before any file is written (fail closed). `tag_write_error` reads the same head. A branch statement reaches the fork writer through a temp view, so the router never sees its table. The path still resolves the name as written (follow-up card SPARK-DOOR-TARGET-NORMALISATION-1). A MERGE on a branch reaches the branch path without a delete-format check, as it did before ICE-DELETE-FORMAT-GUARD-1.
+- `write_to_branch.rs` — **ICE-DELETE-FORMAT-GUARD-1 (2026-10-28), delete-format check reverted by RP-61 (2026-10-28):** `commit_write_on_branch` no longer runs the delete-format check: the DML arm's owned-head and fork-parse checks and the MERGE arm are gone, with the `data_format` import. Its BUG-001 valve for DML still runs before `create_wap_branch_from_main`, so that refusal creates no branch. `branch_write_kind` (`BranchWriteKind::{Dml, Merge}`) still classifies the statement from its tokenised head (`statement_head`), so a leading comment does not hide its kind; UPDATE, DELETE, MERGE, INSERT and TRUNCATE classify, and any other head refuses before any file is written (fail closed). `tag_write_error` reads the same head. A branch statement reaches the fork writer through a temp view, so the router never sees its table. The path still resolves the name as written (follow-up card SPARK-DOOR-TARGET-NORMALISATION-1).
 - `time_travel.rs` — **ICE-SESSION-WRITE-CONF-1 round 1 (2026-09-19):** the ref-selector scan
   skips the `FROM` that names a `DELETE` target, so `DELETE FROM t.branch_b …` is a write to
   the branch and not a read pinned to it (the pin turned the target into a read-only temp

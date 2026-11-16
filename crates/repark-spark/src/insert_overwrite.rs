@@ -92,7 +92,7 @@ pub(crate) async fn execute_insert_overwrite(
                 .as_ref()
                 .is_some_and(|(_, _, _, branch)| branch.is_some());
             if !branch_target {
-                let _validated = ctx.sql(sql).await?;
+                let _validated = crate::values_marker::plan_marked_sql(ctx, sql).await?;
             }
             let type_table_sql = match &iceberg_target {
                 Some((catalog_name, _, table, _)) => {

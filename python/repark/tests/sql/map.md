@@ -10,8 +10,10 @@ pins.
 
 ## Contents
 
-- [test_decimal_double_coercion_1.py](test_decimal_double_coercion_1.py) — DECIMAL-DOUBLE-UNION-COERCION-1 part 1 facade pins, both ANSI modes, measured on Spark 4.1.2: 82 Spark-door DML cells (2 strict xfails, SIGNED-ZERO-UPDATE-IN-LIST-1), 15 flips, 7 signed-zero shapes (DELETE and Q8 MERGE zero, cow and mor), a 60-cell fuzz sample, the writer doors, v3 DELETE, non-ASCII union, struct refusal, the four literal shapes, written K1/K2, DataFrame comparison, `VALUES` at main's answer, and the native door.
-- [test_decimal_double_preimage_1.py](test_decimal_double_preimage_1.py) — DECIMAL-DOUBLE-UNION-COERCION-1 part 1 delta, both ANSI modes, measured on Spark 4.1.2: `DECIMAL(10,2)` and `DECIMAL(38,18)` edge rows × 12 constants × 8 operators × both sides, the plan shape, `IN`/`NOT IN`/`BETWEEN`, DataFrame filters, and DELETE, UPDATE and MERGE on COW and MOR.
+- [test_decimal_double_coercion_1.py](test_decimal_double_coercion_1.py) — DECIMAL-DOUBLE-UNION-COERCION-1 part 1 (both modes, Spark 4.1.2): DML, flips, signed zero, Q8, fuzz, writers, literals, K1/K2, `VALUES`, native door.
+- [test_decimal_double_preimage_1.py](test_decimal_double_preimage_1.py) — part 1 delta: DOUBLE constants vs decimal edge rows, 8 operators, plan shape, `IN`/`BETWEEN`, frames, DML.
+- [test_decimal_double_coercion_2.py](test_decimal_double_coercion_2.py) — part 2 (seat V, unions) vs Spark: the 11 cells part 1 broke (a DOUBLE whose `decimal(30,15)` image collides with a truncated `VALUES` cell) and neighbours, seat V's family, the tripwire, native frames.
+- [test_decimal_double_in_ranges_2.py](test_decimal_double_in_ranges_2.py) — part 2 `IN` rewrite: step 0's 224 `in/` lists vs a `float(Decimal)` oracle; plan shape on a view and an Iceberg scan.
 - [test_deep_expr_build_small_stack_1.py](test_deep_expr_build_small_stack_1.py) — DEEP-FILTER-CHAIN-CRASH-1 CI-segv fold — deep expression builds never overflow a caller stack. Two shapes (caller thread, 8 MiB thread), each in its own interpreter (DEEP-BATTERY-SPLIT-1).
 - [test_deep_filter_chain_crash_1.py](test_deep_filter_chain_crash_1.py) — DEEP-FILTER-CHAIN-CRASH-1 — deep operator chains answer instead of crashing. Nine shapes, one interpreter per test; no `xdist_group` (DEEP-BATTERY-SPLIT-1).
 - [test_deep_reverify_1.py](test_deep_reverify_1.py) — DEEP-FILTER-CHAIN-CRASH-1 re-verify fold — VD2 pins on main, small stacks, and GC. The four main-thread shapes run one interpreter each; the 256 KiB, 512 KiB and GC fixtures were one shape each and stay (DEEP-BATTERY-SPLIT-1).
