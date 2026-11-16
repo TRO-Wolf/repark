@@ -1,0 +1,29 @@
+# map — task/roadmap/mid-term/sweep-2026-11-16/
+
+Nineteen cards from Fable's type-pair sweep and DataFusion simplifier audit of 2026-11-16, the reports titled "Fable sweep — type-pair coercion 2026-11-16" and "Fable audit — DataFusion rewrites against Spark 2026-11-16". Both were measured before #1341 and #1345, on main's package against Spark 4.1.2, and nothing is ruled: each card is PROPOSED, not dispatched, and its severity is a proposal for the owner to rule. The five dated appends to existing cards stay in `task/roadmap/mid-term/`.
+
+Re-run on main `e50ed17f` (RePark's side only, Spark's answers kept): 16,884 cells, of which 32 moved, all to equal and all in the `values` position (sweep family 10, fixed by #1341). Every sweep cell behind the ten sweep cards is unchanged on that main; the seven audit cards were not re-run.
+
+## Cards
+
+- [TINYINT-SMALLINT-ARITH-ANSI-1](tinyint-smallint-arith-ansi-1-card-2026-11-16.md) (proposed S1) — **card (2026-11-16, Fable's sweep family 1; not dispatched):** with ANSI on, TINYINT and SMALLINT products and sums wrap where Spark raises; INT and BIGINT already raise.
+- [NUMERIC-TIMESTAMP-CAST-1](numeric-timestamp-cast-1-card-2026-11-16.md) (proposed S1) — **card (2026-11-16, family 2; not dispatched):** a FLOAT or DECIMAL cast to TIMESTAMP reads the number as microseconds, not seconds, in both modes.
+- [SETOP-SCALAR-TYPE-1](setop-scalar-type-1-card-2026-11-16.md) (proposed S3) — **card (2026-11-16, family 5; not dispatched):** EXCEPT and INTERSECT keep the left integer type where Spark widens; the values agree in the sweep.
+- [STRING-IN-COERCE-1](string-in-coerce-1-card-2026-11-16.md) (proposed S1) — **card (2026-11-16, family 7; not dispatched):** a STRING beside a DOUBLE in IN answers a different boolean with ANSI off; a DECIMAL constant refuses.
+- [DATE-NTZ-NANOSECOND-RANGE-1](date-ntz-nanosecond-range-1-card-2026-11-16.md) (proposed S3) — **card (2026-11-16, family 9; not dispatched):** a DATE from 2262-04-12 beside TIMESTAMP_NTZ overflows the nanosecond path; the R-3 residue is not carded.
+- [BOOLEAN-NUMERIC-COMPARE-1](boolean-numeric-compare-1-card-2026-11-16.md) (proposed S3) — **card (2026-11-16, family 13; not dispatched):** BOOLEAN = INT refuses at planning with ANSI off, where Spark answers.
+- [DATE-INTEGRAL-CAST-ANSI-OFF-1](date-integral-cast-ansi-off-1-card-2026-11-16.md) (proposed S3) — **card (2026-11-16, family 14; not dispatched):** with ANSI off, CAST of a DATE to an integer refuses where Spark answers NULL.
+- [CREATEDATAFRAME-DECIMAL-SCHEMA-1](createdataframe-decimal-schema-1-card-2026-11-16.md) (proposed S2) — **card (2026-11-16, family 15; not dispatched; not reproduced by the clerk):** createDataFrame with a DECIMAL(20,0) or DECIMAL(38,0) schema refuses, as Fable's report states.
+- [STRING-NUMBER-CASE-UNION-ANSI-1](string-number-case-union-ansi-1-card-2026-11-16.md) (proposed S3) — **card (2026-11-16, family 16; not dispatched):** with ANSI on, CASE and UNION over a STRING beside a number answer a string where Spark raises on malformed text.
+- [BINARY-STRING-COMPARE-1](binary-string-compare-1-card-2026-11-16.md) (proposed S3) — **card (2026-11-16, family 17; not dispatched):** with ANSI off, a BINARY beside a STRING answers in IN and UNION ALL where Spark refuses.
+- [DATAFUSION-SIMPLIFIER-UPSTREAM-1](datafusion-simplifier-upstream-1-card-2026-11-16.md) (proposed S1) — **card (2026-11-16, audit rewrites 1 to 5; not dispatched):** five DataFusion 54.1.0 rewrites change answers (negation and bitwise, XOR of NULL, IN with NULL, power of NULL).
+- [CASE-BOOL-GUARD-ANSI-1](case-bool-guard-ansi-1-card-2026-11-16.md) (proposed S2) — **card (2026-11-16, audit rewrite 6; not dispatched):** with ANSI on, a boolean CASE that guards a division raises DIVIDE_BY_ZERO where Spark answers.
+- [AND-GUARD-ANSI-1](and-guard-ansi-1-card-2026-11-16.md) (proposed S2) — **card (2026-11-16, audit difference 7; not dispatched):** with ANSI on, AND does not protect its right side, so a guard before a division raises.
+- [RAND-SHARED-VALUE-1](rand-shared-value-1-card-2026-11-16.md) (proposed S1) — **card (2026-11-16, audit difference 8; not dispatched):** two rand() calls in one row return one value on main, where Spark draws each.
+- [DATE-PART-SESSION-ZONE-1](date-part-session-zone-1-card-2026-11-16.md) (proposed S1) — **card (2026-11-16, audit difference 9; not dispatched):** date_part and extract read UTC fields in a non-UTC session; year(ts) and hour(ts) are right.
+- [UNIX-SECONDS-PRE-EPOCH-1](unix-seconds-pre-epoch-1-card-2026-11-16.md) (proposed S3) — **card (2026-11-16, audit difference 10; not dispatched):** unix_seconds of a pre-1970 timestamp with a fraction answers 0 where Spark answers -1.
+- [UNIQUE-PROJECTION-NAMES-1](unique-projection-names-1-card-2026-11-16.md) (proposed S2) — **card (2026-11-16, audit difference 11; not dispatched):** two casts of one column in a select list refuse "Projections require unique expression names", where Spark answers.
+- [DATAFUSION-REWRITE-LEADS-1](datafusion-rewrite-leads-1-card-2026-11-16.md) (proposed S3) — **card (2026-11-16, audit section 5; leads measured by an agent, not re-measured; not dispatched):** six unmeasured leads from the simplifier audit.
+- [NOT-DISTINCT-FROM-NULL-1](not-distinct-from-null-1-card-2026-11-16.md) (proposed S2) — **card (2026-11-16, the orchestrator's item; not dispatched):** `CAST(c AS INT) IS NOT DISTINCT FROM NULL` refuses with UNRESOLVED_COLUMN where Spark answers.
+
+Up: [../map.md](../map.md).

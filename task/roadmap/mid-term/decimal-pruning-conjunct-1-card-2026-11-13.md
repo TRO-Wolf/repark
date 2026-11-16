@@ -28,3 +28,8 @@ outward to `d`'s scale, a superset, while the double predicate stays the exact f
 
 The decimal unit pins today's "no decimal pushdown" rows; when the fork learns decimal datums, that pin fails and this
 card is built, pinned by the files a widened decimal-column predicate scans.
+
+
+## Append (2026-11-16): the shielded and hand-written decimal filters
+
+The records clerk's check of the CAST-LITERAL-UNWRAP-1 build records, under "What the brief got wrong, and incidents", item 4, that neither the shielded decimal filter nor the hand-written one pushes an Iceberg predicate: both plan with `predicate:[]`. On Parquet both prune identically, pinned there. This is the measured form of the "no decimal pushdown" row above, so the cost stands. The cause is the fork's lack of decimal datums, as this card says. It is a cost, not a wrong answer, so the card's S4 stands and the owner rules any change. The build measured this on its own head before it merged, and this section adds no measurement. The source is the build's record, held in the records clerk's scratch folder (not committed).
