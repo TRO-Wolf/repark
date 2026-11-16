@@ -9,76 +9,29 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
 ## Contents
 
 - `mod.rs` — thin index (rustfmt module order).
-- `skipping_limit.rs` + `skipping_limit_grid.tsv` — **OFFSET-NESTED-SORT-1 (2026-10-08):** pins
-  for the `EnforceSorting` guard in `../df_guards/skipping_limit.rs`. The fixture holds 73
-  statements, one per line: name, family, SQL over a relation `t`, and the rows live Spark 4.1.2
-  answered (count, then values; columns joined by `/`). Family is what stock DataFusion 54.1.0
-  does on a memory table: `one-partition` (12 statements, wrong only when the scan has one
-  partition), `every-partition` (9, wrong at 1, 2 and 16), `control` (52, right). Each test
-  swaps `t` for a source: `m` (a `CREATE TABLE AS` memory table, whose partition count follows
-  `target_partitions`), `t` (a view over `generate_series`, a source that declares its order),
-  `p` (a one-file parquet scan written in shuffled order) and `ice.s.i` (an Iceberg table in a
-  memory catalog, inserted in shuffled order). `one_partition_family_answers_spark_rows_at_*`
-  are three tests so that the mutation "remove the guard" shows red at one partition and green
-  at two and sixteen. The other grid tests loop over 1, 2 and 16.
-  `offset_one` (`OFFSET 1` under a same-key outer sort) pins the guard's boundary `skip > 0`: with
-  the boundary moved to `skip > 1` it is red on `m` at one partition and on `p` and `ice.s.i` at 1, 2 and 16.
-  `stock_enforce_sorting_still_loses_the_rows_at_one_partition_only` and
-  `stock_enforce_sorting_still_sorts_below_an_offset` run DataFusion's own rule on the same
-  session state and assert today's wrong answers: they are the retirement signal for the guard.
-  `reported_plan_keeps_the_inner_top_k_as_wide_as_skip_plus_fetch` pins both plans' text.
-  `statements_without_offset_plan_exactly_as_stock_datafusion` and
-  `guarded_rule_list_is_stock_datafusion_in_order_then_the_repark_rules` hold the no-cost
-  claim: the same plan text and the same rule order when no `OFFSET` is present.
-  `no_seal_survives_into_a_final_plan` and
-  `seal_reports_its_limit_and_neither_runs_nor_takes_a_child`
-  pin the seal node. The fixture is regenerated from a live Spark recording, never edited by hand.
-- `write_postgres.rs` — **C-4 step 2 (2026-10-09):** the pre-connection pins: an unknown
-  mounted source and a non-Postgres mount refuse before any connection; an unknown property
-  refuses as `Config` naming `jdbc` without the password; a refused port refuses as
-  operational (`DataFusion` fold); partition keys and `predicates` on a write are ignored,
-  never refused; the `write.path` option defaults to bulk, takes `row` case-insensitively, and
-  refuses anything else as `Configuration` naming both values; the last-report carrier
-  records on builder sessions and nowhere else (bare contexts record nowhere).
-- `write_postgres_shape.rs` — **C-4 fold 3 item 1 (2026-10-11):** split out of
-  `write_postgres.rs` at the pre-connection/`shape_batch` seam when the file passed its
-  ceiling (pure move). It holds the `shape_batch` pins:
-  **C-4 fold 2 items 2–3 (2026-10-10):** integer, decimal and byte overflows refuse with the
-  overflow class, malformed bytes with the invalid-input class, each naming the column; fitting
-  values and NULLs cast as before; a timestamp into a date or text column takes the session-zone
-  wall while timestamp and timestamptz columns keep their placement. **C-4 fold 3 item 1
-  (2026-10-11):** the store-assignment pins: every cross-family cell (integers into
-  date/timestamp/bytea/interval, temporal into integers, empty string into numeric, numbers and
-  strings across bool/int/float, every string source into a non-string column) refuses with the
-  `CANNOT_SAFELY_CAST` class naming the column and both types; interval columns take strings and
-  null only; untyped NULL stores into every column type; widening and narrowing within range still
-  store. The malformed-string, leftmost-value, capped-value and fitting-string pins are deleted: the
-  gate refuses those pairs before the value arms.
-  **C-4 fold 3 item 2 (2026-10-11):** the text-rendering pins: floats spell Java text
-  (infinities, NaN, 1e7, 1e16, 1e-5, 123456789.125, -0.0, both widths); nanosecond,
-  second and millisecond timestamps render the session-zone wall with up to nine
-  fraction digits; timestamps and dates outside the four-digit years render ISO dates;
-  decimals, bools, ints, strings and binaries render plainly.
-  **C-4 fold 3 S3 (2026-10-11):** a gap wall into a timestamptz column refuses naming the column.
-  **C-4 fold 4 item 3 (2026-10-11):** the gap pin also names the column's Postgres type.
-- `write_postgres_interval.rs` — **C-4 fold 4 item 1 (2026-10-11):** the interval carve-out pins at
-  the `shape_batch` chokepoint, in their own module because the shape file sits at its ceiling: an
-  engine `Interval` into an interval column stores as Arrow text, an interval into a text column
-  still refuses with the store-assignment class.
-- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** a count of `3000000000` from the door's
-  argument refuses as `NumberFormat` before any connection.
-- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the pre-connection number refusal is pinned
-  on `numPartitions`; a bound is no longer parsed before the relation resolves, so a date bound
-  beside a bad count still names the count.
-- `read_postgres.rs` — **C-3 (2026-10-07):** `partition_options_refuse_as_spark_does_before_any_connection`
-  (the all-or-none sentence from arguments and from properties, a bound that is not an `i64`
-  as `NumberFormat` without its value, `query` with a column, `predicates` declared from the
-  argument and from a property, a spelling given twice) and
-  `num_partitions_alone_is_no_partitioning_and_never_a_setting`.
-- `read_postgres.rs` — **C-2d fold 1 (2026-10-07), N6:** behind `postgres`.
-  `a_dbtable_property_is_the_target_never_a_setting`: a `dbtable` property, in any case, is
-  dropped before the settings check, so a read without `user` answers that refusal and never
-  names `dbtable` (the verifier's V2).
+- `skipping_limit.rs` + `skipping_limit_grid.tsv` — **OFFSET-NESTED-SORT-1 (2026-10-08):** pins for the `EnforceSorting` guard in `../df_guards/skipping_limit.rs`. The fixture holds 73 statements, one per line: name, family, SQL over a relation `t`, and the rows live Spark 4.1.2 answered (count,
+  then values; columns joined by `/`). Family is what stock DataFusion 54.1.0 does on a memory table: `one-partition` (12 statements, wrong only when the scan has one partition), `every-partition` (9, wrong at 1, 2 and 16), `control` (52, right). Each test swaps `t` for a source: `m` (a `CREATE
+  TABLE AS` memory table, whose partition count follows `target_partitions`), `t` (a view over `generate_series`, a source that declares its order), `p` (a one-file parquet scan written in shuffled order) and `ice.s.i` (an Iceberg table in a memory catalog, inserted in shuffled order).
+  `one_partition_family_answers_spark_rows_at_*` are three tests so that the mutation "remove the guard" shows red at one partition and green at two and sixteen. The other grid tests loop over 1, 2 and 16. `offset_one` (`OFFSET 1` under a same-key outer sort) pins the guard's boundary `skip > 0`:
+  with the boundary moved to `skip > 1` it is red on `m` at one partition and on `p` and `ice.s.i` at 1, 2 and 16. `stock_enforce_sorting_still_loses_the_rows_at_one_partition_only` and `stock_enforce_sorting_still_sorts_below_an_offset` run DataFusion's own rule on the same session state and assert
+  today's wrong answers: they are the retirement signal for the guard. `reported_plan_keeps_the_inner_top_k_as_wide_as_skip_plus_fetch` pins both plans' text. `statements_without_offset_plan_exactly_as_stock_datafusion` and `guarded_rule_list_is_stock_datafusion_in_order_then_the_repark_rules` hold
+  the no-cost claim: the same plan text and the same rule order when no `OFFSET` is present. `no_seal_survives_into_a_final_plan` and `seal_reports_its_limit_and_neither_runs_nor_takes_a_child` pin the seal node. The fixture is regenerated from a live Spark recording, never edited by hand.
+- `write_postgres.rs` — **C-4 step 2 (2026-10-09):** the pre-connection pins: an unknown mounted source and a non-Postgres mount refuse before any connection; an unknown property refuses as `Config` naming `jdbc` without the password; a refused port refuses as operational (`DataFusion` fold);
+  partition keys and `predicates` on a write are ignored, never refused; the `write.path` option defaults to bulk, takes `row` case-insensitively, and refuses anything else as `Configuration` naming both values; the last-report carrier records on builder sessions and nowhere else (bare contexts
+  record nowhere).
+- `write_postgres_shape.rs` — **C-4 fold 3 item 1 (2026-10-11):** split out of `write_postgres.rs` at the pre-connection/`shape_batch` seam when the file passed its ceiling (pure move). It holds the `shape_batch` pins: **C-4 fold 2 items 2–3 (2026-10-10):** integer, decimal and byte overflows refuse
+  with the overflow class, malformed bytes with the invalid-input class, each naming the column; fitting values and NULLs cast as before; a timestamp into a date or text column takes the session-zone wall while timestamp and timestamptz columns keep their placement. **C-4 fold 3 item 1
+  (2026-10-11):** the store-assignment pins: every cross-family cell (integers into date/timestamp/bytea/interval, temporal into integers, empty string into numeric, numbers and strings across bool/int/float, every string source into a non-string column) refuses with the `CANNOT_SAFELY_CAST` class
+  naming the column and both types; interval columns take strings and null only; untyped NULL stores into every column type; widening and narrowing within range still store. The malformed-string, leftmost-value, capped-value and fitting-string pins are deleted: the gate refuses those pairs before
+  the value arms. **C-4 fold 3 item 2 (2026-10-11):** the text-rendering pins: floats spell Java text (infinities, NaN, 1e7, 1e16, 1e-5, 123456789.125, -0.0, both widths); nanosecond, second and millisecond timestamps render the session-zone wall with up to nine fraction digits; timestamps and dates
+  outside the four-digit years render ISO dates; decimals, bools, ints, strings and binaries render plainly. **C-4 fold 3 S3 (2026-10-11):** a gap wall into a timestamptz column refuses naming the column. **C-4 fold 4 item 3 (2026-10-11):** the gap pin also names the column's Postgres type.
+- `write_postgres_interval.rs` — **C-4 fold 4 item 1 (2026-10-11):** the interval carve-out pins at the `shape_batch` chokepoint, in their own module because the shape file sits at its ceiling: an engine `Interval` into an interval column stores as Arrow text, an interval into a text column still
+  refuses with the store-assignment class.
+- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** a count of `3000000000` from the door's argument refuses as `NumberFormat` before any connection.
+- `read_postgres.rs` — **C-3 fold 1 (2026-10-08):** the pre-connection number refusal is pinned on `numPartitions`; a bound is no longer parsed before the relation resolves, so a date bound beside a bad count still names the count.
+- `read_postgres.rs` — **C-3 (2026-10-07):** `partition_options_refuse_as_spark_does_before_any_connection` (the all-or-none sentence from arguments and from properties, a bound that is not an `i64` as `NumberFormat` without its value, `query` with a column, `predicates` declared from the argument
+  and from a property, a spelling given twice) and `num_partitions_alone_is_no_partitioning_and_never_a_setting`.
+- `read_postgres.rs` — **C-2d fold 1 (2026-10-07), N6:** behind `postgres`. `a_dbtable_property_is_the_target_never_a_setting`: a `dbtable` property, in any case, is dropped before the settings check, so a read without `user` answers that refusal and never names `dbtable` (the verifier's V2).
 - `attr_id.rs` — **ATTR-ID-1 S1 (2026-09-30):** the propagation pins for the `repark.attr`
   field-metadata key, measured on DataFusion 54.1.0 alone (a frame tagged by `alias_with_metadata`,
   ids read by position after each node). A bare column and an alias of a column inherit the id; a
@@ -369,11 +322,8 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
 - `conf_dump_redaction.rs` — **SOURCE-URL-REDACT-1 (2026-10-06):** `conf_dump()` masks a password inside a builder
   conf URL and an S3 endpoint, while `resolve_endpoint_from_dump` over the stored rows still
   sees the configured endpoint.
-- `df_guard.rs` — nine DataFusion 54.1 guard pins (the eighth, 2026-09-25: a LEFT JOIN projection's alias-collision decline; the ninth, fix round 5: `BoomOnProjection`, a non-collision error on a Projection stays loud). The rule list holds `signed_zero_literals` before and after `simplify_expressions` (SIGNED-ZERO-NORMALIZE-1; SIGNED-ZERO-CONST-COMPARE-1, 2026-11-14).
-- `io_stats.rs` — **ICE-READ-PERF-0 (2026-09-19):** a session-level read through a registered
-  memory catalog counts data-file ranged reads into `iceberg_io_stats()`, and
-  `reset_iceberg_io_stats()` zeroes the set.
-  It builds its table through the registered handle (`catalogs_snapshot().get`) and
+- `df_guard.rs` — nine DataFusion 54.1 guard pins (the eighth, 2026-09-25: a LEFT JOIN projection's alias-collision decline; the ninth, fix round 5: `BoomOnProjection`, a non-collision error on a Projection stays loud). The rule list holds `signed_zero_literals` before and after `simplify_expressions` (SIGNED-ZERO-NORMALIZE-1; SIGNED-ZERO-CONST-COMPARE-1, 2026-11-14), `repark_cast_shield` before the first of them and last (CAST-LITERAL-UNWRAP-1).
+- `io_stats.rs` — **ICE-READ-PERF-0 (2026-09-19):** a session-level read through a registered memory catalog counts data-file ranged reads into `iceberg_io_stats()`, and `reset_iceberg_io_stats()` zeroes the set. It builds its table through the registered handle (`catalogs_snapshot().get`) and
   `refresh_catalog_provider`, because repark-core has no SQL door of its own.
 - `metadata_cache_report.rs` — **ICE-CATALOG-CACHE-1 (2026-09-19):** `iceberg_metadata_cache_report()`
   carries evictions (three 40 KiB-property tables under `metadataCacheEntries=1`, loads checked

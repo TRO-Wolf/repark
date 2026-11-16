@@ -14,102 +14,35 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 
 ## Modules
 
-- [`display.rs`](display.rs) — **FACADE-2 step 2 (2026-09-12):** `PyColumnParts` is a static-method
-  namespace. Each Group-2 op is one native call that builds the `Expr` and returns a 4-tuple
-  `(PyColumn, spark_display, sql_expr, join_sql_expr)` so the `Expr` is moved, not cloned, back to
-  Python. Child fragments (including Python `str`/`repr` and `_idents` quoting) are inputs; Rust
-  only concatenates. Byte identity with the pre-move Python f-strings is the contract (card D-1).
-  **LOGICAL-WIDTH-1 (2026-09-16, round 2, R-12):** `wrap_cast` is `pub(crate)` so the free
-  `fill_expr_for_column` binding renders the fill literal's cast texts with the same renderer
-  `Column.cast` uses.
-  **CAST-MAP-SPELL-1 (2026-09-19):** `engine_cast` builds through `expr_build::cast_to`;
-  `cast_type_token` is the facade's Spark token for a map-bearing type string
-  (`repark_functions::cast_map::map_cast_token`, `ParseException` otherwise).
-  **Step-2b remediation (2026-09-12, review F1–F5):** operand parts extract as borrowed `&str`
-  tuples, not owned `String`s — PyO3 borrows the UTF-8 cache instead of copying the growing SQL
-  fragments across the boundary per op. `alias` returns a 2-tuple `(PyColumn, spark_display)`: its
-  `sql_expr` is the child's unchanged string, so Python passes the existing `sql_expr_part()`
-  through rather than round-tripping a copy through Rust. The generator arm of `cast`
-  (`apply_engine=false`) takes `Bound<PyColumn>` and returns the same handle via `unbind` — step-1
-  reused `self._inner`, so no `Expr` clone. `case_when` moves `.expr` out of its arm pairs like
-  `PyColumn::case_when`, and every `wrap_*` builder pre-sizes its `String` instead of `format!`.
-  **COLUMN-PARITY-1 critic round (2026-09-14):** `update_fields` (struct expr + op-tag / path
-  literals + `with` values → `update_fields(st, WithField(..))` / `dropfield()` display),
-  `repark_isnan` (`isnan(child)` display), and `in_list` (`(left IN (..))` display) follow the same
-  one-call 4-tuple shape, plus the string-only `field_join_sql` helper for the join-ON bracket
-  fragment.
-  **FACADE-2 step 3 (2026-09-13):** `call_scalar` renders the generic `name(args)` call — the shared
-  helper every `F.<fn>(...)` builder routes through — as a 4-tuple `(PyColumn, spark_display,
-  sql_expr, join_sql_expr)` with an optional display override for the bespoke-name callers. Argument
-  part lists arrive as `Bound<PyList>` items extracted in one pass to `PyBackedStr` handles — owned
-  zero-copy refs to the Python `str` data (the step-2b lesson: the growing fragments never copy
-  across the boundary). Operand `Expr`s move out of the extracted `PyColumn`s into
-  `call_scalar_expr`'s owned `Vec<Expr>` — no second clone beside the operational one (S2-21
-  P2-1). The step-3 `#[pymethods]` wrappers for the Group-1 typed constructors live in this impl
-  block — `#[pymethods]` cannot be split across files — while their `Expr` construction stays in
-  `display/construct.rs`.
-  **DECIMAL-CACHE-1 remediation (2026-09-15):** `unary_neg` emits `Expr::Negative` of the child
-  instead of `lit(0_i32) - child`, so facade `-decimal(p,s)` keeps the child type like Spark's
-  `UnaryMinus` (the old encoding drifted through the pre-coercion seat to `(11,2)` / `(38,9)`);
-  display and SQL fragments unchanged.
-  **FNP-WIN-1 (2026-09-15):** `time_window` is a `#[pymethods]` wrapper in this same impl block for
-  the same reason — a thin call into the `repark-functions` time-window UDFs; grouping/expansion
-  live in the analyzer rule. Step 4 adds the `session_window` wrapper the same way (marker call
-  aliased `session_window`).
-  **ATTR-ID-1 S3a (2026-09-30):** `alias` builds through
-  `repark_core::frame_names::alias_with_fresh_id`, so a user `alias()` mints a fresh attribute id in
-  the alias's metadata. `PyColumn::alias` (the bind/facade path) is untouched: binds keep the
-  field's id.
-  **POLARS-IS-DUPLICATED-1 (2026-09-28):** `is_duplicated` is one native call
-  in the same 4-tuple shape (`is_duplicated(child)` display, SQL and join
-  fragments) over the `expr_build::is_duplicated_expr` constructor.
-  **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):** `impl Drop for PyColumn` lives here (`mod.rs`
-  is at its exact baseline): a deep tree drops on a grown segment sized by expression depth, so
-  teardown never overflows a caller stack. `impl Clone` lives here too: by-value arguments clone at
-  the PyO3 boundary before any builder verdict runs, so the clone grows the same way. `unary_neg`
-  clones the child once.
-  **Re-verify fold (2026-09-30):** `Drop`/`Clone` size from the cached levels (no walk); every
-  `Parts` constructor composes through `combine` (fixed shape) or `combine_surveyed` (scalar
-  dispatch); the inline tests moved verbatim to `display/tests.rs` with the Parts exactness battery.
-- [`display/construct.rs`](display/construct.rs) — **FACADE-2 step 3 (2026-09-13):** the Group-1
-  typed constructors that replace `_native.PyColumn.sql` call sites: `lit_timestamp`, `lit_date`,
-  `lit_time`, `lit_array_cast`, `pi`, `uuid` — a `display` submodule because `mod.rs` is at its
-  exact line baseline. Each builds the `Expr` the analyzed SQL text produced and renders the
-  display/SQL fragments in Rust. `lit_timestamp` mirrors the analyzer's fold decision: text that
-  parses inside the nanosecond `i64` range folds to `Literal(TimestampMicrosecond(µs, UTC))`;
-  out-of-range or unparsable text (measured: Arrow's cast yields a null element, never an error)
-  keeps the `to_timestamp(__repark_decimal_cast_nullable__(Utf8))` call form the SQL path stored.
-  `lit_date` / `lit_time` store `Cast(Utf8, Date32)` / `Cast(Utf8, Time64(Nanosecond))`;
-  `lit_array_cast` stores `Cast(array-call, List<item: <element>, nullable>)` — `VARCHAR` maps to
-  `Utf8View` internally and the Arrow exporter coerces views to `string` at the door.
-  **Re-verify fold (2026-09-30):** the typed constructors compose through `combine` (fixed shape).
-- [`mod.rs`](mod.rs) owns `PyColumn`, constructors, operators, aggregates, and window attachment.
-  **PERF-APPROXPCT-1 (2026-09-05):** `approx_percentile_cont` / `approx_percentile_list`
-  take `accuracy: Option<i64>` (None omits the third literal, so default-accuracy display
-  names keep the two-arg Spark shape). The list call construction collapses to a `let` and
-  the percentage validation folds into a named closure; both hold the file at its exact
-  baseline (ratchet 1053→1052 with the accuracy import).
-  **CASESENS-1 S3 (2026-09-27):** `PyColumn::column` builds through `expr_build::written_column`
-  (the written spelling reaches the binder; net-zero, stays 1012).
-  **DEEP-FILTER-CHAIN-CRASH-1 (2026-09-29):** `Column.sql` drives its planned
-  expression through `deep_stack::block_on` (grown-stack entry point; net-zero: two
-  `use` lines join to pay for the import, stays 1012).
-  **Limits fold (2026-09-29):** the 1 MiB text refusal is removed (1012 → 1011);
-  long fragments plan as on base.
-  **CI segv (2026-09-30):** `PyColumn::expr` is the grown clone-out (every operator routes its
-  operand clones through it); the `case_when` by-value moves become clones because the type now
-  implements `Drop`. rustfmt joins three calls plus the removed `Clone` derive (1011 → 1005).
-  **Re-verify fold (2026-09-30, C-013..C-018, CI perf):** `PyColumn` carries cached `(expression,
-  df-built, subquery-plan)` levels: `combine` composes them in O(1) for fixed-shape operators,
-  `combine_surveyed` surveys once for variable-shape ones, and `expr`/`Clone`/`Drop` size their
-  grown segments from the cache with no per-op tree walk (the walk was the debug-suite 2x). The
-  builder cap counts df-built levels, so SQL-text columns (`from_sql_text`, df 0) stay exempt while
-  DataFrame-API trees still refuse past 1500; mixed trees count only their DF-built levels (Spark
-  answers the mixed-5001 cell). `display_name`/`contains_higher_order` and `make_struct` field
-  naming read through `grown_read`. `Column.sql` plans under `block_on_grown_if` on the text gate.
-  The `expr_tests` module moved verbatim to `expr_tests.rs` and the `PyColumn` struct plus its level
-  constructors moved verbatim to `levels.rs` (the file would otherwise pass its ceiling; 1049 → 969,
-  the exception row retires).
+- [`display.rs`](display.rs) — **FACADE-2 step 2 (2026-09-12):** `PyColumnParts` is a static-method namespace. Each Group-2 op is one native call that builds the `Expr` and returns a 4-tuple `(PyColumn, spark_display, sql_expr, join_sql_expr)` so the `Expr` is moved, not cloned, back to Python.
+  Child fragments (including Python `str`/`repr` and `_idents` quoting) are inputs; Rust only concatenates. Byte identity with the pre-move Python f-strings is the contract (card D-1). **LOGICAL-WIDTH-1 (2026-09-16, round 2, R-12):** `wrap_cast` is `pub(crate)` so the free `fill_expr_for_column`
+  binding renders the fill literal's cast texts with the same renderer `Column.cast` uses. **CAST-MAP-SPELL-1 (2026-09-19):** `engine_cast` builds through `expr_build::cast_to`; `cast_type_token` is the facade's Spark token for a map-bearing type string (`repark_functions::cast_map::map_cast_token`,
+  `ParseException` otherwise). **Step-2b remediation (2026-09-12, review F1–F5):** operand parts extract as borrowed `&str` tuples, not owned `String`s — PyO3 borrows the UTF-8 cache instead of copying the growing SQL fragments across the boundary per op. `alias` returns a 2-tuple `(PyColumn,
+  spark_display)`: its `sql_expr` is the child's unchanged string, so Python passes the existing `sql_expr_part()` through rather than round-tripping a copy through Rust. The generator arm of `cast` (`apply_engine=false`) takes `Bound<PyColumn>` and returns the same handle via `unbind` — step-1
+  reused `self._inner`, so no `Expr` clone. `case_when` moves `.expr` out of its arm pairs like `PyColumn::case_when`, and every `wrap_*` builder pre-sizes its `String` instead of `format!`. **COLUMN-PARITY-1 critic round (2026-09-14):** `update_fields` (struct expr + op-tag / path literals + `with`
+  values → `update_fields(st, WithField(..))` / `dropfield()` display), `repark_isnan` (`isnan(child)` display), and `in_list` (`(left IN (..))` display) follow the same one-call 4-tuple shape, plus the string-only `field_join_sql` helper for the join-ON bracket fragment. **FACADE-2 step 3
+  (2026-09-13):** `call_scalar` renders the generic `name(args)` call — the shared helper every `F.<fn>(...)` builder routes through — as a 4-tuple `(PyColumn, spark_display, sql_expr, join_sql_expr)` with an optional display override for the bespoke-name callers. Argument part lists arrive as
+  `Bound<PyList>` items extracted in one pass to `PyBackedStr` handles — owned zero-copy refs to the Python `str` data (the step-2b lesson: the growing fragments never copy across the boundary). Operand `Expr`s move out of the extracted `PyColumn`s into `call_scalar_expr`'s owned `Vec<Expr>` — no
+  second clone beside the operational one (S2-21 P2-1). The step-3 `#[pymethods]` wrappers for the Group-1 typed constructors live in this impl block — `#[pymethods]` cannot be split across files — while their `Expr` construction stays in `display/construct.rs`. **DECIMAL-CACHE-1 remediation
+  (2026-09-15):** `unary_neg` emits `Expr::Negative` of the child instead of `lit(0_i32) - child`, so facade `-decimal(p,s)` keeps the child type like Spark's `UnaryMinus` (the old encoding drifted through the pre-coercion seat to `(11,2)` / `(38,9)`); display and SQL fragments unchanged.
+  **FNP-WIN-1 (2026-09-15):** `time_window` is a `#[pymethods]` wrapper in this same impl block for the same reason — a thin call into the `repark-functions` time-window UDFs; grouping/expansion live in the analyzer rule. Step 4 adds the `session_window` wrapper the same way (marker call aliased
+  `session_window`). **ATTR-ID-1 S3a (2026-09-30):** `alias` builds through `repark_core::frame_names::alias_with_fresh_id`, so a user `alias()` mints a fresh attribute id in the alias's metadata. `PyColumn::alias` (the bind/facade path) is untouched: binds keep the field's id.
+  **POLARS-IS-DUPLICATED-1 (2026-09-28):** `is_duplicated` is one native call in the same 4-tuple shape (`is_duplicated(child)` display, SQL and join fragments) over the `expr_build::is_duplicated_expr` constructor. **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):** `impl Drop for PyColumn` lives
+  here (`mod.rs` is at its exact baseline): a deep tree drops on a grown segment sized by expression depth, so teardown never overflows a caller stack. `impl Clone` lives here too: by-value arguments clone at the PyO3 boundary before any builder verdict runs, so the clone grows the same way.
+  `unary_neg` clones the child once. **Re-verify fold (2026-09-30):** `Drop`/`Clone` size from the cached levels (no walk); every `Parts` constructor composes through `combine` (fixed shape) or `combine_surveyed` (scalar dispatch); the inline tests moved verbatim to `display/tests.rs` with the Parts
+  exactness battery.
+- [`display/construct.rs`](display/construct.rs) — **FACADE-2 step 3 (2026-09-13):** the Group-1 typed constructors that replace `_native.PyColumn.sql` call sites: `lit_timestamp`, `lit_date`, `lit_time`, `lit_array_cast`, `pi`, `uuid` — a `display` submodule because `mod.rs` is at its exact line
+  baseline. Each builds the `Expr` the analyzed SQL text produced and renders the display/SQL fragments in Rust. `lit_timestamp` mirrors the analyzer's fold decision: text that parses inside the nanosecond `i64` range folds to `Literal(TimestampMicrosecond(µs, UTC))`; out-of-range or unparsable text
+  (measured: Arrow's cast yields a null element, never an error) keeps the `to_timestamp(__repark_decimal_cast_nullable__(Utf8))` call form the SQL path stored. `lit_date` / `lit_time` store `Cast(Utf8, Date32)` / `Cast(Utf8, Time64(Nanosecond))`; `lit_array_cast` stores `Cast(array-call, List<item:
+  <element>, nullable>)` — `VARCHAR` maps to `Utf8View` internally and the Arrow exporter coerces views to `string` at the door. **Re-verify fold (2026-09-30):** the typed constructors compose through `combine` (fixed shape).
+- [`mod.rs`](mod.rs) owns `PyColumn`, constructors, operators, aggregates, and window attachment. **PERF-APPROXPCT-1 (2026-09-05):** `approx_percentile_cont` / `approx_percentile_list` take `accuracy: Option<i64>` (None omits the third literal, so default-accuracy display names keep the two-arg
+  Spark shape). The list call construction collapses to a `let` and the percentage validation folds into a named closure; both hold the file at its exact baseline (ratchet 1053→1052 with the accuracy import). **CASESENS-1 S3 (2026-09-27):** `PyColumn::column` builds through
+  `expr_build::written_column` (the written spelling reaches the binder; net-zero, stays 1012). **DEEP-FILTER-CHAIN-CRASH-1 (2026-09-29):** `Column.sql` drives its planned expression through `deep_stack::block_on` (grown-stack entry point; net-zero: two `use` lines join to pay for the import, stays
+  1012). **Limits fold (2026-09-29):** the 1 MiB text refusal is removed (1012 → 1011); long fragments plan as on base. **CI segv (2026-09-30):** `PyColumn::expr` is the grown clone-out (every operator routes its operand clones through it); the `case_when` by-value moves become clones because the
+  type now implements `Drop`. rustfmt joins three calls plus the removed `Clone` derive (1011 → 1005). **Re-verify fold (2026-09-30, C-013..C-018, CI perf):** `PyColumn` carries cached `(expression, df-built, subquery-plan)` levels: `combine` composes them in O(1) for fixed-shape operators,
+  `combine_surveyed` surveys once for variable-shape ones, and `expr`/`Clone`/`Drop` size their grown segments from the cache with no per-op tree walk (the walk was the debug-suite 2x). The builder cap counts df-built levels, so SQL-text columns (`from_sql_text`, df 0) stay exempt while
+  DataFrame-API trees still refuse past 1500; mixed trees count only their DF-built levels (Spark answers the mixed-5001 cell). `display_name`/`contains_higher_order` and `make_struct` field naming read through `grown_read`. `Column.sql` plans under `block_on_grown_if` on the text gate. The
+  `expr_tests` module moved verbatim to `expr_tests.rs` and the `PyColumn` struct plus its level constructors moved verbatim to `levels.rs` (the file would otherwise pass its ceiling; 1049 → 969, the exception row retires).
 - [`expr_tests.rs`](expr_tests.rs) — **Re-verify fold (2026-09-30):** the `column` unit tests, moved
   verbatim from the inline module, plus the cached- level exactness battery (every operator asserts
   cached levels equal a fresh survey, with df-level pins for SQL-text and mixed shapes).
@@ -177,7 +110,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   is pinned). `cbrt` wraps its argument as `arg * lit(1.0f64)` — Spark's `cbrt` is a
   UnaryMathExpression (always DoubleType, computed in f64); the multiply coerces f32/int/decimal to
   f64 while bool/string still refuse (no numeric coercion).
-- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection. **ATTR-ID-1 SJ-1b (2026-10-02):** `register(module)` adds `grouping_id_column`. **DDU-1 part 2:** seat V marks `F.expr`, `selectExpr`, Spark-door `filter(str)` (`values_marker`). Its delta: a fragment over a mixed `VALUES` plans unresolved; the frame's rules type it (F3). **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `reciprocal_trig_or_inf` maps a zero divisor to `cot(divisor)` (±Inf). **R-CS2P-1 (2026-10-03):** `parse_canonical_predicate` (the insensitive filter door) keeps its plan over in-schema columns, else `folded_qualifier_predicate` re-parses, folds qualifiers (`frame_names::fold_frame_qualifiers`, `IgnoreCase`) and plans the folded tree, so an alias qualifier binds in any case.
+- [`expr_build.rs`](expr_build.rs) owns type parsing, alias handling, and expression inspection; its context registers `__repark_cast_shield__` (CAST-LITERAL-UNWRAP-1). **ATTR-ID-1 SJ-1b (2026-10-02):** `register(module)` adds `grouping_id_column`. **DDU-1 part 2:** seat V marks `F.expr`, `selectExpr`, Spark-door `filter(str)` (`values_marker`). Its delta: a fragment over a mixed `VALUES` plans unresolved; the frame's rules type it (F3). **SIGNED-ZERO-NORMALIZE-1 (2026-11-11):** `reciprocal_trig_or_inf` maps a zero divisor to `cot(divisor)` (±Inf). **R-CS2P-1 (2026-10-03):** `parse_canonical_predicate` (the insensitive filter door) keeps its plan over in-schema columns, else `folded_qualifier_predicate` re-parses, folds qualifiers (`frame_names::fold_frame_qualifiers`, `IgnoreCase`) and plans the folded tree, so an alias qualifier binds in any case.
   **POLARS-IS-DUPLICATED-1 (2026-09-28):** `is_duplicated_expr` builds
   `count(1) OVER (PARTITION BY dup_key(receiver)) > 1` on a user window's path
   (`count_aggregate` + `build_over_expression`, matching the unordered full-partition frame), wrapped in the `dup_mask_udf`
