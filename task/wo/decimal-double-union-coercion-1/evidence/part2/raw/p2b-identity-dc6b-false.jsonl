@@ -1,0 +1,4 @@
+{"key": "provenance", "engine": "repark", "native": "<scratchpad>/pkg-main-dc6b4c94/repark/_native.abi3.so", "warehouse": "critid-1zp5e1l3", "ansi": "false"}
+{"key": "del/id_in_select", "error": "AnalysisException: Error during planning: DELETE with a subquery in its WHERE clause is refused on ``lc`.`ns`.`del_id_in_select``: subquery predicates are silently mis-executed to"}
+{"key": "del/id_eq_scalar", "error": "AnalysisException: Error during planning: DELETE with a subquery in its WHERE clause is refused on ``lc`.`ns`.`del_id_eq_scalar``: subquery predicates are silently mis-executed to"}
+{"key": "upd/id_in_select", "error": "AnalysisException: Error during planning: UPDATE with a subquery in its WHERE clause is refused on ``lc`.`ns`.`upd_id_in_select``: subquery predicates are silently mis-executed to"}

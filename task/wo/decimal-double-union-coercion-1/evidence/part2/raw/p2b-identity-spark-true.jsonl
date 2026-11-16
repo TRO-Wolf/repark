@@ -1,0 +1,4 @@
+{"key": "provenance", "engine": "spark", "version": "4.1.2", "warehouse": "critid-7uwjdsq5", "ansi": "true"}
+{"key": "del/id_in_select", "rows": [["2", "1e-20"]]}
+{"key": "del/id_eq_scalar", "rows": [["2", "1e-20"]]}
+{"key": "upd/id_in_select", "rows": [["1", "0.1"], ["2", "9.0"]]}

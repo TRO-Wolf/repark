@@ -1,0 +1,80 @@
+{"key": "provenance", "engine": "repark", "native": "<scratchpad>/ddu-work/pkg-p2-6be38a8e/repark/_native.abi3.so", "warehouse": "p2b-repark-true-ygzv7bvd", "ansi": "true"}
+{"key": "union/right_deep3", "types": ["int", "double"], "rows": [["1", "0.1"], ["2", "1e-20"], ["3", "-1e-20"]]}
+{"key": "union/mixed_nest4", "types": ["int", "double"], "rows": [["2", "1e-20"], ["3", "-1e-20"], ["4", "0.25"], ["1", "0.1"]]}
+{"key": "union/all5_dec_first", "types": ["int", "double"], "rows": [["1", "0.1"], ["2", "1e-20"], ["3", "-1e-20"], ["4", "2e-20"], ["5", "0.25"]]}
+{"key": "union/all3_cte", "types": ["int", "double"], "rows": [["1", "0.1"], ["2", "1e-20"], ["3", "-1e-20"]]}
+{"key": "union/all3_view", "types": ["int", "double"], "rows": [["1", "0.1"], ["2", "1e-20"], ["3", "-1e-20"]]}
+{"key": "setop/intersect", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "setop/intersect_all", "error": "UnsupportedOperationException: SQL INTERSECT ALL multiset semantics are not Spark-correct on this engine yet; use INTERSECT for distinct bags, or number each side's duplicates with row_number() and INTERSECT the numbered rows (SQL-SETOP-ALL-MULTISET-1)"}
+{"key": "setop/except", "types": ["double"], "rows": [["0.1"]]}
+{"key": "setop/except_all", "error": "UnsupportedOperationException: SQL EXCEPT ALL multiset semantics are not Spark-correct on this engine yet; use EXCEPT for distinct bags, or number each side's duplicates with row_number() and EXCEPT the numbered rows (SQL-SETOP-ALL-MULTISET-1)"}
+{"key": "setop/values_leg_first_intersect", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "values/standalone", "types": ["double"], "rows": [["0.1"], ["1e-20"]]}
+{"key": "values/two_cols", "types": ["int", "double"], "rows": [["1", "0.1"], ["2", "1e-20"]]}
+{"key": "values/null_first", "types": ["double"], "rows": [["NULL"], ["0.1"], ["1e-20"]]}
+{"key": "values/int_dec_double", "types": ["double"], "rows": [["1.0"], ["0.5"], ["1e-20"]]}
+{"key": "values/float", "types": ["double"], "rows": [["0.1"], ["9.999999682655225e-21"]]}
+{"key": "values/user_cast_both", "types": ["decimal(30,15)"], "rows": [["0.100000000000000"], ["0E-15"]]}
+{"key": "values/user_cast_dec_beside_dec", "types": ["decimal(10,2)"], "rows": [["0.50"], ["0.00"], ["1.50"]]}
+{"key": "values/string_beside", "error": "PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed\ncaused by\nArrow error: Cast error: Cannot cast string 'a' to value of Decimal128(38, 10) type"}
+{"key": "values/cte_in", "types": ["int"], "rows": [["1"]]}
+{"key": "values/rcte_anchor", "error": "AnalysisException: Error during planning: Cannot project plan column 0 ('r.n + Int64(2)') to expected output field 'n': field data type differs (input field: Field { name: \"r.n + Int64(2)\", data_type: Int64, nullable: true }, expected field: Field { name: \"n\", data_type: Int32, nullable: true })"}
+{"key": "values/scalar_min", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "zero/in_zero", "types": ["int"], "rows": []}
+{"key": "zero/in_2e16", "types": ["int"], "rows": []}
+{"key": "zero/in_1e16", "types": ["int"], "rows": []}
+{"key": "explain/values", "types": ["string", "string"], "rows": [["logical_plan", "SubqueryAlias: t\n  Projection: column1 AS c\n    Values: (Float64(0.1) AS Decimal128(Some(1),1,1)), (Float64(0.00000000000000000001) AS Utf8(\"1e-20\"))"], ["physical_plan", "ProjectionExec: expr=[column1@0 as c]\n  DataSourceExec: partitions=1, partition_sizes=[1]\n"]]}
+{"key": "explain/extended_values", "error": "ParseException: SQL error: ParserError(\"Expected: an SQL statement, found: EXTENDED at Line: 1, Column: 9\")"}
+{"key": "explain/control", "types": ["string", "string"], "rows": [["logical_plan", "Projection: Decimal128(Some(10),10,2) AS c\n  EmptyRelation: rows=1"], ["physical_plan", "ProjectionExec: expr=[Some(10),10,2 as c]\n  PlaceholderRowExec\n"]]}
+{"key": "df/values_filter_eq", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "df/values_filter_str", "types": ["double"], "rows": [["1e-20"]]}
+{"key": "df/values_join", "types": ["int"], "rows": [["1"]]}
+{"key": "df/values_union_double", "types": ["double"], "rows": [["0.1"], ["1e-20"], ["1e-20"]]}
+{"key": "df/values_select", "types": ["double"], "rows": [["0.2"], ["2e-20"]]}
+{"key": "lit/spark/cmp", "types": ["int", "boolean"], "rows": [["1", "True"], ["2", "False"], ["3", "False"]]}
+{"key": "lit/spark/in", "types": ["int", "boolean"], "rows": [["1", "True"], ["2", "False"], ["3", "False"]]}
+{"key": "lit/spark/between", "types": ["int", "boolean"], "rows": [["1", "True"], ["2", "False"], ["3", "True"]]}
+{"key": "lit/spark/case", "types": ["int", "string"], "rows": [["1", "a"], ["2", "c"], ["3", "c"]]}
+{"key": "lit/spark/cmp_typed", "types": ["int", "boolean"], "rows": [["1", "True"], ["2", "False"], ["3", "False"]]}
+{"key": "lit/spark/in_typed", "types": ["int", "boolean"], "rows": [["1", "True"], ["2", "False"], ["3", "False"]]}
+{"key": "native/fexpr_in_values", "types": ["bigint"], "rows": [["1"]]}
+{"key": "native/filter_str_in_values", "types": ["bigint"], "rows": [["1"]]}
+{"key": "native/fexpr_exists_values", "types": ["bigint"], "rows": [["1"]]}
+{"key": "native/fexpr_select_in_values", "error": "UnsupportedOperationException: This feature is not implemented: Physical plan does not support logical expression InSubquery(InSubquery { expr: Literal(Decimal128(Some(0),30,15), None), subquery: <subquery>, negated: false })"}
+{"key": "native/fexpr_scalar_values", "types": ["decimal(30,15)"], "rows": [["0E-15"]]}
+{"key": "native/explain_fexpr", "rows": [["planned"]], "types": ["string"]}
+{"key": "lit/native/cmp", "types": ["bigint", "boolean"], "rows": [["1", "True"], ["2", "False"], ["3", "False"]]}
+{"key": "lit/native/in", "types": ["bigint", "boolean"], "rows": [["1", "True"], ["2", "False"], ["3", "False"]]}
+{"key": "lit/native/between", "types": ["bigint", "boolean"], "rows": [["1", "True"], ["2", "False"], ["3", "True"]]}
+{"key": "lit/native/case", "types": ["bigint", "string"], "rows": [["1", "a"], ["2", "c"], ["3", "c"]]}
+{"key": "lit/native/cmp_typed", "types": ["bigint", "boolean"], "rows": [["1", "True"], ["2", "False"], ["3", "False"]]}
+{"key": "lit/native/in_typed", "types": ["bigint", "boolean"], "rows": [["1", "True"], ["2", "True"], ["3", "False"]]}
+{"key": "dml/delete_in_values_v/cow", "error": "AnalysisException: Error during planning: DELETE with a subquery in its WHERE clause is refused on ``lc`.`ns`.`t1``: subquery predicates are silently mis-executed today \u2014 DataFusion's DML planner decorrelates IN / NOT I"}
+{"key": "dml/update_in_values_v/cow", "error": "AnalysisException: Error during planning: UPDATE with a subquery in its WHERE clause is refused on ``lc`.`ns`.`t2``: subquery predicates are silently mis-executed today \u2014 DataFusion's DML planner decorrelates IN / NOT I"}
+{"key": "dml/delete_in_table/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/delete_exists_table/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_union_src/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_union_right_deep/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_values_src/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_values_insert/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "0.0", "3"], ["4", "0.10", "0.10000000000000002", "4"], ["7", "0.00", "0.1", "0"], ["8", "0.00", "1e-20", "0"]]}
+{"key": "dml/merge_values_on/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["3", "0.00", "0.0", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_values_view/cow", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/delete_in_values_v/mor", "error": "AnalysisException: Error during planning: DELETE with a subquery in its WHERE clause is refused on ``lc`.`ns`.`t11``: subquery predicates are silently mis-executed today \u2014 DataFusion's DML planner decorrelates IN / NOT "}
+{"key": "dml/update_in_values_v/mor", "error": "AnalysisException: Error during planning: UPDATE with a subquery in its WHERE clause is refused on ``lc`.`ns`.`t12``: subquery predicates are silently mis-executed today \u2014 DataFusion's DML planner decorrelates IN / NOT "}
+{"key": "dml/delete_in_table/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/delete_exists_table/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_union_src/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_union_right_deep/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_values_src/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_values_insert/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "0.0", "3"], ["4", "0.10", "0.10000000000000002", "4"], ["7", "0.00", "0.1", "0"], ["8", "0.00", "1e-20", "0"]]}
+{"key": "dml/merge_values_on/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["3", "0.00", "0.0", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "dml/merge_values_view/mor", "types": ["bigint", "decimal(10,2)", "double", "bigint"], "rows": [["1", "0.10", "0.1", "1"], ["2", "0.00", "1e-20", "2"], ["3", "0.00", "-1e-20", "3"], ["4", "0.10", "0.10000000000000002", "4"]]}
+{"key": "write/insert_dec38", "types": ["decimal(38,18)"], "rows": [["0E-18"], ["0.100000000000000000"]]}
+{"key": "write/insert_string", "types": ["string"], "rows": [["0.1"], ["1.0E-20"]]}
+{"key": "write/insert_double", "types": ["double"], "rows": [["1e-20"], ["0.1"]]}
+{"key": "write/insert_dec10", "types": ["decimal(10,2)"], "rows": [["1.26"], ["1.26"]]}
+{"key": "write/insert_select_values", "types": ["string"], "rows": [["0.1"], ["1.0E-20"]]}
+{"key": "write/overwrite_values", "types": ["double"], "rows": [["1e-20"], ["0.1"]]}
+{"key": "write/overwrite_empty_values", "types": ["double"], "rows": []}
+{"key": "write/user_cast_into_dec", "types": ["decimal(10,2)"], "rows": [["1.26"], ["1.50"]]}
+{"key": "write/ctas_values", "types": ["double"], "rows": [["1e-20"], ["0.1"]]}

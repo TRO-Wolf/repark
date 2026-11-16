@@ -206,3 +206,305 @@ fn the_rule_sits_before_type_coercion_and_refuses_without_it() {
         .collect();
     assert!(insert_decimal_float_widen_before_coercion(without).is_err());
 }
+
+#[tokio::test]
+async fn a_union_of_three_or_more_branches_with_the_decimal_first_is_double() {
+    let ctx = setup().await;
+    for (sql, expected) in [
+        (
+            "SELECT dc AS c FROM src UNION ALL SELECT dd FROM src UNION ALL SELECT dd FROM src",
+            vec!["0.0", "1e-20", "1e-20"],
+        ),
+        (
+            "SELECT dc AS c FROM src UNION ALL SELECT dd FROM src UNION ALL SELECT dd FROM src UNION ALL SELECT dc FROM src",
+            vec!["0.0", "0.0", "1e-20", "1e-20"],
+        ),
+        (
+            "SELECT dc AS c FROM src UNION ALL (SELECT dd FROM src UNION ALL SELECT dc FROM src)",
+            vec!["0.0", "0.0", "1e-20"],
+        ),
+        (
+            "SELECT dc AS c FROM src UNION ALL SELECT dd FROM src UNION (SELECT dd FROM src UNION ALL SELECT dc FROM src)",
+            vec!["0.0", "1e-20"],
+        ),
+        (
+            "SELECT dc AS c FROM src UNION SELECT dd FROM src UNION SELECT dd FROM src",
+            vec!["0.0", "1e-20"],
+        ),
+        (
+            "SELECT dc AS c FROM src UNION ALL SELECT dd FROM src UNION ALL SELECT dd FROM src UNION ALL SELECT dd FROM src UNION ALL SELECT dc FROM src",
+            vec!["0.0", "0.0", "1e-20", "1e-20", "1e-20"],
+        ),
+    ] {
+        let (data_type, values) = answer(&ctx, sql).await;
+        assert_eq!(data_type, DataType::Float64, "{sql}");
+        assert_eq!(values, expected, "{sql}");
+    }
+    let (_, counted) = answer(
+        &ctx,
+        "SELECT count(*) FROM (SELECT dc AS c FROM src UNION ALL SELECT dd FROM src UNION ALL SELECT dd FROM src) WHERE c = CAST(1e-20 AS DOUBLE)",
+    )
+    .await;
+    assert_eq!(counted, vec!["2"]);
+}
+
+mod in_ranges {
+    use std::sync::Arc;
+
+    use datafusion::arrow::array::{Decimal128Array, Int64Array, RecordBatch};
+    use datafusion::arrow::datatypes::{DataType, Field, Schema};
+    use datafusion::arrow::util::display::array_value_to_string;
+    use datafusion::prelude::SessionContext;
+
+    use super::super::{
+        DECIMAL_IN_RANGE_LIMIT, DecimalInForm, DecimalInRanges, decimal_in_form,
+        decimal_range_of_double,
+    };
+
+    const POOL: [f64; 18] = [
+        0.5,
+        1.25,
+        -0.0,
+        4.5,
+        0.505,
+        f64::NAN,
+        -0.5,
+        0.1,
+        f64::INFINITY,
+        1e-18,
+        2.75,
+        1e30,
+        99_999_999.99,
+        0.0,
+        f64::NEG_INFINITY,
+        0.01,
+        1e20,
+        0.1 + 0.2,
+    ];
+    const SCALES: [(u8, i8); 4] = [(10, 2), (20, 6), (38, 18), (38, 10)];
+    const LENGTHS: [usize; 11] = [1, 2, 3, 4, 5, 8, 16, 31, 32, 33, 64];
+
+    fn constants(length: usize, precision: u8, start: usize) -> Vec<f64> {
+        let wide = |index: usize| -> f64 {
+            let base = 1.0 + f64::from(u32::try_from(index).unwrap_or(0)) * 0.37;
+            if precision > 15 {
+                base
+            } else {
+                POOL[index % POOL.len()]
+            }
+        };
+        (0..length)
+            .map(|index| {
+                if index % 3 == 0 {
+                    POOL[(start + index) % POOL.len()]
+                } else {
+                    wide(index + start)
+                }
+            })
+            .collect()
+    }
+
+    fn column(precision: u8, scale: i8, items: &[f64]) -> Vec<Option<i128>> {
+        let top = 10i128.pow(u32::from(precision)) - 1;
+        let mut values = vec![None, Some(-top), Some(top), Some(0), Some(1), Some(-1)];
+        for &item in items {
+            if let Some((lower, upper)) = decimal_range_of_double(item, precision, scale) {
+                for value in [lower - 1, lower, upper - 1, upper] {
+                    if value.abs() <= top {
+                        values.push(Some(value));
+                    }
+                }
+            }
+        }
+        values
+    }
+
+    fn context(precision: u8, scale: i8, values: &[Option<i128>], rule: bool) -> SessionContext {
+        let ctx = SessionContext::new();
+        repark_functions::bool_decimal::install_bool_decimal_cast(&ctx, true);
+        if rule {
+            ctx.add_optimizer_rule(Arc::new(DecimalInRanges));
+        }
+        let schema = Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int64, false),
+            Field::new("d", DataType::Decimal128(precision, scale), true),
+        ]));
+        let ids = Int64Array::from_iter_values(0..i64::try_from(values.len()).unwrap());
+        let decimals = Decimal128Array::from(values.to_vec())
+            .with_precision_and_scale(precision, scale)
+            .unwrap();
+        let batch = RecordBatch::try_new(schema, vec![Arc::new(ids), Arc::new(decimals)]).unwrap();
+        ctx.register_batch("t", batch).unwrap();
+        ctx
+    }
+
+    fn literal(item: f64) -> String {
+        if item.is_nan() {
+            "CAST('NaN' AS DOUBLE)".to_string()
+        } else if item.is_infinite() {
+            format!(
+                "CAST('{}Infinity' AS DOUBLE)",
+                if item < 0.0 { "-" } else { "" }
+            )
+        } else {
+            format!("CAST('{item:e}' AS DOUBLE)")
+        }
+    }
+
+    fn oracle(
+        values: &[Option<i128>],
+        scale: i8,
+        items: &[f64],
+        null_item: bool,
+        negated: bool,
+    ) -> Vec<String> {
+        values
+            .iter()
+            .map(|value| {
+                let Some(unscaled) = value else {
+                    return String::new();
+                };
+                let double = repark_common::java_double::java_decimal_to_double(*unscaled, scale);
+                let member = items.contains(&double);
+                let answer = match (member, null_item) {
+                    (true, _) => Some(!negated),
+                    (false, true) => None,
+                    (false, false) => Some(negated),
+                };
+                answer.map_or_else(String::new, |answer| answer.to_string())
+            })
+            .collect()
+    }
+
+    async fn rows(ctx: &SessionContext, sql: &str) -> (Vec<String>, String) {
+        let frame = ctx.sql(sql).await.unwrap();
+        let optimized = frame.clone().into_optimized_plan().unwrap();
+        let mut out = Vec::new();
+        for batch in frame.collect().await.unwrap() {
+            for row in 0..batch.num_rows() {
+                out.push(array_value_to_string(batch.column(1), row).unwrap());
+            }
+        }
+        (out, format!("{}", optimized.display_indent()))
+    }
+
+    #[test]
+    fn precision_fifteen_and_below_always_takes_the_member_form() {
+        for precision in 1..=15u8 {
+            for scale in 0..=i8::try_from(precision).unwrap() {
+                for length in LENGTHS {
+                    let items = constants(length, precision, usize::from(precision));
+                    assert!(
+                        matches!(
+                            decimal_in_form(&items, precision, scale, DECIMAL_IN_RANGE_LIMIT),
+                            DecimalInForm::Members(_)
+                        ),
+                        "({precision},{scale}) {items:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_range_limit_is_thirty_two() {
+        let distinct = |count: u32, base: f64| -> Vec<f64> {
+            (0..count)
+                .map(|index| base + f64::from(index) * 0.37)
+                .collect()
+        };
+        for (precision, scale, base) in [(38u8, 18i8, 1.0), (38, 10, 1e7), (20, 10, 1e7)] {
+            assert!(matches!(
+                decimal_in_form(&distinct(32, base), precision, scale, DECIMAL_IN_RANGE_LIMIT),
+                DecimalInForm::Ranges { ranges, .. } if ranges.len() == 32
+            ));
+            assert_eq!(
+                decimal_in_form(
+                    &distinct(33, base),
+                    precision,
+                    scale,
+                    DECIMAL_IN_RANGE_LIMIT
+                ),
+                DecimalInForm::PerRow
+            );
+        }
+    }
+
+    #[test]
+    fn zero_signs_nan_and_infinity_follow_spark() {
+        assert_eq!(decimal_range_of_double(-0.0, 10, 2), Some((0, 1)));
+        assert_eq!(decimal_range_of_double(0.0, 10, 2), Some((0, 1)));
+        assert_eq!(decimal_range_of_double(f64::NAN, 10, 2), None);
+        assert_eq!(decimal_range_of_double(f64::INFINITY, 10, 2), None);
+        assert_eq!(decimal_range_of_double(0.505, 10, 2), None);
+        assert_eq!(decimal_range_of_double(1e30, 10, 2), None);
+        assert_eq!(
+            decimal_range_of_double(99_999_999.99, 10, 2),
+            Some((9_999_999_999, 10_000_000_000))
+        );
+        assert_eq!(
+            decimal_in_form(&[f64::NAN, f64::INFINITY], 10, 2, DECIMAL_IN_RANGE_LIMIT),
+            DecimalInForm::Members(Vec::new())
+        );
+    }
+
+    #[tokio::test]
+    async fn the_rewritten_in_answers_as_the_per_row_form_row_for_row() {
+        for (precision, scale) in SCALES {
+            for length in LENGTHS {
+                for start in [0usize, 7] {
+                    let mut items = constants(length, precision, start);
+                    if start == 7 {
+                        items.push(f64::NAN);
+                    }
+                    let values = column(precision, scale, &items);
+                    let mut list: Vec<String> = items.iter().map(|&item| literal(item)).collect();
+                    if start == 7 {
+                        list.push("CAST(NULL AS DOUBLE)".to_string());
+                    }
+                    let form = decimal_in_form(&items, precision, scale, DECIMAL_IN_RANGE_LIMIT);
+                    for negation in ["", "NOT "] {
+                        let sql = format!(
+                            "SELECT id, CAST(d AS DOUBLE) {negation}IN ({}) FROM t ORDER BY id",
+                            list.join(", ")
+                        );
+                        let (per_row, _) =
+                            rows(&context(precision, scale, &values, false), &sql).await;
+                        let (ranged, plan) =
+                            rows(&context(precision, scale, &values, true), &sql).await;
+                        let expected =
+                            oracle(&values, scale, &items, start == 7, !negation.is_empty());
+                        let negative_zero = items
+                            .iter()
+                            .any(|item| *item == 0.0 && item.is_sign_negative());
+                        if length > 3 || !negative_zero {
+                            assert_eq!(ranged, expected, "({precision},{scale}) {sql}");
+                        }
+                        if negative_zero {
+                            assert_eq!(ranged.len(), per_row.len(), "{sql}");
+                        } else {
+                            assert_eq!(per_row, expected, "({precision},{scale}) {sql}");
+                        }
+                        let kept = plan.contains("__repark_decimal_to_double__");
+                        if length <= 3 {
+                            continue;
+                        }
+                        match &form {
+                            DecimalInForm::PerRow => assert!(kept, "{plan}"),
+                            DecimalInForm::Members(_) => {
+                                assert!(!kept && !plan.contains(">="), "{plan}");
+                            }
+                            DecimalInForm::Ranges { ranges, .. } => {
+                                assert!(!kept && plan.contains(">="), "{plan}");
+                                assert!(ranges.len() <= DECIMAL_IN_RANGE_LIMIT);
+                            }
+                        }
+                        if precision <= 15 {
+                            assert!(matches!(form, DecimalInForm::Members(_)), "{plan}");
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

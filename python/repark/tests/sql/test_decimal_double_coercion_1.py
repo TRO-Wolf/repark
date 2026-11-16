@@ -535,18 +535,18 @@ def test_a_dataframe_column_comparison_widens_as_spark(spark: Any) -> None:
 
 VALUES_AT_MAIN = {
     "SELECT c FROM VALUES (0.1), (CAST(1e-20 AS DOUBLE)) AS v(c)": (
-        "decimal(30,15)",
-        ["0.100000000000000", "0E-15"],
+        "double",
+        ["0.1", "1e-20"],
     ),
     "SELECT c FROM VALUES (1, 0.1), (2, CAST(1e-20 AS DOUBLE)) AS v(id, c)": (
-        "decimal(30,15)",
-        ["0.100000000000000", "0E-15"],
+        "double",
+        ["0.1", "1e-20"],
     ),
 }
 
 
 @pytest.mark.parametrize("sql", sorted(VALUES_AT_MAIN))
-def test_a_values_cell_keeps_mains_answer_until_seat_v(spark: Any, sql: str) -> None:
+def test_a_values_cell_answers_as_spark_since_seat_v(spark: Any, sql: str) -> None:
     frame = spark.sql(sql)
     data_type, values = VALUES_AT_MAIN[sql]
     assert frame.dtypes[-1][1] == data_type

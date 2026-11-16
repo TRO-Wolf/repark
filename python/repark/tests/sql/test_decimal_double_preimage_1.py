@@ -77,7 +77,7 @@ LISTS = {
     "between_zero": "{c} BETWEEN CAST('-0.0' AS DOUBLE) AND CAST(0.5 AS DOUBLE)",
     "not_between": "{c} NOT BETWEEN CAST(-0.005 AS DOUBLE) AND CAST(0.5 AS DOUBLE)",
 }
-LISTS_KEEPING_K2 = {"in4", "notin4"}
+LISTS_KEEPING_K2: set[str] = set()
 FRAMES = {
     "df_gt": lambda f: f.filter(sf.col("d10") > 4.5),
     "df_eq": lambda f: f.filter(sf.col("d10") == 4.5),

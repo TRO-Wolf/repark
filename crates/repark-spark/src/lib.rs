@@ -59,6 +59,7 @@ pub mod type_table;
 mod update_cast;
 mod use_ddl;
 mod uuid_cast;
+pub mod values_marker;
 pub mod view_ddl;
 mod void_type;
 pub mod wap;
@@ -66,10 +67,6 @@ mod window_range;
 pub mod write_door;
 pub(crate) mod write_options;
 mod write_to_branch;
-pub use router::{
-    execute, execute_static_overwrite, execute_with_read_only, execute_with_statement_options,
-};
-// G15: parse-altitude collation refuse (binding `F.expr` / `filter_sql` call this).
 pub use collation::{
     COLLATION_REFUSAL_NEEDLE, collation_refusal_message, is_collation_session_key,
     refuse_collation_in_sql, refuse_collation_in_statement,
@@ -77,6 +74,9 @@ pub use collation::{
 pub use repark_functions::declared_refuse::{
     refuse_in_sql as refuse_declared_function_in_sql,
     refuse_in_statement as refuse_declared_function_in_statement,
+};
+pub use router::{
+    execute, execute_static_overwrite, execute_with_read_only, execute_with_statement_options,
 };
 
 /// Parse-altitude valves for SQL fragments that bypass the statement router.

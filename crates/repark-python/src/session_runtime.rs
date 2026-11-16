@@ -437,6 +437,11 @@ pub(crate) fn register_native_door_functions(ctx: &datafusion::prelude::SessionC
     repark_functions::spark_type_planner::install_ansi_planned_timestamp_cast(ctx);
     repark_functions::spark_log1p::register(ctx);
     repark_functions::cast_map::register(ctx);
+    ctx.register_udf(
+        repark_spark::values_marker::values_cell_udf()
+            .as_ref()
+            .clone(),
+    );
 }
 
 pub(crate) fn apply_session_knobs(
