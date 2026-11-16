@@ -187,3 +187,10 @@ The rest of sketch §4.2(a), a later brief:
 
 Part 2 merged with its pins, and the sign-set `max`/`min` xfails in `test_nan_minmax_stats_1.py` turned green (the
 multi-file `max` is a positive pin since the second delta). The `d >= 1.0` xfail closes with NAN-COMPARE-LITERAL-1.
+
+## Append (2026-11-16): the RESET gap is carded
+
+The owner, 2026-11-16, about 11:10 UTC, verbatim: "Great work. Go with your recommendation on that". The recommendation
+it adopts: the RESET/unset gap in the paragraph "**Residual, measured, not fixed:**" above becomes its own small follow-up
+unit, NAN-MINMAX-RESET-1, queued after DECIMAL-DOUBLE-UNION-COERCION-1 part 2, and it does not block the label. Card:
+[nan-minmax-reset-1-card-2026-11-16.md](nan-minmax-reset-1-card-2026-11-16.md). The text above is unchanged.
