@@ -10,7 +10,7 @@ Workspace-wide cargo configuration.
   systems that ship only `python3` (not `/usr/bin/python`). Inert until `repark-python` lands
   (phase 3); maturin overrides it when building wheels.
 - `audit.toml` — `cargo audit` ignore list (the `make rust-audit` gate). Kept in sync with
-  `deny.toml` `[advisories].ignore`; three ignored advisory ids on 2026-11-02 after four were retired that day; reasons below.
+  `deny.toml` `[advisories].ignore`; six ignored advisory ids on 2026-11-17, three of them added that day; reasons below.
 
 ## Ignored advisories
 
@@ -30,6 +30,19 @@ The TOML lists stay bare; the reason lives here, never as a TOML comment (owner 
   (requires ^0.37). Exposure is DoS-only, and the parser only sees S3 API responses (AWS-authored
   XML), not attacker-controlled input. Revisit at the next DataFusion-family bump (when
   `object_store` moves past ^0.39) and when the fork bumps opendal/reqsign.
+- **RUSTSEC-2026-0543 (chrono), RUSTSEC-2026-0555 (chrono-tz), RUSTSEC-2026-0542 (humantime)**,
+  unmaintained, informational only, first reported by the `cargo-deny` CI job on 2026-11-17. No
+  vulnerability is filed against any of them. The advisories say every version is affected and no
+  safe upgrade exists; they name `jiff` and `time` as alternatives. `humantime` is listed because it
+  wraps `chrono`. Paths: `chrono` 0.4.45 and `chrono-tz` 0.10.4 <- `arrow` 58.4.1 (`arrow-arith`,
+  `arrow-array`) <- `datafusion` 54.1.0 <- `iceberg-datafusion` 0.9.1 (the owned fork), and
+  `chrono` is also a direct workspace dependency (`Cargo.toml`, `[workspace.dependencies]`);
+  `humantime` 2.4.0 <- `object_store` 0.13.2 <- `datafusion` 54.1.0. Arrow's timestamp and
+  time-zone arithmetic is built on `chrono` and `chrono-tz`, so leaving them is an upstream
+  migration, not a lock change. Verified 2026-11-17: `cargo deny check advisories` on main
+  `a792ce47` fails with exactly these three findings, and passes with the three ids ignored.
+  Revisit when arrow or DataFusion moves off `chrono`, when `object_store` drops `humantime`, or
+  when a vulnerability is filed against any of the three.
 ### Retired
 
 - **RUSTSEC-2026-0435 (thrift)**: retired 2026-11-02 by the compatible lock refresh, because parquet 58.4.1 requires thrift 0.23.0, which carries the fix for RUSTSEC-2026-0435.
