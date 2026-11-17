@@ -8,8 +8,8 @@
 
 CC-4 (2026-08-30): remaining banner files condensed to the one-line rule
 
-CC-2 closing-critic remediation: review-round label narration swept from prose; safety and
-accuracy contracts restored in condensed form (see the unit ledger's findings dispositions).
+CC-2 closing-critic remediation: review narration swept; safety and
+accuracy contracts restored condensed.
 
 ## Purpose
 
@@ -578,10 +578,10 @@ scalars live under [`try_invert/`](try_invert/map.md).
   Missing carrier also defaults LTZ. Invalid value
   fail-louds naming `TIMESTAMP_LTZ` and `TIMESTAMP_NTZ`. Ledger:
   `task/q10-timestamptype-ledger.md`.
-- `ansi.rs` — **U5 / Q10=A:** Spark-door `spark.sql.ansi.enabled` carrier
+- `ansi.rs` — **U5 / Q10=A:** Spark-door `spark.sql.ansi.enabled` carrier; `decimal_legacy.rs` (DECIMAL-COMMON-TYPE-1) carries the decimal legacy flag alike
   (`SparkAnsiConfig`, `PREFIX = repark.ansi`, default **TRUE**) + the embedded
   `__repark_ansi_nonzero_divisor__` raise kernel. Parsed from the builder map in
-  `SparkExtension::configure`. Missing carrier also defaults TRUE. `notabool`
+  `SparkExtension::configure`. No carrier: TRUE. `notabool`
   fail-louds with Spark's `should be boolean, but was` needle
   (`DataFusionError::Configuration`; IllegalArgument class is a named residue —
   `engine_err` never emits `Error::Config`). Ledger: `task/s1-ansi-knob-u5-ledger.md`.

@@ -56,6 +56,11 @@ the Spark-door analyzer list.
   **The tripwire:** an unmarked multi-row `VALUES` whose DECIMAL column holds a FLOAT/DOUBLE cell under a cast and a
   decimal cell refuses with a plan error naming the unit, and a marker outside a `VALUES` cell refuses. The native
   door has neither rule.
+  **DECIMAL-COMMON-TYPE-1 (2026-11-16):** a column of decimals, or of integers and decimals, takes Spark's type from
+  `spark_decimal_type` (an `INT`-sized integer literal in Spark's `INT` form) when it differs from the planner's:
+  standalone, the field is retyped and each cell cast; under an insert, each cell is cast to Spark's type and then to
+  the target. The legacy flag skips it. `../values_marker.rs` marks a plain column for it at the statement seat when
+  it holds a decimal beside an integer literal or a decimal of 20 or more digits (`spark_decimal_column`).
 - `tests.rs` — the marked mixed `VALUES` is `double`; an unmarked one refuses naming the unit; the shapes main
   answers (user casts on both cells, all-double, all-decimal, one row, INT beside DOUBLE, 1,000 rows with one
   double) stay quiet; a second analyzer pass finds nothing to refuse; a `VALUES` in an `IN` subquery and in a

@@ -96,6 +96,23 @@ function-registry + analyzer-rule installation + the composed
   - **The retirement (critic item 9):** `widen_decimal_against_float` is gone from `../spark_literal_typing.rs`; seat E
     answers its four literal shapes (comparison, `IN`, `BETWEEN`, simple `CASE`). The gate pinned them through
     `F.expr` on both doors before and after; no native-door answer moved, so no fallback was kept.
+  **DECIMAL-COMMON-TYPE-1 (2026-11-16):** the same single detect walk and rewrite walk now also cast two decimals,
+  or an integer and a decimal, to Spark's least common type when `range + scale > 38`, through the shared function
+  in `decimal_common_type.rs`: comparisons and join keys (an integer literal keeps its own digits), `BETWEEN` (split
+  into its two comparisons), `IN` lists and `IN` subqueries (the integer's form), `CASE` (a simple `CASE` whose pairs
+  differ turns searched), `if`, `coalesce`, `nvl`, `nvl2`, `nullif`, `greatest`, `least`, `array`, `map` keys and
+  values, `map_concat`, `array_contains`, unions bottom up per binary node with struct fields, and the set-operation
+  joins. An `INSERT` whose conform projection no longer matches the table type gets its cast back
+  (`conform_insert`). The legacy flag `spark.sql.legacy.decimal.retainFractionDigitsOnTruncate=true` skips the
+  decimal rule only. `tests.rs` adds the union rounding order, the `IN` mode and the legacy flag; the facade pins are
+  `python/repark/tests/types/test_decimal_common_type_1.py`.
+- `decimal_common_type.rs` (and `decimal_common_type/tests.rs`) — **DECIMAL-COMMON-TYPE-1 (2026-11-16):**
+  `spark_decimal_common_type` is Spark's `DecimalType.boundedPreferIntegralDigits` over the operand types (integers
+  in Spark's forms, an integer literal at its own digits in `Mode::Compare`), `None` unless `range + scale > 38`;
+  `spark_decimal_type` answers the type always (seat V). `target_of_types` adds the double class of part 1 and the
+  field-by-field `Shape` of structs, arrays and maps; `apply` and `retarget` cast an operand to it. `conform_insert` lives
+  here too; the legacy flag's carrier is `repark-functions`' `decimal_legacy.rs`. `tests.rs` pins the 14 pairs, the
+  literal digits, and the struct, list and map shapes.
 
 
 - `../extension.rs` — **STRUCT-COMPARE-BY-POSITION-1 (2026-11-10):** seats
