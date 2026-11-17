@@ -216,6 +216,16 @@ fn mark_rows(rows: &mut [&mut Vec<Expr>], seat: Seat) -> bool {
     let mut marked = rows.iter().any(|row| row.iter().any(is_marker_call));
     for column in 0..width {
         match column_kind(rows, column) {
+            Column::Plain if seat == Seat::Statement && spark_decimal_column(rows, column) => {
+                for row in rows.iter_mut() {
+                    if let Some(cell) = row.get_mut(column)
+                        && is_markable(cell)
+                    {
+                        wrap_in_marker(cell);
+                        marked = true;
+                    }
+                }
+            }
             Column::Plain => {}
             Column::Decided if seat == Seat::Statement => {
                 mixed = true;
@@ -264,6 +274,52 @@ fn column_kind(rows: &[&mut Vec<Expr>], column: usize) -> Column {
         Column::Decided
     } else {
         Column::Plain
+    }
+}
+
+fn spark_decimal_column(rows: &[&mut Vec<Expr>], column: usize) -> bool {
+    let (mut decimal, mut integer, mut wide) = (false, false, false);
+    for row in rows {
+        let Some(cell) = row.get(column) else {
+            continue;
+        };
+        match cell_kind(cell) {
+            Cell::Decimal => {
+                decimal = true;
+                wide |= decimal_width(cell) >= 20;
+            }
+            Cell::Integer => integer = true,
+            _ => {}
+        }
+    }
+    decimal && (integer || wide)
+}
+
+fn decimal_width(cell: &Expr) -> u64 {
+    match cell {
+        Expr::Value(value) => match &value.value {
+            Value::Number(text, false) => text
+                .trim_start_matches(['0', '.'])
+                .bytes()
+                .filter(u8::is_ascii_digit)
+                .count()
+                .try_into()
+                .unwrap_or(u64::MAX),
+            _ => 0,
+        },
+        Expr::Nested(inner) | Expr::UnaryOp { expr: inner, .. } => decimal_width(inner),
+        Expr::Cast {
+            data_type: SqlType::Decimal(info) | SqlType::Numeric(info) | SqlType::Dec(info),
+            ..
+        } => match info {
+            ExactNumberInfo::Precision(precision)
+            | ExactNumberInfo::PrecisionAndScale(precision, _) => *precision,
+            ExactNumberInfo::None => 10,
+        },
+        Expr::Function(function) if is_marker_call(cell) => {
+            marker_argument(function).map_or(0, decimal_width)
+        }
+        _ => 0,
     }
 }
 

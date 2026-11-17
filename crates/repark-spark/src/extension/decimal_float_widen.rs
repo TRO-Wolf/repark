@@ -8,11 +8,16 @@ use datafusion::common::{Column, DFSchema, NullEquality, Result, ScalarValue};
 use datafusion::logical_expr::expr::{Case, InList, InSubquery};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
-    Between, BinaryExpr, Cast, Distinct, Expr, ExprSchemable, Join, JoinType, LogicalPlan,
-    Operator, Projection, Subquery, Union,
+    Between, BinaryExpr, Distinct, Expr, ExprSchemable, Join, JoinType, LogicalPlan, Operator,
+    Projection, Subquery, Union, WriteOp,
 };
 use datafusion::optimizer::optimizer::ApplyOrder;
 use datafusion::optimizer::{AnalyzerRule, OptimizerConfig, OptimizerRule};
+
+use super::decimal_common_type::{
+    Mode, Target, array_contains_target, conform_insert, in_subquery_target, literal_digits,
+    retarget, retarget_typed, target_of, target_of_types, widen_array_contains,
+};
 
 const ALL_ARGUMENTS: &[&str] = &[
     "coalesce",
@@ -22,19 +27,23 @@ const ALL_ARGUMENTS: &[&str] = &[
     "least",
     "array",
     "make_array",
+    "map_concat",
 ];
 const AFTER_FIRST_ARGUMENT: &[&str] = &["if", "nvl2"];
 const MAP_CONSTRUCTORS: &[&str] = &["__repark_create_map__", "create_map"];
+const ARRAY_CONTAINS: &str = "array_contains";
 
 #[derive(Debug, Default)]
 pub struct SparkDecimalFloatWiden;
 
 impl AnalyzerRule for SparkDecimalFloatWiden {
-    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        if !plan_widens(&plan)? {
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
+        let decimals = repark_functions::decimal_legacy::spark_decimal_rule_enabled(config);
+        if !plan_widens(&plan, decimals)? {
             return Ok(plan);
         }
-        plan.transform_up_with_subqueries(rewrite_plan).data()
+        plan.transform_up_with_subqueries(|node| rewrite_plan(node, decimals))
+            .data()
     }
 
     #[allow(clippy::unnecessary_literal_bound)]
@@ -76,14 +85,6 @@ fn expr_class(expr: &Expr, schema: &DFSchema) -> Class {
         .map_or(Class::Other, |data_type| class_of(&data_type))
 }
 
-fn mixed(classes: &[Class]) -> bool {
-    classes.contains(&Class::Decimal) && classes.contains(&Class::Float)
-}
-
-fn to_double(expr: Expr) -> Expr {
-    Expr::Cast(Cast::new(Box::new(expr), DataType::Float64))
-}
-
 fn is_comparison(op: Operator) -> bool {
     matches!(
         op,
@@ -98,15 +99,18 @@ fn is_comparison(op: Operator) -> bool {
     )
 }
 
-fn function_positions(name: &str, arity: usize) -> Option<Vec<usize>> {
+fn function_groups(name: &str, arity: usize) -> Option<Vec<Vec<usize>>> {
     if ALL_ARGUMENTS.contains(&name) {
-        return Some((0..arity).collect());
+        return Some(vec![(0..arity).collect()]);
     }
     if AFTER_FIRST_ARGUMENT.contains(&name) {
-        return Some((1..arity).collect());
+        return Some(vec![(1..arity).collect()]);
     }
     if MAP_CONSTRUCTORS.contains(&name) {
-        return Some((1..arity).step_by(2).collect());
+        return Some(vec![
+            (0..arity).step_by(2).collect(),
+            (1..arity).step_by(2).collect(),
+        ]);
     }
     None
 }
@@ -117,82 +121,124 @@ fn is_candidate(expr: &Expr) -> bool {
         Expr::InList(_) | Expr::Between(_) | Expr::Case(_) | Expr::InSubquery(_) => true,
         Expr::ScalarFunction(function) => {
             let name = function.func.name();
-            name == "nullif" || function_positions(name, function.args.len()).is_some()
+            name == "nullif"
+                || name == ARRAY_CONTAINS
+                || function_groups(name, function.args.len()).is_some()
         }
         _ => false,
     }
 }
 
-fn expr_widens(expr: &Expr, schema: &DFSchema) -> bool {
+fn pair_target(left: &Expr, right: &Expr, schema: &DFSchema, decimals: bool) -> Option<Target> {
+    target_of(&[left, right], schema, Mode::Compare, decimals)
+}
+
+fn in_list_target(in_list: &InList, schema: &DFSchema, decimals: bool) -> Option<Target> {
+    let operands = std::iter::once(in_list.expr.as_ref())
+        .chain(in_list.list.iter())
+        .collect::<Vec<_>>();
+    target_of(&operands, schema, Mode::Unify, decimals)
+}
+
+fn group_target(
+    args: &[Expr],
+    positions: &[usize],
+    schema: &DFSchema,
+    decimals: bool,
+) -> Option<Target> {
+    let chosen = positions
+        .iter()
+        .filter_map(|&position| args.get(position))
+        .collect::<Vec<_>>();
+    target_of(&chosen, schema, Mode::Unify, decimals)
+}
+
+fn expr_widens(expr: &Expr, schema: &DFSchema, decimals: bool) -> bool {
     match expr {
-        Expr::BinaryExpr(binary) if is_comparison(binary.op) => mixed(&[
-            expr_class(&binary.left, schema),
-            expr_class(&binary.right, schema),
-        ]),
-        Expr::InList(in_list) => mixed(
-            &std::iter::once(in_list.expr.as_ref())
-                .chain(in_list.list.iter())
-                .map(|item| expr_class(item, schema))
-                .collect::<Vec<_>>(),
-        ),
-        Expr::Between(between) => {
-            let operand = expr_class(&between.expr, schema);
-            mixed(&[operand, expr_class(&between.low, schema)])
-                || mixed(&[operand, expr_class(&between.high, schema)])
+        Expr::BinaryExpr(binary) if is_comparison(binary.op) => {
+            pair_target(&binary.left, &binary.right, schema, decimals).is_some()
         }
-        Expr::Case(case) => case_widens(case, schema),
-        Expr::InSubquery(in_subquery) => mixed(&[
-            expr_class(&in_subquery.expr, schema),
-            subquery_class(&in_subquery.subquery),
-        ]),
+        Expr::InList(in_list) => in_list_target(in_list, schema, decimals).is_some(),
+        Expr::Between(between) => {
+            pair_target(&between.expr, &between.low, schema, decimals).is_some()
+                || pair_target(&between.expr, &between.high, schema, decimals).is_some()
+        }
+        Expr::Case(case) => case_widens(case, schema, decimals),
+        Expr::InSubquery(in_subquery) => {
+            in_subquery_target(in_subquery, schema, decimals).is_some()
+        }
         Expr::ScalarFunction(function) => {
             let name = function.func.name();
+            let args = &function.args;
             if name == "nullif" {
-                return function.args.len() == 2
-                    && mixed(&[
-                        expr_class(&function.args[0], schema),
-                        expr_class(&function.args[1], schema),
-                    ]);
+                return args.len() == 2
+                    && pair_target(&args[0], &args[1], schema, decimals).is_some();
             }
-            function_positions(name, function.args.len()).is_some_and(|positions| {
-                mixed(
-                    &positions
-                        .iter()
-                        .filter_map(|&position| function.args.get(position))
-                        .map(|arg| expr_class(arg, schema))
-                        .collect::<Vec<_>>(),
-                )
+            if name == ARRAY_CONTAINS {
+                return array_contains_target(args, schema, decimals).is_some();
+            }
+            function_groups(name, args.len()).is_some_and(|groups| {
+                groups
+                    .iter()
+                    .any(|positions| group_target(args, positions, schema, decimals).is_some())
             })
         }
         _ => false,
     }
 }
 
-fn case_widens(case: &Case, schema: &DFSchema) -> bool {
-    let results = case
-        .when_then_expr
+fn case_results(case: &Case) -> Vec<&Expr> {
+    case.when_then_expr
         .iter()
-        .map(|(_, then)| expr_class(then, schema))
-        .chain(case.else_expr.iter().map(|other| expr_class(other, schema)))
+        .map(|(_, then)| then.as_ref())
+        .chain(case.else_expr.as_deref())
+        .collect()
+}
+
+fn case_searched(operand: &Expr, whens: &[&Expr], schema: &DFSchema, decimals: bool) -> bool {
+    let operand_class = expr_class(operand, schema);
+    let classes = whens
+        .iter()
+        .map(|when| expr_class(when, schema))
         .collect::<Vec<_>>();
-    if mixed(&results) {
+    if operand_class == Class::Decimal
+        && classes.contains(&Class::Float)
+        && classes.iter().any(|class| *class != Class::Float)
+    {
         return true;
     }
-    case.expr.as_ref().is_some_and(|operand| {
-        let operand = expr_class(operand, schema);
-        case.when_then_expr
-            .iter()
-            .any(|(when, _)| mixed(&[operand, expr_class(when, schema)]))
+    if !decimals {
+        return false;
+    }
+    let all = std::iter::once(operand)
+        .chain(whens.iter().copied())
+        .collect::<Vec<_>>();
+    matches!(
+        target_of(&all, schema, Mode::Compare, decimals),
+        Some(Target::Spark(_))
+    ) || whens.iter().any(|when| {
+        matches!(
+            pair_target(operand, when, schema, decimals),
+            Some(Target::Spark(_))
+        )
     })
 }
 
-fn subquery_class(subquery: &Subquery) -> Class {
-    subquery
-        .subquery
-        .schema()
-        .fields()
-        .first()
-        .map_or(Class::Other, |field| class_of(field.data_type()))
+fn case_widens(case: &Case, schema: &DFSchema, decimals: bool) -> bool {
+    if target_of(&case_results(case), schema, Mode::Unify, decimals).is_some() {
+        return true;
+    }
+    case.expr.as_ref().is_some_and(|operand| {
+        let whens = case
+            .when_then_expr
+            .iter()
+            .map(|(when, _)| when.as_ref())
+            .collect::<Vec<_>>();
+        whens
+            .iter()
+            .any(|when| pair_target(operand, when, schema, decimals).is_some())
+            || case_searched(operand, &whens, schema, decimals)
+    })
 }
 
 fn merged_input_schema(plan: &LogicalPlan) -> DFSchema {
@@ -203,10 +249,10 @@ fn merged_input_schema(plan: &LogicalPlan) -> DFSchema {
     schema
 }
 
-fn node_widens(plan: &LogicalPlan) -> Result<bool> {
+fn node_widens(plan: &LogicalPlan, decimals: bool) -> Result<bool> {
     match plan {
-        LogicalPlan::Union(union) => return Ok(!union_positions(union).is_empty()),
-        LogicalPlan::Join(join) if !join_widening(join).is_empty() => return Ok(true),
+        LogicalPlan::Union(union) => return Ok(!union_targets(union, decimals).is_empty()),
+        LogicalPlan::Join(join) if !join_widening(join, decimals).is_empty() => return Ok(true),
         _ => {}
     }
     let mut candidate = false;
@@ -224,7 +270,7 @@ fn node_widens(plan: &LogicalPlan) -> Result<bool> {
     let schema = merged_input_schema(plan);
     let mut found = false;
     plan.apply_expressions(|expr| {
-        found = expr.exists(|node| Ok(expr_widens(node, &schema)))?;
+        found = expr.exists(|node| Ok(expr_widens(node, &schema, decimals)))?;
         Ok(if found {
             TreeNodeRecursion::Stop
         } else {
@@ -234,10 +280,10 @@ fn node_widens(plan: &LogicalPlan) -> Result<bool> {
     Ok(found)
 }
 
-fn plan_widens(plan: &LogicalPlan) -> Result<bool> {
+fn plan_widens(plan: &LogicalPlan, decimals: bool) -> Result<bool> {
     let mut found = false;
     plan.apply_with_subqueries(|node| {
-        found = node_widens(node)?;
+        found = node_widens(node, decimals)?;
         Ok(if found {
             TreeNodeRecursion::Stop
         } else {
@@ -247,7 +293,7 @@ fn plan_widens(plan: &LogicalPlan) -> Result<bool> {
     Ok(found)
 }
 
-fn union_positions(union: &Union) -> Vec<usize> {
+fn union_targets(union: &Union, decimals: bool) -> Vec<(usize, Target)> {
     let Some(width) = union
         .inputs
         .first()
@@ -256,25 +302,24 @@ fn union_positions(union: &Union) -> Vec<usize> {
         return Vec::new();
     };
     (0..width)
-        .filter(|&position| {
-            mixed(
-                &union
-                    .inputs
-                    .iter()
-                    .map(|input| {
-                        input
-                            .schema()
-                            .fields()
-                            .get(position)
-                            .map_or(Class::Other, |field| class_of(field.data_type()))
-                    })
-                    .collect::<Vec<_>>(),
-            )
+        .filter_map(|position| {
+            let types = union
+                .inputs
+                .iter()
+                .map(|input| {
+                    input
+                        .schema()
+                        .fields()
+                        .get(position)
+                        .map(|field| field.data_type())
+                })
+                .collect::<Option<Vec<_>>>()?;
+            target_of_types(&types, &[], Mode::Unify, decimals).map(|target| (position, target))
         })
         .collect()
 }
 
-fn project_to_double(input: Arc<LogicalPlan>, positions: &[usize]) -> Result<(LogicalPlan, bool)> {
+fn project_to(input: Arc<LogicalPlan>, targets: &[(usize, Target)]) -> Result<(LogicalPlan, bool)> {
     let schema = input.schema();
     let mut changed = false;
     let exprs = schema
@@ -282,12 +327,15 @@ fn project_to_double(input: Arc<LogicalPlan>, positions: &[usize]) -> Result<(Lo
         .enumerate()
         .map(|(position, (qualifier, field))| {
             let column = Expr::Column(Column::new(qualifier.cloned(), field.name()));
-            if positions.contains(&position) && class_of(field.data_type()) == Class::Decimal {
-                changed = true;
-                to_double(column).alias_qualified(qualifier.cloned(), field.name())
-            } else {
-                column
+            let Some((_, target)) = targets.iter().find(|(chosen, _)| *chosen == position) else {
+                return column;
+            };
+            let cast = retarget_typed(column.clone(), field.data_type(), target);
+            if cast == column {
+                return column;
             }
+            changed = true;
+            cast.alias_qualified(qualifier.cloned(), field.name())
         })
         .collect::<Vec<_>>();
     if !changed {
@@ -299,14 +347,14 @@ fn project_to_double(input: Arc<LogicalPlan>, positions: &[usize]) -> Result<(Lo
     ))
 }
 
-fn rewrite_union(union: Union) -> Result<Transformed<LogicalPlan>> {
-    let positions = union_positions(&union);
-    if positions.is_empty() {
+fn rewrite_union(union: Union, decimals: bool) -> Result<Transformed<LogicalPlan>> {
+    let targets = union_targets(&union, decimals);
+    if targets.is_empty() {
         return rebuild_stale_union(union);
     }
     let mut inputs = Vec::with_capacity(union.inputs.len());
     for input in union.inputs {
-        let (projected, _) = project_to_double(input, &positions)?;
+        let (projected, _) = project_to(input, &targets)?;
         inputs.push(Arc::new(projected));
     }
     Ok(Transformed::yes(LogicalPlan::Union(
@@ -334,15 +382,15 @@ fn rebuild_stale_union(union: Union) -> Result<Transformed<LogicalPlan>> {
 
 enum JoinWidening {
     None,
-    Keys(Vec<usize>),
-    SetOperation(Vec<usize>),
+    Keys(Vec<(usize, Target)>),
+    SetOperation(Vec<(usize, Target)>),
 }
 
 impl JoinWidening {
     fn is_empty(&self) -> bool {
         match self {
             Self::None => true,
-            Self::Keys(positions) | Self::SetOperation(positions) => positions.is_empty(),
+            Self::Keys(targets) | Self::SetOperation(targets) => targets.is_empty(),
         }
     }
 }
@@ -369,135 +417,131 @@ fn is_set_operation(join: &Join) -> bool {
             })
 }
 
-fn join_widening(join: &Join) -> JoinWidening {
-    let positions = join
+fn join_widening(join: &Join, decimals: bool) -> JoinWidening {
+    if join.on.is_empty() {
+        return JoinWidening::None;
+    }
+    let set_operation = is_set_operation(join);
+    let mode = if set_operation {
+        Mode::Unify
+    } else {
+        Mode::Compare
+    };
+    let targets = join
         .on
         .iter()
         .enumerate()
-        .filter(|(_, (left, right))| {
-            mixed(&[
-                expr_class(left, join.left.schema()),
-                expr_class(right, join.right.schema()),
-            ])
+        .filter_map(|(position, (left, right))| {
+            let types = [
+                left.get_type(join.left.schema()).ok()?,
+                right.get_type(join.right.schema()).ok()?,
+            ];
+            let literals = [literal_digits(left), literal_digits(right)];
+            target_of_types(&[&types[0], &types[1]], &literals, mode, decimals)
+                .map(|target| (position, target))
         })
-        .map(|(position, _)| position)
         .collect::<Vec<_>>();
-    if positions.is_empty() {
-        return JoinWidening::None;
-    }
-    if is_set_operation(join) {
-        JoinWidening::SetOperation(positions)
+    if targets.is_empty() {
+        JoinWidening::None
+    } else if set_operation {
+        JoinWidening::SetOperation(targets)
     } else {
-        JoinWidening::Keys(positions)
+        JoinWidening::Keys(targets)
     }
 }
 
-fn rewrite_join(mut join: Join) -> Result<Transformed<LogicalPlan>> {
-    match join_widening(&join) {
+fn rewrite_join(mut join: Join, decimals: bool) -> Result<Transformed<LogicalPlan>> {
+    match join_widening(&join, decimals) {
         JoinWidening::None => Ok(Transformed::no(LogicalPlan::Join(join))),
-        JoinWidening::Keys(positions) => {
-            for position in positions {
+        JoinWidening::Keys(targets) => {
+            for (position, target) in targets {
                 let Some((left, right)) = join.on.get_mut(position) else {
                     continue;
                 };
-                if expr_class(left, join.left.schema()) == Class::Decimal {
-                    *left = to_double(left.clone());
-                }
-                if expr_class(right, join.right.schema()) == Class::Decimal {
-                    *right = to_double(right.clone());
-                }
+                *left = retarget(left.clone(), join.left.schema(), &target);
+                *right = retarget(right.clone(), join.right.schema(), &target);
             }
             Ok(Transformed::yes(LogicalPlan::Join(join)))
         }
-        JoinWidening::SetOperation(positions) => {
+        JoinWidening::SetOperation(targets) => {
             if let LogicalPlan::Distinct(Distinct::All(inner)) = join.left.as_ref() {
-                let (projected, _) = project_to_double(Arc::clone(inner), &positions)?;
+                let (projected, _) = project_to(Arc::clone(inner), &targets)?;
                 join.left = Arc::new(LogicalPlan::Distinct(Distinct::All(Arc::new(projected))));
             }
-            let (right, _) = project_to_double(Arc::clone(&join.right), &positions)?;
+            let (right, _) = project_to(Arc::clone(&join.right), &targets)?;
             join.right = Arc::new(right);
             Ok(Transformed::yes(LogicalPlan::Join(join)))
         }
     }
 }
 
-fn widen_pair(left: Expr, right: Expr, schema: &DFSchema) -> (Expr, Expr) {
-    match (expr_class(&left, schema), expr_class(&right, schema)) {
-        (Class::Decimal, Class::Float) => (to_double(left), right),
-        (Class::Float, Class::Decimal) => (left, to_double(right)),
-        _ => (left, right),
+fn widen_pair(left: Expr, right: Expr, schema: &DFSchema, decimals: bool) -> (Expr, Expr) {
+    match pair_target(&left, &right, schema, decimals) {
+        Some(target) => (
+            retarget(left, schema, &target),
+            retarget(right, schema, &target),
+        ),
+        None => (left, right),
     }
 }
 
-fn widen_all(exprs: Vec<Expr>, schema: &DFSchema) -> Vec<Expr> {
-    let classes = exprs
-        .iter()
-        .map(|expr| expr_class(expr, schema))
-        .collect::<Vec<_>>();
-    if !mixed(&classes) {
+fn widen_all(exprs: Vec<Expr>, schema: &DFSchema, mode: Mode, decimals: bool) -> Vec<Expr> {
+    let Some(target) = target_of(&exprs.iter().collect::<Vec<_>>(), schema, mode, decimals) else {
         return exprs;
-    }
+    };
     exprs
         .into_iter()
-        .zip(classes)
-        .map(|(expr, class)| {
-            if class == Class::Decimal {
-                to_double(expr)
-            } else {
-                expr
-            }
-        })
+        .map(|expr| retarget(expr, schema, &target))
         .collect()
 }
 
-fn widen_between(between: Between, schema: &DFSchema) -> Expr {
+fn compare(left: Expr, op: Operator, right: Expr) -> Expr {
+    Expr::BinaryExpr(BinaryExpr::new(Box::new(left), op, Box::new(right)))
+}
+
+fn widen_between(between: Between, schema: &DFSchema, decimals: bool) -> Expr {
     let Between {
         expr,
         negated,
         low,
         high,
     } = between;
+    let spark = |bound: &Expr| {
+        matches!(
+            pair_target(&expr, bound, schema, decimals),
+            Some(Target::Spark(_))
+        )
+    };
     let operand = expr_class(&expr, schema);
     let bounds = [expr_class(&low, schema), expr_class(&high, schema)];
-    if operand == Class::Decimal && bounds[0] != bounds[1] {
-        let (lower, low) = widen_pair(*expr.clone(), *low, schema);
-        let (upper, high) = widen_pair(*expr, *high, schema);
-        let both = Expr::BinaryExpr(BinaryExpr::new(
-            Box::new(Expr::BinaryExpr(BinaryExpr::new(
-                Box::new(lower),
-                Operator::GtEq,
-                Box::new(low),
-            ))),
+    if spark(&low) || spark(&high) || (operand == Class::Decimal && bounds[0] != bounds[1]) {
+        let (lower, low) = widen_pair(*expr.clone(), *low, schema, decimals);
+        let (upper, high) = widen_pair(*expr, *high, schema, decimals);
+        let both = compare(
+            compare(lower, Operator::GtEq, low),
             Operator::And,
-            Box::new(Expr::BinaryExpr(BinaryExpr::new(
-                Box::new(upper),
-                Operator::LtEq,
-                Box::new(high),
-            ))),
-        ));
+            compare(upper, Operator::LtEq, high),
+        );
         return if negated {
             Expr::Not(Box::new(both))
         } else {
             both
         };
     }
-    let widen = mixed(&[operand, bounds[0], bounds[1]]);
-    let cast = |expr: Expr, class: Class| {
-        if widen && class == Class::Decimal {
-            to_double(expr)
-        } else {
-            expr
-        }
+    let target = target_of(&[&expr, &low, &high], schema, Mode::Compare, false);
+    let cast = |expr: Expr| match &target {
+        Some(target) => retarget(expr, schema, target),
+        None => expr,
     };
     Expr::Between(Between::new(
-        Box::new(cast(*expr, operand)),
+        Box::new(cast(*expr)),
         negated,
-        Box::new(cast(*low, bounds[0])),
-        Box::new(cast(*high, bounds[1])),
+        Box::new(cast(*low)),
+        Box::new(cast(*high)),
     ))
 }
 
-fn widen_case(case: Case, schema: &DFSchema) -> Expr {
+fn widen_case(case: Case, schema: &DFSchema, decimals: bool) -> Expr {
     let Case {
         expr,
         when_then_expr,
@@ -510,7 +554,7 @@ fn widen_case(case: Case, schema: &DFSchema) -> Expr {
     let mut results = thens;
     let has_else = else_expr.is_some();
     results.extend(else_expr.map(|other| *other));
-    let mut results = widen_all(results, schema);
+    let mut results = widen_all(results, schema, Mode::Unify, decimals);
     let else_expr = if has_else {
         results.pop().map(Box::new)
     } else {
@@ -519,30 +563,27 @@ fn widen_case(case: Case, schema: &DFSchema) -> Expr {
     let (expr, whens) = match expr {
         None => (None, whens),
         Some(operand) => {
-            let operand_class = expr_class(&operand, schema);
-            let classes = whens
-                .iter()
-                .map(|when| expr_class(when, schema))
-                .collect::<Vec<_>>();
-            if operand_class == Class::Decimal
-                && classes.contains(&Class::Float)
-                && classes.iter().any(|class| *class != Class::Float)
-            {
+            if case_searched(
+                &operand,
+                &whens.iter().collect::<Vec<_>>(),
+                schema,
+                decimals,
+            ) {
                 let searched = whens
                     .into_iter()
                     .map(|when| {
-                        let (left, right) = widen_pair(*operand.clone(), when, schema);
-                        Expr::BinaryExpr(BinaryExpr::new(
-                            Box::new(left),
-                            Operator::Eq,
-                            Box::new(right),
-                        ))
+                        let (left, right) = widen_pair(*operand.clone(), when, schema, decimals);
+                        compare(left, Operator::Eq, right)
                     })
                     .collect();
                 (None, searched)
             } else {
-                let mut widened =
-                    widen_all(std::iter::once(*operand).chain(whens).collect(), schema);
+                let mut widened = widen_all(
+                    std::iter::once(*operand).chain(whens).collect(),
+                    schema,
+                    Mode::Compare,
+                    false,
+                );
                 let operand = widened.remove(0);
                 (Some(Box::new(operand)), widened)
             }
@@ -559,64 +600,62 @@ fn widen_case(case: Case, schema: &DFSchema) -> Expr {
     ))
 }
 
-fn widen_in_subquery(in_subquery: InSubquery, schema: &DFSchema) -> Result<Expr> {
+fn widen_in_subquery(in_subquery: InSubquery, schema: &DFSchema, decimals: bool) -> Result<Expr> {
+    let Some(target) = in_subquery_target(&in_subquery, schema, decimals) else {
+        return Ok(Expr::InSubquery(in_subquery));
+    };
     let InSubquery {
         expr,
         subquery,
         negated,
     } = in_subquery;
-    match (expr_class(&expr, schema), subquery_class(&subquery)) {
-        (Class::Decimal, Class::Float) => Ok(Expr::InSubquery(InSubquery::new(
-            Box::new(to_double(*expr)),
-            subquery,
-            negated,
-        ))),
-        (Class::Float, Class::Decimal) => {
-            let (projected, _) = project_to_double(Arc::clone(&subquery.subquery), &[0])?;
-            Ok(Expr::InSubquery(InSubquery::new(
-                expr,
-                Subquery {
-                    subquery: Arc::new(projected),
-                    ..subquery
-                },
-                negated,
-            )))
+    let (projected, changed) = project_to(Arc::clone(&subquery.subquery), &[(0, target.clone())])?;
+    let subquery = if changed {
+        Subquery {
+            subquery: Arc::new(projected),
+            ..subquery
         }
-        _ => Ok(Expr::InSubquery(InSubquery::new(expr, subquery, negated))),
-    }
+    } else {
+        subquery
+    };
+    Ok(Expr::InSubquery(InSubquery::new(
+        Box::new(retarget(*expr, schema, &target)),
+        subquery,
+        negated,
+    )))
 }
 
 fn widen_function(
     function: datafusion::logical_expr::expr::ScalarFunction,
     schema: &DFSchema,
+    decimals: bool,
 ) -> Expr {
     let name = function.func.name().to_string();
     let mut args = function.args;
     if name == "nullif" && args.len() == 2 {
         let second = args.remove(1);
         let value = args.remove(0);
-        let (left, right) = widen_pair(value.clone(), second, schema);
+        let (left, right) = widen_pair(value.clone(), second, schema, decimals);
         return Expr::Case(Case::new(
             None,
             vec![(
-                Box::new(Expr::BinaryExpr(BinaryExpr::new(
-                    Box::new(left),
-                    Operator::Eq,
-                    Box::new(right),
-                ))),
+                Box::new(compare(left, Operator::Eq, right)),
                 Box::new(Expr::Literal(ScalarValue::Null, None)),
             )],
             Some(Box::new(value)),
         ));
     }
-    if let Some(positions) = function_positions(&name, args.len()) {
-        let chosen = positions
-            .iter()
-            .filter_map(|&position| args.get(position).cloned())
-            .collect::<Vec<_>>();
-        for (position, widened) in positions.into_iter().zip(widen_all(chosen, schema)) {
-            if let Some(slot) = args.get_mut(position) {
-                *slot = widened;
+    if name == ARRAY_CONTAINS {
+        args = widen_array_contains(args, schema, decimals);
+    } else if let Some(groups) = function_groups(&name, args.len()) {
+        for positions in groups {
+            let Some(target) = group_target(&args, &positions, schema, decimals) else {
+                continue;
+            };
+            for position in positions {
+                if let Some(slot) = args.get_mut(position) {
+                    *slot = retarget(slot.clone(), schema, &target);
+                }
             }
         }
     }
@@ -626,37 +665,45 @@ fn widen_function(
     ))
 }
 
-fn widen_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
-    if !expr_widens(&expr, schema) {
+fn widen_expr(expr: Expr, schema: &DFSchema, decimals: bool) -> Result<Transformed<Expr>> {
+    if !expr_widens(&expr, schema, decimals) {
         return Ok(Transformed::no(expr));
     }
     let widened = match expr {
         Expr::BinaryExpr(BinaryExpr { left, op, right }) => {
-            let (left, right) = widen_pair(*left, *right, schema);
-            Expr::BinaryExpr(BinaryExpr::new(Box::new(left), op, Box::new(right)))
+            let (left, right) = widen_pair(*left, *right, schema, decimals);
+            compare(left, op, right)
         }
         Expr::InList(InList {
             expr,
             list,
             negated,
         }) => {
-            let mut widened = widen_all(std::iter::once(*expr).chain(list).collect(), schema);
+            let mut widened = widen_all(
+                std::iter::once(*expr).chain(list).collect(),
+                schema,
+                Mode::Unify,
+                decimals,
+            );
             let expr = widened.remove(0);
             Expr::InList(InList::new(Box::new(expr), widened, negated))
         }
-        Expr::Between(between) => widen_between(between, schema),
-        Expr::Case(case) => widen_case(case, schema),
-        Expr::InSubquery(in_subquery) => widen_in_subquery(in_subquery, schema)?,
-        Expr::ScalarFunction(function) => widen_function(function, schema),
+        Expr::Between(between) => widen_between(between, schema, decimals),
+        Expr::Case(case) => widen_case(case, schema, decimals),
+        Expr::InSubquery(in_subquery) => widen_in_subquery(in_subquery, schema, decimals)?,
+        Expr::ScalarFunction(function) => widen_function(function, schema, decimals),
         other => return Ok(Transformed::no(other)),
     };
     Ok(Transformed::yes(widened))
 }
 
-fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+fn rewrite_plan(plan: LogicalPlan, decimals: bool) -> Result<Transformed<LogicalPlan>> {
     let plan = match plan {
-        LogicalPlan::Union(union) => return rewrite_union(union),
-        LogicalPlan::Join(join) => rewrite_join(join)?,
+        LogicalPlan::Union(union) => return rewrite_union(union, decimals),
+        LogicalPlan::Join(join) => rewrite_join(join, decimals)?,
+        LogicalPlan::Dml(dml) if decimals && matches!(dml.op, WriteOp::Insert(_)) => {
+            return conform_insert(dml);
+        }
         other => Transformed::no(other),
     };
     let keyed = plan.transformed;
@@ -665,7 +712,7 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let widened = expr.transform_up(|node| widen_expr(node, &schema))?;
+        let widened = expr.transform_up(|node| widen_expr(node, &schema, decimals))?;
         Ok(widened.update_data(|node| saved_name.restore(node)))
     })?;
     let changed = keyed || transformed.transformed;

@@ -21,6 +21,7 @@ pub mod csv;
 pub mod current_date;
 pub mod datetime;
 pub mod decimal_cast;
+pub mod decimal_legacy;
 pub mod decimal_precision;
 pub mod decimal_spark;
 pub mod declared_refuse;
