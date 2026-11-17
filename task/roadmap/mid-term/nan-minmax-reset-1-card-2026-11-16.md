@@ -107,3 +107,7 @@ dynamic-filter bound that calls `scalar_min` is `no_grouping.rs:187` in 54.1.0. 
 repository. No issue is filed, and filing waits on the owner.
 
 Up: [map.md](map.md).
+
+## Append (2026-11-17): step 0 lists every DataFusion key RePark overrides
+
+Ruling 3 of the [rulings](../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md): NAN-MINMAX-RESET-1 stays its own unit. Its step 0 lists every DataFusion key RePark overrides, since each has the same `RESET` gap. Fable's reading (Fable (`claude-fable-5-2`), consult reply of 2026-11-17, section 2, Q2): its seat is the reset path, and "`RESET` and `unset` should restore RePark's default, not DataFusion's." The label status is unchanged: not label-blocking (owner, 2026-11-16).

@@ -5649,7 +5649,7 @@ still open is `isModifiable`.
 - **Rationale** — the owner's 2026-11-16 rulings ("defaults"; "adopt Fable's, run the string-cast sizing"); card
   [CAST-LITERAL-UNWRAP-1](../task/roadmap/mid-term/cast-literal-unwrap-1-card-2026-11-16.md).
 
-### DECIMAL-COMMON-TYPE-1 — two decimals past 38 digits take Spark's least common type — **FIXED 2026-11-16 (branch `fix/decimal-common-type-1`, not merged)**
+### DECIMAL-COMMON-TYPE-1 — two decimals past 38 digits take Spark's least common type — **FIXED 2026-11-16, merged as #1350 (`a792ce47`, 2026-11-17)**
 
 - **repark** — Before (main `33bfde4e`): the Spark door took DataFusion's decimal common type, which keeps the larger
   scale and caps the precision at 38. Where `range + scale > 38` (`DECIMAL(38,0)` beside `DECIMAL(10,2)`, `BIGINT`

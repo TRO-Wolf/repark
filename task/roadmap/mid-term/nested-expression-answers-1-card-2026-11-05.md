@@ -11,3 +11,7 @@
 The ruling covers SELECT answers only. Where the same expressions reach a write, the findings are blockers and sit on [ANSI-SUBSCRIPT-AND-AMBIGUOUS-FIELD-1](ansi-subscript-and-ambiguous-field-1-card-2026-11-05.md) (AUD-022 and AUD-023).
 
 **Close:** when the expression answers match Spark's refusal in a pinned SELECT, or when the owner keeps the card open as a stated limit.
+
+## Append (2026-11-17): element_at past the end, Fable's cell
+
+Fable's cell (Fable (`claude-fable-5-2`), consult reply of 2026-11-17, section 4, seen in passing): `element_at(arr, 2)` on a one-element array answers NULL with ANSI on, where Spark raises `INVALID_ARRAY_INDEX_IN_ELEMENT_AT`. It is the `element_at` cell of D10 above, measured on main before #1341. The subscript card [ANSI-SUBSCRIPT-AND-AMBIGUOUS-FIELD-1](ansi-subscript-and-ambiguous-field-1-card-2026-11-05.md) covers the write routes and defers SELECT answers to this card. Ruled 2026-11-17 (side check 5 of the [rulings](../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md)): a dated line here, and no new card. The severity is not restated here.
