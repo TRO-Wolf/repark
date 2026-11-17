@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-01. **Filed by:** the third-audit records round (`claude-haiku-5-5`), from the targeted re-audit of the format-v2 label, finding AUD-016 ([the report](../../../docs/audits/iceberg-v2-label-targeted-reaudit-2026-11-01.md), section 5).
 
-**Status:** dispatched 2026-11-01 on an Opus 5.5 lane (branch `fix/map-struct-key-subscript-1`), not merged. Grade A, P1, High. A blocker of the format-v2 label (ledger clause C-080).
+**Status:** dispatched 2026-11-01 on an Opus 5.5 lane (branch `fix/map-struct-key-subscript-1`); **merged** as #1232 (`8f8a0694`). Grade A, P1, High. A blocker of the format-v2 label (ledger clause C-080).
 
 **Why:** `m[named_struct(...)]` on a map whose key type is a struct panics. DataFusion 54.1.0's `get_field` slices a `BooleanBuffer` past its length, and the facade reports the panic as an internal error on an ordinary SELECT. Spark answers the value for each row. The same map under `element_at` is correct, and so is a string-keyed subscript. The panic is in DataFusion, not Iceberg-specific: a literal map shows it too. The production definition lists panics in library code as a disqualifier, and the order treated the second audit's AUD-008 the same way. The fault predates the third audit: it is identical at `321c6095`.
 
