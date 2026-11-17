@@ -5721,7 +5721,8 @@ still open is `isModifiable`.
   `evidence/built/`.)*
 - **Still unlike Spark:**
   - Spark's grouped hash aggregate stores its sum buffer per row, so a grouped sum that passes 38 digits inside one
-    partition and comes back answers NULL or raises on Spark; RePark answers (the ruled unbounded running sum);
+    partition and comes back answers NULL or raises on Spark; RePark answers (the ruled unbounded running sum; owner ruling (a), 2026-11-17, card AVG-GROUPED-SUM-STICKY-1, not label-blocking);
+  - ANSI on, a window `avg` past `Decimal(38, 4)` raises `NUMERIC_VALUE_OUT_OF_RANGE` as a bare `PySparkException`, without Spark's `.WITH_SUGGESTION` (the same condition; text only);
   - `avg(DISTINCT x)` or `mean(DISTINCT x)` beside another aggregate refuses (AVG-DISTINCT-MIXED-1, S3); `avg(d / 3)`
     rounds at RePark's wider quotient scale (DECIMAL-DIVIDE-LITERAL-1, S1); `avg(d38_10 * 3)` raises Arrow's overflow
     (its S2 card); a bare aggregate in a DataFrame `select(F.expr(…))` refuses (FEXPR-COUNT-STAR-AGG-1, S3);
@@ -10756,7 +10757,8 @@ the pin rather than obeying it.
 
 ### AVG-DEC-SUMWRAP-1 — decimal `avg` / `try_avg` when the i128 sum wraps with a representable quotient
 
-- **repark** — `avg` / `try_avg` over `DECIMAL(38,0)` inputs whose true sum overflows
+- **Status** — **closed on the Spark door** by AVG-DECIMAL-ROUND-1 (PR #1355, open, 2026-11-17): every sum-wrap cell on the Spark door answers Spark's NULL or `ARITHMETIC_OVERFLOW`, except the ANSI-on window `avg` text (the same result-precision condition, a bare `PySparkException`). The native `repark.sql()` door keeps the wrapped answers (`0.0000`, `100000.0000`) under NATIVE-DECIMAL-AVG-DIVIDE-1.
+- **repark** (before AVG-DECIMAL-ROUND-1; the native door still does) — `avg` / `try_avg` over `DECIMAL(38,0)` inputs whose true sum overflows
   i128 answer the wrapped quotient at `decimal128(38, 4)` instead of NULLing or
   raising. The zero-wrap fixture (three maxima plus
   `40282366920938463463374607431768211459`, summing to exactly 2^128) answers
@@ -10773,10 +10775,7 @@ the pin rather than obeying it.
   unrepresentable at `Decimal(38, 4)`). The return type agrees wherever a value is
   returned.
   *(oracle: recorded 2026-09-05.)*
-- **Pin** —
-  `python/repark/tests/perf/test_perf_agg_avg_1.py::test_avg_decimal_sumwrap_records_divergence`
-  (asserts today's `0.0000` and `100000.0000` on the SQL and DataFrame doors, the
-  window `try_avg` list and the window `avg` raise; reds when fixed).
+- **Pin** — `python/repark/tests/perf/test_perf_agg_avg_1.py`: `::test_avg_decimal_sumwrap_spark_door_matches_spark[true]` and `[false]` (the Spark door, both ANSI modes); `::test_avg_decimal_window_result_overflow_text_diverges` (the ANSI-on window text); and `::test_avg_decimal_sumwrap_native_door_records_divergence` (the native door's wrapped answers; commit `46fac9af`).
 - **Rationale** — BACKLOG, filed 2026-09-05 (PERF-AGG-AVG-1 round 2 S2-4, widened to
   the general wrap class in round 3 R2-1).
   Pre-existing: the global `Accumulator` arms are byte-identical to the base (that

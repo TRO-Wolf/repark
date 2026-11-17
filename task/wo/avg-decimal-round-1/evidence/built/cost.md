@@ -37,3 +37,17 @@ Raw: [raw/cost/](raw/cost/) (`samples.jsonl`, `raw-avg.jsonl`, `table.md`).
   397 MB of partial output); `i256` arithmetic at each window `evaluate` cost K2 1.07x to 1.13x. The product commit
   keeps a native running sum with a wrap count, ships the declared state types, and averages through the `i128`
   path of `div_half_up`.
+
+## K4 at ten runs (delta 1)
+
+Delta 1 added runs 6 to 10 of the four K4 cases (`RUNS=10`), so each row now has ten alternations. Runs 1 to 10 are in [raw/cost/raw-avg.jsonl](raw/cost/raw-avg.jsonl); runs 1 to 5 are the copy taken before this delta. Each sample is four reps, and the medians are per rep. The control band is each run's main-aa/main ratio.
+
+| row | base (s) | head (s) | head/base | control band |
+|---|---|---|---|---|
+| K4 `avg(x)` (`DOUBLE`) | 0.0777 | 0.0768 | 0.989 | 0.943 to 1.136 |
+| K4 `mean(x)` (`DOUBLE`) | 0.0746 | 0.0781 | 1.047 | 0.949 to 1.083 |
+| K4 `avg(b)` (`BIGINT`) | 0.0799 | 0.0790 | 0.988 | 0.889 to 1.074 |
+| K4 `mean(b)` (`BIGINT`) | 0.0761 | 0.0779 | 1.024 | 0.958 to 1.088 |
+
+- At ten runs every row reads at or under 1.05x and sits inside its control band. `mean(x)` reads 1.047 here; the five-run figure above is 1.069.
+- The K4 "answers equal" flag is false on main as well as on the head: the DOUBLE sum's last digit moves with the summation order.

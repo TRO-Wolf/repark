@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), under the owner's ruling "Merge those and defaults." (2026-11-16, about 23:40 UTC), ruling B7 on DECIMAL-COMMON-TYPE-1 step 0 ([rulings](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-16.md)). **Source:** [domain table](../../../wo/decimal-common-type-1/domain-table.md), the "Other causes" table and the Aggregates section; [sketch §9 and §10 question 7](../../../wo/decimal-common-type-1/sketch.md). Parent: [DECIMAL-DECIMAL-UNION-WIDEN-1](../decimal-decimal-union-widen-1-card-2026-11-16.md).
 
-**Status:** step 0 merged as #1352 (`9c96a963`) and the build is running (2026-11-17). **Label-blocking** (ruled B7).
+**Status:** built on PR #1355 (open, not merged; 2026-11-17). **Label-blocking** (ruled B7).
 
 **Severity: S1** (ruled B7, label-blocking). The sketch proposed S2 in §9 and §10 question 7; the ruling sets S1, and this card carries the ruled value. A wrong answer on a scalar decimal column.
 
@@ -117,3 +117,14 @@ skips partial aggregation at 200,000 groups and ships every row's state.
 | grouped decimal `mean` (reported) | 1.008 | 0.915 to 1.004 |
 
 K4 `mean(x)` is above 1.05x but inside its control band, so this is no halt.
+
+## Append (2026-11-17, evening): delta 1 and ruling (a)
+
+- **Test commit `46fac9af`** on `fix/avg-decimal-round-1`, by the successor builder (Claude Opus 5.5, `claude-opus-5-5`). Three fixes:
+  - the pin helper's decimal precision is now local: the cells helper no longer sets the process-wide decimal precision at import, which had leaked into later tests in the same worker;
+  - the overflow text is pinned to Spark's: `[ARITHMETIC_OVERFLOW] Overflow in sum of decimals`, with the `try_avg` hint (`test_avg_overflow_raises`, and the RePark side of the live overflow test);
+  - the sum-wrap pins are split into the Spark door (equal to Spark in both ANSI modes, except the window text below) and the native door (main's answers).
+- **Text class, kept:** with ANSI on, a window `avg` past `Decimal(38, 4)` raises `NUMERIC_VALUE_OUT_OF_RANGE` without `.WITH_SUGGESTION`, as a bare `PySparkException`. Spark raises the same condition as an `ArithmeticException` with `.WITH_SUGGESTION`. Only the text differs.
+- **Full facade suite** (head, release, `-n 6`): 35,168 passed, 0 failed, 813 skipped, 160 xfailed.
+- **K4 at ten runs** (delta 1; [cost.md](../../../wo/avg-decimal-round-1/evidence/built/cost.md)): `avg(x)` 0.989, `mean(x)` 1.047, `avg(b)` 0.988 and `mean(b)` 1.024, each inside its control band.
+- **Ruling (a), verbatim** (owner, 2026-11-17): "Merge 1354, option a on the grouped sum". Option (a) records the grouped-sum difference on a card, is not label-blocking, and merges the unit as it is. The card: [AVG-GROUPED-SUM-STICKY-1](../consult-2026-11-17/avg-grouped-sum-sticky-1-card-2026-11-17.md).
