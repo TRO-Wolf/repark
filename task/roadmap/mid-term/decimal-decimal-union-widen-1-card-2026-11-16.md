@@ -79,4 +79,26 @@ What they change for this card:
 
 `VALUES (1), (decimal(10,2))` types `decimal(22,2)` on both repark builds of the #1341 re-check, where Spark types `decimal(12,2)`. The values are equal in both. The verdict classes it as a pre-existing int and decimal precision gap (class c, reproduced in both ANSI modes). It is a step 0 cell for this unit, the unit this card's rename note names DECIMAL-COMMON-TYPE-1. Source: the #1341 re-check verdict, held outside the repository. The text above is unchanged.
 
+## Append (2026-11-16): step 0 measured
+
+Measured on main `e50ed17f` against Spark 4.1.2, both ANSI modes, by Claude Opus 5.5 (`claude-opus-5-5`); the
+sketch, domain table and inventory are in [../../wo/decimal-common-type-1/](../../wo/decimal-common-type-1/map.md).
+The text above is unchanged.
+
+- **Spark door, per ANSI mode:** 874 common-type cells, **825 wrong** with ANSI off (356 wrong answers, 7 wrong
+  types, **38 wrong writes**, 424 refusals Spark answers), 819 wrong plus 6 both-raise with ANSI on; 161 of 161
+  control cells agree. Native door: 612 of 655 wrong.
+- **Wrong writes:** Iceberg `INSERT … UNION ALL`, `INSERT … VALUES`, CTAS, RTAS, `DELETE`, `UPDATE`, `MERGE ON`
+  and `MERGE … INSERT`, copy-on-write and merge-on-read, and `DELETE` on decimal-partitioned tables; each is named
+  in the domain table.
+- **Spark's rule, measured:** integers take their decimal forms, an integer literal in a comparison its own
+  digits, unions round once per binary node (so `c ∪ d ∪ a` rounds twice), functions and `VALUES` once.
+- **The legacy flag:** in range it is DataFusion's rule (64 of 94 cells agree); 28 overflow cells answer NULL on
+  Spark with ANSI off where main raises.
+- **Recommended seat:** one shared Spark common-type function inside `SparkDecimalFloatWiden`'s walk, called by
+  seat V too; one unit on the Spark door, with the other causes found beside it carded.
+- **Revised after the inventory critic** (no cell contradicted): map keys, aliased `USING` joins, integer literals in
+  `IN` lists and `INTERSECT`/`EXCEPT` membership are in the family too; with them, 890 of 946 Spark-door cells per
+  mode are wrong with ANSI off (884 plus 8 both-raise with ANSI on).
+
 Up: [map.md](map.md).
