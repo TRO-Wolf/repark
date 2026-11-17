@@ -1,0 +1,89 @@
+{
+ "create/df_path": {
+  "analysis_frames": [],
+  "error": "",
+  "text": "Error during planning: table '<scratchpad>/vs/wh/wcs-repark-zxaa2nk_/cs2' not found"
+ },
+ "create/sql_path": {
+  "analysis_frames": [],
+  "error": "",
+  "text": "Error during planning: table '<scratchpad>/vs/wh/wcs-repark-zxaa2nk_/cs2' not found"
+ },
+ "create/sql_upper_only": {
+  "rows": [
+   ""
+  ],
+  "types": []
+ },
+ "create/sql_upper_ref": {
+  "rows": [
+   ""
+  ],
+  "types": []
+ },
+ "create/sql_view": {
+  "rows": [
+   ""
+  ],
+  "types": []
+ },
+ "direct/ci/path": {
+  "analysis_frames": [],
+  "error": "",
+  "text": "Error during planning: table '<scratchpad>/vs/wh/wcs-repark-zxaa2nk_/cs2' not found"
+ },
+ "provenance": {
+  "engine": "repark",
+  "native": "<scratchpad>/ddu-work/pkg-dct-7bf32859/repark/_native.abi3.so",
+  "version": "1.5.6"
+ },
+ "read/ci/df_path": {
+  "analysis_frames": [],
+  "error": "",
+  "text": "Error during planning: table 'spark_catalog.default.d_path' not found"
+ },
+ "read/ci/fixture": {
+  "analysis_frames": [],
+  "error": "COLUMN_ALREADY_EXISTS",
+  "text": "Error during planning: [COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"
+ },
+ "read/ci/held_fresh": {
+  "rows": [
+   "2"
+  ],
+  "types": [
+   "int"
+  ]
+ },
+ "read/ci/sql_path": {
+  "analysis_frames": [],
+  "error": "",
+  "text": "Error during planning: table 'spark_catalog.default.v_path' not found"
+ },
+ "read/ci/sql_upref": {
+  "rows": [
+   "9"
+  ],
+  "types": [
+   "int"
+  ]
+ },
+ "read/ci/sql_view": {
+  "analysis_frames": [],
+  "error": "AMBIGUOUS_REFERENCE",
+  "text": "Error during planning: [AMBIGUOUS_REFERENCE] Reference `A` is ambiguous, could be: [`cs2`.`A`, `cs2`.`A`]. SQLSTATE: 42704"
+ },
+ "read/cs/sql_path": {
+  "analysis_frames": [],
+  "error": "",
+  "text": "Error during planning: table 'spark_catalog.default.v_path' not found"
+ },
+ "read/cs/sql_view": {
+  "rows": [
+   "2"
+  ],
+  "types": [
+   "int"
+  ]
+ }
+}

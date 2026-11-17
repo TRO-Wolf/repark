@@ -1,0 +1,232 @@
+provenance engine=spark jar=org.apache.iceberg_iceberg-spark-runtime-4.1_2.13-1.11.0.jar version=4.1.2
+=== read sql_on_div (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT m FROM sql_on_div
+== Parsed Logical Plan ==
+'Project ['m]
++- 'UnresolvedRelation [sql_on_div], [], false
+
+== Analyzed Logical Plan ==
+m: double
+Project [m#37]
++- SubqueryAlias sql_on_div
+   +- View (`sql_on_div`, [m#37])
+      +- Project [cast(m#36 as double) AS m#37]
+         +- Project [(cast(10 as double) / cast(b#4 as double)) AS m#36]
+            +- SubqueryAlias fx
+               +- View (`fx`, [a#3, b#4, s#5])
+                  +- Relation [a#3,b#4,s#5] parquet
+
+== Optimized Logical Plan ==
+Project [(10.0 / cast(b#4 as double)) AS m#37]
++- Relation [a#3,b#4,s#5] parquet
+
+== Physical Plan ==
+*(1) Project [(10.0 / cast(b#4 as double)) AS m#37]
++- *(1) ColumnarToRow
+   +- FileScan parquet [b#4] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[<scratchpad>/, PartitionFilters: [], PushedFilters: [], ReadSchema: struct<b:int>
+
+=== read sql_on_add_ovf (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT m FROM sql_on_add_ovf
+== Parsed Logical Plan ==
+'Project ['m]
++- 'UnresolvedRelation [sql_on_add_ovf], [], false
+
+== Analyzed Logical Plan ==
+m: int
+Project [m#39]
++- SubqueryAlias sql_on_add_ovf
+   +- View (`sql_on_add_ovf`, [m#39])
+      +- Project [cast(m#38 as int) AS m#39]
+         +- Project [(a#3 + 1) AS m#38]
+            +- SubqueryAlias fx
+               +- View (`fx`, [a#3, b#4, s#5])
+                  +- Relation [a#3,b#4,s#5] parquet
+
+== Optimized Logical Plan ==
+Project [(a#3 + 1) AS m#39]
++- Relation [a#3,b#4,s#5] parquet
+
+== Physical Plan ==
+*(1) Project [(a#3 + 1) AS m#39]
++- *(1) ColumnarToRow
+   +- FileScan parquet [a#3] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[<scratchpad>/, PartitionFilters: [], PushedFilters: [], ReadSchema: struct<a:int>
+
+=== read df_on_div (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT m FROM df_on_div
+== Parsed Logical Plan ==
+'Project ['m]
++- 'UnresolvedRelation [df_on_div], [], false
+
+== Analyzed Logical Plan ==
+m: double
+Project [m#13]
++- SubqueryAlias df_on_div
+   +- View (`df_on_div`, [m#13])
+      +- Project [(cast(10 as double) / cast(b#4 as double)) AS m#13]
+         +- SubqueryAlias fx
+            +- View (`fx`, [a#3, b#4, s#5])
+               +- Relation [a#3,b#4,s#5] parquet
+
+== Optimized Logical Plan ==
+Project [(10.0 / cast(b#4 as double)) AS m#13]
++- Relation [a#3,b#4,s#5] parquet
+
+== Physical Plan ==
+*(1) Project [(10.0 / cast(b#4 as double)) AS m#13]
++- *(1) ColumnarToRow
+   +- FileScan parquet [b#4] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[<scratchpad>/, PartitionFilters: [], PushedFilters: [], ReadSchema: struct<b:int>
+
+=== read df_on_add_ovf (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT m FROM df_on_add_ovf
+== Parsed Logical Plan ==
+'Project ['m]
++- 'UnresolvedRelation [df_on_add_ovf], [], false
+
+== Analyzed Logical Plan ==
+m: int
+Project [m#15]
++- SubqueryAlias df_on_add_ovf
+   +- View (`df_on_add_ovf`, [m#15])
+      +- Project [(a#3 + 1) AS m#15]
+         +- SubqueryAlias fx
+            +- View (`fx`, [a#3, b#4, s#5])
+               +- Relation [a#3,b#4,s#5] parquet
+
+== Optimized Logical Plan ==
+Project [(a#3 + 1) AS m#15]
++- Relation [a#3,b#4,s#5] parquet
+
+== Physical Plan ==
+*(1) Project [(a#3 + 1) AS m#15]
++- *(1) ColumnarToRow
+   +- FileScan parquet [a#3] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[<scratchpad>/, PartitionFilters: [], PushedFilters: [], ReadSchema: struct<a:int>
+
+=== read sql_utc_hour (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT m FROM sql_utc_hour
+== Parsed Logical Plan ==
+'Project ['m]
++- 'UnresolvedRelation [sql_utc_hour], [], false
+
+== Analyzed Logical Plan ==
+m: int
+Project [m#41]
++- SubqueryAlias sql_utc_hour
+   +- View (`sql_utc_hour`, [m#41])
+      +- Project [cast(m#40 as int) AS m#41]
+         +- Project [hour(ts#9, Some(UTC)) AS m#40]
+            +- SubqueryAlias tzt
+               +- View (`tzt`, [ts#9, s#10, dt#11])
+                  +- Relation [ts#9,s#10,dt#11] parquet
+
+== Optimized Logical Plan ==
+Project [hour(ts#9, Some(UTC)) AS m#41]
++- Relation [ts#9,s#10,dt#11] parquet
+
+== Physical Plan ==
+*(1) Project [hour(ts#9, Some(UTC)) AS m#41]
++- *(1) ColumnarToRow
+   +- FileScan parquet [ts#9] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[<scratchpad>/, PartitionFilters: [], PushedFilters: [], ReadSchema: struct<ts:timestamp>
+
+=== read df_utc_hour (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT m FROM df_utc_hour
+== Parsed Logical Plan ==
+'Project ['m]
++- 'UnresolvedRelation [df_utc_hour], [], false
+
+== Analyzed Logical Plan ==
+m: int
+Project [m#19]
++- SubqueryAlias df_utc_hour
+   +- View (`df_utc_hour`, [m#19])
+      +- Project [hour(ts#9, Some(UTC)) AS m#19]
+         +- SubqueryAlias tzt
+            +- View (`tzt`, [ts#9, s#10, dt#11])
+               +- Relation [ts#9,s#10,dt#11] parquet
+
+== Optimized Logical Plan ==
+Project [hour(ts#9, Some(UTC)) AS m#19]
++- Relation [ts#9,s#10,dt#11] parquet
+
+== Physical Plan ==
+*(1) Project [hour(ts#9, Some(UTC)) AS m#19]
++- *(1) ColumnarToRow
+   +- FileScan parquet [ts#9] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[<scratchpad>/, PartitionFilters: [], PushedFilters: [], ReadSchema: struct<ts:timestamp>
+
+=== direct off div (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT 10 / b AS m FROM fx
+== Parsed Logical Plan ==
+'Project [(10 / 'b) AS m#42]
++- 'UnresolvedRelation [fx], [], false
+
+== Analyzed Logical Plan ==
+m: double
+Project [(cast(10 as double) / cast(b#4 as double)) AS m#42]
++- SubqueryAlias fx
+   +- View (`fx`, [a#3, b#4, s#5])
+      +- Relation [a#3,b#4,s#5] parquet
+
+== Optimized Logical Plan ==
+Project [(10.0 / cast(b#4 as double)) AS m#42]
++- Relation [a#3,b#4,s#5] parquet
+
+== Physical Plan ==
+*(1) Project [(10.0 / cast(b#4 as double)) AS m#42]
++- *(1) ColumnarToRow
+   +- FileScan parquet [b#4] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[<scratchpad>/, PartitionFilters: [], PushedFilters: [], ReadSchema: struct<b:int>
+
+=== direct off add_ovf (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT a + 1 AS m FROM fx
+== Parsed Logical Plan ==
+'Project [('a + 1) AS m#43]
++- 'UnresolvedRelation [fx], [], false
+
+== Analyzed Logical Plan ==
+m: int
+Project [(a#3 + 1) AS m#43]
++- SubqueryAlias fx
+   +- View (`fx`, [a#3, b#4, s#5])
+      +- Relation [a#3,b#4,s#5] parquet
+
+== Optimized Logical Plan ==
+Project [(a#3 + 1) AS m#43]
++- Relation [a#3,b#4,s#5] parquet
+
+== Physical Plan ==
+*(1) Project [(a#3 + 1) AS m#43]
++- *(1) ColumnarToRow
+   +- FileScan parquet [a#3] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[<scratchpad>/, PartitionFilters: [], PushedFilters: [], ReadSchema: struct<a:int>
+
+=== held div (created ANSI on; explained after SET off)
+== Parsed Logical Plan ==
+'Project [(10 / 'b) AS m#16]
++- 'UnresolvedRelation [fx], [], false
+
+== Analyzed Logical Plan ==
+m: double
+Project [(cast(10 as double) / cast(b#4 as double)) AS m#16]
++- SubqueryAlias fx
+   +- View (`fx`, [a#3, b#4, s#5])
+      +- Relation [a#3,b#4,s#5] parquet
+
+== Optimized Logical Plan ==
+Project [(10.0 / cast(b#4 as double)) AS m#16]
++- Relation [a#3,b#4,s#5] parquet
+
+== Physical Plan ==
+*(1) Project [(10.0 / cast(b#4 as double)) AS m#16]
++- *(1) ColumnarToRow
+   +- FileScan parquet [b#4] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[<scratchpad>/, PartitionFilters: [], PushedFilters: [], ReadSchema: struct<b:int>
+
+=== held add_ovf (created ANSI on; explained after SET off)
+== Parsed Logical Plan ==
+'Project [('a + 1) AS m#17]
++- 'UnresolvedRelation [fx], [], false
+
+== Analyzed Logical Plan ==
+m: int
+Project [(a#3 + 1) AS m#17]
++- SubqueryAlias fx
+   +- View (`fx`, [a#3, b#4, s#5])
+      +- Relation [a#3,b#4,s#5] parquet
+
+== Optimized Logical Plan ==
+Project [(a#3 + 1) AS m#17]
++- Relation [a#3,b#4,s#5] parquet
+
+== Physical Plan ==
+*(1) Project [(a#3 + 1) AS m#17]
++- *(1) ColumnarToRow
+   +- FileScan parquet [a#3] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[<scratchpad>/, PartitionFilters: [], PushedFilters: [], ReadSchema: struct<a:int>
+
