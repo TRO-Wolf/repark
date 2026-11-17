@@ -1,0 +1,28 @@
+native <scratchpad>/ddu-work/pkg-dct-7bf32859/repark/_native.abi3.so
+{"id": "f01", "ok": true, "types": "decimal(14,6)", "vals": "0.836666"}
+{"id": "f02", "ok": true, "types": "decimal(14,6)", "vals": "0.836666"}
+{"id": "f03", "ok": true, "types": "int,decimal(14,6)", "vals": "3,0.836666"}
+{"id": "f04", "ok": true, "types": "int,decimal(14,6)", "vals": "3,0.836666"}
+{"id": "f05", "ok": true, "types": "int,decimal(14,6)", "vals": "3,0.836666"}
+{"id": "f06", "ok": true, "types": "int,decimal(14,6)", "vals": "3,0.836666"}
+{"id": "f07", "ok": true, "types": "string,string", "vals": "count,3;mean,0.836666;stddev,1.4491491756659607;min,0.00;max,2.51"}
+{"id": "f08", "ok": true, "types": "string,string", "vals": "count,3;mean,0.836666;stddev,1.4491491756659607;min,0.00;max,2.51"}
+{"id": "f09", "ok": true, "types": "double", "vals": "0.09999999999999999;0.3333333333333333;0.02"}
+{"id": "f10", "ok": true, "types": "double", "vals": "0.09999999999999999;0.3333333333333333;0.02"}
+{"id": "f11", "ok": true, "types": "double", "vals": "10.0;3.0;50.0"}
+{"id": "f12", "ok": true, "types": "double", "vals": "0.09999999999999999;0.3333333333333333;0.02"}
+{"id": "f13", "ok": true, "types": "decimal(21,13)", "vals": "0.1000000000000;0.3333333333333;0.0200000000000"}
+{"id": "f14", "ok": true, "types": "decimal(21,13)", "vals": "0.1000000000000;0.3333333333333;0.0200000000000"}
+{"id": "f15", "ok": false, "types": "", "vals": "ERR:UnsupportedOperationException:None:This feature is not implemented: Physical plan does not support logical expression AggregateFunction(AggregateFunction { func: AggregateUDF { inner: Avg { signature: Signature { type_signature: OneOf("}
+{"id": "f16", "ok": false, "types": "", "vals": "ERR:UnsupportedOperationException:None:This feature is not implemented: Physical plan does not support logical expression AggregateFunction(AggregateFunction { func: AggregateUDF { inner: SparkAvgWithRetract { signature: Signature { type_s"}
+{"id": "f17", "ok": true, "types": "decimal(14,6)", "vals": "0.836666;0.836666;0.836666"}
+{"id": "f18", "ok": true, "types": "decimal(10,2)", "vals": "0.06"}
+{"id": "f19", "ok": true, "types": "double", "vals": "0.1;0.33;0.02"}
+{"id": "f20", "ok": true, "types": "decimal(12,2)", "vals": "0.90;3.00;0.18"}
+{"id": "f21", "ok": true, "types": "decimal(12,2)", "vals": "0.30;1.00;0.06"}
+{"id": "f22", "ok": true, "types": "double", "vals": "0.0;0.3333333333333333;0.0"}
+{"id": "f23", "ok": true, "types": "decimal(21,13)", "vals": "0.1000000000000;0.3333333333333;0.0200000000000"}
+{"id": "f24", "ok": true, "types": "decimal(10,2)", "vals": "0.30;1.00;0.06"}
+{"id": "f25", "ok": false, "types": "", "vals": "ERR:UnsupportedOperationException:None:This feature is not implemented: Physical plan does not support logical expression AggregateFunction(AggregateFunction { func: AggregateUDF { inner: SparkAvgWithRetract { signature: Signature { type_s"}
+{"id": "f26", "ok": true, "types": "double", "vals": "3.0"}
+{"id": "f27", "ok": false, "types": "", "vals": "ERR:UnsupportedOperationException:None:This feature is not implemented: Physical plan does not support logical expression AggregateFunction(AggregateFunction { func: AggregateUDF { inner: Sum { signature: Signature { type_signature: OneOf("}

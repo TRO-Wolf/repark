@@ -1,0 +1,11 @@
+native <scratchpad>/ddu-work/pkg-dct-7bf32859/repark/_native.abi3.so
+{"id": "ctas-avg-c10_0", "ok": true, "types": "int,decimal(14,4)", "vals": "9,1.0000;12,0.0000", "ddl": ""}
+{"id": "ctas-avg-c10_2", "ok": true, "types": "int,decimal(14,6)", "vals": "9,0.836666;12,0.005454", "ddl": ""}
+{"id": "ctas-avg-c28_2", "ok": true, "types": "int,decimal(32,6)", "vals": "9,0.836666;12,0.005454", "ddl": ""}
+{"id": "ctas-avg-c38_18", "ok": true, "types": "int,decimal(38,22)", "vals": "9,0.8366666666666666666666;12,0.0054545454545454545454", "ddl": ""}
+{"id": "ins-avg-c10_2", "ok": true, "types": "int,decimal(10,5),decimal(24,10)", "vals": "9,0.83667,0.8366660000;12,0.00545,0.0054540000", "ddl": ""}
+{"id": "ins-avg-c10_0", "ok": true, "types": "int,decimal(10,5),decimal(24,10)", "vals": "9,1.00000,1.0000000000;12,0.00000,0.0000000000", "ddl": ""}
+{"id": "merge-avg-c10_2-cow", "ok": true, "types": "int,decimal(10,5),decimal(24,10)", "vals": "9,0.83667,0.8366660000;12,0.00545,0.0054540000", "ddl": ""}
+{"id": "merge-avg-c10_0-cow", "ok": true, "types": "int,decimal(10,5),decimal(24,10)", "vals": "9,1.00000,1.0000000000;12,0.00000,0.0000000000", "ddl": ""}
+{"id": "merge-avg-c10_2-mor", "ok": true, "types": "int,decimal(10,5),decimal(24,10)", "vals": "9,0.83667,0.8366660000;12,0.00545,0.0054540000", "ddl": ""}
+{"id": "merge-avg-c10_0-mor", "ok": true, "types": "int,decimal(10,5),decimal(24,10)", "vals": "9,1.00000,1.0000000000;12,0.00000,0.0000000000", "ddl": ""}

@@ -5673,7 +5673,7 @@ still open is `isModifiable`.
 - **Still unlike Spark:**
   - the native `repark.sql()` door keeps DataFusion's type (DECIMAL-COMMON-TYPE-NATIVE-1, S2);
   - `nvl` / `ifnull` of two decimals answers `double` (NVL-DECIMAL-DOUBLE-1, S2, linked to NVL-TYPE-COERCION-2);
-    `avg` of a decimal truncates (AVG-DECIMAL-ROUND-1, S2); `array_union` of two element types answers where Spark
+    `avg` of a decimal truncated (AVG-DECIMAL-ROUND-1, S1, fixed 2026-11-17, below); `array_union` of two element types answers where Spark
     refuses (ARRAY-UNION-TYPES-1, S3); `lag`/`lead` with a column default, `USING` over two unaliased derived tables,
     a decimal `RANGE` offset and `UPDATE … SET x = coalesce(CASE …)` refuse for any types (S3 cards); `nullif`'s result
     type and `EXCEPT`/`INTERSECT`'s output type are sweep families 6 and 5;
@@ -5690,6 +5690,51 @@ still open is `isModifiable`.
 - **Cost** — [evidence/built/cost.md](../task/wo/decimal-common-type-1/evidence/built/cost.md).
 - **Rationale** — the owner's 2026-11-16 rulings ("defaults"; "Merge those and defaults."); card
   [DECIMAL-DECIMAL-UNION-WIDEN-1](../task/roadmap/mid-term/decimal-decimal-union-widen-1-card-2026-11-16.md).
+
+
+### AVG-DECIMAL-ROUND-1 — a decimal `avg` and `mean` round half up at `s + 4`, keep an exact sum and follow the ANSI flag — **FIXED 2026-11-17 on the Spark door (branch `fix/avg-decimal-round-1`, not merged)**
+
+- **repark** — Before (main `03d1ea8b`): `avg` divided the sum by the count truncating (`2.51 / 3` was `0.836666`),
+  formed `sum × 10^4` in `i128` so sums Spark holds at p ≥ 34 raised a condition-less `Arithmetic Overflow in
+  AvgAccumulator`, summed with a silent `i128` wrap, raised the same text with ANSI off where Spark answers NULL, and
+  `mean` was DataFusion's `Avg` (the same truncation; `mean(DISTINCT x), count(x)` answered).
+
+  After, on the Spark door (SQL, `F.expr`, `selectExpr`, every DataFrame spelling, `describe`, `summary`, Iceberg
+  stores and DML):
+  - the result type stays `DecimalType.bounded(p + 4, s + 4)`; the value is Spark's `DecimalDivideWithOverflowCheck`:
+    the exact sum is checked against `bounded(p + 10, s)`, scaled to `s + 4`, divided by the count half up (one
+    rounding of the exact quotient, through the division UDF's kernel) and checked against the result precision;
+  - every position reaches it: ungrouped, grouped, `HAVING`, every window frame (sliding `ROWS` retracts), `DISTINCT`,
+    `FILTER`, grouping sets, `try_avg`, the partial-state merge;
+  - the running sum is exact in update, retract and merge, so a sum that passes 38 digits and comes back answers
+    (`s04` is `1.0000`); the partial state keeps its declared types, and a partial whose own sum leaves Spark's sum
+    type ships a NULL sum, as Spark's partial buffer does (a two-file sum past 38 digits answers NULL or raises on both);
+  - ANSI on: a sum past the sum type raises `[ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' …`, and
+    a quotient past the result precision raises `[NUMERIC_VALUE_OUT_OF_RANGE]`; ANSI off and `try_avg`: NULL. An
+    analyzer arm picks the mode; the display name stays `avg(x)` / `mean(x)`;
+  - `mean` is RePark's averager (its own instance and name), so `avg(c), mean(c)` in one query now answers, and
+    a decimal `mean(DISTINCT x)` beside another aggregate refuses as `avg` does (ruled; AVG-DISTINCT-MIXED-1 holds
+    both), while a `DOUBLE` or integer one keeps main's answer.
+- **spark** — Spark 4.1.2 `Average` (read from the jar): `If(count = 0, NULL, DecimalDivideWithOverflowCheck(sum,
+  count, bounded(p + 4, s + 4), nullOnOverflow = evalMode != ANSI))`; `Decimal.$div` truncates at scale 39, then
+  `toPrecision` rounds `HALF_UP`. *(oracle: measured live 2026-11-17, `task/wo/avg-decimal-round-1/evidence/` and
+  `evidence/built/`.)*
+- **Still unlike Spark:**
+  - Spark's grouped hash aggregate stores its sum buffer per row, so a grouped sum that passes 38 digits inside one
+    partition and comes back answers NULL or raises on Spark; RePark answers (the ruled unbounded running sum);
+  - `avg(DISTINCT x)` or `mean(DISTINCT x)` beside another aggregate refuses (AVG-DISTINCT-MIXED-1, S3); `avg(d / 3)`
+    rounds at RePark's wider quotient scale (DECIMAL-DIVIDE-LITERAL-1, S1); `avg(d38_10 * 3)` raises Arrow's overflow
+    (its S2 card); a bare aggregate in a DataFrame `select(F.expr(…))` refuses (FEXPR-COUNT-STAR-AGG-1, S3);
+  - the native `repark.sql()` door keeps DataFusion's truncating `Avg` and division (NATIVE-DECIMAL-AVG-DIVIDE-1, S2);
+  - `describe` / `summary` print a wide decimal mean in plain notation where Spark prints `4.21667E-17`, and their
+    `stddev` text differs in the last digit (not the averager).
+- **Pin** — `python/repark/tests/types/test_avg_decimal_round_1.py` (243 cells per ANSI mode against
+  `avg_decimal_round_1_spark_oracle.json`, plus the ruled refusals and the partition cells); Rust `repark-functions`
+  `avg_decimal.rs` (averager, carry, both accumulators, state), `aggregate.rs` (ANSI arm, `mean`), `avg_groups.rs`.
+- **Cost** — [evidence/built/cost.md](../task/wo/avg-decimal-round-1/evidence/built/cost.md).
+- **Rationale** — the owner's rulings "Merge those and defaults." (2026-11-16), "Defaults" and "Merge 1352 and 1353,
+  defaults on the questions" (2026-11-17); card
+  [AVG-DECIMAL-ROUND-1](../task/roadmap/mid-term/decimal-common-type-1-side/avg-decimal-round-1-card-2026-11-16.md).
 
 ## 5. Facade drop-in semantics (DECLARED)
 

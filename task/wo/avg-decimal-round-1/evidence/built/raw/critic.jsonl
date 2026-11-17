@@ -1,0 +1,294 @@
+{"set": "q", "mode": "true", "id": "b01", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b02", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b03", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b04", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b05", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b06", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b07", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b08", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b09", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b10", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b11", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b12", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b13", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b14", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b16", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b17", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b18", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b19", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b20", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b21", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b22", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b23", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "b24", "main": "BOTH_RAISE", "head": "BOTH_RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "RAISE"}
+{"set": "q", "mode": "true", "id": "b25", "main": "BOTH_RAISE", "head": "BOTH_RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "RAISE"}
+{"set": "q", "mode": "true", "id": "b26", "main": "BOTH_RAISE", "head": "BOTH_RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "RAISE"}
+{"set": "q", "mode": "true", "id": "b27", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "c01", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "c02", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "c03", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "c04", "main": "WRONG", "head": "WRONG", "same_as_main": false, "head_cell": "OK [decimal(14,6)] num:0.006667;num:0.836667", "spark_cell": "OK [decimal(14,6)] num:0.836667;num:0.006667"}
+{"set": "q", "mode": "true", "id": "c05", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "c06", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "c07", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(25,17)] num:0.3225", "spark_cell": "OK [decimal(18,10)] num:0.3225"}
+{"set": "q", "mode": "true", "id": "c08", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "c09", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [decimal(14,6),bigint] num:0.026667,num:3"}
+{"set": "q", "mode": "true", "id": "c10", "main": "WRONG", "head": "RAISE", "same_as_main": false, "head_cell": "RAISE", "spark_cell": "OK [decimal(14,6),bigint] num:0.026667,num:3"}
+{"set": "q", "mode": "true", "id": "c11", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [interval day to second] 1 day, 12:00:00"}
+{"set": "q", "mode": "true", "id": "c12", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [interval day to second] 1 day, 12:00:00"}
+{"set": "q", "mode": "true", "id": "c13", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "c14", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "c15", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(21,13)] num:0;num:0;num:0.8366666666667", "spark_cell": "OK [decimal(14,6)] num:0;num:0;num:0.836667"}
+{"set": "q", "mode": "true", "id": "c16", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(14,6),decimal(21,13)] num:0,num:0;num:2.51,num:0.8366666666667", "spark_cell": "OK [decimal(14,6),decimal(14,6)] num:0,num:0;num:2.51,num:0.836667"}
+{"set": "q", "mode": "true", "id": "c17", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "c18", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "d01", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(21,13),decimal(10,2)] null,null;num:0.02,num:0.06;num:0.1,num:0.3;num:0.3333333333333,num:1;num:0.8366666666667,num:2.51", "spark_cell": "OK [decimal(14,6),decimal(10,2)] null,null;num:0.02,num:0.06;num:0.1,num:0.3;num:0.333333,num:1;num:0.836667,num:2.51"}
+{"set": "q", "mode": "true", "id": "d02", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(16,8)] null;num:0.02;num:0.1;num:0.33333333;num:0.83666667", "spark_cell": "OK [decimal(14,6)] null;num:0.02;num:0.1;num:0.333333;num:0.836667"}
+{"set": "q", "mode": "true", "id": "d03", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "d04", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(31,23)] null;num:0.02;num:0.1;num:0.33333333333333333333333;num:0.83666666666666666666667", "spark_cell": "OK [decimal(14,6)] null;num:0.02;num:0.1;num:0.333333;num:0.836667"}
+{"set": "q", "mode": "true", "id": "d05", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(21,13)] null;num:0.0006;num:0.003;num:0.01;num:0.0251", "spark_cell": "OK [decimal(14,6)] null;num:0.0006;num:0.003;num:0.01;num:0.0251"}
+{"set": "q", "mode": "true", "id": "d06", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(21,13)] null;num:-0.02;num:-0.1;num:-0.3333333333333;num:-0.8366666666667", "spark_cell": "OK [decimal(14,6)] null;num:-0.02;num:-0.1;num:-0.333333;num:-0.836667"}
+{"set": "q", "mode": "true", "id": "d07", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(31,23)] null;num:0.00000000002;num:0.0000000001;num:0.00000000033333333333333;num:0.00000000083666666666667", "spark_cell": "OK [decimal(21,13)] null;num:0.00000000002;num:0.0000000001;num:0.0000000003333;num:0.0000000008367"}
+{"set": "q", "mode": "true", "id": "d08", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(23,11)] null;num:50;num:10;num:3;num:1.19521912351", "spark_cell": "OK [decimal(14,11)] null;num:50;num:10;num:3;num:1.19521912351"}
+{"set": "q", "mode": "true", "id": "d09", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "d10", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "d11", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(13,12)] num:0.333333333333", "spark_cell": "OK [decimal(7,6)] num:0.333333"}
+{"set": "q", "mode": "true", "id": "d12", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(10,2)] null;num:0.06;num:0.3;num:1;num:2.51", "spark_cell": "OK [decimal(3,2)] null;num:0.06;num:0.3;num:1;num:2.51"}
+{"set": "q", "mode": "true", "id": "d13", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "d14", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "d15", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(10,2)] ", "spark_cell": "OK [decimal(10,2)] num:2.51"}
+{"set": "q", "mode": "true", "id": "d16", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [string] lo;lo;lo;lo;lo", "spark_cell": "OK [string] lo;lo;lo;lo;hi"}
+{"set": "q", "mode": "true", "id": "d17", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(38,12)] num:0.1;num:0.836666666667", "spark_cell": "OK [decimal(32,6)] num:0.1;num:0.836667"}
+{"set": "q", "mode": "true", "id": "d18", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(38,26)] num:10;num:1.19521912350597609561752988", "spark_cell": "OK [decimal(32,29)] num:10;num:1.19521912350597609561752988048"}
+{"set": "q", "mode": "true", "id": "d19", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [double] null;num:0;num:0;num:0.3333333333333333;num:0.6666666666666666", "spark_cell": "OK [decimal(14,6)] null;num:0.02;num:0.1;num:0.333333;num:0.836667"}
+{"set": "q", "mode": "true", "id": "d20", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int] null;num:1;num:1;num:2;num:3", "spark_cell": "OK [decimal(11,2)] null;num:1.06;num:1.3;num:2;num:3.51"}
+{"set": "q", "mode": "true", "id": "d21", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int] null;num:;num:;num:3;num:6", "spark_cell": "OK [decimal(12,2)] null;num:0.18;num:0.9;num:3;num:7.53"}
+{"set": "q", "mode": "true", "id": "d22", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(32,24)] num:0.075", "spark_cell": "OK [decimal(16,8)] num:0.075"}
+{"set": "q", "mode": "true", "id": "d23", "main": "BOTH_RAISE", "head": "BOTH_RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "RAISE"}
+{"set": "q", "mode": "true", "id": "d24", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "d27", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int] null;num:-1;num:-1;num:;num:1", "spark_cell": "OK [decimal(11,2)] null;num:-0.94;num:-0.7;num:0;num:1.51"}
+{"set": "q", "mode": "true", "id": "d28", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int] null;num:;num:;num:1;num:2", "spark_cell": "OK [decimal(3,2)] null;num:0.06;num:0.3;num:1;num:2.51"}
+{"set": "q", "mode": "true", "id": "d29", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(12,2)] null;num:0.06;num:0.3;num:1;num:2.51", "spark_cell": "OK [decimal(3,2)] null;num:0.06;num:0.3;num:1;num:2.51"}
+{"set": "q", "mode": "true", "id": "d30", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(12,2)] null;num:0.06;num:0.3;num:1;num:2.51", "spark_cell": "OK [decimal(3,2)] null;num:0.06;num:0.3;num:1;num:2.51"}
+{"set": "q", "mode": "true", "id": "d31", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(21,13)] null;num:0.02;num:0.1;num:0.33;num:0.84", "spark_cell": "OK [decimal(11,2)] null;num:0.02;num:0.1;num:0.33;num:0.84"}
+{"set": "q", "mode": "true", "id": "d32", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "true", "id": "d33", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(16,2)] null;num:0.18;num:0.9;num:3;num:7.53", "spark_cell": "OK [decimal(12,2)] null;num:0.18;num:0.9;num:3;num:7.53"}
+{"set": "q", "mode": "true", "id": "d34", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(31,2)] null;num:0.18;num:0.9;num:3;num:7.53", "spark_cell": "OK [decimal(12,2)] null;num:0.18;num:0.9;num:3;num:7.53"}
+{"set": "df", "mode": "true", "id": "f01", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "true", "id": "f02", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "true", "id": "f03", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "true", "id": "f04", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "true", "id": "f05", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "true", "id": "f06", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "true", "id": "f07", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "true", "id": "f08", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "true", "id": "f09", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [double] num:0.09999999999999999;num:0.3333333333333333;num:0.02", "spark_cell": "OK [decimal(14,6)] num:0.1;num:0.333333;num:0.02"}
+{"set": "df", "mode": "true", "id": "f10", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [double] num:0.09999999999999999;num:0.3333333333333333;num:0.02", "spark_cell": "OK [decimal(14,6)] num:0.1;num:0.333333;num:0.02"}
+{"set": "df", "mode": "true", "id": "f11", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [double] num:10;num:3;num:50", "spark_cell": "OK [decimal(14,11)] num:10;num:3;num:50"}
+{"set": "df", "mode": "true", "id": "f12", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [double] num:0.09999999999999999;num:0.3333333333333333;num:0.02", "spark_cell": "OK [decimal(21,13)] num:0.1;num:0.3333333333333;num:0.02"}
+{"set": "df", "mode": "true", "id": "f13", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(21,13)] num:0.1;num:0.3333333333333;num:0.02", "spark_cell": "OK [decimal(14,6)] num:0.1;num:0.333333;num:0.02"}
+{"set": "df", "mode": "true", "id": "f14", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(21,13)] num:0.1;num:0.3333333333333;num:0.02", "spark_cell": "OK [decimal(14,6)] num:0.1;num:0.333333;num:0.02"}
+{"set": "df", "mode": "true", "id": "f15", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [decimal(14,6)] num:0.836667"}
+{"set": "df", "mode": "true", "id": "f16", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [decimal(14,6)] num:0.836667"}
+{"set": "df", "mode": "true", "id": "f17", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "true", "id": "f18", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(10,2)] num:0.06", "spark_cell": "OK [decimal(10,2)] num:0.3;num:1;num:0.06"}
+{"set": "df", "mode": "true", "id": "f19", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [double] num:0.1;num:0.33;num:0.02", "spark_cell": "OK [decimal(11,2)] num:0.1;num:0.33;num:0.02"}
+{"set": "df", "mode": "true", "id": "f20", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "true", "id": "f21", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(12,2)] num:0.3;num:1;num:0.06", "spark_cell": "OK [decimal(3,2)] num:0.3;num:1;num:0.06"}
+{"set": "df", "mode": "true", "id": "f22", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [double] num:0;num:0.3333333333333333;num:0", "spark_cell": "OK [decimal(14,6)] num:0.1;num:0.333333;num:0.02"}
+{"set": "df", "mode": "true", "id": "f23", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "true", "id": "f24", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(10,2)] num:0.3;num:1;num:0.06", "spark_cell": "OK [decimal(3,2)] num:0.3;num:1;num:0.06"}
+{"set": "df", "mode": "true", "id": "f25", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [double] num:3"}
+{"set": "df", "mode": "true", "id": "f26", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "true", "id": "f27", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [bigint] num:9"}
+{"set": "ice-avg", "mode": "true", "id": "ctas-avg-c10_0", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "true", "id": "ctas-avg-c10_2", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "true", "id": "ctas-avg-c28_2", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "true", "id": "ctas-avg-c38_18", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "true", "id": "ins-avg-c10_0", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "true", "id": "ins-avg-c10_2", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "true", "id": "merge-avg-c10_0-cow", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "true", "id": "merge-avg-c10_0-mor", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "true", "id": "merge-avg-c10_2-cow", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "true", "id": "merge-avg-c10_2-mor", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "ice-div", "mode": "true", "id": "ctas-div-d10_2", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(21,13),decimal(21,13)] num:1,num:0.1,num:0.0272727272727;num:2,num:0.8366666666667,num:0.2281818181818;num:3,num:0.02,num:0.0054545454545;num:4,num:0.3333333333333,num:0.0909090909091", "spark_cell": "OK [int,decimal(14,6),decimal(14,6)] num:1,num:0.1,num:0.027273;num:2,num:0.836667,num:0.228182;num:3,num:0.02,num:0.005455;num:4,num:0.333333,num:0.090909"}
+{"set": "ice-div", "mode": "true", "id": "ctas-div-d28_2", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(38,12),decimal(38,12)] num:1,num:0.1,num:0.027272727273;num:2,num:0.836666666667,num:0.228181818182;num:3,num:0.02,num:0.005454545455;num:4,num:0.333333333333,num:0.090909090909", "spark_cell": "OK [int,decimal(32,6),decimal(32,6)] num:1,num:0.1,num:0.027273;num:2,num:0.836667,num:0.228182;num:3,num:0.02,num:0.005455;num:4,num:0.333333,num:0.090909"}
+{"set": "ice-div", "mode": "true", "id": "ctas-div-d38_2", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "ice-div", "mode": "true", "id": "ins-div-d10_2", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.8366666667;num:3,num:0.00545,num:0.02;num:4,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.836667;num:3,num:0.00546,num:0.02;num:4,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "true", "id": "ins-div-d28_2", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.8366666667;num:3,num:0.00545,num:0.02;num:4,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.836667;num:3,num:0.00546,num:0.02;num:4,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "true", "id": "ins-literal-narrow", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "ice-div", "mode": "true", "id": "merge-div-d10_2-cow", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.8366666667;num:3,num:0.00545,num:0.02;num:4,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.836667;num:3,num:0.00546,num:0.02;num:4,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "true", "id": "merge-div-d10_2-mor", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.8366666667;num:3,num:0.00545,num:0.02;num:4,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.836667;num:3,num:0.00546,num:0.02;num:4,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "true", "id": "merge-div-d28_2-cow", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.8366666667;num:3,num:0.00545,num:0.02;num:4,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.836667;num:3,num:0.00546,num:0.02;num:4,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "true", "id": "merge-div-d28_2-mor", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.8366666667;num:3,num:0.00545,num:0.02;num:4,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.836667;num:3,num:0.00546,num:0.02;num:4,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "true", "id": "upd-div-d10_2-cow", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.8366666667;num:3,num:0.06,num:0.00545,num:0.02;num:4,num:1,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.836667;num:3,num:0.06,num:0.00546,num:0.02;num:4,num:1,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "true", "id": "upd-div-d10_2-mor", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.8366666667;num:3,num:0.06,num:0.00545,num:0.02;num:4,num:1,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.836667;num:3,num:0.06,num:0.00546,num:0.02;num:4,num:1,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "true", "id": "upd-div-d28_2-cow", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(28,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.8366666667;num:3,num:0.06,num:0.00545,num:0.02;num:4,num:1,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(28,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.836667;num:3,num:0.06,num:0.00546,num:0.02;num:4,num:1,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "true", "id": "upd-div-d28_2-mor", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(28,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.8366666667;num:3,num:0.06,num:0.00545,num:0.02;num:4,num:1,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(28,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.836667;num:3,num:0.06,num:0.00546,num:0.02;num:4,num:1,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "true", "id": "where-div-ice", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int] ", "spark_cell": "OK [int] num:2"}
+{"set": "q3", "mode": "true", "id": "h01", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q3", "mode": "true", "id": "h02", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q3", "mode": "true", "id": "h03", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q3", "mode": "true", "id": "p01", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [decimal(14,6),decimal(14,6)] num:1.26,num:0.06"}
+{"set": "q3", "mode": "true", "id": "s01", "main": "BOTH_RAISE", "head": "BOTH_RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "RAISE"}
+{"set": "q3", "mode": "true", "id": "s02", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q3", "mode": "true", "id": "s03", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q3", "mode": "true", "id": "s04", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q3", "mode": "true", "id": "s05", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "fix", "mode": "true", "id": "b23", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "fix", "mode": "true", "id": "b24", "main": "BOTH_RAISE", "head": "BOTH_RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "RAISE"}
+{"set": "fix", "mode": "true", "id": "b25", "main": "BOTH_RAISE", "head": "BOTH_RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "RAISE"}
+{"set": "fix", "mode": "true", "id": "b26", "main": "BOTH_RAISE", "head": "BOTH_RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "RAISE"}
+{"set": "fix", "mode": "true", "id": "b27", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b01", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b02", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b03", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b04", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b05", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b06", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b07", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b08", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b09", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b10", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b11", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b12", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b13", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b14", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b16", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b17", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b18", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b19", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b20", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b21", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b22", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b23", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b24", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b25", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b26", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "b27", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "c01", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "c02", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "c03", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "c04", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "c05", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "c06", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "c07", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(25,17)] num:0.3225", "spark_cell": "OK [decimal(18,10)] num:0.3225"}
+{"set": "q", "mode": "false", "id": "c08", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "c09", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [decimal(14,6),bigint] num:0.026667,num:3"}
+{"set": "q", "mode": "false", "id": "c10", "main": "WRONG", "head": "RAISE", "same_as_main": false, "head_cell": "RAISE", "spark_cell": "OK [decimal(14,6),bigint] num:0.026667,num:3"}
+{"set": "q", "mode": "false", "id": "c11", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [interval day to second] 1 day, 12:00:00"}
+{"set": "q", "mode": "false", "id": "c12", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [interval day to second] 1 day, 12:00:00"}
+{"set": "q", "mode": "false", "id": "c13", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "c14", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "c15", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(21,13)] num:0;num:0;num:0.8366666666667", "spark_cell": "OK [decimal(14,6)] num:0;num:0;num:0.836667"}
+{"set": "q", "mode": "false", "id": "c16", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(14,6),decimal(21,13)] num:0,num:0;num:2.51,num:0.8366666666667", "spark_cell": "OK [decimal(14,6),decimal(14,6)] num:0,num:0;num:2.51,num:0.836667"}
+{"set": "q", "mode": "false", "id": "c17", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "c18", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "d01", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(21,13),decimal(10,2)] null,null;num:0.02,num:0.06;num:0.1,num:0.3;num:0.3333333333333,num:1;num:0.8366666666667,num:2.51", "spark_cell": "OK [decimal(14,6),decimal(10,2)] null,null;num:0.02,num:0.06;num:0.1,num:0.3;num:0.333333,num:1;num:0.836667,num:2.51"}
+{"set": "q", "mode": "false", "id": "d02", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(16,8)] null;num:0.02;num:0.1;num:0.33333333;num:0.83666667", "spark_cell": "OK [decimal(14,6)] null;num:0.02;num:0.1;num:0.333333;num:0.836667"}
+{"set": "q", "mode": "false", "id": "d03", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "d04", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(31,23)] null;num:0.02;num:0.1;num:0.33333333333333333333333;num:0.83666666666666666666667", "spark_cell": "OK [decimal(14,6)] null;num:0.02;num:0.1;num:0.333333;num:0.836667"}
+{"set": "q", "mode": "false", "id": "d05", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(21,13)] null;num:0.0006;num:0.003;num:0.01;num:0.0251", "spark_cell": "OK [decimal(14,6)] null;num:0.0006;num:0.003;num:0.01;num:0.0251"}
+{"set": "q", "mode": "false", "id": "d06", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(21,13)] null;num:-0.02;num:-0.1;num:-0.3333333333333;num:-0.8366666666667", "spark_cell": "OK [decimal(14,6)] null;num:-0.02;num:-0.1;num:-0.333333;num:-0.836667"}
+{"set": "q", "mode": "false", "id": "d07", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(31,23)] null;num:0.00000000002;num:0.0000000001;num:0.00000000033333333333333;num:0.00000000083666666666667", "spark_cell": "OK [decimal(21,13)] null;num:0.00000000002;num:0.0000000001;num:0.0000000003333;num:0.0000000008367"}
+{"set": "q", "mode": "false", "id": "d08", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(23,11)] null;num:50;num:10;num:3;num:1.19521912351", "spark_cell": "OK [decimal(14,11)] null;num:50;num:10;num:3;num:1.19521912351"}
+{"set": "q", "mode": "false", "id": "d09", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "d10", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "d11", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(13,12)] num:0.333333333333", "spark_cell": "OK [decimal(7,6)] num:0.333333"}
+{"set": "q", "mode": "false", "id": "d12", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(10,2)] null;num:0.06;num:0.3;num:1;num:2.51", "spark_cell": "OK [decimal(3,2)] null;num:0.06;num:0.3;num:1;num:2.51"}
+{"set": "q", "mode": "false", "id": "d13", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "d14", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "d15", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(10,2)] ", "spark_cell": "OK [decimal(10,2)] num:2.51"}
+{"set": "q", "mode": "false", "id": "d16", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [string] lo;lo;lo;lo;lo", "spark_cell": "OK [string] lo;lo;lo;lo;hi"}
+{"set": "q", "mode": "false", "id": "d17", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(38,12)] num:0.1;num:0.836666666667", "spark_cell": "OK [decimal(32,6)] num:0.1;num:0.836667"}
+{"set": "q", "mode": "false", "id": "d18", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(38,26)] num:10;num:1.19521912350597609561752988", "spark_cell": "OK [decimal(32,29)] num:10;num:1.19521912350597609561752988048"}
+{"set": "q", "mode": "false", "id": "d19", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [double] null;num:0;num:0;num:0.3333333333333333;num:0.6666666666666666", "spark_cell": "OK [decimal(14,6)] null;num:0.02;num:0.1;num:0.333333;num:0.836667"}
+{"set": "q", "mode": "false", "id": "d20", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int] null;num:1;num:1;num:2;num:3", "spark_cell": "OK [decimal(11,2)] null;num:1.06;num:1.3;num:2;num:3.51"}
+{"set": "q", "mode": "false", "id": "d21", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int] null;num:;num:;num:3;num:6", "spark_cell": "OK [decimal(12,2)] null;num:0.18;num:0.9;num:3;num:7.53"}
+{"set": "q", "mode": "false", "id": "d22", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(32,24)] num:0.075", "spark_cell": "OK [decimal(16,8)] num:0.075"}
+{"set": "q", "mode": "false", "id": "d23", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [decimal(38,6)] null"}
+{"set": "q", "mode": "false", "id": "d24", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "d27", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int] null;num:-1;num:-1;num:;num:1", "spark_cell": "OK [decimal(11,2)] null;num:-0.94;num:-0.7;num:0;num:1.51"}
+{"set": "q", "mode": "false", "id": "d28", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int] null;num:;num:;num:1;num:2", "spark_cell": "OK [decimal(3,2)] null;num:0.06;num:0.3;num:1;num:2.51"}
+{"set": "q", "mode": "false", "id": "d29", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(12,2)] null;num:0.06;num:0.3;num:1;num:2.51", "spark_cell": "OK [decimal(3,2)] null;num:0.06;num:0.3;num:1;num:2.51"}
+{"set": "q", "mode": "false", "id": "d30", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(12,2)] null;num:0.06;num:0.3;num:1;num:2.51", "spark_cell": "OK [decimal(3,2)] null;num:0.06;num:0.3;num:1;num:2.51"}
+{"set": "q", "mode": "false", "id": "d31", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(21,13)] null;num:0.02;num:0.1;num:0.33;num:0.84", "spark_cell": "OK [decimal(11,2)] null;num:0.02;num:0.1;num:0.33;num:0.84"}
+{"set": "q", "mode": "false", "id": "d32", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q", "mode": "false", "id": "d33", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(16,2)] null;num:0.18;num:0.9;num:3;num:7.53", "spark_cell": "OK [decimal(12,2)] null;num:0.18;num:0.9;num:3;num:7.53"}
+{"set": "q", "mode": "false", "id": "d34", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(31,2)] null;num:0.18;num:0.9;num:3;num:7.53", "spark_cell": "OK [decimal(12,2)] null;num:0.18;num:0.9;num:3;num:7.53"}
+{"set": "df", "mode": "false", "id": "f01", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "false", "id": "f02", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "false", "id": "f03", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "false", "id": "f04", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "false", "id": "f05", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "false", "id": "f06", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "false", "id": "f07", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "false", "id": "f08", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "false", "id": "f09", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [double] num:0.09999999999999999;num:0.3333333333333333;num:0.02", "spark_cell": "OK [decimal(14,6)] num:0.1;num:0.333333;num:0.02"}
+{"set": "df", "mode": "false", "id": "f10", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [double] num:0.09999999999999999;num:0.3333333333333333;num:0.02", "spark_cell": "OK [decimal(14,6)] num:0.1;num:0.333333;num:0.02"}
+{"set": "df", "mode": "false", "id": "f11", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [double] num:10;num:3;num:50", "spark_cell": "OK [decimal(14,11)] num:10;num:3;num:50"}
+{"set": "df", "mode": "false", "id": "f12", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [double] num:0.09999999999999999;num:0.3333333333333333;num:0.02", "spark_cell": "OK [decimal(21,13)] num:0.1;num:0.3333333333333;num:0.02"}
+{"set": "df", "mode": "false", "id": "f13", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(21,13)] num:0.1;num:0.3333333333333;num:0.02", "spark_cell": "OK [decimal(14,6)] num:0.1;num:0.333333;num:0.02"}
+{"set": "df", "mode": "false", "id": "f14", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(21,13)] num:0.1;num:0.3333333333333;num:0.02", "spark_cell": "OK [decimal(14,6)] num:0.1;num:0.333333;num:0.02"}
+{"set": "df", "mode": "false", "id": "f15", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [decimal(14,6)] num:0.836667"}
+{"set": "df", "mode": "false", "id": "f16", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [decimal(14,6)] num:0.836667"}
+{"set": "df", "mode": "false", "id": "f17", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "false", "id": "f18", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(10,2)] num:0.06", "spark_cell": "OK [decimal(10,2)] num:0.3;num:1;num:0.06"}
+{"set": "df", "mode": "false", "id": "f19", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [double] num:0.1;num:0.33;num:0.02", "spark_cell": "OK [decimal(11,2)] num:0.1;num:0.33;num:0.02"}
+{"set": "df", "mode": "false", "id": "f20", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "false", "id": "f21", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(12,2)] num:0.3;num:1;num:0.06", "spark_cell": "OK [decimal(3,2)] num:0.3;num:1;num:0.06"}
+{"set": "df", "mode": "false", "id": "f22", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [double] num:0;num:0.3333333333333333;num:0", "spark_cell": "OK [decimal(14,6)] num:0.1;num:0.333333;num:0.02"}
+{"set": "df", "mode": "false", "id": "f23", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "df", "mode": "false", "id": "f24", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [decimal(10,2)] num:0.3;num:1;num:0.06", "spark_cell": "OK [decimal(3,2)] num:0.3;num:1;num:0.06"}
+{"set": "df", "mode": "false", "id": "f25", "main": null, "head": null, "same_as_main": true, "head_cell": "RAISE", "spark_cell": null}
+{"set": "df", "mode": "false", "id": "f26", "main": null, "head": null, "same_as_main": true, "head_cell": "OK [double] num:3", "spark_cell": null}
+{"set": "df", "mode": "false", "id": "f27", "main": null, "head": null, "same_as_main": true, "head_cell": "RAISE", "spark_cell": null}
+{"set": "ice-avg", "mode": "false", "id": "ctas-avg-c10_0", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "false", "id": "ctas-avg-c10_2", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "false", "id": "ctas-avg-c28_2", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "false", "id": "ctas-avg-c38_18", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "false", "id": "ins-avg-c10_0", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "false", "id": "ins-avg-c10_2", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "false", "id": "merge-avg-c10_0-cow", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "false", "id": "merge-avg-c10_0-mor", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "false", "id": "merge-avg-c10_2-cow", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "ice-avg", "mode": "false", "id": "merge-avg-c10_2-mor", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "ice-div", "mode": "false", "id": "ctas-div-d10_2", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(21,13),decimal(21,13)] num:1,num:0.1,num:0.0272727272727;num:2,num:0.8366666666667,num:0.2281818181818;num:3,num:0.02,num:0.0054545454545;num:4,num:0.3333333333333,num:0.0909090909091", "spark_cell": "OK [int,decimal(14,6),decimal(14,6)] num:1,num:0.1,num:0.027273;num:2,num:0.836667,num:0.228182;num:3,num:0.02,num:0.005455;num:4,num:0.333333,num:0.090909"}
+{"set": "ice-div", "mode": "false", "id": "ctas-div-d28_2", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(38,12),decimal(38,12)] num:1,num:0.1,num:0.027272727273;num:2,num:0.836666666667,num:0.228181818182;num:3,num:0.02,num:0.005454545455;num:4,num:0.333333333333,num:0.090909090909", "spark_cell": "OK [int,decimal(32,6),decimal(32,6)] num:1,num:0.1,num:0.027273;num:2,num:0.836667,num:0.228182;num:3,num:0.02,num:0.005455;num:4,num:0.333333,num:0.090909"}
+{"set": "ice-div", "mode": "false", "id": "ctas-div-d38_2", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "ice-div", "mode": "false", "id": "ins-div-d10_2", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.8366666667;num:3,num:0.00545,num:0.02;num:4,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.836667;num:3,num:0.00546,num:0.02;num:4,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "false", "id": "ins-div-d28_2", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.8366666667;num:3,num:0.00545,num:0.02;num:4,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.836667;num:3,num:0.00546,num:0.02;num:4,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "false", "id": "ins-literal-narrow", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "ice-div", "mode": "false", "id": "merge-div-d10_2-cow", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.8366666667;num:3,num:0.00545,num:0.02;num:4,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.836667;num:3,num:0.00546,num:0.02;num:4,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "false", "id": "merge-div-d10_2-mor", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.8366666667;num:3,num:0.00545,num:0.02;num:4,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.836667;num:3,num:0.00546,num:0.02;num:4,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "false", "id": "merge-div-d28_2-cow", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.8366666667;num:3,num:0.00545,num:0.02;num:4,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.836667;num:3,num:0.00546,num:0.02;num:4,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "false", "id": "merge-div-d28_2-mor", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.8366666667;num:3,num:0.00545,num:0.02;num:4,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,5),decimal(24,10)] num:1,num:0.02727,num:0.1;num:2,num:0.22818,num:0.836667;num:3,num:0.00546,num:0.02;num:4,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "false", "id": "upd-div-d10_2-cow", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.8366666667;num:3,num:0.06,num:0.00545,num:0.02;num:4,num:1,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.836667;num:3,num:0.06,num:0.00546,num:0.02;num:4,num:1,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "false", "id": "upd-div-d10_2-mor", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(10,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.8366666667;num:3,num:0.06,num:0.00545,num:0.02;num:4,num:1,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(10,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.836667;num:3,num:0.06,num:0.00546,num:0.02;num:4,num:1,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "false", "id": "upd-div-d28_2-cow", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(28,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.8366666667;num:3,num:0.06,num:0.00545,num:0.02;num:4,num:1,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(28,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.836667;num:3,num:0.06,num:0.00546,num:0.02;num:4,num:1,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "false", "id": "upd-div-d28_2-mor", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int,decimal(28,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.8366666667;num:3,num:0.06,num:0.00545,num:0.02;num:4,num:1,num:0.09091,num:0.3333333333", "spark_cell": "OK [int,decimal(28,2),decimal(10,5),decimal(24,10)] num:1,num:0.3,num:0.02727,num:0.1;num:2,num:2.51,num:0.22818,num:0.836667;num:3,num:0.06,num:0.00546,num:0.02;num:4,num:1,num:0.09091,num:0.333333"}
+{"set": "ice-div", "mode": "false", "id": "where-div-ice", "main": "WRONG", "head": "WRONG", "same_as_main": true, "head_cell": "OK [int] ", "spark_cell": "OK [int] num:2"}
+{"set": "q3", "mode": "false", "id": "h01", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q3", "mode": "false", "id": "h02", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q3", "mode": "false", "id": "h03", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q3", "mode": "false", "id": "p01", "main": "RAISE", "head": "RAISE", "same_as_main": true, "head_cell": "RAISE", "spark_cell": "OK [decimal(14,6),decimal(14,6)] num:1.26,num:0.06"}
+{"set": "q3", "mode": "false", "id": "s01", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "q3", "mode": "false", "id": "s02", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q3", "mode": "false", "id": "s03", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q3", "mode": "false", "id": "s04", "main": "EQUAL", "head": "EQUAL", "same_as_main": true, "head_cell": null, "spark_cell": null}
+{"set": "q3", "mode": "false", "id": "s05", "main": "WRONG", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "fix", "mode": "false", "id": "b23", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "fix", "mode": "false", "id": "b24", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "fix", "mode": "false", "id": "b25", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "fix", "mode": "false", "id": "b26", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "fix", "mode": "false", "id": "b27", "main": "RAISE", "head": "EQUAL", "same_as_main": false, "head_cell": null, "spark_cell": null}
+{"set": "native", "mode": "-", "id": "n01", "main": "n/a", "head": "n/a", "same_as_main": true}
+{"set": "native", "mode": "-", "id": "n02", "main": "n/a", "head": "n/a", "same_as_main": true}
+{"set": "native", "mode": "-", "id": "n03", "main": "n/a", "head": "n/a", "same_as_main": true}
+{"set": "native", "mode": "-", "id": "n04", "main": "n/a", "head": "n/a", "same_as_main": true}
+{"set": "native", "mode": "-", "id": "n05", "main": "n/a", "head": "n/a", "same_as_main": true}
+{"set": "native", "mode": "-", "id": "n06", "main": "n/a", "head": "n/a", "same_as_main": true}
+{"set": "native", "mode": "-", "id": "n07", "main": "n/a", "head": "n/a", "same_as_main": true}
+{"set": "native", "mode": "-", "id": "n08", "main": "n/a", "head": "n/a", "same_as_main": true}
+{"set": "native", "mode": "-", "id": "n09", "main": "n/a", "head": "n/a", "same_as_main": true}
+{"set": "native", "mode": "-", "id": "n10", "main": "n/a", "head": "n/a", "same_as_main": true}

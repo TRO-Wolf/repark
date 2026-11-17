@@ -1,0 +1,685 @@
+{
+"avg/beside_avg": "ERR:Error during planning: Projections require unique expression names but the expression \"avg(datafusion.public.ndt.x)\" at position 0 and \"avg(datafusion.public.ndt.x)\" at position 1 have the same name. Co",
+"avg/beside_sum_b": {
+"rows": [
+"1|2.0|4",
+"2|9.223372036854776e+18|-2",
+"3|2.0|6"
+],
+"types": [
+"int",
+"double",
+"bigint"
+]
+},
+"avg/distinct/b": {
+"rows": [
+"1|2.0",
+"2|9.223372036854776e+18",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/distinct/i": {
+"rows": [
+"1|3.5",
+"2|2147483647.0",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/distinct/x": {
+"rows": [
+"1|-0.375",
+"2|1e+308",
+"3|0.20000000000000004"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/grouped/'1.5'": "ERR:Execution error: avg interval: year-month mistyped",
+"avg/grouped/CAST(h AS TINYINT)": "ERR:Arrow error: Cast error: Can't cast value 32767 to type Int8",
+"avg/grouped/NULL": "ERR:This feature is not implemented: AvgGroupsAccumulator for (Null --> Float64)",
+"avg/grouped/b": {
+"rows": [
+"1|2.0",
+"2|9.223372036854776e+18",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/grouped/f": {
+"rows": [
+"1|1.875",
+"2|0.75",
+"3|0.2000000054637591"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/grouped/h": {
+"rows": [
+"1|1.5",
+"2|32767.0",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/grouped/i": {
+"rows": [
+"1|3.5",
+"2|2147483647.0",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/grouped/str": "ERR:Error during planning: Failed to coerce arguments to satisfy a call to 'avg' function: coercion from Utf8View to the signature OneOf(Coercible(Decimal), Coercible(Float64), Exact(Interval(YearMonth)),",
+"avg/grouped/t": "ERR:Error during planning: Failed to coerce arguments to satisfy a call to 'avg' function: coercion from Boolean to the signature OneOf(Coercible(Decimal), Coercible(Float64), Exact(Interval(YearMonth)), ",
+"avg/grouped/x": {
+"rows": [
+"1|-0.375",
+"2|inf",
+"3|0.20000000000000004"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/having/b": {
+"rows": [
+"1",
+"2",
+"3"
+],
+"types": [
+"int"
+]
+},
+"avg/having/i": {
+"rows": [
+"1",
+"2",
+"3"
+],
+"types": [
+"int"
+]
+},
+"avg/having/x": {
+"rows": [
+"2"
+],
+"types": [
+"int"
+]
+},
+"avg/interval_day": "ERR:Error during planning: Cannot get result type for temporal operation Interval(MonthDayNano) * Int64: Invalid argument error: Invalid interval arithmetic operation: Interval(MonthDayNano) * Interval(Mo",
+"avg/interval_dts": "ERR:This feature is not implemented: Unsupported Interval Expression with last_field Some(Second)",
+"avg/interval_ym": "ERR:Error during planning: Cannot get result type for temporal operation Interval(MonthDayNano) * Int64: Invalid argument error: Invalid interval arithmetic operation: Interval(MonthDayNano) * Interval(Mo",
+"avg/mixed_distinct/b": "ERR:This feature is not implemented: DistinctAvgAccumulator",
+"avg/mixed_distinct/i": "ERR:This feature is not implemented: DistinctAvgAccumulator",
+"avg/mixed_distinct/x": "ERR:This feature is not implemented: DistinctAvgAccumulator",
+"avg/ungrouped/'1.5'": "ERR:Execution error: avg interval: year-month mistyped",
+"avg/ungrouped/CAST(h AS TINYINT)": "ERR:Arrow error: Cast error: Can't cast value 32767 to type Int8",
+"avg/ungrouped/NULL": "ERR:This feature is not implemented: AvgAccumulator for (Null --> Float64)",
+"avg/ungrouped/b": {
+"rows": [
+"2.6352491533870787e+18"
+],
+"types": [
+"double"
+]
+},
+"avg/ungrouped/f": {
+"rows": [
+"0.8357142880558968"
+],
+"types": [
+"double"
+]
+},
+"avg/ungrouped/h": {
+"rows": [
+"9363.285714285714"
+],
+"types": [
+"double"
+]
+},
+"avg/ungrouped/i": {
+"rows": [
+"613566758.1428572"
+],
+"types": [
+"double"
+]
+},
+"avg/ungrouped/str": "ERR:Error during planning: Failed to coerce arguments to satisfy a call to 'avg' function: coercion from Utf8View to the signature OneOf(Coercible(Decimal), Coercible(Float64), Exact(Interval(YearMonth)),",
+"avg/ungrouped/t": "ERR:Error during planning: Failed to coerce arguments to satisfy a call to 'avg' function: coercion from Boolean to the signature OneOf(Coercible(Decimal), Coercible(Float64), Exact(Interval(YearMonth)), ",
+"avg/ungrouped/x": {
+"rows": [
+"inf"
+],
+"types": [
+"double"
+]
+},
+"avg/win_part/b": {
+"rows": [
+"1|1|2.0",
+"1|2|2.0",
+"1|3|2.0",
+"2|4|9.223372036854776e+18",
+"2|5|9.223372036854776e+18",
+"3|6|2.0",
+"3|7|2.0",
+"3|8|2.0"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"avg/win_part/i": {
+"rows": [
+"1|1|3.5",
+"1|2|3.5",
+"1|3|3.5",
+"2|4|2147483647.0",
+"2|5|2147483647.0",
+"3|6|2.0",
+"3|7|2.0",
+"3|8|2.0"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"avg/win_part/x": {
+"rows": [
+"1|1|-0.375",
+"1|2|-0.375",
+"1|3|-0.375",
+"2|4|inf",
+"2|5|inf",
+"3|6|0.20000000000000004",
+"3|7|0.20000000000000004",
+"3|8|0.20000000000000004"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"avg/win_rows/b": {
+"rows": [
+"1|1|7.0",
+"1|2|2.0",
+"1|3|-3.0",
+"2|4|9.223372036854776e+18",
+"2|5|9.223372036854776e+18",
+"3|6|1.0",
+"3|7|1.5",
+"3|8|2.5"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"avg/win_rows/i": {
+"rows": [
+"1|1|3.0",
+"1|2|3.5",
+"1|3|4.0",
+"2|4|2147483647.0",
+"2|5|2147483647.0",
+"3|6|1.0",
+"3|7|1.5",
+"3|8|2.5"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"avg/win_rows/x": {
+"rows": [
+"1|1|1.5",
+"1|2|-0.375",
+"1|3|-2.25",
+"2|4|1e+308",
+"2|5|inf",
+"3|6|0.1",
+"3|7|0.15000000000000002",
+"3|8|0.25000000000000006"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"df/F.mean/b": {
+"rows": [
+"1|2.0",
+"2|9.223372036854776e+18",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"df/F.mean/x": {
+"rows": [
+"1|-0.375",
+"2|inf",
+"3|0.20000000000000004"
+],
+"types": [
+"int",
+"double"
+]
+},
+"df/GroupedData.mean/i": {
+"rows": [
+"1|3.5",
+"2|2147483647.0",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"df/agg_F.expr_mean/b": {
+"rows": [
+"1|2.0",
+"2|9.223372036854776e+18",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"df/agg_dict_mean/x": {
+"rows": [
+"1|-0.375",
+"2|inf",
+"3|0.20000000000000004"
+],
+"types": [
+"int",
+"double"
+]
+},
+"df/describe/x": {
+"rows": [
+"count|7",
+"max|1e308",
+"mean|inf",
+"min|-2.25",
+"stddev|inf"
+],
+"types": [
+"string",
+"string"
+]
+},
+"df/selectExpr_mean/x": {
+"rows": [
+"inf"
+],
+"types": [
+"double"
+]
+},
+"mean/beside_avg": "ERR:Schema error: Schema contains duplicate unqualified field name \"avg(datafusion.public.ndt.x)\"",
+"mean/beside_sum_b": {
+"rows": [
+"1|2.0|4",
+"2|9.223372036854776e+18|-2",
+"3|2.0|6"
+],
+"types": [
+"int",
+"double",
+"bigint"
+]
+},
+"mean/distinct/b": {
+"rows": [
+"1|2.0",
+"2|9.223372036854776e+18",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/distinct/i": {
+"rows": [
+"1|3.5",
+"2|2147483647.0",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/distinct/x": {
+"rows": [
+"1|-0.375",
+"2|1e+308",
+"3|0.20000000000000004"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/grouped/'1.5'": "ERR:Error during planning: Internal error: Function 'avg' failed to match any signature, errors: Error during planning: Function 'avg' requires Decimal, but received String (DataType: Utf8).,Error during ",
+"mean/grouped/CAST(h AS TINYINT)": "ERR:Arrow error: Cast error: Can't cast value 32767 to type Int8",
+"mean/grouped/NULL": "ERR:This feature is not implemented: AvgGroupsAccumulator for (Null --> Float64)",
+"mean/grouped/b": {
+"rows": [
+"1|2.0",
+"2|9.223372036854776e+18",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/grouped/f": {
+"rows": [
+"1|1.875",
+"2|0.75",
+"3|0.2000000054637591"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/grouped/h": {
+"rows": [
+"1|1.5",
+"2|32767.0",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/grouped/i": {
+"rows": [
+"1|3.5",
+"2|2147483647.0",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/grouped/str": "ERR:Error during planning: Internal error: Function 'avg' failed to match any signature, errors: Error during planning: Function 'avg' requires Decimal, but received String (DataType: Utf8View).,Error dur",
+"mean/grouped/t": "ERR:Error during planning: Internal error: Function 'avg' failed to match any signature, errors: Error during planning: Function 'avg' requires Decimal, but received Boolean (DataType: Boolean).,Error dur",
+"mean/grouped/x": {
+"rows": [
+"1|-0.375",
+"2|inf",
+"3|0.20000000000000004"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/having/b": {
+"rows": [
+"1",
+"2",
+"3"
+],
+"types": [
+"int"
+]
+},
+"mean/having/i": {
+"rows": [
+"1",
+"2",
+"3"
+],
+"types": [
+"int"
+]
+},
+"mean/having/x": {
+"rows": [
+"2"
+],
+"types": [
+"int"
+]
+},
+"mean/interval_day": "ERR:Error during planning: Cannot get result type for temporal operation Interval(MonthDayNano) * Int64: Invalid argument error: Invalid interval arithmetic operation: Interval(MonthDayNano) * Interval(Mo",
+"mean/interval_dts": "ERR:This feature is not implemented: Unsupported Interval Expression with last_field Some(Second)",
+"mean/interval_ym": "ERR:Error during planning: Cannot get result type for temporal operation Interval(MonthDayNano) * Int64: Invalid argument error: Invalid interval arithmetic operation: Interval(MonthDayNano) * Interval(Mo",
+"mean/mixed_distinct/b": {
+"rows": [
+"1|2.0|2",
+"2|9.223372036854776e+18|2",
+"3|2.0|3"
+],
+"types": [
+"int",
+"double",
+"bigint"
+]
+},
+"mean/mixed_distinct/i": {
+"rows": [
+"1|3.5|2",
+"2|2147483647.0|2",
+"3|2.0|3"
+],
+"types": [
+"int",
+"double",
+"bigint"
+]
+},
+"mean/mixed_distinct/x": {
+"rows": [
+"1|-0.375|2",
+"2|1e+308|2",
+"3|0.20000000000000004|3"
+],
+"types": [
+"int",
+"double",
+"bigint"
+]
+},
+"mean/ungrouped/'1.5'": "ERR:Error during planning: Internal error: Function 'avg' failed to match any signature, errors: Error during planning: Function 'avg' requires Decimal, but received String (DataType: Utf8).,Error during ",
+"mean/ungrouped/CAST(h AS TINYINT)": "ERR:Arrow error: Cast error: Can't cast value 32767 to type Int8",
+"mean/ungrouped/NULL": "ERR:datafusion engine error: Execution error: AvgAccumulator for (Null --> Float64)",
+"mean/ungrouped/b": {
+"rows": [
+"2.6352491533870787e+18"
+],
+"types": [
+"double"
+]
+},
+"mean/ungrouped/f": {
+"rows": [
+"0.8357142880558968"
+],
+"types": [
+"double"
+]
+},
+"mean/ungrouped/h": {
+"rows": [
+"9363.285714285714"
+],
+"types": [
+"double"
+]
+},
+"mean/ungrouped/i": {
+"rows": [
+"613566758.1428572"
+],
+"types": [
+"double"
+]
+},
+"mean/ungrouped/str": "ERR:Error during planning: Internal error: Function 'avg' failed to match any signature, errors: Error during planning: Function 'avg' requires Decimal, but received String (DataType: Utf8View).,Error dur",
+"mean/ungrouped/t": "ERR:Error during planning: Internal error: Function 'avg' failed to match any signature, errors: Error during planning: Function 'avg' requires Decimal, but received Boolean (DataType: Boolean).,Error dur",
+"mean/ungrouped/x": {
+"rows": [
+"inf"
+],
+"types": [
+"double"
+]
+},
+"mean/win_part/b": {
+"rows": [
+"1|1|2.0",
+"1|2|2.0",
+"1|3|2.0",
+"2|4|9.223372036854776e+18",
+"2|5|9.223372036854776e+18",
+"3|6|2.0",
+"3|7|2.0",
+"3|8|2.0"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"mean/win_part/i": {
+"rows": [
+"1|1|3.5",
+"1|2|3.5",
+"1|3|3.5",
+"2|4|2147483647.0",
+"2|5|2147483647.0",
+"3|6|2.0",
+"3|7|2.0",
+"3|8|2.0"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"mean/win_part/x": {
+"rows": [
+"1|1|-0.375",
+"1|2|-0.375",
+"1|3|-0.375",
+"2|4|inf",
+"2|5|inf",
+"3|6|0.20000000000000004",
+"3|7|0.20000000000000004",
+"3|8|0.20000000000000004"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"mean/win_rows/b": {
+"rows": [
+"1|1|7.0",
+"1|2|2.0",
+"1|3|-3.0",
+"2|4|9.223372036854776e+18",
+"2|5|9.223372036854776e+18",
+"3|6|1.0",
+"3|7|1.5",
+"3|8|2.5"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"mean/win_rows/i": {
+"rows": [
+"1|1|3.0",
+"1|2|3.5",
+"1|3|4.0",
+"2|4|2147483647.0",
+"2|5|2147483647.0",
+"3|6|1.0",
+"3|7|1.5",
+"3|8|2.5"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"mean/win_rows/x": {
+"rows": [
+"1|1|1.5",
+"1|2|-0.375",
+"1|3|-2.25",
+"2|4|1e+308",
+"2|5|inf",
+"3|6|0.1",
+"3|7|0.15000000000000002",
+"3|8|0.25000000000000006"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+}
+}

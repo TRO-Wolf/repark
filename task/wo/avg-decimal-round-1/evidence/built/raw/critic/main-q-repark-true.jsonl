@@ -1,0 +1,81 @@
+native <scratchpad>/ddu-work/pkg-dct-7bf32859/repark/_native.abi3.so
+{"id": "b01", "ok": true, "types": "decimal(14,6)", "vals": "0.836666"}
+{"id": "b02", "ok": true, "types": "int,decimal(14,6)", "vals": "1,0.006666;2,0.836666"}
+{"id": "b03", "ok": true, "types": "decimal(14,4)", "vals": "0.6666"}
+{"id": "b04", "ok": true, "types": "decimal(32,14)", "vals": "0.83666666666666"}
+{"id": "b05", "ok": true, "types": "decimal(38,22)", "vals": "0.8366666666666666666666"}
+{"id": "b06", "ok": true, "types": "decimal(38,38)", "vals": "0.00000000000000000000000000000000000050"}
+{"id": "b07", "ok": true, "types": "decimal(14,6)", "vals": "0.026666"}
+{"id": "b08", "ok": true, "types": "decimal(14,6)", "vals": "0.836666"}
+{"id": "b09", "ok": true, "types": "decimal(14,6)", "vals": "0.836666"}
+{"id": "b10", "ok": true, "types": "decimal(14,6)", "vals": "0.836666;0.836666;0.836666"}
+{"id": "b11", "ok": true, "types": "decimal(14,6)", "vals": "0.010000;0.015000;0.026666"}
+{"id": "b12", "ok": true, "types": "int,decimal(14,6)", "vals": "1,0.836666"}
+{"id": "b13", "ok": true, "types": "int,decimal(14,6)", "vals": ""}
+{"id": "b14", "ok": true, "types": "decimal(14,6),decimal(10,2)", "vals": "0.836666,2.51"}
+{"id": "b16", "ok": true, "types": "double", "vals": "1.5"}
+{"id": "b17", "ok": true, "types": "decimal(6,5)", "vals": "2.00000"}
+{"id": "b18", "ok": true, "types": "decimal(38,20)", "vals": "0.83666666666666666667"}
+{"id": "b19", "ok": true, "types": "decimal(14,6)", "vals": "-0.006666"}
+{"id": "b20", "ok": true, "types": "decimal(14,6)", "vals": "0.000312"}
+{"id": "b21", "ok": true, "types": "decimal(14,6)", "vals": "1.666666"}
+{"id": "b22", "ok": true, "types": "decimal(14,6)", "vals": "null"}
+{"id": "b23", "ok": false, "types": "", "vals": "ERR:PySparkException:None:Execution error: Arithmetic Overflow in AvgAccumulator"}
+{"id": "b24", "ok": false, "types": "", "vals": "ERR:PySparkException:None:Execution error: Arithmetic Overflow in AvgAccumulator"}
+{"id": "b25", "ok": false, "types": "", "vals": "ERR:PySparkException:None:Execution error: Arithmetic Overflow in AvgAccumulator"}
+{"id": "b26", "ok": false, "types": "", "vals": "ERR:PySparkException:None:Execution error: Arithmetic Overflow in AvgAccumulator"}
+{"id": "b27", "ok": false, "types": "", "vals": "ERR:AnalysisException:None:Schema error: Schema contains duplicate unqualified field name \"avg(c)\""}
+{"id": "e01", "ok": true, "types": "string,string", "vals": "logical_plan,Projection: avg(c) AS mean(c)\n  Aggregate: groupBy=[[]], aggr=[[avg(c)]]\n    Projection: CAST(__repark_decimal_cast_nullable__(v.x) AS Decimal128(10, 2)) AS c\n      SubqueryAlias: v\n        Projection: Utf8(\"2.51\") AS x\n          EmptyRelation: rows=1;physical_plan,ProjectionExec: expr=[avg(c)@0 as mean(c)]\n  AggregateExec: mode=Single, gby=[], aggr=[avg(c)]\n    ProjectionExec: expr=[CAST(__repark_decimal_cast_nullable__(2.51) AS Decimal128(10, 2)) as c]\n      PlaceholderRowExec\n"}
+{"id": "e02", "ok": true, "types": "string,string", "vals": "logical_plan,Aggregate: groupBy=[[]], aggr=[[avg(c)]]\n  Projection: CAST(__repark_decimal_cast_nullable__(v.x) AS Decimal128(10, 2)) AS c\n    SubqueryAlias: v\n      Projection: Utf8(\"2.51\") AS x\n        EmptyRelation: rows=1;physical_plan,AggregateExec: mode=Single, gby=[], aggr=[avg(c)]\n  ProjectionExec: expr=[CAST(__repark_decimal_cast_nullable__(2.51) AS Decimal128(10, 2)) as c]\n    PlaceholderRowExec\n"}
+{"id": "d01", "ok": true, "types": "decimal(21,13),decimal(10,2)", "vals": "null,null;0.0200000000000,0.06;0.1000000000000,0.30;0.3333333333333,1.00;0.8366666666667,2.51"}
+{"id": "d02", "ok": true, "types": "decimal(16,8)", "vals": "null;0.02000000;0.10000000;0.33333333;0.83666667"}
+{"id": "d03", "ok": true, "types": "decimal(14,6)", "vals": "null;0.020000;0.100000;0.333333;0.836667"}
+{"id": "d04", "ok": true, "types": "decimal(31,23)", "vals": "null;0.02000000000000000000000;0.10000000000000000000000;0.33333333333333333333333;0.83666666666666666666667"}
+{"id": "d05", "ok": true, "types": "decimal(21,13)", "vals": "null;0.0006000000000;0.0030000000000;0.0100000000000;0.0251000000000"}
+{"id": "d06", "ok": true, "types": "decimal(21,13)", "vals": "null;-0.0200000000000;-0.1000000000000;-0.3333333333333;-0.8366666666667"}
+{"id": "d07", "ok": true, "types": "decimal(31,23)", "vals": "null;0.00000000002000000000000;0.00000000010000000000000;0.00000000033333333333333;0.00000000083666666666667"}
+{"id": "d08", "ok": true, "types": "decimal(23,11)", "vals": "null;50.00000000000;10.00000000000;3.00000000000;1.19521912351"}
+{"id": "d09", "ok": true, "types": "decimal(21,13)", "vals": "null;0.0200000000000;0.1000000000000;0.3333333333333;0.8366666666667"}
+{"id": "d10", "ok": true, "types": "decimal(21,13)", "vals": "null;0.0200000000000;0.1000000000000;0.3333333333333;0.8366666666667"}
+{"id": "d11", "ok": true, "types": "decimal(13,12)", "vals": "0.333333333333"}
+{"id": "d12", "ok": true, "types": "decimal(10,2)", "vals": "null;0.06;0.30;1.00;2.51"}
+{"id": "d13", "ok": true, "types": "decimal(12,2)", "vals": "null;0.18;0.90;3.00;7.53"}
+{"id": "d14", "ok": true, "types": "decimal(11,2)", "vals": "null;3.06;3.30;4.00;5.51"}
+{"id": "d15", "ok": true, "types": "decimal(10,2)", "vals": ""}
+{"id": "d16", "ok": true, "types": "string", "vals": "lo;lo;lo;lo;lo"}
+{"id": "d17", "ok": true, "types": "decimal(38,12)", "vals": "0.100000000000;0.836666666667"}
+{"id": "d18", "ok": true, "types": "decimal(38,26)", "vals": "10.00000000000000000000000000;1.19521912350597609561752988"}
+{"id": "d19", "ok": true, "types": "double", "vals": "null;0.0;0.0;0.3333333333333333;0.6666666666666666"}
+{"id": "d20", "ok": true, "types": "int", "vals": "null;1;1;2;3"}
+{"id": "d21", "ok": true, "types": "int", "vals": "null;0;0;3;6"}
+{"id": "d22", "ok": true, "types": "decimal(32,24)", "vals": "0.075000000000000000000000"}
+{"id": "d23", "ok": false, "types": "", "vals": "ERR:PySparkException:None:Arrow error: Cast error: Cannot cast string '99999999999999999999999999999999999999.99' to value of Decimal128(38, 10) type"}
+{"id": "d24", "ok": true, "types": "decimal(15,6)", "vals": "null;0.020000;0.100000;0.333333;0.836667"}
+{"id": "d27", "ok": true, "types": "int", "vals": "null;-1;-1;0;1"}
+{"id": "d28", "ok": true, "types": "int", "vals": "null;0;0;1;2"}
+{"id": "d29", "ok": true, "types": "decimal(12,2)", "vals": "null;0.06;0.30;1.00;2.51"}
+{"id": "d30", "ok": true, "types": "decimal(12,2)", "vals": "null;0.06;0.30;1.00;2.51"}
+{"id": "d31", "ok": true, "types": "decimal(21,13)", "vals": "null;0.0200000000000;0.1000000000000;0.3300000000000;0.8400000000000"}
+{"id": "d32", "ok": true, "types": "decimal(21,13)", "vals": "null;0.0200000000000;0.1000000000000;0.3333333333333;0.8366666666667"}
+{"id": "d33", "ok": true, "types": "decimal(16,2)", "vals": "null;0.18;0.90;3.00;7.53"}
+{"id": "d34", "ok": true, "types": "decimal(31,2)", "vals": "null;0.18;0.90;3.00;7.53"}
+{"id": "c01", "ok": true, "types": "int,decimal(14,6)", "vals": "2,0.003333;4,-0.010000;7,1.666666;9,2.510000;null,0.625833"}
+{"id": "c02", "ok": true, "types": "int,decimal(14,6)", "vals": "2,0.003333;4,-0.010000;7,1.666666;9,2.510000;null,0.625833"}
+{"id": "c03", "ok": true, "types": "int,decimal(14,6)", "vals": "2,0.003333;4,-0.010000;7,1.666666;9,2.510000;null,0.625833"}
+{"id": "c04", "ok": true, "types": "decimal(14,6)", "vals": "0.006666;0.836666"}
+{"id": "c05", "ok": true, "types": "decimal(14,6)", "vals": "2.510000"}
+{"id": "c06", "ok": true, "types": "decimal(16,6)", "vals": "1.935000"}
+{"id": "c07", "ok": true, "types": "decimal(25,17)", "vals": "0.32250000000000000"}
+{"id": "c08", "ok": true, "types": "decimal(14,6)", "vals": "0.502000"}
+{"id": "c09", "ok": false, "types": "", "vals": "ERR:UnsupportedOperationException:None:This feature is not implemented: DistinctAvgAccumulator"}
+{"id": "c10", "ok": true, "types": "decimal(14,6),bigint", "vals": "0.026666,3"}
+{"id": "c11", "ok": false, "types": "", "vals": "ERR:PySparkNotImplementedError:NOT_IMPLEMENTED:[NOT_IMPLEMENTED] feature='Python conversion for calendar interval (make_interval / CalendarIntervalType)'"}
+{"id": "c12", "ok": false, "types": "", "vals": "ERR:AnalysisException:None:Error during planning: Internal error: Function 'avg' failed to match any signature, errors: Error during planning: Function 'avg' requires Decimal, but received Interval(MonthDayNano) (DataType: Interval(MonthDayNano))."}
+{"id": "c13", "ok": true, "types": "", "vals": ""}
+{"id": "c14", "ok": true, "types": "decimal(14,6)", "vals": "0.836666"}
+{"id": "c15", "ok": true, "types": "decimal(21,13)", "vals": "0.0000000000000;0.0000000000000;0.8366666666667"}
+{"id": "c16", "ok": true, "types": "decimal(14,6),decimal(21,13)", "vals": "0.000000,0.0000000000000;2.510000,0.8366666666667"}
+{"id": "c17", "ok": true, "types": "decimal(21,13)", "vals": "0.1000000000000;0.8366666666667"}
+{"id": "c18", "ok": true, "types": "decimal(10,2)", "vals": "0.06;0.30"}
+{"id": "e03", "ok": true, "types": "string,string", "vals": "logical_plan,Projection: pmod(CAST(CAST(v.x AS Decimal128(10, 2)) AS Decimal128(12, 2)), Decimal128(Some(300),12,2)) AS pmod(d,Int64(3))\n  SubqueryAlias: v\n    Projection: column1 AS x\n      Values: (Utf8(\"0.30\")), (Utf8(\"2.51\")), (Utf8(\"0.06\")), (Utf8(\"1.00\")), (Utf8(NULL));physical_plan,ProjectionExec: expr=[pmod(CAST(CAST(column1@0 AS Decimal128(10, 2)) AS Decimal128(12, 2)), Some(300),12,2) as pmod(d,Int64(3))]\n  DataSourceExec: partitions=1, partition_sizes=[1]\n"}
+{"id": "e04", "ok": true, "types": "string,string", "vals": "logical_plan,Projection: __repark_spark_decimal_div__(CAST(v.x AS Decimal128(10, 2)), Decimal128(Some(3),10,0)) AS d / Int64(3)\n  SubqueryAlias: v\n    Projection: column1 AS x\n      Values: (Utf8(\"0.30\")), (Utf8(\"2.51\")), (Utf8(\"0.06\")), (Utf8(\"1.00\")), (Utf8(NULL));physical_plan,ProjectionExec: expr=[__repark_spark_decimal_div__(CAST(column1@0 AS Decimal128(10, 2)), Some(3),10,0) as d / Int64(3)]\n  DataSourceExec: partitions=1, partition_sizes=[1]\n"}

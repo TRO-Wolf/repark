@@ -1,0 +1,11 @@
+native <scratchpad>/ddu-work/pkg-dct-7bf32859/repark/_native.abi3.so
+{"id": "n01", "ok": true, "types": "decimal(14,6)", "vals": "0.836666"}
+{"id": "n02", "ok": true, "types": "decimal(14,6)", "vals": "0.836666"}
+{"id": "n03", "ok": true, "types": "decimal(14,6)", "vals": "0.020000;0.100000;0.836666"}
+{"id": "n04", "ok": true, "types": "decimal(26,4)", "vals": "50.0000;10.0000;1.1952"}
+{"id": "n05", "ok": true, "types": "decimal(14,6),bigint", "vals": "0.026666,3"}
+{"id": "n06", "ok": false, "types": "", "vals": "ERR:AnalysisException:None:[UNRESOLVED_ROUTINE] Cannot resolve routine `try_avg` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"id": "n07", "ok": false, "types": "", "vals": "ERR:AnalysisException:None:[UNRESOLVED_ROUTINE] Cannot resolve routine `try_divide` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"id": "n08", "ok": false, "types": "", "vals": "ERR:AnalysisException:None:[UNRESOLVED_ROUTINE] Cannot resolve routine `pmod` on search path [`system`.`builtin`, `system`.`session`, `spark_catalog`.`default`]. SQLSTATE: 42883; line 1 pos 7"}
+{"id": "n09", "ok": true, "types": "bigint,decimal(14,6)", "vals": "1,0.006666"}
+{"id": "n10", "ok": true, "types": "decimal(10,2)", "vals": "0.06;0.30;2.51"}
