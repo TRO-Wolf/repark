@@ -13,6 +13,7 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::AnalyzerRule;
 
 use super::{values_cell_argument, values_cell_name};
+use crate::extension::decimal_common_type::{Mode, spark_decimal_type};
 
 const UNIT: &str = "DECIMAL-DOUBLE-UNION-COERCION-1";
 
@@ -20,13 +21,17 @@ const UNIT: &str = "DECIMAL-DOUBLE-UNION-COERCION-1";
 pub struct SparkValuesTyping;
 
 impl AnalyzerRule for SparkValuesTyping {
-    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
         if !has_values(&plan)? {
             return Ok(plan);
         }
+        let decimals = repark_functions::decimal_legacy::spark_decimal_rule_enabled(config);
         let mut retyped = false;
         let typed = plan
-            .transform_down_up_with_subqueries(type_down, |node| type_up(node, &mut retyped))?
+            .transform_down_up_with_subqueries(
+                |node| type_down(node, decimals),
+                |node| type_up(node, &mut retyped, decimals),
+            )?
             .data;
         if !retyped {
             return Ok(typed);
@@ -70,7 +75,7 @@ fn has_values(plan: &LogicalPlan) -> Result<bool> {
     Ok(found)
 }
 
-fn type_down(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+fn type_down(plan: LogicalPlan, decimals: bool) -> Result<Transformed<LogicalPlan>> {
     match plan {
         LogicalPlan::RecursiveQuery(_) => {
             let stripped = plan.transform_up_with_subqueries(|node| {
@@ -82,12 +87,14 @@ fn type_down(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
                 TreeNodeRecursion::Jump,
             ))
         }
-        LogicalPlan::Dml(dml) if matches!(dml.op, WriteOp::Insert(_)) => type_insert_source(dml),
+        LogicalPlan::Dml(dml) if matches!(dml.op, WriteOp::Insert(_)) => {
+            type_insert_source(dml, decimals)
+        }
         other => Ok(Transformed::no(other)),
     }
 }
 
-fn type_insert_source(dml: DmlStatement) -> Result<Transformed<LogicalPlan>> {
+fn type_insert_source(dml: DmlStatement, decimals: bool) -> Result<Transformed<LogicalPlan>> {
     let LogicalPlan::Projection(projection) = dml.input.as_ref() else {
         return Ok(Transformed::no(LogicalPlan::Dml(dml)));
     };
@@ -97,7 +104,7 @@ fn type_insert_source(dml: DmlStatement) -> Result<Transformed<LogicalPlan>> {
     if !values_marked(values) {
         return Ok(Transformed::no(LogicalPlan::Dml(dml)));
     }
-    let typed = type_values(values.clone(), Placement::Target)?;
+    let typed = type_values(values.clone(), Placement::Target, decimals)?;
     let projection = Projection::try_new_with_schema(
         projection.expr.clone(),
         Arc::new(LogicalPlan::Values(typed)),
@@ -109,7 +116,11 @@ fn type_insert_source(dml: DmlStatement) -> Result<Transformed<LogicalPlan>> {
     })))
 }
 
-fn type_up(plan: LogicalPlan, retyped: &mut bool) -> Result<Transformed<LogicalPlan>> {
+fn type_up(
+    plan: LogicalPlan,
+    retyped: &mut bool,
+    decimals: bool,
+) -> Result<Transformed<LogicalPlan>> {
     match plan {
         LogicalPlan::Values(values) => {
             if !values_marked(&values) {
@@ -117,7 +128,7 @@ fn type_up(plan: LogicalPlan, retyped: &mut bool) -> Result<Transformed<LogicalP
                 return Ok(Transformed::no(LogicalPlan::Values(values)));
             }
             let before = Arc::clone(&values.schema);
-            let typed = type_values(values, Placement::Standalone)?;
+            let typed = type_values(values, Placement::Standalone, decimals)?;
             *retyped |= typed.schema != before;
             Ok(Transformed::yes(LogicalPlan::Values(typed)))
         }
@@ -251,15 +262,26 @@ fn marked_argument(cell: &Expr) -> Option<&Expr> {
     if count == 1 { found } else { None }
 }
 
+fn spark_cell_type(argument: &Expr, data_type: DataType) -> DataType {
+    match argument {
+        Expr::Literal(ScalarValue::Int64(Some(value)), _) if i32::try_from(*value).is_ok() => {
+            DataType::Int32
+        }
+        _ => data_type,
+    }
+}
+
 fn column_placement(
     rows: &[Vec<Expr>],
     column: usize,
     planned: &DataType,
     empty: &DFSchema,
-) -> Option<Placement> {
+    decimals: bool,
+) -> Option<(Placement, DataType)> {
     let mut decimal = false;
     let mut float = false;
     let mut common: Option<DataType> = None;
+    let mut spark = Vec::with_capacity(rows.len());
     for row in rows {
         let argument = row.get(column).and_then(marked_argument)?;
         let data_type = argument.get_type(empty).ok()?;
@@ -270,19 +292,29 @@ fn column_placement(
             Class::Null => continue,
             Class::Other => return None,
         }
+        spark.push(spark_cell_type(argument, data_type.clone()));
         common = Some(match common {
             None => data_type,
             Some(previous) => type_union_resolution(&[previous, data_type])?,
         });
     }
-    if !(decimal && float) {
+    let target = if decimal && float {
+        DataType::Float64
+    } else if decimal && decimals {
+        let found = spark_decimal_type(spark.iter().map(|cell| (cell, None)), Mode::Unify)?;
+        if found == *planned {
+            return None;
+        }
+        found
+    } else {
         return None;
-    }
-    Some(if common.as_ref() == Some(planned) {
+    };
+    let placement = if common.as_ref() == Some(planned) {
         Placement::Standalone
     } else {
         Placement::Target
-    })
+    };
+    Some((placement, target))
 }
 
 fn realiased(cell: &Expr, typed: Expr) -> Expr {
@@ -296,11 +328,23 @@ fn realiased(cell: &Expr, typed: Expr) -> Expr {
     }
 }
 
-fn widened_cell(cell: &Expr, target: &DataType, placement: Placement, empty: &DFSchema) -> Expr {
-    realiased(cell, widened_value(cell, target, placement, empty))
+fn widened_cell(
+    cell: &Expr,
+    target: &DataType,
+    common: &DataType,
+    placement: Placement,
+    empty: &DFSchema,
+) -> Expr {
+    realiased(cell, widened_value(cell, target, common, placement, empty))
 }
 
-fn widened_value(cell: &Expr, target: &DataType, placement: Placement, empty: &DFSchema) -> Expr {
+fn widened_value(
+    cell: &Expr,
+    target: &DataType,
+    common: &DataType,
+    placement: Placement,
+    empty: &DFSchema,
+) -> Expr {
     let Some(argument) = marked_argument(cell) else {
         return unaliased(cell).clone();
     };
@@ -309,23 +353,23 @@ fn widened_value(cell: &Expr, target: &DataType, placement: Placement, empty: &D
     if source == DataType::Null {
         return Expr::Literal(
             ScalarValue::try_from(match placement {
-                Placement::Standalone => &DataType::Float64,
+                Placement::Standalone => common,
                 Placement::Target => target,
             })
             .unwrap_or(ScalarValue::Null),
             None,
         );
     }
-    let double = if source == DataType::Float64 {
+    let widened = if source == *common {
         argument
     } else {
-        Expr::Cast(Cast::new(Box::new(argument), DataType::Float64))
+        Expr::Cast(Cast::new(Box::new(argument), common.clone()))
     };
     match placement {
-        Placement::Target if *target != DataType::Float64 => {
-            Expr::Cast(Cast::new(Box::new(double), target.clone()))
+        Placement::Target if target != common => {
+            Expr::Cast(Cast::new(Box::new(widened), target.clone()))
         }
-        _ => double,
+        _ => widened,
     }
 }
 
@@ -342,7 +386,7 @@ fn stripped_cell(cell: &Expr) -> Result<Expr> {
         .data()
 }
 
-fn type_values(values: Values, forced: Placement) -> Result<Values> {
+fn type_values(values: Values, forced: Placement, decimals: bool) -> Result<Values> {
     let empty = DFSchema::empty();
     let Values { schema, values } = values;
     let mut fields: Vec<_> = schema
@@ -352,7 +396,7 @@ fn type_values(values: Values, forced: Placement) -> Result<Values> {
     let mut rows = values;
     for (column, (_, field)) in fields.iter_mut().enumerate() {
         let target = field.data_type().clone();
-        if let Some(found) = column_placement(&rows, column, &target, &empty) {
+        if let Some((found, common)) = column_placement(&rows, column, &target, &empty, decimals) {
             let placement = if forced == Placement::Target {
                 Placement::Target
             } else {
@@ -360,11 +404,11 @@ fn type_values(values: Values, forced: Placement) -> Result<Values> {
             };
             for row in &mut rows {
                 if let Some(cell) = row.get_mut(column) {
-                    *cell = widened_cell(cell, &target, placement, &empty);
+                    *cell = widened_cell(cell, &target, &common, placement, &empty);
                 }
             }
             if placement == Placement::Standalone {
-                *field = Arc::new(field.as_ref().clone().with_data_type(DataType::Float64));
+                *field = Arc::new(field.as_ref().clone().with_data_type(common));
             }
             continue;
         }

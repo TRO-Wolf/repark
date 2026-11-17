@@ -8,6 +8,7 @@ use datafusion::prelude::{SessionConfig, SessionContext};
 use repark_core::{SessionBuildConf, SessionExtension};
 use repark_ta::TaExtension;
 
+pub(crate) mod decimal_common_type;
 pub(crate) mod decimal_float_widen;
 pub mod session_catalog;
 
@@ -105,6 +106,8 @@ fn install_spark_session_conf(
     let timestamp_type =
         repark_functions::timestamp_type::spark_timestamp_type_from_config_map(session.conf)?;
     config = repark_functions::timestamp_type::with_spark_timestamp_type(config, timestamp_type);
+    config =
+        repark_functions::decimal_legacy::install_decimal_truncate_legacy(config, session.conf)?;
     config = apply_spark_float_as_decimal(config);
     config = apply_spark_parser_dialect(config);
     config = config.with_extension(Arc::new(SparkDoorSession));

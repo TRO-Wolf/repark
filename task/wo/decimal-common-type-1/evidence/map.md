@@ -2,6 +2,7 @@
 
 - [probes/](probes/map.md) — the cell definitions, the runners and the analysis (comment-free Python).
 - [raw/](raw/map.md) — one JSON object per cell and engine, the verdicts, the summary and the grids.
+- [built/](built/map.md) — the build's bar and cost (head `7bf32859`), their probes and raw data.
 
 ## Provenance
 

@@ -6,13 +6,13 @@ WRITE-SPINE-1 step 3a (2026-10-24): `write_door.rs` holds `WriteDoor`, one varia
 
 MAP-COLUMN-PANIC-1 (2026-10-20): `keyword_lower.rs` lowers an unqualified odd-arity `map(...)` call to the internal `__repark_create_map__` kernel (`repark_functions::collection::SQL_MAP_NAME`), and `map_door_keyword_errors` rewrites the kernel's arity error into Spark's `[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `map` requires 2n (n > 0) parameters but the actual number is N` (SQLSTATE 42605), where DataFusion's planner says `make_map requires an even number of arguments` with no count. An even-arity call is left to the planner here: the analyzer rule `SparkMapRewrite` in `repark-functions` sends every non-constant one to the Spark per-row kernel, on every door. `spark_ast.rs` and `merge.rs` keep their calls and names; `has_empty_map_or_timestamp_ns_cast` also finds an odd-arity call, so a MERGE lowers it.
 
-CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08): `extension.rs` seats `normalize/join_condition.rs`'s `JoinConditionRefusals` before `type_coercion` (`lib.rs` holds its 156-line ceiling; one `mod` line in `normalize.rs`); STRUCT-COMPARE-BY-POSITION-1 seats `normalize/struct_position.rs` the same way. `extension/tests.rs` pins both.
+CROSS-JOIN-CONDITION-1 fold 2 (2026-10-08): `extension.rs` seats `normalize/join_condition.rs`'s `JoinConditionRefusals` before `type_coercion` (one `mod` line in `normalize.rs`); STRUCT-COMPARE-BY-POSITION-1 seats `normalize/struct_position.rs` the same way. `extension/tests.rs` pins both.
 
 U1-MEM-LAYOUT-1 (2026-09-23): Spark create resolution uses the registered memory warehouse layout root. On a `TempFallbackAllowed` catalog only, an orphan scan refuses a path that holds another table's metadata file or an unreadable one, or whose ancestor walk (`call/map.md`) reaches a `metadata/` directory holding one (the other table of any catalog); and a path that holds another table of the same catalog, lies inside one outside the swept table's own location, or lies inside the swept table's own location when another table shares it. See `tests/map.md` and `call/map.md`.
 
 ICE-MIXED-CASE-1 (2026-09-17): `merge_fragments.rs` passes the clause home scope — NOT MATCHED fragments resolve against one alias, MATCHED/ON against both; normalization stays ON with backticked stored-case spellings; `spark_door_case_insensitive` negates the one `spark.sql.caseSensitive` carrier. pins: ice-mixed-case-1/C-001…C-006
 
-CC-2/CC-3 (2026-08-30): comments condensed to one line, banners removed, truncated comments rewritten as complete sentences; router canonicalize reasons restored byte-exact to `6774ebd` (test-pinned); review-round narration swept, safety contracts kept condensed.
+CC-2/CC-3 (2026-08-30): comments condensed to one line, banners removed, truncated comments rewritten; router canonicalize reasons restored byte-exact to `6774ebd` (test-pinned); review narration swept, safety contracts kept.
 
 ## Purpose
 
@@ -26,7 +26,7 @@ Source documentation may retain model provenance; code-quality grade tags stay o
 
 ## Contents
 
-- `values_marker.rs`, `values_marker/` — DDU-1 part 2, seat V: [values_marker/map.md](values_marker/map.md).
+- `values_marker.rs`, `values_marker/` — DDU-1 part 2, seat V: [values_marker/map.md](values_marker/map.md). DECIMAL-COMMON-TYPE-1 adds decimal columns.
 - `lib.rs` — re-exports G15 collation valves and FNP-15/16 `refuse_declared_function_in_*`
   from `repark-functions`, plus `refuse_sql_fragment` for `F.expr` / `filter_sql`, which also ends in `repark_core::refuse_multiset_set_operation` (SQL-SETOP-ALL-REFUSE-1).
   **STAMP-2-R5P6-2 (2026-10-07):** re-exports `normalize/map_ordering.rs`'s `analyze_built_plan` on

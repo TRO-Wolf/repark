@@ -508,3 +508,97 @@ mod in_ranges {
         }
     }
 }
+
+fn decimal_ctx(legacy: bool) -> SessionContext {
+    let rules = insert_decimal_float_widen_before_coercion(Analyzer::new().rules).unwrap();
+    let mut config = SessionConfig::new();
+    repark_functions::decimal_legacy::write_decimal_truncate_legacy(config.options_mut(), legacy);
+    let state = SessionStateBuilder::new()
+        .with_config(config)
+        .with_default_features()
+        .with_analyzer_rules(rules)
+        .build();
+    SessionContext::new_with_state(state)
+}
+
+async fn decimal_setup(legacy: bool) -> SessionContext {
+    let ctx = decimal_ctx(legacy);
+    ctx.sql(
+        "CREATE VIEW p AS SELECT * FROM (VALUES \
+         (1, CAST('0.49' AS DECIMAL(10,2)), CAST('0.4' AS DECIMAL(38,1)), CAST('0' AS DECIMAL(38,0)), \
+          CAST('1.000000000000000000000000000049' AS DECIMAL(38,30))), \
+         (2, CAST('1.45' AS DECIMAL(10,2)), CAST('1.4' AS DECIMAL(38,1)), CAST('1' AS DECIMAL(38,0)), \
+          CAST('2.5' AS DECIMAL(38,30)))) t(id, c, d, a, w)",
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    ctx
+}
+
+#[tokio::test]
+async fn nested_unions_round_once_per_binary_node_bottom_up() {
+    let ctx = decimal_setup(false).await;
+    let (data_type, values) = answer(
+        &ctx,
+        "SELECT c AS v FROM p UNION ALL SELECT d FROM p UNION ALL SELECT a FROM p",
+    )
+    .await;
+    assert_eq!(data_type, DataType::Decimal128(38, 0));
+    assert_eq!(values, vec!["0", "0", "1", "1", "1", "2"]);
+    let (_, values) = answer(
+        &ctx,
+        "SELECT a AS v FROM p UNION ALL SELECT c FROM p UNION ALL SELECT d FROM p",
+    )
+    .await;
+    assert_eq!(values, vec!["0", "0", "0", "1", "1", "1"]);
+}
+
+async fn walked(ctx: &SessionContext, sql: &str) -> String {
+    let mut found = String::new();
+    for batch in ctx
+        .sql(&format!("EXPLAIN VERBOSE {sql}"))
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap()
+    {
+        for row in 0..batch.num_rows() {
+            if array_value_to_string(batch.column(0), row).unwrap()
+                == "logical_plan after spark_decimal_float_widen"
+            {
+                found = array_value_to_string(batch.column(1), row).unwrap();
+            }
+        }
+    }
+    found
+}
+
+#[tokio::test]
+async fn a_comparison_keeps_a_literal_digits_and_an_in_list_takes_the_integer_form() {
+    let ctx = decimal_setup(false).await;
+    let equal = walked(&ctx, "SELECT id FROM p WHERE w = 1").await;
+    assert!(!equal.contains("Decimal128(38, 28)"), "{equal}");
+    let listed = walked(
+        &ctx,
+        "SELECT id FROM p WHERE w IN (CAST(1 AS INT), CAST(7 AS INT))",
+    )
+    .await;
+    assert!(
+        listed.contains("CAST(p.w AS Decimal128(38, 28))"),
+        "{listed}"
+    );
+    let (data_type, _) = answer(&ctx, "SELECT coalesce(a, c) FROM p").await;
+    assert_eq!(data_type, DataType::Decimal128(38, 0));
+}
+
+#[tokio::test]
+async fn the_legacy_flag_leaves_datafusion_s_decimal_type() {
+    let ctx = decimal_setup(true).await;
+    let (data_type, values) = answer(&ctx, "SELECT a AS v FROM p UNION ALL SELECT c FROM p").await;
+    assert_eq!(data_type, DataType::Decimal128(38, 2));
+    assert_eq!(values, vec!["0.00", "0.49", "1.00", "1.45"]);
+}
