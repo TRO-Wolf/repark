@@ -1,0 +1,321 @@
+== Average.resultType (Average.class)
+private org.apache.spark.sql.types.AtomicType resultType$lzycompute();
+5: getfield      // Field bitmap$0:I
+8: iconst_1
+10: iconst_0
+16: invokevirtual // Method child:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+19: invokevirtual // Method org/apache/spark/sql/catalyst/expressions/Expression.dataType:()Lorg/apache/spark/sql/types/DataType;
+24: instanceof    // class org/apache/spark/sql/types/DecimalType
+31: checkcast     // class org/apache/spark/sql/types/DecimalType
+36: getstatic     // Field org/apache/spark/sql/types/DecimalType$Fixed$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$Fixed$;
+41: invokevirtual // Method org/apache/spark/sql/types/DecimalType$Fixed$.unapply:(Lorg/apache/spark/sql/types/DecimalType;)Lscala/Option;
+48: invokevirtual // Method scala/Option.isEmpty:()Z
+56: invokevirtual // Method scala/Option.get:()Ljava/lang/Object;
+59: checkcast     // class scala/Tuple2
+62: invokevirtual // Method scala/Tuple2._1$mcI$sp:()I
+
+== Average.sumDataType
+private org.apache.spark.sql.types.AtomicType sumDataType$lzycompute();
+5: getfield      // Field bitmap$0:I
+8: iconst_2
+10: iconst_0
+16: invokevirtual // Method child:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+19: invokevirtual // Method org/apache/spark/sql/catalyst/expressions/Expression.dataType:()Lorg/apache/spark/sql/types/DataType;
+24: instanceof    // class org/apache/spark/sql/types/DecimalType
+31: checkcast     // class org/apache/spark/sql/types/DecimalType
+36: getstatic     // Field org/apache/spark/sql/types/DecimalType$Fixed$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$Fixed$;
+41: invokevirtual // Method org/apache/spark/sql/types/DecimalType$Fixed$.unapply:(Lorg/apache/spark/sql/types/DecimalType;)Lscala/Option;
+48: invokevirtual // Method scala/Option.isEmpty:()Z
+56: invokevirtual // Method scala/Option.get:()Ljava/lang/Object;
+59: checkcast     // class scala/Tuple2
+62: invokevirtual // Method scala/Tuple2._1$mcI$sp:()I
+
+== Average.evaluateExpression (decimal arm)
+private org.apache.spark.sql.catalyst.expressions.Expression evaluateExpression$lzycompute();
+5: getfield      // Field bitmap$0:I
+12: iconst_0
+18: invokevirtual // Method child:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+21: invokevirtual // Method org/apache/spark/sql/catalyst/expressions/Expression.dataType:()Lorg/apache/spark/sql/types/DataType;
+26: instanceof    // class org/apache/spark/sql/types/DecimalType
+32: new           // class org/apache/spark/sql/catalyst/expressions/If
+36: new           // class org/apache/spark/sql/catalyst/expressions/EqualTo
+41: invokevirtual // Method count:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+44: getstatic     // Field org/apache/spark/sql/catalyst/expressions/Literal$.MODULE$:Lorg/apache/spark/sql/catalyst/expressions/Literal$;
+48: invokestatic  // Method scala/runtime/BoxesRunTime.boxToLong:(J)Ljava/lang/Long;
+51: invokevirtual // Method org/apache/spark/sql/catalyst/expressions/Literal$.apply:(Ljava/lang/Object;)Lorg/apache/spark/sql/catalyst/expressions/Literal;
+54: invokespecial // Method org/apache/spark/sql/catalyst/expressions/EqualTo."<init>":(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;)V
+57: new           // class org/apache/spark/sql/catalyst/expressions/Literal
+63: invokevirtual // Method resultType:()Lorg/apache/spark/sql/types/AtomicType;
+66: invokespecial // Method org/apache/spark/sql/catalyst/expressions/Literal."<init>":(Ljava/lang/Object;Lorg/apache/spark/sql/types/DataType;)V
+69: new           // class org/apache/spark/sql/catalyst/expressions/DecimalDivideWithOverflowCheck
+74: invokevirtual // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+77: getstatic     // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+81: invokevirtual // Method count:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+84: invokevirtual // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$Expr
+87: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+90: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.LongDecimal:()Lorg/apache/spark/sql/types/DecimalType;
+93: invokevirtual // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.cast:(Lorg/apache/spark/sql/types/DataType;)Lorg/apache/spark/sql/catalyst/expressions/Express
+97: invokevirtual // Method resultType:()Lorg/apache/spark/sql/types/AtomicType;
+100: checkcast     // class org/apache/spark/sql/types/DecimalType
+104: invokevirtual // Method getContextOrNull:()Lorg/apache/spark/QueryContext;
+108: invokevirtual // Method evalMode:()Lscala/Enumeration$Value;
+111: getstatic     // Field org/apache/spark/sql/catalyst/expressions/EvalMode$.MODULE$:Lorg/apache/spark/sql/catalyst/expressions/EvalMode$;
+114: invokevirtual // Method org/apache/spark/sql/catalyst/expressions/EvalMode$.ANSI:()Lscala/Enumeration$Value;
+134: invokevirtual // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+140: iconst_1
+144: iconst_0
+145: invokespecial // Method org/apache/spark/sql/catalyst/expressions/DecimalDivideWithOverflowCheck."<init>":(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/exp
+
+== Average.add
+public org.apache.spark.sql.catalyst.expressions.Expression add(org.apache.spark.sql.catalyst.expressions.Expression, org.apache.spark.sql.catalyst.expressions.Expression);
+1: invokevirtual // Method org/apache/spark/sql/catalyst/expressions/Expression.dataType:()Lorg/apache/spark/sql/types/DataType;
+8: instanceof    // class org/apache/spark/sql/types/DecimalType
+14: new           // class org/apache/spark/sql/catalyst/expressions/DecimalAddNoOverflowCheck
+21: invokevirtual // Method org/apache/spark/sql/catalyst/expressions/Expression.dataType:()Lorg/apache/spark/sql/types/DataType;
+24: invokespecial // Method org/apache/spark/sql/catalyst/expressions/DecimalAddNoOverflowCheck."<init>":(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressio
+31: getstatic     // Field org/apache/spark/sql/catalyst/expressions/Add$.MODULE$:Lorg/apache/spark/sql/catalyst/expressions/Add$;
+37: invokevirtual // Method evalMode:()Lscala/Enumeration$Value;
+40: invokevirtual // Method org/apache/spark/sql/catalyst/expressions/Add$.apply:(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;Lscala/Enu
+
+== DecimalDivideWithOverflowCheck.eval
+public java.lang.Object eval(org.apache.spark.sql.catalyst.InternalRow);
+1: invokevirtual // Method left:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+5: invokevirtual // Method org/apache/spark/sql/catalyst/expressions/Expression.eval:(Lorg/apache/spark/sql/catalyst/InternalRow;)Ljava/lang/Object;
+14: invokevirtual // Method nullOnOverflow:()Z
+22: getstatic     // Field org/apache/spark/sql/errors/QueryExecutionErrors$.MODULE$:Lorg/apache/spark/sql/errors/QueryExecutionErrors$;
+26: invokevirtual // Method getContextOrNull:()Lorg/apache/spark/QueryContext;
+29: ldc           // String try_avg
+31: invokevirtual // Method org/apache/spark/sql/errors/QueryExecutionErrors$.overflowInSumOfDecimalError:(Lorg/apache/spark/QueryContext;Ljava/lang/String;)Ljava/lang/ArithmeticException;
+36: invokevirtual // Method right:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+40: invokevirtual // Method org/apache/spark/sql/catalyst/expressions/Expression.eval:(Lorg/apache/spark/sql/catalyst/InternalRow;)Ljava/lang/Object;
+44: getstatic     // Field org/apache/spark/sql/catalyst/types/PhysicalDecimalType$.MODULE$:Lorg/apache/spark/sql/catalyst/types/PhysicalDecimalType$;
+48: invokevirtual // Method dataType:()Lorg/apache/spark/sql/types/DecimalType;
+51: invokevirtual // Method org/apache/spark/sql/types/DecimalType.precision:()I
+55: invokevirtual // Method dataType:()Lorg/apache/spark/sql/types/DecimalType;
+58: invokevirtual // Method org/apache/spark/sql/types/DecimalType.scale:()I
+61: invokevirtual // Method org/apache/spark/sql/catalyst/types/PhysicalDecimalType$.apply:(II)Lorg/apache/spark/sql/catalyst/types/PhysicalDecimalType;
+64: invokevirtual // Method org/apache/spark/sql/catalyst/types/PhysicalDecimalType.fractional:()Lorg/apache/spark/sql/types/Decimal$DecimalIsFractional$;
+69: invokevirtual // Method org/apache/spark/sql/types/Decimal$DecimalIsFractional$.div:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+72: checkcast     // class org/apache/spark/sql/types/Decimal
+76: invokevirtual // Method dataType:()Lorg/apache/spark/sql/types/DecimalType;
+79: invokevirtual // Method org/apache/spark/sql/types/DecimalType.precision:()I
+83: invokevirtual // Method dataType:()Lorg/apache/spark/sql/types/DecimalType;
+86: invokevirtual // Method org/apache/spark/sql/types/DecimalType.scale:()I
+89: getstatic     // Field org/apache/spark/sql/types/Decimal$.MODULE$:Lorg/apache/spark/sql/types/Decimal$;
+92: invokevirtual // Method org/apache/spark/sql/types/Decimal$.ROUND_HALF_UP:()Lscala/Enumeration$Value;
+96: invokevirtual // Method nullOnOverflow:()Z
+100: invokevirtual // Method getContextOrNull:()Lorg/apache/spark/QueryContext;
+103: invokevirtual // Method org/apache/spark/sql/types/Decimal.toPrecision:(IILscala/Enumeration$Value;ZLorg/apache/spark/QueryContext;)Lorg/apache/spark/sql/types/Decimal;
+
+== Decimal.$div
+public org.apache.spark.sql.types.Decimal $div(org.apache.spark.sql.types.Decimal);
+1: invokevirtual // Method isZero:()Z
+9: getstatic     // Field org/apache/spark/sql/types/Decimal$.MODULE$:Lorg/apache/spark/sql/types/Decimal$;
+13: invokevirtual // Method toJavaBigDecimal:()Ljava/math/BigDecimal;
+17: invokevirtual // Method toJavaBigDecimal:()Ljava/math/BigDecimal;
+20: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+23: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.MAX_SCALE:()I
+26: iconst_1
+28: getstatic     // Field org/apache/spark/sql/types/Decimal$.MODULE$:Lorg/apache/spark/sql/types/Decimal$;
+31: invokevirtual // Method org/apache/spark/sql/types/Decimal$.org$apache$spark$sql$types$Decimal$$MATH_CONTEXT:()Ljava/math/MathContext;
+34: invokevirtual // Method java/math/MathContext.getRoundingMode:()Ljava/math/RoundingMode;
+37: invokevirtual // Method java/math/BigDecimal.divide:(Ljava/math/BigDecimal;ILjava/math/RoundingMode;)Ljava/math/BigDecimal;
+40: invokevirtual // Method org/apache/spark/sql/types/Decimal$.apply:(Ljava/math/BigDecimal;)Lorg/apache/spark/sql/types/Decimal;
+
+== Decimal$.<clinit> MATH_CONTEXT
+90: dup
+91: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+94: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.MAX_PRECISION:()I
+97: iconst_1
+98: iadd
+99: getstatic     // Field java/math/RoundingMode.DOWN:Ljava/math/RoundingMode;
+102: invokespecial // Method java/math/MathContext."<init>":(ILjava/math/RoundingMode;)V
+105: putstatic     // Field org$apache$spark$sql$types$Decimal$$MATH_CONTEXT:Ljava/math/MathContext;
+108: getstatic     // Field MODULE$:Lorg/apache/spark/sql/types/Decimal$;
+111: iconst_0
+
+== Divide.resultDecimalType
+public org.apache.spark.sql.types.DecimalType resultDecimalType(int, int, int, int);
+1: invokevirtual // Method allowPrecisionLoss:()Z
+15: getstatic     // Field scala/math/package$.MODULE$:Lscala/math/package$;
+18: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+21: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.MINIMUM_ADJUSTED_SCALE:()I
+27: iconst_1
+29: invokevirtual // Method scala/math/package$.max:(II)I
+41: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+48: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.adjustPrecisionScale:(II)Lorg/apache/spark/sql/types/DecimalType;
+52: getstatic     // Field scala/math/package$.MODULE$:Lscala/math/package$;
+55: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+58: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.MAX_SCALE:()I
+67: invokevirtual // Method scala/math/package$.min:(II)I
+72: getstatic     // Field scala/math/package$.MODULE$:Lscala/math/package$;
+75: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+78: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.MAX_SCALE:()I
+81: getstatic     // Field scala/math/package$.MODULE$:Lscala/math/package$;
+84: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+87: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.MINIMUM_ADJUSTED_SCALE:()I
+93: iconst_1
+95: invokevirtual // Method scala/math/package$.max:(II)I
+98: invokevirtual // Method scala/math/package$.min:(II)I
+108: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+111: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.MAX_SCALE:()I
+119: iconst_0
+127: iconst_2
+129: iconst_1
+134: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+137: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.MAX_SCALE:()I
+148: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+158: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.bounded:(II)Lorg/apache/spark/sql/types/DecimalType;
+
+== DecimalPrecisionTypeCoercion$$anonfun$nondecimalAndDecimal$1.applyOrElse (method refs)
+      3 Field literalPickMinimumPrecision$1
+      2 Method org/apache/spark/sql/types/IntegralTypeExpression$.unapply
+      2 Method org/apache/spark/sql/types/DecimalType$.forType
+      2 Method org/apache/spark/sql/catalyst/types/DataTypeUtils$.fromLiteral
+      2 Method org/apache/spark/sql/catalyst/expressions/Literal.dataType
+      2 Field org/apache/spark/sql/types/IntegralTypeExpression$.MODULE$
+
+== DataTypeUtils$.fromLiteral
+public org.apache.spark.sql.types.DecimalType fromLiteral(org.apache.spark.sql.catalyst.expressions.Literal);
+1: invokevirtual // Method org/apache/spark/sql/catalyst/expressions/Literal.value:()Ljava/lang/Object;
+6: instanceof    // class java/lang/Short
+13: invokestatic  // Method scala/runtime/BoxesRunTime.unboxToShort:(Ljava/lang/Object;)S
+18: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+21: getstatic     // Field org/apache/spark/sql/types/Decimal$.MODULE$:Lorg/apache/spark/sql/types/Decimal$;
+24: getstatic     // Field scala/package$.MODULE$:Lscala/package$;
+27: invokevirtual // Method scala/package$.BigDecimal:()Lscala/math/BigDecimal$;
+32: invokevirtual // Method scala/math/BigDecimal$.apply:(I)Lscala/math/BigDecimal;
+35: invokevirtual // Method org/apache/spark/sql/types/Decimal$.apply:(Lscala/math/BigDecimal;)Lorg/apache/spark/sql/types/Decimal;
+38: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.fromDecimal:(Lorg/apache/spark/sql/types/Decimal;)Lorg/apache/spark/sql/types/DecimalType;
+46: instanceof    // class java/lang/Integer
+53: invokestatic  // Method scala/runtime/BoxesRunTime.unboxToInt:(Ljava/lang/Object;)I
+58: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+61: getstatic     // Field org/apache/spark/sql/types/Decimal$.MODULE$:Lorg/apache/spark/sql/types/Decimal$;
+64: getstatic     // Field scala/package$.MODULE$:Lscala/package$;
+67: invokevirtual // Method scala/package$.BigDecimal:()Lscala/math/BigDecimal$;
+72: invokevirtual // Method scala/math/BigDecimal$.apply:(I)Lscala/math/BigDecimal;
+75: invokevirtual // Method org/apache/spark/sql/types/Decimal$.apply:(Lscala/math/BigDecimal;)Lorg/apache/spark/sql/types/Decimal;
+78: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.fromDecimal:(Lorg/apache/spark/sql/types/Decimal;)Lorg/apache/spark/sql/types/DecimalType;
+86: instanceof    // class java/lang/Long
+93: invokestatic  // Method scala/runtime/BoxesRunTime.unboxToLong:(Ljava/lang/Object;)J
+98: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+101: getstatic     // Field org/apache/spark/sql/types/Decimal$.MODULE$:Lorg/apache/spark/sql/types/Decimal$;
+
+== Divide.nullSafeEval decimal arm (Divide.class, line of javap -c -p)
+
+public static final org.apache.spark.sql.types.Decimal $anonfun$div$1(org.apache.spark.sql.catalyst.expressions.Divide, org.apache.spark.sql.types.Decimal$DecimalIsFractional$, int, int, java.lang.Obj
+Code:
+0: aload_1
+1: aload         4
+3: aload         5
+5: invokevirtual // Method org/apache/spark/sql/types/Decimal$DecimalIsFractional$.div:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+8: astore        6
+10: aload_0
+11: aload         6
+13: checkcast     // class org/apache/spark/sql/types/Decimal
+16: iload_2
+17: iload_3
+18: invokevirtual // Method checkDecimalOverflow:(Lorg/apache/spark/sql/types/Decimal;II)Lorg/apache/spark/sql/types/Decimal;
+21: areturn
+
+public static final java.lang.Object $anonfun$div$2(scala.math.Fractional, java.lang.Object, java.lang.Object);
+Code:
+
+== BinaryArithmetic.checkDecimalOverflow
+public org.apache.spark.sql.types.Decimal checkDecimalOverflow(org.apache.spark.sql.types.Decimal, int, int);
+Code:
+0: aload_1
+1: iload_2
+2: iload_3
+3: getstatic     // Field org/apache/spark/sql/types/Decimal$.MODULE$:Lorg/apache/spark/sql/types/Decimal$;
+6: invokevirtual // Method org/apache/spark/sql/types/Decimal$.ROUND_HALF_UP:()Lscala/Enumeration$Value;
+9: aload_0
+10: invokevirtual // Method failOnError:()Z
+13: ifne          20
+16: iconst_1
+17: goto          21
+20: iconst_0
+21: aload_0
+22: invokevirtual // Method getContextOrNull:()Lorg/apache/spark/QueryContext;
+25: invokevirtual // Method org/apache/spark/sql/types/Decimal.toPrecision:(IILscala/Enumeration$Value;ZLorg/apache/spark/QueryContext;)Lorg/apache/spark/sql/types/Decimal;
+28: areturn
+
+public java.lang.String decimalMethod();
+Code:
+
+== Pmod.resultDecimalType (revision)
+public org.apache.spark.sql.types.DecimalType resultDecimalType(int, int, int, int);
+Code:
+0: getstatic     // Field scala/math/package$.MODULE$:Lscala/math/package$;
+3: iload_2
+4: iload         4
+6: invokevirtual // Method scala/math/package$.max:(II)I
+9: istore        5
+11: getstatic     // Field scala/math/package$.MODULE$:Lscala/math/package$;
+14: iload_1
+15: iload_2
+16: isub
+17: iload_3
+18: iload         4
+20: isub
+21: invokevirtual // Method scala/math/package$.min:(II)I
+24: iload         5
+26: iadd
+27: istore        6
+29: aload_0
+30: invokevirtual // Method allowPrecisionLoss:()Z
+33: ifeq          47
+36: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+39: iload         6
+41: iload         5
+43: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.adjustPrecisionScale:(II)Lorg/apache/spark/sql/types/DecimalType;
+46: areturn
+47: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+50: iload         6
+52: iload         5
+54: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.bounded:(II)Lorg/apache/spark/sql/types/DecimalType;
+57: areturn
+
+== Remainder.resultDecimalType (revision)
+public org.apache.spark.sql.types.DecimalType resultDecimalType(int, int, int, int);
+Code:
+0: getstatic     // Field scala/math/package$.MODULE$:Lscala/math/package$;
+3: iload_2
+4: iload         4
+6: invokevirtual // Method scala/math/package$.max:(II)I
+9: istore        5
+11: getstatic     // Field scala/math/package$.MODULE$:Lscala/math/package$;
+14: iload_1
+15: iload_2
+16: isub
+17: iload_3
+18: iload         4
+20: isub
+21: invokevirtual // Method scala/math/package$.min:(II)I
+24: iload         5
+26: iadd
+27: istore        6
+29: aload_0
+30: invokevirtual // Method allowPrecisionLoss:()Z
+33: ifeq          47
+36: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+39: iload         6
+41: iload         5
+43: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.adjustPrecisionScale:(II)Lorg/apache/spark/sql/types/DecimalType;
+46: areturn
+47: getstatic     // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+50: iload         6
+52: iload         5
+54: invokevirtual // Method org/apache/spark/sql/types/DecimalType$.bounded:(II)Lorg/apache/spark/sql/types/DecimalType;
+57: areturn
+
+== DecimalAddNoOverflowCheck.nullSafeEval (revision)
+public java.lang.Object nullSafeEval(java.lang.Object, java.lang.Object);
+Code:
+0: aload_0
+1: invokespecial // Method numeric:()Lscala/math/Numeric;
+4: aload_1
+5: aload_2
+6: invokeinterface #107,  3          // InterfaceMethod scala/math/Numeric.plus:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+11: areturn
+
