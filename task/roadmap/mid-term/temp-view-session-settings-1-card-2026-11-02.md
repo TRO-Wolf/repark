@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-02. **Filed by:** `claude-haiku-5-5` (records clerk) for the orchestrator, from the observations of the MAP-STRUCT-KEY-SUBSCRIPT-1 round-5 Opus verdict. The observations are not counted against that unit.
 
-**Status:** step 0 dispatched 2026-11-17 (the orchestrator's reading of the owner's words, quoted in the dated append below); absorbs VIEW-ANSI-CAPTURE-1; severity and label status not ruled. Head equals base for the cells below.
+**Status:** step 0 PR #1356, revised after two critic rounds; S1 by class; the time-zone half blocks the label, the ANSI half does not (owner, 2026-11-17). Absorbs VIEW-ANSI-CAPTURE-1. Head equals base for the cells below.
 
 **Why:** Spark stores the creating session's SQL configs with a temp view. RePark re-analyses the view under the setting of the session that reads it. The verdict finds that the subscript follows the door's other ANSI-gated rules here, so the gap belongs to the views. The card VIEW-ANSI-CAPTURE-1 names the same re-analysis for `sequence` and CAST; the cells below add a struct-key subscript and the arithmetic cells.
 
@@ -88,3 +88,20 @@ On the DataFrame door, the one-way cell (Fable's measurement on the head): creat
 - **Catalog views:** leave them as they are. Spark follows the reader for Iceberg catalog views (Fable's measurement, on Spark only).
 
 Fable's fix shape and step 0 list are in section 5 of the reply, "Fable reply — AVG verifier F1 and view settings 2026-11-17.md" (outside the repository, named and not linked). They are not copied here.
+
+## Dated append (2026-11-17, later): the rulings
+
+**Owner, 2026-11-17, evening (no time given), verbatim "Defaults, merge 1355".** The owner adopted Fable's defaults: this unit is S1 by class; its time-zone half blocks ICE-V2-FLAT-AWS-LABEL-1 and its ANSI half does not; only the matching-settings path is held to the 1.05x gate, and the other path is measured and reported; and verifier briefs name a view read under settings other than its creation settings as an accepted class until this unit lands. The list is as given for the [rulings record](../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md), later section, not the owner's words.
+
+**Owner, 2026-11-17, later the same evening, verbatim "defaults on both".** The owner adopted the step 0's defaults for questions 4 to 11 (the sketch's section 7 on PR #1356's branch, not on this branch):
+
+- Q4, held-frame writes: follow Spark door by door. `writeTo` takes the creation ANSI setting and the writer's zone.
+- Q5: `current_timezone()` on a fresh held frame is carded at S3, not in this unit: [HELD-FRAME-CURRENT-TIMEZONE-1](consult-2026-11-17/held-frame-current-timezone-1-card-2026-11-17.md).
+- Q6: `element_at(array, 5)` and `array[5]` stay under D10 of [NESTED-EXPRESSION-ANSWERS-1](nested-expression-answers-1-card-2026-11-05.md). No re-rating.
+- Q7: the `sequence(1, '3')` view cells are pinned after the `sequence` fix.
+- Q8: cache substitution is not in this unit: [CACHE-HONESTY-1](consult-2026-11-17/cache-honesty-1-card-2026-11-17.md), not rated.
+- Q9: part 2's bar takes the held derivations: 22 derivation cells, 2 `registerTempTable` cells, 4 held-write cells, and seat 3.
+- Q10: the direct gaps get one S3 card: [TEMP-VIEW-ALTER-AND-CACHE-AS-1](consult-2026-11-17/temp-view-alter-and-cache-as-1-card-2026-11-17.md).
+- Q11, option (a): the revised filter rule stands. The re-critic measured 7 loud cells among 36 differing-path view cells (of 44 filter cells), none silent; 6 of the 7 agree with Spark today and are ruled an accepted class. The wrapper alternative is carded as [VIEW-FILTER-SETTINGS-WRAPPER-1](consult-2026-11-17/view-filter-settings-wrapper-1-card-2026-11-17.md), not rated. Neither option closes the 2 AND-GUARD-ANSI-1 cells or the `(a+1)+0` cell.
+
+The sketch's build pins from the round 2 critic are its section 10 (on PR #1356's branch).
