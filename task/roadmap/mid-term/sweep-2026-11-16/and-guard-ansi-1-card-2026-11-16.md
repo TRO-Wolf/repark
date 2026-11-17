@@ -2,9 +2,11 @@
 
 **Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from Fable's simplifier audit of 2026-11-16 (difference 7; not a rewrite). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2. The sweep re-run on main `e50ed17f` does not cover this audit cell; it was not re-measured on that main.
 
-**Status:** PROPOSED, not dispatched; severity and label-blocking: owner to rule.
+**Status:** ruled 2026-11-16, not dispatched; not label-blocking. Queued first once the label blockers are done.
 
-**Severity:** Proposed: S2 (owner to rule). A raise where Spark answers, on a common guard shape.
+**Severity:** S2, ruled 2026-11-16, not label-blocking. A raise where Spark answers, on a common guard shape.
+
+Ruled 2026-11-16 ("Merge those and defaults."): S2, not label-blocking; the label text lists this loud card as an exclusion. Queued first once the label blockers are done, with CASE-BOOL-GUARD-ANSI-1.
 
 ## Finding
 

@@ -164,3 +164,17 @@ every held row at most 1.05x — C-012 0.998 and 0.999, `plan_values10k` 0.998, 
 `VALUES` 0.861.
 
 Up: [map.md](map.md).
+
+## Append (2026-11-16): step 0 ruled
+
+The owner, 2026-11-16, about 23:40 UTC, verbatim "Merge those and defaults.", ruled the seven questions of [step 0 (sketch §10)](../../wo/decimal-common-type-1/sketch.md) with the orchestrator's defaults. The record is [rulings-2026-11-16.md](../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-16.md), section B:
+
+- **B1, one unit on the Spark door,** with decimal map keys, aliased `USING` joins, integer literals in `IN` lists, and `INTERSECT` / `EXCEPT` / `UNION DISTINCT` membership.
+- **B2, Spark's double rounding in nested unions:** one rounding per binary union node.
+- **B3, the legacy flag's NULL-on-overflow is carded** as LEGACY-DECIMAL-TRUNCATE-OVERFLOW-1 (S3), not fixed. The flag only skips the rule.
+- **B4, the `VALUES (1), (decimal(10,2))` typing cell is in this unit,** through seat V.
+- **B5, struct fields in unions are in this unit.** Struct comparisons raise on both engines and get a pin only.
+- **B6, overflow literals answer as Spark's cast does:** NULL with ANSI off, `NUMERIC_VALUE_OUT_OF_RANGE` with ANSI on. If the refusal is the literal's own cast, that is carded instead.
+- **B7, the side cards are filed:** nine cards in [decimal-common-type-1-side/](decimal-common-type-1-side/map.md). AVG-DECIMAL-ROUND-1 is S1 and label-blocking; the other eight are not label-blocking. The sketch had proposed S2 for AVG-DECIMAL-ROUND-1.
+
+This card's severity (S1) and label-blocking status are unchanged. The build is not dispatched by this record.

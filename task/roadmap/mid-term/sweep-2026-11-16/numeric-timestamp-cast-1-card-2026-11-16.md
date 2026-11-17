@@ -2,9 +2,11 @@
 
 **Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from Fable's type-pair sweep of 2026-11-16 (family 2). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2. Re-run on main `e50ed17f` (RePark side): unchanged; only family 10's 32 `VALUES` cells moved to equal (#1341).
 
-**Status:** PROPOSED, not dispatched; severity and label-blocking: owner to rule.
+**Status:** ruled 2026-11-16, not dispatched; label-blocking. Built inside the string-cast unit, not as a separate build.
 
-**Severity:** Proposed: S1 (owner to rule). Silent, in both ANSI modes, on an ordinary cast of a measured number.
+**Severity:** S1, label-blocking, ruled 2026-11-16. Silent, in both ANSI modes, on an ordinary cast of a measured number.
+
+Ruled 2026-11-16 ("Merge those and defaults."): S1, label-blocking; absorbed into the string-cast build (STRING-CAST-SILENT-1 with STRING-CAST-LENIENT-1) as one Spark cast unit.
 
 ## Finding
 

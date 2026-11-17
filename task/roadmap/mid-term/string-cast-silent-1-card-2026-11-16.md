@@ -55,4 +55,29 @@ The orchestrator's spot-check agrees with the report on four cells: `CAST(' 1' A
 
 One build, shared with STRING-CAST-LENIENT-1, queued at the end of the current blocker list, after SIGNED-ZERO-UPDATE-IN-LIST-1. The build is not dispatched.
 
+## Append (2026-11-16): ruling A1, the ANSI-on split
+
+The owner, 2026-11-16, about 23:40 UTC, verbatim "Merge those and defaults.", ruled A1: the scoped label ICE-V2-FLAT-AWS-LABEL-1 is scoped to ANSI on, which is Spark 4's default. A defect seen only with ANSI off no longer blocks the label. The record is [rulings-2026-11-16.md](../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-16.md), section A1. The table above is unchanged. Each cell's mode below is read from the card's own rows and text.
+
+**Still block (silent with ANSI on):**
+
+- `CAST('' AS DECIMAL(10,2))` and `TRY_CAST` of the same text: main `0.00` in both modes.
+- `CAST('20260105' AS DATE)` and `TRY_CAST` of the same text: main `2026-01-05` in both modes.
+- `TRY_CAST` of a whitespace text to TINYINT, SMALLINT, INT or BIGINT: main NULL in both modes.
+- `TRY_CAST` of a whitespace text to FLOAT or DOUBLE: main NULL in both modes.
+
+**No longer block (ANSI off only):**
+
+- `TRY_CAST` of a padded DATE text: the row states ANSI off.
+- `CAST` of a padded TIMESTAMP_NTZ text: a silent NULL with ANSI off; the card says "With ANSI on, main refuses instead", and that is the CAST answer.
+- `INSERT ... SELECT s` of a text into FLOAT or DOUBLE: the row states ANSI off. The table gives no ANSI-on cell for main on this row.
+
+**Mode not stated:**
+
+- `TRY_CAST` of a padded TIMESTAMP_NTZ text: the card does not give its ANSI-on answer, and TRY_CAST does not refuse. Its half of the row is not shown to be ANSI off only.
+- The JSON reader, PERMISSIVE, DOUBLE or FLOAT from a JSON string value: the card states no mode.
+- The CSV reader, explicit schema, DOUBLE from `'nan'`: the card states no mode.
+
+A cell whose mode is not stated is not shown to be ANSI off only, so it stays in the blocking half until its mode is measured. This reading of A1 is the clerk's, for the owner to confirm. The card's status and severity lines are unchanged by this append.
+
 Up: [map.md](map.md).
