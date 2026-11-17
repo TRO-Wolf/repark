@@ -101,4 +101,66 @@ The text above is unchanged.
   `IN` lists and `INTERSECT`/`EXCEPT` membership are in the family too; with them, 890 of 946 Spark-door cells per
   mode are wrong with ANSI off (884 plus 8 both-raise with ANSI on).
 
+## Append (2026-11-16): built (seat A)
+
+Built by Claude Opus 5.5 (`claude-opus-5-5`) on branch `fix/decimal-common-type-1`, product commit `7bf32859`, on
+main `33bfde4e`; not pushed. The bar, cost, probes and raw data are in
+[../../wo/decimal-common-type-1/evidence/built/](../../wo/decimal-common-type-1/evidence/built/map.md). The text above is
+unchanged.
+
+**The rulings, verbatim.** The owner, 2026-11-16, about 14:40 UTC: "defaults" (S1, label-blocking; one unit for
+Spark's decimal least-common-type family; match Spark's lossy comparison and union; after CAST-LITERAL-UNWRAP-1).
+About 23:40 UTC, to step 0's seven questions: "Merge those and defaults." (one Spark-door unit with map keys, aliased
+`USING`, `IN` literals and set-operation membership; Spark's double rounding in nested unions; the legacy flag only
+skips the rule; the `VALUES (1), (decimal(10,2))` cell through seat V; struct fields in unions, struct comparisons a
+both-raise pin; overflow literals answer as Spark's cast does, or are carded when the refusal is the literal's own
+cast; the side cards filed by a records clerk). The label is scoped to ANSI on.
+
+**Seat A, as designed** (Fable's guidance: one walk, one shared function):
+
+- **The shared function**, `spark_decimal_common_type` (`crates/repark-spark/src/extension/decimal_common_type.rs`):
+  Spark's `DecimalType.boundedPreferIntegralDigits`, integers as `TINYINT` (3,0), `SMALLINT` (5,0), `INT` (10,0),
+  `BIGINT` (20,0); `Mode::Compare` keeps an integer literal's own digits, `Mode::Unify` (the `IN` mode, the critic's
+  M3, and every unifying position) takes its type's form; `None` unless `range + scale > 38`. Structs, lists and maps
+  unify field by field.
+- **The walk**, `SparkDecimalFloatWiden` (`decimal_float_widen.rs`), one detect and one rewrite pass as before:
+  comparisons, join keys, `BETWEEN` (split into its two comparisons, as Spark rewrites it), `IN` lists and subqueries,
+  `CASE` (a simple `CASE` whose pairs differ turns searched), `if`, `coalesce`, `nvl`, `nvl2`, `nullif`, `greatest`,
+  `least`, `array`, `map` keys and values, `map_concat`, `array_contains`, unions bottom up per binary node with struct
+  fields, and the set-operation joins. An `INSERT` whose conform projection no longer matches the table type gets
+  its cast back (`conform_insert`), so stored rows go through the store cast as Spark's do.
+
+**The five explicit changes:** (1) seat V's gate (`values_marker/consume.rs`, `column_placement`) calls
+`spark_decimal_type`, an `INT`-sized literal in Spark's `INT` form, and the statement marker
+(`values_marker.rs`, `spark_decimal_column`) marks a column holding a decimal beside an integer literal or a decimal of
+20 or more digits; (2) `map_concat` and `array_contains` join the walk's lists; (3) struct fields recurse
+(`struct_shape`); (4) map keys are a position of their own, and a collision after rounding raises
+`DUPLICATED_MAP_KEY`; (5) the `IN` mode. The legacy flag
+`spark.sql.legacy.decimal.retainFractionDigitsOnTruncate=true` (builder, `SET`, `conf.set`; `RESET` and `unset`
+restore) skips the decimal rule and seat V's decimal typing; part 1's double rule is unchanged.
+
+**Product files (7 of the cap of 8):** `crates/repark-spark/src/extension/decimal_common_type.rs` (new),
+`extension/decimal_float_widen.rs`, `values_marker/consume.rs`, `values_marker.rs`,
+`crates/repark-functions/src/decimal_legacy.rs` (new, the flag's carrier beside the other conf carriers),
+`crates/repark-python/src/session_runtime.rs`, `python/repark/src/repark/spark/session/builder_conf.py`; plus
+one-line registrations in `crates/repark-spark/src/extension.rs` (the `mod` line and the builder-conf install line)
+and `crates/repark-functions/src/lib.rs`.
+
+**The bar** ([bar.md](../../wo/decimal-common-type-1/evidence/built/bar.md)): **0 EQUAL→WRONG, 0 EQUAL→RAISE** on both
+doors and both modes. Of the 946 common-type cells per mode, 928 agree (54 on main) and all 38 wrong writes are
+EQUAL; the 18 left per mode are named: 8 overflow-literal cells (ruling 6, carded: the literal's own cast refuses at
+planning; carded as **DECIMAL-LITERAL-OVERFLOW-1**, new, for the records clerk), 2 `DUPLICATED_MAP_KEY` and 1 struct-comparison both-raise cells
+(as ruled), `having_avg_max` (AVG-DECIMAL-ROUND-1), and three new findings for the records clerk, each reproduced on
+main with user-written same-type casts: **MAP-FILTER-ORDER** (4 cells: a `map` evaluated above a filter the physical
+plan moved after it meets a filtered-out NULL key), **FEXPR-DECIMAL-LITERAL** (1 cell: `F.expr("a = 1.25")` types the
+literal as `double`), **DECIMAL-CAST-SELECTIVITY** (1 cell: DataFusion's selectivity assertion on a `BIGINT`-edge
+cast). The native door answers as main's in all 912 cells.
+
+**Cost** ([cost.md](../../wo/decimal-common-type-1/evidence/built/cost.md), 5 alternating runs of main, head, main):
+every held row at most 1.05x — C-012 0.998 and 0.999, `plan_values10k` 0.998, `plan_union200` 1.003, `plan_free200`
+0.978, `plan_wide_dd` 0.978, `plan_pred200` 1.005, K1 0.994 to 1.024 (`k1_pred200` the largest), K4 0.973, K5 1.018
+(`DELETE`) and 1.012 (`UPDATE`); K3's cast form answers and scans as the hand-written range. Reported: K2's
+200-comparison plan 5.5x (main's user-written casts cost the same), the five-branch union 0.976, the 10,000-row mixed
+`VALUES` 0.861.
+
 Up: [map.md](map.md).

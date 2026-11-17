@@ -1,6 +1,6 @@
 # task/wo/ — work orders, by grade
 The orders an engine builds from. [TEMPLATE.md](TEMPLATE.md) defines the three grades (A self-directed, B guided,
-C clerk) and the skeleton every order follows; the engine band table (which grade an engine may run) is owner-gated, outside the repo. Since 2026-10-01 orders are committed here, not in a `/tmp` directory wiped at boot.
+C clerk) and the skeleton every order follows; the engine band table (which grade an engine runs) is owner-gated, outside the repo. Since 2026-10-01 orders are committed here, not in a `/tmp` directory.
 - [TEMPLATE.md](TEMPLATE.md) — the three grades, the test of a grade-C order, the skeleton, the standing rules every order inherits.
 - [T-1](t-1-spark-tests-it.md) — **grade C:** `repark-spark`'s 166-entry `src/tests/` into one `tests/it/main.rs` binary; pure move, identical test count, private-item halt (CL-4, CL-6).
 - [C-0](c-0-postgres-harness.md) — **grade C:** the disposable Postgres container script; `pg_live` fixture with unique names and cleanup, five cdc S0 scenario pins, live-database rules paragraph (CC-6); Compose-declared container, `make pg-up`/`pg-down`/`pg-url`, four at once, `reap`; owner 2026-10-02; no product code.
@@ -53,6 +53,6 @@ C clerk) and the skeleton every order follows; the engine band table (which grad
 - [NAN-MINMAX-1](nan-minmax-1/map.md) — **(part 1, S1, 2026-11-13):** constant-file NaN reads vs Spark 4.1.2, read paths, the Inexact seat, cost; [SIGNED-ZERO-CONST-COMPARE-1](signed-zero-const-compare-1/map.md) (2026-11-14): folded zeros, by bits.
 - [decimal-double-union-coercion-1/](decimal-double-union-coercion-1/map.md) — **DECIMAL-DOUBLE-UNION-COERCION-1 sketch (2026-11-13):** DECIMAL by FLOAT/DOUBLE types `decimal(30,15)` (Spark `double`); [nan-compare-spark-1/](nan-compare-spark-1/map.md) — **NAN-COMPARE-SPARK-1 sketch (2026-11-13):** NaN by bits, not Spark's one greatest value; both: table, inventory, seats, split, owner Qs. [double-decimal-store-round-1/](double-decimal-store-round-1/map.md) — **DOUBLE-DECIMAL-STORE-ROUND-1 (2026-11-13), the coercion's prerequisite:** stores fix; step 0, evidence.
 - [round-double-exact-1/](round-double-exact-1/map.md) — **ROUND-DOUBLE-EXACT-1 (2026-11-14):** FLOAT and DOUBLE `round` and `bround` answer Spark's JDK 17 text on the Spark doors; step 0, fix, evidence; the native gap is carded.
-- [cast-literal-unwrap-1/](cast-literal-unwrap-1/map.md) — **CAST-LITERAL-UNWRAP-1 step 0 (S1, 2026-11-16).** [decimal-common-type-1/](decimal-common-type-1/map.md) — **DECIMAL-COMMON-TYPE-1 step 0 (S1, 2026-11-16).**
+- [cast-literal-unwrap-1/](cast-literal-unwrap-1/map.md) — **CAST-LITERAL-UNWRAP-1 step 0 (S1, 2026-11-16).** [decimal-common-type-1/](decimal-common-type-1/map.md) — **DECIMAL-COMMON-TYPE-1 step 0, built (S1, 2026-11-16).**
 
 Up: [../map.md](../map.md).

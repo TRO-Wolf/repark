@@ -5649,6 +5649,48 @@ still open is `isModifiable`.
 - **Rationale** — the owner's 2026-11-16 rulings ("defaults"; "adopt Fable's, run the string-cast sizing"); card
   [CAST-LITERAL-UNWRAP-1](../task/roadmap/mid-term/cast-literal-unwrap-1-card-2026-11-16.md).
 
+### DECIMAL-COMMON-TYPE-1 — two decimals past 38 digits take Spark's least common type — **FIXED 2026-11-16 (branch `fix/decimal-common-type-1`, not merged)**
+
+- **repark** — Before (main `33bfde4e`): the Spark door took DataFusion's decimal common type, which keeps the larger
+  scale and caps the precision at 38. Where `range + scale > 38` (`DECIMAL(38,0)` beside `DECIMAL(10,2)`, `BIGINT`
+  beside `DECIMAL(38,20)`) it raised where the integer digits no longer fit, or compared and stored exactly where
+  Spark rounds: `a = c` missed `1 = 1.25`, `a UNION ALL c` stored 1.25, `DELETE … WHERE a = c` deleted nothing.
+
+  After, on the Spark door (SQL, DataFrame, `F.expr`, Iceberg stores and DML):
+  - one shared function follows Spark's `DecimalType.boundedPreferIntegralDigits`: `TINYINT` (3,0), `SMALLINT` (5,0),
+    `INT` (10,0) and `BIGINT` (20,0); an integer literal keeps its own digits in `=`, `<=>`, `<`…, `BETWEEN` and a
+    simple `CASE`, and takes its type's form in an `IN` list or `IN` subquery and in every unifying position;
+  - comparisons, join keys (`ON`, aliased `USING`, DataFrame `join(…, "k")`), `BETWEEN` (as its two comparisons),
+    `IN` lists and subqueries, `CASE`, `if`, `coalesce`, `nvl2`, `nullif` (the comparison; `a`'s type stays), `greatest`,
+    `least`, `array`, `map` keys and values, `map_concat`, `array_contains`, unions (bottom up, one rounding per binary
+    node, so `c ∪ d ∪ a` rounds twice and `a ∪ c ∪ d` once, as Spark does), struct fields in a union, `INTERSECT` /
+    `EXCEPT` membership and multi-row `VALUES` (one rounding per row) cast each operand to that type before
+    coercion; a map key collision after rounding raises `DUPLICATED_MAP_KEY`;
+  - `spark.sql.legacy.decimal.retainFractionDigitsOnTruncate=true` (builder, `SET`, `conf.set`; `RESET` restores)
+    skips the rule, so the legacy answers are main's.
+- **spark** — Spark 4.1.2 rounds `HALF_UP` to the common type, both ANSI modes alike.
+  *(oracle: measured live 2026-11-16, `task/wo/decimal-common-type-1/evidence/` and `evidence/built/`.)*
+- **Still unlike Spark:**
+  - the native `repark.sql()` door keeps DataFusion's type (DECIMAL-COMMON-TYPE-NATIVE-1, S2);
+  - `nvl` / `ifnull` of two decimals answers `double` (NVL-DECIMAL-DOUBLE-1, S2, linked to NVL-TYPE-COERCION-2);
+    `avg` of a decimal truncates (AVG-DECIMAL-ROUND-1, S2); `array_union` of two element types answers where Spark
+    refuses (ARRAY-UNION-TYPES-1, S3); `lag`/`lead` with a column default, `USING` over two unaliased derived tables,
+    a decimal `RANGE` offset and `UPDATE … SET x = coalesce(CASE …)` refuse for any types (S3 cards); `nullif`'s result
+    type and `EXCEPT`/`INTERSECT`'s output type are sweep families 6 and 5;
+  - a literal whose own cast overflows (`CAST('1.5' AS DECIMAL(38,38))`) refuses at planning where Spark answers NULL
+    with ANSI off (DECIMAL-LITERAL-OVERFLOW-1, carded by ruling 6); under the legacy flag the 28
+    overflowing cells raise where Spark answers NULL with ANSI off (LEGACY-DECIMAL-TRUNCATE-OVERFLOW-1, S3);
+  - found by this build, for the records clerk: a `map` built above a filter the planner placed after it meets a
+    filtered-out NULL key (MAP-FILTER-ORDER); `F.expr("a = 1.25")` types the literal as `double` (FEXPR-DECIMAL-LITERAL);
+    a filter over a `BIGINT`-edge cast to a wide decimal raises DataFusion's selectivity assertion
+    (DECIMAL-CAST-SELECTIVITY). Each answers alike for user-written same-type casts on main.
+- **Pin** — `python/repark/tests/types/test_decimal_common_type_1.py` (651 cells, both ANSI modes, against
+  `decimal_common_type_1_spark_oracle.json`); Rust `repark-spark` `extension/decimal_common_type/tests.rs` and
+  `extension/decimal_float_widen/tests.rs`, `repark-functions` `decimal_legacy.rs`.
+- **Cost** — [evidence/built/cost.md](../task/wo/decimal-common-type-1/evidence/built/cost.md).
+- **Rationale** — the owner's 2026-11-16 rulings ("defaults"; "Merge those and defaults."); card
+  [DECIMAL-DECIMAL-UNION-WIDEN-1](../task/roadmap/mid-term/decimal-decimal-union-widen-1-card-2026-11-16.md).
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`
