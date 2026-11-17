@@ -24,3 +24,7 @@ The first count's ANSI-off and ANSI-on rows are from the domain table's Headline
 Not diagnosed on this door. The Spark door's seat (sketch §4) is the unit's seat; this card owns whatever the native door's own path adds.
 
 Up: [map.md](map.md).
+
+## Append (2026-11-17, afternoon): the native avg and division family
+
+The native door's `avg`, `mean` and decimal `/` truncation is a separate family on the same door, filed as [NATIVE-DECIMAL-AVG-DIVIDE-1](../consult-2026-11-17/native-decimal-avg-divide-1-card-2026-11-17.md) (S2, not label-blocking, ruling 9 of the [afternoon ruling](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md)).

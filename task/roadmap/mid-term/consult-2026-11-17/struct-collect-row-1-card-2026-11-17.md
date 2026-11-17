@@ -2,9 +2,9 @@
 
 **Date:** 2026-11-17. **Filed by:** the records clerk (`claude-haiku-5-5`), under the owner's ruling "Defaults." (2026-11-17, about 10:40 UTC), ruling 5 ([rulings](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md)). **Source:** Fable (`claude-fable-5-2`), consult reply of 2026-11-17, section 4 ("seen in passing"; measured on main before #1341), and the DECIMAL-COMMON-TYPE-1 build's [bar](../../../wo/decimal-common-type-1/evidence/built/bar.md).
 
-**Status:** filed 2026-11-17, not dispatched.
+**Status:** filed 2026-11-17, not dispatched; S2, not label-blocking (owner, 2026-11-17).
 
-**Severity: not rated; the owner's to set** (ruling 5).
+**Severity: S2, not label-blocking (owner, 2026-11-17)** (afternoon ruling 11).
 
 ## Finding
 
@@ -20,5 +20,11 @@ The build's bar records six cells where the struct renders differently: `literal
 - The parity registry's map residues (in [the parity doc](../../../../docs/spark-sql-iceberg-parity.md)) name "a struct inside a map value collects as a `dict` where PySpark answers a `Row`". That is a struct nested in a map value, not a top-level struct.
 
 Neither covers a top-level struct `collect()`, so this card is filed.
+
+Up: [map.md](map.md).
+
+## Append (2026-11-17, afternoon): rated S2, not label-blocking
+
+The owner's afternoon ruling of 2026-11-17 (about 14:05 UTC) rated this card, ruling 11: "STRUCT-COLLECT-ROW-1: S2, not label-blocking." The rating is in the severity and Status lines above, which replace "not rated". The morning's ruling 5 is not edited. Sketch §6 does not cite this card; the rating rests on the card's own six cells (`literal/u_struct` on `t` and `tx`, and `rev/pin/struct_pos`, in both modes), as the Cells section gives them. The [rulings record](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md) holds the afternoon section.
 
 Up: [map.md](map.md).
