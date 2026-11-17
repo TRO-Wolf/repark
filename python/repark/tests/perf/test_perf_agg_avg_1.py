@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import statistics
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from decimal import Decimal
 from pathlib import Path
 
@@ -18,6 +20,10 @@ from repark.spark import functions as F  # noqa: N812
 from repark_parity import assert_frames_equal
 
 RATIO_BOUND = 2.5
+AVG_SUM_OVERFLOW = r"\[ARITHMETIC_OVERFLOW\].*'try_avg'"
+AVG_RESULT_OUT_OF_RANGE = (
+    r"\[NUMERIC_VALUE_OUT_OF_RANGE\] cannot be represented as Decimal\(38, 4\)"
+)
 MANY_GROUPS = 200_000
 MANY_ROWS_PER_GROUP = 10
 
@@ -195,6 +201,14 @@ SQL_DECIMAL_SUMWRAP_WINDOW = (
     "AS t(id, v) ORDER BY id"
 )
 
+SUMWRAP_TRY = (SQL_DECIMAL_SUMWRAP_GROUPED_TRY, SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED_TRY)
+
+SUMWRAP_AVG = (
+    SQL_DECIMAL_SUMWRAP_GROUPED,
+    SQL_DECIMAL_SUMWRAP_GLOBAL,
+    SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED,
+)
+
 SQL_FLOAT_DRIFT_GROUPED = (
     "SELECT k, avg(v) AS a FROM (VALUES (1, CAST(1e16 AS DOUBLE)), "
     + ", ".join(["(1, CAST(1.0 AS DOUBLE))"] * 64)
@@ -226,6 +240,18 @@ SQL_MANY_SUM = "SELECT k, sum(v) AS s FROM many_groups GROUP BY k"
 def _session() -> SparkSession:
     """A facade session of this module's own, per the suite's build-your-own convention."""
     return SparkSession.builder.appName("pytest-perf-agg-avg-1").getOrCreate()
+
+
+@contextmanager
+def _ansi(enabled: str) -> Iterator[SparkSession]:
+    """This module's session with the ANSI flag set for one block, restored after it."""
+    spark = _session()
+    previous = spark.conf.get("spark.sql.ansi.enabled")
+    spark.conf.set("spark.sql.ansi.enabled", enabled)
+    try:
+        yield spark
+    finally:
+        spark.conf.set("spark.sql.ansi.enabled", previous)
 
 
 def _sig(table: pa.Table) -> list[tuple[str, str, bool]]:
@@ -368,12 +394,12 @@ def test_try_avg_overflow_is_null() -> None:
 
 
 def test_avg_overflow_raises() -> None:
-    """Decimal plain-avg overflow raises instead of answering NULL."""
+    """Decimal plain-avg overflow with ANSI on raises ARITHMETIC_OVERFLOW with the try_avg hint."""
     """pins: perf-agg-avg-1/C-003."""
-    from repark.errors import PySparkException
+    from repark.errors import ArithmeticException
 
-    with pytest.raises(PySparkException, match="Arithmetic Overflow"):
-        _session().sql(SQL_AVG_OVERFLOW).toArrow()
+    with _ansi("true") as spark, pytest.raises(ArithmeticException, match=AVG_SUM_OVERFLOW):
+        spark.sql(SQL_AVG_OVERFLOW).toArrow()
 
 
 def test_avg_empty_input_is_null() -> None:
@@ -432,39 +458,66 @@ def test_avg_grouped_float_drift_within_spark() -> None:
     assert table.column("a").to_pylist() == pytest.approx([SPARK_FLOAT_DRIFT_GROUPED], rel=1e-12)
 
 
-def test_avg_decimal_sumwrap_records_divergence() -> None:
-    """Sum-wrap fixtures answer the wrapped quotient; Spark NULLs and raises."""
+@pytest.mark.parametrize("ansi", ["true", "false"])
+def test_avg_decimal_sumwrap_spark_door_matches_spark(ansi: str) -> None:
+    """Sum-wrap fixtures answer Spark's NULL on the Spark door, or its overflow with ANSI on."""
     """pins: perf-agg-avg-1/C-003; types-1/C-001 (VALUES k is int32 on Spark)."""
+    from repark.errors import ArithmeticException
+
+    with _ansi(ansi) as spark:
+        for sql in SUMWRAP_TRY:
+            table = spark.sql(sql).toArrow()
+            assert table.column("a").to_pylist() == [None]
+            assert _sig(table) == [("k", "int32", True), ("a", "decimal128(38, 4)", True)]
+        frame = spark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_FRAME)
+        frame_try = frame.groupBy("k").agg(F.try_avg("v").alias("a")).toArrow()
+        assert frame_try.column("a").to_pylist() == [None]
+        window_try = spark.sql(SQL_DECIMAL_SUMWRAP_WINDOW_TRY).toArrow()
+        assert window_try.column("a").to_pylist() == [None] * 4
+        assert _sig(window_try) == [("id", "int32", True), ("a", "decimal128(38, 4)", True)]
+        frame_avg = frame.groupBy("k").agg(F.avg("v").alias("a"))
+        if ansi == "true":
+            for sql in SUMWRAP_AVG:
+                with pytest.raises(ArithmeticException, match=AVG_SUM_OVERFLOW):
+                    spark.sql(sql).toArrow()
+            with pytest.raises(ArithmeticException, match=AVG_SUM_OVERFLOW):
+                frame_avg.toArrow()
+            return
+        for sql in SUMWRAP_AVG:
+            assert spark.sql(sql).toArrow().column("a").to_pylist() == [None]
+        assert frame_avg.toArrow().column("a").to_pylist() == [None]
+        window = spark.sql(SQL_DECIMAL_SUMWRAP_WINDOW).toArrow()
+        assert window.column("a").to_pylist() == [None] * 4
+
+
+def test_avg_decimal_window_result_overflow_text_diverges() -> None:
+    """With ANSI on, a window avg past Decimal(38, 4) raises bare NUMERIC_VALUE_OUT_OF_RANGE.
+
+    Spark raises the same condition as `NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION` in an
+    ArithmeticException; here it is a bare PySparkException. This is the result-precision text
+    class (both raise the same condition), not the grouped sum that passes 38 digits and comes back.
+    """
+    """pins: perf-agg-avg-1/C-003."""
     from repark.errors import PySparkException
 
-    spark = _session()
-    grouped_try = spark.sql(SQL_DECIMAL_SUMWRAP_GROUPED_TRY).toArrow()
-    assert grouped_try.column("a").to_pylist() == [Decimal("0.0000")]
-    assert _sig(grouped_try) == [("k", "int32", True), ("a", "decimal128(38, 4)", True)]
-    grouped = spark.sql(SQL_DECIMAL_SUMWRAP_GROUPED).toArrow()
-    assert grouped.column("a").to_pylist() == [Decimal("0.0000")]
+    with (
+        _ansi("true") as spark,
+        pytest.raises(PySparkException, match=AVG_RESULT_OUT_OF_RANGE) as caught,
+    ):
+        spark.sql(SQL_DECIMAL_SUMWRAP_WINDOW).toArrow()
+    assert type(caught.value) is PySparkException
+
+
+def test_avg_decimal_sumwrap_native_door_records_divergence() -> None:
+    """The native door keeps main's wrapped quotients where Spark NULLs or raises."""
+    """pins: perf-agg-avg-1/C-003."""
     native_grouped = repark.sql(SQL_DECIMAL_SUMWRAP_GROUPED).to_arrow()
     assert native_grouped.column("a").to_pylist() == [Decimal("0.0000")]
     native_global = repark.sql(SQL_DECIMAL_SUMWRAP_GLOBAL).to_arrow()
     assert native_global.column("a").to_pylist() == [Decimal("0.0000")]
     assert _sig(native_global) == [("a", "decimal128(38, 4)", True)]
-    nonzero_try = spark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED_TRY).toArrow()
-    assert nonzero_try.column("a").to_pylist() == [Decimal("100000.0000")]
-    assert _sig(nonzero_try) == [("k", "int32", True), ("a", "decimal128(38, 4)", True)]
-    nonzero = spark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED).toArrow()
-    assert nonzero.column("a").to_pylist() == [Decimal("100000.0000")]
     native_nonzero = repark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_GROUPED).to_arrow()
     assert native_nonzero.column("a").to_pylist() == [Decimal("100000.0000")]
-    frame = spark.sql(SQL_DECIMAL_SUMWRAP_NONZERO_FRAME)
-    frame_try = frame.groupBy("k").agg(F.try_avg("v").alias("a")).toArrow()
-    assert frame_try.column("a").to_pylist() == [Decimal("100000.0000")]
-    frame_avg = frame.groupBy("k").agg(F.avg("v").alias("a")).toArrow()
-    assert frame_avg.column("a").to_pylist() == [Decimal("100000.0000")]
-    window_try = spark.sql(SQL_DECIMAL_SUMWRAP_WINDOW_TRY).toArrow()
-    assert window_try.column("a").to_pylist() == [None, None, None, Decimal("0.0000")]
-    assert _sig(window_try) == [("id", "int32", True), ("a", "decimal128(38, 4)", True)]
-    with pytest.raises(PySparkException, match="Arithmetic Overflow"):
-        spark.sql(SQL_DECIMAL_SUMWRAP_WINDOW).toArrow()
 
 
 def test_avg_grouped_null_refuses_naming_groups_accumulator() -> None:
@@ -570,8 +623,8 @@ def test_live_avg_overflow_raises_on_both(spark_engine: live_parity.Engine) -> N
 
     from repark.errors import PySparkException
 
-    with pytest.raises(PySparkException, match="Arithmetic Overflow"):
-        _session().sql(SQL_AVG_OVERFLOW).toArrow()
+    with _ansi("true") as spark, pytest.raises(PySparkException, match=AVG_SUM_OVERFLOW):
+        spark.sql(SQL_AVG_OVERFLOW).toArrow()
     with (
         live_parity.spark_session_conf(
             spark_engine, (("spark.sql.leafNodeDefaultParallelism", "2"),)

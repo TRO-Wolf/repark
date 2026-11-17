@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from decimal import ROUND_HALF_UP, Decimal, getcontext
+from decimal import ROUND_HALF_UP, Context, Decimal
 from typing import Any
 
-getcontext().prec = 120
+WIDE_CONTEXT = Context(prec=120)
 
 DECIMAL_TEXT = re.compile(r"-?\d+\.\d+")
 COLUMNS = [(10, 0), (10, 2), (28, 2), (34, 4), (38, 0), (38, 18)]
@@ -43,7 +43,11 @@ def pattern(g: int, p: int) -> list[int | None]:
 
 
 def text(unscaled: int | None, s: int) -> str | None:
-    return None if unscaled is None else format(Decimal(unscaled).scaleb(-s), "f")
+    return (
+        None
+        if unscaled is None
+        else format(Decimal(unscaled).scaleb(-s, context=WIDE_CONTEXT), "f")
+    )
 
 
 def rows() -> tuple[list[str], list[list[str | None]]]:
@@ -73,9 +77,12 @@ def types() -> dict[str, str]:
 
 def expected(g: int, p: int, s: int) -> str:
     values = [v for v in pattern(g, p) if v is not None]
-    quotient = Decimal(sum(values)).scaleb(-s) / Decimal(len(values))
+    total = Decimal(sum(values)).scaleb(-s, context=WIDE_CONTEXT)
+    quotient = WIDE_CONTEXT.divide(total, Decimal(len(values)))
     scale = min(s + 4, 38)
-    return format(quotient.quantize(Decimal(1).scaleb(-scale), rounding=ROUND_HALF_UP), "f")
+    step = Decimal(1).scaleb(-scale, context=WIDE_CONTEXT)
+    rounded = quotient.quantize(step, rounding=ROUND_HALF_UP, context=WIDE_CONTEXT)
+    return format(rounded, "f")
 
 
 def having_case(p: int, s: int) -> str:
