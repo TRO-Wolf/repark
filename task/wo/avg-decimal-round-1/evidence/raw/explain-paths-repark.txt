@@ -1,0 +1,106 @@
+provenance: {'engine': 'repark', 'version': '1.5.6', 'native': '<scratchpad>/ddu-work/pkg-dct-7bf32859/repark/_native.abi3.so'}
+== spark door avg_distinct: SELECT g, avg(DISTINCT c10_2) AS m FROM t GROUP BY g
+logical_plan | Projection: t.g, avg(alias1) AS m
+  Aggregate: groupBy=[[t.g]], aggr=[[avg(alias1)]]
+    Aggregate: groupBy=[[t.g, t.c10_2 AS alias1]], aggr=[[]]
+      SubqueryAlias: t
+        Projection: CAST(datafusion.public.__repark_selx_4d92e292373a45699f0330e4c996953d.g AS Int32) AS g, CAST(datafusion.public.__repark_selx_4d92e292373a45699f0330e4c996953d.c10_2 AS Decimal128(10, 2)) AS c10_2
+          SubqueryAlias: datafusion.public.__repark_selx_4d92e292373a45699f0330e4c996953d
+            TableScan: datafusion.public.__repark_cdf_829d3f42bc36495f8a7218f0337db8de projection=[g, c10_2]
+physical_plan | ProjectionExec: expr=[g@0 as g, avg(alias1)@1 as m]
+  AggregateExec: mode=FinalPartitioned, gby=[g@0 as g], aggr=[avg(alias1)]
+    RepartitionExec: partitioning=Hash([g@0], 10), input_partitions=10
+      AggregateExec: mode=Partial, gby=[g@0 as g], aggr=[avg(alias1)]
+        AggregateExec: mode=FinalPartitioned, gby=[g@0 as g, alias1@1 as alias1], aggr=[]
+          RepartitionExec: partitioning=Hash([g@0, alias1@1], 10), input_partitions=1
+            AggregateExec: mode=Partial, gby=[g@0 as g, c10_2@1 as alias1], aggr=[]
+              ParallelProjectionExec: expr=[CAST(g@0 AS Int32) as g, CAST(c10_2@1 AS Decimal128(10, 2)) as c10_2]
+                DataSourceExec: partitions=1, partition_sizes=[1]
+
+== spark door avg_grouped: SELECT g, avg(c10_2) AS m FROM t GROUP BY g
+logical_plan | Projection: t.g, avg(t.c10_2) AS m
+  Aggregate: groupBy=[[t.g]], aggr=[[avg(t.c10_2)]]
+    SubqueryAlias: t
+      Projection: CAST(datafusion.public.__repark_selx_4d92e292373a45699f0330e4c996953d.g AS Int32) AS g, CAST(datafusion.public.__repark_selx_4d92e292373a45699f0330e4c996953d.c10_2 AS Decimal128(10, 2)) AS c10_2
+        SubqueryAlias: datafusion.public.__repark_selx_4d92e292373a45699f0330e4c996953d
+          TableScan: datafusion.public.__repark_cdf_829d3f42bc36495f8a7218f0337db8de projection=[g, c10_2]
+physical_plan | ProjectionExec: expr=[g@0 as g, avg(t.c10_2)@1 as m]
+  AggregateExec: mode=FinalPartitioned, gby=[g@0 as g], aggr=[avg(t.c10_2)]
+    RepartitionExec: partitioning=Hash([g@0], 10), input_partitions=1
+      AggregateExec: mode=Partial, gby=[g@0 as g], aggr=[avg(t.c10_2)]
+        ParallelProjectionExec: expr=[CAST(g@0 AS Int32) as g, CAST(c10_2@1 AS Decimal128(10, 2)) as c10_2]
+          DataSourceExec: partitions=1, partition_sizes=[1]
+
+== spark door avg_rows3: SELECT g, avg(c10_2) OVER (PARTITION BY g ORDER BY id ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) AS m FROM t
+logical_plan | Projection: t.g, avg(t.c10_2) PARTITION BY [t.g] ORDER BY [t.id ASC NULLS LAST] ROWS BETWEEN 2 PRECEDING AND CURRENT ROW AS m
+  WindowAggr: windowExpr=[[avg(t.c10_2) PARTITION BY [t.g] ORDER BY [t.id ASC NULLS LAST] ROWS BETWEEN 2 PRECEDING AND CURRENT ROW]]
+    SubqueryAlias: t
+      Projection: CAST(datafusion.public.__repark_selx_4d92e292373a45699f0330e4c996953d.g AS Int32) AS g, CAST(datafusion.public.__repark_selx_4d92e292373a45699f0330e4c996953d.id AS Int32) AS id, CAST(datafusion.public.__repark_selx_4d92e292373a45699f0330e4c996953d.c10_2 AS Decimal128(10, 2)) AS c10_2
+        SubqueryAlias: datafusion.public.__repark_selx_4d92e292373a45699f0330e4c996953d
+          TableScan: datafusion.public.__repark_cdf_829d3f42bc36495f8a7218f0337db8de projection=[g, id, c10_2]
+physical_plan | ProjectionExec: expr=[g@0 as g, avg(t.c10_2) PARTITION BY [t.g] ORDER BY [t.id ASC NULLS LAST] ROWS BETWEEN 2 PRECEDING AND CURRENT ROW@3 as m]
+  BoundedWindowAggExec: wdw=[avg(t.c10_2) PARTITION BY [t.g] ORDER BY [t.id ASC NULLS LAST] ROWS BETWEEN 2 PRECEDING AND CURRENT ROW: Field { "avg(t.c10_2) PARTITION BY [t.g] ORDER BY [t.id ASC NULLS LAST] ROWS BETWEEN 2 PRECEDING AND CURRENT ROW": nullable Decimal128(14, 6) }, frame: ROWS BETWEEN 2 PRECEDING AND CURRENT ROW], mode=[Sorted]
+    SortExec: expr=[g@0 ASC NULLS LAST, id@1 ASC NULLS LAST], preserve_partitioning=[false]
+      ParallelProjectionExec: expr=[CAST(g@0 AS Int32) as g, CAST(id@1 AS Int32) as id, CAST(c10_2@2 AS Decimal128(10, 2)) as c10_2]
+        DataSourceExec: partitions=1, partition_sizes=[1]
+
+== spark door div_lit: SELECT d10_2 / 3 AS q FROM v
+logical_plan | Projection: __repark_spark_decimal_div__(v.d10_2, Decimal128(Some(3),10,0)) AS q
+  SubqueryAlias: v
+    Projection: CAST(datafusion.public.__repark_selx_a009966fe1dd48f99d91c405d8ea3879.d10_2 AS Decimal128(10, 2)) AS d10_2
+      SubqueryAlias: datafusion.public.__repark_selx_a009966fe1dd48f99d91c405d8ea3879
+        TableScan: datafusion.public.__repark_cdf_b1bdb2295a774e6cb7befdd356606cb2 projection=[d10_2]
+physical_plan | ProjectionExec: expr=[__repark_spark_decimal_div__(CAST(d10_2@0 AS Decimal128(10, 2)), Some(3),10,0) as q]
+  DataSourceExec: partitions=1, partition_sizes=[1]
+
+== spark door mul_lit: SELECT d10_2 * 3 AS q FROM v
+logical_plan | Projection: v.d10_2 * Decimal128(Some(3),1,0) AS q
+  SubqueryAlias: v
+    Projection: CAST(datafusion.public.__repark_selx_a009966fe1dd48f99d91c405d8ea3879.d10_2 AS Decimal128(10, 2)) AS d10_2
+      SubqueryAlias: datafusion.public.__repark_selx_a009966fe1dd48f99d91c405d8ea3879
+        TableScan: datafusion.public.__repark_cdf_b1bdb2295a774e6cb7befdd356606cb2 projection=[d10_2]
+physical_plan | ProjectionExec: expr=[CAST(d10_2@0 AS Decimal128(10, 2)) * Some(3),1,0 as q]
+  DataSourceExec: partitions=1, partition_sizes=[1]
+
+== spark door mod_lit: SELECT d10_2 % 3 AS q FROM v
+logical_plan | Projection: v.d10_2 % Decimal128(Some(3),10,0) AS q
+  SubqueryAlias: v
+    Projection: CAST(datafusion.public.__repark_selx_a009966fe1dd48f99d91c405d8ea3879.d10_2 AS Decimal128(10, 2)) AS d10_2
+      SubqueryAlias: datafusion.public.__repark_selx_a009966fe1dd48f99d91c405d8ea3879
+        TableScan: datafusion.public.__repark_cdf_b1bdb2295a774e6cb7befdd356606cb2 projection=[d10_2]
+physical_plan | ProjectionExec: expr=[CAST(d10_2@0 AS Decimal128(10, 2)) % Some(3),10,0 as q]
+  DataSourceExec: partitions=1, partition_sizes=[1]
+
+== DataFrame col / 3 schema
+StructType([StructField('q', DoubleType(), True)])
+[]
+[]
+== spark door answer avg_distinct_with_count: SELECT g, avg(DISTINCT c10_2) AS m, count(c10_2) AS n FROM t GROUP BY g
+ERR:PySparkException:None:This feature is not implemented: DistinctAvgAccumulator
+== spark door answer avg_distinct_window: SELECT g, avg(DISTINCT c10_2) OVER (PARTITION BY g) AS m FROM t
+ERR:PySparkException:None:This feature is not implemented: DistinctAvgAccumulator
+== native door avg_distinct: SELECT g, avg(DISTINCT c10_2) AS m FROM nt GROUP BY g
+logical_plan | Projection: nt.g, avg(alias1) AS m
+  Aggregate: groupBy=[[nt.g]], aggr=[[avg(alias1)]]
+    Aggregate: groupBy=[[nt.g, nt.c10_2 AS alias1]], aggr=[[]]
+      SubqueryAlias: nt
+        Projection: CAST(column1 AS Int32) AS g, CAST(column4 AS Decimal128(10, 2)) AS c10_2
+          Values: (Utf8("1"), Utf8("1"), Utf8("1"), Utf8("0.01"), Utf8("0.000001"), Utf8("1"), Utf8("0.01"), Utf8("0.0000000001"), Utf8("1"), Utf8("0.0001"), Utf8("0.000000000000000000000000000001"), Utf8("1"), Utf8("0.01"), Utf8("0.000000000000000001"), Utf8("0.000000000000000000000000000000000001"), Utf8("1"), Utf8("1"), Utf8("1.0")), (Utf8("1"), Utf8("2"), Utf8("2"), Utf8("0.02"), Utf8("0.000002"), Utf8("2"), Utf8("0.02"), Utf8("0.0000000002"), Utf8("2"), Utf8("0.0002"), Utf8("0.000000000000000000000000000002"), Utf8("2"), Utf8("0.02"), Utf8("0.000000000000000002"), Utf8("0.000000000000000000000000000000000002"), Utf8("2"), Utf8("2"), Utf8("2.0")), (Utf8("2"), Utf8("3"), Utf8("1"), Utf8("0.01"), Utf8("0.000001"), Utf8("1"), Utf8("0.01"), Utf8("0.0000000001"), Utf8("1"), Utf8("0.0001"), Utf8("0.000000000000000000000000000001"), Utf8("1"), Utf8("0.01"), Utf8("0.000000000000000001"), Utf8("0.000000000000000000000000000000000001"), Utf8("1"), Utf8("1"), Utf8("1.0")), (Utf8("2"), Utf8("4"), Utf8("1"), Utf8("0.01"), Utf8("0.000001"), Utf8("1"), Utf8("0.01"), Utf8("0.0000000001"), Utf8("1"), Utf8("0.0001"), Utf8("0.000000000000000000000000000001"), Utf8("1"), Utf8("0.01"), Utf8("0.000000000000000001"), Utf8("0.000000000000000000000000000000000001"), Utf8("1"), Utf8("1"), Utf8("1.0")), (Utf8("2"), Utf8("5"), Utf8("0"), Utf8("0.00"), Utf8("0.000000"), Utf8("0"), Utf8("0.00"), Utf8("0.0000000000"), Utf8("0"), Utf8("0.0000"), Utf8("0.000000000000000000000000000000"), Utf8("0"), Utf8("0.00"), Utf8("0.000000000000000000"), Utf8("0.000000000000000000000000000000000000"), Utf8("0"), Utf8("0"), Utf8("0.0"))...
+physical_plan | ProjectionExec: expr=[g@0 as g, avg(alias1)@1 as m]
+  AggregateExec: mode=FinalPartitioned, gby=[g@0 as g], aggr=[avg(alias1)]
+    RepartitionExec: partitioning=Hash([g@0], 10), input_partitions=10
+      AggregateExec: mode=Partial, gby=[g@0 as g], aggr=[avg(alias1)]
+        AggregateExec: mode=FinalPartitioned, gby=[g@0 as g, alias1@1 as alias1], aggr=[]
+          RepartitionExec: partitioning=Hash([g@0, alias1@1], 10), input_partitions=1
+            AggregateExec: mode=Partial, gby=[g@0 as g, c10_2@1 as alias1], aggr=[]
+              ParallelProjectionExec: expr=[CAST(column1@0 AS Int32) as g, CAST(column4@3 AS Decimal128(10, 2)) as c10_2]
+                DataSourceExec: partitions=1, partition_sizes=[1]
+
+== native door div_lit: SELECT d10_2 / 3 AS q FROM nv
+logical_plan | Projection: nv.d10_2 / Decimal128(Some(3),20,0) AS q
+  SubqueryAlias: nv
+    Projection: CAST(column3 AS Decimal128(10, 2)) AS d10_2
+      Values: (Utf8("1"), Utf8("30"), Utf8("0.30"), Utf8("0.0030"), Utf8("0.30"), Utf8("0.30"), Utf8("0.0000000030"), Utf8("0.0030"), Utf8("30"), Utf8("0.30"), Utf8("0.0000000030"), Utf8("3"), Utf8("3"), Utf8("3"), Utf8("3")), (Utf8("2"), Utf8("100"), Utf8("1.00"), Utf8("0.0100"), Utf8("1.00"), Utf8("1.00"), Utf8("0.0000000100"), Utf8("0.0100"), Utf8("100"), Utf8("1.00"), Utf8("0.0000000100"), Utf8("3"), Utf8("3"), Utf8("3"), Utf8("3")), (Utf8("3"), Utf8("251"), Utf8("2.51"), Utf8("0.0251"), Utf8("2.51"), Utf8("2.51"), Utf8("0.0000000251"), Utf8("0.0251"), Utf8("251"), Utf8("2.51"), Utf8("0.0000000251"), Utf8("3"), Utf8("3"), Utf8("3"), Utf8("3")), (Utf8("4"), Utf8("-251"), Utf8("-2.51"), Utf8("-0.0251"), Utf8("-2.51"), Utf8("-2.51"), Utf8("-0.0000000251"), Utf8("-0.0251"), Utf8("-251"), Utf8("-2.51"), Utf8("-0.0000000251"), Utf8("3"), Utf8("3"), Utf8("3"), Utf8("3")), (Utf8("5"), Utf8("1"), Utf8("0.01"), Utf8("0.0001"), Utf8("0.01"), Utf8("0.01"), Utf8("0.0000000001"), Utf8("0.0001"), Utf8("1"), Utf8("0.01"), Utf8("0.0000000001"), Utf8("3"), Utf8("3"), Utf8("3"), Utf8("3"))...
+physical_plan | ProjectionExec: expr=[CAST(column3@2 AS Decimal128(10, 2)) / Some(3),20,0 as q]
+  DataSourceExec: partitions=1, partition_sizes=[1]
+
