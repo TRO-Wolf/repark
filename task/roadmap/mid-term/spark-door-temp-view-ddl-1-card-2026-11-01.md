@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-01. **Filed by:** the third-audit records round (`claude-haiku-5-5`), from the targeted re-audit of the format-v2 label, finding AUD-015 ([the report](../../../docs/audits/iceberg-v2-label-targeted-reaudit-2026-11-01.md), section 5).
 
-**Status:** dispatched 2026-11-01 on an Opus 5.5 lane (branch `fix/spark-door-temp-view-ddl-1`), not merged. Grade A, P1, Critical. A blocker of the format-v2 label (ledger clause C-079).
+**Status:** dispatched 2026-11-01 on an Opus 5.5 lane (branch `fix/spark-door-temp-view-ddl-1`); **merged** as #1233 (`c68017f6`). Grade A, P1, Critical. A blocker of the format-v2 label (ledger clause C-079).
 
 **Why:** With a temporary view `t` in scope, the twelve `ALTER TABLE t ...` kinds the audit counts change the same-named Iceberg table, where Spark 4.1.2 refuses with `EXPECT_TABLE_NOT_VIEW`. `DROP COLUMN` and `REPLACE COLUMNS` remove a column's values from every current read, which is silent data loss by an ordinary statement, the class that blocked the label under AUD-006. The view keeps answering `SELECT`. The fault predates the third audit: it is identical at `321c6095`.
 
