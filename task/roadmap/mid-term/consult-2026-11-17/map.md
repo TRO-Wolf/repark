@@ -13,5 +13,6 @@ Four cards from Fable's consult of 2026-11-17 (Fable (`claude-fable-5-2`), consu
 - [NAN-ARRAY-MINMAX-1](nan-array-minmax-1-card-2026-11-17.md) (S1, label-blocking, kept from NAN-MINMAX-1 part 2; not placed) — **card (2026-11-17, ruling 3):** `array_min` and `array_max` over a sign-set NaN.
 - [NAN-QUANTILE-SIGNSET-1](nan-quantile-signset-1-card-2026-11-17.md) (S1, label-blocking, kept from NAN-MINMAX-1 part 2; not placed) — **card (2026-11-17, ruling 3):** `median` and `percentile_approx` over a sign-set NaN.
 - [STRUCT-COLLECT-ROW-1](struct-collect-row-1-card-2026-11-17.md) (S2, not label-blocking, ruled 2026-11-17) — **card (2026-11-17, ruling 5; rated by afternoon ruling 11):** `collect()` returns a struct as a `dict`, where PySpark returns a `Row`.
+- [SUM-DEC-I128WRAP-1](sum-dec-i128wrap-1-card-2026-11-17.md) (not rated; the owner's to set) — **card (2026-11-17, evening, from Fable's consult reply §7, seen in passing; not in the counts above):** a decimal `sum` past 38 digits answers silently where Spark raises. The registry carries the id as BACKLOG (2026-09-10).
 
 Up: [../map.md](../map.md).

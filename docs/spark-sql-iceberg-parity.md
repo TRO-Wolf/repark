@@ -15193,6 +15193,7 @@ Shared roster pin for every heading:
 - **Rationale** — BACKLOG (2026-09-10), filed by TORTURE-1 step 2. The wrapping i128 add
   behind `AVG-DEC-SUMWRAP-1` reaches `SUM` too, and a wrapped answer is silent truncation,
   not a value. A fix needs the same overflow latching in the sum accumulators.
+- **2026-11-17, measured by Fable** (consult reply §7, on #1355's head `8ac1683a`, ANSI on; the owner has not seen these cells): `sum` over `MAX38` and `1`, both `DECIMAL(38,0)`, answers `100000000000000000000000000000000000000`, a 39-digit value in a `decimal(38,0)` column; `sum` over two `MAX38` answers `-140282366920938463463374607431768211458`, as main does. Spark raises `ARITHMETIC_OVERFLOW` on both cells. Step 0 dispatched 2026-11-17 (the orchestrator's reading of the owner's words). Card: [SUM-DEC-I128WRAP-1](../task/roadmap/mid-term/consult-2026-11-17/sum-dec-i128wrap-1-card-2026-11-17.md), severity not rated.
 
 ### DATE-INTERVAL-NSBOUND-1 — `date + INTERVAL` raises at the whole-day edge; Spark adds days at date width and completes — **BACKLOG 2026-09-10**
 
