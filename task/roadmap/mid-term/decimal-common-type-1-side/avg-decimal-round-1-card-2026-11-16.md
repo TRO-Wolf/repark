@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), under the owner's ruling "Merge those and defaults." (2026-11-16, about 23:40 UTC), ruling B7 on DECIMAL-COMMON-TYPE-1 step 0 ([rulings](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-16.md)). **Source:** [domain table](../../../wo/decimal-common-type-1/domain-table.md), the "Other causes" table and the Aggregates section; [sketch §9 and §10 question 7](../../../wo/decimal-common-type-1/sketch.md). Parent: [DECIMAL-DECIMAL-UNION-WIDEN-1](../decimal-decimal-union-widen-1-card-2026-11-16.md).
 
-**Status:** built on PR #1355 (open, not merged; 2026-11-17). **Label-blocking** (ruled B7).
+**Status:** built on PR #1355 (open; the verifier's FAIL rests on a carded view-settings class, F1; the merge awaits the owner; 2026-11-17). **Label-blocking** (ruled B7).
 
 **Severity: S1** (ruled B7, label-blocking). The sketch proposed S2 in §9 and §10 question 7; the ruling sets S1, and this card carries the ruled value. A wrong answer on a scalar decimal column.
 
@@ -98,7 +98,7 @@ skips partial aggregation at 200,000 groups and ships every row's state.
   - the `d38_10 * 3` overflow: 18;
   - FEXPR-COUNT-STAR-AGG-1: 52;
   - `+`, `-` and `*` around `avg` past 38 digits: 32;
-  - both raise the same condition with ANSI on: 35;
+  - both raise the same condition with ANSI on: 35 (not exact; see the night append, N1);
   - `describe` text: 4; `summary()` without percentiles: 8.
 - The critic's sets: 0 EQUAL → non-EQUAL, `c10` WRONG → RAISE (ruling 2), the native cells equal.
 - The non-decimal `mean` cells: 0 EQUAL → non-EQUAL.
@@ -128,3 +128,39 @@ K4 `mean(x)` is above 1.05x but inside its control band, so this is no halt.
 - **Full facade suite** (head, release, `-n 6`): 35,168 passed, 0 failed, 813 skipped, 160 xfailed.
 - **K4 at ten runs** (delta 1; [cost.md](../../../wo/avg-decimal-round-1/evidence/built/cost.md)): `avg(x)` 0.989, `mean(x)` 1.047, `avg(b)` 0.988 and `mean(b)` 1.024, each inside its control band.
 - **Ruling (a), verbatim** (owner, 2026-11-17): "Merge 1354, option a on the grouped sum". Option (a) records the grouped-sum difference on a card, is not label-blocking, and merges the unit as it is. The card: [AVG-GROUPED-SUM-STICKY-1](../consult-2026-11-17/avg-grouped-sum-sticky-1-card-2026-11-17.md).
+
+## Append (2026-11-17, night): verifier round
+
+Sources: the verdict of the verifier's round (Muse 1.3 at xhigh, on head `8ac1683a`) and Fable's reply, which is guidance only and is named here, not linked (it sits outside the repository). Nothing in Fable's reply is a ruling.
+
+**Verdict: FAIL.** The FAIL rests on F1 (class (a), S2) and N1 (records). F2 is pre-existing and reported only.
+
+**F1: a temp view reads the ANSI setting of the session that reads it, not the one that created it.** Spark keeps the creating session's setting for the view's body. The head follows the reading session. Main ignored the flag for `avg`. The four `avg` cells on the SQL temp view door: the on-to-off and off-to-on cells are the verdict's V1 and V2; the same-mode rows are from the consult's F1 table.
+
+| created → read | Spark 4.1.2 | main | head (#1355) |
+|---|---|---|---|
+| on → on | RAISE `ARITHMETIC_OVERFLOW` | RAISE `Arithmetic Overflow in AvgAccumulator` | RAISE `ARITHMETIC_OVERFLOW` |
+| on → **off** | RAISE `ARITHMETIC_OVERFLOW` | RAISE `Arithmetic Overflow in AvgAccumulator` | **NULL** |
+| off → off | NULL | RAISE (condition-less) | NULL |
+| off → **on** | **NULL** | RAISE (condition-less) | RAISE `ARITHMETIC_OVERFLOW` |
+
+Not reconciled: the consult's table calls main's on-to-off cell condition-less, where the table above keeps the verdict's text. The verdict says same-mode reads agree everywhere, but the consult's table has main raising where Spark answers NULL in the off-to-off row. The clerk did not measure either, so the records do not settle these.
+
+Fable's measurements (SQL temp view, on main and on the head), as Fable reports them. They show that the reader's setting already governs these bodies on main, so the gap is not confined to `avg`:
+
+| body | created → read | Spark | main | head |
+|---|---|---|---|---|
+| `10 / b` (b = 0) | on → off | RAISE `DIVIDE_BY_ZERO` | NULL | NULL |
+| `10 / b` | off → on | NULL | RAISE | RAISE |
+| `a + 1` (a = 2147483647) | on → off | RAISE `ARITHMETIC_OVERFLOW` | -2147483648 | -2147483648 |
+| `a + 1` | off → on | -2147483648 | RAISE | RAISE |
+
+Fable's reading: merging #1355 moves one cell, created on and read off, from "both raise" to a silent NULL. Its reader is on ANSI off, which is outside the label's scope.
+
+Where F1 goes (the orchestrator's routing; Fable recommends one card for the two view cards): carded into TEMP-VIEW-SESSION-SETTINGS-1, which absorbs VIEW-ANSI-CAPTURE-1 ([card](../temp-view-session-settings-1-card-2026-11-02.md)).
+
+**F2 (pre-existing, reported only):** a window `avg` whose frame sum passes 38 digits raises a different condition on each build. Spark raises `NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION`, main a condition-less raise, and head `ARITHMETIC_OVERFLOW`. Not reconciled: the delta-1 text class above records head as `NUMERIC_VALUE_OUT_OF_RANGE` without `.WITH_SUGGESTION` for a window `avg` past `Decimal(38, 4)`, a case that looks similar.
+
+**N1 (records):** the Built append's "both raise the same condition with ANSI on: 35" is not exact. The clerk recounted the both-raise list in `bar.md` (its ANSI-on bullet): **170** entries, all with ANSI on, none repeated. Of them, **33** are in the avg, mean and sum family: 24 `avg`, 8 `mean` and 1 `sum`. The verifier's count is the same. `bar.md` is the authority, and this append does not restate 35 as that class's count.
+
+Open, not ruled by the owner: whether #1355 merges over this FAIL, with F1 carded and no new verifier. The view family's severity and label status are open too; see [TEMP-VIEW-SESSION-SETTINGS-1](../temp-view-session-settings-1-card-2026-11-02.md).
