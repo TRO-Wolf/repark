@@ -20,5 +20,9 @@ against Spark 4.1.2; documents and probes only, no product code. Card:
   [evidence/raw/rev/](evidence/raw/rev/map.md); the owner questions restated (ten).
 - [evidence/](evidence/map.md) — the probes, the raw cells, the verdicts and grids, the `javap` excerpts and the
   provenance.
+- **Built (2026-11-17, seat A1 with the `mean` alias, branch `fix/avg-decimal-round-1`, `27d6149f`):**
+  [evidence/built/](evidence/built/map.md) — the bar against main and Spark (`bar.md`), the cost (`cost.md`) and the
+  raw data. Spark's sum is not sticky ungrouped in one partition, but is per row in a grouped hash aggregate and per
+  partial across partitions (measured).
 
 Up: [../map.md](../map.md).

@@ -25,3 +25,13 @@ On the native door (`repark.sql()`), `avg` and `mean` are DataFusion's `Avg`, wh
 The two are separate families on the same door. [DECIMAL-COMMON-TYPE-NATIVE-1](../decimal-common-type-1-side/decimal-common-type-native-1-card-2026-11-16.md) is the native door's common-type family. The sketch found that no existing card holds this one (sketch §4: "DECIMAL-COMMON-TYPE-NATIVE-1 is the common-type family only").
 
 Up: [map.md](map.md).
+
+## Append (2026-11-17, evening): the native door's sum-wrap answers (delta 1)
+
+Delta 1 measured the sum-wrap shapes on the native door (`repark.sql()`) against main and the head. Test `test_avg_decimal_sumwrap_native_door_records_divergence` (commit `46fac9af`) pins them. The head equals main on all nine native cells.
+
+- The wrapped answers stand: `0.0000` (grouped and global) and `100000.0000` (non-zero grouped). Spark answers NULL or raises on the same fixtures.
+- The window `avg` raises the old `Arithmetic Overflow in AvgAccumulator` text.
+- `try_avg` is unresolved on the native door (`UNRESOLVED_ROUTINE`).
+
+The Spark door's sum-wrap cells are closed by AVG-DECIMAL-ROUND-1 (PR #1355, open). The native door's remainder stays on this card.

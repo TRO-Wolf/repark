@@ -7,6 +7,7 @@ pub(crate) use shim_macros::shim_udf_boilerplate;
 pub mod aggregate;
 pub mod analyzer;
 pub mod ansi;
+mod avg_decimal;
 mod avg_groups;
 pub mod bitmap_agg;
 pub mod bool_decimal;
