@@ -4,5 +4,9 @@
   `resultType`, `add`, `initialValues`, `updateExpressions`, `mergeExpressions`, `evaluateExpression` and the
   one-argument constructor; `TrySumExpressionBuilder$.build`; `CheckOverflowInSum.eval`;
   `DecimalAddNoOverflowCheck.nullSafeEval`; `UnsafeRow.setDecimal`. Read in [../../sketch.md](../../sketch.md) §2.
+- `javap-revision.txt` — the revision's excerpts: `codegen.UnsafeRowWriter.write(int, Decimal, int, int)`, the
+  decimal write template `GenerateUnsafeProjection$` emits, and from the Iceberg 1.11.0 runtime jar
+  `SparkParquetWriters$FixedDecimalWriter.write` and `DecimalUtil.toReusedFixLengthBytes` (the per-value precision
+  check). Read in the sketch's §2 and the inventory's row I-5.
 
 Up: [../map.md](../map.md).

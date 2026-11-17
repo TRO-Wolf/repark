@@ -37,4 +37,27 @@
   is byte-identical); `cells.sum_sql_cells()` and `EXPLAIN_CELLS` return the same 1,837 and 8 statements before and
   after, so the committed probes are the ones that ran.
 
+## Provenance of the revision (2026-11-17, after the critic)
+
+- **The same builds:** main `6f80793b`, the package `pkg-avg-27d6149f` (every RePark run printed its
+  `<scratchpad>/ddu-work/pkg-avg-27d6149f/repark/_native.abi3.so`), PySpark 4.1.2, the same session settings and jar.
+  The critic's probes, raw cells and jar reads were read, never written, and none of its cells is reused.
+- **When and how:** under the shared measure lock on cores 58–63 with the 48 GiB cap, every Spark JVM through the
+  Spark slot, one command at a time: `run_revision.py` RePark on, RePark off, Spark on, Spark off, then
+  `crossread.py` with Spark on and off over both RePark warehouses. The Iceberg jar's size and modification time
+  were the same before and after, and so were the `spark-catalyst` jar's around the class extraction.
+- **Commands** (from `probes/`, `<wh>` a fresh scratch directory, `<jar>` the Iceberg runtime jar):
+  - `run_revision.py <spark|repark> <true|false> <wh> <jar> <out>/rev-<engine>-<ansi>.jsonl` (warehouse
+    `<wh>/rev-<engine>-<ansi>`);
+  - `crossread.py <true|false> <jar> <out>/rev-cross-<ansi>.jsonl <wh>/rev-repark-true <wh>/rev-repark-false`;
+  - `trim_revision.py ../raw/rev-*-{true,false}.jsonl` (once, on the files as written), then
+    `analyze_revision.py ../raw`.
+- **Jar readings:** `UnsafeRowWriter` and `GenerateUnsafeProjection$` unzipped from `spark-catalyst_2.13-4.1.2.jar`,
+  and `SparkParquetWriters$FixedDecimalWriter` and `DecimalUtil` from the Iceberg runtime jar, into a scratch
+  directory, then `javap -c -p` (and `-v` for the constant pool).
+- **Checked:** the revision's probes passed `ruff format` and `ruff check` before they ran; the one later change is
+  in `analyze_revision.py` (a skipped-key test written as a tuple, and the 220-character cut ending on a whole word),
+  which re-ran over the trimmed files with the same counts as before the trim.
+- Warehouses: under 10 MB in total, kept in the scratch directory.
+
 Up: [../map.md](../map.md).

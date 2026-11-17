@@ -3,7 +3,8 @@
 Main `6f80793b` (#1355 merged; its product tree equals `27d6149f`, package `pkg-avg-27d6149f`) against Spark 4.1.2,
 ANSI on and off. Every cell, its SQL or DataFrame form and both answers are in [evidence/raw/](evidence/raw/map.md);
 the probes that produced them are in [evidence/probes/](evidence/probes/map.md). Counts below come from
-`tables.py` over `raw/verdicts.jsonl`; the per-group letter grids are in `raw/grids.md`.
+`tables.py` over `raw/verdicts.jsonl`; the per-group letter grids are in `raw/grids.md`. **The revision** (after the
+critic's verdict) adds §12, counted apart, and corrects §6 and §9.
 
 **Verdicts.** `EQUAL`; **silent** = `SPARK_RAISES` (Spark raises, RePark answers) or `VALUE` (both answer,
 differently); **loud other** = `REPARK_RAISES` (RePark raises, Spark answers) or `BOTH_RAISE_OTHER` (both raise,
@@ -152,6 +153,9 @@ columns): `F.sum`, `GroupedData.sum`, `agg({c: "sum"})`, `F.expr("sum(c)")`, `se
 - Every `sum` form answers what the SQL door answers: 150 silent cells per mode (24 `X`, 24 `W`, 24 `w`, 24 `k`
   among the per-group cells; the all-group and window cells carry several values each).
 - `F.try_sum`: 30 cells, all equal (grouped; RePark's `try_sum` checks per row, as Spark's grouped buffer does).
+  The ungrouped form was not in this pass; the revision measured it (§12.1): it over-nulls as SQL `try_sum` does.
+- The revision adds the DataFrame forms step 0 lacked (§12.1): `pivot`, `rollup`, `cube`, `groupingSets`,
+  `F.call_function("sum")`. All silent.
 - `F.sum_distinct` (and `F.sumDistinct`) **do not exist** on RePark's facade: 30 cells raise `AttributeError`.
   Already on the FNP-AGG-1 list (PR #625, a draft, not merged); not this unit's.
 - `BIGINT` (`intdf/F.sum/g42`, `g44`): wraps with ANSI on where Spark raises (2 cells).
@@ -185,8 +189,13 @@ groups 1 and 7; `back` = groups 1, 10, 11): `CREATE TABLE … AS SELECT g, sum(c
    checks precision from each file's statistics after the file is written (inventory row I-3), so the file stays.
    `CTAS` and `MERGE` of the same source left no file holding such a value.
 
-No 39-digit value reaches a committed file: the writer refuses it. A wrapped value that lands inside 38 digits is
-committed. The `back` rows are exact values that Spark refuses (the sticky class); they are not wrong digits.
+**Corrected in the revision.** Step 0 wrote here that no 39-digit value reaches a committed file because the writer
+refuses it. That holds only for a column that collects bounds (`truncate`, the default, or `full`), and these cells
+ran with default properties. The fork checks decimal precision only from a file's min/max statistics (inventory
+I-3). Under `write.metadata.metrics.default` = `none` or `counts`, and in a table with no metrics property that is
+wider than 100 columns (column 101 onward), the 39-digit values **commit**, and Spark 4.1.2 then cannot scan those
+rows: §12.3. A wrapped value that lands inside 38 digits is committed under every mode. The `back` rows are exact
+values that Spark refuses (the sticky class); they are not wrong digits.
 
 ## 7. The native door (`repark.sql()`)
 
@@ -225,8 +234,9 @@ subquery, view, at `c10_2`, `c38_0`, `c38_38`, and every control cell.
 2. **Layout-dependent, 6 (on) / 8 (off).** Both engines check per row, on different row orders and partials:
    `try/grouped_p2/g23`, `g24`, `try/s4/g11`, `mp/try/s4/g11`. Neither answer is stable across layouts; pin none.
 
-Grouped `try_sum` of a pass-back group agrees (both NULL), and so does every sliding-frame `try_sum` (DataFusion
-re-scans the frame for an accumulator without retract, as WIN-SLIDE-1 recorded).
+Grouped `try_sum` of a pass-back group agrees (both NULL), and so does every sliding-frame `try_sum`: RePark's own
+analyzer rule `SlidingFrameReScan` (inventory A-9; WIN-SLIDE-1) re-sums the frame for an accumulator without
+retract. Step 0 credited this to DataFusion; it is RePark's rule (corrected in the revision).
 
 ## 10. Other causes measured beside (not this unit's)
 
@@ -251,3 +261,104 @@ re-scans the frame for an accumulator without retract, as WIN-SLIDE-1 recorded).
 - Every column over all groups: `grouped_all`, `empty_*`, `distinct_all`, `try_grouped_all`, `having_all`, the five
   window forms, and every DataFrame form.
 - One column (`c38_0`) for the CTE, the scalar subquery and the temp view (groups 1, 5, 6, 10), and `win_parallel`.
+
+## 12. The revision cells (2026-11-17, after the critic's verdict)
+
+Re-measured on the same main, package and Spark, both ANSI modes, by `probes/run_revision.py` (one engine and mode
+per run, table `s` as one Parquet file, the critic's shapes as named cells) and `probes/crossread.py` (Spark 4.1.2
+reading RePark's Iceberg tables); verdicts by `probes/analyze_revision.py` into `raw/rev-verdicts.jsonl`. The
+critic's own cells were read, not reused: every cell below ran here. Counts per mode:
+
+| group | cells | ANSI on: silent | equal | other | ANSI off: silent | equal | other |
+|---|---|---|---|---|---|---|---|
+| shapes (§12.1) | 60 | **52** (48 Spark raises, 4 `F.try_sum` over-nulls) | 8 | 0 | **52** | 8 | 0 |
+| views (§12.2; 7 `sum`, 3 `avg` controls) | 10 | 8 (7 `sum`, 1 `avg`) | 1 | 1 both raise | 7 (`sum`) | 1 | 1 both raise, 1 loud (`avg`) |
+| Iceberg statements (§12.3) | 22 | **14 commit** where Spark raises | 0 | 8 both raise, other condition | **14 commit** a value Spark stores as NULL | 0 | 8 loud (RePark refuses) |
+| observations, not this unit's (§12.5) | 7 | 0 | 0 | 7 | 2 (the `describe` notation) | 0 | 5 |
+
+### 12.1 The shapes step 0 missed (p = 38, `c38_0` and `c38_38` unless named)
+
+| cell | Spark (on / off) | RePark (both modes) | tag |
+|---|---|---|---|
+| `rev/rollup/g1_7`, `rev/gsets/g1_7` (`GROUPING SETS ((g), ())`), `rev/cube/g1_5` | `ARITHMETIC_OVERFLOW` / NULL in the group and total rows | the wrap (`w`) or `10^38` (`X`) in the group row, and the total row built on it | silent |
+| **`rev/rollup_total/g1_4`, `rev/gsets_total/g1_4`, `rev/cube_total/g1_4`**: every group fits (350 and M), only the `()` total passes | raises / NULL **in the total row only** | total `100000000000000000000000000000000000349` (39 digits; `1.00…0349` at scale 38) | silent, X |
+| `rev/df_rollup/g1_7`, `rev/df_rollup_total/g1_4`, `rev/df_cube_total/g1_4`, `rev/df_gsets_total/g1_4` (DataFrame, lowered to SQL, inventory R-8) | as SQL | as SQL | silent |
+| `rev/df_pivot/g1_7`, `rev/df_pivot_agg/g1_7` (`groupBy().pivot("g", [1, 7])`, R-9) | raises / `[350, NULL]` | `[350, -40282366920938463463374607431768211459]` | silent, w |
+| `rev/df_call_function/g7`, `rev/df_call_function_ungrouped/g5` (R-10) | raises / NULL | the wrap, `10^38` | silent |
+| `rev/filter/g5` (`sum(x) FILTER (WHERE g = 5)`), `rev/filter_grouped/g7` | raises / NULL | `10^38`, the wrap | silent |
+| `rev/sum_case/g5/c38_0`, `rev/sum_case_grouped/g7` | raises / NULL | `10^38`, the wrap | silent |
+| `rev/sum_case/g5/c38_38` (`CASE … ELSE 0`: the common type is `decimal(38,28)`) | `1.0000000000000000000000000000` | the same | equal (control) |
+| `rev/sum_mul1/g5`, `rev/sum_mul1_grouped/g7` (`sum(c38_0 * 1)`) | raises / NULL | `10^38`, the wrap | silent |
+| `rev/cast_dbl/g7` (`sum(CAST(CAST('5e37' AS DOUBLE) AS DECIMAL(38,0)))`, three rows), `rev/cast_dbl_col/g7` (`CAST(c38_0 AS DOUBLE) / 2`), `rev/cast_dbl_grouped/g6` (`9e37`, two rows) | raises / NULL | `150000000000000000000000000000000000000` (X), the same, `-160282366920938463463374607431768211456` (W) | silent |
+| **`rev/having_lt/g1_7`** (`HAVING sum(x) < 0`) | raises / no row | **keeps group 7**: the wrap is negative | silent, a wrong row |
+| `rev/having_gt/all` (`HAVING sum(x) > 0`, every group) | raises / groups 1, 2, 4, 12, 13, 14 | adds groups 5, 9, 10, 11 (at `c38_38` both engines also drop 14: the comparison's common type rounds `10^-38` to 0) | silent |
+| `rev/distinct_mixed/g5` (`sum(DISTINCT x), count(y)`), `rev/distinct_two/g5` (two distinct arguments) | `ARITHMETIC_OVERFLOW` / NULL | `10^38` (inventory A-5) | silent, X |
+| `rev/distinct_mixed_ungrouped/g5` | **`NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION`** / NULL | `10^38` | silent, X; Spark's other condition (Q6) |
+| `rev/distinct_mixed/g7` (`sum(DISTINCT x)` of three equal values, `sum(c10_2)`) | M, `299999999.97` | the same | equal (control) |
+| **`rev/union/g4_14`** (ungrouped `sum` over `UNION ALL` of `M` and `1`; Spark: 2 partitions, `data/union_parts`) | **`NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION`** / NULL | `10^38` | silent, X; both partials fit, the total does not (Q6) |
+| `rev/union_partial/g5_14` (one leg's partial passes) | `ARITHMETIC_OVERFLOW` / NULL | `10^38 + 1` | silent, X |
+| `rev/union_grouped/g4_14` | `ARITHMETIC_OVERFLOW` / NULL | `10^38` | silent, X |
+| `rev/df_try_sum_ungrouped/g10`, `g11` × `c38_0`, `c38_38` (DataFrame `agg(F.try_sum(c))`, no grouping) | `5`, M, `5·10^-38`, `0.99…9` | NULL | silent, over-null (§9 kind 1) |
+| `rev/df_try_sum_grouped/*` (the same four, grouped), `rev/df_try_sum_ungrouped/g5` | NULL | NULL | equal |
+
+### 12.2 Views across an ANSI flip (TEMP-VIEW-SESSION-SETTINGS-1)
+
+Each run creates `v_sum` (SQL), `v_dfsum` (a DataFrame's temp view) and `v_avg` in its mode, reads them, flips
+`spark.sql.ansi.enabled`, and reads them again (`conf/ansi_flipped`, `conf/ansi_restored` record the flag).
+
+| cell | created on, read off: Spark / RePark | created off, read on: Spark / RePark |
+|---|---|---|
+| `rev/view_flip/g5`, `g7` (SQL view of `sum`) | `ARITHMETIC_OVERFLOW` (the view keeps "on") / `10^38`, the wrap | NULL (keeps "off") / `10^38`, the wrap |
+| `rev/dfview_flip/g5`, `g7` (DataFrame-made view) | the same as SQL | the same as SQL |
+| `rev/view_flip_avg/g5` (`avg`, which has the ANSI arm today) | `ARITHMETIC_OVERFLOW` / **NULL** | NULL / **`ARITHMETIC_OVERFLOW`** |
+| `rev/flip_direct/g5` (a plain `sum` in the flipped mode) | NULL / `10^38` | `ARITHMETIC_OVERFLOW` / `10^38` |
+
+`sum` answers its wrap in every view cell today, because it has no ANSI arm. `avg` shows what A3 will make of `sum`:
+RePark follows the **reading** session where Spark keeps the creating one, for SQL and DataFrame-made views alike.
+That is TEMP-VIEW-SESSION-SETTINGS-1's class
+([card](../../roadmap/mid-term/temp-view-session-settings-1-card-2026-11-02.md)); sketch §6 says why no Q7.
+
+### 12.3 Iceberg: the metrics modes and the wide table
+
+Source `SELECT g, sum(c) AS s FROM s WHERE g IN (1, 5, 6) GROUP BY g`: group 1 = 350, group 5 = `10^38` (39
+digits), group 6 = `-140282366920938463463374607431768211458` (the 39-digit wrap of `2·10^38 − 2`). Tables carry
+`'write.metadata.metrics.default'` = `none`, `counts` or `full`; MERGE tables are format v2 with that property and
+copy-on-write or merge-on-read. The wide tables carry no metrics property: `g`, then `z001…` integer columns, then
+`s` as column 100 (`wide100`) or 101 (`wide101`, `ice/wide101/columns` = 101).
+
+| statement | ANSI on: Spark / RePark | ANSI off: Spark / RePark | stored by RePark |
+|---|---|---|---|
+| `ice/insert/metrics_none/c38_0`, `metrics_counts`; `ice/ctas/…`; `ice/merge_cow/…`; `ice/merge_mor/…` (8) | `ARITHMETIC_OVERFLOW` / **commits** | stores `350, NULL, NULL` / **commits** | `350`, `100000000000000000000000000000000000000`, `-140282366920938463463374607431768211458`, in the table and in the data files (copy-on-write and insert files read with `pyarrow`) |
+| `ice/insert/metrics_{none,counts}/c38_38`, `ice/ctas/…/c38_38` (4) | the same | the same | `1.00000000000000000000000000000000000000`, `-1.40282366920938463463374607431768211458` at `decimal(38,38)` |
+| **`ice/ctas/wide101/c38_0`, `ice/insert/wide101/c38_0`** (2, default properties) | the same | the same | the same three values |
+| `ice/{insert,ctas,merge_cow,merge_mor}/metrics_full/c38_0`, `ice/{insert,ctas}/metrics_full/c38_38` (6); `ice/{ctas,insert}/wide100/c38_0` (2) | both raise: RePark `DataInvalid … too large for precision 38` | Spark stores NULLs / RePark raises | nothing committed; the three `INSERT`s (`metrics_full` × 2, `wide100`) leave orphan data files holding the 39-digit values, as §6's `ice/insert/all`; the MERGEs leave none |
+
+**Committed wrong writes in the revision: 14 per mode**, every one a 39-digit value in a `decimal(38, s)` column.
+With ANSI off the statements themselves agree (`ok` on both), so `analyze_revision.py` scores them `EQUAL` and the
+difference sits in their `…/readback` verdicts (`VALUE`).
+Reading a merge-on-read table's files one by one stops at its position-delete file (no `s` column); its read-back and
+Spark's cross-read below are the evidence there.
+
+### 12.4 Spark reads RePark's tables
+
+`crossread.py` points a hadoop catalog at each RePark warehouse (written with ANSI on, and off) and runs, in Spark
+4.1.2 with ANSI on and again off: `SELECT g, s`, `… WHERE g = 1`, `count(*)`, `… WHERE s > 0`
+(`raw/rev-cross-{true,false}.jsonl`, 176 queries per Spark mode).
+
+- **Every one of the 28 tables holding a committed 39-digit value** (14 per RePark mode) fails `SELECT g, s` and
+  `WHERE s > 0` with `[NUMERIC_VALUE_OUT_OF_RANGE.WITHOUT_SUGGESTION] The 100000000000000000000000000000000000000
+  rounded half up from … cannot be represented as Decimal(38, 0)`, **with Spark's ANSI on and off alike**.
+- `WHERE g = 1` answers (the file holding only 350 is read alone) and `count(*)` answers 3: the table is listed,
+  counted and partly readable, and any scan that touches a bad row fails.
+- The 10 tables with no such value read normally (the refused `INSERT`s are empty, the refused MERGEs hold their
+  first row); the 6 refused CTAS never existed.
+
+### 12.5 Seen beside, not this unit's
+
+| cell | Spark (on / off) | RePark (both modes) | card |
+|---|---|---|---|
+| `obs/pivot_sql/g1_7` (SQL `PIVOT`) | `ARITHMETIC_OVERFLOW` / `[350, NULL]` | `Unsupported ast node Pivot` | none found (`grep` of the roadmap and registry; PIVOT-COLUMN-ORDER-1 is the DataFrame pivot's column order) |
+| `obs/caststr_lit` (`CAST('10^30' AS DECIMAL(34,4))`) | `NUMERIC_VALUE_OUT_OF_RANGE` / NULL | `simplify_expressions` failed: Arrow `Invalid argument` | DECIMAL-LITERAL-OVERFLOW-1 (the literal refused at planning) |
+| `obs/caststr_col`, `obs/caststr_col_sum` (the same from a string column) | `NUMERIC_VALUE_OUT_OF_RANGE` / `[5.0000, NULL]` | Arrow `Invalid argument … too large to store in a Decimal128 of precision 34` | none exact: STRING-CAST-LENIENT-1 covers unparsable texts, not an out-of-range number |
+| `obs/summary/g5` (`summary()`) | the percentile table (off) | `UnsupportedOperationException` | registry EX-DF-15 |
+| `obs/describe/g5`, `g13`, ANSI off | `stddev` `7.071067811865475E37` | `7.071067811865475e37` | none found; the AVG-DECIMAL-ROUND-1 card counts 4 `describe` text cells, likely the same notation |

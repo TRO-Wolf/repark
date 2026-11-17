@@ -15,4 +15,10 @@ owner's ruling of 2026-11-17 (evening), as the orchestrator reads it. Measured o
   the seat: yes / no, because", with file:line and how it was searched.
 - [evidence/](evidence/map.md) — the probes, the raw cells and verdicts, the `javap` excerpts, the provenance.
 
+**Revised 2026-11-17** after the critic's verdict (GAPS): the Iceberg writer checks precision only from bounds, so
+39-digit values commit under `none` / `counts` and past column 100 (proposed card ICE-DECIMAL-WRITE-PRECISION-1),
+the missing seats (`SlidingFrameReScan`, the DataFrame grouping-set, pivot and `call_function` routes), the grouped
+marker (Q2), the missed shapes, the view cells, the cost list and the observations; sketch §9 records where it
+agrees and disagrees with the critic.
+
 Up: [../map.md](../map.md).

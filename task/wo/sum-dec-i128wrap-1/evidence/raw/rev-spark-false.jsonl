@@ -1,0 +1,151 @@
+{"key": "provenance", "ansi": "false", "engine": "spark", "version": "4.1.2", "jar": "org.apache.iceberg_iceberg-spark-runtime-4.1_2.13-1.11.0.jar", "result": null}
+{"key": "conf/ansi", "result": "false"}
+{"key": "rev/rollup/g1_7/c38_0", "result": {"rows": [["1", "350"], ["7", "null"], ["null", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 990.8}
+{"key": "rev/gsets/g1_7/c38_0", "result": {"rows": [["1", "350"], ["7", "null"], ["null", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 193.4}
+{"key": "rev/cube/g1_5/c38_0", "result": {"rows": [["1", "350"], ["5", "null"], ["null", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 236.3}
+{"key": "rev/rollup_total/g1_4/c38_0", "result": {"rows": [["1", "350"], ["4", "99999999999999999999999999999999999999"], ["null", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 194.6}
+{"key": "rev/gsets_total/g1_4/c38_0", "result": {"rows": [["1", "350"], ["4", "99999999999999999999999999999999999999"], ["null", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 149.7}
+{"key": "rev/cube_total/g1_4/c38_0", "result": {"rows": [["1", "350"], ["4", "99999999999999999999999999999999999999"], ["null", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 170.6}
+{"key": "rev/filter/g5/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 145.6}
+{"key": "rev/filter_grouped/g7/c38_0", "result": {"rows": [["7", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 191.6}
+{"key": "rev/sum_case/g5/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 155.5}
+{"key": "rev/sum_case_grouped/g7/c38_0", "result": {"rows": [["7", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 150.8}
+{"key": "rev/having_lt/g1_7/c38_0", "result": {"rows": [], "types": ["int"]}, "ms": 194.2}
+{"key": "rev/having_gt/all/c38_0", "result": {"rows": [["1"], ["2"], ["4"], ["12"], ["13"], ["14"]], "types": ["int"]}, "ms": 174.7}
+{"key": "rev/distinct_two/g5/c38_0", "result": {"rows": [["5", "null", "null"]], "types": ["int", "decimal(38,0)", "decimal(38,10)"]}, "ms": 364.8}
+{"key": "rev/distinct_mixed/g5/c38_0", "result": {"rows": [["5", "null", "2"]], "types": ["int", "decimal(38,0)", "bigint"]}, "ms": 259.9}
+{"key": "rev/distinct_mixed/g7/c38_0", "result": {"rows": [["7", "99999999999999999999999999999999999999", "299999999.97"]], "types": ["int", "decimal(38,0)", "decimal(20,2)"]}, "ms": 243.2}
+{"key": "rev/distinct_mixed_ungrouped/g5/c38_0", "result": {"rows": [["null", "2"]], "types": ["decimal(38,0)", "bigint"]}, "ms": 200.8}
+{"key": "rev/union/g4_14/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 200.8}
+{"key": "rev/union_partial/g5_14/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 128.2}
+{"key": "rev/union_grouped/g4_14/c38_0", "result": {"rows": [["1", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 214.1}
+{"key": "rev/rollup/g1_7/c38_38", "result": {"rows": [["1", "0.00000000000000000000000000000000000350"], ["7", "null"], ["null", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 134.4}
+{"key": "rev/gsets/g1_7/c38_38", "result": {"rows": [["1", "0.00000000000000000000000000000000000350"], ["7", "null"], ["null", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 93.4}
+{"key": "rev/cube/g1_5/c38_38", "result": {"rows": [["1", "0.00000000000000000000000000000000000350"], ["5", "null"], ["null", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 114.5}
+{"key": "rev/rollup_total/g1_4/c38_38", "result": {"rows": [["1", "0.00000000000000000000000000000000000350"], ["4", "0.99999999999999999999999999999999999999"], ["null", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 117.6}
+{"key": "rev/gsets_total/g1_4/c38_38", "result": {"rows": [["1", "0.00000000000000000000000000000000000350"], ["4", "0.99999999999999999999999999999999999999"], ["null", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 100.4}
+{"key": "rev/cube_total/g1_4/c38_38", "result": {"rows": [["1", "0.00000000000000000000000000000000000350"], ["4", "0.99999999999999999999999999999999999999"], ["null", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 109.8}
+{"key": "rev/filter/g5/c38_38", "result": {"rows": [["null"]], "types": ["decimal(38,38)"]}, "ms": 129.1}
+{"key": "rev/filter_grouped/g7/c38_38", "result": {"rows": [["7", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 126.8}
+{"key": "rev/sum_case/g5/c38_38", "result": {"rows": [["1.0000000000000000000000000000"]], "types": ["decimal(38,28)"]}, "ms": 117.7}
+{"key": "rev/sum_case_grouped/g7/c38_38", "result": {"rows": [["7", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 114.6}
+{"key": "rev/having_lt/g1_7/c38_38", "result": {"rows": [], "types": ["int"]}, "ms": 142.6}
+{"key": "rev/having_gt/all/c38_38", "result": {"rows": [["1"], ["2"], ["4"], ["12"], ["13"]], "types": ["int"]}, "ms": 115.8}
+{"key": "rev/distinct_two/g5/c38_38", "result": {"rows": [["5", "null", "null"]], "types": ["int", "decimal(38,38)", "decimal(38,10)"]}, "ms": 221.0}
+{"key": "rev/distinct_mixed/g5/c38_38", "result": {"rows": [["5", "null", "2"]], "types": ["int", "decimal(38,38)", "bigint"]}, "ms": 219.0}
+{"key": "rev/distinct_mixed/g7/c38_38", "result": {"rows": [["7", "0.99999999999999999999999999999999999999", "299999999.97"]], "types": ["int", "decimal(38,38)", "decimal(20,2)"]}, "ms": 186.9}
+{"key": "rev/distinct_mixed_ungrouped/g5/c38_38", "result": {"rows": [["null", "2"]], "types": ["decimal(38,38)", "bigint"]}, "ms": 142.9}
+{"key": "rev/union/g4_14/c38_38", "result": {"rows": [["null"]], "types": ["decimal(38,38)"]}, "ms": 142.0}
+{"key": "rev/union_partial/g5_14/c38_38", "result": {"rows": [["null"]], "types": ["decimal(38,38)"]}, "ms": 113.1}
+{"key": "rev/union_grouped/g4_14/c38_38", "result": {"rows": [["1", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 163.2}
+{"key": "rev/sum_mul1/g5/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 111.8}
+{"key": "rev/sum_mul1_grouped/g7/c38_0", "result": {"rows": [["7", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 115.5}
+{"key": "rev/cast_dbl/g7", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 93.1}
+{"key": "rev/cast_dbl_grouped/g6", "result": {"rows": [["6", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 99.3}
+{"key": "rev/cast_dbl_col/g7", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 91.4}
+{"key": "data/union_parts", "result": 2, "ms": 51.3}
+{"key": "rev/df_pivot/g1_7/c38_0", "result": {"rows": [["350", "null"]], "types": ["decimal(38,0)", "decimal(38,0)"]}, "ms": 256.0}
+{"key": "rev/df_pivot_agg/g1_7/c38_0", "result": {"rows": [["350", "null"]], "types": ["decimal(38,0)", "decimal(38,0)"]}, "ms": 123.2}
+{"key": "rev/df_rollup/g1_7/c38_0", "result": {"rows": [["1", "350"], ["7", "null"], ["null", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 118.3}
+{"key": "rev/df_rollup_total/g1_4/c38_0", "result": {"rows": [["1", "350"], ["4", "99999999999999999999999999999999999999"], ["null", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 109.3}
+{"key": "rev/df_cube_total/g1_4/c38_0", "result": {"rows": [["1", "350"], ["4", "99999999999999999999999999999999999999"], ["null", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 92.0}
+{"key": "rev/df_gsets_total/g1_4/c38_0", "result": {"rows": [["1", "350"], ["4", "99999999999999999999999999999999999999"], ["null", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 86.0}
+{"key": "rev/df_call_function/g7/c38_0", "result": {"rows": [["7", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 83.2}
+{"key": "rev/df_call_function_ungrouped/g5/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 81.1}
+{"key": "rev/df_try_sum_ungrouped/g10/c38_0", "result": {"rows": [["5"]], "types": ["decimal(38,0)"]}, "ms": 114.0}
+{"key": "rev/df_try_sum_grouped/g10/c38_0", "result": {"rows": [["10", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 101.8}
+{"key": "rev/df_try_sum_ungrouped/g11/c38_0", "result": {"rows": [["99999999999999999999999999999999999999"]], "types": ["decimal(38,0)"]}, "ms": 75.8}
+{"key": "rev/df_try_sum_grouped/g11/c38_0", "result": {"rows": [["11", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 104.2}
+{"key": "rev/df_try_sum_ungrouped/g10/c38_38", "result": {"rows": [["0.000000000000000000000000000000000000050"]], "types": ["decimal(38,38)"]}, "ms": 85.4}
+{"key": "rev/df_try_sum_grouped/g10/c38_38", "result": {"rows": [["10", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 102.0}
+{"key": "rev/df_try_sum_ungrouped/g11/c38_38", "result": {"rows": [["0.99999999999999999999999999999999999999"]], "types": ["decimal(38,38)"]}, "ms": 72.8}
+{"key": "rev/df_try_sum_grouped/g11/c38_38", "result": {"rows": [["11", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 108.2}
+{"key": "rev/df_try_sum_ungrouped/g5/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 66.1}
+{"key": "rev/view_same/g5/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 114.9}
+{"key": "rev/view_same/g7/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 76.3}
+{"key": "rev/view_same_avg/g5/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,4)"]}, "ms": 117.1}
+{"key": "conf/ansi_flipped", "result": "true"}
+{"key": "rev/view_flip/g5/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 99.2}
+{"key": "rev/dfview_flip/g5/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 83.2}
+{"key": "rev/view_flip/g7/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 73.7}
+{"key": "rev/dfview_flip/g7/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,0)"]}, "ms": 71.0}
+{"key": "rev/view_flip_avg/g5/c38_0", "result": {"rows": [["null"]], "types": ["decimal(38,4)"]}, "ms": 123.4}
+{"key": "rev/flip_direct/g5/c38_0", "result": "ERR:ArithmeticException:ARITHMETIC_OVERFLOW:[ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003", "ms": 119.1}
+{"key": "rev/flip_direct_avg/g5/c38_0", "result": "ERR:ArithmeticException:ARITHMETIC_OVERFLOW:[ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003", "ms": 115.5}
+{"key": "conf/ansi_restored", "result": "false"}
+{"key": "obs/pivot_sql/g1_7", "result": {"rows": [["350", "null"]], "types": ["decimal(38,0)", "decimal(38,0)"]}, "ms": 98.8}
+{"key": "obs/caststr_lit", "result": {"rows": [["null"]], "types": ["decimal(34,4)"]}, "ms": 38.7}
+{"key": "obs/caststr_col", "result": {"rows": [["5.0000"], ["null"]], "types": ["decimal(34,4)"]}, "ms": 130.0}
+{"key": "obs/caststr_col_sum", "result": {"rows": [["5.0000"]], "types": ["decimal(38,4)"]}, "ms": 158.5}
+{"key": "obs/summary/g5", "result": {"rows": [["25%", "1.0"], ["50%", "1.0"], ["75%", "100000000000000000000000000000000000000"], ["count", "2"], ["max", "99999999999999999999999999999999999999"], ["mean", "null"], ["min", "1"], ["stddev", "7.071067811865475E37"]], "types": ["string", "string"]}, "ms": 224.4}
+{"key": "obs/describe/g5", "result": {"rows": [["count", "2"], ["max", "99999999999999999999999999999999999999"], ["mean", "null"], ["min", "1"], ["stddev", "7.071067811865475E37"]], "types": ["string", "string"]}, "ms": 141.9}
+{"key": "obs/describe/g13", "result": {"rows": [["count", "2"], ["max", "99999999999999999999999999999999999999"], ["mean", "null"], ["min", "-1"], ["stddev", "7.071067811865475E37"]], "types": ["string", "string"]}, "ms": 113.3}
+{"key": "ice/insert/metrics_none/c38_0", "result": ["ok", "ok"]}
+{"key": "ice/insert/metrics_none/c38_0/readback", "result": {"rows": [["1", "350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 332.6}
+{"key": "ice/insert/metrics_none/c38_0/files", "result": [["350", "null", "null"]]}
+{"key": "ice/ctas/metrics_none/c38_0", "result": ["ok"]}
+{"key": "ice/ctas/metrics_none/c38_0/readback", "result": {"rows": [["1", "350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 50.3}
+{"key": "ice/ctas/metrics_none/c38_0/files", "result": [["350", "null", "null"]]}
+{"key": "ice/merge_cow/metrics_none/c38_0", "result": ["ok", "ok", "ok"]}
+{"key": "ice/merge_cow/metrics_none/c38_0/readback", "result": {"rows": [["1", "350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 50.7}
+{"key": "ice/merge_cow/metrics_none/c38_0/files", "result": [["0"], ["350", "null", "null"]]}
+{"key": "ice/merge_mor/metrics_none/c38_0", "result": ["ok", "ok", "ok"]}
+{"key": "ice/merge_mor/metrics_none/c38_0/readback", "result": {"rows": [["1", "350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 107.3}
+{"key": "ice/merge_mor/metrics_none/c38_0/files", "result": "ERR:KeyError:None:'Field \"s\" does not exist in"}
+{"key": "ice/insert/metrics_counts/c38_0", "result": ["ok", "ok"]}
+{"key": "ice/insert/metrics_counts/c38_0/readback", "result": {"rows": [["1", "350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 59.9}
+{"key": "ice/insert/metrics_counts/c38_0/files", "result": [["350", "null", "null"]]}
+{"key": "ice/ctas/metrics_counts/c38_0", "result": ["ok"]}
+{"key": "ice/ctas/metrics_counts/c38_0/readback", "result": {"rows": [["1", "350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 57.8}
+{"key": "ice/ctas/metrics_counts/c38_0/files", "result": [["350", "null", "null"]]}
+{"key": "ice/merge_cow/metrics_counts/c38_0", "result": ["ok", "ok", "ok"]}
+{"key": "ice/merge_cow/metrics_counts/c38_0/readback", "result": {"rows": [["1", "350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 44.3}
+{"key": "ice/merge_cow/metrics_counts/c38_0/files", "result": [["0"], ["350", "null", "null"]]}
+{"key": "ice/merge_mor/metrics_counts/c38_0", "result": ["ok", "ok", "ok"]}
+{"key": "ice/merge_mor/metrics_counts/c38_0/readback", "result": {"rows": [["1", "350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 80.8}
+{"key": "ice/merge_mor/metrics_counts/c38_0/files", "result": "ERR:KeyError:None:'Field \"s\" does not exist in"}
+{"key": "ice/insert/metrics_full/c38_0", "result": ["ok", "ok"]}
+{"key": "ice/insert/metrics_full/c38_0/readback", "result": {"rows": [["1", "350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 42.1}
+{"key": "ice/insert/metrics_full/c38_0/files", "result": [["350", "null", "null"]]}
+{"key": "ice/ctas/metrics_full/c38_0", "result": ["ok"]}
+{"key": "ice/ctas/metrics_full/c38_0/readback", "result": {"rows": [["1", "350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 58.2}
+{"key": "ice/ctas/metrics_full/c38_0/files", "result": [["350", "null", "null"]]}
+{"key": "ice/merge_cow/metrics_full/c38_0", "result": ["ok", "ok", "ok"]}
+{"key": "ice/merge_cow/metrics_full/c38_0/readback", "result": {"rows": [["1", "350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 37.5}
+{"key": "ice/merge_cow/metrics_full/c38_0/files", "result": [["0"], ["350", "null", "null"]]}
+{"key": "ice/merge_mor/metrics_full/c38_0", "result": ["ok", "ok", "ok"]}
+{"key": "ice/merge_mor/metrics_full/c38_0/readback", "result": {"rows": [["1", "350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,0)"]}, "ms": 87.1}
+{"key": "ice/merge_mor/metrics_full/c38_0/files", "result": "ERR:KeyError:None:'Field \"s\" does not exist in"}
+{"key": "ice/insert/metrics_none/c38_38", "result": ["ok", "ok"]}
+{"key": "ice/insert/metrics_none/c38_38/readback", "result": {"rows": [["1", "0.00000000000000000000000000000000000350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 68.6}
+{"key": "ice/insert/metrics_none/c38_38/files", "result": [["0.00000000000000000000000000000000000350", "null", "null"]]}
+{"key": "ice/ctas/metrics_none/c38_38", "result": ["ok"]}
+{"key": "ice/ctas/metrics_none/c38_38/readback", "result": {"rows": [["1", "0.00000000000000000000000000000000000350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 38.1}
+{"key": "ice/ctas/metrics_none/c38_38/files", "result": [["0.00000000000000000000000000000000000350", "null", "null"]]}
+{"key": "ice/insert/metrics_counts/c38_38", "result": ["ok", "ok"]}
+{"key": "ice/insert/metrics_counts/c38_38/readback", "result": {"rows": [["1", "0.00000000000000000000000000000000000350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 35.0}
+{"key": "ice/insert/metrics_counts/c38_38/files", "result": [["0.00000000000000000000000000000000000350", "null", "null"]]}
+{"key": "ice/ctas/metrics_counts/c38_38", "result": ["ok"]}
+{"key": "ice/ctas/metrics_counts/c38_38/readback", "result": {"rows": [["1", "0.00000000000000000000000000000000000350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 51.0}
+{"key": "ice/ctas/metrics_counts/c38_38/files", "result": [["0.00000000000000000000000000000000000350", "null", "null"]]}
+{"key": "ice/insert/metrics_full/c38_38", "result": ["ok", "ok"]}
+{"key": "ice/insert/metrics_full/c38_38/readback", "result": {"rows": [["1", "0.00000000000000000000000000000000000350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 45.6}
+{"key": "ice/insert/metrics_full/c38_38/files", "result": [["0.00000000000000000000000000000000000350", "null", "null"]]}
+{"key": "ice/ctas/metrics_full/c38_38", "result": ["ok"]}
+{"key": "ice/ctas/metrics_full/c38_38/readback", "result": {"rows": [["1", "0.00000000000000000000000000000000000350"], ["5", "null"], ["6", "null"]], "types": ["int", "decimal(38,38)"]}, "ms": 49.4}
+{"key": "ice/ctas/metrics_full/c38_38/files", "result": [["0.00000000000000000000000000000000000350", "null", "null"]]}
+{"key": "ice/ctas/wide100/c38_0", "result": ["ok"]}
+{"key": "ice/ctas/wide100/c38_0/readback", "result": {"rows": [["1", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "350"], ["5", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "null"], ["6", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "null"]], "types": ["int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "decimal(38,0)"]}, "ms": 139.8}
+{"key": "ice/ctas/wide100/c38_0/files", "result": [["350", "null", "null"]]}
+{"key": "ice/insert/wide100/c38_0", "result": ["ok", "ok"]}
+{"key": "ice/insert/wide100/c38_0/readback", "result": {"rows": [["1", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "350"], ["5", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "null"], ["6", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "null"]], "types": ["int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "decimal(38,0)"]}, "ms": 74.6}
+{"key": "ice/insert/wide100/c38_0/files", "result": [["350", "null", "null"]]}
+{"key": "ice/wide100/columns", "result": 100, "ms": 4.8}
+{"key": "ice/ctas/wide101/c38_0", "result": ["ok"]}
+{"key": "ice/ctas/wide101/c38_0/readback", "result": {"rows": [["1", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "350"], ["5", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "null"], ["6", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "null"]], "types": ["int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "decimal(38,0)"]}, "ms": 91.4}
+{"key": "ice/ctas/wide101/c38_0/files", "result": [["350", "null", "null"]]}
+{"key": "ice/insert/wide101/c38_0", "result": ["ok", "ok"]}
+{"key": "ice/insert/wide101/c38_0/readback", "result": {"rows": [["1", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "350"], ["5", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "null"], ["6", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "null"]], "types": ["int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "int", "decimal(38,0)"]}, "ms": 76.5}
+{"key": "ice/insert/wide101/c38_0/files", "result": [["350", "null", "null"]]}
+{"key": "ice/wide101/columns", "result": 101, "ms": 5.5}
+{"key": "warehouse", "result": "<scratchpad>/sum-rev/wh/rev-spark-false"}

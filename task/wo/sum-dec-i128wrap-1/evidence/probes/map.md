@@ -19,6 +19,16 @@ Run from this directory; `cells` and `lib` are imported by the runners. Commands
   value against the exact sum (wrapped or exact, inside or past the type) and the stored files (committed or
   orphan); writes `verdicts.jsonl`, `summary.md` and `grids.md`.
 - `tables.py` — the domain table's counts from `verdicts.jsonl`.
+- `run_revision.py` — the revision (after the critic), one engine and one ANSI mode: table `s` as one Parquet file,
+  the missed shapes (grouping sets and totals, `FILTER`, `CASE`, `* 1`, the `DOUBLE` cast, `HAVING < 0`, the mixed
+  `DISTINCT`, `UNION ALL`), the DataFrame `pivot`, `rollup`, `cube`, `groupingSets`, `call_function` and ungrouped
+  `F.try_sum`, the views across an ANSI flip, the observations, RePark's EXPLAIN VERBOSE of seven window forms, and
+  the Iceberg statements under each metrics mode and at 100 and 101 columns, with the read-back and the files.
+- `crossread.py` — Spark reads every Iceberg table in RePark's revision warehouses (four queries per table).
+- `trim_revision.py` — trims the revision's raw files in place: Spark's quoted SQL fragment (` == SQL …`) is cut from
+  each error, and the last, possibly cut, word from every other error and from every EXPLAIN line.
+- `analyze_revision.py` — pairs the revision's cells, writes `rev-verdicts.jsonl` and prints the counts of the
+  domain table §12.
 - `compact.py` — copies the raw outputs into [../raw/](../raw/map.md) without SQL text or timings, with scratch paths
   replaced by `<scratchpad>` (the avg unit's, with one more pattern for the paths in truncated plans).
 

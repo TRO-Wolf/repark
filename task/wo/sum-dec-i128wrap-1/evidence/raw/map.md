@@ -11,6 +11,10 @@ the SQL text is rebuilt from the key by `../probes/cells.py`. Scratch paths read
 - `native.jsonl` — the native door's sample (594 records).
 - `verdicts.jsonl` — one verdict per paired cell (6,252), with both answers for every non-equal cell and every
   Iceberg statement, the value tags and the file tags.
+- `rev-spark-true.jsonl`, `rev-spark-false.jsonl`, `rev-repark-true.jsonl`, `rev-repark-false.jsonl` — the revision's
+  cells (`rev/…`, `ice/…`, `obs/…`, `explain/…`, `route/…`), with no scratch paths in them, trimmed by `../probes/trim_revision.py`.
+- `rev-cross-true.jsonl`, `rev-cross-false.jsonl` — Spark's reads of RePark's revision tables, per Spark ANSI mode.
+- `rev-verdicts.jsonl` — one verdict per revision cell and mode, with both answers.
 - `summary.md` — verdict counts per run, mode, family, door and position, with tag counts.
 - `grids.md` — the group-by-column letter grids per run, mode, family, door and position.
 
