@@ -6,5 +6,9 @@
   `ViewHelper$.createTemporaryViewRelation`, and which of `prepareTemporaryView`,
   `prepareTemporaryViewStoringAnalyzedPlan` and `generateViewProperties` reach `sqlConfigsToProps`. Read in
   [../../sketch.md](../../sketch.md) §2.
+- `javap-current-time.txt` — the revision's excerpts: `ComputeCurrentTime`'s match arms (`CurrentDate` and
+  `LocalTimestamp` folded with the expression's `zoneId`, `CurrentTimeZone` replaced by the `timezone$1` literal built
+  from the optimizer's `conf.sessionLocalTimeZone`) and `ReplaceCurrentLike`'s (`CurrentDatabase`, `CurrentCatalog`,
+  `CurrentUser` only). Read in sketch §2.
 
 Up: [../map.md](../map.md).

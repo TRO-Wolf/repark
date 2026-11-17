@@ -2,7 +2,7 @@
 
 - [probes/](probes/map.md) — the cell definitions, the runners and the analysis (comment-free Python).
 - [raw/](raw/map.md) — one JSON object per cell and engine, the verdicts, the headline, the summary, the plans.
-- [jar/](jar/map.md) — the `javap -c -p` excerpts of Spark 4.1.2's view-capture classes.
+- [jar/](jar/map.md) — the `javap -c -p` excerpts of Spark 4.1.2's view-capture and current-time classes.
 
 ## Provenance
 
@@ -36,5 +36,16 @@
   - `explain.py <spark|repark> <wh> <jar> <out>/explain-<spark|main>.txt`;
   - `run_cs.py <spark|repark> <wh> <jar> <out>/cs-<spark|main>.json`;
   - `compact.py <out> ../raw`, then `analyze.py ../raw ../raw`.
+- **Revision (2026-11-17, after the critic):** main `6f80793b`'s package `pkg-avg-27d6149f` (built from `27d6149f`, the
+  head #1355 merged; its product tree equals main's), the same interpreter rules (every run printed
+  `<scratchpad>/ddu-work/pkg-avg-27d6149f/repark/_native.abi3.so`, also in the provenance row), the same Spark
+  environment, lock, cores, cap and `TZ=UTC`, at 21:4x UTC. Spark ran once; RePark ran twice, because the first
+  run's held `write.parquet` cells failed on a dotted output path, and the committed file is the second run after
+  the probe's path fix (every other cell the same in both runs). After the probes were annotated and reformatted for
+  the lint gate, both engines ran again: 0 differences in 312 cells, and the committed files are that pass. The Iceberg jar's sha256 was the same
+  before and after. Commands: `rev.py <spark|repark> <wh> <jar> <out>/rev-<spark|main>.jsonl`, then
+  `compact.py <out> ../raw` and `rev_compare.py ../raw/rev-spark.jsonl ../raw/rev-main.jsonl ../raw/rev-cells.md`.
+  The `ComputeCurrentTime` and `ReplaceCurrentLike` classes were unzipped from the same `spark-catalyst` jar into a
+  scratch directory and read with `javap -c -p`.
 
 Up: [../map.md](../map.md).

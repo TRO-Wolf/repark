@@ -15,6 +15,12 @@ Run from this directory; `cells` and `lib` are imported by the runners. Commands
 - `explain.py` — the plans of a SQL view, a DataFrame view and a held frame read after the `SET`, both engines.
 - `run_cs.py` — the twin-column case probe: where Spark refuses a relation with `a` and `A` under
   `caseSensitive=false`.
+- `rev.py` — the revision's cells (one engine per run): filters through a view, caches, held-frame derivations and
+  `registerTempTable`, renames under both spellings and the direct gaps, current-time functions in a view,
+  `CREATE OR REPLACE`, the self-join, `RESET`, `spark.conf.set`, `spark.sql.defaultCatalog`, and held-frame writes,
+  each with the direct queries of its bodies.
+- `rev_compare.py` — pairs the two `rev-*.jsonl` files, gives each cell `analyze.py`'s verdict classes, and writes
+  `rev-cells.md` and `rev-cells.jsonl`.
 - `compact.py` — copies the raw outputs into [../raw/](../raw/map.md) without timings, scratch and home paths
   replaced by placeholders.
 - `analyze.py` — pairs each RePark cell with Spark's, classifies it (`EQUAL`, `VALUE`, `TYPE`, `REPARK_ANSWERS`,
