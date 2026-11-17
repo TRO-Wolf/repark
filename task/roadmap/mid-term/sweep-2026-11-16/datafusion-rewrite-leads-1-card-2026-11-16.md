@@ -2,9 +2,11 @@
 
 **Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from section 5 of Fable's simplifier audit of 2026-11-16. Fable did not re-measure these, and this card does not either.
 
-**Status:** PROPOSED, not dispatched. Measured by an agent, not re-measured. Severity and label-blocking: owner to rule.
+**Status:** ruled 2026-11-16, not dispatched; not label-blocking. Measured by an agent, not re-measured.
 
-**Severity:** Proposed: S3 (owner to rule). A placeholder: each lead is unmeasured and may move once step 0 measures it.
+**Severity:** S3, ruled 2026-11-16 (the proposed severity stands). A placeholder: each lead is unmeasured and may move once step 0 measures it.
+
+Ruled 2026-11-16 ("Merge those and defaults."): the proposed S3 stands; not label-blocking; the six leads stay unmeasured until step 0.
 
 ## Leads
 

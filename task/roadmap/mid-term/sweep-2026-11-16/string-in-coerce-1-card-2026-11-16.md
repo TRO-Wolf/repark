@@ -2,9 +2,11 @@
 
 **Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from Fable's type-pair sweep of 2026-11-16 (family 7). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2. Re-run on main `e50ed17f` (RePark side): unchanged; only family 10's 32 `VALUES` cells moved to equal (#1341).
 
-**Status:** PROPOSED, not dispatched; severity and label-blocking: owner to rule.
+**Status:** ruled 2026-11-16, not dispatched; not label-blocking on either half.
 
-**Severity:** Proposed: S1 (owner to rule) for the silent ANSI-off cells. The DECIMAL refusals are proposed S2 (owner to rule).
+**Severity:** S1 for the silent ANSI-off cells, ruled 2026-11-16, not label-blocking. The DECIMAL refusals are S2, ruled 2026-11-16, not label-blocking.
+
+Ruled 2026-11-16 ("Merge those and defaults."): the silent half (ANSI off only) is S1 and not label-blocking; the refusal half is S2 and not label-blocking.
 
 ## Finding
 
