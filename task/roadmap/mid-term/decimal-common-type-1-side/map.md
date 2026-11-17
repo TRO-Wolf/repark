@@ -4,7 +4,7 @@ Nine side cards from the step 0 of DECIMAL-COMMON-TYPE-1, measured on main `e50e
 
 ## Cards
 
-- [AVG-DECIMAL-ROUND-1](avg-decimal-round-1-card-2026-11-16.md) (S1, label-blocking, ruled 2026-11-16) — **card:** `avg` of a DECIMAL truncates where Spark rounds half up (0.836666 against 0.836667).
+- [AVG-DECIMAL-ROUND-1](avg-decimal-round-1-card-2026-11-16.md) (S1, label-blocking, ruled 2026-11-16; built 2026-11-17, branch `fix/avg-decimal-round-1`, not merged) — **card:** `avg` of a DECIMAL truncates where Spark rounds half up (0.836666 against 0.836667).
 - [NVL-DECIMAL-DOUBLE-1](nvl-decimal-double-1-card-2026-11-16.md) (S2, not label-blocking, ruled 2026-11-16) — **card:** `nvl` and `ifnull` over decimals answer a DOUBLE; linked to NVL-TYPE-COERCION-2.
 - [LAG-LEAD-COLUMN-DEFAULT-1](lag-lead-column-default-1-card-2026-11-16.md) (S3, not label-blocking, ruled 2026-11-16) — **card:** `lag` and `lead` with a column default refuse.
 - [JOIN-USING-UNALIASED-DERIVED-1](join-using-unaliased-derived-1-card-2026-11-16.md) (S3, not label-blocking, ruled 2026-11-16) — **card:** `JOIN … USING` over unaliased derived tables refuses.

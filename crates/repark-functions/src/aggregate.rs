@@ -2,23 +2,28 @@
 
 use std::sync::Arc;
 
-use arrow::array::{Array, ArrayRef, ArrowNativeTypeOp, ArrowNumericType, AsArray};
+use arrow::array::{Array, ArrayRef, AsArray};
 use arrow::compute::{cast, sum};
 use arrow::datatypes::{
-    ArrowNativeType, DECIMAL32_MAX_PRECISION, DECIMAL32_MAX_SCALE, DECIMAL64_MAX_PRECISION,
-    DECIMAL64_MAX_SCALE, DECIMAL128_MAX_PRECISION, DECIMAL128_MAX_SCALE, DECIMAL256_MAX_PRECISION,
-    DECIMAL256_MAX_SCALE, DataType, Decimal32Type, Decimal64Type, Decimal128Type, Decimal256Type,
-    DecimalType, Field, FieldRef, Float64Type, Int64Type, IntervalUnit, TimeUnit,
+    DECIMAL32_MAX_PRECISION, DECIMAL32_MAX_SCALE, DECIMAL64_MAX_PRECISION, DECIMAL64_MAX_SCALE,
+    DECIMAL128_MAX_PRECISION, DECIMAL128_MAX_SCALE, DECIMAL256_MAX_PRECISION, DECIMAL256_MAX_SCALE,
+    DataType, Decimal32Type, Decimal64Type, Decimal128Type, Decimal256Type, Field, FieldRef,
+    Float64Type, Int64Type, IntervalUnit, TimeUnit,
 };
+use datafusion::common::config::ConfigOptions;
+use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::types::{NativeType, logical_float64};
-use datafusion::common::{Result, ScalarValue, exec_err, not_impl_err};
+use datafusion::common::{Result, ScalarValue, not_impl_err};
 use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
 use datafusion::logical_expr::utils::format_state_name;
 use datafusion::logical_expr::{
-    Accumulator, AggregateUDF, AggregateUDFImpl, Coercion, GroupsAccumulator, ReversedUDAF,
-    Signature, TypeSignature, TypeSignatureClass, Volatility,
+    Accumulator, AggregateUDF, AggregateUDFImpl, Coercion, Expr, GroupsAccumulator, LogicalPlan,
+    ReversedUDAF, Signature, TypeSignature, TypeSignatureClass, Volatility,
+    WindowFunctionDefinition,
 };
+use datafusion::optimizer::AnalyzerRule;
 
+use crate::avg_decimal::DecimalAvgAccumulator;
 use crate::avg_groups;
 
 pub use crate::grouping::{grouping_id_udaf, grouping_udaf};
@@ -26,7 +31,12 @@ pub use crate::grouping::{grouping_id_udaf, grouping_udaf};
 /// Register repark `avg` [`AggregateUDF`] instances after `datafusion-spark` (name overwrite).
 #[must_use]
 pub fn functions() -> Vec<Arc<AggregateUDF>> {
-    let mut functions = vec![avg_udaf(), try_avg_udaf(), crate::count_if::count_if_udaf()];
+    let mut functions = vec![
+        avg_udaf(),
+        mean_udaf(),
+        try_avg_udaf(),
+        crate::count_if::count_if_udaf(),
+    ];
     functions.push(crate::grouping::grouping_udaf());
     functions.push(crate::grouping::grouping_id_udaf());
     functions.extend(crate::bitmap_agg::functions());
@@ -43,20 +53,41 @@ pub fn try_sum_udaf() -> Arc<AggregateUDF> {
 /// Spark `try_avg` — decimal overflow yields NULL; interval input refuses (FNP-11).
 #[must_use]
 pub fn try_avg_udaf() -> Arc<AggregateUDF> {
-    Arc::new(AggregateUDF::new_from_impl(SparkAvgWithRetract::try_avg()))
+    Arc::new(AggregateUDF::new_from_impl(SparkAvgWithRetract::new(
+        "try_avg",
+        AvgMode::Try,
+    )))
 }
 
 /// Return Spark-compatible `avg` with Spark's null/count and argument contracts.
 #[must_use]
 pub fn avg_udaf() -> Arc<AggregateUDF> {
-    Arc::new(AggregateUDF::new_from_impl(SparkAvgWithRetract::new()))
+    Arc::new(AggregateUDF::new_from_impl(SparkAvgWithRetract::new(
+        "avg",
+        AvgMode::Ansi,
+    )))
+}
+
+fn mean_udaf() -> Arc<AggregateUDF> {
+    Arc::new(AggregateUDF::new_from_impl(SparkAvgWithRetract::new(
+        "mean",
+        AvgMode::Ansi,
+    )))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum AvgMode {
+    Ansi,
+    Legacy,
+    Try,
 }
 
 /// Spark AVG keeps Float64 retract and exact decimal retract; integers and floats become `Float64`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct SparkAvgWithRetract {
     signature: Signature,
-    null_on_overflow: bool,
+    name: &'static str,
+    mode: AvgMode,
 }
 
 fn numeric_avg_signatures() -> Vec<TypeSignature> {
@@ -83,33 +114,32 @@ fn interval_avg_signatures() -> Vec<TypeSignature> {
 }
 
 impl SparkAvgWithRetract {
-    fn new() -> Self {
+    fn new(name: &'static str, mode: AvgMode) -> Self {
         let mut signatures = numeric_avg_signatures();
         signatures.extend(interval_avg_signatures());
         Self {
             signature: Signature::one_of(signatures, Volatility::Immutable),
-            null_on_overflow: false,
+            name,
+            mode,
         }
     }
 
-    fn try_avg() -> Self {
-        let mut signatures = numeric_avg_signatures();
-        signatures.extend(interval_avg_signatures());
-        Self {
-            signature: Signature::one_of(signatures, Volatility::Immutable),
-            null_on_overflow: true,
-        }
+    fn decimal_null_on_overflow(&self) -> bool {
+        self.mode != AvgMode::Ansi
+    }
+
+    fn interval_null_on_overflow(&self) -> bool {
+        self.mode == AvgMode::Try
+    }
+
+    fn keeps_core_distinct(&self, data_type: &DataType) -> bool {
+        self.name == "mean" && data_type == &DataType::Float64
     }
 }
 
 impl AggregateUDFImpl for SparkAvgWithRetract {
-    #[allow(clippy::unnecessary_literal_bound)]
     fn name(&self) -> &str {
-        if self.null_on_overflow {
-            "try_avg"
-        } else {
-            "avg"
-        }
+        self.name
     }
 
     fn signature(&self) -> &Signature {
@@ -145,10 +175,13 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
     }
 
     fn accumulator(&self, acc_args: AccumulatorArgs) -> Result<Box<dyn Accumulator>> {
+        let data_type = acc_args.exprs[0].data_type(acc_args.schema)?;
         if acc_args.is_distinct {
+            if self.keeps_core_distinct(&data_type) {
+                return datafusion::functions_aggregate::average::avg_udaf().accumulator(acc_args);
+            }
             return not_impl_err!("DistinctAvgAccumulator");
         }
-        let data_type = acc_args.exprs[0].data_type(acc_args.schema)?;
         match (&data_type, acc_args.return_type()) {
             (DataType::Float64, DataType::Float64) => {
                 Ok(Box::<AvgAccumulatorWithRetract>::default())
@@ -156,54 +189,38 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
             (
                 DataType::Decimal32(sum_precision, sum_scale),
                 DataType::Decimal32(target_precision, target_scale),
-            ) => Ok(Box::new(DecimalAvgAccumulator::<Decimal32Type> {
-                sum: None,
-                count: 0,
-                sum_scale: *sum_scale,
-                sum_precision: *sum_precision,
-                target_precision: *target_precision,
-                target_scale: *target_scale,
-                null_on_overflow: self.null_on_overflow,
-            })),
+            ) => Ok(Box::new(DecimalAvgAccumulator::<Decimal32Type>::try_new(
+                (*sum_precision, *sum_scale),
+                (*target_precision, *target_scale),
+                self.decimal_null_on_overflow(),
+            )?)),
             (
                 DataType::Decimal64(sum_precision, sum_scale),
                 DataType::Decimal64(target_precision, target_scale),
-            ) => Ok(Box::new(DecimalAvgAccumulator::<Decimal64Type> {
-                sum: None,
-                count: 0,
-                sum_scale: *sum_scale,
-                sum_precision: *sum_precision,
-                target_precision: *target_precision,
-                target_scale: *target_scale,
-                null_on_overflow: self.null_on_overflow,
-            })),
+            ) => Ok(Box::new(DecimalAvgAccumulator::<Decimal64Type>::try_new(
+                (*sum_precision, *sum_scale),
+                (*target_precision, *target_scale),
+                self.decimal_null_on_overflow(),
+            )?)),
             (
                 DataType::Decimal128(sum_precision, sum_scale),
                 DataType::Decimal128(target_precision, target_scale),
-            ) => Ok(Box::new(DecimalAvgAccumulator::<Decimal128Type> {
-                sum: None,
-                count: 0,
-                sum_scale: *sum_scale,
-                sum_precision: *sum_precision,
-                target_precision: *target_precision,
-                target_scale: *target_scale,
-                null_on_overflow: self.null_on_overflow,
-            })),
+            ) => Ok(Box::new(DecimalAvgAccumulator::<Decimal128Type>::try_new(
+                (*sum_precision, *sum_scale),
+                (*target_precision, *target_scale),
+                self.decimal_null_on_overflow(),
+            )?)),
             (
                 DataType::Decimal256(sum_precision, sum_scale),
                 DataType::Decimal256(target_precision, target_scale),
-            ) => Ok(Box::new(DecimalAvgAccumulator::<Decimal256Type> {
-                sum: None,
-                count: 0,
-                sum_scale: *sum_scale,
-                sum_precision: *sum_precision,
-                target_precision: *target_precision,
-                target_scale: *target_scale,
-                null_on_overflow: self.null_on_overflow,
-            })),
+            ) => Ok(Box::new(DecimalAvgAccumulator::<Decimal256Type>::try_new(
+                (*sum_precision, *sum_scale),
+                (*target_precision, *target_scale),
+                self.decimal_null_on_overflow(),
+            )?)),
             (DataType::Interval(_) | DataType::Duration(_), _) => Ok(Box::new(
                 crate::interval_avg::IntervalAvgAccumulator::with_null_on_overflow(
-                    self.null_on_overflow,
+                    self.interval_null_on_overflow(),
                 ),
             )),
             (data_type, return_type) => {
@@ -221,10 +238,17 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
         args: AccumulatorArgs,
     ) -> Result<Box<dyn GroupsAccumulator>> {
         let data_type = args.exprs[0].data_type(args.schema)?;
-        avg_groups::create_groups(&data_type, args.return_type(), self.null_on_overflow)
+        avg_groups::create_groups(
+            &data_type,
+            args.return_type(),
+            self.decimal_null_on_overflow(),
+        )
     }
 
     fn state_fields(&self, args: StateFieldsArgs) -> Result<Vec<FieldRef>> {
+        if args.is_distinct && self.keeps_core_distinct(args.input_fields[0].data_type()) {
+            return datafusion::functions_aggregate::average::avg_udaf().state_fields(args);
+        }
         if matches!(
             args.input_fields[0].data_type(),
             DataType::Interval(_) | DataType::Duration(_)
@@ -269,170 +293,59 @@ impl AggregateUDFImpl for SparkAvgWithRetract {
     }
 }
 
-/// Small copy of DF `DecimalAverager` (`datafusion-functions-aggregate-common` 54.1 `utils.rs`).
-pub(crate) struct DecimalAverager<T: DecimalType> {
-    sum_mul: T::Native,
-    target_mul: T::Native,
-    target_precision: u8,
-    target_scale: i8,
-}
+#[derive(Debug, Default)]
+pub(crate) struct SparkAvgAnsiMode;
 
-impl<T: DecimalType> DecimalAverager<T> {
-    pub(crate) fn try_new(sum_scale: i8, target_precision: u8, target_scale: i8) -> Result<Self> {
-        let ten = T::Native::from_usize(10).ok_or_else(|| {
-            datafusion::common::DataFusionError::Internal(
-                "DecimalAverager: 10 does not fit the decimal native type".to_string(),
-            )
-        })?;
-        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-        let sum_mul = ten.pow_wrapping(sum_scale as u32);
-        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-        let target_mul = ten.pow_wrapping(target_scale as u32);
-        if target_mul >= sum_mul {
-            Ok(Self {
-                sum_mul,
-                target_mul,
-                target_precision,
-                target_scale,
-            })
-        } else {
-            exec_err!("Arithmetic Overflow in AvgAccumulator")
+impl AnalyzerRule for SparkAvgAnsiMode {
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
+        if crate::ansi::spark_ansi_enabled_from_options(config) {
+            return Ok(plan);
         }
+        plan.transform_up_with_subqueries(|node| {
+            node.map_expressions(|expr| expr.transform_up(|leaf| Ok(legacy_avg_expr(leaf))))
+        })
+        .data()
     }
 
-    pub(crate) fn avg(
-        &self,
-        sum: T::Native,
-        count: T::Native,
-        null_on_overflow: bool,
-    ) -> Result<Option<T::Native>> {
-        let Ok(value) = sum.mul_checked(self.target_mul.div_wrapping(self.sum_mul)) else {
-            if null_on_overflow {
-                return Ok(None);
+    fn name(&self) -> &'static str {
+        "spark_avg_ansi_mode"
+    }
+}
+
+fn legacy_avg_expr(expr: Expr) -> Transformed<Expr> {
+    match expr {
+        Expr::AggregateFunction(mut function) => match legacy_avg_udaf(&function.func) {
+            Some(func) => {
+                function.func = func;
+                Transformed::yes(Expr::AggregateFunction(function))
             }
-            return exec_err!("Arithmetic Overflow in AvgAccumulator");
-        };
-        let new_value = value.div_wrapping(count);
-        if T::validate_decimal_precision(new_value, self.target_precision, self.target_scale)
-            .is_ok()
-        {
-            Ok(Some(new_value))
-        } else if null_on_overflow {
-            Ok(None)
-        } else {
-            exec_err!("Arithmetic Overflow in AvgAccumulator")
+            None => Transformed::no(Expr::AggregateFunction(function)),
+        },
+        Expr::WindowFunction(mut window) => {
+            let legacy = match &window.fun {
+                WindowFunctionDefinition::AggregateUDF(udaf) => legacy_avg_udaf(udaf),
+                WindowFunctionDefinition::WindowUDF(_) => None,
+            };
+            match legacy {
+                Some(func) => {
+                    window.fun = WindowFunctionDefinition::AggregateUDF(func);
+                    Transformed::yes(Expr::WindowFunction(window))
+                }
+                None => Transformed::no(Expr::WindowFunction(window)),
+            }
         }
+        other => Transformed::no(other),
     }
 }
 
-/// Small copy of DF `DecimalAvgAccumulator` (54.1 `average.rs`) — includes `retract_batch`.
-#[derive(Debug)]
-struct DecimalAvgAccumulator<T: DecimalType + ArrowNumericType + std::fmt::Debug> {
-    sum: Option<T::Native>,
-    count: u64,
-    sum_scale: i8,
-    sum_precision: u8,
-    target_precision: u8,
-    target_scale: i8,
-    null_on_overflow: bool,
-}
-
-impl<T> Accumulator for DecimalAvgAccumulator<T>
-where
-    T: DecimalType + ArrowNumericType + std::fmt::Debug,
-{
-    fn update_batch(&mut self, values: &[ArrayRef]) -> Result<()> {
-        let values = values[0].as_primitive::<T>();
-        self.count += u64::try_from(values.len() - values.null_count()).map_err(|_| {
-            datafusion::common::DataFusionError::Internal(
-                "avg update_batch: batch length does not fit u64".to_string(),
-            )
-        })?;
-        if let Some(total) = sum(values) {
-            let slot = self.sum.get_or_insert_with(T::Native::default);
-            self.sum = Some(slot.add_wrapping(total));
-        }
-        Ok(())
-    }
-
-    fn evaluate(&mut self) -> Result<ScalarValue> {
-        let value = if self.count == 0 {
-            None
-        } else {
-            self.sum
-                .map(|total| {
-                    let count_native = usize::try_from(self.count)
-                        .ok()
-                        .and_then(T::Native::from_usize)
-                        .ok_or_else(|| {
-                            datafusion::common::DataFusionError::Execution(
-                                "avg count does not fit the decimal native type".to_string(),
-                            )
-                        })?;
-                    match DecimalAverager::<T>::try_new(
-                        self.sum_scale,
-                        self.target_precision,
-                        self.target_scale,
-                    ) {
-                        Ok(averager) => averager.avg(total, count_native, self.null_on_overflow),
-                        Err(_) if self.null_on_overflow => Ok(None),
-                        Err(error) => Err(error),
-                    }
-                })
-                .transpose()?
-                .flatten()
-        };
-        ScalarValue::new_primitive::<T>(
-            value,
-            &T::TYPE_CONSTRUCTOR(self.target_precision, self.target_scale),
-        )
-    }
-
-    fn size(&self) -> usize {
-        std::mem::size_of_val(self)
-    }
-
-    fn state(&mut self) -> Result<Vec<ScalarValue>> {
-        Ok(vec![
-            ScalarValue::from(self.count),
-            ScalarValue::new_primitive::<T>(
-                self.sum,
-                &T::TYPE_CONSTRUCTOR(self.sum_precision, self.sum_scale),
-            )?,
-        ])
-    }
-
-    fn merge_batch(&mut self, states: &[ArrayRef]) -> Result<()> {
-        use arrow::datatypes::UInt64Type;
-        self.count += sum(states[0].as_primitive::<UInt64Type>()).unwrap_or_default();
-        if let Some(total) = sum(states[1].as_primitive::<T>()) {
-            let slot = self.sum.get_or_insert_with(T::Native::default);
-            self.sum = Some(slot.add_wrapping(total));
-        }
-        Ok(())
-    }
-
-    fn retract_batch(&mut self, values: &[ArrayRef]) -> Result<()> {
-        let values = values[0].as_primitive::<T>();
-        self.count =
-            self.count
-                .saturating_sub(u64::try_from(values.len() - values.null_count()).map_err(
-                    |_| {
-                        datafusion::common::DataFusionError::Internal(
-                            "avg retract_batch: batch length does not fit u64".to_string(),
-                        )
-                    },
-                )?);
-        if let Some(total) = sum(values) {
-            let current = self.sum.unwrap_or_default();
-            self.sum = Some(current.sub_wrapping(total));
-        }
-        Ok(())
-    }
-
-    fn supports_retract_batch(&self) -> bool {
-        true
-    }
+fn legacy_avg_udaf(func: &Arc<AggregateUDF>) -> Option<Arc<AggregateUDF>> {
+    let avg = func.inner().downcast_ref::<SparkAvgWithRetract>()?;
+    (avg.mode == AvgMode::Ansi).then(|| {
+        Arc::new(AggregateUDF::new_from_impl(SparkAvgWithRetract {
+            mode: AvgMode::Legacy,
+            ..avg.clone()
+        }))
+    })
 }
 
 /// Float64 avg accumulator: Spark semantics (i64 count, null when count==0) + retract for sliding.
@@ -690,24 +603,19 @@ mod tests {
 
     #[test]
     fn decimal_retract_batch_returns_to_empty() {
-        let mut acc = DecimalAvgAccumulator::<Decimal128Type> {
-            sum: None,
-            count: 0,
-            sum_scale: 2,
-            sum_precision: 10,
-            target_precision: 14,
-            target_scale: 6,
-            null_on_overflow: false,
-        };
+        let mut acc = DecimalAvgAccumulator::<Decimal128Type>::try_new((10, 2), (14, 6), false)
+            .expect("averager");
         let batch = Arc::new(
             arrow::array::Decimal128Array::from(vec![Some(110), Some(220), None])
                 .with_precision_and_scale(10, 2)
                 .expect("fixture scale"),
         ) as ArrayRef;
         acc.update_batch(&[Arc::clone(&batch)]).expect("update");
-        assert_eq!(acc.count, 2);
+        assert_eq!(
+            acc.evaluate().expect("two rows"),
+            ScalarValue::Decimal128(Some(1_650_000), 14, 6)
+        );
         acc.retract_batch(&[batch]).expect("retract");
-        assert_eq!(acc.count, 0);
         let evaluated = acc.evaluate().expect("empty frame is null");
         assert!(evaluated.is_null(), "empty retracted frame must be NULL");
     }
@@ -948,5 +856,104 @@ mod tests {
             },
         };
         assert!(error.contains("[INTERVAL_ARITHMETIC_OVERFLOW"), "{error}");
+    }
+
+    fn ansi_ctx(ansi: bool) -> SessionContext {
+        let config =
+            crate::ansi::with_spark_ansi_config(datafusion::prelude::SessionConfig::new(), ansi);
+        let ctx = SessionContext::new_with_config(config);
+        crate::register_all(&ctx);
+        ctx.add_analyzer_rule(Arc::new(SparkAvgAnsiMode));
+        ctx
+    }
+
+    const NINES38: &str = "99999999999999999999999999999999999999";
+
+    async fn first_text(ctx: &SessionContext, sql: &str) -> std::result::Result<String, String> {
+        let frame = ctx.sql(sql).await.map_err(|error| error.to_string())?;
+        let batches = frame.collect().await.map_err(|error| error.to_string())?;
+        let column = batches[0].column(0);
+        Ok(arrow::util::display::array_value_to_string(column, 0).expect("display"))
+    }
+
+    #[tokio::test]
+    async fn avg_and_mean_overflow_is_null_with_ansi_off_and_raises_with_ansi_on() {
+        let source = format!(
+            "(SELECT CAST(x AS DECIMAL(38,0)) AS v, x AS w FROM (VALUES ('{NINES38}'), ('{NINES38}')) t(x))"
+        );
+        for function in ["avg", "mean"] {
+            for shape in [
+                format!("SELECT {function}(v) FROM {source} s"),
+                format!("SELECT {function}(v) OVER () FROM {source} s"),
+                format!("SELECT {function}(v), w FROM {source} s GROUP BY w"),
+            ] {
+                let off = first_text(&ansi_ctx(false), &shape).await;
+                assert_eq!(off.as_deref(), Ok(""), "{shape}");
+                let on = first_text(&ansi_ctx(true), &shape)
+                    .await
+                    .expect_err("ANSI raises");
+                assert!(
+                    on.contains("[ARITHMETIC_OVERFLOW] Overflow in sum of decimals"),
+                    "{on}"
+                );
+            }
+        }
+        let try_avg = format!("SELECT try_avg(v) FROM {source} s");
+        for ansi in [true, false] {
+            assert_eq!(
+                first_text(&ansi_ctx(ansi), &try_avg).await.as_deref(),
+                Ok("")
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn mean_is_spark_avg_and_keeps_its_name() {
+        let ctx = ansi_ctx(true);
+        let source = "(SELECT CAST(x AS DECIMAL(10,2)) AS v FROM (VALUES ('2.51'), ('0.00'), ('0.00')) t(x))";
+        let frame = ctx
+            .sql(&format!("SELECT avg(v), mean(v) FROM {source} s"))
+            .await
+            .expect("plan avg beside mean");
+        let names: Vec<String> = frame
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| field.name().clone())
+            .collect();
+        assert_eq!(names, ["avg(s.v)", "mean(s.v)"]);
+        let batches = frame.collect().await.expect("avg beside mean");
+        for index in 0..2 {
+            assert_eq!(
+                arrow::util::display::array_value_to_string(batches[0].column(index), 0)
+                    .expect("display"),
+                "0.836667"
+            );
+        }
+        let floats = "SELECT mean(DISTINCT x), count(x) FROM (VALUES (1.5), (1.5), (2.5)) t(x)";
+        let floats = ctx
+            .sql(floats)
+            .await
+            .expect("plan")
+            .collect()
+            .await
+            .expect("float DISTINCT");
+        assert_eq!(
+            arrow::util::display::array_value_to_string(floats[0].column(0), 0).expect("display"),
+            "2.0"
+        );
+        let mixed = format!("SELECT mean(DISTINCT v), count(v) FROM {source} s");
+        let error = first_text(&ctx, &mixed)
+            .await
+            .expect_err("mixed DISTINCT refuses");
+        assert!(error.contains("DistinctAvgAccumulator"), "{error}");
+        let registered = datafusion::execution::FunctionRegistry::udaf(&ctx.state(), "mean")
+            .expect("mean registered");
+        assert!(
+            registered
+                .inner()
+                .downcast_ref::<SparkAvgWithRetract>()
+                .is_some()
+        );
     }
 }

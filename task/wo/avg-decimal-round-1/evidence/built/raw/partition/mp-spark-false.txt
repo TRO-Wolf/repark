@@ -1,0 +1,11 @@
+{"k": "two/grouped", "rows": [["1", "None"]], "nparts": null}
+{"k": "two/ungrouped", "rows": [["None"]], "nparts": null}
+{"k": "two/grouped_mean", "rows": [["1", "None"]], "nparts": null}
+{"k": "one/grouped", "rows": [["1", "None"]], "nparts": null}
+{"k": "one/ungrouped", "rows": [["1.0000"]], "nparts": null}
+{"k": "two/try_grouped", "rows": [["1", "None"]], "nparts": null}
+{"k": "two/sum_grouped", "rows": [["1", "None"]], "nparts": null}
+{"k": "headg", "rows": [["1", "None"]], "nparts": null}
+{"k": "b25", "rows": [["None"]], "nparts": null}
+{"k": "b25g", "rows": [["1", "None"]], "nparts": null}
+parts two 2515 one 1

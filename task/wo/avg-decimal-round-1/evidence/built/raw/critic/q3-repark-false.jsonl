@@ -1,0 +1,11 @@
+native <scratchpad>/ddu-work/pkg-avg-27d6149f/repark/_native.abi3.so
+{"id": "h01", "ok": true, "types": "int,decimal(14,6)", "vals": "2,0.003333;4,-0.010000;7,1.666667;9,2.510000"}
+{"id": "h02", "ok": true, "types": "int,decimal(14,6)", "vals": ""}
+{"id": "h03", "ok": true, "types": "int,decimal(14,6),boolean", "vals": "2,0.003333,false;4,-0.010000,false;7,1.666667,false;9,2.510000,false"}
+{"id": "s01", "ok": true, "types": "decimal(38,4)", "vals": "null"}
+{"id": "s02", "ok": true, "types": "decimal(38,0),bigint", "vals": "99999999999999999999999999999999999999,3"}
+{"id": "s03", "ok": true, "types": "decimal(38,4)", "vals": "3333333333333333333333333333333333.0000"}
+{"id": "p01", "ok": false, "types": "", "vals": "ERR:UnsupportedOperationException:None:This feature is not implemented: Unsupported ast node Pivot { table: Derived { lateral: false, subquery: Query { with: None, body: Select(Select { select_token: TokenWithSpan { token: Word(Word { value: \"SELECT\", quote_s"}
+{"id": "h02", "ok": true, "types": "int,decimal(14,6)", "vals": ""}
+{"id": "s04", "ok": true, "types": "decimal(38,4)", "vals": "1.0000"}
+{"id": "s05", "ok": true, "types": "decimal(38,4)", "vals": "1.6667"}

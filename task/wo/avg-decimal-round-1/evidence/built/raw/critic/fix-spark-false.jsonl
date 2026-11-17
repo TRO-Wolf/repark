@@ -1,0 +1,9 @@
+{"id": "b23", "ok": true, "types": "decimal(38,8)", "vals": "999999999999999999999999999999.99990000"}
+{"id": "b24", "ok": true, "types": "decimal(38,6)", "vals": "null"}
+{"id": "b25", "ok": true, "types": "decimal(38,6)", "vals": "null"}
+{"id": "b26", "ok": true, "types": "decimal(38,4)", "vals": "null"}
+{"id": "b27", "ok": true, "types": "decimal(14,6),decimal(14,6)", "vals": "0.836667,0.836667"}
+{"id": "e01", "ok": true, "types": "string", "vals": "== Physical Plan ==\nAdaptiveSparkPlan isFinalPlan=false\n+- HashAggregate(keys=[], functions=[avg(251)])\n   +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=321]\n      +- HashAggregate(keys=[], functions=[partial_avg(251)])\n         +- Scan OneRowRelation[]\n\n"}
+{"id": "e02", "ok": true, "types": "string", "vals": "== Physical Plan ==\nAdaptiveSparkPlan isFinalPlan=false\n+- HashAggregate(keys=[], functions=[avg(251)])\n   +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=340]\n      +- HashAggregate(keys=[], functions=[partial_avg(251)])\n         +- Scan OneRowRelation[]\n\n"}
+{"id": "e03", "ok": true, "types": "string", "vals": "== Physical Plan ==\nLocalTableScan [pmod(d, 3)#117]\n\n"}
+{"id": "e04", "ok": true, "types": "string", "vals": "== Physical Plan ==\nLocalTableScan [(d / 3)#126]\n\n"}

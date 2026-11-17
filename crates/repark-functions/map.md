@@ -17,10 +17,10 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 
 
 - `aggregate.rs` / R-RETRACT-SHIM + **DEC-5 / Z-3 U1:** `SparkAvgWithRetract` keeps
-  Float64 retract (X2 sliding windows) and now also keeps Spark-typed decimal `avg`
-  (`(p,s)→(min(38,p+4), min(38,s+4))`) with decimal `retract_batch` (small copy of
+  Float64 retract (X2 sliding windows) and also keeps Spark-typed decimal `avg`
+  (`(p,s)→(min(38,p+4), min(38,s+4))`) with decimal `retract_batch` (copy of
   DF `DecimalAvgAccumulator` / `DecimalAverager`). Signature is DF `Avg`'s: Decimal
-  stays decimal; Integer/Float still coerce to Float64. Pins:
+  stays decimal; Integer/Float coerce to Float64. Pins:
   `group_avg_decimal128_stays_decimal_14_6_i128`, `sliding_avg_decimal128_retracts`.
   **W-2 U2 ride-along (Z-3 S3):** revert-red pins
   `group_avg_decimal32_stays_decimal_9_6_i32`,
@@ -28,14 +28,14 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   `group_avg_decimal256_stays_decimal_14_6_i256`.
   FN-FIX-1 unit test: `percentile_approx_sql_aliases_resolve` pins Spark SQL aliases
   on the discrete UDAF.
-  **PERF-AGG-AVG-1 (2026-09-05):** the UDAF now also serves grouped aggregation
+  **PERF-AGG-AVG-1 (2026-09-05):** the UDAF also serves grouped aggregation
   through `src/avg_groups.rs` (`groups_accumulator_supported` /
   `create_groups_accumulator` over Float64 and Decimal32/64/128/256, `try_avg`
   overflow on the 2×-MAX shape → per-group NULL, the sum-wrap shape filed as
   BACKLOG `AVG-DEC-SUMWRAP-1`); the `Accumulator` retract arms are untouched for
   window frames. The 300 ms isolated cost on `avg(l_quantity) GROUP BY l_partkey` (200 k
   groups) was one boxed accumulator per group; the groups path keeps one sum and one
-  count vector.
+  count vector; decimal adds wraps.
 
 - `Cargo.toml` — package; depends on `datafusion` + `datafusion-spark` + `arrow` + `chrono`
   + `iceberg` (**ICE-SYSTEM-FUNCTIONS-1**, 2026-09-20: the external fork crate for the
