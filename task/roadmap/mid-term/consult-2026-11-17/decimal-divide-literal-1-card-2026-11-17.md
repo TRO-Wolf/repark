@@ -41,3 +41,15 @@ Not diagnosed. The orchestrator's lead is "the division function from #99 that o
 Fable: "It sits beside AVG-DECIMAL-ROUND-1, since both are Spark's decimal division." AVG-DECIMAL-ROUND-1's step 0 carries these cells as a neighbour. If they share a seat, they fold in; if not, this card stays its own unit (ruling 1).
 
 Up: [map.md](map.md).
+
+## Append (2026-11-17, afternoon): scope after rulings 1, 2, 3 and 10, the seats, and the place
+
+- **Scope** (rulings 1 to 3 and 10, the [afternoon ruling](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md)): seat A2. It takes the literal width of `/` and `%`; the DataFrame `/` fault, where any decimal operand answers `double`; the suffixed-literal `*` (`3S`, `3L`); and the `mod()` and `pmod()` calls, with a function-call arm. It does **not** take `round()`, which stays DECIMAL-ROUND-RESULT-TYPE-1. Its pin is `avg(d / 3)`: after AVG-DECIMAL-ROUND-1 alone that cell stays wrong (`shape/avg_div/*`).
+- **Cells** (sketch §6): Q2, `divdf/col_div_int/*`, `col_div_lit`, `col_div_intcol`, `int_rdiv_col` and `where_round` (50 DataFrame cells, ANSI off), and the revision's `moddf/round_col_div/*`; Q3, `extra/mul_smallint_literal`, `extra/mul_bigint_literal`, `divctl/mod/*/i3`, `rev: mod/mod/*`, `mod/pmod/*`, `moddf/F.pmod/*` and `moddf/pct/*` (type only; values equal); Q10, `shape/avg_div/*`.
+- **Seats the step 0 found** (inventory, "Division"; sketch §4, A2). These replace the undiagnosed reading of the seat above:
+  - `SparkDecimalPrecision`, U3 literal step, at `crates/repark-functions/src/decimal_precision.rs:65-70`. It covers `+`, `-` and `*` only (`is_decimal_arithmetic`), so `/` and `%` never reach it.
+  - `PyColumn::div` at `crates/repark-python/src/column/mod.rs:697-703`. It casts both operands to `Float64` before `/`, which is the DataFrame fault.
+  - The `mod` and `pmod` calls: datafusion-spark's `SparkMod` and `SparkPmod`, `datafusion-spark-54.1.0/src/function/math/modulus.rs:103-163`. U3 walks `BinaryExpr` only, so a function-call arm is needed.
+- **Place** (ruling 1): next after AVG-DECIMAL-ROUND-1, which is order 1. This card is order 2 (sketch §5, "Order: 1 then 2").
+
+Up: [map.md](map.md).

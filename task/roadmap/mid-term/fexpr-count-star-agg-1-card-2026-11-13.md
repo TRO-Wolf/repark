@@ -21,3 +21,7 @@ None given by the sources.
 
 `F.expr('count(*)')` in `agg` and `groupBy().agg` answers Spark's count, with the two related forms measured and
 either answered or carded, each pinned.
+
+## Append (2026-11-17, afternoon): decimal bare aggregates in an F.expr select
+
+The AVG-DECIMAL-ROUND-1 step 0 (#1352, `9c96a963`) found that decimal bare aggregates in a DataFrame `select` hit this refusal too. `select(F.expr("avg(x)"))` and `select(F.expr("mean(x)"))`, with no `groupBy`, raise `This feature is not implemented: Physical plan does not support logical expression AggregateFunction(…)` where Spark answers: 26 `R` per mode (domain table, "After the inventory critic", M1; inventory, "`avg` — the doors", the `F.expr` row). `selectExpr("avg(x)")` answers, truncated. This is the class this card already names, so no new card is filed.

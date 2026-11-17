@@ -30,3 +30,13 @@ Spark's rule (`decimal(10,4)` at scale 2 → `decimal(9,2)`) is the same narrowi
 covers FLOAT and DOUBLE values only and its close clause does not include this shape, so this card carries it.
 
 Up: [map.md](map.md).
+
+## Append (2026-11-17, afternoon): round() cells measured in the AVG step 0
+
+The AVG-DECIMAL-ROUND-1 step 0 (#1352, `9c96a963`) measured `round` on the Spark door and the native door. RePark's `round(decimal, s)` keeps the input type; Spark's takes the scale `s`:
+
+- `round(d10_2 / 3, 2)`: Spark `decimal(11,2)`, RePark `decimal(21,13)`, values equal (`T`);
+- `round(d10_2, 1)`: Spark `decimal(10,1)`, RePark `decimal(10,2)`, values equal (`T`);
+- the DataFrame `round(col(d) / 3, 2)` is `double` on RePark, because of the DataFrame `/` seat (DECIMAL-DIVIDE-LITERAL-1), against `decimal(11,2)` on Spark.
+
+Over `round(d, 1)` and `round(d / 3, 2)`: 20 cells per mode. With ANSI on, `=` 1, `T` 17, `B` 2; with ANSI off, `=` 1, `T` 19 (domain table, "After the inventory critic", M4). They were measured in the AVG step 0 and are not folded into either unit (ruling 3): this card keeps `round()`.
