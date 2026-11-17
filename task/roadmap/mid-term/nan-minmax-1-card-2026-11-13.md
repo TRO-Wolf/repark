@@ -196,3 +196,14 @@ The owner, 2026-11-16, about 11:10 UTC, verbatim: "Great work. Go with your reco
 it adopts: the RESET/unset gap in the paragraph "**Residual, measured, not fixed:**" above becomes its own small follow-up
 unit, NAN-MINMAX-RESET-1, queued after DECIMAL-DOUBLE-UNION-COERCION-1 part 2, and it does not block the label. Card:
 [nan-minmax-reset-1-card-2026-11-16.md](nan-minmax-reset-1-card-2026-11-16.md). The text above is unchanged.
+
+## Append (2026-11-17): part 2 narrowed to the float aggregate
+
+The owner's "Defaults." of 2026-11-17 narrowed part 2 (ruling 3 of the [rulings](../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md)). Part 2 is the float aggregate only: the grouped accumulator that starts from no value, NaN ordered as one value above `+Infinity`, ungrouped and grouped, sliding windows, an internal name other than `max`/`min`, and the TopK pins. Its two other seats are split out, each keeping S1 and label-blocking. Their place in the order is not ruled.
+
+- [NAN-ARRAY-MINMAX-1](consult-2026-11-17/nan-array-minmax-1-card-2026-11-17.md): `array_min`/`array_max` over a sign-set NaN.
+- [NAN-QUANTILE-SIGNSET-1](consult-2026-11-17/nan-quantile-signset-1-card-2026-11-17.md): `median`/`percentile_approx` over a sign-set NaN.
+
+Fable's cost rows for the aggregate (Fable (`claude-fable-5-2`), consult reply of 2026-11-17, section 2, Q2): "a grouped float `max` over many groups (it needs a groups accumulator), a sliding window frame (it needs to retract), and the C-012 set. The column's display name must stay `max(x)`." Fable's reading on the seats: "Under the one-round cap I would make the aggregate the unit and card the other two, unless step 0 shows one seat serves all three."
+
+The column's display name stays `max(x)`.

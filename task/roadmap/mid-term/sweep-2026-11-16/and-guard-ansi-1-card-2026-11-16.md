@@ -29,3 +29,7 @@ Reproduction, with `<scratchpad>` the Fable audit scratch folder (not committed)
 The seat. ANSI-REMAINDER-CLASS-1 names the division guard on the analyzer seam, which raises on a zero divisor for the rows it evaluates. Step 0 finds where `AND` plans and evaluates its right side, and whether the guard covers this shape. The sibling with a rewrite is CASE-BOOL-GUARD-ANSI-1.
 
 Up: [map.md](map.md).
+
+## Append (2026-11-17): the coalesce shape is cross-listed
+
+Ruling 4 of the [rulings](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md) lists the `coalesce_overflow_lit` shape here as well. It is a planning fold that raises in a branch Spark never evaluates: with ANSI on, Spark answers and RePark's fold raises (Fable (`claude-fable-5-2`), consult reply of 2026-11-17, section 3, Q3). The card for that literal is [DECIMAL-LITERAL-OVERFLOW-1](../decimal-common-type-1-side/decimal-literal-overflow-1-card-2026-11-17.md) (S2, not label-blocking). This card's severity and label status are unchanged.

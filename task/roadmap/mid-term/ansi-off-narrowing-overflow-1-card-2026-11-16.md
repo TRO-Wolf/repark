@@ -58,3 +58,7 @@ This card's kinds are integer and DECIMAL sources. Fable's type-pair sweep of 20
 Spark's values follow Java's narrowing: the value saturates to an int, then narrows for TINYINT. The card does not rule the mechanism. With ANSI on both engines raise (class B for these cells). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2. Reproduction: `python3 <scratchpad>/sweep/v.py f:cast:FLOAT:TINYINT f:cast:DOUBLE:INT`, with `<scratchpad>` the Fable sweep scratch folder (not committed).
 
 Up: [map.md](map.md).
+
+## Append (2026-11-17): the ANSI-off literal half
+
+The ANSI-off half of [DECIMAL-LITERAL-OVERFLOW-1](decimal-common-type-1-side/decimal-literal-overflow-1-card-2026-11-17.md) sits beside this card. That card is a string-to-decimal literal refused at planning (S2, not label-blocking, ruled 2026-11-17). This card's own severity is unchanged.

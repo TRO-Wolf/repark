@@ -24,3 +24,18 @@ The table states no ANSI mode for these cells.
 Not diagnosed. The step 0 of a build finds where the decimal `avg` sets its result scale and its rounding.
 
 Up: [map.md](map.md).
+
+## Append (2026-11-17): placement, step 0 scope, and Fable's readings
+
+**Placement (ruling 1):** AVG-DECIMAL-ROUND-1 runs first, before NAN-MINMAX-1 part 2 (item 1 of the order in the [rulings](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md)). The owner's "Defaults." of 2026-11-17 ruled the place. Its step 0 measures:
+
+- precisions 10, 28, 34 and 38, with quotients that do and do not terminate, and negative values;
+- grouped and ungrouped aggregation, a merge of partial states, window frames, `avg(DISTINCT …)` and `mean`;
+- the DataFrame door: `F.avg`, `F.mean`, `GroupedData.avg`, `agg({"x": "avg"})`, `describe` and `summary`;
+- the cells of [DECIMAL-DIVIDE-LITERAL-1](../consult-2026-11-17/decimal-divide-literal-1-card-2026-11-17.md). If they share a seat, they fold in; if not, that card stays its own unit.
+
+**Readings from Fable** (Fable (`claude-fable-5-2`), consult reply of 2026-11-17, section 2, Q1). These are readings, not checks of RePark's code:
+
+- RePark has its own average accumulator, `crates/repark-functions/src/avg_groups.rs:158` (`SparkAvgGroupsAccumulator`), and imports its own `DecimalAverager` at `avg_groups.rs:16` from `aggregate.rs`. DataFusion's `DecimalAverager::avg` divides with `div_wrapping`, which truncates (`datafusion-functions-aggregate-common/src/utils.rs:157-176`). RePark's copy was not read.
+- Registry DEC-4 in [the parity doc](../../../../docs/spark-sql-iceberg-parity.md) records the facade's `avg` result type as `DECIMAL(min(38,p+4), min(38,s+4))`. The rounding is not in that row.
+- From memory of Spark, unmeasured: "Spark divides the sum by the count as a decimal division and then casts to `(p + 4, s + 4)`. For wide decimals the division's own scale is cut below `s + 4` first, so the last digits are zeros, not a longer quotient rounded. 'Round half up at `s + 4`' is right only for narrow decimals."
