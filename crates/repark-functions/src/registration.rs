@@ -33,6 +33,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
         Arc::new(crate::spark_nullability::SparkNullability),
         Arc::new(crate::integer_spark::SparkIntegerOverflow),
         Arc::new(crate::analyzer::SparkExprSemantics),
+        Arc::new(crate::aggregate::SparkAvgAnsiMode),
         Arc::new(crate::int_to_binary::IntToBinaryCast),
         Arc::new(crate::java_double::SparkFloatStringify),
     ];

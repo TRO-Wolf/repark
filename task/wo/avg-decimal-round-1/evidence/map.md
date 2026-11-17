@@ -2,6 +2,7 @@
 
 - [probes/](probes/map.md) — the cell definitions, the runners and the analysis (comment-free Python).
 - [raw/](raw/map.md) — one JSON object per cell, run and engine, the verdicts, the summary and the grids.
+- [built/](built/map.md) — the build's bar, cost and raw data (2026-11-17).
 - [jar/](jar/map.md) — the `javap -c -p` excerpts of Spark 4.1.2's `Average`, `DecimalDivideWithOverflowCheck`,
   `Decimal`, `Divide`, `BinaryArithmetic`, `DecimalPrecisionTypeCoercion` and `DataTypeUtils`.
 

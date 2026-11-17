@@ -1,3 +1,10 @@
+> **Errata (2026-11-17, records clerk).** AVG-DECIMAL-ROUND-1 (PR #1355, open) amends rows C-001 and C-003 of this
+> ledger. **C-001:** the sum-wrap shape (BACKLOG `AVG-DEC-SUMWRAP-1`) is closed on the Spark door, and the plain-avg
+> overflow text is Spark's; the native `repark.sql()` door keeps the wrapped answers (NATIVE-DECIMAL-AVG-DIVIDE-1).
+> **C-003:** the decimal sum-wrap fixtures are closed on the Spark door (Spark's NULL or overflow in both ANSI modes),
+> and the plain-avg overflow text is Spark's; the native door keeps the wrapped answers. The rows themselves stand
+> unedited as the history of the unit.
+
 # Unit ledger — PERF-AGG-AVG-1 · a `GroupsAccumulator` for the Spark `avg` / `try_avg` UDAF
 
 **Date:** 2026-09-05 · **Branch:** `perf/agg-avg-1` · **Base:** `origin/main` `6f5c62c8` ·

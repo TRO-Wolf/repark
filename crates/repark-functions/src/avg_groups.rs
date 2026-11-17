@@ -7,13 +7,13 @@ use arrow::array::{
 use arrow::buffer::NullBuffer;
 use arrow::compute::cast;
 use arrow::datatypes::{
-    ArrowNativeType, DataType, Decimal32Type, Decimal64Type, Decimal128Type, Decimal256Type,
-    DecimalType, Float64Type, Int64Type, UInt64Type,
+    DataType, Decimal32Type, Decimal64Type, Decimal128Type, Decimal256Type, DecimalType,
+    Float64Type, Int64Type, UInt64Type,
 };
 use datafusion::common::{DataFusionError, Result, exec_err, not_impl_err};
 use datafusion::logical_expr::{EmitTo, GroupsAccumulator};
 
-use crate::aggregate::DecimalAverager;
+use crate::avg_decimal::{DecimalAvgGroups, WideDecimal};
 use crate::groups_null_state::GroupNullState;
 
 pub(crate) fn groups_supported(return_type: &DataType, is_distinct: bool) -> bool {
@@ -101,41 +101,28 @@ fn decimal_groups<T>(
 ) -> Result<Box<dyn GroupsAccumulator>>
 where
     T: DecimalType + ArrowNumericType + Send,
+    T::Native: WideDecimal,
 {
-    let averager = match DecimalAverager::<T>::try_new(sum_scale, target_precision, target_scale) {
-        Ok(averager) => Some(averager),
-        Err(_) if null_on_overflow => None,
-        Err(error) => return Err(error),
+    let Some(input_precision) = decimal_precision(data_type) else {
+        return not_impl_err!("AvgGroupsAccumulator for ({data_type} --> {return_type})");
     };
-    Ok(Box::new(SparkAvgGroupsAccumulator::<T, _>::new(
+    Ok(Box::new(DecimalAvgGroups::<T>::try_new(
         data_type,
         return_type,
-        false,
-        move |sum, count| decimal_average(averager.as_ref(), sum, count, null_on_overflow),
-    )))
+        (input_precision, sum_scale),
+        (target_precision, target_scale),
+        null_on_overflow,
+    )?))
 }
 
-fn decimal_average<T: DecimalType>(
-    averager: Option<&DecimalAverager<T>>,
-    sum: T::Native,
-    count: u64,
-    null_on_overflow: bool,
-) -> Result<Option<T::Native>> {
-    if count == 0 {
-        return Ok(None);
+fn decimal_precision(data_type: &DataType) -> Option<u8> {
+    match data_type {
+        DataType::Decimal32(precision, _)
+        | DataType::Decimal64(precision, _)
+        | DataType::Decimal128(precision, _)
+        | DataType::Decimal256(precision, _) => Some(*precision),
+        _ => None,
     }
-    let Some(averager) = averager else {
-        return Ok(None);
-    };
-    let count_native = usize::try_from(count)
-        .ok()
-        .and_then(T::Native::from_usize)
-        .ok_or_else(|| {
-            DataFusionError::Execution(
-                "avg groups evaluate: group count exceeds the decimal native type".to_string(),
-            )
-        })?;
-    averager.avg(sum, count_native, null_on_overflow)
 }
 
 #[allow(clippy::cast_precision_loss, clippy::unnecessary_wraps)]
@@ -147,7 +134,10 @@ fn float_average(sum: f64, count: u64) -> Result<Option<f64>> {
     }
 }
 
-fn filtered_nulls(opt_filter: Option<&BooleanArray>, input: &dyn Array) -> Option<NullBuffer> {
+pub(crate) fn filtered_nulls(
+    opt_filter: Option<&BooleanArray>,
+    input: &dyn Array,
+) -> Option<NullBuffer> {
     let filter_nulls = opt_filter.map(|filter| match filter.nulls() {
         None => NullBuffer::new(filter.values().clone()),
         Some(valid) => NullBuffer::new(filter.values() & valid.inner()),
@@ -203,7 +193,7 @@ where
     }
 }
 
-fn check_emitted(counts: usize, sums: usize, nulls: Option<&NullBuffer>) -> Result<()> {
+pub(crate) fn check_emitted(counts: usize, sums: usize, nulls: Option<&NullBuffer>) -> Result<()> {
     if counts != sums {
         return exec_err!("avg groups emit: counts and sums disagree");
     }
@@ -757,7 +747,10 @@ mod tests {
                 assert!(result.is_null(1));
             } else {
                 let error = groups.evaluate(EmitTo::All).expect_err("avg must raise");
-                assert!(error.to_string().contains("Arithmetic Overflow"), "{error}");
+                assert!(
+                    error.to_string().contains("[NUMERIC_VALUE_OUT_OF_RANGE]"),
+                    "{error}"
+                );
             }
         }
     }

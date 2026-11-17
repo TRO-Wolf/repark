@@ -1,0 +1,808 @@
+{
+"avg/beside_avg": {
+"rows": [
+"inf|inf"
+],
+"types": [
+"double",
+"double"
+]
+},
+"avg/beside_sum_b": "ERR:[ARITHMETIC_OVERFLOW] long overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003",
+"avg/distinct/b": {
+"rows": [
+"1|2.0",
+"2|9.223372036854776e+18",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/distinct/i": {
+"rows": [
+"1|3.5",
+"2|2147483647.0",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/distinct/x": {
+"rows": [
+"1|-0.375",
+"2|1e+308",
+"3|0.20000000000000004"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/grouped/'1.5'": {
+"rows": [
+"1|1.5",
+"2|1.5",
+"3|1.5"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/grouped/CAST(h AS TINYINT)": "ERR:[CAST_OVERFLOW] The value 32767S of the type \"SMALLINT\" cannot be cast to \"TINYINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003",
+"avg/grouped/NULL": {
+"rows": [
+"1|null",
+"2|null",
+"3|null"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/grouped/b": {
+"rows": [
+"1|2.0",
+"2|9.223372036854776e+18",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/grouped/f": {
+"rows": [
+"1|1.875",
+"2|0.75",
+"3|0.2000000054637591"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/grouped/h": {
+"rows": [
+"1|1.5",
+"2|32767.0",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/grouped/i": {
+"rows": [
+"1|3.5",
+"2|2147483647.0",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/grouped/str": "ERR:[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate m",
+"avg/grouped/t": "ERR:[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"avg(t)\" due to data type mismatch: The first parameter requires the \"NUMERIC\" or \"ANSI INTERVAL\" type, however \"t\" has the type \"BOOLEAN\". SQL",
+"avg/grouped/x": {
+"rows": [
+"1|-0.375",
+"2|inf",
+"3|0.20000000000000004"
+],
+"types": [
+"int",
+"double"
+]
+},
+"avg/having/b": {
+"rows": [
+"1",
+"2",
+"3"
+],
+"types": [
+"int"
+]
+},
+"avg/having/i": {
+"rows": [
+"1",
+"2",
+"3"
+],
+"types": [
+"int"
+]
+},
+"avg/having/x": {
+"rows": [
+"2"
+],
+"types": [
+"int"
+]
+},
+"avg/interval_day": {
+"rows": [
+"1 day, 12:00:00"
+],
+"types": [
+"interval day to second"
+]
+},
+"avg/interval_dts": {
+"rows": [
+"1 day, 15:04:36"
+],
+"types": [
+"interval day to second"
+]
+},
+"avg/interval_ym": "ERR:[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented.",
+"avg/mixed_distinct/b": {
+"rows": [
+"1|2.0|2",
+"2|9.223372036854776e+18|2",
+"3|2.0|3"
+],
+"types": [
+"int",
+"double",
+"bigint"
+]
+},
+"avg/mixed_distinct/i": {
+"rows": [
+"1|3.5|2",
+"2|2147483647.0|2",
+"3|2.0|3"
+],
+"types": [
+"int",
+"double",
+"bigint"
+]
+},
+"avg/mixed_distinct/x": {
+"rows": [
+"1|-0.375|2",
+"2|1e+308|2",
+"3|0.20000000000000004|3"
+],
+"types": [
+"int",
+"double",
+"bigint"
+]
+},
+"avg/ungrouped/'1.5'": {
+"rows": [
+"1.5"
+],
+"types": [
+"double"
+]
+},
+"avg/ungrouped/CAST(h AS TINYINT)": "ERR:[CAST_OVERFLOW] The value 32767S of the type \"SMALLINT\" cannot be cast to \"TINYINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003",
+"avg/ungrouped/NULL": {
+"rows": [
+"null"
+],
+"types": [
+"double"
+]
+},
+"avg/ungrouped/b": {
+"rows": [
+"2.6352491533870787e+18"
+],
+"types": [
+"double"
+]
+},
+"avg/ungrouped/f": {
+"rows": [
+"0.8357142880558968"
+],
+"types": [
+"double"
+]
+},
+"avg/ungrouped/h": {
+"rows": [
+"9363.285714285714"
+],
+"types": [
+"double"
+]
+},
+"avg/ungrouped/i": {
+"rows": [
+"613566758.1428572"
+],
+"types": [
+"double"
+]
+},
+"avg/ungrouped/str": "ERR:[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate m",
+"avg/ungrouped/t": "ERR:[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"avg(t)\" due to data type mismatch: The first parameter requires the \"NUMERIC\" or \"ANSI INTERVAL\" type, however \"t\" has the type \"BOOLEAN\". SQL",
+"avg/ungrouped/x": {
+"rows": [
+"inf"
+],
+"types": [
+"double"
+]
+},
+"avg/win_part/b": {
+"rows": [
+"1|1|2.0",
+"1|2|2.0",
+"1|3|2.0",
+"2|4|9.223372036854776e+18",
+"2|5|9.223372036854776e+18",
+"3|6|2.0",
+"3|7|2.0",
+"3|8|2.0"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"avg/win_part/i": {
+"rows": [
+"1|1|3.5",
+"1|2|3.5",
+"1|3|3.5",
+"2|4|2147483647.0",
+"2|5|2147483647.0",
+"3|6|2.0",
+"3|7|2.0",
+"3|8|2.0"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"avg/win_part/x": {
+"rows": [
+"1|1|-0.375",
+"1|2|-0.375",
+"1|3|-0.375",
+"2|4|inf",
+"2|5|inf",
+"3|6|0.20000000000000004",
+"3|7|0.20000000000000004",
+"3|8|0.20000000000000004"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"avg/win_rows/b": {
+"rows": [
+"1|1|7.0",
+"1|2|2.0",
+"1|3|-3.0",
+"2|4|9.223372036854776e+18",
+"2|5|9.223372036854776e+18",
+"3|6|1.0",
+"3|7|1.5",
+"3|8|2.5"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"avg/win_rows/i": {
+"rows": [
+"1|1|3.0",
+"1|2|3.5",
+"1|3|4.0",
+"2|4|2147483647.0",
+"2|5|2147483647.0",
+"3|6|1.0",
+"3|7|1.5",
+"3|8|2.5"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"avg/win_rows/x": {
+"rows": [
+"1|1|1.5",
+"1|2|-0.375",
+"1|3|-2.25",
+"2|4|1e+308",
+"2|5|inf",
+"3|6|0.1",
+"3|7|0.15000000000000002",
+"3|8|0.25"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"df/F.mean/b": {
+"rows": [
+"1|2.0",
+"2|9.223372036854776e+18",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"df/F.mean/x": {
+"rows": [
+"1|-0.375",
+"2|inf",
+"3|0.20000000000000004"
+],
+"types": [
+"int",
+"double"
+]
+},
+"df/GroupedData.mean/i": {
+"rows": [
+"1|3.5",
+"2|2147483647.0",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"df/agg_F.expr_mean/b": {
+"rows": [
+"1|2.0",
+"2|9.223372036854776e+18",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"df/agg_dict_mean/x": {
+"rows": [
+"1|-0.375",
+"2|inf",
+"3|0.20000000000000004"
+],
+"types": [
+"int",
+"double"
+]
+},
+"df/describe/x": {
+"rows": [
+"count|7",
+"max|1.0E308",
+"mean|Infinity",
+"min|-2.25",
+"stddev|NaN"
+],
+"types": [
+"string",
+"string"
+]
+},
+"df/selectExpr_mean/x": {
+"rows": [
+"inf"
+],
+"types": [
+"double"
+]
+},
+"mean/beside_avg": {
+"rows": [
+"inf|inf"
+],
+"types": [
+"double",
+"double"
+]
+},
+"mean/beside_sum_b": "ERR:[ARITHMETIC_OVERFLOW] long overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003",
+"mean/distinct/b": {
+"rows": [
+"1|2.0",
+"2|9.223372036854776e+18",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/distinct/i": {
+"rows": [
+"1|3.5",
+"2|2147483647.0",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/distinct/x": {
+"rows": [
+"1|-0.375",
+"2|1e+308",
+"3|0.20000000000000004"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/grouped/'1.5'": {
+"rows": [
+"1|1.5",
+"2|1.5",
+"3|1.5"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/grouped/CAST(h AS TINYINT)": "ERR:[CAST_OVERFLOW] The value 32767S of the type \"SMALLINT\" cannot be cast to \"TINYINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003",
+"mean/grouped/NULL": {
+"rows": [
+"1|null",
+"2|null",
+"3|null"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/grouped/b": {
+"rows": [
+"1|2.0",
+"2|9.223372036854776e+18",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/grouped/f": {
+"rows": [
+"1|1.875",
+"2|0.75",
+"3|0.2000000054637591"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/grouped/h": {
+"rows": [
+"1|1.5",
+"2|32767.0",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/grouped/i": {
+"rows": [
+"1|3.5",
+"2|2147483647.0",
+"3|2.0"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/grouped/str": "ERR:[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate m",
+"mean/grouped/t": "ERR:[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"mean(t)\" due to data type mismatch: The first parameter requires the \"NUMERIC\" or \"ANSI INTERVAL\" type, however \"t\" has the type \"BOOLEAN\". SQ",
+"mean/grouped/x": {
+"rows": [
+"1|-0.375",
+"2|inf",
+"3|0.20000000000000004"
+],
+"types": [
+"int",
+"double"
+]
+},
+"mean/having/b": {
+"rows": [
+"1",
+"2",
+"3"
+],
+"types": [
+"int"
+]
+},
+"mean/having/i": {
+"rows": [
+"1",
+"2",
+"3"
+],
+"types": [
+"int"
+]
+},
+"mean/having/x": {
+"rows": [
+"2"
+],
+"types": [
+"int"
+]
+},
+"mean/interval_day": {
+"rows": [
+"1 day, 12:00:00"
+],
+"types": [
+"interval day to second"
+]
+},
+"mean/interval_dts": {
+"rows": [
+"1 day, 15:04:36"
+],
+"types": [
+"interval day to second"
+]
+},
+"mean/interval_ym": "ERR:[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented.",
+"mean/mixed_distinct/b": {
+"rows": [
+"1|2.0|2",
+"2|9.223372036854776e+18|2",
+"3|2.0|3"
+],
+"types": [
+"int",
+"double",
+"bigint"
+]
+},
+"mean/mixed_distinct/i": {
+"rows": [
+"1|3.5|2",
+"2|2147483647.0|2",
+"3|2.0|3"
+],
+"types": [
+"int",
+"double",
+"bigint"
+]
+},
+"mean/mixed_distinct/x": {
+"rows": [
+"1|-0.375|2",
+"2|1e+308|2",
+"3|0.20000000000000004|3"
+],
+"types": [
+"int",
+"double",
+"bigint"
+]
+},
+"mean/ungrouped/'1.5'": {
+"rows": [
+"1.5"
+],
+"types": [
+"double"
+]
+},
+"mean/ungrouped/CAST(h AS TINYINT)": "ERR:[CAST_OVERFLOW] The value 32767S of the type \"SMALLINT\" cannot be cast to \"TINYINT\" due to an overflow. Use `try_cast` to tolerate overflow and return NULL instead. SQLSTATE: 22003",
+"mean/ungrouped/NULL": {
+"rows": [
+"null"
+],
+"types": [
+"double"
+]
+},
+"mean/ungrouped/b": {
+"rows": [
+"2.6352491533870787e+18"
+],
+"types": [
+"double"
+]
+},
+"mean/ungrouped/f": {
+"rows": [
+"0.8357142880558968"
+],
+"types": [
+"double"
+]
+},
+"mean/ungrouped/h": {
+"rows": [
+"9363.285714285714"
+],
+"types": [
+"double"
+]
+},
+"mean/ungrouped/i": {
+"rows": [
+"613566758.1428572"
+],
+"types": [
+"double"
+]
+},
+"mean/ungrouped/str": "ERR:[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate m",
+"mean/ungrouped/t": "ERR:[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"mean(t)\" due to data type mismatch: The first parameter requires the \"NUMERIC\" or \"ANSI INTERVAL\" type, however \"t\" has the type \"BOOLEAN\". SQ",
+"mean/ungrouped/x": {
+"rows": [
+"inf"
+],
+"types": [
+"double"
+]
+},
+"mean/win_part/b": {
+"rows": [
+"1|1|2.0",
+"1|2|2.0",
+"1|3|2.0",
+"2|4|9.223372036854776e+18",
+"2|5|9.223372036854776e+18",
+"3|6|2.0",
+"3|7|2.0",
+"3|8|2.0"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"mean/win_part/i": {
+"rows": [
+"1|1|3.5",
+"1|2|3.5",
+"1|3|3.5",
+"2|4|2147483647.0",
+"2|5|2147483647.0",
+"3|6|2.0",
+"3|7|2.0",
+"3|8|2.0"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"mean/win_part/x": {
+"rows": [
+"1|1|-0.375",
+"1|2|-0.375",
+"1|3|-0.375",
+"2|4|inf",
+"2|5|inf",
+"3|6|0.20000000000000004",
+"3|7|0.20000000000000004",
+"3|8|0.20000000000000004"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"mean/win_rows/b": {
+"rows": [
+"1|1|7.0",
+"1|2|2.0",
+"1|3|-3.0",
+"2|4|9.223372036854776e+18",
+"2|5|9.223372036854776e+18",
+"3|6|1.0",
+"3|7|1.5",
+"3|8|2.5"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"mean/win_rows/i": {
+"rows": [
+"1|1|3.0",
+"1|2|3.5",
+"1|3|4.0",
+"2|4|2147483647.0",
+"2|5|2147483647.0",
+"3|6|1.0",
+"3|7|1.5",
+"3|8|2.5"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+},
+"mean/win_rows/x": {
+"rows": [
+"1|1|1.5",
+"1|2|-0.375",
+"1|3|-2.25",
+"2|4|1e+308",
+"2|5|inf",
+"3|6|0.1",
+"3|7|0.15000000000000002",
+"3|8|0.25"
+],
+"types": [
+"int",
+"int",
+"double"
+]
+}
+}

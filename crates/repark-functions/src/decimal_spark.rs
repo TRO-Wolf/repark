@@ -524,7 +524,12 @@ fn scale_unscaled(value: i256, from_scale: i32, to_scale: i32) -> Result<i256> {
 }
 
 /// Java / Spark `ROUND_HALF_UP`: nearest-neighbor, ties away from zero.
-fn div_half_up(numerator: i256, denominator: i256) -> Result<i256> {
+pub(crate) fn div_half_up(numerator: i256, denominator: i256) -> Result<i256> {
+    if let (Some(numerator), Some(denominator)) = (numerator.to_i128(), denominator.to_i128())
+        && let Some(quotient) = narrow_div_half_up(numerator, denominator)
+    {
+        return Ok(i256::from_i128(quotient));
+    }
     if denominator == i256::ZERO {
         return exec_err!("decimal kernel asked to divide by zero");
     }
@@ -558,6 +563,19 @@ fn div_half_up(numerator: i256, denominator: i256) -> Result<i256> {
     };
     quotient.checked_add(bump).ok_or_else(|| {
         DataFusionError::Execution("decimal half-up bump overflowed i256".to_string())
+    })
+}
+
+pub(crate) fn narrow_div_half_up(numerator: i128, denominator: i128) -> Option<i128> {
+    let quotient = numerator.checked_div(denominator)?;
+    let remainder = numerator - quotient * denominator;
+    if remainder == 0 || remainder.unsigned_abs() * 2 < denominator.unsigned_abs() {
+        return Some(quotient);
+    }
+    quotient.checked_add(if (numerator < 0) == (denominator < 0) {
+        1
+    } else {
+        -1
     })
 }
 
