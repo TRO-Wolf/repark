@@ -33,3 +33,7 @@ Up: [map.md](map.md).
 ## Append (2026-11-17): the coalesce shape is cross-listed
 
 Ruling 4 of the [rulings](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md) lists the `coalesce_overflow_lit` shape here as well. It is a planning fold that raises in a branch Spark never evaluates: with ANSI on, Spark answers and RePark's fold raises (Fable (`claude-fable-5-2`), consult reply of 2026-11-17, section 3, Q3). The card for that literal is [DECIMAL-LITERAL-OVERFLOW-1](../decimal-common-type-1-side/decimal-literal-overflow-1-card-2026-11-17.md) (S2, not label-blocking). This card's severity and label status are unchanged.
+
+## Append (2026-11-17, later): two cells through a temp view
+
+The view step 0's round 2 re-critic (TEMP-VIEW-SESSION-SETTINGS-1, PR #1356, head `a2e34b9e`) measured the same shape through a temp view: `NOT (b = 0) AND m > 1`, created with ANSI on and read with it off. Spark answers 5.0 on both doors. RePark answers 5.0 on the SQL door and raises on the DataFrame door. The view unit's ruled filter rule leaves both cells raising under the reader's filter, and the wrapper follow-up ([VIEW-FILTER-SETTINGS-WRAPPER-1](../consult-2026-11-17/view-filter-settings-wrapper-1-card-2026-11-17.md)) does not close them either. The control, the same shape with ANSI on at creation and read, raises on both RePark doors, and so does a direct query. This append records the two cells; the severity and label status are unchanged (S2, not label-blocking).

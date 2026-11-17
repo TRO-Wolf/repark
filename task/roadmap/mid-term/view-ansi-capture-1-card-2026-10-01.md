@@ -1,5 +1,7 @@
 # VIEW-ANSI-CAPTURE-1 — views lose their creation-time ANSI setting
 
+**Folded into TEMP-VIEW-SESSION-SETTINGS-1 on 2026-11-17** (one gap, Fable's recommendation; the step 0 works both): see [TEMP-VIEW-SESSION-SETTINGS-1](temp-view-session-settings-1-card-2026-11-02.md).
+
 **Filed: 2026-10-01 from the overnight owner-items backlog** (source:
 `/tmp/oc-worker/direct/wo/overnight-2026-09-29-owner-items.md`, line 66;
 #888 re-verify 8, finding **VN9-4**). **Severity:** wrong results, not yet
