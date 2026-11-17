@@ -304,12 +304,109 @@ DataFrame forms, and every division cell. Both engines accept the `SET` and read
 | `d38_10 * 3` (and `* -3`) | `decimal(38,8)` | `Arrow error: Arithmetic overflow` | decimal multiplication at 38 digits |
 | `summary()` with no statistics | answers | refuses (no percentile rows) | `summary`, disclosed |
 
+## After the inventory critic (revision, 2026-11-17)
+
+The critic (`GAPS`) contradicted no cell above. Its findings were re-measured here with `run_revision.py` on the
+same tables, both engines, both ANSI modes (778 cells per run; raw in `evidence/raw/rev/`), and `mean` and the
+new shapes were added. Letters as above.
+
+| family (Spark door) | cells per mode | ANSI on | ANSI off |
+|---|---|---|---|
+| `mean` (SQL every `avg` position, `F.expr`, `selectExpr`, `agg` dict, Iceberg CTAS) | 470 | `=` 121, `t` 273, `V` 33, `R` 35, `B` 8 | `=` 121, `t` 273, `V` 33, `R` 43 |
+| `avg` / `mean` `(DISTINCT x)` beside `count(x)` | 26 | `R` 13 (`avg`), `t` 13 (`mean`) | the same |
+| shapes (grouping sets, `UNION ALL`, `HAVING` with a truncated constant, `avg(d / 3)`, folding) | 55 | `=` 14, `t` 12, `V` 11, `R` 5, `B` 13 | `=` 20, `t` 12, `V` 11, `R` 12 |
+| `mod`, `pmod`, `%` (SQL and DataFrame), DataFrame `round(col / 3, 2)`, `F.expr` folding | 100 | `=` 8, `T` 83, `V` 5, `S` 2, `B` 2 | `=` 10, `T` 83, `V` 7 |
+| `round(d, 1)`, `round(d / 3, 2)` | 20 | `=` 1, `T` 17, `B` 2 | `=` 1, `T` 19 |
+| `try_add`, `try_subtract`, `try_multiply`, `try_divide`, `try_mod` | 100 | `T` 8, `V` 47, `R` 45 | the same |
+| the sum past 38 digits (`s04`) | 3 | `=` 2, `B` 1 | `=` 2, `R` 1 |
+| Iceberg `WHERE d / 3 = 0.836667` | 3 | `V` 2, `B` 1 | `V` 2, `=` 1 |
+
+### M1 — `mean` is DataFusion's `Avg`, not RePark's averager
+
+- **Every `mean` position truncates as `avg` does**: ungrouped (128 `t`, the same group grid), `GROUP BY`,
+  `DISTINCT`, every window frame, `HAVING`, beside a constant, `agg(F.expr("mean(x)"))`, `selectExpr("mean(x)")`,
+  `agg({x: "mean"})`, Iceberg CTAS (`c10_2` g9 stored `0.836666` against `0.836667`). The values agree with `avg`'s
+  cells because DataFusion's `Avg` truncates the same way (`div_wrapping`), so the step 0 table could not tell the
+  two accumulators apart.
+- **The proof that it is another accumulator**: `mean(DISTINCT x), count(x)` **answers** (truncated: g13 `0.026666`
+  against Spark's `0.026667`, all 13 columns), where `avg(DISTINCT x), count(x)` raises `DistinctAvgAccumulator`
+  (13 columns, both modes). On the native door both answer, truncated (`n05`'s shape: `t` on `c10_2` and `c28_2`).
+- `F.mean` and `GroupedData.mean` (step 0's DataFrame rows) go through `F.avg` and so reach RePark's averager;
+  the SQL name `mean` does not.
+- **Bare aggregates in a DataFrame `select`** (`select(F.expr("mean(x)"))`, `select(F.expr("avg(x)"))`, no
+  `groupBy`) raise `This feature is not implemented: Physical plan does not support logical expression
+  AggregateFunction(…)` where Spark answers (26 `R` per mode). The same refusal as FEXPR-COUNT-STAR-AGG-1 (M5);
+  `selectExpr("avg(x)")` answers (truncated).
+
+### Shapes (the critic's §4)
+
+- `GROUPING SETS ((g), ())`, `ROLLUP(g)`, `CUBE(g)`, `UNION ALL` of two averages: `t` on `c10_2`, `c28_2`,
+  `c38_18`, both modes (the grand-total row truncates too).
+- **`HAVING avg(x) = <the truncated value>`**: Spark keeps the terminating groups only (g1, g3, g10); RePark keeps
+  13 groups — the mirror of step 0's `having_eq`.
+- **`avg(d / 3)` and `mean(d / 3)`**: the division's wrong type feeds the average. `d10_2`: Spark `decimal(18,10)`
+  `3703704.4122221111`, RePark `decimal(25,17)` `3703704.41222222222221111`; at p ≥ 28 RePark raises `Arithmetic
+  Overflow in AvgAccumulator` where Spark answers (`d28_2`, `d28_10` in both modes; ANSI off also `d34_4` and
+  `d38_10`, where Spark answers NULL). Control
+  `avg(d * 2)` agrees below p = 34.
+- **Pins that agree (keep them agreeing)**: `d / (1 + 2)` is `decimal(21,13)` on both engines (SQL and `F.expr`):
+  Spark folds `1 + 2` after its coercion, so the integer is not a literal when the type is picked; A2 must stay
+  before `type_coercion` and leave a folded expression alone.
+- Iceberg: `SELECT id FROM <iceberg table> WHERE d10_2 / 3 = 0.836667` keeps row 3 on Spark and nothing on RePark
+  (`d10_2`, `d28_2`, both modes).
+
+### M3 — `mod()`, `pmod()`, `%`
+
+`d10_2`, Spark / RePark, both modes (values equal everywhere; `T` on all 10 columns of each form):
+
+| cell | Spark | RePark |
+|---|---|---|
+| `d % 3` (SQL and `col(d) % 3`) | `decimal(3,2)` | `decimal(10,2)` |
+| `mod(d, 3)`, `pmod(d, 3)`, `pmod(d, -3)` (SQL and `F.expr`) | `decimal(3,2)` | `decimal(12,2)` |
+| `F.pmod(col(d), F.lit(3))` | `decimal(3,2)` | `decimal(11,2)` |
+| `pmod(d28_2, 3)` | `decimal(3,2)` | `decimal(28,2)` |
+
+On the native door `mod` and `pmod` do not resolve (`UNRESOLVED_ROUTINE`); `%` is `T`.
+
+### M4 — `round`
+
+`round(d10_2, 1)`: Spark `decimal(10,1)`, RePark `decimal(10,2)`; `round(d10_2 / 3, 2)`: Spark `decimal(11,2)`,
+RePark `decimal(21,13)`; values equal (`T`). The DataFrame `round(col(d) / 3, 2)` is `double` on RePark (the
+DataFrame `/` seat), `decimal(11,2)` on Spark, with `V` at p ≥ 20 (`0.1` against `0.10` is equal; wide rows lose
+digits in `double`). Held by the existing card DECIMAL-ROUND-RESULT-TYPE-1 (S3).
+
+### `try_*` with a decimal and an integer
+
+Rows 1–9 (row 10, the column maximum, makes every `try_*` raise `Cast error: value of 9999999999 is out of range
+Int32` on RePark: the `R` cells). Spark / RePark at `d10_2`:
+
+| call | Spark | RePark |
+|---|---|---|
+| `try_add(d, 1)` | `decimal(11,2)`, row 3 `3.51` | `int`, `3` |
+| `try_subtract(d, 1)` | `decimal(11,2)`, `1.51` | `int`, `1` |
+| `try_multiply(d, 3)` | `decimal(12,2)`, `7.53` | `int`, `6` |
+| `try_divide(d, 3)` | `decimal(14,6)`, `0.836667` | `double`, `0.6666666666666666` |
+| `try_mod(d, 3)` | `decimal(3,2)`, `2.51` | `int`, `2` |
+
+At scale 0 (`d10_0`, `d38_0`) the values agree and only the type differs (`T`, 8 cells). Every other width is `V`.
+
+### The sum past 38 digits is not sticky
+
+`s04` (`decimal(38,0)` rows `MAX38`, `MAX38`, `-MAX38`, `-MAX38`, `5`): `avg` and `mean` answer `1.0000` on both
+engines, both modes — Spark's running sum passes 38 digits and comes back (`DecimalAddNoOverflowCheck` is an
+unbounded `plus`; only the final `toPrecision` checks), and RePark's `i128` sum wraps and unwraps. Only a sum still
+past 38 digits at the end overflows (`MAX38`, `MAX38`, `5`): ANSI on Spark `[ARITHMETIC_OVERFLOW] Overflow in sum
+of decimals` (`B`), ANSI off Spark `NULL`, RePark raises (`R`). So A1's sum must be unbounded and checked once, at
+`evaluate` (sketch §4).
+
 ## Exclusions and sampling
 
 - Window frames run over one column order (`id`); `RANGE` by the decimal itself is not run.
+- Spark's non-sticky sum is measured ungrouped, one partition; a grouped multi-partition sum past 38 digits that
+  comes back is not run.
 - The confs are sampled (above); Iceberg runs four `avg` and three division sources; the native door runs six
   `avg` and four division columns.
-- `avg` of a decimal expression (`avg(d / 3)`) and `avg` over an interval are not run.
+- `avg` over an interval is not run; `avg(d / 3)` was added in the revision.
 - The wide round-up case (a large magnitude with ⅔) is not run; g21 and g23 cover wide magnitudes rounding down.
 
 Up: [map.md](map.md).

@@ -30,6 +30,9 @@
   - `explain_paths.py <wh> <out>/explain-paths-repark.txt` (RePark, ANSI on);
   - `run_extra.py <spark|repark> true <wh> <jar> <out>/extra-<engine>-true.jsonl`;
   - `compact.py <out> ../raw`, then `analyze.py ../raw ../raw` and `grids.py ../raw`.
+  - the revision (after the inventory critic): `run_revision.py <spark|repark> <true|false> <wh> <jar> <out>/rev`,
+    then `compact.py <out>/rev ../raw/rev` and `analyze.py ../raw/rev ../raw/rev`; the Spark 4.1.2 `Pmod`, `Remainder`
+    and `DecimalAddNoOverflowCheck` readings appended to `jar/javap-excerpts.txt`.
 - **Checked:** the SQL text recorded with every raw cell equals the text `cells.py` rebuilds for its key (8,464 cells,
   0 mismatches), so the committed probes are the ones that ran (later edits were formatting only).
 

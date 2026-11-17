@@ -11,6 +11,7 @@ Written by the probes in [../probes/](../probes/map.md); the SQL text of a cell 
 - `native.jsonl` — the native door `repark.sql()`, paired with both Spark `base` runs.
 - `extra-spark-true.jsonl`, `extra-repark-true.jsonl` — `run_extra.py`, ANSI on (the SQL text is in `run_extra.py`).
 - `explain-paths-repark.txt` — `explain_paths.py`'s plans and answers.
+- [rev/](rev/map.md) — the revision's cells after the inventory critic (`run_revision.py`).
 - `verdicts.jsonl` — `analyze.py`'s pairing: one row per RePark or native cell, mode and conf, with both result
   types, the verdict, the differing rows (first six), the count of differing rows and the per-value cause tags.
 - `summary.md` — `analyze.py`'s count table by conf, mode, family, door and position.

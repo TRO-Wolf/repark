@@ -22,6 +22,10 @@ Run from this directory; `cells` and `lib` are imported by the runners. Commands
   answers.
 - `run_extra.py` — after the main pass, ANSI on, both engines: `avg(DISTINCT …)` beside `count` and as a window,
   `*` and `+` with `3Y`, `3S`, `3L` literals, and `try_add`, `try_multiply`, `try_divide` over a decimal.
+- `rev_cells.py`, `run_revision.py` — the revision after the inventory critic: `mean` at every `avg` position and
+  door, `avg`/`mean(DISTINCT …)` beside `count`, grouping sets, `UNION ALL`, `HAVING` with a truncated constant,
+  `avg(d / 3)`, folding, `mod`/`pmod`/`%`, `round`, the five `try_*` calls, the non-sticky sum `s04`, the DataFrame
+  cells, the Iceberg `WHERE` and `mean` CTAS, and a native sample; one engine and ANSI mode per run.
 - `analyze.py` — pairs each RePark (or native) cell with Spark's in the same mode and conf, renormalises a Spark
   `decimal(38,38)` value that PySpark prints with a 39th zero digit, classifies (`EQUAL`, `TYPE`, `VALUE`,
   `REPARK_RAISES`, `SPARK_RAISES`, `BOTH_RAISE`), tags each differing value (`truncated_one_unit`,
