@@ -4,7 +4,9 @@
 note N5, also fails on main before #1339). Measured on main `a06c1088`'s package against Spark 4.1.2, both ANSI
 modes, the Spark door and the native door.
 
-**Status:** PROPOSED, not dispatched. Pre-existing: main refuses it too.
+**Status:** merged as #1350 (`a792ce47`, 2026-11-17), after step 0 (#1347), the build and its verifier (PASS).
+
+**2026-11-17:** the Status line above is corrected in place. It read "PROPOSED, not dispatched. Pre-existing: main refuses it too." after #1350 merged (the orchestrator, `claude-opus-5-5`).
 
 **Severity: S1.** Beside the refusals, neighbouring two-branch cells answer with the wrong type and wrong values
 (`i2_p2`, `i2_q3`, `i2_q4` below): a `UNION ALL` of decimals is a common shape, and a mistyped union silently rounds
