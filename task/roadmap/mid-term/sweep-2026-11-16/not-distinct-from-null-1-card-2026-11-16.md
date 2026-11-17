@@ -2,9 +2,11 @@
 
 **Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from the CAST-LITERAL-UNWRAP-1 verifier's verdict of 2026-11-16 (Findings), an orchestrator item. Measured on main and on the CAST-LITERAL-UNWRAP-1 head, four times in both ANSI modes; the verdict does not record which commit each ran on, so this card makes no claim about #1341 or #1345.
 
-**Status:** PROPOSED, not dispatched; severity and label-blocking: owner to rule.
+**Status:** ruled 2026-11-16, not dispatched; not label-blocking.
 
-**Severity:** Proposed: S2 (owner to rule). A refusal where Spark answers, on a plain null-safe comparison.
+**Severity:** S2, ruled 2026-11-16, not label-blocking. A refusal where Spark answers, on a plain null-safe comparison.
+
+Ruled 2026-11-16 ("Merge those and defaults."): S2, not label-blocking; the label text lists this loud card as an exclusion.
 
 ## Finding
 

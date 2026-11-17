@@ -2,9 +2,11 @@
 
 **Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from Fable's simplifier audit of 2026-11-16 (difference 9). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2. The sweep re-run on main `e50ed17f` does not cover this audit cell; it was not re-measured on that main.
 
-**Status:** PROPOSED, not dispatched; severity and label-blocking: owner to rule.
+**Status:** ruled 2026-11-16, not dispatched; label-blocking. Queued after the string-cast build, in the ruled order.
 
-**Severity:** Proposed: S1 (owner to rule). A silent wrong calendar field on an ordinary `extract` in a session that is not UTC.
+**Severity:** S1, label-blocking, ruled 2026-11-16. A silent wrong calendar field on an ordinary `extract` in a session that is not UTC.
+
+Ruled 2026-11-16 ("Merge those and defaults."): S1, label-blocking; in the order after the string-cast build, ahead of TINYINT-SMALLINT-ARITH-ANSI-1 and RAND-SHARED-VALUE-1.
 
 ## Finding
 

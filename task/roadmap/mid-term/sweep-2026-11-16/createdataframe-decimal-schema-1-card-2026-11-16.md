@@ -2,9 +2,11 @@
 
 **Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from Fable's type-pair sweep report of 2026-11-16 (family 15). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3`, as the report states. It is not a sweep matrix cell, so the re-run on main `e50ed17f` does not cover it.
 
-**Status:** PROPOSED, not dispatched; severity and label-blocking: owner to rule. **Unverified:** this clerk did not reproduce it.
+**Status:** PROPOSED, not dispatched; to be measured before it is rated (ruled 2026-11-16). Label-blocking: not ruled. **Unverified:** this clerk did not reproduce it.
 
-**Severity:** Proposed: S2 (owner to rule), if reproduced as the report states.
+**Severity:** Proposed: S2, not yet rated, if reproduced as the report states. Measured at step 0 before any rating.
+
+Ruled 2026-11-16 ("Merge those and defaults."): measure before it is rated. No severity and no label status is set until the step 0 measurement.
 
 ## Finding
 

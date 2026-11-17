@@ -2,9 +2,11 @@
 
 **Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), from Fable's simplifier audit of 2026-11-16 (rewrites 1 to 5; Fable re-measured them with its own probe). Measured before #1341 and #1345, on main's package `pkg-ddu1-7b21bde3` against Spark 4.1.2. The sweep re-run on main `e50ed17f` does not cover this audit cell; it was not re-measured on that main.
 
-**Status:** PROPOSED, not dispatched; severity and label-blocking: owner to rule. Upstream reports and any patched crate are not decided here.
+**Status:** ruled 2026-11-16, not dispatched; label-blocking (S1). Upstream reports and any patched crate are not decided here.
 
-**Severity:** Proposed: S1 (owner to rule) for the group. Each rewrite can be ruled on its own; rewrite 1 needs a non-nullable input.
+**Severity:** S1, label-blocking, ruled 2026-11-16 for the group. Each rewrite can be ruled on its own; rewrite 1 needs a non-nullable input.
+
+Ruled 2026-11-16 ("Merge those and defaults."): S1, label-blocking. The unit is a sized patch of DataFusion's simplifier, queued after the string-cast build. Filing the bugs upstream is a separate owner decision.
 
 ## Finding
 
