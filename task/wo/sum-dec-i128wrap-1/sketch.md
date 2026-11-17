@@ -288,7 +288,9 @@ the decimal-to-string notation (domain table §10).
 
 ## 6. Owner questions (each with a default)
 
-1. **Severity and label status.** Default: **S1, label-blocking**, by the class rule (a silent wrong answer on the
+**Ruled** (owner, 2026-11-17, verbatim "defaults on both", adopting the default under each question below).
+
+1. **Severity and label status.** **Ruled** ("defaults on both"; adopted: S1, label-blocking). Default: **S1, label-blocking**, by the class rule (a silent wrong answer on the
    Spark door with ANSI on): 522 cells where Spark raises and RePark answers a wrapped or 39-digit value
    (`sum/grouped/g6/c38_0`, `g7`, `ungrouped/g5`, `grouped_big/g31`, `g32`, every DataFrame form), 52 more shape
    cells from the revision (`rev/rollup_total/g1_4`, `rev/having_lt/g1_7`, `rev/union/g4_14`, `rev/df_pivot/g1_7`,
@@ -302,7 +304,7 @@ the decimal-to-string notation (domain table §10).
      (domain table §12.4);
    - **uncommitted orphan files with 39-digit values**, 2 (`ice/insert/all/c38_0`, `c38_38`; the revision's
      `metrics_full` and `wide100` `INSERT`s are the same case).
-2. **The per-row grouped check against AVG-GROUPED-SUM-STICKY-1 (restated in the revision).** Spark checks a grouped
+2. **The per-row grouped check against AVG-GROUPED-SUM-STICKY-1 (restated in the revision).** **Ruled** ("defaults on both"; adopted: option (i), follow Spark, raising at once with ANSI on; ANSI off and `try_sum` carry a marker, chosen by K1 at 1.05x or less; `avg` keeps ruling (a)). Spark checks a grouped
    sum after every row and is sticky; ruling (a) let `avg` answer the exact value instead. Step 0's default said this
    needed "an in-memory flag, no state column". **That premise was wrong:** a group that overflowed in a partial (or
    in a row state, when DataFusion skips partial aggregation at 100,000 groups) must reach the final step marked
@@ -318,13 +320,13 @@ the decimal-to-string notation (domain table §10).
    K1 cannot hold the ANSI-off marker at 1.05x, the build stops and reports, and the owner chooses between paying it
    and (iii) for ANSI off. Cells: `sum/grouped/g10`, `g11`, `grouped_s4/g12`, `mp/grouped_p2/g21`, `g24`,
    `grouped_big/g33`, `beside/g10`, `try/grouped/g10`, `g11`.
-3. **The native door.** Its `sum` is DataFusion's and it has no `try_sum` (142 / 136 silent cells, 84 unresolved).
+3. **The native door.** **Ruled** ("defaults on both"; adopted: card it at S2, not label-blocking, as NATIVE-DECIMAL-SUM-1). Its `sum` is DataFusion's and it has no `try_sum` (142 / 136 silent cells, 84 unresolved).
    Default: **card it, S2, not label-blocking** (the label is the Spark door's): NATIVE-DECIMAL-SUM-1, or a widening
    of NATIVE-DECIMAL-AVG-DIVIDE-1, the records clerk's call. Registering A1 on the native door later is one line in
    `register_native_door_functions`.
-4. **`BIGINT` overflow with ANSI on** (17 cells, the same class rule). Default: **a second unit,
+4. **`BIGINT` overflow with ANSI on** (17 cells, the same class rule). **Ruled** ("defaults on both"; adopted: a second unit, SUM-BIGINT-ANSI-OVERFLOW-1, S1). Default: **a second unit,
    SUM-BIGINT-ANSI-OVERFLOW-1, S1 by the same class rule**, after this one (§5).
-5. **Orphan files, and the writer's bounds-only check (restated in the revision).** Two classes:
+5. **Orphan files, and the writer's bounds-only check (restated in the revision).** **Ruled** ("defaults on both"; adopted: (a) card at S3, not label-blocking; (b) ICE-DECIMAL-WRITE-PRECISION-1 at S1, label-blocking until a per-value check lands). Two classes:
    - (a) **orphans after a failed write** (`ice/insert/all/c38_0`, `c38_38`; revision `ice/insert/metrics_full/*`,
      `ice/insert/wide100/c38_0`): the writer checks after the file is written, so a refused `INSERT` leaves data files
      under the table holding the 39-digit values; the table is right. Default: **card it, S3, not label-blocking**.
@@ -340,7 +342,7 @@ the decimal-to-string notation (domain table §10).
      check per decimal column per batch, with its own cost case). Alternative (the critic's): **S2, not
      label-blocking once unit 1 lands**, on the reading that no Spark-door route remains. Cells: domain table
      §12.3, §12.4.
-6. **The ungrouped total past 38 digits across partitions (restated in the revision).** Spark raises
+6. **The ungrouped total past 38 digits across partitions (restated in the revision).** **Ruled** ("defaults on both"; adopted: mirror Spark's rule, `ARITHMETIC_OVERFLOW` for an overflowed partial or a single-phase aggregate, `NUMERIC_VALUE_OUT_OF_RANGE` for a merged total whose partials fit). Spark raises
    `NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION` when every partial fits and the merged total does not, and
    `ARITHMETIC_OVERFLOW` when a partial (or the only partition) overflows. The revision shows that this is a common
    shape, not only a multi-file read: an ungrouped `sum` over `UNION ALL` (`rev/union/g4_14`: two partials) and an
