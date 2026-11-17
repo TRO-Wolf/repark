@@ -473,6 +473,8 @@ Part 2 gets its own order after part 1 merges, on the same lane (ruling 2026-11-
 These block the label. The design would extend the normalisation through a `key_by_position`-style recursion
 (`repark-functions/src/collection/key_by_position.rs:243`) into nested comparisons and keys.
 
+**Ruled 2026-11-17, about 01:05 UTC** (owner, verbatim "merge it. Accept the blocking of only full v2 label"): "the label" above is the full format-v2 label. Part 2 does not block the scoped label ICE-V2-FLAT-AWS-LABEL-1, which excludes STRUCT, ARRAY and MAP columns.
+
 **Bar:** the 1.05x / 1.20x pair against part 1's merged head.
 
 **Out of part 2:** nested-float SELECT answers (Fable's N01–N12) are a card, `NESTED-FLOAT-KEY-1`, not this unit. So are

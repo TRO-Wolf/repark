@@ -32,6 +32,9 @@ ignore = [
   # Mirrored in .cargo/audit.toml.
   "RUSTSEC-2026-0194",
   "RUSTSEC-2026-0195",
+  "RUSTSEC-2026-0542",
+  "RUSTSEC-2026-0543",
+  "RUSTSEC-2026-0555",
 ]
 
 [licenses]
