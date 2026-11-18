@@ -1,0 +1,562 @@
+default:rs/refuse [false] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE INVALID_CONF_VALUE
+    main: string spark.sql.legacy.literal.pickMinimumPrecision|maybe
+    d1: string spark.sql.legacy.literal.pickMinimumPrecision|maybe
+    head: RAISE INVALID_CONF_VALUE
+default:rs/refuse [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE INVALID_CONF_VALUE
+    main: string spark.sql.legacy.literal.pickMinimumPrecision|maybe
+    d1: string spark.sql.legacy.literal.pickMinimumPrecision|maybe
+    head: RAISE INVALID_CONF_VALUE
+default:rs/reset/add [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(11,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+default:rs/reset/add [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(11,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+default:rs/reset/call_mod [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/reset/call_mod [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/reset/call_pmod [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/reset/call_pmod [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/reset/div [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(14,6) 1|0.100000;2|0.333333;3|0.836667;4|-0.836667;5|0.003333;6|3.333333;7|null;8|2.590000;9|0.020000
+    main: decimal(21,13) 1|0.1000000000000;2|0.3333333333333;3|0.8366666666667;4|-0.8366666666667;5|0.0033333333333;6|3.3333333333333;7|null;8|2.5900000000000;9|0.0200000000000
+default:rs/reset/div [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(14,6) 1|0.100000;2|0.333333;3|0.836667;4|-0.836667;5|0.003333;6|3.333333;7|null;8|2.590000;9|0.020000
+    main: decimal(21,13) 1|0.1000000000000;2|0.3333333333333;3|0.8366666666667;4|-0.8366666666667;5|0.0033333333333;6|3.3333333333333;7|null;8|2.5900000000000;9|0.0200000000000
+default:rs/reset/mod [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/reset/mod [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/reset/mul [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(12,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+default:rs/reset/mul [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(12,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+default:rs/reset/sub [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(11,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+default:rs/reset/sub [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(11,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+default:rs/set_false/add [false] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(13,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+    main: decimal(11,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+    d1: decimal(11,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+default:rs/set_false/add [true] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(13,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+    main: decimal(11,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+    d1: decimal(11,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+default:rs/set_false/call_mod [false] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    d1: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/set_false/call_mod [true] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    d1: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/set_false/call_pmod [false] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    d1: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/set_false/call_pmod [true] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    d1: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/set_false/div [false] | main=EQUAL | d1=TYPE | head=EQUAL | spark: decimal(21,13) 1|0.1000000000000;2|0.3333333333333;3|0.8366666666667;4|-0.8366666666667;5|0.0033333333333;6|3.3333333333333;7|null;8|2.5900000000000;9|0.0200000000000
+    d1: decimal(14,6) 1|0.100000;2|0.333333;3|0.836667;4|-0.836667;5|0.003333;6|3.333333;7|null;8|2.590000;9|0.020000
+default:rs/set_false/div [true] | main=EQUAL | d1=TYPE | head=EQUAL | spark: decimal(21,13) 1|0.1000000000000;2|0.3333333333333;3|0.8366666666667;4|-0.8366666666667;5|0.0033333333333;6|3.3333333333333;7|null;8|2.5900000000000;9|0.0200000000000
+    d1: decimal(14,6) 1|0.100000;2|0.333333;3|0.836667;4|-0.836667;5|0.003333;6|3.333333;7|null;8|2.590000;9|0.020000
+default:rs/set_false/mod [false] | main=EQUAL | d1=TYPE | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    d1: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/set_false/mod [true] | main=EQUAL | d1=TYPE | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    d1: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/set_false/mul [false] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(21,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+    main: decimal(12,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+    d1: decimal(12,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+default:rs/set_false/mul [true] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(21,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+    main: decimal(12,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+    d1: decimal(12,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+default:rs/set_false/sub [false] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(13,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+    main: decimal(11,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+    d1: decimal(11,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+default:rs/set_false/sub [true] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(13,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+    main: decimal(11,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+    d1: decimal(11,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+default:rs/set_false/view [false] | main=TYPE | d1=EQUAL | head=REPARK_RAISES | spark: decimal(12,2),decimal(14,6),decimal(3,2) 1|0.90|0.100000|0.30;2|3.00|0.333333|1.00;3|7.53|0.836667|2.51;4|-7.53|-0.836667|-2.51;5|0.03|0.003333|0.01;6|30.00|3.333333|1.00;7|null|null|null;8|23.31|2.590000|1.77;9|0.18|0.020000|0.06
+    main: decimal(12,2),decimal(21,13),decimal(10,2) 1|0.90|0.1000000000000|0.30;2|3.00|0.3333333333333|1.00;3|7.53|0.8366666666667|2.51;4|-7.53|-0.8366666666667|-2.51;5|0.03|0.0033333333333|0.01;6|30.00|3.3333333333333|1.00;7|null|null|null;8|23.31|2.5900000000000|1.77;9|0.18|0.0200000000000|0.06
+    head: RAISE CANNOT_UP_CAST_DATATYPE
+default:rs/set_false/view [true] | main=TYPE | d1=EQUAL | head=REPARK_RAISES | spark: decimal(12,2),decimal(14,6),decimal(3,2) 1|0.90|0.100000|0.30;2|3.00|0.333333|1.00;3|7.53|0.836667|2.51;4|-7.53|-0.836667|-2.51;5|0.03|0.003333|0.01;6|30.00|3.333333|1.00;7|null|null|null;8|23.31|2.590000|1.77;9|0.18|0.020000|0.06
+    main: decimal(12,2),decimal(21,13),decimal(10,2) 1|0.90|0.1000000000000|0.30;2|3.00|0.3333333333333|1.00;3|7.53|0.8366666666667|2.51;4|-7.53|-0.8366666666667|-2.51;5|0.03|0.0033333333333|0.01;6|30.00|3.3333333333333|1.00;7|null|null|null;8|23.31|2.5900000000000|1.77;9|0.18|0.0200000000000|0.06
+    head: RAISE CANNOT_UP_CAST_DATATYPE
+default:rs/set_true/add [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(11,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+default:rs/set_true/add [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(11,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+default:rs/set_true/call_mod [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/set_true/call_mod [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/set_true/call_pmod [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/set_true/call_pmod [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/set_true/div [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(14,6) 1|0.100000;2|0.333333;3|0.836667;4|-0.836667;5|0.003333;6|3.333333;7|null;8|2.590000;9|0.020000
+    main: decimal(21,13) 1|0.1000000000000;2|0.3333333333333;3|0.8366666666667;4|-0.8366666666667;5|0.0033333333333;6|3.3333333333333;7|null;8|2.5900000000000;9|0.0200000000000
+default:rs/set_true/div [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(14,6) 1|0.100000;2|0.333333;3|0.836667;4|-0.836667;5|0.003333;6|3.333333;7|null;8|2.590000;9|0.020000
+    main: decimal(21,13) 1|0.1000000000000;2|0.3333333333333;3|0.8366666666667;4|-0.8366666666667;5|0.0033333333333;6|3.3333333333333;7|null;8|2.5900000000000;9|0.0200000000000
+default:rs/set_true/mod [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/set_true/mod [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+default:rs/set_true/mul [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(12,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+default:rs/set_true/mul [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(12,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+default:rs/set_true/sub [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(11,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+default:rs/set_true/sub [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(11,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+false:rs/built_false/add [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(13,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+    main: decimal(11,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+false:rs/built_false/add [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(13,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+    main: decimal(11,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+false:rs/built_false/call_mod [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false/call_mod [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false/call_pmod [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false/call_pmod [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false/div [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(21,13) 1|0.1000000000000;2|0.3333333333333;3|0.8366666666667;4|-0.8366666666667;5|0.0033333333333;6|3.3333333333333;7|null;8|2.5900000000000;9|0.0200000000000
+false:rs/built_false/div [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(21,13) 1|0.1000000000000;2|0.3333333333333;3|0.8366666666667;4|-0.8366666666667;5|0.0033333333333;6|3.3333333333333;7|null;8|2.5900000000000;9|0.0200000000000
+false:rs/built_false/mod [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false/mod [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false/mul [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(21,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+    main: decimal(12,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+false:rs/built_false/mul [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(21,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+    main: decimal(12,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+false:rs/built_false/sub [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(13,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+    main: decimal(11,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+false:rs/built_false/sub [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(13,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+    main: decimal(11,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+false:rs/built_false_reset/add [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(13,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+    main: decimal(11,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+false:rs/built_false_reset/add [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(13,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+    main: decimal(11,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+false:rs/built_false_reset/call_mod [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false_reset/call_mod [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false_reset/call_pmod [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false_reset/call_pmod [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false_reset/div [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(21,13) 1|0.1000000000000;2|0.3333333333333;3|0.8366666666667;4|-0.8366666666667;5|0.0033333333333;6|3.3333333333333;7|null;8|2.5900000000000;9|0.0200000000000
+false:rs/built_false_reset/div [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(21,13) 1|0.1000000000000;2|0.3333333333333;3|0.8366666666667;4|-0.8366666666667;5|0.0033333333333;6|3.3333333333333;7|null;8|2.5900000000000;9|0.0200000000000
+false:rs/built_false_reset/mod [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false_reset/mod [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false_reset/mul [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(21,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+    main: decimal(12,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+false:rs/built_false_reset/mul [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(21,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+    main: decimal(12,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+false:rs/built_false_reset/sub [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(13,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+    main: decimal(11,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+false:rs/built_false_reset/sub [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(13,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+    main: decimal(11,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+false:rs/built_false_set_true/add [false] | main=EQUAL | d1=TYPE | head=EQUAL | spark: decimal(11,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+    d1: decimal(13,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+false:rs/built_false_set_true/add [true] | main=EQUAL | d1=TYPE | head=EQUAL | spark: decimal(11,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+    d1: decimal(13,2) 1|3.30;2|4.00;3|5.51;4|0.49;5|3.01;6|13.00;7|null;8|10.77;9|3.06
+false:rs/built_false_set_true/call_mod [false] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    d1: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false_set_true/call_mod [true] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    d1: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false_set_true/call_pmod [false] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    d1: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false_set_true/call_pmod [true] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(12,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    d1: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|0.49;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false_set_true/div [false] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(14,6) 1|0.100000;2|0.333333;3|0.836667;4|-0.836667;5|0.003333;6|3.333333;7|null;8|2.590000;9|0.020000
+    main: decimal(21,13) 1|0.1000000000000;2|0.3333333333333;3|0.8366666666667;4|-0.8366666666667;5|0.0033333333333;6|3.3333333333333;7|null;8|2.5900000000000;9|0.0200000000000
+    d1: decimal(21,13) 1|0.1000000000000;2|0.3333333333333;3|0.8366666666667;4|-0.8366666666667;5|0.0033333333333;6|3.3333333333333;7|null;8|2.5900000000000;9|0.0200000000000
+false:rs/built_false_set_true/div [true] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(14,6) 1|0.100000;2|0.333333;3|0.836667;4|-0.836667;5|0.003333;6|3.333333;7|null;8|2.590000;9|0.020000
+    main: decimal(21,13) 1|0.1000000000000;2|0.3333333333333;3|0.8366666666667;4|-0.8366666666667;5|0.0033333333333;6|3.3333333333333;7|null;8|2.5900000000000;9|0.0200000000000
+    d1: decimal(21,13) 1|0.1000000000000;2|0.3333333333333;3|0.8366666666667;4|-0.8366666666667;5|0.0033333333333;6|3.3333333333333;7|null;8|2.5900000000000;9|0.0200000000000
+false:rs/built_false_set_true/mod [false] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    d1: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false_set_true/mod [true] | main=TYPE | d1=TYPE | head=EQUAL | spark: decimal(3,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    main: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+    d1: decimal(10,2) 1|0.30;2|1.00;3|2.51;4|-2.51;5|0.01;6|1.00;7|null;8|1.77;9|0.06
+false:rs/built_false_set_true/mul [false] | main=EQUAL | d1=TYPE | head=EQUAL | spark: decimal(12,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+    d1: decimal(21,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+false:rs/built_false_set_true/mul [true] | main=EQUAL | d1=TYPE | head=EQUAL | spark: decimal(12,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+    d1: decimal(21,2) 1|0.90;2|3.00;3|7.53;4|-7.53;5|0.03;6|30.00;7|null;8|23.31;9|0.18
+false:rs/built_false_set_true/sub [false] | main=EQUAL | d1=TYPE | head=EQUAL | spark: decimal(11,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+    d1: decimal(13,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+false:rs/built_false_set_true/sub [true] | main=EQUAL | d1=TYPE | head=EQUAL | spark: decimal(11,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+    d1: decimal(13,2) 1|-2.70;2|-2.00;3|-0.49;4|-5.51;5|-2.99;6|7.00;7|null;8|4.77;9|-2.94
+pm/F/d10_2/int_column [false] | main=TYPE | d1=TYPE | head=TYPE | spark: decimal(10,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    main: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    d1: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    head: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+pm/F/d10_2/int_column [true] | main=TYPE | d1=TYPE | head=TYPE | spark: decimal(10,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    main: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    d1: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    head: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+pm/F/d10_2/left_neg [false] | main=TYPE | d1=TYPE | head=TYPE | spark: decimal(3,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|null;7|-3.00
+    main: decimal(10,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345675.91;7|-3.00
+    d1: decimal(10,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345675.91;7|-3.00
+    head: decimal(10,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345675.91;7|-3.00
+pm/F/d10_2/left_neg [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=SPARK_RAISES | spark: RAISE NUMERIC_VALUE_OUT_OF_RANGE
+    main: decimal(10,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345675.91;7|-3.00
+    d1: decimal(10,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345675.91;7|-3.00
+    head: decimal(10,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345675.91;7|-3.00
+pm/F/d10_2/neg_divisor [false] | main=TYPE | d1=VALUE | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    main: decimal(11,2) 1|-1.75;2|-1.25;3|null;4|0.00;5|0.00;6|-2.09;7|-0.91
+    d1: decimal(3,2) 1|-1.75;2|-1.25;3|null;4|0.00;5|0.00;6|-2.09;7|-0.91
+pm/F/d10_2/neg_divisor [true] | main=TYPE | d1=VALUE | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    main: decimal(11,2) 1|-1.75;2|-1.25;3|null;4|0.00;5|0.00;6|-2.09;7|-0.91
+    d1: decimal(3,2) 1|-1.75;2|-1.25;3|null;4|0.00;5|0.00;6|-2.09;7|-0.91
+pm/F/d10_2/pos [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.91;7|2.09
+    main: decimal(11,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.91;7|2.09
+pm/F/d10_2/pos [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.91;7|2.09
+    main: decimal(11,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.91;7|2.09
+pm/F/d10_2/zero [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(11,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/F/d10_2/zero [true] | main=BOTH_RAISE | d1=BOTH_RAISE | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: RAISE DIVIDE_BY_ZERO
+    d1: RAISE DIVIDE_BY_ZERO
+    head: RAISE DIVIDE_BY_ZERO
+pm/F/d10_2/zero_column [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(5,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/F/d10_2/zero_column [true] | main=BOTH_RAISE | d1=BOTH_RAISE | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: RAISE DIVIDE_BY_ZERO
+    d1: RAISE DIVIDE_BY_ZERO
+    head: RAISE DIVIDE_BY_ZERO
+pm/F/d28_2/int_column [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+pm/F/d28_2/int_column [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+pm/F/d28_2/left_neg [false] | main=TYPE | d1=TYPE | head=TYPE | spark: decimal(3,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|null;7|-3.00
+    main: decimal(28,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345678901234567890123453.78;7|-3.00
+    d1: decimal(28,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345678901234567890123453.78;7|-3.00
+    head: decimal(28,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345678901234567890123453.78;7|-3.00
+pm/F/d28_2/left_neg [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=SPARK_RAISES | spark: RAISE NUMERIC_VALUE_OUT_OF_RANGE
+    main: decimal(28,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345678901234567890123453.78;7|-3.00
+    d1: decimal(28,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345678901234567890123453.78;7|-3.00
+    head: decimal(28,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345678901234567890123453.78;7|-3.00
+pm/F/d28_2/neg_divisor [false] | main=TYPE | d1=VALUE | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+    main: decimal(12,2) 1|-1.75;2|-1.25;3|null;4|0.00;5|0.00;6|-2.22;7|-0.78
+    d1: decimal(3,2) 1|-1.75;2|-1.25;3|null;4|0.00;5|0.00;6|-2.22;7|-0.78
+pm/F/d28_2/neg_divisor [true] | main=TYPE | d1=VALUE | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+    main: decimal(12,2) 1|-1.75;2|-1.25;3|null;4|0.00;5|0.00;6|-2.22;7|-0.78
+    d1: decimal(3,2) 1|-1.75;2|-1.25;3|null;4|0.00;5|0.00;6|-2.22;7|-0.78
+pm/F/d28_2/pos [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.78;7|2.22
+    main: decimal(12,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.78;7|2.22
+pm/F/d28_2/pos [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.78;7|2.22
+    main: decimal(12,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.78;7|2.22
+pm/F/d28_2/zero [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(12,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/F/d28_2/zero [true] | main=BOTH_RAISE | d1=BOTH_RAISE | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: RAISE DIVIDE_BY_ZERO
+    d1: RAISE DIVIDE_BY_ZERO
+    head: RAISE DIVIDE_BY_ZERO
+pm/F/d28_2/zero_column [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(5,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/F/d28_2/zero_column [true] | main=BOTH_RAISE | d1=BOTH_RAISE | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: RAISE DIVIDE_BY_ZERO
+    d1: RAISE DIVIDE_BY_ZERO
+    head: RAISE DIVIDE_BY_ZERO
+pm/F/d38_10/int_column [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(20,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+pm/F/d38_10/int_column [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(20,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+pm/F/d38_10/left_neg [false] | main=TYPE | d1=TYPE | head=TYPE | spark: decimal(11,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|null;7|-3.0000000000
+    main: decimal(38,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|1234567890123456789012345675.1234567890;7|-3.0000000000
+    d1: decimal(38,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|1234567890123456789012345675.1234567890;7|-3.0000000000
+    head: decimal(38,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|1234567890123456789012345675.1234567890;7|-3.0000000000
+pm/F/d38_10/left_neg [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=SPARK_RAISES | spark: RAISE NUMERIC_VALUE_OUT_OF_RANGE
+    main: decimal(38,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|1234567890123456789012345675.1234567890;7|-3.0000000000
+    d1: decimal(38,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|1234567890123456789012345675.1234567890;7|-3.0000000000
+    head: decimal(38,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|1234567890123456789012345675.1234567890;7|-3.0000000000
+pm/F/d38_10/neg_divisor [false] | main=TYPE | d1=VALUE | head=EQUAL | spark: decimal(11,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+    main: decimal(20,10) 1|-1.7500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|-2.8765432110;7|-0.1234567890
+    d1: decimal(11,10) 1|-1.7500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|-2.8765432110;7|-0.1234567890
+pm/F/d38_10/neg_divisor [true] | main=TYPE | d1=VALUE | head=EQUAL | spark: decimal(11,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+    main: decimal(20,10) 1|-1.7500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|-2.8765432110;7|-0.1234567890
+    d1: decimal(11,10) 1|-1.7500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|-2.8765432110;7|-0.1234567890
+pm/F/d38_10/pos [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|1.2500000000;2|1.7500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|2.8765432110
+    main: decimal(20,10) 1|1.2500000000;2|1.7500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|2.8765432110
+pm/F/d38_10/pos [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|1.2500000000;2|1.7500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|2.8765432110
+    main: decimal(20,10) 1|1.2500000000;2|1.7500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|2.8765432110
+pm/F/d38_10/zero [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(20,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/F/d38_10/zero [true] | main=BOTH_RAISE | d1=BOTH_RAISE | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: RAISE DIVIDE_BY_ZERO
+    d1: RAISE DIVIDE_BY_ZERO
+    head: RAISE DIVIDE_BY_ZERO
+pm/F/d38_10/zero_column [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: decimal(13,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/F/d38_10/zero_column [true] | main=BOTH_RAISE | d1=BOTH_RAISE | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: RAISE DIVIDE_BY_ZERO
+    d1: RAISE DIVIDE_BY_ZERO
+    head: RAISE DIVIDE_BY_ZERO
+pm/F/i/int_column [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: int 1|1;2|-1;3|null;4|0;5|0;6|1;7|-1
+pm/F/i/int_column [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: int 1|1;2|-1;3|null;4|0;5|0;6|1;7|-1
+pm/F/i/left_neg [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: int 1|4;2|-3;3|null;4|3;5|-3;6|2147483644;7|2147483646
+pm/F/i/left_neg [true] | main=REPARK_RAISES | d1=REPARK_RAISES | head=REPARK_RAISES | spark: int 1|4;2|-3;3|null;4|3;5|-3;6|2147483644;7|2147483646
+    main: RAISE ARITHMETIC_OVERFLOW
+    d1: RAISE ARITHMETIC_OVERFLOW
+    head: RAISE ARITHMETIC_OVERFLOW
+pm/F/i/neg_divisor [false] | main=VALUE | d1=VALUE | head=EQUAL | spark: int 1|1;2|-1;3|null;4|0;5|0;6|1;7|-1
+    main: int 1|-2;2|-1;3|null;4|0;5|0;6|-2;7|-1
+    d1: int 1|-2;2|-1;3|null;4|0;5|0;6|-2;7|-1
+pm/F/i/neg_divisor [true] | main=VALUE | d1=VALUE | head=EQUAL | spark: int 1|1;2|-1;3|null;4|0;5|0;6|1;7|-1
+    main: int 1|-2;2|-1;3|null;4|0;5|0;6|-2;7|-1
+    d1: int 1|-2;2|-1;3|null;4|0;5|0;6|-2;7|-1
+pm/F/i/pos [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: int 1|1;2|2;3|null;4|0;5|0;6|1;7|2
+pm/F/i/pos [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: int 1|1;2|2;3|null;4|0;5|0;6|1;7|2
+pm/F/i/zero [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: int 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/F/i/zero [true] | main=BOTH_RAISE | d1=BOTH_RAISE | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: RAISE DIVIDE_BY_ZERO
+    d1: RAISE DIVIDE_BY_ZERO
+    head: RAISE DIVIDE_BY_ZERO
+pm/F/i/zero_column [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: int 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/F/i/zero_column [true] | main=BOTH_RAISE | d1=BOTH_RAISE | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: RAISE DIVIDE_BY_ZERO
+    d1: RAISE DIVIDE_BY_ZERO
+    head: RAISE DIVIDE_BY_ZERO
+pm/F/x/int_column [false] | main=VALUE | d1=VALUE | head=EQUAL | spark: double 1|1.25;2|-1.25;3|null;4|0.0;5|-0.0;6|0.9100000001490116;7|-0.9100000001490116
+    main: double 1|1.25;2|-1.25;3|null;4|-0.0;5|0.0;6|0.9100000001490116;7|-0.9100000001490116
+    d1: double 1|1.25;2|-1.25;3|null;4|-0.0;5|0.0;6|0.9100000001490116;7|-0.9100000001490116
+pm/F/x/int_column [true] | main=VALUE | d1=VALUE | head=EQUAL | spark: double 1|1.25;2|-1.25;3|null;4|0.0;5|-0.0;6|0.9100000001490116;7|-0.9100000001490116
+    main: double 1|1.25;2|-1.25;3|null;4|-0.0;5|0.0;6|0.9100000001490116;7|-0.9100000001490116
+    d1: double 1|1.25;2|-1.25;3|null;4|-0.0;5|0.0;6|0.9100000001490116;7|-0.9100000001490116
+pm/F/x/left_neg [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: double 1|4.25;2|-3.0;3|null;4|3.0;5|-3.0;6|12345675.91;7|-3.0
+pm/F/x/left_neg [true] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: double 1|4.25;2|-3.0;3|null;4|3.0;5|-3.0;6|12345675.91;7|-3.0
+pm/F/x/neg_divisor [false] | main=VALUE | d1=VALUE | head=EQUAL | spark: double 1|1.25;2|-1.25;3|null;4|0.0;5|-0.0;6|0.9100000001490116;7|-0.9100000001490116
+    main: double 1|-1.75;2|-1.25;3|null;4|-0.0;5|-0.0;6|-2.0899999998509884;7|-0.9100000001490116
+    d1: double 1|-1.75;2|-1.25;3|null;4|-0.0;5|-0.0;6|-2.0899999998509884;7|-0.9100000001490116
+pm/F/x/neg_divisor [true] | main=VALUE | d1=VALUE | head=EQUAL | spark: double 1|1.25;2|-1.25;3|null;4|0.0;5|-0.0;6|0.9100000001490116;7|-0.9100000001490116
+    main: double 1|-1.75;2|-1.25;3|null;4|-0.0;5|-0.0;6|-2.0899999998509884;7|-0.9100000001490116
+    d1: double 1|-1.75;2|-1.25;3|null;4|-0.0;5|-0.0;6|-2.0899999998509884;7|-0.9100000001490116
+pm/F/x/pos [false] | main=VALUE | d1=VALUE | head=EQUAL | spark: double 1|1.25;2|1.75;3|null;4|0.0;5|-0.0;6|0.9100000001490116;7|2.0899999998509884
+    main: double 1|1.25;2|1.75;3|null;4|0.0;5|0.0;6|0.9100000001490116;7|2.0899999998509884
+    d1: double 1|1.25;2|1.75;3|null;4|0.0;5|0.0;6|0.9100000001490116;7|2.0899999998509884
+pm/F/x/pos [true] | main=VALUE | d1=VALUE | head=EQUAL | spark: double 1|1.25;2|1.75;3|null;4|0.0;5|-0.0;6|0.9100000001490116;7|2.0899999998509884
+    main: double 1|1.25;2|1.75;3|null;4|0.0;5|0.0;6|0.9100000001490116;7|2.0899999998509884
+    d1: double 1|1.25;2|1.75;3|null;4|0.0;5|0.0;6|0.9100000001490116;7|2.0899999998509884
+pm/F/x/zero [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: double 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/F/x/zero [true] | main=BOTH_RAISE | d1=BOTH_RAISE | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: RAISE DIVIDE_BY_ZERO
+    d1: RAISE DIVIDE_BY_ZERO
+    head: RAISE DIVIDE_BY_ZERO
+pm/F/x/zero_column [false] | main=EQUAL | d1=EQUAL | head=EQUAL | spark: double 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/F/x/zero_column [true] | main=BOTH_RAISE | d1=BOTH_RAISE | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: RAISE DIVIDE_BY_ZERO
+    d1: RAISE DIVIDE_BY_ZERO
+    head: RAISE DIVIDE_BY_ZERO
+pm/expr/d10_2/left_neg [false] | main=TYPE | d1=REPARK_RAISES | head=EQUAL | spark: decimal(3,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|null;7|-3.00
+    main: decimal(12,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345675.91;7|-3.00
+    d1: RAISE Arrow error: Invalid argument error: 12345675.91 is too 
+pm/expr/d10_2/left_neg [true] | main=SPARK_RAISES | d1=BOTH_RAISE_OTHER_CLASS | head=BOTH_RAISE_OTHER_CLASS | spark: RAISE NUMERIC_VALUE_OUT_OF_RANGE
+    main: decimal(12,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345675.91;7|-3.00
+    d1: RAISE Arrow error: Invalid argument error: 12345675.91 is too 
+    head: RAISE Arrow error: Invalid argument error: 12345675.91 is too 
+pm/expr/d10_2/neg_divisor [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    main: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+pm/expr/d10_2/neg_divisor [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    main: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+pm/expr/d10_2/zero [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(12,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/expr/d10_2/zero [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(12,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(3,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+pm/expr/d28_2/left_neg [false] | main=TYPE | d1=REPARK_RAISES | head=EQUAL | spark: decimal(3,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|null;7|-3.00
+    main: decimal(28,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345678901234567890123453.78;7|-3.00
+    d1: RAISE Arrow error: Invalid argument error: 1234567890123456789
+pm/expr/d28_2/left_neg [true] | main=SPARK_RAISES | d1=BOTH_RAISE_OTHER_CLASS | head=BOTH_RAISE_OTHER_CLASS | spark: RAISE NUMERIC_VALUE_OUT_OF_RANGE
+    main: decimal(28,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345678901234567890123453.78;7|-3.00
+    d1: RAISE Arrow error: Invalid argument error: 1234567890123456789
+    head: RAISE Arrow error: Invalid argument error: 1234567890123456789
+pm/expr/d28_2/neg_divisor [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+    main: decimal(28,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+pm/expr/d28_2/neg_divisor [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+    main: decimal(28,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+pm/expr/d28_2/zero [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(28,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/expr/d28_2/zero [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(28,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(3,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+pm/expr/d38_10/left_neg [false] | main=TYPE | d1=REPARK_RAISES | head=EQUAL | spark: decimal(11,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|null;7|-3.0000000000
+    main: decimal(38,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|1234567890123456789012345675.1234567890;7|-3.0000000000
+    d1: RAISE Arrow error: Invalid argument error: 1234567890123456789
+pm/expr/d38_10/left_neg [true] | main=SPARK_RAISES | d1=BOTH_RAISE_OTHER_CLASS | head=BOTH_RAISE_OTHER_CLASS | spark: RAISE NUMERIC_VALUE_OUT_OF_RANGE
+    main: decimal(38,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|1234567890123456789012345675.1234567890;7|-3.0000000000
+    d1: RAISE Arrow error: Invalid argument error: 1234567890123456789
+    head: RAISE Arrow error: Invalid argument error: 1234567890123456789
+pm/expr/d38_10/neg_divisor [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+    main: decimal(38,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+pm/expr/d38_10/neg_divisor [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+    main: decimal(38,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+pm/expr/d38_10/zero [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(38,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/expr/d38_10/zero [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(38,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(11,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+pm/select_expr/d10_2/left_neg [false] | main=TYPE | d1=REPARK_RAISES | head=EQUAL | spark: decimal(3,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|null;7|-3.00
+    main: decimal(12,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345675.91;7|-3.00
+    d1: RAISE Arrow error: Invalid argument error: 12345675.91 is too 
+pm/select_expr/d10_2/left_neg [true] | main=SPARK_RAISES | d1=BOTH_RAISE_OTHER_CLASS | head=BOTH_RAISE_OTHER_CLASS | spark: RAISE NUMERIC_VALUE_OUT_OF_RANGE
+    main: decimal(12,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345675.91;7|-3.00
+    d1: RAISE Arrow error: Invalid argument error: 12345675.91 is too 
+    head: RAISE Arrow error: Invalid argument error: 12345675.91 is too 
+pm/select_expr/d10_2/neg_divisor [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    main: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+pm/select_expr/d10_2/neg_divisor [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    main: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+pm/select_expr/d10_2/zero [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(12,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/select_expr/d10_2/zero [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(12,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(3,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+pm/select_expr/d28_2/left_neg [false] | main=TYPE | d1=REPARK_RAISES | head=EQUAL | spark: decimal(3,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|null;7|-3.00
+    main: decimal(28,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345678901234567890123453.78;7|-3.00
+    d1: RAISE Arrow error: Invalid argument error: 1234567890123456789
+pm/select_expr/d28_2/left_neg [true] | main=SPARK_RAISES | d1=BOTH_RAISE_OTHER_CLASS | head=BOTH_RAISE_OTHER_CLASS | spark: RAISE NUMERIC_VALUE_OUT_OF_RANGE
+    main: decimal(28,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345678901234567890123453.78;7|-3.00
+    d1: RAISE Arrow error: Invalid argument error: 1234567890123456789
+    head: RAISE Arrow error: Invalid argument error: 1234567890123456789
+pm/select_expr/d28_2/neg_divisor [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+    main: decimal(28,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+pm/select_expr/d28_2/neg_divisor [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+    main: decimal(28,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+pm/select_expr/d28_2/zero [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(28,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/select_expr/d28_2/zero [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(28,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(3,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+pm/select_expr/d38_10/left_neg [false] | main=TYPE | d1=REPARK_RAISES | head=EQUAL | spark: decimal(11,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|null;7|-3.0000000000
+    main: decimal(38,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|1234567890123456789012345675.1234567890;7|-3.0000000000
+    d1: RAISE Arrow error: Invalid argument error: 1234567890123456789
+pm/select_expr/d38_10/left_neg [true] | main=SPARK_RAISES | d1=BOTH_RAISE_OTHER_CLASS | head=BOTH_RAISE_OTHER_CLASS | spark: RAISE NUMERIC_VALUE_OUT_OF_RANGE
+    main: decimal(38,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|1234567890123456789012345675.1234567890;7|-3.0000000000
+    d1: RAISE Arrow error: Invalid argument error: 1234567890123456789
+    head: RAISE Arrow error: Invalid argument error: 1234567890123456789
+pm/select_expr/d38_10/neg_divisor [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+    main: decimal(38,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+pm/select_expr/d38_10/neg_divisor [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+    main: decimal(38,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+pm/select_expr/d38_10/zero [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(38,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/select_expr/d38_10/zero [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(38,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(11,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+pm/sql/d10_2/int_column [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(10,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    main: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+pm/sql/d10_2/int_column [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(10,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    main: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+pm/sql/d10_2/left_neg [false] | main=TYPE | d1=REPARK_RAISES | head=EQUAL | spark: decimal(3,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|null;7|-3.00
+    main: decimal(12,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345675.91;7|-3.00
+    d1: RAISE Arrow error: Invalid argument error: 12345675.91 is too 
+pm/sql/d10_2/left_neg [true] | main=SPARK_RAISES | d1=BOTH_RAISE_OTHER_CLASS | head=BOTH_RAISE_OTHER_CLASS | spark: RAISE NUMERIC_VALUE_OUT_OF_RANGE
+    main: decimal(12,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345675.91;7|-3.00
+    d1: RAISE Arrow error: Invalid argument error: 12345675.91 is too 
+    head: RAISE Arrow error: Invalid argument error: 12345675.91 is too 
+pm/sql/d10_2/left_pos [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|3.00;2|3.00;3|null;4|3.00;5|3.00;6|3.00;7|3.00
+    main: decimal(12,2) 1|3.00;2|3.00;3|null;4|3.00;5|3.00;6|3.00;7|3.00
+pm/sql/d10_2/left_pos [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|3.00;2|3.00;3|null;4|3.00;5|3.00;6|3.00;7|3.00
+    main: decimal(12,2) 1|3.00;2|3.00;3|null;4|3.00;5|3.00;6|3.00;7|3.00
+pm/sql/d10_2/neg_divisor [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    main: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+pm/sql/d10_2/neg_divisor [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+    main: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.91;7|-0.91
+pm/sql/d10_2/pos [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.91;7|2.09
+    main: decimal(12,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.91;7|2.09
+pm/sql/d10_2/pos [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.91;7|2.09
+    main: decimal(12,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.91;7|2.09
+pm/sql/d10_2/zero [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(12,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/sql/d10_2/zero [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(12,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(3,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+pm/sql/d10_2/zero_column [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(5,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(10,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/sql/d10_2/zero_column [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(10,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(5,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+pm/sql/d10_2/zero_decimal [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(5,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(10,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/sql/d10_2/zero_decimal [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(10,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(5,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+pm/sql/d28_2/int_column [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+    main: decimal(28,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+pm/sql/d28_2/int_column [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(12,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+    main: decimal(28,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+pm/sql/d28_2/left_neg [false] | main=TYPE | d1=REPARK_RAISES | head=EQUAL | spark: decimal(3,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|null;7|-3.00
+    main: decimal(28,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345678901234567890123453.78;7|-3.00
+    d1: RAISE Arrow error: Invalid argument error: 1234567890123456789
+pm/sql/d28_2/left_neg [true] | main=SPARK_RAISES | d1=BOTH_RAISE_OTHER_CLASS | head=BOTH_RAISE_OTHER_CLASS | spark: RAISE NUMERIC_VALUE_OUT_OF_RANGE
+    main: decimal(28,2) 1|4.25;2|-3.00;3|null;4|3.00;5|-3.00;6|12345678901234567890123453.78;7|-3.00
+    d1: RAISE Arrow error: Invalid argument error: 1234567890123456789
+    head: RAISE Arrow error: Invalid argument error: 1234567890123456789
+pm/sql/d28_2/left_pos [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|3.00;2|3.00;3|null;4|3.00;5|3.00;6|3.00;7|3.00
+    main: decimal(28,2) 1|3.00;2|3.00;3|null;4|3.00;5|3.00;6|3.00;7|3.00
+pm/sql/d28_2/left_pos [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|3.00;2|3.00;3|null;4|3.00;5|3.00;6|3.00;7|3.00
+    main: decimal(28,2) 1|3.00;2|3.00;3|null;4|3.00;5|3.00;6|3.00;7|3.00
+pm/sql/d28_2/neg_divisor [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+    main: decimal(28,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+pm/sql/d28_2/neg_divisor [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+    main: decimal(28,2) 1|1.25;2|-1.25;3|null;4|0.00;5|0.00;6|0.78;7|-0.78
+pm/sql/d28_2/pos [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.78;7|2.22
+    main: decimal(28,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.78;7|2.22
+pm/sql/d28_2/pos [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.78;7|2.22
+    main: decimal(28,2) 1|1.25;2|1.75;3|null;4|0.00;5|0.00;6|0.78;7|2.22
+pm/sql/d28_2/zero [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(3,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(28,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/sql/d28_2/zero [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(28,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(3,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+pm/sql/d28_2/zero_column [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(5,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(28,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/sql/d28_2/zero_column [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(28,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(5,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+pm/sql/d28_2/zero_decimal [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(5,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(28,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/sql/d28_2/zero_decimal [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(28,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(5,2) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+pm/sql/d38_10/int_column [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(20,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+    main: decimal(38,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+pm/sql/d38_10/int_column [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(20,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+    main: decimal(38,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+pm/sql/d38_10/left_neg [false] | main=TYPE | d1=REPARK_RAISES | head=EQUAL | spark: decimal(11,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|null;7|-3.0000000000
+    main: decimal(38,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|1234567890123456789012345675.1234567890;7|-3.0000000000
+    d1: RAISE Arrow error: Invalid argument error: 1234567890123456789
+pm/sql/d38_10/left_neg [true] | main=SPARK_RAISES | d1=BOTH_RAISE_OTHER_CLASS | head=BOTH_RAISE_OTHER_CLASS | spark: RAISE NUMERIC_VALUE_OUT_OF_RANGE
+    main: decimal(38,10) 1|4.2500000000;2|-3.0000000000;3|null;4|3.0000000000;5|-3.0000000000;6|1234567890123456789012345675.1234567890;7|-3.0000000000
+    d1: RAISE Arrow error: Invalid argument error: 1234567890123456789
+    head: RAISE Arrow error: Invalid argument error: 1234567890123456789
+pm/sql/d38_10/left_pos [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|3.0000000000;2|3.0000000000;3|null;4|3.0000000000;5|3.0000000000;6|3.0000000000;7|3.0000000000
+    main: decimal(38,10) 1|3.0000000000;2|3.0000000000;3|null;4|3.0000000000;5|3.0000000000;6|3.0000000000;7|3.0000000000
+pm/sql/d38_10/left_pos [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|3.0000000000;2|3.0000000000;3|null;4|3.0000000000;5|3.0000000000;6|3.0000000000;7|3.0000000000
+    main: decimal(38,10) 1|3.0000000000;2|3.0000000000;3|null;4|3.0000000000;5|3.0000000000;6|3.0000000000;7|3.0000000000
+pm/sql/d38_10/neg_divisor [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+    main: decimal(38,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+pm/sql/d38_10/neg_divisor [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+    main: decimal(38,10) 1|1.2500000000;2|-1.2500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|-0.1234567890
+pm/sql/d38_10/pos [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|1.2500000000;2|1.7500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|2.8765432110
+    main: decimal(38,10) 1|1.2500000000;2|1.7500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|2.8765432110
+pm/sql/d38_10/pos [true] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|1.2500000000;2|1.7500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|2.8765432110
+    main: decimal(38,10) 1|1.2500000000;2|1.7500000000;3|null;4|0.0000000000;5|0.0000000000;6|0.1234567890;7|2.8765432110
+pm/sql/d38_10/zero [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(11,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(38,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/sql/d38_10/zero [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(38,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(11,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+pm/sql/d38_10/zero_column [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(13,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(38,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/sql/d38_10/zero_column [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(38,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(13,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+pm/sql/d38_10/zero_decimal [false] | main=TYPE | d1=EQUAL | head=EQUAL | spark: decimal(13,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    main: decimal(38,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+pm/sql/d38_10/zero_decimal [true] | main=SPARK_RAISES | d1=SPARK_RAISES | head=BOTH_RAISE | spark: RAISE REMAINDER_BY_ZERO
+    main: decimal(38,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    d1: decimal(13,10) 1|null;2|null;3|null;4|null;5|null;6|null;7|null
+    head: RAISE DIVIDE_BY_ZERO
+COUNTS main {'BOTH_RAISE': 10, 'EQUAL': 48, 'REPARK_RAISES': 1, 'SPARK_RAISES': 29, 'TYPE': 136, 'VALUE': 8}
+COUNTS d1 {'BOTH_RAISE': 10, 'BOTH_RAISE_OTHER_CLASS': 9, 'EQUAL': 136, 'REPARK_RAISES': 10, 'SPARK_RAISES': 20, 'TYPE': 33, 'VALUE': 14}
+COUNTS head {'BOTH_RAISE': 27, 'BOTH_RAISE_OTHER_CLASS': 9, 'EQUAL': 185, 'REPARK_RAISES': 3, 'SPARK_RAISES': 3, 'TYPE': 5}

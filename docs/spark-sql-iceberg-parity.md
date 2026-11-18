@@ -5737,6 +5737,67 @@ still open is `isModifiable`.
   defaults on the questions" (2026-11-17); card
   [AVG-DECIMAL-ROUND-1](../task/roadmap/mid-term/decimal-common-type-1-side/avg-decimal-round-1-card-2026-11-16.md).
 
+### DECIMAL-DIVIDE-LITERAL-1 — an integer literal beside a decimal takes its digits in every operator, and the DataFrame `/` types a decimal as SQL does — **FIXED 2026-11-18 on the Spark door (branch `fix/decimal-divide-literal-1`, not merged)**
+
+- **repark** — Before (main `cd3d9ac3`): the literal step (U3) ran for `+ − *` only and saw a bare `INT` literal only,
+  so `/` and `%` typed an integer literal by its type (`d10_2 / 3` was `decimal(21,13)`, `0.8366666666667`; `d10_2 % 3`
+  `decimal(10,2)`), `3S` and `3L` took their type's width in every operator (`d10_2 * 3L` was `decimal(31,2)`),
+  `mod()` and `pmod()` typed their first argument (`decimal(12,2)`), the DataFrame `/` cast every operand to `double`
+  (`col("d") / 3` was `0.09999999999999999`), and `spark.sql.legacy.literal.pickMinimumPrecision` was read by nothing.
+
+  After, on the Spark door (SQL, `F.expr`, `selectExpr`, the DataFrame operators, Iceberg stores and DML):
+  - an `INT`, `SMALLINT` or `BIGINT` literal beside a decimal is `DECIMAL(digits, 0)` on either side of `/`, `%`, `*`,
+    `+` and `-`, as Spark's `DataTypeUtils.fromLiteral`; a `TINYINT` literal stays `decimal(3,0)` (no `Byte` arm);
+    typed operands, written casts and folded divisors keep their width (`d / (1 + 2)` and
+    `d / CAST(3 AS DECIMAL(20,0))` answer as before, equal to Spark);
+  - `mod(d, 3)`, `pmod(d, 3)` and `F.expr("mod(d, 3)")` take Spark's `Remainder`/`Pmod` type (`decimal(3,2)`); a
+    decimal `mod()` is the `%` operator (delta 1), so `mod(d, 0)` raises with ANSI on as Spark does and is NULL
+    with ANSI off; a decimal `pmod()` is Spark's `Pmod.eval` over `%` (delta 2: `r = a % n`, then `(r + n) % n` where
+    `r < 0`), so `pmod(d, 0)` raises with ANSI on too, and `pmod(-3, d)` past `Pmod`'s type answers NULL with ANSI off;
+  - `F.pmod` spells the same formula (delta 2), so `F.pmod(d, F.lit(-3))` answers `1.25` for `7.25`, for decimal,
+    integer and double operands;
+  - the DataFrame `/` keeps `double` for integers, floats and strings and is typed as SQL text when a decimal meets a
+    decimal, an integer or NULL; `%` and `F.pmod` follow;
+  - the division writes store Spark's types and rows (CTAS `decimal(14,6)` at `d10_2`, `decimal(32,6)` at `d28_2`;
+    `INSERT`, `UPDATE`, `MERGE` copy-on-write and merge-on-read store `0.00546` for `0.06 / 11`);
+  - `avg(d / 3)` is Spark's `decimal(18,10)` at `d10_2` (with AVG-DECIMAL-ROUND-1);
+  - `spark.sql.legacy.literal.pickMinimumPrecision=false` at session build turns the step off for every operator
+    (`d10_2 * 3` is then `decimal(21,2)`, as on Spark); a runtime `SET`, `unset` and `RESET` of the key reach the
+    analyzer too (delta 2), and a non-boolean value refuses with Spark's `INVALID_CONF_VALUE.TYPE_MISMATCH`.
+- **spark** — Spark 4.1.2 `DecimalPrecisionTypeCoercion.nondecimalAndDecimal(literalPickMinimumPrecision)` types an
+  integral `Literal` beside a decimal with `fromLiteral` (`Short`, `Integer`, `Long` arms) for every `BinaryOperator`,
+  and any other integral operand with `forType`; `Remainder`/`Pmod.resultDecimalType` is `max(s1, s2)`,
+  `min(p1 − s1, p2 − s2) + scale`. *(oracle: measured live 2026-11-17 and 2026-11-18,
+  `task/wo/avg-decimal-round-1/evidence/` and `task/wo/decimal-divide-literal-1/evidence/built/`.)*
+- **Still unlike Spark:**
+  - the outer `/` over a session-catalog view of an Iceberg table misses the division UDF (`h / 2` is `decimal(18,10)`
+    where Spark answers `decimal(16,8)`, and a CTAS from that view stores `decimal(18,10)`; values equal; proposed card
+    SESSION-VIEW-DECIMAL-DIV-1);
+  - a remainder by zero with ANSI on: `%`, a decimal `mod()` and a decimal `pmod()` raise `[DIVIDE_BY_ZERO]` where
+    Spark raises `[REMAINDER_BY_ZERO]`; an integer `mod(i, 0)`/`pmod(i, 0)` answers NULL where Spark raises;
+    `pmod(-3, d)` past `Pmod`'s type raises Arrow's error with ANSI on where Spark raises
+    `NUMERIC_VALUE_OUT_OF_RANGE`; `F.pmod` answers its formula's type, not `Pmod`'s, when the divisor has more integer
+    digits than the dividend (`F.pmod(F.lit(-3), d)`, `F.pmod(d10_2, int column)`), and an integer `F.pmod`'s
+    intermediate sum raises `ARITHMETIC_OVERFLOW` with ANSI on where Spark wraps (proposed cards, `bar.md`);
+  - `round(d / 3, s)` keeps its input type (DECIMAL-ROUND-RESULT-TYPE-1, S3), so `round(d38_10 / 3, 6)` comparisons
+    keep main's rows; `try_*` with a decimal and an integer (TRY-ARITH-DECIMAL-INT-1, S1);
+    `allowPrecisionLoss=false` (DECIMAL-PRECISION-LOSS-CONF-1, S2); `d38_10 * 3` and ANSI-off `d38_0 * 3` raise
+    Arrow's overflow (its S2 card); a temp view created before a runtime `SET` of `pickMinimumPrecision` and read
+    after it refuses `CANNOT_UP_CAST_DATATYPE` where Spark answers with the creation setting (the view re-plans
+    under the reader's setting; TEMP-VIEW-SESSION-SETTINGS-1's capture list does not hold the key);
+  - a written `CAST(3 AS DECIMAL(20,0))` in `*` and `+` is still narrowed to `decimal(1,0)`
+    (`d10_2 * CAST(3 AS DECIMAL(20,0))` is `decimal(12,2)` where Spark answers `decimal(31,2)`; main alike; proposed
+    card);
+  - the native `repark.sql()` door keeps DataFusion's division (NATIVE-DECIMAL-AVG-DIVIDE-1, S2).
+- **Pin** — `python/repark/tests/types/test_decimal_divide_literal_1.py` (207 cells per ANSI mode against
+  `decimal_divide_literal_1_spark_oracle.json`: 82 default, 9 under `pickMinimumPrecision=false`, 72 `pmod()` and
+  `F.pmod`, 44 runtime `SET`/`RESET`; the 20 cells Spark answers otherwise are strict `xfail`s naming their card); Rust
+  `repark-functions` `decimal_precision/literal_step_tests.rs`.
+- **Cost** — [evidence/built/cost.md](../task/wo/decimal-divide-literal-1/evidence/built/cost.md).
+- **Rationale** — the owner's rulings "Defaults" (ruling 2) and "Merge 1352 and 1353, defaults on the questions"
+  (2026-11-17); card
+  [DECIMAL-DIVIDE-LITERAL-1](../task/roadmap/mid-term/consult-2026-11-17/decimal-divide-literal-1-card-2026-11-17.md).
+
 ### TEMP-VIEW-SESSION-SETTINGS-1 part 1 — a SQL temp view answers under the settings captured at CREATE — **FIXED 2026-11-18 on the SQL door (branch `fix/temp-view-session-settings-1-part1`, not merged)**
 
 - **repark** — Before (main `6f80793b`): a SQL temp view re-planned its text at every read under the live session and
@@ -9869,7 +9930,8 @@ the pin rather than obeying it.
   on both engines) + Rust `pin_int_times_decimal_is_12_2_i128` (now asserts nullable)
 - **Rationale** — FIXED. Campaign DEC-8 / U3 (`#91`) closed the **width**;
   CUTOVER-SCHEMA-1 closed **nullability** through the decimal-cast rule. Both faces now
-  agree with Spark.
+  agree with Spark. **DECIMAL-DIVIDE-LITERAL-1 (2026-11-18):** the suffixed `3S` and `3L` now take their digits too
+  (`d10_2 * 3L` is `decimal(12,2)`, as on Spark), and `/` and `%` take the same step; DEC-5 is no longer partial.
 
 > **Name collision.** Campaign DEC-8 is integer-literal min-precision (this width).
 > Registry DEC-8 is `(38,20)*(38,20)` plan-refuse — a different class.
@@ -9896,6 +9958,10 @@ the pin rather than obeying it.
 > `crates/repark-spark/src/tests/decimal.rs::pin_div_by_zero_decimal38_raises_under_default_ansi` +
 > `…::pin_div_by_zero_decimal38_returns_null_at_38_4_when_ansi_false`. A fixed defect gets this
 > dated note, never a live divergence row.
+> **DECIMAL-DIVIDE-LITERAL-1 (2026-11-18):** the division UDF's operand is now Spark's: an integer literal divisor or
+> dividend takes its digits (`d10_2 / 3` is `decimal(14,6)` `0.836667`), so the UDF's type and its half-up rounding
+> agree with Spark; R-INTDIV-2's "values equal" (INTDIV-1, 2026-09-28) held only for terminating quotients, and the
+> `h / 2` scopes now answer Spark's `decimal(16,8)` except the session-catalog view (`decimal(18,10)`).
 
 > **DEC-8 — `DECIMAL(38,20) * DECIMAL(38,20)` — FIXED (2026-08-14, DEC-8 planner / #99).** An
 > `ExprPlanner` (`plan_binary_op`) rewrites the Arrow-refusing `(38,20)*(38,20)` — which used to

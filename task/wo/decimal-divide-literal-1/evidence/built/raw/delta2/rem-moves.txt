@@ -1,0 +1,23 @@
+| `fable/pmod(d, 0)` | true | decimal(3,2) null,null,null | RAISE DIVIDE_BY_ZERO |
+| `sql/zero/pmod/d10_2` | true | decimal(3,2) null,null,null,null,null,null,null | RAISE DIVIDE_BY_ZERO |
+| `sql/zero/pmod_dec/d10_2` | true | decimal(5,2) null,null,null,null,null,null,null | RAISE DIVIDE_BY_ZERO |
+| `sql/zero/pmod_col/d10_2` | true | decimal(5,2) null,null,null,null,null,null,null | RAISE DIVIDE_BY_ZERO |
+| `sql/zero/pmod/d28_2` | true | decimal(3,2) null,null,null,null,null,null,null | RAISE DIVIDE_BY_ZERO |
+| `sql/zero/pmod_dec/d28_2` | true | decimal(5,2) null,null,null,null,null,null,null | RAISE DIVIDE_BY_ZERO |
+| `sql/zero/pmod_col/d28_2` | true | decimal(5,2) null,null,null,null,null,null,null | RAISE DIVIDE_BY_ZERO |
+| `sql/zero/pmod/d38_10` | true | decimal(11,10) null,null,null,null,null,null,null | RAISE DIVIDE_BY_ZERO |
+| `sql/zero/pmod_dec/d38_10` | true | decimal(13,10) null,null,null,null,null,null,null | RAISE DIVIDE_BY_ZERO |
+| `sql/zero/pmod_col/d38_10` | true | decimal(13,10) null,null,null,null,null,null,null | RAISE DIVIDE_BY_ZERO |
+| `df/expr_pmod_zero/d10_2` | true | decimal(3,2) null,null,null,null,null,null,null | RAISE DIVIDE_BY_ZERO |
+| `df/F.pmod_neg/d10_2` | true | decimal(3,2) -1.75,-1.25,null,0.00,0.00,-2.09,-0.91 | decimal(3,2) 1.25,-1.25,null,0.00,0.00,0.91,-0.91 |
+| `df/expr_pmod_zero/d28_2` | true | decimal(3,2) null,null,null,null,null,null,null | RAISE DIVIDE_BY_ZERO |
+| `df/F.pmod_neg/d28_2` | true | decimal(3,2) -1.75,-1.25,null,0.00,0.00,-2.22,-0.78 | decimal(3,2) 1.25,-1.25,null,0.00,0.00,0.78,-0.78 |
+| `df/expr_pmod_zero/d38_10` | true | decimal(11,10) null,null,null,null,null,null,null | RAISE DIVIDE_BY_ZERO |
+| `df/F.pmod_neg/d38_10` | true | decimal(11,10) -1.7500000000,-1.2500000000,null,0.0000000000,0.0000000000,-2.8765432110,-0.1234567890 | decimal(11,10) 1.2500000000,-1.2500000000,null,0.0000000000,0.0000000000,0.1234567890,-0.1234567890 |
+| `sql/neg/pmod_left_neg/d10_2` | false | RAISE ERR:PySparkException:None:Arrow error: Invalid argument error: 12345675.91 is to | decimal(3,2) 4.25,-3.00,null,3.00,-3.00,null,-3.00 |
+| `sql/neg/pmod_left_neg/d28_2` | false | RAISE ERR:PySparkException:None:Arrow error: Invalid argument error: 12345678901234567 | decimal(3,2) 4.25,-3.00,null,3.00,-3.00,null,-3.00 |
+| `sql/neg/pmod_left_neg/d38_10` | false | RAISE ERR:PySparkException:None:Arrow error: Invalid argument error: 12345678901234567 | decimal(11,10) 4.2500000000,-3.0000000000,null,3.0000000000,-3.0000000000,null,-3.0000000000 |
+| `df/F.pmod_neg/d10_2` | false | decimal(3,2) -1.75,-1.25,null,0.00,0.00,-2.09,-0.91 | decimal(3,2) 1.25,-1.25,null,0.00,0.00,0.91,-0.91 |
+| `df/F.pmod_neg/d28_2` | false | decimal(3,2) -1.75,-1.25,null,0.00,0.00,-2.22,-0.78 | decimal(3,2) 1.25,-1.25,null,0.00,0.00,0.78,-0.78 |
+| `df/F.pmod_neg/d38_10` | false | decimal(11,10) -1.7500000000,-1.2500000000,null,0.0000000000,0.0000000000,-2.8765432110,-0.1234567890 | decimal(11,10) 1.2500000000,-1.2500000000,null,0.0000000000,0.0000000000,0.1234567890,-0.1234567890 |
+moved 22

@@ -1,0 +1,31 @@
+cells 7258
+  main     BOTH_RAISE -> head BOTH_RAISE     201
+  main          EQUAL -> head EQUAL          4807
+  main         FORMAT -> head FORMAT         4
+  main       READ_ERR -> head READ_ERR       1
+  main  REPARK_RAISES -> head EQUAL          4
+  main  REPARK_RAISES -> head REPARK_RAISES  367
+  main   SPARK_RAISES -> head BOTH_RAISE     26
+  main   SPARK_RAISES -> head SPARK_RAISES   59
+  main           TYPE -> head EQUAL          374
+  main           TYPE -> head TYPE           94
+  main          VALUE -> head EQUAL          710
+  main          VALUE -> head TYPE           12
+  main          VALUE -> head VALUE          599
+EQUAL -> non-EQUAL: 0
+protected cells that moved: 0
+became EQUAL by family prefix: {'div': 470, 'divctl': 72, 'divdf': 324, 'hdiv': 8, 'ice': 28, 'shape': 26, 'mod': 80, 'moddf': 80}
+head non-EQUAL by class:
+  AVG-DISTINCT-MIXED-1 (S3): 52 {'REPARK_RAISES': 52} moved=0
+  FEXPR-COUNT-STAR-AGG-1 (S3): 52 {'REPARK_RAISES': 52} moved=0
+  WHERE / CASE on d38_10 / 3 = round(d38_10 / 3, 6) (the round() seat): 12 {'VALUE': 12} moved=4
+  allowPrecisionLoss=false (DECIMAL-PRECISION-LOSS-CONF-1, S2): 230 {'REPARK_RAISES': 30, 'VALUE': 142, 'SPARK_RAISES': 58} moved=62
+  avg family (AVG-DECIMAL-ROUND-1 classes): 32 {'VALUE': 32} moved=0
+  both raise (the 38-digit row 10, the same condition): 209 {'BOTH_RAISE': 209} moved=28
+  d38_10 * 3 overflow (its S2 card): 31 {'REPARK_RAISES': 29, 'VALUE': 2} moved=0
+  describe/summary (not this family): 12 {'REPARK_RAISES': 8, 'FORMAT': 4} moved=0
+  hdiv/sessview (SESSION-VIEW-DECIMAL-DIV-1, proposed): 2 {'TYPE': 2} moved=2
+  ice/where_div/d38_2: both raise, Spark's class with .WITH_SUGGESTION: 1 {'READ_ERR': 1} moved=0
+  native door (NATIVE-DECIMAL-AVG-DIVIDE-1, S2): 440 {'VALUE': 315, 'REPARK_RAISES': 72, 'BOTH_RAISE': 18, 'TYPE': 34, 'SPARK_RAISES': 1} moved=0
+  round() type (DECIMAL-ROUND-RESULT-TYPE-1, S3): 54 {'TYPE': 54} moved=32
+  try_* coercion (TRY-ARITH-DECIMAL-INT-1, S1): 236 {'REPARK_RAISES': 124, 'VALUE': 96, 'TYPE': 16} moved=0

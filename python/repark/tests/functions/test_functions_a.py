@@ -131,7 +131,7 @@ def test_negative_and_positive(spark: ReparkSession) -> None:
 def test_pmod_positive_remainder(spark: ReparkSession) -> None:
     frame = spark.createDataFrame([(10, 3), (-10, 3), (10, -3)], ["a", "b"])
     table = _table(frame.select(F.pmod("a", "b").alias("p")))
-    assert table.column("p").to_pylist() == [1, 2, -2]
+    assert table.column("p").to_pylist() == [1, 2, 1]
     assert pa.types.is_integer(table.schema.field("p").type)
 
 
