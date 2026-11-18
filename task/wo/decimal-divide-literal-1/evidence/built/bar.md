@@ -158,10 +158,12 @@ answer), TYPE → RAISE against main, and proposed item 7 below. The pin is a st
 All but the view were the same on delta 1's head and on main (`F.pmod`'s old spelling has the same `+`); the
 `F.pmod` type cells are main's TYPE too.
 
-### D2.8 Proposed cards, kept current (every severity is a proposal for the owner)
+### D2.8 Proposed cards, kept current
 
-1. **SESSION-VIEW-DECIMAL-DIV-1** — open, unchanged (S2).
-2. **A written `CAST(3 AS DECIMAL(20,0))` narrowed in `*` and `+`** — open, unchanged (S3).
+**Severities ruled by the owner** (owner, 2026-11-18, about 13:40 UTC, verbatim: "Go with Fable's leans on A, B and C."), relayed by the orchestrator: Fable's leans on SESSION-VIEW-DECIMAL-DIV-1 (S2, not label-blocking), the written cast (S3), the runtime `SET` (S3 if not closed; closed here) and the integer `mod`/`pmod` by zero (S2); every other card keeps the severity proposed below, now ruled.
+
+1. **SESSION-VIEW-DECIMAL-DIV-1** — open (ruled S2, not label-blocking).
+2. **A written `CAST(3 AS DECIMAL(20,0))` narrowed in `*` and `+`** — open (ruled S3).
 3. **A runtime `SET` of `pickMinimumPrecision` accepted and not read — CLOSED by delta 2** (D2.6); its temp-view
    residue is item 7.
 4. Zero divisor and `pmod`:
@@ -169,8 +171,7 @@ All but the view were the same on delta 1's head and on main (`F.pmod`'s old spe
      D2.5.
    - b. **ANSI-on `pmod(d, 0)` answering NULL — the decimal half (13 cells) CLOSED by delta 2** (D2.5). The integer
      `mod(i, 0)`/`pmod(i, 0)` half (4 cells: `sql/int/{mod_zero,pmod_zero,mod_zero_col,pmod_zero_col}`) stays open, not
-     this delta's (Fable's lean S2: a silent NULL in the label's mode; the severity and whether it blocks the label are
-     the owner's).
+     this delta's (ruled S2, Fable's lean: a silent NULL in the label's mode).
    - c. **`F.pmod` with a negative divisor — CLOSED by delta 2** (task 3; 6 probe cells and the new `pm/F/*/neg_divisor`
      pins, decimal, integer and double).
    - d. **`pmod()` past its `Pmod` type** — the ANSI-off half CLOSED (NULL, as Spark); the ANSI-on half open: Arrow's

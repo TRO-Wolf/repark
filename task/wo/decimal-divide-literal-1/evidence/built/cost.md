@@ -18,7 +18,7 @@
 | 2 DataFrame `F.expr("mod(d10, 3)")` | 0.0785 | 0.0651 | 0.829 | 0.827 to 1.174 | 1.05 | 5 | True | under |
 | 2 DataFrame `F.pmod(col(d10), F.lit(3))` | 0.1083 | 0.0913 | 0.843 | 0.940 to 1.069 | 1.05 | 5 | True | under |
 | 2 DataFrame `col(d10) % 3` | 0.0635 | 0.0623 | 0.981 | 0.965 to 1.104 | 1.05 | 5 | True | under |
-| 2 DataFrame `col(d10) / 3` | 0.0530 | 0.2070 | 3.907 | 0.849 to 1.175 | 1.05 | 10 | False | **over: the owner's row** |
+| 2 DataFrame `col(d10) / 3` | 0.0530 | 0.2070 | 3.907 | 0.849 to 1.175 | 1.05 | 10 | False | **over: accepted by the owner (2026-11-18)** |
 | 3 DataFrame `col(i1) / col(i2)` | 0.0266 | 0.0276 | 1.038 | 0.946 to 1.095 | 1.05 | 5 | False | under |
 | 3 DataFrame `col(x1) / col(x2)` | 0.0372 | 0.0376 | 1.010 | 0.859 to 1.180 | 1.05 | 10 | False | under |
 | 3 SQL `i1 / i2` (`INT`) | 0.0299 | 0.0295 | 0.986 | 0.931 to 1.035 | 1.05 | 5 | False | under |
@@ -43,7 +43,7 @@ The SQL `pmod(d10, 3)` row on the head, against two bases on main:
 
 Notes on the series:
 - C-012 samples are timed around the whole locked command, so a sample that waited for the shared measure lock (the other lane's builds on cores 32-47 held it through most of the series) counts its wait (the control bands of both C-012 rows are wide for that reason; their medians are not): run 2 `c012rest` head 156.03 s, run 3 `c012p6` head 757.51 s, run 4 `c012p6` head 124.26 s, run 4 `c012rest` main 763.98 s, run 9 `c012rest` head 84.6 s, run 9 `c012rest` main-aa 128.71 s, run 10 `c012p6` main 778.17 s, run 10 `c012p6` head 123.33 s, run 10 `c012rest` main-aa 70.18 s. The `ddl` rows time inside the process and are not affected.
-- Over the bar after ten runs: 2 DataFrame `col(d10) / 3` — **over: the owner's row**.
+- Over the bar after ten runs: 2 DataFrame `col(d10) / 3`. **Accepted by the owner** (owner, 2026-11-18, about 13:40 UTC, verbatim: "Go with Fable's leans on A, B and C."; Fable's lean B): the named cost of the Q2 S1 fix, measured like for like against main's SQL `d10 / 3` (0.768x). The three ratios stay reported.
 - **SQL `pmod(d10, 3)` is under the bar** against main's `pmod(d10, 3)` (main answered `decimal(12,2)`, not Spark's type); against main's SQL `d10 % 3` it is the ratio in its own table (the formula computes one `%`, a comparison, and a second `%` on the negative rows; `%` alone is the floor).
 - The control band of a `ddl` row is main's second run over main's first, per run; the head/main ratio is of medians over all runs.
 - `F.pmod` (task 3's row) is 0.843x after five runs: under the bar, so task 3 stays.

@@ -191,13 +191,16 @@ Product commit `8efe8e69` (over `a30a8d60`); package `pkg-ddl-8efe8e69` (its `BU
 - **Cost** (five runs per row, ten for a row over the bar after five): **SQL `pmod(d10, 3)` 0.749x** against main's
   `pmod(d10, 3)` (it was 1.142x on delta 1's head; main answered `decimal(12,2)`), and 1.582x against main's SQL
   `d10 % 3`, the base Fable named, as a measurement only; `F.pmod` 0.843x; every other held row under the bar,
-  C-012 1.029x and 1.007x after ten. The DataFrame `col(d10) / 3`, the owner's row: 3.907x against main's `double`
+  C-012 1.029x and 1.007x after ten. The DataFrame `col(d10) / 3` is **accepted by the owner** (owner, 2026-11-18, about 13:40 UTC, verbatim: "Go with Fable's leans on A, B and C."; Fable's lean
+  B: the named cost of the Q2 S1 fix, measured like for like against main's SQL `d10 / 3`): 3.907x against main's `double`
   division, 0.768x against main's SQL `d10 / 3`, 0.779x against main's `F.expr("d10 / 3")`.
 - **Proposed cards, kept current** (bar.md §D2.8): closed by delta 2 — 3 (the runtime `SET`), 4b's decimal half, 4c
   (`F.pmod` by a negative divisor), 4d's ANSI-off half. Open — 1 SESSION-VIEW-DECIMAL-DIV-1 (S2), 2 the written
   `CAST(3 AS DECIMAL(20,0))` (S3), 4a the remainder-by-zero class (S3), 4b's integer half (4 cells; Fable's lean S2),
   4d's ANSI-on class (S3). New — 5 `F.pmod`'s formula type (S3), 6 an integer `F.pmod`'s sum overflowing with ANSI on
-  (S3), 7 the temp view and the runtime `SET` (S3). Every severity is the owner's.
+  (S3), 7 the temp view and the runtime `SET` (S3). **Severities ruled** (owner, 2026-11-18, about 13:40 UTC, verbatim: "Go with Fable's leans on A, B and C."): SESSION-VIEW-DECIMAL-DIV-1 S2, not
+  label-blocking; the written cast S3; the integer `mod`/`pmod` by zero S2; the others as proposed (the runtime `SET`
+  card is closed by this delta).
 - **Gates:** the delta's hand-back carries the gate table (run on the product commit `5b34022f`).
 
 Up: [map.md](map.md).
