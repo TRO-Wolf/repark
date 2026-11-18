@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-16. **Filed by:** the records clerk (`claude-haiku-5-5`), under the owner's ruling "Merge those and defaults." (2026-11-16, about 23:40 UTC), ruling B7 on DECIMAL-COMMON-TYPE-1 step 0 ([rulings](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-16.md)). **Source:** [domain table](../../../wo/decimal-common-type-1/domain-table.md), the "Other causes" table and the Aggregates section; [sketch §9 and §10 question 7](../../../wo/decimal-common-type-1/sketch.md). Parent: [DECIMAL-DECIMAL-UNION-WIDEN-1](../decimal-decimal-union-widen-1-card-2026-11-16.md).
 
-**Status:** built on PR #1355 (open; the verifier's FAIL rests on a carded view-settings class, F1; the merge awaits the owner; 2026-11-17). **Label-blocking** (ruled B7).
+**Status:** merged as #1355 (`6f80793b`, 2026-11-17). **Label-blocking** (ruled B7).
 
 **Severity: S1** (ruled B7, label-blocking). The sketch proposed S2 in §9 and §10 question 7; the ruling sets S1, and this card carries the ruled value. A wrong answer on a scalar decimal column.
 
@@ -163,4 +163,4 @@ Where F1 goes (the orchestrator's routing; Fable recommends one card for the two
 
 **N1 (records):** the Built append's "both raise the same condition with ANSI on: 35" is not exact. The clerk recounted the both-raise list in `bar.md` (its ANSI-on bullet): **170** entries, all with ANSI on, none repeated. Of them, **33** are in the avg, mean and sum family: 24 `avg`, 8 `mean` and 1 `sum`. The verifier's count is the same. `bar.md` is the authority, and this append does not restate 35 as that class's count.
 
-Open, not ruled by the owner: whether #1355 merges over this FAIL, with F1 carded and no new verifier. The view family's severity and label status are open too; see [TEMP-VIEW-SESSION-SETTINGS-1](../temp-view-session-settings-1-card-2026-11-02.md).
+Ruled by the owner, 2026-11-17, verbatim "Defaults, merge 1355" (Fable's defaults, as listed in the [rulings record](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md), later section): #1355 merges over this FAIL, with F1 carded and no new verifier. It merged as `6f80793b`. Verifier briefs name a view read under settings other than its creation settings as an accepted class until [TEMP-VIEW-SESSION-SETTINGS-1](../temp-view-session-settings-1-card-2026-11-02.md) lands; that card is S1 by class, and its time-zone half blocks the label while its ANSI half does not.

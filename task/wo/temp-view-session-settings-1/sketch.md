@@ -327,9 +327,9 @@ Changes to Fable's split:
 3. **The cost gate: only the matching-settings path is held to 1.05x; the differing path is measured and reported.**
    Ruled.
 
-**Open** (each with a default and the cells it rests on):
+**Ruled** for questions 4 to 11 (owner, 2026-11-17, verbatim "defaults on both", adopting the defaults listed under each question; the cells each rests on are as listed):
 
-4. **Spark's write doors for a held frame (restated; step 0's default contradicted question 2).** Step 0's default,
+4. **Spark's write doors for a held frame (restated; step 0's default contradicted question 2).** **Ruled** ("defaults on both"; adopted: follow Spark door by door). Step 0's default,
    "follow creation on every write door", would turn 6 held `writeTo` zone cells that are equal today into silent wrong
    answers with ANSI on, inside the label's scope (the other 2 of the 8 are the `TIMESTAMP '…'` literal, creation on
    both engines and under any choice). **Default: follow Spark door by door** — `write.parquet`, `saveAsTable`,
@@ -339,24 +339,26 @@ Changes to Fable's split:
    raise, one silent today stays; Spark binds `avg`'s mode in the writer's re-analysis, and each has the frame or the
    writer on ANSI off, outside the label's scope). Cells: domain
    table §7.8, §4. Alternative: keep `writeTo` on today's path (the writer's settings for every key).
-5. **`current_timezone()` on a held frame** (6 cells, outside both parts). Default: card it at S3 and do not build it
+5. **`current_timezone()` on a held frame** (6 cells, outside both parts). **Ruled** ("defaults on both"; adopted: card it at S3, not built in this unit). Default: card it at S3 and do not build it
    in this unit.
-6. **`element_at(array, 5)` and `array[5]` with ANSI on** answer NULL where Spark raises. They are already carded:
+6. **`element_at(array, 5)` and `array[5]` with ANSI on** answer NULL where Spark raises. **Ruled** ("defaults on both"; adopted: no new card and no re-rating; the new cells are appended under D10). They are already carded:
    D10 of [NESTED-EXPRESSION-ANSWERS-1](../../roadmap/mid-term/nested-expression-answers-1-card-2026-11-05.md) (S2 in
    the nested rule; the card's 2026-11-17 append records Fable's `element_at` cell). No new card. **Question: do the new
    cells re-rate D10?** Default: no — they are D10's own shapes on direct queries (4 cells, domain table §6), and a view
    carries the same answer. The rest of §6 stays with its existing cards.
 7. **VIEW-ANSI-CAPTURE-1's `sequence(1, '3')` body** cannot show the view gap while RePark refuses it directly.
+   **Ruled** ("defaults on both"; adopted: pin its view cells after the `sequence` coercion is fixed, not in this unit).
    Default: pin its view cells after the `sequence` coercion is fixed, not in this unit.
 8. **Cache substitution** (SQL reads of a `CACHE TABLE`d view re-plan it instead of reading the cached rows,
-   `catalog_surface.py:530-558`). Default: **not in this unit; card it separately** as cache honesty. Cells: the 6
+   `catalog_surface.py:530-558`). **Ruled** ("defaults on both"; adopted: not in this unit; card it separately as cache honesty).
+   Default: **not in this unit; card it separately** as cache honesty. Cells: the 6
    cache cells (domain table §7.2) close through Parts 1 and 2 and seat 3 without substitution (a reading, pinned by
    the build); substitution still differs from Spark when the data or a non-deterministic body changes after the
    cache.
-9. **The held derivations in Part 2's bar.** Default: **yes** — the 22 derivation cells, the 2 `registerTempTable`
+9. **The held derivations in Part 2's bar.** **Ruled** ("defaults on both"; adopted: yes, in Part 2's bar). Default: **yes** — the 22 derivation cells, the 2 `registerTempTable`
    cells and the 4 new held-frame write cells go into Part 2's bar, with seat 3 for the 2 `cache()` cells. 11 of the
    22 are zone cells with ANSI on, inside the label's scope. Cells: domain table §7.3, §7.8.
-10. **Carding the direct gaps** `ALTER VIEW <temp> RENAME TO` (refuses `TABLE_OR_VIEW_NOT_FOUND`, also with no `SET`),
+10. **Carding the direct gaps** **Ruled** ("defaults on both"; adopted: one card at S3, TEMP-VIEW-ALTER-AND-CACHE-AS-1). `ALTER VIEW <temp> RENAME TO` (refuses `TABLE_OR_VIEW_NOT_FOUND`, also with no `SET`),
     `ALTER VIEW <temp> AS …` (refused by design, `ALTER_VIEW_AS_REFUSAL`) and `CACHE TABLE … AS SELECT` (`Unsupported
     SQL statement`). Default: **one card, S3** (loud refusals; Spark answers), proposed as
     TEMP-VIEW-ALTER-AND-CACHE-AS-1, beside the two narrower open cards
@@ -364,14 +366,23 @@ Changes to Fable's split:
     [ALTER-VIEW-DIGIT-NAME-1](../../roadmap/mid-term/alter-view-digit-name-1-card-2026-11-02.md). When built,
     `ALTER VIEW … AS` must re-capture the settings and the rename must copy them (the cells show Spark does both).
     Cells: domain table §7.4 (5 cells).
-11. **How close to Spark the filter handling must be on the differing path.** Default: **trap 2's rule** —
+11. **How close to Spark the filter handling must be on the differing path.** **Ruled** ("defaults on both"; adopted: trap 2's rule). Default: **trap 2's rule** —
     settings-free conjuncts are pushed into the body, settings-sensitive conjuncts and the limit stay above under the
-    reader's state; the residual is loud only (2 `filter_sensitive` cells raise where Spark answers `5.0`). The
+    reader's state; the residual is loud only (the revision's count: 2 `filter_sensitive` cells raise where Spark answers `5.0`; the re-critic's count is restated below). The
     alternative, closest to Spark: wrap each settings-reading call of the reader's filter in a delegating
     `ScalarUDFImpl` that replaces `ScalarFunctionArgs::config_options` (`udf.rs:425`) with the reader's options and
     never simplifies, so every conjunct and the limit can enter the body; it costs a wrapper per call on the differing
     path only, and the wrapper must delegate the function's identity (`equals`, `return_field_from_args`, the name in
     `EXPLAIN`). Cells: domain table §7.1.
+
+    **Residual, restated from the re-critic's verdict (round 2, GAPS).** The rule leaves **7 loud cells and 0 silent**
+    among the 36 differing-path view cells (the re-critic's 44 filter cells include these 36, 6 direct gaps and 2 matching
+    `on_on` controls). 6 of the 7 are equal to Spark today and would start raising; the 7th, the DataFrame-door `AND` cell,
+    already raises. By class: 4 come from a setting-sensitive conjunct kept above a body that raises (2 `OR` cells, 2
+    aggregate-key cells); 2 from AND-GUARD-ANSI-1 (`task/roadmap/mid-term/sweep-2026-11-16/and-guard-ansi-1-card-2026-11-16.md`,
+    the SQL-door and DataFrame-door `AND` cells); 1 from Spark's optimizer folding `(a+1)+0` on the DataFrame door. The
+    wrapper would close the 4; neither option closes the 2 AND-GUARD-ANSI-1 cells or the `(a+1)+0` cell. The revision's own
+    count, 2 `filter_sensitive` cells, stays beside it, labelled as the revision's.
 
 ## 8. What the brief, Fable's reply and step 0 got wrong, or left open
 
@@ -427,5 +438,19 @@ Changes to Fable's split:
 11. **Owner questions.** Agreed on the Q4/Q2 conflict, but the measured count is 6 cells, not 8 (the 2 literal cells
     stay equal under any choice); Q4 is restated with a default that keeps them right. Q6 now cites D10. Questions
     8 to 11 are the critic's (a) to (d).
+
+## 10. Build pins from the round 2 critic
+
+Source: the round 2 re-critic's verdict (GAPS, `a2e34b9e`), section "Required before the build". Its item 1 (restate
+owner question 11 with the measured class) is done in §7, question 11. The pins below are the verdict's "Pins the build
+brief carries (not gaps)", in its words; the raw outputs named in (d) are the re-critic's scratch files (not tracked).
+
+- (a) The sensitive conjuncts are planned in `scan` with the reader's `create_physical_expr`, the limit goes above them, and `supports_filters_pushdown` is unchanged.
+- (b) The closed `Expr` allow-list, defaulting to sensitive, with a test that fails if a physical `Cast` starts reading `config_options`.
+- (c) The cast-shield and normalize-zero UDFs read no config.
+- (d) My 44 filter cells (the re-critic's raw `rc-*.jsonl` outputs, scratch and not tracked) as both-engine pins, the AND cells cited to AND-GUARD-ANSI-1.
+- (e) A nested-view `current_timezone()` cell, with the outermost reader's zone carried down.
+- (f) Seat 3A takes the frame's options but the materialisation-time start.
+- (g) `EXPLAIN` identity on the matching path, including a `LIMIT`.
 
 Up: [map.md](map.md).
