@@ -17,5 +17,7 @@ and unchanged.
   verdicts.
 - [compare/](compare/map.md) — the comparison's outputs and the pin file's result on main.
 - [cost/](cost/map.md) — the cost runner's samples and per-case timings.
+- [delta1/](delta1/map.md) — delta 1 (2026-11-18, the grouped final merge checks its total once): the sizing and
+  spread scripts and their raw output.
 
 Up: [../map.md](../map.md) is the step 0's evidence map; this folder is linked from [../../map.md](../../map.md).
