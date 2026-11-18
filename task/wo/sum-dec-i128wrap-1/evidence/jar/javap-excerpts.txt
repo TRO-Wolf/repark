@@ -1,0 +1,882 @@
+javap -c -p, Spark 4.1.2 (spark-catalyst_2.13-4.1.2.jar), classes unzipped into a scratch directory; excerpts.
+
+===== Sum.shouldTrackIsEmpty (Sum.txt lines 180-225)
+  private boolean shouldTrackIsEmpty();
+    Code:
+       0: aload_0
+       1: invokespecial #189                // Method resultType:()Lorg/apache/spark/sql/types/AtomicType;
+       4: astore_3
+       5: aload_3
+       6: instanceof    #42                 // class org/apache/spark/sql/types/DecimalType
+       9: ifeq          14
+      12: iconst_1
+      13: ireturn
+      14: goto          17
+      17: aload_3
+      18: instanceof    #191                // class org/apache/spark/sql/types/IntegralType
+      21: ifeq          28
+      24: iconst_1
+      25: goto          49
+      28: goto          31
+      31: aload_3
+      32: instanceof    #193                // class org/apache/spark/sql/types/AnsiIntervalType
+      35: ifeq          42
+      38: iconst_1
+      39: goto          49
+      42: goto          45
+      45: iconst_0
+      46: goto          49
+      49: ifeq          90
+      52: aload_0
+      53: invokevirtual #195                // Method evalContext:()Lorg/apache/spark/sql/catalyst/expressions/NumericEvalContext;
+      56: invokevirtual #201                // Method org/apache/spark/sql/catalyst/expressions/NumericEvalContext.evalMode:()Lscala/Enumeration$Value;
+      59: getstatic     #206                // Field org/apache/spark/sql/catalyst/expressions/EvalMode$.MODULE$:Lorg/apache/spark/sql/catalyst/expressions/EvalMode$;
+      62: invokevirtual #209                // Method org/apache/spark/sql/catalyst/expressions/EvalMode$.TRY:()Lscala/Enumeration$Value;
+      65: astore        4
+      67: dup
+      68: ifnonnull     80
+      71: pop
+      72: aload         4
+      74: ifnull        88
+      77: goto          90
+      80: aload         4
+      82: invokevirtual #215                // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+      85: ifeq          90
+      88: iconst_1
+      89: ireturn
+      90: goto          93
+      93: iconst_0
+      94: ireturn
+
+===== Sum.resultType (Sum.txt lines 279-375)
+  private org.apache.spark.sql.types.AtomicType resultType$lzycompute();
+    Code:
+       0: aload_0
+       1: dup
+       2: astore_2
+       3: monitorenter
+       4: aload_0
+       5: getfield      #289                // Field bitmap$0:I
+       8: iconst_1
+       9: iand
+      10: iconst_0
+      11: if_icmpne     179
+      14: aload_0
+      15: aload_0
+      16: invokevirtual #279                // Method child:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+      19: invokevirtual #293                // Method org/apache/spark/sql/catalyst/expressions/Expression.dataType:()Lorg/apache/spark/sql/types/DataType;
+      22: astore_3
+      23: aload_3
+      24: instanceof    #42                 // class org/apache/spark/sql/types/DecimalType
+      27: ifeq          99
+      30: aload_3
+      31: checkcast     #42                 // class org/apache/spark/sql/types/DecimalType
+      34: astore        4
+      36: getstatic     #296                // Field org/apache/spark/sql/types/DecimalType$Fixed$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$Fixed$;
+      39: aload         4
+      41: invokevirtual #299                // Method org/apache/spark/sql/types/DecimalType$Fixed$.unapply:(Lorg/apache/spark/sql/types/DecimalType;)Lscala/Option;
+      44: astore        5
+      46: aload         5
+      48: invokevirtual #303                // Method scala/Option.isEmpty:()Z
+      51: ifne          96
+      54: aload         5
+      56: invokevirtual #307                // Method scala/Option.get:()Ljava/lang/Object;
+      59: checkcast     #309                // class scala/Tuple2
+      62: invokevirtual #313                // Method scala/Tuple2._1$mcI$sp:()I
+      65: istore        6
+      67: aload         5
+      69: invokevirtual #307                // Method scala/Option.get:()Ljava/lang/Object;
+      72: checkcast     #309                // class scala/Tuple2
+      75: invokevirtual #316                // Method scala/Tuple2._2$mcI$sp:()I
+      78: istore        7
+      80: getstatic     #321                // Field org/apache/spark/sql/types/DecimalType$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$;
+      83: iload         6
+      85: bipush        10
+      87: iadd
+      88: iload         7
+      90: invokevirtual #325                // Method org/apache/spark/sql/types/DecimalType$.bounded:(II)Lorg/apache/spark/sql/types/DecimalType;
+      93: goto          166
+      96: goto          102
+      99: goto          102
+     102: aload_3
+     103: instanceof    #191                // class org/apache/spark/sql/types/IntegralType
+     106: ifeq          115
+     109: getstatic     #330                // Field org/apache/spark/sql/types/LongType$.MODULE$:Lorg/apache/spark/sql/types/LongType$;
+     112: goto          166
+     115: goto          118
+     118: aload_3
+     119: instanceof    #332                // class org/apache/spark/sql/types/YearMonthIntervalType
+     122: ifeq          136
+     125: aload_3
+     126: checkcast     #332                // class org/apache/spark/sql/types/YearMonthIntervalType
+     129: astore        8
+     131: aload         8
+     133: goto          166
+     136: goto          139
+     139: aload_3
+     140: instanceof    #334                // class org/apache/spark/sql/types/DayTimeIntervalType
+     143: ifeq          157
+     146: aload_3
+     147: checkcast     #334                // class org/apache/spark/sql/types/DayTimeIntervalType
+     150: astore        9
+     152: aload         9
+     154: goto          166
+     157: goto          160
+     160: getstatic     #339                // Field org/apache/spark/sql/types/DoubleType$.MODULE$:Lorg/apache/spark/sql/types/DoubleType$;
+     163: goto          166
+     166: putfield      #341                // Field resultType:Lorg/apache/spark/sql/types/AtomicType;
+     169: aload_0
+     170: aload_0
+     171: getfield      #289                // Field bitmap$0:I
+     174: iconst_1
+     175: ior
+     176: putfield      #289                // Field bitmap$0:I
+     179: aload_2
+     180: monitorexit
+     181: goto          187
+     184: aload_2
+     185: monitorexit
+     186: athrow
+     187: aload_0
+     188: getfield      #341                // Field resultType:Lorg/apache/spark/sql/types/AtomicType;
+     191: areturn
+    Exception table:
+       from    to  target type
+           4   179   184   any
+
+  private org.apache.spark.sql.types.AtomicType resultType();
+    Code:
+
+===== Sum.add (Sum.txt lines 603-628)
+  private org.apache.spark.sql.catalyst.expressions.Expression add(org.apache.spark.sql.catalyst.expressions.Expression, org.apache.spark.sql.catalyst.expressions.Expression);
+    Code:
+       0: aload_1
+       1: invokevirtual #293                // Method org/apache/spark/sql/catalyst/expressions/Expression.dataType:()Lorg/apache/spark/sql/types/DataType;
+       4: astore        4
+       6: aload         4
+       8: instanceof    #42                 // class org/apache/spark/sql/types/DecimalType
+      11: ifeq          28
+      14: new           #419                // class org/apache/spark/sql/catalyst/expressions/DecimalAddNoOverflowCheck
+      17: dup
+      18: aload_1
+      19: aload_2
+      20: aload_1
+      21: invokevirtual #293                // Method org/apache/spark/sql/catalyst/expressions/Expression.dataType:()Lorg/apache/spark/sql/types/DataType;
+      24: invokespecial #422                // Method org/apache/spark/sql/catalyst/expressions/DecimalAddNoOverflowCheck."<init>":(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/types/DataType;)V
+      27: areturn
+      28: goto          31
+      31: new           #424                // class org/apache/spark/sql/catalyst/expressions/Add
+      34: dup
+      35: aload_1
+      36: aload_2
+      37: aload_0
+      38: invokevirtual #195                // Method evalContext:()Lorg/apache/spark/sql/catalyst/expressions/NumericEvalContext;
+      41: invokespecial #427                // Method org/apache/spark/sql/catalyst/expressions/Add."<init>":(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/NumericEvalContext;)V
+      44: areturn
+
+
+===== Sum.initialValues (Sum.txt lines 698-760)
+  private scala.collection.immutable.Seq<org.apache.spark.sql.catalyst.expressions.Expression> initialValues$lzycompute();
+    Code:
+       0: aload_0
+       1: dup
+       2: astore_1
+       3: monitorenter
+       4: aload_0
+       5: getfield      #289                // Field bitmap$0:I
+       8: bipush        32
+      10: iand
+      11: iconst_0
+      12: if_icmpne     97
+      15: aload_0
+      16: aload_0
+      17: invokespecial #431                // Method shouldTrackIsEmpty:()Z
+      20: ifeq          61
+      23: new           #224                // class scala/collection/immutable/$colon$colon
+      26: dup
+      27: aload_0
+      28: invokespecial #449                // Method zero:()Lorg/apache/spark/sql/catalyst/expressions/Literal;
+      31: new           #224                // class scala/collection/immutable/$colon$colon
+      34: dup
+      35: new           #451                // class org/apache/spark/sql/catalyst/expressions/Literal
+      38: dup
+      39: iconst_1
+      40: invokestatic  #457                // Method scala/runtime/BoxesRunTime.boxToBoolean:(Z)Ljava/lang/Boolean;
+      43: getstatic     #394                // Field org/apache/spark/sql/types/BooleanType$.MODULE$:Lorg/apache/spark/sql/types/BooleanType$;
+      46: invokespecial #460                // Method org/apache/spark/sql/catalyst/expressions/Literal."<init>":(Ljava/lang/Object;Lorg/apache/spark/sql/types/DataType;)V
+      49: getstatic     #266                // Field scala/collection/immutable/Nil$.MODULE$:Lscala/collection/immutable/Nil$;
+      52: invokespecial #270                // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+      55: invokespecial #270                // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+      58: goto          83
+      61: new           #224                // class scala/collection/immutable/$colon$colon
+      64: dup
+      65: new           #451                // class org/apache/spark/sql/catalyst/expressions/Literal
+      68: dup
+      69: aconst_null
+      70: aload_0
+      71: invokespecial #189                // Method resultType:()Lorg/apache/spark/sql/types/AtomicType;
+      74: invokespecial #460                // Method org/apache/spark/sql/catalyst/expressions/Literal."<init>":(Ljava/lang/Object;Lorg/apache/spark/sql/types/DataType;)V
+      77: getstatic     #266                // Field scala/collection/immutable/Nil$.MODULE$:Lscala/collection/immutable/Nil$;
+      80: invokespecial #270                // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+      83: putfield      #462                // Field initialValues:Lscala/collection/immutable/Seq;
+      86: aload_0
+      87: aload_0
+      88: getfield      #289                // Field bitmap$0:I
+      91: bipush        32
+      93: ior
+      94: putfield      #289                // Field bitmap$0:I
+      97: aload_1
+      98: monitorexit
+      99: goto          105
+     102: aload_1
+     103: monitorexit
+     104: athrow
+     105: aload_0
+     106: getfield      #462                // Field initialValues:Lscala/collection/immutable/Seq;
+     109: areturn
+    Exception table:
+       from    to  target type
+           4    97   102   any
+
+  public scala.collection.immutable.Seq<org.apache.spark.sql.catalyst.expressions.Expression> initialValues();
+
+===== Sum.updateExpressions (Sum.txt lines 775-967)
+  private scala.collection.immutable.Seq<org.apache.spark.sql.catalyst.expressions.Expression> updateExpressions$lzycompute();
+    Code:
+       0: aload_0
+       1: dup
+       2: astore_1
+       3: monitorenter
+       4: aload_0
+       5: getfield      #289                // Field bitmap$0:I
+       8: bipush        64
+      10: iand
+      11: iconst_0
+      12: if_icmpne     387
+      15: aload_0
+      16: aload_0
+      17: invokespecial #431                // Method shouldTrackIsEmpty:()Z
+      20: ifeq          203
+      23: aload_0
+      24: invokevirtual #279                // Method child:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+      27: invokevirtual #467                // Method org/apache/spark/sql/catalyst/expressions/Expression.nullable:()Z
+      30: ifeq          95
+      33: new           #469                // class org/apache/spark/sql/catalyst/expressions/If
+      36: dup
+      37: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+      40: aload_0
+      41: invokevirtual #279                // Method child:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+      44: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+      47: invokevirtual #479                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.isNull:()Lorg/apache/spark/sql/catalyst/expressions/Predicate;
+      50: checkcast     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+      53: aload_0
+      54: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+      57: aload_0
+      58: aload_0
+      59: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+      62: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+      65: new           #481                // class org/apache/spark/sql/catalyst/expressions/KnownNotNull
+      68: dup
+      69: aload_0
+      70: invokevirtual #279                // Method child:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+      73: invokespecial #483                // Method org/apache/spark/sql/catalyst/expressions/KnownNotNull."<init>":(Lorg/apache/spark/sql/catalyst/expressions/Expression;)V
+      76: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+      79: aload_0
+      80: invokespecial #189                // Method resultType:()Lorg/apache/spark/sql/types/AtomicType;
+      83: invokevirtual #487                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.cast:(Lorg/apache/spark/sql/types/DataType;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+      86: invokespecial #489                // Method add:(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+      89: invokespecial #492                // Method org/apache/spark/sql/catalyst/expressions/If."<init>":(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;)V
+      92: goto          120
+      95: aload_0
+      96: aload_0
+      97: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     100: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+     103: aload_0
+     104: invokevirtual #279                // Method child:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     107: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+     110: aload_0
+     111: invokespecial #189                // Method resultType:()Lorg/apache/spark/sql/types/AtomicType;
+     114: invokevirtual #487                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.cast:(Lorg/apache/spark/sql/types/DataType;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     117: invokespecial #489                // Method add:(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     120: astore_2
+     121: aload_0
+     122: invokevirtual #279                // Method child:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     125: invokevirtual #467                // Method org/apache/spark/sql/catalyst/expressions/Expression.nullable:()Z
+     128: ifeq          166
+     131: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+     134: aload_0
+     135: invokespecial #435                // Method isEmpty:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     138: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+     141: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+     144: aload_0
+     145: invokevirtual #279                // Method child:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     148: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+     151: invokevirtual #479                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.isNull:()Lorg/apache/spark/sql/catalyst/expressions/Predicate;
+     154: checkcast     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+     157: invokevirtual #496                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.$amp$amp:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/expressions/Predicate;
+     160: checkcast     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+     163: goto          180
+     166: new           #451                // class org/apache/spark/sql/catalyst/expressions/Literal
+     169: dup
+     170: iconst_0
+     171: invokestatic  #457                // Method scala/runtime/BoxesRunTime.boxToBoolean:(Z)Ljava/lang/Boolean;
+     174: getstatic     #394                // Field org/apache/spark/sql/types/BooleanType$.MODULE$:Lorg/apache/spark/sql/types/BooleanType$;
+     177: invokespecial #460                // Method org/apache/spark/sql/catalyst/expressions/Literal."<init>":(Ljava/lang/Object;Lorg/apache/spark/sql/types/DataType;)V
+     180: astore_3
+     181: new           #224                // class scala/collection/immutable/$colon$colon
+     184: dup
+     185: aload_2
+     186: new           #224                // class scala/collection/immutable/$colon$colon
+     189: dup
+     190: aload_3
+     191: getstatic     #266                // Field scala/collection/immutable/Nil$.MODULE$:Lscala/collection/immutable/Nil$;
+     194: invokespecial #270                // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+     197: invokespecial #270                // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+     200: goto          373
+     203: aload_0
+     204: invokevirtual #279                // Method child:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     207: invokevirtual #467                // Method org/apache/spark/sql/catalyst/expressions/Expression.nullable:()Z
+     210: ifeq          309
+     213: new           #224                // class scala/collection/immutable/$colon$colon
+     216: dup
+     217: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+     220: getstatic     #234                // Field scala/runtime/ScalaRunTime$.MODULE$:Lscala/runtime/ScalaRunTime$;
+     223: iconst_2
+     224: anewarray     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+     227: dup
+     228: iconst_0
+     229: aload_0
+     230: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+     233: getstatic     #234                // Field scala/runtime/ScalaRunTime$.MODULE$:Lscala/runtime/ScalaRunTime$;
+     236: iconst_2
+     237: anewarray     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+     240: dup
+     241: iconst_0
+     242: aload_0
+     243: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     246: aastore
+     247: dup
+     248: iconst_1
+     249: aload_0
+     250: invokespecial #449                // Method zero:()Lorg/apache/spark/sql/catalyst/expressions/Literal;
+     253: aastore
+     254: checkcast     #253                // class "[Ljava/lang/Object;"
+     257: invokevirtual #257                // Method scala/runtime/ScalaRunTime$.wrapRefArray:([Ljava/lang/Object;)Lscala/collection/immutable/ArraySeq;
+     260: invokevirtual #500                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.coalesce:(Lscala/collection/immutable/Seq;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     263: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+     266: aload_0
+     267: invokevirtual #279                // Method child:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     270: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+     273: aload_0
+     274: invokespecial #189                // Method resultType:()Lorg/apache/spark/sql/types/AtomicType;
+     277: invokevirtual #487                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.cast:(Lorg/apache/spark/sql/types/DataType;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     280: invokespecial #489                // Method add:(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     283: aastore
+     284: dup
+     285: iconst_1
+     286: aload_0
+     287: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     290: aastore
+     291: checkcast     #253                // class "[Ljava/lang/Object;"
+     294: invokevirtual #257                // Method scala/runtime/ScalaRunTime$.wrapRefArray:([Ljava/lang/Object;)Lscala/collection/immutable/ArraySeq;
+     297: invokevirtual #500                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.coalesce:(Lscala/collection/immutable/Seq;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     300: getstatic     #266                // Field scala/collection/immutable/Nil$.MODULE$:Lscala/collection/immutable/Nil$;
+     303: invokespecial #270                // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+     306: goto          373
+     309: new           #224                // class scala/collection/immutable/$colon$colon
+     312: dup
+     313: aload_0
+     314: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+     317: getstatic     #234                // Field scala/runtime/ScalaRunTime$.MODULE$:Lscala/runtime/ScalaRunTime$;
+     320: iconst_2
+     321: anewarray     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+     324: dup
+     325: iconst_0
+     326: aload_0
+     327: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     330: aastore
+     331: dup
+     332: iconst_1
+     333: aload_0
+     334: invokespecial #449                // Method zero:()Lorg/apache/spark/sql/catalyst/expressions/Literal;
+     337: aastore
+     338: checkcast     #253                // class "[Ljava/lang/Object;"
+     341: invokevirtual #257                // Method scala/runtime/ScalaRunTime$.wrapRefArray:([Ljava/lang/Object;)Lscala/collection/immutable/ArraySeq;
+     344: invokevirtual #500                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.coalesce:(Lscala/collection/immutable/Seq;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     347: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+     350: aload_0
+     351: invokevirtual #279                // Method child:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     354: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+     357: aload_0
+     358: invokespecial #189                // Method resultType:()Lorg/apache/spark/sql/types/AtomicType;
+     361: invokevirtual #487                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.cast:(Lorg/apache/spark/sql/types/DataType;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     364: invokespecial #489                // Method add:(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     367: getstatic     #266                // Field scala/collection/immutable/Nil$.MODULE$:Lscala/collection/immutable/Nil$;
+     370: invokespecial #270                // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+     373: putfield      #502                // Field updateExpressions:Lscala/collection/immutable/Seq;
+     376: aload_0
+     377: aload_0
+     378: getfield      #289                // Field bitmap$0:I
+     381: bipush        64
+     383: ior
+     384: putfield      #289                // Field bitmap$0:I
+     387: aload_1
+     388: monitorexit
+     389: goto          395
+     392: aload_1
+     393: monitorexit
+     394: athrow
+     395: aload_0
+     396: getfield      #502                // Field updateExpressions:Lscala/collection/immutable/Seq;
+     399: areturn
+    Exception table:
+       from    to  target type
+           4   387   392   any
+
+  public scala.collection.immutable.Seq<org.apache.spark.sql.catalyst.expressions.Expression> updateExpressions();
+
+===== Sum.mergeExpressions (Sum.txt lines 982-1167)
+  private scala.collection.immutable.Seq<org.apache.spark.sql.catalyst.expressions.Expression> mergeExpressions$lzycompute();
+    Code:
+       0: aload_0
+       1: dup
+       2: astore_1
+       3: monitorenter
+       4: aload_0
+       5: getfield      #289                // Field bitmap$0:I
+       8: sipush        128
+      11: iand
+      12: iconst_0
+      13: if_icmpne     384
+      16: aload_0
+      17: aload_0
+      18: invokespecial #431                // Method shouldTrackIsEmpty:()Z
+      21: ifeq          268
+      24: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+      27: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+      30: aload_0
+      31: aload_0
+      32: invokespecial #435                // Method isEmpty:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+      35: invokevirtual #510                // Method RichAttribute:(Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;)Lorg/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute;
+      38: invokevirtual #512                // Method org/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute.left:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+      41: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+      44: invokevirtual #515                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.unary_$bang:()Lorg/apache/spark/sql/catalyst/expressions/Predicate;
+      47: checkcast     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+      50: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+      53: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+      56: aload_0
+      57: aload_0
+      58: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+      61: invokevirtual #510                // Method RichAttribute:(Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;)Lorg/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute;
+      64: invokevirtual #512                // Method org/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute.left:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+      67: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+      70: invokevirtual #479                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.isNull:()Lorg/apache/spark/sql/catalyst/expressions/Predicate;
+      73: checkcast     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+      76: invokevirtual #496                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.$amp$amp:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/expressions/Predicate;
+      79: astore_2
+      80: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+      83: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+      86: aload_0
+      87: aload_0
+      88: invokespecial #435                // Method isEmpty:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+      91: invokevirtual #510                // Method RichAttribute:(Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;)Lorg/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute;
+      94: invokevirtual #517                // Method org/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute.right:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+      97: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+     100: invokevirtual #515                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.unary_$bang:()Lorg/apache/spark/sql/catalyst/expressions/Predicate;
+     103: checkcast     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+     106: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+     109: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+     112: aload_0
+     113: aload_0
+     114: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     117: invokevirtual #510                // Method RichAttribute:(Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;)Lorg/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute;
+     120: invokevirtual #517                // Method org/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute.right:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     123: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+     126: invokevirtual #479                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.isNull:()Lorg/apache/spark/sql/catalyst/expressions/Predicate;
+     129: checkcast     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+     132: invokevirtual #496                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.$amp$amp:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/expressions/Predicate;
+     135: astore_3
+     136: new           #224                // class scala/collection/immutable/$colon$colon
+     139: dup
+     140: new           #469                // class org/apache/spark/sql/catalyst/expressions/If
+     143: dup
+     144: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+     147: aload_2
+     148: checkcast     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+     151: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+     154: aload_3
+     155: checkcast     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+     158: invokevirtual #520                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.$bar$bar:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/expressions/Predicate;
+     161: checkcast     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+     164: getstatic     #405                // Field org/apache/spark/sql/catalyst/expressions/Literal$.MODULE$:Lorg/apache/spark/sql/catalyst/expressions/Literal$;
+     167: aconst_null
+     168: aload_0
+     169: invokespecial #189                // Method resultType:()Lorg/apache/spark/sql/types/AtomicType;
+     172: invokevirtual #524                // Method org/apache/spark/sql/catalyst/expressions/Literal$.create:(Ljava/lang/Object;Lorg/apache/spark/sql/types/DataType;)Lorg/apache/spark/sql/catalyst/expressions/Literal;
+     175: aload_0
+     176: new           #481                // class org/apache/spark/sql/catalyst/expressions/KnownNotNull
+     179: dup
+     180: aload_0
+     181: aload_0
+     182: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     185: invokevirtual #510                // Method RichAttribute:(Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;)Lorg/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute;
+     188: invokevirtual #512                // Method org/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute.left:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     191: invokespecial #483                // Method org/apache/spark/sql/catalyst/expressions/KnownNotNull."<init>":(Lorg/apache/spark/sql/catalyst/expressions/Expression;)V
+     194: new           #481                // class org/apache/spark/sql/catalyst/expressions/KnownNotNull
+     197: dup
+     198: aload_0
+     199: aload_0
+     200: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     203: invokevirtual #510                // Method RichAttribute:(Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;)Lorg/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute;
+     206: invokevirtual #517                // Method org/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute.right:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     209: invokespecial #483                // Method org/apache/spark/sql/catalyst/expressions/KnownNotNull."<init>":(Lorg/apache/spark/sql/catalyst/expressions/Expression;)V
+     212: invokespecial #489                // Method add:(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     215: invokespecial #492                // Method org/apache/spark/sql/catalyst/expressions/If."<init>":(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;)V
+     218: new           #224                // class scala/collection/immutable/$colon$colon
+     221: dup
+     222: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+     225: aload_0
+     226: aload_0
+     227: invokespecial #435                // Method isEmpty:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     230: invokevirtual #510                // Method RichAttribute:(Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;)Lorg/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute;
+     233: invokevirtual #512                // Method org/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute.left:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     236: invokevirtual #475                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.DslExpression:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression;
+     239: aload_0
+     240: aload_0
+     241: invokespecial #435                // Method isEmpty:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     244: invokevirtual #510                // Method RichAttribute:(Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;)Lorg/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute;
+     247: invokevirtual #517                // Method org/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute.right:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     250: invokevirtual #496                // Method org/apache/spark/sql/catalyst/dsl/package$ExpressionConversions$DslExpression.$amp$amp:(Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/expressions/Predicate;
+     253: checkcast     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+     256: getstatic     #266                // Field scala/collection/immutable/Nil$.MODULE$:Lscala/collection/immutable/Nil$;
+     259: invokespecial #270                // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+     262: invokespecial #270                // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+     265: goto          369
+     268: new           #224                // class scala/collection/immutable/$colon$colon
+     271: dup
+     272: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+     275: getstatic     #234                // Field scala/runtime/ScalaRunTime$.MODULE$:Lscala/runtime/ScalaRunTime$;
+     278: iconst_2
+     279: anewarray     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+     282: dup
+     283: iconst_0
+     284: aload_0
+     285: getstatic     #472                // Field org/apache/spark/sql/catalyst/dsl/package$expressions$.MODULE$:Lorg/apache/spark/sql/catalyst/dsl/package$expressions$;
+     288: getstatic     #234                // Field scala/runtime/ScalaRunTime$.MODULE$:Lscala/runtime/ScalaRunTime$;
+     291: iconst_2
+     292: anewarray     #291                // class org/apache/spark/sql/catalyst/expressions/Expression
+     295: dup
+     296: iconst_0
+     297: aload_0
+     298: aload_0
+     299: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     302: invokevirtual #510                // Method RichAttribute:(Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;)Lorg/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute;
+     305: invokevirtual #512                // Method org/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute.left:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     308: aastore
+     309: dup
+     310: iconst_1
+     311: aload_0
+     312: invokespecial #449                // Method zero:()Lorg/apache/spark/sql/catalyst/expressions/Literal;
+     315: aastore
+     316: checkcast     #253                // class "[Ljava/lang/Object;"
+     319: invokevirtual #257                // Method scala/runtime/ScalaRunTime$.wrapRefArray:([Ljava/lang/Object;)Lscala/collection/immutable/ArraySeq;
+     322: invokevirtual #500                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.coalesce:(Lscala/collection/immutable/Seq;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     325: aload_0
+     326: aload_0
+     327: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     330: invokevirtual #510                // Method RichAttribute:(Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;)Lorg/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute;
+     333: invokevirtual #517                // Method org/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute.right:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     336: invokespecial #489                // Method add:(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     339: aastore
+     340: dup
+     341: iconst_1
+     342: aload_0
+     343: aload_0
+     344: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     347: invokevirtual #510                // Method RichAttribute:(Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;)Lorg/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute;
+     350: invokevirtual #512                // Method org/apache/spark/sql/catalyst/expressions/aggregate/DeclarativeAggregate$RichAttribute.left:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     353: aastore
+     354: checkcast     #253                // class "[Ljava/lang/Object;"
+     357: invokevirtual #257                // Method scala/runtime/ScalaRunTime$.wrapRefArray:([Ljava/lang/Object;)Lscala/collection/immutable/ArraySeq;
+     360: invokevirtual #500                // Method org/apache/spark/sql/catalyst/dsl/package$expressions$.coalesce:(Lscala/collection/immutable/Seq;)Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     363: getstatic     #266                // Field scala/collection/immutable/Nil$.MODULE$:Lscala/collection/immutable/Nil$;
+     366: invokespecial #270                // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+     369: putfield      #526                // Field mergeExpressions:Lscala/collection/immutable/Seq;
+     372: aload_0
+     373: aload_0
+     374: getfield      #289                // Field bitmap$0:I
+     377: sipush        128
+     380: ior
+     381: putfield      #289                // Field bitmap$0:I
+     384: aload_1
+     385: monitorexit
+     386: goto          392
+     389: aload_1
+     390: monitorexit
+     391: athrow
+     392: aload_0
+     393: getfield      #526                // Field mergeExpressions:Lscala/collection/immutable/Seq;
+     396: areturn
+    Exception table:
+       from    to  target type
+           4   384   389   any
+
+  public scala.collection.immutable.Seq<org.apache.spark.sql.catalyst.expressions.Expression> mergeExpressions();
+
+===== Sum.evaluateExpression (Sum.txt lines 1182-1284)
+  private org.apache.spark.sql.catalyst.expressions.Expression evaluateExpression$lzycompute();
+    Code:
+       0: aload_0
+       1: dup
+       2: astore_2
+       3: monitorenter
+       4: aload_0
+       5: getfield      #289                // Field bitmap$0:I
+       8: sipush        256
+      11: iand
+      12: iconst_0
+      13: if_icmpne     186
+      16: aload_0
+      17: aload_0
+      18: invokespecial #189                // Method resultType:()Lorg/apache/spark/sql/types/AtomicType;
+      21: astore_3
+      22: aload_3
+      23: instanceof    #42                 // class org/apache/spark/sql/types/DecimalType
+      26: ifeq          122
+      29: aload_3
+      30: checkcast     #42                 // class org/apache/spark/sql/types/DecimalType
+      33: astore        4
+      35: new           #534                // class org/apache/spark/sql/catalyst/expressions/CheckOverflowInSum
+      38: dup
+      39: aload_0
+      40: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+      43: aload         4
+      45: aload_0
+      46: invokevirtual #195                // Method evalContext:()Lorg/apache/spark/sql/catalyst/expressions/NumericEvalContext;
+      49: invokevirtual #201                // Method org/apache/spark/sql/catalyst/expressions/NumericEvalContext.evalMode:()Lscala/Enumeration$Value;
+      52: getstatic     #206                // Field org/apache/spark/sql/catalyst/expressions/EvalMode$.MODULE$:Lorg/apache/spark/sql/catalyst/expressions/EvalMode$;
+      55: invokevirtual #537                // Method org/apache/spark/sql/catalyst/expressions/EvalMode$.ANSI:()Lscala/Enumeration$Value;
+      58: astore        6
+      60: dup
+      61: ifnonnull     73
+      64: pop
+      65: aload         6
+      67: ifnull        85
+      70: goto          81
+      73: aload         6
+      75: invokevirtual #215                // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+      78: ifne          85
+      81: iconst_1
+      82: goto          86
+      85: iconst_0
+      86: aload_0
+      87: invokevirtual #539                // Method getContextOrNull:()Lorg/apache/spark/QueryContext;
+      90: invokespecial #542                // Method org/apache/spark/sql/catalyst/expressions/CheckOverflowInSum."<init>":(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/types/DecimalType;ZLorg/apache/spark/QueryContext;)V
+      93: astore        5
+      95: new           #469                // class org/apache/spark/sql/catalyst/expressions/If
+      98: dup
+      99: aload_0
+     100: invokespecial #435                // Method isEmpty:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     103: getstatic     #405                // Field org/apache/spark/sql/catalyst/expressions/Literal$.MODULE$:Lorg/apache/spark/sql/catalyst/expressions/Literal$;
+     106: aconst_null
+     107: aload_0
+     108: invokespecial #189                // Method resultType:()Lorg/apache/spark/sql/types/AtomicType;
+     111: invokevirtual #524                // Method org/apache/spark/sql/catalyst/expressions/Literal$.create:(Ljava/lang/Object;Lorg/apache/spark/sql/types/DataType;)Lorg/apache/spark/sql/catalyst/expressions/Literal;
+     114: aload         5
+     116: invokespecial #492                // Method org/apache/spark/sql/catalyst/expressions/If."<init>":(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;)V
+     119: goto          171
+     122: goto          125
+     125: aload_0
+     126: invokespecial #431                // Method shouldTrackIsEmpty:()Z
+     129: ifeq          161
+     132: new           #469                // class org/apache/spark/sql/catalyst/expressions/If
+     135: dup
+     136: aload_0
+     137: invokespecial #435                // Method isEmpty:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     140: getstatic     #405                // Field org/apache/spark/sql/catalyst/expressions/Literal$.MODULE$:Lorg/apache/spark/sql/catalyst/expressions/Literal$;
+     143: aconst_null
+     144: aload_0
+     145: invokespecial #189                // Method resultType:()Lorg/apache/spark/sql/types/AtomicType;
+     148: invokevirtual #524                // Method org/apache/spark/sql/catalyst/expressions/Literal$.create:(Ljava/lang/Object;Lorg/apache/spark/sql/types/DataType;)Lorg/apache/spark/sql/catalyst/expressions/Literal;
+     151: aload_0
+     152: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     155: invokespecial #492                // Method org/apache/spark/sql/catalyst/expressions/If."<init>":(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/Expression;)V
+     158: goto          171
+     161: goto          164
+     164: aload_0
+     165: invokespecial #433                // Method sum:()Lorg/apache/spark/sql/catalyst/expressions/AttributeReference;
+     168: goto          171
+     171: putfield      #544                // Field evaluateExpression:Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     174: aload_0
+     175: aload_0
+     176: getfield      #289                // Field bitmap$0:I
+     179: sipush        256
+     182: ior
+     183: putfield      #289                // Field bitmap$0:I
+     186: aload_2
+     187: monitorexit
+     188: goto          194
+     191: aload_2
+     192: monitorexit
+     193: athrow
+     194: aload_0
+     195: getfield      #544                // Field evaluateExpression:Lorg/apache/spark/sql/catalyst/expressions/Expression;
+     198: areturn
+    Exception table:
+       from    to  target type
+           4   186   191   any
+
+  public org.apache.spark.sql.catalyst.expressions.Expression evaluateExpression();
+
+===== Sum.<init>(Expression) (Sum.txt lines 1539-1549)
+  public org.apache.spark.sql.catalyst.expressions.aggregate.Sum(org.apache.spark.sql.catalyst.expressions.Expression);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: getstatic     #661                // Field org/apache/spark/sql/catalyst/expressions/NumericEvalContext$.MODULE$:Lorg/apache/spark/sql/catalyst/expressions/NumericEvalContext$;
+       5: getstatic     #666                // Field org/apache/spark/sql/internal/SQLConf$.MODULE$:Lorg/apache/spark/sql/internal/SQLConf$;
+       8: invokevirtual #669                // Method org/apache/spark/sql/internal/SQLConf$.get:()Lorg/apache/spark/sql/internal/SQLConf;
+      11: invokevirtual #673                // Method org/apache/spark/sql/catalyst/expressions/NumericEvalContext$.fromSQLConf:(Lorg/apache/spark/sql/internal/SQLConf;)Lorg/apache/spark/sql/catalyst/expressions/NumericEvalContext;
+      14: invokespecial #598                // Method "<init>":(Lorg/apache/spark/sql/catalyst/expressions/Expression;Lorg/apache/spark/sql/catalyst/expressions/NumericEvalContext;)V
+      17: return
+}
+
+===== TrySumExpressionBuilder$.build (TrySumBuilder.txt lines 37-46)
+  public org.apache.spark.sql.catalyst.expressions.Expression build(java.lang.String, scala.collection.immutable.Seq<org.apache.spark.sql.catalyst.expressions.Expression>);
+    Code:
+       0: aload_2
+       1: invokeinterface #76,  1           // InterfaceMethod scala/collection/immutable/Seq.length:()I
+       6: istore_3
+       7: iload_3
+       8: iconst_1
+       9: if_icmpne     47
+      12: new           #78                 // class org/apache/spark/sql/catalyst/expressions/aggregate/Sum
+      15: dup
+
+===== CheckOverflowInSum.eval (CheckOverflowInSum.txt lines 108-144)
+  public java.lang.Object eval(org.apache.spark.sql.catalyst.InternalRow);
+    Code:
+       0: aload_0
+       1: invokevirtual #117                // Method child:()Lorg/apache/spark/sql/catalyst/expressions/Expression;
+       4: aload_1
+       5: invokevirtual #121                // Method org/apache/spark/sql/catalyst/expressions/Expression.eval:(Lorg/apache/spark/sql/catalyst/InternalRow;)Ljava/lang/Object;
+       8: astore_2
+       9: aload_2
+      10: ifnonnull     35
+      13: aload_0
+      14: invokevirtual #123                // Method nullOnOverflow:()Z
+      17: ifeq          22
+      20: aconst_null
+      21: areturn
+      22: getstatic     #128                // Field org/apache/spark/sql/errors/QueryExecutionErrors$.MODULE$:Lorg/apache/spark/sql/errors/QueryExecutionErrors$;
+      25: aload_0
+      26: invokevirtual #130                // Method context:()Lorg/apache/spark/QueryContext;
+      29: ldc           #132                // String try_sum
+      31: invokevirtual #136                // Method org/apache/spark/sql/errors/QueryExecutionErrors$.overflowInSumOfDecimalError:(Lorg/apache/spark/QueryContext;Ljava/lang/String;)Ljava/lang/ArithmeticException;
+      34: athrow
+      35: aload_2
+      36: checkcast     #138                // class org/apache/spark/sql/types/Decimal
+      39: aload_0
+      40: invokevirtual #140                // Method dataType:()Lorg/apache/spark/sql/types/DecimalType;
+      43: invokevirtual #146                // Method org/apache/spark/sql/types/DecimalType.precision:()I
+      46: aload_0
+      47: invokevirtual #140                // Method dataType:()Lorg/apache/spark/sql/types/DecimalType;
+      50: invokevirtual #149                // Method org/apache/spark/sql/types/DecimalType.scale:()I
+      53: getstatic     #154                // Field org/apache/spark/sql/types/Decimal$.MODULE$:Lorg/apache/spark/sql/types/Decimal$;
+      56: invokevirtual #158                // Method org/apache/spark/sql/types/Decimal$.ROUND_HALF_UP:()Lscala/Enumeration$Value;
+      59: aload_0
+      60: invokevirtual #123                // Method nullOnOverflow:()Z
+      63: aload_0
+      64: invokevirtual #130                // Method context:()Lorg/apache/spark/QueryContext;
+      67: invokevirtual #162                // Method org/apache/spark/sql/types/Decimal.toPrecision:(IILscala/Enumeration$Value;ZLorg/apache/spark/QueryContext;)Lorg/apache/spark/sql/types/Decimal;
+      70: areturn
+
+
+===== DecimalAddNoOverflowCheck.nullSafeEval (DecimalAddNoOverflowCheck.txt lines 110-118)
+  public java.lang.Object nullSafeEval(java.lang.Object, java.lang.Object);
+    Code:
+       0: aload_0
+       1: invokespecial #102                // Method numeric:()Lscala/math/Numeric;
+       4: aload_1
+       5: aload_2
+       6: invokeinterface #107,  3          // InterfaceMethod scala/math/Numeric.plus:(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+      11: areturn
+
+
+===== UnsafeRow.setDecimal(int, Decimal, int)
+  public void setDecimal(int, org.apache.spark.sql.types.Decimal, int);
+    Code:
+       0: aload_0
+       1: iload_1
+       2: invokevirtual #116                // Method assertIndexIsValid:(I)V
+       5: iload_3
+       6: invokestatic  #27                 // Method org/apache/spark/sql/types/Decimal.MAX_LONG_DIGITS:()I
+       9: if_icmpgt     36
+      12: aload_2
+      13: ifnonnull     24
+      16: aload_0
+      17: iload_1
+      18: invokevirtual #167                // Method setNullAt:(I)V
+      21: goto          226
+      24: aload_0
+      25: iload_1
+      26: aload_2
+      27: invokevirtual #170                // Method org/apache/spark/sql/types/Decimal.toUnscaledLong:()J
+      30: invokevirtual #174                // Method setLong:(IJ)V
+      33: goto          226
+      36: aload_0
+      37: iload_1
+      38: invokevirtual #178                // Method getLong:(I)J
+      41: bipush        32
+      43: lushr
+      44: lstore        4
+      46: getstatic     #49                 // Field $assertionsDisabled:Z
+      49: ifne          74
+      52: lload         4
+      54: lconst_0
+      55: lcmp
+      56: ifgt          74
+      59: new           #53                 // class java/lang/AssertionError
+      62: dup
+      63: lload         4
+      65: invokedynamic #181,  0            // InvokeDynamic #5:makeConcatWithConstants:(J)Ljava/lang/String;
+      70: invokespecial #59                 // Method java/lang/AssertionError."<init>":(Ljava/lang/Object;)V
+      73: athrow
+      74: aload_0
+      75: getfield      #78                 // Field baseObject:Ljava/lang/Object;
+      78: aload_0
+      79: getfield      #39                 // Field baseOffset:J
+      82: lload         4
+      84: ladd
+      85: lconst_0
+      86: invokestatic  #132                // Method org/apache/spark/unsafe/Platform.putLong:(Ljava/lang/Object;JJ)V
+      89: aload_0
+      90: getfield      #78                 // Field baseObject:Ljava/lang/Object;
+      93: aload_0
+      94: getfield      #39                 // Field baseOffset:J
+      97: lload         4
+      99: ladd
+     100: ldc2_w        #47                 // long 8l
+     103: ladd
+     104: lconst_0
+     105: invokestatic  #132                // Method org/apache/spark/unsafe/Platform.putLong:(Ljava/lang/Object;JJ)V
+     108: aload_2
+     109: ifnull        124
+     112: aload_2
+     113: iload_3
+     114: aload_2
+     115: invokevirtual #184                // Method org/apache/spark/sql/types/Decimal.scale:()I
+     118: invokevirtual #187                // Method org/apache/spark/sql/types/Decimal.changePrecision:(II)Z
+     121: ifne          149
+     124: aload_0
+     125: iload_1
+     126: invokevirtual #167                // Method setNullAt:(I)V
+     129: aload_0
+     130: getfield      #78                 // Field baseObject:Ljava/lang/Object;
+     133: aload_0
+     134: iload_1
+     135: invokevirtual #128                // Method getFieldOffset:(I)J
+     138: lload         4
+     140: bipush        32
+     142: lshl
+     143: invokestatic  #132                // Method org/apache/spark/unsafe/Platform.putLong:(Ljava/lang/Object;JJ)V

@@ -1,0 +1,168 @@
+== spark-catalyst_2.13-4.1.2.jar: org.apache.spark.sql.catalyst.expressions.codegen.UnsafeRowWriter (javap -c -p)
+  public void write(int, org.apache.spark.sql.types.Decimal, int, int);
+    Code:
+       0: iload_3
+       1: invokestatic  #133                // Method org/apache/spark/sql/types/Decimal.MAX_LONG_DIGITS:()I
+       4: if_icmpgt     41
+       7: aload_2
+       8: ifnull        33
+      11: aload_2
+      12: iload_3
+      13: iload         4
+      15: invokevirtual #138                // Method org/apache/spark/sql/types/Decimal.changePrecision:(II)Z
+      18: ifeq          33
+      21: aload_0
+      22: iload_1
+      23: aload_2
+      24: invokevirtual #142                // Method org/apache/spark/sql/types/Decimal.toUnscaledLong:()J
+      27: invokevirtual #92                 // Method write:(IJ)V
+      30: goto          188
+      33: aload_0
+      34: iload_1
+      35: invokevirtual #96                 // Method setNullAt:(I)V
+      38: goto          188
+      41: aload_0
+      42: getfield      #146                // Field holder:Lorg/apache/spark/sql/catalyst/expressions/codegen/BufferHolder;
+      45: bipush        16
+      47: invokevirtual #150                // Method org/apache/spark/sql/catalyst/expressions/codegen/BufferHolder.grow:(I)V
+      50: aload_0
+      51: invokevirtual #72                 // Method getBuffer:()[B
+      54: aload_0
+      55: invokevirtual #50                 // Method cursor:()I
+      58: i2l
+      59: lconst_0
+      60: invokestatic  #76                 // Method org/apache/spark/unsafe/Platform.putLong:(Ljava/lang/Object;JJ)V
+      63: aload_0
+      64: invokevirtual #72                 // Method getBuffer:()[B
+      67: aload_0
+      68: invokevirtual #50                 // Method cursor:()I
+      71: bipush        8
+      73: iadd
+      74: i2l
+      75: lconst_0
+      76: invokestatic  #76                 // Method org/apache/spark/unsafe/Platform.putLong:(Ljava/lang/Object;JJ)V
+      79: aload_2
+      80: ifnull        93
+      83: aload_2
+      84: iload_3
+      85: iload         4
+      87: invokevirtual #138                // Method org/apache/spark/sql/types/Decimal.changePrecision:(II)Z
+      90: ifne          115
+      93: aload_0
+      94: invokevirtual #72                 // Method getBuffer:()[B
+      97: aload_0
+      98: getfield      #53                 // Field startingOffset:I
+     101: i2l
+     102: iload_1
+     103: invokestatic  #88                 // Method org/apache/spark/unsafe/bitset/BitSetMethods.set:(Ljava/lang/Object;JI)V
+     106: aload_0
+     107: iload_1
+     108: iconst_0
+     109: invokevirtual #151                // Method setOffsetAndSize:(II)V
+     112: goto          182
+     115: aload_2
+     116: invokevirtual #155                // Method org/apache/spark/sql/types/Decimal.toJavaBigDecimal:()Ljava/math/BigDecimal;
+     119: invokevirtual #159                // Method java/math/BigDecimal.unscaledValue:()Ljava/math/BigInteger;
+     122: invokevirtual #165                // Method java/math/BigInteger.toByteArray:()[B
+     125: astore        5
+     127: aload         5
+
+== spark-catalyst_2.13-4.1.2.jar: GenerateUnsafeProjection$ (javap -v), the decimal write templates
+  #489 = Utf8               \u0001.write(\u0001, \u0001, \u0001, \u0001);
+  #490 = String             #489          // \u0001.write(\u0001, \u0001, \u0001, \u0001);
+  #844 = Utf8               \u0001.write(\u0001, (Decimal) null, \u0001, \u0001);
+  #845 = String             #844          // \u0001.write(\u0001, (Decimal) null, \u0001, \u0001);
+
+== GenerateUnsafeProjection$.writeElement (javap -c -p -constants), the DecimalType.Fixed branch
+     176: goto          179
+     179: aload         7
+     181: instanceof    #35                 // class org/apache/spark/sql/types/DecimalType
+     184: ifeq          255
+     187: aload         7
+     189: checkcast     #35                 // class org/apache/spark/sql/types/DecimalType
+     192: astore        17
+     194: getstatic     #468                // Field org/apache/spark/sql/types/DecimalType$Fixed$.MODULE$:Lorg/apache/spark/sql/types/DecimalType$Fixed$;
+     197: aload         17
+     199: invokevirtual #472                // Method org/apache/spark/sql/types/DecimalType$Fixed$.unapply:(Lorg/apache/spark/sql/types/DecimalType;)Lscala/Option;
+     202: astore        18
+     204: aload         18
+     206: invokevirtual #477                // Method scala/Option.isEmpty:()Z
+     209: ifne          252
+     212: aload         18
+     214: invokevirtual #480                // Method scala/Option.get:()Ljava/lang/Object;
+     217: checkcast     #482                // class scala/Tuple2
+     220: invokevirtual #485                // Method scala/Tuple2._1$mcI$sp:()I
+     223: istore        19
+     225: aload         18
+     227: invokevirtual #480                // Method scala/Option.get:()Ljava/lang/Object;
+     230: checkcast     #482                // class scala/Tuple2
+     233: invokevirtual #488                // Method scala/Tuple2._2$mcI$sp:()I
+     236: istore        20
+     238: aload         5
+     240: aload_3
+     241: aload_2
+     242: iload         19
+     244: iload         20
+     246: invokedynamic #493,  0            // InvokeDynamic #19:makeConcatWithConstants:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;II)Ljava/lang/String;
+     251: areturn
+     252: goto          258
+     255: goto          258
+
+== iceberg-spark-runtime-4.1_2.13-1.11.0.jar: org.apache.iceberg.spark.data.SparkParquetWriters$FixedDecimalWriter.write
+  public void write(int, org.apache.spark.sql.types.Decimal);
+    Code:
+       0: aload_0
+       1: getfield      #30                 // Field precision:I
+       4: aload_0
+       5: getfield      #32                 // Field scale:I
+       8: aload_2
+       9: invokevirtual #72                 // Method org/apache/spark/sql/types/Decimal.toJavaBigDecimal:()Ljava/math/BigDecimal;
+      12: aload_0
+      13: getfield      #60                 // Field bytes:Ljava/lang/ThreadLocal;
+      16: invokevirtual #74                 // Method java/lang/ThreadLocal.get:()Ljava/lang/Object;
+      19: checkcast     #76                 // class "[B"
+      22: invokestatic  #82                 // Method org/apache/iceberg/util/DecimalUtil.toReusedFixLengthBytes:(IILjava/math/BigDecimal;[B)[B
+      25: astore_3
+
+== iceberg-spark-runtime-4.1_2.13-1.11.0.jar: org.apache.iceberg.util.DecimalUtil.toReusedFixLengthBytes
+  public static byte[] toReusedFixLengthBytes(int, int, java.math.BigDecimal, byte[]);
+    Code:
+       0: aload_2
+       1: invokevirtual #19                 // Method java/math/BigDecimal.scale:()I
+       4: iload_1
+       5: if_icmpne     12
+       8: iconst_1
+       9: goto          13
+      12: iconst_0
+      13: ldc           #21                 // String Cannot write value as decimal(%s,%s), wrong scale: %s
+      15: iload_0
+      16: invokestatic  #27                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      19: iload_1
+      20: invokestatic  #27                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      23: aload_2
+      24: invokestatic  #33                 // Method org/apache/iceberg/relocated/com/google/common/base/Preconditions.checkArgument:(ZLjava/lang/String;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V
+      27: aload_2
+      28: invokevirtual #36                 // Method java/math/BigDecimal.precision:()I
+      31: iload_0
+      32: if_icmpgt     39
+      35: iconst_1
+      36: goto          40
+      39: iconst_0
+      40: ldc           #38                 // String Cannot write value as decimal(%s,%s), too large: %s
+      42: iload_0
+      43: invokestatic  #27                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      46: iload_1
+      47: invokestatic  #27                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      50: aload_2
+      51: invokestatic  #33                 // Method org/apache/iceberg/relocated/com/google/common/base/Preconditions.checkArgument:(ZLjava/lang/String;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V
+      54: aload_2
+      55: invokevirtual #42                 // Method java/math/BigDecimal.unscaledValue:()Ljava/math/BigInteger;
+      58: invokevirtual #48                 // Method java/math/BigInteger.toByteArray:()[B
+      61: astore        4
+      63: aload         4
+      65: arraylength
+      66: aload_3
+      67: arraylength
+      68: if_icmpne     74
+      71: aload         4
+      73: areturn
