@@ -1,0 +1,30 @@
+Read with javap -c -p from spark-catalyst_2.13-4.1.2.jar (the oracle environment, read only), constant-pool indexes stripped.
+
+== ComputeCurrentTime$$anonfun$apply$8$$anonfun$applyOrElse$3 (applyOrElse, the optimizer rule match arms)
+12:       5: instanceof // class org/apache/spark/sql/catalyst/expressions/CurrentDate
+21:      27: invokevirtual // Method org/apache/spark/sql/catalyst/expressions/CurrentDate.zoneId:()Ljava/time/ZoneId;
+29:      47: instanceof // class org/apache/spark/sql/catalyst/expressions/CurrentTime
+54:     109: instanceof // class org/apache/spark/sql/catalyst/expressions/CurrentTimestamp
+60:     124: instanceof // class org/apache/spark/sql/catalyst/expressions/Now
+74:     157: instanceof // class org/apache/spark/sql/catalyst/expressions/CurrentTimeZone
+82:     176: instanceof // class org/apache/spark/sql/catalyst/expressions/LocalTimestamp
+91:     198: invokevirtual // Method org/apache/spark/sql/catalyst/expressions/LocalTimestamp.zoneId:()Ljava/time/ZoneId;
+108:       5: instanceof // class org/apache/spark/sql/catalyst/expressions/CurrentDate
+114:      18: instanceof // class org/apache/spark/sql/catalyst/expressions/CurrentTime
+120:      31: instanceof // class org/apache/spark/sql/catalyst/expressions/CurrentTimestamp
+126:      46: instanceof // class org/apache/spark/sql/catalyst/expressions/Now
+
+== ComputeCurrentTime$ (apply): the zone literal is built from the optimizer conf, not from the expression
+30:      32: invokevirtual // Method conf:()Lorg/apache/spark/sql/internal/SQLConf;
+31:      35: invokevirtual // Method org/apache/spark/sql/internal/SQLConf.sessionLocalTimeZone:()Ljava/lang/String;
+36:      47: invokevirtual // Method conf:()Lorg/apache/spark/sql/internal/SQLConf;
+37:      50: invokevirtual // Method org/apache/spark/sql/internal/SQLConf.sessionLocalTimeZone:()Ljava/lang/String;
+
+== ComputeCurrentTime$$anonfun$apply$8: the literal field
+13:  public final org.apache.spark.sql.catalyst.expressions.Literal timezone$1;
+80:      25: putfield // Field timezone$1:Lorg/apache/spark/sql/catalyst/expressions/Literal;
+
+== ReplaceCurrentLike$$anonfun$apply$10 (applyOrElse): no CurrentTimeZone arm
+18:       5: instanceof // class org/apache/spark/sql/catalyst/expressions/CurrentDatabase
+31:      37: instanceof // class org/apache/spark/sql/catalyst/expressions/CurrentCatalog
+44:      69: instanceof // class org/apache/spark/sql/catalyst/expressions/CurrentUser

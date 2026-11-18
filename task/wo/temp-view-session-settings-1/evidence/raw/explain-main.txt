@@ -1,0 +1,101 @@
+provenance engine=repark native=<scratchpad>/ddu-work/pkg-dct-7bf32859/repark/_native.abi3.so version=1.5.6
+=== read sql_on_div (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT m FROM sql_on_div
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_805601c9f40c4d0e8f6c4c0ec0505474
+  SubqueryAlias: datafusion.public.sql_on_div
+    TableScan: ?table? projection=[m]
+
+== Physical Plan ==
+DataSourceExec: file_groups={1 group: [[<scratchpad>/vs/wh/wx-repark-4bf1wi6d/fx-fx/KrWhx0ArUyS3lhTJ_0.parquet]]}, projection=[10 / nullif(CAST(b@1 AS Float64), 0) as m], file_type=parquet
+
+=== read sql_on_add_ovf (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT m FROM sql_on_add_ovf
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_d83505df341441a886b93f8aca5b6f2a
+  SubqueryAlias: datafusion.public.sql_on_add_ovf
+    TableScan: ?table? projection=[m]
+
+== Physical Plan ==
+DataSourceExec: file_groups={1 group: [[<scratchpad>/vs/wh/wx-repark-4bf1wi6d/fx-fx/KrWhx0ArUyS3lhTJ_0.parquet]]}, projection=[__repark_spark_int_add__(a@0, 1) as m], file_type=parquet
+
+=== read df_on_div (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT m FROM df_on_div
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_d53af0ff844f43e09687677142902f37
+  SubqueryAlias: datafusion.public.df_on_div
+    Projection: Float64(10) / nullif(__repark_ansi_nonzero_divisor__(CAST(datafusion.public.fx.b AS Float64)), Float64(0)) AS m
+      SubqueryAlias: datafusion.public.fx
+        TableScan: ?table? projection=[b]
+
+== Physical Plan ==
+DataSourceExec: file_groups={1 group: [[<scratchpad>/vs/wh/wx-repark-4bf1wi6d/fx-fx/KrWhx0ArUyS3lhTJ_0.parquet]]}, projection=[10 / nullif(__repark_ansi_nonzero_divisor__(CAST(b@1 AS Float64)), 0) as m], file_type=parquet
+
+=== read df_on_add_ovf (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT m FROM df_on_add_ovf
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_6080af8f0cf349bba75597be0fd7c0fe
+  SubqueryAlias: datafusion.public.df_on_add_ovf
+    Projection: __repark_spark_int_add__(CAST(datafusion.public.fx.a AS Int32), Int32(1)) AS datafusion.public.fx.a + Int64(1) AS m
+      SubqueryAlias: datafusion.public.fx
+        TableScan: ?table? projection=[a]
+
+== Physical Plan ==
+DataSourceExec: file_groups={1 group: [[<scratchpad>/vs/wh/wx-repark-4bf1wi6d/fx-fx/KrWhx0ArUyS3lhTJ_0.parquet]]}, projection=[__repark_spark_int_add__(a@0, 1) as m], file_type=parquet
+
+=== read sql_utc_hour (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT m FROM sql_utc_hour
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_f468d29054164be9b2cd2ff54cbe0675
+  SubqueryAlias: datafusion.public.sql_utc_hour
+    TableScan: ?table? projection=[m]
+
+== Physical Plan ==
+DataSourceExec: file_groups={1 group: [[<scratchpad>/vs/wh/wx-repark-4bf1wi6d/fx-tzt/NodjFZ45HCsNaJte_0.parquet]]}, projection=[hour(ts@0) as m], file_type=parquet
+
+=== read df_utc_hour (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT m FROM df_utc_hour
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_ebb62e2ddeec4c1ba4bb890b5d49b05e
+  SubqueryAlias: datafusion.public.df_utc_hour
+    Projection: hour(datafusion.public.tzt.ts) AS m
+      SubqueryAlias: datafusion.public.tzt
+        TableScan: ?table? projection=[ts]
+
+== Physical Plan ==
+DataSourceExec: file_groups={1 group: [[<scratchpad>/vs/wh/wx-repark-4bf1wi6d/fx-tzt/NodjFZ45HCsNaJte_0.parquet]]}, projection=[hour(ts@0) as m], file_type=parquet
+
+=== direct off div (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT 10 / b AS m FROM fx
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_5673ba6569cb499e8645a26146492f75
+  Projection: Float64(10) / nullif(CAST(datafusion.public.fx.b AS Float64), Float64(0)) AS m
+    SubqueryAlias: datafusion.public.fx
+      TableScan: ?table? projection=[b]
+
+== Physical Plan ==
+DataSourceExec: file_groups={1 group: [[<scratchpad>/vs/wh/wx-repark-4bf1wi6d/fx-fx/KrWhx0ArUyS3lhTJ_0.parquet]]}, projection=[10 / nullif(CAST(b@1 AS Float64), 0) as m], file_type=parquet
+
+=== direct off add_ovf (created ANSI on and UTC; read ANSI off and America/Los_Angeles) :: SELECT a + 1 AS m FROM fx
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_635162104e52455bad75eee87bd80924
+  Projection: __repark_spark_int_add__(CAST(datafusion.public.fx.a AS Int32), Int32(1)) AS datafusion.public.fx.a + Int64(1) AS m
+    SubqueryAlias: datafusion.public.fx
+      TableScan: ?table? projection=[a]
+
+== Physical Plan ==
+DataSourceExec: file_groups={1 group: [[<scratchpad>/vs/wh/wx-repark-4bf1wi6d/fx-fx/KrWhx0ArUyS3lhTJ_0.parquet]]}, projection=[__repark_spark_int_add__(a@0, 1) as m], file_type=parquet
+
+=== held div (created ANSI on; explained after SET off)
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_4c761247c5a144eaaa2fd9dccf386ea3
+  Projection: Float64(10) / nullif(__repark_ansi_nonzero_divisor__(CAST(datafusion.public.fx.b AS Float64)), Float64(0)) AS m
+    SubqueryAlias: datafusion.public.fx
+      TableScan: ?table? projection=[b]
+
+== Physical Plan ==
+DataSourceExec: file_groups={1 group: [[<scratchpad>/vs/wh/wx-repark-4bf1wi6d/fx-fx/KrWhx0ArUyS3lhTJ_0.parquet]]}, projection=[10 / nullif(__repark_ansi_nonzero_divisor__(CAST(b@1 AS Float64)), 0) as m], file_type=parquet
+
+=== held add_ovf (created ANSI on; explained after SET off)
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_cf1ac92912724fbc8eca846c1aa30e20
+  Projection: __repark_spark_int_add__(CAST(datafusion.public.fx.a AS Int32), Int32(1)) AS datafusion.public.fx.a + Int64(1) AS m
+    SubqueryAlias: datafusion.public.fx
+      TableScan: ?table? projection=[a]
+
+== Physical Plan ==
+DataSourceExec: file_groups={1 group: [[<scratchpad>/vs/wh/wx-repark-4bf1wi6d/fx-fx/KrWhx0ArUyS3lhTJ_0.parquet]]}, projection=[__repark_spark_int_add__(a@0, 1) as m], file_type=parquet
+
