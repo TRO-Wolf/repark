@@ -15,7 +15,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
 ## Modules
 
 - [`display.rs`](display.rs) — **FACADE-2 step 2 (2026-09-12):** `PyColumnParts` is a static-method
-  namespace. Each Group-2 op is one native call that builds the `Expr` and returns a 4-tuple
+  namespace (`/`: DECIMAL-DIVIDE-LITERAL-1). Each Group-2 op is one native call: an `Expr` and a 4-tuple
   `(PyColumn, spark_display, sql_expr, join_sql_expr)` so the `Expr` is moved, not cloned, back to
   Python. Child fragments (including Python `str`/`repr` and `_idents` quoting) are inputs; Rust
   only concatenates. Byte identity with the pre-move Python f-strings is the contract (card D-1).
@@ -83,7 +83,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `lit_array_cast` stores `Cast(array-call, List<item: <element>, nullable>)` — `VARCHAR` maps to
   `Utf8View` internally and the Arrow exporter coerces views to `string` at the door.
   **Re-verify fold (2026-09-30):** the typed constructors compose through `combine` (fixed shape).
-- [`mod.rs`](mod.rs) owns `PyColumn`, constructors, operators, aggregates, and window attachment.
+- [`mod.rs`](mod.rs) owns `PyColumn`, constructors, operators, aggregates, windows.
   **PERF-APPROXPCT-1 (2026-09-05):** `approx_percentile_cont` / `approx_percentile_list`
   take `accuracy: Option<i64>` (None omits the third literal, so default-accuracy display
   names keep the two-arg Spark shape). The list call construction collapses to a `let` and

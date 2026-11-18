@@ -48,6 +48,7 @@ _CACHE_BYTE_BUDGET_KEYS_LOWER: frozenset[str] = frozenset(
 
 SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY = "spark.sql.ansi.doubleQuotedIdentifiers"
 DECIMAL_TRUNCATE_LEGACY_KEY = "spark.sql.legacy.decimal.retainFractionDigitsOnTruncate"
+_PICK_MINIMUM_PRECISION_KEY = "spark.sql.legacy.literal.pickMinimumPrecision"
 
 _CATALOG_KEY_PREFIXES: tuple[str, str] = ("spark.sql.catalog.", "repark.sql.catalog.")
 
@@ -258,6 +259,7 @@ class RuntimeConfig:
             TIME_PARSER_POLICY_KEY,
             SPARK_SQL_ANSI_DOUBLE_QUOTED_IDENTIFIERS_KEY,
             DECIMAL_TRUNCATE_LEGACY_KEY,
+            _PICK_MINIMUM_PRECISION_KEY,
         ):
             _native.set_runtime_config(inner, key, text)
             if key == SESSION_TIME_ZONE_KEY:
@@ -479,6 +481,8 @@ class RuntimeConfig:
             return
         if key == DECIMAL_TRUNCATE_LEGACY_KEY:
             _native.set_runtime_config(inner, key, "false")
+        if key == _PICK_MINIMUM_PRECISION_KEY:
+            _native.set_runtime_config(inner, key, "true")
         if is_iceberg_session_write_key(key) or key == DEFAULT_CATALOG_KEY:
             _native.unset_runtime_config(inner, key)
         if key == DEFAULT_CATALOG_KEY:

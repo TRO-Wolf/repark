@@ -1,0 +1,5 @@
+{"ansi": "true", "engine": "spark", "jar": "org.apache.iceberg_iceberg-spark-runtime-4.1_2.13-1.11.0.jar", "key": "provenance", "version": "4.1.2"}
+{"key": "hdiv/sessview/select", "result": {"rows": [["1", "1.81250000"], ["2", "-1.81250000"], ["3", "null"], ["4", "0.01500000"], ["5", "3086419.72750000"]], "types": ["int", "decimal(16,8)"]}}
+{"key": "hdiv/sessview/ctas", "metadata_type": [["id", "int"], ["v", "decimal(16, 8)"]], "read_type": ["int", "decimal(16,8)"], "result": {"rows": [["1", "1.81250000"], ["2", "-1.81250000"], ["3", "null"], ["4", "0.01500000"], ["5", "3086419.72750000"]], "types": ["int", "decimal(16,8)"]}, "statement": "ok"}
+{"key": "hdiv/tempview/select", "result": {"rows": [["1", "1.81250000"], ["2", "-1.81250000"], ["3", "null"], ["4", "0.01500000"], ["5", "3086419.72750000"]], "types": ["int", "decimal(16,8)"]}}
+{"key": "hdiv/tempview/ctas", "metadata_type": [["id", "int"], ["v", "decimal(16, 8)"]], "read_type": ["int", "decimal(16,8)"], "result": {"rows": [["1", "1.81250000"], ["2", "-1.81250000"], ["3", "null"], ["4", "0.01500000"], ["5", "3086419.72750000"]], "types": ["int", "decimal(16,8)"]}, "statement": "ok"}

@@ -118,14 +118,15 @@ def test_arithmetic_operators(spark: ReparkSession) -> None:
 
 
 def test_division_is_float(spark: ReparkSession) -> None:
-    # SQL literals `7.0`/`2.0` are DECIMAL(2,1); Column `/` still yields float64 (the analyzer's
-    # SQL `/` rewrite is not this path).
     df = spark.sql("SELECT 7.0 AS a, 2.0 AS b").withColumn("d", F.col("a") / F.col("b"))
     table = df.to_arrow()
     assert table.schema.field("a").type == pa.decimal128(2, 1)
     assert table.schema.field("b").type == pa.decimal128(2, 1)
-    assert pa.types.is_floating(table.schema.field("d").type)
-    assert table.column("d").to_pylist() == [3.5]
+    assert table.schema.field("d").type == pa.decimal128(8, 6)
+    assert table.column("d").to_pylist() == [Decimal("3.500000")]
+    ints = spark.sql("SELECT 7 AS a, 2 AS b").withColumn("d", F.col("a") / F.col("b")).to_arrow()
+    assert pa.types.is_floating(ints.schema.field("d").type)
+    assert ints.column("d").to_pylist() == [3.5]
 
 
 def test_sql_float_literal_division_is_decimal(spark: ReparkSession) -> None:

@@ -108,6 +108,8 @@ fn install_spark_session_conf(
     config = repark_functions::timestamp_type::with_spark_timestamp_type(config, timestamp_type);
     config =
         repark_functions::decimal_legacy::install_decimal_truncate_legacy(config, session.conf)?;
+    config =
+        repark_functions::decimal_precision::install_pick_minimum_precision(config, session.conf)?;
     config = apply_spark_float_as_decimal(config);
     config = apply_spark_parser_dialect(config);
     config = config.with_extension(Arc::new(SparkDoorSession));

@@ -1,0 +1,95 @@
+PKG <scratchpad>/lane-round-exact-1/python/repark/src/repark/_native.abi3.so
+===== true SQL pmod(d10, 3) decimal(3,2)
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_9e1f996b596c44d189c716ff9ecf847b
+  Projection: CASE WHEN __common_expr_1 < Decimal128(Some(0),3,2) THEN (__common_expr_1 + Decimal128(Some(3),1,0)) % Decimal128(Some(3),1,0) ELSE __common_expr_1 END AS q
+    Projection: datafusion.public.k.d10 % Decimal128(Some(3),1,0) AS __common_expr_1
+      SubqueryAlias: datafusion.public.k
+        SubqueryAlias: t
+          Projection: column1 AS d10
+            Values: (Decimal128(Some(725),10,2) AS Decimal128(Some(725),3,2), Int32(3)), (Decimal128(Some(-725),10,2) AS Decimal128(Some(-725),3,2), Int32(-3))
+
+== Physical Plan ==
+ProjectionExec: expr=[CASE WHEN __common_expr_1@0 < Some(0),3,2 THEN (__common_expr_1@0 + Some(3),1,0) % Some(3),1,0 ELSE __common_expr_1@0 END as q]
+  ProjectionExec: expr=[column1@0 % Some(3),1,0 as __common_expr_1]
+    DataSourceExec: partitions=1, partition_sizes=[1]
+
+===== true SQL pmod(-3, d10) decimal(3,2)
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_fb5be2f0ff204d9faa1b6001a1b56f5c
+  Projection: CAST(CASE WHEN __common_expr_1 < Decimal128(Some(0),3,2) THEN (__common_expr_1 + datafusion.public.k.d10) % __common_expr_2 ELSE CAST(__common_expr_1 AS Decimal128(10, 2)) END AS Decimal128(3, 2)) AS q
+    Projection: Decimal128(Some(-3),1,0) % __common_expr_3 AS __common_expr_1, __common_expr_3 AS __common_expr_2, datafusion.public.k.d10
+      Projection: __repark_ansi_nonzero_divisor__(datafusion.public.k.d10) AS __common_expr_3, datafusion.public.k.d10
+        SubqueryAlias: datafusion.public.k
+          SubqueryAlias: t
+            Projection: column1 AS d10
+              Values: (Decimal128(Some(725),10,2) AS Decimal128(Some(725),3,2), Int32(3)), (Decimal128(Some(-725),10,2) AS Decimal128(Some(-725),3,2), Int32(-3))
+
+== Physical Plan ==
+ProjectionExec: expr=[CAST(CASE WHEN __common_expr_1@0 < Some(0),3,2 THEN (__common_expr_1@0 + d10@2) % __common_expr_2@1 ELSE CAST(__common_expr_1@0 AS Decimal128(10, 2)) END AS Decimal128(3, 2)) as q]
+  ProjectionExec: expr=[Some(-3),1,0 % __common_expr_3@0 as __common_expr_1, __common_expr_3@0 as __common_expr_2, d10@1 as d10]
+    ProjectionExec: expr=[__repark_ansi_nonzero_divisor__(column1@0) as __common_expr_3, column1@0 as d10]
+      DataSourceExec: partitions=1, partition_sizes=[1]
+
+===== true F.pmod(col(d10), lit(3)) decimal(3,2)
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_8a7affc24b864c80a8db3781b96f6118
+  Projection: CASE WHEN __common_expr_1 < Decimal128(Some(0),3,2) THEN (__common_expr_1 + Decimal128(Some(3),1,0)) % Decimal128(Some(3),1,0) ELSE __common_expr_1 END AS q
+    Projection: datafusion.public.k.d10 % Decimal128(Some(3),1,0) AS __common_expr_1
+      SubqueryAlias: datafusion.public.k
+        SubqueryAlias: t
+          Projection: column1 AS d10
+            Values: (Decimal128(Some(725),10,2) AS Decimal128(Some(725),3,2), Int32(3)), (Decimal128(Some(-725),10,2) AS Decimal128(Some(-725),3,2), Int32(-3))
+
+== Physical Plan ==
+ProjectionExec: expr=[CASE WHEN __common_expr_1@0 < Some(0),3,2 THEN (__common_expr_1@0 + Some(3),1,0) % Some(3),1,0 ELSE __common_expr_1@0 END as q]
+  ProjectionExec: expr=[column1@0 % Some(3),1,0 as __common_expr_1]
+    DataSourceExec: partitions=1, partition_sizes=[1]
+
+===== false SQL pmod(d10, 3) decimal(3,2)
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_0e9e3339f34244969be406e66e426a49
+  Projection: CASE WHEN __common_expr_1 < Decimal128(Some(0),3,2) THEN (__common_expr_1 + Decimal128(Some(3),1,0)) % Decimal128(Some(3),1,0) ELSE __common_expr_1 END AS q
+    Projection: datafusion.public.k.d10 % Decimal128(Some(3),1,0) AS __common_expr_1
+      SubqueryAlias: datafusion.public.k
+        SubqueryAlias: t
+          Projection: column1 AS d10
+            Values: (Decimal128(Some(725),10,2) AS Decimal128(Some(725),3,2), Int32(3)), (Decimal128(Some(-725),10,2) AS Decimal128(Some(-725),3,2), Int32(-3))
+
+== Physical Plan ==
+ProjectionExec: expr=[CASE WHEN __common_expr_1@0 < Some(0),3,2 THEN (__common_expr_1@0 + Some(3),1,0) % Some(3),1,0 ELSE __common_expr_1@0 END as q]
+  ProjectionExec: expr=[column1@0 % Some(3),1,0 as __common_expr_1]
+    DataSourceExec: partitions=1, partition_sizes=[1]
+
+===== false SQL pmod(-3, d10) decimal(3,2)
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_6a663925f5174258970c7738a90fe01e
+  Projection: TRY_CAST(CASE WHEN __common_expr_1 < Decimal128(Some(0),3,2) THEN (__common_expr_1 + datafusion.public.k.d10) % __common_expr_2 ELSE CAST(__common_expr_1 AS Decimal128(10, 2)) END AS Decimal128(3, 2)) AS q
+    Projection: Decimal128(Some(-3),1,0) % __common_expr_3 AS __common_expr_1, __common_expr_3 AS __common_expr_2, datafusion.public.k.d10
+      Projection: nullif(datafusion.public.k.d10, Decimal128(Some(0),10,2)) AS __common_expr_3, datafusion.public.k.d10
+        SubqueryAlias: datafusion.public.k
+          SubqueryAlias: t
+            Projection: column1 AS d10
+              Values: (Decimal128(Some(725),10,2) AS Decimal128(Some(725),3,2), Int32(3)), (Decimal128(Some(-725),10,2) AS Decimal128(Some(-725),3,2), Int32(-3))
+
+== Physical Plan ==
+ProjectionExec: expr=[TRY_CAST(CASE WHEN __common_expr_1@0 < Some(0),3,2 THEN (__common_expr_1@0 + d10@2) % __common_expr_2@1 ELSE CAST(__common_expr_1@0 AS Decimal128(10, 2)) END AS Decimal128(3, 2)) as q]
+  ProjectionExec: expr=[Some(-3),1,0 % __common_expr_3@0 as __common_expr_1, __common_expr_3@0 as __common_expr_2, d10@1 as d10]
+    ProjectionExec: expr=[nullif(column1@0, Some(0),10,2) as __common_expr_3, column1@0 as d10]
+      DataSourceExec: partitions=1, partition_sizes=[1]
+
+===== false F.pmod(col(d10), lit(3)) decimal(3,2)
+== Optimized Logical Plan ==
+SubqueryAlias: datafusion.public.__repark_explain_c6762212807b46fa8c5fd5fd8b91f888
+  Projection: CASE WHEN __common_expr_1 < Decimal128(Some(0),3,2) THEN (__common_expr_1 + Decimal128(Some(3),1,0)) % Decimal128(Some(3),1,0) ELSE __common_expr_1 END AS q
+    Projection: datafusion.public.k.d10 % Decimal128(Some(3),1,0) AS __common_expr_1
+      SubqueryAlias: datafusion.public.k
+        SubqueryAlias: t
+          Projection: column1 AS d10
+            Values: (Decimal128(Some(725),10,2) AS Decimal128(Some(725),3,2), Int32(3)), (Decimal128(Some(-725),10,2) AS Decimal128(Some(-725),3,2), Int32(-3))
+
+== Physical Plan ==
+ProjectionExec: expr=[CASE WHEN __common_expr_1@0 < Some(0),3,2 THEN (__common_expr_1@0 + Some(3),1,0) % Some(3),1,0 ELSE __common_expr_1@0 END as q]
+  ProjectionExec: expr=[column1@0 % Some(3),1,0 as __common_expr_1]
+    DataSourceExec: partitions=1, partition_sizes=[1]
+

@@ -1,0 +1,15 @@
+{"ansi": "true", "engine": "repark", "key": "provenance", "native": "<scratchpad>/ddu-work/pkg-ddl-a30a8d60/repark/_native.abi3.so", "version": "1.5.6"}
+{"key": "written_cast/mul_dec20", "result": {"rows": [["1", "21.75"], ["2", "-21.75"], ["3", "null"], ["4", "37037036.73"]], "types": ["int", "decimal(12,2)"]}}
+{"key": "written_cast/add_dec20", "result": {"rows": [["1", "10.25"], ["2", "-4.25"], ["3", "null"], ["4", "12345681.91"]], "types": ["int", "decimal(11,2)"]}}
+{"key": "written_cast/div_dec20", "result": {"rows": [["1", "2.41666666666666666666667"], ["2", "-2.41666666666666666666667"], ["3", "null"], ["4", "4115226.30333333333333333333333"]], "types": ["int", "decimal(31,23)"]}}
+{"key": "written_cast/mul_dec10", "result": {"rows": [["1", "21.75"], ["2", "-21.75"], ["3", "null"], ["4", "37037036.73"]], "types": ["int", "decimal(21,2)"]}}
+{"key": "default/runtime_set_pmp/mul", "result": {"rows": [["1", "21.75"], ["2", "-21.75"], ["3", "null"], ["4", "37037036.73"]], "types": ["int", "decimal(12,2)"]}}
+{"key": "default/runtime_set_pmp/div", "result": {"rows": [["1", "2.416667"], ["2", "-2.416667"], ["3", "null"], ["4", "4115226.303333"]], "types": ["int", "decimal(14,6)"]}}
+{"key": "default/runtime_set_pmp/pct", "result": {"rows": [["1", "1.25"], ["2", "-1.25"], ["3", "null"], ["4", "0.91"]], "types": ["int", "decimal(3,2)"]}}
+{"key": "default/runtime_set_pmp/mod", "result": {"rows": [["1", "1.25"], ["2", "-1.25"], ["3", "null"], ["4", "0.91"]], "types": ["int", "decimal(3,2)"]}}
+{"key": "setup/set", "result": "ok"}
+{"key": "setup/read_back", "result": "false"}
+{"key": "runtime_set_pmp/mul", "result": {"rows": [["1", "21.75"], ["2", "-21.75"], ["3", "null"], ["4", "37037036.73"]], "types": ["int", "decimal(12,2)"]}}
+{"key": "runtime_set_pmp/div", "result": {"rows": [["1", "2.416667"], ["2", "-2.416667"], ["3", "null"], ["4", "4115226.303333"]], "types": ["int", "decimal(14,6)"]}}
+{"key": "runtime_set_pmp/pct", "result": {"rows": [["1", "1.25"], ["2", "-1.25"], ["3", "null"], ["4", "0.91"]], "types": ["int", "decimal(3,2)"]}}
+{"key": "runtime_set_pmp/mod", "result": {"rows": [["1", "1.25"], ["2", "-1.25"], ["3", "null"], ["4", "0.91"]], "types": ["int", "decimal(3,2)"]}}
