@@ -5760,7 +5760,9 @@ still open is `isModifiable`.
 - **Still unlike Spark:**
   - the DataFrame door (`createOrReplaceTempView`, `registerTempTable`, the facade's scratch views, held-frame writes and
     derivations, `cache()` of a held frame) — Part 2 of this card; a SQL view whose body inlines a DataFrame view that
-    reads settings keeps today's path until Part 2 lands;
+    reads settings keeps today's path until Part 2 lands (Delta 1, 2026-11-18: an inlined frame reads settings unless
+    its analysed plan holds only bare column references, under a closed list of plan nodes, since the SQL door's eager
+    analysis folds a zone-reading coercion such as `ts >= '…'` into a timestamp literal);
   - the ruled class (owner, "defaults on both", question 11 (a)): a settings-sensitive reader conjunct runs above a body
     that raises on a row the conjunct drops, so the read raises where Spark answers (`b <> 0 OR b + 0 > 100`,
     `b + 0 <> 0` over a `10 / b` view created on and read off); the wrapper that would close most of them is
@@ -5771,11 +5773,15 @@ still open is `isModifiable`.
   - `ALTER VIEW <temp> RENAME TO`, `ALTER VIEW <temp> AS` and `CACHE TABLE … AS SELECT` refuse
     (TEMP-VIEW-ALTER-AND-CACHE-AS-1);
   - `caseSensitive` is not captured: a view created case-insensitive and read case-sensitive refuses where Spark
-    answers, because capturing it would answer where Spark refuses a twin-column relation (proposed card
-    TEMP-VIEW-CASE-SENSITIVE-CAPTURE-1).
-- **Pin** — `python/repark/tests/session/test_temp_view_session_settings_1.py` (383 cells in each ANSI mode and the unset
-  cells against `temp_view_session_settings_1_spark_oracle.json`, the ruled class and the direct gaps pinned as they
-  answer, `EXPLAIN` identity with main's plans); Rust `repark-spark` `view_ddl/temp_settings/tests.rs` and
+    answers. Spark captures it into `viewSQLConfigs` and resolves the body under the captured value; its refusal of a
+    twin-column Parquet relation is the file relation's, under the reader's setting (`AMBIGUOUS_REFERENCE` from
+    `LogicalPlan.resolve(StructType)`, `COLUMN_ALREADY_EXISTS` from `DataSource.resolveRelation`), which RePark lacks,
+    so capturing first would answer where Spark refuses (proposed card TEMP-VIEW-CASE-SENSITIVE-CAPTURE-1, S3, loud,
+    not label-blocking).
+- **Pin** — `python/repark/tests/session/test_temp_view_session_settings_1.py` (499 cells in each ANSI mode, 116 of them
+  Delta 1's sweep, and the unset cells against `temp_view_session_settings_1_spark_oracle.json`, the ruled class, the
+  direct gaps and the sweep's Part 2 cells pinned as they answer, `EXPLAIN` identity with main's plans); Rust
+  `repark-spark` `view_ddl/temp_settings/tests.rs` and
   `view_ddl/temp_view.rs` tests.
 - **Bar and cost** — [built-part1/bar.md](../task/wo/temp-view-session-settings-1/evidence/built-part1/bar.md),
   [built-part1/cost.md](../task/wo/temp-view-session-settings-1/evidence/built-part1/cost.md).

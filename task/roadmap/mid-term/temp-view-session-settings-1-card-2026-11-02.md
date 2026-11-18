@@ -130,8 +130,12 @@ gaps carded as TEMP-VIEW-ALTER-AND-CACHE-AS-1; question 8: cache substitution no
 - **Two builder decisions, named for the verifier:** (1) a body that inlines a DataFrame view whose plan reads settings
   keeps today's path, because the overlay would otherwise re-plan that frame under the SQL view's settings (measured:
   an EQUAL → WRONG `nest-df-sql` cell and moved `vsd` cells, both part 2's); (2) `caseSensitive` is not captured
-  (captured, 4 equal twin-column refusals turn into silent answers; Spark's twin-column check reads the reader's
-  setting at every door). Proposed card: TEMP-VIEW-CASE-SENSITIVE-CAPTURE-1.
+  (captured, 4 equal twin-column refusals turn into silent answers). Corrected 2026-11-18 (Delta 1, Fable's
+  measurement): Spark captures `spark.sql.caseSensitive` into `viewSQLConfigs` and resolves the body's names under the
+  captured value; the refusal is the file relation's, under the reader's setting (`AMBIGUOUS_REFERENCE` from
+  `LogicalPlan.resolve(StructType)`, `COLUMN_ALREADY_EXISTS` from `DataSource.resolveRelation`), not a general
+  twin-column check, and "at every door, a held frame included" holds for the file fixture only. Proposed card:
+  TEMP-VIEW-CASE-SENSITIVE-CAPTURE-1 (S3, loud, not label-blocking; the file relation's reader-side refusal first).
 
 **Bar** ([evidence/built-part1/bar.md](../../wo/temp-view-session-settings-1/evidence/built-part1/bar.md)): 2,772 paired
 cells; 363 WRONG → EQUAL in part 1, 0 EQUAL → WRONG, 4 EQUAL → RAISE (the ruled class: `or_mixed`, `agg_key_sens`,
@@ -156,3 +160,19 @@ Pins: 772 pass on the head, 606 fail on main.
 **Still unlike Spark:** Part 2 (the DataFrame door, its caches and held derivations); the ruled class;
 VIEW-FILTER-SETTINGS-WRAPPER-1; AND-GUARD-ANSI-1; HELD-FRAME-CURRENT-TIMEZONE-1; TEMP-VIEW-ALTER-AND-CACHE-AS-1;
 `caseSensitive` (proposed TEMP-VIEW-CASE-SENSITIVE-CAPTURE-1).
+
+**Delta 1 (2026-11-18):** a Fable medium consult under the owner's overnight delegation ("Proceed with the plans, use
+defaults, when it comes to any roadblocks or questions spin up a Fable medium session to ask for guidance. Merge any PRs
+needed as long as they get us to our end goal"; guidance, not an owner ruling) declined the inlined-frame fallback as
+built on one measured silent zone cell (a DataFrame frame `ts >= '…'` made under `America/Los_Angeles`, inlined into a
+SQL view made under `UTC`, read under `America/Los_Angeles`: Spark 1, main 1, part 1 2), adopted the `caseSensitive`
+exclusion with Spark's mechanism corrected above, and confirmed `filter_sensitive/sql/fdiv/on_off` in the ruled class
+(the SQL door's accepted EQUAL → RAISE count is 4). Product and pins `c54f5fc7`, one file (`temp_settings.rs`; the cap
+stays 3 of 5): the SQL door analyses the body eagerly and folds that coercion into a timestamp literal, so an inlined
+frame now reads settings unless its analysed plan holds only bare column references under a closed list of plan nodes.
+A 232-cell sweep (both ANSI modes, both orders; `timestamp`/`date` against strings, string arithmetic and casts, mixed
+`CASE`, implicit function casts, decimal widening, two levels): part 1 had 20 EQUAL → WRONG, the head 0, answering every
+cell as main does. The bar re-run (2,772 cells): 0 moves against part 1 as built, the same as part 1 against main. Cost:
+every held row ≤ 1.05x (C-012 0.997 / 0.994, timed inside the lock after a runner flaw was found). Records:
+[bar.md](../../wo/temp-view-session-settings-1/evidence/built-part1/bar.md) and
+[cost.md](../../wo/temp-view-session-settings-1/evidence/built-part1/cost.md) "Delta 1".

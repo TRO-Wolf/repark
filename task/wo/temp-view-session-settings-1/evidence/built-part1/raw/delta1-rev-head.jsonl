@@ -1,0 +1,157 @@
+{"cell": "provenance", "engine": "repark", "native": "<scratchpad>/ddu-work/pkg-view1-92a55871/repark/_native.abi3.so", "version": "1.5.6"}
+{"body": "add", "cell": "direct/add/true", "kind": "direct", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "add", "cell": "direct/add/false", "kind": "direct", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"body": "div", "cell": "direct/div/true", "kind": "direct", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "div", "cell": "direct/div/false", "kind": "direct", "result": {"rows": ["null"], "types": ["double"]}}
+{"body": "hour", "cell": "direct/hour/UTC", "kind": "direct", "result": {"rows": ["2"], "types": ["int"]}}
+{"body": "hour", "cell": "direct/hour/America/Los_Angeles", "kind": "direct", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "str", "cell": "direct/str/UTC", "kind": "direct", "result": {"rows": ["2024-01-01 02:30:00"], "types": ["string"]}}
+{"body": "str", "cell": "direct/str/America/Los_Angeles", "kind": "direct", "result": {"rows": ["2023-12-31 18:30:00"], "types": ["string"]}}
+{"body": "date", "cell": "direct/date/UTC", "kind": "direct", "result": {"rows": ["2024-01-01"], "types": ["date"]}}
+{"body": "date", "cell": "direct/date/America/Los_Angeles", "kind": "direct", "result": {"rows": ["2023-12-31"], "types": ["date"]}}
+{"body": "lit", "cell": "direct/lit/UTC", "kind": "direct", "result": {"rows": ["1704076200"], "types": ["bigint"]}}
+{"body": "lit", "cell": "direct/lit/America/Los_Angeles", "kind": "direct", "result": {"rows": ["1704105000"], "types": ["bigint"]}}
+{"body": "fdiv", "cell": "direct/fdiv/true", "kind": "direct", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "fdiv", "cell": "direct/fdiv/false", "kind": "direct", "result": {"rows": ["0|null", "2|5.0"], "types": ["int", "double"]}}
+{"body": "fcast", "cell": "direct/fcast/true", "kind": "direct", "result": {"error": "", "text": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}}
+{"body": "fcast", "cell": "direct/fcast/false", "kind": "direct", "result": {"error": "", "text": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}}
+{"body": "lts", "cell": "direct/lts/UTC", "kind": "direct", "result": {"rows": ["4"], "types": ["int"]}}
+{"body": "lts", "cell": "direct/lts/America/Los_Angeles", "kind": "direct", "result": {"rows": ["20"], "types": ["int"]}}
+{"body": "cdate", "cell": "direct/cdate/UTC", "kind": "direct", "result": {"rows": ["2026-11-18"], "types": ["string"]}}
+{"body": "cdate", "cell": "direct/cdate/America/Los_Angeles", "kind": "direct", "result": {"rows": ["2026-11-17"], "types": ["string"]}}
+{"body": "now", "cell": "direct/now/UTC", "kind": "direct", "result": {"rows": ["4"], "types": ["int"]}}
+{"body": "now", "cell": "direct/now/America/Los_Angeles", "kind": "direct", "result": {"rows": ["20"], "types": ["int"]}}
+{"body": "fdiv", "cell": "filter_below/sql/fdiv/on_off", "dir": "on_off", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"body": "fdiv", "cell": "filter_below/sql/fdiv/off_on", "dir": "off_on", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"body": "fdiv", "cell": "filter_below/sql/fdiv/on_on", "dir": "on_on", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"body": "fcast", "cell": "filter_below/sql/fcast/on_off", "dir": "on_off", "kind": "filter", "result": {"rows": ["7"], "types": ["int"]}}
+{"body": "fcast", "cell": "filter_below/sql/fcast/off_on", "dir": "off_on", "kind": "filter", "result": {"rows": ["7"], "types": ["int"]}}
+{"body": "fcast", "cell": "filter_below/sql/fcast/on_on", "dir": "on_on", "kind": "filter", "result": {"rows": ["7"], "types": ["int"]}}
+{"body": "fdiv", "cell": "filter_on_m/sql/fdiv/on_off", "dir": "on_off", "kind": "filter", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "fdiv", "cell": "filter_on_m/sql/fdiv/off_on", "dir": "off_on", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"body": "fdiv", "cell": "limit/sql/fdiv/on_off", "dir": "on_off", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"body": "fdiv", "cell": "limit/sql/fdiv/off_on", "dir": "off_on", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"body": "fdiv", "cell": "filter_sensitive/sql/fdiv/on_off", "dir": "on_off", "kind": "filter", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "fdiv", "cell": "filter_sensitive/sql/fdiv/off_on", "dir": "off_on", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"body": "fdiv", "cell": "filter_below/df/fdiv/on_off", "dir": "on_off", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"body": "fdiv", "cell": "filter_below/df/fdiv/off_on", "dir": "off_on", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"body": "fdiv", "cell": "filter_below/df/fdiv/on_on", "dir": "on_on", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"body": "fcast", "cell": "filter_below/df/fcast/on_off", "dir": "on_off", "kind": "filter", "result": {"rows": ["7"], "types": ["int"]}}
+{"body": "fcast", "cell": "filter_below/df/fcast/off_on", "dir": "off_on", "kind": "filter", "result": {"rows": ["7"], "types": ["int"]}}
+{"body": "fcast", "cell": "filter_below/df/fcast/on_on", "dir": "on_on", "kind": "filter", "result": {"rows": ["7"], "types": ["int"]}}
+{"body": "fdiv", "cell": "filter_on_m/df/fdiv/on_off", "dir": "on_off", "kind": "filter", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "fdiv", "cell": "filter_on_m/df/fdiv/off_on", "dir": "off_on", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"body": "fdiv", "cell": "limit/df/fdiv/on_off", "dir": "on_off", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"body": "fdiv", "cell": "limit/df/fdiv/off_on", "dir": "off_on", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"body": "fdiv", "cell": "filter_sensitive/df/fdiv/on_off", "dir": "on_off", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"body": "fdiv", "cell": "filter_sensitive/df/fdiv/off_on", "dir": "off_on", "kind": "filter", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"cell": "cache/sql_then_set", "kind": "cache", "result": {"rows": ["before=2", "after=2", "cached=true"]}}
+{"cell": "cache/df_then_set", "kind": "cache", "result": {"rows": ["after=18", "cached=true"]}}
+{"cell": "cache/lazy_then_set", "kind": "cache", "result": {"rows": ["after=2"]}}
+{"cell": "cache/catalog_then_set", "kind": "cache", "result": {"rows": ["after=2"]}}
+{"cell": "cache/set_between_zone", "kind": "cache", "result": {"rows": ["after=2"]}}
+{"cell": "cache/set_between_off_on", "kind": "cache", "result": {"rows": ["after=-2147483648"]}}
+{"cell": "cache/held_then_set", "kind": "cache", "result": {"rows": ["after=2"]}}
+{"body": "add", "cell": "derive/alias/add/on_off", "dir": "on_off", "kind": "derive", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "hour", "cell": "derive/alias/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["2"], "types": ["int"]}}
+{"body": "add", "cell": "derive/union/add/on_off", "dir": "on_off", "kind": "derive", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "hour", "cell": "derive/union/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["2", "2"], "types": ["int"]}}
+{"body": "add", "cell": "derive/distinct/add/on_off", "dir": "on_off", "kind": "derive", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "hour", "cell": "derive/distinct/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["2"], "types": ["int"]}}
+{"body": "add", "cell": "derive/filter/add/on_off", "dir": "on_off", "kind": "derive", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "hour", "cell": "derive/filter/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["2"], "types": ["int"]}}
+{"body": "add", "cell": "derive/selectcol/add/on_off", "dir": "on_off", "kind": "derive", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "hour", "cell": "derive/selectcol/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["2"], "types": ["int"]}}
+{"body": "add", "cell": "derive/join/add/on_off", "dir": "on_off", "kind": "derive", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"body": "hour", "cell": "derive/join/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "add", "cell": "derive/crossjoin/add/on_off", "dir": "on_off", "kind": "derive", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"body": "hour", "cell": "derive/crossjoin/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "add", "cell": "derive/gagg/add/on_off", "dir": "on_off", "kind": "derive", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "hour", "cell": "derive/gagg/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["2"], "types": ["int"]}}
+{"body": "add", "cell": "derive/gagg_lit/add/on_off", "dir": "on_off", "kind": "derive", "result": {"rows": ["-2147483648|1"], "types": ["int", "int"]}}
+{"body": "hour", "cell": "derive/gagg_lit/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["18|1"], "types": ["int", "int"]}}
+{"body": "add", "cell": "derive/groupagg/add/on_off", "dir": "on_off", "kind": "derive", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "hour", "cell": "derive/groupagg/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["2"], "types": ["int"]}}
+{"body": "add", "cell": "derive/unpivot/add/on_off", "dir": "on_off", "kind": "derive", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"body": "hour", "cell": "derive/unpivot/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "add", "cell": "derive/selectexpr/add/on_off", "dir": "on_off", "kind": "derive", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"body": "hour", "cell": "derive/selectexpr/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "add", "cell": "derive/explode/add/on_off", "dir": "on_off", "kind": "derive", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"body": "hour", "cell": "derive/explode/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "add", "cell": "derive/intersect/add/on_off", "dir": "on_off", "kind": "derive", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"body": "hour", "cell": "derive/intersect/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "add", "cell": "derive/subtract/add/on_off", "dir": "on_off", "kind": "derive", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"body": "hour", "cell": "derive/subtract/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "add", "cell": "derive/cache/add/on_off", "dir": "on_off", "kind": "derive", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"body": "hour", "cell": "derive/cache/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "add", "cell": "derive/tempview_after/add/on_off", "dir": "on_off", "kind": "derive", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"body": "hour", "cell": "derive/tempview_after/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "add", "cell": "derive/registertemptable/add/on_off", "dir": "on_off", "kind": "derive", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"body": "hour", "cell": "derive/registertemptable/hour/utc_la", "dir": "utc_la", "kind": "derive", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "add", "cell": "door/registertemptable/add/on_off", "dir": "on_off", "kind": "door", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"body": "hour", "cell": "door/registertemptable/hour/utc_la", "dir": "utc_la", "kind": "door", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "div", "cell": "rename/view/div/on_off", "dir": "on_off", "kind": "rename", "result": {"error": "TABLE_OR_VIEW_NOT_FOUND", "text": "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `spark_catalog`.`default`.`rv43` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema()"}}
+{"body": "div", "cell": "rename/table/div/on_off", "dir": "on_off", "kind": "rename", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "hour", "cell": "rename/view/hour/utc_la", "dir": "utc_la", "kind": "rename", "result": {"error": "TABLE_OR_VIEW_NOT_FOUND", "text": "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `spark_catalog`.`default`.`rv45` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema()"}}
+{"body": "hour", "cell": "rename/table/hour/utc_la", "dir": "utc_la", "kind": "rename", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "rename/view/control/same", "kind": "rename", "result": {"error": "TABLE_OR_VIEW_NOT_FOUND", "text": "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `spark_catalog`.`default`.`rv47` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema()"}}
+{"body": "div", "cell": "alter_view_as/div/on_off", "dir": "on_off", "kind": "direct_gap", "result": {"error": "", "text": "Error during planning: ALTER VIEW <viewName> AS is not supported. Use CREATE OR REPLACE VIEW instead"}}
+{"body": "hour", "cell": "alter_view_as/hour/utc_la", "dir": "utc_la", "kind": "direct_gap", "result": {"error": "", "text": "Error during planning: ALTER VIEW <viewName> AS is not supported. Use CREATE OR REPLACE VIEW instead"}}
+{"cell": "cache_table_as_select/hour/same", "kind": "direct_gap", "result": {"error": "", "text": "This feature is not implemented: Unsupported SQL statement: CACHE TABLE ct50 AS SELECT * FROM tzt"}}
+{"body": "lts", "cell": "now_fn/sql/lts/utc_la", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["4"], "types": ["int"]}}
+{"body": "lts", "cell": "now_fn/sql/lts/la_utc", "dir": "la_utc", "kind": "now_fn", "result": {"rows": ["20"], "types": ["int"]}}
+{"body": "lts", "cell": "now_fn/df/lts/utc_la", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["20"], "types": ["int"]}}
+{"body": "lts", "cell": "now_fn/df/lts/la_utc", "dir": "la_utc", "kind": "now_fn", "result": {"rows": ["4"], "types": ["int"]}}
+{"body": "cdate", "cell": "now_fn/sql/cdate/utc_la", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["2026-11-18"], "types": ["string"]}}
+{"body": "cdate", "cell": "now_fn/sql/cdate/la_utc", "dir": "la_utc", "kind": "now_fn", "result": {"rows": ["2026-11-17"], "types": ["string"]}}
+{"body": "cdate", "cell": "now_fn/df/cdate/utc_la", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["2026-11-17"], "types": ["string"]}}
+{"body": "cdate", "cell": "now_fn/df/cdate/la_utc", "dir": "la_utc", "kind": "now_fn", "result": {"rows": ["2026-11-18"], "types": ["string"]}}
+{"body": "now", "cell": "now_fn/sql/now/utc_la", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["4"], "types": ["int"]}}
+{"body": "now", "cell": "now_fn/sql/now/la_utc", "dir": "la_utc", "kind": "now_fn", "result": {"rows": ["20"], "types": ["int"]}}
+{"body": "now", "cell": "now_fn/df/now/utc_la", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["20"], "types": ["int"]}}
+{"body": "now", "cell": "now_fn/df/now/la_utc", "dir": "la_utc", "kind": "now_fn", "result": {"rows": ["4"], "types": ["int"]}}
+{"body": "div", "cell": "replace/sql/div/on_off", "dir": "on_off", "kind": "shape", "result": {"rows": ["null"], "types": ["double"]}}
+{"body": "hour", "cell": "replace/sql/hour/utc_la", "dir": "utc_la", "kind": "shape", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "add", "cell": "self_join/sql/add/on_off", "dir": "on_off", "kind": "shape", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "hour", "cell": "self_join/sql/hour/utc_la", "dir": "utc_la", "kind": "shape", "result": {"rows": ["2|2"], "types": ["int", "int"]}}
+{"body": "div", "cell": "reset/all/sql/div", "kind": "shape", "result": {"after_reset": "true", "rows": ["null"], "types": ["double"]}}
+{"body": "hour", "cell": "reset/key/sql/hour", "kind": "shape", "result": {"after_reset": "UTC", "rows": ["18"], "types": ["int"]}}
+{"body": "div", "cell": "conf_set/conf_then_sql/sql/div/on_off", "dir": "on_off", "kind": "shape", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "div", "cell": "conf_set/sql_then_conf/sql/div/on_off", "dir": "on_off", "kind": "shape", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "hour", "cell": "conf_set/conf_then_sql/sql/hour/utc_la", "dir": "utc_la", "kind": "shape", "result": {"rows": ["2"], "types": ["int"]}}
+{"body": "hour", "cell": "conf_set/sql_then_conf/sql/hour/utc_la", "dir": "utc_la", "kind": "shape", "result": {"rows": ["2"], "types": ["int"]}}
+{"body": "div", "cell": "replace/df/div/on_off", "dir": "on_off", "kind": "shape", "result": {"rows": ["null"], "types": ["double"]}}
+{"body": "hour", "cell": "replace/df/hour/utc_la", "dir": "utc_la", "kind": "shape", "result": {"rows": ["2"], "types": ["int"]}}
+{"body": "add", "cell": "self_join/df/add/on_off", "dir": "on_off", "kind": "shape", "result": {"rows": ["-2147483648|-2147483648"], "types": ["int", "int"]}}
+{"body": "hour", "cell": "self_join/df/hour/utc_la", "dir": "utc_la", "kind": "shape", "result": {"rows": ["18|18"], "types": ["int", "int"]}}
+{"body": "div", "cell": "reset/all/df/div", "kind": "shape", "result": {"after_reset": "true", "rows": ["null"], "types": ["double"]}}
+{"body": "hour", "cell": "reset/key/df/hour", "kind": "shape", "result": {"after_reset": "UTC", "rows": ["2"], "types": ["int"]}}
+{"body": "div", "cell": "conf_set/conf_then_sql/df/div/on_off", "dir": "on_off", "kind": "shape", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "div", "cell": "conf_set/sql_then_conf/df/div/on_off", "dir": "on_off", "kind": "shape", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"body": "hour", "cell": "conf_set/conf_then_sql/df/hour/utc_la", "dir": "utc_la", "kind": "shape", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "hour", "cell": "conf_set/sql_then_conf/df/hour/utc_la", "dir": "utc_la", "kind": "shape", "result": {"rows": ["18"], "types": ["int"]}}
+{"cell": "defcat/direct", "kind": "defcat", "result": {"rows": ["lc"], "types": ["string"]}}
+{"cell": "defcat/sql", "kind": "defcat", "result": {"rows": ["lc"], "types": ["string"]}}
+{"cell": "defcat/df", "kind": "defcat", "result": {"rows": ["lc"], "types": ["string"]}}
+{"body": "hour", "cell": "held_write/writeto/hour/utc_la", "dir": "utc_la", "kind": "held_write", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "hour", "cell": "held_write/writeto/hour/la_utc", "dir": "la_utc", "kind": "held_write", "result": {"rows": ["2"], "types": ["int"]}}
+{"body": "str", "cell": "held_write/writeto/str/utc_la", "dir": "utc_la", "kind": "held_write", "result": {"rows": ["2023-12-31 18:30:00"], "types": ["string"]}}
+{"body": "str", "cell": "held_write/writeto/str/la_utc", "dir": "la_utc", "kind": "held_write", "result": {"rows": ["2024-01-01 02:30:00"], "types": ["string"]}}
+{"body": "date", "cell": "held_write/writeto/date/utc_la", "dir": "utc_la", "kind": "held_write", "result": {"rows": ["2023-12-31"], "types": ["date"]}}
+{"body": "date", "cell": "held_write/writeto/date/la_utc", "dir": "la_utc", "kind": "held_write", "result": {"rows": ["2024-01-01"], "types": ["date"]}}
+{"body": "lit", "cell": "held_write/writeto/lit/utc_la", "dir": "utc_la", "kind": "held_write", "result": {"rows": ["1704076200"], "types": ["bigint"]}}
+{"body": "lit", "cell": "held_write/writeto/lit/la_utc", "dir": "la_utc", "kind": "held_write", "result": {"rows": ["1704105000"], "types": ["bigint"]}}
+{"body": "hour", "cell": "held_write/parquet/hour/utc_la", "dir": "utc_la", "kind": "held_write", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "hour", "cell": "held_write/parquet/hour/la_utc", "dir": "la_utc", "kind": "held_write", "result": {"rows": ["2"], "types": ["int"]}}
+{"body": "lit", "cell": "held_write/parquet/lit/utc_la", "dir": "utc_la", "kind": "held_write", "result": {"rows": ["1704076200"], "types": ["bigint"]}}
+{"body": "lit", "cell": "held_write/parquet/lit/la_utc", "dir": "la_utc", "kind": "held_write", "result": {"rows": ["1704105000"], "types": ["bigint"]}}
+{"body": "hour", "cell": "held_write/saveastable/hour/utc_la", "dir": "utc_la", "kind": "held_write", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "hour", "cell": "held_write/saveastable/hour/la_utc", "dir": "la_utc", "kind": "held_write", "result": {"rows": ["2"], "types": ["int"]}}
+{"body": "lit", "cell": "held_write/saveastable/lit/utc_la", "dir": "utc_la", "kind": "held_write", "result": {"rows": ["1704076200"], "types": ["bigint"]}}
+{"body": "lit", "cell": "held_write/saveastable/lit/la_utc", "dir": "la_utc", "kind": "held_write", "result": {"rows": ["1704105000"], "types": ["bigint"]}}
+{"body": "hour", "cell": "held_write/insertinto/hour/utc_la", "dir": "utc_la", "kind": "held_write", "result": {"rows": ["18"], "types": ["int"]}}
+{"body": "hour", "cell": "held_write/insertinto/hour/la_utc", "dir": "la_utc", "kind": "held_write", "result": {"rows": ["2"], "types": ["int"]}}
+{"body": "lit", "cell": "held_write/insertinto/lit/utc_la", "dir": "utc_la", "kind": "held_write", "result": {"rows": ["1704076200"], "types": ["bigint"]}}
+{"body": "lit", "cell": "held_write/insertinto/lit/la_utc", "dir": "la_utc", "kind": "held_write", "result": {"rows": ["1704105000"], "types": ["bigint"]}}
+{"body": "add", "cell": "held_write/writeto/add/on_off", "dir": "on_off", "kind": "held_write", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"body": "add", "cell": "held_write/writeto/add/off_on", "dir": "off_on", "kind": "held_write", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
