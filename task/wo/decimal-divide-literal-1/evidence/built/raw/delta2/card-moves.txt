@@ -1,0 +1,9 @@
+| `runtime_set_pmp/mul` | true | decimal(12,2) 21.75,-21.75,null,37037036.73 | decimal(21,2) 21.75,-21.75,null,37037036.73 |
+| `runtime_set_pmp/div` | true | decimal(14,6) 2.416667,-2.416667,null,4115226.303333 | decimal(21,13) 2.4166666666667,-2.4166666666667,null,4115226.3033333333333 |
+| `runtime_set_pmp/pct` | true | decimal(3,2) 1.25,-1.25,null,0.91 | decimal(10,2) 1.25,-1.25,null,0.91 |
+| `runtime_set_pmp/mod` | true | decimal(3,2) 1.25,-1.25,null,0.91 | decimal(10,2) 1.25,-1.25,null,0.91 |
+| `runtime_set_pmp/mul` | false | decimal(12,2) 21.75,-21.75,null,37037036.73 | decimal(21,2) 21.75,-21.75,null,37037036.73 |
+| `runtime_set_pmp/div` | false | decimal(14,6) 2.416667,-2.416667,null,4115226.303333 | decimal(21,13) 2.4166666666667,-2.4166666666667,null,4115226.3033333333333 |
+| `runtime_set_pmp/pct` | false | decimal(3,2) 1.25,-1.25,null,0.91 | decimal(10,2) 1.25,-1.25,null,0.91 |
+| `runtime_set_pmp/mod` | false | decimal(3,2) 1.25,-1.25,null,0.91 | decimal(10,2) 1.25,-1.25,null,0.91 |
+moved 8

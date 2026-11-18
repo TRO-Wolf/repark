@@ -1133,16 +1133,16 @@ Source documentation may retain model provenance; code-quality grade tags stay o
   projection and keeps explicit non-marker aliases. **Round 6 (2026-09-15):** `cargo fmt`
   applied. The display reads through struct relabels (`without_relabels`, 2026-11-10).
   **Round 8 (2026-09-15):** `SuffixLiteral` schema/display names come from the
-  value text (Java double/float text, scale-exact decimals), so nested columns never
+  value text (Java double/float, exact decimals; argument's nullability), so nested columns never
   carry the marker; the fold covers numeric targets except `Int64` (whose CAST anchor
   must survive re-analysis); the root display fires on single-root scalar-dump
   names only (balanced `Int64(1)`, table-qualified `t.Int64(1)`, negated
-  `(- 0.0)`; composites like `a + Int64(1)` or `getbit(Int64(6),Int64(1))`
+  `(- 0.0)`; composites (`a + Int64(1)`, `getbit(Int64(6),Int64(1))`)
   keep their plan names) and names unfolded integer `CAST`s from the literal
-  inner. Inner renames are out of scope: analysis runs twice and outer references would go stale.
+  inner. Inner renames are out of scope: analysis runs twice, so outer references would go stale.
   **SIGNED-ZERO-NORMALIZE-1 delta (2026-11-11):** the display reads through
-  `__repark_spark_nonnull__` and spells `<=>` and `IS DISTINCT FROM` as Spark does (`(d <=> 0.0)`,
-  `(NOT (d <=> 0.0))`), so `selectExpr` never shows the wrapper.
+  `__repark_spark_nonnull__` and spells `<=>` and `IS DISTINCT FROM` as Spark (`(d <=> 0.0)`,
+  `(NOT (d <=> 0.0))`), so `selectExpr` hides the wrapper.
 - `spark_ast.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** the passthrough runs every planned
   statement through `normalize/map_ordering.rs`'s `refuse_map_ordering` before analysis, so a
   map comparison, `ORDER BY` or `DISTINCT` refuses as Spark does (verifier V-003).

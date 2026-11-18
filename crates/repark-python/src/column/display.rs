@@ -1,6 +1,5 @@
-use datafusion::arrow::datatypes::DataType;
 use datafusion::logical_expr::expr::ScalarFunction;
-use datafusion::logical_expr::{Case, Cast, Expr, lit};
+use datafusion::logical_expr::{Case, Expr, lit};
 use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -245,9 +244,11 @@ fn apply_binary_op(left: &PyColumn, right: &PyColumn, op_method: &str) -> PyResu
         "sub" => Ok((left_expr - right_expr, 1)),
         "mul" => Ok((left_expr * right_expr, 1)),
         "div" => {
-            let numerator = Expr::Cast(Cast::new(Box::new(left_expr), DataType::Float64));
-            let denominator = Expr::Cast(Cast::new(Box::new(right_expr), DataType::Float64));
-            Ok((numerator / denominator, 2))
+            let numerator =
+                repark_functions::decimal_precision::dataframe_divide_operand(left_expr);
+            let denominator =
+                repark_functions::decimal_precision::dataframe_divide_operand(right_expr);
+            Ok((numerator / denominator, 3))
         }
         "modulo" => Ok((left_expr % right_expr, 1)),
         "eq" => Ok((left_expr.eq(right_expr), 1)),

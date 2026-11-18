@@ -1768,12 +1768,12 @@ def positive(col: Column | str) -> Column:
 def pmod(dividend: Column | str, divisor: Column | str) -> Column:
     """Positive modulo (PySpark ``functions.pmod``).
 
-    ``((dividend % divisor) + divisor) % divisor`` matches Spark's sign-of-divisor
-    remainder (``pmod(-10, 3) == 2``). ``call_scalar("pmod")`` is not wired.
+    ``call_scalar("pmod")`` is not wired.
     """
     left = _as_column_arg(dividend, as_lit=False)
     right = _as_column_arg(divisor, as_lit=False)
-    return ((left % right) + right) % right
+    remainder = left % right
+    return when(remainder < 0, (remainder + right) % right).otherwise(remainder)
 
 
 def expm1(col: Column | str) -> Column:

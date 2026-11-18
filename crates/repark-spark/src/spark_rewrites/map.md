@@ -19,6 +19,10 @@ path stay in `spark_literals.rs`.
   and call-base struct field access. **WO-A5 (2026-09-23):** the
   `INVALID_NUMERIC_LITERAL_RANGE` producer has a direct `engine_err` pin for its complete
   bracketed parse message.
+  **DECIMAL-DIVIDE-LITERAL-1 (2026-11-17):** a `3S` or `3L` that is an operand of `* / % + -`
+  or an argument of `mod(` / `pmod(` is spelled `__repark_suffix_literal__(CAST(3 AS BIGINT))`
+  (`spell_integer_suffix`, [decimal_precision/](../../../repark-functions/src/decimal_precision/map.md)),
+  so the literal step tells it from a written cast; elsewhere the plain cast stays.
 - `timestamp_ltz_literal.rs` — **WO U9-TYPES-1 (2026-09-25):**
   `plan_timestamp_ltz_literal_regions` rewrites an unquoted `TIMESTAMP_LTZ` word that a
   single- or double-quoted string follows (whitespace allowed; the Spark door lexes `"…"` as a

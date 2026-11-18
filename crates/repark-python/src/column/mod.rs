@@ -688,17 +688,13 @@ impl PyColumn {
     }
 
     /// `self / other` (PySpark `Column.__truediv__`).
-    ///
-    /// PySpark's `/` is **always true (double) division** — `col(7) / col(2)` is `3.5` of
-    /// `DoubleType`, and integer division is the separate `div`/`//` operator. DataFusion's `/`
-    /// keeps the operand type, so on two integer columns it does integer-truncating division
-    /// (`7 / 2 == 3`). We cast both sides to `Float64` first so the result matches Spark; a cast
-    /// on operands that are already floating point is a no-op, and NULL casts stay NULL.
     pub fn div(&self, other: &PyColumn) -> PyResult<Self> {
         fenced!("Column.div", {
-            let numerator = Expr::Cast(Cast::new(Box::new(self.expr()), DataType::Float64));
-            let denominator = Expr::Cast(Cast::new(Box::new(other.expr()), DataType::Float64));
-            Ok(Self::combine(numerator / denominator, [self, other], 2))
+            let numerator =
+                repark_functions::decimal_precision::dataframe_divide_operand(self.expr());
+            let denominator =
+                repark_functions::decimal_precision::dataframe_divide_operand(other.expr());
+            Ok(Self::combine(numerator / denominator, [self, other], 3))
         })
     }
 
