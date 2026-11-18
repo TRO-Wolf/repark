@@ -27,6 +27,7 @@ use crate::view_ddl::parse::{
 };
 use crate::view_ddl::read::{plan_prepared_body, prepare_view_body_sql};
 use crate::view_ddl::temp_parse::CreateTempViewStatement;
+use crate::view_ddl::temp_settings::TempViewSettings;
 use crate::view_ddl::temp_view::{
     TempViewDefinition, refuse_recursive_temp_view, replanning_temp_view,
 };
@@ -127,6 +128,7 @@ pub(crate) async fn execute_create_temp_view(
         ));
     };
     let (catalog, namespace_name) = crate::use_ddl::session_defaults(catalogs);
+    let settings = TempViewSettings::capture(ctx.state_ref().read().config_options());
     let home = temp_views
         .temp_view_target_ref(&temp_view_name_arg(&statement.name))
         .map_err(temp_view_err)?;
@@ -137,6 +139,7 @@ pub(crate) async fn execute_create_temp_view(
         catalog,
         namespace: NamespaceIdent::new(namespace_name),
         aliases: statement.aliases,
+        settings,
     };
     let view = replanning_temp_view(ctx, catalogs, definition, temp_views).await?;
     let name = temp_view_name_arg(&statement.name);

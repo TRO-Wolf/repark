@@ -24,6 +24,9 @@ use crate::view_ddl::read::{
     VIEW_EXPANSION_STACK_SEGMENT, nested_depth_refusal, plan_prepared_body,
     prepare_view_body_sql_with, refuse_write_query_body,
 };
+use crate::view_ddl::temp_settings::{
+    TempViewSettings, inlines_settings_reading_frame, plan_under_overlay,
+};
 
 const MAX_TEMP_VIEW_WALK: usize = 4096;
 
@@ -34,6 +37,7 @@ pub(crate) struct TempViewDefinition {
     pub(crate) catalog: String,
     pub(crate) namespace: NamespaceIdent,
     pub(crate) aliases: Vec<(String, Option<String>)>,
+    pub(crate) settings: TempViewSettings,
 }
 
 pub(crate) struct ReplanningTempView {
@@ -131,6 +135,13 @@ impl ReplanningTempView {
             )));
         }
         refuse_dropped_dependency(&self.ctx, &self.dependencies)?;
+        let live = Arc::clone(self.ctx.state_ref().read().config_options());
+        if let Some(overlay) = self.definition.settings.overlay(state, &live)
+            && let Some(plan) =
+                Box::pin(self.scan_under(state, overlay, projection, filters, limit)).await?
+        {
+            return Ok(plan);
+        }
         let frame = Box::pin(plan_definition(
             &self.ctx,
             &self.catalogs,
@@ -141,6 +152,46 @@ impl ReplanningTempView {
         let frame = conform_to_creation_schema(frame, &self.schema, &self.definition.display)?;
         let view = ViewTable::new(frame.logical_plan().clone(), None);
         Box::pin(view.scan(state, projection, filters, limit)).await
+    }
+
+    async fn scan_under(
+        &self,
+        reader: &dyn Session,
+        overlay: datafusion::execution::session_state::SessionState,
+        projection: Option<&Vec<usize>>,
+        filters: &[Expr],
+        limit: Option<usize>,
+    ) -> Result<Option<Arc<dyn ExecutionPlan>>> {
+        let planner = SessionContext::new_with_state(overlay.clone());
+        let frame = Box::pin(plan_definition(
+            &planner,
+            &self.catalogs,
+            &self.definition,
+            &TempHomes::Captured(&self.temp_homes),
+        ))
+        .await?;
+        let body = conform_to_creation_schema(frame, &self.schema, &self.definition.display)?
+            .into_unoptimized_plan();
+        let homes = self
+            .temp_homes
+            .values()
+            .filter_map(|home| match home.as_slice() {
+                [catalog, schema, table] => Some(TableReference::full(
+                    catalog.as_str(),
+                    schema.as_str(),
+                    table.as_str(),
+                )),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        if inlines_settings_reading_frame(&body, &homes)? {
+            return Ok(None);
+        }
+        Box::pin(plan_under_overlay(
+            &overlay, reader, body, projection, filters, limit,
+        ))
+        .await
+        .map(Some)
     }
 }
 
@@ -276,6 +327,7 @@ pub(crate) fn renamed_temp_view(
         catalog: view.definition.catalog.clone(),
         namespace: view.definition.namespace.clone(),
         aliases: view.definition.aliases.clone(),
+        settings: view.definition.settings.clone(),
     };
     Ok(Some(Arc::new(ReplanningTempView {
         ctx: view.ctx.clone(),
@@ -620,6 +672,7 @@ mod tests {
                 catalog: String::new(),
                 namespace: NamespaceIdent::new(String::new()),
                 aliases: Vec::new(),
+                settings: TempViewSettings::default(),
             },
             temp_homes: HashMap::new(),
             references,
@@ -664,6 +717,27 @@ mod tests {
         let references = direct_temp_view_references(wrapped.logical_plan())
             .unwrap_or_else(|error| panic!("walk: {error}"));
         assert_eq!(references, vec![home(7)]);
+    }
+
+    #[test]
+    fn pushdown_answers_stay_exact_and_inexact_for_normalize_zero() {
+        let ctx = SessionContext::new();
+        let view = chained_view(&ctx, 0, Vec::new());
+        let plain = datafusion::logical_expr::col("a").gt(datafusion::logical_expr::lit(1));
+        let sensitive = datafusion::logical_expr::col("a") + datafusion::logical_expr::lit(1);
+        let zero = repark_core::extension::normalize_zero_call(datafusion::logical_expr::col("a"))
+            .eq(datafusion::logical_expr::lit(0.0));
+        let answers = view
+            .supports_filters_pushdown(&[&plain, &sensitive, &zero])
+            .unwrap_or_else(|error| panic!("pushdown: {error}"));
+        assert!(matches!(
+            answers.as_slice(),
+            [
+                TableProviderFilterPushDown::Exact,
+                TableProviderFilterPushDown::Exact,
+                TableProviderFilterPushDown::Inexact
+            ]
+        ));
     }
 
     #[tokio::test]
