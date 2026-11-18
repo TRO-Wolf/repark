@@ -7,7 +7,7 @@ U7 PR1 (2026-09-24): `session.rs` declares `session/writer_layout.rs` (the DataF
 ICE-MIXED-CASE-1 round 3 (2026-09-17, Q-20b-1): `rewrite_fragment_case` takes `unqualified_scope` — bare references resolve against one MERGE side only while qualified references keep validating against both.
 ICE-MIXED-CASE-1 round 4 (2026-09-17): red-first `dataframe_filter_binds_projection_alias` reproduces the L-01 DataFrame filter regression at the Rust level.
 
-CC-3 and CC-4 (2026-08-30): comments condensed to one line, banners removed (CC-4: remaining banners), truncated and wrapped comments rewritten as complete sentences (D-001, D-002), clippy doc_markdown backticks added. CC-2 closing-critic remediation: review-round label narration swept from prose; safety and accuracy contracts restored (see the unit ledger's findings).
+CC-3 and CC-4 (2026-08-30): comments condensed to one line, banners removed (CC-4: the rest), truncated and wrapped comments rewritten as sentences (D-001, D-002), clippy doc_markdown backticks added. CC-2 closing-critic remediation: review-round label narration swept from prose; safety and accuracy contracts restored (see the unit ledger's findings).
 
 ## Purpose
 
@@ -89,7 +89,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the install line is paid for by one shed comment, so the file holds 1000 of 1000.
   `build` carries `#[allow(clippy::too_many_lines)]` (one config line per wired product),
   paid for by a second shed comment.
-- `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** session build registers the `repark_text_csv` / `repark_text_json` sink formats, not the retired `repark_write_format_text` UDF. **G-6:** rustdoc
+- `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **TEXT-WRITE-TIMESTAMP-ZONE-1 sink-format round (2026-09-30):** the build registers the `repark_text_csv` / `repark_text_json` sink formats, not the retired `repark_write_format_text` UDF. **G-6:** rustdoc
   intra-links fixed (private helpers named in backticks, not broken `[links]`;
   `Self::list_iceberg_table_names` for the live list path). **SIGNED-ZERO-NORMALIZE-1:** `build`
   calls `df_guards::finish_session_build` (dialect hook, then seat 1). **ICE-READ-PERF-0 (2026-09-19):**
@@ -337,8 +337,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `plan_canonical.rs`), scan-level pushed-down filters are not hashed
   (the `Filter` node above carries them), file scans fingerprint by listing-table
   paths, `generate_series` by bounds, memtables by construction identity
-  (independently built frames never share a hash, same data or not — Spark answers
-  the same), cube / rollup / grouping sets by distinct tags, and cache-view scans
+  (independently built frames never share a hash, same data or not, as on
+  Spark), cube / rollup / grouping sets by distinct tags, and cache-view scans
   expand through the caller-supplied lineage map while other temp-view scans expand
   inline. Identity projections (each output the input column in order, bare or
   same-named alias) and subquery aliases strip; integer-literal casts fold to the
@@ -359,7 +359,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **S3-PATH-WRITE-1 re-verify (2026-09-28):** `plan_reads_s3_prefix` walks with
   `apply_with_subqueries` (IN / EXISTS / scalar subqueries count as reads) and
   `scan_url_hits_prefix` compares the decoded `ListingTableUrl::prefix` plus
-  the `object_store` bucket, so percent-encoded keys refuse self-overwrite.
+  the `object_store` bucket, so percent-encoded keys refuse self-overwrite. **TEMP-VIEW-SESSION-SETTINGS-1 part 2:** it and `write_table_source` read through a plan-carrying source.
 - `error_map.rs` — **C-4 step 2 (2026-10-09):** the `Connect` fold keeps
   `Error::CommitStateUnknown` (operation id through), so a Postgres commit whose outcome the
   driver could not prove surfaces as `CommitStateUnknownException`, matching the
@@ -536,7 +536,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `repark_common::redaction::column_name_is_secret_shaped`, the pre-widening rule, so the
   widened display key rule changes no column decision; the flag, boolean and single-character
   option refusals echo the value masked.
-- `text_scan.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan. **IO-TEXT-1 (2026-09-15, orchestrator):** `text_scan.rs` carries no doc comments (the unit's workers are briefed comment-free); the two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]` instead.
+- `text_scan.rs` — **IO-TEXT-1 (2026-09-14):** the Spark `text` scan. **IO-TEXT-1 (2026-09-15, orchestrator):** `text_scan.rs` carries no doc comments (its workers were briefed comment-free); its two public `Result` entry points take `#[allow(clippy::missing_errors_doc)]`.
   A `TableProvider` over sorted local files, plain dirs (hidden `_`/`.` skipped,
   `key=value` dirs descended), and Hadoop globs (see `text_glob.rs`), serving one
   nullable `value` Utf8 column through `StreamingTableExec` over at most 8 contiguous
@@ -816,7 +816,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `session/df_guards/map.md`).
 - `idents.rs` — table-identifier segment parse + path-escape refuse
   (via `repark_iceberg::write::idents::path_escape_kind`
-  — shared needles). **IDENT-DIALECT-1/1B (2026-11-02/03):** Spark's grammar: a quoted segment, a second target or a non-ASCII word refuses at the token (backticks double); the VALUES skip fires only at a relation start (`relation_starts_at`); a single-quoted post-dot segment refuses at the dot (`spark_table_identifier_message`).
+  — shared needles). **IDENT-DIALECT-1/1B (2026-11-02/03):** Spark's grammar: a quoted segment, a second target or a non-ASCII word refuses at the token (backticks double); the VALUES skip fires at a relation start only (`relation_starts_at`); a single-quoted post-dot segment refuses at the dot (`spark_table_identifier_message`).
 - `namespace_create.rs` — **R-6 / G-6 Q1 (2026-08-14):** the shared
   `refuse_contradictory_namespace_location` predicate (and its message helper)
   used by `session.rs` `create_namespace` and both SQL doors' `IF NOT EXISTS`
@@ -946,7 +946,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `execute` through `PreExecute::run` instead of a bare `SessionContext::sql`, so the native
   door is guarded like the two SQL doors). `SqlDialect::on_session_built` (default no-op)
   runs from `ReparkSessionBuilder::build` after extension `register` (F-Y10-1).
-  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `SqlDialect::temp_view_name_rule` (default `None`, so the ANSI and DataFusion doors keep their behaviour) answers the temporary-view name rule from the session options, and `TempViewSession::temp_view_target_ref` (default: the home plus the legacy segment) names the reference a CREATE registers under. Case folding is the rule's job: `IgnoreCase` folds the key at creation and at lookup (fix round 2 removed the round-1 twin fallback; C-019, C-020), `Exact` is verbatim (C-011).
+  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `SqlDialect::temp_view_name_rule` (default `None`: the ANSI and DataFusion doors keep theirs) answers the temp-view name rule from the session options, and `TempViewSession::temp_view_target_ref` (default: the home plus the legacy segment) names the reference a CREATE registers under. Case folding is the rule's job: `IgnoreCase` folds the key at creation and at lookup (fix round 2 removed the round-1 twin fallback; C-019, C-020), `Exact` is verbatim (C-011).
   **IPI-40 PR6 (2026-09-24):** `TempViewSession` (`create_or_replace_temp_view_from`,
   `resolve_temp_view_home_ref`, `temp_view_home`, `list_temp_view_names`, `drop_temp_view`) is
   the session's temp-view seam; `EngineContext::temp_views` carries it (None from `new`, set by
@@ -1027,13 +1027,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** `built_with_debug_assertions` moved here
   unchanged from `lib.rs` (still re-exported at the crate root) so `lib.rs` stays under its
   `check_lib_rs.py` ceiling after `mod parallel_window;`.
-- `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3):
+- `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3): **TEMP-VIEW-SESSION-SETTINGS-1 part 2 (2026-11-18):** `FrameViewSeat` (a door's frame-view wrap and first analyzer rule, in config).
   `SessionExtension` with three defaulted hooks (`configure` pre-assembly,
   `configure_analyzer_rules` during context assembly, and `register` post-context) at v1's inline
   registration positions; `NoopSessionExtension` is the
   no-extension baseline. `configure` takes a `SessionBuildConf` — the builder's raw conf map PLUS
   the values `build()` has already resolved from it (today: the session timezone, H-1a split B).
-  A door reads the resolved value instead of re-parsing the map, which keeps
+  A door reads the resolved value, not the map again, which keeps
   "resolved once, at construction" literally true.
   **FNP-8 (2026-09-07):** the analyzer hook receives the core-owned guarded rule list and returns
   it unchanged by default. The Spark door uses it to insert one HOF preparation rule before the
@@ -1433,7 +1433,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   unchanged from BASE.
   **CASESENS-1 S3 (2026-09-27):** plus `temp_view_ref_from_segment_exact` (no fold;
   the exact session probe builds through it).
-  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `legacy_temp_view_segment` is the rule-free segment `temp_view_target_ref` uses: a quoted name verbatim with `""` unescaped, an unquoted name lower-cased with Unicode `to_lowercase` (fix round 2; ASCII-only before).
+  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `legacy_temp_view_segment` is the rule-free segment `temp_view_target_ref` uses: a quoted name verbatim with `""` unescaped, an unquoted one lower-cased by Unicode `to_lowercase` (fix round 2; ASCII-only before).
 - `session/` — `temp_views.rs` (the temp-view family: register / replace / materialize / cache /
   declare-sorted / drop, all through `temp_view_ref`; split out of `session.rs` in round 6) and
   `spill.rs` (S-1: FairSpillPool install + runtime SET intercept; production
@@ -1502,13 +1502,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 | `read_parquet("s3://…")` errors: no region / no credentials | Region from the aws-config chain or the `repark.hadoop.fs.s3a.endpoint.region` / `spark.hadoop.fs.s3a.endpoint.region` config; creds from the default chain. `object_store_s3.rs`. |
 | `s3a://` path not found but `s3://` works | Both schemes must be registered per bucket (`register_bucket_store` does both); DataFusion looks up `scheme://bucket` verbatim. |
 | `table_exists` on a quoted name misparses | Quote-aware `parse_table_identifier_segments` (double-quote/backtick; dots inside quotes OK); path-escape segments (`..` / `/` / `\`) reject at parse. |
-| `SHOW TABLES` / `DESCRIBE` refuses "unless information_schema is enabled" | Set it on the builder: `.config("datafusion.catalog.information_schema", "true")` (P2G R2 — `apply_datafusion_config_keys` in `session.rs`). It is OFF by default; nothing else enables it. |
-| A nested-column query got slower after 2026-08-18 | Only with an `Unnest` (a repeated `explode` / multi-pass `dynamicFlatten`) AND `push_down_leaf_projections` failing on it: DF-54.1 guard 2 keeps the unoptimized plan for that subtree, so struct-field extraction is not hoisted toward the leaves (`session/df_guards.rs`). Plans without `Unnest` are untouched (measured identical to stock). No knob restores the miscompile; `.config("datafusion.optimizer.enable_leaf_expression_pushdown", "false")` still turns the whole optimization off. Pins: `bare_session_keeps_leaf_expression_pushdown_enabled`, `a_plan_without_unnest_keeps_the_stock_leaf_pushdown`, `an_unnest_plan_the_rule_can_rewrite_still_gets_leaf_pushdown`. |
-| `dynamicFlatten` / `dynamic_flatten` wrong names, collisions, or null-parent zeros | Kernel is `dynamic_flatten.rs` — structs are a null-safe Project (the `null_mask.rs` extractor, or the CASE on a dictionary struct; never DF struct unnest); lists bind through `Column::new_unqualified`. Pins: `dynamic_flatten/tests.rs`. |
+| `SHOW TABLES` / `DESCRIBE` refuses "unless information_schema is enabled" | Set it on the builder: `.config("datafusion.catalog.information_schema", "true")` (P2G R2 — `apply_datafusion_config_keys` in `session.rs`); OFF by default, nothing else enables it. |
+| A nested-column query is slower after 2026-08-18 | Only with an `Unnest` (a repeated `explode` / multi-pass `dynamicFlatten`) AND `push_down_leaf_projections` failing on it: DF-54.1 guard 2 keeps that subtree unoptimized, so struct-field extraction is not hoisted (`session/df_guards.rs`). Plans without `Unnest` are untouched (measured). No knob restores the miscompile; `.config("datafusion.optimizer.enable_leaf_expression_pushdown", "false")` still turns it all off. Pins: `bare_session_keeps_leaf_expression_pushdown_enabled`, `a_plan_without_unnest_keeps_the_stock_leaf_pushdown`, `an_unnest_plan_the_rule_can_rewrite_still_gets_leaf_pushdown`. |
+| `dynamicFlatten` / `dynamic_flatten` wrong names, collisions, or null-parent zeros | Kernel `dynamic_flatten.rs`: structs are a null-safe Project (the `null_mask.rs` extractor, or the CASE on a dictionary struct; never DF struct unnest); lists bind via `Column::new_unqualified`. Pins: `dynamic_flatten/tests.rs`. |
 | A `datafusion.*` builder key fails the build | Intended: an unknown/unparseable key is `Error::Config` naming the key, so a typo cannot go silently inert. Check the spelling against DataFusion's `ConfigOptions`. |
-| `spark.sql.session.timeZone` seems to have no effect on `year`/`hour`/`date_trunc` | Since H-1a split B it DOES, on a Spark-extended session. On a session built without `SparkExtension` it does not, because stock DataFusion's `date_part` reads the array's own zone — the zone reaches the extractors through `SparkExtension::configure`. Pins: `crates/repark-spark/tests/session_timezone.rs`, `crates/repark-sql/tests/session_timezone_ansi_door.rs`. |
-| A session refuses to build naming `spark.sql.session.timeZone` | The zone is validated at construction (`session_time_zone.rs`): it must be an IANA id (`America/New_York`) or a fixed offset (`+05:00`). A differently-cased lookalike key is not this knob — there is exactly one spelling. |
-| `$`-suffixed metadata tables do NOT show up in `SHOW TABLES` | Fork F-8 (RP-5): `table_names` lists catalog entries only. Pins: `information_schema_hides_the_dollar_metadata_tables_on_the_bare_session` + `a_hidden_metadata_table_is_still_queryable_on_the_bare_session`. |
+| `spark.sql.session.timeZone` seems to have no effect on `year`/`hour`/`date_trunc` | Since H-1a split B it DOES on a Spark-extended session; without `SparkExtension` it does not (stock `date_part` reads the array's own zone; the zone reaches the extractors through `SparkExtension::configure`). Pins: `crates/repark-spark/tests/session_timezone.rs`, `crates/repark-sql/tests/session_timezone_ansi_door.rs`. |
+| A session refuses to build naming `spark.sql.session.timeZone` | The zone is validated at construction (`session_time_zone.rs`): an IANA id (`America/New_York`) or a fixed offset (`+05:00`). A differently-cased lookalike key is not this knob (one spelling). |
+| `$`-suffixed metadata tables do NOT show up in `SHOW TABLES` | Fork F-8 (RP-5): `table_names` lists catalog entries. Pins: `information_schema_hides_the_dollar_metadata_tables_on_the_bare_session` + `a_hidden_metadata_table_is_still_queryable_on_the_bare_session`. |
 | `SELECT * … JOIN … _row_id` returns shuffled user columns | Intended refuse `[V3-ROWID-2]` — the rewrite is single-table only (`lineage_columns.rs`). A successful HashMap-ordered projection is the L-001 defect. |
 
 First checks: `cargo test -p repark-core`. Escalate to: [../map.md#debug](../map.md).

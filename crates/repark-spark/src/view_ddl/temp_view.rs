@@ -19,14 +19,13 @@ use repark_common::spark_error;
 use repark_core::column_resolution::on_grown_stack_with;
 use repark_core::{CatalogRegistry, TempViewSession, frame_names};
 
+use crate::view_ddl::frame_settings::{frame_plan, opened};
 use crate::view_ddl::read::{
     MAX_VIEW_EXPANSION_DEPTH, TempHomes, VIEW_EXPANSION_STACK_RED_ZONE,
     VIEW_EXPANSION_STACK_SEGMENT, nested_depth_refusal, plan_prepared_body,
     prepare_view_body_sql_with, refuse_write_query_body,
 };
-use crate::view_ddl::temp_settings::{
-    TempViewSettings, inlines_settings_reading_frame, plan_under_overlay,
-};
+use crate::view_ddl::temp_settings::{TempViewSettings, plan_under_overlay, view_filter_pushdown};
 
 const MAX_TEMP_VIEW_WALK: usize = 4096;
 
@@ -61,6 +60,16 @@ pub(crate) fn definition_plan(provider: &dyn TableProvider) -> Option<LogicalPla
     let any: &dyn Any = provider;
     any.downcast_ref::<ReplanningTempView>()
         .map(|view| view.definition_plan.clone())
+        .or_else(|| frame_plan(provider))
+}
+
+pub(crate) fn replanning_scan(plan: &LogicalPlan) -> bool {
+    temp_view_scan(plan)
+        .and_then(|scan| source_as_provider(&scan.source).ok())
+        .is_some_and(|provider| {
+            let any: &dyn Any = provider.as_ref();
+            any.is::<ReplanningTempView>()
+        })
 }
 
 impl std::fmt::Debug for ReplanningTempView {
@@ -87,16 +96,7 @@ impl TableProvider for ReplanningTempView {
         &self,
         filters: &[&Expr],
     ) -> Result<Vec<TableProviderFilterPushDown>> {
-        Ok(filters
-            .iter()
-            .map(|filter| {
-                if repark_core::extension::contains_normalize_zero(filter) {
-                    TableProviderFilterPushDown::Inexact
-                } else {
-                    TableProviderFilterPushDown::Exact
-                }
-            })
-            .collect())
+        Ok(view_filter_pushdown(filters))
     }
 
     async fn scan(
@@ -136,11 +136,8 @@ impl ReplanningTempView {
         }
         refuse_dropped_dependency(&self.ctx, &self.dependencies)?;
         let live = Arc::clone(self.ctx.state_ref().read().config_options());
-        if let Some(overlay) = self.definition.settings.overlay(state, &live)
-            && let Some(plan) =
-                Box::pin(self.scan_under(state, overlay, projection, filters, limit)).await?
-        {
-            return Ok(plan);
+        if let Some(overlay) = self.definition.settings.overlay(state, &live) {
+            return Box::pin(self.scan_under(state, overlay, projection, filters, limit)).await;
         }
         let frame = Box::pin(plan_definition(
             &self.ctx,
@@ -161,7 +158,7 @@ impl ReplanningTempView {
         projection: Option<&Vec<usize>>,
         filters: &[Expr],
         limit: Option<usize>,
-    ) -> Result<Option<Arc<dyn ExecutionPlan>>> {
+    ) -> Result<Arc<dyn ExecutionPlan>> {
         let planner = SessionContext::new_with_state(overlay.clone());
         let frame = Box::pin(plan_definition(
             &planner,
@@ -172,26 +169,10 @@ impl ReplanningTempView {
         .await?;
         let body = conform_to_creation_schema(frame, &self.schema, &self.definition.display)?
             .into_unoptimized_plan();
-        let homes = self
-            .temp_homes
-            .values()
-            .filter_map(|home| match home.as_slice() {
-                [catalog, schema, table] => Some(TableReference::full(
-                    catalog.as_str(),
-                    schema.as_str(),
-                    table.as_str(),
-                )),
-                _ => None,
-            })
-            .collect::<Vec<_>>();
-        if inlines_settings_reading_frame(&body, &homes)? {
-            return Ok(None);
-        }
         Box::pin(plan_under_overlay(
             &overlay, reader, body, projection, filters, limit,
         ))
         .await
-        .map(Some)
     }
 }
 
@@ -213,8 +194,9 @@ pub(crate) async fn replanning_temp_view(
         },
     )
     .await?;
-    let references = direct_temp_view_references(frame.logical_plan())?;
-    let mut dependencies = temp_home_dependencies(frame.logical_plan(), &definition.home)?;
+    let walked = opened(frame.logical_plan())?;
+    let references = direct_temp_view_references(&walked)?;
+    let mut dependencies = temp_home_dependencies(&walked, &definition.home)?;
     for reference in &references {
         if !dependencies.contains(reference) {
             dependencies.push(reference.clone());

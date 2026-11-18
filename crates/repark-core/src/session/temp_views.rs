@@ -40,7 +40,19 @@ impl ReparkSession {
     /// # Errors
     /// Returns [`Error::DataFusion`] if register fails; [`Error::Analysis`] if `name` is qualified.
     pub fn create_or_replace_temp_view_from(&self, name: &str, frame: &DataFrame) -> Result<()> {
-        self.replace_view(name, frame.clone().into_view())
+        let (seat, live) = {
+            let state = self.context().state_ref();
+            let state = state.read();
+            let seat = state
+                .config()
+                .get_extension::<crate::extension::FrameViewSeat>();
+            (seat, Arc::clone(state.config_options()))
+        };
+        let provider = match seat {
+            Some(seat) => seat.wrap(name, frame, &live),
+            None => frame.clone().into_view(),
+        };
+        self.replace_view(name, provider)
     }
 
     /// Collect `frame` once and register a [`MemTable`] temp view.
@@ -150,8 +162,8 @@ impl ReparkSession {
         max_bytes: Option<u64>,
         max_total_bytes: Option<u64>,
     ) -> Result<()> {
-        let plan = frame.logical_plan().clone();
-        let state = self.context().state();
+        let (mut state, plan) = frame.into_parts();
+        state.mark_start_execution();
         let analyzed = state
             .analyzer()
             .execute_and_check(plan, state.config_options(), |_, _| {})

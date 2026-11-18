@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::catalog::Session;
-use datafusion::common::config::ConfigOptions;
-use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
+use datafusion::common::config::{ConfigExtension, ConfigOptions};
+use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::common::{Column, DFSchema};
 use datafusion::error::Result;
 use datafusion::execution::session_state::SessionState;
@@ -13,13 +13,12 @@ use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::utils::{conjunction, split_conjunction_owned};
 use datafusion::logical_expr::{
     Between, BinaryExpr, Cast, Expr, ExprSchemable, LogicalPlan, LogicalPlanBuilder, Operator,
-    TryCast, lit,
+    TableProviderFilterPushDown, TryCast, lit,
 };
 use datafusion::physical_plan::coalesce_partitions::CoalescePartitionsExec;
 use datafusion::physical_plan::filter::FilterExecBuilder;
 use datafusion::physical_plan::limit::{GlobalLimitExec, LocalLimitExec};
 use datafusion::physical_plan::{ExecutionPlan, ExecutionPlanProperties, PhysicalExpr};
-use datafusion::sql::TableReference;
 use repark_functions::ansi::SparkAnsiConfig;
 use repark_functions::decimal_legacy::SparkDecimalTruncateLegacy;
 use repark_functions::session_time_zone::{
@@ -31,48 +30,56 @@ const CURRENT_TIMEZONE: &str = "current_timezone";
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(crate) struct TempViewSettings {
-    ansi: Option<SparkAnsiConfig>,
-    zone: Option<SessionTimeZoneConfig>,
-    decimal_legacy: Option<SparkDecimalTruncateLegacy>,
-    timestamp_type: Option<SparkTimestampTypeConfig>,
+    ansi: SparkAnsiConfig,
+    zone: SessionTimeZoneConfig,
+    decimal_legacy: SparkDecimalTruncateLegacy,
+    timestamp_type: SparkTimestampTypeConfig,
 }
 
 #[derive(Debug)]
 struct ReaderZone(String);
 
+fn effective<T: ConfigExtension + Clone + Default>(options: &ConfigOptions) -> T {
+    options.extensions.get::<T>().cloned().unwrap_or_default()
+}
+
+fn holds<T: ConfigExtension + Default + PartialEq>(options: &ConfigOptions, captured: &T) -> bool {
+    options
+        .extensions
+        .get::<T>()
+        .map_or_else(|| *captured == T::default(), |value| value == captured)
+}
+
 impl TempViewSettings {
     pub(crate) fn capture(options: &ConfigOptions) -> Self {
-        let extensions = &options.extensions;
         Self {
-            ansi: extensions.get::<SparkAnsiConfig>().cloned(),
-            zone: extensions.get::<SessionTimeZoneConfig>().cloned(),
-            decimal_legacy: extensions.get::<SparkDecimalTruncateLegacy>().cloned(),
-            timestamp_type: extensions.get::<SparkTimestampTypeConfig>().cloned(),
+            ansi: effective(options),
+            zone: effective(options),
+            decimal_legacy: effective(options),
+            timestamp_type: effective(options),
         }
     }
 
-    fn same_as(&self, options: &ConfigOptions) -> bool {
-        let extensions = &options.extensions;
-        extensions.get::<SparkAnsiConfig>() == self.ansi.as_ref()
-            && extensions.get::<SessionTimeZoneConfig>() == self.zone.as_ref()
-            && extensions.get::<SparkDecimalTruncateLegacy>() == self.decimal_legacy.as_ref()
-            && extensions.get::<SparkTimestampTypeConfig>() == self.timestamp_type.as_ref()
+    pub(crate) fn with_zone_of(self, options: &ConfigOptions) -> Self {
+        Self {
+            zone: effective(options),
+            ..self
+        }
     }
 
-    fn apply(&self, options: &mut ConfigOptions) {
+    pub(crate) fn same_as(&self, options: &ConfigOptions) -> bool {
+        holds(options, &self.ansi)
+            && holds(options, &self.zone)
+            && holds(options, &self.decimal_legacy)
+            && holds(options, &self.timestamp_type)
+    }
+
+    pub(crate) fn apply(&self, options: &mut ConfigOptions) {
         let extensions = &mut options.extensions;
-        if let Some(ansi) = &self.ansi {
-            extensions.insert(ansi.clone());
-        }
-        if let Some(zone) = &self.zone {
-            extensions.insert(zone.clone());
-        }
-        if let Some(decimal_legacy) = &self.decimal_legacy {
-            extensions.insert(decimal_legacy.clone());
-        }
-        if let Some(timestamp_type) = &self.timestamp_type {
-            extensions.insert(timestamp_type.clone());
-        }
+        extensions.insert(self.ansi.clone());
+        extensions.insert(self.zone.clone());
+        extensions.insert(self.decimal_legacy.clone());
+        extensions.insert(self.timestamp_type.clone());
     }
 
     pub(crate) fn overlay(
@@ -81,9 +88,9 @@ impl TempViewSettings {
         live: &ConfigOptions,
     ) -> Option<SessionState> {
         let outer_zone = reader.config().get_extension::<ReaderZone>();
-        let zone_kept = outer_zone.as_ref().is_none_or(|zone| {
-            Some(zone.0.as_str()) == self.zone.as_ref().map(SessionTimeZoneConfig::display)
-        });
+        let zone_kept = outer_zone
+            .as_ref()
+            .is_none_or(|zone| zone.0 == self.zone.display());
         if zone_kept && self.same_as(reader.config_options()) && self.same_as(live) {
             return None;
         }
@@ -100,6 +107,19 @@ impl TempViewSettings {
         overlay.execution_props_mut().config_options = Some(options);
         Some(overlay)
     }
+}
+
+pub(crate) fn view_filter_pushdown(filters: &[&Expr]) -> Vec<TableProviderFilterPushDown> {
+    filters
+        .iter()
+        .map(|filter| {
+            if repark_core::extension::contains_normalize_zero(filter) {
+                TableProviderFilterPushDown::Inexact
+            } else {
+                TableProviderFilterPushDown::Exact
+            }
+        })
+        .collect()
 }
 
 pub(crate) fn settings_free(expr: &Expr, schema: Option<&DFSchema>) -> bool {
@@ -154,90 +174,6 @@ fn numeric_cast(operand: &Expr, target: &DataType, schema: Option<&DFSchema>) ->
         && schema
             .and_then(|schema| operand.get_type(schema).ok())
             .is_some_and(|source| source.is_numeric())
-}
-
-pub(crate) fn inlines_settings_reading_frame(
-    body: &LogicalPlan,
-    homes: &[TableReference],
-) -> Result<bool> {
-    let mut found = false;
-    body.apply_with_subqueries(|node| {
-        if let LogicalPlan::SubqueryAlias(alias) = node
-            && (!matches!(alias.alias, TableReference::Bare { .. }) || homes.contains(&alias.alias))
-            && reads_settings(alias.input.as_ref())?
-        {
-            found = true;
-            return Ok(TreeNodeRecursion::Stop);
-        }
-        Ok(TreeNodeRecursion::Continue)
-    })?;
-    Ok(found)
-}
-
-fn reads_settings(plan: &LogicalPlan) -> Result<bool> {
-    let mut reads = false;
-    plan.apply_with_subqueries(|node| {
-        if column_only_node(node)? {
-            Ok(TreeNodeRecursion::Continue)
-        } else {
-            reads = true;
-            Ok(TreeNodeRecursion::Stop)
-        }
-    })?;
-    Ok(reads)
-}
-
-fn column_only_node(node: &LogicalPlan) -> Result<bool> {
-    let shape = match node {
-        LogicalPlan::Projection(_)
-        | LogicalPlan::Filter(_)
-        | LogicalPlan::SubqueryAlias(_)
-        | LogicalPlan::Sort(_)
-        | LogicalPlan::Distinct(_)
-        | LogicalPlan::Aggregate(_)
-        | LogicalPlan::EmptyRelation(_) => true,
-        LogicalPlan::TableScan(scan) => match scan.source.get_logical_plan() {
-            Some(inner) => !reads_settings(&inner)?,
-            None => true,
-        },
-        LogicalPlan::Union(union) => union.inputs.iter().all(|input| {
-            input.schema().fields().len() == union.schema.fields().len()
-                && input
-                    .schema()
-                    .fields()
-                    .iter()
-                    .zip(union.schema.fields())
-                    .all(|(field, out)| field.data_type() == out.data_type())
-        }),
-        LogicalPlan::Join(join) => join.on.iter().all(|(left, right)| {
-            matches!(
-                (left.get_type(join.left.schema()), right.get_type(join.right.schema())),
-                (Ok(left), Ok(right)) if left == right
-            )
-        }),
-        _ => false,
-    };
-    if !shape {
-        return Ok(false);
-    }
-    let mut free = true;
-    node.apply_expressions(|expr| {
-        free = bare_column(expr);
-        Ok(if free {
-            TreeNodeRecursion::Continue
-        } else {
-            TreeNodeRecursion::Stop
-        })
-    })?;
-    Ok(free)
-}
-
-fn bare_column(expr: &Expr) -> bool {
-    match expr {
-        Expr::Column(_) => true,
-        Expr::Alias(alias) => bare_column(&alias.expr),
-        _ => false,
-    }
 }
 
 pub(crate) fn reader_zone(overlay: &SessionState) -> String {

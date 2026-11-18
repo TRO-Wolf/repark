@@ -125,6 +125,7 @@ fn install_spark_session_conf(
         config,
         crate::view_ddl::temp_view::definition_plan,
     );
+    config = crate::view_ddl::frame_settings::install(config);
     Ok(repark_functions::session_time_zone::with_session_time_zone(
         config,
         session.session_time_zone.id(),
