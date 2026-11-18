@@ -17,6 +17,7 @@ SQL = {
     "s1_sql_d38_div3": AGG.format(e="d38 / 3"),
     "s1_sql_d10_mod3": AGG.format(e="mod(d10, 3)"),
     "s1_sql_d10_pmod3": AGG.format(e="pmod(d10, 3)"),
+    "s1_sql_d10_pct3": AGG.format(e="d10 % 3"),
     "s3_sql_int_div_int": AGG.format(e="i1 / i2"),
     "s3_sql_double_div_double": AGG.format(e="x1 / x2"),
 }

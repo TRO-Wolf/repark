@@ -4,7 +4,9 @@ Built by Claude Opus 5.5 (`claude-opus-5-5`) on branch `fix/decimal-divide-liter
 package `pkg-ddl-a30a8d60` (built from a clean worktree of that commit; its `BUILT_FROM` names it). Main's package is
 `pkg-avg-27d6149f`; main `cd3d9ac3`'s product tree equals it. **Delta 1** (the same day): product commit `8efe8e69`
 (a decimal `mod()` takes the `%` path), package `pkg-ddl-8efe8e69`; it added `bar.md` §0, replaced the cost series and
-restructured the scripts to pass `ruff`.
+restructured the scripts to pass `ruff`. **Delta 2** (the same day): product commit `5b34022f` (a decimal `pmod()`
+on Spark's formula over `%`, the runtime `SET` of `pickMinimumPrecision`, `F.pmod`), package `pkg-ddl-5b34022f`;
+it added `bar.md` §D2 and a new cost series in `cost.md`, under a cap lifted from 5 to 8 on Fable's guidance.
 
 - [bar.md](bar.md) — delta 1's Spark measurement of `mod`/`pmod`/`%` by zero and with negatives, the "NULL → RAISE,
   Spark's answer" class cell for cell, the session-view CTAS cell and the proposed cards (§0); step 0's whole domain

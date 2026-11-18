@@ -11,5 +11,10 @@
   CTAS cell), `card-*` (the proposed cards' cells), for `spark`, main `pkg-avg-27d6149f`, the build's head
   `pkg-ddl-a30a8d60` (not for `ctas`) and the delta's head `pkg-ddl-8efe8e69`; `bar-classes.txt`, the class table of
   step 0's bar on the delta's head; `pins/`, the pin file's runs on the delta's head and on main.
+- `delta2/` — delta 2's data on `pkg-ddl-5b34022f`: `cells-<package>.json` (the new `pmod` and runtime `SET` pin
+  cells on main, delta 1's head and delta 2's head; Spark's are the pin oracle) and `compare.txt` (each against
+  Spark); `rem-*` and `card-*` (delta 1's probes on the head) with `rem-moves.txt`, `card-moves.txt` and
+  `rem-table.txt`; `bar-moves.txt` (step 0's raw cells against delta 1's head: none moved); `explain-pmod.txt` (the
+  plan of `pmod(d10, 3)`, `pmod(-3, d10)` and `F.pmod`); `pins/`; `cost/`, delta 2's cost series.
 
 Up: [../map.md](../map.md).

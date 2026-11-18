@@ -10,6 +10,7 @@ NAMES = {
     "s1_sql_d38_div3": "1 SQL `d38 / 3` (`DECIMAL(38,2)`)",
     "s1_sql_d10_mod3": "1 SQL `mod(d10, 3)`",
     "s1_sql_d10_pmod3": "1 SQL `pmod(d10, 3)`",
+    "s1_sql_d10_pct3": "1 SQL `d10 % 3` (a base for the SQL `pmod()` row)",
     "s2_df_d10_div3": "2 DataFrame `col(d10) / 3`",
     "s2_df_d10_mod3": "2 DataFrame `col(d10) % 3`",
     "s2_df_d10_pmod": "2 DataFrame `F.pmod(col(d10), F.lit(3))`",
@@ -27,6 +28,12 @@ RATIO_BASES = {
     "s2_df_d10_div3": "main's DataFrame `col(d10) / 3` (a `double` division)",
     "s1_sql_d10_div3": "main's SQL `d10 / 3`",
     "s2_df_d10_expr_div3": 'main\'s `F.expr("d10 / 3")` on the DataFrame door',
+}
+
+PMOD_ROW = "s1_sql_d10_pmod3"
+PMOD_BASES = {
+    "s1_sql_d10_pmod3": "main's SQL `pmod(d10, 3)` (`decimal(12,2)`, not Spark's type)",
+    "s1_sql_d10_pct3": "main's SQL `d10 % 3`",
 }
 
 
@@ -92,6 +99,12 @@ def table(cost_dir: Path) -> list[str]:
         base = med(per[case].get("main", []))
         ratio = head / base
         out.append(f"| {text} | {base:.4f} | {head:.4f} | {ratio:.3f} |")
+    head = med(per[PMOD_ROW].get("head", []))
+    out += ["", "The SQL `pmod(d10, 3)` row on the head, against two bases on main:", ""]
+    out += ["| base on main | main (s) | head `pmod(d10, 3)` (s) | ratio |", "|---|---|---|---|"]
+    for case, text in PMOD_BASES.items():
+        base = med(per[case].get("main", []))
+        out.append(f"| {text} | {base:.4f} | {head:.4f} | {head / base:.3f} |")
     return out
 
 

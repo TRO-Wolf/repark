@@ -19,6 +19,16 @@
     `SET spark.sql.legacy.literal.pickMinimumPrecision=false`;
   - `remainder_table.py`, `delta_moves.py`, `card_table.py` — Spark against main and a head per cell, the cells that
     moved between two packages, and a side-by-side table.
+- Delta 2 (2026-11-18):
+  - `record_oracle.py` also records the pin file's `pmod` and runtime `SET` cells (`measure_pmod`,
+    `measure_runtime_set`, a default build and a `false` build);
+  - `repark_cells.py <cells dir> <warehouse parent> <out>` — the same `pmod` and runtime `SET` cells on a RePark
+    package (`PYTHONPATH`), as JSON;
+  - `delta2_compare.py <spark json> <name> <json> …` — each of those cells against Spark per package, with counts;
+  - `raw_moves.py <before run dir> <after run dir>` — step 0's raw bar cells that moved between two heads (timings
+    and the package path ignored);
+  - `run.sh` takes `COST_DIR` and the SQL `d10 % 3` base row; `ddl_cost.py` has the `s1_sql_d10_pct3` case;
+    `analyze.py` adds the `pmod(d10, 3)` row against main's `pmod(d10, 3)` and `d10 % 3`.
 - Every script here passes `ruff check` and `ruff format --check` (delta 1 restructured the build's scripts).
 
 Up: [../map.md](../map.md).

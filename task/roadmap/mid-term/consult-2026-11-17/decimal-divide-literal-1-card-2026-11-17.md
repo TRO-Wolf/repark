@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-17. **Filed by:** the records clerk (`claude-haiku-5-5`), under the owner's ruling "Defaults." (2026-11-17, about 10:40 UTC), ruling 2 ([rulings](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md)). **Source:** Fable (`claude-fable-5-2`), consult reply of 2026-11-17, section 1, with the probe outputs Fable named (`p2-spark`, `p2-pkg-cu-88999454` and `p2-pkg-dct-7bf32859`; kept outside the repository).
 
-**Status:** built, not merged (2026-11-18; the build halted at the cost bar, below).
+**Status:** built, not merged (2026-11-18; delta 2 built, below).
 
 **Severity: S1, label-blocking** (ruled 2026-11-17, ruling 2).
 
@@ -157,5 +157,47 @@ Product commit `8efe8e69` (over `a30a8d60`); package `pkg-ddl-8efe8e69` (its `BU
   0 with the records; `ledger_lifecycle.py check` 0; `check_map_size.py` 0; `sync_map_md.py --check` 0;
   `uvx ruff@0.15.22 check .` 0 and `format --check .` 0 (the build's scripts restructured, PR #1361's CI failure); the
   comment gate 0 hits.
+
+
+### Built, delta 2 (2026-11-18): a decimal `pmod()` on Spark's formula, the runtime `SET`, `F.pmod`
+
+**Status: built, not merged.** Builder: Claude Opus 5.5 (`claude-opus-5-5`), effort xhigh. Product commit `5b34022f`
+(over `8efe8e69`); package `pkg-ddl-5b34022f` (its `BUILT_FROM`). Evidence:
+[bar.md](../../../wo/decimal-divide-literal-1/evidence/built/bar.md) §D2 and
+[cost.md](../../../wo/decimal-divide-literal-1/evidence/built/cost.md).
+
+- **Guidance carried:** Fable's reply on delta 1's halts (`claude-fable-5-2`, 2026-11-18), **guidance under the owner's
+  delegation, not an owner ruling**: Q1, rewrite a decimal `pmod()` as Spark's formula over `%` (Fable withdrew its
+  earlier "only onto `F.pmod`'s spelling"); Q2, route the runtime `SET` of `pickMinimumPrecision` in two exception
+  files; Q3, take `F.pmod` as a third exception file with a back-out, the decimal half of card 4b, and leave the
+  integer `mod`/`pmod` by zero carded.
+- **The cap: 5 product files to 8, on that guidance** (the owner can reverse it): the build's 5 plus
+  `python/repark/src/repark/spark/session/builder_conf.py`, `crates/repark-python/src/session_runtime.rs` and
+  `python/repark/src/repark/spark/functions_expr.py` (`pmod` only). The PR is at 8.
+- **Built:** `literal_step.rs` `pmod_formula` makes a decimal `pmod()` `CASE WHEN r < 0 THEN (r + n) % n ELSE r END`
+  with `r = a % n` (computed once per row by the optimizer's common-subexpression pass); no cast where the formula's
+  type is `Pmod`'s (the timed row), otherwise `TRY_CAST` with ANSI off and a plain cast with ANSI on; a 38-digit
+  divisor keeps `SparkPmod`. `session_runtime.rs` and `builder_conf.py` route `SET`, `unset` and `RESET` of the key,
+  refusing a non-boolean as the decimal truncate key does. `F.pmod` spells the same formula (kept: no cell EQUAL on
+  delta 1's head moved, and its row is under the bar).
+- **The bar:** step 0's bar re-ran on the package and all 7,026 head cells answer as on delta 1's head (0 EQUAL →
+  WRONG, 0 EQUAL → RAISE, the protected cells unmoved). The class **"NULL → RAISE, Spark's answer"** gains the 13
+  probe and 15 pin cells of an ANSI-on decimal `pmod(d, 0)` (50 in all). The class **"TYPE → EQUAL after the runtime
+  `SET`"** is 38 cells (`*`, `+`, `-`, `mod()`, `pmod()`, and `/` and `%` after `SET …=true` over a `false` build).
+  Delta 1's halt 2 is closed (`d / 3` and `d % 3` after `SET …=false` are EQUAL again). **One cell moved from EQUAL on
+  delta 1's head:** a temp view made before the `SET` and read after it refuses `CANNOT_UP_CAST_DATATYPE` where Spark
+  answers the creation setting (main TYPE; TEMP-VIEW-SESSION-SETTINGS-1 does not capture the key; a fix is a ninth
+  file, proposed card 7). Pins: 394 passed and 20 strict `xfail`s on the head; 291 failed, 103 passed on main.
+- **Cost** (five runs per row, ten for a row over the bar after five): **SQL `pmod(d10, 3)` 0.749x** against main's
+  `pmod(d10, 3)` (it was 1.142x on delta 1's head; main answered `decimal(12,2)`), and 1.582x against main's SQL
+  `d10 % 3`, the base Fable named, as a measurement only; `F.pmod` 0.843x; every other held row under the bar,
+  C-012 1.029x and 1.007x after ten. The DataFrame `col(d10) / 3`, the owner's row: 3.907x against main's `double`
+  division, 0.768x against main's SQL `d10 / 3`, 0.779x against main's `F.expr("d10 / 3")`.
+- **Proposed cards, kept current** (bar.md §D2.8): closed by delta 2 — 3 (the runtime `SET`), 4b's decimal half, 4c
+  (`F.pmod` by a negative divisor), 4d's ANSI-off half. Open — 1 SESSION-VIEW-DECIMAL-DIV-1 (S2), 2 the written
+  `CAST(3 AS DECIMAL(20,0))` (S3), 4a the remainder-by-zero class (S3), 4b's integer half (4 cells; Fable's lean S2),
+  4d's ANSI-on class (S3). New — 5 `F.pmod`'s formula type (S3), 6 an integer `F.pmod`'s sum overflowing with ANSI on
+  (S3), 7 the temp view and the runtime `SET` (S3). Every severity is the owner's.
+- **Gates:** the delta's hand-back carries the gate table (run on the product commit `5b34022f`).
 
 Up: [map.md](map.md).

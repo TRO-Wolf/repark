@@ -32,8 +32,19 @@ def session(mode: str, wh: Path, extra: dict) -> SparkSession:
     return b.getOrCreate()
 
 
-result = {"cells": {}, "pick_false": {}}
+result = {"cells": {}, "pick_false": {}, "pmod": {}, "runtime_set": {"default": {}, "false": {}}}
 for mode in ("false", "true"):
+    wh = Path(root) / f"pmod-{mode}"
+    s = session(mode, wh, {})
+    cells.make_pmod_table(s, str(wh))
+    result["pmod"][mode] = cells.measure_pmod(s, sf)
+    s.stop()
+    for built, extra in (("default", {}), ("false", {cells.PICK_SET_KEY: "false"})):
+        wh = Path(root) / f"set-{built}-{mode}"
+        s = session(mode, wh, extra)
+        cells.make_tables(s, str(wh))
+        result["runtime_set"][built][mode] = cells.measure_runtime_set(s, built == "false")
+        s.stop()
     wh = Path(root) / f"main-{mode}"
     s = session(mode, wh, {})
     cells.make_tables(s, str(wh))
