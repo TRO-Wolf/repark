@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import threading
+from collections import Counter
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -155,3 +157,78 @@ def test_a_negated_null_write_refuses_as_spark(tmp_path: Path, ansi: str, door: 
         session.stop()
         _reset_active_session_for_tests()
     assert found == dict.fromkeys(NEGATED_NULL_CELLS, "refused")
+
+
+RACE_WRITES = 100
+RACE_SETTINGS = (
+    ("spark.sql.caseSensitive", "false"),
+    ("spark.sql.legacy.decimal.retainFractionDigitsOnTruncate", "false"),
+)
+
+
+def race_write(session: Any, door: str, target: str, step: int) -> None:
+    table = f"lc.race.t_{target}".lower()
+    if door == "writeTo":
+        session.sql(f"SELECT {step} AS id, -NULL AS c").writeTo(table).append()
+    elif door == "insertInto":
+        session.sql(f"SELECT {step} AS id, -NULL AS c").write.insertInto(table)
+    else:
+        view = "race_same" if step % 2 else "race_other"
+        session.sql(f"INSERT INTO {table} SELECT id, c FROM {view}").collect()
+
+
+def race_writer(session: Any, door: str, target: str, found: Counter[tuple[str, str, str]]) -> None:
+    for step in range(RACE_WRITES):
+        try:
+            race_write(session, door, target, step)
+        except Exception as error:
+            answer = "refused" if CANNOT_SAFELY_CAST in str(error) else str(error)[:200]
+        else:
+            answer = "wrote"
+        found[(door, target, answer)] += 1
+
+
+def race_setter(session: Any, done: threading.Event) -> None:
+    while not done.is_set():
+        for key, value in RACE_SETTINGS:
+            session.conf.set(key, value)
+
+
+def test_a_negated_null_write_refuses_while_another_thread_sets_the_conf(tmp_path: Path) -> None:
+    session = build(tmp_path, "true")
+    cells = [
+        (door, target) for door in sorted(NEGATED_NULL_DOORS) for target in ("DATE", "BOOLEAN")
+    ]
+    found: Counter[tuple[str, str, str]] = Counter()
+    try:
+        session.sql("CREATE NAMESPACE IF NOT EXISTS lc.race").collect()
+        for target in ("DATE", "BOOLEAN"):
+            session.sql(
+                f"CREATE TABLE lc.race.t_{target.lower()} (id INT, c {target}) USING iceberg"
+            ).collect()
+        session.sql("SET spark.sql.ansi.enabled=false").collect()
+        session.sql("SELECT 7 AS id, -NULL AS c").createOrReplaceTempView("race_other")
+        session.sql("SET spark.sql.ansi.enabled=true").collect()
+        session.sql("SELECT 5 AS id, -NULL AS c").createOrReplaceTempView("race_same")
+        done = threading.Event()
+        setters = [threading.Thread(target=race_setter, args=(session, done)) for _ in range(2)]
+        writers = [
+            threading.Thread(target=race_writer, args=(session, door, target, found))
+            for door, target in cells
+        ]
+        for thread in setters + writers:
+            thread.start()
+        for thread in writers:
+            thread.join()
+        done.set()
+        for thread in setters:
+            thread.join()
+        stored = {
+            target: session.sql(f"SELECT count(*) FROM lc.race.t_{target.lower()}").collect()[0][0]
+            for target in ("DATE", "BOOLEAN")
+        }
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+    assert dict(found) == {(door, target, "refused"): RACE_WRITES for door, target in cells}
+    assert stored == {"DATE": 0, "BOOLEAN": 0}

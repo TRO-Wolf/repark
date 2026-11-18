@@ -1,6 +1,7 @@
 //! Temp views — the session-local registration family (`createOrReplaceTempView` and friends).
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use arrow::array::RecordBatch;
 use arrow::compute::{CastOptions, cast_with_options, concat_batches};
@@ -16,6 +17,8 @@ use repark_common::{Error, Result};
 
 use super::ReparkSession;
 use crate::engine_err;
+
+const LIVE_READ_WAIT: Duration = Duration::from_secs(1);
 
 impl ReparkSession {
     /// Register `batches` as a replaceable in-memory view named `name`.
@@ -51,12 +54,15 @@ impl ReparkSession {
         let provider = match seat {
             Some(seat) => {
                 let weak = Arc::downgrade(&shared);
-                let reader = crate::extension::LiveOptions::new(Arc::new(move || {
-                    let state = weak.upgrade()?;
-                    state
-                        .try_read_recursive()
-                        .map(|guard| Arc::clone(guard.config_options()))
-                }));
+                let reader = crate::extension::LiveOptions::new(
+                    Arc::clone(&live),
+                    Arc::new(move || {
+                        let state = weak.upgrade()?;
+                        state
+                            .try_read_recursive_for(LIVE_READ_WAIT)
+                            .map(|guard| Arc::clone(guard.config_options()))
+                    }),
+                );
                 seat.wrap(name, frame, &live, reader)
             }
             None => frame.clone().into_view(),

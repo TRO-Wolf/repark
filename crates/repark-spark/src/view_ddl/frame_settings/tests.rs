@@ -158,10 +158,17 @@ async fn differing_settings_close_the_frame_under_its_own_settings() {
 }
 
 #[tokio::test]
-async fn the_marker_is_decided_under_the_planning_state_not_the_live_one() {
+async fn inside_a_sql_view_body_the_marker_is_decided_under_the_planning_state() {
     let reader = session(false);
     let frame = DataFrame::new(held_on(&reader), unanalysed(&reader, OVERFLOW).await);
-    let plan = scanned(wrapped(&frame));
+    reader
+        .create_or_replace_temp_view_from("v", &frame)
+        .unwrap_or_else(|error| panic!("register: {error}"));
+    let outside = unanalysed(&reader, "SELECT * FROM v").await;
+    assert!(!holds_marker(&outside).unwrap_or(true));
+    assert_eq!(closed_views(&outside), 1);
+    let plan = view_body(unanalysed(&reader, "SELECT * FROM v")).await;
+    assert!(holds_marker(&plan).unwrap_or(false));
     let on = held_on(&reader);
     let under_on = FrameSettingsRule
         .analyze(plan.clone(), on.config_options())
@@ -172,15 +179,13 @@ async fn the_marker_is_decided_under_the_planning_state_not_the_live_one() {
     let under_off = FrameSettingsRule
         .analyze(plan, live.config_options())
         .unwrap_or_else(|error| panic!("decide: {error}"));
+    assert!(!holds_marker(&under_off).unwrap_or(true));
     assert_eq!(closed_views(&under_off), 1);
-    let LogicalPlan::SubqueryAlias(alias) = &under_off else {
+    let Some(LogicalPlan::Projection(projection)) = inlined_view(&under_off, "v") else {
         panic!(
-            "the inlined alias stays on top: {}",
+            "a projection restores the frame's schema: {}",
             under_off.display_indent()
         );
-    };
-    let LogicalPlan::Projection(projection) = alias.input.as_ref() else {
-        panic!("a projection restores the frame's schema");
     };
     let wanted = frame.logical_plan().schema();
     let typed = analysed(&on, frame.logical_plan().clone());
@@ -608,4 +613,109 @@ async fn the_negated_null_store_check_reads_through_a_frame_view_on_both_paths()
         closed_views(&read_plan(&reader, "SELECT * FROM w").await),
         1
     );
+}
+
+async fn registered_view(reader: &ReparkSession, name: &str) -> Arc<dyn TableProvider> {
+    let home = reader
+        .resolve_temp_view_home_ref(name)
+        .unwrap_or_else(|error| panic!("home: {error}"))
+        .unwrap_or_else(|| panic!("{name} is registered"));
+    let [catalog, schema, table] = home.as_slice() else {
+        panic!("a three-part home: {home:?}");
+    };
+    reader
+        .context()
+        .table_provider(TableReference::full(
+            catalog.as_str(),
+            schema.as_str(),
+            table.as_str(),
+        ))
+        .await
+        .unwrap_or_else(|error| panic!("provider: {error}"))
+}
+
+fn inlined_while_written<T>(
+    reader: &ReparkSession,
+    hold: impl FnOnce(&mut SessionState) + Send,
+    inline: impl FnOnce() -> T,
+    released: std::time::Duration,
+) -> T {
+    let shared = reader.context().state_ref();
+    let (locked, holding) = std::sync::mpsc::channel();
+    let (release, releasing) = std::sync::mpsc::channel::<()>();
+    std::thread::scope(|scope| {
+        scope.spawn(move || {
+            let mut guard = shared.write();
+            hold(&mut guard);
+            let _ = locked.send(());
+            let _ = releasing.recv_timeout(released);
+        });
+        holding
+            .recv()
+            .unwrap_or_else(|error| panic!("the writer holds the lock: {error}"));
+        let found = inline();
+        let _ = release.send(());
+        found
+    })
+}
+
+#[tokio::test]
+async fn a_held_state_write_lock_never_inlines_the_marker_outside_a_view_body() {
+    let reader = session(false);
+    let matching = reader
+        .context()
+        .sql(OVERFLOW)
+        .await
+        .unwrap_or_else(|error| panic!("frame: {error}"));
+    let differing = DataFrame::new(held_on(&reader), unanalysed(&reader, OVERFLOW).await);
+    for (name, frame) in [("v", &matching), ("w", &differing)] {
+        reader
+            .create_or_replace_temp_view_from(name, frame)
+            .unwrap_or_else(|error| panic!("register {name}: {error}"));
+    }
+    let same = registered_view(&reader, "v").await;
+    let other = registered_view(&reader, "w").await;
+    let shared = reader.context().state_ref();
+    let (same, other) = inlined_while_written(
+        &reader,
+        |_| {},
+        || {
+            assert!(shared.try_read_recursive().is_none());
+            (
+                same.get_logical_plan().map(Cow::into_owned),
+                other.get_logical_plan().map(Cow::into_owned),
+            )
+        },
+        std::time::Duration::from_mins(1),
+    );
+    let same = same.unwrap_or_else(|| panic!("a frame view inlines a plan"));
+    assert!(!holds_marker(&same).unwrap_or(true));
+    assert_eq!(&same, matching.logical_plan());
+    let other = other.unwrap_or_else(|| panic!("a frame view inlines a plan"));
+    assert!(!holds_marker(&other).unwrap_or(true));
+    assert_eq!(closed_views(&other), 1);
+}
+
+#[tokio::test]
+async fn a_live_read_waits_for_a_writer_and_decides_under_its_setting() {
+    let reader = session(true);
+    let frame = reader
+        .context()
+        .sql(OVERFLOW)
+        .await
+        .unwrap_or_else(|error| panic!("frame: {error}"));
+    reader
+        .create_or_replace_temp_view_from("v", &frame)
+        .unwrap_or_else(|error| panic!("register: {error}"));
+    let view = registered_view(&reader, "v").await;
+    let off = TempViewSettings::capture(session(false).context().state().config_options());
+    let inlined = inlined_while_written(
+        &reader,
+        |state| off.apply(state.config_mut().options_mut()),
+        || view.get_logical_plan().map(Cow::into_owned),
+        std::time::Duration::from_millis(100),
+    )
+    .unwrap_or_else(|| panic!("a frame view inlines a plan"));
+    assert!(!holds_marker(&inlined).unwrap_or(true));
+    assert_eq!(closed_views(&inlined), 1);
 }

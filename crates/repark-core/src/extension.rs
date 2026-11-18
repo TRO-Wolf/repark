@@ -1,7 +1,7 @@
 //! Build-time registration seam for SQL-door extensions.
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, PoisonError};
 
 use datafusion::catalog::TableProvider;
 use datafusion::common::config::ConfigOptions;
@@ -18,18 +18,32 @@ pub type FrameViewWrap =
 
 type ReadLive = dyn Fn() -> Option<Arc<ConfigOptions>> + Send + Sync;
 
+struct LastRead {
+    read: Arc<ReadLive>,
+    last: Mutex<Arc<ConfigOptions>>,
+}
+
 #[derive(Clone, Default)]
-pub struct LiveOptions(Option<Arc<ReadLive>>);
+pub struct LiveOptions(Option<Arc<LastRead>>);
 
 impl LiveOptions {
     #[must_use]
-    pub fn new(read: Arc<ReadLive>) -> Self {
-        Self(Some(read))
+    pub fn new(start: Arc<ConfigOptions>, read: Arc<ReadLive>) -> Self {
+        Self(Some(Arc::new(LastRead {
+            read,
+            last: Mutex::new(start),
+        })))
     }
 
     #[must_use]
     pub fn read(&self) -> Option<Arc<ConfigOptions>> {
-        self.0.as_ref().and_then(|read| read())
+        let live = self.0.as_ref()?;
+        let fresh = (live.read)();
+        let mut last = live.last.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some(fresh) = fresh {
+            *last = fresh;
+        }
+        Some(Arc::clone(&last))
     }
 }
 

@@ -1027,15 +1027,15 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** `built_with_debug_assertions` moved here
   unchanged from `lib.rs` (still re-exported at the crate root) so `lib.rs` stays under its
   `check_lib_rs.py` ceiling after `mod parallel_window;`.
-- `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3): **TEMP-VIEW-SESSION-SETTINGS-1 part 2 (2026-11-18):** `FrameViewSeat` (its frame-view wrap, first rule) and `LiveOptions` (delta 2).
+- `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3): **TEMP-VIEW-SESSION-SETTINGS-1 part 2 (2026-11-18):** `FrameViewSeat` (frame-view wrap, first rule) and `LiveOptions` (delta 2; keeps a last read, delta 3).
   `SessionExtension` with three defaulted hooks (`configure` pre-assembly,
   `configure_analyzer_rules` during context assembly, and `register` post-context) at v1's inline
   registration positions; `NoopSessionExtension` is the
-  no-extension baseline. `configure` takes a `SessionBuildConf` — the builder's raw conf map PLUS
-  the values `build()` has already resolved from it (today: the session timezone, H-1a split B).
+  no-extension baseline. `configure` takes a `SessionBuildConf` — the raw conf map PLUS
+  the values `build()` already resolved from it (the session timezone, H-1a split B).
   A door reads the resolved value, not the map again, which keeps
   "resolved once, at construction" literally true.
-  **FNP-8 (2026-09-07):** the analyzer hook receives the core-owned guarded rule list and returns
+  **FNP-8 (2026-09-07):** the analyzer hook takes the core-owned guarded rule list and returns
   it unchanged by default. The Spark door uses it to insert one HOF preparation rule before the
   first default type-coercion pass.
 - `catalog_kind.rs` — **ICE-CATALOG-SESSION-1 S7 (2026-09-20):** short-form kind
