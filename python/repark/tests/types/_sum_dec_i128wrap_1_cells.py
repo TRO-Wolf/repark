@@ -29,6 +29,17 @@ SPLIT_SHAPES: dict[int, list[list[str]]] = {
 }
 REPEATS = 20
 MERGE_TOTAL_CLASS = ("21",)
+KEPT_DIVERGENCE = {
+    f"{pos}/{c}": g
+    for c in WIDE
+    for pos, g in (
+        ("sql/sticky/g10", 10),
+        ("sql/sticky/g11", 11),
+        ("sql/try_grouped/g10", 10),
+        ("df/agg_dict/g10", 10),
+    )
+}
+CONDITION_CLASS = {f"sql/union/g4_14/{c}": "NUMERIC_VALUE_OUT_OF_RANGE" for c in WIDE}
 ICE_MODES = {
     "cow": "'format-version'='2','write.merge.mode'='copy-on-write'",
     "mor": "'format-version'='2','write.merge.mode'='merge-on-read'",
@@ -240,6 +251,21 @@ def split_rows() -> tuple[list[str], list[list[str]]]:
     return names, out
 
 
+def class_of(key: str) -> str:
+    if key in KEPT_DIVERGENCE:
+        return "kept-divergence"
+    if key in CONDITION_CLASS:
+        return "condition-class"
+    return "spark"
+
+
+def kept_exact(key: str, types: list[str]) -> dict[str, Any]:
+    g, c = KEPT_DIVERGENCE[key], key.rsplit("/", 1)[1]
+    p, s = (int(x) for x in c[1:].split("_"))
+    total = sum(unscaled(token, p) for token in SHAPES[g])
+    return {"rows": [f"{g}|{text(total, s)}"], "types": types}
+
+
 def exact_row(g: int, c: str) -> str:
     p, s = (int(x) for x in c[1:].split("_"))
     total = sum(unscaled(token, p) for files in SPLIT_SHAPES[g] for token in files)
@@ -337,3 +363,86 @@ def measure_all(spark: Any, sf: Any, window: Any, catalog: str, engine: str) -> 
         found[key] = attempt(lambda build=build: answer_of(build(spark.table("t"))))
     found.update(iceberg_cells(spark, catalog))
     return found
+
+
+TARGET_PARTITIONS = (2, 4, 8)
+SPREAD_COLUMNS = [(19, 0), (20, 0), (38, 0)]
+SPREAD_FILES = {"a": "M", "b": "5", "c": "-M"}
+SPREAD_ROWS = 300_000
+SPREAD_GROUPS = 3_000
+
+
+def spread_hits(k: int) -> list[bool]:
+    rounds = SPREAD_ROWS // SPREAD_GROUPS
+    return [
+        i // SPREAD_GROUPS == ((i % SPREAD_GROUPS) * (k + 3) * 2654435761 >> 7) % rounds
+        for i in range(SPREAD_ROWS)
+    ]
+
+
+def write_spread_tables(root: Path) -> None:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    (root / "big").mkdir()
+    (root / "t4x").mkdir()
+    for k, (name, token) in enumerate(SPREAD_FILES.items()):
+        hits = spread_hits(k)
+        table = {"g": pa.array([i % SPREAD_GROUPS for i in range(SPREAD_ROWS)], pa.int32())}
+        for p, s in SPREAD_COLUMNS:
+            special, zero = text(unscaled(token, p), s), text(0, s)
+            values = pa.array([special if hit else zero for hit in hits], pa.string())
+            table[col(p, s)] = values.cast(pa.decimal128(p, s))
+        pq.write_table(pa.table(table), root / "big" / f"{name}.parquet")
+        part = [(g, x) for g, files in SPLIT_SHAPES.items() if k < len(files) for x in files[k]]
+        small = {"g": pa.array([g for g, _ in part], pa.int32())}
+        for p, s in SPREAD_COLUMNS:
+            texts = [text(unscaled(token, p), s) for _, token in part]
+            small[col(p, s)] = pa.array(texts, pa.string()).cast(pa.decimal128(p, s))
+        pq.write_table(pa.table(small), root / "t4x" / f"{name}.parquet")
+
+
+def spread_sql() -> dict[str, str]:
+    found: dict[str, str] = {}
+    for p, s in SPREAD_COLUMNS:
+        c = col(p, s)
+        for agg in ("sum", "try_sum"):
+            found[f"big/grouped/{agg}/{c}"] = f"SELECT g, {agg}({c}) AS m FROM big GROUP BY g"
+            found[f"big/ungrouped/{agg}/{c}"] = f"SELECT {agg}({c}) AS m FROM big"
+            for g in SPLIT_SHAPES:
+                found[f"t4x/g{g}/grouped/{agg}/{c}"] = (
+                    f"SELECT g, {agg}({c}) AS m FROM t4x WHERE g = {g} GROUP BY g"
+                )
+                found[f"t4x/g{g}/ungrouped/{agg}/{c}"] = (
+                    f"SELECT {agg}({c}) AS m FROM t4x WHERE g = {g}"
+                )
+    return found
+
+
+def spread_exact(key: str, ansi: str) -> Any:
+    table, *rest = key.split("/")
+    agg, c = rest[-2], rest[-1]
+    p, s = (int(x) for x in c[1:].split("_"))
+    result = f"decimal({min(38, p + 10)},{s})"
+    if table == "big":
+        g, total = None, 5 * (SPREAD_GROUPS if rest[0] == "ungrouped" else 1)
+    else:
+        g = int(rest[0][1:])
+        total = sum(unscaled(token, p) for files in SPLIT_SHAPES[g] for token in files)
+    grouped = "grouped" in rest
+    if abs(total) >= 10 ** min(38, p + 10):
+        if ansi == "true" and agg == "sum":
+            return "ARITHMETIC_OVERFLOW"
+        value = "null"
+    else:
+        value = text(total, s)
+    if table == "big" and grouped:
+        return {"rows": [f"{i}|{value}" for i in range(SPREAD_GROUPS)], "types": ["int", result]}
+    if grouped:
+        return {"rows": [f"{g}|{value}"], "types": ["int", result]}
+    return {"rows": [value], "types": [result]}
+
+
+def register_spread_tables(spark: Any, root: Path) -> None:
+    for name in ("big", "t4x"):
+        spark.read.parquet(str(root / name)).createOrReplaceTempView(name)

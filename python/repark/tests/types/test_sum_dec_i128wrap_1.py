@@ -17,7 +17,8 @@ from repark.spark.window import Window
 
 ORACLE = json.loads(Path(__file__).with_name("sum_dec_i128wrap_1_spark_oracle.json").read_text())
 KEYS = sorted(ORACLE["cells"]["false"])
-REPEAT_KEYS = sorted(ORACLE["repeats"]["false"])
+SPREAD = cells.spread_sql()
+SPREAD_SETS = sorted({(key.split("/")[0], key.split("/")[-1]) for key in SPREAD})
 CONDITION = re.compile(r"\[([A-Z_]+)")
 WRAP = 2**128
 
@@ -39,7 +40,6 @@ def measured(
     )
     cells.make_tables(session, str(root))
     found = cells.measure_all(session, sf, Window, "lc", "repark")
-    found["repeats"] = cells.measure_repeats(session, cells.REPEATS)
     session.stop()
     _reset_active_session_for_tests()
     yield request.param, found, root / "wh"
@@ -70,10 +70,29 @@ def assert_as_spark(found: Any, want: Any, key: str) -> None:
     assert cells.same_answer(found, want), (key, found, want)
 
 
-@pytest.mark.parametrize("key", KEYS)
-def test_a_cell_answers_as_spark(measured: tuple[str, dict[str, Any], Path], key: str) -> None:
+def drops(answer: Any) -> bool:
+    if isinstance(answer, str):
+        return condition(answer) is not None
+    return all(row == "null" or row.endswith("|null") for row in answer["rows"])
+
+
+@pytest.mark.parametrize("key", KEYS, ids=[f"{cells.class_of(key)}:{key}" for key in KEYS])
+def test_a_cell_answers_as_spark_or_as_its_named_class(
+    measured: tuple[str, dict[str, Any], Path], key: str
+) -> None:
     mode, found, _ = measured
-    assert_as_spark(found[key], ORACLE["cells"][mode][key], key)
+    want = ORACLE["cells"][mode][key]
+    if key in cells.KEPT_DIVERGENCE:
+        assert drops(want), (key, want)
+        exact = cells.kept_exact(key, ORACLE["cells"]["false"][key]["types"])
+        assert cells.same_answer(found[key], exact), (key, found[key], exact)
+        return
+    if key in cells.CONDITION_CLASS and mode == "true":
+        assert condition(want) == cells.CONDITION_CLASS[key], (key, want)
+        assert isinstance(found[key], str), (key, found[key])
+        assert condition(found[key]) == "ARITHMETIC_OVERFLOW", (key, found[key])
+        return
+    assert_as_spark(found[key], want, key)
 
 
 def test_no_data_file_holds_a_sum_past_38_digits_or_its_wrap(
@@ -97,30 +116,61 @@ def drops_the_total(answer: Any, mode: str, function: str, g: str) -> bool:
     return isinstance(answer, dict) and answer["rows"] == [f"{g}|null"]
 
 
-@pytest.mark.parametrize("key", REPEAT_KEYS)
-def test_a_multi_partial_query_gives_one_answer_on_every_run(
-    measured: tuple[str, dict[str, Any], Path], key: str
-) -> None:
-    mode, found, _ = measured
-    runs = found["repeats"][key]
-    seen = {json.dumps(run, sort_keys=True) for run in runs}
-    assert len(runs) == cells.REPEATS, key
-    assert len(seen) == 1, (key, seen)
-    spark_runs = ORACLE["repeats"][mode][key]
-    assert len({json.dumps(run, sort_keys=True) for run in spark_runs}) == 1, key
-    _, function, group, column = key.split("/")
-    g = group[1:]
-    if function == "distinct":
-        layout = drops_the_total(runs[0], mode, "sum", g)
-        assert layout or cells.same_answer(runs[0], spark_runs[0]), (key, runs[0])
-        return
-    if g in cells.MERGE_TOTAL_CLASS:
-        assert drops_the_total(spark_runs[0], mode, function, g), (key, spark_runs[0])
-        scale = column.split("_")[1]
-        exact = {
-            "rows": [cells.exact_row(int(g), column)],
-            "types": ["int", f"decimal(38,{scale})"],
+@pytest.mark.parametrize("mode", ["false", "true"])
+def test_spark_drops_the_total_of_the_kept_divergence_group_on_every_run(mode: str) -> None:
+    for key, runs in ORACLE["repeats"][mode].items():
+        _, function, group, _ = key.split("/")
+        if group[1:] in cells.MERGE_TOTAL_CLASS:
+            assert len({json.dumps(run, sort_keys=True) for run in runs}) == 1, key
+            assert drops_the_total(runs[0], mode, function, group[1:]), (key, runs[0])
+
+
+@pytest.fixture(scope="module")
+def spread_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    root = tmp_path_factory.mktemp("sum-spread")
+    cells.write_spread_tables(root)
+    return root
+
+
+def spread_runs(root: Path, mode: str, partitions: int, keys: list[str]) -> dict[str, list[Any]]:
+    _reset_active_session_for_tests()
+    session = (
+        ReparkSession.builder.appName("test-sum-dec-i128wrap-1-spread")
+        .config("spark.sql.session.timeZone", "UTC")
+        .config("spark.sql.ansi.enabled", mode)
+        .getOrCreate()
+    )
+    try:
+        session.sql(f"SET datafusion.execution.target_partitions = {partitions}").collect()
+        cells.register_spread_tables(session, root)
+        return {
+            key: [
+                cells.attempt(lambda key=key: cells.answer_of(session.sql(SPREAD[key])))
+                for _ in range(cells.REPEATS)
+            ]
+            for key in keys
         }
-        assert cells.same_answer(runs[0], exact), (key, runs[0], exact)
-        return
-    assert_as_spark(runs[0], spark_runs[0], key)
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+
+@pytest.mark.parametrize("mode", ["false", "true"], ids=["ansi_off", "ansi_on"])
+@pytest.mark.parametrize("partitions", cells.TARGET_PARTITIONS, ids=lambda n: f"tp{n}")
+@pytest.mark.parametrize(("table", "column"), SPREAD_SETS, ids=[f"{t}-{c}" for t, c in SPREAD_SETS])
+def test_a_multi_partial_total_is_the_exact_total_on_every_run_at_2_4_and_8_partitions(
+    spread_root: Path, mode: str, partitions: int, table: str, column: str
+) -> None:
+    keys = [
+        key for key in sorted(SPREAD) if key.startswith(f"{table}/") and key.endswith(f"/{column}")
+    ]
+    for key, runs in spread_runs(spread_root, mode, partitions, keys).items():
+        seen = {json.dumps(run, sort_keys=True) for run in runs}
+        assert len(runs) == cells.REPEATS, key
+        assert len(seen) == 1, (key, len(seen), sorted(text[:160] for text in seen))
+        want = cells.spread_exact(key, mode)
+        if isinstance(want, str):
+            assert isinstance(runs[0], str), (key, str(runs[0])[:300])
+            assert condition(runs[0]) == want, (key, runs[0][:300])
+        else:
+            assert cells.same_answer(runs[0], want), (key, str(runs[0])[:300], str(want)[:300])
