@@ -774,9 +774,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `EmitTo::First` splitting the mask. The unit test pins the split.
 
 - `decimal_precision.rs` — **V-2 / DEC U3+U4a:** `SparkDecimalPrecision` analyzer rule.
-  U3: integer-literal `fromLiteral` (`DECIMAL(digits,0)`) on `+ − *` only (typed INT
-  columns untouched). U4a: CAST-after add/sub/mul clamp (`allowPrecisionLoss=true`).
-  `/` formula, DEC-8, and DEC-6 live in `decimal_spark.rs`. Inserted **second** in
+  U3 `fromLiteral` on every operator: [decimal_precision/](decimal_precision/map.md) (typed INT
+  columns untouched). U4a: `+ − *` cast-after clamp (`allowPrecisionLoss=true`).
+  `/` formula, DEC-8, DEC-6: `decimal_spark.rs`. Inserted **second** in
   `analyzer_rules()` (after `SparkIntegerLiteral`, before `SparkDecimalRewrite` then
   `SparkExprSemantics`). **TYPES-1 (2026-09-05):** the default-cast check accepts the
   narrowed `(20,0)`-over-`Int32` shape and keeps `(10,0)`-over-`Int32` user casts declared.

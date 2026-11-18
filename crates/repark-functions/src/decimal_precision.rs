@@ -9,6 +9,16 @@ use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{BinaryExpr, Cast, Expr, ExprSchemable, LogicalPlan, Operator};
 use datafusion::optimizer::AnalyzerRule;
 
+mod literal_step;
+
+#[cfg(test)]
+use literal_step::min_precision_digits;
+use literal_step::min_precision_integer_literal;
+pub use literal_step::{
+    PICK_MINIMUM_PRECISION_KEY, SparkPickMinimumPrecision, dataframe_divide_operand,
+    install_pick_minimum_precision, spell_integer_suffix, write_pick_minimum_precision,
+};
+
 /// Spark / Arrow decimal128 limits.
 pub(crate) const MAX_PRECISION: i32 = 38;
 pub(crate) const MINIMUM_ADJUSTED_SCALE: i32 = 6;
@@ -18,8 +28,10 @@ pub(crate) const MINIMUM_ADJUSTED_SCALE: i32 = 6;
 pub struct SparkDecimalPrecision;
 
 impl AnalyzerRule for SparkDecimalPrecision {
-    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up_with_subqueries(rewrite_plan).data()
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
+        let pick = literal_step::pick_minimum_precision(config);
+        plan.transform_up_with_subqueries(|node| rewrite_plan(node, pick))
+            .data()
     }
 
     #[allow(clippy::unnecessary_literal_bound)] // `AnalyzerRule::name` ties the lifetime to &self
@@ -29,7 +41,7 @@ impl AnalyzerRule for SparkDecimalPrecision {
 }
 
 /// Rewrite one plan node's expressions against its merged input schema, keeping output field names.
-fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+fn rewrite_plan(plan: LogicalPlan, pick: bool) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -37,18 +49,21 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten = expr.transform_down(|node| Ok(rewrite_expr(node, &schema)))?;
+        let rewritten =
+            literal_step::rewrite_operators(expr, &schema, pick)?.transform_data(|lifted| {
+                lifted.transform_down(|node| Ok(rewrite_expr(node, &schema, pick)))
+            })?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed.map_data(LogicalPlan::recompute_schema)
 }
 
 /// Stop on an already-correct Spark-typed `CAST` so a second analyze cannot recompute the formula.
-fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+fn rewrite_expr(expr: Expr, schema: &DFSchema, pick: bool) -> Transformed<Expr> {
     if let Expr::Cast(cast) = &expr
         && let Expr::BinaryExpr(inner) = cast.expr.as_ref()
         && is_decimal_arithmetic(inner.op)
-        && let Some(spark) = spark_type_after_min_precision(inner, schema)
+        && let Some(spark) = spark_type_after_min_precision(inner, schema, pick)
         && decimal128_parts(cast.field.data_type()) == Some(spark)
     {
         return Transformed::new(expr, false, TreeNodeRecursion::Stop);
@@ -59,7 +74,7 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     if !is_decimal_arithmetic(binary.op) {
         return Transformed::no(Expr::BinaryExpr(binary));
     }
-    rewrite_decimal_arithmetic(binary, schema)
+    rewrite_decimal_arithmetic(binary, schema, pick)
 }
 
 fn is_decimal_arithmetic(operator: Operator) -> bool {
@@ -70,7 +85,11 @@ fn is_decimal_arithmetic(operator: Operator) -> bool {
 }
 
 /// U3 then U4a on one `+ − *` node.
-fn rewrite_decimal_arithmetic(binary: BinaryExpr, schema: &DFSchema) -> Transformed<Expr> {
+fn rewrite_decimal_arithmetic(
+    binary: BinaryExpr,
+    schema: &DFSchema,
+    pick: bool,
+) -> Transformed<Expr> {
     let (Ok(left_type), Ok(right_type)) =
         (binary.left.get_type(schema), binary.right.get_type(schema))
     else {
@@ -82,8 +101,8 @@ fn rewrite_decimal_arithmetic(binary: BinaryExpr, schema: &DFSchema) -> Transfor
         operator,
         binary.right.clone(),
     ));
-    let left = min_precision_integer_literal(*binary.left, &right_type);
-    let right = min_precision_integer_literal(*binary.right, &left_type);
+    let left = min_precision_integer_literal(*binary.left, &right_type, pick);
+    let right = min_precision_integer_literal(*binary.right, &left_type, pick);
     let (Ok(left_type), Ok(right_type)) = (left.get_type(schema), right.get_type(schema)) else {
         return rebuilt(left, operator, right, &original);
     };
@@ -113,11 +132,15 @@ fn rewrite_decimal_arithmetic(binary: BinaryExpr, schema: &DFSchema) -> Transfor
     )
 }
 
-fn spark_type_after_min_precision(binary: &BinaryExpr, schema: &DFSchema) -> Option<(u8, i8)> {
+fn spark_type_after_min_precision(
+    binary: &BinaryExpr,
+    schema: &DFSchema,
+    pick: bool,
+) -> Option<(u8, i8)> {
     let left_type = binary.left.get_type(schema).ok()?;
     let right_type = binary.right.get_type(schema).ok()?;
-    let left = min_precision_integer_literal(*binary.left.clone(), &right_type);
-    let right = min_precision_integer_literal(*binary.right.clone(), &left_type);
+    let left = min_precision_integer_literal(*binary.left.clone(), &right_type, pick);
+    let right = min_precision_integer_literal(*binary.right.clone(), &left_type, pick);
     let left_type = left.get_type(schema).ok()?;
     let right_type = right.get_type(schema).ok()?;
     let left_decimal = decimal128_parts(&left_type)?;
@@ -131,83 +154,6 @@ fn rebuilt(left: Expr, operator: Operator, right: Expr, original: &Expr) -> Tran
         Transformed::no(next)
     } else {
         Transformed::yes(next)
-    }
-}
-
-/// U3: cast bare integer literals beside decimals to minimum-precision `DECIMAL(digits, 0)`.
-fn min_precision_integer_literal(operand: Expr, other_type: &DataType) -> Expr {
-    if decimal128_parts(other_type).is_none() {
-        return operand;
-    }
-    if let Some(value) = integer_literal_value(&operand) {
-        return cast_integer_literal_to_min_precision(operand, value);
-    }
-    let Expr::Cast(cast) = &operand else {
-        return operand;
-    };
-    let Some(value) = integer_literal_value(&cast.expr) else {
-        return operand;
-    };
-    let Ok(native_type) = cast.expr.get_type(&DFSchema::empty()) else {
-        return operand;
-    };
-    if !is_default_integer_to_decimal(cast.field.data_type(), &native_type) {
-        return operand;
-    }
-    cast_integer_literal_to_min_precision(*cast.expr.clone(), value)
-}
-
-fn cast_integer_literal_to_min_precision(integer_literal: Expr, value: i128) -> Expr {
-    let precision = min_precision_digits(value);
-    Expr::Cast(Cast::new(
-        Box::new(integer_literal),
-        DataType::Decimal128(precision, 0),
-    ))
-}
-
-fn integer_literal_value(expr: &Expr) -> Option<i128> {
-    let Expr::Literal(scalar, _) = expr else {
-        return None;
-    };
-    match scalar {
-        ScalarValue::Int8(Some(value)) => Some(i128::from(*value)),
-        ScalarValue::Int16(Some(value)) => Some(i128::from(*value)),
-        ScalarValue::Int32(Some(value)) => Some(i128::from(*value)),
-        ScalarValue::Int64(Some(value)) => Some(i128::from(*value)),
-        ScalarValue::UInt8(Some(value)) => Some(i128::from(*value)),
-        ScalarValue::UInt16(Some(value)) => Some(i128::from(*value)),
-        ScalarValue::UInt32(Some(value)) => Some(i128::from(*value)),
-        ScalarValue::UInt64(Some(value)) => Some(i128::from(*value)),
-        _ => None,
-    }
-}
-
-/// Spark `DecimalType.forType` / DataFusion `coerce_numeric_type_to_decimal128`.
-fn is_default_integer_to_decimal(cast_target: &DataType, native: &DataType) -> bool {
-    matches!(
-        (cast_target, native),
-        (
-            DataType::Decimal128(20, 0),
-            DataType::Int64 | DataType::UInt64 | DataType::Int32
-        ) | (DataType::Decimal128(10, 0), DataType::UInt32)
-            | (
-                DataType::Decimal128(5, 0),
-                DataType::Int16 | DataType::UInt16
-            )
-            | (DataType::Decimal128(3, 0), DataType::Int8 | DataType::UInt8)
-    )
-}
-
-/// Digits of the integer value (Spark `fromLiteral`).
-fn min_precision_digits(value: i128) -> u8 {
-    let magnitude = value.unsigned_abs();
-    if magnitude == 0 {
-        return 1;
-    }
-    let digits = magnitude.ilog10() + 1;
-    match u8::try_from(digits) {
-        Ok(count) if (1..=38).contains(&count) => count,
-        _ => 38,
     }
 }
 
@@ -421,6 +367,9 @@ fn is_decimal_data_type(data_type: &DataType) -> bool {
 
 #[cfg(test)]
 mod negate_null_tests;
+
+#[cfg(test)]
+mod literal_step_tests;
 
 #[cfg(test)]
 mod tests {

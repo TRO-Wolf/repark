@@ -17,10 +17,11 @@ pub(crate) fn plan_suffix_regions(tokens: &[TokenWithSpan]) -> Result<Vec<Litera
         if *long {
             if digits.bytes().all(|byte| byte.is_ascii_digit()) {
                 if digits.parse::<i64>().is_ok() {
+                    let cast = format!("CAST({digits} AS BIGINT)");
                     regions.push(LiteralRegion {
                         start: tokens[index].span.start,
                         end: tokens[index].span.end,
-                        replacement: format!("CAST({digits} AS BIGINT)"),
+                        replacement: marked_operand(tokens, index, index, "BIGINT", cast),
                     });
                 } else {
                     let minus = unary_minus_start(tokens, index);
@@ -81,10 +82,11 @@ pub(crate) fn plan_suffix_regions(tokens: &[TokenWithSpan]) -> Result<Vec<Litera
                 },
                 _ => (suffix_start(tokens, index), signed.clone()),
             };
+            let cast = suffix_replacement(digits, target, &literal)?;
             regions.push(LiteralRegion {
                 start,
                 end: found.end,
-                replacement: suffix_replacement(digits, target, &literal)?,
+                replacement: marked_operand(tokens, index, found.index, target, cast),
             });
         }
         index += 1;
@@ -134,6 +136,17 @@ fn signed_digits(tokens: &[TokenWithSpan], number: usize, digits: &str) -> Strin
             _ => return digits.to_string(),
         }
     }
+}
+
+fn marked_operand(
+    tokens: &[TokenWithSpan],
+    at: usize,
+    last: usize,
+    ty: &str,
+    cast: String,
+) -> String {
+    let unary = unary_minus_start(tokens, at).is_some();
+    repark_functions::decimal_precision::spell_integer_suffix(tokens, at, last, unary, ty, cast)
 }
 
 fn suffix_start(tokens: &[TokenWithSpan], number: usize) -> Location {
