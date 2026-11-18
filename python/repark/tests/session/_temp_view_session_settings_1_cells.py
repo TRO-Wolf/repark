@@ -6,6 +6,8 @@ from decimal import Decimal
 from itertools import count
 from typing import Any
 
+import _temp_view_session_settings_1_sweep as sweep
+
 ANSI = "spark.sql.ansi.enabled"
 TZ = "spark.sql.session.timeZone"
 LA = "America/Los_Angeles"
@@ -440,6 +442,7 @@ class Cells:
         self.shape_cells()
         self.write_cells()
         self.cache_cells()
+        sweep.Sweep(self).run()
         return self.found
 
     def explain(self) -> dict[str, str]:

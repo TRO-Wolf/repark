@@ -177,16 +177,67 @@ pub(crate) fn inlines_settings_reading_frame(
 fn reads_settings(plan: &LogicalPlan) -> Result<bool> {
     let mut reads = false;
     plan.apply_with_subqueries(|node| {
-        node.apply_expressions(|expr| {
-            if settings_free(expr, None) {
-                Ok(TreeNodeRecursion::Continue)
-            } else {
-                reads = true;
-                Ok(TreeNodeRecursion::Stop)
-            }
-        })
+        if column_only_node(node)? {
+            Ok(TreeNodeRecursion::Continue)
+        } else {
+            reads = true;
+            Ok(TreeNodeRecursion::Stop)
+        }
     })?;
     Ok(reads)
+}
+
+fn column_only_node(node: &LogicalPlan) -> Result<bool> {
+    let shape = match node {
+        LogicalPlan::Projection(_)
+        | LogicalPlan::Filter(_)
+        | LogicalPlan::SubqueryAlias(_)
+        | LogicalPlan::Sort(_)
+        | LogicalPlan::Distinct(_)
+        | LogicalPlan::Aggregate(_)
+        | LogicalPlan::EmptyRelation(_) => true,
+        LogicalPlan::TableScan(scan) => match scan.source.get_logical_plan() {
+            Some(inner) => !reads_settings(&inner)?,
+            None => true,
+        },
+        LogicalPlan::Union(union) => union.inputs.iter().all(|input| {
+            input.schema().fields().len() == union.schema.fields().len()
+                && input
+                    .schema()
+                    .fields()
+                    .iter()
+                    .zip(union.schema.fields())
+                    .all(|(field, out)| field.data_type() == out.data_type())
+        }),
+        LogicalPlan::Join(join) => join.on.iter().all(|(left, right)| {
+            matches!(
+                (left.get_type(join.left.schema()), right.get_type(join.right.schema())),
+                (Ok(left), Ok(right)) if left == right
+            )
+        }),
+        _ => false,
+    };
+    if !shape {
+        return Ok(false);
+    }
+    let mut free = true;
+    node.apply_expressions(|expr| {
+        free = bare_column(expr);
+        Ok(if free {
+            TreeNodeRecursion::Continue
+        } else {
+            TreeNodeRecursion::Stop
+        })
+    })?;
+    Ok(free)
+}
+
+fn bare_column(expr: &Expr) -> bool {
+    match expr {
+        Expr::Column(_) => true,
+        Expr::Alias(alias) => bare_column(&alias.expr),
+        _ => false,
+    }
 }
 
 pub(crate) fn reader_zone(overlay: &SessionState) -> String {

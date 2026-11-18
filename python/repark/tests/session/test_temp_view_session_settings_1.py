@@ -15,6 +15,7 @@ pytestmark = pytest.mark.xdist_group("temp_view_session_settings_1")
 HERE = Path(__file__)
 ORACLE = json.loads(HERE.with_name("temp_view_session_settings_1_spark_oracle.json").read_text())
 PLANS = json.loads(HERE.with_name("temp_view_session_settings_1_plans.json").read_text())
+SWEEP = json.loads(HERE.with_name("temp_view_session_settings_1_sweep_standing.json").read_text())
 KEYS = sorted(ORACLE["true"])
 UNSET_KEYS = sorted(ORACLE["unset"])
 RULED = "TEMP-VIEW-SESSION-SETTINGS-1 ruled class: a settings-sensitive conjunct kept above"
@@ -37,7 +38,10 @@ STANDING = {
 }
 
 
-def standing(key: str) -> tuple[str, str | list[str]] | None:
+def standing(key: str, mode: str = "true") -> tuple[str, str | list[str]] | None:
+    if key in SWEEP[mode]:
+        held = SWEEP[mode][key]
+        return SWEEP["classes"][held["class"]], held["answer"]
     if key in STANDING:
         return STANDING[key]
     if key.endswith("/ansi/mod/true>false"):
@@ -105,7 +109,7 @@ def assert_answer(found: dict[str, Any], want: dict[str, Any], key: str) -> None
 @pytest.mark.parametrize("key", KEYS)
 def test_a_cell_answers_as_spark(measured: tuple[str, dict[str, Any]], key: str) -> None:
     mode, found = measured
-    held = standing(key)
+    held = standing(key, mode)
     if held is None:
         assert_answer(found[key], ORACLE[mode][key], key)
         return

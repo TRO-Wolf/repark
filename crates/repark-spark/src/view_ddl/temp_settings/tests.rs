@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
 use datafusion::arrow::array::{ArrayRef, Decimal128Array, Float64Array, Int64Array};
-use datafusion::arrow::datatypes::{DataType, Field, Schema};
+use datafusion::arrow::datatypes::{DataType, Field, Schema, TimeUnit};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::arrow::util::pretty::pretty_format_batches;
-use datafusion::common::DFSchema;
+use datafusion::common::{DFSchema, ScalarValue};
 use datafusion::execution::session_state::SessionState;
 use datafusion::logical_expr::{
     Expr, LogicalPlanBuilder, ScalarUDF, cast, col, in_list, lit, try_cast,
@@ -309,16 +309,15 @@ async fn free_conjuncts_enter_the_body_and_the_body_answers_the_reader_zone() {
 #[test]
 fn a_frame_view_that_reads_settings_is_found_and_a_plain_one_is_not() {
     let home = TableReference::full("datafusion", "public", "f");
-    let values = LogicalPlanBuilder::values(vec![vec![lit(1_i64)]])
-        .unwrap_or_else(|error| panic!("values: {error}"));
+    let values = stamped();
     let plain = values
         .clone()
-        .project(vec![col("column1").alias("a")])
+        .project(vec![col("n").alias("a")])
         .and_then(|builder| builder.alias(home.clone()))
         .and_then(LogicalPlanBuilder::build)
         .unwrap_or_else(|error| panic!("plain: {error}"));
     let computed = values
-        .project(vec![(col("column1") + lit(1_i64)).alias("a")])
+        .project(vec![(col("n") + lit(1_i64)).alias("a")])
         .and_then(|builder| builder.alias(home.clone()))
         .and_then(LogicalPlanBuilder::build)
         .unwrap_or_else(|error| panic!("computed: {error}"));
@@ -332,6 +331,147 @@ fn a_frame_view_that_reads_settings_is_found_and_a_plain_one_is_not() {
         .unwrap_or_else(|error| panic!("derived: {error}"));
     assert!(!inlines_settings_reading_frame(&derived, &[]).unwrap_or(true));
     assert!(inlines_settings_reading_frame(&derived, &[bare]).unwrap_or(false));
+}
+
+fn stamped() -> LogicalPlanBuilder {
+    let schema = Schema::new(vec![
+        Field::new(
+            "ts",
+            DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+            true,
+        ),
+        Field::new("s", DataType::Utf8, true),
+        Field::new("n", DataType::Int64, true),
+        Field::new("flag", DataType::Boolean, true),
+    ]);
+    datafusion::logical_expr::table_scan(Some("t"), &schema, None)
+        .unwrap_or_else(|error| panic!("stamped: {error}"))
+}
+
+fn framed(builder: LogicalPlanBuilder) -> LogicalPlan {
+    builder
+        .alias(TableReference::full("datafusion", "public", "f"))
+        .and_then(LogicalPlanBuilder::build)
+        .unwrap_or_else(|error| panic!("framed: {error}"))
+}
+
+fn filtered(predicate: Expr) -> LogicalPlan {
+    framed(
+        stamped()
+            .filter(predicate)
+            .unwrap_or_else(|error| panic!("filter: {error}")),
+    )
+}
+
+fn joined(left: &str, right: &str) -> LogicalPlan {
+    let other = stamped()
+        .alias("r")
+        .and_then(LogicalPlanBuilder::build)
+        .unwrap_or_else(|error| panic!("right: {error}"));
+    let keys = (
+        vec![Column::from_qualified_name(left)],
+        vec![Column::from_qualified_name(right)],
+    );
+    framed(
+        stamped()
+            .alias("l")
+            .and_then(|builder| {
+                builder.join(other, datafusion::common::JoinType::Inner, keys, None)
+            })
+            .and_then(|builder| builder.project(vec![col("l.ts")]))
+            .unwrap_or_else(|error| panic!("join: {error}")),
+    )
+}
+
+fn analysed(state: &SessionState, plan: &LogicalPlan) -> LogicalPlan {
+    state
+        .analyzer()
+        .execute_and_check(plan.clone(), state.config_options(), |_, _| {})
+        .unwrap_or_else(|error| panic!("analysed: {error}"))
+}
+
+fn found(plan: &LogicalPlan) -> bool {
+    inlines_settings_reading_frame(plan, &[]).unwrap_or_else(|error| panic!("check: {error}"))
+}
+
+#[test]
+fn a_coercing_frame_comparison_is_never_called_settings_free() {
+    let text = || lit("2024-01-01 00:00:00");
+    let coercing = filtered(col("ts").gt_eq(text()));
+    let utc = analysed(&spark_state(true, "UTC"), &coercing);
+    let la = analysed(&spark_state(true, LA), &coercing);
+    assert_ne!(
+        utc.display_indent().to_string(),
+        la.display_indent().to_string(),
+        "the coercion reads the zone"
+    );
+    let instant = || {
+        lit(ScalarValue::TimestampMicrosecond(
+            Some(1),
+            Some("UTC".into()),
+        ))
+    };
+    let reading = [
+        coercing,
+        utc,
+        la,
+        filtered(col("ts").gt_eq(instant())),
+        filtered(col("ts").eq(text())),
+        filtered(in_list(col("ts"), vec![text(), instant()], false)),
+        filtered(col("ts").between(text(), instant())),
+        filtered(col("s").eq(lit(1_i64))),
+        filtered(lit("1").eq(col("n"))),
+        filtered(col("flag").and(col("n").is_not_null())),
+        framed(
+            stamped()
+                .project(vec![(col("n") + lit(0_i64)).alias("n")])
+                .unwrap_or_else(|error| panic!("{error}")),
+        ),
+        framed(
+            stamped()
+                .project(vec![col("ts")])
+                .and_then(|builder| {
+                    builder.union(
+                        stamped()
+                            .project(vec![col("s").alias("ts")])
+                            .and_then(LogicalPlanBuilder::build)?,
+                    )
+                })
+                .unwrap_or_else(|error| panic!("union: {error}")),
+        ),
+        joined("l.s", "r.n"),
+        framed(
+            LogicalPlanBuilder::values(vec![vec![lit(1_i64)]])
+                .unwrap_or_else(|error| panic!("values: {error}")),
+        ),
+    ];
+    for plan in &reading {
+        assert!(found(plan), "settings-reading: {}", plan.display_indent());
+    }
+    let free = [
+        framed(
+            stamped()
+                .project(vec![col("ts"), col("n").alias("m")])
+                .unwrap_or_else(|error| panic!("{error}")),
+        ),
+        filtered(col("flag")),
+        joined("l.n", "r.n"),
+        framed(
+            stamped()
+                .project(vec![col("s")])
+                .and_then(|builder| {
+                    builder.union(
+                        stamped()
+                            .project(vec![col("s")])
+                            .and_then(LogicalPlanBuilder::build)?,
+                    )
+                })
+                .unwrap_or_else(|error| panic!("union: {error}")),
+        ),
+    ];
+    for plan in &free {
+        assert!(!found(plan), "settings-free: {}", plan.display_indent());
+    }
 }
 
 #[tokio::test]

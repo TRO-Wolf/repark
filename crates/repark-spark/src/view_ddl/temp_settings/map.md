@@ -15,6 +15,8 @@ of the round 2 critic.
   runs under the reader's `create_physical_expr` with the limit above it, and leaves unread body columns pruned
   (pin a); free conjuncts enter the body and `current_timezone()` answers the reader's zone; a frame view whose plan
   reads settings is found, a plain one is not. `supports_filters_pushdown` unchanged: `../temp_view.rs`'s own tests.
+  Delta 1 (2026-11-18): an inlined frame whose analysed plan holds any expression but a bare column, a coercing
+  union or join, or a node outside the closed list, reads settings (the analysed `ts >= '…'` frame included).
 
 ## Pointers
 
