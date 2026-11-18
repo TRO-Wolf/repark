@@ -10,6 +10,7 @@ import cells
 from predict import predicted
 
 spread = Path(sys.argv[1])
+spark_dir = spread.parent / "before"
 builds = sys.argv[2:]
 GOOD = ("EQUAL", "BOTH_RAISE")
 
@@ -53,7 +54,7 @@ def model(key: str, ansi: str) -> object:
 
 for ansi in ("true", "false"):
     for conf in ("split", "default"):
-        spark = load(spread / f"spark-{ansi}-{conf}-passback.jsonl")
+        spark = load(spark_dir / f"spark-{ansi}-{conf}-passback.jsonl")
         print(f"## ANSI {ansi}, Spark local[4] {conf}: {len(spark)} queries")
         for build in builds:
             mine = load(spread / f"repark-{build}-{ansi}-none-all.jsonl")

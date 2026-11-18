@@ -41,3 +41,77 @@ Up: [map.md](map.md).
 - Q6: an ungrouped total past 38 digits mirrors Spark: `ARITHMETIC_OVERFLOW` when a partial or a single-phase aggregate overflows; `NUMERIC_VALUE_OUT_OF_RANGE` when the partials fit and the merged total does not.
 
 The step 0 revision's counts behind the severity: 522 silent decimal `sum` cells on the Spark door with ANSI on (step 0), 52 shape cells more (revision), 8 committed wrapped writes and 14 committed 39-digit values in Iceberg statements, and 2 orphan statements. The step 0 sketch says no separate question 7 is needed for views across an ANSI flip: those cells are carried by [TEMP-VIEW-SESSION-SETTINGS-1](../temp-view-session-settings-1-card-2026-11-02.md).
+
+## Built (2026-11-17, Claude Opus 5.5 `claude-opus-5-5`, xhigh) — **HALT** on the bar: 46 layout cells
+
+**Seat A** (sketch §4), branch `fix/sum-dec-i128wrap-1`, product commit `a8016e75`. Five product files (cap 6; the two
+`mod` lines in `aggregate.rs` and the test `mod` in `repark-spark/src/extension.rs` do not count):
+
+1. `crates/repark-functions/src/aggregate/spark_sum.rs` (new) — A1/A2: `SparkSum`, `sum` (`Ansi`) and `try_sum`
+   (`Try`) over DataFusion's `Sum` / datafusion-spark's `SparkTrySum`; the decimal arm, delegation of every other type,
+   `placed` / `legacy` for A3.
+2. `crates/repark-functions/src/aggregate/sum_decimal.rs` (new) — the accumulators (`DecimalSum`, `DecimalSumGroups`,
+   `DecimalSumDistinct`), Spark's check and conditions, the marker, the magnitude bound.
+3. `crates/repark-functions/src/aggregate.rs` — registration in `functions()`, `sum_udaf()`, `try_sum_udaf()`, and A3:
+   `SparkAvgAnsiMode` places each `sum` with ANSI on and swaps it to `Legacy` with ANSI off.
+4. `crates/repark-functions/src/avg_decimal.rs` — `safe_rows`, `add_batch`, `sub_batch` made `pub(crate)` (shared
+   arithmetic only; no behaviour change).
+5. `crates/repark-python/src/column/function_dispatch.rs` — the `:938` arm returns `sum_udaf()`.
+
+**The rulings carried (owner, 2026-11-17, verbatim):** "dispatch Opus xhigh effort levels for these fixes, then use
+Opus 5.5 medium verifiers for the time and not muse, at least until these things are closed out"; "defaults on both"
+(Q1 S1 label-blocking; Q2 follow Spark's per-row grouped check, raise at once with ANSI on, a marker with ANSI off and
+in `try_sum` chosen by K1 at 1.05x or less, `avg` keeps ruling (a); Q3 the native door carded NATIVE-DECIMAL-SUM-1,
+S2; Q4 SUM-BIGINT-ANSI-OVERFLOW-1 a second unit; Q5 ICE-DECIMAL-WRITE-PRECISION-1 its own card, S1, orphans S3; Q6
+`ARITHMETIC_OVERFLOW` for an overflowed partial or a single-phase aggregate, `NUMERIC_VALUE_OUT_OF_RANGE` when the
+partials fit and the merged total does not); "Defaults, merge 1355" (views read under other settings:
+TEMP-VIEW-SESSION-SETTINGS-1, not fixed here).
+
+**The marker:** the **sentinel** `i128::MIN` in the one declared state column (NULL stays "empty"), with ANSI off and
+in `try_sum`; with ANSI on the grouped accumulator raises at the first overflowing row and the partial at `state()`,
+so its state is the same one column with no marker. K1 (200,000 groups, head / main, five runs): `(10,2)` 0.909 on and 0.954 off, `(38,0)` 0.983 on and 0.950 off ([cost.md](../../../wo/sum-dec-i128wrap-1/evidence/built/cost.md)); the second state column was not needed. Survival pins
+(`aggregate::sum_tests`): an Arrow IPC round trip (spill and the distributed data path), a spilling grouped aggregate
+(`spill_count > 0`), `RepartitionExec` with and without skipped partial aggregation (`convert_to_state`); no
+`validate_decimal_precision` sits between the partial and final steps. The distributed plan codec carries the UDAF by
+name (Ballista's codec), so a decoded executor gets the registered `sum` in `Ansi` mode: the mode is lost there, as
+`avg`'s already is (behind `cluster`, which no door uses).
+
+**The bar** ([bar.md](../../../wo/sum-dec-i128wrap-1/evidence/built/bar.md)): 1,329 cells move; decimal `sum` 430 / 449 silent cells to Spark's answer, the shapes
+47 / 51 of 52, `try_sum` 16 / 17, every Iceberg statement EQUAL or BOTH_RAISE, no wrapped or 39-digit value in any data
+file, Spark reads every table; `avg`'s 330 cells per mode, the controls and the native door byte-for-byte unchanged.
+**Halt:** 46 cells (23 per mode) go from EQUAL to another verdict, all pass-back sums whose answer depends on the
+split or order: (a) 20 where Spark's default pass read several files as one split (their multi-partition twins moved
+to Spark's answer), (b) 14 grouped and distinct merges whose answer differed run to run on the build's head (corrected 2026-11-18: Spark gives one answer per layout, and two of them, `try/s4/g11/c38_0` and `mp/try/s4/g11/c38_10`, were silent with ANSI on), (c) 12 DataFrame
+`repartition(4)` cells (RoundRobinBatch keeps the batch in one partition). Named classes left: the native door, FNP-AGG-1,
+`BIGINT` (Q4), `avg` (ruling (a)), views (TEMP-VIEW-SESSION-SETTINGS-1), the layout and order classes, the observations,
+message-text classes. The writer card has no `sum` cell left.
+
+**Cost** ([cost.md](../../../wo/sum-dec-i128wrap-1/evidence/built/cost.md)): every held row at or below 1.05x except K3 `sum(d38)` at 1.067 after ten runs, inside its control band (0.978 to 1.089); K2's 1000-row frame 0.929x / 1.016x of the 3-row frame; C-012 1.001 and 0.995; K5 (reported) 0.110.
+
+## Delta 1 (2026-11-18, Claude Opus 5.5 `claude-opus-5-5`, xhigh): the grouped final merge checks its total once
+
+**The ruling (owner, 2026-11-18, about 13:40 UTC, verbatim):** "Go with Fable's leans on A, B and C." It amends Q2 (i)
+of 2026-11-17 **for the grouped final merge only** (A: "Check the grouped final merge's total once, not after every
+partial."): the partial step keeps Spark's per-row sticky check. B accepts the layout class at S3; C rates the
+distributed plan codec card S3 (the clerk files it, not this PR). Fable's earlier answers (its reply of 2026-11-18,
+questions 1 and 3) are Fable's guidance.
+
+**Built:** commits `76295c30` and `6d730107` on `fix/sum-dec-i128wrap-1`, one product file
+(`crates/repark-functions/src/aggregate/sum_decimal.rs`; still five of the cap of six). `DecimalSumGroups` adds the
+merged partials exactly (a wrap count per group) and checks each total once at `evaluate`, raising Spark's measured
+grouped condition, `ARITHMETIC_OVERFLOW` with the `try_sum` hint (not Q6's `NUMERIC_VALUE_OUT_OF_RANGE`, which is the
+ungrouped one), or answering NULL; an overflowed partial still answers as Spark does. The partial-skip path stays: with
+it off, K1 ran at 1.25x to 1.30x.
+
+**Sized before the change:** Spark 4.1.2 at `local[4]` gives one answer on every one of 20 runs for all 172 pass-back
+queries; the build's head varied on 17 (ANSI on) and 20 (off) of 401, main on 4 and 4 (its own grouped `try_sum`).
+**After:** the head varies on none; 17 cells move into EQUAL, none out; all 14 class (b) cells are EQUAL; the 32 cells
+left from EQUAL are the layout class, the same against both bases. [bar.md](../../../wo/sum-dec-i128wrap-1/evidence/built/bar.md),
+"Delta 1".
+
+**Cards (listed in bar.md, filed by the clerk):** SUM-GROUPED-MERGE-TOTAL-1 (proposed; beside
+[AVG-GROUPED-SUM-STICKY-1](avg-grouped-sum-sticky-1-card-2026-11-17.md), not rated, not label-blocking): Spark's own
+merge order passes 38 digits and comes back, Spark raises or answers NULL, RePark answers the exact total (pinned on
+the `t4` group 21, 8 cells). SUM-PARTIAL-LAYOUT-1 (proposed, S3): the 32 layout cells.
+
+**Cost:** in progress (delta 1 paused on its turn budget; the K1 rows of the first two runs hold, see the hand-back notes). The cost series and the gates are the next step.

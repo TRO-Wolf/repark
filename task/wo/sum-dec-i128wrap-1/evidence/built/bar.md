@@ -163,3 +163,91 @@ not move. No modelled cell
 leaves EQUAL: on these fixtures Spark's own merge order never passes 38 digits and comes back. The pin file's new
 `t4` table builds one that does (group 21, `M`, `1`, `−1` in three files; Spark merges `M` and `1` first and raises
 or answers NULL on all 20 runs), the accepted class's pin.
+
+### What was built
+
+One product file, `crates/repark-functions/src/aggregate/sum_decimal.rs` (still five of the cap of six):
+`DecimalSumGroups` (`:288`) keeps its per-row check in the partial step (`fold_rows`, `:331`: sticky per group, ANSI
+raises at the first overflowing row) and gains a final step of its own (`fold_partials`, `:363`): the merged partials
+are added exactly, with a wrap count per group, and an overflowed partial's marker still answers NULL (ANSI off and
+`try_sum`) or raises at once (ANSI on). `evaluate` (`:462`) checks each group's total once and raises Spark's grouped
+condition, `ARITHMETIC_OVERFLOW` with the `try_sum` hint, or answers NULL. A final step that spills ships its merged
+total (`state`, `:494`) as is, or the marker once it no longer fits in 128 bits. The skip path stays
+(`convert_to_state`, `:517`): with it off (commit `76295c30`) K1 ran at 1.25x to 1.30x of main, so `6d730107` put it
+back; where DataFusion skips the partial step (at least 100,000 rows in a partition with 80 % or more distinct groups)
+the rows reach the final step and are totalled once, the final-merge class below. The ungrouped and window
+accumulators, `DecimalSumDistinct`, `avg` and the non-decimal delegation are unchanged.
+
+### After the change (head `6d730107`, package `pkg-sum-6d730107`)
+
+The step 0's whole domain table re-ran on the head package and on main's (`pkg-view1-c54f5fc7`), Spark's side the
+step 0's; compared with [compare_bar.py](compare_bar.py) against both bases, `pkg-view1-c54f5fc7` and the build's base
+`pkg-avg-27d6149f` (the step 0's raw). Compacted output and verdicts: [delta1/raw/](delta1/raw/map.md); comparisons:
+[delta1/compare/](delta1/compare/map.md).
+
+**Counts per verdict** (Spark door, default and multi-partition passes; 2,537 cells per mode):
+
+| build | ANSI | EQUAL | BOTH_RAISE | SPARK_RAISES | VALUE | REPARK_RAISES | BOTH_RAISE_OTHER | FORMAT |
+|---|---|---|---|---|---|---|---|---|
+| base `pkg-avg-27d6149f` | on | 1,769 | 138 | 549 | 26 | 24 | 31 | 0 |
+| main `pkg-view1-c54f5fc7` | on | 1,770 | 138 | 549 | 25 | 24 | 31 | 0 |
+| the build's head `pkg-sum-a8016e75` | on | 1,765 | 655 | 32 | 9 | 45 | 31 | 0 |
+| **head `pkg-sum-6d730107`** | on | **1,773** | **655** | 32 | **6** | **40** | 31 | 0 |
+| base `pkg-avg-27d6149f` | off | 1,912 | 0 | 0 | 570 | 47 | 0 | 8 |
+| main `pkg-view1-c54f5fc7` | off | 1,914 | 0 | 0 | 568 | 47 | 0 | 8 |
+| the build's head `pkg-sum-a8016e75` | off | 2,439 | 0 | 0 | 56 | 34 | 0 | 8 |
+| **head `pkg-sum-6d730107`** | off | **2,448** | 0 | 0 | **47** | 34 | 0 | 8 |
+
+**Step 1's two numbers, after.** (1) Spark is unchanged (0 of 172 queries vary, above). RePark's head: **0 of 401
+queries give more than one answer** in 20 runs, in both modes (the build's head: 17 and 20; main: 4 and 4); Fable's
+probe itself, 40 runs per query, answers `M` on every run for all three queries in both modes. (2) The moves, against
+the build's head: **17 Spark-door cells into EQUAL** (8 with ANSI on, 9 off: the 11 the model predicted and the six
+`DISTINCT` cells it could not place), **0 out of EQUAL or BOTH_RAISE**; the other 6 cells that moved are the views
+across an ANSI flip, which main's TEMP-VIEW-SESSION-SETTINGS-1 part 1 fixed. Against Spark's `local[4]` run the head
+is right on every run for 148 (on) and 155 (off) of the 172 queries and never varies (the build's head: 137 and 144
+right on every run, 17 and 20 on some runs only); the rest are named below.
+
+**All 14 class (b) cells are EQUAL**, both silent ANSI-on cells among them (`try/s4/g11/c38_0` and
+`mp/try/s4/g11/c38_10` answer Spark's value on every run).
+
+**The hard bar.** Against either base, **32 cells go from EQUAL to another verdict, the same 32 against both**: the
+layout class, owner-accepted 2026-11-18 at S3 (ruling B), cell for cell below. No other cell leaves EQUAL or
+BOTH_RAISE. `avg`'s 330 cells per mode, the 150 control cells per mode (the 17 `BIGINT` ANSI cells among them) and the
+native door's 594 records are byte-for-byte those of both bases and of the build's head. **The two bases differ on 9
+cells:** `rev/view_flip_avg/g5/c38_0` in both modes (main's TEMP-VIEW-SESSION-SETTINGS-1 part 1) and seven grouped
+`try_sum` cells over several partials (`try/s4/g11/c38_0`, `c38_38` and `mp/try/s4/g11/c38_0`, `c38_10`, `c38_38`
+across the modes), where main's own `try_sum` answers differently from run to run.
+
+#### The cards (listed here; the clerk files them)
+
+**SUM-GROUPED-MERGE-TOTAL-1** (proposed name, beside AVG-GROUPED-SUM-STICKY-1). **Severity: not rated; not
+label-blocking**, AVG-GROUPED-SUM-STICKY-1's rating (owner's ruling (a) of 2026-11-17), since Fable's lean put it
+beside that card. A grouped decimal `sum` or `try_sum` whose partials each fit and whose total fits, where Spark's own
+merge order passes 38 digits and comes back: Spark raises `ARITHMETIC_OVERFLOW` (ANSI on) or answers NULL; RePark
+answers the exact total on every run. Cells: none in the domain table (no fixture has that merge order); the pin
+file's `t4` group 21 (`M`, `1`, `−1` in three files; Spark merges `M` and `1` first), `final/sum/g21/c38_0`,
+`c38_38` and `final/try_sum/g21/c38_0`, `c38_38`, in both modes (8 cells). The same direction, outside the bar's
+oracle: where DataFusion skips the partial step (large, high-cardinality inputs), a group's rows reach the final step
+and are totalled once, where Spark checks each row (pinned in Rust: `the_overflow_marker_survives_spill_repartition_and_skipped_partials`,
+group 20,001); and Spark's own `DISTINCT` partial (`sum/distinct/g11`, three columns per mode, non-EQUAL on both bases
+too: the distinct values `M`, `1`, `−1`, Spark summing `M` and `1` first).
+
+**The layout card** (proposed name SUM-PARTIAL-LAYOUT-1). **Severity: S3** (owner, 2026-11-18, ruling B). RePark's
+partials follow its plan, not Spark's splits, so a pass-back sum's partial can pass 38 digits on one engine and not the
+other; both answer one value per layout. The 32 cells: (a) one split against several files, 20:
+`sum/ungrouped_s4/g10` and `g12` at `c38_0`, `c38_10`, `c38_38`, `sum/ungrouped_p2/g21` and `sum/grouped_p2/g24` at
+`c38_0` and `c38_38`, in both modes (Spark's default pass reads the files as one split; the `mp/` twins are EQUAL or
+BOTH_RAISE); (c) `repartition(4)`, 12: `df/repartition/g10` and `g11` at the three columns, both modes (Spark deals rows
+round robin, RePark's `RoundRobinBatch` keeps the small batch whole). Measured outside the bar, against Spark
+`local[4]`: the `DISTINCT` cells over groups 11 and 12 and the ungrouped `DISTINCT` over group 5, where Spark's
+distinct partials follow its four shuffle partitions (a third kind of layout, not in ruling B's list: the owner may
+want to confirm it), and `mp/avg/grouped_p2/g24` (AVG-GROUPED-SUM-STICKY-1).
+
+**Every non-EQUAL cell left on the head, by named class** ([delta1/compare/head-vs-main/compare.md](delta1/compare/head-vs-main/compare.md)):
+as the build's table above, except that the "order" row now holds only the `repartition(4)` cells (6 per mode) and
+cells that were non-EQUAL on both bases too (`sum/distinct/g11`, 3 per mode, and with ANSI off `sum/distinct_all/*`
+and `df/repartition/all/*`, 3 each: Spark's own `DISTINCT` or one-partition order), and the views row holds 2 per mode
+after main's fix: native door 305 / 288, `F.sum_distinct` 30 / 30, `BIGINT` ANSI 17 / 0, `avg` 12 / 14, layout 35 / 18, order 9 /
+15, views 2 / 2, seen beside 6 / 7, string notation 0 / 8, decimal `+` at scale 38 2 / 2, `BIGINT` Parquet statistics
+2 / 2, CTAS read-back not-found text 8 / 0, same condition by message 4 / 0, numerically equal 1 / 1, Py4J-wrapped
+condition 2 / 0.

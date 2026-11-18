@@ -1,0 +1,238 @@
+# transitions (run, ANSI, main -> head, cells)
+
+- native false: EQUAL -> EQUAL: 301
+- native false: FORMAT -> FORMAT: 4
+- native false: REPARK_RAISES -> REPARK_RAISES: 118
+- native false: TYPE -> TYPE: 30
+- native false: VALUE -> VALUE: 136
+- native true: BOTH_RAISE_OTHER -> BOTH_RAISE_OTHER: 11
+- native true: EQUAL -> EQUAL: 284
+- native true: REPARK_RAISES -> REPARK_RAISES: 107
+- native true: SPARK_RAISES -> SPARK_RAISES: 150
+- native true: TYPE -> TYPE: 30
+- native true: VALUE -> VALUE: 7
+- revision false: BOTH_RAISE -> BOTH_RAISE: 2
+- revision false: EQUAL -> EQUAL: 106
+- revision false: REPARK_RAISES -> EQUAL: 3
+- revision false: REPARK_RAISES -> REPARK_RAISES: 7
+- revision false: VALUE -> VALUE: 3
+- revision true: BOTH_RAISE -> BOTH_RAISE: 70
+- revision true: BOTH_RAISE_OTHER -> BOTH_RAISE_OTHER: 18
+- revision true: EQUAL -> EQUAL: 27
+- revision true: SPARK_RAISES -> BOTH_RAISE: 3
+- revision true: SPARK_RAISES -> SPARK_RAISES: 2
+- revision true: VALUE -> VALUE: 1
+- spark_door false: EQUAL -> EQUAL: 2439
+- spark_door false: FORMAT -> FORMAT: 8
+- spark_door false: REPARK_RAISES -> REPARK_RAISES: 34
+- spark_door false: VALUE -> EQUAL: 9
+- spark_door false: VALUE -> VALUE: 47
+- spark_door true: BOTH_RAISE -> BOTH_RAISE: 655
+- spark_door true: BOTH_RAISE_OTHER -> BOTH_RAISE_OTHER: 31
+- spark_door true: EQUAL -> EQUAL: 1765
+- spark_door true: REPARK_RAISES -> EQUAL: 5
+- spark_door true: REPARK_RAISES -> REPARK_RAISES: 40
+- spark_door true: SPARK_RAISES -> SPARK_RAISES: 32
+- spark_door true: VALUE -> EQUAL: 3
+- spark_door true: VALUE -> VALUE: 6
+
+# head verdicts by family
+
+- native false native EQUAL: 301
+- native false native FORMAT: 4
+- native false native REPARK_RAISES: 118
+- native false native TYPE: 30
+- native false native VALUE: 136
+- native true native BOTH_RAISE_OTHER: 11
+- native true native EQUAL: 284
+- native true native REPARK_RAISES: 107
+- native true native SPARK_RAISES: 150
+- native true native TYPE: 30
+- native true native VALUE: 7
+- revision false ice EQUAL: 8
+- revision false ice/ctas EQUAL: 12
+- revision false ice/insert EQUAL: 12
+- revision false ice/merge_cow EQUAL: 6
+- revision false ice/merge_mor EQUAL: 6
+- revision false obs/caststr_col REPARK_RAISES: 1
+- revision false obs/caststr_col_sum REPARK_RAISES: 1
+- revision false obs/caststr_lit REPARK_RAISES: 1
+- revision false obs/describe VALUE: 2
+- revision false obs/pivot_sql REPARK_RAISES: 1
+- revision false obs/summary REPARK_RAISES: 1
+- revision false rev/cast_dbl EQUAL: 1
+- revision false rev/cast_dbl_col EQUAL: 1
+- revision false rev/cast_dbl_grouped EQUAL: 1
+- revision false rev/cube EQUAL: 2
+- revision false rev/cube_total EQUAL: 2
+- revision false rev/df_call_function EQUAL: 1
+- revision false rev/df_call_function_ungrouped EQUAL: 1
+- revision false rev/df_cube_total EQUAL: 1
+- revision false rev/df_gsets_total EQUAL: 1
+- revision false rev/df_pivot EQUAL: 1
+- revision false rev/df_pivot_agg EQUAL: 1
+- revision false rev/df_rollup EQUAL: 1
+- revision false rev/df_rollup_total EQUAL: 1
+- revision false rev/df_try_sum_grouped EQUAL: 4
+- revision false rev/df_try_sum_ungrouped EQUAL: 4
+- revision false rev/df_try_sum_ungrouped VALUE: 1
+- revision false rev/dfview_flip REPARK_RAISES: 2
+- revision false rev/distinct_mixed EQUAL: 4
+- revision false rev/distinct_mixed_ungrouped EQUAL: 2
+- revision false rev/distinct_two EQUAL: 2
+- revision false rev/filter EQUAL: 2
+- revision false rev/filter_grouped EQUAL: 2
+- revision false rev/flip_direct BOTH_RAISE: 1
+- revision false rev/flip_direct_avg BOTH_RAISE: 1
+- revision false rev/gsets EQUAL: 2
+- revision false rev/gsets_total EQUAL: 2
+- revision false rev/having_gt EQUAL: 2
+- revision false rev/having_lt EQUAL: 2
+- revision false rev/rollup EQUAL: 2
+- revision false rev/rollup_total EQUAL: 2
+- revision false rev/sum_case EQUAL: 2
+- revision false rev/sum_case_grouped EQUAL: 2
+- revision false rev/sum_mul1 EQUAL: 1
+- revision false rev/sum_mul1_grouped EQUAL: 1
+- revision false rev/union EQUAL: 2
+- revision false rev/union_grouped EQUAL: 2
+- revision false rev/union_partial EQUAL: 2
+- revision false rev/view_flip EQUAL: 2
+- revision false rev/view_flip_avg EQUAL: 1
+- revision false rev/view_same EQUAL: 2
+- revision false rev/view_same_avg EQUAL: 1
+- revision true ice BOTH_RAISE: 4
+- revision true ice BOTH_RAISE_OTHER: 2
+- revision true ice EQUAL: 2
+- revision true ice/ctas BOTH_RAISE: 6
+- revision true ice/ctas BOTH_RAISE_OTHER: 6
+- revision true ice/insert BOTH_RAISE: 6
+- revision true ice/insert EQUAL: 6
+- revision true ice/merge_cow BOTH_RAISE: 3
+- revision true ice/merge_cow EQUAL: 3
+- revision true ice/merge_mor BOTH_RAISE: 3
+- revision true ice/merge_mor EQUAL: 3
+- revision true obs/caststr_col BOTH_RAISE_OTHER: 1
+- revision true obs/caststr_col_sum BOTH_RAISE_OTHER: 1
+- revision true obs/caststr_lit BOTH_RAISE_OTHER: 1
+- revision true obs/describe BOTH_RAISE: 1
+- revision true obs/describe BOTH_RAISE_OTHER: 1
+- revision true obs/pivot_sql BOTH_RAISE_OTHER: 1
+- revision true obs/summary BOTH_RAISE_OTHER: 1
+- revision true rev/cast_dbl BOTH_RAISE: 1
+- revision true rev/cast_dbl_col BOTH_RAISE: 1
+- revision true rev/cast_dbl_grouped BOTH_RAISE: 1
+- revision true rev/cube BOTH_RAISE: 2
+- revision true rev/cube_total BOTH_RAISE: 2
+- revision true rev/df_call_function BOTH_RAISE: 1
+- revision true rev/df_call_function_ungrouped BOTH_RAISE: 1
+- revision true rev/df_cube_total BOTH_RAISE: 1
+- revision true rev/df_gsets_total BOTH_RAISE: 1
+- revision true rev/df_pivot BOTH_RAISE: 1
+- revision true rev/df_pivot_agg BOTH_RAISE: 1
+- revision true rev/df_rollup BOTH_RAISE: 1
+- revision true rev/df_rollup_total BOTH_RAISE: 1
+- revision true rev/df_try_sum_grouped EQUAL: 4
+- revision true rev/df_try_sum_ungrouped EQUAL: 4
+- revision true rev/df_try_sum_ungrouped VALUE: 1
+- revision true rev/dfview_flip SPARK_RAISES: 2
+- revision true rev/distinct_mixed BOTH_RAISE: 2
+- revision true rev/distinct_mixed EQUAL: 2
+- revision true rev/distinct_mixed_ungrouped BOTH_RAISE_OTHER: 2
+- revision true rev/distinct_two BOTH_RAISE: 2
+- revision true rev/filter BOTH_RAISE: 2
+- revision true rev/filter_grouped BOTH_RAISE: 2
+- revision true rev/flip_direct EQUAL: 1
+- revision true rev/flip_direct_avg EQUAL: 1
+- revision true rev/gsets BOTH_RAISE: 2
+- revision true rev/gsets_total BOTH_RAISE: 2
+- revision true rev/having_gt BOTH_RAISE: 2
+- revision true rev/having_lt BOTH_RAISE: 2
+- revision true rev/rollup BOTH_RAISE: 2
+- revision true rev/rollup_total BOTH_RAISE: 2
+- revision true rev/sum_case BOTH_RAISE: 1
+- revision true rev/sum_case EQUAL: 1
+- revision true rev/sum_case_grouped BOTH_RAISE: 2
+- revision true rev/sum_mul1 BOTH_RAISE: 1
+- revision true rev/sum_mul1_grouped BOTH_RAISE: 1
+- revision true rev/union BOTH_RAISE_OTHER: 2
+- revision true rev/union_grouped BOTH_RAISE: 2
+- revision true rev/union_partial BOTH_RAISE: 2
+- revision true rev/view_flip BOTH_RAISE: 2
+- revision true rev/view_flip_avg BOTH_RAISE: 1
+- revision true rev/view_same BOTH_RAISE: 2
+- revision true rev/view_same_avg BOTH_RAISE: 1
+- spark_door false avg EQUAL: 320
+- spark_door false avg VALUE: 10
+- spark_door false control EQUAL: 150
+- spark_door false side REPARK_RAISES: 2
+- spark_door false sum EQUAL: 1585
+- spark_door false sum FORMAT: 8
+- spark_door false sum REPARK_RAISES: 32
+- spark_door false sum VALUE: 31
+- spark_door false try_sum EQUAL: 393
+- spark_door false try_sum VALUE: 6
+- spark_door true avg BOTH_RAISE: 110
+- spark_door true avg BOTH_RAISE_OTHER: 2
+- spark_door true avg EQUAL: 208
+- spark_door true avg SPARK_RAISES: 10
+- spark_door true control EQUAL: 133
+- spark_door true control SPARK_RAISES: 17
+- spark_door true side BOTH_RAISE_OTHER: 1
+- spark_door true side REPARK_RAISES: 1
+- spark_door true sum BOTH_RAISE: 545
+- spark_door true sum BOTH_RAISE_OTHER: 28
+- spark_door true sum EQUAL: 1039
+- spark_door true sum REPARK_RAISES: 39
+- spark_door true sum SPARK_RAISES: 5
+- spark_door true try_sum EQUAL: 393
+- spark_door true try_sum VALUE: 6
+
+# non-EQUAL cells left on head, by named class
+
+- native false native door (NATIVE-DECIMAL-SUM-1, Q3) FORMAT: 4
+- native false native door (NATIVE-DECIMAL-SUM-1, Q3) REPARK_RAISES: 118
+- native false native door (NATIVE-DECIMAL-SUM-1, Q3) TYPE: 30
+- native false native door (NATIVE-DECIMAL-SUM-1, Q3) VALUE: 136
+- native true native door (NATIVE-DECIMAL-SUM-1, Q3) BOTH_RAISE_OTHER: 11
+- native true native door (NATIVE-DECIMAL-SUM-1, Q3) REPARK_RAISES: 107
+- native true native door (NATIVE-DECIMAL-SUM-1, Q3) SPARK_RAISES: 150
+- native true native door (NATIVE-DECIMAL-SUM-1, Q3) TYPE: 30
+- native true native door (NATIVE-DECIMAL-SUM-1, Q3) VALUE: 7
+- revision false numerically equal; the revision analyzer compares text VALUE: 1
+- revision false seen beside (step 0 sketch section 8) REPARK_RAISES: 5
+- revision false seen beside (step 0 sketch section 8) VALUE: 2
+- revision false views across an ANSI flip (TEMP-VIEW-SESSION-SETTINGS-1) REPARK_RAISES: 2
+- revision true no table on both; RePark's not-found text lacks TABLE_OR_VIEW_NOT_FOUND BOTH_RAISE_OTHER: 8
+- revision true numerically equal; the revision analyzer compares text VALUE: 1
+- revision true same condition by message; the revision analyzer reads getCondition BOTH_RAISE_OTHER: 4
+- revision true seen beside (step 0 sketch section 8) BOTH_RAISE_OTHER: 6
+- revision true views across an ANSI flip (TEMP-VIEW-SESSION-SETTINGS-1) SPARK_RAISES: 2
+- spark_door false BIGINT Parquet statistics assertion (DECIMAL-CAST-SELECTIVITY-1) REPARK_RAISES: 2
+- spark_door false F.sum_distinct missing (FNP-AGG-1) REPARK_RAISES: 30
+- spark_door false avg (AVG-GROUPED-SUM-STICKY-1, ruling (a)) VALUE: 14
+- spark_door false decimal + at scale 38 (DECIMAL-MULTIPLY-OVERFLOW-1 family) REPARK_RAISES: 2
+- spark_door false decimal-to-string notation (domain table section 10) FORMAT: 8
+- spark_door false layout: RePark reads each file as a partial where Spark read one split (Q6) VALUE: 18
+- spark_door false order: a pass-back sum's partial or merge order differs from Spark's (Q2 (i)) VALUE: 15
+- spark_door true BIGINT ANSI overflow (SUM-BIGINT-ANSI-OVERFLOW-1, Q4) SPARK_RAISES: 17
+- spark_door true BIGINT Parquet statistics assertion (DECIMAL-CAST-SELECTIVITY-1) BOTH_RAISE_OTHER: 1
+- spark_door true BIGINT Parquet statistics assertion (DECIMAL-CAST-SELECTIVITY-1) REPARK_RAISES: 1
+- spark_door true F.sum_distinct missing (FNP-AGG-1) BOTH_RAISE_OTHER: 9
+- spark_door true F.sum_distinct missing (FNP-AGG-1) REPARK_RAISES: 21
+- spark_door true avg (AVG-GROUPED-SUM-STICKY-1, ruling (a)) BOTH_RAISE_OTHER: 2
+- spark_door true avg (AVG-GROUPED-SUM-STICKY-1, ruling (a)) SPARK_RAISES: 10
+- spark_door true both raise; Spark's condition is wrapped by Py4J BOTH_RAISE_OTHER: 2
+- spark_door true decimal + at scale 38 (DECIMAL-MULTIPLY-OVERFLOW-1 family) REPARK_RAISES: 2
+- spark_door true layout: RePark reads each file as a partial where Spark read one split (Q6) BOTH_RAISE_OTHER: 17
+- spark_door true layout: RePark reads each file as a partial where Spark read one split (Q6) REPARK_RAISES: 10
+- spark_door true layout: RePark reads each file as a partial where Spark read one split (Q6) SPARK_RAISES: 2
+- spark_door true layout: RePark reads each file as a partial where Spark read one split (Q6) VALUE: 6
+- spark_door true order: a pass-back sum's partial or merge order differs from Spark's (Q2 (i)) REPARK_RAISES: 6
+- spark_door true order: a pass-back sum's partial or merge order differs from Spark's (Q2 (i)) SPARK_RAISES: 3
+
+# EQUAL/BOTH_RAISE -> other on head: 0
+
+
+# cells present on one side only: 0
+

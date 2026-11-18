@@ -20,5 +20,7 @@ change before any product file moved, and measured it after; the results are in 
 - `sizing.py` — each RePark build's answers on every run against Spark's `local[4]` answers, and the model's.
 - [spread/](spread/map.md) — the raw spreads, before (`pkg-sum-a8016e75`, main's `pkg-view1-c54f5fc7`, Spark) and after
   (the delta's head).
+- [raw/](raw/map.md) — the bar's re-run on the head package `pkg-sum-6d730107` and main's verdicts.
+- [compare/](compare/map.md) — the head against main, the build's base and the build's head; main against the base.
 
 Up: [../map.md](../map.md).
