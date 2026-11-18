@@ -439,3 +439,77 @@ async fn a_frame_that_only_scans_keeps_todays_provider() {
         .unwrap_or_else(|error| panic!("compute: {error}"));
     assert!(frame_plan(wrapped(&computing).as_ref()).is_some());
 }
+
+async fn json_frame(reader: &ReparkSession, root: &std::path::Path) -> DataFrame {
+    let path = root.join("a.json");
+    std::fs::write(&path, "{\"n\": 1, \"ts\": \"2024-01-01 03:00:00\"}\n")
+        .unwrap_or_else(|error| panic!("write: {error}"));
+    let path = path.to_str().unwrap_or_else(|| panic!("utf-8 path"));
+    reader
+        .read_json(path, &std::collections::HashMap::new())
+        .await
+        .unwrap_or_else(|error| panic!("read: {error}"))
+        .select(vec![
+            datafusion::logical_expr::col("n"),
+            datafusion::logical_expr::col("ts").alias("t"),
+        ])
+        .unwrap_or_else(|error| panic!("select: {error}"))
+}
+
+#[tokio::test]
+async fn a_json_reader_lineage_keeps_todays_provider_through_views() {
+    let reader = session(true);
+    let root = tempfile::tempdir().unwrap_or_else(|error| panic!("dir: {error}"));
+    let json = json_frame(&reader, root.path()).await;
+    let computing = json
+        .clone()
+        .select(vec![
+            datafusion::logical_expr::col("n") + datafusion::logical_expr::lit(1),
+        ])
+        .unwrap_or_else(|error| panic!("compute: {error}"));
+    assert!(reader_lineage(computing.logical_plan()));
+    assert!(frame_plan(wrapped(&computing).as_ref()).is_none());
+    reader
+        .context()
+        .register_table("jv", wrapped(&json))
+        .unwrap_or_else(|error| panic!("register: {error}"));
+    let over = reader
+        .context()
+        .table("jv")
+        .await
+        .unwrap_or_else(|error| panic!("table: {error}"))
+        .select(vec![
+            datafusion::logical_expr::col("n") * datafusion::logical_expr::lit(2),
+        ])
+        .unwrap_or_else(|error| panic!("over: {error}"));
+    assert!(frame_plan(wrapped(&over).as_ref()).is_none());
+    let held = reader
+        .context()
+        .sql(OVERFLOW)
+        .await
+        .unwrap_or_else(|error| panic!("held: {error}"));
+    assert!(!reader_lineage(held.logical_plan()));
+    reader
+        .context()
+        .register_table("pv", wrapped(&held))
+        .unwrap_or_else(|error| panic!("register: {error}"));
+    let marked = reader
+        .context()
+        .table("pv")
+        .await
+        .unwrap_or_else(|error| panic!("table: {error}"));
+    assert!(holds_marker(marked.logical_plan()).unwrap_or_else(|error| panic!("{error}")));
+    let mixed = DataFrame::new(
+        reader.context().state(),
+        LogicalPlanBuilder::from(marked.logical_plan().clone())
+            .cross_join(computing.logical_plan().clone())
+            .and_then(LogicalPlanBuilder::build)
+            .unwrap_or_else(|error| panic!("join: {error}")),
+    );
+    let provider = wrapped(&mixed);
+    assert!(frame_plan(provider.as_ref()).is_none());
+    let inlined = provider
+        .get_logical_plan()
+        .unwrap_or_else(|| panic!("a frame provider inlines"));
+    assert!(!holds_marker(inlined.as_ref()).unwrap_or_else(|error| panic!("{error}")));
+}

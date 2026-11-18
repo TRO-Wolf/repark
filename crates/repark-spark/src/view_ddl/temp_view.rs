@@ -19,13 +19,15 @@ use repark_common::spark_error;
 use repark_core::column_resolution::on_grown_stack_with;
 use repark_core::{CatalogRegistry, TempViewSession, frame_names};
 
-use crate::view_ddl::frame_settings::{frame_plan, opened};
+use crate::view_ddl::frame_settings::{frame_plan, opened, reader_lineage};
 use crate::view_ddl::read::{
     MAX_VIEW_EXPANSION_DEPTH, TempHomes, VIEW_EXPANSION_STACK_RED_ZONE,
     VIEW_EXPANSION_STACK_SEGMENT, nested_depth_refusal, plan_prepared_body,
     prepare_view_body_sql_with, refuse_write_query_body,
 };
-use crate::view_ddl::temp_settings::{TempViewSettings, plan_under_overlay, view_filter_pushdown};
+use crate::view_ddl::temp_settings::{
+    TempViewSettings, inlines_settings_reading_frame, plan_under_overlay, view_filter_pushdown,
+};
 
 const MAX_TEMP_VIEW_WALK: usize = 4096;
 
@@ -136,8 +138,11 @@ impl ReplanningTempView {
         }
         refuse_dropped_dependency(&self.ctx, &self.dependencies)?;
         let live = Arc::clone(self.ctx.state_ref().read().config_options());
-        if let Some(overlay) = self.definition.settings.overlay(state, &live) {
-            return Box::pin(self.scan_under(state, overlay, projection, filters, limit)).await;
+        if let Some(overlay) = self.definition.settings.overlay(state, &live)
+            && let Some(plan) =
+                Box::pin(self.scan_under(state, overlay, projection, filters, limit)).await?
+        {
+            return Ok(plan);
         }
         let frame = Box::pin(plan_definition(
             &self.ctx,
@@ -158,7 +163,7 @@ impl ReplanningTempView {
         projection: Option<&Vec<usize>>,
         filters: &[Expr],
         limit: Option<usize>,
-    ) -> Result<Arc<dyn ExecutionPlan>> {
+    ) -> Result<Option<Arc<dyn ExecutionPlan>>> {
         let planner = SessionContext::new_with_state(overlay.clone());
         let frame = Box::pin(plan_definition(
             &planner,
@@ -169,10 +174,28 @@ impl ReplanningTempView {
         .await?;
         let body = conform_to_creation_schema(frame, &self.schema, &self.definition.display)?
             .into_unoptimized_plan();
+        if reader_lineage(&body) && inlines_settings_reading_frame(&body, &self.reader_homes())? {
+            return Ok(None);
+        }
         Box::pin(plan_under_overlay(
             &overlay, reader, body, projection, filters, limit,
         ))
         .await
+        .map(Some)
+    }
+
+    fn reader_homes(&self) -> Vec<TableReference> {
+        self.temp_homes
+            .values()
+            .filter_map(|home| match home.as_slice() {
+                [catalog, schema, table] => Some(TableReference::full(
+                    catalog.as_str(),
+                    schema.as_str(),
+                    table.as_str(),
+                )),
+                _ => None,
+            })
+            .collect()
     }
 }
 

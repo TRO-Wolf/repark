@@ -4,7 +4,7 @@ use std::sync::Arc;
 use datafusion::arrow::datatypes::DataType;
 use datafusion::catalog::Session;
 use datafusion::common::config::{ConfigExtension, ConfigOptions};
-use datafusion::common::tree_node::{Transformed, TreeNode};
+use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{Column, DFSchema};
 use datafusion::error::Result;
 use datafusion::execution::session_state::SessionState;
@@ -19,6 +19,7 @@ use datafusion::physical_plan::coalesce_partitions::CoalescePartitionsExec;
 use datafusion::physical_plan::filter::FilterExecBuilder;
 use datafusion::physical_plan::limit::{GlobalLimitExec, LocalLimitExec};
 use datafusion::physical_plan::{ExecutionPlan, ExecutionPlanProperties, PhysicalExpr};
+use datafusion::sql::TableReference;
 use repark_functions::ansi::SparkAnsiConfig;
 use repark_functions::decimal_legacy::SparkDecimalTruncateLegacy;
 use repark_functions::session_time_zone::{
@@ -174,6 +175,90 @@ fn numeric_cast(operand: &Expr, target: &DataType, schema: Option<&DFSchema>) ->
         && schema
             .and_then(|schema| operand.get_type(schema).ok())
             .is_some_and(|source| source.is_numeric())
+}
+
+pub(crate) fn inlines_settings_reading_frame(
+    body: &LogicalPlan,
+    homes: &[TableReference],
+) -> Result<bool> {
+    let mut found = false;
+    body.apply_with_subqueries(|node| {
+        if let LogicalPlan::SubqueryAlias(alias) = node
+            && (!matches!(alias.alias, TableReference::Bare { .. }) || homes.contains(&alias.alias))
+            && reads_settings(alias.input.as_ref())?
+        {
+            found = true;
+            return Ok(TreeNodeRecursion::Stop);
+        }
+        Ok(TreeNodeRecursion::Continue)
+    })?;
+    Ok(found)
+}
+
+fn reads_settings(plan: &LogicalPlan) -> Result<bool> {
+    let mut reads = false;
+    plan.apply_with_subqueries(|node| {
+        if column_only_node(node)? {
+            Ok(TreeNodeRecursion::Continue)
+        } else {
+            reads = true;
+            Ok(TreeNodeRecursion::Stop)
+        }
+    })?;
+    Ok(reads)
+}
+
+fn column_only_node(node: &LogicalPlan) -> Result<bool> {
+    let shape = match node {
+        LogicalPlan::Projection(_)
+        | LogicalPlan::Filter(_)
+        | LogicalPlan::SubqueryAlias(_)
+        | LogicalPlan::Sort(_)
+        | LogicalPlan::Distinct(_)
+        | LogicalPlan::Aggregate(_)
+        | LogicalPlan::EmptyRelation(_) => true,
+        LogicalPlan::TableScan(scan) => match scan.source.get_logical_plan() {
+            Some(inner) => !reads_settings(&inner)?,
+            None => true,
+        },
+        LogicalPlan::Union(union) => union.inputs.iter().all(|input| {
+            input.schema().fields().len() == union.schema.fields().len()
+                && input
+                    .schema()
+                    .fields()
+                    .iter()
+                    .zip(union.schema.fields())
+                    .all(|(field, out)| field.data_type() == out.data_type())
+        }),
+        LogicalPlan::Join(join) => join.on.iter().all(|(left, right)| {
+            matches!(
+                (left.get_type(join.left.schema()), right.get_type(join.right.schema())),
+                (Ok(left), Ok(right)) if left == right
+            )
+        }),
+        _ => false,
+    };
+    if !shape {
+        return Ok(false);
+    }
+    let mut free = true;
+    node.apply_expressions(|expr| {
+        free = bare_column(expr);
+        Ok(if free {
+            TreeNodeRecursion::Continue
+        } else {
+            TreeNodeRecursion::Stop
+        })
+    })?;
+    Ok(free)
+}
+
+fn bare_column(expr: &Expr) -> bool {
+    match expr {
+        Expr::Column(_) => true,
+        Expr::Alias(alias) => bare_column(&alias.expr),
+        _ => false,
+    }
 }
 
 pub(crate) fn reader_zone(overlay: &SessionState) -> String {

@@ -12,7 +12,10 @@ use datafusion::common::config::ConfigOptions;
 use datafusion::common::metadata::FieldMetadata;
 use datafusion::common::tree_node::{Transformed, TreeNodeRecursion};
 use datafusion::common::{DFSchemaRef, internal_datafusion_err};
-use datafusion::datasource::{ViewTable, provider_as_source};
+use datafusion::datasource::file_format::csv::CsvFormat;
+use datafusion::datasource::file_format::json::JsonFormat;
+use datafusion::datasource::listing::ListingTable;
+use datafusion::datasource::{ViewTable, provider_as_source, source_as_provider};
 use datafusion::error::Result;
 use datafusion::logical_expr::{
     Expr, Extension, LogicalPlan, Projection, TableProviderFilterPushDown, TableScan, TableType,
@@ -26,11 +29,12 @@ use repark_core::frame_names;
 
 use crate::view_ddl::read::{MAX_VIEW_EXPANSION_DEPTH, nested_depth_refusal};
 use crate::view_ddl::temp_settings::{TempViewSettings, plan_under_overlay, view_filter_pushdown};
-use crate::view_ddl::temp_view::replanning_scan;
+use crate::view_ddl::temp_view::{definition_plan, replanning_scan};
 
 pub(crate) const FRAME_SETTINGS_RULE: &str = "repark_frame_settings";
 const NODE_NAME: &str = "FrameSettings";
 const WRITER_V2: &str = "_repark_writer_v2_";
+const MAX_LINEAGE_WALK: usize = 4096;
 
 #[derive(Debug, Clone)]
 struct FrameSettingsNode {
@@ -193,6 +197,9 @@ pub(crate) fn frame_view(
     live: &ConfigOptions,
 ) -> Arc<dyn TableProvider> {
     let (state, plan) = frame.clone().into_parts();
+    if reader_lineage(&plan) {
+        return DataFrame::new(state, unmarked(plan)).into_view();
+    }
     if replanning_scan(&plan) || scans_only(&plan) {
         return DataFrame::new(state, plan).into_view();
     }
@@ -234,6 +241,57 @@ fn scans_only(plan: &LogicalPlan) -> bool {
         })
     });
     walked.is_ok() && only
+}
+
+pub(crate) fn reader_lineage(plan: &LogicalPlan) -> bool {
+    let mut pending = vec![plan.clone()];
+    let mut walked = 0;
+    let mut found = false;
+    while let Some(next) = pending.pop() {
+        walked += 1;
+        if walked > MAX_LINEAGE_WALK {
+            return true;
+        }
+        let visited = next.apply_with_subqueries(|node| {
+            if let LogicalPlan::TableScan(scan) = node
+                && let Ok(provider) = source_as_provider(&scan.source)
+            {
+                if reader_scan(provider.as_ref()) {
+                    found = true;
+                    return Ok(TreeNodeRecursion::Stop);
+                }
+                if let Some(inner) = definition_plan(provider.as_ref())
+                    .or_else(|| provider.get_logical_plan().map(Cow::into_owned))
+                {
+                    pending.push(inner);
+                }
+            }
+            Ok(TreeNodeRecursion::Continue)
+        });
+        if found || visited.is_err() {
+            return true;
+        }
+    }
+    false
+}
+
+fn reader_scan(provider: &dyn TableProvider) -> bool {
+    let any: &dyn Any = provider;
+    any.downcast_ref::<ListingTable>().is_some_and(|table| {
+        let format: &dyn Any = table.options().format.as_ref();
+        format.is::<JsonFormat>() || format.is::<CsvFormat>()
+    })
+}
+
+fn unmarked(plan: LogicalPlan) -> LogicalPlan {
+    let original = plan.clone();
+    plan.transform_up_with_subqueries(|node| {
+        Ok(match marker(&node) {
+            Some(found) => Transformed::yes(found.input.clone()),
+            None => Transformed::no(node),
+        })
+    })
+    .map_or(original, |done| done.data)
 }
 
 fn writer_v2(name: &str) -> bool {

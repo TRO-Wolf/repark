@@ -8,7 +8,9 @@ as Spark's `writeTo` re-analyses) and inlines a `FrameSettings` marker; the anal
 unwraps it when the planning state's settings match, else closes it as a `TableScan` over the frame analysed under its
 own settings, planned by part 1's overlay; `opened` and `definition_plan` read through a closed frame, and the SQL
 door's bare `ReplanningTempView` scan and a frame that only scans (columns over a scan, whose source reads the
-reader's settings at scan time, as Spark's file scans do) keep `into_view`. Part 1's inlined-frame fallback is removed.
+reader's settings at scan time, as Spark's file scans do) keep `into_view`, as does a lineage reaching a JSON or CSV
+scan (delta 1, `reader_lineage`, which walks through view and frame providers; its markers are unwrapped). Part 1's
+inlined-frame fallback stays for that lineage only.
 
 ## Contents
 
@@ -19,7 +21,8 @@ reader's settings at scan time, as Spark's file scans do) keep `into_view`. Part
   `definition_plan` and `get_logical_plan` read through a closed frame to its plan, and its schema carries no
   attribute id; a frame view answers `temp_view_column_comments` and `renamed_temp_view` as `into_view` does; the
   SQL door's registration stays a bare scan; materialisation takes the frame's options and a fresh start time
-  (pin f); a frame that only scans keeps `into_view`, one that computes is marked.
+  (pin f); a frame that only scans keeps `into_view`, one that computes is marked; a JSON frame that computes, a frame
+  over its view and a join of it with a marked frame keep `into_view`, the last with its marker unwrapped (delta 1).
 
 ## Pointers
 

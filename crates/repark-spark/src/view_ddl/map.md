@@ -81,15 +81,15 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
 - `temp_alter.rs` — **SPARK-DOOR-TEMP-VIEW-DDL-1 (2026-11-02, AUD-015):** `route_temp_view_alter`, called by `temp_ddl.rs` after the AUD-006 check; `route_temp_view_statement` refuses a leading `;` before any route. The target is read with sqlparser's `ALTER [ICEBERG] TABLE [IF EXISTS] [ONLY] <name> [ON CLUSTER <ident>]` grammar: a prefix or quoted target part is RePark-only and refuses; a view-named target refuses with Spark's `EXPECT_TABLE_NOT_VIEW` text; an unknown word head fails closed; `RENAME TO` renames the view (`renamed_temp_view`). Fix round 3: a lookup error refuses (no `.ok()??`), and the raw token decides a name the segment parser rejects (core `temp_views.rs`).
 - `temp_view.rs` — **WO STORE-TS-TO-NUMERIC-1 (2026-09-28):** `ReplanningTempView`
   keeps the plan it built at CREATE (`definition_plan`), and the free function
-  `definition_plan` answers it for such a provider; `extension.rs` registers that
+  `definition_plan` answers it; `extension.rs` registers that
   function as the session's `ViewDefinitionPlans` resolver so the store gates can follow a
   `-NULL` column through a temp view. `get_logical_plan` is unimplemented, so
   DataFusion never inlines a replanning view.
   **ATTR-VIEW-SEMANTICS-1 (2026-10-05):** the provider schema is born without attribute ids,
   and the definition's ids are no longer carried, so each read mints fresh ids through the
   facade stamp, as Spark does (card `task/roadmap/mid-term/attr-view-semantics-1-card-2026-10-04.md`).
-  **IPI-40 PR6** `ReplanningTempView`, the provider behind
-  a SQL temp view: it
+  **IPI-40 PR6** `ReplanningTempView`, a SQL temp view's
+  provider: it
   re-plans the stored body at every scan under the creation-time catalog and
   namespace and the temp names captured at CREATE, conforms the answer to the
   creation columns by name (Spark's up-cast widening, else
@@ -109,7 +109,7 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   `VIEW_EXPANSION_STACK_SEGMENT` (8 MiB), so a 100-level chain reads on the caller's stack.
   **RP-56 DIFF-PROBE fold (2026-09-29):** the provider reports `TableType::Temporary`
   (it is one): the twin-star guard skips its schema and the re-planned body carries the
-  verdict: a scan-free twin body answers, a twin-table body refuses, both like Spark. **TEMP-VIEW-SESSION-SETTINGS-1 part 1 (2026-11-17):** the definition carries `TempViewSettings`; a scan whose reader and live settings match takes the path above, else `temp_settings.rs` ([tests](temp_settings/map.md)); `renamed_temp_view` copies them. `temp_settings.rs` — the captured ANSI, zone, decimal-legacy and timestamp-type carriers; the overlay (the reader's state and start time, the captured values, the outermost reader's zone); the closed settings-free allow-list; the body planned under it with `current_timezone()` rewritten to the reader's zone, free conjuncts inside, sensitive ones and the limit above under the reader's `create_physical_expr`. **Part 2 (2026-11-18):** `frame_settings.rs`, the DataFrame door ([map](frame_settings/map.md)): a frame view inlines a marker of its frame's settings that the first analyzer rule unwraps or closes as a `TableScan` under the overlay; the fallback is gone.
+  verdict: a scan-free twin body answers, a twin-table body refuses, both like Spark. **TEMP-VIEW-SESSION-SETTINGS-1 part 1 (2026-11-17):** the definition carries `TempViewSettings`; a scan whose reader and live settings match takes the path above, else `temp_settings.rs` ([tests](temp_settings/map.md)); `renamed_temp_view` copies them. `temp_settings.rs` — the four captured carriers; the overlay (the reader's state and start time, the captured values, the outermost reader's zone); the closed settings-free allow-list; the body planned under it with `current_timezone()` rewritten to the reader's zone, free conjuncts inside, sensitive ones and the limit above under the reader's `create_physical_expr`. **Part 2 (2026-11-18):** `frame_settings.rs`, the DataFrame door ([map](frame_settings/map.md)): a frame view inlines a marker of its settings that the first analyzer rule unwraps or closes as a `TableScan` under the overlay; a JSON or CSV scan's lineage keeps `into_view` and part 1's fallback (delta 1).
 - `read.rs` — `ViewSchemaProvider` (`table` tries inner, then `load_view`,
   and returns a read-only provider planning the stored SQL under its stored
   defaults with aliases applied; `table_names` stays tables-only);
