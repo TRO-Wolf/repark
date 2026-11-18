@@ -15,3 +15,7 @@ The ruling covers SELECT answers only. Where the same expressions reach a write,
 ## Append (2026-11-17): element_at past the end, Fable's cell
 
 Fable's cell (Fable (`claude-fable-5-2`), consult reply of 2026-11-17, section 4, seen in passing): `element_at(arr, 2)` on a one-element array answers NULL with ANSI on, where Spark raises `INVALID_ARRAY_INDEX_IN_ELEMENT_AT`. It is the `element_at` cell of D10 above, measured on main before #1341. The subscript card [ANSI-SUBSCRIPT-AND-AMBIGUOUS-FIELD-1](ansi-subscript-and-ambiguous-field-1-card-2026-11-05.md) covers the write routes and defers SELECT answers to this card. Ruled 2026-11-17 (side check 5 of the [rulings](../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md)): a dated line here, and no new card. The severity is not restated here.
+
+## Append (2026-11-17, later): the view step 0's element_at and array[5] cells
+
+The view step 0 (TEMP-VIEW-SESSION-SETTINGS-1, PR #1356) measured `element_at(array, 5)` and `array[5]` with ANSI on: both answer NULL on RePark where Spark raises. These are D10's own shapes on direct queries (4 cells, the step 0's domain table §6), and a view carries the same answer. Ruled "defaults on both" (owner, 2026-11-17, question 6 of the step 0): they stay under D10, with no new card and no re-rating. The severity is not restated here ([rulings](../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md), later section).

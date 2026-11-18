@@ -1,0 +1,156 @@
+{"cell": "direct/add/true", "kind": "direct", "repark": "RAISE ARITHMETIC_OVERFLOW", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "BOTH_RAISE"}
+{"cell": "direct/add/false", "kind": "direct", "repark": "-2147483648", "spark": "-2147483648", "verdict": "EQUAL"}
+{"cell": "direct/div/true", "kind": "direct", "repark": "RAISE DIVIDE_BY_ZERO", "spark": "RAISE DIVIDE_BY_ZERO", "verdict": "BOTH_RAISE"}
+{"cell": "direct/div/false", "kind": "direct", "repark": "null", "spark": "null", "verdict": "EQUAL"}
+{"cell": "direct/hour/UTC", "kind": "direct", "repark": "2", "spark": "2", "verdict": "EQUAL"}
+{"cell": "direct/hour/America/Los_Angeles", "kind": "direct", "repark": "18", "spark": "18", "verdict": "EQUAL"}
+{"cell": "direct/str/UTC", "kind": "direct", "repark": "2024-01-01 02:30:00", "spark": "2024-01-01 02:30:00", "verdict": "EQUAL"}
+{"cell": "direct/str/America/Los_Angeles", "kind": "direct", "repark": "2023-12-31 18:30:00", "spark": "2023-12-31 18:30:00", "verdict": "EQUAL"}
+{"cell": "direct/date/UTC", "kind": "direct", "repark": "2024-01-01", "spark": "2024-01-01", "verdict": "EQUAL"}
+{"cell": "direct/date/America/Los_Angeles", "kind": "direct", "repark": "2023-12-31", "spark": "2023-12-31", "verdict": "EQUAL"}
+{"cell": "direct/lit/UTC", "kind": "direct", "repark": "1704076200", "spark": "1704076200", "verdict": "EQUAL"}
+{"cell": "direct/lit/America/Los_Angeles", "kind": "direct", "repark": "1704105000", "spark": "1704105000", "verdict": "EQUAL"}
+{"cell": "direct/fdiv/true", "kind": "direct", "repark": "RAISE DIVIDE_BY_ZERO", "spark": "RAISE DIVIDE_BY_ZERO", "verdict": "BOTH_RAISE"}
+{"cell": "direct/fdiv/false", "kind": "direct", "repark": "0|null;2|5.0", "spark": "0|null;2|5.0", "verdict": "EQUAL"}
+{"cell": "direct/fcast/true", "kind": "direct", "repark": "RAISE Arrow error: Cast error: Cannot cast string 'abc' to value o", "spark": "RAISE CAST_INVALID_INPUT", "verdict": "BOTH_RAISE_OTHER"}
+{"cell": "direct/fcast/false", "kind": "direct", "repark": "RAISE Arrow error: Cast error: Cannot cast string 'abc' to value o", "spark": "7|7;abc|null", "verdict": "REPARK_RAISES"}
+{"cell": "direct/lts/UTC", "kind": "direct", "repark": "21", "spark": "21", "verdict": "EQUAL"}
+{"cell": "direct/lts/America/Los_Angeles", "kind": "direct", "repark": "13", "spark": "13", "verdict": "EQUAL"}
+{"cell": "direct/cdate/UTC", "kind": "direct", "repark": "2026-11-17", "spark": "2026-11-17", "verdict": "EQUAL"}
+{"cell": "direct/cdate/America/Los_Angeles", "kind": "direct", "repark": "2026-11-17", "spark": "2026-11-17", "verdict": "EQUAL"}
+{"cell": "direct/now/UTC", "kind": "direct", "repark": "21", "spark": "21", "verdict": "EQUAL"}
+{"cell": "direct/now/America/Los_Angeles", "kind": "direct", "repark": "13", "spark": "13", "verdict": "EQUAL"}
+{"cell": "filter_below/sql/fdiv/on_off", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "filter_below/sql/fdiv/off_on", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "filter_below/sql/fdiv/on_on", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "filter_below/sql/fcast/on_off", "kind": "filter", "repark": "7", "spark": "7", "verdict": "EQUAL"}
+{"cell": "filter_below/sql/fcast/off_on", "kind": "filter", "repark": "7", "spark": "7", "verdict": "EQUAL"}
+{"cell": "filter_below/sql/fcast/on_on", "kind": "filter", "repark": "7", "spark": "7", "verdict": "EQUAL"}
+{"cell": "filter_on_m/sql/fdiv/on_off", "kind": "filter", "repark": "5.0", "spark": "RAISE DIVIDE_BY_ZERO", "verdict": "REPARK_ANSWERS"}
+{"cell": "filter_on_m/sql/fdiv/off_on", "kind": "filter", "repark": "RAISE DIVIDE_BY_ZERO", "spark": "5.0", "verdict": "REPARK_RAISES"}
+{"cell": "limit/sql/fdiv/on_off", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "limit/sql/fdiv/off_on", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "filter_sensitive/sql/fdiv/on_off", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "filter_sensitive/sql/fdiv/off_on", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "filter_below/df/fdiv/on_off", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "filter_below/df/fdiv/off_on", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "filter_below/df/fdiv/on_on", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "filter_below/df/fcast/on_off", "kind": "filter", "repark": "7", "spark": "7", "verdict": "EQUAL"}
+{"cell": "filter_below/df/fcast/off_on", "kind": "filter", "repark": "7", "spark": "7", "verdict": "EQUAL"}
+{"cell": "filter_below/df/fcast/on_on", "kind": "filter", "repark": "7", "spark": "7", "verdict": "EQUAL"}
+{"cell": "filter_on_m/df/fdiv/on_off", "kind": "filter", "repark": "RAISE DIVIDE_BY_ZERO", "spark": "RAISE DIVIDE_BY_ZERO", "verdict": "BOTH_RAISE"}
+{"cell": "filter_on_m/df/fdiv/off_on", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "limit/df/fdiv/on_off", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "limit/df/fdiv/off_on", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "filter_sensitive/df/fdiv/on_off", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "filter_sensitive/df/fdiv/off_on", "kind": "filter", "repark": "5.0", "spark": "5.0", "verdict": "EQUAL"}
+{"cell": "cache/sql_then_set", "kind": "cache", "repark": "before=2;after=18;cached=true", "spark": "before=2;after=2;cached=true", "verdict": "VALUE"}
+{"cell": "cache/df_then_set", "kind": "cache", "repark": "after=18;cached=true", "spark": "after=2;cached=true", "verdict": "VALUE"}
+{"cell": "cache/lazy_then_set", "kind": "cache", "repark": "after=18", "spark": "after=2", "verdict": "VALUE"}
+{"cell": "cache/catalog_then_set", "kind": "cache", "repark": "after=18", "spark": "after=2", "verdict": "VALUE"}
+{"cell": "cache/set_between_zone", "kind": "cache", "repark": "after=18", "spark": "after=2", "verdict": "VALUE"}
+{"cell": "cache/set_between_off_on", "kind": "cache", "repark": "RAISE ARITHMETIC_OVERFLOW", "spark": "after=-2147483648", "verdict": "REPARK_RAISES"}
+{"cell": "cache/held_then_set", "kind": "cache", "repark": "after=2", "spark": "after=2", "verdict": "EQUAL"}
+{"cell": "derive/alias/add/on_off", "kind": "derive", "repark": "RAISE ARITHMETIC_OVERFLOW", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "BOTH_RAISE"}
+{"cell": "derive/alias/hour/utc_la", "kind": "derive", "repark": "2", "spark": "2", "verdict": "EQUAL"}
+{"cell": "derive/union/add/on_off", "kind": "derive", "repark": "RAISE ARITHMETIC_OVERFLOW", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "BOTH_RAISE"}
+{"cell": "derive/union/hour/utc_la", "kind": "derive", "repark": "2;2", "spark": "2;2", "verdict": "EQUAL"}
+{"cell": "derive/distinct/add/on_off", "kind": "derive", "repark": "RAISE ARITHMETIC_OVERFLOW", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "BOTH_RAISE"}
+{"cell": "derive/distinct/hour/utc_la", "kind": "derive", "repark": "2", "spark": "2", "verdict": "EQUAL"}
+{"cell": "derive/filter/add/on_off", "kind": "derive", "repark": "RAISE ARITHMETIC_OVERFLOW", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "BOTH_RAISE"}
+{"cell": "derive/filter/hour/utc_la", "kind": "derive", "repark": "2", "spark": "2", "verdict": "EQUAL"}
+{"cell": "derive/selectcol/add/on_off", "kind": "derive", "repark": "RAISE ARITHMETIC_OVERFLOW", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "BOTH_RAISE"}
+{"cell": "derive/selectcol/hour/utc_la", "kind": "derive", "repark": "2", "spark": "2", "verdict": "EQUAL"}
+{"cell": "derive/join/add/on_off", "kind": "derive", "repark": "-2147483648", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "derive/join/hour/utc_la", "kind": "derive", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "derive/crossjoin/add/on_off", "kind": "derive", "repark": "-2147483648", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "derive/crossjoin/hour/utc_la", "kind": "derive", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "derive/gagg/add/on_off", "kind": "derive", "repark": "RAISE ARITHMETIC_OVERFLOW", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "BOTH_RAISE"}
+{"cell": "derive/gagg/hour/utc_la", "kind": "derive", "repark": "2", "spark": "2", "verdict": "EQUAL"}
+{"cell": "derive/gagg_lit/add/on_off", "kind": "derive", "repark": "-2147483648|1", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "derive/gagg_lit/hour/utc_la", "kind": "derive", "repark": "18|1", "spark": "2|1", "verdict": "VALUE"}
+{"cell": "derive/groupagg/add/on_off", "kind": "derive", "repark": "RAISE ARITHMETIC_OVERFLOW", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "BOTH_RAISE"}
+{"cell": "derive/groupagg/hour/utc_la", "kind": "derive", "repark": "2", "spark": "2", "verdict": "EQUAL"}
+{"cell": "derive/unpivot/add/on_off", "kind": "derive", "repark": "-2147483648", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "derive/unpivot/hour/utc_la", "kind": "derive", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "derive/selectexpr/add/on_off", "kind": "derive", "repark": "-2147483648", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "derive/selectexpr/hour/utc_la", "kind": "derive", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "derive/explode/add/on_off", "kind": "derive", "repark": "-2147483648", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "derive/explode/hour/utc_la", "kind": "derive", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "derive/intersect/add/on_off", "kind": "derive", "repark": "-2147483648", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "derive/intersect/hour/utc_la", "kind": "derive", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "derive/subtract/add/on_off", "kind": "derive", "repark": "-2147483648", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "derive/subtract/hour/utc_la", "kind": "derive", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "derive/cache/add/on_off", "kind": "derive", "repark": "-2147483648", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "derive/cache/hour/utc_la", "kind": "derive", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "derive/tempview_after/add/on_off", "kind": "derive", "repark": "-2147483648", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "derive/tempview_after/hour/utc_la", "kind": "derive", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "derive/registertemptable/add/on_off", "kind": "derive", "repark": "-2147483648", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "derive/registertemptable/hour/utc_la", "kind": "derive", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "door/registertemptable/add/on_off", "kind": "door", "repark": "-2147483648", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "door/registertemptable/hour/utc_la", "kind": "door", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "rename/view/div/on_off", "kind": "rename", "repark": "RAISE TABLE_OR_VIEW_NOT_FOUND", "spark": "RAISE DIVIDE_BY_ZERO", "verdict": "BOTH_RAISE_OTHER"}
+{"cell": "rename/table/div/on_off", "kind": "rename", "repark": "null", "spark": "RAISE DIVIDE_BY_ZERO", "verdict": "REPARK_ANSWERS"}
+{"cell": "rename/view/hour/utc_la", "kind": "rename", "repark": "RAISE TABLE_OR_VIEW_NOT_FOUND", "spark": "2", "verdict": "REPARK_RAISES"}
+{"cell": "rename/table/hour/utc_la", "kind": "rename", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "rename/view/control/same", "kind": "rename", "repark": "RAISE TABLE_OR_VIEW_NOT_FOUND", "spark": "1", "verdict": "REPARK_RAISES"}
+{"cell": "alter_view_as/div/on_off", "kind": "direct_gap", "repark": "RAISE Error during planning: ALTER VIEW <viewName> AS is not suppo", "spark": "null", "verdict": "REPARK_RAISES"}
+{"cell": "alter_view_as/hour/utc_la", "kind": "direct_gap", "repark": "RAISE Error during planning: ALTER VIEW <viewName> AS is not suppo", "spark": "18", "verdict": "REPARK_RAISES"}
+{"cell": "cache_table_as_select/hour/same", "kind": "direct_gap", "repark": "RAISE This feature is not implemented: Unsupported SQL statement: ", "spark": "2", "verdict": "REPARK_RAISES"}
+{"cell": "now_fn/sql/lts/utc_la", "kind": "now_fn", "repark": "13", "spark": "21", "verdict": "VALUE"}
+{"cell": "now_fn/sql/lts/la_utc", "kind": "now_fn", "repark": "21", "spark": "13", "verdict": "VALUE"}
+{"cell": "now_fn/df/lts/utc_la", "kind": "now_fn", "repark": "13", "spark": "21", "verdict": "VALUE"}
+{"cell": "now_fn/df/lts/la_utc", "kind": "now_fn", "repark": "21", "spark": "13", "verdict": "VALUE"}
+{"cell": "now_fn/sql/cdate/utc_la", "kind": "now_fn", "repark": "2026-11-17", "spark": "2026-11-17", "verdict": "EQUAL"}
+{"cell": "now_fn/sql/cdate/la_utc", "kind": "now_fn", "repark": "2026-11-17", "spark": "2026-11-17", "verdict": "EQUAL"}
+{"cell": "now_fn/df/cdate/utc_la", "kind": "now_fn", "repark": "2026-11-17", "spark": "2026-11-17", "verdict": "EQUAL"}
+{"cell": "now_fn/df/cdate/la_utc", "kind": "now_fn", "repark": "2026-11-17", "spark": "2026-11-17", "verdict": "EQUAL"}
+{"cell": "now_fn/sql/now/utc_la", "kind": "now_fn", "repark": "13", "spark": "21", "verdict": "VALUE"}
+{"cell": "now_fn/sql/now/la_utc", "kind": "now_fn", "repark": "21", "spark": "13", "verdict": "VALUE"}
+{"cell": "now_fn/df/now/utc_la", "kind": "now_fn", "repark": "13", "spark": "21", "verdict": "VALUE"}
+{"cell": "now_fn/df/now/la_utc", "kind": "now_fn", "repark": "21", "spark": "13", "verdict": "VALUE"}
+{"cell": "replace/sql/div/on_off", "kind": "shape", "repark": "RAISE DIVIDE_BY_ZERO", "spark": "null", "verdict": "REPARK_RAISES"}
+{"cell": "replace/sql/hour/utc_la", "kind": "shape", "repark": "2", "spark": "18", "verdict": "VALUE"}
+{"cell": "self_join/sql/add/on_off", "kind": "shape", "repark": "-2147483648|-2147483648", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "self_join/sql/hour/utc_la", "kind": "shape", "repark": "18|18", "spark": "2|2", "verdict": "VALUE"}
+{"cell": "reset/all/sql/div", "kind": "shape", "repark": "RAISE DIVIDE_BY_ZERO", "spark": "null {\"after_reset\": \"true\"}", "verdict": "REPARK_RAISES"}
+{"cell": "reset/key/sql/hour", "kind": "shape", "repark": "2 {\"after_reset\": \"UTC\"}", "spark": "18 {\"after_reset\": \"UTC\"}", "verdict": "VALUE"}
+{"cell": "conf_set/conf_then_sql/sql/div/on_off", "kind": "shape", "repark": "null", "spark": "RAISE DIVIDE_BY_ZERO", "verdict": "REPARK_ANSWERS"}
+{"cell": "conf_set/sql_then_conf/sql/div/on_off", "kind": "shape", "repark": "null", "spark": "RAISE DIVIDE_BY_ZERO", "verdict": "REPARK_ANSWERS"}
+{"cell": "conf_set/conf_then_sql/sql/hour/utc_la", "kind": "shape", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "conf_set/sql_then_conf/sql/hour/utc_la", "kind": "shape", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "replace/df/div/on_off", "kind": "shape", "repark": "null", "spark": "null", "verdict": "EQUAL"}
+{"cell": "replace/df/hour/utc_la", "kind": "shape", "repark": "2", "spark": "18", "verdict": "VALUE"}
+{"cell": "self_join/df/add/on_off", "kind": "shape", "repark": "-2147483648|-2147483648", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "self_join/df/hour/utc_la", "kind": "shape", "repark": "18|18", "spark": "2|2", "verdict": "VALUE"}
+{"cell": "reset/all/df/div", "kind": "shape", "repark": "null {\"after_reset\": \"true\"}", "spark": "null {\"after_reset\": \"true\"}", "verdict": "EQUAL"}
+{"cell": "reset/key/df/hour", "kind": "shape", "repark": "2 {\"after_reset\": \"UTC\"}", "spark": "18 {\"after_reset\": \"UTC\"}", "verdict": "VALUE"}
+{"cell": "conf_set/conf_then_sql/df/div/on_off", "kind": "shape", "repark": "RAISE DIVIDE_BY_ZERO", "spark": "RAISE DIVIDE_BY_ZERO", "verdict": "BOTH_RAISE"}
+{"cell": "conf_set/sql_then_conf/df/div/on_off", "kind": "shape", "repark": "RAISE DIVIDE_BY_ZERO", "spark": "RAISE DIVIDE_BY_ZERO", "verdict": "BOTH_RAISE"}
+{"cell": "conf_set/conf_then_sql/df/hour/utc_la", "kind": "shape", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "conf_set/sql_then_conf/df/hour/utc_la", "kind": "shape", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "defcat/direct", "kind": "defcat", "repark": "lc", "spark": "lc", "verdict": "EQUAL"}
+{"cell": "defcat/sql", "kind": "defcat", "repark": "lc", "spark": "lc", "verdict": "EQUAL"}
+{"cell": "defcat/df", "kind": "defcat", "repark": "lc", "spark": "lc", "verdict": "EQUAL"}
+{"cell": "held_write/writeto/hour/utc_la", "kind": "held_write", "repark": "18", "spark": "18", "verdict": "EQUAL"}
+{"cell": "held_write/writeto/hour/la_utc", "kind": "held_write", "repark": "2", "spark": "2", "verdict": "EQUAL"}
+{"cell": "held_write/writeto/str/utc_la", "kind": "held_write", "repark": "2023-12-31 18:30:00", "spark": "2023-12-31 18:30:00", "verdict": "EQUAL"}
+{"cell": "held_write/writeto/str/la_utc", "kind": "held_write", "repark": "2024-01-01 02:30:00", "spark": "2024-01-01 02:30:00", "verdict": "EQUAL"}
+{"cell": "held_write/writeto/date/utc_la", "kind": "held_write", "repark": "2023-12-31", "spark": "2023-12-31", "verdict": "EQUAL"}
+{"cell": "held_write/writeto/date/la_utc", "kind": "held_write", "repark": "2024-01-01", "spark": "2024-01-01", "verdict": "EQUAL"}
+{"cell": "held_write/writeto/lit/utc_la", "kind": "held_write", "repark": "1704076200", "spark": "1704076200", "verdict": "EQUAL"}
+{"cell": "held_write/writeto/lit/la_utc", "kind": "held_write", "repark": "1704105000", "spark": "1704105000", "verdict": "EQUAL"}
+{"cell": "held_write/parquet/hour/utc_la", "kind": "held_write", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "held_write/parquet/hour/la_utc", "kind": "held_write", "repark": "2", "spark": "18", "verdict": "VALUE"}
+{"cell": "held_write/parquet/lit/utc_la", "kind": "held_write", "repark": "1704076200", "spark": "1704076200", "verdict": "EQUAL"}
+{"cell": "held_write/parquet/lit/la_utc", "kind": "held_write", "repark": "1704105000", "spark": "1704105000", "verdict": "EQUAL"}
+{"cell": "held_write/saveastable/hour/utc_la", "kind": "held_write", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "held_write/saveastable/hour/la_utc", "kind": "held_write", "repark": "2", "spark": "18", "verdict": "VALUE"}
+{"cell": "held_write/saveastable/lit/utc_la", "kind": "held_write", "repark": "1704076200", "spark": "1704076200", "verdict": "EQUAL"}
+{"cell": "held_write/saveastable/lit/la_utc", "kind": "held_write", "repark": "1704105000", "spark": "1704105000", "verdict": "EQUAL"}
+{"cell": "held_write/insertinto/hour/utc_la", "kind": "held_write", "repark": "18", "spark": "2", "verdict": "VALUE"}
+{"cell": "held_write/insertinto/hour/la_utc", "kind": "held_write", "repark": "2", "spark": "18", "verdict": "VALUE"}
+{"cell": "held_write/insertinto/lit/utc_la", "kind": "held_write", "repark": "1704076200", "spark": "1704076200", "verdict": "EQUAL"}
+{"cell": "held_write/insertinto/lit/la_utc", "kind": "held_write", "repark": "1704105000", "spark": "1704105000", "verdict": "EQUAL"}
+{"cell": "held_write/writeto/add/on_off", "kind": "held_write", "repark": "-2147483648", "spark": "RAISE ARITHMETIC_OVERFLOW", "verdict": "REPARK_ANSWERS"}
+{"cell": "held_write/writeto/add/off_on", "kind": "held_write", "repark": "RAISE ARITHMETIC_OVERFLOW", "spark": "-2147483648", "verdict": "REPARK_RAISES"}
