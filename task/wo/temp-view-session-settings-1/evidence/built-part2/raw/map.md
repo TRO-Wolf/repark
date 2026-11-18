@@ -11,5 +11,7 @@ Scratch and home paths replaced by placeholders.
 - [delta1/](delta1/) — delta 1's runs on Spark, `pre`, `part1`, `b74` (`74c22dfe`) and `head` (`513208ce`): the reader
   sweep, the join sweep (`joins-task2.jsonl` with task 2's backed-out fix, `task2.patch`), `smartCsv`, the verifier's
   probes, Fable's probe, the plans; `summary.txt` the tallies.
+- [delta2/](delta2/) — `wsweep.jsonl`: the write sweep's 3,100 cells under matching settings, each cell's answer on
+  `pre`, `part1`, delta 1 (`513208ce`), the head (`9d71e030`) and, for six doors, Spark.
 
 Up: [../map.md](../map.md).

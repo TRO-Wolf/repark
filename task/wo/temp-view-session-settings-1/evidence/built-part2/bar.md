@@ -1,9 +1,11 @@
-# TEMP-VIEW-SESSION-SETTINGS-1 part 2 — the bar (delta 1)
+# TEMP-VIEW-SESSION-SETTINGS-1 part 2 — the bar (delta 2)
 
-**Head:** product commit `513208ce` (`74c22dfe` plus delta 1), package `pkg-view2-513208ce` (`BUILT_FROM`
-`513208ceb6dc…`). **Against:** main before part 1 (`pre`, `pkg-avg-27d6149f`), main with part 1 (`part1`,
-`pkg-view1-c54f5fc7`), the build's head (`74c22dfe`) and Spark 4.1.2. Every set ran fresh on every build at
-14:35–14:47 UTC, so the current-time cells pair. Pairing [probes/bar2.py](probes/map.md); cells [raw/](raw/map.md).
+**Head:** product commit `9d71e030` (`74c22dfe`, delta 1 `513208ce`, delta 2), package `pkg-view2-9d71e030`
+(`BUILT_FROM` `9d71e03057524debfbb9f60554fa12fffe7da98c`). **Against:** main before part 1 (`pre`,
+`pkg-avg-27d6149f`), main with part 1 (`part1`, `pkg-view1-c54f5fc7`), delta 1's head (`513208ce`) and Spark 4.1.2.
+Delta 2 re-ran every RePark set fresh on the head, `part1` and `pre` at 17:05–17:07 UTC; Spark's sets are delta 1's
+(14:35–14:47 UTC) except the current-time set (`rev.py`), re-run on all four at 17:06–17:07 so its hours pair. Pairing
+[probes/bar2.py](probes/map.md); cells [raw/](raw/map.md), delta 2's in [raw/delta2/](raw/map.md).
 
 ## The build's bar (3,004 cells: `run.py` both start modes, `rev.py`, `rc.py`, the delta 1 sweep)
 
@@ -12,12 +14,88 @@
 | part1 | 261 | 10 | 5 | 0 | 0 |
 | pre | 622 | 33 | 9 | 0 | 0 |
 
-The same counts as `74c22dfe`'s bar; the delta moves no cell of it (the 12 cells whose answers differ from the
+Delta 2's head gives the same verdict as delta 1's in every one of the 3,004 cells (12 answers per build differ
+from delta 1's files: current-time hours, paired within each run). The same counts as `74c22dfe`'s bar; delta 1 moved
+no cell of it (the 12 cells whose answers differ from the
 build's run are current-time hours, paired within each run). Outside part 2's scope: the sweep's 40 WRONG → EQUAL and 8
 WRONG → WRONG (`date_add_where`, the same refusal text-prefixed), part 1's `nest/read/sqldf/utc/m2` WRONG → EQUAL; no
 move in the held door, the catalog views or the direct queries. **Part 2's targets:** of the 665 part 2 cells EQUAL on
 `74c22dfe` (the 196 of the step 0's target among them), none is lost. Part 2's non-EQUAL cells left: 213, the build's
 classes (`raw/part2-left.jsonl`).
+
+**The matching-settings claim, corrected (delta 2).** "0 matching-settings moves" and "`EXPLAIN` identical to main's"
+covered reads only. Writes under matching settings were not measured, and `513208ce` wrote 216 cells that main and
+Spark refuse (below). With delta 2, matching settings move nothing on either side: 0 moves in the bar's matching
+cells, 0 in the write sweep's 3,100 cells, and the 22 + 7 matching plans of `explain10.py` and `explain_joins.py`
+identical to main's (scratch paths and scratch-view names aside).
+
+## Delta 2: writes under matching settings
+
+**The finding (PR #1362's CI).** `test_store_ts_to_numeric_1.py::test_store_assignment_cells_replay_spark` failed on
+both part 2 packages: with one session in `UTC` and no setting changed, `s.sql("SELECT 127 AS id, -NULL AS c")`
+written into a `DATE` or `BOOLEAN` column through `writeTo(...).append()` or `insertInto` stored a NULL where main and
+Spark refuse with `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST` (Spark types `-NULL` as `DOUBLE`).
+
+**The cause.** Not the write path taking the frame's analysed plan. The store-assignment check
+(`repark-iceberg/src/write/negated_null_store.rs`, `column_origin`, `:79-143`, called from
+`repark-spark/src/void_type/insert_source_types.rs:82` and `:151`, `update_cast.rs:166` and
+`repark-iceberg/src/write/merge/insert.rs:130` and `:255`) re-plans the write's source from SQL text and walks the
+unanalysed plan to find where a `NULL` column comes from; any node it does not know answers `Other`, and only
+`Negated` refuses. DataFusion inlines a view's `get_logical_plan()` at plan-build time
+(`datafusion-expr-54.1.0/src/logical_plan/builder.rs:517-540`), and the build's `FrameView::get_logical_plan`
+(`frame_settings.rs:156-158` at `513208ce`) returned the `FrameSettings` marker for every reader, so the walk met a
+`LogicalPlan::Extension` between the view's alias and the frame's projection and the refusal never ran. Every write
+door reads its source through a scratch temp view (`_repark_writer_`, `_repark_writer_v2_`,
+`__repark_merge_src_`) or a user's DataFrame view, so all of them lost it, and the differing path lost it too.
+
+**The fix, inside the build's seven files** (`9d71e030`; the cap count stays 7). The marker stays only where the
+analyzer alone knows the planning settings: a SQL view's body, re-planned by `ReplanningTempView`
+(`temp_view.rs:147` and `:168`, each wrapped in `frame_settings.rs` `view_body`, a poll-scoped depth counter).
+Anywhere else a registered frame view decides when it is inlined (`frame_settings.rs` `FrameView::inlined_for_reader`),
+against the session's live options read through a weak `LiveOptions` handle (`repark-core/src/extension.rs`,
+built in `session/temp_views.rs` from the context's state, `try_read_recursive`): its own plan when they match (the
+plan `into_view` gave, so every pre-analysis walker sees main's plan), the closed `TableScan` the analyzer rule would
+have built when they differ (the walker reads its analysed plan through `get_logical_plan`), the marker when no live
+reader is present. A frame inlined at the top level is planned under the live options: a SQL statement plans and
+analyses under one state, and a held `DataFrame` analyses under the snapshot taken when it was built. Clippy's
+`single_match` at `frame_settings.rs:174` is now an `if let`.
+
+**The write sweep** ([probes/wsweep.py](probes/map.md), [raw/delta2/wsweep.jsonl](raw/map.md)): one session per
+build and ANSI mode, settings never changed; 13 doors (`writeTo` `append`, `overwrite`, `overwritePartitions`,
+`create`, `createOrReplace`; `insertInto` and its overwrite; `saveAsTable` append and overwrite; `mergeInto`; SQL
+`INSERT` and `MERGE` from a DataFrame view; `write.parquet`); 5 sources (a bare literal, a derived subquery, a frame
+built with `select` and `withColumn`, a frame over a temp view, a `createDataFrame` frame) of 5 values (`1`, `NULL`,
+`-NULL`, `CAST(NULL AS <type>)`, `-1.5D`); into `DATE`, `BOOLEAN`, `BIGINT`, `DECIMAL(10,2)`, `TIMESTAMP` and `STRING`
+(the source-typed doors once per source): 1,550 cells per mode. The S3 paths were not measured (no object store on
+this box); they read their source through the same scratch view.
+
+| build | cells | differ from main (`part1`) | against Spark (6 doors, 1,400 cells) |
+|---|---|---|---|
+| `pre` (`pkg-avg-27d6149f`) | 3,100 | 0 | — |
+| `part1` (`pkg-view1-c54f5fc7`) | 3,100 | — | 1,376 EQUAL, 24 direct gaps |
+| delta 1 (`pkg-view2-513208ce`) | 3,100 | 216 refused → wrote | 1,280 EQUAL (96 EQUAL → WRONG) |
+| head (`pkg-view2-9d71e030`) | 3,100 | **0** | 1,376 EQUAL, the same 24 |
+
+Delta 1's 216: `-NULL` into `DATE`, `BOOLEAN` and `TIMESTAMP` from the literal, derived, `select`/`withColumn` and
+temp-view sources, on 9 doors (`append`, `overwrite`, `overwritePartitions`, `insertInto` and its overwrite,
+`saveAsTable` append, `mergeInto`, SQL `INSERT` and `MERGE` from a view), both modes. The 24 direct gaps, identical on
+main and the head: `writeTo(...).create()` of a `-NULL` column refuses (`Invalid type for c: unknown`) where Spark
+writes `DOUBLE` (8); `write.parquet` of `NULL` and `-NULL` stores `int` where Spark stores `void` and `double` (16).
+Spark ran `append`, `insertInto`, SQL `INSERT` from a view, `mergeInto`, `create` and `write.parquet`.
+
+**The differing path.** The build's write cells (the 25 wrong writes and question 4's doors: `write/ctas-df`,
+`parquet-held`, `writeto-held` and the rest, 112 cells) give the same verdicts as delta 1 (above). A `-NULL` frame made
+under the other ANSI mode or `America/Los_Angeles` and written under the session's settings through `writeTo`,
+`insertInto` or SQL `INSERT` from its view: delta 1 wrote, the head refuses as main does (Spark's type for `-NULL` and
+its store-assignment rule read neither setting).
+
+**Pins.** `test_temp_view_session_settings_2.py::test_a_negated_null_write_refuses_as_spark`, per ANSI mode and door
+(`writeTo`, `insertInto`, SQL `INSERT` from a view), each over the bare and derived sources, `DATE` and `BOOLEAN`, a
+frame made under matching settings, the other ANSI mode and the other zone (72 cells in 6 tests): head 6 passed;
+`pkg-view2-513208ce` 6 failed; `pkg-view1-c54f5fc7` and `pkg-avg-27d6149f` 6 passed. The CI test
+`test_store_ts_to_numeric_1.py` passes on the head. Rust (`view_ddl/frame_settings/tests.rs`):
+`a_reader_under_the_frames_settings_inlines_the_frames_own_plan` (the inlined plan is the frame's own, and a view body
+keeps the marker), `the_negated_null_store_check_reads_through_a_frame_view_on_both_paths`; `view_ddl::` 70 passed.
 
 ## Named classes, cell for cell
 
@@ -43,7 +121,13 @@ Spark raises (both recorded under question 4, outside the label's ANSI-on scope)
 | `frames.py` | 30 | 4 WRONG → EQUAL (`frame/dfc`, `dff`, `dfl`, `dflim`, the verifier's class (c) S3 note); 0 other moves | the four JSON cells (`json/direct/read_UTC`, `json/frame_utc/direct_read_la`, `json/frame_utc_view_tk/read_la`, `json/sqlview_utc/read_UTC`) answer as part 1 and Spark again |
 | `attack.py` | 133 | 2 WRONG → EQUAL, 1 WRONG → WRONG (`nest/df_over_sql`) | |
 | `attack2.py`, `attack3.py`, `case.py` | 16, 7, 7 | 0 | `overlay/start_time` pairs again (it compares UTC's and Kiritimati's `current_date()`, which differ after 10:00 UTC; the verifier's files were recorded at 04:30) |
-| Fable's `probe.py` | 14 | 0 answers moved; `EXPLAIN` differs only by the warehouse path | `jf.filter("n > 0")` and `jf.selectExpr("n + 1 AS n1", "ts")` back at Spark's answer; `hour(ts)` WRONG as on part 1 |
+| Fable's `probe.py` | 14 | 0 answers moved; `EXPLAIN` differs only by the warehouse path and (delta 2) the lane's partition count | `jf.filter("n > 0")` and `jf.selectExpr("n + 1 AS n1", "ts")` back at Spark's answer; `hour(ts)` WRONG as on part 1 |
+
+Delta 2 re-ran these sets with the reader, join and `smartCsv` sweeps (1,622 cells; the Postgres cells not run, with no
+server up) on the head, `part1` and `pre` against Spark's delta 1 files ([probes/probes_cmp.py](probes/map.md)): 0
+cells EQUAL on part 1 and not on the head. Against delta 1's head, 0 answers moved but four artefacts of the run: two
+of Fable's plans print the partition count of this lane's ten cores, and two time-travel refusals print the run's
+own timestamp.
 
 ## The JSON and CSV lineage held at part 1's answers
 
@@ -113,7 +197,8 @@ Spark answer: it is not a Spark API. I did not halt. The file is read and its ro
 is literally `createDataFrame` plus `selectExpr` casts, and for that composition Spark binds the creation zone; the
 head's answer is that one. Holding it at part 1's answer would need a marker from the facade, which is a different
 remedy and a file outside the cap. **For the orchestrator:** if part 1's answer is wanted, it belongs to
-TEMP-VIEW-FRAME-READER-PARSE-1's unit.
+TEMP-VIEW-FRAME-READER-PARSE-1's unit. **Ruled by the owner (2026-11-18, about 15:00 UTC, "Defaults on all three"):**
+the head's behaviour is accepted, and any change folds into TEMP-VIEW-FRAME-READER-PARSE-1.
 
 ## Task 2: `crossJoin` and the exact-key join door — built, measured, backed out
 
@@ -154,18 +239,21 @@ against part 1 (SQL views and CTAS over held joins, through the seat), 0 EQUAL �
   a JSON or CSV source under the reader's settings and decides everything above the parse under the frame's. Cells: the
   reader sweep's non-EQUAL JSON and CSV lineage cells (330 of 524, `raw/delta1/readers-*.jsonl`), Fable's
   `json/derived_hour/*`, the verifier's `csv/sqlview_hour_utc/*`; `74c22dfe`'s 20 `csv_s` EQUAL cells are the shape
-  the unit must reach. Its inventory is the table above; `smartCsv` is its open question.
-- **Proposed, for the owner (severities proposed):** TEMP-VIEW-FRAME-CROSSJOIN-1 (the exact-key join door and
-  `crossJoin` analyse both held sides under the live state; silent; S1 by class; the left-anti gap below first);
-  HELD-FRAME-USING-JOIN-1 (`join_on_names` keeps only the left frame's state; silent; S1 by class);
-  HELD-FRAME-DERIVED-ANSI-1 (`expr_build.rs:187`, `withColumn` and `select(F.expr(...))` over a held ANSI frame;
-  S2); LEFT-ANTI-PROJECTION-PUSHDOWN-1 (a left-anti or left-semi join evaluates the left projection on every row; loud;
-  S3).
+  the unit must reach. Its inventory is the table above; `smartCsv` folds into it (ruled, below).
+- **Ruled by the owner (2026-11-18, about 15:00 UTC, verbatim: "Defaults on all three, extend the window 4 hours"):**
+  TEMP-VIEW-FRAME-CROSSJOIN-1 (the exact-key join door and `crossJoin` analyse both held sides under the live state;
+  silent; the left-anti gap below first) and HELD-FRAME-USING-JOIN-1 (`join_on_names` keeps only the left frame's
+  state; silent): **S1, label-blocking**; HELD-FRAME-DERIVED-ANSI-1 (`expr_build.rs:187`, `withColumn` and
+  `select(F.expr(...))` over a held ANSI frame): **S2**; LEFT-ANTI-PROJECTION-PUSHDOWN-1 (a left-anti or left-semi
+  join evaluates the left projection on every row; loud): **S3**; `smartCsv`: **the head's behaviour is accepted**, and
+  any change folds into TEMP-VIEW-FRAME-READER-PARSE-1.
 
 ## The cap
 
 Task 1 used three of the build's seven product files (`frame_settings.rs`, `temp_settings.rs`, `temp_view.rs`).
 Fable's guidance under the owner's delegation allowed an eighth, `crates/repark-python/src/frame_lineage.rs`, plus one
-`extension.rs` helper, for task 2 only; it was used for the backed-out build and is not in the branch.
+`extension.rs` helper, for task 2 only; it was used for the backed-out build and is not in the branch. Delta 2 touched
+four of the seven (`repark-core/src/extension.rs`, `repark-core/src/session/temp_views.rs`, `frame_settings.rs`,
+`temp_view.rs`) and no other product file: **seven of seven**.
 
 Up: [map.md](map.md).

@@ -5799,11 +5799,13 @@ still open is `isModifiable`.
   `cache()`, a temp view made after the `SET`) and a held frame written with `write.parquet`, `saveAsTable` or
   `insertInto`.
 
-  After: the view captures the frame's own ANSI flag, session zone, decimal legacy switch and timestamp-type carrier and
-  inlines a marker; the analyzer's first rule keeps today's plan when the planning settings match (`EXPLAIN` identical)
-  and otherwise plans the frame under its own settings with the reader's start time, `current_timezone()` at the
-  reader's zone, and the reader's filters split as part 1 splits them. Inside a SQL view the frame is decided under
-  that view's captured settings. `writeTo` keeps the frame's ANSI and takes the writer's zone, as Spark's re-analysis
+  After: the view captures the frame's own ANSI flag, session zone, decimal legacy switch and timestamp-type carrier.
+  Read where the session's live settings plan it, it inlines its own plan when they match (`EXPLAIN` identical, and
+  every write door refuses and stores as main does) and otherwise the frame closed under its own settings with the
+  reader's start time, `current_timezone()` at the reader's zone, and the reader's filters split as part 1 splits them.
+  Inside a SQL view's body it inlines a marker that the analyzer's first rule decides under that view's captured
+  settings (delta 2: the build's marker for every reader hid the source from the store-assignment check,
+  `negated_null_store::column_origin`, so `-NULL` into a `DATE` or `BOOLEAN` column was written where Spark refuses). `writeTo` keeps the frame's ANSI and takes the writer's zone, as Spark's re-analysis
   does; a frame that only scans keeps today's provider. A view whose lineage reaches the facade's JSON or CSV reader
   (whose typed parse is a projection over a scan of strings) answers as part 1 and main do: the frame keeps today's
   provider and a SQL view over it keeps part 1's fallback (delta 1, `reader_lineage`).
@@ -5822,13 +5824,17 @@ still open is `isModifiable`.
     for ICE-V2-FLAT-AWS-LABEL-1 by the owner's ruling of 2026-11-18 ("We better go with B to be safe");
   - `crossJoin`, and any join the facade plans natively by exact references (`frame_lineage.rs` `join_exact_sides`),
     plans both sides under the live state (proposed TEMP-VIEW-FRAME-CROSSJOIN-1; a fix was built and backed out, see
-    bar.md); a USING join keeps only the left frame's state;
+    bar.md); a USING join keeps only the left frame's state (TEMP-VIEW-FRAME-CROSSJOIN-1 and HELD-FRAME-USING-JOIN-1,
+    S1 and label-blocking, and HELD-FRAME-DERIVED-ANSI-1 S2, by the owner's ruling of 2026-11-18, "Defaults on all
+    three, extend the window 4 hours");
   - HELD-FRAME-CURRENT-TIMEZONE-1; `caseSensitive` (TEMP-VIEW-CASE-SENSITIVE-CAPTURE-1).
 - **Pin** — `python/repark/tests/session/test_temp_view_reader_lineage.py` (the JSON and CSV lineage, both ANSI modes);
   `python/repark/tests/session/test_temp_view_session_settings_2.py` (308 cells in each ANSI mode and the unset
   cells against `temp_view_session_settings_2_spark_oracle.json`, the named classes pinned as they answer in
-  `temp_view_session_settings_2_standing.json`, `EXPLAIN` identity with main's plans); Rust `repark-spark`
-  `view_ddl/frame_settings/tests.rs` (rule order, the matching and closed paths, the walkers, pin (f), the JSON lineage) and
+  `temp_view_session_settings_2_standing.json`, `EXPLAIN` identity with main's plans, and `-NULL` writes into `DATE`
+  and `BOOLEAN` refusing on three doors under matching and differing settings); Rust `repark-spark`
+  `view_ddl/frame_settings/tests.rs` (rule order, the matching and closed paths, the walkers, pin (f), the JSON lineage,
+  the inline decision and the store check through a frame view) and
   `repark-core` `plan_introspect.rs` tests.
 - **Bar and cost** — [built-part2/bar.md](../task/wo/temp-view-session-settings-1/evidence/built-part2/bar.md),
   [built-part2/cost.md](../task/wo/temp-view-session-settings-1/evidence/built-part2/cost.md).

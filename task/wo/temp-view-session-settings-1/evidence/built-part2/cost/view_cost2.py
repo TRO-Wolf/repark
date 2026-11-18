@@ -26,6 +26,8 @@ s.read.parquet(f"{data}/k2").createOrReplaceTempView("k2")
 s.sql("SELECT a, b, a % 7 AS m FROM k").createOrReplaceTempView("v")
 s.sql("SELECT a, m FROM v").createOrReplaceTempView("vv")
 small = s.sql("SELECT a, b, a % 7 AS m FROM k WHERE a < 200")
+pair = s.sql("SELECT a, w AS b FROM k2 WHERE a < 200")
+tiny = s.sql("SELECT a, a % 7 AS m FROM k WHERE a < 40")
 QUERIES = {
     "read": ("SELECT count(*), sum(m) FROM v", 20),
     "filter": ("SELECT count(*), sum(m) FROM v WHERE a > 1000 AND b < 1500000", 8),
@@ -51,6 +53,15 @@ def facade(op: str) -> list:
         return small.select(fn.explode(fn.array(fn.col("m"))).alias("m")).collect()
     if op == "gagg_lit":
         return small.select(fn.max("m").alias("m"), fn.lit(1).alias("one")).collect()
+    if op == "exactjoin":
+        return (
+            small.alias("l")
+            .join(pair.alias("r"), fn.col("l.a") == fn.col("r.a"))
+            .select("l.m")
+            .collect()
+        )
+    if op == "crossjoin":
+        return tiny.crossJoin(pair.select(fn.col("a").alias("a2"))).select("m").collect()
     table = "lc.ns.t" + str(next(serial))
     if op == "saveastable":
         small.write.format("iceberg").saveAsTable(table)
@@ -71,6 +82,8 @@ FACADE = {
     "setop": 10,
     "explode": 20,
     "gagg_lit": 20,
+    "exactjoin": 10,
+    "crossjoin": 10,
     "saveastable": 4,
     "insertinto": 3,
     "writeto": 4,

@@ -180,7 +180,7 @@ every held row ≤ 1.05x (C-012 0.997 / 0.994, timed inside the lock after a run
 
 ## Built (part 2, the DataFrame door and materialisation) — 2026-11-18
 
-**Branch:** `fix/temp-view-session-settings-1-part2`, product and pins `74c22dfe` and, delta 1, `513208ce` (not pushed). **Builder:** Claude Opus 5.5
+**Branch:** `fix/temp-view-session-settings-1-part2` (draft PR #1362), product and pins `74c22dfe`, delta 1 `513208ce` and delta 2 `9d71e030`. **Builder:** Claude Opus 5.5
 (`claude-opus-5-5`), effort xhigh.
 
 **Rulings carried (owner, verbatim):** 2026-11-17 "dispatch Opus xhigh effort levels for these fixes, then use Opus 5.5
@@ -192,7 +192,9 @@ seat 3 for the 2 `cache()` cells; question 11 (a): the revised filter rule, its 
 carded as VIEW-FILTER-SETTINGS-WRAPPER-1). 2026-11-18 (overnight): "Proceed with the plans, use defaults, when it comes
 to any roadblocks or questions spin up a Fable medium session to ask for guidance. Merge any PRs needed as long as they
 get us to our end goal"; "Extend the window for 6 hours". Part 1's calls (Fable, under that delegation): the fallback
-replaced here; `caseSensitive` stays uncaptured (TEMP-VIEW-CASE-SENSITIVE-CAPTURE-1).
+replaced here; `caseSensitive` stays uncaptured (TEMP-VIEW-CASE-SENSITIVE-CAPTURE-1). 2026-11-18, about 14:30 UTC: "We
+better go with B to be safe" (TEMP-VIEW-FRAME-READER-PARSE-1 label-blocking, S1 by class); about 15:00 UTC: "Defaults on
+all three, extend the window 4 hours" (the proposed cards' severities below, and `smartCsv`).
 
 **Seat 2A, a marker decided by the analyzer.**
 - `crates/repark-spark/src/view_ddl/frame_settings.rs` (new): `frame_view` captures the four carriers from the frame's
@@ -226,6 +228,21 @@ its inner markers unwrapped, and a SQL view whose re-planned body reaches one ke
 files; no new product file. Reader inventory, sweep and judgement call (`smartCsv`):
 [bar.md](../../wo/temp-view-session-settings-1/evidence/built-part2/bar.md).
 
+**Delta 2 (2026-11-18): writes under matching settings.** PR #1362's CI failed
+`test_store_ts_to_numeric_1.py::test_store_assignment_cells_replay_spark`: with no setting changed, `-NULL` written
+into a `DATE`, `BOOLEAN` or `TIMESTAMP` column through `writeTo`, `insertInto`, `saveAsTable`, `mergeInto` or SQL
+`INSERT` or `MERGE` from a DataFrame view stored a NULL where main and Spark refuse with
+`INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`; the differing path did the same. The cause: the store-assignment
+check (`repark-iceberg` `negated_null_store::column_origin`) walks the write source's unanalysed plan, and any node it
+does not know ends the walk without a refusal; the build inlined the `FrameSettings` marker for every reader. The fix
+(`9d71e030`, four of the seven files, cap 7): the marker stays only inside a SQL view's body, re-planned by
+`ReplanningTempView` (`view_body`); elsewhere a frame view decides when it is inlined, against the session's live
+options read through a weak `LiveOptions` handle (`repark-core` `extension.rs`, `session/temp_views.rs`): its own plan
+when they match (main's plan, for every walker), the closed `TableScan` when they differ. The build's and delta 1's
+claim of no matching-settings moves covered reads; the write sweep (13 doors, 5 sources of 5 values, 6 target types,
+both ANSI modes, 3,100 cells) now shows writes too: 0 cells differ from main (delta 1: 216), and against Spark on six
+doors 1,376 of 1,400 EQUAL, the same 24 direct gaps as main.
+
 **The cap exception, not used:** Fable's guidance under the owner's delegation allowed an eighth product file,
 `crates/repark-python/src/frame_lineage.rs`, plus one helper in `repark-core/src/extension.rs`, for `crossJoin` and the
 exact-key join door. The fix was built (each side's plan through the seat before `join_exact_sides` analyses the join)
@@ -243,14 +260,15 @@ the reader's settings and decides everything above the parse under the frame's; 
 as part 1 and main do. Its cells, the reader inventory with the settings each reader-built expression reads, and the
 `smartCsv` question are in bar.md.
 
-**Proposed cards (for the owner; severities proposed):** TEMP-VIEW-FRAME-CROSSJOIN-1 (`crossJoin` and the exact-key join
-door analyse both held sides under the live state; silent; proposed S1 by class, with the left-anti direct gap as its
-prerequisite); HELD-FRAME-USING-JOIN-1 (a USING join keeps only the left frame's state, `join_on_names`, so a held right
-side answers under the live settings; silent; proposed S1 by class); HELD-FRAME-DERIVED-ANSI-1 (`withColumn` and
-`select(F.expr(...))` over a held ANSI frame answer unlike Spark on every build, the column door's eager analysis,
-`column/expr_build.rs:187`; proposed S2); LEFT-ANTI-PROJECTION-PUSHDOWN-1 (a left-anti or left-semi join evaluates the
-left projection on every row, where Spark pushes the join below it; proposed S3, loud).
+**Cards ruled by the owner (2026-11-18, about 15:00 UTC, verbatim: "Defaults on all three, extend the window 4 hours"):**
+TEMP-VIEW-FRAME-CROSSJOIN-1 (`crossJoin` and the exact-key join door analyse both held sides under the live state;
+silent; the left-anti direct gap is its prerequisite) and HELD-FRAME-USING-JOIN-1 (a USING join keeps only the left
+frame's state, `join_on_names`, so a held right side answers under the live settings; silent): **S1, label-blocking**;
+HELD-FRAME-DERIVED-ANSI-1 (`withColumn` and `select(F.expr(...))` over a held ANSI frame answer unlike Spark on every
+build, the column door's eager analysis, `column/expr_build.rs:187`): **S2**; LEFT-ANTI-PROJECTION-PUSHDOWN-1 (a
+left-anti or left-semi join evaluates the left projection on every row, where Spark pushes the join below it; loud):
+**S3**; `smartCsv`: the head's behaviour is accepted, and any change folds into TEMP-VIEW-FRAME-READER-PARSE-1.
 
-**Bar** ([evidence/built-part2/bar.md](../../wo/temp-view-session-settings-1/evidence/built-part2/bar.md), package `pkg-view2-513208ce`): 3,004 cells, against part 1 261 WRONG → EQUAL, 10 WRONG → WRONG (changed), 5 EQUAL → RAISE (the ruled filter class's four DataFrame-door cells and question 4's `writeTo` `avg`), 0 EQUAL → WRONG, 0 matching-settings moves; none of the 665 part 2 EQUAL targets lost; the JSON and CSV lineage 0 moves against part 1 (524 sweep cells).
+**Bar** ([evidence/built-part2/bar.md](../../wo/temp-view-session-settings-1/evidence/built-part2/bar.md), package `pkg-view2-9d71e030`): 3,004 cells, against part 1 261 WRONG → EQUAL, 10 WRONG → WRONG (changed), 5 EQUAL → RAISE (the ruled filter class's four DataFrame-door cells and question 4's `writeTo` `avg`), 0 EQUAL → WRONG, 0 matching-settings moves, every verdict as delta 1's; none of the 665 part 2 EQUAL targets lost; the JSON and CSV lineage 0 moves against part 1 (524 sweep cells); the write sweep under matching settings 0 cells differ from main in 3,100.
 
-**Cost:** not completed in delta 1 ([cost.md](../../wo/temp-view-session-settings-1/evidence/built-part2/cost.md)).
+**Cost** ([cost.md](../../wo/temp-view-session-settings-1/evidence/built-part2/cost.md), delta 2 on `pkg-view2-9d71e030` against `pkg-view1-c54f5fc7`, 5 alternating runs, 10 for the one row over the bar): every held matching row within 1.05x (0.980x to 1.032x; C-012 1.016x and 1.001x; `match_unpivot` 1.056x after 5 runs, 1.004x after 10); the differing path, reported, 0.982x to 1.054x.

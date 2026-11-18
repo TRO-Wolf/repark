@@ -8,6 +8,12 @@
   build answers unlike Spark.
 - `gen_standing.py` — `gen_standing.py <dir> <head> <out>`: the pin file's standing answers, every non-Spark head cell
   by named class (refuses an unclassed cell).
+- `wsweep.py` — `wsweep.py <engine> <wh> <out> <ansi> [doors]` (delta 2): one session under fixed settings writes
+  every source of the write sweep into a fresh Iceberg table per cell through each write door, and records the
+  refusal or the stored rows and types; Spark takes its runtime jar from `ICEBERG_SPARK_JAR`.
+- `wsweep_cmp.py` — `wsweep_cmp.py <dir> <build> <build> [shown]`: the cells two builds answer differently.
+- `probes_cmp.py` — `probes_cmp.py <runs> <delta 1 runs>`: the verifier's, Fable's, the reader, join and `smartCsv`
+  sets per build against Spark, and the head's answers against delta 1's.
 
 The step 0 probes ran unchanged from `../../probes/` (`run.py <engine> true|unset`, `rev.py <engine>`), part 1's
 `rc.py` and `sweep_drive.py` from `../../built-part1/probes/`, each in its own warehouse, every RePark run with the
