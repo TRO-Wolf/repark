@@ -180,7 +180,7 @@ every held row ≤ 1.05x (C-012 0.997 / 0.994, timed inside the lock after a run
 
 ## Built (part 2, the DataFrame door and materialisation) — 2026-11-18
 
-**Branch:** `fix/temp-view-session-settings-1-part2` (draft PR #1362), product and pins `74c22dfe`, delta 1 `513208ce` and delta 2 `9d71e030`. **Builder:** Claude Opus 5.5
+**Branch:** `fix/temp-view-session-settings-1-part2` (draft PR #1362), product and pins `74c22dfe`, delta 1 `513208ce`, delta 2 `9d71e030` and delta 3 `9aa2f182`. **Builder:** Claude Opus 5.5
 (`claude-opus-5-5`), effort xhigh.
 
 **Rulings carried (owner, verbatim):** 2026-11-17 "dispatch Opus xhigh effort levels for these fixes, then use Opus 5.5
@@ -242,6 +242,17 @@ when they match (main's plan, for every walker), the closed `TableScan` when the
 claim of no matching-settings moves covered reads; the write sweep (13 doors, 5 sources of 5 values, 6 target types,
 both ANSI modes, 3,100 cells) now shows writes too: 0 cells differ from main (delta 1: 216), and against Spark on six
 doors 1,376 of 1,400 EQUAL, the same 24 direct gaps as main.
+
+**Delta 3 (2026-11-18): the live read under a contended lock.** The verifier of #1362 (Opus 5.5) found F1, class (a),
+S2: delta 2's live read (`try_read_recursive`) failed while another thread held the session state's write lock (every
+`spark.conf.set` takes it), the frame view inlined the `FrameSettings` marker, and `-NULL` into `DATE` or `BOOLEAN` was
+stored where main and Spark refuse: 27 to 44 of 1,000 writes beside two `conf.set` threads. The owner's ruling
+(2026-11-18, about 20:25 UTC, verbatim): "Go with your recommendation, dispatch 1362 delta 3" (fix F1 inside the seven
+files, with the verifier's race probe as a test; stop at an eighth). The fix (`9aa2f182`, two of the seven files, cap
+7): the read waits for the lock at most one second (`try_read_recursive_for`), and `LiveOptions` answers the options it
+last read, from the view's creation on, when the wait expires, so outside a SQL view body a frame view never inlines
+the marker and nothing waits unbounded. No write-lock holder plans, awaits or takes a planner's lock (the audit is in
+bar.md). Measured with the verifier's probe (five doors, two setter threads): the head 0 of 5,000 writes landed in each of two runs, the merged delta 2 (`d4423a69`) 165, main now (`6286ba19`) 0; two 75-second hang runs on the head (one with the setters also flipping ANSI and the zone) landed 0 of about 15,000 writes each and ended inside their timeout. Pins: a facade race test (fails 10 of 10 runs on `d4423a69`, about 4 s) and two Rust tests holding the state's write lock.
 
 **The cap exception, not used:** Fable's guidance under the owner's delegation allowed an eighth product file,
 `crates/repark-python/src/frame_lineage.rs`, plus one helper in `repark-core/src/extension.rs`, for `crossJoin` and the

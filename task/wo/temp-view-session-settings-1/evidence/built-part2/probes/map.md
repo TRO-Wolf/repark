@@ -12,6 +12,10 @@
   every source of the write sweep into a fresh Iceberg table per cell through each write door, and records the
   refusal or the stored rows and types; Spark takes its runtime jar from `ICEBERG_SPARK_JAR`.
 - `wsweep_cmp.py` — `wsweep_cmp.py <dir> <build> <build> [shown]`: the cells two builds answer differently.
+- `race.py` — `race.py <wh> <out> [writes per door] [seconds] [captured]` (delta 3): the verifier's F1 probe, five
+  write doors writing `-NULL` into `DATE` and `BOOLEAN` on five threads beside two threads looping `spark.conf.set`
+  (keys outside the captured four, or with `captured` the ANSI flag and the zone too); a write count per door, or a
+  duration for the hang run; records landed, refused and other answers, the rows stored and every write over 0.5 s.
 - `probes_cmp.py` — `probes_cmp.py <runs> <delta 1 runs>`: the verifier's, Fable's, the reader, join and `smartCsv`
   sets per build against Spark, and the head's answers against delta 1's.
 

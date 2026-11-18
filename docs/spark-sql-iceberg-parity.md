@@ -5866,7 +5866,9 @@ still open is `isModifiable`.
   reader's start time, `current_timezone()` at the reader's zone, and the reader's filters split as part 1 splits them.
   Inside a SQL view's body it inlines a marker that the analyzer's first rule decides under that view's captured
   settings (delta 2: the build's marker for every reader hid the source from the store-assignment check,
-  `negated_null_store::column_origin`, so `-NULL` into a `DATE` or `BOOLEAN` column was written where Spark refuses). `writeTo` keeps the frame's ANSI and takes the writer's zone, as Spark's re-analysis
+  `negated_null_store::column_origin`, so `-NULL` into a `DATE` or `BOOLEAN` column was written where Spark refuses; delta 3: the live read waits for the
+  session state's lock at most a second and otherwise answers the options it last read, so a concurrent
+  `spark.conf.set` never inlines the marker, the verifier's F1). `writeTo` keeps the frame's ANSI and takes the writer's zone, as Spark's re-analysis
   does; a frame that only scans keeps today's provider. A view whose lineage reaches the facade's JSON or CSV reader
   (whose typed parse is a projection over a scan of strings) answers as part 1 and main do: the frame keeps today's
   provider and a SQL view over it keeps part 1's fallback (delta 1, `reader_lineage`).
@@ -5893,9 +5895,10 @@ still open is `isModifiable`.
   `python/repark/tests/session/test_temp_view_session_settings_2.py` (308 cells in each ANSI mode and the unset
   cells against `temp_view_session_settings_2_spark_oracle.json`, the named classes pinned as they answer in
   `temp_view_session_settings_2_standing.json`, `EXPLAIN` identity with main's plans, and `-NULL` writes into `DATE`
-  and `BOOLEAN` refusing on three doors under matching and differing settings); Rust `repark-spark`
+  and `BOOLEAN` refusing on three doors under matching and differing settings, and beside two threads looping
+  `spark.conf.set`); Rust `repark-spark`
   `view_ddl/frame_settings/tests.rs` (rule order, the matching and closed paths, the walkers, pin (f), the JSON lineage,
-  the inline decision and the store check through a frame view) and
+  the inline decision and the store check through a frame view, no marker with the state's write lock held) and
   `repark-core` `plan_introspect.rs` tests.
 - **Bar and cost** — [built-part2/bar.md](../task/wo/temp-view-session-settings-1/evidence/built-part2/bar.md),
   [built-part2/cost.md](../task/wo/temp-view-session-settings-1/evidence/built-part2/cost.md).

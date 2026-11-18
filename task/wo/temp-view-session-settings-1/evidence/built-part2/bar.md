@@ -1,6 +1,8 @@
-# TEMP-VIEW-SESSION-SETTINGS-1 part 2 — the bar (delta 2)
+# TEMP-VIEW-SESSION-SETTINGS-1 part 2 — the bar (delta 3)
 
-**Head:** product commit `9d71e030` (`74c22dfe`, delta 1 `513208ce`, delta 2), package `pkg-view2-9d71e030`
+**Head:** product commit `9aa2f182` (delta 3, after the merge of main `6286ba19`), package `pkg-view2-9aa2f182`
+(`BUILT_FROM` `9aa2f18253b9b31bb1a529c3039b52ce6e31c7eb`); delta 3's section is below. Before it: product commit `9d71e030`
+(`74c22dfe`, delta 1 `513208ce`, delta 2), package `pkg-view2-9d71e030`
 (`BUILT_FROM` `9d71e03057524debfbb9f60554fa12fffe7da98c`). **Against:** main before part 1 (`pre`,
 `pkg-avg-27d6149f`), main with part 1 (`part1`, `pkg-view1-c54f5fc7`), delta 1's head (`513208ce`) and Spark 4.1.2.
 Delta 2 re-ran every RePark set fresh on the head, `part1` and `pre` at 17:05–17:07 UTC; Spark's sets are delta 1's
@@ -96,6 +98,110 @@ frame made under matching settings, the other ANSI mode and the other zone (72 c
 `test_store_ts_to_numeric_1.py` passes on the head. Rust (`view_ddl/frame_settings/tests.rs`):
 `a_reader_under_the_frames_settings_inlines_the_frames_own_plan` (the inlined plan is the frame's own, and a view body
 keeps the marker), `the_negated_null_store_check_reads_through_a_frame_view_on_both_paths`; `view_ddl::` 70 passed.
+
+## Delta 3: the live read under a contended lock (the verifier's F1)
+
+**The finding (the verifier's F1, class (a), S2; `pkg-view2-9d71e030` and the merged `pkg-view2-d4423a69`).** Delta 2's
+live read (`session/temp_views.rs`, `try_read_recursive`) returns nothing while another thread holds the session
+state's write lock, and `FrameView::inlined_for_reader` (`frame_settings.rs:201-203`) then inlined the
+`FrameSettings` marker, which the store-assignment walker (`negated_null_store::column_origin`) cannot read. With two
+threads looping `spark.conf.set` on keys outside the four captured settings, `-NULL` written into `DATE` and
+`BOOLEAN` landed 44 and 32 times in 1,000 writes on `9d71e030` and 27 on `d4423a69`; main 0; the head with no setter
+thread 0. Every `spark.conf.set` takes that write lock, and planning runs with the GIL released, so any second Python
+thread could open the window.
+
+**The owner's ruling (2026-11-18, about 20:25 UTC, verbatim):** "Go with your recommendation, dispatch 1362 delta 3".
+The recommendation: fix F1 inside the build's seven product files, with the verifier's race probe as a test, and stop
+if the fix needs an eighth.
+
+**The remedy (`9aa2f182`, two of the seven files, cap 7).** A bounded wait with a last-known snapshot as its fallback:
+- `repark-core/src/session/temp_views.rs`: the reader waits for the state lock with `try_read_recursive_for` for at
+  most `LIVE_READ_WAIT` (one second) instead of failing at once.
+- `repark-core/src/extension.rs`: `LiveOptions` keeps the options it last read, starting from the session's options
+  when the view is created, and answers them when the wait expires or the session is gone. For a registered frame view
+  `read` therefore always answers, and `inlined_for_reader` always chooses its own plan or the closed scan. The marker
+  is left only inside a SQL view body (`view_body`, by design) and for a provider built with no reader (none in
+  production).
+
+Why this remedy: the wait gives the exact live answer whenever a writer releases, which the lock audit below shows
+every writer does at once; the bound means even a future write-lock holder that planned on its own thread could cost
+only one bounded wait, never a hang. A snapshot alone was not enough: with no wait, a contended read right after a
+`SET` of a captured key would decide under the setting before it. The other remedy the verifier named,
+`column_origin` walking through the marker's input, is in `repark-iceberg`, an eighth product file, and was not
+needed.
+
+**The lock audit.** Every taker of the state's write lock, each a pure in-memory update that plans nothing, awaits
+nothing, calls no Python and takes no lock a planner holds:
+
+| site | what it does under the lock |
+|---|---|
+| `repark-python/src/session_runtime.rs:232`, `:270`, `:295`, `:315`, `:335`, `:352`, `:375`, `:396`, `:414` (`spark.conf.set` / `unset` for the decimal-truncate flag, minimum precision, ANSI, case sensitivity, self-join, schema merge, overwrite mode, WAP, zone) | sets one carrier field; `:414` also swaps the runtime zone's `Arc` under its own lock, whose readers clone and release |
+| `repark-core/src/session/write_options.rs:20`, `:33`, `:40` | sets the time-parser policy or an Iceberg session write key |
+| `repark-core/src/session/path_write.rs:845` | registers a text-write path in a mutex-held map |
+| `repark-core/src/session/spill.rs:258` | rebuilds the runtime env and the state from a clone |
+| `repark-core/src/microbatch/driver.rs:331` | installs the streaming manager extension |
+| `repark-core/src/spark_nullable.rs:78`, `session/text_write_format/file_format.rs:249`, `:253` | registers a file format |
+| `repark-spark/src/use_ddl.rs:40`, `repark-iceberg/src/write/conform_stage.rs:114` | writes the session-defaults or stage-record extension |
+| `repark-spark/src/extension.rs:181`, `repark-functions/src/integer_spark.rs:35`, `decimal_spark.rs:37` | registers an expression planner at build |
+| `repark-core/src/microbatch/run.rs:409`, `repark-python/src/column/expr_build.rs:353` | a context of its own, not the session's |
+| DataFusion `SessionContext` (`context/mod.rs`): `SET` / `RESET` (`:1125`, `:1157`), runtime variables (`:1182`, `:1225`), `PREPARE`'s store (`:761`, after the optimizer ran outside the lock), `CREATE CATALOG` (`:1044`), function, catalog-list and table-options registration | updates config, registries or the prepared-plan map; the only callback, `with_updated_config` (`instant_ts.rs:227`), builds a UDF |
+
+No thread holds the write lock while it plans, so a read that waits never deadlocks; the facade plans with the GIL
+released, and no writer waits for the GIL while it holds the lock.
+
+**Tests (red on the pre-fix code, green on the head).**
+- Rust (`view_ddl/frame_settings/tests.rs`): `a_held_state_write_lock_never_inlines_the_marker_outside_a_view_body`
+  holds the write lock on another thread across the bound: the matching frame view inlines its own plan and the
+  differing one the closed scan; `a_live_read_waits_for_a_writer_and_decides_under_its_setting` has the writer turn
+  ANSI off before it releases: the read waits and closes the ANSI-on frame. With `extension.rs` and `temp_views.rs` at
+  `d4423a69` both fail at their "no marker" assertion; with the fix, `view_ddl::` 72 passed.
+  `the_marker_is_decided_under_the_planning_state_not_the_live_one` is now
+  `inside_a_sql_view_body_the_marker_is_decided_under_the_planning_state`: outside a body the view inlines the closed
+  scan; inside one the marker, which the rule unwraps under the frame's settings and closes under the reader's.
+- Facade (`test_temp_view_session_settings_2.py::test_a_negated_null_write_refuses_while_another_thread_sets_the_conf`,
+  from the verifier's `race.py`): two threads loop `spark.conf.set` on `caseSensitive` and the decimal-truncate flag
+  beside six writer threads (`writeTo`, `insertInto` and SQL `INSERT` from a same-mode and an other-mode view, into
+  `DATE` and `BOOLEAN`), 100 writes each; every write must refuse and both tables stay empty. It ran in about 4 s per call. On the head it passed 5 of 5 runs; on `pkg-view2-d4423a69` it failed 10 of 10, each with at least 17 to 33 writes landed across four or five of the six door and target cells; on main now (`pkg-main-6286ba19`) it passes, with delta 2's negated-null pins.
+
+**Race and hang** ([probes/race.py](probes/map.md), the verifier's probe with a duration mode; outputs in
+[raw/delta3/](raw/map.md)): five doors on five threads (`writeTo` and `insertInto` of a bare frame, `writeTo` from an
+other-mode view, `insertInto` from a same-mode view, SQL `INSERT` from an other-mode view) beside two setter threads.
+
+| build | run | writes | landed | rows stored | `conf.set` calls overlapped | slowest write (s) |
+|---|---|---|---|---|---|---|
+| `d4423a69` (merged delta 2) | 5 × 1,000 | 5,000 | **165** (`writeTo` 39, `insertInto` 42, `insertInto` from the same-mode view 36, SQL `INSERT` from the other-mode view 48, `writeTo` from the other-mode view 0) | 87 / 78 | 5.43 M | 0.40 |
+| head `9aa2f182`, run 1 | 5 × 1,000 | 5,000 | **0** | 0 / 0 | 5.51 M | 1.02 |
+| head `9aa2f182`, run 2 | 5 × 1,000 | 5,000 | **0** | 0 / 0 | 7.22 M | 0.53 |
+| main now `6286ba19`, run 1 | 5 × 1,000 | 5,000 | 0 | 0 / 0 | 5.24 M | 0.44 |
+| main now `6286ba19`, run 2 | 5 × 1,000 | 5,000 | 0 | 0 / 0 | 7.58 M | 0.47 |
+| head, hang run: 75 s under `timeout 300` | 75 s | 15,132 | **0** | 0 / 0 | 10.19 M | 0.21 |
+| head, hang run with the setters also flipping ANSI and the zone (the captured keys) | 75 s | 15,229 | **0** | 0 / 0 | 9.51 M | 0.25 |
+
+Every write refused with `CANNOT_SAFELY_CAST`; no other error. Both 75-second runs ended on their own clock, well
+inside the timeout: no deadlock and no hang. One write in the head's first run took 1.02 s; run 2 records every write
+over 0.5 s (two, at 0.51 s and 0.53 s; main's slowest 0.47 s), and the hang runs' slowest is 0.25 s across 30,000
+writes, so a contended read waits milliseconds, not the bound.
+
+**The bar** (package `pkg-view2-9aa2f182`, `BUILT_FROM` `9aa2f182…`; main now `pkg-main-6286ba19`). Every check as delta 2's:
+- **The write sweep** ([probes/wsweep.py](probes/map.md), 13 doors, 3,100 cells, both ANSI modes): the head and main
+  now answer **the same in all 3,100 cells**.
+- **The pins:** the part 1 and part 2 pin files, `test_temp_view_reader_lineage.py`, `test_store_ts_to_numeric_1.py`
+  and DECIMAL-DIVIDE-LITERAL-1's `test_decimal_divide_literal_1.py`: 2,041 passed, 20 xfailed (DECIMAL-DIVIDE-LITERAL-1's
+  standing xfails).
+- **The build's bar** (3,004 cells, fresh on the head, `part1` and `pre` at 21:10–21:12 UTC; `rev.py` re-run on all four
+  at 21:12 so its hours pair): **the same verdict as delta 2's in all 2,978 paired cells**, the same counts against
+  part 1 (261 WRONG → EQUAL, 10 WRONG → WRONG (changed), 5 EQUAL → RAISE, 0 EQUAL → WRONG, 0 matching-settings
+  moves) and against `pre` (622 / 33 / 9 / 0 / 0); only the 12 current-time hours differ in text, paired within the run.
+- **The verifier's probes, Fable's probe and the reader, join and `smartCsv` sweeps** (1,478 cells): 0 cells EQUAL on
+  part 1 and not on the head; against delta 2's head four answers differ, all artefacts (two of Fable's plans print
+  this lane's partition count and the package path, two time-travel refusals the run's own timestamp).
+- **`EXPLAIN` under matching settings:** `explain10.py` (22) and `explain_joins.py` (7) identical to main now's,
+  scratch paths aside; the cost cases' plans in [cost.md](cost.md).
+
+**The cap.** Delta 3 touched two of the build's seven product files (`repark-core/src/extension.rs` and
+`repark-core/src/session/temp_views.rs`) and no other: **seven of seven**. Test and map files:
+`frame_settings/tests.rs`, the part 2 pin file and four `map.md` rows; the two excepted maps keep their exact
+baselines.
 
 ## Named classes, cell for cell
 
@@ -254,6 +360,7 @@ Task 1 used three of the build's seven product files (`frame_settings.rs`, `temp
 Fable's guidance under the owner's delegation allowed an eighth, `crates/repark-python/src/frame_lineage.rs`, plus one
 `extension.rs` helper, for task 2 only; it was used for the backed-out build and is not in the branch. Delta 2 touched
 four of the seven (`repark-core/src/extension.rs`, `repark-core/src/session/temp_views.rs`, `frame_settings.rs`,
-`temp_view.rs`) and no other product file: **seven of seven**.
+`temp_view.rs`) and no other product file: **seven of seven**. Delta 3 touched two of the seven
+(`repark-core/src/extension.rs`, `repark-core/src/session/temp_views.rs`) and no other: **seven of seven**.
 
 Up: [map.md](map.md).

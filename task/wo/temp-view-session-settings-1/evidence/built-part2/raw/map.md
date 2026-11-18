@@ -13,5 +13,8 @@ Scratch and home paths replaced by placeholders.
   probes, Fable's probe, the plans; `summary.txt` the tallies.
 - [delta2/](delta2/) — `wsweep.jsonl`: the write sweep's 3,100 cells under matching settings, each cell's answer on
   `pre`, `part1`, delta 1 (`513208ce`), the head (`9d71e030`) and, for six doors, Spark.
+- [delta3/](delta3/) — `../probes/race.py`'s outputs: `race-d4423a69.json` (the merged delta 2), `race-head-1.json`,
+  `race-head-2.json` (`9aa2f182`), `race-main-1.json`, `race-main-2.json` (main `6286ba19`), 5,000 writes each, and the
+  head's 75-second hang runs `hang-head-unrelated.json` and `hang-head-captured.json`.
 
 Up: [../map.md](../map.md).
