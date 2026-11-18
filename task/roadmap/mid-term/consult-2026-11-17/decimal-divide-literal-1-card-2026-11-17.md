@@ -111,4 +111,51 @@ package `pkg-ddl-a30a8d60` (its `BUILT_FROM`). Evidence: [decimal-divide-literal
   default-cast check (`d10_2 * CAST(3 AS DECIMAL(20,0))` is `decimal(12,2)`, Spark `decimal(31,2)`; main alike);
   a runtime `SET` of `pickMinimumPrecision` is accepted and not read (the builder conf is).
 
+### Built, delta 1 (2026-11-18): a decimal `mod()` on the `%` path
+
+**Status: built, not merged; delta 1 halted (below).** Builder: Claude Opus 5.5 (`claude-opus-5-5`), effort xhigh.
+Product commit `8efe8e69` (over `a30a8d60`); package `pkg-ddl-8efe8e69` (its `BUILT_FROM`). Evidence:
+[bar.md](../../../wo/decimal-divide-literal-1/evidence/built/bar.md) §0 and
+[cost.md](../../../wo/decimal-divide-literal-1/evidence/built/cost.md).
+
+- **Guidance carried:** Fable's reply on the build's cost halt (`claude-fable-5-2`, 2026-11-18), **guidance under the
+  owner's overnight delegation, not an owner ruling**: Q1, the DataFrame `col(d10) / 3` row is the owner's (report
+  three ratios, no verdict); Q2, measure `mod(d, 0)`, `d % 0`, `pmod(d, 0)` on Spark first and put a decimal `mod()` on
+  the `%` path if Spark raises; time SQL `pmod()` and rewrite it only onto `F.pmod`'s spelling, measured against
+  Spark; Q3, the full series on the delta's package; Q4, card the items the build left.
+- **Spark first:** with ANSI on, `mod(d, 0)`, `d % 0`, `pmod(d, 0)` and `mod(d, CAST(0 AS DECIMAL(5,2)))` raise
+  `[REMAINDER_BY_ZERO]` at `d10_2`, `d28_2` and `d38_10`, on SQL and the DataFrame door; with ANSI off they answer
+  NULL. `mod` and `%` take the dividend's sign; `pmod(d, -3)` answers `1.25` for `7.25`.
+- **Built (one product file, the cap stays at 5 plus one statement):** `literal_step.rs` `remainder_node` rewrites a
+  decimal `mod()` onto the `%` operator (`remainder_operator`, `remainder_decimal_operand`; an integer argument cast to
+  its `forType` width). Every non-zero `mod()` cell keeps its answer and type; the class **"NULL → RAISE, Spark's
+  answer"** is 22 cells (ANSI on, `mod(d, 0)` by a literal, a decimal cast or a zero column; SQL, `F.expr`,
+  `selectExpr`; the pin file's five), each raising `[DIVIDE_BY_ZERO]` for Spark's `[REMAINDER_BY_ZERO]`. `pmod()` is
+  not rewritten: `F.pmod`'s spelling answers a negative divisor unlike Spark.
+- **The bar:** step 0's whole bar re-ran on the delta's head and every raw cell answers as on the build's head (0 EQUAL
+  → WRONG, 0 EQUAL → RAISE, the protected cells unmoved). Pins: 182 passed on the head; 137 failed and 45 passed on
+  main (the new green on main: `d10_2 % 0` with ANSI on).
+- **Cost** (five runs per row, ten over the bar): `F.expr("mod(d10, 3)")` 0.794x (was 1.207x); SQL `mod(d10, 3)`
+  0.869x; `F.pmod` 0.990x after ten; the build's near rows under. **SQL `pmod(d10, 3)` 1.142x after ten, outside its
+  band (0.950 to 1.064): a halt.** The DataFrame `col(d10) / 3`, the owner's row: 3.935x against main's `double`
+  division, 0.767x against main's SQL `d10 / 3`, 0.754x against main's `F.expr("d10 / 3")`.
+- **Found by the delta, a halt:** after a runtime `SET spark.sql.legacy.literal.pickMinimumPrecision=false` (accepted,
+  read back, not routed to the analyzer), `d10_2 / 3` and `d10_2 % 3` keep the narrowed widths (`decimal(14,6)`,
+  `decimal(3,2)`) where Spark and main answer `decimal(21,13)` and `decimal(10,2)`: EQUAL on main, TYPE on the head,
+  both modes. The fix routes the key at runtime (`builder_conf.py`, `session_runtime.rs`), outside the cap.
+- **Step 5, `hdiv/sessview`:** a CTAS of `h / 2` from a session-catalog view of `d10_2 / 2` over an Iceberg table
+  stores `decimal(18,10)` on the head, `decimal(25,17)` on main, `decimal(16, 8)` on Spark; values equal.
+- **Proposed cards** (bar.md §0.6; the clerk files them; every severity is a proposal for the owner):
+  SESSION-VIEW-DECIMAL-DIV-1 (S2; its label effect is the owner's); a written `CAST(3 AS DECIMAL(20,0))` narrowed in
+  `*` and `+` (S3); the runtime `SET` of `pickMinimumPrecision` (S2); the remainder-by-zero error class (S3); ANSI-on
+  `pmod(d, 0)` and integer `mod`/`pmod` by zero answering NULL (S2); `F.pmod` with a negative divisor (S2); `pmod()`
+  past its `Pmod` type raising Arrow's error (S3).
+- **Gates** (exit codes): `cargo test --locked` `repark-common`, `repark-functions`, `repark-core`,
+  `repark-spark`, `repark-python` 0; `make rust-clippy` 0; `make rust-panic-ban` 0; `cargo fmt --all -- --check` 0;
+  `make rust-fmt-check` 0; the pin file 182 passed on the head; the facade suite, release build, `-n 6`: 35,350
+  passed, 0 failed; `make py-test-facade` (`-n 6`): 35,345 passed, 0 failed; `pytest -n 6 python/repark-parity/tests`
+  0 with the records; `ledger_lifecycle.py check` 0; `check_map_size.py` 0; `sync_map_md.py --check` 0;
+  `uvx ruff@0.15.22 check .` 0 and `format --check .` 0 (the build's scripts restructured, PR #1361's CI failure); the
+  comment gate 0 hits.
+
 Up: [map.md](map.md).

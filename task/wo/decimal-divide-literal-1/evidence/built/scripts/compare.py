@@ -1,32 +1,62 @@
 import json
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent / "probes"))
-sys.argv = [sys.argv[0], "/dev/null", "/dev/null"] + sys.argv[1:]
-src = {}
-exec(compile(Path(Path(__file__).parent / "probes" / "analyze.py").read_text().split("verdicts = []")[0], "analyze", "exec"), src)
+PROBES = Path(__file__).parent / "probes"
+sys.path.insert(0, str(PROBES))
+sys.argv = [sys.argv[0], "/dev/null", "/dev/null", *sys.argv[1:]]
+src: dict = {}
+prelude = (PROBES / "analyze.py").read_text().split("verdicts = []")[0]
+exec(compile(prelude, "analyze", "exec"), src)
 classify, renorm = src["classify"], src["renorm"]
 
 main_dir, head_dir, out = Path(sys.argv[3]), Path(sys.argv[4]), Path(sys.argv[5])
 
 
-def load(path):
+def load(path: Path) -> dict:
     if not path.exists():
         return {}
     return {r["key"]: r for r in map(json.loads, path.open())}
 
 
-runs = []
-for ansi in ("true", "false"):
-    for conf in ("base", "apl_false", "pmp_false"):
-        runs.append((ansi, conf, f"spark-{ansi}-{conf}.jsonl", f"repark-{ansi}-{conf}.jsonl", ""))
-    runs.append((ansi, "native", f"spark-{ansi}-base.jsonl", "native.jsonl", ""))
-    runs.append((ansi, "rev", f"spark-{ansi}-base.jsonl", f"repark-{ansi}-base.jsonl", "rev/"))
-    runs.append((ansi, "rev-native", f"spark-{ansi}-base.jsonl", "native.jsonl", "rev/"))
+def runs() -> list[tuple[str, str, str, str, str]]:
+    found = []
+    for ansi in ("true", "false"):
+        base = f"spark-{ansi}-base.jsonl"
+        for conf in ("base", "apl_false", "pmp_false"):
+            pair = (f"spark-{ansi}-{conf}.jsonl", f"repark-{ansi}-{conf}.jsonl")
+            found.append((ansi, conf, *pair, ""))
+        found.append((ansi, "native", base, "native.jsonl", ""))
+        found.append((ansi, "rev", base, f"repark-{ansi}-base.jsonl", "rev/"))
+        found.append((ansi, "rev-native", base, "native.jsonl", "rev/"))
+    return found
+
+
+def compared(ansi: str, conf: str, sp: dict, mp: dict, hp: dict, key: str) -> dict:
+    spn = dict(sp, result=renorm(sp.get("result")))
+    door = "native" if "native" in conf else sp.get("door")
+    vm = classify(spn, dict(mp, result=renorm(mp.get("result")), door=sp.get("door")))
+    vh = classify(spn, dict(hp, result=renorm(hp.get("result")), door=sp.get("door")))
+    same = mp.get("result") == hp.get("result") and mp.get("statement") == hp.get("statement")
+    return {
+        "key": key,
+        "ansi": ansi,
+        "conf": conf,
+        "family": sp.get("family"),
+        "door": door,
+        "pos": sp.get("pos"),
+        "col": sp.get("col"),
+        "main": vm,
+        "head": vh,
+        "same_as_main": same,
+        "head_result": hp.get("result") if vh != "EQUAL" else None,
+        "spark_result": sp.get("result") if vh != "EQUAL" else None,
+    }
+
+
 rows = []
-for ansi, conf, sname, rname, sub in runs:
+for ansi, conf, sname, rname, sub in runs():
     sp_all = load(main_dir / sub / sname)
     mp_all = load(main_dir / sub / rname)
     hp_all = load(head_dir / sub / rname)
@@ -39,15 +69,7 @@ for ansi, conf, sname, rname, sub in runs:
         mp, hp = mp_all.get(key), hp_all.get(key)
         if mp is None or hp is None:
             continue
-        spn = dict(sp, result=renorm(sp.get("result")))
-        door = "native" if "native" in conf else sp.get("door")
-        vm = classify(spn, dict(mp, result=renorm(mp.get("result")), door=sp.get("door")))
-        vh = classify(spn, dict(hp, result=renorm(hp.get("result")), door=sp.get("door")))
-        same = mp.get("result") == hp.get("result") and mp.get("statement") == hp.get("statement")
-        rows.append({"key": key, "ansi": ansi, "conf": conf, "family": sp.get("family"), "door": door,
-                     "pos": sp.get("pos"), "col": sp.get("col"), "main": vm, "head": vh, "same_as_main": same,
-                     "head_result": hp.get("result") if vh != "EQUAL" else None,
-                     "spark_result": sp.get("result") if vh != "EQUAL" else None})
+        rows.append(compared(ansi, conf, sp, mp, hp, key))
 with out.open("w") as fh:
     for r in rows:
         fh.write(json.dumps(r, sort_keys=True) + "\n")

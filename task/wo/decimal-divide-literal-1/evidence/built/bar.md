@@ -4,6 +4,147 @@ Head: package `pkg-ddl-a30a8d60` (`BUILT_FROM` `a30a8d60`, the product commit, b
 `pkg-avg-27d6149f` (main `cd3d9ac3`'s product tree). Spark: PySpark 4.1.2, `local[1]`, the session zone UTC, Iceberg
 1.11.0. Every run printed `repark._native.__file__` and named the package it meant. Raw data: [raw/](raw/map.md).
 
+> **Delta 1 (2026-11-18).** The delta's head is package `pkg-ddl-8efe8e69` (`BUILT_FROM` `8efe8e69`, product commit
+> `8efe8e69` over `a30a8d60`): a decimal `mod()` takes the `%` path. It carries Fable's guidance under the owner's
+> overnight delegation (`claude-fable-5-2`, 2026-11-18; not an owner ruling). Section 0 is new; sections 1 to 3 are
+> the build's, and re-ran unchanged on the delta's head (marked where the delta changed a count).
+
+## 0. Delta 1: `mod()`, `pmod()` and the zero divisor
+
+### 0.1 Spark first (step 1)
+
+[scripts/remainder_probe.py](scripts/remainder_probe.py), the same cells on Spark 4.1.2, main `pkg-avg-27d6149f`, the
+build's head `pkg-ddl-a30a8d60` and the delta's head `pkg-ddl-8efe8e69`, both ANSI modes: Fable's 16 expressions over
+`7.25`, `-7.25`, NULL; `mod`, `%`, `pmod` with a zero divisor (literal `0`, `CAST(0 AS DECIMAL(5,2))`, a
+`DECIMAL(5,2)` zero column) and with negative operands (`3`, `-3`, `-0.7`, `-3` on the left, `3L`) at `d10_2`,
+`d28_2` and `d38_10` over seven rows (`±7.25`, NULL, `±6.00`, and a wide `±` value at each precision); integer
+`mod`/`pmod` by zero; and on the DataFrame door `F.expr("mod(…)")`, `F.expr("pmod(…)")`, `F.pmod`, `col % n` and
+`selectExpr`. 129 cells per mode. Raw: [raw/delta1/](raw/delta1/) (`rem-*.jsonl`); table:
+[scripts/remainder_table.py](scripts/remainder_table.py).
+
+| Spark 4.1.2 | ANSI on | ANSI off |
+|---|---|---|
+| `mod(d, 0)`, `d % 0`, `pmod(d, 0)`, `mod(d, CAST(0 AS DECIMAL(5,2)))`, a zero column; SQL, `F.expr`, `selectExpr`, `F.pmod`, `col % 0` | raise `[REMAINDER_BY_ZERO]` | NULL, Spark's `Remainder`/`Pmod` type |
+| integer `mod(i, 0)`, `i % 0`, `pmod(i, 0)` | raise `[REMAINDER_BY_ZERO]` | NULL, `int` |
+| `mod(d, ±3)`, `d % ±3` (negative dividend, divisor, both) | the dividend's sign: `7.25 → 1.25`, `-7.25 → -1.25`; `decimal(3,2)` at `d10_2` and `d28_2`, `decimal(11,10)` at `d38_10` | the same |
+| `pmod(d, 3)` | `-7.25 → 1.75` | the same |
+| `pmod(d, -3)` | `7.25 → 1.25`, `-7.25 → -1.25` (`r = a % n; r < 0 ? (r + n) % n : r`) | the same |
+| `pmod(-3, d)`, the wide row (`12345675.91` does not fit `decimal(3,2)`) | raise `[NUMERIC_VALUE_OUT_OF_RANGE]` | NULL for that row |
+
+Spark's `mod` is `Remainder`, the same expression as `%`, and raises with ANSI on. **Step 2's condition holds:** the
+remedy is built.
+
+### 0.2 What the delta built (step 2) and did not build (step 3)
+
+- **`mod()`:** `literal_step.rs` `remainder_node` rewrites a decimal `mod()` call (one whose operands are decimals or
+  integers, at least one decimal) onto the `%` operator (`remainder_operator`, `remainder_decimal_operand`), with an
+  integer argument cast to its `forType` width; it keeps `%`'s `Remainder` type and every non-zero answer, and takes
+  `SparkExprSemantics`' zero-divisor guard. An integer `mod()` and a `mod()` with a float keep `SparkMod`.
+- **`pmod()`: not rewritten.** The only allowed target, the spelling `F.pmod` uses (`((a % n) + n) % n`), was measured
+  against Spark: it raises for a zero divisor with ANSI on (as Spark does, `[DIVIDE_BY_ZERO]` for
+  `[REMAINDER_BY_ZERO]`), but answers a negative divisor unlike Spark (`F.pmod(7.25, -3)` is `-1.75`, Spark `1.25`;
+  6 cells below), where the SQL `pmod(d, -3)` answers as Spark. A rewrite would move `mod/pmod_neg` (EQUAL on the
+  build's head) to a wrong value, so it is not a target whatever the cost row says (cost.md).
+
+### 0.3 The delta's moves: the class "NULL → RAISE, Spark's answer"
+
+Every cell of the 129 × 2 that moved from the build's head to the delta's head
+([scripts/delta_moves.py](scripts/delta_moves.py)) is a decimal `mod()` with a zero divisor, ANSI on: it answered NULL
+and now raises, as Spark does. RePark's condition is `[DIVIDE_BY_ZERO]` where Spark's is `[REMAINDER_BY_ZERO]` (the
+same as `d % 0` on main; proposed card 4a below). Nothing else moved, in either mode.
+
+| cell (ANSI on) | build's head `a30a8d60` | delta's head `8efe8e69` | Spark |
+|---|---|---|---|
+| `fable/mod(d, 0)` | `decimal(3,2)` NULL ×3 | RAISE `DIVIDE_BY_ZERO` | RAISE `REMAINDER_BY_ZERO` |
+| `fable/mod(d, CAST(0 AS DECIMAL(5,2)))` | `decimal(5,2)` NULL ×3 | RAISE `DIVIDE_BY_ZERO` | RAISE `REMAINDER_BY_ZERO` |
+| `sql/zero/mod/d10_2`, `sql/zero/mod/d28_2` | `decimal(3,2)` NULL ×7 | RAISE `DIVIDE_BY_ZERO` | RAISE `REMAINDER_BY_ZERO` |
+| `sql/zero/mod/d38_10` | `decimal(11,10)` NULL ×7 | RAISE `DIVIDE_BY_ZERO` | RAISE `REMAINDER_BY_ZERO` |
+| `sql/zero/mod_dec/d10_2`, `sql/zero/mod_dec/d28_2` | `decimal(5,2)` NULL ×7 | RAISE `DIVIDE_BY_ZERO` | RAISE `REMAINDER_BY_ZERO` |
+| `sql/zero/mod_dec/d38_10` | `decimal(13,10)` NULL ×7 | RAISE `DIVIDE_BY_ZERO` | RAISE `REMAINDER_BY_ZERO` |
+| `sql/zero/mod_col/d10_2`, `sql/zero/mod_col/d28_2` | `decimal(5,2)` NULL ×7 | RAISE `DIVIDE_BY_ZERO` | RAISE `REMAINDER_BY_ZERO` |
+| `sql/zero/mod_col/d38_10` | `decimal(13,10)` NULL ×7 | RAISE `DIVIDE_BY_ZERO` | RAISE `REMAINDER_BY_ZERO` |
+| `df/expr_mod_zero/d10_2`, `df/expr_mod_zero/d28_2` (`F.expr`) | `decimal(3,2)` NULL ×7 | RAISE `DIVIDE_BY_ZERO` | RAISE `REMAINDER_BY_ZERO` |
+| `df/expr_mod_zero/d38_10` | `decimal(11,10)` NULL ×7 | RAISE `DIVIDE_BY_ZERO` | RAISE `REMAINDER_BY_ZERO` |
+| `df/selectExpr_mod_zero/d10_2`, `df/selectExpr_mod_zero/d28_2` | `decimal(3,2)` NULL ×7 | RAISE `DIVIDE_BY_ZERO` | RAISE `REMAINDER_BY_ZERO` |
+| `df/selectExpr_mod_zero/d38_10` | `decimal(11,10)` NULL ×7 | RAISE `DIVIDE_BY_ZERO` | RAISE `REMAINDER_BY_ZERO` |
+
+17 cells in the probe; the pin file adds 5 more of the class (ANSI on): `sql/call/mod_zero` (`mod(d10_2, 0)`),
+`sql/call/mod_zero_decimal`, `sql/call/mod_zero_column` (`mod(d10_2, bi - 3)`), `df/expr_mod_zero` and
+`pmp/call_mod_zero` (the `pickMinimumPrecision=false` session). Main answered NULL in all 22. With ANSI off the same
+cells answer NULL with Spark's type on both heads, as Spark does.
+
+The delta's head against Spark over the probe: ANSI on, EQUAL 71, both raise 38 (18 `%`/`F.pmod` by zero with the
+class name, as on main; the 17 above; 3 `pmod(-3, d)` overflows), Spark raises 17 (proposed card 4b), VALUE 3
+(`F.pmod` by `-3`); ANSI off, EQUAL 123, VALUE 3 (`F.pmod` by `-3`), RePark raises 3 (`pmod(-3, d)`). Main: ANSI on
+EQUAL 3, TYPE 68; ANSI off EQUAL 15, TYPE 108 (the rest as listed under the cards).
+
+### 0.4 Step 0's bar on the delta's head (step 6)
+
+The build's bar (section 1) re-ran in full on `pkg-ddl-8efe8e69`: **every one of its 7,035 raw cells answers exactly
+as on the build's head** (`raw/head/` against the delta's run, field for field), so the 7,258 comparisons keep
+section 1's transitions and counts: 0 EQUAL → WRONG, 0 EQUAL → RAISE, 0 protected cells moved. Step 0's probes have no
+zero-divisor cell. The class table, reproduced by [scripts/ddl_classes.py](scripts/ddl_classes.py) for both heads
+(identical output): [raw/delta1/bar-classes.txt](raw/delta1/bar-classes.txt).
+
+### 0.5 Step 5: a CTAS from a session-catalog view (`hdiv/sessview`)
+
+[scripts/sessview_ctas.py](scripts/sessview_ctas.py): an Iceberg table `lc.ns.vt` of `d10_2`, the view
+`CREATE VIEW default.sv_h AS SELECT id, d10_2 / 2 AS h FROM lc.ns.vt`, then
+`CREATE TABLE lc.ns.ctas_sessview USING iceberg AS SELECT id, h / 2 AS v FROM default.sv_h`; the stored type is read
+from the table's current `metadata.json` schema. A temp view over the same table is the control. Both ANSI modes
+answer alike. Raw: `raw/delta1/ctas-*.jsonl`.
+
+| CTAS of `h / 2` from | Spark 4.1.2 | main `pkg-avg-27d6149f` | delta's head `pkg-ddl-8efe8e69` |
+|---|---|---|---|
+| the session-catalog view | `decimal(16, 8)`: `1.81250000`, `-1.81250000`, NULL, `0.01500000`, `3086419.72750000` | `decimal(25,17)` | `decimal(18,10)` |
+| a temp view (control) | `decimal(16, 8)` | `decimal(32,24)` | `decimal(16,8)` (equal to Spark) |
+
+The values are equal at each stored scale (`1.8125000000` on the head); the stored column type is wrong on main and on
+the head.
+
+### 0.6 Proposed cards (for the orchestrator's clerk; every severity is a proposal for the owner)
+
+1. **SESSION-VIEW-DECIMAL-DIV-1** (`hdiv/sessview`): the outer `/` over a session-catalog view of an Iceberg table
+   misses the division UDF. Cells: `hdiv/sessview` TYPE in both modes (`h / 2` is `decimal(18,10)`, Spark
+   `decimal(16,8)`, main `decimal(25,17)`; values equal) and the CTAS cell above (stored `decimal(18,10)` against
+   Spark's `decimal(16, 8)`; main `decimal(25,17)`). A2's "`h / 2` scopes" closed at three of the four view-like
+   scopes (derived table, CTE, temp view; not the session view), and the flat `d / 2 / 2` agrees. Proposed **S2**; whether it blocks the label is the owner's (Fable's lean:
+   S2, not label-blocking if session-catalog views over Iceberg are outside the scoped label).
+2. **A written `CAST(3 AS DECIMAL(20,0))` narrowed in `*` and `+`** (U3's default-cast check reads a written
+   `DECIMAL(20,0)` cast of an integer literal as the planner's `BIGINT` coercion): `d10_2 * CAST(3 AS DECIMAL(20,0))`
+   is `decimal(12,2)` (Spark `decimal(31,2)`), `d10_2 + CAST(3 AS DECIMAL(20,0))` `decimal(11,2)` (Spark
+   `decimal(23,2)`); values equal; `/` and a `DECIMAL(10,0)` cast agree; main alike. Raw: `raw/delta1/card-*.jsonl`.
+   Proposed **S3**.
+3. **A runtime `SET spark.sql.legacy.literal.pickMinimumPrecision=false` is accepted and not read** (it reads back
+   `false`; only the builder conf reaches the analyzer; the facade does not route the key to `set_runtime_config`).
+   After the `SET`, Spark answers `d10_2 * 3` `decimal(21,2)`, `d10_2 / 3` `decimal(21,13)`, `d10_2 % 3`
+   `decimal(10,2)`, `mod(d10_2, 3)` `decimal(10,2)`; main `(12,2)`, `(21,13)`, `(10,2)`, `(12,2)`; the head `(12,2)`,
+   `(14,6)`, `(3,2)`, `(3,2)`, values equal, both modes. **`/` and `%` were EQUAL on main and are TYPE on the head**
+   (main agreed by never narrowing them): an EQUAL → WRONG cell outside step 0's bar, found by the delta. The fix
+   routes the key at runtime (the facade's `builder_conf.py` key list and `session_runtime.rs`
+   `apply_runtime_config`): a sixth and seventh product file, outside the cap. Proposed **S2** (the owner's default
+   for the other accepted-and-ignored decimal conf, `allowPrecisionLoss`, was S2); the regression is reported as a
+   halt in the hand-back, not ruled here.
+4. **Zero divisor and `pmod`, left by steps 2 and 3** (all main alike unless stated):
+   - a. **The error class of a remainder by zero:** `d % 0`, a decimal `mod(d, 0)`, `F.pmod(d, 0)` and `col % 0`
+     raise `[DIVIDE_BY_ZERO] Division by zero. Use try_divide…` where Spark raises `[REMAINDER_BY_ZERO] Remainder by
+     zero. Use try_mod…` (ANSI on). Cells: the 18 `%`/`F.pmod` cells (`fable/d % 0`, `fable/d % CAST(0…)`,
+     `sql/zero/pct{,_dec,_col}/*`, `sql/int/pct_zero`, `df/F.pmod_zero/*`, `df/pct_zero/*`) and the 22 cells of 0.3.
+     The pin file reads the class through `CARDED_CONDITIONS`. Proposed **S3**.
+   - b. **ANSI on, `pmod(d, 0)` and an integer `mod`/`pmod` by zero answer NULL** where Spark raises
+     `[REMAINDER_BY_ZERO]`: `fable/pmod(d, 0)`, `sql/zero/pmod{,_dec,_col}/{d10_2,d28_2,d38_10}`,
+     `df/expr_pmod_zero/{d10_2,d28_2,d38_10}`, `sql/int/{mod_zero,pmod_zero,mod_zero_col,pmod_zero_col}` (17 cells; a
+     silent NULL in the label's mode). Proposed **S2**.
+   - c. **`F.pmod` with a negative divisor** answers the facade spelling's `((a % n) + n) % n`: `F.pmod(d, F.lit(-3))`
+     is `-1.75` for `7.25` and `-2.09` for `12345678.91` where Spark answers `1.25` and `0.91`
+     (`df/F.pmod_neg/{d10_2,d28_2,d38_10}`, both modes, 6 cells; a silent wrong value; the SQL `pmod(d, -3)` answers
+     as Spark). Proposed **S2**.
+   - d. **`pmod()` whose answer overflows Spark's `Pmod` type:** `pmod(-3, d)` at the wide row (`12345675.91` into
+     `decimal(3,2)`): Spark NULL (ANSI off) and `[NUMERIC_VALUE_OUT_OF_RANGE]` (ANSI on); the head's cast to the
+     `Pmod` type raises Arrow's `Invalid argument error` in both modes; main answered `decimal(12,2)` with the
+     value. `sql/neg/pmod_left_neg/{d10_2,d28_2,d38_10}`, 6 cells (ANSI off: main TYPE and VALUE, the head raises; the
+     build's cast, not the delta's). Proposed **S3**.
+
 ## 1. Step 0's whole domain table, re-run on the head
 
 Step 0's probes (`../probes/`: `run_door.py` for `base`, `apl_false`, `pmp_false` in both modes, `run_revision.py` in
@@ -99,6 +240,18 @@ mode, a session built with `spark.sql.legacy.literal.pickMinimumPrecision=false`
 |---|---|---|
 | head `pkg-ddl-a30a8d60` | 162 | 0 |
 | main `pkg-avg-27d6149f` | 44 | 118 |
+| **delta 1:** head `pkg-ddl-8efe8e69` | 182 | 0 |
+| **delta 1:** main `pkg-avg-27d6149f` | 45 | 137 |
+
+**Delta 1** re-recorded the oracle from Spark 4.1.2 (every earlier cell's answer unchanged) and added 10 cells per
+mode, 91 in all (82 default, 9 `false`-conf): `sql/call/mod_neg` (`mod(d10_2, -3)`), `sql/call/mod_d28_2`,
+`sql/call/mod_zero` (`mod(d10_2, 0)`), `sql/call/mod_zero_decimal` (`CAST(0 AS DECIMAL(5,2))`),
+`sql/call/mod_zero_column` (`mod(d10_2, bi - 3)`), `sql/mod/zero` (`d10_2 % 0`), `df/expr_mod_neg`,
+`df/expr_mod_zero`, `pmp/call_mod_d28_2` (Spark's `decimal(12,2)` with the `INT` width) and `pmp/call_mod_zero`.
+With ANSI on, Spark raises `[REMAINDER_BY_ZERO]` for the five zero-divisor `mod` cells and `d10_2 % 0`; the test reads
+RePark's `[DIVIDE_BY_ZERO]` for it (`CARDED_CONDITIONS`, proposed card 4a). Every new cell is red on main in both
+modes except `d10_2 % 0` with ANSI on (main raises too), the one new green on main; it is red on main with ANSI off
+(`decimal(10,2)` against Spark's `decimal(3,2)`). Logs: [raw/delta1/pins/](raw/delta1/pins/).
 
 Main's 44 green cells are the guards and the `false`-conf cells where main already agrees (`d / 3`, `3 / d28_2`,
 `d % 3`, `d * 3L`, which main types by width as Spark then does): `sql/guard/*` (`d / (1 + 2)`, `d / bi`, `i / j`,
@@ -114,7 +267,9 @@ the suffixed `*`, `-`, `/`, `%`; `mod`, `pmod`, `mod(3, d)`, `mod(d, 0.7)`, `mod
 
 Rust: `crates/repark-functions/src/decimal_precision/literal_step_tests.rs` (9 tests: the literal widths of `/`, `%`,
 `mod`, `pmod`, the folded and cast divisors, the `false` conf, a second analyze, the DataFrame marker, the suffix
-spelling).
+spelling). Delta 1 adds
+`a_decimal_mod_call_answers_as_the_remainder_operator` (`mod(d, 3)`, `mod(d, -3)`, `mod(3, d)`, `mod(d, i)` answer
+as `%`; `mod(d, 0)` raises `DIVIDE_BY_ZERO` with ANSI on; an integer `mod(i, j)` stays `int`): 10 tests.
 
 ## 3. Earlier units' pin files and the facade suite
 

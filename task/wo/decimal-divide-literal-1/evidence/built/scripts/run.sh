@@ -10,7 +10,7 @@ HEAD=${HEAD:?}
 RUNS=${RUNS:-5}
 FIRST=${FIRST:-1}
 GROUPS_=${GROUPS_:-"ddl c012"}
-DDL_CASES=${DDL_CASES:-"s1_sql_d10_div3 s1_sql_d38_div3 s2_df_d10_div3 s2_df_d10_mod3 s2_df_d10_pmod s2_df_d10_expr_mod s3_sql_int_div_int s3_sql_double_div_double s3_df_int_div_int s3_df_double_div_double"}
+DDL_CASES=${DDL_CASES:-"s1_sql_d10_div3 s1_sql_d38_div3 s1_sql_d10_mod3 s1_sql_d10_pmod3 s2_df_d10_div3 s2_df_d10_mod3 s2_df_d10_pmod s2_df_d10_expr_mod s2_df_d10_expr_div3 s3_sql_int_div_int s3_sql_double_div_double s3_df_int_div_int s3_df_double_div_double"}
 pkg() { case $1 in head) echo $HEAD;; *) echo $MAIN;; esac; }
 LOCK="flock -x $B/measure.lock flock $B/link.lock flock $B/opus-cargo.lock flock $B/opus2-cargo.lock nice -n 10 taskset -c 48-57"
 sample() {

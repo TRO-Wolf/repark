@@ -1,12 +1,14 @@
+import importlib
 import json
 import sys
 from pathlib import Path
 
-cells_dir, jar, root, out = sys.argv[1:5]
-sys.path.insert(0, cells_dir)
-import _decimal_divide_literal_1_cells as cells
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as sf
+
+cells_dir, jar, root, out = sys.argv[1:5]
+sys.path.insert(0, cells_dir)
+cells = importlib.import_module("_decimal_divide_literal_1_cells")
 
 EXT = "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
 

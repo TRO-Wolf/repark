@@ -5750,7 +5750,9 @@ still open is `isModifiable`.
     `+` and `-`, as Spark's `DataTypeUtils.fromLiteral`; a `TINYINT` literal stays `decimal(3,0)` (no `Byte` arm);
     typed operands, written casts and folded divisors keep their width (`d / (1 + 2)` and
     `d / CAST(3 AS DECIMAL(20,0))` answer as before, equal to Spark);
-  - `mod(d, 3)`, `pmod(d, 3)` and `F.expr("mod(d, 3)")` take Spark's `Remainder`/`Pmod` type (`decimal(3,2)`);
+  - `mod(d, 3)`, `pmod(d, 3)` and `F.expr("mod(d, 3)")` take Spark's `Remainder`/`Pmod` type (`decimal(3,2)`); a
+    decimal `mod()` is the `%` operator (delta 1), so `mod(d, 0)` raises with ANSI on as Spark does and is NULL
+    with ANSI off;
   - the DataFrame `/` keeps `double` for integers, floats and strings and is typed as SQL text when a decimal meets a
     decimal, an integer or NULL; `%` and `F.pmod` follow;
   - the division writes store Spark's types and rows (CTAS `decimal(14,6)` at `d10_2`, `decimal(32,6)` at `d28_2`;
@@ -5765,16 +5767,24 @@ still open is `isModifiable`.
   `task/wo/avg-decimal-round-1/evidence/` and `task/wo/decimal-divide-literal-1/evidence/built/`.)*
 - **Still unlike Spark:**
   - the outer `/` over a session-catalog view of an Iceberg table misses the division UDF (`h / 2` is `decimal(18,10)`
-    where Spark answers `decimal(16,8)`; values equal; no card yet);
+    where Spark answers `decimal(16,8)`, and a CTAS from that view stores `decimal(18,10)`; values equal; proposed card
+    SESSION-VIEW-DECIMAL-DIV-1);
+  - a remainder by zero with ANSI on: `%` and a decimal `mod()` raise `[DIVIDE_BY_ZERO]` where Spark raises
+    `[REMAINDER_BY_ZERO]`; `pmod(d, 0)` and an integer `mod(i, 0)`/`pmod(i, 0)` answer NULL where Spark raises;
+    `F.pmod(d, -3)` answers `-1.75` for `7.25` (Spark `1.25`); `pmod(-3, d)` past `Pmod`'s type raises Arrow's error
+    where Spark answers NULL (ANSI off) or `NUMERIC_VALUE_OUT_OF_RANGE` (proposed cards, delta 1 `bar.md` §0.6);
   - `round(d / 3, s)` keeps its input type (DECIMAL-ROUND-RESULT-TYPE-1, S3), so `round(d38_10 / 3, 6)` comparisons
     keep main's rows; `try_*` with a decimal and an integer (TRY-ARITH-DECIMAL-INT-1, S1);
     `allowPrecisionLoss=false` (DECIMAL-PRECISION-LOSS-CONF-1, S2); `d38_10 * 3` and ANSI-off `d38_0 * 3` raise
-    Arrow's overflow (its S2 card); a runtime `SET` of `pickMinimumPrecision` is accepted and not read;
-  - a written `CAST(3 AS DECIMAL(20,0))` in `*` is still narrowed to `decimal(1,0)` (`d10_2 * CAST(3 AS DECIMAL(20,0))`
-    is `decimal(12,2)` where Spark answers `decimal(31,2)`; main alike; no card yet);
+    Arrow's overflow (its S2 card); a runtime `SET` of `pickMinimumPrecision` is accepted and not read, so after
+    `SET …=false` `d / 3` and `d % 3` keep the narrowed widths where Spark (and main, which never narrowed them)
+    answer `decimal(21,13)` and `decimal(10,2)` (proposed card);
+  - a written `CAST(3 AS DECIMAL(20,0))` in `*` and `+` is still narrowed to `decimal(1,0)`
+    (`d10_2 * CAST(3 AS DECIMAL(20,0))` is `decimal(12,2)` where Spark answers `decimal(31,2)`; main alike; proposed
+    card);
   - the native `repark.sql()` door keeps DataFusion's division (NATIVE-DECIMAL-AVG-DIVIDE-1, S2).
-- **Pin** — `python/repark/tests/types/test_decimal_divide_literal_1.py` (81 cells per ANSI mode against
-  `decimal_divide_literal_1_spark_oracle.json`, 74 default and 7 under `pickMinimumPrecision=false`); Rust
+- **Pin** — `python/repark/tests/types/test_decimal_divide_literal_1.py` (91 cells per ANSI mode against
+  `decimal_divide_literal_1_spark_oracle.json`, 82 default and 9 under `pickMinimumPrecision=false`); Rust
   `repark-functions` `decimal_precision/literal_step_tests.rs`.
 - **Cost** — [evidence/built/cost.md](../task/wo/decimal-divide-literal-1/evidence/built/cost.md).
 - **Rationale** — the owner's rulings "Defaults" (ruling 2) and "Merge 1352 and 1353, defaults on the questions"

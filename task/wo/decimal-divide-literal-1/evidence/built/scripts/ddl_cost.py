@@ -5,7 +5,7 @@ from pathlib import Path
 
 import repark._native as native
 from repark import ReparkSession
-from repark import functions as F
+from repark import functions as sf
 
 case, label, data, out = sys.argv[1:5]
 s = ReparkSession.builder.appName("ddl-cost").getOrCreate()
@@ -15,17 +15,20 @@ AGG = "SELECT count(*), sum(q) FROM (SELECT {e} AS q FROM k)"
 SQL = {
     "s1_sql_d10_div3": AGG.format(e="d10 / 3"),
     "s1_sql_d38_div3": AGG.format(e="d38 / 3"),
+    "s1_sql_d10_mod3": AGG.format(e="mod(d10, 3)"),
+    "s1_sql_d10_pmod3": AGG.format(e="pmod(d10, 3)"),
     "s3_sql_int_div_int": AGG.format(e="i1 / i2"),
     "s3_sql_double_div_double": AGG.format(e="x1 / x2"),
 }
-d = F.col("d10")
+d = sf.col("d10")
 FRAME = {
     "s2_df_d10_div3": lambda: d / 3,
     "s2_df_d10_mod3": lambda: d % 3,
-    "s2_df_d10_pmod": lambda: F.pmod(d, F.lit(3)),
-    "s2_df_d10_expr_mod": lambda: F.expr("mod(d10, 3)"),
-    "s3_df_int_div_int": lambda: F.col("i1") / F.col("i2"),
-    "s3_df_double_div_double": lambda: F.col("x1") / F.col("x2"),
+    "s2_df_d10_pmod": lambda: sf.pmod(d, sf.lit(3)),
+    "s2_df_d10_expr_mod": lambda: sf.expr("mod(d10, 3)"),
+    "s2_df_d10_expr_div3": lambda: sf.expr("d10 / 3"),
+    "s3_df_int_div_int": lambda: sf.col("i1") / sf.col("i2"),
+    "s3_df_double_div_double": lambda: sf.col("x1") / sf.col("x2"),
 }
 REPS = 4
 
@@ -33,7 +36,7 @@ REPS = 4
 def run() -> list:
     if case in SQL:
         return s.sql(SQL[case]).collect()
-    return k.select(FRAME[case]().alias("q")).agg(F.count(F.lit(1)), F.sum("q")).collect()
+    return k.select(FRAME[case]().alias("q")).agg(sf.count(sf.lit(1)), sf.sum("q")).collect()
 
 
 got = run()
