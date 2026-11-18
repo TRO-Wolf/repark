@@ -1,0 +1,92 @@
+{
+ "create/df_path": "OK",
+ "create/sql_path": {
+  "rows": [],
+  "types": []
+ },
+ "create/sql_upper_only": {
+  "rows": [],
+  "types": []
+ },
+ "create/sql_upper_ref": {
+  "rows": [],
+  "types": []
+ },
+ "create/sql_view": {
+  "rows": [],
+  "types": []
+ },
+ "direct/ci/path": {
+  "analysis_frames": [
+   "at org.apache.spark.sql.catalyst.analysis.Analyzer.org$apache$spark$sql$catalyst$analysis$Analyzer$$executeSameContext(Analyzer.scala:343)",
+   "at org.apache.spark.sql.catalyst.analysis.Analyzer.$anonfun$execute$1(Analyzer.scala:339)",
+   "at org.apache.spark.sql.catalyst.analysis.AnalysisContext$.withNewAnalysisContext(Analyzer.scala:224)",
+   "at org.apache.spark.sql.catalyst.analysis.Analyzer.execute(Analyzer.scala:339)",
+   "at org.apache.spark.sql.catalyst.analysis.Analyzer.execute(Analyzer.scala:289)",
+   "at org.apache.spark.sql.catalyst.analysis.resolver.HybridAnalyzer.resolveInFixedPoint(HybridAnalyzer.scala:236)"
+  ],
+  "error": "COLUMN_ALREADY_EXISTS",
+  "text": "[COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or rename the existing column. SQLSTATE: 42711 JVM stacktrace: org.apache.spark.sql.AnalysisException: [COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"
+ },
+ "provenance": {
+  "engine": "spark",
+  "jar": "org.apache.iceberg_iceberg-spark-runtime-4.1_2.13-1.11.0.jar",
+  "version": "4.1.2"
+ },
+ "read/ci/df_path": {
+  "analysis_frames": [],
+  "error": "AMBIGUOUS_REFERENCE",
+  "text": "[AMBIGUOUS_REFERENCE] Reference `a` is ambiguous, could be: [`a`, `a`]. SQLSTATE: 42704 JVM stacktrace: org.apache.spark.sql.AnalysisException: [AMBIGUOUS_REFERENCE] Reference `a` is ambiguous, could be: [`a`, `a`]. SQLSTATE: 42704 at"
+ },
+ "read/ci/fixture": {
+  "analysis_frames": [],
+  "error": "AMBIGUOUS_REFERENCE",
+  "text": "[AMBIGUOUS_REFERENCE] Reference `a` is ambiguous, could be: [`a`, `a`]. SQLSTATE: 42704 JVM stacktrace: org.apache.spark.sql.AnalysisException: [AMBIGUOUS_REFERENCE] Reference `a` is ambiguous, could be: [`a`, `a`]. SQLSTATE: 42704 at"
+ },
+ "read/ci/held_fresh": {
+  "analysis_frames": [],
+  "error": "AMBIGUOUS_REFERENCE",
+  "text": "[AMBIGUOUS_REFERENCE] Reference `a` is ambiguous, could be: [`a`, `a`]. SQLSTATE: 42704 JVM stacktrace: org.apache.spark.sql.AnalysisException: [AMBIGUOUS_REFERENCE] Reference `a` is ambiguous, could be: [`a`, `a`]. SQLSTATE: 42704 at"
+ },
+ "read/ci/sql_path": {
+  "analysis_frames": [
+   "at org.apache.spark.sql.catalyst.analysis.Analyzer.org$apache$spark$sql$catalyst$analysis$Analyzer$$executeSameContext(Analyzer.scala:343)",
+   "at org.apache.spark.sql.catalyst.analysis.Analyzer$ResolveRelations$.$anonfun$resolveViews$1(Analyzer.scala:1179)",
+   "at org.apache.spark.sql.catalyst.analysis.ViewResolution$.$anonfun$resolve$2(ViewResolution.scala:53)",
+   "at org.apache.spark.sql.catalyst.analysis.ViewResolution$.$anonfun$resolve$1(ViewResolution.scala:53)",
+   "at org.apache.spark.sql.catalyst.analysis.AnalysisContext$.withAnalysisContext(Analyzer.scala:216)",
+   "at org.apache.spark.sql.catalyst.analysis.ViewResolution$.resolve(ViewResolution.scala:36)"
+  ],
+  "error": "COLUMN_ALREADY_EXISTS",
+  "text": "[COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or rename the existing column. SQLSTATE: 42711 JVM stacktrace: org.apache.spark.sql.AnalysisException: [COLUMN_ALREADY_EXISTS] The column `a` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"
+ },
+ "read/ci/sql_upref": {
+  "rows": [
+   "9"
+  ],
+  "types": [
+   "int"
+  ]
+ },
+ "read/ci/sql_view": {
+  "analysis_frames": [],
+  "error": "AMBIGUOUS_REFERENCE",
+  "text": "[AMBIGUOUS_REFERENCE] Reference `a` is ambiguous, could be: [`a`, `a`]. SQLSTATE: 42704 JVM stacktrace: org.apache.spark.sql.AnalysisException: [AMBIGUOUS_REFERENCE] Reference `a` is ambiguous, could be: [`a`, `a`]. SQLSTATE: 42704 at"
+ },
+ "read/cs/sql_path": {
+  "rows": [
+   "2"
+  ],
+  "types": [
+   "int"
+  ]
+ },
+ "read/cs/sql_view": {
+  "rows": [
+   "2"
+  ],
+  "types": [
+   "int"
+  ]
+ }
+}
