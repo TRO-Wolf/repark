@@ -5737,6 +5737,51 @@ still open is `isModifiable`.
   defaults on the questions" (2026-11-17); card
   [AVG-DECIMAL-ROUND-1](../task/roadmap/mid-term/decimal-common-type-1-side/avg-decimal-round-1-card-2026-11-16.md).
 
+### TEMP-VIEW-SESSION-SETTINGS-1 part 1 — a SQL temp view answers under the settings captured at CREATE — **FIXED 2026-11-18 on the SQL door (branch `fix/temp-view-session-settings-1-part1`, not merged)**
+
+- **repark** — Before (main `6f80793b`): a SQL temp view re-planned its text at every read under the live session and
+  physically planned it under the reader's state, so every ANSI-gated and zone-reading body followed the reader:
+  created ANSI on and read off, `10 / b` answered NULL and `a + 1` wrapped where Spark raises; created `UTC` and read
+  `America/Los_Angeles`, `hour(ts)` answered `18` where Spark answers `2` (silent, ANSI on). The same held for a view over
+  a view, a DataFrame over a SQL view, `spark.table` over a SQL view, the `ALTER TABLE` rename, CTAS, `INSERT … SELECT`
+  and `writeTo` from the view, `CREATE OR REPLACE`, `RESET`, `spark.conf.set`, the self-join and the SQL-view caches.
+
+  After: the view captures the ANSI flag, the session zone, the decimal legacy switch and the timestamp-type carrier at
+  `CREATE` (and every `CREATE OR REPLACE`); a rename copies them. A read whose settings match runs today's plan
+  (`EXPLAIN` identical); otherwise the body is planned and analysed under the captured settings with the reader's start
+  time, `current_timezone()` answers the outermost reader's zone (as Spark's `ComputeCurrentTime` does), and
+  `current_date()`, `localtimestamp()` and `now()`'s zone follow creation, as on Spark. A reader's filter keeps the
+  reader's semantics: its settings-free conjuncts (columns, literals, comparisons, boolean operators, `IN`, `BETWEEN`,
+  numeric casts) push into the body, where the optimizer substitutes the body's own expressions; the others, and the
+  limit, run above the body under the reader's settings.
+- **spark** — `CapturesConfig.sqlConfigsToProps` stores every modifiable SQL setting plus the zone and ANSI with a SQL
+  temp view; `View.effectiveSQLConf` analyses the body under them; the optimizer and execution run under the reader
+  (read from the 4.1.2 jars; the step 0, `task/wo/temp-view-session-settings-1/`).
+- **Still unlike Spark:**
+  - the DataFrame door (`createOrReplaceTempView`, `registerTempTable`, the facade's scratch views, held-frame writes and
+    derivations, `cache()` of a held frame) — Part 2 of this card; a SQL view whose body inlines a DataFrame view that
+    reads settings keeps today's path until Part 2 lands;
+  - the ruled class (owner, "defaults on both", question 11 (a)): a settings-sensitive reader conjunct runs above a body
+    that raises on a row the conjunct drops, so the read raises where Spark answers (`b <> 0 OR b + 0 > 100`,
+    `b + 0 <> 0` over a `10 / b` view created on and read off); the wrapper that would close most of them is
+    VIEW-FILTER-SETTINGS-WRAPPER-1;
+  - `NOT (b = 0) AND m > 1` raises through the AND's evaluation order (AND-GUARD-ANSI-1);
+  - `current_timezone()` on a held frame first acted on after a zone `SET` keeps the creation zone
+    (HELD-FRAME-CURRENT-TIMEZONE-1);
+  - `ALTER VIEW <temp> RENAME TO`, `ALTER VIEW <temp> AS` and `CACHE TABLE … AS SELECT` refuse
+    (TEMP-VIEW-ALTER-AND-CACHE-AS-1);
+  - `caseSensitive` is not captured: a view created case-insensitive and read case-sensitive refuses where Spark
+    answers, because capturing it would answer where Spark refuses a twin-column relation (proposed card
+    TEMP-VIEW-CASE-SENSITIVE-CAPTURE-1).
+- **Pin** — `python/repark/tests/session/test_temp_view_session_settings_1.py` (383 cells in each ANSI mode and the unset
+  cells against `temp_view_session_settings_1_spark_oracle.json`, the ruled class and the direct gaps pinned as they
+  answer, `EXPLAIN` identity with main's plans); Rust `repark-spark` `view_ddl/temp_settings/tests.rs` and
+  `view_ddl/temp_view.rs` tests.
+- **Bar and cost** — [built-part1/bar.md](../task/wo/temp-view-session-settings-1/evidence/built-part1/bar.md),
+  [built-part1/cost.md](../task/wo/temp-view-session-settings-1/evidence/built-part1/cost.md).
+- **Rationale** — the owner's rulings "Defaults, merge 1355" and "defaults on both" (2026-11-17); card
+  [TEMP-VIEW-SESSION-SETTINGS-1](../task/roadmap/mid-term/temp-view-session-settings-1-card-2026-11-02.md).
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`
