@@ -7,5 +7,6 @@ pub(crate) mod show_tblproperties;
 pub(crate) mod temp_alter;
 pub(crate) mod temp_ddl;
 pub(crate) mod temp_parse;
+pub(crate) mod temp_settings;
 pub(crate) mod temp_view;
 pub(crate) mod temp_write;
