@@ -31,7 +31,13 @@ everything else passes through.
     `[REMAINDER_BY_ZERO]`), and is NULL with ANSI off. `pmod()` keeps `SparkPmod` and a cast to
     `Pmod.resultDecimalType` (`max(s1, s2)`, `min(p1 − s1, p2 − s2) + scale`,
     `adjustPrecisionScale`). An integer `mod()` keeps `SparkMod`. A cast over a call is left
-    alone, so a second analyze changes nothing;
+    alone, so a second analyze changes nothing. **Delta 2 (2026-11-18):** a decimal `pmod()` is
+    Spark's `Pmod.eval` over `%`: `CASE WHEN r < 0 THEN (r + n) % n ELSE r END` with `r = a % n`
+    (`pmod_formula`; the optimizer's common-subexpression pass computes `r` once per row). No
+    cast where the formula's type is `Pmod`'s; otherwise a cast to it, `TRY_CAST` with ANSI off
+    (NULL on overflow, as Spark) and a plain cast with ANSI on (Arrow's error for Spark's
+    `[NUMERIC_VALUE_OUT_OF_RANGE]`). When the `+` would need Spark's precision-38 scale cut
+    (a 38-digit divisor), the call keeps `SparkPmod` and the same cast, so `r + n` stays exact;
   - the DataFrame `/` marker: `PyColumn::div` builds `CAST(CAST(x AS DOUBLE) AS DOUBLE)` on
     each side (`dataframe_divide_operand`). The bottom-up pass strips it when one side is a
     decimal and the other a decimal, an integer or NULL (the plain `/` is then typed as SQL
@@ -44,10 +50,11 @@ everything else passes through.
     `VALUES`, partition transforms) the plain cast stays;
   - the conf `spark.sql.legacy.literal.pickMinimumPrecision` (default `true`): a builder conf
     installs `SparkPickMinimumPrecision`; `false` turns the literal step off for every
-    operator, as Spark's `literalPickMinimumPrecision` does. A runtime `SET` is accepted and
-    not read (as on main).
+    operator, as Spark's `literalPickMinimumPrecision` does. **Delta 2:** a runtime `SET` and
+    `RESET` write it too (`repark-python` `session_runtime.rs`, the facade's `builder_conf.py`).
 - [`literal_step_tests.rs`](literal_step_tests.rs) pins the literal widths of `/`, `%`,
   `mod`, `pmod`, a decimal `mod()` answering as `%` (`mod(d, 0)` raising with ANSI on), the
+  decimal `pmod()` formula (negative operands, the overflow row in both modes, a zero divisor), the
   folded and cast divisors, the `false` conf, the second analyze, the DataFrame marker and the
   suffix spelling.
 - [`negate_null_tests.rs`](negate_null_tests.rs) pins the fold shapes (null cast /

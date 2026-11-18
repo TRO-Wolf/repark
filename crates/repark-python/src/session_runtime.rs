@@ -237,6 +237,22 @@ fn apply_runtime_config(
         );
         return Ok(());
     }
+    if key == repark_functions::decimal_precision::PICK_MINIMUM_PRECISION_KEY {
+        let enabled = repark_functions::decimal_legacy::parse_decimal_truncate_legacy(value)
+            .ok_or_else(|| {
+                refused_boolean_knob(BooleanConfRefusal {
+                    key: repark_functions::decimal_precision::PICK_MINIMUM_PRECISION_KEY,
+                    raw: value.to_string(),
+                })
+            })?;
+        let state_lock = session.context().state_ref();
+        let mut state = state_lock.write();
+        repark_functions::decimal_precision::write_pick_minimum_precision(
+            state.config_mut().options_mut(),
+            enabled,
+        );
+        return Ok(());
+    }
     if key == repark_core::TIME_PARSER_POLICY_KEY {
         session.set_time_parser_policy(value)?;
         return Ok(());

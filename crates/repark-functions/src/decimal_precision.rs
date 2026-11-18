@@ -30,7 +30,8 @@ pub struct SparkDecimalPrecision;
 impl AnalyzerRule for SparkDecimalPrecision {
     fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
         let pick = literal_step::pick_minimum_precision(config);
-        plan.transform_up_with_subqueries(|node| rewrite_plan(node, pick))
+        let ansi = crate::ansi::spark_ansi_enabled_from_options(config);
+        plan.transform_up_with_subqueries(|node| rewrite_plan(node, pick, ansi))
             .data()
     }
 
@@ -41,7 +42,7 @@ impl AnalyzerRule for SparkDecimalPrecision {
 }
 
 /// Rewrite one plan node's expressions against its merged input schema, keeping output field names.
-fn rewrite_plan(plan: LogicalPlan, pick: bool) -> Result<Transformed<LogicalPlan>> {
+fn rewrite_plan(plan: LogicalPlan, pick: bool, ansi: bool) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -49,8 +50,8 @@ fn rewrite_plan(plan: LogicalPlan, pick: bool) -> Result<Transformed<LogicalPlan
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten =
-            literal_step::rewrite_operators(expr, &schema, pick)?.transform_data(|lifted| {
+        let rewritten = literal_step::rewrite_operators(expr, &schema, pick, ansi)?
+            .transform_data(|lifted| {
                 lifted.transform_down(|node| Ok(rewrite_expr(node, &schema, pick)))
             })?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))

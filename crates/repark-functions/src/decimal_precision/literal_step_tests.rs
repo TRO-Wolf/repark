@@ -13,11 +13,15 @@ use super::{dataframe_divide_operand, spell_integer_suffix, write_pick_minimum_p
 use crate::analyze_eagerly;
 
 fn spark_ctx(pick: bool) -> SessionContext {
+    spark_ctx_in(pick, true)
+}
+
+fn spark_ctx_in(pick: bool, ansi: bool) -> SessionContext {
     let mut rules =
         crate::lambda_rebind::analyzer_rules_with_higher_order_preparation(Analyzer::new().rules)
             .expect("type_coercion seat");
     rules.extend(crate::analyzer_rules());
-    let mut config = crate::ansi::with_spark_ansi_config(SessionConfig::new(), true);
+    let mut config = crate::ansi::with_spark_ansi_config(SessionConfig::new(), ansi);
     write_pick_minimum_precision(config.options_mut(), pick);
     let state = SessionStateBuilder::new()
         .with_config(config)
@@ -142,6 +146,37 @@ async fn a_decimal_mod_call_answers_as_the_remainder_operator() {
 }
 
 #[tokio::test]
+async fn a_decimal_pmod_call_answers_as_spark_pmod_formula() {
+    let ctx = spark_ctx(true);
+    for (sql, data_type, expected) in [
+        ("SELECT pmod(d, -3) FROM t", (3, 2), ["2.51", "-2.51", ""]),
+        ("SELECT pmod(-3, d) FROM t", (3, 2), ["2.02", "-0.49", ""]),
+        ("SELECT pmod(d, i) FROM t", (10, 2), ["2.51", "5.49", ""]),
+    ] {
+        let (answered, values) = first_column(&ctx, sql).await;
+        assert_eq!(
+            answered,
+            DataType::Decimal128(data_type.0, data_type.1),
+            "{sql}"
+        );
+        assert_eq!(values, expected, "{sql}");
+    }
+    for sql in [
+        "SELECT pmod(d, 0) FROM t",
+        "SELECT pmod(-3, d * 10000) FROM t",
+    ] {
+        let outcome = ctx.sql(sql).await.expect("plan").collect().await;
+        assert!(outcome.is_err(), "{sql} raises with ANSI on");
+    }
+    let ctx = spark_ctx_in(true, false);
+    let (data_type, values) = first_column(&ctx, "SELECT pmod(-3, d * 10000) FROM t").await;
+    assert_eq!(data_type, DataType::Decimal128(3, 2));
+    assert_eq!(values, ["", "-3.00", ""]);
+    let (_, values) = first_column(&ctx, "SELECT pmod(d, 0) FROM t").await;
+    assert_eq!(values, ["", "", ""]);
+}
+
+#[tokio::test]
 async fn a_folded_divisor_keeps_the_integer_width() {
     let ctx = spark_ctx(true);
     let (folded, _) =
@@ -174,6 +209,7 @@ async fn a_second_analyze_changes_nothing() {
     let ctx = spark_ctx(true);
     for sql in [
         "SELECT d / 3, d % 3, mod(d, 3), pmod(d, 3) FROM t",
+        "SELECT pmod(-3, d), pmod(d, i), pmod(-3, d * 10000) FROM t",
         "SELECT avg(d / 3) FROM t",
     ] {
         let plan = ctx.state().create_logical_plan(sql).await.expect("plan");

@@ -1,6 +1,7 @@
 use std::any::Any;
 use std::collections::HashMap;
 use std::hash::BuildHasher;
+use std::sync::Arc;
 
 use datafusion::arrow::datatypes::DataType;
 use datafusion::common::config::{ConfigEntry, ConfigExtension, ConfigOptions, ExtensionOptions};
@@ -8,13 +9,15 @@ use datafusion::common::tree_node::{Transformed, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, Result, ScalarValue};
 use datafusion::error::DataFusionError;
 use datafusion::logical_expr::expr::ScalarFunction;
-use datafusion::logical_expr::{BinaryExpr, Cast, Expr, ExprSchemable, Operator};
+use datafusion::logical_expr::{
+    BinaryExpr, Case, Cast, Expr, ExprSchemable, Operator, ScalarUDF, TryCast,
+};
 use datafusion::prelude::SessionConfig;
 use datafusion::sql::sqlparser::tokenizer::{Token, TokenWithSpan};
 
 use crate::java_double::SUFFIX_LITERAL_NAME;
 
-use super::{adjust_precision_scale, decimal128_parts};
+use super::{adjust_precision_scale, arrow_result_type, decimal128_parts, spark_result_type};
 
 pub const PICK_MINIMUM_PRECISION_KEY: &str = "spark.sql.legacy.literal.pickMinimumPrecision";
 
@@ -99,9 +102,10 @@ pub(super) fn rewrite_operators(
     expr: Expr,
     schema: &DFSchema,
     pick: bool,
+    ansi: bool,
 ) -> Result<Transformed<Expr>> {
     expr.transform_up(|node| Ok(operator_node(node, schema, pick)))?
-        .transform_data(|lifted| rewrite_remainder_calls(lifted, schema, pick))
+        .transform_data(|lifted| rewrite_remainder_calls(lifted, schema, pick, ansi))
 }
 
 fn operator_node(node: Expr, schema: &DFSchema, pick: bool) -> Transformed<Expr> {
@@ -188,16 +192,22 @@ fn narrow_operand(operand: Expr, other: &DataType) -> Transformed<Expr> {
     }
 }
 
-fn rewrite_remainder_calls(expr: Expr, schema: &DFSchema, pick: bool) -> Result<Transformed<Expr>> {
-    expr.transform_down(|node| remainder_node(node, schema, pick))
+fn rewrite_remainder_calls(
+    expr: Expr,
+    schema: &DFSchema,
+    pick: bool,
+    ansi: bool,
+) -> Result<Transformed<Expr>> {
+    expr.transform_down(|node| remainder_node(node, schema, pick, ansi))
 }
 
-fn remainder_node(node: Expr, schema: &DFSchema, pick: bool) -> Result<Transformed<Expr>> {
-    if let Expr::Cast(cast) = &node
-        && let Expr::ScalarFunction(function) = cast.expr.as_ref()
-        && is_remainder_call(function)
-        && decimal128_parts(cast.field.data_type()).is_some()
-    {
+fn remainder_node(
+    node: Expr,
+    schema: &DFSchema,
+    pick: bool,
+    ansi: bool,
+) -> Result<Transformed<Expr>> {
+    if spark_typed_remainder_call(&node) {
         return Ok(Transformed::new(node, false, TreeNodeRecursion::Jump));
     }
     let Expr::ScalarFunction(function) = node else {
@@ -210,7 +220,7 @@ fn remainder_node(node: Expr, schema: &DFSchema, pick: bool) -> Result<Transform
     let mut changed = false;
     let mut operands = Vec::with_capacity(2);
     for arg in args {
-        let rewritten = rewrite_remainder_calls(arg, schema, pick)?;
+        let rewritten = rewrite_remainder_calls(arg, schema, pick, ansi)?;
         changed |= rewritten.transformed;
         operands.push(rewritten.data);
     }
@@ -222,37 +232,114 @@ fn remainder_node(node: Expr, schema: &DFSchema, pick: bool) -> Result<Transform
         operands = vec![left.data, right.data];
     }
     let spark = remainder_type(&operands[0], &operands[1], schema);
-    let operands = match <[Expr; 2]>::try_from(operands) {
-        Ok([left, right]) if spark.is_some() && func.name() == "mod" => {
-            return Ok(Transformed::new(
-                remainder_operator(left, right, schema),
-                true,
-                TreeNodeRecursion::Jump,
-            ));
+    let operands = match (spark, <[Expr; 2]>::try_from(operands)) {
+        (Some(spark), Ok([left, right])) => {
+            let rewritten = if func.name() == "mod" {
+                remainder_operator(left, right, schema)
+            } else {
+                pmod_operator(func, left, right, schema, spark, ansi)
+            };
+            return Ok(Transformed::new(rewritten, true, TreeNodeRecursion::Jump));
         }
-        Ok(pair) => Vec::from(pair),
-        Err(operands) => operands,
-    };
-    let call = Expr::ScalarFunction(ScalarFunction::new_udf(func, operands));
-    let Some((precision, scale)) = spark else {
-        return Ok(Transformed::new(call, changed, TreeNodeRecursion::Jump));
+        (None, Ok(pair)) => Vec::from(pair),
+        (_, Err(operands)) => operands,
     };
     Ok(Transformed::new(
-        Expr::Cast(Cast::new(
-            Box::new(call),
-            DataType::Decimal128(precision, scale),
-        )),
-        true,
+        Expr::ScalarFunction(ScalarFunction::new_udf(func, operands)),
+        changed,
         TreeNodeRecursion::Jump,
     ))
 }
 
-fn remainder_operator(left: Expr, right: Expr, schema: &DFSchema) -> Expr {
-    Expr::BinaryExpr(BinaryExpr::new(
-        Box::new(remainder_decimal_operand(left, schema)),
+fn spark_typed_remainder_call(node: &Expr) -> bool {
+    let (inner, target) = match node {
+        Expr::Cast(cast) => (cast.expr.as_ref(), cast.field.data_type()),
+        Expr::TryCast(cast) => (cast.expr.as_ref(), cast.field.data_type()),
+        _ => return false,
+    };
+    matches!(inner, Expr::ScalarFunction(function) if is_remainder_call(function))
+        && decimal128_parts(target).is_some()
+}
+
+fn pmod_operator(
+    func: Arc<ScalarUDF>,
+    left: Expr,
+    right: Expr,
+    schema: &DFSchema,
+    spark: (u8, i8),
+    ansi: bool,
+) -> Expr {
+    if let Some(formula) = pmod_formula(&left, &right, schema, spark, ansi) {
+        return formula;
+    }
+    checked_decimal_cast(
+        Expr::ScalarFunction(ScalarFunction::new_udf(func, vec![left, right])),
+        spark,
+        ansi,
+    )
+}
+
+fn pmod_formula(
+    left: &Expr,
+    right: &Expr,
+    schema: &DFSchema,
+    spark: (u8, i8),
+    ansi: bool,
+) -> Option<Expr> {
+    let divisor = remainder_decimal_operand(right.clone(), schema);
+    let remainder = binary(
+        remainder_decimal_operand(left.clone(), schema),
         Operator::Modulo,
-        Box::new(remainder_decimal_operand(right, schema)),
-    ))
+        divisor.clone(),
+    );
+    let remainder_parts = decimal128_parts(&remainder.get_type(schema).ok()?)?;
+    let divisor_parts = decimal128_parts(&divisor.get_type(schema).ok()?)?;
+    let sum = spark_result_type(Operator::Plus, remainder_parts, divisor_parts)?;
+    if arrow_result_type(Operator::Plus, remainder_parts, divisor_parts) != Some(sum) {
+        return None;
+    }
+    let wrapped = binary(
+        binary(remainder.clone(), Operator::Plus, divisor.clone()),
+        Operator::Modulo,
+        divisor,
+    );
+    let wrapped_parts = decimal128_parts(&wrapped.get_type(schema).ok()?)?;
+    let zero = Expr::Literal(
+        ScalarValue::Decimal128(Some(0), remainder_parts.0, remainder_parts.1),
+        None,
+    );
+    let formula = Expr::Case(Case::new(
+        None,
+        vec![(
+            Box::new(binary(remainder.clone(), Operator::Lt, zero)),
+            Box::new(wrapped),
+        )],
+        Some(Box::new(remainder)),
+    ));
+    if remainder_parts == spark && wrapped_parts == spark {
+        return Some(formula);
+    }
+    Some(checked_decimal_cast(formula, spark, ansi))
+}
+
+fn binary(left: Expr, operator: Operator, right: Expr) -> Expr {
+    Expr::BinaryExpr(BinaryExpr::new(Box::new(left), operator, Box::new(right)))
+}
+
+fn checked_decimal_cast(expr: Expr, (precision, scale): (u8, i8), ansi: bool) -> Expr {
+    let target = DataType::Decimal128(precision, scale);
+    if ansi {
+        return Expr::Cast(Cast::new(Box::new(expr), target));
+    }
+    Expr::TryCast(TryCast::new(Box::new(expr), target))
+}
+
+fn remainder_operator(left: Expr, right: Expr, schema: &DFSchema) -> Expr {
+    binary(
+        remainder_decimal_operand(left, schema),
+        Operator::Modulo,
+        remainder_decimal_operand(right, schema),
+    )
 }
 
 fn remainder_decimal_operand(operand: Expr, schema: &DFSchema) -> Expr {

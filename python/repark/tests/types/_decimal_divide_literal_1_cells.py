@@ -275,3 +275,151 @@ def measure_pick_false(spark: Any, sf: Any) -> dict[str, Any]:
         lambda: answer_of(frame.select("id", (sf.col("d10_2") / 3).alias("v")))
     )
     return found
+
+
+PMOD_KINDS = {
+    "id": "INT",
+    "d10_2": "DECIMAL(10,2)",
+    "d28_2": "DECIMAL(28,2)",
+    "d38_10": "DECIMAL(38,10)",
+    "zd": "DECIMAL(5,2)",
+    "zi": "INT",
+    "n": "INT",
+    "i": "INT",
+    "x": "DOUBLE",
+}
+PMOD_ROWS = [
+    ["1", "7.25", "7.25", "7.25", "0", "0", "3", "7", "7.25"],
+    ["2", "-7.25", "-7.25", "-7.25", "0", "0", "-3", "-7", "-7.25"],
+    ["3", None, None, None, "0", "0", "3", None, None],
+    ["4", "6.00", "6.00", "6.00", "0", "0", "-3", "6", "6.0"],
+    ["5", "-6.00", "-6.00", "-6.00", "0", "0", "3", "-6", "-6.0"],
+    [
+        "6",
+        "12345678.91",
+        "12345678901234567890123456.78",
+        "1234567890123456789012345678.1234567890",
+        "0",
+        "0",
+        "3",
+        "2147483647",
+        "12345678.91",
+    ],
+    [
+        "7",
+        "-12345678.91",
+        "-12345678901234567890123456.78",
+        "-1234567890123456789012345678.1234567890",
+        "0",
+        "0",
+        "-3",
+        "-2147483647",
+        "-12345678.91",
+    ],
+]
+PRECISIONS = ("d10_2", "d28_2", "d38_10")
+PICK_SET_KEY = "spark.sql.legacy.literal.pickMinimumPrecision"
+SET_EXPRS = {
+    "div": "d10_2 / 3",
+    "mod": "d10_2 % 3",
+    "call_mod": "mod(d10_2, 3)",
+    "call_pmod": "pmod(d10_2, 3)",
+    "mul": "d10_2 * 3",
+    "add": "d10_2 + 3",
+    "sub": "d10_2 - 3",
+}
+
+
+def make_pmod_table(spark: Any, root: str) -> None:
+    names = list(PMOD_KINDS)
+    raw = spark.createDataFrame(PMOD_ROWS, ", ".join(f"{n} STRING" for n in names))
+    typed = raw.selectExpr(*[f"CAST({n} AS {PMOD_KINDS[n]}) AS {n}" for n in names])
+    path = f"{root}/pq_w"
+    typed.write.mode("overwrite").parquet(path)
+    spark.read.parquet(path).createOrReplaceTempView("w")
+
+
+def pmod_sql_cells() -> dict[str, str]:
+    out: dict[str, str] = {}
+    for p in PRECISIONS:
+        for name, expr in (
+            ("pos", f"pmod({p}, 3)"),
+            ("neg_divisor", f"pmod({p}, -3)"),
+            ("left_neg", f"pmod(-3, {p})"),
+            ("left_pos", f"pmod(3, {p})"),
+            ("zero", f"pmod({p}, 0)"),
+            ("zero_decimal", f"pmod({p}, CAST(0 AS DECIMAL(5,2)))"),
+            ("zero_column", f"pmod({p}, zd)"),
+            ("int_column", f"pmod({p}, n)"),
+        ):
+            out[f"pm/sql/{p}/{name}"] = f"SELECT id, {expr} AS v FROM w"
+    return out
+
+
+def pmod_frame_cells(sf: Any) -> dict[str, Callable[[Any], Any]]:
+    out: dict[str, Callable[[Any], Any]] = {}
+    for p in PRECISIONS:
+        for name, expr in (
+            ("neg_divisor", f"pmod({p}, -3)"),
+            ("zero", f"pmod({p}, 0)"),
+            ("left_neg", f"pmod(-3, {p})"),
+        ):
+            out[f"pm/expr/{p}/{name}"] = lambda f, e=expr: f.select("id", sf.expr(e).alias("v"))
+            out[f"pm/select_expr/{p}/{name}"] = lambda f, e=expr: f.selectExpr("id", f"{e} AS v")
+    operands = {p: (sf.lit(3), sf.lit(-3), sf.lit(0), "zd") for p in PRECISIONS}
+    operands["i"] = (sf.lit(3), sf.lit(-3), sf.lit(0), "zi")
+    operands["x"] = (sf.lit(3.0), sf.lit(-3.0), sf.lit(0.0), "zi")
+    for c, (three, minus, zero, zcol) in operands.items():
+        for name, left, right in (
+            ("pos", sf.col(c), three),
+            ("neg_divisor", sf.col(c), minus),
+            ("left_neg", minus, sf.col(c)),
+            ("zero", sf.col(c), zero),
+            ("zero_column", sf.col(c), sf.col(zcol)),
+            ("int_column", sf.col(c), sf.col("n")),
+        ):
+            out[f"pm/F/{c}/{name}"] = lambda f, a=left, b=right: f.select(
+                "id", sf.pmod(a, b).alias("v")
+            )
+    return out
+
+
+def measure_pmod(spark: Any, sf: Any) -> dict[str, Any]:
+    found: dict[str, Any] = {}
+    for key, sql in pmod_sql_cells().items():
+        found[key] = attempt(lambda sql=sql: answer_of(spark.sql(sql)))
+    for key, build in pmod_frame_cells(sf).items():
+        found[key] = attempt(lambda build=build: answer_of(build(spark.table("w"))))
+    return found
+
+
+def set_state(spark: Any, label: str, found: dict[str, Any]) -> None:
+    for name, expr in SET_EXPRS.items():
+        found[f"rs/{label}/{name}"] = attempt(
+            lambda e=expr: answer_of(spark.sql(f"SELECT id, {e} AS v FROM v"))
+        )
+
+
+def measure_runtime_set(spark: Any, built_false: bool) -> dict[str, Any]:
+    found: dict[str, Any] = {}
+    if built_false:
+        set_state(spark, "built_false", found)
+        spark.sql(f"SET {PICK_SET_KEY}=true").collect()
+        set_state(spark, "built_false_set_true", found)
+        spark.sql("RESET").collect()
+        set_state(spark, "built_false_reset", found)
+        return found
+    spark.sql(
+        "CREATE OR REPLACE TEMP VIEW sv AS "
+        "SELECT id, d10_2 * 3 AS m, d10_2 / 3 AS q, d10_2 % 3 AS r FROM v"
+    ).collect()
+    found["rs/refuse"] = attempt(lambda: answer_of(spark.sql(f"SET {PICK_SET_KEY}=maybe")))
+    spark.sql(f"SET {PICK_SET_KEY}=false").collect()
+    set_state(spark, "set_false", found)
+    found["rs/set_false/view"] = attempt(lambda: answer_of(spark.sql("SELECT * FROM sv")))
+    spark.sql(f"SET {PICK_SET_KEY}=true").collect()
+    set_state(spark, "set_true", found)
+    spark.sql(f"SET {PICK_SET_KEY}=false").collect()
+    spark.sql(f"RESET {PICK_SET_KEY}").collect()
+    set_state(spark, "reset", found)
+    return found
