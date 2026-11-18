@@ -1,0 +1,7 @@
+{"tag": "case/ci_upper/false>true", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "case/ci_upper/false>true/table", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "case/twin_file/true>true", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "case/twin_file/true>false", "error": "AMBIGUOUS_REFERENCE"}
+{"tag": "case/twin_values/true>false", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "case/twin_over_view/true>false", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "case/direct_file/false", "error": "AMBIGUOUS_REFERENCE"}

@@ -5788,6 +5788,53 @@ still open is `isModifiable`.
 - **Rationale** — the owner's rulings "Defaults, merge 1355" and "defaults on both" (2026-11-17); card
   [TEMP-VIEW-SESSION-SETTINGS-1](../task/roadmap/mid-term/temp-view-session-settings-1-card-2026-11-02.md).
 
+### TEMP-VIEW-SESSION-SETTINGS-1 part 2 — a DataFrame temp view answers under its frame's own settings — **FIXED 2026-11-18 on the DataFrame door (branch `fix/temp-view-session-settings-1-part2`, not merged)**
+
+- **repark** — Before (main `d6f58d7f`, part 1 merged): `createOrReplaceTempView`, `registerTempTable` and every facade
+  scratch view registered `DataFrame::into_view`, whose plan the reader inlined and analysed and planned under its own
+  settings, and `cache()` materialised under the live session. A DataFrame view created ANSI on and read off wrapped
+  `a + 1` where Spark raises; created `UTC` and read `America/Los_Angeles`, `hour(ts)` answered `18` where Spark answers
+  `2` (silent, ANSI on). The same held for a SQL view over a DataFrame view, CTAS from one, a held frame derived after
+  the `SET` (`selectExpr`, a conditioned join, `unpivot`, set operations, `explode`, a global aggregate with a literal,
+  `cache()`, a temp view made after the `SET`) and a held frame written with `write.parquet`, `saveAsTable` or
+  `insertInto`.
+
+  After: the view captures the frame's own ANSI flag, session zone, decimal legacy switch and timestamp-type carrier and
+  inlines a marker; the analyzer's first rule keeps today's plan when the planning settings match (`EXPLAIN` identical)
+  and otherwise plans the frame under its own settings with the reader's start time, `current_timezone()` at the
+  reader's zone, and the reader's filters split as part 1 splits them. Inside a SQL view the frame is decided under
+  that view's captured settings. `writeTo` keeps the frame's ANSI and takes the writer's zone, as Spark's re-analysis
+  does; a frame that only scans keeps today's provider. A view whose lineage reaches the facade's JSON or CSV reader
+  (whose typed parse is a projection over a scan of strings) answers as part 1 and main do: the frame keeps today's
+  provider and a SQL view over it keeps part 1's fallback (delta 1, `reader_lineage`).
+  `cache()` and the facade's materialised views plan under the frame's own state with the materialisation's `now()`.
+- **spark** — a DataFrame temp view stores its analysed plan (`ViewHelper$.prepareTemporaryViewStoringAnalyzedPlan`),
+  so its expressions keep the creation settings; `DataFrameWriterV2` re-analyses the frame's logical plan under the
+  writer's settings (the step 0, `task/wo/temp-view-session-settings-1/`).
+- **Still unlike Spark:**
+  - the ruled filter class (owner, "defaults on both", question 11 (a)) on the DataFrame door too (`b <> 0 OR b + 0 >
+    100`, `b + 0 <> 0` over `sum(10 / b)`, `m + 0 > 0` over `a + 1`, the step 0's `filter_sensitive` cell), with
+    VIEW-FILTER-SETTINGS-WRAPPER-1; AND-GUARD-ANSI-1;
+  - `writeTo` of a held `avg` frame: the frame's ANSI binds `avg`'s mode where Spark's re-analysis takes the writer's
+    (question 4's recorded divergences, outside the label's ANSI-on scope);
+  - the JSON and CSV reader lineage: Spark parses the source under the reader's settings and decides everything above
+    the parse under the frame's; RePark answers as main does. TEMP-VIEW-FRAME-READER-PARSE-1, filed, **label-blocking**
+    for ICE-V2-FLAT-AWS-LABEL-1 by the owner's ruling of 2026-11-18 ("We better go with B to be safe");
+  - `crossJoin`, and any join the facade plans natively by exact references (`frame_lineage.rs` `join_exact_sides`),
+    plans both sides under the live state (proposed TEMP-VIEW-FRAME-CROSSJOIN-1; a fix was built and backed out, see
+    bar.md); a USING join keeps only the left frame's state;
+  - HELD-FRAME-CURRENT-TIMEZONE-1; `caseSensitive` (TEMP-VIEW-CASE-SENSITIVE-CAPTURE-1).
+- **Pin** — `python/repark/tests/session/test_temp_view_reader_lineage.py` (the JSON and CSV lineage, both ANSI modes);
+  `python/repark/tests/session/test_temp_view_session_settings_2.py` (308 cells in each ANSI mode and the unset
+  cells against `temp_view_session_settings_2_spark_oracle.json`, the named classes pinned as they answer in
+  `temp_view_session_settings_2_standing.json`, `EXPLAIN` identity with main's plans); Rust `repark-spark`
+  `view_ddl/frame_settings/tests.rs` (rule order, the matching and closed paths, the walkers, pin (f), the JSON lineage) and
+  `repark-core` `plan_introspect.rs` tests.
+- **Bar and cost** — [built-part2/bar.md](../task/wo/temp-view-session-settings-1/evidence/built-part2/bar.md),
+  [built-part2/cost.md](../task/wo/temp-view-session-settings-1/evidence/built-part2/cost.md).
+- **Rationale** — the owner's rulings "Defaults, merge 1355" and "defaults on both" (2026-11-17); card
+  [TEMP-VIEW-SESSION-SETTINGS-1](../task/roadmap/mid-term/temp-view-session-settings-1-card-2026-11-02.md).
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`

@@ -1,0 +1,1866 @@
+{
+"false": {
+"sweep/ansi/add_date/off>on/read_off": {
+"rows": [
+"2024-01-02",
+"2024-01-03"
+],
+"types": [
+"date"
+]
+},
+"sweep/ansi/add_date/off>on/read_on": {
+"rows": [
+"2024-01-02",
+"2024-01-03"
+],
+"types": [
+"date"
+]
+},
+"sweep/ansi/add_date/on>off/read_off": {
+"rows": [
+"2024-01-02",
+"2024-01-03"
+],
+"types": [
+"date"
+]
+},
+"sweep/ansi/add_date/on>off/read_on": {
+"rows": [
+"2024-01-02",
+"2024-01-03"
+],
+"types": [
+"date"
+]
+},
+"sweep/ansi/case_mixed/off>on/read_off": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"string"
+]
+},
+"sweep/ansi/case_mixed/off>on/read_on": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"string"
+]
+},
+"sweep/ansi/case_mixed/on>off/read_off": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/case_mixed/on>off/read_on": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/date_bad/off>on/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/date_bad/off>on/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/date_bad/on>off/read_off": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"DATE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/date_bad/on>off/read_on": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"DATE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/lit_plus/off>on/read_off": {
+"rows": [
+"2.0",
+"3.0"
+],
+"types": [
+"double"
+]
+},
+"sweep/ansi/lit_plus/off>on/read_on": {
+"rows": [
+"2.0",
+"3.0"
+],
+"types": [
+"double"
+]
+},
+"sweep/ansi/lit_plus/on>off/read_off": {
+"rows": [
+"2",
+"3"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/lit_plus/on>off/read_on": {
+"rows": [
+"2",
+"3"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/str_cast_where/off>on/read_off": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/str_cast_where/off>on/read_on": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/str_cast_where/on>off/read_off": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"INT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/str_cast_where/on>off/read_on": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"INT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/str_eq_int/off>on/read_off": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/str_eq_int/off>on/read_on": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/str_eq_int/on>off/read_off": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/str_eq_int/on>off/read_on": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/str_plus/off>on/read_off": {
+"rows": [
+"2.0",
+"null"
+],
+"types": [
+"double"
+]
+},
+"sweep/ansi/str_plus/off>on/read_on": {
+"rows": [
+"2.0",
+"null"
+],
+"types": [
+"double"
+]
+},
+"sweep/ansi/str_plus/on>off/read_off": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/str_plus/on>off/read_on": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/two_levels_ansi/off>on/read_off": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/two_levels_ansi/off>on/read_on": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/two_levels_ansi/on>off/read_off": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/two_levels_ansi/on>off/read_on": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/dec/dec_case/off>on/read_off": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"decimal(38,0)"
+]
+},
+"sweep/dec/dec_case/off>on/read_on": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"decimal(38,0)"
+]
+},
+"sweep/dec/dec_case/on>off/read_off": {
+"rows": [
+"1.0000000000",
+"1.5000000000"
+],
+"types": [
+"decimal(38,10)"
+]
+},
+"sweep/dec/dec_case/on>off/read_on": {
+"rows": [
+"1.0000000000",
+"1.5000000000"
+],
+"types": [
+"decimal(38,10)"
+]
+},
+"sweep/dec/dec_eq/off>on/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_eq/off>on/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_eq/on>off/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_eq/on>off/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_union/off>on/read_off": {
+"rows": [
+"1",
+"2",
+"null",
+"null"
+],
+"types": [
+"decimal(38,0)"
+]
+},
+"sweep/dec/dec_union/off>on/read_on": {
+"rows": [
+"1",
+"2",
+"null",
+"null"
+],
+"types": [
+"decimal(38,0)"
+]
+},
+"sweep/dec/dec_union/on>off/read_off": {
+"rows": [
+"1.0000000000",
+"1.5000000000",
+"null",
+"null"
+],
+"types": [
+"decimal(38,10)"
+]
+},
+"sweep/dec/dec_union/on>off/read_on": {
+"rows": [
+"1.0000000000",
+"1.5000000000",
+"null",
+"null"
+],
+"types": [
+"decimal(38,10)"
+]
+},
+"sweep/dec/two_levels_dec/off>on/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/two_levels_dec/off>on/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/two_levels_dec/on>off/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/two_levels_dec/on>off/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/case_zone/la>utc/read_la": {
+"rows": [
+"2023-12-31 19:00:00",
+"2024-01-01 00:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/case_zone/la>utc/read_utc": {
+"rows": [
+"2023-12-31 19:00:00",
+"2024-01-01 00:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/case_zone/utc>la/read_la": {
+"rows": [
+"2024-01-01 00:00:00",
+"2024-01-01 03:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/case_zone/utc>la/read_utc": {
+"rows": [
+"2024-01-01 00:00:00",
+"2024-01-01 03:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/date_add/la>utc/read_la": {
+"rows": [
+"2023-12-31",
+"2024-01-01"
+],
+"types": [
+"date"
+]
+},
+"sweep/zone/date_add/la>utc/read_utc": {
+"rows": [
+"2023-12-31",
+"2024-01-01"
+],
+"types": [
+"date"
+]
+},
+"sweep/zone/date_add/utc>la/read_la": {
+"rows": [
+"2024-01-01",
+"2024-01-01"
+],
+"types": [
+"date"
+]
+},
+"sweep/zone/date_add/utc>la/read_utc": {
+"rows": [
+"2024-01-01",
+"2024-01-01"
+],
+"types": [
+"date"
+]
+},
+"sweep/zone/date_add_where/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_add_where/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_add_where/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_add_where/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_between/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_between/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_between/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_between/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/la>utc/read_utc": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_text/la>utc/read_la": {
+"rows": [
+"19",
+"19"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_text/la>utc/read_utc": {
+"rows": [
+"19",
+"19"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_text/utc>la/read_la": {
+"rows": [
+"3",
+"3"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_text/utc>la/read_utc": {
+"rows": [
+"3",
+"3"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_where/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_where/la>utc/read_utc": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_where/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_where/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/la>utc/read_utc": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/la>utc/read_utc": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+}
+},
+"true": {
+"sweep/ansi/add_date/off>on/read_off": {
+"rows": [
+"2024-01-02",
+"2024-01-03"
+],
+"types": [
+"date"
+]
+},
+"sweep/ansi/add_date/off>on/read_on": {
+"rows": [
+"2024-01-02",
+"2024-01-03"
+],
+"types": [
+"date"
+]
+},
+"sweep/ansi/add_date/on>off/read_off": {
+"rows": [
+"2024-01-02",
+"2024-01-03"
+],
+"types": [
+"date"
+]
+},
+"sweep/ansi/add_date/on>off/read_on": {
+"rows": [
+"2024-01-02",
+"2024-01-03"
+],
+"types": [
+"date"
+]
+},
+"sweep/ansi/case_mixed/off>on/read_off": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"string"
+]
+},
+"sweep/ansi/case_mixed/off>on/read_on": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"string"
+]
+},
+"sweep/ansi/case_mixed/on>off/read_off": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/case_mixed/on>off/read_on": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/date_bad/off>on/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/date_bad/off>on/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/date_bad/on>off/read_off": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"DATE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/date_bad/on>off/read_on": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"DATE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/lit_plus/off>on/read_off": {
+"rows": [
+"2.0",
+"3.0"
+],
+"types": [
+"double"
+]
+},
+"sweep/ansi/lit_plus/off>on/read_on": {
+"rows": [
+"2.0",
+"3.0"
+],
+"types": [
+"double"
+]
+},
+"sweep/ansi/lit_plus/on>off/read_off": {
+"rows": [
+"2",
+"3"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/lit_plus/on>off/read_on": {
+"rows": [
+"2",
+"3"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/str_cast_where/off>on/read_off": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/str_cast_where/off>on/read_on": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/str_cast_where/on>off/read_off": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"INT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/str_cast_where/on>off/read_on": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"INT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/str_eq_int/off>on/read_off": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/str_eq_int/off>on/read_on": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/str_eq_int/on>off/read_off": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/str_eq_int/on>off/read_on": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/str_plus/off>on/read_off": {
+"rows": [
+"2.0",
+"null"
+],
+"types": [
+"double"
+]
+},
+"sweep/ansi/str_plus/off>on/read_on": {
+"rows": [
+"2.0",
+"null"
+],
+"types": [
+"double"
+]
+},
+"sweep/ansi/str_plus/on>off/read_off": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/str_plus/on>off/read_on": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/two_levels_ansi/off>on/read_off": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/two_levels_ansi/off>on/read_on": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/ansi/two_levels_ansi/on>off/read_off": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/ansi/two_levels_ansi/on>off/read_on": {
+"error": "CAST_INVALID_INPUT",
+"text": "[CAST_INVALID_INPUT] The value 'x' of the type \"STRING\" cannot be cast to \"BIGINT\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate"
+},
+"sweep/dec/dec_case/off>on/read_off": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"decimal(38,0)"
+]
+},
+"sweep/dec/dec_case/off>on/read_on": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"decimal(38,0)"
+]
+},
+"sweep/dec/dec_case/on>off/read_off": {
+"rows": [
+"1.0000000000",
+"1.5000000000"
+],
+"types": [
+"decimal(38,10)"
+]
+},
+"sweep/dec/dec_case/on>off/read_on": {
+"rows": [
+"1.0000000000",
+"1.5000000000"
+],
+"types": [
+"decimal(38,10)"
+]
+},
+"sweep/dec/dec_eq/off>on/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_eq/off>on/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_eq/on>off/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_eq/on>off/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_union/off>on/read_off": {
+"rows": [
+"1",
+"2",
+"null",
+"null"
+],
+"types": [
+"decimal(38,0)"
+]
+},
+"sweep/dec/dec_union/off>on/read_on": {
+"rows": [
+"1",
+"2",
+"null",
+"null"
+],
+"types": [
+"decimal(38,0)"
+]
+},
+"sweep/dec/dec_union/on>off/read_off": {
+"rows": [
+"1.0000000000",
+"1.5000000000",
+"null",
+"null"
+],
+"types": [
+"decimal(38,10)"
+]
+},
+"sweep/dec/dec_union/on>off/read_on": {
+"rows": [
+"1.0000000000",
+"1.5000000000",
+"null",
+"null"
+],
+"types": [
+"decimal(38,10)"
+]
+},
+"sweep/dec/two_levels_dec/off>on/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/two_levels_dec/off>on/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/two_levels_dec/on>off/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/two_levels_dec/on>off/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/case_zone/la>utc/read_la": {
+"rows": [
+"2023-12-31 19:00:00",
+"2024-01-01 00:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/case_zone/la>utc/read_utc": {
+"rows": [
+"2023-12-31 19:00:00",
+"2024-01-01 00:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/case_zone/utc>la/read_la": {
+"rows": [
+"2024-01-01 00:00:00",
+"2024-01-01 03:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/case_zone/utc>la/read_utc": {
+"rows": [
+"2024-01-01 00:00:00",
+"2024-01-01 03:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/date_add/la>utc/read_la": {
+"rows": [
+"2023-12-31",
+"2024-01-01"
+],
+"types": [
+"date"
+]
+},
+"sweep/zone/date_add/la>utc/read_utc": {
+"rows": [
+"2023-12-31",
+"2024-01-01"
+],
+"types": [
+"date"
+]
+},
+"sweep/zone/date_add/utc>la/read_la": {
+"rows": [
+"2024-01-01",
+"2024-01-01"
+],
+"types": [
+"date"
+]
+},
+"sweep/zone/date_add/utc>la/read_utc": {
+"rows": [
+"2024-01-01",
+"2024-01-01"
+],
+"types": [
+"date"
+]
+},
+"sweep/zone/date_add_where/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_add_where/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_add_where/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_add_where/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_between/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_between/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_between/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_between/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/la>utc/read_utc": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_text/la>utc/read_la": {
+"rows": [
+"19",
+"19"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_text/la>utc/read_utc": {
+"rows": [
+"19",
+"19"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_text/utc>la/read_la": {
+"rows": [
+"3",
+"3"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_text/utc>la/read_utc": {
+"rows": [
+"3",
+"3"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_where/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_where/la>utc/read_utc": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_where/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_where/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/la>utc/read_utc": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/la>utc/read_utc": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+}
+}
+}

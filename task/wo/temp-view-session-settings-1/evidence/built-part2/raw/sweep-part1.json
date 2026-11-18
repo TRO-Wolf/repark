@@ -1,0 +1,1602 @@
+{
+"false": {
+"sweep/ansi/add_date/off>on/read_off": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' num_days must be an integer, got Utf8. No function matches the given"
+},
+"sweep/ansi/add_date/off>on/read_on": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' num_days must be an integer, got Utf8. No function matches the given"
+},
+"sweep/ansi/add_date/on>off/read_off": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' num_days must be an integer, got Utf8. No function matches the given"
+},
+"sweep/ansi/add_date/on>off/read_on": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' num_days must be an integer, got Utf8. No function matches the given"
+},
+"sweep/ansi/case_mixed/off>on/read_off": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"string"
+]
+},
+"sweep/ansi/case_mixed/off>on/read_on": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"string"
+]
+},
+"sweep/ansi/case_mixed/on>off/read_off": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"string"
+]
+},
+"sweep/ansi/case_mixed/on>off/read_on": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"string"
+]
+},
+"sweep/ansi/date_bad/off>on/read_off": {
+"error": "",
+"text": "datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast string 'x' to value of Date32 type"
+},
+"sweep/ansi/date_bad/off>on/read_on": {
+"error": "",
+"text": "datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast string 'x' to value of Date32 type"
+},
+"sweep/ansi/date_bad/on>off/read_off": {
+"error": "",
+"text": "datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast string 'x' to value of Date32 type"
+},
+"sweep/ansi/date_bad/on>off/read_on": {
+"error": "",
+"text": "datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast string 'x' to value of Date32 type"
+},
+"sweep/ansi/lit_plus/off>on/read_off": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8 + Int32 to valid types"
+},
+"sweep/ansi/lit_plus/off>on/read_on": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8 + Int32 to valid types"
+},
+"sweep/ansi/lit_plus/on>off/read_off": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8 + Int32 to valid types"
+},
+"sweep/ansi/lit_plus/on>off/read_on": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8 + Int32 to valid types"
+},
+"sweep/ansi/str_cast_where/off>on/read_off": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_cast_where/off>on/read_on": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_cast_where/on>off/read_off": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_cast_where/on>off/read_on": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_eq_int/off>on/read_off": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_eq_int/off>on/read_on": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_eq_int/on>off/read_off": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_eq_int/on>off/read_on": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_plus/off>on/read_off": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8View + Int32 to valid types"
+},
+"sweep/ansi/str_plus/off>on/read_on": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8View + Int32 to valid types"
+},
+"sweep/ansi/str_plus/on>off/read_off": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8View + Int32 to valid types"
+},
+"sweep/ansi/str_plus/on>off/read_on": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8View + Int32 to valid types"
+},
+"sweep/ansi/two_levels_ansi/off>on/read_off": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/two_levels_ansi/off>on/read_on": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/two_levels_ansi/on>off/read_off": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/two_levels_ansi/on>off/read_on": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/dec/dec_case/off>on/read_off": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"decimal(38,0)"
+]
+},
+"sweep/dec/dec_case/off>on/read_on": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"decimal(38,0)"
+]
+},
+"sweep/dec/dec_case/on>off/read_off": {
+"rows": [
+"1.0000000000",
+"1.5000000000"
+],
+"types": [
+"decimal(38,10)"
+]
+},
+"sweep/dec/dec_case/on>off/read_on": {
+"rows": [
+"1.0000000000",
+"1.5000000000"
+],
+"types": [
+"decimal(38,10)"
+]
+},
+"sweep/dec/dec_eq/off>on/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_eq/off>on/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_eq/on>off/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_eq/on>off/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_union/off>on/read_off": {
+"error": "CANNOT_UP_CAST_DATATYPE",
+"text": "Error during planning: [CANNOT_UP_CAST_DATATYPE] Cannot up cast d185.m from \"DECIMAL(38,0)\" to \"DECIMAL(38,10)\". The type path of the target object is: You can either add an explicit cast to the"
+},
+"sweep/dec/dec_union/off>on/read_on": {
+"rows": [
+"1.0000000000",
+"1.5000000000",
+"null",
+"null"
+],
+"types": [
+"decimal(38,10)"
+]
+},
+"sweep/dec/dec_union/on>off/read_off": {
+"rows": [
+"1",
+"2",
+"null",
+"null"
+],
+"types": [
+"decimal(38,0)"
+]
+},
+"sweep/dec/dec_union/on>off/read_on": {
+"error": "CANNOT_UP_CAST_DATATYPE",
+"text": "Error during planning: [CANNOT_UP_CAST_DATATYPE] Cannot up cast d189.m from \"DECIMAL(38,10)\" to \"DECIMAL(38,0)\". The type path of the target object is: You can either add an explicit cast to the"
+},
+"sweep/dec/two_levels_dec/off>on/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/two_levels_dec/off>on/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/two_levels_dec/on>off/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/two_levels_dec/on>off/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/case_zone/la>utc/read_la": {
+"rows": [
+"2023-12-31 19:00:00",
+"2024-01-01 00:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/case_zone/la>utc/read_utc": {
+"rows": [
+"2024-01-01 03:00:00",
+"2024-01-01 08:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/case_zone/utc>la/read_la": {
+"rows": [
+"2023-12-31 16:00:00",
+"2023-12-31 19:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/case_zone/utc>la/read_utc": {
+"rows": [
+"2024-01-01 00:00:00",
+"2024-01-01 03:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/date_add/la>utc/read_la": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type Timestamp(\u00b5s, \"UTC\"). No function"
+},
+"sweep/zone/date_add/la>utc/read_utc": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type Timestamp(\u00b5s, \"UTC\"). No function"
+},
+"sweep/zone/date_add/utc>la/read_la": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type Timestamp(\u00b5s, \"UTC\"). No function"
+},
+"sweep/zone/date_add/utc>la/read_utc": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type Timestamp(\u00b5s, \"UTC\"). No function"
+},
+"sweep/zone/date_add_where/la>utc/read_la": {
+"error": "",
+"text": "type_coercion caused by Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type"
+},
+"sweep/zone/date_add_where/la>utc/read_utc": {
+"error": "",
+"text": "type_coercion caused by Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type"
+},
+"sweep/zone/date_add_where/utc>la/read_la": {
+"error": "",
+"text": "type_coercion caused by Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type"
+},
+"sweep/zone/date_add_where/utc>la/read_utc": {
+"error": "",
+"text": "type_coercion caused by Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type"
+},
+"sweep/zone/date_between/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_between/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_between/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_between/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/utc>la/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_text/la>utc/read_la": {
+"rows": [
+"0",
+"0"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_text/la>utc/read_utc": {
+"rows": [
+"0",
+"0"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_text/utc>la/read_la": {
+"rows": [
+"0",
+"0"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_text/utc>la/read_utc": {
+"rows": [
+"0",
+"0"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_where/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_where/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_where/utc>la/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_where/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/la>utc/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/utc>la/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/la>utc/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/la>utc/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/la>utc/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/utc>la/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+}
+},
+"true": {
+"sweep/ansi/add_date/off>on/read_off": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' num_days must be an integer, got Utf8. No function matches the given"
+},
+"sweep/ansi/add_date/off>on/read_on": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' num_days must be an integer, got Utf8. No function matches the given"
+},
+"sweep/ansi/add_date/on>off/read_off": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' num_days must be an integer, got Utf8. No function matches the given"
+},
+"sweep/ansi/add_date/on>off/read_on": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' num_days must be an integer, got Utf8. No function matches the given"
+},
+"sweep/ansi/case_mixed/off>on/read_off": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"string"
+]
+},
+"sweep/ansi/case_mixed/off>on/read_on": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"string"
+]
+},
+"sweep/ansi/case_mixed/on>off/read_off": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"string"
+]
+},
+"sweep/ansi/case_mixed/on>off/read_on": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"string"
+]
+},
+"sweep/ansi/date_bad/off>on/read_off": {
+"error": "",
+"text": "datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast string 'x' to value of Date32 type"
+},
+"sweep/ansi/date_bad/off>on/read_on": {
+"error": "",
+"text": "datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast string 'x' to value of Date32 type"
+},
+"sweep/ansi/date_bad/on>off/read_off": {
+"error": "",
+"text": "datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast string 'x' to value of Date32 type"
+},
+"sweep/ansi/date_bad/on>off/read_on": {
+"error": "",
+"text": "datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast string 'x' to value of Date32 type"
+},
+"sweep/ansi/lit_plus/off>on/read_off": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8 + Int32 to valid types"
+},
+"sweep/ansi/lit_plus/off>on/read_on": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8 + Int32 to valid types"
+},
+"sweep/ansi/lit_plus/on>off/read_off": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8 + Int32 to valid types"
+},
+"sweep/ansi/lit_plus/on>off/read_on": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8 + Int32 to valid types"
+},
+"sweep/ansi/str_cast_where/off>on/read_off": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_cast_where/off>on/read_on": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_cast_where/on>off/read_off": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_cast_where/on>off/read_on": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_eq_int/off>on/read_off": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_eq_int/off>on/read_on": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_eq_int/on>off/read_off": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_eq_int/on>off/read_on": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/str_plus/off>on/read_off": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8View + Int32 to valid types"
+},
+"sweep/ansi/str_plus/off>on/read_on": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8View + Int32 to valid types"
+},
+"sweep/ansi/str_plus/on>off/read_off": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8View + Int32 to valid types"
+},
+"sweep/ansi/str_plus/on>off/read_on": {
+"error": "",
+"text": "Error during planning: Cannot coerce arithmetic expression Utf8View + Int32 to valid types"
+},
+"sweep/ansi/two_levels_ansi/off>on/read_off": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/two_levels_ansi/off>on/read_on": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/two_levels_ansi/on>off/read_off": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/ansi/two_levels_ansi/on>off/read_on": {
+"error": "",
+"text": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"
+},
+"sweep/dec/dec_case/off>on/read_off": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"decimal(38,0)"
+]
+},
+"sweep/dec/dec_case/off>on/read_on": {
+"rows": [
+"1",
+"2"
+],
+"types": [
+"decimal(38,0)"
+]
+},
+"sweep/dec/dec_case/on>off/read_off": {
+"rows": [
+"1.0000000000",
+"1.5000000000"
+],
+"types": [
+"decimal(38,10)"
+]
+},
+"sweep/dec/dec_case/on>off/read_on": {
+"rows": [
+"1.0000000000",
+"1.5000000000"
+],
+"types": [
+"decimal(38,10)"
+]
+},
+"sweep/dec/dec_eq/off>on/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_eq/off>on/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_eq/on>off/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_eq/on>off/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/dec_union/off>on/read_off": {
+"error": "CANNOT_UP_CAST_DATATYPE",
+"text": "Error during planning: [CANNOT_UP_CAST_DATATYPE] Cannot up cast d185.m from \"DECIMAL(38,0)\" to \"DECIMAL(38,10)\". The type path of the target object is: You can either add an explicit cast to the"
+},
+"sweep/dec/dec_union/off>on/read_on": {
+"rows": [
+"1.0000000000",
+"1.5000000000",
+"null",
+"null"
+],
+"types": [
+"decimal(38,10)"
+]
+},
+"sweep/dec/dec_union/on>off/read_off": {
+"rows": [
+"1",
+"2",
+"null",
+"null"
+],
+"types": [
+"decimal(38,0)"
+]
+},
+"sweep/dec/dec_union/on>off/read_on": {
+"error": "CANNOT_UP_CAST_DATATYPE",
+"text": "Error during planning: [CANNOT_UP_CAST_DATATYPE] Cannot up cast d189.m from \"DECIMAL(38,10)\" to \"DECIMAL(38,0)\". The type path of the target object is: You can either add an explicit cast to the"
+},
+"sweep/dec/two_levels_dec/off>on/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/two_levels_dec/off>on/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/two_levels_dec/on>off/read_off": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/dec/two_levels_dec/on>off/read_on": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/case_zone/la>utc/read_la": {
+"rows": [
+"2023-12-31 19:00:00",
+"2024-01-01 00:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/case_zone/la>utc/read_utc": {
+"rows": [
+"2024-01-01 03:00:00",
+"2024-01-01 08:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/case_zone/utc>la/read_la": {
+"rows": [
+"2023-12-31 16:00:00",
+"2023-12-31 19:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/case_zone/utc>la/read_utc": {
+"rows": [
+"2024-01-01 00:00:00",
+"2024-01-01 03:00:00"
+],
+"types": [
+"string"
+]
+},
+"sweep/zone/date_add/la>utc/read_la": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type Timestamp(\u00b5s, \"UTC\"). No function"
+},
+"sweep/zone/date_add/la>utc/read_utc": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type Timestamp(\u00b5s, \"UTC\"). No function"
+},
+"sweep/zone/date_add/utc>la/read_la": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type Timestamp(\u00b5s, \"UTC\"). No function"
+},
+"sweep/zone/date_add/utc>la/read_utc": {
+"error": "",
+"text": "Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type Timestamp(\u00b5s, \"UTC\"). No function"
+},
+"sweep/zone/date_add_where/la>utc/read_la": {
+"error": "",
+"text": "type_coercion caused by Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type"
+},
+"sweep/zone/date_add_where/la>utc/read_utc": {
+"error": "",
+"text": "type_coercion caused by Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type"
+},
+"sweep/zone/date_add_where/utc>la/read_la": {
+"error": "",
+"text": "type_coercion caused by Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type"
+},
+"sweep/zone/date_add_where/utc>la/read_utc": {
+"error": "",
+"text": "type_coercion caused by Error during planning: Execution error: Function 'date_add' user-defined coercion failed with: Error during planning: 'date_add' cannot accept a start date of type"
+},
+"sweep/zone/date_between/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_between/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_between/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_between/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_eq/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ge/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_in/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/utc>la/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/date_ts/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_text/la>utc/read_la": {
+"rows": [
+"0",
+"0"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_text/la>utc/read_utc": {
+"rows": [
+"0",
+"0"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_text/utc>la/read_la": {
+"rows": [
+"0",
+"0"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_text/utc>la/read_utc": {
+"rows": [
+"0",
+"0"
+],
+"types": [
+"int"
+]
+},
+"sweep/zone/hour_where/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_where/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_where/utc>la/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/hour_where/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/sql_frame/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/la>utc/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_between/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/utc>la/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_eq/utc>la/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/la>utc/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/la>utc/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/utc>la/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_ge_column/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/la>utc/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/la>utc/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/utc>la/read_la": {
+"rows": [
+"0"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/ts_in/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/la>utc/read_la": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/la>utc/read_utc": {
+"rows": [
+"1"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/utc>la/read_la": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+},
+"sweep/zone/two_levels_zone/utc>la/read_utc": {
+"rows": [
+"2"
+],
+"types": [
+"bigint"
+]
+}
+}
+}

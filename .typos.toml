@@ -23,6 +23,7 @@ extend-exclude = [
   "task/wo/struct-compare-seat-family-1/evidence/",
   "task/wo/listview-inner-join-key-1/evidence/",
   "task/wo/decimal-double-union-coercion-1/evidence/part2/raw/",
+  "task/wo/temp-view-session-settings-1/evidence/built-part2/raw/",
   "python/repark/tests/sql/data/struct_compare_by_position_cells.jsonl",
   "python/repark/tests/sql/data/struct_compare_kind_cells.jsonl",
   "python/repark/tests/sql/data/listview_inner_join_key_1_cells.jsonl",

@@ -3,6 +3,8 @@
 - [probes/](probes/map.md) — the cell definitions, the runners and the analysis (comment-free Python).
 - [raw/](raw/map.md) — one JSON object per cell and engine, the verdicts, the headline, the summary, the plans.
 - [jar/](jar/map.md) — the `javap -c -p` excerpts of Spark 4.1.2's view-capture and current-time classes.
+- [built-part1/](built-part1/map.md) — part 1's bar and cost (the SQL door).
+- [built-part2/](built-part2/map.md) — part 2's bar and cost (the DataFrame door and materialisation).
 
 ## Provenance
 

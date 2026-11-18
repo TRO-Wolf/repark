@@ -1,0 +1,16 @@
+{"tag": "fixture", "rows": ["(1, 3000000000, '2024-01-01 03:00:00', Decimal('90000000000000000000000000000000000000'))", "(2, 5, '2024-01-01 12:00:00', Decimal('1'))"], "types": ["int", "bigint", "string", "decimal(38,0)"]}
+{"tag": "nest/ansi3_raise/read_true", "error": "DIVIDE_BY_ZERO"}
+{"tag": "nest/ansi3_values/read_true", "error": "DIVIDE_BY_ZERO"}
+{"tag": "nest/ansi3_raise/read_false", "rows": ["(1, None, None)", "(2, Decimal('2.0000000000000'), Decimal('1.0000000000000'))"], "types": ["int", "decimal(23,13)", "decimal(23,13)"]}
+{"tag": "nest/ansi3_values/read_false", "rows": ["(1, None, Decimal('1.00000000000000'), None)", "(2, Decimal('2.0000000000000'), Decimal('1.00000000000000'), Decimal('2.0000000000000'))"], "types": ["int", "decimal(23,13)", "decimal(24,14)", "decimal(23,13)"]}
+{"tag": "door/fexpr", "rows": ["(19,)", "(4,)"], "types": ["int"]}
+{"tag": "door/fexpr_sub", "error": "Error during planning: table 'datafusion.public.zv' not found"}
+{"tag": "DDL:w_insert", "error": "datafusion engine error: Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "DDL:w2_ctas", "error": "datafusion engine error: Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "DDL:w3_merge", "error": "datafusion engine error: Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "write/w", "rows": [], "types": ["int", "int", "int"]}
+{"tag": "write/w2", "error": "Error during planning: table 'lc.db.w2' not found"}
+{"tag": "write/w3", "rows": ["(1, -1, -1)"], "types": ["int", "int", "int"]}
+{"tag": "overlay/start_time", "rows": ["(True, True, True, True)"], "types": ["boolean", "boolean", "boolean", "boolean"]}
+{"tag": "overlay/start_time_join", "rows": ["(1,)"], "types": ["bigint"]}
+{"tag": "overlay/catalog", "rows": ["(1,)"], "types": ["bigint"]}
