@@ -746,32 +746,32 @@ scalars live under [`try_invert/`](try_invert/map.md).
   **AVG-DECIMAL-ROUND-1 (2026-11-17):** `avg`,
   `mean` (own instance; core `Avg` alias gone) and `try_avg` share
   `SparkAvgWithRetract` with an `AvgMode`; `SparkAvgAnsiMode` (in `registration.rs`, after
-  `SparkExprSemantics`) swaps in the null-on-overflow mode when ANSI is off; a float `mean(DISTINCT)` keeps core's.
+  `SparkExprSemantics`) swaps in the null-on-overflow mode when ANSI is off; a float `mean(DISTINCT)` keeps core's. **SUM-DEC-I128WRAP-1 (2026-11-17):** registers `sum`/`try_sum` from [aggregate/](aggregate/map.md); the rule places each `sum`.
 - `avg_groups.rs` — **PERF-AGG-AVG-1 (2026-09-05):** the
   `GroupsAccumulator` for the Spark `avg` / `try_avg` UDAF, shaped on DataFusion 54.1's
-  `AvgGroupsAccumulator` (`datafusion-functions-aggregate/src/average.rs`):
-  per-group `Vec<u64>` counts plus `Vec<Native>` sums, `EmitTo::First` partial emission,
+  `AvgGroupsAccumulator`:
+  per-group counts and sums, `EmitTo::First` partial emission,
   `convert_to_state`, and a local null-state tracker (the
-  `datafusion-functions-aggregate-common` `NullState` needs a new
+  `NullState` needs a new
   dependency, so its All/Some fast-path semantics are re-implemented here). Its decimal
   arms build `avg_decimal::DecimalAvgGroups`. Loud `exec_err!` replaces `assert_eq!`;
-  indexing is bounds-checked (no `unsafe`).
+  indexing is bounds-checked, no `unsafe`.
 - `avg_decimal.rs` — **AVG-DECIMAL-ROUND-1 (2026-11-17):** Spark's decimal average: the sum
   is checked against `bounded(p + 10, s)`, scaled to the result scale, divided half up by
-  `decimal_spark::div_half_up` (`pub(crate)`, an `i128` fast path), and checked
+  `decimal_spark::div_half_up` (an `i128` fast path), and checked
   against the result precision; ANSI on raises `ARITHMETIC_OVERFLOW` or
   `NUMERIC_VALUE_OUT_OF_RANGE`, ANSI off and `try_avg` answer NULL. Both accumulators hold
   an exact sum (a native sum plus a wrap count) in update and merge; the state keeps
   `[count:UInt64, sum]`, and a partial past Spark's sum type ships NULL, as Spark's does
   (closes BACKLOG `AVG-DEC-SUMWRAP-1` on the Spark door). Unit tests drive the averager, the carry, both
-  accumulators and the state round trip; the three-group merge test asserts every
-  group.
+  accumulators and the state round trip; the merge test asserts every
+  group. `safe_rows`, `add_batch`, `sub_batch` are `pub(crate)` for SUM-DEC-I128WRAP-1.
 - `groups_null_state.rs` — **PERF-AGG-AVG-1 (2026-09-05):** the groups accumulator's
   per-group validity tracker, split out of `avg_groups.rs` so neither file passes the
-  1000-line ceiling. It re-implements the `datafusion-functions-aggregate-common`
-  `NullState` All/Some fast-path semantics (no new dependency allowed): batches with no
-  nulls and no filter skip tracking entirely, otherwise one validity bit per group with
-  `EmitTo::First` splitting the mask. The unit test pins the split.
+  1000-line ceiling. It re-implements DataFusion's
+  `NullState` All/Some fast path (no new dependency): batches with no
+  nulls and no filter skip tracking, else one validity bit per group with
+  `EmitTo::First` splitting the mask; a unit test pins the split.
 
 - `decimal_precision.rs` — **V-2 / DEC U3+U4a:** `SparkDecimalPrecision` analyzer rule.
   U3: integer-literal `fromLiteral` (`DECIMAL(digits,0)`) on `+ − *` only (typed INT

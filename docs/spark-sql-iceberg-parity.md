@@ -15214,7 +15214,24 @@ Shared roster pin for every heading:
   readable file into a loud refusal. Same reader family as `CSV-INFER-HEADER-NEWLINE` and
   `CSV-INFER-PERF-1`.
 
-### SUM-DEC-I128WRAP-1 — decimal `SUM` answers a wrapped i128 value; Spark raises — **BACKLOG 2026-09-10**
+### SUM-DEC-I128WRAP-1 — decimal `SUM` answers a wrapped i128 value; Spark raises — **closed on the Spark door 2026-11-17 (built; the bar's layout cells await the owner)**
+
+- **Status** — **closed on the Spark door** by the SUM-DEC-I128WRAP-1 build (branch `fix/sum-dec-i128wrap-1`, product
+  commit `a8016e75`, 2026-11-17; not merged): a RePark `sum` / `try_sum` (`crates/repark-functions/src/aggregate/`)
+  sums decimals exactly and checks where Spark checks: grouped after every row (sticky; ANSI on raises at once), an
+  ungrouped partial at its state (`ARITHMETIC_OVERFLOW`) and the merged total (`NUMERIC_VALUE_OUT_OF_RANGE`), every
+  window frame. Every Spark-door position, the DataFrame forms, `try_sum` and the Iceberg writes answer Spark's NULL
+  or condition, and no data file holds a wrapped or 39-digit value
+  ([bar](../task/wo/sum-dec-i128wrap-1/evidence/built/bar.md)). **Stays unlike Spark:** the native `repark.sql()` door
+  (NATIVE-DECIMAL-SUM-1, S2); `BIGINT` `sum` with ANSI on (SUM-BIGINT-ANSI-OVERFLOW-1); `F.sum_distinct` (FNP-AGG-1);
+  views read under other settings (TEMP-VIEW-SESSION-SETTINGS-1); a grouped `avg` pass-back (AVG-GROUPED-SUM-STICKY-1);
+  the writer's bounds-only precision check for other producers (ICE-DECIMAL-WRITE-PRECISION-1); and pass-back sums
+  whose answer depends on Spark's split or the partial order (several files read as one split, a `repartition(4)`,
+  a merge order), 46 cells of the domain table that main answered by accident and the build halted on.
+- **Pins (new)** — `python/repark/tests/types/test_sum_dec_i128wrap_1.py::test_a_cell_answers_as_spark` (77 cells,
+  both ANSI modes) and `::test_no_data_file_holds_a_sum_past_38_digits_or_its_wrap`; Rust
+  `repark-functions` `aggregate::sum_tests::*` and `repark-spark` `extension::sum_window_tests::*`; the torture cell
+  below, its strict xfail removed.
 
 - **repark** — `SUM` over `DECIMAL(38,0)` inputs whose true sum overflows i128 answers the
   wrapped value at `decimal128(38, 0)` instead of raising: the torture `decimal_overflow`
@@ -15233,7 +15250,8 @@ Shared roster pin for every heading:
   half stays recorded in `AVG-DEC-SUMWRAP-1`, oracle 2026-09-05.)*
 - **Pin** —
   `python/repark-parity/tests/torture/test_torture_decimal_overflow.py::test_decimal_overflow_sum_refuses_loud`
-  (`xfail(strict=True)` naming this row; reds when repark latches the overflow).
+  (the strict xfail removed 2026-11-17; it pins Spark's `[ARITHMETIC_OVERFLOW] Overflow in sum of decimals` on both
+  doors).
 - **Rationale** — BACKLOG (2026-09-10), filed by TORTURE-1 step 2. The wrapping i128 add
   behind `AVG-DEC-SUMWRAP-1` reaches `SUM` too, and a wrapped answer is silent truncation,
   not a value. A fix needs the same overflow latching in the sum accumulators.
