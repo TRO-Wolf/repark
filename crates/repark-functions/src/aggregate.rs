@@ -26,6 +26,11 @@ use datafusion::optimizer::AnalyzerRule;
 use crate::avg_decimal::DecimalAvgAccumulator;
 use crate::avg_groups;
 
+mod spark_sum;
+mod sum_decimal;
+#[cfg(test)]
+mod sum_tests;
+
 pub use crate::grouping::{grouping_id_udaf, grouping_udaf};
 
 /// Register repark `avg` [`AggregateUDF`] instances after `datafusion-spark` (name overwrite).
@@ -36,6 +41,8 @@ pub fn functions() -> Vec<Arc<AggregateUDF>> {
         mean_udaf(),
         try_avg_udaf(),
         crate::count_if::count_if_udaf(),
+        sum_udaf(),
+        try_sum_udaf(),
     ];
     functions.push(crate::grouping::grouping_udaf());
     functions.push(crate::grouping::grouping_id_udaf());
@@ -47,7 +54,12 @@ pub fn functions() -> Vec<Arc<AggregateUDF>> {
 /// Spark `try_sum` — overflow yields NULL. Reuses the datafusion-spark kernel.
 #[must_use]
 pub fn try_sum_udaf() -> Arc<AggregateUDF> {
-    datafusion_spark::function::aggregate::try_sum()
+    spark_sum::try_sum_udaf()
+}
+
+#[must_use]
+pub fn sum_udaf() -> Arc<AggregateUDF> {
+    spark_sum::sum_udaf()
 }
 
 /// Spark `try_avg` — decimal overflow yields NULL; interval input refuses (FNP-11).
@@ -298,11 +310,12 @@ pub(crate) struct SparkAvgAnsiMode;
 
 impl AnalyzerRule for SparkAvgAnsiMode {
     fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
-        if crate::ansi::spark_ansi_enabled_from_options(config) {
-            return Ok(plan);
-        }
+        let ansi = crate::ansi::spark_ansi_enabled_from_options(config);
         plan.transform_up_with_subqueries(|node| {
-            node.map_expressions(|expr| expr.transform_up(|leaf| Ok(legacy_avg_expr(leaf))))
+            let place = spark_sum::place_of(spark_sum::grouped(&node));
+            node.map_expressions(|expr| {
+                expr.transform_up(|leaf| Ok(legacy_avg_expr(leaf, ansi, place)))
+            })
         })
         .data()
     }
@@ -312,18 +325,33 @@ impl AnalyzerRule for SparkAvgAnsiMode {
     }
 }
 
-fn legacy_avg_expr(expr: Expr) -> Transformed<Expr> {
+fn ansi_mode_udaf(
+    func: &Arc<AggregateUDF>,
+    ansi: bool,
+    place: sum_decimal::Place,
+) -> Option<Arc<AggregateUDF>> {
+    if ansi {
+        return spark_sum::placed(func, place);
+    }
+    legacy_avg_udaf(func).or_else(|| spark_sum::legacy(func))
+}
+
+fn legacy_avg_expr(expr: Expr, ansi: bool, place: sum_decimal::Place) -> Transformed<Expr> {
     match expr {
-        Expr::AggregateFunction(mut function) => match legacy_avg_udaf(&function.func) {
-            Some(func) => {
-                function.func = func;
-                Transformed::yes(Expr::AggregateFunction(function))
+        Expr::AggregateFunction(mut function) => {
+            match ansi_mode_udaf(&function.func, ansi, place) {
+                Some(func) => {
+                    function.func = func;
+                    Transformed::yes(Expr::AggregateFunction(function))
+                }
+                None => Transformed::no(Expr::AggregateFunction(function)),
             }
-            None => Transformed::no(Expr::AggregateFunction(function)),
-        },
+        }
         Expr::WindowFunction(mut window) => {
             let legacy = match &window.fun {
-                WindowFunctionDefinition::AggregateUDF(udaf) => legacy_avg_udaf(udaf),
+                WindowFunctionDefinition::AggregateUDF(udaf) => {
+                    ansi_mode_udaf(udaf, ansi, sum_decimal::Place::Window)
+                }
                 WindowFunctionDefinition::WindowUDF(_) => None,
             };
             match legacy {
