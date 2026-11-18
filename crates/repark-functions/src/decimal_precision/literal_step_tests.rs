@@ -114,6 +114,34 @@ async fn mod_and_pmod_calls_take_the_remainder_type() {
 }
 
 #[tokio::test]
+async fn a_decimal_mod_call_answers_as_the_remainder_operator() {
+    let ctx = spark_ctx(true);
+    for (call, operator) in [
+        ("SELECT mod(d, 3) FROM t", "SELECT d % 3 FROM t"),
+        ("SELECT mod(d, -3) FROM t", "SELECT d % -3 FROM t"),
+        ("SELECT mod(3, d) FROM t", "SELECT 3 % d FROM t"),
+        ("SELECT mod(d, i) FROM t", "SELECT d % i FROM t"),
+    ] {
+        assert_eq!(
+            first_column(&ctx, call).await,
+            first_column(&ctx, operator).await,
+            "{call}"
+        );
+    }
+    let error = ctx
+        .sql("SELECT mod(d, 0) FROM t")
+        .await
+        .expect("plan")
+        .collect()
+        .await
+        .expect_err("a zero divisor raises with ANSI on");
+    assert!(error.to_string().contains("DIVIDE_BY_ZERO"), "{error}");
+    let (data_type, values) = first_column(&ctx, "SELECT mod(i, j) FROM t").await;
+    assert_eq!(data_type, DataType::Int32);
+    assert_eq!(values, ["1", "0", "1"]);
+}
+
+#[tokio::test]
 async fn a_folded_divisor_keeps_the_integer_width() {
     let ctx = spark_ctx(true);
     let (folded, _) =

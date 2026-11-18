@@ -23,10 +23,15 @@ everything else passes through.
     `type_coercion` (`analyzer_rules_with_higher_order_preparation`), so `d / (1 + 2)` keeps
     `(21,13)` as on Spark, which folds after its coercion;
   - the `mod()` / `pmod()` call arm (datafusion-spark `SparkMod`, `SparkPmod`, which type the
-    first argument): it narrows an integer literal argument and casts the call to Spark's
-    `Remainder`/`Pmod.resultDecimalType` (`max(s1, s2)`, `min(p1 − s1, p2 − s2) + scale`,
-    `adjustPrecisionScale`); an integer column argument is `forType`; a cast over the call is
-    left alone, so a second analyze changes nothing;
+    first argument): it narrows an integer literal argument. **Delta 1 (2026-11-18):** a decimal
+    `mod()` call is rewritten onto the `%` operator (Spark's `mod` is `Remainder`, the same
+    expression as `%`), with an integer argument cast to its `forType` width (`(10,0)` for an
+    `INT`), so it takes `%`'s `Remainder` type and `SparkExprSemantics`' zero-divisor guard:
+    `mod(d, 0)` raises with ANSI on, as on Spark (`[DIVIDE_BY_ZERO]` for Spark's
+    `[REMAINDER_BY_ZERO]`), and is NULL with ANSI off. `pmod()` keeps `SparkPmod` and a cast to
+    `Pmod.resultDecimalType` (`max(s1, s2)`, `min(p1 − s1, p2 − s2) + scale`,
+    `adjustPrecisionScale`). An integer `mod()` keeps `SparkMod`. A cast over a call is left
+    alone, so a second analyze changes nothing;
   - the DataFrame `/` marker: `PyColumn::div` builds `CAST(CAST(x AS DOUBLE) AS DOUBLE)` on
     each side (`dataframe_divide_operand`). The bottom-up pass strips it when one side is a
     decimal and the other a decimal, an integer or NULL (the plain `/` is then typed as SQL
@@ -42,8 +47,9 @@ everything else passes through.
     operator, as Spark's `literalPickMinimumPrecision` does. A runtime `SET` is accepted and
     not read (as on main).
 - [`literal_step_tests.rs`](literal_step_tests.rs) pins the literal widths of `/`, `%`,
-  `mod`, `pmod`, the folded and cast divisors, the `false` conf, the second analyze, the
-  DataFrame marker and the suffix spelling.
+  `mod`, `pmod`, a decimal `mod()` answering as `%` (`mod(d, 0)` raising with ANSI on), the
+  folded and cast divisors, the `false` conf, the second analyze, the DataFrame marker and the
+  suffix spelling.
 - [`negate_null_tests.rs`](negate_null_tests.rs) pins the fold shapes (null cast /
   literal / try-cast / nested negative / wide target keep their type) and the untouched
   shapes (valued decimal, null int, null string, non-decimal cast target).

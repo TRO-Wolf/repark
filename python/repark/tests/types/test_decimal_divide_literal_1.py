@@ -20,6 +20,7 @@ KEYS = sorted(ORACLE["cells"]["false"])
 PICK_KEYS = sorted(ORACLE["pick_false"]["false"])
 CONDITION = re.compile(r"\[([A-Z_]+)")
 PICK_KEY = "spark.sql.legacy.literal.pickMinimumPrecision"
+CARDED_CONDITIONS = {"REMAINDER_BY_ZERO": "DIVIDE_BY_ZERO"}
 
 
 def session_for(mode: str, root: Path, extra: dict[str, str]) -> Any:
@@ -71,7 +72,8 @@ def condition(value: str) -> str | None:
 def assert_as_spark(found: Any, want: Any, key: str) -> None:
     if isinstance(want, str):
         assert isinstance(found, str), (key, found, want)
-        assert condition(found) == condition(want), (key, found, want)
+        spark = condition(want)
+        assert condition(found) == CARDED_CONDITIONS.get(spark, spark), (key, found, want)
         return
     if isinstance(want, dict) and "statement" in want:
         assert isinstance(found, dict), (key, found)

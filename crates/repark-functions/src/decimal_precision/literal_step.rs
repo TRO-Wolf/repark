@@ -222,6 +222,17 @@ fn remainder_node(node: Expr, schema: &DFSchema, pick: bool) -> Result<Transform
         operands = vec![left.data, right.data];
     }
     let spark = remainder_type(&operands[0], &operands[1], schema);
+    let operands = match <[Expr; 2]>::try_from(operands) {
+        Ok([left, right]) if spark.is_some() && func.name() == "mod" => {
+            return Ok(Transformed::new(
+                remainder_operator(left, right, schema),
+                true,
+                TreeNodeRecursion::Jump,
+            ));
+        }
+        Ok(pair) => Vec::from(pair),
+        Err(operands) => operands,
+    };
     let call = Expr::ScalarFunction(ScalarFunction::new_udf(func, operands));
     let Some((precision, scale)) = spark else {
         return Ok(Transformed::new(call, changed, TreeNodeRecursion::Jump));
@@ -234,6 +245,32 @@ fn remainder_node(node: Expr, schema: &DFSchema, pick: bool) -> Result<Transform
         true,
         TreeNodeRecursion::Jump,
     ))
+}
+
+fn remainder_operator(left: Expr, right: Expr, schema: &DFSchema) -> Expr {
+    Expr::BinaryExpr(BinaryExpr::new(
+        Box::new(remainder_decimal_operand(left, schema)),
+        Operator::Modulo,
+        Box::new(remainder_decimal_operand(right, schema)),
+    ))
+}
+
+fn remainder_decimal_operand(operand: Expr, schema: &DFSchema) -> Expr {
+    let Ok(data_type) = operand.get_type(schema) else {
+        return operand;
+    };
+    if decimal128_parts(&data_type).is_some() {
+        return operand;
+    }
+    let precision = remainder_operand(&operand, &data_type)
+        .and_then(|(precision, _)| u8::try_from(precision).ok());
+    match precision {
+        Some(precision) => Expr::Cast(Cast::new(
+            Box::new(operand),
+            DataType::Decimal128(precision, 0),
+        )),
+        None => operand,
+    }
 }
 
 fn is_remainder_call(function: &ScalarFunction) -> bool {
