@@ -1,9 +1,13 @@
 use std::any::Any;
 use std::borrow::Cow;
+use std::cell::Cell;
 use std::cmp::Ordering;
 use std::fmt;
+use std::future::Future;
 use std::hash::{Hash, Hasher};
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 
 use async_trait::async_trait;
 use datafusion::arrow::datatypes::SchemaRef;
@@ -24,7 +28,7 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::{Analyzer, AnalyzerRule};
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::{DataFrame, SessionConfig};
-use repark_core::extension::{FrameViewSeat, with_frame_view_seat};
+use repark_core::extension::{FrameViewSeat, LiveOptions, with_frame_view_seat};
 use repark_core::frame_names;
 
 use crate::view_ddl::read::{MAX_VIEW_EXPANSION_DEPTH, nested_depth_refusal};
@@ -35,6 +39,50 @@ pub(crate) const FRAME_SETTINGS_RULE: &str = "repark_frame_settings";
 const NODE_NAME: &str = "FrameSettings";
 const WRITER_V2: &str = "_repark_writer_v2_";
 const MAX_LINEAGE_WALK: usize = 4096;
+
+thread_local! {
+    static VIEW_BODY: Cell<usize> = const { Cell::new(0) };
+}
+
+struct ViewBodyDepth;
+
+impl ViewBodyDepth {
+    fn enter() -> Self {
+        VIEW_BODY.with(|depth| depth.set(depth.get() + 1));
+        Self
+    }
+}
+
+impl Drop for ViewBodyDepth {
+    fn drop(&mut self) {
+        VIEW_BODY.with(|depth| depth.set(depth.get().saturating_sub(1)));
+    }
+}
+
+struct ViewBody<'a, T: 'a> {
+    inner: Pin<Box<dyn Future<Output = T> + Send + 'a>>,
+}
+
+impl<T> Future for ViewBody<'_, T> {
+    type Output = T;
+
+    fn poll(mut self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<T> {
+        let _depth = ViewBodyDepth::enter();
+        self.inner.as_mut().poll(context)
+    }
+}
+
+pub(crate) fn view_body<'a, T: 'a>(
+    future: impl Future<Output = T> + Send + 'a,
+) -> impl Future<Output = T> + Send + 'a {
+    ViewBody {
+        inner: Box::pin(future),
+    }
+}
+
+fn planning_view_body() -> bool {
+    VIEW_BODY.with(|depth| depth.get() > 0)
+}
 
 #[derive(Debug, Clone)]
 struct FrameSettingsNode {
@@ -110,6 +158,7 @@ pub(crate) struct FrameView {
     inlined: Option<LogicalPlan>,
     settings: Arc<TempViewSettings>,
     schema: SchemaRef,
+    reader: LiveOptions,
 }
 
 impl FrameView {
@@ -117,6 +166,7 @@ impl FrameView {
         plan: LogicalPlan,
         settings: Arc<TempViewSettings>,
         analyzer: Arc<Analyzer>,
+        reader: LiveOptions,
     ) -> Self {
         let marker = FrameSettingsNode {
             input: plan.clone(),
@@ -130,6 +180,7 @@ impl FrameView {
             })),
             plan,
             settings,
+            reader,
         }
     }
 
@@ -139,7 +190,23 @@ impl FrameView {
             inlined: None,
             plan,
             settings,
+            reader: LiveOptions::default(),
         }
+    }
+
+    fn inlined_for_reader<'a>(&'a self, marked: &'a LogicalPlan) -> Cow<'a, LogicalPlan> {
+        if planning_view_body() {
+            return Cow::Borrowed(marked);
+        }
+        let Some(live) = self.reader.read() else {
+            return Cow::Borrowed(marked);
+        };
+        if self.settings.same_as(&live) {
+            return Cow::Borrowed(&self.plan);
+        }
+        marker(marked)
+            .and_then(|found| closed_scan(found, &live).ok())
+            .map_or(Cow::Borrowed(marked), Cow::Owned)
     }
 }
 
@@ -154,7 +221,10 @@ impl TableProvider for FrameView {
     }
 
     fn get_logical_plan(&self) -> Option<Cow<'_, LogicalPlan>> {
-        Some(Cow::Borrowed(self.inlined.as_ref().unwrap_or(&self.plan)))
+        Some(match &self.inlined {
+            Some(marked) => self.inlined_for_reader(marked),
+            None => Cow::Borrowed(&self.plan),
+        })
     }
 
     fn supports_filters_pushdown(
@@ -171,22 +241,19 @@ impl TableProvider for FrameView {
         filters: &[Expr],
         limit: Option<usize>,
     ) -> Result<Arc<dyn ExecutionPlan>> {
-        match self.settings.overlay(state, state.config_options()) {
-            Some(overlay) => {
-                Box::pin(plan_under_overlay(
-                    &overlay,
-                    state,
-                    self.plan.clone(),
-                    projection,
-                    filters,
-                    limit,
-                ))
-                .await
-            }
-            None => {
-                let view = ViewTable::new(self.plan.clone(), None);
-                Box::pin(view.scan(state, projection, filters, limit)).await
-            }
+        if let Some(overlay) = self.settings.overlay(state, state.config_options()) {
+            Box::pin(plan_under_overlay(
+                &overlay,
+                state,
+                self.plan.clone(),
+                projection,
+                filters,
+                limit,
+            ))
+            .await
+        } else {
+            let view = ViewTable::new(self.plan.clone(), None);
+            Box::pin(view.scan(state, projection, filters, limit)).await
         }
     }
 }
@@ -195,6 +262,7 @@ pub(crate) fn frame_view(
     name: &str,
     frame: &DataFrame,
     live: &ConfigOptions,
+    reader: LiveOptions,
 ) -> Arc<dyn TableProvider> {
     let (state, plan) = frame.clone().into_parts();
     if reader_lineage(&plan) {
@@ -210,7 +278,7 @@ pub(crate) fn frame_view(
         captured
     });
     let analyzer = Arc::new(state.analyzer().clone());
-    Arc::new(FrameView::registered(plan, settings, analyzer))
+    Arc::new(FrameView::registered(plan, settings, analyzer, reader))
 }
 
 fn scans_only(plan: &LogicalPlan) -> bool {

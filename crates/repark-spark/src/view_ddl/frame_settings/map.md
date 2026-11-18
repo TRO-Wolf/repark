@@ -10,7 +10,11 @@ own settings, planned by part 1's overlay; `opened` and `definition_plan` read t
 door's bare `ReplanningTempView` scan and a frame that only scans (columns over a scan, whose source reads the
 reader's settings at scan time, as Spark's file scans do) keep `into_view`, as does a lineage reaching a JSON or CSV
 scan (delta 1, `reader_lineage`, which walks through view and frame providers; its markers are unwrapped). Part 1's
-inlined-frame fallback stays for that lineage only.
+inlined-frame fallback stays for that lineage only. Delta 2: outside a SQL view body (`view_body`, set around
+`ReplanningTempView`'s re-planning) a frame view decides at inline time against the session's live options
+(`LiveOptions`): its own plan when they match, the closed `TableScan` when they differ, so a walker that reads the
+unanalysed plan (the store-assignment check's `negated_null_store::column_origin`) sees what `into_view` gave; inside
+a body, or with no live reader, it inlines the marker.
 
 ## Contents
 
@@ -22,7 +26,9 @@ inlined-frame fallback stays for that lineage only.
   attribute id; a frame view answers `temp_view_column_comments` and `renamed_temp_view` as `into_view` does; the
   SQL door's registration stays a bare scan; materialisation takes the frame's options and a fresh start time
   (pin f); a frame that only scans keeps `into_view`, one that computes is marked; a JSON frame that computes, a frame
-  over its view and a join of it with a marked frame keep `into_view`, the last with its marker unwrapped (delta 1).
+  over its view and a join of it with a marked frame keep `into_view`, the last with its marker unwrapped (delta 1); a
+  reader under the frame's settings inlines the frame's own plan and a view body the marker, and the negated-null
+  store check refuses a write from a frame view on both paths (delta 2).
 
 ## Pointers
 

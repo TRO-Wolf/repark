@@ -13,7 +13,34 @@ use datafusion::prelude::{DataFrame, SessionConfig, SessionContext};
 
 use crate::session_time_zone::SessionTimeZone;
 
-pub type FrameViewWrap = fn(&str, &DataFrame, &ConfigOptions) -> Arc<dyn TableProvider>;
+pub type FrameViewWrap =
+    fn(&str, &DataFrame, &ConfigOptions, LiveOptions) -> Arc<dyn TableProvider>;
+
+type ReadLive = dyn Fn() -> Option<Arc<ConfigOptions>> + Send + Sync;
+
+#[derive(Clone, Default)]
+pub struct LiveOptions(Option<Arc<ReadLive>>);
+
+impl LiveOptions {
+    #[must_use]
+    pub fn new(read: Arc<ReadLive>) -> Self {
+        Self(Some(read))
+    }
+
+    #[must_use]
+    pub fn read(&self) -> Option<Arc<ConfigOptions>> {
+        self.0.as_ref().and_then(|read| read())
+    }
+}
+
+impl std::fmt::Debug for LiveOptions {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_tuple("LiveOptions")
+            .field(&self.0.is_some())
+            .finish()
+    }
+}
 
 #[derive(Clone)]
 pub struct FrameViewSeat {
@@ -36,8 +63,9 @@ impl FrameViewSeat {
         name: &str,
         frame: &DataFrame,
         live: &ConfigOptions,
+        reader: LiveOptions,
     ) -> Arc<dyn TableProvider> {
-        (self.wrap)(name, frame, live)
+        (self.wrap)(name, frame, live, reader)
     }
 }
 

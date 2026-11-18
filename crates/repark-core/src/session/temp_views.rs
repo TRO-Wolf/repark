@@ -40,16 +40,25 @@ impl ReparkSession {
     /// # Errors
     /// Returns [`Error::DataFusion`] if register fails; [`Error::Analysis`] if `name` is qualified.
     pub fn create_or_replace_temp_view_from(&self, name: &str, frame: &DataFrame) -> Result<()> {
+        let shared = self.context().state_ref();
         let (seat, live) = {
-            let state = self.context().state_ref();
-            let state = state.read();
+            let state = shared.read();
             let seat = state
                 .config()
                 .get_extension::<crate::extension::FrameViewSeat>();
             (seat, Arc::clone(state.config_options()))
         };
         let provider = match seat {
-            Some(seat) => seat.wrap(name, frame, &live),
+            Some(seat) => {
+                let weak = Arc::downgrade(&shared);
+                let reader = crate::extension::LiveOptions::new(Arc::new(move || {
+                    let state = weak.upgrade()?;
+                    state
+                        .try_read_recursive()
+                        .map(|guard| Arc::clone(guard.config_options()))
+                }));
+                seat.wrap(name, frame, &live, reader)
+            }
             None => frame.clone().into_view(),
         };
         self.replace_view(name, provider)

@@ -28,7 +28,12 @@ fn zoned(ansi: bool, zone: &str) -> ReparkSession {
 }
 
 fn wrapped(frame: &DataFrame) -> Arc<dyn TableProvider> {
-    frame_view("v", frame, frame.task_ctx().session_config().options())
+    frame_view(
+        "v",
+        frame,
+        frame.task_ctx().session_config().options(),
+        LiveOptions::default(),
+    )
 }
 
 fn held_on(reader: &ReparkSession) -> SessionState {
@@ -362,7 +367,12 @@ async fn a_writer_v2_scratch_view_takes_the_writers_zone_and_the_frames_ansi() {
         .unwrap_or_else(|error| panic!("frame: {error}"));
     let writer = zoned(true, "America/Los_Angeles").context().state();
     let decide = |name: &str| {
-        let provider = frame_view(name, &frame, writer.config_options());
+        let provider = frame_view(
+            name,
+            &frame,
+            writer.config_options(),
+            LiveOptions::default(),
+        );
         let plan = FrameSettingsRule
             .analyze(scanned(provider), writer.config_options())
             .unwrap_or_else(|error| panic!("decide {name}: {error}"));
@@ -371,7 +381,12 @@ async fn a_writer_v2_scratch_view_takes_the_writers_zone_and_the_frames_ansi() {
     assert_eq!(decide("__repark_selx_1"), 1);
     assert_eq!(decide("`datafusion`.`public`.`_repark_writer_v2_9`"), 0);
     let off = zoned(false, "America/Los_Angeles").context().state();
-    let provider = frame_view("_repark_writer_v2_9", &frame, writer.config_options());
+    let provider = frame_view(
+        "_repark_writer_v2_9",
+        &frame,
+        writer.config_options(),
+        LiveOptions::default(),
+    );
     let plan = FrameSettingsRule
         .analyze(scanned(provider), off.config_options())
         .unwrap_or_else(|error| panic!("decide off: {error}"));
@@ -512,4 +527,85 @@ async fn a_json_reader_lineage_keeps_todays_provider_through_views() {
         .get_logical_plan()
         .unwrap_or_else(|| panic!("a frame provider inlines"));
     assert!(!holds_marker(inlined.as_ref()).unwrap_or_else(|error| panic!("{error}")));
+}
+
+fn inlined_view(plan: &LogicalPlan, name: &str) -> Option<LogicalPlan> {
+    let mut inlined = None;
+    plan.apply_with_subqueries(|node| {
+        if let LogicalPlan::SubqueryAlias(alias) = node
+            && alias.alias.table() == name
+        {
+            inlined = Some(alias.input.as_ref().clone());
+            return Ok(TreeNodeRecursion::Stop);
+        }
+        Ok(TreeNodeRecursion::Continue)
+    })
+    .unwrap_or_else(|error| panic!("walk: {error}"));
+    inlined
+}
+
+async fn read_plan(reader: &ReparkSession, sql: &str) -> LogicalPlan {
+    reader
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("read {sql}: {error}"))
+        .logical_plan()
+        .clone()
+}
+
+#[tokio::test]
+async fn a_reader_under_the_frames_settings_inlines_the_frames_own_plan() {
+    let reader = session(true);
+    let frame = reader
+        .context()
+        .sql(OVERFLOW)
+        .await
+        .unwrap_or_else(|error| panic!("frame: {error}"));
+    reader
+        .create_or_replace_temp_view_from("v", &frame)
+        .unwrap_or_else(|error| panic!("register: {error}"));
+    let read = unanalysed(&reader, "SELECT m FROM v").await;
+    assert!(!holds_marker(&read).unwrap_or(true));
+    assert_eq!(closed_views(&read), 0);
+    assert_eq!(
+        inlined_view(&read, "v").as_ref(),
+        Some(frame.logical_plan())
+    );
+    let body = view_body(unanalysed(&reader, "SELECT m FROM v")).await;
+    assert!(holds_marker(&body).unwrap_or(false));
+}
+
+#[tokio::test]
+async fn the_negated_null_store_check_reads_through_a_frame_view_on_both_paths() {
+    use datafusion::arrow::datatypes::DataType;
+    use repark_iceberg::write::negated_null_store::refuse_negated_null_writes;
+    const SOURCE: &str = "SELECT 127 AS id, -NULL AS c";
+    let reader = session(false);
+    let matching = reader
+        .context()
+        .sql(SOURCE)
+        .await
+        .unwrap_or_else(|error| panic!("frame: {error}"));
+    let differing = DataFrame::new(held_on(&reader), unanalysed(&reader, SOURCE).await);
+    for (name, frame) in [("v", &matching), ("w", &differing)] {
+        reader
+            .create_or_replace_temp_view_from(name, frame)
+            .unwrap_or_else(|error| panic!("register {name}: {error}"));
+        let read = read_plan(&reader, &format!("SELECT * FROM {name}")).await;
+        assert!(!holds_marker(&read).unwrap_or(true), "{name}");
+        let refused = refuse_negated_null_writes(
+            reader.context(),
+            "`t`",
+            &read,
+            [("id", &DataType::Int32), ("c", &DataType::Date32)],
+        )
+        .err()
+        .map(|error| error.to_string())
+        .unwrap_or_default();
+        assert!(refused.contains("CANNOT_SAFELY_CAST"), "{name}: {refused}");
+    }
+    assert_eq!(
+        closed_views(&read_plan(&reader, "SELECT * FROM w").await),
+        1
+    );
 }

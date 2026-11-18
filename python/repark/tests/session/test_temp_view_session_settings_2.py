@@ -80,3 +80,78 @@ def test_an_unset_flag_is_captured_from_the_frame(unset_measured: dict[str, Any]
 def test_matching_settings_keep_todays_plans(tmp_path: Path) -> None:
     plans = measure(tmp_path, "true", "explain")
     assert plans == PLANS["true"]
+
+
+NEGATED_NULL_SOURCES = {
+    "bare": "SELECT 127 AS id, -NULL AS c",
+    "derived": "SELECT id, c FROM (SELECT 127 AS id, -NULL AS c) d",
+}
+CANNOT_SAFELY_CAST = "[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]"
+
+
+def write_to(session: Any, frame: Any, table: str) -> None:
+    frame.writeTo(table).append()
+
+
+def insert_into(session: Any, frame: Any, table: str) -> None:
+    frame.write.insertInto(table)
+
+
+def sql_insert_from_view(session: Any, frame: Any, table: str) -> None:
+    frame.createOrReplaceTempView("negated_null_source")
+    session.sql(f"INSERT INTO {table} SELECT * FROM negated_null_source").collect()
+
+
+NEGATED_NULL_DOORS = {
+    "writeTo": write_to,
+    "insertInto": insert_into,
+    "sqlInsertFromView": sql_insert_from_view,
+}
+NEGATED_NULL_CELLS = [
+    (shape, target, made)
+    for shape in sorted(NEGATED_NULL_SOURCES)
+    for target in ("DATE", "BOOLEAN")
+    for made in ("matching", "other_ansi", "other_zone")
+]
+
+
+def made_frame(session: Any, ansi: str, made: str, sql: str) -> Any:
+    if made == "matching":
+        return session.sql(sql)
+    key, value, back = {
+        "other_ansi": ("spark.sql.ansi.enabled", "false" if ansi == "true" else "true", ansi),
+        "other_zone": ("spark.sql.session.timeZone", "America/Los_Angeles", "UTC"),
+    }[made]
+    session.sql(f"SET {key}={value}").collect()
+    frame = session.sql(sql)
+    frame.collect()
+    session.sql(f"SET {key}={back}").collect()
+    return frame
+
+
+def negated_null_answer(session: Any, ansi: str, door: str, cell: tuple[str, str, str]) -> str:
+    shape, target, made = cell
+    table = f"lc.nn.{door}_{shape}_{target}_{made}".lower()
+    session.sql(f"CREATE TABLE {table} (id INT, c {target}) USING iceberg").collect()
+    frame = made_frame(session, ansi, made, NEGATED_NULL_SOURCES[shape])
+    try:
+        NEGATED_NULL_DOORS[door](session, frame, table)
+    except Exception as error:
+        written = session.sql(f"SELECT * FROM {table}").collect()
+        return "refused" if CANNOT_SAFELY_CAST in str(error) and not written else str(error)
+    return f"wrote {session.sql(f'SELECT * FROM {table}').collect()}"
+
+
+@pytest.mark.parametrize("door", sorted(NEGATED_NULL_DOORS))
+@pytest.mark.parametrize("ansi", ["true", "false"])
+def test_a_negated_null_write_refuses_as_spark(tmp_path: Path, ansi: str, door: str) -> None:
+    session = build(tmp_path, ansi)
+    try:
+        session.sql("CREATE NAMESPACE IF NOT EXISTS lc.nn").collect()
+        found = {
+            cell: negated_null_answer(session, ansi, door, cell) for cell in NEGATED_NULL_CELLS
+        }
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+    assert found == dict.fromkeys(NEGATED_NULL_CELLS, "refused")

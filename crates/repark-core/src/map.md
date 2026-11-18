@@ -1027,7 +1027,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** `built_with_debug_assertions` moved here
   unchanged from `lib.rs` (still re-exported at the crate root) so `lib.rs` stays under its
   `check_lib_rs.py` ceiling after `mod parallel_window;`.
-- `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3): **TEMP-VIEW-SESSION-SETTINGS-1 part 2 (2026-11-18):** `FrameViewSeat` (a door's frame-view wrap and first analyzer rule, in config).
+- `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3): **TEMP-VIEW-SESSION-SETTINGS-1 part 2 (2026-11-18):** `FrameViewSeat` (its frame-view wrap, first rule) and `LiveOptions` (delta 2).
   `SessionExtension` with three defaulted hooks (`configure` pre-assembly,
   `configure_analyzer_rules` during context assembly, and `register` post-context) at v1's inline
   registration positions; `NoopSessionExtension` is the

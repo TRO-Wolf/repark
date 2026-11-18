@@ -19,7 +19,7 @@ use repark_common::spark_error;
 use repark_core::column_resolution::on_grown_stack_with;
 use repark_core::{CatalogRegistry, TempViewSession, frame_names};
 
-use crate::view_ddl::frame_settings::{frame_plan, opened, reader_lineage};
+use crate::view_ddl::frame_settings::{frame_plan, opened, reader_lineage, view_body};
 use crate::view_ddl::read::{
     MAX_VIEW_EXPANSION_DEPTH, TempHomes, VIEW_EXPANSION_STACK_RED_ZONE,
     VIEW_EXPANSION_STACK_SEGMENT, nested_depth_refusal, plan_prepared_body,
@@ -144,12 +144,12 @@ impl ReplanningTempView {
         {
             return Ok(plan);
         }
-        let frame = Box::pin(plan_definition(
+        let frame = Box::pin(view_body(plan_definition(
             &self.ctx,
             &self.catalogs,
             &self.definition,
             &TempHomes::Captured(&self.temp_homes),
-        ))
+        )))
         .await?;
         let frame = conform_to_creation_schema(frame, &self.schema, &self.definition.display)?;
         let view = ViewTable::new(frame.logical_plan().clone(), None);
@@ -165,12 +165,12 @@ impl ReplanningTempView {
         limit: Option<usize>,
     ) -> Result<Option<Arc<dyn ExecutionPlan>>> {
         let planner = SessionContext::new_with_state(overlay.clone());
-        let frame = Box::pin(plan_definition(
+        let frame = Box::pin(view_body(plan_definition(
             &planner,
             &self.catalogs,
             &self.definition,
             &TempHomes::Captured(&self.temp_homes),
-        ))
+        )))
         .await?;
         let body = conform_to_creation_schema(frame, &self.schema, &self.definition.display)?
             .into_unoptimized_plan();
