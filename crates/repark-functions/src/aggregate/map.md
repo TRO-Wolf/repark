@@ -31,15 +31,16 @@ that now also places each `sum`. Only the arithmetic is shared with `avg`
   raises at once, so its state stays one column with no marker); the final step adds the merged
   partials exactly (a wrap count per group) and checks each total once at `evaluate`
   (`ARITHMETIC_OVERFLOW`, Spark's grouped condition; NULL with ANSI off and in `try_sum`), so the
-  answer no longer depends on the partials' arrival order (delta 1, owner 2026-11-18). It has no
-  `convert_to_state`, so DataFusion never skips the partial step. `DecimalSumDistinct`: a value
+  answer no longer depends on the partials' arrival order (delta 1, owner 2026-11-18). Where
+  DataFusion skips the partial step (`convert_to_state`), the rows reach the final step and are
+  totalled once too; turning the skip off cost K1 1.25x. `DecimalSumDistinct`: a value
   set summed exactly at `evaluate` (the mixed `DISTINCT`). Batches bound their magnitude with Arrow
   `min` / `max` so ordinary `p ≥ 35` data keeps Arrow's `sum`.
 - `sum_tests.rs` — the unit's Rust pins: Spark's check places in both modes (SQL), Q6's two
   conditions, the sticky grouped state and its marker, the grouped final merge checked once in
   every partial order (and through a final step's spill), the distinct sum, the marker through an
-  Arrow IPC round trip, a spilling aggregate, `RepartitionExec` and a skip probe that never skips
-  the partial step, every arm's
+  Arrow IPC round trip, a spilling aggregate, `RepartitionExec` and skipped partials (their rows
+  totalled once), every arm's
   retracting sliding accumulator, and the delegated non-decimal answers and linear-rewrite hook.
 
 ## Pointers

@@ -319,10 +319,11 @@ fn a_grouped_sum_is_checked_after_every_row_and_sticks() {
         .update_batch(&[decimal(&[Some(MAX38), Some(1)], 38, 0)], &[0, 0], None, 1)
         .expect_err("the first overflowing row raises");
     assert!(error.to_string().contains("'try_sum'"), "{error}");
-    assert!(
-        !DecimalSumGroups::new(legacy).supports_convert_to_state(),
-        "the partial step is never skipped, so its per-row check always runs"
-    );
+    let converted = DecimalSumGroups::new(SumCheck::new(38, 2, false))
+        .convert_to_state(&[decimal(&[Some(7), None], 28, 2)], None)
+        .expect("convert");
+    assert_eq!(converted[0].data_type(), &DataType::Decimal128(38, 2));
+    assert!(converted[0].is_null(1));
 }
 
 fn merged_in_order(check: SumCheck, partials: &[i128]) -> Result<ArrayRef, String> {
@@ -436,6 +437,14 @@ fn the_overflow_marker_survives_an_arrow_ipc_round_trip() {
     assert_eq!(result.value(1), 5);
 }
 
+fn key_batch(schema: &Arc<Schema>, keys: Vec<i64>, values: &[Option<i128>]) -> RecordBatch {
+    RecordBatch::try_new(
+        Arc::clone(schema),
+        vec![Arc::new(Int64Array::from(keys)), decimal(values, 38, 0)],
+    )
+    .expect("batch")
+}
+
 fn grouped_table(groups: i64, partitions: usize) -> MemTable {
     let schema = Arc::new(Schema::new(vec![
         Field::new("g", DataType::Int64, false),
@@ -443,17 +452,17 @@ fn grouped_table(groups: i64, partitions: usize) -> MemTable {
     ]));
     let mut batches = Vec::new();
     for part in 0..partitions {
-        let mut keys = Vec::new();
-        let mut values = Vec::new();
+        let (mut keys, mut values) = (Vec::new(), Vec::new());
+        let (mut late_keys, mut late_values) = (Vec::new(), Vec::new());
         if part == 0 {
-            keys.extend([7, 7, groups + 1, groups + 1, groups + 1, groups + 1]);
-            values.extend([Some(MAX38), Some(MAX38), Some(MAX38), Some(MAX38)]);
-            values.extend([Some(-MAX38), Some(-MAX38)]);
+            late_keys.extend([7, 7, groups + 1, groups + 1, groups + 1, groups + 1]);
+            late_values.extend([Some(MAX38), Some(MAX38), Some(MAX38), Some(MAX38)]);
+            late_values.extend([Some(-MAX38), Some(-MAX38)]);
         }
         for (index, value) in [MAX38, 1, -1].into_iter().enumerate() {
             if index % partitions == part {
-                keys.push(groups + 2);
-                values.push(Some(value));
+                late_keys.push(groups + 2);
+                late_values.push(Some(value));
             }
         }
         for key in
@@ -462,12 +471,10 @@ fn grouped_table(groups: i64, partitions: usize) -> MemTable {
             keys.push(key);
             values.push(Some(1));
         }
-        let batch = RecordBatch::try_new(
-            Arc::clone(&schema),
-            vec![Arc::new(Int64Array::from(keys)), decimal(&values, 38, 0)],
-        )
-        .expect("batch");
-        batches.push(vec![batch]);
+        batches.push(vec![
+            key_batch(&schema, keys, &values),
+            key_batch(&schema, late_keys, &late_values),
+        ]);
     }
     MemTable::try_new(schema, batches).expect("table")
 }
@@ -509,13 +516,16 @@ async fn grouped_answer(
     Ok((rows, spills(&plan)))
 }
 
-fn assert_marked(rows: &[(i64, Option<i128>)], groups: i64, partitions: usize) {
+fn assert_marked(rows: &[(i64, Option<i128>)], groups: i64, partitions: usize, skipped: bool) {
     assert_eq!(rows.len(), usize::try_from(groups + 2).expect("groups"));
     for (key, sum) in rows {
-        if *key == 7 || *key == groups + 1 {
+        if *key == 7 {
+            assert_eq!(*sum, None, "group {key}: the total passes 38 digits");
+        } else if *key == groups + 1 {
+            let want = skipped.then_some(0);
             assert_eq!(
-                *sum, None,
-                "group {key}: a partial that passed 38 digits stays NULL"
+                *sum, want,
+                "group {key}: a partial that passed 38 digits stays NULL; skipped rows are totalled once"
             );
         } else if *key == groups + 2 {
             let want = (partitions > 1).then_some(MAX38);
@@ -556,7 +566,7 @@ async fn the_overflow_marker_survives_spill_repartition_and_skipped_partials() {
             .await
             .expect("spilled answer");
         assert!(spilled > 0, "{function}: the aggregate must spill");
-        assert_marked(&rows, 300_000, 1);
+        assert_marked(&rows, 300_000, 1, false);
     }
     for skip in [false, true] {
         let mut config = SessionConfig::new()
@@ -581,7 +591,7 @@ async fn the_overflow_marker_survives_spill_repartition_and_skipped_partials() {
                 match grouped_answer(&ctx, function).await {
                     Ok((rows, _)) => {
                         assert!(!ansi || function == "try_sum", "ANSI sum must raise");
-                        assert_marked(&rows, 20_000, 4);
+                        assert_marked(&rows, 20_000, 4, skip);
                     }
                     Err(error) => {
                         assert!(ansi && function == "sum", "{error}");

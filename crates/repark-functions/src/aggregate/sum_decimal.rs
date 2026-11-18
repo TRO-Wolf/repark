@@ -9,7 +9,7 @@ use datafusion::common::{DataFusionError, HashSet, Result, ScalarValue, exec_err
 use datafusion::logical_expr::{Accumulator, EmitTo, GroupsAccumulator};
 
 use crate::avg_decimal::{WideDecimal, add_batch, safe_rows, sub_batch};
-use crate::avg_groups::check_emitted;
+use crate::avg_groups::{check_emitted, filtered_nulls};
 use crate::decimal_spark::numeric_out_of_range_error;
 use crate::groups_null_state::GroupNullState;
 
@@ -512,6 +512,20 @@ impl GroupsAccumulator for DecimalSumGroups {
             }
         }
         Ok(vec![self.array(sums.into(), nulls)])
+    }
+
+    fn convert_to_state(
+        &self,
+        values: &[ArrayRef],
+        opt_filter: Option<&BooleanArray>,
+    ) -> Result<Vec<ArrayRef>> {
+        let values = decimals(values, "groups convert")?;
+        let nulls = filtered_nulls(opt_filter, values);
+        Ok(vec![self.array(values.values().clone(), nulls)])
+    }
+
+    fn supports_convert_to_state(&self) -> bool {
+        true
     }
 
     fn size(&self) -> usize {
