@@ -10,7 +10,9 @@ use datafusion::logical_expr::{
     LogicalPlan, Operator, ReversedUDAF, SetMonotonicity, Signature,
 };
 
-use super::sum_decimal::{DecimalSum, DecimalSumDistinct, DecimalSumGroups, Place, SumCheck};
+use super::sum_decimal::{
+    Carrier, DecimalSum, DecimalSumDistinct, DecimalSumGroups, Place, SumCheck,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum SumMode {
@@ -143,9 +145,9 @@ impl AggregateUDFImpl for SparkSum {
             return self.inner.state_fields(args);
         };
         let result = args.return_field.data_type().clone();
-        if decimal_arm(input.data_type(), &result).is_none() {
+        let Some((input_precision, ..)) = decimal_arm(input.data_type(), &result) else {
             return self.inner.state_fields(args);
-        }
+        };
         if args.is_distinct {
             return Ok(vec![
                 Field::new_list(
@@ -156,9 +158,14 @@ impl AggregateUDFImpl for SparkSum {
                 .into(),
             ]);
         }
-        Ok(vec![
-            Field::new(format_state_name(args.name, "sum"), result, true).into(),
-        ])
+        let sum = Field::new(format_state_name(args.name, "sum"), result, true).into();
+        Ok(match Carrier::of(input_precision) {
+            Carrier::Narrow => vec![sum],
+            Carrier::Wide => vec![
+                sum,
+                Field::new(format_state_name(args.name, "wraps"), DataType::Int64, true).into(),
+            ],
+        })
     }
 
     fn groups_accumulator_supported(&self, args: AccumulatorArgs) -> bool {
@@ -173,7 +180,9 @@ impl AggregateUDFImpl for SparkSum {
         args: AccumulatorArgs,
     ) -> Result<Box<dyn GroupsAccumulator>> {
         match self.arm(&args) {
-            Some((_, check)) if !args.is_distinct => Ok(Box::new(DecimalSumGroups::new(check))),
+            Some((input_precision, check)) if !args.is_distinct => {
+                Ok(Box::new(DecimalSumGroups::new(input_precision, check)))
+            }
             _ => self.inner.create_groups_accumulator(args),
         }
     }
