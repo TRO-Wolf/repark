@@ -7,5 +7,7 @@ runs = {json.loads(path.read_text())["ansi"]: json.loads(path.read_text()) for p
 for mode, run in runs.items():
     assert run["cells"].pop("conf/ansi") == mode, mode
 oracle = {"cells": {mode: runs[mode]["cells"] for mode in ("false", "true")}}
+oracle["repeats"] = {mode: runs[mode]["repeats"] for mode in ("false", "true")}
+assert all(run["t4_partitions"] == 3 for run in runs.values()), "one split per t4 file"
 oracle["provenance"] = runs["true"]["provenance"]
 out.write_text(json.dumps(oracle, sort_keys=True, separators=None) + "\n")

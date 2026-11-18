@@ -20,6 +20,15 @@ SHAPES: dict[int, list[str]] = {
     11: ["M", "1", "-1"],
     14: ["1"],
 }
+SPLIT_SHAPES: dict[int, list[list[str]]] = {
+    21: [["M"], ["1"], ["-1"]],
+    22: [["M"], ["1"]],
+    23: [["M", "5"], ["-M"]],
+    24: [["M", "-M"], ["M", "-M", "5"]],
+    25: [["M"], ["-M"], ["5"]],
+}
+REPEATS = 20
+MERGE_TOTAL_CLASS = ("21",)
 ICE_MODES = {
     "cow": "'format-version'='2','write.merge.mode'='copy-on-write'",
     "mor": "'format-version'='2','write.merge.mode'='merge-on-read'",
@@ -210,6 +219,54 @@ def make_tables(spark: Any, root: str) -> None:
     typed = raw.selectExpr(*[f"CAST({n} AS {kinds[n]}) AS {n}" for n in names])
     typed.coalesce(1).write.mode("overwrite").parquet(f"{root}/pq_t")
     spark.read.parquet(f"{root}/pq_t").createOrReplaceTempView("t")
+    names, values = split_rows()
+    raw = spark.createDataFrame(values, ", ".join(f"{n} STRING" for n in names))
+    typed = raw.selectExpr(*[f"CAST({n} AS {kinds.get(n, 'INT')}) AS {n}" for n in names])
+    for part in range(3):
+        files = typed.where(f"f = {part}").coalesce(1)
+        files.write.mode("append").parquet(f"{root}/pq_t4")
+    spark.read.parquet(f"{root}/pq_t4").createOrReplaceTempView("t4")
+
+
+def split_rows() -> tuple[list[str], list[list[str]]]:
+    names = ["g", "id", "f"] + [col(p, s) for p, s in COLUMNS if p == 38]
+    out: list[list[str]] = []
+    for part in range(3):
+        for g, files in SPLIT_SHAPES.items():
+            for token in files[part] if part < len(files) else []:
+                row = [str(g), str(len(out) + 100), str(part)]
+                row += [text(unscaled(token, p), s) for p, s in COLUMNS if p == 38]
+                out.append(row)
+    return names, out
+
+
+def exact_row(g: int, c: str) -> str:
+    p, s = (int(x) for x in c[1:].split("_"))
+    total = sum(unscaled(token, p) for files in SPLIT_SHAPES[g] for token in files)
+    return f"{g}|{text(total, s)}"
+
+
+def repeat_sql() -> dict[str, str]:
+    found: dict[str, str] = {}
+    for c in WIDE:
+        for g in SPLIT_SHAPES:
+            found[f"final/sum/g{g}/{c}"] = (
+                f"SELECT g, sum({c}) AS m FROM t4 WHERE g = {g} GROUP BY g"
+            )
+            found[f"final/try_sum/g{g}/{c}"] = (
+                f"SELECT g, try_sum({c}) AS m FROM t4 WHERE g = {g} GROUP BY g"
+            )
+        found[f"final/distinct/g10/{c}"] = (
+            f"SELECT g, sum(DISTINCT {c}) AS m FROM t WHERE g = 10 GROUP BY g"
+        )
+    return found
+
+
+def measure_repeats(spark: Any, repeats: int) -> dict[str, list[Any]]:
+    found: dict[str, list[Any]] = {}
+    for key, sql in repeat_sql().items():
+        found[key] = [attempt(lambda sql=sql: answer_of(spark.sql(sql))) for _ in range(repeats)]
+    return found
 
 
 def stored(spark: Any, statement: str, table: str) -> dict[str, Any]:

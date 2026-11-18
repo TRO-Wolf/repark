@@ -19,6 +19,7 @@ spark = (
         "spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
     )
     .config("spark.sql.shuffle.partitions", "1")
+    .config("spark.sql.files.openCostInBytes", "134217728")
     .config("spark.sql.warehouse.dir", f"{root}/spark-warehouse")
     .config("spark.sql.catalog.lc", "org.apache.iceberg.spark.SparkCatalog")
     .config("spark.sql.catalog.lc.type", "hadoop")
@@ -30,10 +31,14 @@ spark = (
 cells.make_tables(spark, root)
 found = cells.measure_all(spark, sf, Window, "lc", "spark")
 found["conf/ansi"] = spark.conf.get("spark.sql.ansi.enabled")
+repeats = cells.measure_repeats(spark, cells.REPEATS)
+splits = spark.table("t4").rdd.getNumPartitions()
 spark.stop()
 record = {
     "ansi": ansi,
     "cells": found,
+    "repeats": repeats,
+    "t4_partitions": splits,
     "provenance": {"engine": "spark", "version": pyspark.__version__, "jar": Path(jar).name},
 }
 Path(out).write_text(json.dumps(record, sort_keys=True, indent=1) + "\n")

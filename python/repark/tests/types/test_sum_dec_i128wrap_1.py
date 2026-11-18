@@ -17,6 +17,7 @@ from repark.spark.window import Window
 
 ORACLE = json.loads(Path(__file__).with_name("sum_dec_i128wrap_1_spark_oracle.json").read_text())
 KEYS = sorted(ORACLE["cells"]["false"])
+REPEAT_KEYS = sorted(ORACLE["repeats"]["false"])
 CONDITION = re.compile(r"\[([A-Z_]+)")
 WRAP = 2**128
 
@@ -38,6 +39,7 @@ def measured(
     )
     cells.make_tables(session, str(root))
     found = cells.measure_all(session, sf, Window, "lc", "repark")
+    found["repeats"] = cells.measure_repeats(session, cells.REPEATS)
     session.stop()
     _reset_active_session_for_tests()
     yield request.param, found, root / "wh"
@@ -87,3 +89,38 @@ def test_no_data_file_holds_a_sum_past_38_digits_or_its_wrap(
         assert -exponent in (0, 38), value
     allowed = {Decimal(350), Decimal("3.50E-36")}
     assert {value for value in values if value != 0} <= allowed, values
+
+
+def drops_the_total(answer: Any, mode: str, function: str, g: str) -> bool:
+    if mode == "true" and function == "sum":
+        return isinstance(answer, str) and condition(answer) == "ARITHMETIC_OVERFLOW"
+    return isinstance(answer, dict) and answer["rows"] == [f"{g}|null"]
+
+
+@pytest.mark.parametrize("key", REPEAT_KEYS)
+def test_a_multi_partial_query_gives_one_answer_on_every_run(
+    measured: tuple[str, dict[str, Any], Path], key: str
+) -> None:
+    mode, found, _ = measured
+    runs = found["repeats"][key]
+    seen = {json.dumps(run, sort_keys=True) for run in runs}
+    assert len(runs) == cells.REPEATS, key
+    assert len(seen) == 1, (key, seen)
+    spark_runs = ORACLE["repeats"][mode][key]
+    assert len({json.dumps(run, sort_keys=True) for run in spark_runs}) == 1, key
+    _, function, group, column = key.split("/")
+    g = group[1:]
+    if function == "distinct":
+        layout = drops_the_total(runs[0], mode, "sum", g)
+        assert layout or cells.same_answer(runs[0], spark_runs[0]), (key, runs[0])
+        return
+    if g in cells.MERGE_TOTAL_CLASS:
+        assert drops_the_total(spark_runs[0], mode, function, g), (key, spark_runs[0])
+        scale = column.split("_")[1]
+        exact = {
+            "rows": [cells.exact_row(int(g), column)],
+            "types": ["int", f"decimal(38,{scale})"],
+        }
+        assert cells.same_answer(runs[0], exact), (key, runs[0], exact)
+        return
+    assert_as_spark(runs[0], spark_runs[0], key)

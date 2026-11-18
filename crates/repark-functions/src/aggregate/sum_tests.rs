@@ -319,11 +319,89 @@ fn a_grouped_sum_is_checked_after_every_row_and_sticks() {
         .update_batch(&[decimal(&[Some(MAX38), Some(1)], 38, 0)], &[0, 0], None, 1)
         .expect_err("the first overflowing row raises");
     assert!(error.to_string().contains("'try_sum'"), "{error}");
-    let converted = DecimalSumGroups::new(SumCheck::new(38, 2, false))
-        .convert_to_state(&[decimal(&[Some(7), None], 28, 2)], None)
-        .expect("convert");
-    assert_eq!(converted[0].data_type(), &DataType::Decimal128(38, 2));
-    assert!(converted[0].is_null(1));
+    assert!(
+        !DecimalSumGroups::new(legacy).supports_convert_to_state(),
+        "the partial step is never skipped, so its per-row check always runs"
+    );
+}
+
+fn merged_in_order(check: SumCheck, partials: &[i128]) -> Result<ArrayRef, String> {
+    let mut merged = DecimalSumGroups::new(check);
+    for partial in partials {
+        merged
+            .merge_batch(&[decimal(&[Some(*partial)], 38, 0)], &[0], None, 1)
+            .map_err(|error| error.to_string())?;
+    }
+    merged
+        .evaluate(EmitTo::All)
+        .map_err(|error| error.to_string())
+}
+
+#[test]
+fn the_grouped_final_merge_checks_the_total_once_in_any_order() {
+    let orders = [
+        [MAX38, 1, -1],
+        [MAX38, -1, 1],
+        [1, MAX38, -1],
+        [1, -1, MAX38],
+        [-1, MAX38, 1],
+        [-1, 1, MAX38],
+    ];
+    for raise in [false, true] {
+        let check = SumCheck::new(38, 0, raise);
+        for order in orders {
+            let result = merged_in_order(check, &order).expect("the total fits");
+            assert_eq!(
+                result.as_primitive::<Decimal128Type>().value(0),
+                MAX38,
+                "{order:?}"
+            );
+        }
+        for order in [[MAX38, 1], [1, MAX38]] {
+            match merged_in_order(check, &order) {
+                Ok(result) => {
+                    assert!(!raise, "{order:?}");
+                    assert!(result.is_null(0), "{order:?}");
+                }
+                Err(error) => {
+                    assert!(raise, "{error}");
+                    assert!(
+                        error.contains(
+                            "[ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum'"
+                        ),
+                        "{error}"
+                    );
+                }
+            }
+        }
+    }
+    let legacy = SumCheck::new(38, 0, false);
+    let result = merged_in_order(legacy, &[OVERFLOWED, -1]).expect("the marker");
+    assert!(result.is_null(0), "an overflowed partial stays NULL");
+    let error = merged_in_order(SumCheck::new(38, 0, true), &[1, OVERFLOWED])
+        .expect_err("an overflowed partial raises at once");
+    assert!(error.contains("[ARITHMETIC_OVERFLOW]"), "{error}");
+    for (partials, want) in [(vec![MAX38, 1], Some(MAX38)), (vec![MAX38, MAX38], None)] {
+        let mut spilled = DecimalSumGroups::new(legacy);
+        for partial in &partials {
+            spilled
+                .merge_batch(&[decimal(&[Some(*partial)], 38, 0)], &[0], None, 1)
+                .expect("merge");
+        }
+        let state = spilled.state(EmitTo::All).expect("a final step's spill");
+        let mut merged = DecimalSumGroups::new(legacy);
+        merged.merge_batch(&state, &[0], None, 1).expect("re-merge");
+        merged
+            .merge_batch(&[decimal(&[Some(-1)], 38, 0)], &[0], None, 1)
+            .expect("merge");
+        let result = merged.evaluate(EmitTo::All).expect("evaluate");
+        let result = result.as_primitive::<Decimal128Type>();
+        assert_eq!(
+            result.is_valid(0).then(|| result.value(0)),
+            want,
+            "{partials:?}"
+        );
+    }
 }
 
 #[test]
@@ -368,8 +446,15 @@ fn grouped_table(groups: i64, partitions: usize) -> MemTable {
         let mut keys = Vec::new();
         let mut values = Vec::new();
         if part == 0 {
-            keys.extend([7, 7]);
-            values.extend([Some(MAX38), Some(MAX38)]);
+            keys.extend([7, 7, groups + 1, groups + 1, groups + 1, groups + 1]);
+            values.extend([Some(MAX38), Some(MAX38), Some(MAX38), Some(MAX38)]);
+            values.extend([Some(-MAX38), Some(-MAX38)]);
+        }
+        for (index, value) in [MAX38, 1, -1].into_iter().enumerate() {
+            if index % partitions == part {
+                keys.push(groups + 2);
+                values.push(Some(value));
+            }
         }
         for key in
             (0..groups).filter(|key| usize::try_from(*key).expect("key") % partitions == part)
@@ -424,11 +509,20 @@ async fn grouped_answer(
     Ok((rows, spills(&plan)))
 }
 
-fn assert_marked(rows: &[(i64, Option<i128>)], groups: i64) {
-    assert_eq!(rows.len(), usize::try_from(groups).expect("groups"));
+fn assert_marked(rows: &[(i64, Option<i128>)], groups: i64, partitions: usize) {
+    assert_eq!(rows.len(), usize::try_from(groups + 2).expect("groups"));
     for (key, sum) in rows {
-        if *key == 7 {
-            assert_eq!(*sum, None, "the overflowed group is NULL");
+        if *key == 7 || *key == groups + 1 {
+            assert_eq!(
+                *sum, None,
+                "group {key}: a partial that passed 38 digits stays NULL"
+            );
+        } else if *key == groups + 2 {
+            let want = (partitions > 1).then_some(MAX38);
+            assert_eq!(
+                *sum, want,
+                "group {key}: partials that fit are totalled once"
+            );
         } else {
             assert_eq!(*sum, Some(1), "group {key}");
         }
@@ -462,7 +556,7 @@ async fn the_overflow_marker_survives_spill_repartition_and_skipped_partials() {
             .await
             .expect("spilled answer");
         assert!(spilled > 0, "{function}: the aggregate must spill");
-        assert_marked(&rows, 300_000);
+        assert_marked(&rows, 300_000, 1);
     }
     for skip in [false, true] {
         let mut config = SessionConfig::new()
@@ -487,7 +581,7 @@ async fn the_overflow_marker_survives_spill_repartition_and_skipped_partials() {
                 match grouped_answer(&ctx, function).await {
                     Ok((rows, _)) => {
                         assert!(!ansi || function == "try_sum", "ANSI sum must raise");
-                        assert_marked(&rows, 20_000);
+                        assert_marked(&rows, 20_000, 4);
                     }
                     Err(error) => {
                         assert!(ansi && function == "sum", "{error}");

@@ -9,7 +9,7 @@ use datafusion::common::{DataFusionError, HashSet, Result, ScalarValue, exec_err
 use datafusion::logical_expr::{Accumulator, EmitTo, GroupsAccumulator};
 
 use crate::avg_decimal::{WideDecimal, add_batch, safe_rows, sub_batch};
-use crate::avg_groups::{check_emitted, filtered_nulls};
+use crate::avg_groups::check_emitted;
 use crate::decimal_spark::numeric_out_of_range_error;
 use crate::groups_null_state::GroupNullState;
 
@@ -287,8 +287,10 @@ impl Accumulator for DecimalSumDistinct {
 
 pub(crate) struct DecimalSumGroups {
     sums: Vec<i128>,
+    wraps: Vec<i64>,
     overflowed: Vec<bool>,
     any_overflowed: bool,
+    merged: bool,
     null_state: GroupNullState,
     check: SumCheck,
 }
@@ -297,8 +299,10 @@ impl DecimalSumGroups {
     pub(crate) fn new(check: SumCheck) -> Self {
         Self {
             sums: Vec::new(),
+            wraps: Vec::new(),
             overflowed: Vec::new(),
             any_overflowed: false,
+            merged: false,
             null_state: GroupNullState::new(),
             check,
         }
@@ -306,18 +310,30 @@ impl DecimalSumGroups {
 
     fn resize(&mut self, total_num_groups: usize) {
         self.sums.resize(total_num_groups, 0);
+        if self.merged {
+            self.wraps.resize(total_num_groups, 0);
+        }
         if !self.check.raise {
             self.overflowed.resize(total_num_groups, false);
         }
     }
 
-    fn fold(
+    fn mark(&mut self, hit: bool) -> Result<()> {
+        if hit {
+            if self.check.raise {
+                return Err(sum_overflow_error());
+            }
+            self.any_overflowed = true;
+        }
+        Ok(())
+    }
+
+    fn fold_rows(
         &mut self,
         values: &PrimitiveArray<Decimal128Type>,
         group_indices: &[usize],
         opt_filter: Option<&BooleanArray>,
         total_num_groups: usize,
-        partials: bool,
     ) -> Result<()> {
         self.resize(total_num_groups);
         let limit = self.check.limit;
@@ -333,10 +349,7 @@ impl DecimalSumGroups {
                 let mut carried = 0;
                 let total = sums[group_index].add_carry(value, &mut carried);
                 sums[group_index] = total;
-                if carried != 0
-                    || total.unsigned_abs() >= limit
-                    || (partials && value == OVERFLOWED)
-                {
+                if carried != 0 || total.unsigned_abs() >= limit {
                     hit = true;
                     if let Some(flag) = overflowed.get_mut(group_index) {
                         *flag = true;
@@ -344,28 +357,68 @@ impl DecimalSumGroups {
                 }
             },
         )?;
-        if hit {
-            if self.check.raise {
-                return Err(sum_overflow_error());
-            }
-            self.any_overflowed = true;
-        }
-        Ok(())
+        self.mark(hit)
     }
 
-    fn taken(&mut self, emit_to: EmitTo) -> Result<(Vec<i128>, Vec<bool>, Option<NullBuffer>)> {
+    fn fold_partials(
+        &mut self,
+        partials: &PrimitiveArray<Decimal128Type>,
+        group_indices: &[usize],
+        opt_filter: Option<&BooleanArray>,
+        total_num_groups: usize,
+    ) -> Result<()> {
+        self.merged = true;
+        self.resize(total_num_groups);
+        let sums = &mut self.sums;
+        let wraps = &mut self.wraps;
+        let overflowed = &mut self.overflowed;
+        let mut hit = false;
+        self.null_state.accumulate(
+            group_indices,
+            partials,
+            opt_filter,
+            total_num_groups,
+            |group_index, partial| {
+                if partial == OVERFLOWED {
+                    hit = true;
+                    if let Some(flag) = overflowed.get_mut(group_index) {
+                        *flag = true;
+                    }
+                } else {
+                    sums[group_index] =
+                        sums[group_index].add_carry(partial, &mut wraps[group_index]);
+                }
+            },
+        )?;
+        self.mark(hit)
+    }
+
+    fn taken(&mut self, emit_to: EmitTo) -> Result<Taken> {
         let nulls = self.null_state.build(emit_to)?;
         let sums = emit_to.take_needed(&mut self.sums);
+        let wraps = if self.merged {
+            emit_to.take_needed(&mut self.wraps)
+        } else {
+            Vec::new()
+        };
         let overflowed = if self.check.raise {
             Vec::new()
         } else {
             emit_to.take_needed(&mut self.overflowed)
         };
         check_emitted(sums.len(), sums.len(), nulls.as_ref())?;
+        if self.merged {
+            check_emitted(wraps.len(), sums.len(), None)?;
+        }
         if !self.check.raise {
             check_emitted(overflowed.len(), sums.len(), None)?;
         }
-        Ok((sums, overflowed, nulls))
+        Ok(Taken {
+            sums,
+            wraps,
+            overflowed,
+            nulls,
+        })
     }
 
     fn array(&self, sums: ScalarBuffer<i128>, nulls: Option<NullBuffer>) -> ArrayRef {
@@ -374,6 +427,13 @@ impl DecimalSumGroups {
                 .with_data_type(self.check.data_type()),
         )
     }
+}
+
+struct Taken {
+    sums: Vec<i128>,
+    wraps: Vec<i64>,
+    overflowed: Vec<bool>,
+    nulls: Option<NullBuffer>,
 }
 
 impl GroupsAccumulator for DecimalSumGroups {
@@ -385,7 +445,7 @@ impl GroupsAccumulator for DecimalSumGroups {
         total_num_groups: usize,
     ) -> Result<()> {
         let values = decimals(values, "groups update")?;
-        self.fold(values, group_indices, opt_filter, total_num_groups, false)
+        self.fold_rows(values, group_indices, opt_filter, total_num_groups)
     }
 
     fn merge_batch(
@@ -396,14 +456,35 @@ impl GroupsAccumulator for DecimalSumGroups {
         total_num_groups: usize,
     ) -> Result<()> {
         let partials = decimals(values, "groups merge")?;
-        self.fold(partials, group_indices, opt_filter, total_num_groups, true)
+        self.fold_partials(partials, group_indices, opt_filter, total_num_groups)
     }
 
     fn evaluate(&mut self, emit_to: EmitTo) -> Result<ArrayRef> {
-        let (sums, overflowed, nulls) = self.taken(emit_to)?;
-        let nulls = if self.any_overflowed && overflowed.iter().any(|flag| *flag) {
-            let kept = NullBuffer::from(overflowed.iter().map(|flag| !flag).collect::<Vec<_>>());
-            NullBuffer::union(nulls.as_ref(), Some(&kept))
+        let (check, flagged) = (self.check, self.any_overflowed);
+        let Taken {
+            sums,
+            wraps,
+            overflowed,
+            nulls,
+        } = self.taken(emit_to)?;
+        let past = sums
+            .iter()
+            .zip(&wraps)
+            .any(|(low, wraps)| !check.fits(*low, *wraps));
+        if past && check.raise {
+            return Err(sum_overflow_error());
+        }
+        let nulls = if past || (flagged && overflowed.contains(&true)) {
+            let kept: Vec<bool> = (0..sums.len())
+                .map(|index| {
+                    let marked = overflowed.get(index).copied().unwrap_or(false);
+                    let wide = wraps
+                        .get(index)
+                        .is_some_and(|wraps| !check.fits(sums[index], *wraps));
+                    !(marked || wide)
+                })
+                .collect();
+            NullBuffer::union(nulls.as_ref(), Some(&NullBuffer::from(kept)))
         } else {
             nulls
         };
@@ -411,33 +492,31 @@ impl GroupsAccumulator for DecimalSumGroups {
     }
 
     fn state(&mut self, emit_to: EmitTo) -> Result<Vec<ArrayRef>> {
-        let (mut sums, overflowed, nulls) = self.taken(emit_to)?;
-        if self.any_overflowed {
+        let flagged = self.any_overflowed;
+        let Taken {
+            mut sums,
+            wraps,
+            overflowed,
+            nulls,
+        } = self.taken(emit_to)?;
+        if flagged {
             for (sum, flag) in sums.iter_mut().zip(&overflowed) {
                 if *flag {
                     *sum = OVERFLOWED;
                 }
             }
         }
+        for (sum, wraps) in sums.iter_mut().zip(&wraps) {
+            if *wraps != 0 {
+                *sum = OVERFLOWED;
+            }
+        }
         Ok(vec![self.array(sums.into(), nulls)])
-    }
-
-    fn convert_to_state(
-        &self,
-        values: &[ArrayRef],
-        opt_filter: Option<&BooleanArray>,
-    ) -> Result<Vec<ArrayRef>> {
-        let values = decimals(values, "groups convert")?;
-        let nulls = filtered_nulls(opt_filter, values);
-        Ok(vec![self.array(values.values().clone(), nulls)])
-    }
-
-    fn supports_convert_to_state(&self) -> bool {
-        true
     }
 
     fn size(&self) -> usize {
         self.sums.capacity() * std::mem::size_of::<i128>()
+            + self.wraps.capacity() * std::mem::size_of::<i64>()
             + self.overflowed.capacity()
             + self.null_state.size()
     }

@@ -12,7 +12,7 @@ and unchanged.
   moved cells, cells left by named class.
 - [cost_table.py](cost_table.py) — prints the cost table from the runner's two files.
 - [record_oracle.py](record_oracle.py), [merge_oracle.py](merge_oracle.py) — record the pin file's Spark oracle,
-  one ANSI mode per run, and merge the two runs.
+  one ANSI mode per run, and merge the two runs (delta 1: one split per file, and 20 runs of each repeated query).
 - [raw/](raw/map.md) — the head's compacted RePark cells, Spark's cross-reads of the head's tables, the head's
   verdicts.
 - [compare/](compare/map.md) — the comparison's outputs and the pin file's result on main.
