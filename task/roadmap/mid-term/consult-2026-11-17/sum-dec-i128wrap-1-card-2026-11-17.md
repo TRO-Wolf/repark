@@ -105,7 +105,8 @@ it off, K1 ran at 1.25x to 1.30x.
 
 **Sized before the change:** Spark 4.1.2 at `local[4]` gives one answer on every one of 20 runs for all 172 pass-back
 queries; the build's head varied on 17 (ANSI on) and 20 (off) of 401, main on 4 and 4 (its own grouped `try_sum`).
-**After:** the head varies on none; 17 cells move into EQUAL, none out; all 14 class (b) cells are EQUAL; the 32 cells
+**After:** the head varies on none (corrected in delta 2: on the step 0's small tables at the lane's 16 cores only;
+CI and the sizing step found it varying at 2, 4 and 8 partitions); 17 cells move into EQUAL, none out; all 14 class (b) cells are EQUAL; the 32 cells
 left from EQUAL are the layout class, the same against both bases. [bar.md](../../../wo/sum-dec-i128wrap-1/evidence/built/bar.md),
 "Delta 1".
 
@@ -114,4 +115,35 @@ left from EQUAL are the layout class, the same against both bases. [bar.md](../.
 merge order passes 38 digits and comes back, Spark raises or answers NULL, RePark answers the exact total (pinned on
 the `t4` group 21, 8 cells). SUM-PARTIAL-LAYOUT-1 (proposed, S3): the 32 layout cells.
 
-**Cost:** in progress (delta 1 paused on its turn budget; the K1 rows of the first two runs hold, see the hand-back notes). The cost series and the gates are the next step.
+**Cost:** not finished. Delta 1 paused at two of five runs (every K1 row held); Fable's guidance after the CI halt was
+not to finish a series for a product that would not merge, and delta 2 replaced it.
+
+## Delta 2 (2026-11-18, Claude Opus 5.5 `claude-opus-5-5`, xhigh, the last): exact in every phase, the state chosen by precision
+
+**The ruling (owner, 2026-11-18, about 20:05 UTC, verbatim):** "Go with Fable's recommendations on all seven, re-run
+1362". It adopts Fable's §9 recommendations (Fable's guidance under the owner's delegation until this line). For this
+unit: decision I, option (1), **amending Q2 (i) of 2026-11-17 for every phase and replacing ruling A of 13:40 UTC**:
+decimal `sum` and `try_sum` add exactly in every phase and check once, at `evaluate` (`ARITHMETIC_OVERFLOW` with the
+`try_sum` hint for every non-window total with ANSI on; NULL with ANSI off and in `try_sum`); windows keep their check,
+`DISTINCT` and `avg` do not move; the state is one raw `i128` column at input precision 19 and under and the low word
+plus a wrap count from 20. K1 may reach 1.12x of main at precision 20 and up only. This is the last delta.
+
+**Built:** commit `fcb0c888` (product and Rust pins) and `62c46161` (facade pins) on `fix/sum-dec-i128wrap-1`; two
+product files, both among the build's five (`sum_decimal.rs`, `spark_sum.rs`'s `state_fields`; still five of six).
+
+**Checked:** DataFusion 54.1.0 passes the input fields to `state_fields`, so the schema follows the precision; no
+narrow path ships a marker; every grouped and ungrouped `sum` and `try_sum` gives one answer, the exact total, in all
+24 determinism configurations (2, 4, 8, 10 cores, stealing on and off, `target_partitions` 2, 4, 8, 16), at precision
+10, 18, 19, 20 and 38.
+
+**The bar** ([bar.md](../../../wo/sum-dec-i128wrap-1/evidence/built/bar.md), "Delta 2"): cell for cell the sizing's
+prototype (i); no moved cell at precision 28 or under; no wrong value. The kept divergence: 133 (ANSI on) and 161 (off)
+cells against Spark `local[1]`, 30 per mode against `local[4]`; the condition class 23 out of BOTH_RAISE (plus 4
+expression cells) and 17 in, ANSI on; ruling B's 32 layout cells and 8 `try_sum` cells reach Spark's answer.
+
+**Cards (listed in bar.md, filed by the clerk):** SUM-EXACT-TOTAL-DIVERGENCE-1 (proposed, owner-accepted by decision
+I; supersedes SUM-GROUPED-MERGE-TOTAL-1), with its condition class; DECIMAL-ADD-SCALE38-OVERFLOW-1 (proposed; the
+rating is the owner's): `x + 1` on a `decimal(38,38)` column of `0.99…9` raises an Arrow overflow on main and head,
+where Spark answers `2.000000000000000000000000000000000000`.
+
+**Cost:** [cost.md](../../../wo/sum-dec-i128wrap-1/evidence/built/cost.md), "Delta 2".

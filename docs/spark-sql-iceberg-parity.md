@@ -15331,28 +15331,36 @@ Shared roster pin for every heading:
   readable file into a loud refusal. Same reader family as `CSV-INFER-HEADER-NEWLINE` and
   `CSV-INFER-PERF-1`.
 
-### SUM-DEC-I128WRAP-1 — decimal `SUM` answers a wrapped i128 value; Spark raises — **closed on the Spark door 2026-11-17 (built; delta 1 2026-11-18: the grouped final merge checks its total once)**
+### SUM-DEC-I128WRAP-1 — decimal `SUM` answers a wrapped i128 value; Spark raises — **closed on the Spark door 2026-11-17 (built; delta 2 2026-11-18: exact in every phase, checked once)**
 
 - **Status** — **closed on the Spark door** by the SUM-DEC-I128WRAP-1 build (branch `fix/sum-dec-i128wrap-1`, product
   commit `a8016e75`, 2026-11-17; not merged): a RePark `sum` / `try_sum` (`crates/repark-functions/src/aggregate/`)
   sums decimals exactly and checks where Spark checks: grouped after every row (sticky; ANSI on raises at once), an
   ungrouped partial at its state (`ARITHMETIC_OVERFLOW`) and the merged total (`NUMERIC_VALUE_OUT_OF_RANGE`), every
   window frame. **Delta 1** (commits `76295c30`, `6d730107`, 2026-11-18; owner, verbatim, "Go with Fable's leans on A,
-  B and C."): the grouped final step adds the merged partials exactly and checks each group's total once
-  (`ARITHMETIC_OVERFLOW`, Spark's grouped condition), so the answer no longer varies with the partials' arrival order;
-  the partial step keeps the per-row check. Every Spark-door position, the DataFrame forms, `try_sum` and the Iceberg writes answer Spark's NULL
-  or condition, and no data file holds a wrapped or 39-digit value
-  ([bar](../task/wo/sum-dec-i128wrap-1/evidence/built/bar.md)). **Stays unlike Spark:** the native `repark.sql()` door
-  (NATIVE-DECIMAL-SUM-1, S2); `BIGINT` `sum` with ANSI on (SUM-BIGINT-ANSI-OVERFLOW-1); `F.sum_distinct` (FNP-AGG-1);
-  views read under other settings (TEMP-VIEW-SESSION-SETTINGS-1); a grouped `avg` pass-back (AVG-GROUPED-SUM-STICKY-1);
-  the writer's bounds-only precision check for other producers (ICE-DECIMAL-WRITE-PRECISION-1); pass-back sums whose
-  partials follow RePark's plan, not Spark's splits (several files read as one split, a `repartition(4)`; 32 cells,
-  owner-accepted 2026-11-18 at S3, layout card proposed as SUM-PARTIAL-LAYOUT-1); and a grouped total whose partials
-  fit where Spark's own merge order passes 38 digits and comes back: Spark raises or answers NULL, RePark answers the
-  exact total (proposed SUM-GROUPED-MERGE-TOTAL-1, beside AVG-GROUPED-SUM-STICKY-1, not rated, not label-blocking).
-- **Pins (new)** — `python/repark/tests/types/test_sum_dec_i128wrap_1.py::test_a_cell_answers_as_spark` (77 cells,
-  both ANSI modes), `::test_no_data_file_holds_a_sum_past_38_digits_or_its_wrap` and (delta 1)
-  `::test_a_multi_partial_query_gives_one_answer_on_every_run` (22 queries, 20 runs each, both modes); Rust
+  B and C."): the grouped final step adds the merged partials exactly and checks each group's total once; its partial
+  step kept the per-row check, and its answers varied with the partition count. **Delta 2** (commits `fcb0c888`,
+  `62c46161`, 2026-11-18; owner, verbatim, "Go with Fable's recommendations on all seven, re-run 1362", decision I
+  option (1)): every phase adds exactly and the total is checked once at `evaluate` (`ARITHMETIC_OVERFLOW` with the
+  `try_sum` hint with ANSI on, NULL with ANSI off and in `try_sum`; windows check each frame); the state is one raw
+  `i128` column at input precision 19 and under and the low word plus a wrap count from 20. One answer, the exact
+  total, at every partition count. Every total past 38 digits raises or answers NULL, and no data file holds a wrapped
+  or 39-digit value ([bar](../task/wo/sum-dec-i128wrap-1/evidence/built/bar.md)). **Stays unlike Spark:** the native
+  `repark.sql()` door (NATIVE-DECIMAL-SUM-1, S2); `BIGINT` `sum` with ANSI on (SUM-BIGINT-ANSI-OVERFLOW-1);
+  `F.sum_distinct` (FNP-AGG-1); views read under other settings (TEMP-VIEW-SESSION-SETTINGS-1); a grouped `avg`
+  pass-back (AVG-GROUPED-SUM-STICKY-1); the writer's bounds-only precision check for other producers
+  (ICE-DECIMAL-WRITE-PRECISION-1); **the kept divergence** (owner-accepted by decision I, proposed card
+  SUM-EXACT-TOTAL-DIVERGENCE-1, which supersedes SUM-GROUPED-MERGE-TOTAL-1): where Spark's running total passes 38
+  digits and comes back, Spark raises or answers NULL and RePark answers the exact total, ANSI-on Iceberg writes Spark
+  refuses among them; with it, a non-window total past 38 digits raises `ARITHMETIC_OVERFLOW` where Spark raises
+  `NUMERIC_VALUE_OUT_OF_RANGE` after a merge; and `x + 1` on a `decimal(38,38)` value near 1 (proposed
+  DECIMAL-ADD-SCALE38-OVERFLOW-1, the expression layer). Ruling B's 32 layout cells now answer as Spark.
+- **Pins (new)** — `python/repark/tests/types/test_sum_dec_i128wrap_1.py::test_a_cell_answers_as_spark_or_as_its_named_class`
+  (77 cells, both ANSI modes, each id naming `spark:`, `kept-divergence:` or `condition-class:`),
+  `::test_no_data_file_holds_a_sum_past_38_digits_or_its_wrap`,
+  `::test_spark_drops_the_total_of_the_kept_divergence_group_on_every_run` and (delta 2)
+  `::test_a_multi_partial_total_is_the_exact_total_on_every_run_at_2_4_and_8_partitions` (36: `target_partitions` 2, 4
+  and 8 set before two three-file tables are read, precision 19, 20 and 38, both modes, 20 runs); Rust
   `repark-functions` `aggregate::sum_tests::*` and `repark-spark` `extension::sum_window_tests::*`; the torture cell
   below, its strict xfail removed.
 

@@ -199,7 +199,8 @@ step 0's; compared with [compare_bar.py](compare_bar.py) against both bases, `pk
 | **head `pkg-sum-6d730107`** | off | **2,448** | 0 | 0 | **47** | 34 | 0 | 8 |
 
 **Step 1's two numbers, after.** (1) Spark is unchanged (0 of 172 queries vary, above). RePark's head: **0 of 401
-queries give more than one answer** in 20 runs, in both modes (the build's head: 17 and 20; main: 4 and 4); Fable's
+queries give more than one answer** in 20 runs, in both modes (**corrected in delta 2:** this held only for these small
+tables at the lane's 16 cores; CI and the sizing step found delta 1 varying at 2, 4 and 8 partitions, see "Delta 2") (the build's head: 17 and 20; main: 4 and 4); Fable's
 probe itself, 40 runs per query, answers `M` on every run for all three queries in both modes. (2) The moves, against
 the build's head: **17 Spark-door cells into EQUAL** (8 with ANSI on, 9 off: the 11 the model predicted and the six
 `DISTINCT` cells it could not place), **0 out of EQUAL or BOTH_RAISE**; the other 6 cells that moved are the views
@@ -251,3 +252,172 @@ after main's fix: native door 305 / 288, `F.sum_distinct` 30 / 30, `BIGINT` ANSI
 15, views 2 / 2, seen beside 6 / 7, string notation 0 / 8, decimal `+` at scale 38 2 / 2, `BIGINT` Parquet statistics
 2 / 2, CTAS read-back not-found text 8 / 0, same condition by message 4 / 0, numerically equal 1 / 1, Py4J-wrapped
 condition 2 / 0.
+
+## Delta 2 (2026-11-18, the last): exact in every phase, the state chosen by precision
+
+### The ruling and what it amends
+
+**Owner, 2026-11-18, about 20:05 UTC, verbatim:** "Go with Fable's recommendations on all seven, re-run 1362". The
+seven are §9 of Fable's reply on the overnight plan and decision I (Fable's guidance under the owner's delegation,
+written about 19:50 UTC; not a ruling until this line). For this unit the line rules:
+
+- **Decision I, option (1):** decimal `sum` and `try_sum` are exact in every phase. Input precision 19 and under keeps
+  one raw `i128` state column with no marker; precision 20 and up carries the low word and a wrap count. One check, at
+  `evaluate`: `ARITHMETIC_OVERFLOW` with the `try_sum` hint for every non-window total with ANSI on, NULL with ANSI off
+  and in `try_sum`. Windows keep their own check; `DISTINCT` and `avg` do not move. **It amends the owner's Q2 (i) of
+  2026-11-17 for every phase, and replaces ruling A of 2026-11-18 13:40 UTC** ("Go with Fable's leans on A, B and C"),
+  under which delta 1's partial step kept Spark's per-row sticky check.
+- **The cost exception:** K1 may reach 1.12x of main for precision 20 and up only; 1.05x stays for precision 19 and
+  under and every other held row.
+- **One more delta, the last;** a class (a) or (b) finding at the fresh verifier parks the unit.
+- **The kept divergence** goes into the label text (the orchestrator files the wording); **aggregate determinism
+  runs** at `target_partitions` 2, 4 and 8 on multi-file tables, 20 runs each, the setting made before the table is
+  read.
+
+Fable's earlier replies (the build halt, delta 1's CI halt about 17:30 UTC) stay Fable's guidance; the measured
+design came from the sizing step on the scratch prototypes `898e15e6` (carrier (i)) and `5469a59a` (carrier (ii)).
+
+**Correction of delta 1's record.** "0 of 401 multi-partial queries varied" (above) held only for the step 0's small
+tables at the lane's 16 cores. Delta 1's pin `test_a_multi_partial_query_gives_one_answer_on_every_run` failed PR
+#1360's CI, and the sizing step measured delta 1 varying at 2, 4 and 8 cores and at `target_partitions` 2, 4 and 8
+(up to 10 answers in 20 runs on a 300,000-row three-file table, and raise-or-answer with ANSI on), because DataFusion
+does not fix which rows meet in a partial or their order (file work stealing and round-robin batches).
+
+### What was built (head `fcb0c888`, package `pkg-sum-fcb0c888`)
+
+Two product files, both already among the build's five (cap 6, count unchanged at 5):
+`crates/repark-functions/src/aggregate/sum_decimal.rs` (`NARROW_PRECISION` `:16`, `Carrier` `:26`, `unwrapped` `:102`,
+`DecimalSum` `:146` with `merge_batch` `:193` and `state` `:210`, `DecimalSumGroups` `:318` with `fold_partials` `:363`,
+`shipped` `:409`, `evaluate` `:442`, `state` `:465`, `convert_to_state` `:470`) and
+`crates/repark-functions/src/aggregate/spark_sum.rs` (`state_fields` `:143`: one column to precision 19, two from 20).
+It is the sizing's prototype (i) with the precision split; the prototype's unused `OVERFLOWED` is gone. A partial of
+a precision-19 input that does pass 128 bits (only possible when the input holds values past its declared precision)
+raises an error rather than ship a marker.
+
+### The four checks (Fable §3)
+
+1. **K1 for `DECIMAL(10,x)` at 1.05x of main:** see [cost.md](cost.md), "Delta 2".
+2. **The state schema can depend on the input precision:** DataFusion 54.1.0 builds `StateFieldsArgs` with the
+   aggregate's own `input_fields` (`datafusion-physical-expr-54.1.0/src/aggregate.rs:732-741`), so
+   `SparkSum::state_fields` reads the input precision inside the cap. Pinned:
+   `the_state_is_one_column_to_precision_19_and_two_from_precision_20` (`sum` and `try_sum` at `(10,2)`, `(18,0)`,
+   `(19,0)`, `(19,19)`, `(20,0)`, `(28,2)`, `(38,0)`; and both accumulators and `convert_to_state` at 19 and 20).
+3. **One answer in every configuration** (below): yes, and it is the exact total.
+4. **No `i128::MIN` marker on a narrow path:** the product holds no marker constant or `i128::MIN` at all; the
+   ungrouped `state`, the grouped `state` and `convert_to_state` ship one raw column at precision 19 and under. Pinned:
+   `a_narrow_state_ships_the_raw_total_and_never_a_marker` (a partial of `−2 × (10^19 − 1)`, and ten narrow partials
+   of `−9 × 10^36` merged, shipped by a final step's spill as `−9 × 10^37`, then NULL or `ARITHMETIC_OVERFLOW` at
+   `evaluate`; input past its precision raises an error in both accumulators).
+
+### Determinism (check 3, [delta2/det/](delta2/det/map.md))
+
+The sizing's step 3 on the pin file's tables with columns at precision 10, 18, 19, 20 and 38: `big` (three Parquet
+files of 300,000 rows, 3,000 groups; per group `M` in file a, `5` in b, `−M` in c, exact total `5`) and `t4x` (groups
+21 to 25 over three files). Each configuration ran every grouped and ungrouped `sum` and `try_sum` (120 queries) 20
+times in each ANSI mode; grouped `avg` reported. Lane B has 10 cores, so 10 cores and `SET target_partitions = 16`
+stand in for the sizing's 16 cores.
+
+| cores | stealing | `target_partitions` | ANSI | most answers of any `sum` / `try_sum` query | queries not the exact total | grouped `avg` on `big` (reported) |
+|---|---|---|---|---|---|---|
+| 2, 4, 8, 10 | on | default | off / on | 1 | 0 | 1, 3, 3, 3 / 1 |
+| 2, 4, 8, 10 | off | default | off / on | 1 | 0 | 1 / 1 |
+| 10 | on | 2, 4, 8, 16 | off / on | 1 | 0 | 1, 4, 3, 1 / 1 |
+
+All 24 configurations: one answer on every run for all 120 queries, each the exact total (`5` per group, `15000` per
+table, `t4x` g21 `M`, g22 past 38 digits at precision 38 so NULL or `ARITHMETIC_OVERFLOW`). Only grouped `avg`,
+which this unit does not touch, varies (up to 4 answers; `t4x` 2 at 2 cores and `SET 2`).
+
+### The bar (head `pkg-sum-fcb0c888`; main now `pkg-main-6286ba19`)
+
+The step 0's whole domain table re-ran on the head and on main now (raw: [delta2/raw/](delta2/raw/map.md)).
+
+| build | ANSI | EQUAL | BOTH_RAISE | SPARK_RAISES | VALUE | REPARK_RAISES | BOTH_RAISE_OTHER | FORMAT |
+|---|---|---|---|---|---|---|---|---|
+| main now `pkg-main-6286ba19` | on | 1,770 | 138 | 549 | 25 | 24 | 31 | 0 |
+| delta 1 `pkg-sum-6d730107` | on | 1,773 | 655 | 32 | 6 | 40 | 31 | 0 |
+| **head `pkg-sum-fcb0c888`** | on | **1,752** | **557** | **120** | **43** | **24** | **41** | 0 |
+| main now | off | 1,913 | 0 | 0 | 569 | 47 | 0 | 8 |
+| delta 1 | off | 2,448 | 0 | 0 | 47 | 34 | 0 | 8 |
+| **head** | off | **2,312** | 0 | 0 | **182** | **35** | 0 | 8 |
+
+- **Cell for cell against the sizing's prototype (i):** 0 cells differ in verdict or answer (2,537 Spark-door cells
+  and the revision's 121 per mode), and the 172 `local[4]` queries per mode compare to Spark exactly as (i)'s did.
+- **Against delta 1** (the sizing's comparison, [delta2/compare/head-vs-delta1.txt](delta2/compare/head-vs-delta1.txt)):
+  388 cells move, the same 388 as the sizing.
+- **The two mains differ on 6 cells** ([main-vs-main.jsonl](delta2/compare/main-vs-main.jsonl)): three grouped
+  `try_sum` cells over several partials, where main's own `try_sum` varies run to run (`try/s4/g11/c38_38` on,
+  `try/s4/g11/c38_10` off, `mp/try/s4/g11/c38_10` on), and three Iceberg `INSERT` statements that both mains refuse, whose error
+  names a different first wrapped row (`ice/insert/wide100/c38_0` on, `ice/insert/metrics_full/c38_0` and `c38_38`
+  off).
+- **Fable's test of its account of Spark: 0 moved cells at precision 28 and under.** The bar holds 766 cells per mode
+  at precision 28 or under; every moved cell, against delta 1 and against main, is at precision 34 or 38.
+- **No wrong value:** the sizing's `check_exact.py` finds every moved value row the exact total (234 machine-checked,
+  0 mismatches; the 121 rows of `HAVING`, `beside`, `plus1` and the Iceberg read-backs are the sizing's hand-checked
+  rows, unchanged), and every total past 38 digits raises or answers NULL.
+- **Hard bar:** 0 EQUAL→WRONG and 0 EQUAL→RAISE outside the named classes below. `avg`, the controls (`BIGINT`,
+  `DOUBLE`), windows and the native door do not move against delta 1 or prototype (i). Against main now, 1,230 cells
+  move ([head-vs-main.txt](delta2/compare/head-vs-main.txt)): the build's own fixes (windows and grouped totals into
+  EQUAL or BOTH_RAISE), the 45 per mode below, and cells non-EQUAL on main too (Iceberg writes main refused and the
+  head commits as the exact total, and two view-flip cells of TEMP-VIEW-SESSION-SETTINGS-1's class).
+
+### The named classes ([delta2/classes.md](delta2/classes.md), every cell listed)
+
+| class | Spark `local[1]`, on / off | Spark `local[4]`, on / off | the sizing measured |
+|---|---|---|---|
+| **the kept divergence** (decision I): the exact total fits, Spark raises (on) or answers NULL (off) | 133 / 161 | 30 / 30 (each split packing) | 133 / 161 and 30 per mode |
+| **the condition class**, out of BOTH_RAISE (both raise, another condition) | 27 / 0 | — | 23 out, plus the 4 expression cells it listed apart |
+| the condition class, into BOTH_RAISE | 17 / 0 | — | 17 |
+| **the loud expression cell** `sum/plus1/g11/c38_38` | 0 / 1 | — | 1 |
+| into EQUAL | 20 / 20 | 9 / 6 into EQUAL or BOTH_RAISE | 20 / 20 and 9 / 6 |
+
+- **The kept divergence, against `local[1]`:** grouped 52 / 58, ungrouped 8 / 8, `try_sum` 31 / 31, DataFrame door
+  33 / 45, Iceberg writes 9 / 19 (with ANSI on, 9 writes Spark refuses and RePark commits the exact total; with it off,
+  19 store the exact total where Spark stores NULL). Against main now it is 45 cells per mode, since main's wrapping
+  sum already answered the exact total where it fits. It comes from a few input shapes (`M, M, −M, −M, 5`; `M, 1, −1`;
+  their multi-file layouts; the large-group `M`×10,001 … `5`) over every column and query form.
+- **The condition class (ANSI on):** 23 cells where Spark raises `NUMERIC_VALUE_OUT_OF_RANGE` (its partials fit and the
+  merged total does not) and RePark `ARITHMETIC_OVERFLOW` (17 multi-split ungrouped cells, 6 ungrouped `DISTINCT` cells
+  that DataFusion rewrites to a group-by under a plain `sum`), and 4 expression cells (`sum/beside/g11`, `sum/plus1/g11`
+  at `c38_0` and `c38_38`), where the expression's own error now differs; 17 default-pass ungrouped cells join
+  BOTH_RAISE. Spark's condition follows its split layout, which no steady rule can copy; Fable's recommendation, adopted
+  by the owner's line, is `ARITHMETIC_OVERFLOW` for every non-window total.
+- **Into EQUAL:** ruling B's 32 layout cells (all 32) and the 8 `try_sum` cells beside them (all 8) reach Spark's
+  answer; so does layout class (c)'s `repartition(4)` at `local[4]`.
+
+### The cards (listed here; the clerk files them)
+
+**SUM-EXACT-TOTAL-DIVERGENCE-1** (proposed; **owner-accepted by decision I**, 2026-11-18). It **supersedes delta 1's
+proposed SUM-GROUPED-MERGE-TOTAL-1.** Decimal `sum` and `try_sum` answer the exact total whenever it fits the result
+precision; where Spark's own running total passes 38 digits and comes back (per row, per split or in its merge order),
+Spark raises `ARITHMETIC_OVERFLOW` (ANSI on) or answers NULL, and RePark answers the exact total on every run, layout
+and machine. That includes ANSI-on Iceberg writes Spark refuses and RePark commits, and ANSI-off writes that store the
+exact total where Spark stores NULL. Cells: the kept divergence above (133 / 161 against `local[1]`, 30 per mode
+against `local[4]`), the pin file's `kept-divergence:` cells and `t4` group 21. **With its condition class:** a
+non-window total past 38 digits raises `ARITHMETIC_OVERFLOW` where Spark raises `NUMERIC_VALUE_OUT_OF_RANGE` after a
+merge (23 cells, ANSI on; the pin file's `condition-class:` cells). The label wording is the orchestrator's to file.
+
+**The expression card** (proposed name DECIMAL-ADD-SCALE38-OVERFLOW-1; **the rating is the owner's**). `x + 1` on a
+`decimal(38,38)` value of `0.99999999999999999999999999999999999999` (a column, not a literal) raises `Arrow error:
+Arithmetic overflow` in RePark's decimal addition, on main `6286ba19` and on this head alike, in both ANSI modes;
+Spark 4.1.2 answers `2.000000000000000000000000000000000000` (`decimal(38,36)`) in both (measured; a literal `0.5`
+answers `1.5` on both engines). The bar's `sum/plus1/g11/c38_38` (ANSI off) shows it now because the total is `M` at
+scale 38 instead of NULL; with ANSI on it changes the error of `sum/beside/g11` and `sum/plus1/g11`. Not this unit's
+seat (the expression layer).
+
+### Pins (red and green)
+
+- `test_sum_dec_i128wrap_1.py`: the old cells as `test_a_cell_answers_as_spark_or_as_its_named_class`, each id naming
+  its class (`spark:`, `kept-divergence:` 16 cells, `condition-class:` 2 cells with ANSI on);
+  `test_spark_drops_the_total_of_the_kept_divergence_group_on_every_run` (the oracle's 20 Spark runs of group 21);
+  and `test_a_multi_partial_total_is_the_exact_total_on_every_run_at_2_4_and_8_partitions`, which replaces the repeat
+  pin that failed CI (36 tests: `big` and `t4x` × `c19_0`, `c20_0`, `c38_0` × `target_partitions` 2, 4, 8 × both
+  modes; every grouped and ungrouped `sum` and `try_sum`, 20 runs, one answer, the exact total).
+- **Head `pkg-sum-fcb0c888`: 194 passed.** **Delta 1 `pkg-sum-6d730107`: 30 failed** (the 18 class cells, and all 12
+  `c38_0` partition pins: `big` grouped `sum` up to 11 answers in 20 runs, the ungrouped total `15000` or NULL, or with
+  ANSI on `ARITHMETIC_OVERFLOW` on every run where the total is `5`; `t4x` g21 `M` or NULL); its `c19_0` and `c20_0`
+  pins pass, as nothing at those precisions can pass 38 digits. **Main `pkg-main-6286ba19`: 142 failed.**
+- Rust, `aggregate::sum_tests` (33 pass): the tests the prototype left failing now assert the exact carrier (the
+  marker tests became the exact total through spill, `RepartitionExec`, skipped partials and an IPC round trip, at
+  precision 19, 20 and 38), plus the boundary tests named in the checks and
+  `a_total_at_the_38_digit_limit_fits_and_one_past_it_does_not` and
+  `a_wide_total_wraps_128_bits_and_comes_back_from_precision_20`.

@@ -22,26 +22,25 @@ that now also places each `sum`. Only the arithmetic is shared with `avg`
   off it becomes `Legacy`. A non-decimal `try_sum` keeps datafusion-spark's accumulator, so
   `SlidingFrameReScan` still re-scans its frames (Spark's `TRY` integral add checks each row in
   frame order).
-- `sum_decimal.rs` — the decimal accumulators and Spark's check (`|exact| < 10^p`, `p` the result
-  precision). `DecimalSum` (ungrouped, every window frame, retracting): exact low part plus wrap
-  count; a partial is checked at `state()` (ANSI raises `ARITHMETIC_OVERFLOW`, otherwise it ships
-  the marker `OVERFLOWED`, `i128::MIN`, in the one state column), the total at `evaluate`:
-  `NUMERIC_VALUE_OUT_OF_RANGE` after a merge and in a window, `ARITHMETIC_OVERFLOW` single-phase.
-  `DecimalSumGroups` (grouped): the partial step checks after every row, sticky per group (ANSI
-  raises at once, so its state stays one column with no marker); the final step adds the merged
-  partials exactly (a wrap count per group) and checks each total once at `evaluate`
-  (`ARITHMETIC_OVERFLOW`, Spark's grouped condition; NULL with ANSI off and in `try_sum`), so the
-  answer no longer depends on the partials' arrival order (delta 1, owner 2026-11-18). Where
-  DataFusion skips the partial step (`convert_to_state`), the rows reach the final step and are
-  totalled once too; turning the skip off cost K1 1.25x. `DecimalSumDistinct`: a value
-  set summed exactly at `evaluate` (the mixed `DISTINCT`). Batches bound their magnitude with Arrow
-  `min` / `max` so ordinary `p ≥ 35` data keeps Arrow's `sum`.
-- `sum_tests.rs` — the unit's Rust pins: Spark's check places in both modes (SQL), Q6's two
-  conditions, the sticky grouped state and its marker, the grouped final merge checked once in
-  every partial order (and through a final step's spill), the distinct sum, the marker through an
-  Arrow IPC round trip, a spilling aggregate, `RepartitionExec` and skipped partials (their rows
-  totalled once), every arm's
-  retracting sliding accumulator, and the delegated non-decimal answers and linear-rewrite hook.
+- `sum_decimal.rs` — the decimal accumulators, exact in every phase (decision I, owner 2026-11-18,
+  delta 2). Every row and every merged partial is added exactly; no phase before `evaluate`
+  checks or marks. The state follows the input precision (`Carrier`): at precision 19 and under
+  one raw `i128` column, which cannot wrap (rows × 10^19 stays under 2^127; a partial that does
+  wrap means input past its declared precision and raises an error, never a marker); from
+  precision 20 the low word and an `Int64` wrap count. Each non-window total is checked once at
+  `evaluate` against the result precision (`|exact| < 10^p`): `ARITHMETIC_OVERFLOW` with the
+  `try_sum` hint with ANSI on, NULL with ANSI off and in `try_sum`. `DecimalSum` (ungrouped, and
+  every window frame, retracting; a window checks each frame, `NUMERIC_VALUE_OUT_OF_RANGE`);
+  `DecimalSumGroups` (grouped; `convert_to_state` keeps DataFusion's partial-skip path);
+  `DecimalSumDistinct` (the mixed `DISTINCT`, unchanged). Batches bound their magnitude with
+  Arrow `min` / `max` so ordinary `p ≥ 35` data keeps Arrow's `sum`.
+- `sum_tests.rs` — the unit's Rust pins: the exact total and its one check in both modes (SQL),
+  the window's per-frame check, the distinct sum, every partial order and a final step's spill,
+  128-bit wraps and their return from precision 20, the 38-digit limit, the one- or two-column
+  state at precision 19 and 20, the narrow state's raw total (no marker), the wide carrier
+  through an Arrow IPC round trip, a spilling aggregate, `RepartitionExec` and skipped partials
+  at precision 19, 20 and 38, every arm's retracting sliding accumulator, and the delegated
+  non-decimal answers and linear-rewrite hook.
 
 ## Pointers
 
