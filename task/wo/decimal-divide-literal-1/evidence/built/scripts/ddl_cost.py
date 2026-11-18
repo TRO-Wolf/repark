@@ -1,0 +1,53 @@
+import json
+import sys
+import time
+from pathlib import Path
+
+import repark._native as native
+from repark import ReparkSession
+from repark import functions as F
+
+case, label, data, out = sys.argv[1:5]
+s = ReparkSession.builder.appName("ddl-cost").getOrCreate()
+k = s.read.parquet(f"{data}/k")
+k.createOrReplaceTempView("k")
+AGG = "SELECT count(*), sum(q) FROM (SELECT {e} AS q FROM k)"
+SQL = {
+    "s1_sql_d10_div3": AGG.format(e="d10 / 3"),
+    "s1_sql_d38_div3": AGG.format(e="d38 / 3"),
+    "s3_sql_int_div_int": AGG.format(e="i1 / i2"),
+    "s3_sql_double_div_double": AGG.format(e="x1 / x2"),
+}
+d = F.col("d10")
+FRAME = {
+    "s2_df_d10_div3": lambda: d / 3,
+    "s2_df_d10_mod3": lambda: d % 3,
+    "s2_df_d10_pmod": lambda: F.pmod(d, F.lit(3)),
+    "s2_df_d10_expr_mod": lambda: F.expr("mod(d10, 3)"),
+    "s3_df_int_div_int": lambda: F.col("i1") / F.col("i2"),
+    "s3_df_double_div_double": lambda: F.col("x1") / F.col("x2"),
+}
+REPS = 4
+
+
+def run() -> list:
+    if case in SQL:
+        return s.sql(SQL[case]).collect()
+    return k.select(FRAME[case]().alias("q")).agg(F.count(F.lit(1)), F.sum("q")).collect()
+
+
+got = run()
+start = time.perf_counter()
+for _ in range(REPS):
+    got = run()
+seconds = time.perf_counter() - start
+record = {
+    "case": case,
+    "label": label,
+    "seconds": seconds,
+    "reps": REPS,
+    "answer": str([list(r) for r in got])[:300],
+    "native": "<scratchpad>/" + native.__file__.split("/scratchpad/", 1)[-1],
+}
+with Path(out).open("a") as fh:
+    fh.write(json.dumps(record) + "\n")

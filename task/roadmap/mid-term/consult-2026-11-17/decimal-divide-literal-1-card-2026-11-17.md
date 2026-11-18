@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-17. **Filed by:** the records clerk (`claude-haiku-5-5`), under the owner's ruling "Defaults." (2026-11-17, about 10:40 UTC), ruling 2 ([rulings](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-17.md)). **Source:** Fable (`claude-fable-5-2`), consult reply of 2026-11-17, section 1, with the probe outputs Fable named (`p2-spark`, `p2-pkg-cu-88999454` and `p2-pkg-dct-7bf32859`; kept outside the repository).
 
-**Status:** filed 2026-11-17, not dispatched.
+**Status:** built, not merged (2026-11-18; the build halted at the cost bar, below).
 
 **Severity: S1, label-blocking** (ruled 2026-11-17, ruling 2).
 
@@ -51,5 +51,64 @@ Up: [map.md](map.md).
   - `PyColumn::div` at `crates/repark-python/src/column/mod.rs:697-703`. It casts both operands to `Float64` before `/`, which is the DataFrame fault.
   - The `mod` and `pmod` calls: datafusion-spark's `SparkMod` and `SparkPmod`, `datafusion-spark-54.1.0/src/function/math/modulus.rs:103-163`. U3 walks `BinaryExpr` only, so a function-call arm is needed.
 - **Place** (ruling 1): next after AVG-DECIMAL-ROUND-1, which is order 1. This card is order 2 (sketch §5, "Order: 1 then 2").
+
+Up: [map.md](map.md).
+
+## Built (2026-11-18): seat A2, branch `fix/decimal-divide-literal-1`
+
+**Status: built, not merged.** Builder: Claude Opus 5.5 (`claude-opus-5-5`), effort xhigh. Product commit `a30a8d60`;
+package `pkg-ddl-a30a8d60` (its `BUILT_FROM`). Evidence: [decimal-divide-literal-1/](../../../wo/decimal-divide-literal-1/map.md).
+
+- **Rulings carried (owner, verbatim):** "Defaults" (2026-11-17, ruling 2: S1, label-blocking; the label is scoped to
+  ANSI on); "Merge 1352 and 1353, defaults on the questions" (2026-11-17: Q1 two units, the `mod()`/`pmod()` arm rides
+  this seat; Q2 this unit takes the DataFrame `/`; Q3 the suffixed `*`, `%`, `mod()`/`pmod()`, not `round()`; Q5
+  `allowPrecisionLoss=false` carded; Q8 `d38_10 * 3` carded; Q9 the native door carded and unchanged; Q10 the
+  `avg(d / 3)` pin is this unit's); "dispatch Opus xhigh effort levels for these fixes, then use Opus 5.5 medium
+  verifiers for the time and not muse, at least until these things are closed out" (2026-11-17); "Proceed with the
+  plans, use defaults, when it comes to any roadblocks or questions spin up a Fable medium session to ask for
+  guidance. Merge any PRs needed as long as they get us to our end goal" (2026-11-18).
+- **Seat and files (5 product files, at the cap):**
+  - `crates/repark-functions/src/decimal_precision/literal_step.rs` (new): the U3 functions (moved), the bottom-up `/`
+    and `%` literal step, the `mod()`/`pmod()` call arm, the DataFrame divide marker, `spell_integer_suffix`, the
+    `pickMinimumPrecision` conf;
+  - `crates/repark-functions/src/decimal_precision.rs`: the rule runs the bottom-up pass before the `+ − *` pass,
+    reads the conf, and the suffix arm joins U3 (`min_precision_integer_literal`); `Int8`/`UInt8` are not narrowed;
+    still installed before `type_coercion` (`analyzer_rules_with_higher_order_preparation`) and after it;
+  - `crates/repark-spark/src/spark_rewrites/mod.rs`: `3S` and `3L` beside an arithmetic operator or in a `mod`/`pmod`
+    call are spelled with the suffix marker;
+  - `crates/repark-python/src/column/display.rs` (the facade's `_binary` `/`) and `column/mod.rs` (`PyColumn::div`):
+    the DataFrame divide marker in place of the two `Float64` casts;
+  - one statement in `crates/repark-spark/src/extension.rs` installs the conf at session build.
+- **The bar** (step 0's probes, 7,258 comparisons against Spark 4.1.2, both ANSI modes; [bar.md](../../../wo/decimal-divide-literal-1/evidence/built/bar.md)):
+  0 EQUAL → WRONG, 0 EQUAL → RAISE; the native door, `avg`/`mean`/`sum`, `try_*`, typed operands and `d / (1 + 2)`
+  unchanged; 1,088 cells became EQUAL (every literal width of `/` and `%`, the DataFrame `/` and `%`, `mod`/`pmod`,
+  the suffixed `*`, four `h / 2` scopes, `avg(d / 3)`, `WHERE`/`CASE`, every division wrong write). Left in scope,
+  by class: the 38-digit row 10 both raising (ANSI on); `round()`'s type (DECIMAL-ROUND-RESULT-TYPE-1); the
+  session-catalog view's outer `/` (`decimal(18,10)` against `decimal(16,8)`, values equal; no card yet); the
+  38-digit multiplication overflow (the `d38_10 * 3` card); `try_*` (TRY-ARITH-DECIMAL-INT-1);
+  `allowPrecisionLoss=false` (DECIMAL-PRECISION-LOSS-CONF-1); the native door (NATIVE-DECIMAL-AVG-DIVIDE-1).
+- **Pins:** `python/repark/tests/types/test_decimal_divide_literal_1.py` — 162 passed on the head, 118 failed and 44
+  passed (the guards) on main; Rust `decimal_precision/literal_step_tests.rs`. Re-pinned to Spark's answers:
+  `dataframe/test_columns.py::test_division_is_float` (`decimal(8,6)`; an integer pair stays `double`) and the four
+  `dec-div0` cells of `writes/cast_overflow_insert_1_spark_oracle.json` (RePark's message now names Spark's
+  `DECIMAL(8,6)`).
+- **Cost** ([cost.md](../../../wo/decimal-divide-literal-1/evidence/built/cost.md); two alternating runs, stopped short of
+  five and ten by a shared measure lock and the turn budget): the SQL division
+  rows are faster on the head (Spark's narrower quotient), the integer and float controls on both doors and C-012 are
+  at the bar; **two held rows are over 1.05x and outside their control bands — a halt, not ruled here:** the
+  DataFrame `col(d10) / 3` (about 3.7x: main's `double` division against the decimal division UDF Spark's type
+  needs; the same cost as the SQL `d10 / 3` on the head) and `F.expr("mod(d10, 3)")` (about 1.2x: the per-row cast
+  to Spark's `Remainder` type; a remedy inside the cap, not built: the `%` path).
+- **Gates** (exit codes): `cargo test --locked` `repark-functions` 0, `repark-common` 0, `repark-core` 0,
+  `repark-spark` 0 (on `a30a8d60`; 101 on the first commit, the reverted nullability line), `repark-python` 0;
+  `make rust-clippy` 0; `make rust-panic-ban` 0; `cargo fmt --all -- --check` 0 (`make rust-fmt-check` is the
+  same command); the facade suite, release build, `-n 6`: 35,321 passed and 9 failed on the first commit (four
+  from the reverted line, five re-pinned to Spark), and the affected files with both units' pins 809 passed on
+  `a30a8d60`; `make py-test-facade`: not run (the cost halt); `pytest -n 6 python/repark-parity/tests` 0 with the
+  records; `ledger_lifecycle.py check` 0; `check_map_size.py` 0 (three exact baselines lowered); `sync_map_md.py
+  --check` 0; the comment gate 0 hits.
+- **Found beside (not this unit's):** a written `CAST(3 AS DECIMAL(20,0))` in `*` is still narrowed by U3's
+  default-cast check (`d10_2 * CAST(3 AS DECIMAL(20,0))` is `decimal(12,2)`, Spark `decimal(31,2)`; main alike);
+  a runtime `SET` of `pickMinimumPrecision` is accepted and not read (the builder conf is).
 
 Up: [map.md](map.md).

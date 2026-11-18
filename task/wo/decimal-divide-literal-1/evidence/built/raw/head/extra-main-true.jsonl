@@ -1,0 +1,10 @@
+{"ansi": "true", "engine": "repark", "key": "provenance", "native": "<scratchpad>/ddu-work/pkg-avg-27d6149f/repark/_native.abi3.so", "version": "1.5.6"}
+{"key": "extra/avg_distinct_with_count", "result": "ERR:PySparkException:None:This feature is not implemented:"}
+{"key": "extra/avg_distinct_window", "result": "ERR:PySparkException:None:This feature is not implemented:"}
+{"key": "extra/mul_tinyint_literal", "result": {"rows": [["1", "0.90"], ["2", "3.00"], ["3", "7.53"]], "types": ["int", "decimal(14,2)"]}}
+{"key": "extra/add_tinyint_literal", "result": {"rows": [["1", "3.30"], ["2", "4.00"], ["3", "5.51"]], "types": ["int", "decimal(11,2)"]}}
+{"key": "extra/mul_smallint_literal", "result": {"rows": [["1", "0.90"], ["2", "3.00"], ["3", "7.53"]], "types": ["int", "decimal(16,2)"]}}
+{"key": "extra/mul_bigint_literal", "result": {"rows": [["1", "0.90"], ["2", "3.00"], ["3", "7.53"]], "types": ["int", "decimal(31,2)"]}}
+{"key": "extra/try_add_dec_int", "result": {"rows": [["1", "1"], ["2", "2"], ["3", "3"]], "types": ["int", "int"]}}
+{"key": "extra/try_multiply_dec_int", "result": {"rows": [["1", "0"], ["2", "3"], ["3", "6"]], "types": ["int", "int"]}}
+{"key": "extra/try_divide_dec_dec", "result": {"rows": [["1", "0.100000"], ["2", "0.333333"], ["3", "0.836667"]], "types": ["int", "decimal(14,6)"]}}

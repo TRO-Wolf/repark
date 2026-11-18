@@ -1,0 +1,9 @@
+{"key": "extra/avg_distinct_with_count", "main": "REPARK_RAISES", "head": "REPARK_RAISES", "same_as_main": true}
+{"key": "extra/avg_distinct_window", "main": "BOTH_RAISE", "head": "BOTH_RAISE", "same_as_main": true}
+{"key": "extra/mul_tinyint_literal", "main": "EQUAL", "head": "EQUAL", "same_as_main": true}
+{"key": "extra/add_tinyint_literal", "main": "EQUAL", "head": "EQUAL", "same_as_main": true}
+{"key": "extra/mul_smallint_literal", "main": "TYPE", "head": "EQUAL", "same_as_main": false}
+{"key": "extra/mul_bigint_literal", "main": "TYPE", "head": "EQUAL", "same_as_main": false}
+{"key": "extra/try_add_dec_int", "main": "VALUE", "head": "VALUE", "same_as_main": true}
+{"key": "extra/try_multiply_dec_int", "main": "VALUE", "head": "VALUE", "same_as_main": true}
+{"key": "extra/try_divide_dec_dec", "main": "EQUAL", "head": "EQUAL", "same_as_main": true}
