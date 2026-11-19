@@ -14,6 +14,8 @@ ZONES = {"la_utc": (LA, UTC), "utc_la": (UTC, LA)}
 ANSIS = {"on_off": ("true", "false"), "off_on": ("false", "true")}
 SHAPE = ["n", "CAST(ts AS STRING) AS t", "hour(ts) AS b", "CAST(unix_timestamp(ts) AS STRING) AS u"]
 VIEW_READ = "SELECT n, b, unix_timestamp(ts) AS u FROM {V}"
+E5_READ = "SELECT n, {C}b, CAST(ts AS STRING) AS t, unix_timestamp(ts) AS u FROM {{V}}"
+NESTED = ["n", "CAST(ts AS STRING) AS t", "h1", "h2", "hour(ts) AS h3", "unix_timestamp(ts) AS u"]
 SUBQ = (
     "SELECT n, (SELECT max(unix_timestamp(ts)) FROM {V}) AS mu, "
     "(SELECT max(hour(ts)) FROM {V}) AS mh FROM {P} "
@@ -104,11 +106,11 @@ class Cells:
                         lambda v: b(reader, v), m, x, VIEW_READ
                     ),
                 )
-            for door, build in (("cj", self.cj), ("cross", self.cross)):
+            for door, build, shown in (("cj", self.cj, "ph, "), ("cross", self.cross, "")):
                 self.put(
                     "E5/" + door + tag,
-                    lambda b=build, m=made, x=read: self.view_cell(
-                        lambda v: b(reader, v), m, x, "SELECT * FROM {V}"
+                    lambda b=build, m=made, x=read, c=shown: self.view_cell(
+                        lambda v: b(reader, v), m, x, E5_READ.format(C=c)
                     ),
                 )
             for door in ("direct", "cjdirect", "cache_after", "pathwrite"):
@@ -175,7 +177,7 @@ class Cells:
         over.createOrReplaceTempView(top)
         self.conf(TK)
         read = self.s.table(top)
-        return one.answer(read.selectExpr("*", "hour(ts) AS h3", "unix_timestamp(ts) AS u"))
+        return one.answer(read.selectExpr(*NESTED))
 
     def headerless(self) -> dict:
         frame = self.s.read.csv(self.root + "/csv0")
