@@ -473,14 +473,39 @@ def test_excepted_map_that_grows_goes_red(tmp_path: Path) -> None:
     ).read_text(encoding="utf-8")
 
 
+def test_excepted_map_that_grows_in_bytes_alone_goes_red(tmp_path: Path) -> None:
+    repo = _size_repo(tmp_path, _table(f'    "big/map.md": (250, {_big_bytes()}),\n'))
+    _write(repo, "big/map.md", "".join(f"- row {n}\n" for n in range(249)) + "- row 2499\n")
+    result = _size(repo)
+    assert result.returncode == 1
+    assert f"ERROR: big/map.md grew to 250 lines and {_big_bytes() + 1} bytes" in result.stderr
+
+
+def test_excepted_map_that_grows_in_lines_alone_goes_red(tmp_path: Path) -> None:
+    repo = _size_repo(tmp_path, _table(f'    "big/map.md": (250, {_big_bytes()}),\n'))
+    longer = "".join(f"- row {n}\n" for n in range(249)) + "\n\n"
+    assert len(longer.encode()) < _big_bytes()
+    _write(repo, "big/map.md", longer)
+    result = _size(repo)
+    assert result.returncode == 1
+    assert "ERROR: big/map.md grew to 251 lines" in result.stderr
+
+
+def test_excepted_map_that_shrinks_is_green_without_a_row_edit(tmp_path: Path) -> None:
+    row = f'    "big/map.md": (250, {_big_bytes()}),\n'
+    repo = _size_repo(tmp_path, _table(row))
+    _write(repo, "big/map.md", "".join(f"- row {n}\n" for n in range(249)))
+    result = _size(repo)
+    assert result.returncode == 0, result.stderr
+    assert "1 exceptions" in result.stdout
+    assert row in (repo / "scripts/check_map_size.py").read_text(encoding="utf-8")
+
+
 def test_excepted_map_that_shrinks_ratchets_down(tmp_path: Path) -> None:
     repo = _size_repo(tmp_path, _table(f'    "big/map.md": (250, {_big_bytes()}),\n'))
     shrunk = "".join(f"- row {n}\n" for n in range(240))
     _write(repo, "big/map.md", shrunk)
-    result = _size(repo)
-    assert result.returncode == 1
-    assert "shrank to 240 lines" in result.stderr
-    assert "lower the row" in result.stderr
+    assert _size(repo).returncode == 0
     updated = _size(repo, "--update-baselines")
     assert updated.returncode == 0, updated.stderr
     script = (repo / "scripts/check_map_size.py").read_text(encoding="utf-8")
@@ -491,9 +516,7 @@ def test_excepted_map_that_shrinks_ratchets_down(tmp_path: Path) -> None:
 def test_excepted_map_within_both_ceilings_retires_its_row(tmp_path: Path) -> None:
     repo = _size_repo(tmp_path, _table(f'    "big/map.md": (250, {_big_bytes()}),\n'))
     _write(repo, "big/map.md", "# small\n")
-    result = _size(repo)
-    assert result.returncode == 1
-    assert "delete the row" in result.stderr
+    assert _size(repo).returncode == 0
     assert _size(repo, "--update-baselines").returncode == 0
     script = (repo / "scripts/check_map_size.py").read_text(encoding="utf-8")
     assert "EXCEPTIONS: dict[str, tuple[int, int]] = {}\n" in script

@@ -6,9 +6,6 @@ SSOT for map size (MAP-GOVERNANCE-1). Prose points here and never restates the n
 Rules over every tracked file named `map.md`:
 1. A map stays within DEFAULT_LINES lines and DEFAULT_BYTES bytes; crossing either fails.
    Blank lines count.
-2. EXCEPTIONS records the exact (lines, bytes) of each map that was over a ceiling when the
-   ratchet armed. An excepted map must equal its baseline: growth in either measure fails, and
-   shrinkage fails until the row is lowered, or deleted once the map is within both ceilings.
 3. EXEMPT and EXEMPT_PATTERNS list the ledger-bin and archive-month maps the lifecycle script
    rewrites on every `move` and `archive`; they are inventories outside the ratchet, each with
    its reason. A pattern's `*` matches one path segment.
@@ -257,17 +254,10 @@ def check_map(path: str, lines: int, size: int, table: dict[str, tuple[int, int]
         return [f"ERROR: {path}: baseline ({base_lines}, {base_bytes}) is within both ceilings."]
     if lines > base_lines or size > base_bytes:
         return [
-            f"ERROR: {path} grew to {lines} lines and {size} bytes (exact baseline "
+            f"ERROR: {path} grew to {lines} lines and {size} bytes (baseline "
             f"{base_lines} lines, {base_bytes} bytes). Make the edit size-neutral or condense "
             "the map; growth that came from main is re-seeded by --update-baselines, and any "
             "other raised baseline needs explicit owner approval."
-        ]
-    if (lines, size) != baseline:
-        action = "delete the row" if not over(lines, size) else "lower the row"
-        return [
-            f"ERROR: {path} shrank to {lines} lines and {size} bytes below its exact baseline "
-            f"{base_lines} lines, {base_bytes} bytes; {action} "
-            "(python3 scripts/check_map_size.py --update-baselines)."
         ]
     return []
 

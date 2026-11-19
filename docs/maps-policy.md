@@ -17,6 +17,7 @@ A `map.md` routes a reader to the document or code that owns a fact. It is a nav
 - Routes, owners, boundaries and the verification for its directory.
 - Not history. History lives in ledgers, PRs or `docs/history/`, never in a map.
 - Transition: a map that still holds dated history is not wrong until its ratchet row is lowered. Lowering the row is the moment the history must leave.
+- A unit adds or changes a map row only when it adds, removes or renames a file; its claims live in its ledger and sidecar (owner, 2026-11-18, [task/lessons.md](../task/lessons.md)).
 - Not pins. A clause's pin is a sidecar line, never a `pins:` citation in a map. The migration removed 2,650 citation lines from 231 maps and wrote no map prose.
 
 ## Ownership
@@ -33,7 +34,7 @@ A `map.md` routes a reader to the document or code that owns a fact. It is a nav
 ## The size ratchet
 
 - A tracked `map.md` may hold 200 lines and 16 KiB (16,384 bytes). Crossing either fails.
-- `EXCEPTIONS` in `scripts/check_map_size.py` records the exact `(lines, bytes)` of each map that was over a ceiling when the ratchet armed. The check compares an excepted map with its row alone: growth in either measure fails, and shrinkage fails until the row is lowered. A branch cannot regrow a map it lowered toward its base unnoticed.
+- `EXCEPTIONS` in `scripts/check_map_size.py` records a `(lines, bytes)` row for each map that was over a ceiling when the ratchet armed. The row is a ceiling: growth past it in either measure fails, and shrinkage passes with the row untouched. Rows are lowered only by a clerk sweep with `--update-baselines` (owner, 2026-11-18), at each release tag (a default the owner accepted on 2026-11-19).
 - `--update-baselines` lowers a shrunk row and deletes a row once its map is within both ceilings. It raises a row only by the growth `main` made to its map since the row was committed: the map's size at `git merge-base HEAD origin/main` less its size at the merge base of the row's commit (the oldest first-parent commit of the newest unbroken run that carries that exact row), never above the current merge-base size. Any other growth, a row not yet committed, no merge base or a new violator is refused, and it writes nothing then. The way out of a violation is a split or a condensed map.
 - **Push to `main`.** On a push to `main` HEAD is `origin/main`, so the update's merge base is HEAD and that limitation is confined to `--update-baselines`. The check reds on any run; the pull-request run holds the update too (ci.yml's guards checkout is `fetch-depth: 0`).
 - `EXEMPT` and `EXEMPT_PATTERNS` list the lifecycle inventories, with a reason each: the three bin maps, and the archive month maps (`task/ledgers/archive/*/map.md`). The lifecycle script rewrites them on every `move` and `archive`.
