@@ -511,14 +511,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   a `uri` / `url` value is masked too, and the `type` / `catalog-impl` unrecognized-value
   refusal echoes the value through `mask_value_credentials`.
 - `read_options.rs` — CSV/JSON Spark option-map helpers, `read_csv_path` (nullValue
-  all-Utf8 scan; `utf8_columns` re-read so timestamp CAST sees raw offset text), and the
-  local-CSV first-line Utf8 schema. **CSV-INFER-PERF-1** moved the CSV read body here so
-  `session.rs` could drop under the default file-size ceiling. Round 2: `inferSchema`
-  without `nullValue` keeps DataFusion's 1000-row sample. Round 3: `utf8_columns`
-  forces an all-Utf8 schema from the first local record (no second infer), so a
-  `multiLine` re-read past 1000 records cannot raise on chunked record boundaries.
-  Round 4: a `multiLine` first read also uses that infer-free schema, so quoted
-  fields with embedded newlines infer at any record count. Round 5: an embedded
+  all-Utf8 scan; without `inferSchema`, `utf8_columns` re-reads only the named columns),
+  and the local-CSV first-line Utf8 schema. **CSV-INFER-PERF-1** moved the CSV read body
+  here from `session.rs` (file-size ceiling). Round 2: `inferSchema`
+  without `nullValue` keeps DataFusion's 1000-row sample. Round 3: `utf8_columns` forces
+  an all-Utf8 schema from the first local record (no second infer), so a `multiLine`
+  re-read past 1,000 records cannot raise on chunked boundaries; since
+  CSV-SCHEMA-TIMESTAMP-ZONE-1 delta 1, only under `inferSchema`. Round 4: a `multiLine`
+  first read uses it, so quoted newlines infer at any record count. Round 5: an embedded
   newline inside the header still raises (line-based first-record read);
   DECLARED `CSV-INFER-HEADER-NEWLINE`.
   **TORTURE-1 step 3 (D-4/D-4a):** `flag_secret_columns` = `off|warn|refuse` (default

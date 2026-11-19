@@ -221,12 +221,15 @@ pub(crate) async fn read_csv_path(
     let multiline = options
         .get("multiline")
         .is_some_and(|raw| parse_bool_option("multiLine", raw).ok() == Some(true));
-    let utf8_schema =
-        if csv_force_utf8_schema(options) || options.contains_key("utf8_columns") || multiline {
-            csv_utf8_schema_from_path(path, csv_options.has_header, csv_options.delimiter)?
-        } else {
-            None
-        };
+    let infer_reread = options.contains_key("utf8_columns")
+        && options
+            .get("inferschema")
+            .is_some_and(|raw| parse_bool_option("inferSchema", raw).ok() == Some(true));
+    let utf8_schema = if csv_force_utf8_schema(options) || multiline || infer_reread {
+        csv_utf8_schema_from_path(path, csv_options.has_header, csv_options.delimiter)?
+    } else {
+        None
+    };
     if let Some(ref schema) = utf8_schema {
         csv_options = csv_options.schema(schema);
     }
@@ -603,6 +606,47 @@ mod tests {
             panic!("a bad flag value must refuse before any read");
         };
         assert!(error.to_string().contains("flag_secret_columns"), "{error}");
+    }
+
+    #[tokio::test]
+    async fn a_local_csv_utf8_columns_read_types_only_the_named_columns_as_utf8() {
+        use arrow::datatypes::DataType;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("data.csv");
+        std::fs::write(
+            &path,
+            "n,ts,d\n1,2024-03-10 02:30:00,1e2\n2,2024-01-01 03:00:00,1.5E-1\n",
+        )
+        .unwrap();
+        let session = crate::ReparkSession::builder().build().unwrap();
+        let types_of = |frame: &DataFrame| -> Vec<(String, DataType)> {
+            frame
+                .schema()
+                .fields()
+                .iter()
+                .map(|field| (field.name().clone(), field.data_type().clone()))
+                .collect()
+        };
+        let typed = [DataType::Int64, DataType::Utf8, DataType::Float64];
+        let text = [DataType::Utf8, DataType::Utf8, DataType::Utf8];
+        for (extra, expected) in [
+            (None, typed),
+            (Some(("nullvalue", "NA")), text.clone()),
+            (Some(("inferschema", "true")), text),
+        ] {
+            let mut pairs = vec![("header", "true"), ("utf8_columns", "ts")];
+            pairs.extend(extra);
+            let frame = session
+                .read_csv(path.to_str().unwrap(), &options_map(&pairs))
+                .await
+                .unwrap();
+            let names: Vec<String> = ["n", "ts", "d"].map(str::to_string).into();
+            assert_eq!(
+                types_of(&frame),
+                names.into_iter().zip(expected).collect::<Vec<_>>(),
+                "{extra:?}"
+            );
+        }
     }
 
     #[tokio::test]
