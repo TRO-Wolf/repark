@@ -34,4 +34,6 @@ A per-value `Decimal128` precision check in the fork or RePark's write path: one
 
 SUM-DEC-I128WRAP-1 step 0 sketch, §6 question 5(b); step 0 hand-back, inventory I-3; step 0 revision hand-back, items 1 and "Wrong writes, restated"; the sum critic's verdict (GAPS, step 0 `3fecb0ff`), which corrects I-3 and restates question 5. PR #1357 (head `2f63e2c7`).
 
+**Append (2026-11-19, ruling 10):** C1 (RePark's Parquet reader accepts decimal values past the declared precision, where Spark refuses the read with `NUMERIC_VALUE_OUT_OF_RANGE`; main shares it; source `S/verify-sum/verdict.md`, "C1") is rated S2, not label-blocking, by the owner's ruling of 2026-11-19 about 01:28 UTC ([rulings](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-18.md), item 10). It is sized in this card's step 0 as its reader side.
+
 Up: [map.md](map.md).
