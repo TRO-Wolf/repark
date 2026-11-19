@@ -173,8 +173,8 @@ CI-enforced tools never silently skip locally (uvx provisions the pinned tool on
     the workflow compared on load-bearing tokens; fail-closed on a parse miss.
   - *`map.md` content* (`scripts/sync_map_md.py`) — link validity armed (`make check-map-sync`);
     coverage behind `--strict`. Policy: ["Markdown document lifecycle"](#markdown-document-lifecycle).
-  - *Map size* (`scripts/check_map_size.py`, `make check-map-size`) — exact-baseline rows ratchet
-    DOWN only; the ceilings live in the script.
+  - *Map size* (`scripts/check_map_size.py`, `make check-map-size`) — rows are ceilings (growth
+    fails, shrinkage passes; a clerk sweep lowers them); the ceilings live in the script.
   - v1 helper scripts not yet re-homed: [scripts/map.md](scripts/map.md) "Not re-homed". Each
     returns only with a concrete driver named there.
 - **Rust module layout is the default one** — `mod foo;` resolved by `foo.rs`, `foo/mod.rs`, or
