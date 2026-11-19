@@ -228,17 +228,28 @@ def test_recognition_error_carries_no_legacy_clause(spark: ReparkSession, tmp_pa
     assert "LEGACY" not in str(excinfo.value)
 
 
-def test_lmt_offset_seconds_csv_schema_read_refuses_loud(
+def test_lmt_offset_seconds_csv_schema_read_answers_spark(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """CSV schema-read of LMT offset-seconds refuses; card CSV-READ-OFFSET-SECONDS-1."""
+    """CSV schema-read of LMT offset-seconds answers Spark 4.1.2 (CSV-SCHEMA-TIMESTAMP-ZONE-1)."""
     spark.conf.set("spark.sql.session.timeZone", "America/New_York")
     dest = tmp_path / "out"
     spark.sql("SELECT 1 AS id, TIMESTAMP '1850-06-01 10:00:00' AS t").write.mode(
         "overwrite"
     ).option("header", "true").csv(str(dest))
-    with pytest.raises(Exception, match=r"Invalid timezone"):
-        spark.read.option("header", "true").schema("id INT, t TIMESTAMP").csv(str(dest)).collect()
+    read = spark.read.option("header", "true").schema("id INT, t TIMESTAMP").csv(str(dest))
+    read.createOrReplaceTempView("lmt_back")
+    query = "SELECT id, CAST(t AS STRING), unix_timestamp(t) FROM lmt_back"
+    assert [tuple(row) for row in spark.sql(query).collect()] == [
+        (1, "1850-06-01 10:00:00", -3773725438)
+    ]
+    spark.conf.set("spark.sql.session.timeZone", "UTC")
+    spark.read.option("header", "true").schema("id INT, t TIMESTAMP").csv(
+        str(dest)
+    ).createOrReplaceTempView("lmt_back")
+    assert [tuple(row) for row in spark.sql(query).collect()] == [
+        (1, "1850-06-01 14:56:02", -3773725438)
+    ]
 
 
 @pytest.mark.perf

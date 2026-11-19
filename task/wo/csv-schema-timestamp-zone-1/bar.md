@@ -60,6 +60,15 @@ RePark maps by name; now parsed under the session zone). Unchanged and still WRO
 `TIMESTAMP` field; Spark NULL, RePark the epoch second), `nots`/`mixednots`. Unchanged and EQUAL: `TIMESTAMP_NTZ`
 fields (no defect), date-only text (the scan's `Date32` cast is zone-aware), fractional text, `nullValue`.
 
+**A named gain outside step 0's table: the LMT offset-seconds read (card CSV-READ-OFFSET-SECONDS-1).** A CSV
+written under New York from `TIMESTAMP '1850-06-01 10:00:00'` holds `1850-06-01T10:00:00.000-04:56:02`; read back with
+`schema("id INT, t TIMESTAMP")` it refused on main (`Invalid timezone "-04:56:02"`, the scan's typed parse) and now
+answers Spark 4.1.2 in every column (`evidence/probes/lmt.py`, `evidence/raw/lmt.txt`): `(1, '1850-06-01 10:00:00',
+-3773725438)` read under New York and `(1, '1850-06-01 14:56:02', -3773725438)` under UTC. RAISE → EQUAL; the pin
+`python/repark/tests/timestamps/test_text_write_timestamp_zone_1.py::test_lmt_offset_seconds_csv_schema_read_answers_spark`
+replaces the refusal pin (red on main, green on the head). The same file read with `t STRING` still refuses on main
+and the head alike (no `TIMESTAMP` field, so no re-read; Spark answers the text).
+
 **A side effect, named.** On a local path any `utf8_columns` makes the Rust pre-scan read every column as text
 (`csv_utf8_schema_from_path`), so a schema read with a `TIMESTAMP` field now casts every column from its text, as
 the `nullValue` and `multiLine` schema reads already did; on a remote or compressed path only the named columns are

@@ -51,9 +51,12 @@ for tag in sorted(spark):
     moved = len({answer(data[name].get(tag)) for name in builds}) > 1
     print(
         ("MOVED " if moved else "      ") + tag,
-        "| spark:", answer(spark[tag])[:80],
-        *["| " + name + " " + verdicts[name] + ": " + answer(data[name].get(tag))[:80]
-          for name in builds],
+        "| spark:",
+        answer(spark[tag])[:80],
+        *[
+            "| " + name + " " + verdicts[name] + ": " + answer(data[name].get(tag))[:80]
+            for name in builds
+        ],
     )
 for name in builds:
     print(name, dict(counts[name]))

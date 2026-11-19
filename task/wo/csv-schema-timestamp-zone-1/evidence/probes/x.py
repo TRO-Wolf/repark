@@ -36,36 +36,61 @@ Path(wh, "dir", "a.csv").write_text("1,2024-01-01 03:00:00\n")
 Path(wh, "dir", "b.csv").write_text("2,2024-06-01 23:30:00\n")
 U = "SELECT n, unix_timestamp(ts) AS u FROM xv"
 CELLS: list[tuple[str, Any, str]] = [
-    ("ntz", lambda: s.read.schema("n INT, ts TIMESTAMP_NTZ").csv(wh + "/good"),
-     "SELECT n, CAST(ts AS STRING) AS t, hour(ts) AS h FROM xv"),
+    (
+        "ntz",
+        lambda: s.read.schema("n INT, ts TIMESTAMP_NTZ").csv(wh + "/good"),
+        "SELECT n, CAST(ts AS STRING) AS t, hour(ts) AS h FROM xv",
+    ),
     ("date", lambda: s.read.schema(SCHEMA).csv(wh + "/date"), U),
     ("epoch", lambda: s.read.schema(SCHEMA).csv(wh + "/epoch"), U),
-    ("frac", lambda: s.read.schema(SCHEMA).csv(wh + "/frac"),
-     "SELECT n, unix_timestamp(ts) AS u, CAST(ts AS STRING) AS f FROM xv"),
+    (
+        "frac",
+        lambda: s.read.schema(SCHEMA).csv(wh + "/frac"),
+        "SELECT n, unix_timestamp(ts) AS u, CAST(ts AS STRING) AS f FROM xv",
+    ),
     ("iso", lambda: s.read.schema(SCHEMA).csv(wh + "/iso"), U),
     ("hdr", lambda: s.read.option("header", "true").schema(SCHEMA).csv(wh + "/hdr"), U),
     ("hdrpos", lambda: s.read.option("header", "true").schema(SCHEMA).csv(wh + "/hdrpos"), U),
     ("hdrrev", lambda: s.read.option("header", "true").schema(SCHEMA).csv(wh + "/hdrrev"), U),
     ("dst", lambda: s.read.schema(SCHEMA).csv(wh + "/dst"), U),
-    ("mixed", lambda: s.read.schema(
-        "n INT, s STRING, ts TIMESTAMP, d DECIMAL(10,2), b BOOLEAN, x DOUBLE"
-    ).csv(wh + "/mixed"),
-     "SELECT n, s, unix_timestamp(ts) AS u, CAST(d AS STRING) AS d, b, x FROM xv"),
-    ("mixednots", lambda: s.read.schema(
-        "n INT, s STRING, d DECIMAL(10,2), b BOOLEAN, x DOUBLE"
-    ).csv(wh + "/mixednots"), "SELECT n, s, CAST(d AS STRING) AS d, b, x FROM xv"),
-    ("twots", lambda: s.read.schema("n INT, a TIMESTAMP, b TIMESTAMP").csv(wh + "/twots"),
-     "SELECT n, unix_timestamp(a) AS ua, unix_timestamp(b) AS ub FROM xv"),
+    (
+        "mixed",
+        lambda: s.read.schema(
+            "n INT, s STRING, ts TIMESTAMP, d DECIMAL(10,2), b BOOLEAN, x DOUBLE"
+        ).csv(wh + "/mixed"),
+        "SELECT n, s, unix_timestamp(ts) AS u, CAST(d AS STRING) AS d, b, x FROM xv",
+    ),
+    (
+        "mixednots",
+        lambda: s.read.schema("n INT, s STRING, d DECIMAL(10,2), b BOOLEAN, x DOUBLE").csv(
+            wh + "/mixednots"
+        ),
+        "SELECT n, s, CAST(d AS STRING) AS d, b, x FROM xv",
+    ),
+    (
+        "twots",
+        lambda: s.read.schema("n INT, a TIMESTAMP, b TIMESTAMP").csv(wh + "/twots"),
+        "SELECT n, unix_timestamp(a) AS ua, unix_timestamp(b) AS ub FROM xv",
+    ),
     ("emptyts", lambda: s.read.schema(SCHEMA).csv(wh + "/emptyts"), U),
     ("nullv", lambda: s.read.option("nullValue", "NA").schema(SCHEMA).csv(wh + "/nullv"), U),
     ("dir", lambda: s.read.schema(SCHEMA).csv(wh + "/dir"), U),
     ("nots", lambda: s.read.schema("n INT, s STRING").csv(wh + "/nots"), "SELECT n, s FROM xv"),
-    ("struct", lambda: s.read.schema(s.read.schema(SCHEMA).csv(wh + "/good").schema).csv(
-        wh + "/good"), U),
-    ("load", lambda: s.read.format("csv").option("header", "true").schema(SCHEMA).load(
-        wh + "/hdr"), U),
-    ("hour", lambda: s.read.schema(SCHEMA).csv(wh + "/good"),
-     "SELECT n, hour(ts) AS h, CAST(ts AS STRING) AS t, CAST(ts AS DATE) AS d FROM xv"),
+    (
+        "struct",
+        lambda: s.read.schema(s.read.schema(SCHEMA).csv(wh + "/good").schema).csv(wh + "/good"),
+        U,
+    ),
+    (
+        "load",
+        lambda: s.read.format("csv").option("header", "true").schema(SCHEMA).load(wh + "/hdr"),
+        U,
+    ),
+    (
+        "hour",
+        lambda: s.read.schema(SCHEMA).csv(wh + "/good"),
+        "SELECT n, hour(ts) AS h, CAST(ts AS STRING) AS t, CAST(ts AS DATE) AS d FROM xv",
+    ),
 ]
 for ansi in ("true", "false"):
     for zone in (LA, "UTC", TK):

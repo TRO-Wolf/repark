@@ -62,14 +62,15 @@ for reader in sorted({r["reader"] for r in rows if r["group"] == "Z"}):
         + json.dumps(dict(Counter(r.get("gap", "") for r in picked)))
     )
 say("\n## twins against Spark (csv_fix vs csv_s, emu vs json_s), head and main")
-for record in rows:
-    pass
 twin = defaultdict(Counter)
 for record in rows:
     if "twin_vs_spark" in record:
-        twin[record["group"] + " " + record["reader"] + (" cross" if record["cross"] else " matching")][
-            record["twin_vs_spark"]
-        ] += 1
+        twin[
+            record["group"]
+            + " "
+            + record["reader"]
+            + (" cross" if record["cross"] else " matching")
+        ][record["twin_vs_spark"]] += 1
 for key in sorted(twin):
     say(key + " " + json.dumps(dict(twin[key])))
 say("\n## T by reader, head (main)")
@@ -101,10 +102,26 @@ for record in rows:
 say("\n## EQUAL lost")
 for record in rows:
     if record["v_main"] == "EQUAL" and record["v_head"] != "EQUAL":
-        say(record["tag"] + " | spark " + record["spark"][:60] + " | main " + record["main"][:60] + " | head " + record["head"][:60])
+        say(
+            record["tag"]
+            + " | spark "
+            + record["spark"][:60]
+            + " | main "
+            + record["main"][:60]
+            + " | head "
+            + record["head"][:60]
+        )
 say("\n## changed answers that keep the verdict")
 for record in rows:
     if record["moved"] and record["v_main"] == record["v_head"]:
-        say(record["v_main"] + " " + record["tag"] + " | main " + record["main"][:90] + " | head " + record["head"][:90])
+        say(
+            record["v_main"]
+            + " "
+            + record["tag"]
+            + " | main "
+            + record["main"][:90]
+            + " | head "
+            + record["head"][:90]
+        )
 out.write_text("\n".join(lines) + "\n")
 print("\n".join(lines[:80]))

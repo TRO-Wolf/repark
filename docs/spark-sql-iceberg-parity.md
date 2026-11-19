@@ -5916,6 +5916,8 @@ still open is `isModifiable`.
   re-reads the scan's zone-less timestamp columns as text (`utf8_columns`) when the user schema holds a `TIMESTAMP`
   field, and the typed parse casts the text under the session zone, as the JSON reader does. On a local path every
   column of such a read is then cast from its text, as the `nullValue` and `multiLine` schema reads already were.
+  A local-mean-time offset with seconds (`1850-06-01T10:00:00.000-04:56:02`, card CSV-READ-OFFSET-SECONDS-1) read
+  into a `TIMESTAMP` field now answers Spark's instant instead of refusing `Invalid timezone`.
 - **spark** — Spark 4.1.2 parses each CSV field from its text at scan time under the reading session's zone
   (`CSVFileFormat.buildReader` → `getCsvOptions` → the session's live conf). *(oracle: step 0's recorded cells and
   `task/wo/csv-schema-timestamp-zone-1/evidence/`, measured 2026-11-19.)*
@@ -5928,7 +5930,7 @@ still open is `isModifiable`.
     Spark applies the schema by position; a `STRING` field over `007` answers `7` when the schema has no
     `TIMESTAMP` field (proposed D12); malformed and overflowing values raise where Spark answers NULL (D2).
 - **Pin** — `python/repark/tests/io/test_csv_schema_timestamp_zone_1.py` (28 cells, both ANSI modes, against Spark
-  4.1.2's recorded answers).
+  4.1.2's recorded answers); `python/repark/tests/timestamps/test_text_write_timestamp_zone_1.py` (the LMT read).
 - **Bar and cost** — [bar.md](../task/wo/csv-schema-timestamp-zone-1/bar.md),
   [cost.md](../task/wo/csv-schema-timestamp-zone-1/cost.md).
 - **Rationale** — Fable's guidance under the owner's delegation of 2026-11-19 (card CSV-SCHEMA-TIMESTAMP-ZONE-1, S1,

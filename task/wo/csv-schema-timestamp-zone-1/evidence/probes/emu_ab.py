@@ -2,6 +2,7 @@ import json
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 from common import session
 
@@ -20,17 +21,17 @@ for key, text in FILES.items():
     Path(wh, key, "a.csv").write_text(text)
 
 
-def main_reader(path):
+def main_reader(path: str) -> Any:
     return s.read.schema(SCHEMA).csv(path)
 
 
-def a_reader(path):
+def a_reader(path: str) -> Any:
     return s.read_csv(path, {"header": "false", "utf8_columns": "column_2"}).selectExpr(
         "CAST(column_1 AS INT) AS n", "CAST(column_2 AS TIMESTAMP) AS ts"
     )
 
 
-def b_reader(path):
+def b_reader(path: str) -> Any:
     return s.read_csv(path, {"header": "false"}).selectExpr(
         "CAST(column_1 AS INT) AS n", "CAST(CAST(column_2 AS STRING) AS TIMESTAMP) AS ts"
     )
