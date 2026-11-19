@@ -442,6 +442,9 @@ impl ScalarUDFImpl for DatePartWithoutTime {
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        if let [DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View] = arg_types {
+            return Ok(vec![crate::instant_ts::ltz_timestamp_type()]);
+        }
         self.inner.coerce_types(arg_types)
     }
 
@@ -640,6 +643,125 @@ mod tests {
             .downcast_ref::<Int32Array>()
             .unwrap();
         assert_eq!(row.value(0), 1);
+    }
+
+    fn field_udfs() -> [Arc<ScalarUDF>; 3] {
+        [hour_udf(), minute_udf(), second_udf()]
+    }
+
+    fn spark_door_ctx() -> SessionContext {
+        let ctx = ctx();
+        ctx.add_analyzer_rule(crate::instant_ts::ltz_timestamp_cast_rule());
+        let batch = datafusion::arrow::record_batch::RecordBatch::try_from_iter(vec![(
+            "c",
+            Arc::new(StringArray::from(vec![Some("2024-01-01 03:04:05"), None])) as Arc<dyn Array>,
+        )])
+        .unwrap();
+        ctx.register_batch("t", batch).unwrap();
+        ctx
+    }
+
+    #[test]
+    fn string_argument_coerces_to_the_instant() {
+        for udf in field_udfs() {
+            for data_type in [DataType::Utf8, DataType::LargeUtf8, DataType::Utf8View] {
+                assert_eq!(
+                    udf.coerce_types(std::slice::from_ref(&data_type)).unwrap(),
+                    vec![crate::instant_ts::ltz_timestamp_type()],
+                    "{} {data_type}",
+                    udf.name()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn date_null_and_timestamp_arguments_keep_their_coercion() {
+        let naive = DataType::Timestamp(TimeUnit::Microsecond, None);
+        for udf in field_udfs() {
+            for (from, to) in [
+                (DataType::Date32, DataType::Date32),
+                (DataType::Null, DataType::Date32),
+                (naive.clone(), naive.clone()),
+                (
+                    crate::instant_ts::ltz_timestamp_type(),
+                    crate::instant_ts::ltz_timestamp_type(),
+                ),
+            ] {
+                assert_eq!(
+                    udf.coerce_types(std::slice::from_ref(&from)).unwrap(),
+                    vec![to],
+                    "{} {from}",
+                    udf.name()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn time_argument_still_refuses_after_coercion() {
+        for udf in field_udfs() {
+            for data_type in [
+                DataType::Time64(TimeUnit::Microsecond),
+                DataType::Time32(TimeUnit::Second),
+            ] {
+                let coerced = udf.coerce_types(std::slice::from_ref(&data_type)).unwrap();
+                assert_eq!(coerced, vec![data_type.clone()]);
+                let error = udf.return_type(&coerced).unwrap_err().to_string();
+                assert!(error.contains("[UNSUPPORTED_TIME_TYPE]"), "{error}");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn string_field_plans_as_to_timestamp_and_reads_the_field() {
+        let ctx = spark_door_ctx();
+        for name in ["hour", "minute", "second"] {
+            let plan = ctx
+                .sql(&format!("SELECT {name}(c) AS v FROM t"))
+                .await
+                .unwrap()
+                .into_optimized_plan()
+                .unwrap()
+                .display_indent()
+                .to_string();
+            assert!(
+                plan.contains(&format!("{name}(to_timestamp(t.c))")),
+                "{plan}"
+            );
+            assert!(!plan.contains("Date32"), "{plan}");
+        }
+        let batches = ctx
+            .sql("SELECT hour(c) AS h, minute(c) AS m, second(c) AS s FROM t")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        for (index, expected) in [3, 4, 5].into_iter().enumerate() {
+            let column = batches[0]
+                .column(index)
+                .as_any()
+                .downcast_ref::<Int32Array>()
+                .unwrap();
+            assert_eq!(column.value(0), expected);
+            assert!(column.is_null(1));
+        }
+    }
+
+    #[tokio::test]
+    async fn date_field_keeps_its_date_cast() {
+        let ctx = spark_door_ctx();
+        let plan = ctx
+            .sql("SELECT year(c) AS y FROM t")
+            .await
+            .unwrap()
+            .into_optimized_plan()
+            .unwrap()
+            .display_indent()
+            .to_string();
+        assert!(plan.contains("Date32"), "{plan}");
+        assert!(!plan.contains("to_timestamp"), "{plan}");
     }
 
     #[tokio::test]
