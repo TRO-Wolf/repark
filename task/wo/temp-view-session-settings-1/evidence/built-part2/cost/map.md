@@ -8,5 +8,6 @@
   `SELECT a, b FROM k2` failed every case at load).
 - `samples.jsonl` — delta 2's run on `pkg-view2-9d71e030`: every sample's wall time (C-012 timed inside the lock); `raw-view.jsonl` — every view sample;
   `explain-base.json`, `explain-head.json` — the matching cases' plans.
+- [delta3/](delta3/map.md) — delta 3's held-row samples and plans.
 
 Up: [../map.md](../map.md).

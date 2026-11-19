@@ -1,4 +1,4 @@
-# TEMP-VIEW-SESSION-SETTINGS-1 part 2 — cost (delta 2)
+# TEMP-VIEW-SESSION-SETTINGS-1 part 2 — cost (delta 2, delta 3)
 
 **Run:** 2026-11-18, 18:15–18:58 UTC, then the one row over the bar to 10 runs (19:00 UTC). The runner
 `cost/view_cost2.py` (the build's cases, delta 1's `exactjoin` and `crossjoin`), five alternating main, head, main runs
@@ -45,5 +45,28 @@ control band (0.914 to 1.054), and 1.004 after 10. `match_limit` and `match_seto
 (`LIMIT` without `ORDER BY`, `intersect`), so their answers differ between main's own runs too. **Differing path
 (reported):** 0.982x to 1.054x. The six matching cost cases' plans (`cost/explain-base.json`,
 `cost/explain-head.json`) are identical to main's, scratch paths aside.
+
+## Delta 3 (on `pkg-view2-9aa2f182`, against main now)
+
+**Run:** the delta 2 runner (`S/ddu-work/cost-view2/run.sh`, copied with its base package overridable) on lane A's
+cores, five alternating main, head, main runs per row, each sample under the exclusive measure lock with its clock
+started inside the lock; the base is main now (`pkg-main-6286ba19`, which carries DECIMAL-DIVIDE-LITERAL-1 as the
+head does). The held rows the brief names: `match_read`, `match_filter`, `match_join`, `match_insertinto`,
+`match_writeto` and C-012. Samples: `cost/delta3/samples.jsonl`. The change adds one uncontended timed read and one
+mutex per inline of a frame view.
+
+| row | base `pkg-main-6286ba19` (s) | head `pkg-view2-9aa2f182` (s) | head/base | control band (main-aa/main) | bar | runs |
+|---|---|---|---|---|---|---|
+| C-012 c012p6 | 39.6600 | 39.7700 | 1.003 | 0.935 to 1.079 | 1.05x (held) | 5 |
+| C-012 c012rest | 42.9400 | 43.1800 | 1.006 | 0.919 to 1.012 | 1.05x (held) | 5 |
+| match_read | 0.0123 | 0.0124 | 1.008 | 0.936 to 1.057 | 1.05x (held) | 5 |
+| match_filter | 0.0259 | 0.0268 | 1.037 | 0.959 to 1.053 | 1.05x (held) | 5 |
+| match_join | 0.0191 | 0.0185 | 0.972 | 0.893 to 1.097 | 1.05x (held) | 5 |
+| match_insertinto | 0.0319 | 0.0325 | 1.019 | 0.920 to 1.012 | 1.05x (held) | 5 |
+| match_writeto | 0.0329 | 0.0321 | 0.976 | 0.976 to 1.092 | 1.05x (held) | 5 |
+
+**Held rows (1.05x):** all seven within the bar (0.972x to 1.037x). The cost cases' plans (`cost/delta3/explain-base.json`, `cost/delta3/explain-head.json`): 6 of 6 identical to main now's, scratch paths aside.
+
+The series ran from 2026-11-18 at about 22:47 UTC to 2026-11-19 at 00:25 UTC on lane A, run by the orchestrator, because the builder's own series got only 2 of 105 samples under the exclusive measure lock before its turn budget ran out. The first attempt was stopped at 23:43 by another lane's process cleanup, so runs 3 to 5 were re-run. All 105 samples exit 0.
 
 Up: [map.md](map.md).

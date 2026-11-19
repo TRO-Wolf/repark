@@ -105,7 +105,9 @@ keeps the marker), `the_negated_null_store_check_reads_through_a_frame_view_on_b
 live read (`session/temp_views.rs`, `try_read_recursive`) returns nothing while another thread holds the session
 state's write lock, and `FrameView::inlined_for_reader` (`frame_settings.rs:201-203`) then inlined the
 `FrameSettings` marker, which the store-assignment walker (`negated_null_store::column_origin`) cannot read. With two
-threads looping `spark.conf.set` on keys outside the four captured settings, `-NULL` written into `DATE` and
+threads looping `spark.conf.set`, one on `spark.sql.caseSensitive` (not a captured setting) and one on
+`spark.sql.legacy.decimal.retainFractionDigitsOnTruncate` (one of the four captured settings), each always to `false`,
+which is already its value, so no captured setting changes; `-NULL` written into `DATE` and
 `BOOLEAN` landed 44 and 32 times in 1,000 writes on `9d71e030` and 27 on `d4423a69`; main 0; the head with no setter
 thread 0. Every `spark.conf.set` takes that write lock, and planning runs with the GIL released, so any second Python
 thread could open the window.
@@ -202,6 +204,17 @@ writes, so a contended read waits milliseconds, not the bound.
 `repark-core/src/session/temp_views.rs`) and no other: **seven of seven**. Test and map files:
 `frame_settings/tests.rs`, the part 2 pin file and four `map.md` rows; the two excepted maps keep their exact
 baselines.
+
+### The re-check verifier
+
+- Verdict **PASS** at `a3369e93`, Claude Opus 5.5 at effort medium, 2026-11-19 at about 00:10 UTC; no class (a) or (b) finding.
+- Race (`race.py`, five doors): the head 0 of 40,000 writes landed (4 plain runs and 4 under `strace`); `d4423a69` 146 of 5,000; main 0 of 15,000. Hang runs on the head: 70 s with the setters flipping ANSI and the zone, 0 of 14,760; 65 s flipping all four captured keys, 0 of 13,647; both ended on their own clock. With the setters flipping ANSI and the zone, 510 writes per source gave no answer other than the old or the new setting's.
+- The facade pin passed 10 of 10 on the head under `-n 6` (3.3 to 3.9 s a call), failed 5 of 5 on `d4423a69`, and passed on main.
+- Under `strace` the longest timed-out futex wait was 32 ms: no one-second wait expired. One head write took 1.016 s; it could not be tied to the wait, and fits GIL starvation of the last writer thread. Main's slowest write in the same runs was 0.77 s.
+- The cost spot-check (head / main): `match_read` 0.957, `match_insertinto` 0.958 (6 runs), `match_writeto` 0.957.
+- **N1 (class (c), S3, not a merge blocker; a card is proposed, its rating the owner's):** while another thread runs `spark.conf.set` on a captured key, a frame view sometimes answers under the planning state's setting instead of its own: 3 to 13% of writes on the head, about the same on `d4423a69`, about 50% on main. The inline decision compares against the live options (`frame_settings.rs:204`); when they match it inlines the frame's own plan, which is then analysed under DataFusion's earlier state snapshot. Every answer is the old or the new setting's, never a third, the `-NULL` refusal is never skipped, and no answer is worse than main's.
+- **N2 (a path, never observed):** `closed_scan(found, &live)` (`frame_settings.rs:207-208`) takes every setting outside the four captured ones from `live`; after an expired wait or a dropped session `live` is the stale last read, and two concurrent reads store last-writer-wins (`extension.rs:43-46`), so the last read can step back.
+- **N3:** the setter-key wording in this file, corrected above.
 
 ## Named classes, cell for cell
 
