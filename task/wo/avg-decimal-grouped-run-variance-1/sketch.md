@@ -311,4 +311,92 @@ raw runs `N/avg-revision-out/`); §1, §4, §5 and §6 are amended in place.
    inside main's own control band is re-run (5 more alternations) before it counts. If neither layout fits, halt and
    report (Q3). `d10` has no wrap state in either layout, so K1 `d10` measures only the shared change.
 
+## 8. Fable's guidance (2026-11-19)
+
+Fable's guidance under the owner's delegation of 2026-11-19, about 01:28 UTC: "Go with your recommendations and tonight
+you don’t even need to wait on me even if fable says that it’s my call. Merge what you need, follow the goal and good
+luck". This section is guidance, not a ruling. **Source:** the Fable reply of 2026-11-19 in the agents' lessons folder
+(file `Fable reply — avg grouped run variance step 0 2026-11-19.md`). Fable's marks are kept: **[M]** measurement,
+**[R]** reading, **[Rec]** recommendation.
+
+### §1: the revision and the critic's eight items
+
+- **The eight items are closed.** **[R]** The revision closes all eight of the critic's items.
+- **No second critic round.** **[Rec]** Skip it. The six additions below go into the build brief instead.
+- **The six additions for the build brief** **[Rec]**, none needing a critic round:
+  - (a) a DataFrame-door window pin, `F.avg("c").over(...)` on `m_w34`, expecting `9e33`; an `avg` window with no place
+    set falls back to the sum check, which over-refuses but never answers a wrong value;
+  - (b) the `Decimal256` window condition is NVOOR; with ANSI off and `try_avg` it is NULL;
+  - (c) the spill pin asserts a nonzero spill count from the plan metrics, and a Rust test drives `state` into
+    `merge_batch` directly as the primary pin for the wrap column;
+  - (d) the packed layout's two refusals get Rust pins at their boundaries;
+  - (e) the residue pin asserts SQLSTATE `22003` and a condition in the set of two;
+  - (f) two of the critic's side findings, the `CUBE(g, id % 2)` planning failure and the `sum` at SET 4 under a 3 MB
+    pool, need cards.
+
+### Q1 to Q7
+
+**[Rec]** Adopt every default, with one change: build layout D only, and drop layout I.
+
+| Q | ruling | why |
+|---|---|---|
+| Q1, the over-precision wrap is fixed in this unit | (a) | Same file and same helper as the marker fix. The critic reproduced the cells (224 of 840). |
+| Q2, accept the kept divergence (98 pairs, with the new ungrouped class) | (a), with the owner note below | **[R]** The 78 older pairs are the class the owner accepted for `sum`. **[R]** The 20 ungrouped pairs run the other way, and four facts make it safe to proceed: main already answers NULL / AO in all five tables; Spark disagrees with itself there (`local[1]`, and `local[4]` with codegen off, give NULL / AO); it is never a wrong value; and it needs a total past `10^38` with an average under `10^34`. |
+| Q3, measure the packed count beside the `Int64` column | (d), changed: build D only | **[R]** Layout D ships the same two columns at the same widths as main, and removes the `fits_sum` pass and the `overflowed` vector; **[R]** about 1.00x on K1 `d38` expected. **[Rec]** Measure D against main with the same five alternating runs; within 1.12x on K1 `d38` and 1.05x elsewhere, take it; otherwise halt and report. Seat B stays the last fallback. Layout I returns only if a verifier shows the wraps refusal is reachable from declared-precision data at a plausible size. |
+| Q4, widen the narrow natives to a `Decimal128` state and Spark's result type | (a) | The capped result type is a steady wrong NULL at one partition, so it cannot wait for a card. |
+| Q5, the window checks the quotient only, as Spark does | (b') | Spark's window rule is steady at both masters and both modes, so equality is available here. |
+| Q6, `Decimal256` counts wraps | (a) | Counting wraps is also what keeps a sliding frame exact after a retract. |
+| Q7, the ungrouped `avg` keeps the exact total | (a) | It is the same rule as `sum` and as the grouped path, and it equals Spark `local[1]`. **[R]** If the owner later prefers (c), it is one check in the ungrouped `evaluate`; nothing built under (a) is lost. |
+
+**For the owner's morning read:** the 20-pair ungrouped class (Spark answers where RePark raises or answers NULL; main
+does the same today; no wrong value), which the `sum` acceptance does not cover.
+
+### The residue: which condition surfaces
+
+- **[R]** It can be named as a kept residue. The query raises on every run. Both conditions are correct errors of the
+  same query, and both carry SQLSTATE `22003`. No run answers a value.
+- **[R]** There is no cheap rule. The groups that raise different conditions sit in different final partitions after
+  the hash repartition, and the first partition to fail wins. A precedence rule inside one `evaluate` call cannot order
+  two partitions.
+- **[R]** Collapsing the two conditions into one would be deterministic, but it would move cells that equal Spark today
+  (a lone group whose quotient overflows raises NVOOR in both engines). That trade is worse.
+- **[Rec]** Keep it and name it in the label line. The pin asserts "raises, SQLSTATE `22003`, condition in
+  {`ARITHMETIC_OVERFLOW`, `NUMERIC_VALUE_OUT_OF_RANGE`}". Do not spend build time on a rule.
+- The figures "5 pairs, 43 cells" are the orchestrator's, from the questions file. The reply does not restate them.
+
+### The packed count
+
+- **[R]** The packed count is sound. Nothing outside the accumulator reads the count column, and the schema still
+  depends only on the input type, so spill, skip-partial and the codec are unaffected.
+- **[R]** It has two refusal edges, and both are loud:
+  - a count past `2^40`: about `1.1 × 10^12` rows in one group in one shipped state. A spill in the final stage ships
+    merged groups, so this bounds the whole group, not just one partial;
+  - net wraps past `2^23`: by Fable's arithmetic, about `2.85 × 10^7` same-signed rows near `10^38` in one group in one
+    partial (`2^151 / 10^38`). The hand-back says about 14 million; either figure is far from real data.
+- **[R]** The wraps refusal is not one answer at that edge. One partial holding 30 million `+M` rows and then 30 million
+  `-M` rows nets to zero wraps and answers. Split across two partials, the first refuses. Layout I does not have this
+  edge.
+- **[R]** The 40 / 24 split is reasonable. A partial that passes the wraps limit has a total near `2.9 × 10^45`, so the
+  answer is NULL / AO anyway unless another partial cancels it.
+
+### The order
+
+- **[Rec]** Do not build this unit tonight. Lane B takes the STRING-HOUR-MINUTE-SECOND-1 step 0 after the verifier.
+- **The `avg` build runs in the next window, never alongside the SUM-BIGINT-ANSI-OVERFLOW-1 build.** **[R]** The two share
+  the registration and the analyzer rule in `aggregate.rs`, which is at 989 of 1,000 lines. Whichever goes first carries
+  the pure test move as its first commit.
+
+### Clerk's notes (not Fable's guidance)
+
+- **Filed:** the codec card of §5 as DISTRIBUTED-UDAF-INSTANCE-1, on the cards map (S2 pending its own step 0; does not
+  touch the label).
+- **Not filed: HADOOP-NEW-SESSION-READ-1.** Fable's §5 rating for the hadoop-catalog reading is S3 pending measurement, a
+  loud refusal, not touching the label. The filing check found that the shape is already carded as HADOOP-FACADE-FRESH-SESSION-1
+  (`task/roadmap/mid-term/hadoop-facade-fresh-session-1-card-2026-11-02.md`, appended 2026-11-13): a `type=hadoop`
+  catalog opened in a new session over a warehouse another RePark process wrote reports `SCHEMA_NOT_FOUND`. The two cards
+  the brief named do not carry it, so no card was filed and nothing was appended to the carded one. The owner or the
+  orchestrator decides whether that card takes a dated paragraph.
+- **§1 (f):** the two side findings already have cards from #1366: CUBE-GROUPING-EXPR-PLAN-1 and SPILL-SMALL-POOL-STALL-1
+  (both on the cards map). No card is filed here for them.
+
 Up: [map.md](map.md).
