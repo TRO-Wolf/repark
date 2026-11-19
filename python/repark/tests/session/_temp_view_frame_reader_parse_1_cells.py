@@ -21,6 +21,20 @@ SUBQ = (
     "(SELECT max(hour(ts)) FROM {V}) AS mh FROM {P} "
     "WHERE n IN (SELECT n FROM {V} WHERE hour(ts) >= 12)"
 )
+STICKY_SQL = (
+    "SELECT n, CAST(ts AS STRING) AS t, hour(ts) AS b, "
+    "CAST(unix_timestamp(ts) AS STRING) AS u FROM {V}"
+)
+STICKY_READERS = ("json_s", "csv_s", "csv_i")
+FIRST_ACTIONS: dict[str, Callable[[Any], object]] = {
+    "toLocalIterator": lambda frame: list(frame.toLocalIterator()),
+    "toArrow": lambda frame: frame.toArrow(),
+    "tail": lambda frame: frame.tail(2),
+    "foreach": lambda frame: frame.foreach(lambda row: None),
+    "foreachPartition": lambda frame: frame.foreachPartition(lambda rows: None),
+    "localCheckpoint": lambda frame: frame.localCheckpoint(),
+    "checkpoint": lambda frame: frame.checkpoint(),
+}
 
 
 class Cells:
@@ -30,9 +44,10 @@ class Cells:
         self.serial = count(1)
         self.found: dict[str, dict] = {}
 
-    def conf(self, zone: str, ansi: str = "true") -> None:
-        self.s.sql("SET spark.sql.session.timeZone=" + zone).collect()
-        self.s.sql("SET spark.sql.ansi.enabled=" + ansi).collect()
+    def conf(self, zone: str, ansi: str = "true", session: Any = None) -> None:
+        target = self.s if session is None else session
+        target.sql("SET spark.sql.session.timeZone=" + zone).collect()
+        target.sql("SET spark.sql.ansi.enabled=" + ansi).collect()
 
     def name(self, prefix: str = "rp") -> str:
         return prefix + str(next(self.serial))
@@ -56,8 +71,8 @@ class Cells:
             "(1, '2024-01-01 03:00:00'), (2, '2024-06-01 23:30:00') t(n, ts)"
         ).write.mode("overwrite").parquet(self.root + "/pq")
 
-    def reader(self, name: str) -> Any:
-        read, csv = self.s.read, self.root + "/csvh"
+    def reader(self, name: str, session: Any = None) -> Any:
+        read, csv = (self.s if session is None else session).read, self.root + "/csvh"
         if name == "json_s":
             return read.schema("n INT, ts TIMESTAMP").json(self.root + "/json")
         if name == "csv_s":
@@ -205,6 +220,110 @@ class Cells:
             for check, run in checks.items():
                 self.put("SS/" + reader + "/" + check, lambda r=run: {"value": bool(r())})
 
+    def shaped(self, reader: str, session: Any = None) -> Any:
+        return self.reader(reader, session).selectExpr(*SHAPE)
+
+    def twice(self, reader: str, step: str) -> dict:
+        self.conf(LA)
+        frame = self.shaped(reader)
+        frame.collect()
+        self.conf(UTC)
+        if step == "A3":
+            return one.answer(frame.select("*"))
+        if step == "A4":
+            frame.collect()
+            frame.select("*").collect()
+        return one.answer(frame)
+
+    def second_set(self, reader: str) -> dict:
+        self.conf(LA)
+        frame = self.shaped(reader)
+        self.conf(UTC)
+        frame.collect()
+        self.conf(TK)
+        return one.answer(frame)
+
+    def sql_twice(self, reader: str) -> dict:
+        view = self.name()
+        self.conf(LA)
+        self.reader(reader).createOrReplaceTempView(view)
+        frame = self.s.sql(STICKY_SQL.format(V=view))
+        frame.collect()
+        self.conf(UTC)
+        return one.answer(frame)
+
+    def count_first(self, reader: str) -> dict:
+        self.conf(LA)
+        frame = self.shaped(reader)
+        frame.count()
+        self.conf(UTC)
+        return one.answer(frame)
+
+    def write_second(self, reader: str) -> dict:
+        self.conf(LA)
+        frame = self.shaped(reader)
+        frame.collect()
+        self.conf(UTC)
+        target = self.root + "/" + self.name("out")
+        frame.write.mode("overwrite").parquet(target)
+        return one.answer(self.s.read.parquet(target))
+
+    def other_session(self, reader: str, own: bool) -> dict:
+        other = self.s.newSession()
+        self.conf(LA)
+        self.conf(LA, session=other)
+        mine, theirs = self.shaped(reader), self.shaped(reader, other)
+        self.conf(TK, session=other)
+        mine.collect()
+        self.conf(UTC)
+        if own:
+            return one.answer(mine)
+        theirs.collect()
+        self.conf(UTC, session=other)
+        return one.answer(theirs)
+
+    def first_action(self, action: str) -> dict:
+        self.conf(LA)
+        frame = self.shaped("json_s")
+        FIRST_ACTIONS[action](frame)
+        self.conf(UTC)
+        return one.answer(frame)
+
+    def checkpoint_second(self, action: str) -> dict:
+        self.conf(LA)
+        frame = self.shaped("json_s")
+        frame.collect()
+        self.conf(UTC)
+        kept = frame.localCheckpoint() if action == "localCheckpoint" else frame.checkpoint()
+        return one.answer(kept)
+
+    def late_pull(self) -> dict:
+        self.conf(LA)
+        rows = self.shaped("json_s").toLocalIterator()
+        self.conf(UTC)
+        return {"rows": sorted("|".join(one.norm(x) for x in row) for row in rows)}
+
+    def sticky_cells(self) -> None:
+        setter = getattr(getattr(self.s, "sparkContext", None), "setCheckpointDir", None)
+        if setter is not None:
+            setter(self.root + "/ckpt")
+        for reader in STICKY_READERS:
+            for step in ("A2", "A3", "A4"):
+                self.put(f"F1/{step}/{reader}", lambda r=reader, p=step: self.twice(r, p))
+            self.put(f"F1/B2/{reader}", lambda r=reader: self.second_set(r))
+            self.put(f"F1/E1/{reader}", lambda r=reader: self.sql_twice(r))
+            self.put(f"F1/C1/{reader}", lambda r=reader: self.count_first(r))
+            self.put(f"F1/D1/{reader}", lambda r=reader: self.write_second(r))
+            for side, own in (("own", True), ("other", False)):
+                self.put(
+                    f"F1/newsess/{side}/{reader}", lambda r=reader, o=own: self.other_session(r, o)
+                )
+        for action in FIRST_ACTIONS:
+            self.put(f"F1/X/{action}/json_s", lambda a=action: self.first_action(a))
+        for action in ("localCheckpoint", "checkpoint"):
+            self.put(f"F1/Y/{action}/json_s", lambda a=action: self.checkpoint_second(a))
+        self.put("F1/late_pull/json_s", self.late_pull)
+
     def run(self) -> dict[str, dict]:
         self.fixtures()
         for reader in ("json_s", "csv_i"):
@@ -215,4 +334,5 @@ class Cells:
             self.put("N/la_utc_tk/" + reader + "/ff", lambda r=reader: self.nested(r))
         self.put("G3/headerless_csv", self.headerless)
         self.same_cells()
+        self.sticky_cells()
         return self.found
