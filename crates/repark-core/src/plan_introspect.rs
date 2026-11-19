@@ -441,13 +441,14 @@ pub(crate) fn write_plan_leaf<S: BuildHasher>(
                 write_exprs(row, ctx, hash);
             }
         }
-        other => match crate::extension::ReaderParse::of(other) {
-            Some(parse) => write_plan(parse.input(), ctx, hash),
-            None => {
+        other => {
+            if let Some(parse) = crate::extension::ReaderParse::of(other) {
+                write_plan(parse.input(), ctx, hash);
+            } else {
                 hash.write(b"Opaque");
                 write_debug(hash, other);
             }
-        },
+        }
     }
 }
 
