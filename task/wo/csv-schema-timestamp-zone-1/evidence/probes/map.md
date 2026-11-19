@@ -13,5 +13,8 @@
   `TIMESTAMP` and a `STRING` schema in two zones.
 - `csv_cost.py <case> <label> <data> <out>` — K0 (`k0_count`, `k0_hour`) and K2 over a two-million-row CSV, a warm-up
   then five timed repetitions in one process.
+- `delta1.py <engine> <wh> <out>` — delta 1's cells (Spark live): the verifier's F1 and F2 shapes, its N1 shapes, a
+  `STRING`/`DATE` field beside a `TIMESTAMP` field, and the `inferSchema` re-read's shapes on a local and a `file://`
+  path (a column empty for its first 1,100 rows, header names with spaces or empty, a `comment` line, `multiLine`).
 
 Up: [../map.md](../map.md).

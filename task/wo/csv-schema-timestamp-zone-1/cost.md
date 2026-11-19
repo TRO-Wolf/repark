@@ -51,4 +51,38 @@ the Fable reply of 2026-11-19 in the agents' lessons folder (file `Fable reply â
   gap and overlap, but it is wrong for text that carries an offset: the scan types `2024-01-01T03:00:00+02:00` and
   `2024-01-01T03:00:00Z` as zone-less after moving them to UTC, so main's two right rows would be lost.
 
+## Delta 1 (2026-11-19): the cost misses Fable's bars
+
+**Method.** Unit 0's runner and data, lane B: every sample alone under `flock -x <measure lock> flock <link lock>
+flock <opus-cargo lock> flock <opus2-cargo lock> nice -n 10 taskset -c 48-57`, the clock inside the locks; five runs,
+each in the order main, head, main again. Head: `S/ddu-work/pkg-csvts-1ee847b7` (`BUILT_FROM` `1ee847b7`).
+
+**Against main `pkg-main-4c365814`** (the brief's series; K0, K2 and C-012):
+
+| case | main / main again (median) | head (median) | ratio | control band (main again / main) | wall ratio | head runs | bar | holds | unit |
+|---|---|---|---|---|---|---|---|---|---|
+| k0_count | 0.0219 / 0.0212 | 0.0240 | **1.115x** | 0.970 | 1.027x | 5 | 1.05x | no | s per repetition, in process |
+| k0_hour | 0.0551 / 0.0543 | 0.0881 | **1.618x** | 0.986 | 1.313x | 5 | 1.45x | no | s per repetition, in process |
+| k2 | 0.0553 / 0.0538 | 0.0923 | **1.692x** | 0.972 | 1.353x | 5 | 1.45x | no | s per repetition, in process |
+| c012p6 | 40.2100 / 39.3500 | 39.5300 | **0.993x** | 0.979 | 0.993x | 5 | 1.05x | yes | s wall |
+| c012rest | 42.7400 / 42.7800 | 42.6400 | **0.997x** | 1.001 | 0.997x | 5 | 1.05x | yes | s wall |
+
+**Against `pkg-sum-845766fd`** (its product tree equals main `2900efde`, which this branch merged, and it was built in
+the same target directory as the head; K0 and K2 only):
+
+| case | main / main again (median) | head (median) | ratio | control band (main again / main) | wall ratio | head runs | bar | holds | unit |
+|---|---|---|---|---|---|---|---|---|---|
+| k0_count | 0.0220 / 0.0222 | 0.0237 | **1.070x** | 1.007 | 1.054x | 5 | 1.05x | no | s per repetition, in process |
+| k0_hour | 0.0556 / 0.0548 | 0.0849 | **1.548x** | 0.985 | 1.259x | 5 | 1.45x | no | s per repetition, in process |
+| k2 | 0.0525 / 0.0549 | 0.0893 | **1.655x** | 1.046 | 1.358x | 5 | 1.45x | no | s per repetition, in process |
+
+**Reading.** C-012 holds. `k0_count` is over 1.05x and `k0_hour` and K2 are over Fable's 1.45x ceiling, in both
+series. The verifier measured the old head on the same cores at 1.342x (`k0_hour`) and 1.352x (K2). **[M]** K2's plan
+is the same on the old head and delta 1 (`to_timestamp(column_2)` over the same ten-group scan, projection
+`[column_2]`); only the scan's file schema differs (`column_1` `Int64`, not `Utf8`), and K2 never reads `n`. **[M]**
+One-process control timings under the shared lock (`<scratchpad>/csv-ts-delta1/cost2/controls.txt`) were too noisy to
+split the cause: a pure `to_timestamp` over `range(2000000)` read 0.062 to 0.088 s across the same packages. The cause
+is not found; this is a bar miss for the orchestrator to rule on. Samples: `<scratchpad>/csv-ts-delta1/cost/` and
+`cost2/` (`samples.jsonl`, `raw-csv.jsonl`).
+
 Up: [map.md](map.md).

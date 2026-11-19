@@ -127,4 +127,115 @@ builder-mode gain.
 **A named side gain, and what the card covers (§3).** A `STRING` field beside a `TIMESTAMP` field now answers Spark's
 text, as a named side gain. The card CSV-STRING-FIELD-TEXT-1 covers the rest (S1 by class, label-blocking).
 
+## Delta 1 (2026-11-19): the verifier's F1 and F2
+
+**The verifier's findings** (Claude Opus 5.5, effort medium, 2026-11-19; verdict FAIL on head `ffe8e301`; recorded here
+as the verifier's, not re-rated):
+
+- **F1 (class a, S2, loud).** A `DECIMAL` field over exponent text (`1e2`, `1.5E-1`) beside a `TIMESTAMP` field, on a
+  local path: EQUAL → RAISE under UTC (6 cells), WRONG → RAISE elsewhere. Spark and main answer `100.00` and `0.15`.
+  Cause: the all-text pre-scan meeting the text → decimal cast.
+- **F2 (class a, S2, silent; S1 by class if the owner applies unit 0's test).** A `TIMESTAMP_NTZ` field over a DST-gap
+  wall clock (`2024-03-10 02:30:00`) beside a `TIMESTAMP` field, Los Angeles and New York: EQUAL → WRONG (8 cells), an
+  hour forward. Cause: RePark's string → `TIMESTAMP_NTZ` cast resolves the gap through the session zone.
+- **N1 (class c, S3).** `1e3`, `2.0` or `1.5` in an `INT`/`BIGINT` field, and epoch text in a second `TIMESTAMP` field
+  with ANSI on, beside a `TIMESTAMP` field: Spark NULL, main a silent wrong value, the head a raw Arrow cast error.
+- **R1, R2 (records).** The registry entry called two filed cards "proposed" and did not quote the owner; the PR body
+  still said the bar misses awaited Fable.
+
+**The remedy.** The orchestrator's call under the owner's delegation (verbatim in [map.md](map.md)): Fable's option
+(b), which the consult had declined on cost alone. `read_options.rs` is the second product file.
+
+- `read_csv_path` takes the all-Utf8 first-record pre-scan for `nullValue`, `multiLine`, and a `utf8_columns` read under
+  `inferSchema`. Any other `utf8_columns` read lets DataFusion infer, then re-reads only the named columns as Utf8
+  (`csv_utf8_column_schema`), as the `file://` and remote paths already did. So the other fields keep the scan's typed
+  parse: F1's decimal is main's again.
+- `_load_csv` names only the zone-less columns that the schema does not read into a `TIMESTAMP_NTZ` field
+  (`_session_timestamp_text_columns`, pairing fields to columns as `_apply_reader_schema_semantics` does), and drops
+  `inferschema` from the re-read's options (a user schema overrides it). **[R]** F2's NTZ column is itself a zone-less
+  timestamp column, so without this it would still be named and cast from text.
+
+**The caller inventory** (`git grep -n utf8_columns -- crates python`):
+
+| caller | relied on the all-text read | measured |
+|---|---|---|
+| `reader.py` `_load_csv` (this unit) | only for side effects | the `STRING`-field text gain and the ANSI-off NULL for epoch text in a second `TIMESTAMP` field revert to main's answers (below) |
+| `reader_support.py` `_finish_csv_infer_schema` (CSV-INFER-PERF-1) | **yes** | the intermediate package `pkg-csvts-0b45f6a6` (named-only on every path) lost 6 cells on a local path, by names and values: a column DataFusion types Null from its first 1,000 rows dropped a late value (4) and an empty header became `""`, not `_c1` (2). It gained 4 (a `comment` first line; untrimmed header names). So the `inferSchema` re-read keeps the pre-scan; on the delta 1 package its 32 cells are byte-equal to main |
+| `read_options.rs` (the consumer); the user option bag | — | never taken from the user (`test_csv_infer_perf_1.py` pins it) |
+
+**The bar** (package `S/ddu-work/pkg-csvts-1ee847b7`, `BUILT_FROM` `1ee847b7`, against main `pkg-main-4c365814`, the old
+head `pkg-csvts-186c34b0` and Spark 4.1.2; EQUAL / RAISE / WRONG, main → old head → delta 1):
+
+| line | main | old head | delta 1 | lost against main |
+|---|---|---|---|---|
+| the verifier's `vp.py` (329 cells, 8 BOTHERR) | 137 / 68 / 116 | 222 / 70 / 29 | 220 / 66 / 35 | 4: the accepted runtime-`SET` cells (`F/rtset`), as the old head |
+| `vp.py` builder opt-in (12) | 6 / 0 / 6 | 12 / 0 / 0 | 12 / 0 / 0 | 0 |
+| `vp2.py` text-cast matrix (432) | 246 / 40 / 146 | 320 / 60 / 52 | 328 / 40 / 64 | 0 |
+| `vp3.py` `file://` and exponent (84) | 28 / 12 / 44 | 60 / 18 / 6 | 60 / 12 / 12 | 0 |
+| `vp4.py` NTZ gap (42) | 20 / 6 / 16 | 16 / 6 / 20 | 24 / 6 / 12 | 0 |
+| `csv_s`, `csv_f` matching | 64 of 128 each | 128 each | 128 of 128 each | 0 |
+| cross-setting `csv_s`, `csv_f` | 22 / 0 view / 106 direct | 54 / 74 / 0 | 54 EQUAL / 74 view / 0 direct each | 0 |
+| the 8 `csv_s` `d` writes | 0 | 8 | 8 of 8 | 0 |
+| the LMT offset-seconds read (2) | RAISE | EQUAL | EQUAL; the pin passes | 0 |
+| `x.py` (115) | 44 EQUAL / 71 WRONG | 91 / 24 | 85 / 30 | 0 |
+| step 0's table (5,732) | Z 2,214, A 362, T 198, W 152 EQUAL | Z 2,406, A 362, T 218, W 160 | the old head's verdicts in every set | the 14 runtime-`SET` T cells, the named exception |
+| reader sweep (1,176) | 732 EQUAL, 2 BOTHERR | 750, 2 | 750, 2 | 0 (1,174 cells equal the old head's; 2 clock-relative `ice_t` errors) |
+| write sweep (3,100) | — | — | 0 cells differ from main or the old head | 0 |
+| `delta1.py` (84, below) | — | — | — | 0 |
+
+- **F1 reaches Spark.** `vp2` `{true,false}/{utc,la}/decimal102_{1,2}/ts` and `vp3` `*/local/dexp_ts` (UTC, Los
+  Angeles, Tokyo) are EQUAL: RAISE → EQUAL against the old head; under UTC EQUAL on main too.
+- **F2 reaches Spark.** `vp4` `{true,false}/{los_angeles,new_york}/ntz_gap_ts_{empty,z}` are EQUAL again (8), and
+  `vp.py` `A/{true,false}/la/ntz_ts` is EQUAL (WRONG on main and the old head).
+- **Moved for the worse against the old head (none against main), 16 cells.** The named side gain is withdrawn: a
+  `STRING` field beside a `TIMESTAMP` field answers main's `7` for `007` again (`vp3` `local/mix` 6, `vp.py`
+  `T/*/hdr/tsf` 2, `x.py` `mixed` 6), which the filed card CSV-STRING-FIELD-TEXT-1 covers; and epoch text in a second
+  `TIMESTAMP` field under ANSI off answers main's epoch second, not Spark's NULL (`vp.py` `A/false/*/epoch2`, 2).
+- **`A`'s 68 `csv_sov` answers** (an overflowing `INT` beside a `TIMESTAMP` field) are main's error text again
+  (`Can't cast value 2147483648 to type Int32`): RAISE → RAISE.
+
+**N1, against Spark and main.** Every N1 cell now answers main's value: WRONG on main, RAISE on the old head, WRONG on
+delta 1. `vp2` `int_1`, `int_2`, `bigint_1` (`1e3`, `2.0`), both zones and ANSI modes (12); `vp.py`
+`T/*/int_from_frac/ts` (2) and `A/true/*/epoch2` (2); `delta1.py` `N1/*` (12). For `1e3`, `2.0`, `1.5` in an `INT`
+field Spark answers NULL and main `1000`, `2`, `1`; for `1704067200` in a `TIMESTAMP` field Spark answers NULL and main
+the epoch second. Silent on main and here; D2's class (a malformed value answers a value or raises where Spark answers
+NULL).
+
+**`delta1.py`** (84 cells, Spark live; [evidence/raw/delta1-cells.jsonl](evidence/raw/delta1-cells.jsonl)): F1's
+`decimal_exponent` EQUAL in both zones and ANSI modes (main WRONG under Los Angeles, the old head RAISE). F2's
+`ntz_beside` (the `TIMESTAMP` field holds zone-less text), `ntz_empty_ts`, `ntz_z_ts` and the `file://` twin EQUAL in
+both zones (Los Angeles: main WRONG or EQUAL, the old head WRONG). Two header shapes stay WRONG on all three builds (a
+header mapped by name where Spark maps by position). A `STRING` field over ISO `T` text and a `DATE` field beside a
+`TIMESTAMP` field keep the old head's EQUAL (a zone-less column read into a `STRING` field is still re-read). The
+`inferSchema` cells (32): byte-equal to main.
+
+**`EXPLAIN`** (`x.py`, a `csv_s` frame view, `WHERE n > 0`, a local path; `nots` has no `TIMESTAMP` field and is
+unchanged): only the timestamp projection differs from main, and `n` keeps its cast shield again.
+
+```
+main:     Projection: CAST(?table?.column_1 AS Int32) AS n, CAST(?table?.column_2 AS Timestamp(µs, "UTC")) AS ts
+            Filter: __repark_cast_shield__(CAST(?table?.column_1 AS Int32)) > Int32(0)
+old head: Projection: CAST(?table?.column_1 AS Int32) AS n, to_timestamp(?table?.column_2) AS ts
+            Filter: CAST(?table?.column_1 AS Int32) > Int32(0)
+delta 1:  Projection: CAST(?table?.column_1 AS Int32) AS n, to_timestamp(?table?.column_2) AS ts
+            Filter: __repark_cast_shield__(CAST(?table?.column_1 AS Int32)) > Int32(0)
+```
+
+Of step 0's 16 plans only `csv_s`'s 4 differ from main, the same 4 as the old head.
+
+**Pins.** Four shapes in `python/repark/tests/io/test_csv_schema_timestamp_zone_1.py`
+(`test_a_schema_timestamp_field_leaves_the_other_fields_on_the_typed_scan`: `decimal_exponent` and three
+`TIMESTAMP_NTZ` shapes, UTC and Los Angeles, both ANSI modes, Spark 4.1.2's live answers): 8 cells, red on the old head
+(8 failed, 28 passed), green on delta 1 (the file and the LMT file: 283 passed, 1 skipped); main fails 32. The Rust
+test `read_options::tests::a_local_csv_utf8_columns_read_types_only_the_named_columns_as_utf8` (a local path, header
+`n,ts,d`: `utf8_columns=ts` types `Int64`, `Utf8`, `Float64`; with `nullValue` or `inferSchema` all Utf8) fails on the
+old head's condition (`left: [("n", Utf8), ("ts", Utf8), ("d", Utf8)]`) and passes on delta 1.
+
+**F2's root, a card candidate for the clerk (not filed here).** RePark's string → `TIMESTAMP_NTZ` cast moves a DST-gap
+wall clock an hour forward under a DST session zone: `CAST('2024-03-10 02:30:00' AS TIMESTAMP_NTZ)`, the JSON reader's
+`TIMESTAMP_NTZ` field and the CSV `nullValue` `TIMESTAMP_NTZ` read, WRONG on main, the old head and delta 1 under Los
+Angeles and New York (`vp4` `ntz_gap_{cast,json,nullv}`). Spark keeps the wall clock.
+
+Raw: [evidence/raw/delta1-bar.txt](evidence/raw/delta1-bar.txt).
+
 Up: [map.md](map.md).

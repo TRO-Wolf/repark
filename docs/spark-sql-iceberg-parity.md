@@ -5914,8 +5914,9 @@ still open is `isModifiable`.
   whatever `spark.sql.session.timeZone` said: silent, with or without a view, and stored so by every write door
   (step 0 of TEMP-VIEW-FRAME-READER-PARSE-1, D1: 64 of 128 matching cells wrong per reader). After: `_load_csv`
   re-reads the scan's zone-less timestamp columns as text (`utf8_columns`) when the user schema holds a `TIMESTAMP`
-  field, and the typed parse casts the text under the session zone, as the JSON reader does. On a local path every
-  column of such a read is then cast from its text, as the `nullValue` and `multiLine` schema reads already were.
+  field, and the typed parse casts the text under the session zone, as the JSON reader does. Since delta 1 the re-read
+  retypes only those columns on every path (`read_options.rs`), and a column the schema reads into `TIMESTAMP_NTZ`
+  keeps the scan's type, so the other fields keep main's typed parse.
   A local-mean-time offset with seconds (`1850-06-01T10:00:00.000-04:56:02`, card CSV-READ-OFFSET-SECONDS-1) read
   into a `TIMESTAMP` field now answers Spark's instant instead of refusing `Invalid timezone`.
 - **spark** — Spark 4.1.2 parses each CSV field from its text at scan time under the reading session's zone
@@ -5925,17 +5926,30 @@ still open is `isModifiable`.
   - expressions above the parse in a view read under other settings (TEMP-VIEW-FRAME-READER-PARSE-1, unit 1);
   - a `TIMESTAMP` in a DDL schema under `spark.sql.timestampType=TIMESTAMP_NTZ` is typed LTZ, so `unix_timestamp`
     answers the session-zone instant where Spark reads the NTZ wall clock as UTC (14 cells answered Spark's number by
-    coincidence on main, before this fix; proposed card);
+    coincidence on main, before this fix; card TIMESTAMP-TYPE-RUNTIME-SET-1, filed);
   - an integer text in a `TIMESTAMP` field answers the epoch second (Spark NULL); a header mapped by name where
-    Spark applies the schema by position; a `STRING` field over `007` answers `7` when the schema has no
-    `TIMESTAMP` field (proposed D12); malformed and overflowing values raise where Spark answers NULL (D2).
-- **Pin** — `python/repark/tests/io/test_csv_schema_timestamp_zone_1.py` (28 cells, both ANSI modes, against Spark
-  4.1.2's recorded answers); `python/repark/tests/timestamps/test_text_write_timestamp_zone_1.py` (the LMT read).
+    Spark applies the schema by position; a `STRING` field over `007` answers `7` (card CSV-STRING-FIELD-TEXT-1,
+    filed; beside a `TIMESTAMP` field too since delta 1); `1e3` or `2.0` in an `INT` field answers `1000` or `2`
+    (Spark NULL; main's answer, the verifier's N1); malformed and overflowing values raise where Spark answers NULL
+    (D2);
+  - RePark's string → `TIMESTAMP_NTZ` cast moves a DST-gap wall clock an hour forward (SQL `CAST`, the JSON reader,
+    the CSV `nullValue` read; on main too), so a CSV `TIMESTAMP_NTZ` field keeps the scan's parse here.
+- **Pin** — `python/repark/tests/io/test_csv_schema_timestamp_zone_1.py` (36 cells, both ANSI modes, against Spark
+  4.1.2's recorded answers; delta 1's 8 hold a `DECIMAL` over exponent text and a `TIMESTAMP_NTZ` field over a DST
+  gap beside a `TIMESTAMP` field); `python/repark/tests/timestamps/test_text_write_timestamp_zone_1.py` (the LMT read);
+  `crates/repark-core/src/read_options.rs` `a_local_csv_utf8_columns_read_types_only_the_named_columns_as_utf8`.
+- **Delta 1 (2026-11-19)** — the verifier's FAIL on `ffe8e301` (F1: a `DECIMAL` field over exponent text raised; F2:
+  a `TIMESTAMP_NTZ` field over a DST-gap wall clock moved an hour; both from the local path's all-text re-read). The
+  re-read now retypes only the named columns (Fable's option (b), the orchestrator's call), except under `inferSchema`,
+  whose re-read relies on the all-text read. F1 and F2 answer Spark; the `STRING`-field side gain is withdrawn; 0
+  EQUAL lost against main outside the two exceptions. Its cost misses Fable's bars (K0 and K2; cost.md), unruled.
 - **Bar and cost** — [bar.md](../task/wo/csv-schema-timestamp-zone-1/bar.md),
   [cost.md](../task/wo/csv-schema-timestamp-zone-1/cost.md).
 - **Bar exceptions** — two, per Fable's guidance of 2026-11-19: the 14 runtime-`SET` timestamp cells (card TIMESTAMP-TYPE-RUNTIME-SET-1) and the text-timestamp parse cost, 1.379x in process on `k0_hour` and 1.403x on K2 under a 1.45x ceiling (card TEXT-TIMESTAMP-PARSE-KERNEL-1, its way out); the `STRING`-field card CSV-STRING-FIELD-TEXT-1 is filed beside them.
-- **Rationale** — Fable's guidance under the owner's delegation of 2026-11-19 (card CSV-SCHEMA-TIMESTAMP-ZONE-1, S1,
-  label-blocking, unit 0); the parent card TEMP-VIEW-FRAME-READER-PARSE-1 (owner, 2026-11-18: "We better go with B to
+- **Rationale** — Fable's guidance under the owner's delegation of 2026-11-19, about 01:28 UTC, verbatim: "Go with
+  your recommendations and tonight you don’t even need to wait on me even if fable says that it’s my call. Merge what
+  you need, follow the goal and good luck" (card CSV-SCHEMA-TIMESTAMP-ZONE-1, S1, label-blocking, unit 0); the parent
+  card TEMP-VIEW-FRAME-READER-PARSE-1 (owner, 2026-11-18: "We better go with B to
   be safe"); [work order](../task/wo/csv-schema-timestamp-zone-1/map.md).
 
 ### FA-1 — lateral column aliases in `withColumns`

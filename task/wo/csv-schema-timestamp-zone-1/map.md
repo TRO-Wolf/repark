@@ -11,6 +11,12 @@ scan's zone-less timestamp columns as text through the existing `utf8_columns` o
 path the scan's pre-scan makes every column text once `utf8_columns` is set (`csv_utf8_schema_from_path`), as the
 `nullValue` and `multiLine` schema reads already do. One product file; no Rust.
 
+**Delta 1 (2026-11-19), the verifier's F1 and F2.** That all-text read cast a `DECIMAL` field from exponent text (a
+raise) and a `TIMESTAMP_NTZ` field from DST-gap text (an hour forward). `read_csv_path`
+(`crates/repark-core/src/read_options.rs`, the second product file) now re-reads only the named columns, except under
+`inferSchema`, whose re-read was measured to rely on the all-text read; `_load_csv` leaves a `TIMESTAMP_NTZ` field's
+column on the scan's type. See [bar.md](bar.md) and [cost.md](cost.md), "Delta 1".
+
 ## The rulings this unit carries
 
 - **Owner, 2026-11-19, about 01:28 UTC, verbatim:** "Go with your recommendations and tonight you don’t even need to
@@ -19,6 +25,9 @@ path the scan's pre-scan makes every column text once `utf8_columns` is set (`cs
   on step 0, §2 Q2 and §4): D1 gets its own card, CSV-SCHEMA-TIMESTAMP-ZONE-1, S1 and label-blocking; it is unit 0,
   built first as its own PR; it moves matching cells, so it cannot share unit 1's bar; the cost cases are K0 (CSV),
   K2 and C-012.
+- **The orchestrator's call for delta 1, under that delegation:** take Fable's option (b), which the consult had
+  declined on cost alone: on every path `utf8_columns` re-reads only the named columns, with `read_options.rs` as the
+  second product file; Fable's cost exception and the 14 runtime `timestampType` cells stand.
 - **The parent card** TEMP-VIEW-FRAME-READER-PARSE-1 is S1 and label-blocking (owner, 2026-11-18, about 14:30 UTC:
   "We better go with B to be safe").
 
