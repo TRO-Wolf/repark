@@ -1,0 +1,9 @@
+{"run": "revision", "ansi": "false", "key": "rev/view_flip_avg/g5/c38_0", "main": "REPARK_RAISES", "head": "EQUAL"}
+{"run": "revision", "ansi": "true", "key": "rev/view_flip_avg/g5/c38_0", "main": "SPARK_RAISES", "head": "BOTH_RAISE"}
+{"run": "spark_door", "ansi": "false", "key": "mp/try/s4/g11/c38_0", "main": "EQUAL", "head": "VALUE"}
+{"run": "spark_door", "ansi": "false", "key": "mp/try/s4/g11/c38_38", "main": "VALUE", "head": "EQUAL"}
+{"run": "spark_door", "ansi": "false", "key": "try/s4/g11/c38_0", "main": "VALUE", "head": "EQUAL"}
+{"run": "spark_door", "ansi": "false", "key": "try/s4/g11/c38_38", "main": "VALUE", "head": "EQUAL"}
+{"run": "spark_door", "ansi": "true", "key": "mp/try/s4/g11/c38_0", "main": "VALUE", "head": "EQUAL"}
+{"run": "spark_door", "ansi": "true", "key": "mp/try/s4/g11/c38_10", "main": "EQUAL", "head": "VALUE"}
+{"run": "spark_door", "ansi": "true", "key": "try/s4/g11/c38_38", "main": "VALUE", "head": "EQUAL"}

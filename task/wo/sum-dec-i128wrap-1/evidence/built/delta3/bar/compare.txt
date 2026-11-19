@@ -1,0 +1,3 @@
+false | grouped | into EQUAL | 2
+true | grouped | into BOTH_RAISE | 2
+moved 4

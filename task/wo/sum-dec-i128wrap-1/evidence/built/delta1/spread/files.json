@@ -1,0 +1,68 @@
+[
+ {
+  "table": "s",
+  "file": "part-0.parquet",
+  "rows": 37,
+  "sha256": "cb0c9fac6adc2438"
+ },
+ {
+  "table": "s4",
+  "file": "part-0.parquet",
+  "rows": 9,
+  "sha256": "eac2e2132ae01318"
+ },
+ {
+  "table": "s4",
+  "file": "part-1.parquet",
+  "rows": 10,
+  "sha256": "f03d697bc3dac6a7"
+ },
+ {
+  "table": "s4",
+  "file": "part-2.parquet",
+  "rows": 9,
+  "sha256": "70f402338eca414c"
+ },
+ {
+  "table": "s4",
+  "file": "part-3.parquet",
+  "rows": 9,
+  "sha256": "e4f6c9d274e0543d"
+ },
+ {
+  "table": "p2",
+  "file": "part-0.parquet",
+  "rows": 8,
+  "sha256": "30b9ec16a7d78374"
+ },
+ {
+  "table": "p2",
+  "file": "part-1.parquet",
+  "rows": 8,
+  "sha256": "95f16f4821a395bd"
+ },
+ {
+  "table": "fq",
+  "file": "part-0.parquet",
+  "rows": 1,
+  "sha256": "f2a9e6813d948472"
+ },
+ {
+  "table": "fq",
+  "file": "part-1.parquet",
+  "rows": 1,
+  "sha256": "fe93c4ebb3e1f18e"
+ },
+ {
+  "table": "fq",
+  "file": "part-2.parquet",
+  "rows": 1,
+  "sha256": "581a2cf5970d055d"
+ },
+ {
+  "table": "fq",
+  "file": "part-3.parquet",
+  "rows": 1,
+  "sha256": "1d38bc79ee312716"
+ }
+]

@@ -15,7 +15,6 @@ use datafusion::functions_aggregate::regr::{
 };
 use datafusion::functions_aggregate::stddev::{stddev_pop_udaf, stddev_udaf};
 use datafusion::functions_aggregate::string_agg::string_agg_udaf;
-use datafusion::functions_aggregate::sum::sum_udaf;
 use datafusion::functions_aggregate::variance::{var_pop_udaf, var_samp_udaf};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{AggregateUDF, Expr, Operator, binary_expr, lit};
@@ -935,7 +934,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
 /// Unary aggregate UDAF for [`super::PyColumn::aggregate`].
 pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
     let udaf = match kind {
-        "sum" => sum_udaf(),
+        "sum" => repark_functions::aggregate::sum_udaf(),
         "try_sum" => repark_functions::aggregate::try_sum_udaf(),
         "avg" => repark_functions::aggregate::avg_udaf(),
         "try_avg" => repark_functions::aggregate::try_avg_udaf(),

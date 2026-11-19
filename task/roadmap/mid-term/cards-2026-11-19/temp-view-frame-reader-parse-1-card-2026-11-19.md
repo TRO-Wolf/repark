@@ -16,4 +16,6 @@ Spark parses a JSON or CSV source under the reader's settings and decides everyt
 
 **Main:** keeps its own answer when the zone differs, and the view part 2 leaves that answer unchanged. The owner's ruling 5 gives the example: `hour(ts)` answers 3 where Spark answers 19.
 
+**2026-11-19, step 0 (Fable's guidance).** Step 0 is PR #1364. The critic (Opus 5.5 medium) returned GAPS. The revision amended seat (a): the first optimizer rule decides, under the live session at every depth, with a cap of nine files. Fable's guidance accepted it with no second critic round. The split: unit 0 is CSV-SCHEMA-TIMESTAMP-ZONE-1, then unit 1 is seat (a), stacked on it. This is Fable's guidance under the owner's delegation of 2026-11-19, not an owner ruling; see [sketch §10](../../../wo/temp-view-frame-reader-parse-1/sketch.md).
+
 Up: [map.md](map.md).

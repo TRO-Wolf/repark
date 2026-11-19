@@ -1,6 +1,6 @@
 # map — task/roadmap/mid-term/cards-2026-11-19/
 
-Ten cards filed from the 2026-11-18 window, under the owner's rulings recorded in [rulings-2026-11-18.md](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-18.md). Six are the view residue of TEMP-VIEW-SESSION-SETTINGS-1 part 2 (five view cards and the race card); four come from the decimal units (the verify-ddl and sum step 0 verdicts). Each card's severity and label status are the ruling's, quoted in the card. None is dispatched.
+Ten cards filed from the 2026-11-18 window, under the owner's rulings recorded in [rulings-2026-11-18.md](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-18.md). Six are the view residue of TEMP-VIEW-SESSION-SETTINGS-1 part 2 (five view cards and the race card); four come from the decimal units (the verify-ddl and sum step 0 verdicts). Each card's severity and label status are the ruling's, quoted in the card. None is dispatched. Six more, filed 2026-11-19 from Fable's guidance on TEMP-VIEW-FRAME-READER-PARSE-1 step 0, are listed after the ten: CSV-SCHEMA-TIMESTAMP-ZONE-1 is building on its own branch, and the other five are not dispatched.
 
 ## Cards
 
@@ -14,5 +14,11 @@ Ten cards filed from the 2026-11-18 window, under the owner's rulings recorded i
 - [DECIMAL-COMPARE-WIDEN-OVERFLOW-1](decimal-compare-widen-overflow-1-card-2026-11-19.md) (S2, not label-blocking, ruling 7) — **card:** SQL compares a `decimal(38,10)` quotient widened to `(38,14)`, which overflows past 24 integer digits.
 - [DATAFRAME-DIVIDE-MARKER-SPELLABLE-1](dataframe-divide-marker-spellable-1-card-2026-11-19.md) (S3, not label-blocking, ruling 7) — **card:** a written double cast on both sides of `/` is taken for the DataFrame divide marker.
 - [DECIMAL-ADD-SCALE38-OVERFLOW-1](decimal-add-scale38-overflow-1-card-2026-11-19.md) (S3, not label-blocking, ruling 10) — **card:** `x + 1` on a `decimal(38,38)` column raises Arrow's arithmetic overflow where Spark answers.
+- [CSV-SCHEMA-TIMESTAMP-ZONE-1](csv-schema-timestamp-zone-1-card-2026-11-19.md) (S1, label-blocking, Fable's Q2 ruling (i), unit 0; building) — **card:** a CSV read with a schema parses a `TIMESTAMP` field as UTC, whatever the session zone.
+- [TEMP-VIEW-CACHE-LAZY-PARSE-1](temp-view-cache-lazy-parse-1-card-2026-11-19.md) (S1 by class, label-blocking, Fable's Q8, widened to materialisation timing; for the owner's morning read) — **card:** a lazy `.cache()` of a JSON or CSV frame view parses at the view's registration, where Spark parses at the first action.
+- [STRING-HOUR-MINUTE-SECOND-1](string-hour-minute-second-1-card-2026-11-19.md) (S1 by class, label-blocking, Fable's Q6; for the owner's morning read) — **card:** `hour`, `minute` and `second` over a `STRING` timestamp column answer 0 under matching settings, on an Iceberg v2 table.
+- [READER-TYPED-SCAN-1](reader-typed-scan-1-card-2026-11-19.md) (S3, not label-blocking, Fable's Q1, Q3 and Q10; seat (b)) — **card:** a JSON or CSV typed parse raises where Spark answers (D2 and D9–D11).
+- [UNIX-TIMESTAMP-NTZ-ZONE-1](unix-timestamp-ntz-zone-1-card-2026-11-19.md) (not rated, Fable's Q7; its first step measures an Iceberg NTZ column) — **card:** `unix_timestamp` of a `TIMESTAMP_NTZ` column reads the session zone.
+- [SMARTCSV-SQL-VIEW-1](smartcsv-sql-view-1-card-2026-11-19.md) (S3, not label-blocking, Fable's Q5; `smartCsv`'s ruled behaviour kept) — **card:** a SQL view over a `smartCsv` frame view raises `TABLE_OR_VIEW_NOT_FOUND`.
 
 Up: [../map.md](../map.md).
