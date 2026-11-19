@@ -1,0 +1,283 @@
+## Headline
+
+| set | cells | cross-setting | main EQUAL / WRONG / RAISE / no Spark | head same | moves main vs head |
+|---|---|---|---|---|---|
+| Z | 4096 | 2048 | 2214 / 842 / 528 / 512 | {"EQUAL": 2406, "RAISE": 528, "WRONG": 650, "NOSPARK": 512} | 256 |
+| A | 884 | 442 | 362 / 43 / 411 / 68 | yes | 68 |
+| T | 408 | 204 | 198 / 142 / 0 / 68 | {"EQUAL": 218, "WRONG": 122, "NOSPARK": 68} | 68 |
+| S | 8 | 0 | 0 / 0 / 8 / 0 | yes | 0 |
+| W | 336 | 336 | 152 / 136 / 0 / 48 | {"EQUAL": 160, "WRONG": 128, "NOSPARK": 48} | 24 |
+
+### Z cross-setting cells by reader (gap class)
+
+| key | equal | view | direct | nospark | total |
+|---|---|---|---|---|---|
+| csv_0 | 100 | 4 | 24 | 0 | 128 |
+| csv_f | 22 | 0 | 106 | 0 | 128 |
+| csv_fix | 0 | 0 | 0 | 128 | 128 |
+| csv_i | 54 | 74 | 0 | 0 | 128 |
+| csv_n | 54 | 74 | 0 | 0 | 128 |
+| csv_ns | 100 | 4 | 24 | 0 | 128 |
+| csv_s | 22 | 0 | 106 | 0 | 128 |
+| csv_tf | 0 | 0 | 128 | 0 | 128 |
+| emu | 128 | 0 | 0 | 0 | 128 |
+| json_f | 54 | 74 | 0 | 0 | 128 |
+| json_i | 104 | 4 | 20 | 0 | 128 |
+| json_m | 54 | 74 | 0 | 0 | 128 |
+| json_s | 54 | 74 | 0 | 0 | 128 |
+| json_tz | 0 | 0 | 128 | 0 | 128 |
+| pq | 128 | 0 | 0 | 0 | 128 |
+| smart | 0 | 0 | 0 | 128 | 128 |
+
+### Z cross-setting cells by door (gap class)
+
+| key | equal | view | direct | nospark | total |
+|---|---|---|---|---|---|
+| d | 44 | 0 | 12 | 8 | 64 |
+| e | 36 | 0 | 20 | 8 | 64 |
+| eb | 122 | 70 | 88 | 40 | 320 |
+| f | 44 | 0 | 12 | 8 | 64 |
+| j | 8 | 32 | 16 | 8 | 64 |
+| jb | 122 | 70 | 88 | 40 | 320 |
+| o | 44 | 0 | 12 | 8 | 64 |
+| ob | 122 | 70 | 88 | 40 | 320 |
+| osa | 44 | 0 | 12 | 8 | 64 |
+| osb | 122 | 70 | 88 | 40 | 320 |
+| sa | 44 | 0 | 12 | 8 | 64 |
+| sb | 122 | 70 | 88 | 40 | 320 |
+
+### Z cross-setting cells by body (gap class)
+
+| key | equal | view | direct | nospark | total |
+|---|---|---|---|---|---|
+| date | 150 | 50 | 80 | 40 | 320 |
+| fmt | 100 | 100 | 80 | 40 | 320 |
+| hour | 40 | 100 | 140 | 40 | 320 |
+| str | 100 | 100 | 80 | 40 | 320 |
+| ts | 264 | 32 | 96 | 56 | 448 |
+| tz | 220 | 0 | 60 | 40 | 320 |
+
+### Z cross-setting cells by pass (gap class)
+
+| key | equal | view | direct | nospark | total |
+|---|---|---|---|---|---|
+| ansi_false la_utc | 217 | 108 | 123 | 64 | 512 |
+| ansi_false utc_la | 220 | 83 | 145 | 64 | 512 |
+| ansi_true la_utc | 217 | 108 | 123 | 64 | 512 |
+| ansi_true utc_la | 220 | 83 | 145 | 64 | 512 |
+
+### Z matching cells by reader (main)
+
+| key | EQUAL | WRONG | RAISE | NOSPARK | total |
+|---|---|---|---|---|---|
+| csv_0 | 104 | 20 | 4 | 0 | 128 |
+| csv_f | 64 | 64 | 0 | 0 | 128 |
+| csv_fix | 0 | 0 | 0 | 128 | 128 |
+| csv_i | 128 | 0 | 0 | 0 | 128 |
+| csv_n | 128 | 0 | 0 | 0 | 128 |
+| csv_ns | 104 | 20 | 4 | 0 | 128 |
+| csv_s | 64 | 64 | 0 | 0 | 128 |
+| csv_tf | 0 | 0 | 128 | 0 | 128 |
+| emu | 128 | 0 | 0 | 0 | 128 |
+| json_f | 128 | 0 | 0 | 0 | 128 |
+| json_i | 108 | 20 | 0 | 0 | 128 |
+| json_m | 128 | 0 | 0 | 0 | 128 |
+| json_s | 128 | 0 | 0 | 0 | 128 |
+| json_tz | 0 | 0 | 128 | 0 | 128 |
+| pq | 128 | 0 | 0 | 0 | 128 |
+| smart | 0 | 0 | 0 | 128 | 128 |
+
+### A cross-setting cells by reader (gap class)
+
+| key | equal | view | direct | nospark | total |
+|---|---|---|---|---|---|
+| csv_g | 24 | 0 | 10 | 0 | 34 |
+| csv_i | 32 | 0 | 2 | 0 | 34 |
+| csv_s | 0 | 0 | 34 | 0 | 34 |
+| csv_sov | 0 | 0 | 34 | 0 | 34 |
+| csv_sts | 12 | 10 | 12 | 0 | 34 |
+| json_f | 0 | 0 | 34 | 0 | 34 |
+| json_g | 24 | 10 | 0 | 0 | 34 |
+| json_i | 32 | 0 | 2 | 0 | 34 |
+| json_s | 0 | 0 | 34 | 0 | 34 |
+| json_sov | 0 | 0 | 34 | 0 | 34 |
+| json_sts | 12 | 10 | 12 | 0 | 34 |
+| pq | 34 | 0 | 0 | 0 | 34 |
+| smart | 0 | 0 | 0 | 34 | 34 |
+
+### A cross-setting cells by door (gap class)
+
+| key | equal | view | direct | nospark | total |
+|---|---|---|---|---|---|
+| d | 12 | 0 | 12 | 2 | 26 |
+| e | 12 | 0 | 12 | 2 | 26 |
+| eb | 18 | 6 | 24 | 4 | 52 |
+| f | 12 | 0 | 12 | 2 | 26 |
+| j | 12 | 0 | 12 | 2 | 26 |
+| jb | 14 | 6 | 28 | 4 | 52 |
+| o | 12 | 0 | 12 | 2 | 26 |
+| ob | 18 | 6 | 24 | 4 | 52 |
+| osa | 12 | 0 | 12 | 2 | 26 |
+| osb | 18 | 6 | 24 | 4 | 52 |
+| sa | 12 | 0 | 12 | 2 | 26 |
+| sb | 18 | 6 | 24 | 4 | 52 |
+
+### A matching cells by reader (main)
+
+| key | EQUAL | WRONG | RAISE | NOSPARK | total |
+|---|---|---|---|---|---|
+| csv_g | 24 | 10 | 0 | 0 | 34 |
+| csv_i | 28 | 2 | 4 | 0 | 34 |
+| csv_s | 0 | 0 | 34 | 0 | 34 |
+| csv_sov | 0 | 0 | 34 | 0 | 34 |
+| csv_sts | 22 | 0 | 12 | 0 | 34 |
+| json_f | 0 | 0 | 34 | 0 | 34 |
+| json_g | 34 | 0 | 0 | 0 | 34 |
+| json_i | 28 | 2 | 4 | 0 | 34 |
+| json_s | 0 | 0 | 34 | 0 | 34 |
+| json_sov | 0 | 0 | 34 | 0 | 34 |
+| json_sts | 22 | 0 | 12 | 0 | 34 |
+| pq | 34 | 0 | 0 | 0 | 34 |
+| smart | 0 | 0 | 0 | 34 | 34 |
+
+### T cross-setting cells by reader (gap class)
+
+| key | equal | view | direct | nospark | total |
+|---|---|---|---|---|---|
+| csv_i | 17 | 0 | 17 | 0 | 34 |
+| csv_s | 7 | 0 | 27 | 0 | 34 |
+| json_i | 24 | 0 | 10 | 0 | 34 |
+| json_s | 17 | 0 | 17 | 0 | 34 |
+| pq | 34 | 0 | 0 | 0 | 34 |
+| smart | 0 | 0 | 0 | 34 | 34 |
+
+### T cross-setting cells by door (gap class)
+
+| key | equal | view | direct | nospark | total |
+|---|---|---|---|---|---|
+| d | 7 | 0 | 3 | 2 | 12 |
+| e | 7 | 0 | 3 | 2 | 12 |
+| eb | 10 | 0 | 10 | 4 | 24 |
+| f | 7 | 0 | 3 | 2 | 12 |
+| j | 7 | 0 | 3 | 2 | 12 |
+| jb | 10 | 0 | 10 | 4 | 24 |
+| o | 7 | 0 | 3 | 2 | 12 |
+| ob | 10 | 0 | 10 | 4 | 24 |
+| osa | 7 | 0 | 3 | 2 | 12 |
+| osb | 10 | 0 | 10 | 4 | 24 |
+| sa | 7 | 0 | 3 | 2 | 12 |
+| sb | 10 | 0 | 10 | 4 | 24 |
+
+### T matching cells by reader (main)
+
+| key | EQUAL | WRONG | RAISE | NOSPARK | total |
+|---|---|---|---|---|---|
+| csv_i | 17 | 17 | 0 | 0 | 34 |
+| csv_s | 7 | 27 | 0 | 0 | 34 |
+| json_i | 24 | 10 | 0 | 0 | 34 |
+| json_s | 17 | 17 | 0 | 0 | 34 |
+| pq | 34 | 0 | 0 | 0 | 34 |
+| smart | 0 | 0 | 0 | 34 | 34 |
+
+### Z moves, main against head, by reader
+
+| key | gained | lost | changed | total |
+|---|---|---|---|---|
+| csv_f | 32 | 0 | 32 | 64 |
+| csv_s | 32 | 0 | 32 | 64 |
+
+### A moves, main against head, by reader
+
+| key | gained | lost | changed | total |
+|---|---|---|---|---|
+| csv_sov | 0 | 0 | 34 | 34 |
+
+### T moves, main against head, by reader
+
+| key | gained | lost | changed | total |
+|---|---|---|---|---|
+| csv_s | 17 | 7 | 10 | 34 |
+
+### W moves, main against head, by reader
+
+| key | gained | lost | changed | total |
+|---|---|---|---|---|
+| csv_s | 8 | 0 | 16 | 24 |
+
+### W by reader (gap class)
+
+| key | equal | view | direct | nospark | total |
+|---|---|---|---|---|---|
+| csv_i | 16 | 32 | 0 | 0 | 48 |
+| csv_s | 8 | 40 | 0 | 0 | 48 |
+| emu | 48 | 0 | 0 | 0 | 48 |
+| json_i | 16 | 32 | 0 | 0 | 48 |
+| json_s | 16 | 32 | 0 | 0 | 48 |
+| pq | 48 | 0 | 0 | 0 | 48 |
+| smart | 0 | 0 | 0 | 48 | 48 |
+
+### W by source and write (gap class)
+
+| key | equal | view | direct | nospark | total |
+|---|---|---|---|---|---|
+| d/ctas | 22 | 2 | 0 | 4 | 28 |
+| d/ins | 22 | 2 | 0 | 4 | 28 |
+| d/into | 22 | 2 | 0 | 4 | 28 |
+| d/wto | 22 | 2 | 0 | 4 | 28 |
+| eb_hour/ctas | 8 | 16 | 0 | 4 | 28 |
+| eb_hour/ins | 8 | 16 | 0 | 4 | 28 |
+| eb_hour/into | 8 | 16 | 0 | 4 | 28 |
+| eb_hour/wto | 8 | 16 | 0 | 4 | 28 |
+| sb_hour/ctas | 8 | 16 | 0 | 4 | 28 |
+| sb_hour/ins | 8 | 16 | 0 | 4 | 28 |
+| sb_hour/into | 8 | 16 | 0 | 4 | 28 |
+| sb_hour/wto | 8 | 16 | 0 | 4 | 28 |
+
+### Every wrong write (main), by reader, source and write: passes wrong of four
+
+- `csv_i eb_hour/ctas`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_i eb_hour/ins`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_i eb_hour/into`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_i eb_hour/wto`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_i sb_hour/ctas`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_i sb_hour/ins`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_i sb_hour/into`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_i sb_hour/wto`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_s d/ctas`: false utc_la, true utc_la
+- `csv_s d/ins`: false utc_la, true utc_la
+- `csv_s d/into`: false utc_la, true utc_la
+- `csv_s d/wto`: false utc_la, true utc_la
+- `csv_s eb_hour/ctas`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_s eb_hour/ins`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_s eb_hour/into`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_s eb_hour/wto`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_s sb_hour/ctas`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_s sb_hour/ins`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_s sb_hour/into`: false la_utc, false utc_la, true la_utc, true utc_la
+- `csv_s sb_hour/wto`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_i eb_hour/ctas`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_i eb_hour/ins`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_i eb_hour/into`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_i eb_hour/wto`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_i sb_hour/ctas`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_i sb_hour/ins`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_i sb_hour/into`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_i sb_hour/wto`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_s eb_hour/ctas`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_s eb_hour/ins`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_s eb_hour/into`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_s eb_hour/wto`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_s sb_hour/ctas`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_s sb_hour/ins`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_s sb_hour/into`: false la_utc, false utc_la, true la_utc, true utc_la
+- `json_s sb_hour/wto`: false la_utc, false utc_la, true la_utc, true utc_la
+
+### Emulation readers against their Spark twins (main)
+
+| key | EQUAL | WRONG | RAISE | total |
+|---|---|---|---|---|
+| W emu cross | 48 | 0 | 0 | 48 |
+| Z csv_fix cross | 54 | 74 | 0 | 128 |
+| Z csv_fix matching | 128 | 0 | 0 | 128 |
+| Z emu cross | 128 | 0 | 0 | 128 |
+| Z emu matching | 128 | 0 | 0 | 128 |

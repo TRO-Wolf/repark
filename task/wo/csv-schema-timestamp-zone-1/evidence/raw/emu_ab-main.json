@@ -1,0 +1,154 @@
+{
+ "UTC/false/bad/A": "RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of Int32 type",
+ "UTC/false/bad/B": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "UTC/false/bad/main": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "UTC/false/good/A": [
+  "(1, 1704078000)",
+  "(2, 1704110400)"
+ ],
+ "UTC/false/good/B": [
+  "(1, 1704078000)",
+  "(2, 1704110400)"
+ ],
+ "UTC/false/good/main": [
+  "(1, 1704078000)",
+  "(2, 1704110400)"
+ ],
+ "UTC/false/ov/A": "RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of Int32 type",
+ "UTC/false/ov/B": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "UTC/false/ov/main": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "UTC/false/ts/A": [
+  "(1, 1704078000)",
+  "(2, None)"
+ ],
+ "UTC/false/ts/B": [
+  "(1, 1704078000)",
+  "(2, None)"
+ ],
+ "UTC/false/ts/main": [
+  "(1, 1704078000)",
+  "(2, None)"
+ ],
+ "UTC/true/bad/A": "RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of Int32 type",
+ "UTC/true/bad/B": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "UTC/true/bad/main": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "UTC/true/good/A": [
+  "(1, 1704078000)",
+  "(2, 1704110400)"
+ ],
+ "UTC/true/good/B": [
+  "(1, 1704078000)",
+  "(2, 1704110400)"
+ ],
+ "UTC/true/good/main": [
+  "(1, 1704078000)",
+  "(2, 1704110400)"
+ ],
+ "UTC/true/ov/A": "RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of Int32 type",
+ "UTC/true/ov/B": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "UTC/true/ov/main": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "UTC/true/ts/A": "RAISE Execution error: [CAST_INVALID_INPUT] The value 'not a time' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because ",
+ "UTC/true/ts/B": "RAISE Execution error: [CAST_INVALID_INPUT] The value 'not a time' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because ",
+ "UTC/true/ts/main": "RAISE Execution error: [CAST_INVALID_INPUT] The value 'not a time' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because ",
+ "explain/A": [
+  "logical_plan | SubqueryAlias: x\n  Projection: CAST(datafusion.public.__repark_selx_N.column_1 AS Int32) AS n, to_timestamp(datafusion.public.__repark_selx_N.column_2) AS ts\n    SubqueryAlias: datafusion.public.__repark_selx_N\n      TableScan: ?table? projection=[column_1, column_2]",
+  "physical_plan | ProjectionExec: expr=[CAST(column_1@0 AS Int32) as n, to_timestamp(column_2@1) as ts]\n  RepartitionExec: partitioning=RoundRobinBatch(16), input_partitions=1\n    DataSourceExec: file_groups={1 group: [[<scratchpad>/csv-ts-work/wh/rp-repark-yt1i9imz/good/a.csv]]}, projection=[column_1, column_2], file_type=csv, has_header=false\n"
+ ],
+ "explain/B": [
+  "logical_plan | SubqueryAlias: x\n  Projection: CAST(datafusion.public.__repark_selx_N.column_1 AS Int32) AS n, to_timestamp(__repark_timestamp_to_string__(datafusion.public.__repark_selx_N.column_2)) AS ts\n    SubqueryAlias: datafusion.public.__repark_selx_N\n      TableScan: ?table? projection=[column_1, column_2]",
+  "physical_plan | ProjectionExec: expr=[CAST(column_1@0 AS Int32) as n, to_timestamp(__repark_timestamp_to_string__(column_2@1)) as ts]\n  RepartitionExec: partitioning=RoundRobinBatch(16), input_partitions=1\n    DataSourceExec: file_groups={1 group: [[<scratchpad>/csv-ts-work/wh/rp-repark-yt1i9imz/good/a.csv]]}, projection=[column_1, column_2], file_type=csv, has_header=false\n"
+ ],
+ "explain/main": [
+  "logical_plan | SubqueryAlias: x\n  Projection: CAST(?table?.column_1 AS Int32) AS n, CAST(?table?.column_2 AS Timestamp(\u00b5s, \"UTC\")) AS ts\n    TableScan: ?table? projection=[column_1, column_2]",
+  "physical_plan | ProjectionExec: expr=[CAST(column_1@0 AS Int32) as n, CAST(column_2@1 AS Timestamp(\u00b5s, \"UTC\")) as ts]\n  RepartitionExec: partitioning=RoundRobinBatch(16), input_partitions=1\n    DataSourceExec: file_groups={1 group: [[<scratchpad>/csv-ts-work/wh/rp-repark-yt1i9imz/good/a.csv]]}, projection=[column_1, column_2], file_type=csv, has_header=false\n"
+ ],
+ "les/false/bad/A": "RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of Int32 type",
+ "les/false/bad/B": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "les/false/bad/main": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "les/false/good/A": [
+  "(1, 1704106800)",
+  "(2, 1704139200)"
+ ],
+ "les/false/good/B": [
+  "(1, 1704106800)",
+  "(2, 1704139200)"
+ ],
+ "les/false/good/main": [
+  "(1, 1704078000)",
+  "(2, 1704110400)"
+ ],
+ "les/false/ov/A": "RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of Int32 type",
+ "les/false/ov/B": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "les/false/ov/main": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "les/false/ts/A": [
+  "(1, 1704106800)",
+  "(2, None)"
+ ],
+ "les/false/ts/B": [
+  "(1, 1704106800)",
+  "(2, None)"
+ ],
+ "les/false/ts/main": [
+  "(1, 1704106800)",
+  "(2, None)"
+ ],
+ "les/true/bad/A": "RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of Int32 type",
+ "les/true/bad/B": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "les/true/bad/main": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "les/true/good/A": [
+  "(1, 1704106800)",
+  "(2, 1704139200)"
+ ],
+ "les/true/good/B": [
+  "(1, 1704106800)",
+  "(2, 1704139200)"
+ ],
+ "les/true/good/main": [
+  "(1, 1704078000)",
+  "(2, 1704110400)"
+ ],
+ "les/true/ov/A": "RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of Int32 type",
+ "les/true/ov/B": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "les/true/ov/main": "RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32",
+ "les/true/ts/A": "RAISE Execution error: [CAST_INVALID_INPUT] The value 'not a time' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because ",
+ "les/true/ts/B": "RAISE Execution error: [CAST_INVALID_INPUT] The value 'not a time' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because ",
+ "les/true/ts/main": "RAISE Execution error: [CAST_INVALID_INPUT] The value 'not a time' of the type \"STRING\" cannot be cast to \"TIMESTAMP\" because ",
+ "times": {
+  "A": {
+   "count": [
+    0.019,
+    0.019,
+    0.019
+   ],
+   "hour": [
+    0.06,
+    0.054,
+    0.052
+   ]
+  },
+  "B": {
+   "count": [
+    0.019,
+    0.02,
+    0.02
+   ],
+   "hour": [
+    0.118,
+    0.106,
+    0.101
+   ]
+  },
+  "main": {
+   "count": [
+    0.024,
+    0.019,
+    0.019
+   ],
+   "hour": [
+    0.053,
+    0.042,
+    0.039
+   ]
+  }
+ }
+}

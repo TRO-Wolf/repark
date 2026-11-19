@@ -5907,6 +5907,34 @@ still open is `isModifiable`.
 
 ## 5. Facade drop-in semantics (DECLARED)
 
+### CSV-SCHEMA-TIMESTAMP-ZONE-1 — a CSV schema's `TIMESTAMP` field parses under the session zone — **FIXED 2026-11-19 on the Spark door (branch `fix/csv-schema-timestamp-zone-1`, not merged)**
+
+- **repark** — Before (main `6903fb48`): `schema(…).csv` and `format("csv").schema(…).load` read a `TIMESTAMP` field
+  through DataFusion's inferred zone-less timestamp and cast it without the zone, so the text was parsed as UTC
+  whatever `spark.sql.session.timeZone` said: silent, with or without a view, and stored so by every write door
+  (step 0 of TEMP-VIEW-FRAME-READER-PARSE-1, D1: 64 of 128 matching cells wrong per reader). After: `_load_csv`
+  re-reads the scan's zone-less timestamp columns as text (`utf8_columns`) when the user schema holds a `TIMESTAMP`
+  field, and the typed parse casts the text under the session zone, as the JSON reader does. On a local path every
+  column of such a read is then cast from its text, as the `nullValue` and `multiLine` schema reads already were.
+- **spark** — Spark 4.1.2 parses each CSV field from its text at scan time under the reading session's zone
+  (`CSVFileFormat.buildReader` → `getCsvOptions` → the session's live conf). *(oracle: step 0's recorded cells and
+  `task/wo/csv-schema-timestamp-zone-1/evidence/`, measured 2026-11-19.)*
+- **Still unlike Spark:**
+  - expressions above the parse in a view read under other settings (TEMP-VIEW-FRAME-READER-PARSE-1, unit 1);
+  - a `TIMESTAMP` in a DDL schema under `spark.sql.timestampType=TIMESTAMP_NTZ` is typed LTZ, so `unix_timestamp`
+    answers the session-zone instant where Spark reads the NTZ wall clock as UTC (14 cells answered Spark's number by
+    coincidence on main, before this fix; proposed card);
+  - an integer text in a `TIMESTAMP` field answers the epoch second (Spark NULL); a header mapped by name where
+    Spark applies the schema by position; a `STRING` field over `007` answers `7` when the schema has no
+    `TIMESTAMP` field (proposed D12); malformed and overflowing values raise where Spark answers NULL (D2).
+- **Pin** — `python/repark/tests/io/test_csv_schema_timestamp_zone_1.py` (28 cells, both ANSI modes, against Spark
+  4.1.2's recorded answers).
+- **Bar and cost** — [bar.md](../task/wo/csv-schema-timestamp-zone-1/bar.md),
+  [cost.md](../task/wo/csv-schema-timestamp-zone-1/cost.md).
+- **Rationale** — Fable's guidance under the owner's delegation of 2026-11-19 (card CSV-SCHEMA-TIMESTAMP-ZONE-1, S1,
+  label-blocking, unit 0); the parent card TEMP-VIEW-FRAME-READER-PARSE-1 (owner, 2026-11-18: "We better go with B to
+  be safe"); [work order](../task/wo/csv-schema-timestamp-zone-1/map.md).
+
 ### FA-1 — lateral column aliases in `withColumns`
 
 - **repark** — has no lateral-alias resolution: `withColumns({"x": col("a")+1, "y": col("x")})`
