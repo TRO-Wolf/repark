@@ -1,0 +1,528 @@
+FFFFFFFFFFFFFFFFFFFFFFFFFFFF                                             [100%]
+=================================== FAILURES ===================================
+______ test_a_schema_timestamp_parses_under_the_session_zone[true-csv_s] _______
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+reader = 'csv_s'
+
+    @pytest.mark.parametrize("reader", ["csv_s", "csv_f"])
+    def test_a_schema_timestamp_parses_under_the_session_zone(
+        measured: dict[str, Any], reader: str
+    ) -> None:
+        for zone in (UTC, LA):
+            dtypes, got = measured[f"matching/{reader}/{zone}"]
+            assert dtypes == [("n", "int"), ("ts", "timestamp")], zone
+>           assert got == SPARK_BY_ZONE[zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E             
+E             At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:171: AssertionError
+______ test_a_schema_timestamp_parses_under_the_session_zone[true-csv_f] _______
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+reader = 'csv_f'
+
+    @pytest.mark.parametrize("reader", ["csv_s", "csv_f"])
+    def test_a_schema_timestamp_parses_under_the_session_zone(
+        measured: dict[str, Any], reader: str
+    ) -> None:
+        for zone in (UTC, LA):
+            dtypes, got = measured[f"matching/{reader}/{zone}"]
+            assert dtypes == [("n", "int"), ("ts", "timestamp")], zone
+>           assert got == SPARK_BY_ZONE[zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E             
+E             At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:171: AssertionError
+_ test_a_view_read_in_another_zone_parses_under_the_reading_zone[true-frame_view] _
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+door = 'frame_view'
+
+    @pytest.mark.parametrize("door", ["frame_view", "sql_view"])
+    def test_a_view_read_in_another_zone_parses_under_the_reading_zone(
+        measured: dict[str, Any], door: str
+    ) -> None:
+        for made, read in ((LA, UTC), (UTC, LA)):
+>           assert measured[f"view/{door}/{made}/{read}"] == SPARK_BY_ZONE[read], (made, read)
+E           AssertionError: ('UTC', 'America/Los_Angeles')
+E           assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E             
+E             At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:179: AssertionError
+_ test_a_view_read_in_another_zone_parses_under_the_reading_zone[true-sql_view] _
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+door = 'sql_view'
+
+    @pytest.mark.parametrize("door", ["frame_view", "sql_view"])
+    def test_a_view_read_in_another_zone_parses_under_the_reading_zone(
+        measured: dict[str, Any], door: str
+    ) -> None:
+        for made, read in ((LA, UTC), (UTC, LA)):
+>           assert measured[f"view/{door}/{made}/{read}"] == SPARK_BY_ZONE[read], (made, read)
+E           AssertionError: ('UTC', 'America/Los_Angeles')
+E           assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E             
+E             At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:179: AssertionError
+____ test_a_write_in_another_zone_stores_the_writing_zone_parse[true-ctas] _____
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+write = 'ctas'
+
+    @pytest.mark.parametrize("write", sorted(WRITES))
+    def test_a_write_in_another_zone_stores_the_writing_zone_parse(
+        measured: dict[str, Any], write: str
+    ) -> None:
+>       assert measured[f"write/{write}"] == LA_PARSE
+E       assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E         
+E         At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E         Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:186: AssertionError
+___ test_a_write_in_another_zone_stores_the_writing_zone_parse[true-insert] ____
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+write = 'insert'
+
+    @pytest.mark.parametrize("write", sorted(WRITES))
+    def test_a_write_in_another_zone_stores_the_writing_zone_parse(
+        measured: dict[str, Any], write: str
+    ) -> None:
+>       assert measured[f"write/{write}"] == LA_PARSE
+E       assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E         
+E         At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E         Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:186: AssertionError
+_ test_a_write_in_another_zone_stores_the_writing_zone_parse[true-insert_into] _
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+write = 'insert_into'
+
+    @pytest.mark.parametrize("write", sorted(WRITES))
+    def test_a_write_in_another_zone_stores_the_writing_zone_parse(
+        measured: dict[str, Any], write: str
+    ) -> None:
+>       assert measured[f"write/{write}"] == LA_PARSE
+E       assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E         
+E         At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E         Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:186: AssertionError
+__ test_a_write_in_another_zone_stores_the_writing_zone_parse[true-write_to] ___
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+write = 'write_to'
+
+    @pytest.mark.parametrize("write", sorted(WRITES))
+    def test_a_write_in_another_zone_stores_the_writing_zone_parse(
+        measured: dict[str, Any], write: str
+    ) -> None:
+>       assert measured[f"write/{write}"] == LA_PARSE
+E       assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E         
+E         At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E         Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:186: AssertionError
+__ test_every_schema_timestamp_shape_parses_under_the_session_zone[true-dst] ___
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+shape = 'dst'
+
+    @pytest.mark.parametrize("shape", sorted(SHAPES))
+    def test_every_schema_timestamp_shape_parses_under_the_session_zone(
+        measured: dict[str, Any], shape: str
+    ) -> None:
+        for zone in (LA, TK):
+>           assert measured[f"shape/{shape}/{zone}"] == SHAPES[shape][2][zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, 17100378..., 1730597400)] == [(1, 17100666..., 1730622600)]
+E             
+E             At index 0 diff: (1, 1710037800) != (1, 1710066600)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:194: AssertionError
+_ test_every_schema_timestamp_shape_parses_under_the_session_zone[true-empty_field] _
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+shape = 'empty_field'
+
+    @pytest.mark.parametrize("shape", sorted(SHAPES))
+    def test_every_schema_timestamp_shape_parses_under_the_session_zone(
+        measured: dict[str, Any], shape: str
+    ) -> None:
+        for zone in (LA, TK):
+>           assert measured[f"shape/{shape}/{zone}"] == SHAPES[shape][2][zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, None), (2, 1704078000)] == [(1, None), (2, 1704106800)]
+E             
+E             At index 1 diff: (2, 1704078000) != (2, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:194: AssertionError
+_ test_every_schema_timestamp_shape_parses_under_the_session_zone[true-header] _
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+shape = 'header'
+
+    @pytest.mark.parametrize("shape", sorted(SHAPES))
+    def test_every_schema_timestamp_shape_parses_under_the_session_zone(
+        measured: dict[str, Any], shape: str
+    ) -> None:
+        for zone in (LA, TK):
+>           assert measured[f"shape/{shape}/{zone}"] == SHAPES[shape][2][zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, 17040780..., 1717284600)] == [(1, 17041068..., 1717309800)]
+E             
+E             At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:194: AssertionError
+_ test_every_schema_timestamp_shape_parses_under_the_session_zone[true-header_by_position] _
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+shape = 'header_by_position'
+
+    @pytest.mark.parametrize("shape", sorted(SHAPES))
+    def test_every_schema_timestamp_shape_parses_under_the_session_zone(
+        measured: dict[str, Any], shape: str
+    ) -> None:
+        for zone in (LA, TK):
+>           assert measured[f"shape/{shape}/{zone}"] == SHAPES[shape][2][zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, 17040780..., 1717284600)] == [(1, 17041068..., 1717309800)]
+E             
+E             At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:194: AssertionError
+__ test_every_schema_timestamp_shape_parses_under_the_session_zone[true-iso] ___
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+shape = 'iso'
+
+    @pytest.mark.parametrize("shape", sorted(SHAPES))
+    def test_every_schema_timestamp_shape_parses_under_the_session_zone(
+        measured: dict[str, Any], shape: str
+    ) -> None:
+        for zone in (LA, TK):
+>           assert measured[f"shape/{shape}/{zone}"] == SHAPES[shape][2][zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, 17040780..., 1717284600)] == [(1, 17041068..., 1717309800)]
+E             
+E             At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:194: AssertionError
+_ test_every_schema_timestamp_shape_parses_under_the_session_zone[true-two_fields] _
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+shape = 'two_fields'
+
+    @pytest.mark.parametrize("shape", sorted(SHAPES))
+    def test_every_schema_timestamp_shape_parses_under_the_session_zone(
+        measured: dict[str, Any], shape: str
+    ) -> None:
+        for zone in (LA, TK):
+>           assert measured[f"shape/{shape}/{zone}"] == SHAPES[shape][2][zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, 1704078000, 1717284600)] == [(1, 1704106800, 1717309800)]
+E             
+E             At index 0 diff: (1, 1704078000, 1717284600) != (1, 1704106800, 1717309800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:194: AssertionError
+______ test_a_schema_timestamp_parses_under_the_session_zone[false-csv_s] ______
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+reader = 'csv_s'
+
+    @pytest.mark.parametrize("reader", ["csv_s", "csv_f"])
+    def test_a_schema_timestamp_parses_under_the_session_zone(
+        measured: dict[str, Any], reader: str
+    ) -> None:
+        for zone in (UTC, LA):
+            dtypes, got = measured[f"matching/{reader}/{zone}"]
+            assert dtypes == [("n", "int"), ("ts", "timestamp")], zone
+>           assert got == SPARK_BY_ZONE[zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E             
+E             At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:171: AssertionError
+______ test_a_schema_timestamp_parses_under_the_session_zone[false-csv_f] ______
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+reader = 'csv_f'
+
+    @pytest.mark.parametrize("reader", ["csv_s", "csv_f"])
+    def test_a_schema_timestamp_parses_under_the_session_zone(
+        measured: dict[str, Any], reader: str
+    ) -> None:
+        for zone in (UTC, LA):
+            dtypes, got = measured[f"matching/{reader}/{zone}"]
+            assert dtypes == [("n", "int"), ("ts", "timestamp")], zone
+>           assert got == SPARK_BY_ZONE[zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E             
+E             At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:171: AssertionError
+_ test_a_view_read_in_another_zone_parses_under_the_reading_zone[false-frame_view] _
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+door = 'frame_view'
+
+    @pytest.mark.parametrize("door", ["frame_view", "sql_view"])
+    def test_a_view_read_in_another_zone_parses_under_the_reading_zone(
+        measured: dict[str, Any], door: str
+    ) -> None:
+        for made, read in ((LA, UTC), (UTC, LA)):
+>           assert measured[f"view/{door}/{made}/{read}"] == SPARK_BY_ZONE[read], (made, read)
+E           AssertionError: ('UTC', 'America/Los_Angeles')
+E           assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E             
+E             At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:179: AssertionError
+_ test_a_view_read_in_another_zone_parses_under_the_reading_zone[false-sql_view] _
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+door = 'sql_view'
+
+    @pytest.mark.parametrize("door", ["frame_view", "sql_view"])
+    def test_a_view_read_in_another_zone_parses_under_the_reading_zone(
+        measured: dict[str, Any], door: str
+    ) -> None:
+        for made, read in ((LA, UTC), (UTC, LA)):
+>           assert measured[f"view/{door}/{made}/{read}"] == SPARK_BY_ZONE[read], (made, read)
+E           AssertionError: ('UTC', 'America/Los_Angeles')
+E           assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E             
+E             At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:179: AssertionError
+____ test_a_write_in_another_zone_stores_the_writing_zone_parse[false-ctas] ____
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+write = 'ctas'
+
+    @pytest.mark.parametrize("write", sorted(WRITES))
+    def test_a_write_in_another_zone_stores_the_writing_zone_parse(
+        measured: dict[str, Any], write: str
+    ) -> None:
+>       assert measured[f"write/{write}"] == LA_PARSE
+E       assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E         
+E         At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E         Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:186: AssertionError
+___ test_a_write_in_another_zone_stores_the_writing_zone_parse[false-insert] ___
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+write = 'insert'
+
+    @pytest.mark.parametrize("write", sorted(WRITES))
+    def test_a_write_in_another_zone_stores_the_writing_zone_parse(
+        measured: dict[str, Any], write: str
+    ) -> None:
+>       assert measured[f"write/{write}"] == LA_PARSE
+E       assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E         
+E         At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E         Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:186: AssertionError
+_ test_a_write_in_another_zone_stores_the_writing_zone_parse[false-insert_into] _
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+write = 'insert_into'
+
+    @pytest.mark.parametrize("write", sorted(WRITES))
+    def test_a_write_in_another_zone_stores_the_writing_zone_parse(
+        measured: dict[str, Any], write: str
+    ) -> None:
+>       assert measured[f"write/{write}"] == LA_PARSE
+E       assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E         
+E         At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E         Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:186: AssertionError
+__ test_a_write_in_another_zone_stores_the_writing_zone_parse[false-write_to] __
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+write = 'write_to'
+
+    @pytest.mark.parametrize("write", sorted(WRITES))
+    def test_a_write_in_another_zone_stores_the_writing_zone_parse(
+        measured: dict[str, Any], write: str
+    ) -> None:
+>       assert measured[f"write/{write}"] == LA_PARSE
+E       assert [(1, 17040780..., 1704110400)] == [(1, 17041068..., 1704139200)]
+E         
+E         At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E         Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:186: AssertionError
+__ test_every_schema_timestamp_shape_parses_under_the_session_zone[false-dst] __
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+shape = 'dst'
+
+    @pytest.mark.parametrize("shape", sorted(SHAPES))
+    def test_every_schema_timestamp_shape_parses_under_the_session_zone(
+        measured: dict[str, Any], shape: str
+    ) -> None:
+        for zone in (LA, TK):
+>           assert measured[f"shape/{shape}/{zone}"] == SHAPES[shape][2][zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, 17100378..., 1730597400)] == [(1, 17100666..., 1730622600)]
+E             
+E             At index 0 diff: (1, 1710037800) != (1, 1710066600)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:194: AssertionError
+_ test_every_schema_timestamp_shape_parses_under_the_session_zone[false-empty_field] _
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+shape = 'empty_field'
+
+    @pytest.mark.parametrize("shape", sorted(SHAPES))
+    def test_every_schema_timestamp_shape_parses_under_the_session_zone(
+        measured: dict[str, Any], shape: str
+    ) -> None:
+        for zone in (LA, TK):
+>           assert measured[f"shape/{shape}/{zone}"] == SHAPES[shape][2][zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, None), (2, 1704078000)] == [(1, None), (2, 1704106800)]
+E             
+E             At index 1 diff: (2, 1704078000) != (2, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:194: AssertionError
+_ test_every_schema_timestamp_shape_parses_under_the_session_zone[false-header] _
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+shape = 'header'
+
+    @pytest.mark.parametrize("shape", sorted(SHAPES))
+    def test_every_schema_timestamp_shape_parses_under_the_session_zone(
+        measured: dict[str, Any], shape: str
+    ) -> None:
+        for zone in (LA, TK):
+>           assert measured[f"shape/{shape}/{zone}"] == SHAPES[shape][2][zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, 17040780..., 1717284600)] == [(1, 17041068..., 1717309800)]
+E             
+E             At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:194: AssertionError
+_ test_every_schema_timestamp_shape_parses_under_the_session_zone[false-header_by_position] _
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+shape = 'header_by_position'
+
+    @pytest.mark.parametrize("shape", sorted(SHAPES))
+    def test_every_schema_timestamp_shape_parses_under_the_session_zone(
+        measured: dict[str, Any], shape: str
+    ) -> None:
+        for zone in (LA, TK):
+>           assert measured[f"shape/{shape}/{zone}"] == SHAPES[shape][2][zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, 17040780..., 1717284600)] == [(1, 17041068..., 1717309800)]
+E             
+E             At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:194: AssertionError
+__ test_every_schema_timestamp_shape_parses_under_the_session_zone[false-iso] __
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+shape = 'iso'
+
+    @pytest.mark.parametrize("shape", sorted(SHAPES))
+    def test_every_schema_timestamp_shape_parses_under_the_session_zone(
+        measured: dict[str, Any], shape: str
+    ) -> None:
+        for zone in (LA, TK):
+>           assert measured[f"shape/{shape}/{zone}"] == SHAPES[shape][2][zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, 17040780..., 1717284600)] == [(1, 17041068..., 1717309800)]
+E             
+E             At index 0 diff: (1, 1704078000) != (1, 1704106800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:194: AssertionError
+_ test_every_schema_timestamp_shape_parses_under_the_session_zone[false-two_fields] _
+
+measured = {'matching/csv_s/UTC': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), 'matching/csv_s/Amer..., 'matching/csv_f/America/Los_Angeles': ([('n', 'int'), ('ts', 'timestamp')], [(1, 1704078000), (2, 1704110400)]), ...}
+shape = 'two_fields'
+
+    @pytest.mark.parametrize("shape", sorted(SHAPES))
+    def test_every_schema_timestamp_shape_parses_under_the_session_zone(
+        measured: dict[str, Any], shape: str
+    ) -> None:
+        for zone in (LA, TK):
+>           assert measured[f"shape/{shape}/{zone}"] == SHAPES[shape][2][zone], zone
+E           AssertionError: America/Los_Angeles
+E           assert [(1, 1704078000, 1717284600)] == [(1, 1704106800, 1717309800)]
+E             
+E             At index 0 diff: (1, 1704078000, 1717284600) != (1, 1704106800, 1717309800)
+E             Use -v to get more diff
+
+test_csv_schema_timestamp_zone_1.py:194: AssertionError
+=========================== short test summary info ============================
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_schema_timestamp_parses_under_the_session_zone[true-csv_s]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_schema_timestamp_parses_under_the_session_zone[true-csv_f]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_view_read_in_another_zone_parses_under_the_reading_zone[true-frame_view]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_view_read_in_another_zone_parses_under_the_reading_zone[true-sql_view]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_write_in_another_zone_stores_the_writing_zone_parse[true-ctas]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_write_in_another_zone_stores_the_writing_zone_parse[true-insert]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_write_in_another_zone_stores_the_writing_zone_parse[true-insert_into]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_write_in_another_zone_stores_the_writing_zone_parse[true-write_to]
+FAILED test_csv_schema_timestamp_zone_1.py::test_every_schema_timestamp_shape_parses_under_the_session_zone[true-dst]
+FAILED test_csv_schema_timestamp_zone_1.py::test_every_schema_timestamp_shape_parses_under_the_session_zone[true-empty_field]
+FAILED test_csv_schema_timestamp_zone_1.py::test_every_schema_timestamp_shape_parses_under_the_session_zone[true-header]
+FAILED test_csv_schema_timestamp_zone_1.py::test_every_schema_timestamp_shape_parses_under_the_session_zone[true-header_by_position]
+FAILED test_csv_schema_timestamp_zone_1.py::test_every_schema_timestamp_shape_parses_under_the_session_zone[true-iso]
+FAILED test_csv_schema_timestamp_zone_1.py::test_every_schema_timestamp_shape_parses_under_the_session_zone[true-two_fields]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_schema_timestamp_parses_under_the_session_zone[false-csv_s]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_schema_timestamp_parses_under_the_session_zone[false-csv_f]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_view_read_in_another_zone_parses_under_the_reading_zone[false-frame_view]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_view_read_in_another_zone_parses_under_the_reading_zone[false-sql_view]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_write_in_another_zone_stores_the_writing_zone_parse[false-ctas]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_write_in_another_zone_stores_the_writing_zone_parse[false-insert]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_write_in_another_zone_stores_the_writing_zone_parse[false-insert_into]
+FAILED test_csv_schema_timestamp_zone_1.py::test_a_write_in_another_zone_stores_the_writing_zone_parse[false-write_to]
+FAILED test_csv_schema_timestamp_zone_1.py::test_every_schema_timestamp_shape_parses_under_the_session_zone[false-dst]
+FAILED test_csv_schema_timestamp_zone_1.py::test_every_schema_timestamp_shape_parses_under_the_session_zone[false-empty_field]
+FAILED test_csv_schema_timestamp_zone_1.py::test_every_schema_timestamp_shape_parses_under_the_session_zone[false-header]
+FAILED test_csv_schema_timestamp_zone_1.py::test_every_schema_timestamp_shape_parses_under_the_session_zone[false-header_by_position]
+FAILED test_csv_schema_timestamp_zone_1.py::test_every_schema_timestamp_shape_parses_under_the_session_zone[false-iso]
+FAILED test_csv_schema_timestamp_zone_1.py::test_every_schema_timestamp_shape_parses_under_the_session_zone[false-two_fields]
+28 failed in 1.32s

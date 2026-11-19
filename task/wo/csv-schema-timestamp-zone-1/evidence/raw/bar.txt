@@ -1,0 +1,343 @@
+cells 5732
+Z main {"EQUAL": 2214, "RAISE": 528, "WRONG": 842, "NOSPARK": 512} head {"EQUAL": 2406, "RAISE": 528, "WRONG": 650, "NOSPARK": 512} moved 256
+A main {"EQUAL": 362, "WRONG": 43, "RAISE": 411, "NOSPARK": 68} head {"EQUAL": 362, "WRONG": 43, "RAISE": 411, "NOSPARK": 68} moved 68
+T main {"EQUAL": 198, "WRONG": 142, "NOSPARK": 68} head {"EQUAL": 218, "WRONG": 122, "NOSPARK": 68} moved 68
+S main {"RAISE": 8} head {"RAISE": 8} moved 0
+W main {"EQUAL": 152, "WRONG": 136, "NOSPARK": 48} head {"EQUAL": 160, "WRONG": 128, "NOSPARK": 48} moved 24
+
+## Z matching by reader, head (main)
+csv_0 head {"EQUAL": 104, "RAISE": 4, "WRONG": 20} main {"EQUAL": 104, "RAISE": 4, "WRONG": 20}
+csv_f head {"EQUAL": 128} main {"WRONG": 64, "EQUAL": 64}
+csv_fix head {"NOSPARK": 128} main {"NOSPARK": 128}
+csv_i head {"EQUAL": 128} main {"EQUAL": 128}
+csv_n head {"EQUAL": 128} main {"EQUAL": 128}
+csv_ns head {"EQUAL": 104, "RAISE": 4, "WRONG": 20} main {"EQUAL": 104, "RAISE": 4, "WRONG": 20}
+csv_s head {"EQUAL": 128} main {"WRONG": 64, "EQUAL": 64}
+csv_tf head {"RAISE": 128} main {"RAISE": 128}
+emu head {"EQUAL": 128} main {"EQUAL": 128}
+json_f head {"EQUAL": 128} main {"EQUAL": 128}
+json_i head {"EQUAL": 108, "WRONG": 20} main {"EQUAL": 108, "WRONG": 20}
+json_m head {"EQUAL": 128} main {"EQUAL": 128}
+json_s head {"EQUAL": 128} main {"EQUAL": 128}
+json_tz head {"RAISE": 128} main {"RAISE": 128}
+pq head {"EQUAL": 128} main {"EQUAL": 128}
+smart head {"NOSPARK": 128} main {"NOSPARK": 128}
+
+## Z cross by reader, head gap class (main gap class)
+csv_0 head {"equal": 100, "direct": 24, "view": 4} main {"equal": 100, "direct": 24, "view": 4}
+csv_f head {"equal": 54, "view": 74} main {"equal": 22, "direct": 106}
+csv_fix head {"nospark": 128} main {"nospark": 128}
+csv_i head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+csv_n head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+csv_ns head {"equal": 100, "direct": 24, "view": 4} main {"equal": 100, "direct": 24, "view": 4}
+csv_s head {"equal": 54, "view": 74} main {"equal": 22, "direct": 106}
+csv_tf head {"direct": 128} main {"direct": 128}
+emu head {"equal": 128} main {"equal": 128}
+json_f head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+json_i head {"equal": 104, "direct": 20, "view": 4} main {"equal": 104, "direct": 20, "view": 4}
+json_m head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+json_s head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+json_tz head {"direct": 128} main {"direct": 128}
+pq head {"equal": 128} main {"equal": 128}
+smart head {"nospark": 128} main {"nospark": 128}
+
+## twins against Spark (csv_fix vs csv_s, emu vs json_s), head and main
+W emu cross {"EQUAL": 48}
+Z csv_fix cross {"EQUAL": 54, "WRONG": 74}
+Z csv_fix matching {"EQUAL": 128}
+Z emu cross {"EQUAL": 128}
+Z emu matching {"EQUAL": 128}
+
+## T by reader, head (main)
+csv_i head {"EQUAL": 34, "WRONG": 34} main {"EQUAL": 34, "WRONG": 34}
+csv_s head {"EQUAL": 34, "WRONG": 34} main {"WRONG": 54, "EQUAL": 14}
+json_i head {"EQUAL": 48, "WRONG": 20} main {"EQUAL": 48, "WRONG": 20}
+json_s head {"EQUAL": 34, "WRONG": 34} main {"EQUAL": 34, "WRONG": 34}
+pq head {"EQUAL": 68} main {"EQUAL": 68}
+smart head {"NOSPARK": 68} main {"NOSPARK": 68}
+
+## W csv_s d writes
+W/ansi_false/la_utc/csv_s/d/ctas main EQUAL head EQUAL
+W/ansi_false/la_utc/csv_s/d/ins main EQUAL head EQUAL
+W/ansi_false/la_utc/csv_s/d/into main EQUAL head EQUAL
+W/ansi_false/la_utc/csv_s/d/wto main EQUAL head EQUAL
+W/ansi_false/utc_la/csv_s/d/ctas main WRONG head EQUAL
+W/ansi_false/utc_la/csv_s/d/ins main WRONG head EQUAL
+W/ansi_false/utc_la/csv_s/d/into main WRONG head EQUAL
+W/ansi_false/utc_la/csv_s/d/wto main WRONG head EQUAL
+W/ansi_true/la_utc/csv_s/d/ctas main EQUAL head EQUAL
+W/ansi_true/la_utc/csv_s/d/ins main EQUAL head EQUAL
+W/ansi_true/la_utc/csv_s/d/into main EQUAL head EQUAL
+W/ansi_true/la_utc/csv_s/d/wto main EQUAL head EQUAL
+W/ansi_true/utc_la/csv_s/d/ctas main WRONG head EQUAL
+W/ansi_true/utc_la/csv_s/d/ins main WRONG head EQUAL
+W/ansi_true/utc_la/csv_s/d/into main WRONG head EQUAL
+W/ansi_true/utc_la/csv_s/d/wto main WRONG head EQUAL
+
+## every moved cell (main -> head)
+A csv_sov RAISE->RAISE 68
+T csv_s EQUAL->WRONG 14
+T csv_s WRONG->EQUAL 34
+T csv_s WRONG->WRONG 20
+W csv_s WRONG->EQUAL 8
+W csv_s WRONG->WRONG 16
+Z csv_f WRONG->EQUAL 96
+Z csv_f WRONG->WRONG 32
+Z csv_s WRONG->EQUAL 96
+Z csv_s WRONG->WRONG 32
+
+## moved cells outside csv_s, csv_f, csv_fix
+A/false_false/csv_sov/d | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/e | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/f | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/j | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/o | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/osa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/sa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_false/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/d | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/e | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/f | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/j | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/o | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/osa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/sa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/false_true/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/d | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/e | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/f | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/j | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/o | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/osa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/sa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_false/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/d | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/e | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/f | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/j | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/o | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/osa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/sa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+A/true_true/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+
+## EQUAL lost
+T/NTZ_LTZ/csv_s/d | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_LTZ/csv_s/e | spark (1, 2, 1704078000) (2, 3, 1704110400) | main (1, 2, 1704078000) (2, 3, 1704110400) | head (1, 2, 1704106800) (2, 3, 1704139200)
+T/NTZ_LTZ/csv_s/f | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_LTZ/csv_s/j | spark (1, 19, 1704078000) (2, 4, 1704110400) | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 19, 1704106800) (2, 4, 1704139200)
+T/NTZ_LTZ/csv_s/o | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_LTZ/csv_s/osa | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_LTZ/csv_s/sa | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_NTZ/csv_s/d | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_NTZ/csv_s/e | spark (1, 2, 1704078000) (2, 3, 1704110400) | main (1, 2, 1704078000) (2, 3, 1704110400) | head (1, 2, 1704106800) (2, 3, 1704139200)
+T/NTZ_NTZ/csv_s/f | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_NTZ/csv_s/j | spark (1, 19, 1704078000) (2, 4, 1704110400) | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 19, 1704106800) (2, 4, 1704139200)
+T/NTZ_NTZ/csv_s/o | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_NTZ/csv_s/osa | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_NTZ/csv_s/sa | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+
+## changed answers that keep the verdict
+RAISE A/false_false/csv_sov/d | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/e | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/f | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/j | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/o | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/osa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/sa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_false/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/d | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/e | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/f | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/j | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/o | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/osa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/sa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/false_true/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/d | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/e | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/f | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/j | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/o | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/osa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/sa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_false/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/d | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/e | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/f | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/j | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/o | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/osa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/sa | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+RAISE A/true_true/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32 | head RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I
+WRONG T/NTZ_LTZ/csv_s/eb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_LTZ/csv_s/eb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_LTZ/csv_s/jb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_LTZ/csv_s/jb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_LTZ/csv_s/ob_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_LTZ/csv_s/ob_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_LTZ/csv_s/osb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_LTZ/csv_s/osb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_LTZ/csv_s/sb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_LTZ/csv_s/sb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_NTZ/csv_s/eb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_NTZ/csv_s/eb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_NTZ/csv_s/jb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_NTZ/csv_s/jb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_NTZ/csv_s/ob_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_NTZ/csv_s/ob_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_NTZ/csv_s/osb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_NTZ/csv_s/osb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_NTZ/csv_s/sb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_NTZ/csv_s/sb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/eb_hour/ctas | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/eb_hour/ins | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/eb_hour/into | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/eb_hour/wto | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/sb_hour/ctas | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/sb_hour/ins | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/sb_hour/into | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/sb_hour/wto | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/eb_hour/ctas | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/eb_hour/ins | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/eb_hour/into | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/eb_hour/wto | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/sb_hour/ctas | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/sb_hour/ins | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/sb_hour/into | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/sb_hour/wto | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/eb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/eb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/eb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/j | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 19, 1704106800) (2, 4, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/jb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/jb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/jb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/ob_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/ob_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/ob_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/osb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/osb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/osb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/sb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/sb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/sb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/eb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/eb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/eb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/j | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 19, 1704106800) (2, 4, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/jb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/jb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/jb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/ob_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/ob_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/ob_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/osb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/osb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/osb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/sb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/sb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/sb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/eb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/eb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/eb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/j | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 19, 1704106800) (2, 4, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/jb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/jb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/jb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/ob_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/ob_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/ob_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/osb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/osb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/osb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/sb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/sb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/sb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/eb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/eb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/eb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/j | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 19, 1704106800) (2, 4, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/jb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/jb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/jb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/ob_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/ob_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/ob_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/osb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/osb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/osb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/sb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/sb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/sb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)

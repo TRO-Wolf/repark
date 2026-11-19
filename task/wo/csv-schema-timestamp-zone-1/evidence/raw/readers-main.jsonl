@@ -1,0 +1,1176 @@
+{"tag": "ansi_true/la_utc/csv_ns/create_e", "error": "Error during planning: Cannot coerce arithmetic expression Utf8 + Int64 to valid types"}
+{"tag": "ansi_true/la_utc/excel/create", "error": "spark.read.excel (read_excel) is not available in this build: the repark-excel read connector is scheduled post-milestone-one. See the \"Post"}
+{"tag": "ansi_true/la_utc/json_s/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/sh_d", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/sh_f", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/sh_e", "rows": ["(2, 3, 1704078000, '2024-01-01 03:00:00')", "(3, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/sa_h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/sh_h", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/sh_o", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/sa_oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_s/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/h", "rows": ["(1, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/oh", "rows": ["(1, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/sh_d", "rows": ["(1, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/sh_f", "rows": ["(1, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/sh_e", "rows": ["(2, 0, 1704078000, '2024-01-01 03:00:00')", "(3, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/sa_h", "rows": ["(1, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/sh_h", "rows": ["(1, 0, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/sh_o", "rows": ["(1, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/sa_oh", "rows": ["(1, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/sh_oh", "rows": ["(1, 0, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/json_i/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/sh_d", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/sh_f", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/sh_e", "rows": ["(2, 3, 1704078000, '2024-01-01 03:00:00')", "(3, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/sa_h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/sh_h", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/sh_o", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/sa_oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_s/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/sh_d", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/sh_f", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/sh_e", "rows": ["(2, 3, 1704078000, '2024-01-01 03:00:00')", "(3, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/sa_h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/sh_h", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/sh_o", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/sa_oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_i/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(3, None, None)", "(None, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(4, None, None)", "(None, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(3, None, None)", "(None, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/sh_d", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/sh_f", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None)"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(4, None, None)", "(None, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/sh_e", "rows": ["(2, 3, 1704078000, '2024-01-01 03:00:00')", "(4, None, None, None)", "(None, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/sa_h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/sh_h", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None, None)", "(None, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/sh_o", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None)"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/sa_oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None, None)", "(None, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_n/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/d", "rows": ["('1', 1704078000, '2024-01-01 03:00:00')", "('3', None, None)", "(None, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/f", "rows": ["('1', 1704078000, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/h", "rows": ["('1', 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/o", "rows": ["('1', 1704078000, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/oh", "rows": ["('1', 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/sa_d", "rows": ["('1', 1704078000, '2024-01-01 03:00:00')", "('3', None, None)", "(None, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/sh_d", "rows": ["('1', 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/sa_f", "rows": ["('1', 1704078000, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/sh_f", "rows": ["('1', 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None)"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/sa_h", "rows": ["('1', 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/sh_h", "rows": ["('1', 0, 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None, None)", "(None, 0, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/sa_o", "rows": ["('1', 1704078000, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/sh_o", "rows": ["('1', 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None)"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/sa_oh", "rows": ["('1', 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/sh_oh", "rows": ["('1', 0, 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None, None)", "(None, 0, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/csv_ns/osa", "rows": ["('1', 1704078000, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/d", "rows": ["(19, 1704078000, '2024-01-01 03:00:00')", "(19, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/f", "rows": ["(19, 1704078000, '2024-01-01 03:00:00')", "(19, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/e", "rows": ["(20, 1704078000, '2024-01-01 03:00:00')", "(20, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/h", "rows": ["(19, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/o", "rows": ["(19, 1704078000, '2024-01-01 03:00:00')", "(19, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/oh", "rows": ["(19, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/sa_d", "rows": ["(19, 1704078000, '2024-01-01 03:00:00')", "(19, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/sh_d", "rows": ["(19, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/sa_f", "rows": ["(19, 1704078000, '2024-01-01 03:00:00')", "(19, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/sh_f", "rows": ["(19, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/sa_e", "rows": ["(20, 1704078000, '2024-01-01 03:00:00')", "(20, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/sh_e", "rows": ["(20, 0, 1704078000, '2024-01-01 03:00:00')", "(20, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/sa_h", "rows": ["(19, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/sh_h", "rows": ["(19, 0, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/sa_o", "rows": ["(19, 1704078000, '2024-01-01 03:00:00')", "(19, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/sh_o", "rows": ["(19, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/sa_oh", "rows": ["(19, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/sh_oh", "rows": ["(19, 0, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_v/osa", "rows": ["(19, 1704078000, '2024-01-01 03:00:00')", "(19, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/d", "rows": ["('x', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/f", "rows": ["('x', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/e", "rows": ["('x1', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/h", "rows": ["('x', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/o", "rows": ["('x', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/oh", "rows": ["('x', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/sa_d", "rows": ["('x', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/sh_d", "rows": ["('x', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/sa_f", "rows": ["('x', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/sh_f", "rows": ["('x', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/sa_e", "rows": ["('x1', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/sh_e", "rows": ["('x1', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/sa_h", "rows": ["('x', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/sh_h", "rows": ["('x', 3, 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/sa_o", "rows": ["('x', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/sh_o", "rows": ["('x', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/sa_oh", "rows": ["('x', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/sh_oh", "rows": ["('x', 3, 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/text_p/osa", "rows": ["('x', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/sh_d", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/sh_f", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/sh_e", "rows": ["(2, 19, 1704078000, '2024-01-01 03:00:00')", "(3, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/sa_h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/sh_h", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/sh_o", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/sa_oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/sh_oh", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/sh_d", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/sh_f", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/sh_e", "rows": ["(2, 19, 1704078000, '2024-01-01 03:00:00')", "(3, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/sa_h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/sh_h", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/sh_o", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/sa_oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/sh_oh", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/orc_s/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/sh_d", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/sh_f", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/sh_e", "rows": ["(2, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/sa_h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/sh_h", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/sh_o", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/sa_oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/sh_oh", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_v/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/sh_d", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/sh_f", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/sh_e", "rows": ["(2, 19, 1704078000, '2024-01-01 03:00:00')", "(3, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/sa_h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/sh_h", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/sh_o", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/sa_oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/sh_oh", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_t/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/d", "rows": ["(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/f", "rows": ["(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/e", "rows": ["(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/h", "rows": ["(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/o", "rows": ["(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/oh", "rows": ["(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/sa_d", "rows": ["(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/sh_d", "rows": ["(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/sa_f", "rows": ["(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/sh_f", "rows": ["(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/sa_e", "rows": ["(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/sh_e", "rows": ["(3, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/sa_h", "rows": ["(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/sh_h", "rows": ["(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/sa_o", "rows": ["(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/sh_o", "rows": ["(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/sa_oh", "rows": ["(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/sh_oh", "rows": ["(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/ice_i/osa", "rows": ["(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/cdf/d", "rows": ["(1, 1704106800, '2024-01-01 11:00:00')", "(2, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/cdf/f", "rows": ["(1, 1704106800, '2024-01-01 11:00:00')", "(2, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/cdf/e", "rows": ["(2, 1704106800, '2024-01-01 11:00:00')", "(3, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/cdf/h", "rows": ["(1, 3, 1704106800, '2024-01-01 11:00:00')", "(2, 12, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/cdf/o", "rows": ["(1, 1704106800, '2024-01-01 11:00:00')", "(2, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/cdf/oh", "rows": ["(1, 3, 1704106800, '2024-01-01 11:00:00')", "(2, 12, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/cdf/sa_d", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/la_utc/cdf/sh_d", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/la_utc/cdf/sa_f", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/la_utc/cdf/sh_f", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/la_utc/cdf/sa_e", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/la_utc/cdf/sh_e", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/la_utc/cdf/sa_h", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/la_utc/cdf/sh_h", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/la_utc/cdf/sa_o", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/la_utc/cdf/sh_o", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/la_utc/cdf/sa_oh", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/la_utc/cdf/sh_oh", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/la_utc/cdf/osa", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/la_utc/pq/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/sh_d", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/sh_f", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/sh_e", "rows": ["(2, 19, 1704078000, '2024-01-01 03:00:00')", "(3, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/sa_h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/sh_h", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/sh_o", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/sa_oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/sh_oh", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/pq/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/d", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/f", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/e", "rows": ["(2, 3, 1704078000, '2024-01-01 03:00:00')", "(3, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/h", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/o", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/sa_d", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/sh_d", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/sa_f", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/sh_f", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/sa_e", "rows": ["(2, 3, 1704078000, '2024-01-01 03:00:00')", "(3, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/sh_e", "rows": ["(2, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(3, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/sa_h", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/sh_h", "rows": ["(1, 3, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/sa_o", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/sh_o", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/sa_oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/la_utc/mixed/osa", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/create_e", "error": "Error during planning: Cannot coerce arithmetic expression Utf8 + Int64 to valid types"}
+{"tag": "ansi_true/utc_la/ice_t/create", "error": "Cannot find a snapshot older than 2026-11-19T00:10:54+00:00"}
+{"tag": "ansi_true/utc_la/excel/create", "error": "spark.read.excel (read_excel) is not available in this build: the repark-excel read connector is scheduled post-milestone-one. See the \"Post"}
+{"tag": "ansi_true/utc_la/json_s/d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(3, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/h", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/sa_d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/sh_d", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/sa_f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/sh_f", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/sa_e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(3, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/sh_e", "rows": ["(2, 3, 1704106800, '2024-01-01 03:00:00')", "(3, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/sa_h", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/sh_h", "rows": ["(1, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/sa_o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/sh_o", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/sa_oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/sh_oh", "rows": ["(1, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_s/osa", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(3, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/h", "rows": ["(1, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/oh", "rows": ["(1, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/sa_d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/sh_d", "rows": ["(1, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/sa_f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/sh_f", "rows": ["(1, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/sa_e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(3, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/sh_e", "rows": ["(2, 0, 1704106800, '2024-01-01 03:00:00')", "(3, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/sa_h", "rows": ["(1, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/sh_h", "rows": ["(1, 0, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/sa_o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/sh_o", "rows": ["(1, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/sa_oh", "rows": ["(1, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/sh_oh", "rows": ["(1, 0, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/json_i/osa", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/h", "rows": ["(1, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/oh", "rows": ["(1, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/sa_d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/sh_d", "rows": ["(1, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/sa_f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/sh_f", "rows": ["(1, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/sa_e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/sh_e", "rows": ["(2, 19, 1704078000, '2023-12-31 19:00:00')", "(3, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/sa_h", "rows": ["(1, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/sh_h", "rows": ["(1, 19, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/sa_o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/sh_o", "rows": ["(1, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/sa_oh", "rows": ["(1, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/sh_oh", "rows": ["(1, 19, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_s/osa", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(3, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/h", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/sa_d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/sh_d", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/sa_f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/sh_f", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/sa_e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(3, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/sh_e", "rows": ["(2, 3, 1704106800, '2024-01-01 03:00:00')", "(3, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/sa_h", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/sh_h", "rows": ["(1, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/sa_o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/sh_o", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/sa_oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/sh_oh", "rows": ["(1, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_i/osa", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(3, None, None)", "(None, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(4, None, None)", "(None, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/h", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/sa_d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(3, None, None)", "(None, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/sh_d", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/sa_f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/sh_f", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None)"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/sa_e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(4, None, None)", "(None, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/sh_e", "rows": ["(2, 3, 1704106800, '2024-01-01 03:00:00')", "(4, None, None, None)", "(None, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/sa_h", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/sh_h", "rows": ["(1, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None, None)", "(None, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/sa_o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/sh_o", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None)"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/sa_oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/sh_oh", "rows": ["(1, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None, None)", "(None, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_n/osa", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/d", "rows": ["('1', 1704106800, '2024-01-01 03:00:00')", "('3', None, None)", "(None, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/f", "rows": ["('1', 1704106800, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/h", "rows": ["('1', 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/o", "rows": ["('1', 1704106800, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/oh", "rows": ["('1', 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/sa_d", "rows": ["('1', 1704106800, '2024-01-01 03:00:00')", "('3', None, None)", "(None, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/sh_d", "rows": ["('1', 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/sa_f", "rows": ["('1', 1704106800, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/sh_f", "rows": ["('1', 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None)"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/sa_h", "rows": ["('1', 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/sh_h", "rows": ["('1', 0, 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None, None)", "(None, 0, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/sa_o", "rows": ["('1', 1704106800, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/sh_o", "rows": ["('1', 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None)"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/sa_oh", "rows": ["('1', 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/sh_oh", "rows": ["('1', 0, 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None, None)", "(None, 0, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/csv_ns/osa", "rows": ["('1', 1704106800, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/d", "rows": ["(19, 1704106800, '2024-01-01 03:00:00')", "(19, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/f", "rows": ["(19, 1704106800, '2024-01-01 03:00:00')", "(19, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/e", "rows": ["(20, 1704106800, '2024-01-01 03:00:00')", "(20, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/h", "rows": ["(19, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/o", "rows": ["(19, 1704106800, '2024-01-01 03:00:00')", "(19, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/oh", "rows": ["(19, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/sa_d", "rows": ["(19, 1704106800, '2024-01-01 03:00:00')", "(19, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/sh_d", "rows": ["(19, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/sa_f", "rows": ["(19, 1704106800, '2024-01-01 03:00:00')", "(19, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/sh_f", "rows": ["(19, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/sa_e", "rows": ["(20, 1704106800, '2024-01-01 03:00:00')", "(20, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/sh_e", "rows": ["(20, 0, 1704106800, '2024-01-01 03:00:00')", "(20, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/sa_h", "rows": ["(19, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/sh_h", "rows": ["(19, 0, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/sa_o", "rows": ["(19, 1704106800, '2024-01-01 03:00:00')", "(19, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/sh_o", "rows": ["(19, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/sa_oh", "rows": ["(19, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/sh_oh", "rows": ["(19, 0, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_v/osa", "rows": ["(19, 1704106800, '2024-01-01 03:00:00')", "(19, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/d", "rows": ["('x', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/f", "rows": ["('x', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/e", "rows": ["('x1', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/h", "rows": ["('x', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/o", "rows": ["('x', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/oh", "rows": ["('x', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/sa_d", "rows": ["('x', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/sh_d", "rows": ["('x', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/sa_f", "rows": ["('x', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/sh_f", "rows": ["('x', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/sa_e", "rows": ["('x1', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/sh_e", "rows": ["('x1', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/sa_h", "rows": ["('x', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/sh_h", "rows": ["('x', 3, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/sa_o", "rows": ["('x', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/sh_o", "rows": ["('x', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/sa_oh", "rows": ["('x', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/sh_oh", "rows": ["('x', 3, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/text_p/osa", "rows": ["('x', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/sa_d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/sh_d", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/sa_f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/sh_f", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/sa_e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/sh_e", "rows": ["(2, 3, 1704078000, '2023-12-31 19:00:00')", "(3, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/sa_h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/sh_h", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/sa_o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/sh_o", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/sa_oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc/osa", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/sa_d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/sh_d", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/sa_f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/sh_f", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/sa_e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/sh_e", "rows": ["(2, 3, 1704078000, '2023-12-31 19:00:00')", "(3, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/sa_h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/sh_h", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/sa_o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/sh_o", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/sa_oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/orc_s/osa", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/sa_d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/sh_d", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/sa_f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/sh_f", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/sa_e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/sh_e", "rows": ["(2, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/sa_h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/sh_h", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/sa_o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/sh_o", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/sa_oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_v/osa", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/d", "rows": ["(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/f", "rows": ["(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/e", "rows": ["(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/h", "rows": ["(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/o", "rows": ["(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/oh", "rows": ["(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/sa_d", "rows": ["(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/sh_d", "rows": ["(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/sa_f", "rows": ["(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/sh_f", "rows": ["(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/sa_e", "rows": ["(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/sh_e", "rows": ["(3, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/sa_h", "rows": ["(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/sh_h", "rows": ["(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/sa_o", "rows": ["(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/sh_o", "rows": ["(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/sa_oh", "rows": ["(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/sh_oh", "rows": ["(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/ice_i/osa", "rows": ["(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/cdf/d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/cdf/f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/cdf/e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/cdf/h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/cdf/o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/cdf/oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/cdf/sa_d", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/utc_la/cdf/sh_d", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/utc_la/cdf/sa_f", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/utc_la/cdf/sh_f", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/utc_la/cdf/sa_e", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/utc_la/cdf/sh_e", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/utc_la/cdf/sa_h", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/utc_la/cdf/sh_h", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/utc_la/cdf/sa_o", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/utc_la/cdf/sh_o", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/utc_la/cdf/sa_oh", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/utc_la/cdf/sh_oh", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/utc_la/cdf/osa", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_true/utc_la/pq/d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/sa_d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/sh_d", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/sa_f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/sh_f", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/sa_e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/sh_e", "rows": ["(2, 3, 1704078000, '2023-12-31 19:00:00')", "(3, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/sa_h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/sh_h", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/sa_o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/sh_o", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/sa_oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/pq/osa", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/d", "rows": ["(1, 19, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/f", "rows": ["(1, 19, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/e", "rows": ["(2, 19, 1704106800, '2024-01-01 03:00:00')", "(3, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/h", "rows": ["(1, 19, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/o", "rows": ["(1, 19, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/sa_d", "rows": ["(1, 19, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/sh_d", "rows": ["(1, 19, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/sa_f", "rows": ["(1, 19, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/sh_f", "rows": ["(1, 19, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/sa_e", "rows": ["(2, 19, 1704106800, '2024-01-01 03:00:00')", "(3, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/sh_e", "rows": ["(2, 19, 3, 1704106800, '2024-01-01 03:00:00')", "(3, 4, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/sa_h", "rows": ["(1, 19, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/sh_h", "rows": ["(1, 19, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/sa_o", "rows": ["(1, 19, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/sh_o", "rows": ["(1, 19, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/sa_oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/sh_oh", "rows": ["(1, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_true/utc_la/mixed/osa", "rows": ["(1, 19, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/create_e", "error": "Error during planning: Cannot coerce arithmetic expression Utf8 + Int64 to valid types"}
+{"tag": "ansi_false/la_utc/excel/create", "error": "spark.read.excel (read_excel) is not available in this build: the repark-excel read connector is scheduled post-milestone-one. See the \"Post"}
+{"tag": "ansi_false/la_utc/json_s/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/sh_d", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/sh_f", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/sh_e", "rows": ["(2, 3, 1704078000, '2024-01-01 03:00:00')", "(3, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/sa_h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/sh_h", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/sh_o", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/sa_oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_s/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/h", "rows": ["(1, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/oh", "rows": ["(1, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/sh_d", "rows": ["(1, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/sh_f", "rows": ["(1, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/sh_e", "rows": ["(2, 0, 1704078000, '2024-01-01 03:00:00')", "(3, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/sa_h", "rows": ["(1, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/sh_h", "rows": ["(1, 0, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/sh_o", "rows": ["(1, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/sa_oh", "rows": ["(1, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/sh_oh", "rows": ["(1, 0, 0, 1704078000, '2024-01-01 03:00:00')", "(2, 0, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/json_i/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/sh_d", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/sh_f", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/sh_e", "rows": ["(2, 3, 1704078000, '2024-01-01 03:00:00')", "(3, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/sa_h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/sh_h", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/sh_o", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/sa_oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_s/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/sh_d", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/sh_f", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/sh_e", "rows": ["(2, 3, 1704078000, '2024-01-01 03:00:00')", "(3, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/sa_h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/sh_h", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/sh_o", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/sa_oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_i/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(3, None, None)", "(None, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(4, None, None)", "(None, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(3, None, None)", "(None, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/sh_d", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/sh_f", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None)"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(4, None, None)", "(None, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/sh_e", "rows": ["(2, 3, 1704078000, '2024-01-01 03:00:00')", "(4, None, None, None)", "(None, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/sa_h", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/sh_h", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None, None)", "(None, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/sh_o", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None)"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/sa_oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(3, None, None, None, None)", "(None, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_n/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/d", "rows": ["('1', 1704078000, '2024-01-01 03:00:00')", "('3', None, None)", "(None, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/f", "rows": ["('1', 1704078000, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/h", "rows": ["('1', 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/o", "rows": ["('1', 1704078000, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/oh", "rows": ["('1', 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/sa_d", "rows": ["('1', 1704078000, '2024-01-01 03:00:00')", "('3', None, None)", "(None, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/sh_d", "rows": ["('1', 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/sa_f", "rows": ["('1', 1704078000, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/sh_f", "rows": ["('1', 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None)"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/sa_h", "rows": ["('1', 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/sh_h", "rows": ["('1', 0, 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None, None)", "(None, 0, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/sa_o", "rows": ["('1', 1704078000, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/sh_o", "rows": ["('1', 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None)"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/sa_oh", "rows": ["('1', 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/sh_oh", "rows": ["('1', 0, 0, 1704078000, '2024-01-01 03:00:00')", "('3', None, None, None, None)", "(None, 0, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/csv_ns/osa", "rows": ["('1', 1704078000, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/d", "rows": ["(19, 1704078000, '2024-01-01 03:00:00')", "(19, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/f", "rows": ["(19, 1704078000, '2024-01-01 03:00:00')", "(19, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/e", "rows": ["(20, 1704078000, '2024-01-01 03:00:00')", "(20, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/h", "rows": ["(19, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/o", "rows": ["(19, 1704078000, '2024-01-01 03:00:00')", "(19, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/oh", "rows": ["(19, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/sa_d", "rows": ["(19, 1704078000, '2024-01-01 03:00:00')", "(19, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/sh_d", "rows": ["(19, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/sa_f", "rows": ["(19, 1704078000, '2024-01-01 03:00:00')", "(19, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/sh_f", "rows": ["(19, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/sa_e", "rows": ["(20, 1704078000, '2024-01-01 03:00:00')", "(20, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/sh_e", "rows": ["(20, 0, 1704078000, '2024-01-01 03:00:00')", "(20, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/sa_h", "rows": ["(19, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/sh_h", "rows": ["(19, 0, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/sa_o", "rows": ["(19, 1704078000, '2024-01-01 03:00:00')", "(19, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/sh_o", "rows": ["(19, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/sa_oh", "rows": ["(19, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/sh_oh", "rows": ["(19, 0, 0, 1704078000, '2024-01-01 03:00:00')", "(19, 0, 0, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_v/osa", "rows": ["(19, 1704078000, '2024-01-01 03:00:00')", "(19, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/d", "rows": ["('x', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/f", "rows": ["('x', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/e", "rows": ["('x1', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/h", "rows": ["('x', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/o", "rows": ["('x', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/oh", "rows": ["('x', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/sa_d", "rows": ["('x', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/sh_d", "rows": ["('x', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/sa_f", "rows": ["('x', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/sh_f", "rows": ["('x', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/sa_e", "rows": ["('x1', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/sh_e", "rows": ["('x1', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/sa_h", "rows": ["('x', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/sh_h", "rows": ["('x', 3, 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/sa_o", "rows": ["('x', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/sh_o", "rows": ["('x', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/sa_oh", "rows": ["('x', 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/sh_oh", "rows": ["('x', 3, 3, 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/text_p/osa", "rows": ["('x', 1704106800, '2024-01-01 11:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/sh_d", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/sh_f", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/sh_e", "rows": ["(2, 19, 1704078000, '2024-01-01 03:00:00')", "(3, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/sa_h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/sh_h", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/sh_o", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/sa_oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/sh_oh", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/sh_d", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/sh_f", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/sh_e", "rows": ["(2, 19, 1704078000, '2024-01-01 03:00:00')", "(3, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/sa_h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/sh_h", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/sh_o", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/sa_oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/sh_oh", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/orc_s/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/sh_d", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/sh_f", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/sh_e", "rows": ["(2, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/sa_h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/sh_h", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/sh_o", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/sa_oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/sh_oh", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_v/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/sh_d", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/sh_f", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/sh_e", "rows": ["(2, 19, 1704078000, '2024-01-01 03:00:00')", "(3, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/sa_h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/sh_h", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/sh_o", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/sa_oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/sh_oh", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_t/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/d", "rows": ["(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/f", "rows": ["(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/e", "rows": ["(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/h", "rows": ["(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/o", "rows": ["(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/oh", "rows": ["(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/sa_d", "rows": ["(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/sh_d", "rows": ["(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/sa_f", "rows": ["(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/sh_f", "rows": ["(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/sa_e", "rows": ["(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/sh_e", "rows": ["(3, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/sa_h", "rows": ["(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/sh_h", "rows": ["(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/sa_o", "rows": ["(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/sh_o", "rows": ["(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/sa_oh", "rows": ["(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/sh_oh", "rows": ["(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/ice_i/osa", "rows": ["(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/cdf/d", "rows": ["(1, 1704106800, '2024-01-01 11:00:00')", "(2, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/cdf/f", "rows": ["(1, 1704106800, '2024-01-01 11:00:00')", "(2, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/cdf/e", "rows": ["(2, 1704106800, '2024-01-01 11:00:00')", "(3, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/cdf/h", "rows": ["(1, 3, 1704106800, '2024-01-01 11:00:00')", "(2, 12, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/cdf/o", "rows": ["(1, 1704106800, '2024-01-01 11:00:00')", "(2, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/cdf/oh", "rows": ["(1, 3, 1704106800, '2024-01-01 11:00:00')", "(2, 12, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/cdf/sa_d", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/la_utc/cdf/sh_d", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/la_utc/cdf/sa_f", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/la_utc/cdf/sh_f", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/la_utc/cdf/sa_e", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/la_utc/cdf/sh_e", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/la_utc/cdf/sa_h", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/la_utc/cdf/sh_h", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/la_utc/cdf/sa_o", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/la_utc/cdf/sh_o", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/la_utc/cdf/sa_oh", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/la_utc/cdf/sh_oh", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/la_utc/cdf/osa", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/la_utc/pq/d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/sa_d", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/sh_d", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/sa_f", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/sh_f", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/sa_e", "rows": ["(2, 1704078000, '2024-01-01 03:00:00')", "(3, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/sh_e", "rows": ["(2, 19, 1704078000, '2024-01-01 03:00:00')", "(3, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/sa_h", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/sh_h", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/sa_o", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/sh_o", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/sa_oh", "rows": ["(1, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/sh_oh", "rows": ["(1, 19, 19, 1704078000, '2024-01-01 03:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/pq/osa", "rows": ["(1, 1704078000, '2024-01-01 03:00:00')", "(2, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/d", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/f", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/e", "rows": ["(2, 3, 1704078000, '2024-01-01 03:00:00')", "(3, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/h", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/o", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/sa_d", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/sh_d", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/sa_f", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/sh_f", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/sa_e", "rows": ["(2, 3, 1704078000, '2024-01-01 03:00:00')", "(3, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/sh_e", "rows": ["(2, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(3, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/sa_h", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/sh_h", "rows": ["(1, 3, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/sa_o", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/sh_o", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/sa_oh", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/la_utc/mixed/osa", "rows": ["(1, 3, 1704078000, '2024-01-01 03:00:00')", "(2, 12, 1704110400, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/create_e", "error": "Error during planning: Cannot coerce arithmetic expression Utf8 + Int64 to valid types"}
+{"tag": "ansi_false/utc_la/ice_t/create", "error": "Cannot find a snapshot older than 2026-11-19T00:10:54+00:00"}
+{"tag": "ansi_false/utc_la/excel/create", "error": "spark.read.excel (read_excel) is not available in this build: the repark-excel read connector is scheduled post-milestone-one. See the \"Post"}
+{"tag": "ansi_false/utc_la/json_s/d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(3, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/h", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/sa_d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/sh_d", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/sa_f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/sh_f", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/sa_e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(3, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/sh_e", "rows": ["(2, 3, 1704106800, '2024-01-01 03:00:00')", "(3, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/sa_h", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/sh_h", "rows": ["(1, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/sa_o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/sh_o", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/sa_oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/sh_oh", "rows": ["(1, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_s/osa", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(3, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/h", "rows": ["(1, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/oh", "rows": ["(1, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/sa_d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/sh_d", "rows": ["(1, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/sa_f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/sh_f", "rows": ["(1, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/sa_e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(3, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/sh_e", "rows": ["(2, 0, 1704106800, '2024-01-01 03:00:00')", "(3, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/sa_h", "rows": ["(1, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/sh_h", "rows": ["(1, 0, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/sa_o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/sh_o", "rows": ["(1, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/sa_oh", "rows": ["(1, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/sh_oh", "rows": ["(1, 0, 0, 1704106800, '2024-01-01 03:00:00')", "(2, 0, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/json_i/osa", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/h", "rows": ["(1, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/oh", "rows": ["(1, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/sa_d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/sh_d", "rows": ["(1, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/sa_f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/sh_f", "rows": ["(1, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/sa_e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/sh_e", "rows": ["(2, 19, 1704078000, '2023-12-31 19:00:00')", "(3, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/sa_h", "rows": ["(1, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/sh_h", "rows": ["(1, 19, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/sa_o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/sh_o", "rows": ["(1, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/sa_oh", "rows": ["(1, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/sh_oh", "rows": ["(1, 19, 19, 1704078000, '2023-12-31 19:00:00')", "(2, 4, 4, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_s/osa", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(3, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/h", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/sa_d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/sh_d", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/sa_f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/sh_f", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/sa_e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(3, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/sh_e", "rows": ["(2, 3, 1704106800, '2024-01-01 03:00:00')", "(3, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/sa_h", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/sh_h", "rows": ["(1, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/sa_o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/sh_o", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/sa_oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/sh_oh", "rows": ["(1, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_i/osa", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(2, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(3, None, None)", "(None, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(4, None, None)", "(None, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/h", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/sa_d", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(3, None, None)", "(None, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/sh_d", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/sa_f", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/sh_f", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None)"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/sa_e", "rows": ["(2, 1704106800, '2024-01-01 03:00:00')", "(4, None, None)", "(None, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/sh_e", "rows": ["(2, 3, 1704106800, '2024-01-01 03:00:00')", "(4, None, None, None)", "(None, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/sa_h", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/sh_h", "rows": ["(1, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None, None)", "(None, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/sa_o", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/sh_o", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None)"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/sa_oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None)", "(None, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/sh_oh", "rows": ["(1, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(3, None, None, None, None)", "(None, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["bigint", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_n/osa", "rows": ["(1, 1704106800, '2024-01-01 03:00:00')", "(3, None, None)"], "types": ["bigint", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/d", "rows": ["('1', 1704106800, '2024-01-01 03:00:00')", "('3', None, None)", "(None, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/f", "rows": ["('1', 1704106800, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/h", "rows": ["('1', 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/o", "rows": ["('1', 1704106800, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/oh", "rows": ["('1', 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/sa_d", "rows": ["('1', 1704106800, '2024-01-01 03:00:00')", "('3', None, None)", "(None, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/sh_d", "rows": ["('1', 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/sa_f", "rows": ["('1', 1704106800, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/sh_f", "rows": ["('1', 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None)"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/sa_h", "rows": ["('1', 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/sh_h", "rows": ["('1', 0, 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None, None)", "(None, 0, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/sa_o", "rows": ["('1', 1704106800, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/sh_o", "rows": ["('1', 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None)"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/sa_oh", "rows": ["('1', 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None)", "(None, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/sh_oh", "rows": ["('1', 0, 0, 1704106800, '2024-01-01 03:00:00')", "('3', None, None, None, None)", "(None, 0, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/csv_ns/osa", "rows": ["('1', 1704106800, '2024-01-01 03:00:00')", "('3', None, None)"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/d", "rows": ["(19, 1704106800, '2024-01-01 03:00:00')", "(19, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/f", "rows": ["(19, 1704106800, '2024-01-01 03:00:00')", "(19, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/e", "rows": ["(20, 1704106800, '2024-01-01 03:00:00')", "(20, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/h", "rows": ["(19, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/o", "rows": ["(19, 1704106800, '2024-01-01 03:00:00')", "(19, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/oh", "rows": ["(19, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/sa_d", "rows": ["(19, 1704106800, '2024-01-01 03:00:00')", "(19, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/sh_d", "rows": ["(19, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/sa_f", "rows": ["(19, 1704106800, '2024-01-01 03:00:00')", "(19, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/sh_f", "rows": ["(19, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/sa_e", "rows": ["(20, 1704106800, '2024-01-01 03:00:00')", "(20, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/sh_e", "rows": ["(20, 0, 1704106800, '2024-01-01 03:00:00')", "(20, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/sa_h", "rows": ["(19, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/sh_h", "rows": ["(19, 0, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/sa_o", "rows": ["(19, 1704106800, '2024-01-01 03:00:00')", "(19, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/sh_o", "rows": ["(19, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/sa_oh", "rows": ["(19, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/sh_oh", "rows": ["(19, 0, 0, 1704106800, '2024-01-01 03:00:00')", "(19, 0, 0, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_v/osa", "rows": ["(19, 1704106800, '2024-01-01 03:00:00')", "(19, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/d", "rows": ["('x', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/f", "rows": ["('x', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/e", "rows": ["('x1', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/h", "rows": ["('x', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/o", "rows": ["('x', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/oh", "rows": ["('x', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/sa_d", "rows": ["('x', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/sh_d", "rows": ["('x', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/sa_f", "rows": ["('x', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/sh_f", "rows": ["('x', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/sa_e", "rows": ["('x1', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/sh_e", "rows": ["('x1', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/sa_h", "rows": ["('x', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/sh_h", "rows": ["('x', 3, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/sa_o", "rows": ["('x', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/sh_o", "rows": ["('x', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/sa_oh", "rows": ["('x', 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/sh_oh", "rows": ["('x', 3, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/text_p/osa", "rows": ["('x', 1704078000, '2023-12-31 19:00:00')"], "types": ["string", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/sa_d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/sh_d", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/sa_f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/sh_f", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/sa_e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/sh_e", "rows": ["(2, 3, 1704078000, '2023-12-31 19:00:00')", "(3, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/sa_h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/sh_h", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/sa_o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/sh_o", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/sa_oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc/osa", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/sa_d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/sh_d", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/sa_f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/sh_f", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/sa_e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/sh_e", "rows": ["(2, 3, 1704078000, '2023-12-31 19:00:00')", "(3, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/sa_h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/sh_h", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/sa_o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/sh_o", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/sa_oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/orc_s/osa", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/sa_d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/sh_d", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/sa_f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/sh_f", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/sa_e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/sh_e", "rows": ["(2, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/sa_h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/sh_h", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/sa_o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/sh_o", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/sa_oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_v/osa", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/d", "rows": ["(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/f", "rows": ["(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/e", "rows": ["(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/h", "rows": ["(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/o", "rows": ["(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/oh", "rows": ["(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/sa_d", "rows": ["(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/sh_d", "rows": ["(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/sa_f", "rows": ["(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/sh_f", "rows": ["(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/sa_e", "rows": ["(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/sh_e", "rows": ["(3, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/sa_h", "rows": ["(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/sh_h", "rows": ["(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/sa_o", "rows": ["(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/sh_o", "rows": ["(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/sa_oh", "rows": ["(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/sh_oh", "rows": ["(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/ice_i/osa", "rows": ["(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/cdf/d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/cdf/f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/cdf/e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/cdf/h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/cdf/o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/cdf/oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/cdf/sa_d", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/utc_la/cdf/sh_d", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/utc_la/cdf/sa_f", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/utc_la/cdf/sh_f", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/utc_la/cdf/sa_e", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/utc_la/cdf/sh_e", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/utc_la/cdf/sa_h", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/utc_la/cdf/sh_h", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/utc_la/cdf/sa_o", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/utc_la/cdf/sh_o", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/utc_la/cdf/sa_oh", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/utc_la/cdf/sh_oh", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/utc_la/cdf/osa", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "ansi_false/utc_la/pq/d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/sa_d", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/sh_d", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/sa_f", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/sh_f", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/sa_e", "rows": ["(2, 1704078000, '2023-12-31 19:00:00')", "(3, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/sh_e", "rows": ["(2, 3, 1704078000, '2023-12-31 19:00:00')", "(3, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/sa_h", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/sh_h", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/sa_o", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/sh_o", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/sa_oh", "rows": ["(1, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/sh_oh", "rows": ["(1, 3, 3, 1704078000, '2023-12-31 19:00:00')", "(2, 12, 12, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/pq/osa", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/d", "rows": ["(1, 19, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/f", "rows": ["(1, 19, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/e", "rows": ["(2, 19, 1704106800, '2024-01-01 03:00:00')", "(3, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/h", "rows": ["(1, 19, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/o", "rows": ["(1, 19, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/sa_d", "rows": ["(1, 19, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/sh_d", "rows": ["(1, 19, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/sa_f", "rows": ["(1, 19, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/sh_f", "rows": ["(1, 19, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/sa_e", "rows": ["(2, 19, 1704106800, '2024-01-01 03:00:00')", "(3, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/sh_e", "rows": ["(2, 19, 3, 1704106800, '2024-01-01 03:00:00')", "(3, 4, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/sa_h", "rows": ["(1, 19, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/sh_h", "rows": ["(1, 19, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/sa_o", "rows": ["(1, 19, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/sh_o", "rows": ["(1, 19, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/sa_oh", "rows": ["(1, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/sh_oh", "rows": ["(1, 3, 3, 1704106800, '2024-01-01 03:00:00')", "(2, 12, 12, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "int", "bigint", "string"]}
+{"tag": "ansi_false/utc_la/mixed/osa", "rows": ["(1, 19, 1704106800, '2024-01-01 03:00:00')", "(2, 4, 1704139200, '2024-01-01 12:00:00')"], "types": ["int", "int", "bigint", "string"]}

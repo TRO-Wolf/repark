@@ -1,0 +1,2 @@
+n-main vs n-head: 3100 common cells, 0 differ {}
+by door {}

@@ -1,0 +1,1495 @@
+## vp (columns: main = pkg-main-4c365814, old = pkg-csvts-186c34b0, new = pkg-csvts-1ee847b7)
+A/false/la/badts2_PERMISSIVE  main:WRONG | old:EQUAL | new:EQUAL
+A/false/la/csv_kw  main:WRONG | old:EQUAL | new:EQUAL
+A/false/la/dst  main:WRONG | old:EQUAL | new:EQUAL
+LOST A/false/la/epoch2  main:WRONG | old:EQUAL | new:WRONG
+   S ["[\"1\", \"2024-01-01 03:00:00\", \"1704106800\", null, null]", "[\"2\", \"2024-06-01 23:30:00\", \"1717309800\", null, null]"]
+   main ["[\"1\", \"2023-12-31 19:00:00\", \"1704078000\", \"2023-12-31 19:00:00\", \"1704078000\"]", "[\"2\", \"2024-06-01 16:30:00\", \"1717284600\", \"2024-01-01 04:00:00\", \"1704110400\"]"]
+   old ["[\"1\", \"2024-01-01 03:00:00\", \"1704106800\", null, null]", "[\"2\", \"2024-06-01 23:30:00\", \"1717309800\", null, null]"]
+   new ["[\"1\", \"2024-01-01 03:00:00\", \"1704106800\", \"2023-12-31 19:00:00\", \"1704078000\"]", "[\"2\", \"2024-06-01 23:30:00\", \"1717309800\", \"2024-01-01 04:00:00\", \"1704110400\"]"]
+A/false/la/extra  main:WRONG | old:EQUAL | new:EQUAL
+A/false/la/fewer  main:RAISE | old:RAISE | new:RAISE
+A/false/la/file  main:WRONG | old:EQUAL | new:EQUAL
+A/false/la/fmt_load  main:WRONG | old:EQUAL | new:EQUAL
+A/false/la/fmt_opt_path  main:WRONG | old:EQUAL | new:EQUAL
+A/false/la/iceberg  main:WRONG | old:EQUAL | new:EQUAL
+A/false/la/iceberg_read_zone  main:WRONG | old:EQUAL | new:EQUAL
+A/false/la/infer_schema  main:WRONG | old:EQUAL | new:EQUAL
+A/false/la/mdir  main:WRONG | old:EQUAL | new:EQUAL
+A/false/la/mdirh  main:WRONG | old:EQUAL | new:EQUAL
+A/false/la/ntz_ts  main:WRONG | old:WRONG | new:EQUAL
+A/false/la/struct  main:WRONG | old:EQUAL | new:EQUAL
+A/false/la/ts_ntz  main:WRONG | old:EQUAL | new:EQUAL
+A/false/la/two_ts  main:WRONG | old:EQUAL | new:EQUAL
+A/false/tk/iceberg  main:WRONG | old:EQUAL | new:EQUAL
+A/false/tk/iceberg_read_zone  main:WRONG | old:EQUAL | new:EQUAL
+LOST A/false/utc/epoch2  main:WRONG | old:EQUAL | new:WRONG
+   S ["[\"1\", \"2024-01-01 03:00:00\", \"1704078000\", null, null]", "[\"2\", \"2024-06-01 23:30:00\", \"1717284600\", null, null]"]
+   main ["[\"1\", \"2024-01-01 03:00:00\", \"1704078000\", \"2024-01-01 03:00:00\", \"1704078000\"]", "[\"2\", \"2024-06-01 23:30:00\", \"1717284600\", \"2024-01-01 12:00:00\", \"1704110400\"]"]
+   old ["[\"1\", \"2024-01-01 03:00:00\", \"1704078000\", null, null]", "[\"2\", \"2024-06-01 23:30:00\", \"1717284600\", null, null]"]
+   new ["[\"1\", \"2024-01-01 03:00:00\", \"1704078000\", \"2024-01-01 03:00:00\", \"1704078000\"]", "[\"2\", \"2024-06-01 23:30:00\", \"1717284600\", \"2024-01-01 12:00:00\", \"1704110400\"]"]
+A/false/utc/fewer  main:RAISE | old:RAISE | new:RAISE
+A/true/la/csv_kw  main:WRONG | old:EQUAL | new:EQUAL
+A/true/la/dst  main:WRONG | old:EQUAL | new:EQUAL
+A/true/la/epoch2  main:WRONG | old:RAISE | new:WRONG
+A/true/la/extra  main:WRONG | old:EQUAL | new:EQUAL
+A/true/la/fewer  main:RAISE | old:RAISE | new:RAISE
+A/true/la/file  main:WRONG | old:EQUAL | new:EQUAL
+A/true/la/fmt_load  main:WRONG | old:EQUAL | new:EQUAL
+A/true/la/fmt_opt_path  main:WRONG | old:EQUAL | new:EQUAL
+A/true/la/iceberg  main:WRONG | old:EQUAL | new:EQUAL
+A/true/la/iceberg_read_zone  main:WRONG | old:EQUAL | new:EQUAL
+A/true/la/infer_schema  main:WRONG | old:EQUAL | new:EQUAL
+A/true/la/mdir  main:WRONG | old:EQUAL | new:EQUAL
+A/true/la/mdirh  main:WRONG | old:EQUAL | new:EQUAL
+A/true/la/ntz_ts  main:WRONG | old:WRONG | new:EQUAL
+A/true/la/struct  main:WRONG | old:EQUAL | new:EQUAL
+A/true/la/ts_ntz  main:WRONG | old:EQUAL | new:EQUAL
+A/true/la/two_ts  main:WRONG | old:EQUAL | new:EQUAL
+A/true/tk/iceberg  main:WRONG | old:EQUAL | new:EQUAL
+A/true/tk/iceberg_read_zone  main:WRONG | old:EQUAL | new:EQUAL
+A/true/utc/epoch2  main:WRONG | old:RAISE | new:WRONG
+A/true/utc/fewer  main:RAISE | old:RAISE | new:RAISE
+B/false/la/csv_f/api  main:WRONG | old:EQUAL | new:EQUAL
+B/false/la/csv_f/df  main:WRONG | old:EQUAL | new:EQUAL
+B/false/la/csv_f/dt  main:WRONG | old:EQUAL | new:EQUAL
+B/false/la/csv_f/h  main:WRONG | old:EQUAL | new:EQUAL
+B/false/la/csv_f/s  main:WRONG | old:EQUAL | new:EQUAL
+B/false/la/csv_f/u  main:WRONG | old:EQUAL | new:EQUAL
+B/false/la/csv_s/api  main:WRONG | old:EQUAL | new:EQUAL
+B/false/la/csv_s/df  main:WRONG | old:EQUAL | new:EQUAL
+B/false/la/csv_s/dt  main:WRONG | old:EQUAL | new:EQUAL
+B/false/la/csv_s/h  main:WRONG | old:EQUAL | new:EQUAL
+B/false/la/csv_s/s  main:WRONG | old:EQUAL | new:EQUAL
+B/false/la/csv_s/u  main:WRONG | old:EQUAL | new:EQUAL
+B/true/la/csv_f/api  main:WRONG | old:EQUAL | new:EQUAL
+B/true/la/csv_f/df  main:WRONG | old:EQUAL | new:EQUAL
+B/true/la/csv_f/dt  main:WRONG | old:EQUAL | new:EQUAL
+B/true/la/csv_f/h  main:WRONG | old:EQUAL | new:EQUAL
+B/true/la/csv_f/s  main:WRONG | old:EQUAL | new:EQUAL
+B/true/la/csv_f/u  main:WRONG | old:EQUAL | new:EQUAL
+B/true/la/csv_s/api  main:WRONG | old:EQUAL | new:EQUAL
+B/true/la/csv_s/df  main:WRONG | old:EQUAL | new:EQUAL
+B/true/la/csv_s/dt  main:WRONG | old:EQUAL | new:EQUAL
+B/true/la/csv_s/h  main:WRONG | old:EQUAL | new:EQUAL
+B/true/la/csv_s/s  main:WRONG | old:EQUAL | new:EQUAL
+B/true/la/csv_s/u  main:WRONG | old:EQUAL | new:EQUAL
+F/off/la  main:WRONG | old:EQUAL | new:EQUAL
+F/off/tk  main:WRONG | old:EQUAL | new:EQUAL
+F/off_url/la  main:RAISE | old:RAISE | new:RAISE
+F/off_url/tk  main:RAISE | old:RAISE | new:RAISE
+F/off_url/utc  main:RAISE | old:RAISE | new:RAISE
+F/rtset/csv_f/h  main:WRONG | old:EQUAL | new:EQUAL
+F/rtset/csv_f/s  main:WRONG | old:EQUAL | new:EQUAL
+LOST F/rtset/csv_f/sa_u  main:EQUAL | old:WRONG | new:WRONG
+   S ["[\"1\", \"1704078000\"]", "[\"2\", \"1717284600\"]", "[\"3\", \"1735689599\"]"]
+   main ["[\"1\", \"1704078000\"]", "[\"2\", \"1717284600\"]", "[\"3\", \"1735689599\"]"]
+   old ["[\"1\", \"1704106800\"]", "[\"2\", \"1717309800\"]", "[\"3\", \"1735718399\"]"]
+   new ["[\"1\", \"1704106800\"]", "[\"2\", \"1717309800\"]", "[\"3\", \"1735718399\"]"]
+LOST F/rtset/csv_f/u  main:EQUAL | old:WRONG | new:WRONG
+   S ["[\"1\", \"1704078000\"]", "[\"2\", \"1717284600\"]", "[\"3\", \"1735689599\"]"]
+   main ["[\"1\", \"1704078000\"]", "[\"2\", \"1717284600\"]", "[\"3\", \"1735689599\"]"]
+   old ["[\"1\", \"1704106800\"]", "[\"2\", \"1717309800\"]", "[\"3\", \"1735718399\"]"]
+   new ["[\"1\", \"1704106800\"]", "[\"2\", \"1717309800\"]", "[\"3\", \"1735718399\"]"]
+F/rtset/csv_s/h  main:WRONG | old:EQUAL | new:EQUAL
+F/rtset/csv_s/s  main:WRONG | old:EQUAL | new:EQUAL
+LOST F/rtset/csv_s/sa_u  main:EQUAL | old:WRONG | new:WRONG
+   S ["[\"1\", \"1704078000\"]", "[\"2\", \"1717284600\"]", "[\"3\", \"1735689599\"]"]
+   main ["[\"1\", \"1704078000\"]", "[\"2\", \"1717284600\"]", "[\"3\", \"1735689599\"]"]
+   old ["[\"1\", \"1704106800\"]", "[\"2\", \"1717309800\"]", "[\"3\", \"1735718399\"]"]
+   new ["[\"1\", \"1704106800\"]", "[\"2\", \"1717309800\"]", "[\"3\", \"1735718399\"]"]
+LOST F/rtset/csv_s/u  main:EQUAL | old:WRONG | new:WRONG
+   S ["[\"1\", \"1704078000\"]", "[\"2\", \"1717284600\"]", "[\"3\", \"1735689599\"]"]
+   main ["[\"1\", \"1704078000\"]", "[\"2\", \"1717284600\"]", "[\"3\", \"1735689599\"]"]
+   old ["[\"1\", \"1704106800\"]", "[\"2\", \"1717309800\"]", "[\"3\", \"1735718399\"]"]
+   new ["[\"1\", \"1704106800\"]", "[\"2\", \"1717309800\"]", "[\"3\", \"1735718399\"]"]
+F/url/la  main:RAISE | old:RAISE | new:RAISE
+F/url/tk  main:RAISE | old:RAISE | new:RAISE
+F/url/utc  main:RAISE | old:RAISE | new:RAISE
+F/url_h/la  main:RAISE | old:RAISE | new:RAISE
+F/url_h/tk  main:RAISE | old:RAISE | new:RAISE
+F/url_h/utc  main:RAISE | old:RAISE | new:RAISE
+F/url_mixed/la  main:RAISE | old:RAISE | new:RAISE
+F/url_mixed/tk  main:RAISE | old:RAISE | new:RAISE
+F/url_mixed/utc  main:RAISE | old:RAISE | new:RAISE
+L/ny/ts  main:RAISE | old:EQUAL | new:EQUAL
+L/utc/ts  main:RAISE | old:EQUAL | new:EQUAL
+T/false/clean/tsf  main:WRONG | old:WRONG | new:WRONG
+T/false/edge/tsf  main:RAISE | old:RAISE | new:RAISE
+LOST T/false/hdr/tsf  main:WRONG | old:EQUAL | new:WRONG
+   S ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704106800\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\", \"a,b\", null, \"5\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717309800\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\", \"c\", \"NA\", \"-1\"]"]
+   main ["[\"1\", \"7\", \"2023-12-31 19:00:00\", \"1704078000\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\", \"a,b\", null, \"5\"]", "[\"2\", \"10\", \"2024-06-01 16:30:00\", \"1717284600\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\", \"c\", \"NA\", \"-1\"]"]
+   old ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704106800\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\", \"a,b\", null, \"5\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717309800\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\", \"c\", \"NA\", \"-1\"]"]
+   new ["[\"1\", \"7\", \"2024-01-01 03:00:00\", \"1704106800\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\", \"a,b\", null, \"5\"]", "[\"2\", \"10\", \"2024-06-01 23:30:00\", \"1717309800\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\", \"c\", \"NA\", \"-1\"]"]
+T/false/int_from_frac/dbl_ts  main:WRONG | old:EQUAL | new:EQUAL
+T/false/int_from_frac/ts  main:WRONG | old:RAISE | new:WRONG
+T/true/clean/tsf  main:WRONG | old:WRONG | new:WRONG
+T/true/edge/tsf  main:RAISE | old:RAISE | new:RAISE
+LOST T/true/hdr/tsf  main:WRONG | old:EQUAL | new:WRONG
+   S ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704106800\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\", \"a,b\", null, \"5\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717309800\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\", \"c\", \"NA\", \"-1\"]"]
+   main ["[\"1\", \"7\", \"2023-12-31 19:00:00\", \"1704078000\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\", \"a,b\", null, \"5\"]", "[\"2\", \"10\", \"2024-06-01 16:30:00\", \"1717284600\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\", \"c\", \"NA\", \"-1\"]"]
+   old ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704106800\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\", \"a,b\", null, \"5\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717309800\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\", \"c\", \"NA\", \"-1\"]"]
+   new ["[\"1\", \"7\", \"2024-01-01 03:00:00\", \"1704106800\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\", \"a,b\", null, \"5\"]", "[\"2\", \"10\", \"2024-06-01 23:30:00\", \"1717309800\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\", \"c\", \"NA\", \"-1\"]"]
+T/true/int_from_frac/dbl_ts  main:WRONG | old:EQUAL | new:EQUAL
+T/true/int_from_frac/ts  main:WRONG | old:RAISE | new:WRONG
+W/false/utc_la/csv_s/ctas  main:WRONG | old:EQUAL | new:EQUAL
+W/false/utc_la/csv_s/ins  main:WRONG | old:EQUAL | new:EQUAL
+W/false/utc_la/csv_s/into  main:WRONG | old:EQUAL | new:EQUAL
+W/false/utc_la/csv_s/wto  main:WRONG | old:EQUAL | new:EQUAL
+W/true/utc_la/csv_s/ctas  main:WRONG | old:EQUAL | new:EQUAL
+W/true/utc_la/csv_s/ins  main:WRONG | old:EQUAL | new:EQUAL
+W/true/utc_la/csv_s/into  main:WRONG | old:EQUAL | new:EQUAL
+W/true/utc_la/csv_s/wto  main:WRONG | old:EQUAL | new:EQUAL
+X/utc_la/csv_f/frame_s  main:WRONG | old:EQUAL | new:EQUAL
+X/utc_la/csv_f/frame_u  main:WRONG | old:EQUAL | new:EQUAL
+X/utc_la/csv_f/view_h  main:WRONG | old:EQUAL | new:EQUAL
+X/utc_la/csv_f/view_s  main:WRONG | old:EQUAL | new:EQUAL
+X/utc_la/csv_f/view_u  main:WRONG | old:EQUAL | new:EQUAL
+X/utc_la/csv_s/frame_s  main:WRONG | old:EQUAL | new:EQUAL
+X/utc_la/csv_s/frame_u  main:WRONG | old:EQUAL | new:EQUAL
+X/utc_la/csv_s/view_h  main:WRONG | old:EQUAL | new:EQUAL
+X/utc_la/csv_s/view_s  main:WRONG | old:EQUAL | new:EQUAL
+X/utc_la/csv_s/view_u  main:WRONG | old:EQUAL | new:EQUAL
+
+main {'BOTHERR': 8, 'EQUAL': 137, 'RAISE': 68, 'WRONG': 116}
+old {'BOTHERR': 8, 'EQUAL': 222, 'RAISE': 70, 'WRONG': 29}
+new {'BOTHERR': 8, 'EQUAL': 220, 'RAISE': 66, 'WRONG': 35}
+
+('A', 'main RAISE', 'old RAISE', 'new RAISE') 4
+('A', 'main WRONG', 'old EQUAL', 'new EQUAL') 33
+('A', 'main WRONG', 'old EQUAL', 'new WRONG') 2
+('A', 'main WRONG', 'old RAISE', 'new WRONG') 2
+('A', 'main WRONG', 'old WRONG', 'new EQUAL') 2
+('B', 'main WRONG', 'old EQUAL', 'new EQUAL') 24
+('F', 'main EQUAL', 'old WRONG', 'new WRONG') 4
+('F', 'main RAISE', 'old RAISE', 'new RAISE') 12
+('F', 'main WRONG', 'old EQUAL', 'new EQUAL') 6
+('L', 'main RAISE', 'old EQUAL', 'new EQUAL') 2
+('T', 'main RAISE', 'old RAISE', 'new RAISE') 2
+('T', 'main WRONG', 'old EQUAL', 'new EQUAL') 2
+('T', 'main WRONG', 'old EQUAL', 'new WRONG') 2
+('T', 'main WRONG', 'old RAISE', 'new WRONG') 2
+('T', 'main WRONG', 'old WRONG', 'new WRONG') 2
+('W', 'main WRONG', 'old EQUAL', 'new EQUAL') 8
+('X', 'main WRONG', 'old EQUAL', 'new EQUAL') 10
+
+## vpntzb (columns: main = pkg-main-4c365814, old = pkg-csvts-186c34b0, new = pkg-csvts-1ee847b7)
+N/csv_f/h  main:WRONG | old:EQUAL | new:EQUAL
+N/csv_f/s  main:WRONG | old:EQUAL | new:EQUAL
+N/csv_f/ty  main:WRONG | old:EQUAL | new:EQUAL
+N/csv_s/h  main:WRONG | old:EQUAL | new:EQUAL
+N/csv_s/s  main:WRONG | old:EQUAL | new:EQUAL
+N/csv_s/ty  main:WRONG | old:EQUAL | new:EQUAL
+
+main {'EQUAL': 6, 'WRONG': 6}
+old {'EQUAL': 12}
+new {'EQUAL': 12}
+
+('N', 'main WRONG', 'old EQUAL', 'new EQUAL') 6
+
+## vp2 (columns: main = pkg-main-4c365814, old = pkg-csvts-186c34b0, new = pkg-csvts-1ee847b7)
+false/la/bigint_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/bigint_1/ts  main:WRONG | old:RAISE | new:WRONG
+false/la/bigint_3/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/boolean_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/boolean_1/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/boolean_2/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/boolean_3/ts  main:WRONG | old:WRONG | new:WRONG
+false/la/boolean_4/ts  main:WRONG | old:WRONG | new:WRONG
+false/la/boolean_5/ts  main:WRONG | old:WRONG | new:WRONG
+false/la/date_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/date_1/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/date_2/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/date_3/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/date_4/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/date_5/ts  main:WRONG | old:WRONG | new:WRONG
+false/la/decimal102_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/decimal102_1/ts  main:WRONG | old:RAISE | new:EQUAL
+false/la/decimal102_2/ts  main:WRONG | old:RAISE | new:EQUAL
+false/la/decimal102_3/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/decimal102_4/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/decimal102_6/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/decimal102_7/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/double_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/double_1/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/double_2/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/double_3/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/double_4/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/double_5/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/double_6/ts  main:WRONG | old:WRONG | new:WRONG
+false/la/double_7/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/double_8/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/double_9/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/float_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/float_1/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/int_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/int_1/ts  main:WRONG | old:RAISE | new:WRONG
+false/la/int_2/ts  main:WRONG | old:RAISE | new:WRONG
+false/la/int_4/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/int_5/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/int_6/ts  main:RAISE | old:RAISE | new:RAISE
+false/la/int_7/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/string_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/string_1/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/string_2/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/string_3/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/string_4/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/string_5/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/string_6/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/string_7/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/la/tinyint_0/ts  main:RAISE | old:RAISE | new:RAISE
+false/la/tinyint_1/ts  main:WRONG | old:EQUAL | new:EQUAL
+false/utc/bigint_1/ts  main:WRONG | old:RAISE | new:WRONG
+false/utc/decimal102_1/ts  main:EQUAL | old:RAISE | new:EQUAL
+false/utc/decimal102_2/ts  main:EQUAL | old:RAISE | new:EQUAL
+false/utc/int_1/ts  main:WRONG | old:RAISE | new:WRONG
+false/utc/int_2/ts  main:WRONG | old:RAISE | new:WRONG
+false/utc/int_6/ts  main:RAISE | old:RAISE | new:RAISE
+false/utc/tinyint_0/ts  main:RAISE | old:RAISE | new:RAISE
+true/la/bigint_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/bigint_1/ts  main:WRONG | old:RAISE | new:WRONG
+true/la/bigint_3/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/boolean_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/boolean_1/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/boolean_2/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/boolean_3/ts  main:WRONG | old:WRONG | new:WRONG
+true/la/boolean_4/ts  main:WRONG | old:WRONG | new:WRONG
+true/la/boolean_5/ts  main:WRONG | old:WRONG | new:WRONG
+true/la/date_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/date_1/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/date_2/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/date_3/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/date_4/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/date_5/ts  main:WRONG | old:WRONG | new:WRONG
+true/la/decimal102_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/decimal102_1/ts  main:WRONG | old:RAISE | new:EQUAL
+true/la/decimal102_2/ts  main:WRONG | old:RAISE | new:EQUAL
+true/la/decimal102_3/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/decimal102_4/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/decimal102_6/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/decimal102_7/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/double_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/double_1/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/double_2/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/double_3/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/double_4/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/double_5/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/double_6/ts  main:WRONG | old:WRONG | new:WRONG
+true/la/double_7/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/double_8/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/double_9/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/float_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/float_1/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/int_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/int_1/ts  main:WRONG | old:RAISE | new:WRONG
+true/la/int_2/ts  main:WRONG | old:RAISE | new:WRONG
+true/la/int_4/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/int_5/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/int_6/ts  main:RAISE | old:RAISE | new:RAISE
+true/la/int_7/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/string_0/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/string_1/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/string_2/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/string_3/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/string_4/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/string_5/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/string_6/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/string_7/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/la/tinyint_0/ts  main:RAISE | old:RAISE | new:RAISE
+true/la/tinyint_1/ts  main:WRONG | old:EQUAL | new:EQUAL
+true/utc/bigint_1/ts  main:WRONG | old:RAISE | new:WRONG
+true/utc/decimal102_1/ts  main:EQUAL | old:RAISE | new:EQUAL
+true/utc/decimal102_2/ts  main:EQUAL | old:RAISE | new:EQUAL
+true/utc/int_1/ts  main:WRONG | old:RAISE | new:WRONG
+true/utc/int_2/ts  main:WRONG | old:RAISE | new:WRONG
+true/utc/int_6/ts  main:RAISE | old:RAISE | new:RAISE
+true/utc/tinyint_0/ts  main:RAISE | old:RAISE | new:RAISE
+
+main {'EQUAL': 246, 'RAISE': 40, 'WRONG': 146}
+old {'EQUAL': 320, 'RAISE': 60, 'WRONG': 52}
+new {'EQUAL': 328, 'RAISE': 40, 'WRONG': 64}
+
+('false', 'main EQUAL', 'old RAISE', 'new EQUAL') 2
+('false', 'main RAISE', 'old RAISE', 'new RAISE') 4
+('false', 'main WRONG', 'old EQUAL', 'new EQUAL') 39
+('false', 'main WRONG', 'old RAISE', 'new EQUAL') 2
+('false', 'main WRONG', 'old RAISE', 'new WRONG') 6
+('false', 'main WRONG', 'old WRONG', 'new WRONG') 5
+('true', 'main EQUAL', 'old RAISE', 'new EQUAL') 2
+('true', 'main RAISE', 'old RAISE', 'new RAISE') 4
+('true', 'main WRONG', 'old EQUAL', 'new EQUAL') 39
+('true', 'main WRONG', 'old RAISE', 'new EQUAL') 2
+('true', 'main WRONG', 'old RAISE', 'new WRONG') 6
+('true', 'main WRONG', 'old WRONG', 'new WRONG') 5
+
+## vp3 (columns: main = pkg-main-4c365814, old = pkg-csvts-186c34b0, new = pkg-csvts-1ee847b7)
+false/los_angeles/local/dexp_ts  main:WRONG | old:RAISE | new:EQUAL
+false/los_angeles/local/good  main:WRONG | old:EQUAL | new:EQUAL
+false/los_angeles/local/good_h  main:WRONG | old:EQUAL | new:EQUAL
+LOST false/los_angeles/local/mix  main:WRONG | old:EQUAL | new:WRONG
+   S ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704106800\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717309800\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   main ["[\"1\", \"7\", \"2023-12-31 19:00:00\", \"1704078000\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"10\", \"2024-06-01 16:30:00\", \"1717284600\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   old ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704106800\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717309800\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   new ["[\"1\", \"7\", \"2024-01-01 03:00:00\", \"1704106800\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"10\", \"2024-06-01 23:30:00\", \"1717309800\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+false/los_angeles/local/off  main:WRONG | old:EQUAL | new:EQUAL
+false/los_angeles/url/dexp_ts  main:WRONG | old:EQUAL | new:EQUAL
+false/los_angeles/url/good  main:WRONG | old:EQUAL | new:EQUAL
+false/los_angeles/url/good_h  main:WRONG | old:EQUAL | new:EQUAL
+false/los_angeles/url/mix  main:WRONG | old:WRONG | new:WRONG
+false/los_angeles/url/off  main:WRONG | old:EQUAL | new:EQUAL
+false/tokyo/local/dexp_ts  main:WRONG | old:RAISE | new:EQUAL
+false/tokyo/local/good  main:WRONG | old:EQUAL | new:EQUAL
+false/tokyo/local/good_h  main:WRONG | old:EQUAL | new:EQUAL
+LOST false/tokyo/local/mix  main:WRONG | old:EQUAL | new:WRONG
+   S ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704045600\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717252200\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   main ["[\"1\", \"7\", \"2024-01-01 12:00:00\", \"1704078000\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"10\", \"2024-06-02 08:30:00\", \"1717284600\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   old ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704045600\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717252200\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   new ["[\"1\", \"7\", \"2024-01-01 03:00:00\", \"1704045600\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"10\", \"2024-06-01 23:30:00\", \"1717252200\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+false/tokyo/local/off  main:WRONG | old:EQUAL | new:EQUAL
+false/tokyo/url/dexp_ts  main:WRONG | old:EQUAL | new:EQUAL
+false/tokyo/url/good  main:WRONG | old:EQUAL | new:EQUAL
+false/tokyo/url/good_h  main:WRONG | old:EQUAL | new:EQUAL
+false/tokyo/url/mix  main:WRONG | old:WRONG | new:WRONG
+false/tokyo/url/off  main:WRONG | old:EQUAL | new:EQUAL
+false/utc/local/dexp_ts  main:EQUAL | old:RAISE | new:EQUAL
+LOST false/utc/local/mix  main:WRONG | old:EQUAL | new:WRONG
+   S ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704078000\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717284600\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   main ["[\"1\", \"7\", \"2024-01-01 03:00:00\", \"1704078000\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"10\", \"2024-06-01 23:30:00\", \"1717284600\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   old ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704078000\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717284600\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   new ["[\"1\", \"7\", \"2024-01-01 03:00:00\", \"1704078000\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"10\", \"2024-06-01 23:30:00\", \"1717284600\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+true/los_angeles/local/dexp_ts  main:WRONG | old:RAISE | new:EQUAL
+true/los_angeles/local/good  main:WRONG | old:EQUAL | new:EQUAL
+true/los_angeles/local/good_h  main:WRONG | old:EQUAL | new:EQUAL
+LOST true/los_angeles/local/mix  main:WRONG | old:EQUAL | new:WRONG
+   S ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704106800\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717309800\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   main ["[\"1\", \"7\", \"2023-12-31 19:00:00\", \"1704078000\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"10\", \"2024-06-01 16:30:00\", \"1717284600\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   old ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704106800\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717309800\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   new ["[\"1\", \"7\", \"2024-01-01 03:00:00\", \"1704106800\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"10\", \"2024-06-01 23:30:00\", \"1717309800\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+true/los_angeles/local/off  main:WRONG | old:EQUAL | new:EQUAL
+true/los_angeles/url/dexp_ts  main:WRONG | old:EQUAL | new:EQUAL
+true/los_angeles/url/good  main:WRONG | old:EQUAL | new:EQUAL
+true/los_angeles/url/good_h  main:WRONG | old:EQUAL | new:EQUAL
+true/los_angeles/url/mix  main:WRONG | old:WRONG | new:WRONG
+true/los_angeles/url/off  main:WRONG | old:EQUAL | new:EQUAL
+true/tokyo/local/dexp_ts  main:WRONG | old:RAISE | new:EQUAL
+true/tokyo/local/good  main:WRONG | old:EQUAL | new:EQUAL
+true/tokyo/local/good_h  main:WRONG | old:EQUAL | new:EQUAL
+LOST true/tokyo/local/mix  main:WRONG | old:EQUAL | new:WRONG
+   S ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704045600\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717252200\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   main ["[\"1\", \"7\", \"2024-01-01 12:00:00\", \"1704078000\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"10\", \"2024-06-02 08:30:00\", \"1717284600\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   old ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704045600\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717252200\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   new ["[\"1\", \"7\", \"2024-01-01 03:00:00\", \"1704045600\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"10\", \"2024-06-01 23:30:00\", \"1717252200\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+true/tokyo/local/off  main:WRONG | old:EQUAL | new:EQUAL
+true/tokyo/url/dexp_ts  main:WRONG | old:EQUAL | new:EQUAL
+true/tokyo/url/good  main:WRONG | old:EQUAL | new:EQUAL
+true/tokyo/url/good_h  main:WRONG | old:EQUAL | new:EQUAL
+true/tokyo/url/mix  main:WRONG | old:WRONG | new:WRONG
+true/tokyo/url/off  main:WRONG | old:EQUAL | new:EQUAL
+true/utc/local/dexp_ts  main:EQUAL | old:RAISE | new:EQUAL
+LOST true/utc/local/mix  main:WRONG | old:EQUAL | new:WRONG
+   S ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704078000\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717284600\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   main ["[\"1\", \"7\", \"2024-01-01 03:00:00\", \"1704078000\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"10\", \"2024-06-01 23:30:00\", \"1717284600\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   old ["[\"1\", \"007\", \"2024-01-01 03:00:00\", \"1704078000\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"010\", \"2024-06-01 23:30:00\", \"1717284600\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+   new ["[\"1\", \"7\", \"2024-01-01 03:00:00\", \"1704078000\", \"1.01\", \"true\", \"1000.0\", \"2024-01-05\"]", "[\"2\", \"10\", \"2024-06-01 23:30:00\", \"1717284600\", \"2.50\", \"false\", \"1.5\", \"2024-11-30\"]"]
+
+main {'EQUAL': 28, 'RAISE': 12, 'WRONG': 44}
+old {'EQUAL': 60, 'RAISE': 18, 'WRONG': 6}
+new {'EQUAL': 60, 'RAISE': 12, 'WRONG': 12}
+
+('false/los_angeles/local', 'main WRONG', 'old EQUAL', 'new EQUAL') 3
+('false/los_angeles/local', 'main WRONG', 'old EQUAL', 'new WRONG') 1
+('false/los_angeles/local', 'main WRONG', 'old RAISE', 'new EQUAL') 1
+('false/los_angeles/url', 'main WRONG', 'old EQUAL', 'new EQUAL') 4
+('false/los_angeles/url', 'main WRONG', 'old WRONG', 'new WRONG') 1
+('false/tokyo/local', 'main WRONG', 'old EQUAL', 'new EQUAL') 3
+('false/tokyo/local', 'main WRONG', 'old EQUAL', 'new WRONG') 1
+('false/tokyo/local', 'main WRONG', 'old RAISE', 'new EQUAL') 1
+('false/tokyo/url', 'main WRONG', 'old EQUAL', 'new EQUAL') 4
+('false/tokyo/url', 'main WRONG', 'old WRONG', 'new WRONG') 1
+('false/utc/local', 'main EQUAL', 'old RAISE', 'new EQUAL') 1
+('false/utc/local', 'main WRONG', 'old EQUAL', 'new WRONG') 1
+('true/los_angeles/local', 'main WRONG', 'old EQUAL', 'new EQUAL') 3
+('true/los_angeles/local', 'main WRONG', 'old EQUAL', 'new WRONG') 1
+('true/los_angeles/local', 'main WRONG', 'old RAISE', 'new EQUAL') 1
+('true/los_angeles/url', 'main WRONG', 'old EQUAL', 'new EQUAL') 4
+('true/los_angeles/url', 'main WRONG', 'old WRONG', 'new WRONG') 1
+('true/tokyo/local', 'main WRONG', 'old EQUAL', 'new EQUAL') 3
+('true/tokyo/local', 'main WRONG', 'old EQUAL', 'new WRONG') 1
+('true/tokyo/local', 'main WRONG', 'old RAISE', 'new EQUAL') 1
+('true/tokyo/url', 'main WRONG', 'old EQUAL', 'new EQUAL') 4
+('true/tokyo/url', 'main WRONG', 'old WRONG', 'new WRONG') 1
+('true/utc/local', 'main EQUAL', 'old RAISE', 'new EQUAL') 1
+('true/utc/local', 'main WRONG', 'old EQUAL', 'new WRONG') 1
+
+## vp4 (columns: main = pkg-main-4c365814, old = pkg-csvts-186c34b0, new = pkg-csvts-1ee847b7)
+false/los_angeles/ntz_gap_ts_empty  main:EQUAL | old:WRONG | new:EQUAL
+false/los_angeles/ntz_gap_ts_z  main:EQUAL | old:WRONG | new:EQUAL
+false/los_angeles/ts_empty_only  main:WRONG | old:EQUAL | new:EQUAL
+false/new_york/ntz_gap_ts_empty  main:EQUAL | old:WRONG | new:EQUAL
+false/new_york/ntz_gap_ts_z  main:EQUAL | old:WRONG | new:EQUAL
+false/new_york/ts_empty_only  main:WRONG | old:EQUAL | new:EQUAL
+true/los_angeles/ntz_gap_ts_empty  main:EQUAL | old:WRONG | new:EQUAL
+true/los_angeles/ntz_gap_ts_z  main:EQUAL | old:WRONG | new:EQUAL
+true/los_angeles/ts_empty_only  main:WRONG | old:EQUAL | new:EQUAL
+true/new_york/ntz_gap_ts_empty  main:EQUAL | old:WRONG | new:EQUAL
+true/new_york/ntz_gap_ts_z  main:EQUAL | old:WRONG | new:EQUAL
+true/new_york/ts_empty_only  main:WRONG | old:EQUAL | new:EQUAL
+
+main {'EQUAL': 20, 'RAISE': 6, 'WRONG': 16}
+old {'EQUAL': 16, 'RAISE': 6, 'WRONG': 20}
+new {'EQUAL': 24, 'RAISE': 6, 'WRONG': 12}
+
+('false/los_angeles/ntz_gap_ts_empty', 'main EQUAL', 'old WRONG', 'new EQUAL') 1
+('false/los_angeles/ntz_gap_ts_z', 'main EQUAL', 'old WRONG', 'new EQUAL') 1
+('false/los_angeles/ts_empty_only', 'main WRONG', 'old EQUAL', 'new EQUAL') 1
+('false/new_york/ntz_gap_ts_empty', 'main EQUAL', 'old WRONG', 'new EQUAL') 1
+('false/new_york/ntz_gap_ts_z', 'main EQUAL', 'old WRONG', 'new EQUAL') 1
+('false/new_york/ts_empty_only', 'main WRONG', 'old EQUAL', 'new EQUAL') 1
+('true/los_angeles/ntz_gap_ts_empty', 'main EQUAL', 'old WRONG', 'new EQUAL') 1
+('true/los_angeles/ntz_gap_ts_z', 'main EQUAL', 'old WRONG', 'new EQUAL') 1
+('true/los_angeles/ts_empty_only', 'main WRONG', 'old EQUAL', 'new EQUAL') 1
+('true/new_york/ntz_gap_ts_empty', 'main EQUAL', 'old WRONG', 'new EQUAL') 1
+('true/new_york/ntz_gap_ts_z', 'main EQUAL', 'old WRONG', 'new EQUAL') 1
+('true/new_york/ts_empty_only', 'main WRONG', 'old EQUAL', 'new EQUAL') 1
+
+## readers (columns: main = pkg-main-4c365814, old = pkg-csvts-186c34b0, new = pkg-csvts-1ee847b7)
+ansi_false/utc_la/csv_s/d  main:WRONG | old:EQUAL | new:EQUAL
+ansi_false/utc_la/csv_s/e  main:WRONG | old:EQUAL | new:EQUAL
+ansi_false/utc_la/csv_s/f  main:WRONG | old:EQUAL | new:EQUAL
+ansi_false/utc_la/csv_s/h  main:WRONG | old:WRONG | new:WRONG
+ansi_false/utc_la/csv_s/o  main:WRONG | old:EQUAL | new:EQUAL
+ansi_false/utc_la/csv_s/oh  main:WRONG | old:WRONG | new:WRONG
+ansi_false/utc_la/csv_s/osa  main:WRONG | old:EQUAL | new:EQUAL
+ansi_false/utc_la/csv_s/sa_d  main:WRONG | old:EQUAL | new:EQUAL
+ansi_false/utc_la/csv_s/sa_e  main:WRONG | old:EQUAL | new:EQUAL
+ansi_false/utc_la/csv_s/sa_f  main:WRONG | old:EQUAL | new:EQUAL
+ansi_false/utc_la/csv_s/sa_h  main:WRONG | old:WRONG | new:WRONG
+ansi_false/utc_la/csv_s/sa_o  main:WRONG | old:EQUAL | new:EQUAL
+ansi_false/utc_la/csv_s/sa_oh  main:WRONG | old:WRONG | new:WRONG
+ansi_false/utc_la/csv_s/sh_d  main:WRONG | old:WRONG | new:WRONG
+ansi_false/utc_la/csv_s/sh_e  main:WRONG | old:WRONG | new:WRONG
+ansi_false/utc_la/csv_s/sh_f  main:WRONG | old:WRONG | new:WRONG
+ansi_false/utc_la/csv_s/sh_h  main:WRONG | old:WRONG | new:WRONG
+ansi_false/utc_la/csv_s/sh_o  main:WRONG | old:WRONG | new:WRONG
+ansi_false/utc_la/csv_s/sh_oh  main:WRONG | old:WRONG | new:WRONG
+ansi_false/utc_la/ice_t/create  main:BOTHERR | old:BOTHERR | new:BOTHERR
+ansi_true/utc_la/csv_s/d  main:WRONG | old:EQUAL | new:EQUAL
+ansi_true/utc_la/csv_s/e  main:WRONG | old:EQUAL | new:EQUAL
+ansi_true/utc_la/csv_s/f  main:WRONG | old:EQUAL | new:EQUAL
+ansi_true/utc_la/csv_s/h  main:WRONG | old:WRONG | new:WRONG
+ansi_true/utc_la/csv_s/o  main:WRONG | old:EQUAL | new:EQUAL
+ansi_true/utc_la/csv_s/oh  main:WRONG | old:WRONG | new:WRONG
+ansi_true/utc_la/csv_s/osa  main:WRONG | old:EQUAL | new:EQUAL
+ansi_true/utc_la/csv_s/sa_d  main:WRONG | old:EQUAL | new:EQUAL
+ansi_true/utc_la/csv_s/sa_e  main:WRONG | old:EQUAL | new:EQUAL
+ansi_true/utc_la/csv_s/sa_f  main:WRONG | old:EQUAL | new:EQUAL
+ansi_true/utc_la/csv_s/sa_h  main:WRONG | old:WRONG | new:WRONG
+ansi_true/utc_la/csv_s/sa_o  main:WRONG | old:EQUAL | new:EQUAL
+ansi_true/utc_la/csv_s/sa_oh  main:WRONG | old:WRONG | new:WRONG
+ansi_true/utc_la/csv_s/sh_d  main:WRONG | old:WRONG | new:WRONG
+ansi_true/utc_la/csv_s/sh_e  main:WRONG | old:WRONG | new:WRONG
+ansi_true/utc_la/csv_s/sh_f  main:WRONG | old:WRONG | new:WRONG
+ansi_true/utc_la/csv_s/sh_h  main:WRONG | old:WRONG | new:WRONG
+ansi_true/utc_la/csv_s/sh_o  main:WRONG | old:WRONG | new:WRONG
+ansi_true/utc_la/csv_s/sh_oh  main:WRONG | old:WRONG | new:WRONG
+ansi_true/utc_la/ice_t/create  main:BOTHERR | old:BOTHERR | new:BOTHERR
+
+main {'BOTHERR': 2, 'EQUAL': 732, 'NOSPARK': 8, 'RAISE': 52, 'WRONG': 382}
+old {'BOTHERR': 2, 'EQUAL': 750, 'NOSPARK': 8, 'RAISE': 52, 'WRONG': 364}
+new {'BOTHERR': 2, 'EQUAL': 750, 'NOSPARK': 8, 'RAISE': 52, 'WRONG': 364}
+
+('ansi_false/utc_la', 'main BOTHERR', 'old BOTHERR', 'new BOTHERR') 1
+('ansi_false/utc_la', 'main WRONG', 'old EQUAL', 'new EQUAL') 9
+('ansi_false/utc_la', 'main WRONG', 'old WRONG', 'new WRONG') 10
+('ansi_true/utc_la', 'main BOTHERR', 'old BOTHERR', 'new BOTHERR') 1
+('ansi_true/utc_la', 'main WRONG', 'old EQUAL', 'new EQUAL') 9
+('ansi_true/utc_la', 'main WRONG', 'old WRONG', 'new WRONG') 10
+
+## x (columns: main = pkg-main-4c365814, old = pkg-csvts-186c34b0, new = pkg-csvts-1ee847b7)
+      X/false/Los_Angeles/date | spark: (1, 1704096000) (2, 1717225200) | main EQUAL: (1, 1704096000) (2, 1717225200) | old EQUAL: (1, 1704096000) (2, 1717225200) | new EQUAL: (1, 1704096000) (2, 1717225200)
+MOVED X/false/Los_Angeles/dir | spark: (1, 1704106800) (2, 1717309800) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704106800) (2, 1717309800) | new EQUAL: (1, 1704106800) (2, 1717309800)
+MOVED X/false/Los_Angeles/dst | spark: (1, 1710066600) (2, 1730622600) | main WRONG: (1, 1710037800) (2, 1730597400) | old EQUAL: (1, 1710066600) (2, 1730622600) | new EQUAL: (1, 1710066600) (2, 1730622600)
+MOVED X/false/Los_Angeles/emptyts | spark: (1, None) (2, 1704106800) | main WRONG: (1, None) (2, 1704078000) | old EQUAL: (1, None) (2, 1704106800) | new EQUAL: (1, None) (2, 1704106800)
+      X/false/Los_Angeles/epoch | spark: (1, None) (2, None) | main WRONG: (1, 1704078000) (2, 1704110400) | old WRONG: (1, 1704078000) (2, 1704110400) | new WRONG: (1, 1704078000) (2, 1704110400)
+      X/false/Los_Angeles/frac | spark: (1, 1704106800, '2024-01-01 03:00:00.123456') (2, 1704139200, '2024-01-01 12:00: | main EQUAL: (1, 1704106800, '2024-01-01 03:00:00.123456') (2, 1704139200, '2024-01-01 12:00: | old EQUAL: (1, 1704106800, '2024-01-01 03:00:00.123456') (2, 1704139200, '2024-01-01 12:00: | new EQUAL: (1, 1704106800, '2024-01-01 03:00:00.123456') (2, 1704139200, '2024-01-01 12:00:
+MOVED X/false/Los_Angeles/hdr | spark: (1, 1704106800) (2, 1717309800) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704106800) (2, 1717309800) | new EQUAL: (1, 1704106800) (2, 1717309800)
+MOVED X/false/Los_Angeles/hdrpos | spark: (1, 1704106800) (2, 1717309800) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704106800) (2, 1717309800) | new EQUAL: (1, 1704106800) (2, 1717309800)
+MOVED X/false/Los_Angeles/hdrrev | spark: (None, None) (None, None) | main WRONG: (1, 1704078000) (2, 1717284600) | old WRONG: (1, 1704106800) (2, 1717309800) | new WRONG: (1, 1704106800) (2, 1717309800)
+MOVED X/false/Los_Angeles/hour | spark: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23: | main WRONG: (1, 19, '2023-12-31 19:00:00', datetime.date(2023, 12, 31)) (2, 16, '2024-06-01  | old EQUAL: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23: | new EQUAL: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23:
+MOVED X/false/Los_Angeles/iso | spark: (1, 1704106800) (2, 1717309800) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704106800) (2, 1717309800) | new EQUAL: (1, 1704106800) (2, 1717309800)
+MOVED X/false/Los_Angeles/load | spark: (1, 1704106800) (2, 1717309800) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704106800) (2, 1717309800) | new EQUAL: (1, 1704106800) (2, 1717309800)
+MOVED X/false/Los_Angeles/mixed | spark: (1, '007', 1704106800, '1.01', True, 1.5) (2, '010', 1717309800, '2.50', False,  | main WRONG: (1, '7', 1704078000, '1.01', True, 1.5) (2, '10', 1717284600, '2.50', False, 3.0 | old EQUAL: (1, '007', 1704106800, '1.01', True, 1.5) (2, '010', 1717309800, '2.50', False,  | new WRONG: (1, '7', 1704106800, '1.01', True, 1.5) (2, '10', 1717309800, '2.50', False, 3.0
+      X/false/Los_Angeles/mixednots | spark: (1, '007', '1.01', True, 1.5) (2, '010', '2.50', False, 3.0) | main WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0) | old WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0) | new WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0)
+      X/false/Los_Angeles/nots | spark: (1, '007') (2, '010') | main WRONG: (1, '7') (2, '10') | old WRONG: (1, '7') (2, '10') | new WRONG: (1, '7') (2, '10')
+      X/false/Los_Angeles/ntz | spark: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | main EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | old EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | new EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23)
+      X/false/Los_Angeles/nullv | spark: (1, 1704106800) (2, None) | main EQUAL: (1, 1704106800) (2, None) | old EQUAL: (1, 1704106800) (2, None) | new EQUAL: (1, 1704106800) (2, None)
+MOVED X/false/Los_Angeles/struct | spark: (1, 1704106800) (2, 1717309800) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704106800) (2, 1717309800) | new EQUAL: (1, 1704106800) (2, 1717309800)
+MOVED X/false/Los_Angeles/twots | spark: (1, 1704106800, 1717309800) | main WRONG: (1, 1704078000, 1717284600) | old EQUAL: (1, 1704106800, 1717309800) | new EQUAL: (1, 1704106800, 1717309800)
+      X/false/Tokyo/date | spark: (1, 1704034800) (2, 1717167600) | main EQUAL: (1, 1704034800) (2, 1717167600) | old EQUAL: (1, 1704034800) (2, 1717167600) | new EQUAL: (1, 1704034800) (2, 1717167600)
+MOVED X/false/Tokyo/dir | spark: (1, 1704045600) (2, 1717252200) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704045600) (2, 1717252200) | new EQUAL: (1, 1704045600) (2, 1717252200)
+MOVED X/false/Tokyo/dst | spark: (1, 1710005400) (2, 1730565000) | main WRONG: (1, 1710037800) (2, 1730597400) | old EQUAL: (1, 1710005400) (2, 1730565000) | new EQUAL: (1, 1710005400) (2, 1730565000)
+MOVED X/false/Tokyo/emptyts | spark: (1, None) (2, 1704045600) | main WRONG: (1, None) (2, 1704078000) | old EQUAL: (1, None) (2, 1704045600) | new EQUAL: (1, None) (2, 1704045600)
+      X/false/Tokyo/epoch | spark: (1, None) (2, None) | main WRONG: (1, 1704078000) (2, 1704110400) | old WRONG: (1, 1704078000) (2, 1704110400) | new WRONG: (1, 1704078000) (2, 1704110400)
+      X/false/Tokyo/frac | spark: (1, 1704045600, '2024-01-01 03:00:00.123456') (2, 1704078000, '2024-01-01 12:00: | main EQUAL: (1, 1704045600, '2024-01-01 03:00:00.123456') (2, 1704078000, '2024-01-01 12:00: | old EQUAL: (1, 1704045600, '2024-01-01 03:00:00.123456') (2, 1704078000, '2024-01-01 12:00: | new EQUAL: (1, 1704045600, '2024-01-01 03:00:00.123456') (2, 1704078000, '2024-01-01 12:00:
+MOVED X/false/Tokyo/hdr | spark: (1, 1704045600) (2, 1717252200) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704045600) (2, 1717252200) | new EQUAL: (1, 1704045600) (2, 1717252200)
+MOVED X/false/Tokyo/hdrpos | spark: (1, 1704045600) (2, 1717252200) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704045600) (2, 1717252200) | new EQUAL: (1, 1704045600) (2, 1717252200)
+MOVED X/false/Tokyo/hdrrev | spark: (None, None) (None, None) | main WRONG: (1, 1704078000) (2, 1717284600) | old WRONG: (1, 1704045600) (2, 1717252200) | new WRONG: (1, 1704045600) (2, 1717252200)
+MOVED X/false/Tokyo/hour | spark: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23: | main WRONG: (1, 12, '2024-01-01 12:00:00', datetime.date(2024, 1, 1)) (2, 8, '2024-06-02 08: | old EQUAL: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23: | new EQUAL: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23:
+MOVED X/false/Tokyo/iso | spark: (1, 1704045600) (2, 1717252200) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704045600) (2, 1717252200) | new EQUAL: (1, 1704045600) (2, 1717252200)
+MOVED X/false/Tokyo/load | spark: (1, 1704045600) (2, 1717252200) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704045600) (2, 1717252200) | new EQUAL: (1, 1704045600) (2, 1717252200)
+MOVED X/false/Tokyo/mixed | spark: (1, '007', 1704045600, '1.01', True, 1.5) (2, '010', 1717252200, '2.50', False,  | main WRONG: (1, '7', 1704078000, '1.01', True, 1.5) (2, '10', 1717284600, '2.50', False, 3.0 | old EQUAL: (1, '007', 1704045600, '1.01', True, 1.5) (2, '010', 1717252200, '2.50', False,  | new WRONG: (1, '7', 1704045600, '1.01', True, 1.5) (2, '10', 1717252200, '2.50', False, 3.0
+      X/false/Tokyo/mixednots | spark: (1, '007', '1.01', True, 1.5) (2, '010', '2.50', False, 3.0) | main WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0) | old WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0) | new WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0)
+      X/false/Tokyo/nots | spark: (1, '007') (2, '010') | main WRONG: (1, '7') (2, '10') | old WRONG: (1, '7') (2, '10') | new WRONG: (1, '7') (2, '10')
+      X/false/Tokyo/ntz | spark: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | main EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | old EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | new EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23)
+      X/false/Tokyo/nullv | spark: (1, 1704045600) (2, None) | main EQUAL: (1, 1704045600) (2, None) | old EQUAL: (1, 1704045600) (2, None) | new EQUAL: (1, 1704045600) (2, None)
+MOVED X/false/Tokyo/struct | spark: (1, 1704045600) (2, 1717252200) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704045600) (2, 1717252200) | new EQUAL: (1, 1704045600) (2, 1717252200)
+MOVED X/false/Tokyo/twots | spark: (1, 1704045600, 1717252200) | main WRONG: (1, 1704078000, 1717284600) | old EQUAL: (1, 1704045600, 1717252200) | new EQUAL: (1, 1704045600, 1717252200)
+      X/false/UTC/date | spark: (1, 1704067200) (2, 1717200000) | main EQUAL: (1, 1704067200) (2, 1717200000) | old EQUAL: (1, 1704067200) (2, 1717200000) | new EQUAL: (1, 1704067200) (2, 1717200000)
+      X/false/UTC/dir | spark: (1, 1704078000) (2, 1717284600) | main EQUAL: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704078000) (2, 1717284600) | new EQUAL: (1, 1704078000) (2, 1717284600)
+      X/false/UTC/dst | spark: (1, 1710037800) (2, 1730597400) | main EQUAL: (1, 1710037800) (2, 1730597400) | old EQUAL: (1, 1710037800) (2, 1730597400) | new EQUAL: (1, 1710037800) (2, 1730597400)
+      X/false/UTC/emptyts | spark: (1, None) (2, 1704078000) | main EQUAL: (1, None) (2, 1704078000) | old EQUAL: (1, None) (2, 1704078000) | new EQUAL: (1, None) (2, 1704078000)
+      X/false/UTC/epoch | spark: (1, None) (2, None) | main WRONG: (1, 1704078000) (2, 1704110400) | old WRONG: (1, 1704078000) (2, 1704110400) | new WRONG: (1, 1704078000) (2, 1704110400)
+      X/false/UTC/frac | spark: (1, 1704078000, '2024-01-01 03:00:00.123456') (2, 1704110400, '2024-01-01 12:00: | main EQUAL: (1, 1704078000, '2024-01-01 03:00:00.123456') (2, 1704110400, '2024-01-01 12:00: | old EQUAL: (1, 1704078000, '2024-01-01 03:00:00.123456') (2, 1704110400, '2024-01-01 12:00: | new EQUAL: (1, 1704078000, '2024-01-01 03:00:00.123456') (2, 1704110400, '2024-01-01 12:00:
+      X/false/UTC/hdr | spark: (1, 1704078000) (2, 1717284600) | main EQUAL: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704078000) (2, 1717284600) | new EQUAL: (1, 1704078000) (2, 1717284600)
+      X/false/UTC/hdrpos | spark: (1, 1704078000) (2, 1717284600) | main EQUAL: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704078000) (2, 1717284600) | new EQUAL: (1, 1704078000) (2, 1717284600)
+      X/false/UTC/hdrrev | spark: (None, None) (None, None) | main WRONG: (1, 1704078000) (2, 1717284600) | old WRONG: (1, 1704078000) (2, 1717284600) | new WRONG: (1, 1704078000) (2, 1717284600)
+      X/false/UTC/hour | spark: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23: | main EQUAL: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23: | old EQUAL: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23: | new EQUAL: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23:
+      X/false/UTC/iso | spark: (1, 1704078000) (2, 1717284600) | main EQUAL: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704078000) (2, 1717284600) | new EQUAL: (1, 1704078000) (2, 1717284600)
+      X/false/UTC/load | spark: (1, 1704078000) (2, 1717284600) | main EQUAL: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704078000) (2, 1717284600) | new EQUAL: (1, 1704078000) (2, 1717284600)
+MOVED X/false/UTC/mixed | spark: (1, '007', 1704078000, '1.01', True, 1.5) (2, '010', 1717284600, '2.50', False,  | main WRONG: (1, '7', 1704078000, '1.01', True, 1.5) (2, '10', 1717284600, '2.50', False, 3.0 | old EQUAL: (1, '007', 1704078000, '1.01', True, 1.5) (2, '010', 1717284600, '2.50', False,  | new WRONG: (1, '7', 1704078000, '1.01', True, 1.5) (2, '10', 1717284600, '2.50', False, 3.0
+      X/false/UTC/mixednots | spark: (1, '007', '1.01', True, 1.5) (2, '010', '2.50', False, 3.0) | main WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0) | old WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0) | new WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0)
+      X/false/UTC/nots | spark: (1, '007') (2, '010') | main WRONG: (1, '7') (2, '10') | old WRONG: (1, '7') (2, '10') | new WRONG: (1, '7') (2, '10')
+      X/false/UTC/ntz | spark: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | main EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | old EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | new EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23)
+      X/false/UTC/nullv | spark: (1, 1704078000) (2, None) | main EQUAL: (1, 1704078000) (2, None) | old EQUAL: (1, 1704078000) (2, None) | new EQUAL: (1, 1704078000) (2, None)
+      X/false/UTC/struct | spark: (1, 1704078000) (2, 1717284600) | main EQUAL: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704078000) (2, 1717284600) | new EQUAL: (1, 1704078000) (2, 1717284600)
+      X/false/UTC/twots | spark: (1, 1704078000, 1717284600) | main EQUAL: (1, 1704078000, 1717284600) | old EQUAL: (1, 1704078000, 1717284600) | new EQUAL: (1, 1704078000, 1717284600)
+MOVED X/ntz_session/LA/good | spark: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | main WRONG: (1, '2023-12-31 19:00:00', 19) (2, '2024-06-01 16:30:00', 16) | old EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | new EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23)
+      X/true/Los_Angeles/date | spark: (1, 1704096000) (2, 1717225200) | main EQUAL: (1, 1704096000) (2, 1717225200) | old EQUAL: (1, 1704096000) (2, 1717225200) | new EQUAL: (1, 1704096000) (2, 1717225200)
+MOVED X/true/Los_Angeles/dir | spark: (1, 1704106800) (2, 1717309800) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704106800) (2, 1717309800) | new EQUAL: (1, 1704106800) (2, 1717309800)
+MOVED X/true/Los_Angeles/dst | spark: (1, 1710066600) (2, 1730622600) | main WRONG: (1, 1710037800) (2, 1730597400) | old EQUAL: (1, 1710066600) (2, 1730622600) | new EQUAL: (1, 1710066600) (2, 1730622600)
+MOVED X/true/Los_Angeles/emptyts | spark: (1, None) (2, 1704106800) | main WRONG: (1, None) (2, 1704078000) | old EQUAL: (1, None) (2, 1704106800) | new EQUAL: (1, None) (2, 1704106800)
+      X/true/Los_Angeles/epoch | spark: (1, None) (2, None) | main WRONG: (1, 1704078000) (2, 1704110400) | old WRONG: (1, 1704078000) (2, 1704110400) | new WRONG: (1, 1704078000) (2, 1704110400)
+      X/true/Los_Angeles/frac | spark: (1, 1704106800, '2024-01-01 03:00:00.123456') (2, 1704139200, '2024-01-01 12:00: | main EQUAL: (1, 1704106800, '2024-01-01 03:00:00.123456') (2, 1704139200, '2024-01-01 12:00: | old EQUAL: (1, 1704106800, '2024-01-01 03:00:00.123456') (2, 1704139200, '2024-01-01 12:00: | new EQUAL: (1, 1704106800, '2024-01-01 03:00:00.123456') (2, 1704139200, '2024-01-01 12:00:
+MOVED X/true/Los_Angeles/hdr | spark: (1, 1704106800) (2, 1717309800) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704106800) (2, 1717309800) | new EQUAL: (1, 1704106800) (2, 1717309800)
+MOVED X/true/Los_Angeles/hdrpos | spark: (1, 1704106800) (2, 1717309800) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704106800) (2, 1717309800) | new EQUAL: (1, 1704106800) (2, 1717309800)
+MOVED X/true/Los_Angeles/hdrrev | spark: (None, None) (None, None) | main WRONG: (1, 1704078000) (2, 1717284600) | old WRONG: (1, 1704106800) (2, 1717309800) | new WRONG: (1, 1704106800) (2, 1717309800)
+MOVED X/true/Los_Angeles/hour | spark: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23: | main WRONG: (1, 19, '2023-12-31 19:00:00', datetime.date(2023, 12, 31)) (2, 16, '2024-06-01  | old EQUAL: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23: | new EQUAL: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23:
+MOVED X/true/Los_Angeles/iso | spark: (1, 1704106800) (2, 1717309800) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704106800) (2, 1717309800) | new EQUAL: (1, 1704106800) (2, 1717309800)
+MOVED X/true/Los_Angeles/load | spark: (1, 1704106800) (2, 1717309800) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704106800) (2, 1717309800) | new EQUAL: (1, 1704106800) (2, 1717309800)
+MOVED X/true/Los_Angeles/mixed | spark: (1, '007', 1704106800, '1.01', True, 1.5) (2, '010', 1717309800, '2.50', False,  | main WRONG: (1, '7', 1704078000, '1.01', True, 1.5) (2, '10', 1717284600, '2.50', False, 3.0 | old EQUAL: (1, '007', 1704106800, '1.01', True, 1.5) (2, '010', 1717309800, '2.50', False,  | new WRONG: (1, '7', 1704106800, '1.01', True, 1.5) (2, '10', 1717309800, '2.50', False, 3.0
+      X/true/Los_Angeles/mixednots | spark: (1, '007', '1.01', True, 1.5) (2, '010', '2.50', False, 3.0) | main WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0) | old WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0) | new WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0)
+      X/true/Los_Angeles/nots | spark: (1, '007') (2, '010') | main WRONG: (1, '7') (2, '10') | old WRONG: (1, '7') (2, '10') | new WRONG: (1, '7') (2, '10')
+      X/true/Los_Angeles/ntz | spark: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | main EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | old EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | new EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23)
+      X/true/Los_Angeles/nullv | spark: (1, 1704106800) (2, None) | main EQUAL: (1, 1704106800) (2, None) | old EQUAL: (1, 1704106800) (2, None) | new EQUAL: (1, 1704106800) (2, None)
+MOVED X/true/Los_Angeles/struct | spark: (1, 1704106800) (2, 1717309800) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704106800) (2, 1717309800) | new EQUAL: (1, 1704106800) (2, 1717309800)
+MOVED X/true/Los_Angeles/twots | spark: (1, 1704106800, 1717309800) | main WRONG: (1, 1704078000, 1717284600) | old EQUAL: (1, 1704106800, 1717309800) | new EQUAL: (1, 1704106800, 1717309800)
+      X/true/Tokyo/date | spark: (1, 1704034800) (2, 1717167600) | main EQUAL: (1, 1704034800) (2, 1717167600) | old EQUAL: (1, 1704034800) (2, 1717167600) | new EQUAL: (1, 1704034800) (2, 1717167600)
+MOVED X/true/Tokyo/dir | spark: (1, 1704045600) (2, 1717252200) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704045600) (2, 1717252200) | new EQUAL: (1, 1704045600) (2, 1717252200)
+MOVED X/true/Tokyo/dst | spark: (1, 1710005400) (2, 1730565000) | main WRONG: (1, 1710037800) (2, 1730597400) | old EQUAL: (1, 1710005400) (2, 1730565000) | new EQUAL: (1, 1710005400) (2, 1730565000)
+MOVED X/true/Tokyo/emptyts | spark: (1, None) (2, 1704045600) | main WRONG: (1, None) (2, 1704078000) | old EQUAL: (1, None) (2, 1704045600) | new EQUAL: (1, None) (2, 1704045600)
+      X/true/Tokyo/epoch | spark: (1, None) (2, None) | main WRONG: (1, 1704078000) (2, 1704110400) | old WRONG: (1, 1704078000) (2, 1704110400) | new WRONG: (1, 1704078000) (2, 1704110400)
+      X/true/Tokyo/frac | spark: (1, 1704045600, '2024-01-01 03:00:00.123456') (2, 1704078000, '2024-01-01 12:00: | main EQUAL: (1, 1704045600, '2024-01-01 03:00:00.123456') (2, 1704078000, '2024-01-01 12:00: | old EQUAL: (1, 1704045600, '2024-01-01 03:00:00.123456') (2, 1704078000, '2024-01-01 12:00: | new EQUAL: (1, 1704045600, '2024-01-01 03:00:00.123456') (2, 1704078000, '2024-01-01 12:00:
+MOVED X/true/Tokyo/hdr | spark: (1, 1704045600) (2, 1717252200) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704045600) (2, 1717252200) | new EQUAL: (1, 1704045600) (2, 1717252200)
+MOVED X/true/Tokyo/hdrpos | spark: (1, 1704045600) (2, 1717252200) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704045600) (2, 1717252200) | new EQUAL: (1, 1704045600) (2, 1717252200)
+MOVED X/true/Tokyo/hdrrev | spark: (None, None) (None, None) | main WRONG: (1, 1704078000) (2, 1717284600) | old WRONG: (1, 1704045600) (2, 1717252200) | new WRONG: (1, 1704045600) (2, 1717252200)
+MOVED X/true/Tokyo/hour | spark: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23: | main WRONG: (1, 12, '2024-01-01 12:00:00', datetime.date(2024, 1, 1)) (2, 8, '2024-06-02 08: | old EQUAL: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23: | new EQUAL: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23:
+MOVED X/true/Tokyo/iso | spark: (1, 1704045600) (2, 1717252200) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704045600) (2, 1717252200) | new EQUAL: (1, 1704045600) (2, 1717252200)
+MOVED X/true/Tokyo/load | spark: (1, 1704045600) (2, 1717252200) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704045600) (2, 1717252200) | new EQUAL: (1, 1704045600) (2, 1717252200)
+MOVED X/true/Tokyo/mixed | spark: (1, '007', 1704045600, '1.01', True, 1.5) (2, '010', 1717252200, '2.50', False,  | main WRONG: (1, '7', 1704078000, '1.01', True, 1.5) (2, '10', 1717284600, '2.50', False, 3.0 | old EQUAL: (1, '007', 1704045600, '1.01', True, 1.5) (2, '010', 1717252200, '2.50', False,  | new WRONG: (1, '7', 1704045600, '1.01', True, 1.5) (2, '10', 1717252200, '2.50', False, 3.0
+      X/true/Tokyo/mixednots | spark: (1, '007', '1.01', True, 1.5) (2, '010', '2.50', False, 3.0) | main WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0) | old WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0) | new WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0)
+      X/true/Tokyo/nots | spark: (1, '007') (2, '010') | main WRONG: (1, '7') (2, '10') | old WRONG: (1, '7') (2, '10') | new WRONG: (1, '7') (2, '10')
+      X/true/Tokyo/ntz | spark: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | main EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | old EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | new EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23)
+      X/true/Tokyo/nullv | spark: (1, 1704045600) (2, None) | main EQUAL: (1, 1704045600) (2, None) | old EQUAL: (1, 1704045600) (2, None) | new EQUAL: (1, 1704045600) (2, None)
+MOVED X/true/Tokyo/struct | spark: (1, 1704045600) (2, 1717252200) | main WRONG: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704045600) (2, 1717252200) | new EQUAL: (1, 1704045600) (2, 1717252200)
+MOVED X/true/Tokyo/twots | spark: (1, 1704045600, 1717252200) | main WRONG: (1, 1704078000, 1717284600) | old EQUAL: (1, 1704045600, 1717252200) | new EQUAL: (1, 1704045600, 1717252200)
+      X/true/UTC/date | spark: (1, 1704067200) (2, 1717200000) | main EQUAL: (1, 1704067200) (2, 1717200000) | old EQUAL: (1, 1704067200) (2, 1717200000) | new EQUAL: (1, 1704067200) (2, 1717200000)
+      X/true/UTC/dir | spark: (1, 1704078000) (2, 1717284600) | main EQUAL: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704078000) (2, 1717284600) | new EQUAL: (1, 1704078000) (2, 1717284600)
+      X/true/UTC/dst | spark: (1, 1710037800) (2, 1730597400) | main EQUAL: (1, 1710037800) (2, 1730597400) | old EQUAL: (1, 1710037800) (2, 1730597400) | new EQUAL: (1, 1710037800) (2, 1730597400)
+      X/true/UTC/emptyts | spark: (1, None) (2, 1704078000) | main EQUAL: (1, None) (2, 1704078000) | old EQUAL: (1, None) (2, 1704078000) | new EQUAL: (1, None) (2, 1704078000)
+      X/true/UTC/epoch | spark: (1, None) (2, None) | main WRONG: (1, 1704078000) (2, 1704110400) | old WRONG: (1, 1704078000) (2, 1704110400) | new WRONG: (1, 1704078000) (2, 1704110400)
+      X/true/UTC/frac | spark: (1, 1704078000, '2024-01-01 03:00:00.123456') (2, 1704110400, '2024-01-01 12:00: | main EQUAL: (1, 1704078000, '2024-01-01 03:00:00.123456') (2, 1704110400, '2024-01-01 12:00: | old EQUAL: (1, 1704078000, '2024-01-01 03:00:00.123456') (2, 1704110400, '2024-01-01 12:00: | new EQUAL: (1, 1704078000, '2024-01-01 03:00:00.123456') (2, 1704110400, '2024-01-01 12:00:
+      X/true/UTC/hdr | spark: (1, 1704078000) (2, 1717284600) | main EQUAL: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704078000) (2, 1717284600) | new EQUAL: (1, 1704078000) (2, 1717284600)
+      X/true/UTC/hdrpos | spark: (1, 1704078000) (2, 1717284600) | main EQUAL: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704078000) (2, 1717284600) | new EQUAL: (1, 1704078000) (2, 1717284600)
+      X/true/UTC/hdrrev | spark: (None, None) (None, None) | main WRONG: (1, 1704078000) (2, 1717284600) | old WRONG: (1, 1704078000) (2, 1717284600) | new WRONG: (1, 1704078000) (2, 1717284600)
+      X/true/UTC/hour | spark: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23: | main EQUAL: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23: | old EQUAL: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23: | new EQUAL: (1, 3, '2024-01-01 03:00:00', datetime.date(2024, 1, 1)) (2, 23, '2024-06-01 23:
+      X/true/UTC/iso | spark: (1, 1704078000) (2, 1717284600) | main EQUAL: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704078000) (2, 1717284600) | new EQUAL: (1, 1704078000) (2, 1717284600)
+      X/true/UTC/load | spark: (1, 1704078000) (2, 1717284600) | main EQUAL: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704078000) (2, 1717284600) | new EQUAL: (1, 1704078000) (2, 1717284600)
+MOVED X/true/UTC/mixed | spark: (1, '007', 1704078000, '1.01', True, 1.5) (2, '010', 1717284600, '2.50', False,  | main WRONG: (1, '7', 1704078000, '1.01', True, 1.5) (2, '10', 1717284600, '2.50', False, 3.0 | old EQUAL: (1, '007', 1704078000, '1.01', True, 1.5) (2, '010', 1717284600, '2.50', False,  | new WRONG: (1, '7', 1704078000, '1.01', True, 1.5) (2, '10', 1717284600, '2.50', False, 3.0
+      X/true/UTC/mixednots | spark: (1, '007', '1.01', True, 1.5) (2, '010', '2.50', False, 3.0) | main WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0) | old WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0) | new WRONG: (1, '7', '1.01', True, 1.5) (2, '10', '2.50', False, 3.0)
+      X/true/UTC/nots | spark: (1, '007') (2, '010') | main WRONG: (1, '7') (2, '10') | old WRONG: (1, '7') (2, '10') | new WRONG: (1, '7') (2, '10')
+      X/true/UTC/ntz | spark: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | main EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | old EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23) | new EQUAL: (1, '2024-01-01 03:00:00', 3) (2, '2024-06-01 23:30:00', 23)
+      X/true/UTC/nullv | spark: (1, 1704078000) (2, None) | main EQUAL: (1, 1704078000) (2, None) | old EQUAL: (1, 1704078000) (2, None) | new EQUAL: (1, 1704078000) (2, None)
+      X/true/UTC/struct | spark: (1, 1704078000) (2, 1717284600) | main EQUAL: (1, 1704078000) (2, 1717284600) | old EQUAL: (1, 1704078000) (2, 1717284600) | new EQUAL: (1, 1704078000) (2, 1717284600)
+      X/true/UTC/twots | spark: (1, 1704078000, 1717284600) | main EQUAL: (1, 1704078000, 1717284600) | old EQUAL: (1, 1704078000, 1717284600) | new EQUAL: (1, 1704078000, 1717284600)
+main {'EQUAL': 44, 'WRONG': 71}
+old {'EQUAL': 91, 'WRONG': 24}
+new {'EQUAL': 85, 'WRONG': 30}
+
+## d1 (main, old, new)
+false/los_angeles/F1/decimal_exponent main:WRONG -> old:RAISE -> new:EQUAL
+   S ["[\"1\", \"1704106800\", \"100.00\"]", "[\"2\", \"1704139200\", \"0.15\"]"]
+   main ["[\"1\", \"1704078000\", \"100.00\"]", "[\"2\", \"1704110400\", \"0.15\"]"]
+   old "ERR Arrow error: Cast error: Cannot cast string '1e2' to value of Decimal128(38, 10) type"
+   new ["[\"1\", \"1704106800\", \"100.00\"]", "[\"2\", \"1704139200\", \"0.15\"]"]
+false/los_angeles/F2/ntz_beside main:WRONG -> old:WRONG -> new:EQUAL
+   S ["[\"1\", \"2024-03-10 02:30:00\", \"1704106800\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710066600\"]"]
+   main ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710037800\"]"]
+   old ["[\"1\", \"2024-03-10 03:30:00\", \"1704106800\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710066600\"]"]
+   new ["[\"1\", \"2024-03-10 02:30:00\", \"1704106800\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710066600\"]"]
+false/los_angeles/F2/ntz_empty_ts main:EQUAL -> old:WRONG -> new:EQUAL
+   S ["[\"1\", \"2024-03-10 02:30:00\", null]", "[\"2\", \"2024-01-01 03:00:00\", null]"]
+   main ["[\"1\", \"2024-03-10 02:30:00\", null]", "[\"2\", \"2024-01-01 03:00:00\", null]"]
+   old ["[\"1\", \"2024-03-10 03:30:00\", null]", "[\"2\", \"2024-01-01 03:00:00\", null]"]
+   new ["[\"1\", \"2024-03-10 02:30:00\", null]", "[\"2\", \"2024-01-01 03:00:00\", null]"]
+false/los_angeles/F2/ntz_header_by_name main:WRONG -> old:WRONG -> new:WRONG
+   S ["[null, null, \"1710066600\"]"]
+   main ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]"]
+   old ["[\"1\", \"2024-03-10 03:30:00\", \"1704106800\"]"]
+   new ["[\"1\", \"2024-03-10 02:30:00\", \"1704106800\"]"]
+false/los_angeles/F2/ntz_header_partial main:WRONG -> old:WRONG -> new:WRONG
+   S ["[\"1\", \"2024-03-10 02:30:00\", \"1704106800\"]"]
+   main ["[null, \"2024-03-10 02:30:00\", \"1704078000\"]"]
+   old ["[null, \"2024-03-10 03:30:00\", \"1704106800\"]"]
+   new ["[null, \"2024-03-10 02:30:00\", \"1704106800\"]"]
+false/los_angeles/F2/ntz_url main:WRONG -> old:WRONG -> new:EQUAL
+   S ["[\"1\", \"2024-03-10 02:30:00\", \"1704106800\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710066600\"]"]
+   main ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710037800\"]"]
+   old ["[\"1\", \"2024-03-10 03:30:00\", \"1704106800\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710066600\"]"]
+   new ["[\"1\", \"2024-03-10 02:30:00\", \"1704106800\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710066600\"]"]
+false/los_angeles/F2/ntz_z_ts main:EQUAL -> old:WRONG -> new:EQUAL
+   S ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1717200000\"]"]
+   main ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1717200000\"]"]
+   old ["[\"1\", \"2024-03-10 03:30:00\", \"1704078000\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1717200000\"]"]
+   new ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1717200000\"]"]
+false/los_angeles/K/decimal_url main:WRONG -> old:EQUAL -> new:EQUAL
+   S ["[\"1\", \"1704106800\", \"100.00\"]", "[\"2\", \"1704139200\", \"0.15\"]"]
+   main ["[\"1\", \"1704078000\", \"100.00\"]", "[\"2\", \"1704110400\", \"0.15\"]"]
+   old ["[\"1\", \"1704106800\", \"100.00\"]", "[\"2\", \"1704139200\", \"0.15\"]"]
+   new ["[\"1\", \"1704106800\", \"100.00\"]", "[\"2\", \"1704139200\", \"0.15\"]"]
+false/los_angeles/K/string_beside_ts main:WRONG -> old:EQUAL -> new:WRONG
+   S ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704106800\", \"007\"]"]
+   main ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704078000\", \"7\"]"]
+   old ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704106800\", \"007\"]"]
+   new ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704106800\", \"7\"]"]
+false/los_angeles/K/string_date_ts main:WRONG -> old:EQUAL -> new:EQUAL
+   S ["[\"2024-01-01T03:00:00\", \"2024-01-01\", \"1704106800\"]"]
+   main ["[\"2024-01-01 03:00:00\", \"2024-01-01\", \"1704078000\"]"]
+   old ["[\"2024-01-01T03:00:00\", \"2024-01-01\", \"1704106800\"]"]
+   new ["[\"2024-01-01T03:00:00\", \"2024-01-01\", \"1704106800\"]"]
+false/los_angeles/N1/bigint_from_text main:WRONG -> old:RAISE -> new:WRONG
+   S ["[null, \"1704106800\"]", "[null, \"1704139200\"]", "[null, \"1704139200\"]"]
+   main ["[\"1\", \"1704110400\"]", "[\"1000\", \"1704078000\"]", "[\"2\", \"1704110400\"]"]
+   old "ERR Arrow error: Cast error: Cannot cast string '1e3' to value of Int64 type"
+   new ["[\"1\", \"1704139200\"]", "[\"1000\", \"1704106800\"]", "[\"2\", \"1704139200\"]"]
+false/los_angeles/N1/epoch_second_ts main:WRONG -> old:EQUAL -> new:WRONG
+   S ["[\"1\", \"1704106800\", null]"]
+   main ["[\"1\", \"1704078000\", \"1704067200\"]"]
+   old ["[\"1\", \"1704106800\", null]"]
+   new ["[\"1\", \"1704106800\", \"1704067200\"]"]
+false/los_angeles/N1/int_from_text main:WRONG -> old:RAISE -> new:WRONG
+   S ["[null, \"1704106800\"]", "[null, \"1704139200\"]", "[null, \"1704139200\"]"]
+   main ["[\"1\", \"1704110400\"]", "[\"1000\", \"1704078000\"]", "[\"2\", \"1704110400\"]"]
+   old "ERR Arrow error: Cast error: Cannot cast string '1e3' to value of Int32 type"
+   new ["[\"1\", \"1704139200\"]", "[\"1000\", \"1704106800\"]", "[\"2\", \"1704139200\"]"]
+false/utc/F1/decimal_exponent main:EQUAL -> old:RAISE -> new:EQUAL
+   S ["[\"1\", \"1704078000\", \"100.00\"]", "[\"2\", \"1704110400\", \"0.15\"]"]
+   main ["[\"1\", \"1704078000\", \"100.00\"]", "[\"2\", \"1704110400\", \"0.15\"]"]
+   old "ERR Arrow error: Cast error: Cannot cast string '1e2' to value of Decimal128(38, 10) type"
+   new ["[\"1\", \"1704078000\", \"100.00\"]", "[\"2\", \"1704110400\", \"0.15\"]"]
+false/utc/F2/ntz_beside main:EQUAL -> old:EQUAL -> new:EQUAL
+false/utc/F2/ntz_empty_ts main:EQUAL -> old:EQUAL -> new:EQUAL
+false/utc/F2/ntz_header_by_name main:WRONG -> old:WRONG -> new:WRONG
+   S ["[null, null, \"1710037800\"]"]
+   main ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]"]
+   old ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]"]
+   new ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]"]
+false/utc/F2/ntz_header_partial main:WRONG -> old:WRONG -> new:WRONG
+   S ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]"]
+   main ["[null, \"2024-03-10 02:30:00\", \"1704078000\"]"]
+   old ["[null, \"2024-03-10 02:30:00\", \"1704078000\"]"]
+   new ["[null, \"2024-03-10 02:30:00\", \"1704078000\"]"]
+false/utc/F2/ntz_url main:EQUAL -> old:EQUAL -> new:EQUAL
+false/utc/F2/ntz_z_ts main:EQUAL -> old:EQUAL -> new:EQUAL
+false/utc/I/local/comment main:RAISE -> old:RAISE -> new:RAISE
+   S [[["_c0", "int"], ["_c1", "double"], ["_c2", "string"]], ["[\"1\", \"2.5\", \"x\"]", "[\"2\", \"3.5\", \"y\"]"]]
+   main "ERR Arrow error: Csv error: incorrect number of fields for line 1, expected 1 got 3"
+   old "ERR Arrow error: Csv error: incorrect number of fields for line 1, expected 1 got 3"
+   new "ERR Arrow error: Csv error: incorrect number of fields for line 1, expected 1 got 3"
+false/utc/I/local/header_empty main:WRONG -> old:WRONG -> new:WRONG
+   S [[["a", "int"], ["_c1", "int"], ["c", "int"]], ["[\"1\", \"2\", \"3\"]"]]
+   main [[["a", "bigint"], ["_c1", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   old [[["a", "bigint"], ["_c1", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   new [[["a", "bigint"], ["_c1", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+false/utc/I/local/header_space main:WRONG -> old:WRONG -> new:WRONG
+   S [[["a", "int"], [" b", "int"], ["c ", "int"]], ["[\"1\", \"2\", \"3\"]"]]
+   main [[["a", "bigint"], ["b", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   old [[["a", "bigint"], ["b", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   new [[["a", "bigint"], ["b", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+false/utc/I/local/mixed main:WRONG -> old:WRONG -> new:WRONG
+   S [[["_c0", "int"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "int"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+   main [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "bigint"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+   old [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "bigint"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+   new [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "bigint"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+false/utc/I/local/multiline main:RAISE -> old:RAISE -> new:RAISE
+   S ["[\"1100\"]"]
+   main "ERR Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got 3"
+   old "ERR Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got 3"
+   new "ERR Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got 3"
+false/utc/I/local/two_files main:RAISE -> old:RAISE -> new:RAISE
+   S [[["n", "int"], ["v", "string"]], ["[\"1\", \"2.5\"]", "[\"2\", \"x\"]"]]
+   main "ERR datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'v' because the from data_type = Float64 does not equal Utf8"
+   old "ERR datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'v' because the from data_type = Float64 does not equal Utf8"
+   new "ERR datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'v' because the from data_type = Float64 does not equal Utf8"
+false/utc/I/local/two_files_noinfer main:RAISE -> old:RAISE -> new:RAISE
+   S [[["n", "string"], ["v", "string"]], ["[\"1\", \"2.5\"]", "[\"2\", \"x\"]"]]
+   main "ERR datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'v' because the from data_type = Float64 does not equal Utf8"
+   old "ERR datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'v' because the from data_type = Float64 does not equal Utf8"
+   new "ERR datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'v' because the from data_type = Float64 does not equal Utf8"
+false/utc/I/local/void_late main:WRONG -> old:WRONG -> new:WRONG
+   S [[["_c0", "int"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\",
+   main [[["_c0", "bigint"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013
+   old [[["_c0", "bigint"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013
+   new [[["_c0", "bigint"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013
+false/utc/I/local/void_late_header main:WRONG -> old:WRONG -> new:WRONG
+   S [[["n", "int"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", nul
+   main [[["n", "bigint"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", 
+   old [[["n", "bigint"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", 
+   new [[["n", "bigint"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", 
+false/utc/I/url/comment main:WRONG -> old:WRONG -> new:WRONG
+   S [[["_c0", "int"], ["_c1", "double"], ["_c2", "string"]], ["[\"1\", \"2.5\", \"x\"]", "[\"2\", \"3.5\", \"y\"]"]]
+   main [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"]], ["[\"1\", \"2.5\", \"x\"]", "[\"2\", \"3.5\", \"y\"]"]]
+   old [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"]], ["[\"1\", \"2.5\", \"x\"]", "[\"2\", \"3.5\", \"y\"]"]]
+   new [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"]], ["[\"1\", \"2.5\", \"x\"]", "[\"2\", \"3.5\", \"y\"]"]]
+false/utc/I/url/header_empty main:WRONG -> old:WRONG -> new:WRONG
+   S [[["a", "int"], ["_c1", "int"], ["c", "int"]], ["[\"1\", \"2\", \"3\"]"]]
+   main [[["a", "bigint"], ["", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   old [[["a", "bigint"], ["", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   new [[["a", "bigint"], ["", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+false/utc/I/url/header_space main:WRONG -> old:WRONG -> new:WRONG
+   S [[["a", "int"], [" b", "int"], ["c ", "int"]], ["[\"1\", \"2\", \"3\"]"]]
+   main [[["a", "bigint"], [" b", "bigint"], ["c ", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   old [[["a", "bigint"], [" b", "bigint"], ["c ", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   new [[["a", "bigint"], [" b", "bigint"], ["c ", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+false/utc/I/url/mixed main:WRONG -> old:WRONG -> new:WRONG
+   S [[["_c0", "int"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "int"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+   main [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "bigint"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+   old [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "bigint"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+   new [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "bigint"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+false/utc/I/url/multiline main:EQUAL -> old:EQUAL -> new:EQUAL
+false/utc/I/url/void_late main:WRONG -> old:WRONG -> new:WRONG
+   S [[["_c0", "int"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\",
+   main [[["_c0", "bigint"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013
+   old [[["_c0", "bigint"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013
+   new [[["_c0", "bigint"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013
+false/utc/I/url/void_late_header main:WRONG -> old:WRONG -> new:WRONG
+   S [[["n", "int"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", nul
+   main [[["n", "bigint"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", 
+   old [[["n", "bigint"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", 
+   new [[["n", "bigint"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", 
+false/utc/K/decimal_url main:EQUAL -> old:EQUAL -> new:EQUAL
+false/utc/K/string_beside_ts main:WRONG -> old:EQUAL -> new:WRONG
+   S ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704078000\", \"007\"]"]
+   main ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704078000\", \"7\"]"]
+   old ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704078000\", \"007\"]"]
+   new ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704078000\", \"7\"]"]
+false/utc/K/string_date_ts main:WRONG -> old:EQUAL -> new:EQUAL
+   S ["[\"2024-01-01T03:00:00\", \"2024-01-01\", \"1704078000\"]"]
+   main ["[\"2024-01-01 03:00:00\", \"2024-01-01\", \"1704078000\"]"]
+   old ["[\"2024-01-01T03:00:00\", \"2024-01-01\", \"1704078000\"]"]
+   new ["[\"2024-01-01T03:00:00\", \"2024-01-01\", \"1704078000\"]"]
+false/utc/N1/bigint_from_text main:WRONG -> old:RAISE -> new:WRONG
+   S ["[null, \"1704078000\"]", "[null, \"1704110400\"]", "[null, \"1704110400\"]"]
+   main ["[\"1\", \"1704110400\"]", "[\"1000\", \"1704078000\"]", "[\"2\", \"1704110400\"]"]
+   old "ERR Arrow error: Cast error: Cannot cast string '1e3' to value of Int64 type"
+   new ["[\"1\", \"1704110400\"]", "[\"1000\", \"1704078000\"]", "[\"2\", \"1704110400\"]"]
+false/utc/N1/epoch_second_ts main:WRONG -> old:EQUAL -> new:WRONG
+   S ["[\"1\", \"1704078000\", null]"]
+   main ["[\"1\", \"1704078000\", \"1704067200\"]"]
+   old ["[\"1\", \"1704078000\", null]"]
+   new ["[\"1\", \"1704078000\", \"1704067200\"]"]
+false/utc/N1/int_from_text main:WRONG -> old:RAISE -> new:WRONG
+   S ["[null, \"1704078000\"]", "[null, \"1704110400\"]", "[null, \"1704110400\"]"]
+   main ["[\"1\", \"1704110400\"]", "[\"1000\", \"1704078000\"]", "[\"2\", \"1704110400\"]"]
+   old "ERR Arrow error: Cast error: Cannot cast string '1e3' to value of Int32 type"
+   new ["[\"1\", \"1704110400\"]", "[\"1000\", \"1704078000\"]", "[\"2\", \"1704110400\"]"]
+true/los_angeles/F1/decimal_exponent main:WRONG -> old:RAISE -> new:EQUAL
+   S ["[\"1\", \"1704106800\", \"100.00\"]", "[\"2\", \"1704139200\", \"0.15\"]"]
+   main ["[\"1\", \"1704078000\", \"100.00\"]", "[\"2\", \"1704110400\", \"0.15\"]"]
+   old "ERR Arrow error: Cast error: Cannot cast string '1e2' to value of Decimal128(38, 10) type"
+   new ["[\"1\", \"1704106800\", \"100.00\"]", "[\"2\", \"1704139200\", \"0.15\"]"]
+true/los_angeles/F2/ntz_beside main:WRONG -> old:WRONG -> new:EQUAL
+   S ["[\"1\", \"2024-03-10 02:30:00\", \"1704106800\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710066600\"]"]
+   main ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710037800\"]"]
+   old ["[\"1\", \"2024-03-10 03:30:00\", \"1704106800\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710066600\"]"]
+   new ["[\"1\", \"2024-03-10 02:30:00\", \"1704106800\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710066600\"]"]
+true/los_angeles/F2/ntz_empty_ts main:EQUAL -> old:WRONG -> new:EQUAL
+   S ["[\"1\", \"2024-03-10 02:30:00\", null]", "[\"2\", \"2024-01-01 03:00:00\", null]"]
+   main ["[\"1\", \"2024-03-10 02:30:00\", null]", "[\"2\", \"2024-01-01 03:00:00\", null]"]
+   old ["[\"1\", \"2024-03-10 03:30:00\", null]", "[\"2\", \"2024-01-01 03:00:00\", null]"]
+   new ["[\"1\", \"2024-03-10 02:30:00\", null]", "[\"2\", \"2024-01-01 03:00:00\", null]"]
+true/los_angeles/F2/ntz_header_by_name main:WRONG -> old:WRONG -> new:WRONG
+   S ["[null, null, \"1710066600\"]"]
+   main ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]"]
+   old ["[\"1\", \"2024-03-10 03:30:00\", \"1704106800\"]"]
+   new ["[\"1\", \"2024-03-10 02:30:00\", \"1704106800\"]"]
+true/los_angeles/F2/ntz_header_partial main:WRONG -> old:WRONG -> new:WRONG
+   S ["[\"1\", \"2024-03-10 02:30:00\", \"1704106800\"]"]
+   main ["[null, \"2024-03-10 02:30:00\", \"1704078000\"]"]
+   old ["[null, \"2024-03-10 03:30:00\", \"1704106800\"]"]
+   new ["[null, \"2024-03-10 02:30:00\", \"1704106800\"]"]
+true/los_angeles/F2/ntz_url main:WRONG -> old:WRONG -> new:EQUAL
+   S ["[\"1\", \"2024-03-10 02:30:00\", \"1704106800\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710066600\"]"]
+   main ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710037800\"]"]
+   old ["[\"1\", \"2024-03-10 03:30:00\", \"1704106800\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710066600\"]"]
+   new ["[\"1\", \"2024-03-10 02:30:00\", \"1704106800\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1710066600\"]"]
+true/los_angeles/F2/ntz_z_ts main:EQUAL -> old:WRONG -> new:EQUAL
+   S ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1717200000\"]"]
+   main ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1717200000\"]"]
+   old ["[\"1\", \"2024-03-10 03:30:00\", \"1704078000\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1717200000\"]"]
+   new ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]", "[\"2\", \"2024-01-01 03:00:00\", \"1717200000\"]"]
+true/los_angeles/K/decimal_url main:WRONG -> old:EQUAL -> new:EQUAL
+   S ["[\"1\", \"1704106800\", \"100.00\"]", "[\"2\", \"1704139200\", \"0.15\"]"]
+   main ["[\"1\", \"1704078000\", \"100.00\"]", "[\"2\", \"1704110400\", \"0.15\"]"]
+   old ["[\"1\", \"1704106800\", \"100.00\"]", "[\"2\", \"1704139200\", \"0.15\"]"]
+   new ["[\"1\", \"1704106800\", \"100.00\"]", "[\"2\", \"1704139200\", \"0.15\"]"]
+true/los_angeles/K/string_beside_ts main:WRONG -> old:EQUAL -> new:WRONG
+   S ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704106800\", \"007\"]"]
+   main ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704078000\", \"7\"]"]
+   old ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704106800\", \"007\"]"]
+   new ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704106800\", \"7\"]"]
+true/los_angeles/K/string_date_ts main:WRONG -> old:EQUAL -> new:EQUAL
+   S ["[\"2024-01-01T03:00:00\", \"2024-01-01\", \"1704106800\"]"]
+   main ["[\"2024-01-01 03:00:00\", \"2024-01-01\", \"1704078000\"]"]
+   old ["[\"2024-01-01T03:00:00\", \"2024-01-01\", \"1704106800\"]"]
+   new ["[\"2024-01-01T03:00:00\", \"2024-01-01\", \"1704106800\"]"]
+true/los_angeles/N1/bigint_from_text main:WRONG -> old:RAISE -> new:WRONG
+   S ["[null, \"1704106800\"]", "[null, \"1704139200\"]", "[null, \"1704139200\"]"]
+   main ["[\"1\", \"1704110400\"]", "[\"1000\", \"1704078000\"]", "[\"2\", \"1704110400\"]"]
+   old "ERR Arrow error: Cast error: Cannot cast string '1e3' to value of Int64 type"
+   new ["[\"1\", \"1704139200\"]", "[\"1000\", \"1704106800\"]", "[\"2\", \"1704139200\"]"]
+true/los_angeles/N1/epoch_second_ts main:WRONG -> old:RAISE -> new:WRONG
+   S ["[\"1\", \"1704106800\", null]"]
+   main ["[\"1\", \"1704078000\", \"1704067200\"]"]
+   old "ERR CAST_INVALID_INPUT"
+   new ["[\"1\", \"1704106800\", \"1704067200\"]"]
+true/los_angeles/N1/int_from_text main:WRONG -> old:RAISE -> new:WRONG
+   S ["[null, \"1704106800\"]", "[null, \"1704139200\"]", "[null, \"1704139200\"]"]
+   main ["[\"1\", \"1704110400\"]", "[\"1000\", \"1704078000\"]", "[\"2\", \"1704110400\"]"]
+   old "ERR Arrow error: Cast error: Cannot cast string '1e3' to value of Int32 type"
+   new ["[\"1\", \"1704139200\"]", "[\"1000\", \"1704106800\"]", "[\"2\", \"1704139200\"]"]
+true/utc/F1/decimal_exponent main:EQUAL -> old:RAISE -> new:EQUAL
+   S ["[\"1\", \"1704078000\", \"100.00\"]", "[\"2\", \"1704110400\", \"0.15\"]"]
+   main ["[\"1\", \"1704078000\", \"100.00\"]", "[\"2\", \"1704110400\", \"0.15\"]"]
+   old "ERR Arrow error: Cast error: Cannot cast string '1e2' to value of Decimal128(38, 10) type"
+   new ["[\"1\", \"1704078000\", \"100.00\"]", "[\"2\", \"1704110400\", \"0.15\"]"]
+true/utc/F2/ntz_beside main:EQUAL -> old:EQUAL -> new:EQUAL
+true/utc/F2/ntz_empty_ts main:EQUAL -> old:EQUAL -> new:EQUAL
+true/utc/F2/ntz_header_by_name main:WRONG -> old:WRONG -> new:WRONG
+   S ["[null, null, \"1710037800\"]"]
+   main ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]"]
+   old ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]"]
+   new ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]"]
+true/utc/F2/ntz_header_partial main:WRONG -> old:WRONG -> new:WRONG
+   S ["[\"1\", \"2024-03-10 02:30:00\", \"1704078000\"]"]
+   main ["[null, \"2024-03-10 02:30:00\", \"1704078000\"]"]
+   old ["[null, \"2024-03-10 02:30:00\", \"1704078000\"]"]
+   new ["[null, \"2024-03-10 02:30:00\", \"1704078000\"]"]
+true/utc/F2/ntz_url main:EQUAL -> old:EQUAL -> new:EQUAL
+true/utc/F2/ntz_z_ts main:EQUAL -> old:EQUAL -> new:EQUAL
+true/utc/I/local/comment main:RAISE -> old:RAISE -> new:RAISE
+   S [[["_c0", "int"], ["_c1", "double"], ["_c2", "string"]], ["[\"1\", \"2.5\", \"x\"]", "[\"2\", \"3.5\", \"y\"]"]]
+   main "ERR Arrow error: Csv error: incorrect number of fields for line 1, expected 1 got 3"
+   old "ERR Arrow error: Csv error: incorrect number of fields for line 1, expected 1 got 3"
+   new "ERR Arrow error: Csv error: incorrect number of fields for line 1, expected 1 got 3"
+true/utc/I/local/header_empty main:WRONG -> old:WRONG -> new:WRONG
+   S [[["a", "int"], ["_c1", "int"], ["c", "int"]], ["[\"1\", \"2\", \"3\"]"]]
+   main [[["a", "bigint"], ["_c1", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   old [[["a", "bigint"], ["_c1", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   new [[["a", "bigint"], ["_c1", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+true/utc/I/local/header_space main:WRONG -> old:WRONG -> new:WRONG
+   S [[["a", "int"], [" b", "int"], ["c ", "int"]], ["[\"1\", \"2\", \"3\"]"]]
+   main [[["a", "bigint"], ["b", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   old [[["a", "bigint"], ["b", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   new [[["a", "bigint"], ["b", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+true/utc/I/local/mixed main:WRONG -> old:WRONG -> new:WRONG
+   S [[["_c0", "int"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "int"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+   main [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "bigint"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+   old [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "bigint"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+   new [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "bigint"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+true/utc/I/local/multiline main:RAISE -> old:RAISE -> new:RAISE
+   S ["[\"1100\"]"]
+   main "ERR Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got 3"
+   old "ERR Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got 3"
+   new "ERR Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got 3"
+true/utc/I/local/two_files main:RAISE -> old:RAISE -> new:RAISE
+   S [[["n", "int"], ["v", "string"]], ["[\"1\", \"2.5\"]", "[\"2\", \"x\"]"]]
+   main "ERR datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'v' because the from data_type = Float64 does not equal Utf8"
+   old "ERR datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'v' because the from data_type = Float64 does not equal Utf8"
+   new "ERR datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'v' because the from data_type = Float64 does not equal Utf8"
+true/utc/I/local/two_files_noinfer main:RAISE -> old:RAISE -> new:RAISE
+   S [[["n", "string"], ["v", "string"]], ["[\"1\", \"2.5\"]", "[\"2\", \"x\"]"]]
+   main "ERR datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'v' because the from data_type = Float64 does not equal Utf8"
+   old "ERR datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'v' because the from data_type = Float64 does not equal Utf8"
+   new "ERR datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'v' because the from data_type = Float64 does not equal Utf8"
+true/utc/I/local/void_late main:WRONG -> old:WRONG -> new:WRONG
+   S [[["_c0", "int"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\",
+   main [[["_c0", "bigint"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013
+   old [[["_c0", "bigint"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013
+   new [[["_c0", "bigint"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013
+true/utc/I/local/void_late_header main:WRONG -> old:WRONG -> new:WRONG
+   S [[["n", "int"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", nul
+   main [[["n", "bigint"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", 
+   old [[["n", "bigint"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", 
+   new [[["n", "bigint"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", 
+true/utc/I/url/comment main:WRONG -> old:WRONG -> new:WRONG
+   S [[["_c0", "int"], ["_c1", "double"], ["_c2", "string"]], ["[\"1\", \"2.5\", \"x\"]", "[\"2\", \"3.5\", \"y\"]"]]
+   main [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"]], ["[\"1\", \"2.5\", \"x\"]", "[\"2\", \"3.5\", \"y\"]"]]
+   old [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"]], ["[\"1\", \"2.5\", \"x\"]", "[\"2\", \"3.5\", \"y\"]"]]
+   new [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"]], ["[\"1\", \"2.5\", \"x\"]", "[\"2\", \"3.5\", \"y\"]"]]
+true/utc/I/url/header_empty main:WRONG -> old:WRONG -> new:WRONG
+   S [[["a", "int"], ["_c1", "int"], ["c", "int"]], ["[\"1\", \"2\", \"3\"]"]]
+   main [[["a", "bigint"], ["", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   old [[["a", "bigint"], ["", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   new [[["a", "bigint"], ["", "bigint"], ["c", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+true/utc/I/url/header_space main:WRONG -> old:WRONG -> new:WRONG
+   S [[["a", "int"], [" b", "int"], ["c ", "int"]], ["[\"1\", \"2\", \"3\"]"]]
+   main [[["a", "bigint"], [" b", "bigint"], ["c ", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   old [[["a", "bigint"], [" b", "bigint"], ["c ", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+   new [[["a", "bigint"], [" b", "bigint"], ["c ", "bigint"]], ["[\"1\", \"2\", \"3\"]"]]
+true/utc/I/url/mixed main:WRONG -> old:WRONG -> new:WRONG
+   S [[["_c0", "int"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "int"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+   main [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "bigint"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+   old [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "bigint"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+   new [[["_c0", "bigint"], ["_c1", "double"], ["_c2", "string"], ["_c3", "boolean"], ["_c4", "date"], ["_c5", "timestamp"], ["_c6", "bigint"]], ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"2024-01-01 03:00:00\", \"1704078000\", \"7\"]"]]
+true/utc/I/url/multiline main:EQUAL -> old:EQUAL -> new:EQUAL
+true/utc/I/url/void_late main:WRONG -> old:WRONG -> new:WRONG
+   S [[["_c0", "int"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\",
+   main [[["_c0", "bigint"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013
+   old [[["_c0", "bigint"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013
+   new [[["_c0", "bigint"], ["_c1", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013
+true/utc/I/url/void_late_header main:WRONG -> old:WRONG -> new:WRONG
+   S [[["n", "int"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", nul
+   main [[["n", "bigint"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", 
+   old [[["n", "bigint"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", 
+   new [[["n", "bigint"], ["b", "string"]], ["[\"0\", null]", "[\"1\", null]", "[\"10\", null]", "[\"100\", null]", "[\"1000\", null]", "[\"1001\", null]", "[\"1002\", null]", "[\"1003\", null]", "[\"1004\", null]", "[\"1005\", null]", "[\"1006\", null]", "[\"1007\", null]", "[\"1008\", null]", "[\"1009\", null]", "[\"101\", null]", "[\"1010\", null]", "[\"1011\", null]", "[\"1012\", null]", "[\"1013\", 
+true/utc/K/decimal_url main:EQUAL -> old:EQUAL -> new:EQUAL
+true/utc/K/string_beside_ts main:WRONG -> old:EQUAL -> new:WRONG
+   S ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704078000\", \"007\"]"]
+   main ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704078000\", \"7\"]"]
+   old ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704078000\", \"007\"]"]
+   new ["[\"1\", \"2.5\", \"x\", \"true\", \"2024-01-01\", \"1704078000\", \"7\"]"]
+true/utc/K/string_date_ts main:WRONG -> old:EQUAL -> new:EQUAL
+   S ["[\"2024-01-01T03:00:00\", \"2024-01-01\", \"1704078000\"]"]
+   main ["[\"2024-01-01 03:00:00\", \"2024-01-01\", \"1704078000\"]"]
+   old ["[\"2024-01-01T03:00:00\", \"2024-01-01\", \"1704078000\"]"]
+   new ["[\"2024-01-01T03:00:00\", \"2024-01-01\", \"1704078000\"]"]
+true/utc/N1/bigint_from_text main:WRONG -> old:RAISE -> new:WRONG
+   S ["[null, \"1704078000\"]", "[null, \"1704110400\"]", "[null, \"1704110400\"]"]
+   main ["[\"1\", \"1704110400\"]", "[\"1000\", \"1704078000\"]", "[\"2\", \"1704110400\"]"]
+   old "ERR Arrow error: Cast error: Cannot cast string '1e3' to value of Int64 type"
+   new ["[\"1\", \"1704110400\"]", "[\"1000\", \"1704078000\"]", "[\"2\", \"1704110400\"]"]
+true/utc/N1/epoch_second_ts main:WRONG -> old:RAISE -> new:WRONG
+   S ["[\"1\", \"1704078000\", null]"]
+   main ["[\"1\", \"1704078000\", \"1704067200\"]"]
+   old "ERR CAST_INVALID_INPUT"
+   new ["[\"1\", \"1704078000\", \"1704067200\"]"]
+true/utc/N1/int_from_text main:WRONG -> old:RAISE -> new:WRONG
+   S ["[null, \"1704078000\"]", "[null, \"1704110400\"]", "[null, \"1704110400\"]"]
+   main ["[\"1\", \"1704110400\"]", "[\"1000\", \"1704078000\"]", "[\"2\", \"1704110400\"]"]
+   old "ERR Arrow error: Cast error: Cannot cast string '1e3' to value of Int32 type"
+   new ["[\"1\", \"1704110400\"]", "[\"1000\", \"1704078000\"]", "[\"2\", \"1704110400\"]"]
+
+('F1/decimal_exponent', ('EQUAL', 'RAISE', 'EQUAL')) 2
+('F1/decimal_exponent', ('WRONG', 'RAISE', 'EQUAL')) 2
+('F2/ntz_beside', ('EQUAL', 'EQUAL', 'EQUAL')) 2
+('F2/ntz_beside', ('WRONG', 'WRONG', 'EQUAL')) 2
+('F2/ntz_empty_ts', ('EQUAL', 'EQUAL', 'EQUAL')) 2
+('F2/ntz_empty_ts', ('EQUAL', 'WRONG', 'EQUAL')) 2
+('F2/ntz_header_by_name', ('WRONG', 'WRONG', 'WRONG')) 4
+('F2/ntz_header_partial', ('WRONG', 'WRONG', 'WRONG')) 4
+('F2/ntz_url', ('EQUAL', 'EQUAL', 'EQUAL')) 2
+('F2/ntz_url', ('WRONG', 'WRONG', 'EQUAL')) 2
+('F2/ntz_z_ts', ('EQUAL', 'EQUAL', 'EQUAL')) 2
+('F2/ntz_z_ts', ('EQUAL', 'WRONG', 'EQUAL')) 2
+('I/local', ('RAISE', 'RAISE', 'RAISE')) 8
+('I/local', ('WRONG', 'WRONG', 'WRONG')) 10
+('I/url', ('EQUAL', 'EQUAL', 'EQUAL')) 2
+('I/url', ('WRONG', 'WRONG', 'WRONG')) 12
+('K/decimal_url', ('EQUAL', 'EQUAL', 'EQUAL')) 2
+('K/decimal_url', ('WRONG', 'EQUAL', 'EQUAL')) 2
+('K/string_beside_ts', ('WRONG', 'EQUAL', 'WRONG')) 4
+('K/string_date_ts', ('WRONG', 'EQUAL', 'EQUAL')) 4
+('N1/bigint_from_text', ('WRONG', 'RAISE', 'WRONG')) 4
+('N1/epoch_second_ts', ('WRONG', 'EQUAL', 'WRONG')) 2
+('N1/epoch_second_ts', ('WRONG', 'RAISE', 'WRONG')) 2
+('N1/int_from_text', ('WRONG', 'RAISE', 'WRONG')) 4
+
+## d1 inferSchema cells by names and values (main, old, mid = pkg-csvts-0b45f6a6, new)
+false/utc/I/local/comment main:RAISE old:RAISE mid:EQUAL new:RAISE
+false/utc/I/local/header_empty main:EQUAL old:EQUAL mid:WRONG new:EQUAL
+false/utc/I/local/header_space main:WRONG old:WRONG mid:EQUAL new:WRONG
+false/utc/I/local/mixed main:EQUAL old:EQUAL mid:EQUAL new:EQUAL
+false/utc/I/local/multiline main:RAISE old:RAISE mid:RAISE new:RAISE
+false/utc/I/local/two_files main:RAISE old:RAISE mid:RAISE new:RAISE
+false/utc/I/local/two_files_noinfer main:RAISE old:RAISE mid:RAISE new:RAISE
+false/utc/I/local/void_late main:EQUAL old:EQUAL mid:WRONG new:EQUAL
+false/utc/I/local/void_late_header main:EQUAL old:EQUAL mid:WRONG new:EQUAL
+false/utc/I/url/comment main:EQUAL old:EQUAL mid:EQUAL new:EQUAL
+false/utc/I/url/header_empty main:WRONG old:WRONG mid:WRONG new:WRONG
+false/utc/I/url/header_space main:EQUAL old:EQUAL mid:EQUAL new:EQUAL
+false/utc/I/url/mixed main:EQUAL old:EQUAL mid:EQUAL new:EQUAL
+false/utc/I/url/multiline main:EQUAL old:EQUAL mid:EQUAL new:EQUAL
+false/utc/I/url/void_late main:WRONG old:WRONG mid:WRONG new:WRONG
+false/utc/I/url/void_late_header main:WRONG old:WRONG mid:WRONG new:WRONG
+true/utc/I/local/comment main:RAISE old:RAISE mid:EQUAL new:RAISE
+true/utc/I/local/header_empty main:EQUAL old:EQUAL mid:WRONG new:EQUAL
+true/utc/I/local/header_space main:WRONG old:WRONG mid:EQUAL new:WRONG
+true/utc/I/local/mixed main:EQUAL old:EQUAL mid:EQUAL new:EQUAL
+true/utc/I/local/multiline main:RAISE old:RAISE mid:RAISE new:RAISE
+true/utc/I/local/two_files main:RAISE old:RAISE mid:RAISE new:RAISE
+true/utc/I/local/two_files_noinfer main:RAISE old:RAISE mid:RAISE new:RAISE
+true/utc/I/local/void_late main:EQUAL old:EQUAL mid:WRONG new:EQUAL
+true/utc/I/local/void_late_header main:EQUAL old:EQUAL mid:WRONG new:EQUAL
+true/utc/I/url/comment main:EQUAL old:EQUAL mid:EQUAL new:EQUAL
+true/utc/I/url/header_empty main:WRONG old:WRONG mid:WRONG new:WRONG
+true/utc/I/url/header_space main:EQUAL old:EQUAL mid:EQUAL new:EQUAL
+true/utc/I/url/mixed main:EQUAL old:EQUAL mid:EQUAL new:EQUAL
+true/utc/I/url/multiline main:EQUAL old:EQUAL mid:EQUAL new:EQUAL
+true/utc/I/url/void_late main:WRONG old:WRONG mid:WRONG new:WRONG
+true/utc/I/url/void_late_header main:WRONG old:WRONG mid:WRONG new:WRONG
+
+## step 0's table, main against delta 1
+cells 5732
+Z main {"EQUAL": 2214, "RAISE": 528, "WRONG": 842, "NOSPARK": 512} head {"EQUAL": 2406, "RAISE": 528, "WRONG": 650, "NOSPARK": 512} moved 256
+A main {"EQUAL": 362, "WRONG": 43, "RAISE": 411, "NOSPARK": 68} head {"EQUAL": 362, "WRONG": 43, "RAISE": 411, "NOSPARK": 68} moved 0
+T main {"EQUAL": 198, "WRONG": 142, "NOSPARK": 68} head {"EQUAL": 218, "WRONG": 122, "NOSPARK": 68} moved 68
+S main {"RAISE": 8} head {"RAISE": 8} moved 0
+W main {"EQUAL": 152, "WRONG": 136, "NOSPARK": 48} head {"EQUAL": 160, "WRONG": 128, "NOSPARK": 48} moved 24
+
+## Z matching by reader, head (main)
+csv_0 head {"EQUAL": 104, "RAISE": 4, "WRONG": 20} main {"EQUAL": 104, "RAISE": 4, "WRONG": 20}
+csv_f head {"EQUAL": 128} main {"WRONG": 64, "EQUAL": 64}
+csv_fix head {"NOSPARK": 128} main {"NOSPARK": 128}
+csv_i head {"EQUAL": 128} main {"EQUAL": 128}
+csv_n head {"EQUAL": 128} main {"EQUAL": 128}
+csv_ns head {"EQUAL": 104, "RAISE": 4, "WRONG": 20} main {"EQUAL": 104, "RAISE": 4, "WRONG": 20}
+csv_s head {"EQUAL": 128} main {"WRONG": 64, "EQUAL": 64}
+csv_tf head {"RAISE": 128} main {"RAISE": 128}
+emu head {"EQUAL": 128} main {"EQUAL": 128}
+json_f head {"EQUAL": 128} main {"EQUAL": 128}
+json_i head {"EQUAL": 108, "WRONG": 20} main {"EQUAL": 108, "WRONG": 20}
+json_m head {"EQUAL": 128} main {"EQUAL": 128}
+json_s head {"EQUAL": 128} main {"EQUAL": 128}
+json_tz head {"RAISE": 128} main {"RAISE": 128}
+pq head {"EQUAL": 128} main {"EQUAL": 128}
+smart head {"NOSPARK": 128} main {"NOSPARK": 128}
+
+## Z cross by reader, head gap class (main gap class)
+csv_0 head {"equal": 100, "direct": 24, "view": 4} main {"equal": 100, "direct": 24, "view": 4}
+csv_f head {"equal": 54, "view": 74} main {"equal": 22, "direct": 106}
+csv_fix head {"nospark": 128} main {"nospark": 128}
+csv_i head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+csv_n head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+csv_ns head {"equal": 100, "direct": 24, "view": 4} main {"equal": 100, "direct": 24, "view": 4}
+csv_s head {"equal": 54, "view": 74} main {"equal": 22, "direct": 106}
+csv_tf head {"direct": 128} main {"direct": 128}
+emu head {"equal": 128} main {"equal": 128}
+json_f head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+json_i head {"equal": 104, "direct": 20, "view": 4} main {"equal": 104, "direct": 20, "view": 4}
+json_m head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+json_s head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+json_tz head {"direct": 128} main {"direct": 128}
+pq head {"equal": 128} main {"equal": 128}
+smart head {"nospark": 128} main {"nospark": 128}
+
+## twins against Spark (csv_fix vs csv_s, emu vs json_s), head and main
+W emu cross {"EQUAL": 48}
+Z csv_fix cross {"EQUAL": 54, "WRONG": 74}
+Z csv_fix matching {"EQUAL": 128}
+Z emu cross {"EQUAL": 128}
+Z emu matching {"EQUAL": 128}
+
+## T by reader, head (main)
+csv_i head {"EQUAL": 34, "WRONG": 34} main {"EQUAL": 34, "WRONG": 34}
+csv_s head {"EQUAL": 34, "WRONG": 34} main {"WRONG": 54, "EQUAL": 14}
+json_i head {"EQUAL": 48, "WRONG": 20} main {"EQUAL": 48, "WRONG": 20}
+json_s head {"EQUAL": 34, "WRONG": 34} main {"EQUAL": 34, "WRONG": 34}
+pq head {"EQUAL": 68} main {"EQUAL": 68}
+smart head {"NOSPARK": 68} main {"NOSPARK": 68}
+
+## W csv_s d writes
+W/ansi_false/la_utc/csv_s/d/ctas main EQUAL head EQUAL
+W/ansi_false/la_utc/csv_s/d/ins main EQUAL head EQUAL
+W/ansi_false/la_utc/csv_s/d/into main EQUAL head EQUAL
+W/ansi_false/la_utc/csv_s/d/wto main EQUAL head EQUAL
+W/ansi_false/utc_la/csv_s/d/ctas main WRONG head EQUAL
+W/ansi_false/utc_la/csv_s/d/ins main WRONG head EQUAL
+W/ansi_false/utc_la/csv_s/d/into main WRONG head EQUAL
+W/ansi_false/utc_la/csv_s/d/wto main WRONG head EQUAL
+W/ansi_true/la_utc/csv_s/d/ctas main EQUAL head EQUAL
+W/ansi_true/la_utc/csv_s/d/ins main EQUAL head EQUAL
+W/ansi_true/la_utc/csv_s/d/into main EQUAL head EQUAL
+W/ansi_true/la_utc/csv_s/d/wto main EQUAL head EQUAL
+W/ansi_true/utc_la/csv_s/d/ctas main WRONG head EQUAL
+W/ansi_true/utc_la/csv_s/d/ins main WRONG head EQUAL
+W/ansi_true/utc_la/csv_s/d/into main WRONG head EQUAL
+W/ansi_true/utc_la/csv_s/d/wto main WRONG head EQUAL
+
+## every moved cell (main -> head)
+T csv_s EQUAL->WRONG 14
+T csv_s WRONG->EQUAL 34
+T csv_s WRONG->WRONG 20
+W csv_s WRONG->EQUAL 8
+W csv_s WRONG->WRONG 16
+Z csv_f WRONG->EQUAL 96
+Z csv_f WRONG->WRONG 32
+Z csv_s WRONG->EQUAL 96
+Z csv_s WRONG->WRONG 32
+
+## moved cells outside csv_s, csv_f, csv_fix
+
+## EQUAL lost
+T/NTZ_LTZ/csv_s/d | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_LTZ/csv_s/e | spark (1, 2, 1704078000) (2, 3, 1704110400) | main (1, 2, 1704078000) (2, 3, 1704110400) | head (1, 2, 1704106800) (2, 3, 1704139200)
+T/NTZ_LTZ/csv_s/f | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_LTZ/csv_s/j | spark (1, 19, 1704078000) (2, 4, 1704110400) | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 19, 1704106800) (2, 4, 1704139200)
+T/NTZ_LTZ/csv_s/o | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_LTZ/csv_s/osa | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_LTZ/csv_s/sa | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_NTZ/csv_s/d | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_NTZ/csv_s/e | spark (1, 2, 1704078000) (2, 3, 1704110400) | main (1, 2, 1704078000) (2, 3, 1704110400) | head (1, 2, 1704106800) (2, 3, 1704139200)
+T/NTZ_NTZ/csv_s/f | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_NTZ/csv_s/j | spark (1, 19, 1704078000) (2, 4, 1704110400) | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 19, 1704106800) (2, 4, 1704139200)
+T/NTZ_NTZ/csv_s/o | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_NTZ/csv_s/osa | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+T/NTZ_NTZ/csv_s/sa | spark (1, 1704078000) (2, 1704110400) | main (1, 1704078000) (2, 1704110400) | head (1, 1704106800) (2, 1704139200)
+
+## changed answers that keep the verdict
+WRONG T/NTZ_LTZ/csv_s/eb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_LTZ/csv_s/eb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_LTZ/csv_s/jb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_LTZ/csv_s/jb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_LTZ/csv_s/ob_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_LTZ/csv_s/ob_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_LTZ/csv_s/osb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_LTZ/csv_s/osb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_LTZ/csv_s/sb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_LTZ/csv_s/sb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_NTZ/csv_s/eb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_NTZ/csv_s/eb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_NTZ/csv_s/jb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_NTZ/csv_s/jb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_NTZ/csv_s/ob_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_NTZ/csv_s/ob_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_NTZ/csv_s/osb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_NTZ/csv_s/osb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG T/NTZ_NTZ/csv_s/sb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG T/NTZ_NTZ/csv_s/sb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/eb_hour/ctas | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/eb_hour/ins | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/eb_hour/into | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/eb_hour/wto | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/sb_hour/ctas | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/sb_hour/ins | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/sb_hour/into | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_false/utc_la/csv_s/sb_hour/wto | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/eb_hour/ctas | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/eb_hour/ins | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/eb_hour/into | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/eb_hour/wto | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/sb_hour/ctas | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/sb_hour/ins | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/sb_hour/into | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG W/ansi_true/utc_la/csv_s/sb_hour/wto | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/eb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/eb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/eb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/j | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 19, 1704106800) (2, 4, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/jb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/jb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/jb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/ob_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/ob_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/ob_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/osb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/osb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/osb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/sb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/sb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_f/sb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/eb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/eb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/eb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/j | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 19, 1704106800) (2, 4, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/jb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/jb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/jb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/ob_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/ob_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/ob_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/osb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/osb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/osb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/sb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/sb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_false/utc_la/csv_s/sb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/eb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/eb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/eb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/j | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 19, 1704106800) (2, 4, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/jb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/jb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/jb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/ob_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/ob_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/ob_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/osb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/osb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/osb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/sb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/sb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_f/sb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/eb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/eb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/eb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/j | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 19, 1704106800) (2, 4, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/jb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/jb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/jb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/ob_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/ob_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/ob_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/osb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/osb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/osb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/sb_fmt | main (1, '2023-12-31 19:00', 1704078000) (2, '2024-01-01 04:00', 1704110400) | head (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/sb_hour | main (1, 19, 1704078000) (2, 4, 1704110400) | head (1, 3, 1704106800) (2, 12, 1704139200)
+WRONG Z/ansi_true/utc_la/csv_s/sb_str | main (1, '2023-12-31 19:00:00', 1704078000) (2, '2024-01-01 04:00:00', 1704110400) | head (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+
+## step 0's table, old head against delta 1
+cells 5732
+Z main {"EQUAL": 2406, "RAISE": 528, "WRONG": 650, "NOSPARK": 512} head {"EQUAL": 2406, "RAISE": 528, "WRONG": 650, "NOSPARK": 512} moved 0
+A main {"EQUAL": 362, "WRONG": 43, "RAISE": 411, "NOSPARK": 68} head {"EQUAL": 362, "WRONG": 43, "RAISE": 411, "NOSPARK": 68} moved 68
+T main {"EQUAL": 218, "WRONG": 122, "NOSPARK": 68} head {"EQUAL": 218, "WRONG": 122, "NOSPARK": 68} moved 0
+S main {"RAISE": 8} head {"RAISE": 8} moved 0
+W main {"EQUAL": 160, "WRONG": 128, "NOSPARK": 48} head {"EQUAL": 160, "WRONG": 128, "NOSPARK": 48} moved 0
+
+## Z matching by reader, head (main)
+csv_0 head {"EQUAL": 104, "RAISE": 4, "WRONG": 20} main {"EQUAL": 104, "RAISE": 4, "WRONG": 20}
+csv_f head {"EQUAL": 128} main {"EQUAL": 128}
+csv_fix head {"NOSPARK": 128} main {"NOSPARK": 128}
+csv_i head {"EQUAL": 128} main {"EQUAL": 128}
+csv_n head {"EQUAL": 128} main {"EQUAL": 128}
+csv_ns head {"EQUAL": 104, "RAISE": 4, "WRONG": 20} main {"EQUAL": 104, "RAISE": 4, "WRONG": 20}
+csv_s head {"EQUAL": 128} main {"EQUAL": 128}
+csv_tf head {"RAISE": 128} main {"RAISE": 128}
+emu head {"EQUAL": 128} main {"EQUAL": 128}
+json_f head {"EQUAL": 128} main {"EQUAL": 128}
+json_i head {"EQUAL": 108, "WRONG": 20} main {"EQUAL": 108, "WRONG": 20}
+json_m head {"EQUAL": 128} main {"EQUAL": 128}
+json_s head {"EQUAL": 128} main {"EQUAL": 128}
+json_tz head {"RAISE": 128} main {"RAISE": 128}
+pq head {"EQUAL": 128} main {"EQUAL": 128}
+smart head {"NOSPARK": 128} main {"NOSPARK": 128}
+
+## Z cross by reader, head gap class (main gap class)
+csv_0 head {"equal": 100, "direct": 24, "view": 4} main {"equal": 100, "direct": 24, "view": 4}
+csv_f head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+csv_fix head {"nospark": 128} main {"nospark": 128}
+csv_i head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+csv_n head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+csv_ns head {"equal": 100, "direct": 24, "view": 4} main {"equal": 100, "direct": 24, "view": 4}
+csv_s head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+csv_tf head {"direct": 128} main {"direct": 128}
+emu head {"equal": 128} main {"equal": 128}
+json_f head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+json_i head {"equal": 104, "direct": 20, "view": 4} main {"equal": 104, "direct": 20, "view": 4}
+json_m head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+json_s head {"equal": 54, "view": 74} main {"equal": 54, "view": 74}
+json_tz head {"direct": 128} main {"direct": 128}
+pq head {"equal": 128} main {"equal": 128}
+smart head {"nospark": 128} main {"nospark": 128}
+
+## twins against Spark (csv_fix vs csv_s, emu vs json_s), head and main
+W emu cross {"EQUAL": 48}
+Z csv_fix cross {"EQUAL": 54, "WRONG": 74}
+Z csv_fix matching {"EQUAL": 128}
+Z emu cross {"EQUAL": 128}
+Z emu matching {"EQUAL": 128}
+
+## T by reader, head (main)
+csv_i head {"EQUAL": 34, "WRONG": 34} main {"EQUAL": 34, "WRONG": 34}
+csv_s head {"EQUAL": 34, "WRONG": 34} main {"EQUAL": 34, "WRONG": 34}
+json_i head {"EQUAL": 48, "WRONG": 20} main {"EQUAL": 48, "WRONG": 20}
+json_s head {"EQUAL": 34, "WRONG": 34} main {"EQUAL": 34, "WRONG": 34}
+pq head {"EQUAL": 68} main {"EQUAL": 68}
+smart head {"NOSPARK": 68} main {"NOSPARK": 68}
+
+## W csv_s d writes
+W/ansi_false/la_utc/csv_s/d/ctas main EQUAL head EQUAL
+W/ansi_false/la_utc/csv_s/d/ins main EQUAL head EQUAL
+W/ansi_false/la_utc/csv_s/d/into main EQUAL head EQUAL
+W/ansi_false/la_utc/csv_s/d/wto main EQUAL head EQUAL
+W/ansi_false/utc_la/csv_s/d/ctas main EQUAL head EQUAL
+W/ansi_false/utc_la/csv_s/d/ins main EQUAL head EQUAL
+W/ansi_false/utc_la/csv_s/d/into main EQUAL head EQUAL
+W/ansi_false/utc_la/csv_s/d/wto main EQUAL head EQUAL
+W/ansi_true/la_utc/csv_s/d/ctas main EQUAL head EQUAL
+W/ansi_true/la_utc/csv_s/d/ins main EQUAL head EQUAL
+W/ansi_true/la_utc/csv_s/d/into main EQUAL head EQUAL
+W/ansi_true/la_utc/csv_s/d/wto main EQUAL head EQUAL
+W/ansi_true/utc_la/csv_s/d/ctas main EQUAL head EQUAL
+W/ansi_true/utc_la/csv_s/d/ins main EQUAL head EQUAL
+W/ansi_true/utc_la/csv_s/d/into main EQUAL head EQUAL
+W/ansi_true/utc_la/csv_s/d/wto main EQUAL head EQUAL
+
+## every moved cell (main -> head)
+A csv_sov RAISE->RAISE 68
+
+## moved cells outside csv_s, csv_f, csv_fix
+A/false_false/csv_sov/d | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/e | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/f | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/j | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/o | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/osa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/sa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_false/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/d | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/e | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/f | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/j | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/o | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/osa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/sa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/false_true/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/d | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/e | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/f | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/j | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/o | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/osa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/sa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_false/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/d | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/e | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/f | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/j | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/o | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/osa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/sa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+A/true_true/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+
+## EQUAL lost
+
+## changed answers that keep the verdict
+RAISE A/false_false/csv_sov/d | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/e | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/f | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/j | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/o | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/osa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/sa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_false/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/d | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/e | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/f | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/j | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/o | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/osa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/sa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/false_true/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/d | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/e | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/f | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/j | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/o | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/osa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/sa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_false/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/d | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/e | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/eb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/eb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/f | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/j | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/jb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/jb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/o | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/ob_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/ob_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/osa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/osb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/osb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/sa | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/sb_hour | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+RAISE A/true_true/csv_sov/sb_mul | main RAISE Arrow error: Cast error: Cannot cast string '2147483648' to value of I | head RAISE Arrow error: Cast error: Can't cast value 2147483648 to type Int32
+
+## write sweep
+main vs new: 3100 common cells, 0 differ {}
+by door {}
+old vs new: 3100 common cells, 0 differ {}
+by door {}

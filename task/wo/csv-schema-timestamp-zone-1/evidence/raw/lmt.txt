@@ -1,0 +1,20 @@
+== written file
+id,t
+1,1850-06-01T10:00:00.000-04:56:02
+== pkg-main-4c365814
+NATIVE <scratchpad>
+America/New_York TS RAISE Arrow error: Parser error: Error parsing column 1 at line 1: Parser error: Invalid timezone "-04:56:02": failed to parse timezone
+America/New_York TEXT RAISE Arrow error: Parser error: Error parsing column 1 at line 1: Parser error: Invalid timezone "-04:56:02": failed to parse
+UTC TS RAISE Arrow error: Parser error: Error parsing column 1 at line 1: Parser error: Invalid timezone "-04:56:02": failed to parse timezone
+UTC TEXT RAISE Arrow error: Parser error: Error parsing column 1 at line 1: Parser error: Invalid timezone "-04:56:02": failed to parse
+== pkg-csvts-186c34b0
+NATIVE <scratchpad>
+America/New_York TS [('id', 'int'), ('t', 'timestamp')] [Row(id=1, s='1850-06-01 10:00:00', u=-3773725438, f='1850-06-01 10:00:00')]
+America/New_York TEXT RAISE Arrow error: Parser error: Error parsing column 1 at line 1: Parser error: Invalid timezone "-04:56:02": failed to parse
+UTC TS [('id', 'int'), ('t', 'timestamp')] [Row(id=1, s='1850-06-01 14:56:02', u=-3773725438, f='1850-06-01 14:56:02')]
+UTC TEXT RAISE Arrow error: Parser error: Error parsing column 1 at line 1: Parser error: Invalid timezone "-04:56:02": failed to parse
+== spark 4.1.2
+America/New_York TS [('id', 'int'), ('t', 'timestamp')] [Row(id=1, s='1850-06-01 10:00:00', u=-3773725438, f='1850-06-01 10:00:00')]
+America/New_York TEXT [Row(id=1, t='1850-06-01T10:00:00.000-04:56:02')]
+UTC TS [('id', 'int'), ('t', 'timestamp')] [Row(id=1, s='1850-06-01 14:56:02', u=-3773725438, f='1850-06-01 14:56:02')]
+UTC TEXT [Row(id=1, t='1850-06-01T10:00:00.000-04:56:02')]

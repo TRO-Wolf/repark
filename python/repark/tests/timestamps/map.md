@@ -37,7 +37,7 @@ pins.
 - [test_store_ts_doors_2.py](test_store_ts_doors_2.py) — STORE-TS-DOORS-2: timestamp store-assignment cells replay Spark on every door.
 - [test_store_ts_doors_2_fold6.py](test_store_ts_doors_2_fold6.py) — STORE-TS-DOORS-2 fold 6: nullary timestamp columns refuse on every door.
 - [test_store_ts_to_numeric_1.py](test_store_ts_to_numeric_1.py) — STORE-TS-TO-NUMERIC-1: storing a timestamp into a numeric column replays Spark.
-- [test_text_write_timestamp_zone_1.py](test_text_write_timestamp_zone_1.py) — TEXT-WRITE-TIMESTAMP-ZONE-1: CSV and JSON writes format TIMESTAMP like Spark.
+- [test_text_write_timestamp_zone_1.py](test_text_write_timestamp_zone_1.py) — TEXT-WRITE-TIMESTAMP-ZONE-1: CSV/JSON write TIMESTAMP as Spark; LMT read too.
 - [test_timestamp_cast_parity.py](test_timestamp_cast_parity.py) — ``CAST(TIMESTAMP AS <numeric>)`` (TZ-5) and ``CAST(TIMESTAMP AS STRING)`` (B-TZ-4) rows.
 - [test_timestamp_type.py](test_timestamp_type.py) — Q10 — ``spark.sql.timestampType`` LTZ default + NTZ opt-in.
 - [test_tz_asof_1.py](test_tz_asof_1.py) — WO TZ-ASOF-1: an expression named like its ORDER BY key plans.
