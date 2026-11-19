@@ -371,4 +371,6 @@ spellings holds a glob character. All 26 sweep steps exited 0.
 
 Raw: [evidence/raw/delta3-bar.txt](evidence/raw/delta3-bar.txt), [evidence/raw/delta3-glob-cells.jsonl](evidence/raw/delta3-glob-cells.jsonl).
 
+The residual is accepted under the owner's "go with delta 3" (2026-11-19, about 14:45 UTC), and its card is [CSV-GLOB-LITERAL-RESIDUAL-1](../../roadmap/mid-term/cards-2026-11-19/csv-glob-literal-residual-1-card-2026-11-19.md).
+
 Up: [map.md](map.md).
