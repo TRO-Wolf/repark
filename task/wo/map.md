@@ -58,6 +58,6 @@ C clerk) and the skeleton every order follows; the engine band table (which grad
 - [temp-view-session-settings-1/](temp-view-session-settings-1/map.md) — **TEMP-VIEW-SESSION-SETTINGS-1 step 0, revised (2026-11-17):** temp views read under other session settings vs Spark 4.1.2; table, inventory, seats, split, owner Qs.
 - [avg-decimal-grouped-run-variance-1/](avg-decimal-grouped-run-variance-1/map.md) — **AVG-DECIMAL-GROUPED-RUN-VARIANCE-1 step 0 (S2, 2026-11-19):** grouped decimal `avg` vs Spark 4.1.2, 22 configurations; table, inventory, seats, split, owner Qs.
 - [temp-view-frame-reader-parse-1/](temp-view-frame-reader-parse-1/map.md) — **TEMP-VIEW-FRAME-READER-PARSE-1 step 0 (2026-11-19):** a JSON or CSV frame view's parse vs the expressions above it, vs Spark 4.1.2; table, inventory, seats, split, owner Qs.
-- [string-hour-minute-second-1/](string-hour-minute-second-1/map.md) — **STRING-HOUR-MINUTE-SECOND-1 step 0 (S1, 2026-11-19):** `hour` / `minute` / `second` over a `STRING` vs Spark 4.1.2, 75,032 cells; table, inventory, seats, split, owner Qs.
+- [string-hour-minute-second-1/](string-hour-minute-second-1/map.md) — **STRING-HOUR-MINUTE-SECOND-1 step 0 (S1, 2026-11-19):** `hour` / `minute` / `second` over a `STRING` vs Spark 4.1.2, 75,032 cells; table, inventory, seats, split, owner Qs; the seat A build: bar, cost.
 
 Up: [../map.md](../map.md).
