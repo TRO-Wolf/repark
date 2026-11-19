@@ -252,6 +252,13 @@ spelling, and main's code already re-reads only the named columns there. The `in
 (`_finish_csv_infer_schema`) keeps its local path and its all-text pre-scan, as on main. `reader.py` drops delta 1's
 `inferschema` pop (main's code never reads that option) and adds one line; it is 999 lines.
 
+**Correction (delta 3; the re-check verifier, Claude Opus 5.5 medium, its G1 and R1).** A glob did not always keep
+its spelling. One whose own name holds `*`, `?` or `[` and also exists on disk passed `Path.exists()` and went through
+`as_uri()`, which percent-encodes those characters, so the re-read opened only the literal file: 10 cells went EQUAL →
+WRONG under UTC, where main and delta 1 are EQUAL. "0 cells differ from delta 1" below holds for the files below, none
+of which holds such a spelling; on the verifier's `rp.py` and `rp2.py`, delta 2 differs from delta 1 in those 10
+cells. See "Delta 3".
+
 **The bar** (package `S/ddu-work/pkg-csvts-468ba436`, `BUILT_FROM` `468ba436`, cell by cell against delta 1's package
 `pkg-csvts-1ee847b7` on the same probes; generated view and frame ids, Parquet file names, warehouse paths and the
 clock-relative `ice_t` snapshot time are normalised): **0 cells differ from delta 1** in every file below, so every
@@ -276,5 +283,92 @@ count in the delta 1 table above stands, and 0 EQUAL cells are lost against main
   It passes on main's code by design.
 
 Raw: [evidence/raw/delta2-bar.txt](evidence/raw/delta2-bar.txt).
+
+## Delta 3 (2026-11-19): the glob spelling
+
+**The rulings.** Owner, 2026-11-19, about 14:45 UTC, verbatim: "go with delta 3". Owner, 2026-11-19, about 14:00
+UTC, verbatim: "go with recommendations" (it adopts §9 of Fable's reply on the reader-parse units, cost noise and the
+next queue; cost.md "Delta 3" holds the two cost lines it binds).
+
+**Why: the re-check verifier's G1** (Claude Opus 5.5 medium, FAIL on `f9ae43b6`; class (a), S2 and silent, S1 by
+unit 0's class rule, narrow reach). A local spelling whose own name holds `*`, `?` or `[`, and which exists on disk
+under that literal name, read a different set of files from Spark and main. The schema must hold a `TIMESTAMP` field.
+The cells are the verifier's `rp2.py` `G/{star_file,qmark_file,brack_file,star_dir}` and `rp.py` `P/star_literal`,
+under UTC in both ANSI modes: 10 go EQUAL → WRONG against main, and main and delta 1 are EQUAL in all 10.
+
+| spelling | what exists | Spark, main, delta 1 | delta 2 |
+|---|---|---|---|
+| `gl/a*b.csv` | `a*b.csv` (row 1), `axb.csv` (row 2) | rows 1 and 2 | row 1 only |
+| `gq/a?.csv` | `a?.csv` (row 1), `ab.csv` (row 2) | rows 1 and 2 | row 1 only |
+| `gb/a[1].csv` | `a[1].csv` (row 1), `a1.csv` (row 2) | row 2 | row 1, another file's row |
+| `dd*` (a directory) | `dd*/part.csv` (row 1), `ddx/part.csv` (row 2) | rows 1 and 2 | row 1 only |
+| `names/a*b.csv` | five files the glob matches | 10 rows | 2 rows |
+
+**The cause.** Delta 2's `_load_csv` sent any spelling that `Path.exists()` finds through
+`Path(path_str).absolute().as_uri()`. `as_uri()` percent-encodes the glob characters, so the re-read opened only the
+literal file. **[R]** DataFusion 54.1.0 expands a glob only for a filesystem path, never inside a URL:
+`ListingTableUrl::parse` sends a URL to `try_new(url, None)` (`datafusion-datasource-54.1.0/src/url.rs:115`), and
+only `parse_path` splits a glob (`:125-141`), at the first of `GLOB_START_CHARS = ['?', '*', '[']` (`:483`).
+
+**The fix.** `_load_csv` (`reader.py:510-511`) takes the URL route only when the spelling holds none of `*`, `?` or
+`[`, the set DataFusion treats as a glob (`set("*?[").isdisjoint(path_str)`). Every other spelling keeps itself, so
+main's code expands the glob on the re-read as the first read, Spark and main do. One line is added, so `reader.py` is
+1,000 lines, at the facade's cap. No comment was added, moved or re-texted. The native library is delta 2's byte for
+byte.
+
+**The residual, named [M].** For an existing spelling whose own name holds a glob character, main's `read_csv_path`
+takes the local all-text pre-scan again: `csv_utf8_schema_from_path` reads the literal name (`read_options.rs:295-311`).
+So F1 and F2 come back for that spelling only, as on the first head. The delta's probe
+([evidence/probes/delta3_glob.py](evidence/probes/delta3_glob.py), Spark 4.1.2 live, 288 cells per build) reads six
+glob names that exist literally: the five G1 shapes, and `only/a*b.csv`, which its glob matches only to itself. It
+also reads two controls, a plain file and a glob with no literal match. Each runs over plain text and over F1/F2 text
+(`1e2` and `1.5E-1` in the `DECIMAL`, `2024-03-10 02:30:00` in the `TIMESTAMP_NTZ`), under UTC, Los Angeles and New
+York, in both ANSI modes.
+
+| cells | main | delta 1 | first head | delta 2 | delta 3 |
+|---|---|---|---|---|---|
+| the six names over plain text, `TIMESTAMP` schema (36) | UTC EQUAL; LA, NY WRONG (the zone) | EQUAL | EQUAL | WRONG in 30 (the files) | **EQUAL in 36** |
+| the six over F1/F2 text, a `DECIMAL` beside the `TIMESTAMP` (`full`, `f1`; 72) | UTC EQUAL; LA, NY WRONG | EQUAL | RAISE (F1) | WRONG in 60, EQUAL in 12 | **RAISE in 72 (F1), as the first head** |
+| the six over F1/F2 text, `x STRING, tn TIMESTAMP_NTZ` beside the `TIMESTAMP` (`f2`; 36) | WRONG (`STRING` over `1e2`, class c) | WRONG | UTC EQUAL; LA, NY WRONG (F2), `a[1].csv` EQUAL | WRONG | **the first head's: 16 EQUAL, 20 WRONG (F2)** |
+| the six with no `TIMESTAMP` field (72) | EQUAL | EQUAL | EQUAL | EQUAL | EQUAL, byte-equal to main |
+| the two controls, every schema (72) | 36 WRONG (24 the zone, 12 class c) | 12 WRONG (class c) | 26 RAISE or WRONG | 12 WRONG (class c) | **byte-equal to delta 2** |
+
+- Against main, the residual costs 24 EQUAL cells (UTC, `full` and `f1`, EQUAL → RAISE) and turns 48 WRONG cells to
+  RAISE (LA and NY). It gains 24 plain-text cells (the zone) and 16 `f2` cells. It is loud, F1's class (S2).
+- Against delta 2: 30 plain-text cells WRONG → EQUAL (G1 fixed), 60 WRONG → RAISE and 12 EQUAL → RAISE (`only/a*b.csv`
+  over F1 text), and 16 `f2` cells WRONG → EQUAL.
+- Where delta 3 and the first head differ (26 of 108 cells), only the raise's text does: which exponent value the cast
+  names first.
+- It is not wider than that reading: no spelling without a glob character moves (the controls, and the bar below).
+
+**The verifier's probes on delta 3** (`rp.py`, `rp2.py`, `rp3.py`; against the verifier's records of delta 2):
+- `rp2.py` (48): the 16 G1 cells go WRONG → RAISE, and `G/star_alone/full` (4) EQUAL → RAISE. Their rows carry F1's
+  text, so they show the residual, not EQUAL; the file set itself is the plain-text line above and the pins.
+- `rp.py` (272 and the 8 FIFO cells): `P/star_literal/full` (4) WRONG → RAISE, the same residual. The other 268 are
+  byte-equal to delta 2, except the 8 `P/symbroken` raises, whose DataFusion text names the probe's own directory.
+- `rp3.py` (`EXPLAIN`, 40 plans): all 40 equal delta 2's once the probe's paths are normalised.
+
+**The bar** (package `S/ddu-work/pkg-csvts-364f2013`, `BUILT_FROM` `364f2013`; delta 2's whole record set re-run on it,
+cell by cell against delta 2's records, with the same normalisation): **0 of 10,637 records differ**. None of these
+spellings holds a glob character. All 26 sweep steps exited 0.
+
+| line | records | differ from delta 2 |
+|---|---|---|
+| the verifier's `vp.py`, builder opt-in, `vp2.py`, `vp3.py`, `vp4.py` | 331, 12, 433, 86, 42 | 0 |
+| `delta1.py` (with the `inferSchema` caller's 32 cells) | 84 | 0 |
+| step 0's table (`Z0`-`Z7`, `A`, `T`, `S`, `W0`-`W3`, `E`) | 5,252 | 0 |
+| `x.py` (115 cells and its plans) | 119 | 0 |
+| the reader sweep | 1,176 | 0 |
+| part 2's write sweep, both ANSI modes | 3,102 | 0 |
+| Fable's path probes `risk.py`, `risk2.py` | 78, 16 | 1: `la/specialdir/q?m`, a directory named `q?m`, EQUAL → RAISE (the residual) |
+
+- **Pins.** `test_csv_schema_timestamp_zone_1.py` adds the five G1 shapes over plain text (a literal `*`, `?` and
+  `[...]` file, a literal `*` directory, a five-file `*` match), against Spark 4.1.2's live answers, under UTC and Los
+  Angeles, both ANSI modes: 10 cells. Delta 2's package fails all 10 (46 run, 10 failed); delta 3's passes 46 of 46.
+- **The committed reader probe (R4).** `evidence/probes/readers.py` wrote its error records through `r.out.write`,
+  and `common.py`'s `out` is a `Path`, so it crashed on its first create error. It now writes them through
+  `Rec.emit`; on delta 3's package it runs to the end (1,176 records, 62 of them errors).
+
+Raw: [evidence/raw/delta3-bar.txt](evidence/raw/delta3-bar.txt), [evidence/raw/delta3-glob-cells.jsonl](evidence/raw/delta3-glob-cells.jsonl).
 
 Up: [map.md](map.md).

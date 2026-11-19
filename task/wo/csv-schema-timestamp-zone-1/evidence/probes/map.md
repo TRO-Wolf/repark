@@ -8,7 +8,8 @@
   on step 0's files, with rough timings; `q1.py` — main casts a zone-less column to `TIMESTAMP` without the zone;
   `q2.py` — the DDL types `TIMESTAMP` as LTZ under a `TIMESTAMP_NTZ` session.
 - `readers.py` — part 2's reader sweep, made Ruff-clean (annotations, `pathlib`, its setup-error line written with
-  `json.dumps`); the cells are unchanged, and its `common.py` takes the runtime jar path.
+  `json.dumps`); the cells are unchanged, and its `common.py` takes the runtime jar path. Since delta 3 its error
+  records go through `Rec.emit` (the verifier's R4).
 - `lmt.py <engine> <dir> write|read` — the LMT offset-seconds CSV written by RePark under New York, read back with a
   `TIMESTAMP` and a `STRING` schema in two zones.
 - `csv_cost.py <case> <label> <data> <out>` — K0 (`k0_count`, `k0_hour`) and K2 over a two-million-row CSV, a warm-up
@@ -19,5 +20,7 @@
 - `delta2_ab.py <label> <data> <out> named|alltext|twin` — delta 2's one-process A/B: K2, `k0_hour`, `k0_count`
   and the read, each also planned once; `alltext` forces the `inferSchema` pre-scan on the re-read, `twin` builds K2
   over an all-text read and the facade's cast.
+- `delta3_glob.py <engine> <wh> <out> main` — delta 3's residual probe (Spark live): six glob names that exist on
+  disk and two controls, over plain and F1/F2 text, in three zones and both ANSI modes (288 cells).
 
 Up: [../map.md](../map.md).

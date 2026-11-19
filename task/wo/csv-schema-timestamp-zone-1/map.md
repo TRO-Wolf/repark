@@ -24,6 +24,11 @@ code already re-reads named-only. Every bar cell equals delta 1's. K2, `k0_hour`
 head's cost; `k0_count` misses 1.05x (1.08x, the second inference), awaiting a ruling. See [bar.md](bar.md) and
 [cost.md](cost.md), "Delta 2".
 
+**Delta 3 (2026-11-19), the glob spelling.** The re-check verifier's G1: a spelling whose own name holds `*`, `?` or
+`[` and exists on disk re-read only the literal file through `file://`. `_load_csv` now takes that route only for a
+spelling with none of them; such a spelling takes main's all-text pre-scan, so F1 and F2 come back for it alone (the
+residual). Every other record equals delta 2's. See [bar.md](bar.md) and [cost.md](cost.md), "Delta 3".
+
 ## The rulings this unit carries
 
 - **Owner, 2026-11-19, about 01:28 UTC, verbatim:** "Go with your recommendations and tonight you don’t even need to
@@ -37,6 +42,10 @@ head's cost; `k0_count` misses 1.05x (1.08x, the second inference), awaiting a r
   second product file; Fable's cost exception and the 14 runtime `timestampType` cells stand.
 - **The orchestrator's call for delta 2, under that delegation, not an owner ruling:** a second delta, past the
   one-delta cap, for cost only; the owner sees it in the morning read and may stop it. Fable's bars stand unchanged.
+- **Owner, 2026-11-19, about 14:00 UTC, verbatim:** "go with recommendations" (Fable's §9 of his reply on the
+  reader-parse units: `k0_count` recorded by its cause, the K2 and `k0_hour` exception as "no dearer than the first
+  head", N1 folded into CSV-STRING-FIELD-TEXT-1).
+- **Owner, 2026-11-19, about 14:45 UTC, verbatim:** "go with delta 3".
 - **The parent card** TEMP-VIEW-FRAME-READER-PARSE-1 is S1 and label-blocking (owner, 2026-11-18, about 14:30 UTC:
   "We better go with B to be safe").
 

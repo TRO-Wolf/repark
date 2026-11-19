@@ -30,4 +30,8 @@ Measure the three reads above on Spark 4.1.2, and the reach: integers, decimals,
 
 **[R]** The all-text scan whenever the read does not infer types, which is `reader.py` again. **[M]** The cast of an integer from text costs about 1.04x, so that seat should meet 1.05x on non-timestamp rows. It would also remove unit 0's second scan.
 
+## Folded in: N1 (2026-11-19)
+
+The owner adopted Fable's §9 on 2026-11-19, about 14:00 UTC, verbatim: "go with recommendations". So the re-check verifier's N1 cells fold into this card, S1 by class (Fable's §6.2). Over the rows `1e3,2.0` / `1.5,7` / `3,4`, an `INT` and a `BIGINT` field answer `(1000, 2)`, `(1, 7)`, `(3, 4)` where Spark answers `(NULL, NULL)`, `(NULL, 7)`, `(3, 4)`. Unit 0's head answers main's values silently, with or without a `TIMESTAMP` field, where its first head raised. It is the same seat: the reader lets DataFusion infer a type and then casts, where Spark parses each field's text by the declared type and gives NULL when the text does not fit. The first step measures N1 with the three reads above.
+
 Up: [map.md](map.md).

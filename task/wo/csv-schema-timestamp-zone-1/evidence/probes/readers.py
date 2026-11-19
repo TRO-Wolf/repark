@@ -1,5 +1,4 @@
 import datetime
-import json
 import os
 import sys
 from pathlib import Path
@@ -43,7 +42,7 @@ try:
     snaps = [str(row[0]) for row in got]
 except Exception as error:
     shown = " ".join(str(error).split())[:140]
-    r.out.write(json.dumps({"tag": "setup/iceberg", "error": shown}) + "\n")
+    r.emit({"tag": "setup/iceberg", "error": shown})
 travel = (datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=4)).strftime(
     "%Y-%m-%d %H:%M:%S"
 )
@@ -108,7 +107,7 @@ PASSES = [("true", LA, "UTC"), ("true", "UTC", LA), ("false", LA, "UTC"), ("fals
 def fail(tag: str, error: BaseException) -> None:
     text = " ".join(str(error).split())
     match = COND.search(text)
-    r.out.write(json.dumps({"tag": tag, "error": match.group(1) if match else text[:140]}) + "\n")
+    r.emit({"tag": tag, "error": match.group(1) if match else text[:140]})
 
 
 def views(tag: str, key: str, name: str, frame: Any) -> dict[str, list[str]]:

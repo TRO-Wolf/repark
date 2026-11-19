@@ -5917,7 +5917,7 @@ still open is `isModifiable`.
   field, and the typed parse casts the text under the session zone, as the JSON reader does. Since delta 1 the re-read
   retypes only those columns, and a column the schema reads into `TIMESTAMP_NTZ` keeps the scan's type, so the other
   fields keep main's typed parse; since delta 2 a local path is re-read through its `file://` URL, which main's
-  `read_csv_path` re-reads that way.
+  `read_csv_path` re-reads that way (since delta 3, only a spelling with none of `*`, `?` or `[`).
   A local-mean-time offset with seconds (`1850-06-01T10:00:00.000-04:56:02`, card CSV-READ-OFFSET-SECONDS-1) read
   into a `TIMESTAMP` field now answers Spark's instant instead of refusing `Invalid timezone`.
 - **spark** — Spark 4.1.2 parses each CSV field from its text at scan time under the reading session's zone
@@ -5935,8 +5935,8 @@ still open is `isModifiable`.
     (D2);
   - RePark's string → `TIMESTAMP_NTZ` cast moves a DST-gap wall clock an hour forward (SQL `CAST`, the JSON reader,
     the CSV `nullValue` read; on main too), so a CSV `TIMESTAMP_NTZ` field keeps the scan's parse here.
-- **Pin** — `python/repark/tests/io/test_csv_schema_timestamp_zone_1.py` (36 cells, both ANSI modes, against Spark
-  4.1.2's recorded answers; delta 1's 8 hold a `DECIMAL` over exponent text and a `TIMESTAMP_NTZ` field over a DST
+- **Pin** — `python/repark/tests/io/test_csv_schema_timestamp_zone_1.py` (46 cells, both ANSI modes, against Spark
+  4.1.2's recorded answers; delta 3's 10 a name holding `*`, `?` or `[` that exists on disk; delta 1's 8 hold a `DECIMAL` over exponent text and a `TIMESTAMP_NTZ` field over a DST
   gap beside a `TIMESTAMP` field); `python/repark/tests/timestamps/test_text_write_timestamp_zone_1.py` (the LMT read);
   `crates/repark-core/src/read_options.rs` `a_file_url_csv_utf8_columns_read_types_only_the_named_columns_as_utf8`.
 - **Delta 1 (2026-11-19)** — the verifier's FAIL on `ffe8e301` (F1: a `DECIMAL` field over exponent text raised; F2:
@@ -5949,9 +5949,17 @@ still open is `isModifiable`.
   native library than in main's. `read_csv_path` is main's again; `_load_csv` re-reads an existing local path
   through its `file://` URL. Every bar cell equals delta 1's. K2 1.415x, `k0_hour` 1.443x and C-012 hold;
   `k0_count` is 1.083x against 1.05x (the named re-read's second inference), unruled.
+- **Delta 3 (2026-11-19; owner: "go with delta 3")** — the re-check verifier's G1: a local spelling whose name holds
+  `*`, `?` or `[` and exists on disk re-read only that literal file, because `as_uri()` percent-encodes them and
+  DataFusion expands a glob only in a filesystem path. The `file://` route now takes only a spelling with none of
+  them; five pins. Residual: such a spelling takes main's local all-text pre-scan, so F1 and F2 come back for it alone,
+  as on the first head (bar.md "Delta 3"). The cost lines are ruled (owner, "go with recommendations"): `k0_count`
+  pays one extra inference, at most 1 ms per read; K2 and `k0_hour` are no dearer than the first head. N1 (`INT` and
+  `BIGINT` over `1e3`, `2.0` or `1.5` text answer main's values silently) folds into CSV-STRING-FIELD-TEXT-1, S1 by
+  class.
 - **Bar and cost** — [bar.md](../task/wo/csv-schema-timestamp-zone-1/bar.md),
   [cost.md](../task/wo/csv-schema-timestamp-zone-1/cost.md).
-- **Bar exceptions** — two, per Fable's guidance of 2026-11-19: the 14 runtime-`SET` timestamp cells (card TIMESTAMP-TYPE-RUNTIME-SET-1) and the text-timestamp parse cost, 1.379x in process on `k0_hour` and 1.403x on K2 under a 1.45x ceiling (card TEXT-TIMESTAMP-PARSE-KERNEL-1, its way out); the `STRING`-field card CSV-STRING-FIELD-TEXT-1 is filed beside them.
+- **Bar exceptions** — two, per Fable's guidance of 2026-11-19: the 14 runtime-`SET` timestamp cells (card TIMESTAMP-TYPE-RUNTIME-SET-1) and the text-timestamp parse cost on `k0_hour` and K2, no dearer than the first head (owner, 2026-11-19, in place of the 1.45x ratio; delta 2 at 1.007x and 0.994x of the first head's package, the re-check verifier; card TEXT-TIMESTAMP-PARSE-KERNEL-1, its way out); `k0_count` pays one extra inference, at most 1 ms per read; the `STRING`-field card CSV-STRING-FIELD-TEXT-1 is filed beside them.
 - **Rationale** — Fable's guidance under the owner's delegation of 2026-11-19, about 01:28 UTC, verbatim: "Go with
   your recommendations and tonight you don’t even need to wait on me even if fable says that it’s my call. Merge what
   you need, follow the goal and good luck" (card CSV-SCHEMA-TIMESTAMP-ZONE-1, S1, label-blocking, unit 0); the parent

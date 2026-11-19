@@ -19,5 +19,8 @@
   `EXPLAIN ANALYZE` metrics (cost.md "Delta 2").
 - `delta2-cost-samples.jsonl`, `delta2-cost-raw-csv.jsonl` — delta 1's runner on the delta 2 package;
   `delta2-costiso-raw.jsonl` — the side-by-side series (main, the first head, delta 1, delta 2).
+- `delta3-bar.txt` — delta 3's bar: the native library against delta 2's, delta 2's records on delta 3, the
+  verifier's probes, the residual table, Fable's path probes and the pins; `delta3-glob-cells.jsonl` — the residual
+  probe's 288 cells on Spark and five builds.
 
 Up: [../map.md](../map.md).

@@ -163,4 +163,32 @@ ruling on `k0_count` (about 1.08x), or a Rust unit that hands the first read's t
 on its own build; TEXT-TIMESTAMP-PARSE-KERNEL-1 stays the way out for K2 and `k0_hour`. Samples: `<scratchpad>/csv-ts-delta2/cost/` and
 `costiso/`, and [evidence/raw/](evidence/raw/map.md) (`delta2-cost-*.jsonl`).
 
+
+## Delta 3 (2026-11-19): no series; the cost lines as ruled
+
+**The rulings.** Owner, 2026-11-19, about 14:45 UTC, verbatim: "go with delta 3". Owner, 2026-11-19, about 14:00
+UTC, verbatim: "go with recommendations", which adopts §9 of Fable's reply on the reader-parse units, cost noise and
+the next queue; two of its lines bind this file.
+
+**No series.** Delta 3 (bar.md "Delta 3": the verifier's G1, its cause at
+`datafusion-datasource-54.1.0/src/url.rs:115`, `:125-141` and `:483`, the fix and the residual) changes only which
+spellings take the `file://` route: one that holds `*`, `?` or `[` now keeps itself. The timed queries read `k.csv`
+by a local path with no glob character, so they take delta 2's route, and the native library is delta 2's byte for
+byte (every section equal). **[M]** `EXPLAIN` of K2, `k0_hour` and `k0_count` on delta 3's package equals delta 2's.
+
+**`k0_count`, recorded by its cause** (Fable's line in §1.2, as ruled): "a CSV read whose schema holds a `TIMESTAMP`
+field pays one extra inference, at most 1 ms per read; way out: CSV-STRING-FIELD-TEXT-1".
+- The re-check verifier's C1, against `pkg-sum-845766fd` (main `2900efde`'s build) over 3 rounds: +1.64 ms per read
+  against the mean of two base medians, while the base itself moved 1.37 ms between rounds; against one base round
+  alone, +0.96 ms. Inside the noise.
+- Fable, like for like against the same build: 16.24 → 17.10 ms, 0.86 ms (1.053x); over a nine-row file, 4.90 → 5.54
+  ms, 0.64 ms.
+- The orchestrator's instruction-count trial, its `d2 / main` `k0_count` row: instructions 1.0053, cycles 0.9893,
+  wall 1.0188 (medians per repetition 1,018.82M → 1,024.21M instructions, 23.55 → 23.99 ms).
+
+**K2 and `k0_hour`, restated** as "no dearer than the first head", in place of the 1.45x ratio:
+- the re-check verifier: 1.007x on `k0_hour` and 0.994x on K2, against the first head's package;
+- Fable: 1.015x on `k0_hour` and 1.007x on K2;
+- against `pkg-main-4c365814` the ratio moves with the core count: 1.436x on 10 cores, 1.47x to 1.50x on 16.
+
 Up: [map.md](map.md).
