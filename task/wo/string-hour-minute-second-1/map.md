@@ -1,4 +1,4 @@
-# task/wo/string-hour-minute-second-1/ — STRING-HOUR-MINUTE-SECOND-1 step 0 (measured sketch, no product code)
+# task/wo/string-hour-minute-second-1/ — STRING-HOUR-MINUTE-SECOND-1 step 0 (measured sketch) and the build (seat A)
 
 Fable's guidance under the owner's delegation of 2026-11-19 (about 01:28 UTC): S1 by class, label-blocking, its own
 unit. Measured on main `2fdab5c7` (package `pkg-main-4c365814`) against Spark 4.1.2; documents and probes only. Card:
@@ -13,6 +13,12 @@ unit. Measured on main `2fdab5c7` (package `pkg-main-4c365814`) against Spark 4.
   card's three functions, Spark's checks, seat A's forecast, the grid by function and text, neighbours N1–N11.
 - [inventory.md](inventory.md) — the insertion inventory: name resolution (R1–R9), coercion (C1–C10), evaluation
   (E1–E6) with file:line, why `year` is right and `hour` is not, what each seat sees.
-- [evidence/](evidence/map.md) — probes, verdicts, `EXPLAIN` and cost records, `javap` excerpts.
+- [bar.md](bar.md) — the build (seat A, head `58b2725e`): the rulings it carries, what was built, step 0's whole
+  table on base and head (the forecast held, 3 EQUAL cells lost, all N8), `EXPLAIN`, the pins' red and green runs,
+  the reader and write sweeps, unit 1's D4 cells, the doors outside the card.
+- [cost.md](cost.md) — K1, K1x, K2, K5 and C-012 against the base package, like-for-like medians, the short-row
+  gate.
+- [evidence/](evidence/map.md) — probes, verdicts, `EXPLAIN` and cost records, `javap` excerpts; `built/`, the
+  build's probes and records.
 
 Up: [../map.md](../map.md).
