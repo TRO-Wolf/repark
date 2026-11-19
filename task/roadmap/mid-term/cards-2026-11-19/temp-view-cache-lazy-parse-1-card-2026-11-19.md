@@ -17,4 +17,6 @@ The parse follows the zone in force where the cache materialises. At `count()` a
 
 **Main:** `cache_lazy` answers WRONG in `ts`, `u` and `b`, on main and on part 1, for `json_s` and `csv_i` (4 cells); `pq` is EQUAL.
 
+**Dated 2026-11-19: the `udf` cells.** The four `udf` cells join this card's step 0 (Fable's reply of 2026-11-19, §6.4; ruling 2 in [rulings-2026-11-19.md](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-19.md)). Unit 1's hand-back, held outside the repository (`rp-unit1-out/ready.md`), measured them: `json_s` and `csv_i` 4 WRONG in `t`, `b`, `u` on base and head. The frame is planned when the UDF column is built, under the creating settings; `pq` is EQUAL. Fable confirms the cells belong to this card, with no new card, and the rating follows this card.
+
 Up: [map.md](map.md).

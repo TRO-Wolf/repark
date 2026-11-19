@@ -191,4 +191,6 @@ field pays one extra inference, at most 1 ms per read; way out: CSV-STRING-FIELD
 - Fable: 1.015x on `k0_hour` and 1.007x on K2;
 - against `pkg-main-4c365814` the ratio moves with the core count: 1.436x on 10 cores, 1.47x to 1.50x on 16.
 
+The residual is accepted under the owner's "go with delta 3" (2026-11-19, about 14:45 UTC), and its card is [CSV-GLOB-LITERAL-RESIDUAL-1](../../roadmap/mid-term/cards-2026-11-19/csv-glob-literal-residual-1-card-2026-11-19.md).
+
 Up: [map.md](map.md).
