@@ -221,15 +221,12 @@ pub(crate) async fn read_csv_path(
     let multiline = options
         .get("multiline")
         .is_some_and(|raw| parse_bool_option("multiLine", raw).ok() == Some(true));
-    let infer_reread = options.contains_key("utf8_columns")
-        && options
-            .get("inferschema")
-            .is_some_and(|raw| parse_bool_option("inferSchema", raw).ok() == Some(true));
-    let utf8_schema = if csv_force_utf8_schema(options) || multiline || infer_reread {
-        csv_utf8_schema_from_path(path, csv_options.has_header, csv_options.delimiter)?
-    } else {
-        None
-    };
+    let utf8_schema =
+        if csv_force_utf8_schema(options) || options.contains_key("utf8_columns") || multiline {
+            csv_utf8_schema_from_path(path, csv_options.has_header, csv_options.delimiter)?
+        } else {
+            None
+        };
     if let Some(ref schema) = utf8_schema {
         csv_options = csv_options.schema(schema);
     }
@@ -609,7 +606,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_local_csv_utf8_columns_read_types_only_the_named_columns_as_utf8() {
+    async fn a_file_url_csv_utf8_columns_read_types_only_the_named_columns_as_utf8() {
         use arrow::datatypes::DataType;
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("data.csv");
@@ -627,24 +624,20 @@ mod tests {
                 .map(|field| (field.name().clone(), field.data_type().clone()))
                 .collect()
         };
+        let local = path.to_str().unwrap().to_string();
         let typed = [DataType::Int64, DataType::Utf8, DataType::Float64];
         let text = [DataType::Utf8, DataType::Utf8, DataType::Utf8];
-        for (extra, expected) in [
-            (None, typed),
-            (Some(("nullvalue", "NA")), text.clone()),
-            (Some(("inferschema", "true")), text),
-        ] {
-            let mut pairs = vec![("header", "true"), ("utf8_columns", "ts")];
-            pairs.extend(extra);
+        for (target, expected) in [(format!("file://{local}"), typed), (local, text)] {
+            let pairs = [("header", "true"), ("utf8_columns", "ts")];
             let frame = session
-                .read_csv(path.to_str().unwrap(), &options_map(&pairs))
+                .read_csv(&target, &options_map(&pairs))
                 .await
                 .unwrap();
             let names: Vec<String> = ["n", "ts", "d"].map(str::to_string).into();
             assert_eq!(
                 types_of(&frame),
                 names.into_iter().zip(expected).collect::<Vec<_>>(),
-                "{extra:?}"
+                "{target}"
             );
         }
     }

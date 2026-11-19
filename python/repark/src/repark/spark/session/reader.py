@@ -505,9 +505,10 @@ class DataFrameReader:
         frame = self._session.read_csv(path_str, native_options)
         naive = self._session_timestamp_text_columns(frame)
         if naive:
-            native_options.pop("inferschema", None)
+            local = Path(path_str)
             native_options["utf8_columns"] = ",".join(naive)
-            frame = self._session.read_csv(path_str, native_options)
+            uri = local.absolute().as_uri() + "/" * local.is_dir() if local.exists() else path_str
+            frame = self._session.read_csv(uri, native_options)
         return self._apply_reader_schema_semantics(
             frame,
             infer_schema=self._option_bool("inferschema", default=False),
