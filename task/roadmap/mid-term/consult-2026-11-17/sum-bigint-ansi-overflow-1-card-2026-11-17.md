@@ -26,4 +26,6 @@ SUM-DEC-I128WRAP-1 (the same registration; a second unit by ruling). The cause i
 
 SUM-DEC-I128WRAP-1 step 0 sketch, §5 and §6 question 4; step 0 hand-back, "Spark's `Sum`" and "Unit split"; step 0 revision hand-back, items 1 to 9 (the controls); the sum critic's verdict (GAPS), step 4, the `BIGINT` row. PR #1357 (head `2f63e2c7`).
 
+**Append (2026-11-19, ruling 8):** its step 0 starts from decision I (option (1), exact in every phase with the state chosen by input precision; adopted 2026-11-18 about 20:05 UTC with Fable's seven recommendations, [rulings](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-18.md), item 8) and measures the same determinism table, since Spark's integer `sum` under ANSI may also check per row.
+
 Up: [map.md](map.md).
