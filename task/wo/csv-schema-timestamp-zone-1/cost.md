@@ -23,4 +23,32 @@ zone-aware `to_timestamp` cast over text that the JSON reader already uses, and 
 the price of parsing under the session zone; no seat inside `reader.py` avoids it (a recast through a string costs
 more: `evidence/raw/emu_ab-main.json`). Samples: `evidence/raw/cost-samples.jsonl` and `cost-raw-csv.jsonl`.
 
+## Fable's guidance (2026-11-19)
+
+Fable's guidance under the owner's delegation of 2026-11-19, about 01:28 UTC; guidance, not an owner ruling. **Source:**
+the Fable reply of 2026-11-19 in the agents' lessons folder (file `Fable reply — CSV schema timestamp zone unit 0
+2026-11-19.md`), §1. Fable's marks are kept.
+
+- **The named exception, option (a) [Rec] yes.** **[R]** Reach: a CSV read whose user schema holds a `TIMESTAMP` field,
+  on a query that evaluates that field. A `TIMESTAMP_NTZ` field, a read with no timestamp field, JSON and Parquet are
+  untouched. **[M]** Size: about 10 ns of wall time per row here (20 ms over two million rows on ten cores).
+- **The bar under (a) [Rec].** Rows that do not evaluate the field stay at 1.05x (`k0_count`, C-012). `k0_hour` and K2
+  are recorded as measured (1.379x and 1.403x in process, 1.167x and 1.188x wall) under a named exception with a
+  ceiling of 1.45x in process. The exception names the kernel card as its way out, TEXT-TIMESTAMP-PARSE-KERNEL-1.
+- **The split [M].** The whole 1.38x is the text timestamp parse; `n`'s cast is about 1 ms of the 20 ms. `ts_only`
+  never reads `n` and pays 20.35 ms, the same as `k0_hour`. `n_only` and `n_sum` sit at 1.052x and 1.038x, inside the
+  control (`ntz_hour` 1.038x, a path the fix does not touch).
+- **The `file://` path, 1.360x [M].** `url_k0_hour` runs at 1.360x against 1.379x on a local path. **[R]**
+  `csv_utf8_schema_from_path` returns `None` for any path holding `://`, so only the named columns are re-read; the
+  head's plan there keeps the typed cast of `n`.
+- **Option (b), named-column re-read, declined [Rec] no.** **[M]** It buys about 1 ms of 20 and costs a second product
+  file and a Rust build.
+- **Option (c), a faster kernel [Rec] yes, as its own Rust unit, not tonight and not label-blocking.** The card is
+  TEXT-TIMESTAMP-PARSE-KERNEL-1 (S3, cost only). **[M]** Indicative floor: a typed scan plus a zone conversion
+  (`ntz_cast_hour`, 63.40 ms on main) is already about 1.2x of main's `ts_only`, so a kernel unit should take its bar
+  from that, for example at most 1.20x.
+- **Option (d), converting the scan's typed column, declined [Rec] no.** **[M]** It gives the head's answers for the DST
+  gap and overlap, but it is wrong for text that carries an offset: the scan types `2024-01-01T03:00:00+02:00` and
+  `2024-01-01T03:00:00Z` as zone-less after moving them to UTC, so main's two right rows would be lost.
+
 Up: [map.md](map.md).

@@ -90,4 +90,41 @@ in both zones, a frame view and a SQL view read in the other zone both ways, the
 zones), values from Spark 4.1.2's recordings. Main: 28 failed; head package: 28 passed
 (`evidence/raw/pins-main.log`, `pins-head.log`).
 
+## Fable's guidance (2026-11-19)
+
+Fable's guidance under the owner's delegation of 2026-11-19, about 01:28 UTC. It is guidance, not an owner ruling. The
+delegation, verbatim: "Go with your recommendations and tonight you don’t even need to wait on me even if fable says
+that it’s my call. Merge what you need, follow the goal and good luck".
+
+**Source:** the Fable reply of 2026-11-19 in the agents' lessons folder (file `Fable reply — CSV schema timestamp zone
+unit 0 2026-11-19.md`), §2 and §3. Fable's marks are kept: **[M]** measurement, **[R]** reading, **[Rec]**
+recommendation.
+
+**The 14 cells are a named exception (§2).** **[Rec]** A named exception in the bar. Unit 0 must not keep main's
+answers; the builder was right to decline. Keeping them would leave `hour` and the string wrong and would lose the
+builder-mode gain.
+
+**[M]** One row `2024-01-01 03:00:00`, zone Los Angeles, `schema("n INT, ts TIMESTAMP")`:
+
+| key set by | build | reader | type | `unix_timestamp` | `hour` | string |
+|---|---|---|---|---|---|---|
+| runtime `SET` | main | CSV | `timestamp` | 1704078000 | 19 | `2023-12-31 19:00:00` |
+| runtime `SET` | main | JSON | `timestamp` | 1704106800 | 3 | `2024-01-01 03:00:00` |
+| runtime `SET` | head | CSV | `timestamp` | 1704106800 | 3 | `2024-01-01 03:00:00` |
+| runtime `SET` | head | JSON | `timestamp` | 1704106800 | 3 | `2024-01-01 03:00:00` |
+| builder | main | CSV | `timestamp` | 1704078000 | 19 | `2023-12-31 19:00:00` |
+| builder | main | JSON | `timestamp_ntz` | 1704078000 | 3 | `2024-01-01 03:00:00` |
+| builder | head | CSV | `timestamp_ntz` | 1704078000 | 3 | `2024-01-01 03:00:00` |
+| builder | head | JSON | `timestamp_ntz` | 1704078000 | 3 | `2024-01-01 03:00:00` |
+
+- **[M]** Under the builder opt-in the head answers Spark in all three columns, and main does not. Spark's values are the
+  builder's recording (`1704078000`, `3`, the wall-clock string). That is a gain the bar does not count yet.
+- **[M]** Under a runtime `SET` the head's CSV equals JSON on both builds. The JSON cell was already WRONG on main in
+  `unix_timestamp`. Unit 0 moved CSV onto the answer the rest of the engine already gives. `CAST(.. AS TIMESTAMP)` under
+  a runtime `SET` is still `timestamp` on both builds.
+- **The card:** TIMESTAMP-TYPE-RUNTIME-SET-1 (S2, not label-blocking), filed on the cards map.
+
+**A named side gain, and what the card covers (§3).** A `STRING` field beside a `TIMESTAMP` field now answers Spark's
+text, as a named side gain. The card CSV-STRING-FIELD-TEXT-1 covers the rest (S1 by class, label-blocking).
+
 Up: [map.md](map.md).

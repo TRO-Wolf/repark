@@ -5933,6 +5933,7 @@ still open is `isModifiable`.
   4.1.2's recorded answers); `python/repark/tests/timestamps/test_text_write_timestamp_zone_1.py` (the LMT read).
 - **Bar and cost** — [bar.md](../task/wo/csv-schema-timestamp-zone-1/bar.md),
   [cost.md](../task/wo/csv-schema-timestamp-zone-1/cost.md).
+- **Bar exceptions** — two, per Fable's guidance of 2026-11-19: the 14 runtime-`SET` timestamp cells (card TIMESTAMP-TYPE-RUNTIME-SET-1) and the text-timestamp parse cost, 1.379x in process on `k0_hour` and 1.403x on K2 under a 1.45x ceiling (card TEXT-TIMESTAMP-PARSE-KERNEL-1, its way out); the `STRING`-field card CSV-STRING-FIELD-TEXT-1 is filed beside them.
 - **Rationale** — Fable's guidance under the owner's delegation of 2026-11-19 (card CSV-SCHEMA-TIMESTAMP-ZONE-1, S1,
   label-blocking, unit 0); the parent card TEMP-VIEW-FRAME-READER-PARSE-1 (owner, 2026-11-18: "We better go with B to
   be safe"); [work order](../task/wo/csv-schema-timestamp-zone-1/map.md).
