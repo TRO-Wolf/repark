@@ -217,10 +217,52 @@ differs from Spark at one master or both, every one at precision 38 (`c38_0`, `b
 | exact value, Spark NULL (ANSI off and `try_avg`; includes one `HAVING` set where Spark drops the NULL rows) | 24 | 46 |
 | exact value, Spark raises `ARITHMETIC_OVERFLOW` (ANSI on) | 8 | 16 |
 | both raise, another condition (`NUMERIC_VALUE_OUT_OF_RANGE` against `ARITHMETIC_OVERFLOW`, either way round) | 8 | 13 |
-| the exact answer raises or is NULL where Spark answers | 0 | 0 |
+| the exact answer raises or is NULL where Spark answers | 0 | 0 (on these tables; **20 on r1's**, below) |
 | equal to Spark at that master (of the 81) | 41 | 6 |
 
-Against `local[1]` 1,356 of the 1,396 `avg` pairs are equal, against `local[4]` 1,321. No exact value differs from a Spark value,
-and the exact answer never raises or is NULL where Spark answers.
+Against `local[1]` 1,356 of the 1,396 `avg` pairs are equal, against `local[4]` 1,321. No exact value differs from a Spark value.
+**Corrected in r1:** the claim "the exact answer never raises or is NULL where Spark answers" holds on step 0's
+tables only. None of them held a total past 38 digits with an average under `10^34`; on five tables that do, Spark
+`local[4]` answers and the exact answer is NULL / `ARITHMETIC_OVERFLOW` (the r1 section below,
+[evidence/classes.md](evidence/classes.md)).
+
+## Revision r1 (critic round 1, 2026-11-19)
+
+Every cell the critic measured is re-measured here, with the critic's tables re-written by
+[evidence/r1_tables.py](evidence/r1_tables.py) and five new ones. Rendered tables:
+[evidence/raw-r1/](evidence/raw-r1/map.md); raw runs stay in `N/avg-revision-out/` (`raw/`, `logs/`, every
+`repark._native.__file__` print).
+
+- **Builds:** `avg` on `pkg-main-4c365814` (main `d9eebe06` has the same `avg` source: `git diff 6903fb48
+  d9eebe06` touches only `aggregate.rs`, #1360's `sum` routing); `sum` on #1360's `pkg-sum-845766fd`.
+- **RePark configurations:** SET 1, 2, 4 and 8 at 10 cores (stealing on), 2 cores (on), 4 cores (off); both ANSI
+  modes; 20 runs a cell (spill: 5). Every setting before the first read. Probes
+  [evidence/r1_repark.py](evidence/r1_repark.py), [evidence/r1_door.py](evidence/r1_door.py) (DataFrame door,
+  Iceberg), cells [evidence/r1_cells.py](evidence/r1_cells.py), exact answers
+  [evidence/r1_exact.py](evidence/r1_exact.py) (seat A as revised: the window checks only the quotient).
+- **Spark 4.1.2** ([evidence/r1_spark.py](evidence/r1_spark.py)): `local[1]` and `local[4]` × both modes × whole-stage
+  codegen on and off, 2 runs each, shuffle partitions equal to the cores. Every Spark cell was steady.
+
+**Main against the new cells** ([evidence/raw-r1/main.md](evidence/raw-r1/main.md),
+[evidence/raw-r1/pins.md](evidence/raw-r1/pins.md)):
+
+| cells | main (`pkg-main-4c365814`) | Spark (both masters) | seat A (revised) |
+|---|---|---|---|
+| `m_w34`, `m_n33`, `m_s2`, `m_mix`, `m_w8` ungrouped | NULL / AO, steady, all 6 configurations | `local[1]` NULL / AO; `local[4]` the quotient (codegen on) | NULL / AO (the new class) |
+| the same five, whole-partition window | NULL / AO, steady | the quotient, both modes, both codegen | the quotient |
+| `m_w34`, `m_n33` growing frame and a 15,000-row sliding frame | NULL past row 11,111 ([evidence/raw-r1/frames.md](evidence/raw-r1/frames.md)) | the quotient on every row | the quotient on every row |
+| `t` `c38_0` window g2, g3, g5 | ANSI on AO×20 everywhere | NVOOR | NVOOR |
+| `m_d32` (`decimal(9,2)` as `Decimal32`), all rows / `id < 3` | all rows `0.625` at SET 1, NULL / AO from SET 2 (SET 2 varies); `id < 3` NULL, NVOOR or AO everywhere, window too (`9999999.99` does not fit); type `decimal(9,6)` | `0.625`, `9999999.99`; type `decimal(13,6)` | Spark's answers and type |
+| `m_d64` (`decimal(18,0)` as `Decimal64`), all / `id < 10` | all rows `0.2381` at SET 1, NULL / AO from SET 2; `id < 10` NULL, NVOOR or AO everywhere; type `decimal(18,4)` | `0.2381`, `999999999999999999`; type `decimal(22,4)` | Spark's answers and type |
+| `m_d256` (`decimal(76,0)`, exact total `2^256 + 5`) | window `0.4167` steady everywhere; grouped and ungrouped `0.4167` / NULL / AO, VARIES at SET 2, 4, 8 and 2 cores | refuses the read (`DECIMAL_PRECISION_EXCEEDS_MAX_PRECISION`) | NULL / AO (Q6 (a)); never `0.4167` |
+
+**The VARIES count is a lower bound.** Step 0's 96 cells, and the critic's 80 of its 1,818, are what 20 runs saw.
+Added from the critic's runs (`N/avg-critic/out/rp_main.jsonl`, 2 cores, stealing on, ANSI on):
+
+| query | ANSI | configuration | answers |
+|---|---|---|---|
+| `t/c38_0/g/try_avg/g6` | true | 2c on | `6|0.2`×5 / `6|NULL`×15 (critic); this revision `6|NULL`×20 |
+| `t/c38_0/u/try_avg/g6` | true | 2c on | `0.2`×14 / NULL×6 (critic); this revision NULL×20 |
+| `t4/c38_0/g/avg/g21` | true | 2c on | NVOOR×17 / AO×3 (critic); this revision NVOOR×18 / AO×2 |
 
 Up: [map.md](map.md).
