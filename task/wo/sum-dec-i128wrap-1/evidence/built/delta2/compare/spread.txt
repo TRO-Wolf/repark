@@ -1,0 +1,52 @@
+('false', 'default', 'DISTINCT', 'good->good') 28
+('false', 'default', 'DISTINCT', 'none->none') 9
+('false', 'default', 'DataFrame door', 'good->good') 3
+('false', 'default', 'DataFrame door', 'none->good') 6
+('false', 'default', 'avg', 'good->good') 22
+('false', 'default', 'avg', 'none->none') 2
+('false', 'default', 'grouped', 'good->good') 23
+('false', 'default', 'grouped', 'good->none') 10
+('false', 'default', 'try_sum', 'good->good') 25
+('false', 'default', 'try_sum', 'good->none') 12
+('false', 'default', 'ungrouped', 'good->good') 24
+('false', 'default', 'ungrouped', 'good->none') 8
+('false', 'split', 'DISTINCT', 'good->good') 28
+('false', 'split', 'DISTINCT', 'none->none') 9
+('false', 'split', 'DataFrame door', 'good->good') 3
+('false', 'split', 'DataFrame door', 'none->good') 6
+('false', 'split', 'avg', 'good->good') 22
+('false', 'split', 'avg', 'none->none') 2
+('false', 'split', 'grouped', 'good->good') 23
+('false', 'split', 'grouped', 'good->none') 10
+('false', 'split', 'try_sum', 'good->good') 25
+('false', 'split', 'try_sum', 'good->none') 12
+('false', 'split', 'ungrouped', 'good->good') 24
+('false', 'split', 'ungrouped', 'good->none') 8
+('true', 'default', 'DISTINCT', 'good->good') 28
+('true', 'default', 'DISTINCT', 'none->good') 3
+('true', 'default', 'DISTINCT', 'none->none') 6
+('true', 'default', 'DataFrame door', 'good->good') 3
+('true', 'default', 'DataFrame door', 'none->good') 6
+('true', 'default', 'avg', 'good->good') 20
+('true', 'default', 'avg', 'none->none') 4
+('true', 'default', 'grouped', 'good->good') 23
+('true', 'default', 'grouped', 'good->none') 10
+('true', 'default', 'try_sum', 'good->good') 25
+('true', 'default', 'try_sum', 'good->none') 12
+('true', 'default', 'ungrouped', 'good->good') 19
+('true', 'default', 'ungrouped', 'good->none') 8
+('true', 'default', 'ungrouped', 'none->none') 5
+('true', 'split', 'DISTINCT', 'good->good') 28
+('true', 'split', 'DISTINCT', 'none->good') 3
+('true', 'split', 'DISTINCT', 'none->none') 6
+('true', 'split', 'DataFrame door', 'good->good') 3
+('true', 'split', 'DataFrame door', 'none->good') 6
+('true', 'split', 'avg', 'good->good') 20
+('true', 'split', 'avg', 'none->none') 4
+('true', 'split', 'grouped', 'good->good') 23
+('true', 'split', 'grouped', 'good->none') 10
+('true', 'split', 'try_sum', 'good->good') 25
+('true', 'split', 'try_sum', 'good->none') 12
+('true', 'split', 'ungrouped', 'good->good') 19
+('true', 'split', 'ungrouped', 'good->none') 8
+('true', 'split', 'ungrouped', 'none->none') 5

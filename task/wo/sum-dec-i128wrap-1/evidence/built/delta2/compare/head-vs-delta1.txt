@@ -1,0 +1,27 @@
+false | DataFrame door | fits class (Spark raises or NULL, RePark the exact total) | 45
+false | DataFrame door | into EQUAL | 6
+false | DataFrame door | same verdict, other answer | 3
+false | Iceberg writes | fits class (Spark raises or NULL, RePark the exact total) | 19
+false | grouped | fits class (Spark raises or NULL, RePark the exact total) | 58
+false | grouped | into EQUAL | 2
+false | grouped | other: REPARK_RAISES | 1
+false | grouped | same verdict, other answer | 4
+false | try_sum | fits class (Spark raises or NULL, RePark the exact total) | 31
+false | try_sum | into EQUAL | 4
+false | ungrouped | fits class (Spark raises or NULL, RePark the exact total) | 8
+false | ungrouped | into EQUAL | 8
+true | DISTINCT | condition class (both raise, other condition) | 6
+true | DataFrame door | fits class (Spark raises or NULL, RePark the exact total) | 33
+true | DataFrame door | into EQUAL | 6
+true | Iceberg writes | fits class (Spark raises or NULL, RePark the exact total) | 9
+true | grouped | condition class (both raise, other condition) | 4
+true | grouped | fits class (Spark raises or NULL, RePark the exact total) | 52
+true | grouped | into EQUAL | 2
+true | grouped | same verdict, other answer | 2
+true | try_sum | fits class (Spark raises or NULL, RePark the exact total) | 31
+true | try_sum | into EQUAL | 4
+true | ungrouped | condition class (both raise, other condition) | 17
+true | ungrouped | fits class (Spark raises or NULL, RePark the exact total) | 8
+true | ungrouped | into BOTH_RAISE | 17
+true | ungrouped | into EQUAL | 8
+moved 388

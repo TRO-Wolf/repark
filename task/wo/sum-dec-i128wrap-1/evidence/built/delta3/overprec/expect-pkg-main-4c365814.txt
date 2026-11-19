@@ -1,0 +1,229 @@
+DIFF false 1 wrap5_p19 sum/ungrouped want NULL got VALUE 5
+DIFF false 1 wrap5_p19 sum/grouped want NULL got VALUE 5
+DIFF false 1 wrap5_p20 sum/ungrouped want NULL got VALUE 5
+DIFF false 1 wrap5_p20 sum/grouped want NULL got VALUE 5
+DIFF false 1 neg_p19 sum/ungrouped want NULL got VALUE -5
+DIFF false 1 neg_p19 sum/grouped want NULL got VALUE -5
+DIFF false 1 neg_p20 sum/ungrouped want NULL got VALUE -5
+DIFF false 1 neg_p20 sum/grouped want NULL got VALUE -5
+DIFF false 1 fit_p19 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 1 fit_p19 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 1 fit_p20 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 1 fit_p20 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 1 wrap5_two_p19 sum/ungrouped want NULL got VALUE 5
+DIFF false 1 wrap5_two_p19 sum/grouped want NULL got VALUE 5
+DIFF false 1 wrap5_two_p20 sum/ungrouped want NULL got VALUE 5
+DIFF false 1 wrap5_two_p20 sum/grouped want NULL got VALUE 5
+DIFF false 1 neg_two_p19 sum/ungrouped want NULL got VALUE -5
+DIFF false 1 neg_two_p19 sum/grouped want NULL got VALUE -5
+DIFF false 1 neg_two_p20 sum/ungrouped want NULL got VALUE -5
+DIFF false 1 neg_two_p20 sum/grouped want NULL got VALUE -5
+DIFF false 1 fit_two_p19 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 1 fit_two_p19 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 1 fit_two_p20 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 1 fit_two_p20 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 2 wrap5_p19 sum/ungrouped want NULL got VALUE 5
+DIFF false 2 wrap5_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF false 2 wrap5_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 2 wrap5_p20 sum/ungrouped want NULL got VALUE 5
+DIFF false 2 wrap5_p20 sum/grouped want NULL got VALUE 5
+DIFF false 2 neg_p19 sum/ungrouped want NULL got VALUE -5
+DIFF false 2 neg_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF false 2 neg_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 2 neg_p20 sum/ungrouped want NULL got VALUE -5
+DIFF false 2 neg_p20 sum/grouped want NULL got VALUE -5
+DIFF false 2 fit_p19 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 2 fit_p19 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 2 fit_p20 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 2 fit_p20 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 2 wrap5_two_p19 sum/ungrouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF false 2 wrap5_two_p19 try_sum/ungrouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 2 wrap5_two_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF false 2 wrap5_two_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 2 wrap5_two_p20 sum/ungrouped want NULL got VALUE 5
+DIFF false 2 wrap5_two_p20 sum/grouped want NULL got VALUE 5
+DIFF false 2 neg_two_p19 sum/ungrouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF false 2 neg_two_p19 try_sum/ungrouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 2 neg_two_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF false 2 neg_two_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 2 neg_two_p20 sum/ungrouped want NULL got VALUE -5
+DIFF false 2 neg_two_p20 sum/grouped want NULL got VALUE -5
+DIFF false 2 fit_two_p19 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 2 fit_two_p19 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 2 fit_two_p20 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 2 fit_two_p20 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 4 wrap5_p19 sum/ungrouped want NULL got VALUE 5
+DIFF false 4 wrap5_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF false 4 wrap5_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 4 wrap5_p20 sum/ungrouped want NULL got VALUE 5
+DIFF false 4 wrap5_p20 sum/grouped want NULL got VALUE 5
+DIFF false 4 neg_p19 sum/ungrouped want NULL got VALUE -5
+DIFF false 4 neg_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF false 4 neg_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 4 neg_p20 sum/ungrouped want NULL got VALUE -5
+DIFF false 4 neg_p20 sum/grouped want NULL got VALUE -5
+DIFF false 4 fit_p19 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 4 fit_p19 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 4 fit_p20 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 4 fit_p20 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 4 wrap5_two_p19 sum/ungrouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF false 4 wrap5_two_p19 try_sum/ungrouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 4 wrap5_two_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF false 4 wrap5_two_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 4 wrap5_two_p20 sum/ungrouped want NULL got VALUE 5
+DIFF false 4 wrap5_two_p20 sum/grouped want NULL got VALUE 5
+DIFF false 4 neg_two_p19 sum/ungrouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF false 4 neg_two_p19 try_sum/ungrouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 4 neg_two_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF false 4 neg_two_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 4 neg_two_p20 sum/ungrouped want NULL got VALUE -5
+DIFF false 4 neg_two_p20 sum/grouped want NULL got VALUE -5
+DIFF false 4 fit_two_p19 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 4 fit_two_p19 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 4 fit_two_p20 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 4 fit_two_p20 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 8 wrap5_p19 sum/ungrouped want NULL got VALUE 5
+DIFF false 8 wrap5_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF false 8 wrap5_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 8 wrap5_p20 sum/ungrouped want NULL got VALUE 5
+DIFF false 8 wrap5_p20 sum/grouped want NULL got VALUE 5
+DIFF false 8 neg_p19 sum/ungrouped want NULL got VALUE -5
+DIFF false 8 neg_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF false 8 neg_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 8 neg_p20 sum/ungrouped want NULL got VALUE -5
+DIFF false 8 neg_p20 sum/grouped want NULL got VALUE -5
+DIFF false 8 fit_p19 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 8 fit_p19 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 8 fit_p20 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 8 fit_p20 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 8 wrap5_two_p19 sum/ungrouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF false 8 wrap5_two_p19 try_sum/ungrouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 8 wrap5_two_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF false 8 wrap5_two_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 8 wrap5_two_p20 sum/ungrouped want NULL got VALUE 5
+DIFF false 8 wrap5_two_p20 sum/grouped want NULL got VALUE 5
+DIFF false 8 neg_two_p19 sum/ungrouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF false 8 neg_two_p19 try_sum/ungrouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 8 neg_two_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF false 8 neg_two_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF false 8 neg_two_p20 sum/ungrouped want NULL got VALUE -5
+DIFF false 8 neg_two_p20 sum/grouped want NULL got VALUE -5
+DIFF false 8 fit_two_p19 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 8 fit_two_p19 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 8 fit_two_p20 sum/ungrouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF false 8 fit_two_p20 sum/grouped want NULL got VALUE 100000000000000000000000000000000000006
+DIFF true 1 wrap5_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 1 wrap5_p19 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 1 wrap5_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 1 wrap5_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 1 neg_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 1 neg_p19 sum/grouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 1 neg_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 1 neg_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 1 fit_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 1 fit_p19 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 1 fit_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 1 fit_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 1 wrap5_two_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 1 wrap5_two_p19 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 1 wrap5_two_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 1 wrap5_two_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 1 neg_two_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 1 neg_two_p19 sum/grouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 1 neg_two_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 1 neg_two_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 1 fit_two_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 1 fit_two_p19 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 1 fit_two_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 1 fit_two_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 2 wrap5_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 2 wrap5_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF true 2 wrap5_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 2 wrap5_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 2 wrap5_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 2 neg_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 2 neg_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF true 2 neg_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 2 neg_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 2 neg_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 2 fit_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 2 fit_p19 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 2 fit_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 2 fit_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 2 wrap5_two_p19 sum/ungrouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF true 2 wrap5_two_p19 try_sum/ungrouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 2 wrap5_two_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF true 2 wrap5_two_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 2 wrap5_two_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 2 wrap5_two_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 2 neg_two_p19 sum/ungrouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF true 2 neg_two_p19 try_sum/ungrouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 2 neg_two_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF true 2 neg_two_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 2 neg_two_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 2 neg_two_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 2 fit_two_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 2 fit_two_p19 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 2 fit_two_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 2 fit_two_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 4 wrap5_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 4 wrap5_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF true 4 wrap5_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 4 wrap5_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 4 wrap5_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 4 neg_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 4 neg_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF true 4 neg_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 4 neg_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 4 neg_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 4 fit_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 4 fit_p19 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 4 fit_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 4 fit_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 4 wrap5_two_p19 sum/ungrouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF true 4 wrap5_two_p19 try_sum/ungrouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 4 wrap5_two_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF true 4 wrap5_two_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 4 wrap5_two_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 4 wrap5_two_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 4 neg_two_p19 sum/ungrouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF true 4 neg_two_p19 try_sum/ungrouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 4 neg_two_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF true 4 neg_two_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 4 neg_two_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 4 neg_two_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 4 fit_two_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 4 fit_two_p19 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 4 fit_two_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 4 fit_two_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 8 wrap5_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 8 wrap5_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF true 8 wrap5_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 8 wrap5_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 8 wrap5_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 8 neg_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 8 neg_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF true 8 neg_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 8 neg_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 8 neg_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 8 fit_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 8 fit_p19 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 8 fit_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 8 fit_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 8 wrap5_two_p19 sum/ungrouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF true 8 wrap5_two_p19 try_sum/ungrouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 8 wrap5_two_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE 5
+DIFF true 8 wrap5_two_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 8 wrap5_two_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 8 wrap5_two_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 5
+DIFF true 8 neg_two_p19 sum/ungrouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF true 8 neg_two_p19 try_sum/ungrouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 8 neg_two_p19 sum/grouped want PAST_DECLARED_PRECISION got VALUE -5
+DIFF true 8 neg_two_p19 try_sum/grouped want PAST_DECLARED_PRECISION got NULL
+DIFF true 8 neg_two_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 8 neg_two_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE -5
+DIFF true 8 fit_two_p19 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 8 fit_two_p19 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 8 fit_two_p20 sum/ungrouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+DIFF true 8 fit_two_p20 sum/grouped want ARITHMETIC_OVERFLOW got VALUE 100000000000000000000000000000000000006
+{(False, 'VALUE 5'): 64, (True, ''): 156, (False, 'VALUE -5'): 64, (False, 'VALUE 100000000000000000000000000000000000006'): 64, (False, 'NULL'): 36}

@@ -120,19 +120,19 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `keep_verbatim` flag and canonicalizes with it, so `F.expr` parses like the session door (net-zero,
   stays 1012).
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch. Its
-  default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before refusing. **ROUND-DOUBLE-EXACT-1 (2026-11-14):** `F.round` and `Column.round` build `call_round`, not DataFusion's `expr_fn::round`.
+  default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before refusing. **ROUND-DOUBLE-EXACT-1 (2026-11-14):** `F.round` and `Column.round` build `call_round`, not DataFusion's `expr_fn::round`. **SUM-DEC-I128WRAP-1 (2026-11-17):** `"sum"` returns `repark_functions::aggregate::sum_udaf()` (carries `pivot`, `call_function`).
   **FNP-BITMAP-FACADE-1 (2026-09-15):** `unary_aggregate_udaf` gains the `bitmap_construct_agg` /
   `bitmap_or_agg` / `bitmap_and_agg` arms mapping to `repark_functions::bitmap_agg::{bitmap_construct_agg_udaf,
   bitmap_or_agg_udaf, bitmap_and_agg_udaf}` (the module is `pub` in `repark-functions` for the
-  cross-crate path, like the `repark_functions::aggregate` arms). At the exact 1000-line ceiling, the
+  cross-crate path). At the exact 1000-line ceiling, the
   four `datafusion::logical_expr::binary_expr` arms condense onto the existing import (8 → 4
   lines each; `IsNotDistinctFrom` stays wrapped for rustfmt): 1000 → 991 lines, no baseline raised.
   **DEGREES-RUST-1 (2026-09-15, owner Q-15a-1):** `call_scalar_expr` gains the `degrees` / `radians`
-  arms onto the engine's scalar UDFs (`datafusion::functions::expr_fn`) — the single-multiply
-  `f64::to_degrees` / `f64::to_radians` form, bit-equal to Spark, measured (reuse, no new kernel).
+  arms onto the engine's scalar UDFs — the single-multiply
+  `f64::to_degrees` / `f64::to_radians` form, bit-equal to Spark (measured).
   **Run 16a round 3:** the arms rebind to the Spark-exact `repark_functions::expr_fn::degrees` /
-  `radians` pair, with the refusals and ANSI switch the engine UDFs lack.
-  **FNP-11B step 2 (2026-09-15):** the `to_date` arm takes 1 or 2 args (`expr_fn::to_date` widens to
+  `radians` pair, with the refusals and ANSI switch.
+  **FNP-11B step 2 (2026-09-15):** the `to_date` arm takes 1 or 2 args (`to_date` widens to
   `Vec<Expr>`); `unix_timestamp` takes 0 to 2.
   **DEEP-FILTER-CHAIN-CRASH-1 CI segv (2026-09-30):** `call_scalar_expr` keeps
   its name and grows by max argument depth around a renamed inner match, so the

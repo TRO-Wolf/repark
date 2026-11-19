@@ -75,8 +75,8 @@ generates 10k rows into a temp dir at test time; `full` generates 1M rows once u
 - `decimal_overflow.py` — the `decimal_overflow` family (D-2, step 2): two `decimal(38,0)`
   columns at 9.5e37/9.9e37 scale so the true column sum (~9.5e41) overflows both the
   `decimal(38,0)` aggregate boundary and the i128 accumulator, and the true average
-  (~9.5e37) overflows the `decimal(38,4)` average boundary. Repark's `SUM` answers the
-  wrapped i128 value (registry `SUM-DEC-I128WRAP-1`, strict xfail) and its `AVG` refuses
+  (~9.5e37) overflows the `decimal(38,4)` average boundary. Repark's `SUM` raises Spark's
+  `ARITHMETIC_OVERFLOW` (registry `SUM-DEC-I128WRAP-1`, closed 2026-11-17) and its `AVG` refuses
   loud on both doors, matching the recorded `AVG-DEC-SUMWRAP-1` Spark class. The CSV leg's
   38-digit integer text infers `double` on repark against Spark's measured
   `decimal(38,0)`-class answer — strict xfails citing `CSV-INFER-20DIGIT`.

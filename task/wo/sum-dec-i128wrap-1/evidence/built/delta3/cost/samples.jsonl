@@ -1,0 +1,153 @@
+{"group": "sum", "build": "main", "case": "k1_sum_d10_on", "run": 1, "rc": 0, "wall": 0.85}
+{"group": "sum", "build": "head", "case": "k1_sum_d10_on", "run": 1, "rc": 0, "wall": 0.88}
+{"group": "sum", "build": "main-aa", "case": "k1_sum_d10_on", "run": 1, "rc": 0, "wall": 0.9}
+{"group": "sum", "build": "main", "case": "k1_sum_d10_off", "run": 1, "rc": 0, "wall": 0.9}
+{"group": "sum", "build": "head", "case": "k1_sum_d10_off", "run": 1, "rc": 0, "wall": 0.8}
+{"group": "sum", "build": "main-aa", "case": "k1_sum_d10_off", "run": 1, "rc": 0, "wall": 0.89}
+{"group": "sum", "build": "main", "case": "k1_sum_d38_on", "run": 1, "rc": 0, "wall": 0.9}
+{"group": "sum", "build": "head", "case": "k1_sum_d38_on", "run": 1, "rc": 0, "wall": 0.96}
+{"group": "sum", "build": "main-aa", "case": "k1_sum_d38_on", "run": 1, "rc": 0, "wall": 0.94}
+{"group": "sum", "build": "main", "case": "k1_sum_d38_off", "run": 1, "rc": 0, "wall": 0.99}
+{"group": "sum", "build": "head", "case": "k1_sum_d38_off", "run": 1, "rc": 0, "wall": 1.03}
+{"group": "sum", "build": "main-aa", "case": "k1_sum_d38_off", "run": 1, "rc": 0, "wall": 0.99}
+{"group": "sum", "build": "main", "case": "k3_sum_d38", "run": 1, "rc": 0, "wall": 0.97}
+{"group": "sum", "build": "head", "case": "k3_sum_d38", "run": 1, "rc": 0, "wall": 0.94}
+{"group": "sum", "build": "main-aa", "case": "k3_sum_d38", "run": 1, "rc": 0, "wall": 0.98}
+{"group": "sum", "build": "main", "case": "k3_sum_d10", "run": 1, "rc": 0, "wall": 0.76}
+{"group": "sum", "build": "head", "case": "k3_sum_d10", "run": 1, "rc": 0, "wall": 0.71}
+{"group": "sum", "build": "main-aa", "case": "k3_sum_d10", "run": 1, "rc": 0, "wall": 0.71}
+{"group": "sum", "build": "main", "case": "k5_try_sum_d10_grouped", "run": 1, "rc": 0, "wall": 4.7}
+{"group": "sum", "build": "head", "case": "k5_try_sum_d10_grouped", "run": 1, "rc": 0, "wall": 0.89}
+{"group": "sum", "build": "main-aa", "case": "k5_try_sum_d10_grouped", "run": 1, "rc": 0, "wall": 4.49}
+{"group": "c012", "build": "main", "case": "c012p6", "run": 1, "rc": 0, "wall": 39.16}
+{"group": "c012", "build": "head", "case": "c012p6", "run": 1, "rc": 0, "wall": 39.53}
+{"group": "c012", "build": "main-aa", "case": "c012p6", "run": 1, "rc": 0, "wall": 39.06}
+{"group": "c012", "build": "main", "case": "c012rest", "run": 1, "rc": 0, "wall": 42.57}
+{"group": "c012", "build": "head", "case": "c012rest", "run": 1, "rc": 0, "wall": 42.66}
+{"group": "c012", "build": "main-aa", "case": "c012rest", "run": 1, "rc": 0, "wall": 42.57}
+{"group": "sum", "build": "main", "case": "k1_sum_d10_on", "run": 2, "rc": 0, "wall": 0.85}
+{"group": "sum", "build": "head", "case": "k1_sum_d10_on", "run": 2, "rc": 0, "wall": 0.82}
+{"group": "sum", "build": "main-aa", "case": "k1_sum_d10_on", "run": 2, "rc": 0, "wall": 0.84}
+{"group": "sum", "build": "main", "case": "k1_sum_d10_off", "run": 2, "rc": 0, "wall": 0.8}
+{"group": "sum", "build": "head", "case": "k1_sum_d10_off", "run": 2, "rc": 0, "wall": 0.79}
+{"group": "sum", "build": "main-aa", "case": "k1_sum_d10_off", "run": 2, "rc": 0, "wall": 0.82}
+{"group": "sum", "build": "main", "case": "k1_sum_d38_on", "run": 2, "rc": 0, "wall": 0.92}
+{"group": "sum", "build": "head", "case": "k1_sum_d38_on", "run": 2, "rc": 0, "wall": 1.03}
+{"group": "sum", "build": "main-aa", "case": "k1_sum_d38_on", "run": 2, "rc": 0, "wall": 0.89}
+{"group": "sum", "build": "main", "case": "k1_sum_d38_off", "run": 2, "rc": 0, "wall": 0.98}
+{"group": "sum", "build": "head", "case": "k1_sum_d38_off", "run": 2, "rc": 0, "wall": 0.98}
+{"group": "sum", "build": "main-aa", "case": "k1_sum_d38_off", "run": 2, "rc": 0, "wall": 0.93}
+{"group": "sum", "build": "main", "case": "k3_sum_d38", "run": 2, "rc": 0, "wall": 0.93}
+{"group": "sum", "build": "head", "case": "k3_sum_d38", "run": 2, "rc": 0, "wall": 0.89}
+{"group": "sum", "build": "main-aa", "case": "k3_sum_d38", "run": 2, "rc": 0, "wall": 0.97}
+{"group": "sum", "build": "main", "case": "k3_sum_d10", "run": 2, "rc": 0, "wall": 0.72}
+{"group": "sum", "build": "head", "case": "k3_sum_d10", "run": 2, "rc": 0, "wall": 0.74}
+{"group": "sum", "build": "main-aa", "case": "k3_sum_d10", "run": 2, "rc": 0, "wall": 0.71}
+{"group": "sum", "build": "main", "case": "k5_try_sum_d10_grouped", "run": 2, "rc": 0, "wall": 4.56}
+{"group": "sum", "build": "head", "case": "k5_try_sum_d10_grouped", "run": 2, "rc": 0, "wall": 0.8}
+{"group": "sum", "build": "main-aa", "case": "k5_try_sum_d10_grouped", "run": 2, "rc": 0, "wall": 4.48}
+{"group": "c012", "build": "main", "case": "c012p6", "run": 2, "rc": 0, "wall": 39.24}
+{"group": "c012", "build": "head", "case": "c012p6", "run": 2, "rc": 0, "wall": 40.11}
+{"group": "c012", "build": "main-aa", "case": "c012p6", "run": 2, "rc": 0, "wall": 39.37}
+{"group":"c012","build":"main","case":"c012p6","run":2,"rc":0,"wall":39.35}
+{"group":"c012","build":"head","case":"c012p6","run":2,"rc":0,"wall":39.62}
+{"group":"c012","build":"main-aa","case":"c012p6","run":2,"rc":0,"wall":39.06}
+{"group":"c012","build":"main","case":"c012rest","run":2,"rc":0,"wall":42.7}
+{"group":"c012","build":"head","case":"c012rest","run":2,"rc":0,"wall":44.17}
+{"group":"c012","build":"main-aa","case":"c012rest","run":2,"rc":0,"wall":45.7}
+{"group":"sum","build":"main","case":"k1_sum_d10_on","run":3,"rc":0,"wall":0.86}
+{"group":"sum","build":"head","case":"k1_sum_d10_on","run":3,"rc":0,"wall":0.86}
+{"group":"sum","build":"main-aa","case":"k1_sum_d10_on","run":3,"rc":0,"wall":0.84}
+{"group":"sum","build":"main","case":"k1_sum_d10_off","run":3,"rc":0,"wall":0.86}
+{"group":"sum","build":"head","case":"k1_sum_d10_off","run":3,"rc":0,"wall":0.83}
+{"group":"sum","build":"main-aa","case":"k1_sum_d10_off","run":3,"rc":0,"wall":0.84}
+{"group":"sum","build":"main","case":"k1_sum_d38_on","run":3,"rc":0,"wall":0.95}
+{"group":"sum","build":"head","case":"k1_sum_d38_on","run":3,"rc":0,"wall":0.99}
+{"group":"sum","build":"main-aa","case":"k1_sum_d38_on","run":3,"rc":0,"wall":0.94}
+{"group":"sum","build":"main","case":"k1_sum_d38_off","run":3,"rc":0,"wall":0.9}
+{"group":"sum","build":"head","case":"k1_sum_d38_off","run":3,"rc":0,"wall":0.99}
+{"group":"sum","build":"main-aa","case":"k1_sum_d38_off","run":3,"rc":0,"wall":1.0}
+{"group":"sum","build":"main","case":"k3_sum_d38","run":3,"rc":0,"wall":0.95}
+{"group":"sum","build":"head","case":"k3_sum_d38","run":3,"rc":0,"wall":0.99}
+{"group":"sum","build":"main-aa","case":"k3_sum_d38","run":3,"rc":0,"wall":0.93}
+{"group":"sum","build":"main","case":"k3_sum_d10","run":3,"rc":0,"wall":0.71}
+{"group":"sum","build":"head","case":"k3_sum_d10","run":3,"rc":0,"wall":0.7}
+{"group":"sum","build":"main-aa","case":"k3_sum_d10","run":3,"rc":0,"wall":0.7}
+{"group":"sum","build":"main","case":"k5_try_sum_d10_grouped","run":3,"rc":0,"wall":4.43}
+{"group":"sum","build":"head","case":"k5_try_sum_d10_grouped","run":3,"rc":0,"wall":0.82}
+{"group":"sum","build":"main-aa","case":"k5_try_sum_d10_grouped","run":3,"rc":0,"wall":4.56}
+{"group":"c012","build":"main","case":"c012p6","run":3,"rc":0,"wall":39.03}
+{"group":"c012","build":"head","case":"c012p6","run":3,"rc":0,"wall":39.12}
+{"group":"c012","build":"main-aa","case":"c012p6","run":3,"rc":0,"wall":39.14}
+{"group":"c012","build":"main","case":"c012rest","run":3,"rc":0,"wall":42.38}
+{"group":"c012","build":"head","case":"c012rest","run":3,"rc":0,"wall":42.43}
+{"group":"c012","build":"main-aa","case":"c012rest","run":3,"rc":0,"wall":42.5}
+{"group":"sum","build":"main","case":"k1_sum_d10_on","run":4,"rc":0,"wall":0.81}
+{"group":"sum","build":"head","case":"k1_sum_d10_on","run":4,"rc":0,"wall":0.82}
+{"group":"sum","build":"main-aa","case":"k1_sum_d10_on","run":4,"rc":0,"wall":0.81}
+{"group":"sum","build":"main","case":"k1_sum_d10_off","run":4,"rc":0,"wall":0.82}
+{"group":"sum","build":"head","case":"k1_sum_d10_off","run":4,"rc":0,"wall":0.8}
+{"group":"sum","build":"main-aa","case":"k1_sum_d10_off","run":4,"rc":0,"wall":0.87}
+{"group":"sum","build":"main","case":"k1_sum_d38_on","run":4,"rc":0,"wall":0.93}
+{"group":"sum","build":"head","case":"k1_sum_d38_on","run":4,"rc":0,"wall":1.03}
+{"group":"sum","build":"main-aa","case":"k1_sum_d38_on","run":4,"rc":0,"wall":0.89}
+{"group":"sum","build":"main","case":"k1_sum_d38_off","run":4,"rc":0,"wall":0.94}
+{"group":"sum","build":"head","case":"k1_sum_d38_off","run":4,"rc":0,"wall":0.98}
+{"group":"sum","build":"main-aa","case":"k1_sum_d38_off","run":4,"rc":0,"wall":0.98}
+{"group":"sum","build":"main","case":"k3_sum_d38","run":4,"rc":0,"wall":0.96}
+{"group":"sum","build":"head","case":"k3_sum_d38","run":4,"rc":0,"wall":0.92}
+{"group":"sum","build":"main-aa","case":"k3_sum_d38","run":4,"rc":0,"wall":0.95}
+{"group":"sum","build":"main","case":"k3_sum_d10","run":4,"rc":0,"wall":0.74}
+{"group":"sum","build":"head","case":"k3_sum_d10","run":4,"rc":0,"wall":0.69}
+{"group":"sum","build":"main-aa","case":"k3_sum_d10","run":4,"rc":0,"wall":0.69}
+{"group":"sum","build":"main","case":"k5_try_sum_d10_grouped","run":4,"rc":0,"wall":4.55}
+{"group":"sum","build":"head","case":"k5_try_sum_d10_grouped","run":4,"rc":0,"wall":0.82}
+{"group":"sum","build":"main-aa","case":"k5_try_sum_d10_grouped","run":4,"rc":0,"wall":4.48}
+{"group":"c012","build":"main","case":"c012p6","run":4,"rc":0,"wall":39.05}
+{"group":"c012","build":"head","case":"c012p6","run":4,"rc":0,"wall":39.37}
+{"group":"c012","build":"main-aa","case":"c012p6","run":4,"rc":0,"wall":39.18}
+{"group":"c012","build":"main","case":"c012rest","run":4,"rc":0,"wall":42.58}
+{"group":"c012","build":"head","case":"c012rest","run":4,"rc":0,"wall":42.5}
+{"group":"c012","build":"main-aa","case":"c012rest","run":4,"rc":0,"wall":42.67}
+{"group":"sum","build":"main","case":"k1_sum_d10_on","run":5,"rc":0,"wall":0.84}
+{"group":"sum","build":"head","case":"k1_sum_d10_on","run":5,"rc":0,"wall":0.82}
+{"group":"sum","build":"main-aa","case":"k1_sum_d10_on","run":5,"rc":0,"wall":0.86}
+{"group":"sum","build":"main","case":"k1_sum_d10_off","run":5,"rc":0,"wall":0.81}
+{"group":"sum","build":"head","case":"k1_sum_d10_off","run":5,"rc":0,"wall":0.87}
+{"group":"sum","build":"main-aa","case":"k1_sum_d10_off","run":5,"rc":0,"wall":0.81}
+{"group":"sum","build":"main","case":"k1_sum_d38_on","run":5,"rc":0,"wall":0.9}
+{"group":"sum","build":"head","case":"k1_sum_d38_on","run":5,"rc":0,"wall":0.94}
+{"group":"sum","build":"main-aa","case":"k1_sum_d38_on","run":5,"rc":0,"wall":0.87}
+{"group":"sum","build":"main","case":"k1_sum_d38_off","run":5,"rc":0,"wall":0.89}
+{"group":"sum","build":"head","case":"k1_sum_d38_off","run":5,"rc":0,"wall":0.98}
+{"group":"sum","build":"main-aa","case":"k1_sum_d38_off","run":5,"rc":0,"wall":0.94}
+{"group":"sum","build":"main","case":"k3_sum_d38","run":5,"rc":0,"wall":0.98}
+{"group":"sum","build":"head","case":"k3_sum_d38","run":5,"rc":0,"wall":0.98}
+{"group":"sum","build":"main-aa","case":"k3_sum_d38","run":5,"rc":0,"wall":0.98}
+{"group":"sum","build":"main","case":"k3_sum_d10","run":5,"rc":0,"wall":0.72}
+{"group":"sum","build":"head","case":"k3_sum_d10","run":5,"rc":0,"wall":0.73}
+{"group":"sum","build":"main-aa","case":"k3_sum_d10","run":5,"rc":0,"wall":0.74}
+{"group":"sum","build":"main","case":"k5_try_sum_d10_grouped","run":5,"rc":0,"wall":4.81}
+{"group":"sum","build":"head","case":"k5_try_sum_d10_grouped","run":5,"rc":0,"wall":0.79}
+{"group":"sum","build":"main-aa","case":"k5_try_sum_d10_grouped","run":5,"rc":0,"wall":4.34}
+{"group":"c012","build":"main","case":"c012p6","run":5,"rc":0,"wall":39.03}
+{"group":"c012","build":"head","case":"c012p6","run":5,"rc":0,"wall":39.16}
+{"group":"c012","build":"main-aa","case":"c012p6","run":5,"rc":0,"wall":39.11}
+{"group":"c012","build":"main","case":"c012rest","run":5,"rc":0,"wall":42.45}
+{"group":"c012","build":"head","case":"c012rest","run":5,"rc":0,"wall":43.01}
+{"group":"c012","build":"main-aa","case":"c012rest","run":5,"rc":0,"wall":42.68}
+{"group":"sum","build":"main","case":"k1_sum_d38_on","run":6,"rc":0,"wall":0.94}
+{"group":"sum","build":"head","case":"k1_sum_d38_on","run":6,"rc":0,"wall":0.97}
+{"group":"sum","build":"main-aa","case":"k1_sum_d38_on","run":6,"rc":0,"wall":0.89}
+{"group":"sum","build":"main","case":"k1_sum_d38_on","run":7,"rc":0,"wall":0.95}
+{"group":"sum","build":"head","case":"k1_sum_d38_on","run":7,"rc":0,"wall":0.97}
+{"group":"sum","build":"main-aa","case":"k1_sum_d38_on","run":7,"rc":0,"wall":0.95}
+{"group":"sum","build":"main","case":"k1_sum_d38_on","run":8,"rc":0,"wall":0.94}
+{"group":"sum","build":"head","case":"k1_sum_d38_on","run":8,"rc":0,"wall":1.0}
+{"group":"sum","build":"main-aa","case":"k1_sum_d38_on","run":8,"rc":0,"wall":0.92}
+{"group":"sum","build":"main","case":"k1_sum_d38_on","run":9,"rc":0,"wall":0.93}
+{"group":"sum","build":"head","case":"k1_sum_d38_on","run":9,"rc":0,"wall":1.01}
+{"group":"sum","build":"main-aa","case":"k1_sum_d38_on","run":9,"rc":0,"wall":0.87}
+{"group":"sum","build":"main","case":"k1_sum_d38_on","run":10,"rc":0,"wall":0.93}
+{"group":"sum","build":"head","case":"k1_sum_d38_on","run":10,"rc":0,"wall":0.99}
+{"group":"sum","build":"main-aa","case":"k1_sum_d38_on","run":10,"rc":0,"wall":0.92}

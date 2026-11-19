@@ -118,7 +118,6 @@ def test_decimal_overflow_inferred_type_matches_declared_csv(
     assert sql_table.schema.field(column).type == expected
 
 
-@pytest.mark.xfail(strict=True, reason="SUM-DEC-I128WRAP-1")
 def test_decimal_overflow_sum_refuses_loud(
     spark: ReparkSession, decimal_overflow_data: FamilyOutput
 ) -> None:
@@ -126,8 +125,10 @@ def test_decimal_overflow_sum_refuses_loud(
     frame = _open_parquet_view(spark, decimal_overflow_data, PARQUET_VIEW)
     sql_outcome = _sql_outcome(spark, PARQUET_VIEW, "SUM(v), SUM(w)")
     assert isinstance(sql_outcome, Exception), "sql door answered the overflowing sum"
+    assert "[ARITHMETIC_OVERFLOW] Overflow in sum of decimals" in str(sql_outcome)
     frame_outcome = _agg_outcome(frame, F.sum, "v", "w")
     assert isinstance(frame_outcome, Exception), "dataframe door answered the overflowing sum"
+    assert "[ARITHMETIC_OVERFLOW] Overflow in sum of decimals" in str(frame_outcome)
 
 
 def test_decimal_overflow_avg_refuses_loud(
