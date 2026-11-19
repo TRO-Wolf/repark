@@ -292,7 +292,9 @@ Two product files, both already among the build's five (cap 6, count unchanged a
 `crates/repark-functions/src/aggregate/spark_sum.rs` (`state_fields` `:143`: one column to precision 19, two from 20).
 It is the sizing's prototype (i) with the precision split; the prototype's unused `OVERFLOWED` is gone. A partial of
 a precision-19 input that does pass 128 bits (only possible when the input holds values past its declared precision)
-raises an error rather than ship a marker.
+raises an error rather than ship a marker. **Corrected in delta 3 (the verifier's F1):** at `fcb0c888` that held on
+the grouped path only; the ungrouped `update_batch` trusted the declared precision and summed such a batch modulo
+2^128 (`5` for `2^128 + 5`), with no error, in both modes. Since delta 3 every batch is added exactly; see "Delta 3".
 
 ### The four checks (Fable §3)
 
@@ -416,8 +418,147 @@ seat (the expression layer).
   `c38_0` partition pins: `big` grouped `sum` up to 11 answers in 20 runs, the ungrouped total `15000` or NULL, or with
   ANSI on `ARITHMETIC_OVERFLOW` on every run where the total is `5`; `t4x` g21 `M` or NULL); its `c19_0` and `c20_0`
   pins pass, as nothing at those precisions can pass 38 digits. **Main `pkg-main-6286ba19`: 142 failed.**
-- Rust, `aggregate::sum_tests` (33 pass): the tests the prototype left failing now assert the exact carrier (the
+- Rust, `aggregate::sum_tests` (13 tests, all pass; **corrected in delta 3, the verifier's F2:** this line said 33, which is the `aggregate::` filter, 13 `sum_tests` and 20 `aggregate::tests`): the tests the prototype left failing now assert the exact carrier (the
   marker tests became the exact total through spill, `RepartitionExec`, skipped partials and an IPC round trip, at
   precision 19, 20 and 38), plus the boundary tests named in the checks and
   `a_total_at_the_38_digit_limit_fits_and_one_past_it_does_not` and
   `a_wide_total_wraps_128_bits_and_comes_back_from_precision_20`.
+
+## Delta 3 (2026-11-19): the ungrouped path checks the values it adds
+
+### The ruling and what it amends
+
+**Owner, 2026-11-19, about 01:28 UTC, verbatim:** "Go with your recommendations and tonight you don’t even need to wait
+on me even if fable says that it’s my call. Merge what you need, follow the goal and good luck". For this unit it
+adopted the orchestrator's recommendation: **one more delta past the last-delta rule** that checks the values on the
+ungrouped path, pins the verifier's reproduction, fixes the F2 count and re-runs cost, then a re-check verifier. **It
+amends the 2026-11-18 20:05 UTC rule** (delta 2 was the last, and a class (a) or (b) finding at the fresh verifier
+parks the unit). In the same line the owner rated, on the orchestrator's leans, **DECIMAL-ADD-SCALE38-OVERFLOW-1 S3,
+not label-blocking**, and **C1 S2, not label-blocking** (cards below). Everything delta 2 ruled still holds (decision
+I, the precision split, the 1.12x exception on K1 at precision 20 and up, the kept divergence, `target_partitions`
+2, 4 and 8).
+
+### The verifier's findings (Opus 5.5 medium, FAIL at `36db8dd6`)
+
+- **F1** (class (b), with a class (a) defect at S3). A Parquet column whose footer declares `decimal(19,0)` or
+  `decimal(20,0)` over 16-byte values near 10^38: rows `[A, A, A, R]` (`A = 10^38 − 1`, exact total `2^128 + 5`)
+  answered `5` from an ungrouped `sum` or `try_sum`, in both modes, at precision 19 and 20 (the negated file `-5`).
+  Main answers `5` from `sum` too; main's `try_sum` answers NULL, so the `try_sum` value was new. Spark 4.1.2 refuses
+  the read (`NUMERIC_VALUE_OUT_OF_RANGE`). The cause: `bounded_rows` returned the declared-precision row bound without
+  reading the values, and `add_batch` summed the batch with Arrow's wrapping `sum`, so a batch past 128 bits never
+  carried. Four records claimed the opposite: delta 2's "What was built" above, `aggregate/map.md`, the PR body and the
+  registry entry.
+- **F2** (class (b), minor). Delta 2's pins section and the PR body said `aggregate::sum_tests` has 33 tests; it has
+  13. The 33 was the `aggregate::` filter (13 `sum_tests` and 20 `aggregate::tests`).
+
+### What was built (head `845766fd`, package `pkg-sum-845766fd`)
+
+One product file changed in substance, `crates/repark-functions/src/aggregate/sum_decimal.rs`, plus a one-line test
+module declaration in `aggregate.rs`; `avg_decimal.rs` returns to main byte for byte (`sum` no longer uses its
+`add_batch`, `sub_batch` or `safe_rows`, so their `pub(crate)` goes). All three are among the build's five; the cap
+count stays at 5 of 6.
+
+- `exact_total` (`:112`): a batch's total as an `i128` only when no partial sum overflows: four independent checked
+  lanes on a batch without nulls, Arrow's `sum_checked` with nulls. `fold_batch` (`:130`) adds that total with the
+  carry, or, when it overflows, every row with the carry. `DecimalSum::update_batch` (`:192`) and `retract_batch`
+  (`:200`) call it with `add_carry` and `sub_carry`. `bounded_rows` and the `type_rows` field are gone: no ungrouped or
+  window batch trusts the declared precision.
+- The mechanism, measured before the build (a `rustc -O` loop over one cache-resident 8,192-row batch, 10M rows, one
+  lane-B core): Arrow's wrapping `sum` 2.9 ms, a four-lane checked sum 3.4 ms, a one-lane checked sum (`sum_checked`)
+  5.5 ms, `min` + `max` + `sum` (the old path for `p ≥ 35`, and the brief's first option on every batch) 13.8 ms. K1
+  is a grouped query (its ungrouped outer `sum` sees 200,000 rows), so the batch add reaches K3 and the reported
+  K3 `d10` row below.
+
+### The path audit: every path that could trust the declared precision
+
+| path | what holds it now |
+|---|---|
+| ungrouped `DecimalSum::update_batch` (`:192`) | **fixed:** `fold_batch` (checked batch total, or every row with the carry); before, `bounded_rows` trusted the precision and Arrow's wrapping `sum` lost the carry (F1) |
+| window `DecimalSum::update_batch` / `retract_batch` (`:192`, `:200`) | **fixed** the same way (`add_carry` / `sub_carry`); before, a frame could add or retract a batch past 128 bits uncounted |
+| ungrouped `merge_batch` (`:212`) | unchanged: every partial added with the carry; the wrap column read from precision 20 |
+| ungrouped `state` (`:229`) | unchanged: at precision 19 and under `unwrapped` raises on any counted wrap (now reachable from `update_batch` too); from 20 the wrap count ships |
+| grouped `update_batch` (`fold_rows`, `:361`) | unchanged: every row added with the carry, no batch sum |
+| grouped `merge_batch` (`fold_partials`, `:382`) | unchanged: every partial with the carry; the wrap column from precision 20 |
+| grouped `state` (`shipped`, `:428`) and a final step's spill | unchanged: precision 19 and under raises on any counted wrap; from 20 ships the count |
+| `convert_to_state` (the partial-skip path) | unchanged: one row per state, so no sum can wrap; zero wraps shipped |
+| `evaluate` (both accumulators) | unchanged: `wraps == 0 && |low| < 10^p`, from the exact total, never from the declared precision |
+| `DISTINCT` (`DecimalSumDistinct`) | unchanged: the distinct values are added with the carry at `evaluate`; the state is the value list |
+| the state schema (`spark_sum.rs` `state_fields`) | by input precision, as decision I rules; the narrow carrier's premise is held by `unwrapped`, not trusted |
+| `avg` ungrouped (`avg_decimal.rs` `DecimalAvgAccumulator::update_batch` / `retract_batch`, `add_batch` with `safe_rows`) | **not this unit (reported):** the same over-precision wrap; measured below |
+| `avg` grouped (`DecimalAvgGroups`) | every row with the carry; measured NULL or `ARITHMETIC_OVERFLOW` below |
+
+### The verifier's files, measured ([delta3/overprec/](delta3/overprec/map.md))
+
+The verifier's six files re-made byte for byte, plus a two-file table of each (a second file of one `0` row, so the
+ungrouped plan has a partial step), at `target_partitions` 1, 2, 4 and 8, both modes: 384 `sum` and `try_sum`
+answers per build. On one small file the ungrouped plan is single-phase at every partition count (`mode=Single`);
+the grouped plan, and the ungrouped plan on two files, take a partial step from `target_partitions` 2.
+
+| file, precision | ungrouped, single-phase | ungrouped or grouped, multi-phase | delta 2 `fcb0c888` | main `4c365814` |
+|---|---|---|---|---|
+| `wrap5`, `neg` at 19 | `sum`: NULL (off) / `ARITHMETIC_OVERFLOW` (on); `try_sum`: NULL | "past its declared precision" (every mode, `sum` and `try_sum`) | ungrouped `5` / `-5`, both modes | `5` / `-5` |
+| `wrap5`, `neg` at 20 | as at 19 | NULL / `ARITHMETIC_OVERFLOW`; `try_sum` NULL | ungrouped `5` / `-5` | `5` / `-5` |
+| `fit` at 19 and 20 | NULL / `ARITHMETIC_OVERFLOW`; `try_sum` NULL | the same (the partial's wraps net to zero) | the same | `100000000000000000000000000000000000006` |
+
+**Head: 384 of 384 as expected; no value anywhere.** Delta 2: 128 values (`5` and `-5`, the ungrouped path, one
+file and two). Main: 192 values. The grouped single-phase path was already right on delta 2.
+
+**`avg` (reported, not fixed here):** the ungrouped `avg` has the same over-precision wrap, on the head and on main
+alike: `wrap5` answers `1.2500` on one file and `1.0000` on two (the wrapped total `5` over 4 or 5 rows), `neg` the
+negation, in both modes and at every partition count; `fit` answers NULL or `ARITHMETIC_OVERFLOW`. The grouped `avg`
+answers NULL or `ARITHMETIC_OVERFLOW` on every file. `avg_decimal.rs` is main's file byte for byte, so `avg` did not
+move; the grouped `avg` unit (lane B's next) is the seat.
+
+### Pins (red and green)
+
+- **Facade** `test_sum_dec_i128wrap_1.py::test_a_total_of_values_past_their_declared_precision_is_never_a_value`
+  (48: `wrap5`, `neg`, `fit` × precision 19, 20 × one file, two files × `target_partitions` 1, 4 × both modes; each
+  test runs `sum` and `try_sum`, ungrouped and grouped). It crafts the files under `tmp_path` with `craft.py`'s
+  method; each id begins `spark-refuses-the-read:`, so the expectation is RePark's own safety net, not Spark's answer.
+  The whole file: **head `pkg-sum-845766fd` 242 passed**; **delta 2 `pkg-sum-fcb0c888` 32 failed** (every `wrap5`
+  and `neg` case: the ungrouped `5` / `-5`; `fit` passes there); **main `pkg-main-4c365814` 190 failed** (the 142
+  earlier cells and all 48).
+- **Rust** `aggregate::sum_precision_tests::an_ungrouped_batch_past_its_declared_precision_counts_every_wrap` (a new
+  file, as `sum_tests.rs` would pass the 1,000-line ceiling): at precision 19 and 20, one ungrouped batch of `wrap5`,
+  `neg`, the same with nulls (Arrow's `sum_checked` path) and `fit`: NULL or `ARITHMETIC_OVERFLOW` at `evaluate`, the
+  narrow state's "past its declared precision" error, the wide state's wrap count; and a window frame that retracts
+  such a batch comes back exactly. **Red on `fcb0c888`'s `sum_decimal.rs`** (the single-phase total answers `5`,
+  `sum_precision_tests.rs:50`), **green on the head**.
+- **The counts (F2):** `aggregate::sum_tests` 13 tests; `aggregate::sum_precision_tests` 1; the `aggregate::` filter
+  34 (13 + 1 + 20 `aggregate::tests`), all passing.
+
+### The bar (head `pkg-sum-845766fd` against delta 2's recorded verdicts)
+
+Delta 2's whole bar re-run on the head (`run_door`, `run_mp`, `run_native`, `run_revision` and Spark's cross-reads,
+both modes; cores 48–57) and analysed with the same pipeline against the recorded Spark answers:
+
+- **6,252 of 6,252 verdicts equal delta 2's**, and the counts per verdict with them (ANSI on 1,752 EQUAL, 557
+  BOTH_RAISE, 120 SPARK_RAISES, 43 VALUE, 24 REPARK_RAISES, 41 BOTH_RAISE_OTHER; off 2,312 EQUAL, 182 VALUE, 35
+  REPARK_RAISES, 8 FORMAT).
+- **238 of 242 revision verdicts equal delta 2's. The 4 that move are main's #1362, not this delta:**
+  `rev/dfview_flip/g5/c38_0` and `g7` (a DataFrame temp view read after the session's ANSI flag flips) go SPARK_RAISES
+  → BOTH_RAISE with ANSI on and REPARK_RAISES → EQUAL with it off. Delta 2's head predates main `4c365814`
+  (TEMP-VIEW-SESSION-SETTINGS-1 part 2, "a DataFrame temp view answers under its frame's own settings"), which the
+  orchestrator merged into the branch as `de471f60`. Measured on the four builds ([delta3/flip.md](delta3/flip.md)):
+  on delta 2 the DataFrame view answered under the flipped setting while its SQL-view twin `rev/view_flip/g5` (part 1,
+  already in `6286ba19`) answered under its captured one; on the head the two answer the same, as Spark does. Both
+  mains answer the wrapped 39-digit total there in either mode, so they cannot show it. The batch add this delta
+  changed cannot choose an ANSI mode.
+
+### Determinism ([delta3/det/](delta3/det/map.md))
+
+The verifier's own runner (`S/verify-sum/det/det.py`), its five configurations, both modes, 240 queries each, 20 runs:
+**one answer everywhere, and every answer the exact total** (or the raise / NULL for a total past the result precision)
+— 4,800 query series, 0 with more than one answer, 0 inexact, as on delta 2's head.
+
+### The cards (ratings recorded here; the clerk files the card files)
+
+- **DECIMAL-ADD-SCALE38-OVERFLOW-1** (delta 2's expression card): **owner-rated S3, not label-blocking** (2026-11-19).
+- **C1** (the verifier's pre-existing finding): RePark's Parquet reader accepts decimal values past the declared
+  precision, where Spark 4.1.2 refuses the read (`NUMERIC_VALUE_OUT_OF_RANGE`); main the same. **Owner-rated S2, not
+  label-blocking**, sized inside ICE-DECIMAL-WRITE-PRECISION-1's step 0 (the reader side).
+- **The ungrouped `avg` over such values** (above) is the grouped `avg` unit's seat; no new card from this delta.
+
+### Cost
+
+[cost.md](cost.md), "Delta 3".

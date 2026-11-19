@@ -7,7 +7,7 @@ and unchanged.
 - [bar.md](bar.md) — the bar: the step 0's whole domain table re-run on the head, counts per verdict, every class of
   cell left, the 46 EQUAL→other layout cells the build halted on, the unchanged sets, the pin files.
 - [cost.md](cost.md) — K1 to K5 and C-012, base against head with the control band, and the marker's K1 numbers.
-- The card's "Built", "Delta 1" and "Delta 2" appends are on the card itself since main brought it in (2026-11-18):
+- The card's "Built", "Delta 1", "Delta 2" and "Delta 3" appends are on the card itself since main brought it in (2026-11-18):
   [sum-dec-i128wrap-1-card-2026-11-17.md](../../../../roadmap/mid-term/consult-2026-11-17/sum-dec-i128wrap-1-card-2026-11-17.md).
 - [compare_bar.py](compare_bar.py) — pairs main's verdicts (`../raw/`) with the head's (`raw/`): transitions,
   moved cells, cells left by named class.
@@ -22,5 +22,8 @@ and unchanged.
   spread scripts and their raw output.
 - [delta2/](delta2/map.md) — delta 2 (2026-11-18, exact in every phase, the state chosen by precision): the
   named classes cell for cell, the bar's verdicts, the comparisons, the spreads, check 3 and the cost samples.
+- [delta3/](delta3/map.md) — delta 3 (2026-11-19, the ungrouped path checks the values it adds): the verifier's
+  over-precision files on three builds, the bar re-run, the 4 cells main's #1362 moved, determinism, the
+  micro-benchmark and the cost samples.
 
 Up: [../map.md](../map.md) is the step 0's evidence map; this folder is linked from [../../map.md](../../map.md).

@@ -147,3 +147,35 @@ rating is the owner's): `x + 1` on a `decimal(38,38)` column of `0.99…9` raise
 where Spark answers `2.000000000000000000000000000000000000`.
 
 **Cost:** [cost.md](../../../wo/sum-dec-i128wrap-1/evidence/built/cost.md), "Delta 2".
+
+## Delta 3 (2026-11-19, Claude Opus 5.5 `claude-opus-5-5`, xhigh): the ungrouped path checks the values it adds
+
+**The ruling (owner, 2026-11-19, about 01:28 UTC, verbatim):** "Go with your recommendations and tonight you don’t even
+need to wait on me even if fable says that it’s my call. Merge what you need, follow the goal and good luck". It
+adopts the orchestrator's recommendation for this unit, **one more delta past the last-delta rule**, and so amends the
+20:05 UTC rule of 2026-11-18 (delta 2 the last; a class (a) or (b) finding parks the unit). In the same line the owner
+rated DECIMAL-ADD-SCALE38-OVERFLOW-1 **S3, not label-blocking**, and C1 **S2, not label-blocking** (below).
+
+**Why:** delta 2's fresh verifier (Opus 5.5 medium) returned FAIL at `36db8dd6`. F1: over a Parquet column whose
+values pass its declared precision (`decimal(19,0)` / `decimal(20,0)` over values near 10^38), the ungrouped `sum` and
+`try_sum` answered the total modulo 2^128 (`5` for `2^128 + 5`) in both modes, against four records that said such
+input raises; Spark refuses the read. F2: the `aggregate::sum_tests` count (13, not 33).
+
+**Built:** commit `845766fd` (product and the Rust pin `aggregate::sum_precision_tests`) and `86f7cdca` (facade pins);
+`sum_decimal.rs` only in substance (the ungrouped and window batch add: a four-lane checked `i128` total, or every row
+with the carry when it overflows), a test module line in `aggregate.rs`, and `avg_decimal.rs` back to main byte for
+byte. Still five product files of six.
+
+**Measured** ([bar.md](../../../wo/sum-dec-i128wrap-1/evidence/built/bar.md), "Delta 3"): on the verifier's files,
+every `sum` and `try_sum` total answers NULL or `ARITHMETIC_OVERFLOW`, ungrouped and grouped, at precision 19 and 20,
+except that a precision-19 partial past 128 bits in a multi-phase plan raises "past its declared precision" (384 of
+384 as expected; delta 2 answered 128 values). The ungrouped `avg` keeps the same over-precision wrap, as on main
+(reported; the grouped `avg` unit's seat). Delta 2's whole bar: 6,252 of 6,252 verdicts unchanged; 4 of 242 revision
+cells move, all main's #1362 (a DataFrame temp view now answers under its own settings). Determinism: one answer, the
+exact total, in the verifier's five configurations.
+
+**Cards (ratings recorded in bar.md; the clerk files them):** DECIMAL-ADD-SCALE38-OVERFLOW-1, S3, not label-blocking;
+C1 (RePark's Parquet reader accepts decimal values past the declared precision where Spark refuses the read, main the
+same), S2, not label-blocking, sized inside ICE-DECIMAL-WRITE-PRECISION-1's step 0.
+
+**Cost:** [cost.md](../../../wo/sum-dec-i128wrap-1/evidence/built/cost.md), "Delta 3".

@@ -15401,7 +15401,14 @@ Shared roster pin for every heading:
   `try_sum` hint with ANSI on, NULL with ANSI off and in `try_sum`; windows check each frame); the state is one raw
   `i128` column at input precision 19 and under and the low word plus a wrap count from 20. One answer, the exact
   total, at every partition count. Every total past 38 digits raises or answers NULL, and no data file holds a wrapped
-  or 39-digit value ([bar](../task/wo/sum-dec-i128wrap-1/evidence/built/bar.md)). **Stays unlike Spark:** the native
+  or 39-digit value ([bar](../task/wo/sum-dec-i128wrap-1/evidence/built/bar.md)). **Delta 3** (commit `845766fd`,
+  2026-11-19; owner, verbatim, "Go with your recommendations and tonight you don’t even need to wait on me even if
+  fable says that it’s my call. Merge what you need, follow the goal and good luck"): the ungrouped and window batch
+  add no longer trusts the declared precision, so the same holds for values past their declared precision (a
+  non-conforming Parquet file; Spark refuses the read): NULL or `ARITHMETIC_OVERFLOW`, except that at precision 19 and
+  under a partial that passes 128 bits in a multi-phase plan raises "past its declared precision" in every mode and in
+  `try_sum`. At delta 2's head the ungrouped `sum` and `try_sum` answered such a total modulo 2^128 (the verifier's
+  F1). **Stays unlike Spark:** the native
   `repark.sql()` door (NATIVE-DECIMAL-SUM-1, S2); `BIGINT` `sum` with ANSI on (SUM-BIGINT-ANSI-OVERFLOW-1);
   `F.sum_distinct` (FNP-AGG-1); views read under other settings (TEMP-VIEW-SESSION-SETTINGS-1); a grouped `avg`
   pass-back (AVG-GROUPED-SUM-STICKY-1); the writer's bounds-only precision check for other producers
@@ -15410,14 +15417,19 @@ Shared roster pin for every heading:
   digits and comes back, Spark raises or answers NULL and RePark answers the exact total, ANSI-on Iceberg writes Spark
   refuses among them; with it, a non-window total past 38 digits raises `ARITHMETIC_OVERFLOW` where Spark raises
   `NUMERIC_VALUE_OUT_OF_RANGE` after a merge; and `x + 1` on a `decimal(38,38)` value near 1 (proposed
-  DECIMAL-ADD-SCALE38-OVERFLOW-1, the expression layer). Ruling B's 32 layout cells now answer as Spark.
+  DECIMAL-ADD-SCALE38-OVERFLOW-1, the expression layer; owner-rated S3, not label-blocking, 2026-11-19); RePark's
+  Parquet reader accepts decimal values past the declared precision where Spark refuses the read (C1, main the same;
+  owner-rated S2, not label-blocking, sized inside ICE-DECIMAL-WRITE-PRECISION-1's step 0), and over such values the
+  ungrouped `avg` still answers from the total modulo 2^128 (main the same; the grouped `avg` unit). Ruling B's 32
+  layout cells now answer as Spark.
 - **Pins (new)** — `python/repark/tests/types/test_sum_dec_i128wrap_1.py::test_a_cell_answers_as_spark_or_as_its_named_class`
   (77 cells, both ANSI modes, each id naming `spark:`, `kept-divergence:` or `condition-class:`),
   `::test_no_data_file_holds_a_sum_past_38_digits_or_its_wrap`,
   `::test_spark_drops_the_total_of_the_kept_divergence_group_on_every_run` and (delta 2)
   `::test_a_multi_partial_total_is_the_exact_total_on_every_run_at_2_4_and_8_partitions` (36: `target_partitions` 2, 4
-  and 8 set before two three-file tables are read, precision 19, 20 and 38, both modes, 20 runs); Rust
-  `repark-functions` `aggregate::sum_tests::*` and `repark-spark` `extension::sum_window_tests::*`; the torture cell
+  and 8 set before two three-file tables are read, precision 19, 20 and 38, both modes, 20 runs) and (delta 3)
+  `::test_a_total_of_values_past_their_declared_precision_is_never_a_value` (48, each id naming that Spark refuses the
+  read); Rust `repark-functions` `aggregate::sum_tests::*`, (delta 3) `aggregate::sum_precision_tests::*` and `repark-spark` `extension::sum_window_tests::*`; the torture cell
   below, its strict xfail removed.
 
 - **repark** — `SUM` over `DECIMAL(38,0)` inputs whose true sum overflows i128 answers the

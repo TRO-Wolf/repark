@@ -86,3 +86,27 @@ runs 6 to 10 under the series' rule for a row over 1.05x.
 rows' runs 4 and 5, C-012 runs 1 to 5, and `k1_sum_d10_off` runs 6 to 10, from 2026-11-19 at about 00:00 to 00:27 UTC.
 A partial run 4 and three partial C-012 records, from a runner that outlived the builder's hand-back, were removed
 first. The exclusive lock was starved for hours by long shared holds on lane A.
+
+## Delta 3 (interim: the series is not finished)
+
+**Run:** main now `pkg-main-4c365814` against the head `pkg-sum-845766fd`, with delta 2's runner copied to
+`S/ddu-work/cost-sum-d3/` and pointed at them (main, head, main again alternating, one sample at a time under the
+exclusive measure lock with the link lock and both cargo locks, the clock inside the locks, cores 48–57), plus a turnstile
+lock that holds the builder's own shared-lock jobs back while a sample waits. Rows as delta 2, plus **`k3_sum_d10`
+(reported)**: K1 is a grouped query, so the ungrouped batch add this delta changed is reached by K3, and at `d10` by no
+held row. Bars: 1.12x for K1 `d38` (both modes), 1.05x for every other held row, K3 included.
+
+**Interim, not the series:** the builder paused at its turn budget with the K rows' runs 1 and 2 and C-012's run 1
+complete; runs 3 to 5 (and 6 to 10 for any row over its bar) are left. Samples: [delta3/cost/](delta3/cost/map.md).
+
+| row | main (s) | head (s) | head / main | control main-aa / main | runs | answers equal | bar |
+|---|---|---|---|---|---|---|---|
+| c012_c012p6 | 39.2000 | 39.8200 | 1.016 | 0.997 to 1.003 | 2 |  | held |
+| c012_c012rest | 42.5700 | 42.6600 | 1.002 | 1.000 to 1.000 | 1 |  | held |
+| k1_sum_d10_off | 0.0988 | 0.0898 | 0.909 | 0.919 to 1.028 | 2 | True | held |
+| k1_sum_d10_on | 0.0987 | 0.0977 | 0.991 | 0.916 to 1.094 | 2 | True | held |
+| k1_sum_d38_off | 0.1237 | 0.1286 | 1.040 | 0.947 to 1.028 | 2 | True | held |
+| k1_sum_d38_on | 0.1118 | 0.1305 | 1.167 | 1.017 to 1.029 | 2 | True | ABOVE |
+| k3_sum_d10 | 0.0363 | 0.0361 | 0.995 | 0.867 to 1.037 | 2 | True | held |
+| k3_sum_d38 | 0.0571 | 0.0537 | 0.941 | 1.021 to 1.086 | 2 | True | held |
+| k5_try_sum_d10_grouped | 0.8506 | 0.0983 | 0.116 | 0.962 to 0.992 | 2 | True | reported |
