@@ -5938,8 +5938,8 @@ still open is `isModifiable`.
   N8 cells named in each test id; the plan); Rust `repark-functions` `time_family::tests`.
 - **Bar and cost** — [bar.md](../task/wo/string-hour-minute-second-1/bar.md),
   [cost.md](../task/wo/string-hour-minute-second-1/cost.md).
-- **Rationale** — the owner's rulings "Defaults on all six, merge 1369 on green" and "go with recommendations"
-  (2026-11-19); card
+- **Rationale** — the owner's rulings "Defaults on all six, merge 1369 on green", "go with recommendations" and
+  "accept the three N8 cells, carry on" (2026-11-19; the last accepts the three EQUAL cells lost to N8); card
   [STRING-HOUR-MINUTE-SECOND-1](../task/roadmap/mid-term/cards-2026-11-19/string-hour-minute-second-1-card-2026-11-19.md).
 
 ## 5. Facade drop-in semantics (DECLARED)

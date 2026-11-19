@@ -23,6 +23,8 @@ A, under the shared measure lock; every run printed `repark._native.__file__`. T
   whichever merges second re-runs the 92 D4 cells and records their final verdict, and until then both name them "D4,
   wrong on base and head alike") and the cost gate for short rows (§2.2, applied in [cost.md](cost.md)). It also
   grants a merge on green CI and a clean verifier PASS.
+- **Owner, 2026-11-19, about 15:47 UTC, verbatim: "accept the three N8 cells, carry on".** It accepts the three
+  EQUAL cells lost inside the N8 forecast ("Lost EQUAL: 3" below); they stay with the N8 card.
 
 ## What was built
 
@@ -58,7 +60,7 @@ A, under the shared measure lock; every run printed `repark._native.__file__`. T
 - **Lost EQUAL: 3**, all inside the forecast's N8 residue: `hour` of `date` (`2024-01-01`) on `F.expr` over the
   literal in `a0-la`, `a1-la` and `a1-la-ntz`. Main answered `0`, Spark's answer, because it read a midnight `DATE`;
   the head reads the text as the UTC instant on that door (N8) and answers `16`. The other 12 N8 cells were WRONG on
-  main (`0`) and are WRONG on the head (`19`, `18`, `16`).
+  main (`0`) and are WRONG on the head (`19`, `18`, `16`). The owner accepted the three at about 15:47 UTC (above).
 - **The 216 multi-row cells** (`WHERE`, `GROUP BY`, `ORDER BY` on SQL and on the frame, inputs `I`, `P`, `V`, four
   configurations, the twelve-row table): all 216 RAISE on base (the table holds `lead`, `trail`, `nosec`, `yonly`,
   which arrow's date cast refuses), all 216 EQUAL on the head.
