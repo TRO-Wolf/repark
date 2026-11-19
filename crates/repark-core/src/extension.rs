@@ -1,14 +1,19 @@
 //! Build-time registration seam for SQL-door extensions.
 
+use std::cmp::Ordering;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, PoisonError};
+use std::fmt;
+use std::hash::{Hash, Hasher};
+use std::sync::{Arc, Mutex, OnceLock, PoisonError};
+use std::time::Duration;
 
 use datafusion::catalog::TableProvider;
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::TreeNode;
-use datafusion::logical_expr::Expr;
+use datafusion::common::{DFSchemaRef, internal_datafusion_err};
 use datafusion::logical_expr::planner::TypePlanner;
-use datafusion::optimizer::AnalyzerRule;
+use datafusion::logical_expr::{Expr, Extension, LogicalPlan, UserDefinedLogicalNodeCore};
+use datafusion::optimizer::{Analyzer, AnalyzerRule, OptimizerRule};
 use datafusion::prelude::{DataFrame, SessionConfig, SessionContext};
 
 use crate::session_time_zone::SessionTimeZone;
@@ -17,6 +22,9 @@ pub type FrameViewWrap =
     fn(&str, &DataFrame, &ConfigOptions, LiveOptions) -> Arc<dyn TableProvider>;
 
 type ReadLive = dyn Fn() -> Option<Arc<ConfigOptions>> + Send + Sync;
+
+const LIVE_READ_WAIT: Duration = Duration::from_secs(1);
+const READER_PARSE_NODE: &str = "ReaderParse";
 
 struct LastRead {
     read: Arc<ReadLive>,
@@ -45,6 +53,22 @@ impl LiveOptions {
         }
         Some(Arc::clone(&last))
     }
+
+    #[must_use]
+    pub fn of_session(context: &SessionContext) -> Self {
+        let shared = context.state_ref();
+        let start = Arc::clone(shared.read().config_options());
+        let weak = Arc::downgrade(&shared);
+        Self::new(
+            start,
+            Arc::new(move || {
+                let state = weak.upgrade()?;
+                state
+                    .try_read_recursive_for(LIVE_READ_WAIT)
+                    .map(|guard| Arc::clone(guard.config_options()))
+            }),
+        )
+    }
 }
 
 impl std::fmt::Debug for LiveOptions {
@@ -60,16 +84,40 @@ impl std::fmt::Debug for LiveOptions {
 pub struct FrameViewSeat {
     wrap: FrameViewWrap,
     rule: Arc<dyn AnalyzerRule + Send + Sync>,
+    parse: Arc<dyn OptimizerRule + Send + Sync>,
+    live: Arc<OnceLock<LiveOptions>>,
 }
 
 impl FrameViewSeat {
     #[must_use]
-    pub fn new(wrap: FrameViewWrap, rule: Arc<dyn AnalyzerRule + Send + Sync>) -> Self {
-        Self { wrap, rule }
+    pub fn new(
+        wrap: FrameViewWrap,
+        rule: Arc<dyn AnalyzerRule + Send + Sync>,
+        parse: Arc<dyn OptimizerRule + Send + Sync>,
+    ) -> Self {
+        Self {
+            wrap,
+            rule,
+            parse,
+            live: Arc::new(OnceLock::new()),
+        }
     }
 
     pub(crate) fn rule(&self) -> Arc<dyn AnalyzerRule + Send + Sync> {
         Arc::clone(&self.rule)
+    }
+
+    pub(crate) fn parse_rule(&self) -> Arc<dyn OptimizerRule + Send + Sync> {
+        Arc::clone(&self.parse)
+    }
+
+    pub(crate) fn bind(&self, context: &SessionContext) {
+        let _ = self.live.set(LiveOptions::of_session(context));
+    }
+
+    #[must_use]
+    pub fn live(&self) -> Option<LiveOptions> {
+        self.live.get().cloned()
     }
 
     pub(crate) fn wrap(
@@ -88,6 +136,7 @@ impl std::fmt::Debug for FrameViewSeat {
         formatter
             .debug_struct("FrameViewSeat")
             .field("rule", &self.rule.name())
+            .field("parse", &self.parse.name())
             .finish_non_exhaustive()
     }
 }
@@ -95,6 +144,128 @@ impl std::fmt::Debug for FrameViewSeat {
 #[must_use]
 pub fn with_frame_view_seat(config: SessionConfig, seat: FrameViewSeat) -> SessionConfig {
     config.with_extension(Arc::new(seat))
+}
+
+#[derive(Debug, Clone)]
+pub struct ReaderParse {
+    input: LogicalPlan,
+    copy: LogicalPlan,
+    live: LiveOptions,
+    analyzer: Arc<Analyzer>,
+}
+
+impl ReaderParse {
+    #[must_use]
+    pub fn new(plan: LogicalPlan, live: LiveOptions, analyzer: Arc<Analyzer>) -> Self {
+        Self {
+            input: plan.clone(),
+            copy: plan,
+            live,
+            analyzer,
+        }
+    }
+
+    #[must_use]
+    pub fn of(plan: &LogicalPlan) -> Option<&Self> {
+        match plan {
+            LogicalPlan::Extension(extension) => extension.node.as_any().downcast_ref(),
+            _ => None,
+        }
+    }
+
+    #[must_use]
+    pub fn input(&self) -> &LogicalPlan {
+        &self.input
+    }
+
+    #[must_use]
+    pub fn copy(&self) -> &LogicalPlan {
+        &self.copy
+    }
+
+    #[must_use]
+    pub fn live(&self) -> &LiveOptions {
+        &self.live
+    }
+
+    #[must_use]
+    pub fn analyzer(&self) -> &Analyzer {
+        &self.analyzer
+    }
+
+    #[must_use]
+    pub fn into_plan(self) -> LogicalPlan {
+        LogicalPlan::Extension(Extension {
+            node: Arc::new(self),
+        })
+    }
+}
+
+impl PartialEq for ReaderParse {
+    fn eq(&self, other: &Self) -> bool {
+        self.input == other.input
+    }
+}
+
+impl Eq for ReaderParse {}
+
+impl Hash for ReaderParse {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.input.hash(state);
+    }
+}
+
+impl PartialOrd for ReaderParse {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.input.partial_cmp(&other.input)
+    }
+}
+
+impl UserDefinedLogicalNodeCore for ReaderParse {
+    fn name(&self) -> &str {
+        READER_PARSE_NODE
+    }
+
+    fn inputs(&self) -> Vec<&LogicalPlan> {
+        vec![&self.input]
+    }
+
+    fn schema(&self) -> &DFSchemaRef {
+        self.input.schema()
+    }
+
+    fn expressions(&self) -> Vec<Expr> {
+        Vec::new()
+    }
+
+    fn fmt_for_explain(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "{READER_PARSE_NODE}")
+    }
+
+    fn with_exprs_and_inputs(
+        &self,
+        _exprs: Vec<Expr>,
+        mut inputs: Vec<LogicalPlan>,
+    ) -> datafusion::error::Result<Self> {
+        let input = inputs
+            .pop()
+            .ok_or_else(|| internal_datafusion_err!("{READER_PARSE_NODE} takes one input"))?;
+        Ok(Self {
+            input,
+            copy: self.copy.clone(),
+            live: self.live.clone(),
+            analyzer: Arc::clone(&self.analyzer),
+        })
+    }
+}
+
+#[must_use]
+pub fn reader_parse(frame: &DataFrame) -> Option<DataFrame> {
+    let (state, plan) = frame.clone().into_parts();
+    let live = state.config().get_extension::<FrameViewSeat>()?.live()?;
+    let analyzer = Arc::new(state.analyzer().clone());
+    let node = ReaderParse::new(plan, live, analyzer);
+    Some(DataFrame::new(state, node.into_plan()))
 }
 
 /// Values already resolved by `build()` and passed to the configure hook.

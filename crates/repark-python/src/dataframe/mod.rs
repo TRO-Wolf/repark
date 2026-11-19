@@ -351,6 +351,16 @@ impl PyDataFrame {
         })
     }
 
+    #[pyo3(name = "_reader_parse")]
+    #[allow(clippy::missing_errors_doc)]
+    pub fn reader_parse(&self) -> PyResult<Option<Self>> {
+        fenced!("PyDataFrame._reader_parse", {
+            let need = clone_need_bytes(self.depths.plan, self.depths.expression);
+            let wrapped = grown_sync(need, || repark_core::extension::reader_parse(self.inner()));
+            Ok(wrapped.map(|df| self.derived(df, grown_child(&self.depths, 1))))
+        })
+    }
+
     #[allow(clippy::missing_errors_doc)]
     pub fn limit(&self, n: usize) -> PyResult<Self> {
         fenced!("PyDataFrame.limit", {

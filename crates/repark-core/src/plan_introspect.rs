@@ -441,10 +441,13 @@ pub(crate) fn write_plan_leaf<S: BuildHasher>(
                 write_exprs(row, ctx, hash);
             }
         }
-        other => {
-            hash.write(b"Opaque");
-            write_debug(hash, other);
-        }
+        other => match crate::extension::ReaderParse::of(other) {
+            Some(parse) => write_plan(parse.input(), ctx, hash),
+            None => {
+                hash.write(b"Opaque");
+                write_debug(hash, other);
+            }
+        },
     }
 }
 
@@ -537,6 +540,23 @@ mod tests {
         let projected =
             semantic_hash(&state, &wrapped, &HashMap::new()).expect("test plan must hash");
         assert_eq!(bare, projected);
+    }
+
+    #[tokio::test]
+    async fn a_reader_parse_node_hashes_as_its_input() {
+        let context = SessionContext::new();
+        let frame = context
+            .sql("SELECT 1 AS one, 2 AS two")
+            .await
+            .expect("test sql must plan");
+        let plan = frame.logical_plan().clone();
+        let state = context.state();
+        let bare = semantic_hash(&state, &plan, &HashMap::new()).expect("test plan must hash");
+        let analyzer = Arc::new(state.analyzer().clone());
+        let live = crate::extension::LiveOptions::default();
+        let marked = crate::extension::ReaderParse::new(plan, live, analyzer).into_plan();
+        let hashed = semantic_hash(&state, &marked, &HashMap::new()).expect("test plan must hash");
+        assert_eq!(bare, hashed);
     }
 
     #[tokio::test]

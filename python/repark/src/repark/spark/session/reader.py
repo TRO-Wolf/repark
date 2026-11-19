@@ -31,6 +31,11 @@ for _name in dir(_session_funcs):
 del _name, _session_funcs
 
 
+def _reader_parse(frame: DataFrame) -> DataFrame:
+    wrapped = frame._inner._reader_parse()
+    return frame if wrapped is None else frame._spawn_preserving_identity(wrapped)
+
+
 class DataFrameReader:
     """PySpark ``DataFrameReader``: parquet, csv, json, text, excel, table, format/load.
 
@@ -507,11 +512,13 @@ class DataFrameReader:
         if naive and self._schema_has_session_timestamp():
             native_options["utf8_columns"] = ",".join(naive)
             frame = self._session.read_csv(path_str, native_options)
-        return self._apply_reader_schema_semantics(
-            frame,
-            infer_schema=self._option_bool("inferschema", default=False),
-            header=self._option_bool("header", default=False),
-            path=path_str,
+        return _reader_parse(
+            self._apply_reader_schema_semantics(
+                frame,
+                infer_schema=self._option_bool("inferschema", default=False),
+                header=self._option_bool("header", default=False),
+                path=path_str,
+            )
         )
 
     def _schema_has_session_timestamp(self) -> bool:
@@ -552,7 +559,9 @@ class DataFrameReader:
                 "json.load + spark.createDataFrame(payload['Orders']) (dict key-union path)."
             )
         # JSON always has field names; inferSchema is not a Spark JSON option in the same way.
-        return self._apply_reader_schema_semantics(frame, infer_schema=True, header=True)
+        return _reader_parse(
+            self._apply_reader_schema_semantics(frame, infer_schema=True, header=True)
+        )
 
     def _load_excel(self, path: str | Path) -> DataFrame:
         """Materialize one Excel sheet via the pure-Rust calamine reader."""

@@ -8,15 +8,24 @@ as Spark's `writeTo` re-analyses) and inlines a `FrameSettings` marker; the anal
 unwraps it when the planning state's settings match, else closes it as a `TableScan` over the frame analysed under its
 own settings, planned by part 1's overlay; `opened` and `definition_plan` read through a closed frame, and the SQL
 door's bare `ReplanningTempView` scan and a frame that only scans (columns over a scan, whose source reads the
-reader's settings at scan time, as Spark's file scans do) keep `into_view`, as does a lineage reaching a JSON or CSV
-scan (delta 1, `reader_lineage`, which walks through view and frame providers; its markers are unwrapped). Part 1's
-inlined-frame fallback stays for that lineage only. Delta 2: outside a SQL view body (`view_body`, set around
+reader's settings at scan time, as Spark's file scans do) keep `into_view`. A lineage reaching a JSON or CSV
+scan no longer keeps `into_view` (delta 1's `reader_lineage` and part 1's inlined-frame fallback are removed by
+TEMP-VIEW-FRAME-READER-PARSE-1, below). Delta 2: outside a SQL view body (`view_body`, set around
 `ReplanningTempView`'s re-planning) a frame view decides at inline time against the session's live options
 (`LiveOptions`): its own plan when they match, the closed `TableScan` when they differ, so a walker that reads the
 unanalysed plan (the store-assignment check's `negated_null_store::column_origin`) sees what `into_view` gave; inside
 a body, or with no live reader, it inlines the marker. Delta 3 (the verifier's F1): the live read waits a bounded time
 for the session state's lock and, past it, answers the options it last read (from the view's creation on), so another
 thread's `spark.conf.set` never makes a frame view inline the marker outside a body.
+
+TEMP-VIEW-FRAME-READER-PARSE-1 (2026-11-19): the facade wraps each JSON and CSV reader frame in
+`repark_core::extension::ReaderParse` (its parse plan as its input and as an unanalysed copy, the session's one
+`LiveOptions` handle, the frame's analyzer). Analysis leaves it in place. `ReaderParseRule` (`repark_reader_parse`)
+is the optimizer's first rule, put in through the seat; it walks subqueries itself and compares the session's live
+options with those the plan is optimized under: the same, the node becomes its analysed input; different, it
+becomes a closed `FrameView` over its copy analysed by the node's analyzer under the live settings (`parse_closed`,
+`closed_under`). So the parse runs under the session that reads, as Spark's file scan does, and every expression
+above it keeps the frame's settings, with or without a view.
 
 ## Contents
 
@@ -27,12 +36,15 @@ thread's `spark.conf.set` never makes a frame view inline the marker outside a b
   `definition_plan` and `get_logical_plan` read through a closed frame to its plan, and its schema carries no
   attribute id; a frame view answers `temp_view_column_comments` and `renamed_temp_view` as `into_view` does; the
   SQL door's registration stays a bare scan; materialisation takes the frame's options and a fresh start time
-  (pin f); a frame that only scans keeps `into_view`, one that computes is marked; a JSON frame that computes, a frame
-  over its view and a join of it with a marked frame keep `into_view`, the last with its marker unwrapped (delta 1); a
+  (pin f); a frame that only scans keeps `into_view`, one that computes is marked; a JSON frame that computes and a
+  frame over its view are marked like any other (READER-PARSE-1); a
   reader under the frame's settings inlines the frame's own plan and a view body the marker, and the negated-null
   store check refuses a write from a frame view on both paths (delta 2); with the state's write lock held, a frame view
   inlines its own plan or the closed scan, never the marker, and a live read waits for a writer and decides under the
-  writer's setting (delta 3).
+  writer's setting (delta 3). READER-PARSE-1: the reader-parse rule is the optimizer's first; under matching settings
+  a reader parse optimizes to its analysed input's plan and answers as it; under differing settings it closes over its
+  copy and answers as a frame parsed under the live zone; inside an `IN` and a scalar subquery it is decided under
+  both.
 
 ## Pointers
 

@@ -1,0 +1,564 @@
+{
+ "A/eb_mul/off_on/csv_s": {
+  "rows": [
+   "1|2000000000",
+   "2|-294967296"
+  ],
+  "types": [
+   "int",
+   "int"
+  ]
+ },
+ "A/eb_mul/off_on/json_s": {
+  "rows": [
+   "1|2000000000",
+   "2|-294967296"
+  ],
+  "types": [
+   "int",
+   "int"
+  ]
+ },
+ "A/eb_mul/on_off/csv_s": {
+  "error": "ARITHMETIC_OVERFLOW",
+  "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_multiply' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003 =="
+ },
+ "A/eb_mul/on_off/json_s": {
+  "error": "ARITHMETIC_OVERFLOW",
+  "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_multiply' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 22003 =="
+ },
+ "E5/cj/la_utc/csv_i": {
+  "rows": [
+   "1|2024-01-01 03:00:00|19|19",
+   "2|2024-06-01 23:30:00|16|16"
+  ],
+  "types": [
+   "int",
+   "timestamp",
+   "int",
+   "int"
+  ]
+ },
+ "E5/cj/la_utc/json_s": {
+  "rows": [
+   "1|2024-01-01 03:00:00|19|19",
+   "2|2024-06-01 23:30:00|16|16"
+  ],
+  "types": [
+   "int",
+   "timestamp",
+   "int",
+   "int"
+  ]
+ },
+ "E5/cj/utc_la/csv_i": {
+  "rows": [
+   "1|2024-01-01 11:00:00|3|11",
+   "2|2024-06-02 06:30:00|23|6"
+  ],
+  "types": [
+   "int",
+   "timestamp",
+   "int",
+   "int"
+  ]
+ },
+ "E5/cj/utc_la/json_s": {
+  "rows": [
+   "1|2024-01-01 11:00:00|3|11",
+   "2|2024-06-02 06:30:00|23|6"
+  ],
+  "types": [
+   "int",
+   "timestamp",
+   "int",
+   "int"
+  ]
+ },
+ "E5/cross/la_utc/csv_i": {
+  "rows": [
+   "1|2024-01-01 03:00:00|19",
+   "2|2024-06-01 23:30:00|16"
+  ],
+  "types": [
+   "int",
+   "timestamp",
+   "int"
+  ]
+ },
+ "E5/cross/la_utc/json_s": {
+  "rows": [
+   "1|2024-01-01 03:00:00|19",
+   "2|2024-06-01 23:30:00|16"
+  ],
+  "types": [
+   "int",
+   "timestamp",
+   "int"
+  ]
+ },
+ "E5/cross/utc_la/csv_i": {
+  "rows": [
+   "1|2024-01-01 11:00:00|11",
+   "2|2024-06-02 06:30:00|6"
+  ],
+  "types": [
+   "int",
+   "timestamp",
+   "int"
+  ]
+ },
+ "E5/cross/utc_la/json_s": {
+  "rows": [
+   "1|2024-01-01 11:00:00|11",
+   "2|2024-06-02 06:30:00|6"
+  ],
+  "types": [
+   "int",
+   "timestamp",
+   "int"
+  ]
+ },
+ "G3/headerless_csv": {
+  "columns": [
+   "_c0",
+   "_c1"
+  ],
+  "rows": [
+   "1|2024-01-01 03:00:00",
+   "2|2024-06-01 23:30:00"
+  ],
+  "types": [
+   "string",
+   "string"
+  ],
+  "view": {
+   "rows": [
+    "1|2024-01-01 03:00:00",
+    "2|2024-06-01 23:30:00"
+   ],
+   "types": [
+    "string",
+    "string"
+   ]
+  }
+ },
+ "H/cache_after/la_utc/csv_i": {
+  "rows": [
+   "1|2023-12-31 19:00:00|19|1704078000",
+   "2|2024-06-01 16:30:00|16|1717284600"
+  ],
+  "types": [
+   "int",
+   "string",
+   "int",
+   "string"
+  ]
+ },
+ "H/cache_after/la_utc/json_s": {
+  "rows": [
+   "1|2023-12-31 19:00:00|19|1704078000",
+   "2|2024-06-01 16:30:00|16|1717284600"
+  ],
+  "types": [
+   "int",
+   "string",
+   "int",
+   "string"
+  ]
+ },
+ "H/cache_after/utc_la/csv_i": {
+  "rows": [
+   "1|2024-01-01 11:00:00|11|1704106800",
+   "2|2024-06-02 06:30:00|6|1717309800"
+  ],
+  "types": [
+   "int",
+   "string",
+   "int",
+   "string"
+  ]
+ },
+ "H/cache_after/utc_la/json_s": {
+  "rows": [
+   "1|2024-01-01 11:00:00|11|1704106800",
+   "2|2024-06-02 06:30:00|6|1717309800"
+  ],
+  "types": [
+   "int",
+   "string",
+   "int",
+   "string"
+  ]
+ },
+ "H/cjdirect/la_utc/csv_i": {
+  "rows": [
+   "1|2023-12-31 19:00:00|19|1704078000|19",
+   "2|2024-06-01 16:30:00|16|1717284600|16"
+  ],
+  "types": [
+   "int",
+   "string",
+   "int",
+   "string",
+   "int"
+  ]
+ },
+ "H/cjdirect/la_utc/json_s": {
+  "rows": [
+   "1|2023-12-31 19:00:00|19|1704078000|19",
+   "2|2024-06-01 16:30:00|16|1717284600|16"
+  ],
+  "types": [
+   "int",
+   "string",
+   "int",
+   "string",
+   "int"
+  ]
+ },
+ "H/cjdirect/utc_la/csv_i": {
+  "rows": [
+   "1|2024-01-01 11:00:00|11|1704106800|3",
+   "2|2024-06-02 06:30:00|6|1717309800|23"
+  ],
+  "types": [
+   "int",
+   "string",
+   "int",
+   "string",
+   "int"
+  ]
+ },
+ "H/cjdirect/utc_la/json_s": {
+  "rows": [
+   "1|2024-01-01 11:00:00|11|1704106800|3",
+   "2|2024-06-02 06:30:00|6|1717309800|23"
+  ],
+  "types": [
+   "int",
+   "string",
+   "int",
+   "string",
+   "int"
+  ]
+ },
+ "H/direct/la_utc/csv_i": {
+  "rows": [
+   "1|2023-12-31 19:00:00|19|1704078000",
+   "2|2024-06-01 16:30:00|16|1717284600"
+  ],
+  "types": [
+   "int",
+   "string",
+   "int",
+   "string"
+  ]
+ },
+ "H/direct/la_utc/json_s": {
+  "rows": [
+   "1|2023-12-31 19:00:00|19|1704078000",
+   "2|2024-06-01 16:30:00|16|1717284600"
+  ],
+  "types": [
+   "int",
+   "string",
+   "int",
+   "string"
+  ]
+ },
+ "H/direct/utc_la/csv_i": {
+  "rows": [
+   "1|2024-01-01 11:00:00|11|1704106800",
+   "2|2024-06-02 06:30:00|6|1717309800"
+  ],
+  "types": [
+   "int",
+   "string",
+   "int",
+   "string"
+  ]
+ },
+ "H/direct/utc_la/json_s": {
+  "rows": [
+   "1|2024-01-01 11:00:00|11|1704106800",
+   "2|2024-06-02 06:30:00|6|1717309800"
+  ],
+  "types": [
+   "int",
+   "string",
+   "int",
+   "string"
+  ]
+ },
+ "H/pathwrite/la_utc/csv_i": {
+  "rows": [
+   "1|19|1704078000",
+   "2|16|1717284600"
+  ],
+  "types": [
+   "int",
+   "int",
+   "string"
+  ]
+ },
+ "H/pathwrite/la_utc/json_s": {
+  "rows": [
+   "1|19|1704078000",
+   "2|16|1717284600"
+  ],
+  "types": [
+   "int",
+   "int",
+   "string"
+  ]
+ },
+ "H/pathwrite/utc_la/csv_i": {
+  "rows": [
+   "1|11|1704106800",
+   "2|6|1717309800"
+  ],
+  "types": [
+   "int",
+   "int",
+   "string"
+  ]
+ },
+ "H/pathwrite/utc_la/json_s": {
+  "rows": [
+   "1|11|1704106800",
+   "2|6|1717309800"
+  ],
+  "types": [
+   "int",
+   "int",
+   "string"
+  ]
+ },
+ "N/la_utc_tk/csv_i/ff": {
+  "rows": [
+   "1|2023-12-31 18:00:00|10|18|3|1704045600",
+   "2|2024-06-01 14:30:00|7|14|23|1717252200"
+  ],
+  "types": [
+   "int",
+   "timestamp",
+   "int",
+   "int",
+   "int",
+   "bigint"
+  ]
+ },
+ "N/la_utc_tk/json_s/ff": {
+  "rows": [
+   "1|2023-12-31 18:00:00|10|18|3|1704045600",
+   "2|2024-06-01 14:30:00|7|14|23|1717252200"
+  ],
+  "types": [
+   "int",
+   "timestamp",
+   "int",
+   "int",
+   "int",
+   "bigint"
+  ]
+ },
+ "SQ/differing/la_utc/csv_i": {
+  "rows": [
+   "2|1717284600|23"
+  ],
+  "types": [
+   "int",
+   "bigint",
+   "int"
+  ]
+ },
+ "SQ/differing/la_utc/json_s": {
+  "rows": [
+   "2|1717284600|23"
+  ],
+  "types": [
+   "int",
+   "bigint",
+   "int"
+  ]
+ },
+ "SQ/differing/utc_la/csv_i": {
+  "rows": [
+   "2|1717309800|23"
+  ],
+  "types": [
+   "int",
+   "bigint",
+   "int"
+  ]
+ },
+ "SQ/differing/utc_la/json_s": {
+  "rows": [
+   "2|1717309800|23"
+  ],
+  "types": [
+   "int",
+   "bigint",
+   "int"
+  ]
+ },
+ "SQ/matching/la_utc/csv_i": {
+  "rows": [
+   "2|1717309800|23"
+  ],
+  "types": [
+   "int",
+   "bigint",
+   "int"
+  ]
+ },
+ "SQ/matching/la_utc/json_s": {
+  "rows": [
+   "2|1717309800|23"
+  ],
+  "types": [
+   "int",
+   "bigint",
+   "int"
+  ]
+ },
+ "SQ/matching/utc_la/csv_i": {
+  "rows": [
+   "2|1717284600|23"
+  ],
+  "types": [
+   "int",
+   "bigint",
+   "int"
+  ]
+ },
+ "SQ/matching/utc_la/json_s": {
+  "rows": [
+   "2|1717284600|23"
+  ],
+  "types": [
+   "int",
+   "bigint",
+   "int"
+  ]
+ },
+ "SS/csv_i/filters": {
+  "value": true
+ },
+ "SS/csv_i/other_filter": {
+  "value": false
+ },
+ "SS/csv_i/star": {
+  "value": true
+ },
+ "SS/csv_i/two_reads": {
+  "value": true
+ },
+ "SS/csv_i/two_reads_hash": {
+  "value": true
+ },
+ "SS/json_s/filters": {
+  "value": true
+ },
+ "SS/json_s/other_filter": {
+  "value": false
+ },
+ "SS/json_s/star": {
+  "value": true
+ },
+ "SS/json_s/two_reads": {
+  "value": true
+ },
+ "SS/json_s/two_reads_hash": {
+  "value": true
+ },
+ "Z/eb_hour/la_utc/csv_i": {
+  "rows": [
+   "1|19|1704078000",
+   "2|16|1717284600"
+  ],
+  "types": [
+   "int",
+   "int",
+   "bigint"
+  ]
+ },
+ "Z/eb_hour/la_utc/json_s": {
+  "rows": [
+   "1|19|1704078000",
+   "2|16|1717284600"
+  ],
+  "types": [
+   "int",
+   "int",
+   "bigint"
+  ]
+ },
+ "Z/eb_hour/utc_la/csv_i": {
+  "rows": [
+   "1|11|1704106800",
+   "2|6|1717309800"
+  ],
+  "types": [
+   "int",
+   "int",
+   "bigint"
+  ]
+ },
+ "Z/eb_hour/utc_la/json_s": {
+  "rows": [
+   "1|11|1704106800",
+   "2|6|1717309800"
+  ],
+  "types": [
+   "int",
+   "int",
+   "bigint"
+  ]
+ },
+ "Z/sql_view/la_utc/csv_i": {
+  "rows": [
+   "1|19|1704078000",
+   "2|16|1717284600"
+  ],
+  "types": [
+   "int",
+   "int",
+   "bigint"
+  ]
+ },
+ "Z/sql_view/la_utc/json_s": {
+  "rows": [
+   "1|19|1704078000",
+   "2|16|1717284600"
+  ],
+  "types": [
+   "int",
+   "int",
+   "bigint"
+  ]
+ },
+ "Z/sql_view/utc_la/csv_i": {
+  "rows": [
+   "1|11|1704106800",
+   "2|6|1717309800"
+  ],
+  "types": [
+   "int",
+   "int",
+   "bigint"
+  ]
+ },
+ "Z/sql_view/utc_la/json_s": {
+  "rows": [
+   "1|11|1704106800",
+   "2|6|1717309800"
+  ],
+  "types": [
+   "int",
+   "int",
+   "bigint"
+  ]
+ }
+}
