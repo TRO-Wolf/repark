@@ -18,13 +18,16 @@ mirror (harness item H) and `EXPECTED_SYMBOL_HASHES` (item J).
 
 ## 2. Files
 
-- `scripts/check_map_size.py`: the exact-match branch in `check_map` is gone; docstring rule 2 and the
-  growth message restated.
+- `scripts/check_map_size.py`: the exact-match branch in `check_map` is gone; docstring rule 2 is
+  deleted (comments are shed, never reworded) and the growth message drops "exact".
 - `python/repark-parity/tests/test_map_governance_1.py`: shrink without a row edit is green; growth in
   bytes alone and in lines alone each red; the shrink and retire tests now expect green before
   `--update-baselines`.
-- Prose: `docs/maps-policy.md`, `AGENTS.md`, `DEVELOPMENT.md`, `Makefile` (the target's help text),
-  `scripts/map.md`, `python/repark-parity/tests/map.md`.
+- Prose: `docs/maps-policy.md`, `AGENTS.md`, `DEVELOPMENT.md`, `scripts/map.md`,
+  `python/repark-parity/tests/map.md`.
+- Left for the owner: the `Makefile` help text of `check-map-size` and the `check_map_size.py`
+  docstring summary still say "exact-baseline"; Anthropic models may not reword comments, so the
+  owner decides whether a person rewords them.
 - `scripts/ledger_lifecycle.py`: unchanged; a row moved by a link rewrite stays at or above its map.
 
 ## 3. Proof (row for `docs/map.md` untouched, `(373, 31128)`; map restored after each step)

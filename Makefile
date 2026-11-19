@@ -427,7 +427,7 @@ check-map-sync: ## map.md CONTENT guard: every relative link in every map resolv
 	python3 scripts/sync_map_md.py --check
 
 .PHONY: check-map-size
-check-map-size: ## map.md size ceilings with ceiling-row exceptions (growth fails, shrinkage passes); SSOT scripts/check_map_size.py
+check-map-size: ## map.md size ceilings with exact-baseline exceptions that ratchet down only; SSOT scripts/check_map_size.py
 	python3 scripts/check_map_size.py
 
 # ------------------------------------------------------------------------------------------------

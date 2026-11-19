@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-"""Enforce a size ceiling on every tracked `map.md`, with baseline-ceiling exceptions.
+"""Enforce a size ceiling on every tracked `map.md`, with exact-baseline exceptions.
 
 SSOT for map size (MAP-GOVERNANCE-1). Prose points here and never restates the numbers.
 
 Rules over every tracked file named `map.md`:
 1. A map stays within DEFAULT_LINES lines and DEFAULT_BYTES bytes; crossing either fails.
    Blank lines count.
-2. EXCEPTIONS records the (lines, bytes) ceiling of each map that was over a default ceiling
-   when the ratchet armed. Growth past the row in either measure fails; shrinkage passes, and
-   rows are lowered or deleted only by a periodic `--update-baselines` sweep.
 3. EXEMPT and EXEMPT_PATTERNS list the ledger-bin and archive-month maps the lifecycle script
    rewrites on every `move` and `archive`; they are inventories outside the ratchet, each with
    its reason. A pattern's `*` matches one path segment.
