@@ -765,7 +765,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `[count:UInt64, sum]`, and a partial past Spark's sum type ships NULL, as Spark's does
   (closes BACKLOG `AVG-DEC-SUMWRAP-1` on the Spark door). Unit tests drive the averager, the carry, both
   accumulators and the state round trip; the merge test asserts every
-  group. `safe_rows`, `add_batch`, `sub_batch` are `pub(crate)` for SUM-DEC-I128WRAP-1.
+  group.
 - `groups_null_state.rs` — **PERF-AGG-AVG-1 (2026-09-05):** the groups accumulator's
   per-group validity tracker, split out of `avg_groups.rs` so neither file passes the
   1000-line ceiling. It re-implements DataFusion's

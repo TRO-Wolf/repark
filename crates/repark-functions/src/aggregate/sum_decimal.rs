@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use arrow::array::{Array, ArrayRef, AsArray, BooleanArray, Int64Array, PrimitiveArray};
 use arrow::buffer::{NullBuffer, ScalarBuffer};
-use arrow::compute::{max, min};
+use arrow::compute::sum_checked;
 use arrow::datatypes::{DataType, Decimal128Type, Int64Type};
 use datafusion::common::utils::SingleRowListArrayBuilder;
 use datafusion::common::{DataFusionError, HashSet, Result, ScalarValue, exec_err};
 use datafusion::logical_expr::{Accumulator, EmitTo, GroupsAccumulator};
 
-use crate::avg_decimal::{WideDecimal, add_batch, safe_rows, sub_batch};
+use crate::avg_decimal::WideDecimal;
 use crate::avg_groups::{check_emitted, filtered_nulls};
 use crate::decimal_spark::numeric_out_of_range_error;
 use crate::groups_null_state::GroupNullState;
@@ -109,15 +109,38 @@ fn unwrapped(wraps: &[i64]) -> Result<()> {
     Ok(())
 }
 
-fn bounded_rows(values: &PrimitiveArray<Decimal128Type>, rows: usize, type_rows: usize) -> usize {
-    if rows <= type_rows {
-        return type_rows;
+fn exact_total(values: &PrimitiveArray<Decimal128Type>) -> Option<i128> {
+    if values.null_count() > 0 {
+        return sum_checked(values).ok().flatten();
     }
-    let (Some(low), Some(high)) = (min(values), max(values)) else {
-        return type_rows;
-    };
-    let magnitude = low.unsigned_abs().max(high.unsigned_abs()).max(1);
-    usize::try_from(i128::MAX.cast_unsigned() / magnitude).unwrap_or(usize::MAX)
+    let mut lanes = [0_i128; 4];
+    let mut chunks = values.values().chunks_exact(4);
+    for chunk in &mut chunks {
+        for (lane, value) in lanes.iter_mut().zip(chunk) {
+            *lane = lane.checked_add(*value)?;
+        }
+    }
+    chunks
+        .remainder()
+        .iter()
+        .chain(&lanes)
+        .try_fold(0_i128, |total, value| total.checked_add(*value))
+}
+
+fn fold_batch(
+    values: &PrimitiveArray<Decimal128Type>,
+    low: &mut i128,
+    wraps: &mut i64,
+    step: impl Fn(i128, i128, &mut i64) -> i128,
+) {
+    match exact_total(values) {
+        Some(total) => *low = step(*low, total, wraps),
+        None => {
+            for value in values.iter().flatten() {
+                *low = step(*low, value, wraps);
+            }
+        }
+    }
 }
 
 fn decimals<'a>(values: &'a [ArrayRef], what: &str) -> Result<&'a PrimitiveArray<Decimal128Type>> {
@@ -147,7 +170,6 @@ pub(crate) struct DecimalSum {
     low: i128,
     wraps: i64,
     rows: u64,
-    type_rows: usize,
     check: SumCheck,
     place: Place,
     carrier: Carrier,
@@ -159,7 +181,6 @@ impl DecimalSum {
             low: 0,
             wraps: 0,
             rows: 0,
-            type_rows: safe_rows::<i128>(input_precision),
             check,
             place,
             carrier: Carrier::of(input_precision),
@@ -172,8 +193,7 @@ impl Accumulator for DecimalSum {
         let values = decimals(values, "update")?;
         let rows = values.len() - values.null_count();
         self.rows += rows as u64;
-        let safe = bounded_rows(values, rows, self.type_rows);
-        add_batch(values, safe, &mut self.low, &mut self.wraps);
+        fold_batch(values, &mut self.low, &mut self.wraps, i128::add_carry);
         Ok(())
     }
 
@@ -181,8 +201,7 @@ impl Accumulator for DecimalSum {
         let values = decimals(values, "retract")?;
         let rows = values.len() - values.null_count();
         self.rows = self.rows.saturating_sub(rows as u64);
-        let safe = bounded_rows(values, rows, self.type_rows);
-        sub_batch(values, safe, &mut self.low, &mut self.wraps);
+        fold_batch(values, &mut self.low, &mut self.wraps, i128::sub_carry);
         Ok(())
     }
 

@@ -29,6 +29,8 @@ use crate::avg_groups;
 mod spark_sum;
 mod sum_decimal;
 #[cfg(test)]
+mod sum_precision_tests;
+#[cfg(test)]
 mod sum_tests;
 
 pub use crate::grouping::{grouping_id_udaf, grouping_udaf};

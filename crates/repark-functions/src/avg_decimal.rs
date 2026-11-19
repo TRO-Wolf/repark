@@ -300,7 +300,7 @@ impl SparkDecimalAverage {
     }
 }
 
-pub(crate) fn safe_rows<N: WideDecimal>(precision: u8) -> usize {
+fn safe_rows<N: WideDecimal>(precision: u8) -> usize {
     let Ok(limit) = power_of_ten(precision) else {
         return 0;
     };
@@ -316,12 +316,8 @@ pub(crate) fn safe_rows<N: WideDecimal>(precision: u8) -> usize {
         .unwrap_or(usize::MAX)
 }
 
-pub(crate) fn add_batch<T>(
-    values: &PrimitiveArray<T>,
-    safe_rows: usize,
-    low: &mut T::Native,
-    wraps: &mut i64,
-) where
+fn add_batch<T>(values: &PrimitiveArray<T>, safe_rows: usize, low: &mut T::Native, wraps: &mut i64)
+where
     T: ArrowNumericType,
     T::Native: WideDecimal,
 {
@@ -340,12 +336,8 @@ pub(crate) fn add_batch<T>(
     }
 }
 
-pub(crate) fn sub_batch<T>(
-    values: &PrimitiveArray<T>,
-    safe_rows: usize,
-    low: &mut T::Native,
-    wraps: &mut i64,
-) where
+fn sub_batch<T>(values: &PrimitiveArray<T>, safe_rows: usize, low: &mut T::Native, wraps: &mut i64)
+where
     T: ArrowNumericType,
     T::Native: WideDecimal,
 {
