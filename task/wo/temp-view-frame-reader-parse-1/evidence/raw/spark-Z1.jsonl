@@ -1,0 +1,448 @@
+{"tag": "Z/ansi_true/utc_la/json_s/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/j", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/eb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/jb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/ob_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/osb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/sb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/eb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/jb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/ob_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/osb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/sb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/eb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/jb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/ob_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/osb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/sb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/eb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/jb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/ob_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/osb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/sb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/eb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/jb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/ob_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/osb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_s/sb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/j", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/eb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/jb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/ob_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/osb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/sb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/eb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/jb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/ob_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/osb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/sb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/eb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/jb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/ob_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/osb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/sb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/eb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/jb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/ob_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/osb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/sb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/eb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/jb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/ob_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/osb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_f/sb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/j", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/eb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/jb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/ob_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/osb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/sb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/eb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/jb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/ob_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/osb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/sb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/eb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/jb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/ob_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/osb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/sb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/eb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/jb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/ob_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/osb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/sb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/eb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/jb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/ob_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/osb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_m/sb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/j", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/eb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/jb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/ob_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/osb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/sb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/eb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["bigint", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/jb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["bigint", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/ob_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["bigint", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/osb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["bigint", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/sb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["bigint", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/eb_fmt", "rows": ["(1, '2024-01-01 03:00', 1704106800)", "(2, '2024-01-01 12:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/jb_fmt", "rows": ["(1, '2024-01-01 03:00', 1704106800)", "(2, '2024-01-01 12:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/ob_fmt", "rows": ["(1, '2024-01-01 03:00', 1704106800)", "(2, '2024-01-01 12:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/osb_fmt", "rows": ["(1, '2024-01-01 03:00', 1704106800)", "(2, '2024-01-01 12:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/sb_fmt", "rows": ["(1, '2024-01-01 03:00', 1704106800)", "(2, '2024-01-01 12:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/eb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/jb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/ob_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/osb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_i/sb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/j", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/eb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704078000)", "(2, datetime.date(2024, 1, 1), 1704110400)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/jb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704078000)", "(2, datetime.date(2024, 1, 1), 1704110400)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/ob_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704078000)", "(2, datetime.date(2024, 1, 1), 1704110400)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/osb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704078000)", "(2, datetime.date(2024, 1, 1), 1704110400)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/sb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704078000)", "(2, datetime.date(2024, 1, 1), 1704110400)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/eb_fmt", "rows": ["(1, '2024-01-01 03:00', 1704078000)", "(2, '2024-01-01 12:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/jb_fmt", "rows": ["(1, '2024-01-01 03:00', 1704078000)", "(2, '2024-01-01 12:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/ob_fmt", "rows": ["(1, '2024-01-01 03:00', 1704078000)", "(2, '2024-01-01 12:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/osb_fmt", "rows": ["(1, '2024-01-01 03:00', 1704078000)", "(2, '2024-01-01 12:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/sb_fmt", "rows": ["(1, '2024-01-01 03:00', 1704078000)", "(2, '2024-01-01 12:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/eb_tz", "rows": ["(1, 'America/Los_Angeles', 1704078000)", "(2, 'America/Los_Angeles', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/jb_tz", "rows": ["(1, 'America/Los_Angeles', 1704078000)", "(2, 'America/Los_Angeles', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/ob_tz", "rows": ["(1, 'America/Los_Angeles', 1704078000)", "(2, 'America/Los_Angeles', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/osb_tz", "rows": ["(1, 'America/Los_Angeles', 1704078000)", "(2, 'America/Los_Angeles', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/json_tz/sb_tz", "rows": ["(1, 'America/Los_Angeles', 1704078000)", "(2, 'America/Los_Angeles', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/j", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/eb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/jb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/ob_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/osb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/sb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/eb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/jb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/ob_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/osb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/sb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/eb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/jb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/ob_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/osb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/sb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/eb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/jb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/ob_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/osb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/sb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/eb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/jb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/ob_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/osb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_s/sb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/j", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/eb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/jb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/ob_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/osb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/sb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/eb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/jb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/ob_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/osb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/sb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/eb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/jb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/ob_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/osb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/sb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/eb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/jb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/ob_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/osb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/sb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/eb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/jb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/ob_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/osb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_f/sb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/j", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/eb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/jb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/ob_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/osb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/sb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/eb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/jb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/ob_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/osb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/sb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/eb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/jb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/ob_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/osb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/sb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/eb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/jb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/ob_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/osb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/sb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/eb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/jb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/ob_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/osb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_i/sb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/d", "rows": ["(1, 1704106800)", "(3, None)", "(None, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/f", "rows": ["(1, 1704106800)", "(3, None)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/e", "rows": ["(1, 2, 1704106800)", "(3, 4, None)", "(None, None, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/j", "rows": ["(1, 3, 1704106800)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/o", "rows": ["(1, 1704106800)", "(3, None)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/sa", "rows": ["(1, 1704106800)", "(3, None)", "(None, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/osa", "rows": ["(1, 1704106800)", "(3, None)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/eb_hour", "rows": ["(1, 11, 1704106800)", "(3, None, None)", "(None, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/jb_hour", "rows": ["(1, 11, 1704106800)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/ob_hour", "rows": ["(1, 11, 1704106800)", "(3, None, None)", "(None, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/osb_hour", "rows": ["(1, 11, 1704106800)", "(3, None, None)", "(None, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/sb_hour", "rows": ["(1, 11, 1704106800)", "(3, None, None)", "(None, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/eb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(3, None, None)", "(None, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/jb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/ob_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(3, None, None)", "(None, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/osb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(3, None, None)", "(None, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/sb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(3, None, None)", "(None, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/eb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(3, None, None)", "(None, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/jb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/ob_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(3, None, None)", "(None, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/osb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(3, None, None)", "(None, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/sb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(3, None, None)", "(None, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/eb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(3, None, None)", "(None, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/jb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/ob_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(3, None, None)", "(None, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/osb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(3, None, None)", "(None, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/sb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(3, None, None)", "(None, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/eb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(3, 'America/Los_Angeles', None)", "(None, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/jb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/ob_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(3, 'America/Los_Angeles', None)", "(None, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/osb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(3, 'America/Los_Angeles', None)", "(None, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_n/sb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(3, 'America/Los_Angeles', None)", "(None, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/d", "rows": ["('1', 1704106800)", "('3', None)", "(None, 1704139200)"], "types": ["string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/f", "rows": ["('1', 1704106800)", "('3', None)"], "types": ["string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/e", "rows": ["('1', 2, 1704106800)", "('3', 4, None)", "(None, None, 1704139200)"], "types": ["string", "bigint", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/j", "rows": ["('1', 3, 1704106800)"], "types": ["string", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/o", "rows": ["('1', 1704106800)", "('3', None)"], "types": ["string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/sa", "rows": ["('1', 1704106800)", "('3', None)", "(None, 1704139200)"], "types": ["string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/osa", "rows": ["('1', 1704106800)", "('3', None)"], "types": ["string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/eb_hour", "rows": ["('1', 3, 1704106800)", "('3', None, None)", "(None, 12, 1704139200)"], "types": ["string", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/jb_hour", "rows": ["('1', 3, 1704106800)"], "types": ["string", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/ob_hour", "rows": ["('1', 3, 1704106800)", "('3', None, None)", "(None, 12, 1704139200)"], "types": ["string", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/osb_hour", "rows": ["('1', 3, 1704106800)", "('3', None, None)", "(None, 12, 1704139200)"], "types": ["string", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/sb_hour", "rows": ["('1', 3, 1704106800)", "('3', None, None)", "(None, 12, 1704139200)"], "types": ["string", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/eb_str", "rows": ["('1', '2024-01-01 03:00:00', 1704106800)", "('3', None, None)", "(None, '2024-01-01 12:00:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/jb_str", "rows": ["('1', '2024-01-01 03:00:00', 1704106800)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/ob_str", "rows": ["('1', '2024-01-01 03:00:00', 1704106800)", "('3', None, None)", "(None, '2024-01-01 12:00:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/osb_str", "rows": ["('1', '2024-01-01 03:00:00', 1704106800)", "('3', None, None)", "(None, '2024-01-01 12:00:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/sb_str", "rows": ["('1', '2024-01-01 03:00:00', 1704106800)", "('3', None, None)", "(None, '2024-01-01 12:00:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/eb_date", "rows": ["('1', datetime.date(2024, 1, 1), 1704106800)", "('3', None, None)", "(None, datetime.date(2024, 1, 1), 1704139200)"], "types": ["string", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/jb_date", "rows": ["('1', datetime.date(2024, 1, 1), 1704106800)"], "types": ["string", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/ob_date", "rows": ["('1', datetime.date(2024, 1, 1), 1704106800)", "('3', None, None)", "(None, datetime.date(2024, 1, 1), 1704139200)"], "types": ["string", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/osb_date", "rows": ["('1', datetime.date(2024, 1, 1), 1704106800)", "('3', None, None)", "(None, datetime.date(2024, 1, 1), 1704139200)"], "types": ["string", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/sb_date", "rows": ["('1', datetime.date(2024, 1, 1), 1704106800)", "('3', None, None)", "(None, datetime.date(2024, 1, 1), 1704139200)"], "types": ["string", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/eb_fmt", "rows": ["('1', '2024-01-01 03:00', 1704106800)", "('3', None, None)", "(None, '2024-01-01 12:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/jb_fmt", "rows": ["('1', '2024-01-01 03:00', 1704106800)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/ob_fmt", "rows": ["('1', '2024-01-01 03:00', 1704106800)", "('3', None, None)", "(None, '2024-01-01 12:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/osb_fmt", "rows": ["('1', '2024-01-01 03:00', 1704106800)", "('3', None, None)", "(None, '2024-01-01 12:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/sb_fmt", "rows": ["('1', '2024-01-01 03:00', 1704106800)", "('3', None, None)", "(None, '2024-01-01 12:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/eb_tz", "rows": ["('1', 'America/Los_Angeles', 1704106800)", "('3', 'America/Los_Angeles', None)", "(None, 'America/Los_Angeles', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/jb_tz", "rows": ["('1', 'America/Los_Angeles', 1704106800)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/ob_tz", "rows": ["('1', 'America/Los_Angeles', 1704106800)", "('3', 'America/Los_Angeles', None)", "(None, 'America/Los_Angeles', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/osb_tz", "rows": ["('1', 'America/Los_Angeles', 1704106800)", "('3', 'America/Los_Angeles', None)", "(None, 'America/Los_Angeles', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_ns/sb_tz", "rows": ["('1', 'America/Los_Angeles', 1704106800)", "('3', 'America/Los_Angeles', None)", "(None, 'America/Los_Angeles', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/d", "rows": ["('1', 1704106800)", "('2', 1704139200)"], "types": ["string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/f", "rows": ["('1', 1704106800)", "('2', 1704139200)"], "types": ["string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/e", "rows": ["('1', 2, 1704106800)", "('2', 3, 1704139200)"], "types": ["string", "bigint", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/j", "rows": ["('1', 3, 1704106800)", "('2', 12, 1704139200)"], "types": ["string", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/o", "rows": ["('1', 1704106800)", "('2', 1704139200)"], "types": ["string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/sa", "rows": ["('1', 1704106800)", "('2', 1704139200)"], "types": ["string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/osa", "rows": ["('1', 1704106800)", "('2', 1704139200)"], "types": ["string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/eb_hour", "rows": ["('1', 3, 1704106800)", "('2', 12, 1704139200)"], "types": ["string", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/jb_hour", "rows": ["('1', 3, 1704106800)", "('2', 12, 1704139200)"], "types": ["string", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/ob_hour", "rows": ["('1', 3, 1704106800)", "('2', 12, 1704139200)"], "types": ["string", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/osb_hour", "rows": ["('1', 3, 1704106800)", "('2', 12, 1704139200)"], "types": ["string", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/sb_hour", "rows": ["('1', 3, 1704106800)", "('2', 12, 1704139200)"], "types": ["string", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/eb_str", "rows": ["('1', '2024-01-01 03:00:00', 1704106800)", "('2', '2024-01-01 12:00:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/jb_str", "rows": ["('1', '2024-01-01 03:00:00', 1704106800)", "('2', '2024-01-01 12:00:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/ob_str", "rows": ["('1', '2024-01-01 03:00:00', 1704106800)", "('2', '2024-01-01 12:00:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/osb_str", "rows": ["('1', '2024-01-01 03:00:00', 1704106800)", "('2', '2024-01-01 12:00:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/sb_str", "rows": ["('1', '2024-01-01 03:00:00', 1704106800)", "('2', '2024-01-01 12:00:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/eb_date", "rows": ["('1', datetime.date(2024, 1, 1), 1704106800)", "('2', datetime.date(2024, 1, 1), 1704139200)"], "types": ["string", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/jb_date", "rows": ["('1', datetime.date(2024, 1, 1), 1704106800)", "('2', datetime.date(2024, 1, 1), 1704139200)"], "types": ["string", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/ob_date", "rows": ["('1', datetime.date(2024, 1, 1), 1704106800)", "('2', datetime.date(2024, 1, 1), 1704139200)"], "types": ["string", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/osb_date", "rows": ["('1', datetime.date(2024, 1, 1), 1704106800)", "('2', datetime.date(2024, 1, 1), 1704139200)"], "types": ["string", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/sb_date", "rows": ["('1', datetime.date(2024, 1, 1), 1704106800)", "('2', datetime.date(2024, 1, 1), 1704139200)"], "types": ["string", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/eb_fmt", "rows": ["('1', '2024-01-01 03:00', 1704106800)", "('2', '2024-01-01 12:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/jb_fmt", "rows": ["('1', '2024-01-01 03:00', 1704106800)", "('2', '2024-01-01 12:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/ob_fmt", "rows": ["('1', '2024-01-01 03:00', 1704106800)", "('2', '2024-01-01 12:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/osb_fmt", "rows": ["('1', '2024-01-01 03:00', 1704106800)", "('2', '2024-01-01 12:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/sb_fmt", "rows": ["('1', '2024-01-01 03:00', 1704106800)", "('2', '2024-01-01 12:00', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/eb_tz", "rows": ["('1', 'America/Los_Angeles', 1704106800)", "('2', 'America/Los_Angeles', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/jb_tz", "rows": ["('1', 'America/Los_Angeles', 1704106800)", "('2', 'America/Los_Angeles', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/ob_tz", "rows": ["('1', 'America/Los_Angeles', 1704106800)", "('2', 'America/Los_Angeles', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/osb_tz", "rows": ["('1', 'America/Los_Angeles', 1704106800)", "('2', 'America/Los_Angeles', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_0/sb_tz", "rows": ["('1', 'America/Los_Angeles', 1704106800)", "('2', 'America/Los_Angeles', 1704139200)"], "types": ["string", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/j", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/eb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/jb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/ob_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/osb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/sb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/eb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/jb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/ob_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/osb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/sb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/eb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/jb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/ob_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/osb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/sb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/eb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/jb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/ob_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/osb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/sb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/eb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/jb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/ob_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/osb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/csv_tf/sb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/j", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/eb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704078000)", "(2, datetime.date(2024, 1, 1), 1704110400)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/jb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704078000)", "(2, datetime.date(2024, 1, 1), 1704110400)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/ob_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704078000)", "(2, datetime.date(2024, 1, 1), 1704110400)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/osb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704078000)", "(2, datetime.date(2024, 1, 1), 1704110400)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/sb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704078000)", "(2, datetime.date(2024, 1, 1), 1704110400)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/eb_fmt", "rows": ["(1, '2024-01-01 03:00', 1704078000)", "(2, '2024-01-01 12:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/jb_fmt", "rows": ["(1, '2024-01-01 03:00', 1704078000)", "(2, '2024-01-01 12:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/ob_fmt", "rows": ["(1, '2024-01-01 03:00', 1704078000)", "(2, '2024-01-01 12:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/osb_fmt", "rows": ["(1, '2024-01-01 03:00', 1704078000)", "(2, '2024-01-01 12:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/sb_fmt", "rows": ["(1, '2024-01-01 03:00', 1704078000)", "(2, '2024-01-01 12:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/eb_tz", "rows": ["(1, 'America/Los_Angeles', 1704078000)", "(2, 'America/Los_Angeles', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/jb_tz", "rows": ["(1, 'America/Los_Angeles', 1704078000)", "(2, 'America/Los_Angeles', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/ob_tz", "rows": ["(1, 'America/Los_Angeles', 1704078000)", "(2, 'America/Los_Angeles', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/osb_tz", "rows": ["(1, 'America/Los_Angeles', 1704078000)", "(2, 'America/Los_Angeles', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/pq/sb_tz", "rows": ["(1, 'America/Los_Angeles', 1704078000)", "(2, 'America/Los_Angeles', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/j", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/eb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/jb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/ob_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/osb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/sb_hour", "rows": ["(1, 11, 1704106800)", "(2, 20, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/eb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/jb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/ob_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/osb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/sb_str", "rows": ["(1, '2024-01-01 11:00:00', 1704106800)", "(2, '2024-01-01 20:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/eb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/jb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/ob_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/osb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/sb_date", "rows": ["(1, datetime.date(2024, 1, 1), 1704106800)", "(2, datetime.date(2024, 1, 1), 1704139200)"], "types": ["int", "date", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/eb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/jb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/ob_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/osb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/sb_fmt", "rows": ["(1, '2024-01-01 11:00', 1704106800)", "(2, '2024-01-01 20:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/eb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/jb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/ob_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/osb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "Z/ansi_true/utc_la/emu/sb_tz", "rows": ["(1, 'America/Los_Angeles', 1704106800)", "(2, 'America/Los_Angeles', 1704139200)"], "types": ["int", "string", "bigint"]}

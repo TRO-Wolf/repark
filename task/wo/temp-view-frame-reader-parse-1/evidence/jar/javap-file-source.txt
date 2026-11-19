@@ -1,0 +1,67 @@
+# javap -c -p excerpts, Spark 4.1.2 (spark-sql_2.13-4.1.2.jar, spark-catalyst_2.13-4.1.2.jar)
+
+## JsonFileFormat.getJsonOptions (called from buildReader, inferSchema, isSplitable, prepareWrite)
+  private org.apache.spark.sql.catalyst.json.JSONOptions getJsonOptions(org.apache.spark.sql.SparkSession, scala.collection.immutable.Map<java.lang.String, java.lang.Stri
+invokevirtual #302                // Method getSqlConf:(Lorg/apache/spark/sql/SparkSession;)Lorg/apache/spark/sql/internal/SQLConf;
+new           #304                // class org/apache/spark/sql/catalyst/json/JSONOptionsInRead
+invokevirtual #309                // Method org/apache/spark/sql/internal/SQLConf.sessionLocalTimeZone:()Ljava/lang/String;
+invokevirtual #310                // Method org/apache/spark/sql/internal/SQLConf.columnNameOfCorruptRecord:()Ljava/lang/String;
+invokespecial #313                // Method org/apache/spark/sql/catalyst/json/JSONOptionsInRead."<init>":(Lscala/collection/immutable/Map;Ljava/lang/String;Ljava/lang/St
+new           #85                 // class org/apache/spark/sql/catalyst/json/JSONOptions
+invokevirtual #309                // Method org/apache/spark/sql/internal/SQLConf.sessionLocalTimeZone:()Ljava/lang/String;
+invokevirtual #310                // Method org/apache/spark/sql/internal/SQLConf.columnNameOfCorruptRecord:()Ljava/lang/String;
+invokespecial #314                // Method org/apache/spark/sql/catalyst/json/JSONOptions."<init>":(Lscala/collection/immutable/Map;Ljava/lang/String;Ljava/lang/String;)
+
+## JsonFileFormat callers of getJsonOptions
+  public boolean isSplitable(org.apache.spark.sql.SparkSession, scala.collection.immutable.Map<java.lang.String, java.lang.String>, org.apache.hadoop.fs.Path);
+  public org.apache.spark.sql.execution.datasources.OutputWriterFactory prepareWrite(org.apache.spark.sql.SparkSession, org.apache.hadoop.mapreduce.Job, scala.collection.
+  public scala.Function1<org.apache.spark.sql.execution.datasources.PartitionedFile, scala.collection.Iterator<org.apache.spark.sql.catalyst.InternalRow>> buildReader(org
+  public scala.Option<org.apache.spark.sql.types.StructType> inferSchema(org.apache.spark.sql.SparkSession, scala.collection.immutable.Map<java.lang.String, java.lang.Str
+
+## CSVFileFormat.getCsvOptions
+  private org.apache.spark.sql.catalyst.csv.CSVOptions getCsvOptions(org.apache.spark.sql.SparkSession, scala.collection.immutable.Map<java.lang.String, java.lang.String>
+invokevirtual #283                // Method getSqlConf:(Lorg/apache/spark/sql/SparkSession;)Lorg/apache/spark/sql/internal/SQLConf;
+new           #81                 // class org/apache/spark/sql/catalyst/csv/CSVOptions
+invokevirtual #288                // Method org/apache/spark/sql/internal/SQLConf.csvColumnPruning:()Z
+invokevirtual #291                // Method org/apache/spark/sql/internal/SQLConf.sessionLocalTimeZone:()Ljava/lang/String;
+invokevirtual #292                // Method org/apache/spark/sql/internal/SQLConf.columnNameOfCorruptRecord:()Ljava/lang/String;
+invokespecial #295                // Method org/apache/spark/sql/catalyst/csv/CSVOptions."<init>":(Lscala/collection/immutable/Map;ZLjava/lang/String;Ljava/lang/String;)V
+
+## CSVFileFormat callers of getCsvOptions
+  public boolean isSplitable(org.apache.spark.sql.SparkSession, scala.collection.immutable.Map<java.lang.String, java.lang.String>, org.apache.hadoop.fs.Path);
+  public org.apache.spark.sql.execution.datasources.OutputWriterFactory prepareWrite(org.apache.spark.sql.SparkSession, org.apache.hadoop.mapreduce.Job, scala.collection.
+  public scala.Function1<org.apache.spark.sql.execution.datasources.PartitionedFile, scala.collection.Iterator<org.apache.spark.sql.catalyst.InternalRow>> buildReader(org
+  public scala.Option<org.apache.spark.sql.types.StructType> inferSchema(org.apache.spark.sql.SparkSession, scala.collection.immutable.Map<java.lang.String, java.lang.Str
+
+## SessionStateHelper.getSqlConf
+  public default org.apache.spark.sql.internal.SQLConf getSqlConf(org.apache.spark.sql.SparkSession);
+    Code:
+aload_0
+aload_1
+invokeinterface #16,  2           // InterfaceMethod sessionState:(Lorg/apache/spark/sql/SparkSession;)Lorg/apache/spark/sql/internal/SessionState;
+invokevirtual #54                 // Method org/apache/spark/sql/internal/SessionState.conf:()Lorg/apache/spark/sql/internal/SQLConf;
+areturn
+
+
+## FileSourceScanExec.inputRDD$lzycompute (the reader is built when the scan's RDD is first asked for, at execution)
+invokeinterface #524,  8          // InterfaceMethod org/apache/spark/sql/execution/datasources/FileFormat.buildReaderWithPartitionValues:(Lorg/apache/spark/sql/SparkSess
+invokevirtual #411                // Method relation:()Lorg/apache/spark/sql/execution/datasources/HadoopFsRelation;
+invokevirtual #416                // Method org/apache/spark/sql/execution/datasources/HadoopFsRelation.sparkSession:()Lorg/apache/spark/sql/SparkSession;
+invokevirtual #470                // Method org/apache/spark/sql/execution/datasources/HadoopFsRelation.options:()Lscala/collection/immutable/Map;
+
+## ViewHelper$.createTemporaryViewRelation
+invokevirtual #790                // Method org/apache/spark/sql/internal/SQLConf.storeAnalyzedPlanForView:()Z
+invokevirtual #793                // Method scala/Option.isEmpty:()Z
+invokespecial #859                // Method prepareTemporaryView:(Lorg/apache/spark/sql/catalyst/TableIdentifier;Lorg/apache/spark/sql/SparkSession;Lorg/apache/spark/sql/
+invokespecial #874                // Method prepareTemporaryViewStoringAnalyzedPlan:(Lorg/apache/spark/sql/catalyst/TableIdentifier;Lorg/apache/spark/sql/catalyst/plans/l
+invokespecial #880                // Method prepareTemporaryViewPlan:(Lorg/apache/spark/sql/catalyst/TableIdentifier;Lorg/apache/spark/sql/catalyst/plans/logical/LogicalP
+
+## ResolveTimeZone$$anonfun$1 (fills an empty timeZoneId at analysis)
+checkcast     #21                 // class org/apache/spark/sql/catalyst/expressions/TimeZoneAwareExpression
+getstatic     #35                 // Field org/apache/spark/sql/catalyst/analysis/ResolveTimeZone$.MODULE$:Lorg/apache/spark/sql/catalyst/analysis/ResolveTimeZone$;
+instanceof    #21                 // class org/apache/spark/sql/catalyst/expressions/TimeZoneAwareExpression
+invokeinterface #25,  1           // InterfaceMethod org/apache/spark/sql/catalyst/expressions/TimeZoneAwareExpression.timeZoneId:()Lscala/Option;
+invokeinterface #49,  2           // InterfaceMethod org/apache/spark/sql/catalyst/expressions/TimeZoneAwareExpression.withTimeZone:(Ljava/lang/String;)Lorg/apache/spark/
+invokevirtual #39                 // Method org/apache/spark/sql/catalyst/analysis/ResolveTimeZone$.conf:()Lorg/apache/spark/sql/internal/SQLConf;
+invokevirtual #45                 // Method org/apache/spark/sql/internal/SQLConf.sessionLocalTimeZone:()Ljava/lang/String;
+invokevirtual #59                 // Method org/apache/spark/sql/catalyst/analysis/ResolveTimeZone$.apply:(Lorg/apache/spark/sql/catalyst/plans/logical/LogicalPlan;)Lorg/

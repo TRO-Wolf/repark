@@ -1,0 +1,8 @@
+{"tag": "S/ansi_true/la_utc/using_json/create", "create_error": "Error during planning: could not parse `CREATE TEMPORARY VIEW`: expected AS with the view query, got `CREATE OR REPLACE TEMPORARY VIEW s_uj "}
+{"tag": "S/ansi_true/la_utc/using_csv/create", "create_error": "Error during planning: could not parse `CREATE TEMPORARY VIEW`: expected AS with the view query, got `CREATE OR REPLACE TEMPORARY VIEW s_uc "}
+{"tag": "S/ansi_true/la_utc/sql_over_csv/create", "create_error": "Error during planning: table 'spark_catalog.default.s_uc' not found"}
+{"tag": "S/ansi_true/la_utc/path_json/d", "error": "Error during planning: table 'datafusion.json.<scratchpad>"}
+{"tag": "S/ansi_false/la_utc/using_json/create", "create_error": "Error during planning: could not parse `CREATE TEMPORARY VIEW`: expected AS with the view query, got `CREATE OR REPLACE TEMPORARY VIEW s_uj "}
+{"tag": "S/ansi_false/la_utc/using_csv/create", "create_error": "Error during planning: could not parse `CREATE TEMPORARY VIEW`: expected AS with the view query, got `CREATE OR REPLACE TEMPORARY VIEW s_uc "}
+{"tag": "S/ansi_false/la_utc/sql_over_csv/create", "create_error": "Error during planning: table 'spark_catalog.default.s_uc' not found"}
+{"tag": "S/ansi_false/la_utc/path_json/d", "error": "Error during planning: table 'datafusion.json.<scratchpad>"}
