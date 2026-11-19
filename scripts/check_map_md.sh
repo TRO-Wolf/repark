@@ -25,6 +25,7 @@ declare -A checked
 while IFS= read -r file; do
   [[ -z "$file" ]] && continue
   case "$file" in
+    task/wo/*) continue ;;
     *.rs | *.py) ;;
     */Cargo.toml | Cargo.toml | */pyproject.toml | pyproject.toml) ;;
     *) continue ;;

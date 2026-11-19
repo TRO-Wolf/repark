@@ -288,3 +288,26 @@ def test_ci_guard_is_pr_only_and_gitattributes_carries_union() -> None:
     attributes = (_REPO / ".gitattributes").read_text(encoding="utf-8").splitlines()
     assert "map.md merge=union" in attributes
     assert "**/map.md merge=union" in attributes
+
+
+def test_branch_mode_ignores_code_under_task_wo(repo: Path) -> None:
+    """A probe under task/wo owes no map and prints no warning in branch mode."""
+    base = _git(repo, "rev-parse", "HEAD").strip()
+    probe_dir = repo / "task" / "wo" / "unit-x" / "evidence"
+    probe_dir.mkdir(parents=True)
+    (probe_dir / "probe.py").write_text("x = 1\n", encoding="utf-8")
+    _commit(repo, "probe")
+    result = _guard(repo, "--base", base)
+    assert result.returncode == 0, result.stderr
+    assert "task/wo" not in result.stderr
+
+
+def test_staged_mode_ignores_code_under_task_wo(repo: Path) -> None:
+    """A probe under task/wo owes no map and prints no warning in staged mode."""
+    probe_dir = repo / "task" / "wo" / "unit-x" / "evidence"
+    probe_dir.mkdir(parents=True)
+    (probe_dir / "probe.py").write_text("x = 1\n", encoding="utf-8")
+    _git(repo, "add", "-A")
+    result = _guard(repo)
+    assert result.returncode == 0, result.stderr
+    assert "task/wo" not in result.stderr
