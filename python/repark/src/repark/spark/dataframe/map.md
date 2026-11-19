@@ -1272,7 +1272,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 
 ## Durable contracts
 
-- Transformations remain lazy. Actions and Arrow exports execute the plan; own-plan ones hold the frame's first parse (READER-PARSE-1 F1).
+- Transformations remain lazy. Actions and Arrow exports execute the plan; own-plan opens use the frame's first parse (READER-PARSE-1 F1).
 - `to_arrow_batches` holds one Arrow batch and emits one typed empty batch for an empty result.
   `collect` materializes rows and converts maps to dictionaries; calendar intervals refuse.
 - `columns` reads the plan's logical schema, not the analyzed one. A dependent `withColumn`
