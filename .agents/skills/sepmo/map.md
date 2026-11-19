@@ -55,7 +55,7 @@ binds to it. SEPMO governs *lifecycle only*; it cedes every engineering decision
 | See how a SEPMO role or tunable maps to this repo | [binding-manifest.md](binding-manifest.md) |
 | Find the engineering contract SEPMO defers to | [../../../AGENTS.md](../../../AGENTS.md) + [../../../.agents/skills/engineering-method/SKILL.md](../engineering-method/SKILL.md) |
 | Find the precedence chain on a conflict | [../../../AGENTS.md](../../../AGENTS.md) `## Precedence` |
-| File the retrospective metrics | `task/metrics.md` (CREATE at the first retrospective — see the [manifest](binding-manifest.md) `metrics_ledger_location`) |
+| File the retrospective metrics | `task/metrics.md` (what it owes: the [manifest](binding-manifest.md) `metrics_ledger_location`) |
 | Re-port SEPMO to another repo | rewrite only [binding-manifest.md](binding-manifest.md) |
 
 ## Pointers
