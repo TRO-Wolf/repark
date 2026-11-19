@@ -73,4 +73,19 @@ A NULL sum with rows counted raises `ARITHMETIC_OVERFLOW` (the `try_avg` hint) u
 a non-NULL sum is divided and `toPrecision(p, s, ROUND_HALF_UP, nullOnOverflow)` checks the quotient
 (`NUMERIC_VALUE_OUT_OF_RANGE`).
 
+## Revision r1: the buffers the critic's table rests on
+
+Extracted from `spark-sql_2.13-4.1.2.jar` and `spark-catalyst_2.13-4.1.2.jar` into the scratch directory and read
+with zulu-17 `javap -c -p`:
+
+- `org.apache.spark.sql.execution.window.AggregateProcessor`: `private final ...SpecificInternalRow buffer;`, built
+  in the constructor (`new SpecificInternalRow` at bytecode 51, `putfield buffer` at 76) and used by `initialize`,
+  `update` and `evaluate`. A window's sum is a `Decimal` object in that row; nothing calls `changePrecision` on it,
+  so only the divide's `toPrecision` checks (the quotient).
+- `org.apache.spark.sql.execution.aggregate.ObjectAggregationIterator`: `createNewAggregationBuffer` builds a
+  `SpecificInternalRow` (bytecode 36 to 50), and the iterator holds `fallbackCountThreshold` and `sortBased`: past
+  the threshold it falls back to sort-based aggregation, whose buffer is an `UnsafeRow`.
+- `org.apache.spark.sql.internal.SQLConf$`: `spark.sql.objectHashAggregate.sortBased.fallbackThreshold` is built
+  with `sipush 128` (bytecode 12727), the 128 groups of the critic's table.
+
 Up: [map.md](map.md).
