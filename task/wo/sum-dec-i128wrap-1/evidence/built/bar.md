@@ -562,3 +562,12 @@ The verifier's own runner (`S/verify-sum/det/det.py`), its five configurations, 
 ### Cost
 
 [cost.md](cost.md), "Delta 3".
+
+### The re-check verifier
+
+Verdict **PASS** at `cd6dd513`, by Claude Opus 5.5 at effort medium, 2026-11-19 at about 03:40 UTC.
+
+- F1 and F2 are closed. On the over-precision files the head gave no wrong value in 17,904 answers; delta 2 gave 1,958 and main 7,104.
+- The bar matches delta 2's records: 6,252 of 6,252, and 238 of 242 revision cells. The verifier measured that the 4 moved revision cells were moved by main's #1362, toward Spark's answer.
+- Determinism gives one exact answer. `avg` moved 0 of 660. The facade pins split 242 passed on the head, 32 failed on delta 2 and 190 failed on main. The suites had 0 failures.
+- Its two conditions were the unfinished cost series (closed by the Delta 3 record in [cost.md](cost.md)) and the PR body (the orchestrator's).
