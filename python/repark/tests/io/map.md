@@ -15,7 +15,7 @@ pins.
 - [test_boundary_shapes_parity.py](test_boundary_shapes_parity.py) — Facade-boundary container-shape corpus (H-2 gap G10) — pandas / Arrow interchange.
 - [test_create_dataframe_materialize.py](test_create_dataframe_materialize.py) — R-PERF-VALUES — createDataFrame materializes once (MemTable), not re-plan VALUES.
 - [test_csv_infer_perf_1.py](test_csv_infer_perf_1.py) — CSV inferSchema plan-time cost and Spark-equal promotion shapes.
-- [test_csv_schema_timestamp_zone_1.py](test_csv_schema_timestamp_zone_1.py) — CSV-SCHEMA-TIMESTAMP-ZONE-1 — a CSV user-schema `TIMESTAMP` field parses under the session zone (matching zones, views read in another zone, four writes, six file shapes) against Spark 4.1.2's recorded answers.
+- [test_csv_schema_timestamp_zone_1.py](test_csv_schema_timestamp_zone_1.py) — CSV-SCHEMA-TIMESTAMP-ZONE-1 — a CSV user-schema `TIMESTAMP` field parses under the session zone (matching zones, views read in another zone, four writes, six file shapes) against Spark 4.1.2's recorded answers; delta 1 adds four shapes where the other fields keep the typed scan (a `DECIMAL` over exponent text, a `TIMESTAMP_NTZ` over a DST-gap wall clock).
 - [test_datasets_facade.py](test_datasets_facade.py) — DS-4 — facade pins for the five torture-dataset families.
 - [test_e2_readwriter.py](test_e2_readwriter.py) — Readwriter + session residuals: bare-name resolution, parquet path forms, ndarray lit.
 - [test_facade_1_arrow_c_stream.py](test_facade_1_arrow_c_stream.py) — FACADE-1 Arrow C Stream boundary pins: capsule protocol, pyarrow optional, IPC fallback.
