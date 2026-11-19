@@ -1,8 +1,9 @@
 # lessons
 
-DO / DO-NOT rules in force. Append date-stamped entries; supersede, don't delete. Seeded
-2026-08-06 with sanitized lessons carried from the private v1 repository — these were learned
-there the hard way and bind here from day one.
+DO / DO-NOT rules in force. Append date-stamped entries; supersede, don't delete: a superseded entry
+moves to [docs/history/lessons-superseded.md](../docs/history/lessons-superseded.md) with what
+replaced it. Seeded 2026-08-06 with sanitized lessons carried from the private v1 repository — these
+were learned there the hard way and bind here from day one.
 
 ## 2026-11-10 — the table-completeness check and the named-seat rule bind from the next unit on
 
@@ -104,9 +105,6 @@ there the hard way and bind here from day one.
   bump.** Observed in v1: a harmless dependency bump paired in one PR with a datafusion/arrow
   major that broke the pinned iceberg family. Always split: take the safe bump alone; treat any
   DF/arrow/iceberg bump as a deliberate, together-with-the-family repin.
-- **DO update every touched directory's `map.md` in the same change as the code — lockstep, no
-  exceptions.** A change is not done until the maps reflect it; `scripts/check_map_md.sh` is the
-  pre-commit oracle. New directory → new `map.md` in the same change.
 - **DO end every commit message with exactly
   `Authored-By: Claude (claude-fable-5) <noreply@anthropic.com>` — and nothing else.** No
   co-author trailers, no session identifiers or links in commits or PR bodies.
@@ -415,22 +413,6 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   the architecture unit after GATE-RETIRE-1, on the owner's word of 2026-10-22.
 
 
-## 2026-10-22 — two Opus 5.5 lanes at a time; re-evaluate by 2026-11-22
-
-- **DO run at most two Opus 5.5 builds concurrently, not one.** *Why:* the one-lane rule of
-  2026-09-26 came from the September usage spikes (eight Opus executors live at once), and the
-  10-20 plan kept one lane only because the 10-17 halt was lifted for one; the closeout dates then
-  slipped a day for every day that lane ran long. The owner relaxed it on 2026-10-22 ("allow for
-  2 lanes at a time for sure"). Both lanes keep the standing limits: `claude-opus-5-5` only, one
-  Rust suite per clone, inside the 26-core cap, timed measurements on a quiet box only, verifiers
-  and read-only evaluations count toward the two unless the owner says otherwise. Lane 2 opened
-  the same day with ICE-INTEGRITY-PINS-1 pins U and X beside the ZONE-SEAM-1 fix round.
-- **DO re-evaluate the lane count by 2026-11-22.** *Why:* the owner asked for a re-evaluation
-  within a month. Inputs: usage against the owner's ceiling, box contention (cost-gate failures or
-  load-induced test timeouts, as the seam verifier saw on 10-22), and whether the v2 and v3 label
-  dates moved. The CLAUDE.md capability-tier section is unchanged: Opus still only on the owner's
-  explicit word, which this ruling is.
-
 ## 2026-10-22 — CI re-runs: a stall may be re-run once, a failed test waits for the owner
 
 - **DO re-run once, yourself, a CI job that was cancelled at its time cap with every test step
@@ -576,3 +558,79 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
 - **DO kill only processes you started, by their PID, never by a name pattern.** *Why:* on 2026-11-18 at about 23:43 UTC a lane's cleanup killed `bash ./run.sh` by pattern and took down another lane's cost series, whose runs 3 to 5 had to be re-run.
 - **DO run an aggregate's cells at `target_partitions` 2, 4 and 8 on multi-file tables, 20 runs each, with the setting made before the table is read, in step 0 and verifier briefs alike.** *Why:* item 8 (Fable's recommendation, adopted): the lane's 16 cores hid a run-to-run total, since none of 401 queries varied there, and CI then found it.
 - **DO keep a shared measure-lock hold to one command.** *Why:* an exclusive cost sample waits for every shared holder, and long shared holds on one lane starved the other lane's cost series for hours on 2026-11-18.
+
+## 2026-11-14 — two agents at once, the usage-week tiers, and the RAM build limits
+
+- **DO run at most two agents at once, of any tier.** Owner, 2026-11-14 about 20:15 UTC: "Okay lets
+  scale back the number of lanes to just 2 when we have the opportunity, our burn rate is just a
+  little high right now". Opus builders, Haiku or Muse clerks, verifiers and Fable consults all
+  count; drain to two without killing running work, and start no second Opus builder while a
+  verifier round is open. The cap has no review date and stands until the owner changes it (owner,
+  2026-11-18, taking the default: "Defaults on  E, F and the integer card"). It supersedes the
+  2026-10-22 two-lane entry and the owner's 2026-11-02 one-lane rule, which was never recorded
+  here: "lets start consolidating the lanes back to 1 at a time when we can for now".
+- **DO run clerks on Haiku 5.5 xhigh or Muse xhigh, verifiers on Muse 1.3 and builders on Opus 5.5
+  high at the start of a usage week.** Owner, 2026-11-14 about 09:50 UTC: "Go with defaults and
+  let's switch back off the opus clerk or verifiers since we're at the beginning of our usage week".
+  The 2026-11-17 entry below overrides the builder and verifier tiers while the units it names are
+  open.
+- **DO NOT run a `--workspace` cargo test on the shared box; build with `CARGO_BUILD_JOBS=4`, take
+  the shared link lock for every cargo or maturin step, and run facade suites at `-n 6`.** Owner,
+  2026-11-14 about 14:45 UTC: "Okay our RAM usage is really high, lets see if scale things back".
+  *Why:* one builder's whole-workspace test link ran about 60 linkers at about 3.3 GB each beside
+  another lane's build: 93 GB of 125 GB used, plus 25 GB of swap. Lock order: the measure lock, the
+  link lock, the lane's cargo lock, then the Spark slot.
+
+## 2026-11-17 — Opus 5.5 xhigh builders and Opus 5.5 medium verifiers for the view-settings and decimal-sum fixes
+
+- **DO build the view-settings fixes (the TEMP-VIEW-SESSION-SETTINGS-1 family) and the decimal `sum`
+  overflow unit on Opus 5.5 at effort xhigh, and verify them on Opus 5.5 at effort medium, not Muse,
+  until those units close.** Owner, 2026-11-17, evening: "dispatch Opus xhigh effort levels for
+  these fixes, then use Opus 5.5 medium verifiers for the time and not muse, at least until these
+  things are closed out". Verifiers here include step-0 critics. While those units are open the
+  harness units of 2026-11-18 and 2026-11-19 also take Opus 5.5 medium verifiers, with Opus 5.5 high
+  builders (the orchestrator's default, shown to the owner on 2026-11-19: "Yeah proceed"). Clerks
+  are unchanged.
+
+## 2026-11-18 — size baselines are ceilings; closed roadmap cards go to month sub-maps
+
+- **DO treat a map size row as a ceiling.** Owner ruling of 2026-11-18, amending the 2026-10-29
+  adoption of the map policy; the owner's reply to the plan that carried it: "I think that sounds
+  great, great evaluation". The ruling text the owner saw: "Size baselines are ceilings: growth past
+  the row fails, shrinkage passes, and rows are lowered only by a periodic clerk sweep. A unit adds
+  or changes a map row only when it adds, removes or renames a file; unit claims live in the ledger
+  and its sidecar." *Why:* 92 of the 130 commits after MAP-GOVERNANCE-1 (#1221) edited
+  `scripts/check_map_size.py`, 87 of them only to lower rows (median 18 bytes), and a records PR
+  that lowered one row ran the whole code roster, about 75 runner-minutes. The code change is
+  harness item H-A; until it merges, `scripts/check_map_size.py` still compares exactly. The clerk
+  sweep runs at each release tag, in the same pass as the release section of `task/metrics.md` (the
+  orchestrator's default, shown to the owner on 2026-11-19: "Yeah proceed").
+- **DO move closed roadmap cards' rows to month sub-maps through a lifecycle `archive` verb, with
+  the month maps exempt from the size ratchet.** Owner, 2026-11-18, taking the default:
+  "Defaults on  E, F and the integer card". *Why:* `task/roadmap/mid-term/map.md` sits at its
+  row and every records PR adds cards to it. The verb is harness item H-B, a small design unit.
+
+## 2026-11-19 — harness items E to K, the doc ceilings, raw evidence and the metrics ledger
+
+- **DO work harness items E to K after item A, in order.** Owner, 2026-11-19: "I approve". The plan
+  is the Fable hand-off of 2026-11-18 and its 2026-11-19 addendum. No new review lane: LIGHT covers
+  small reversible work.
+- **DO hold `AGENTS.md` to a fixed 30,000-byte ceiling.** Owner, 2026-11-19: "Adopt them all".
+  *Why:* the last three raises each set the ceiling to the file's new size to the byte, so every
+  correction needed a second file in the diff. When the file is next within about 200 bytes of
+  30,000, a clerk trims it before anything is added; the ceiling does not rise again without the
+  owner. `STATUS.md` stays at 25,000 bytes and takes a compaction pass toward about 22,000; the
+  other ceilings stay.
+- **DO commit raw machine output over 100 KB gzipped.** Owner, 2026-11-19: "Adopt them all". It
+  covers `.jsonl`, `.tsv`, `.json`, `.txt` and `.xml`; Markdown stays readable, and a summary that
+  large is split. A file a test reads stays uncompressed until item H-F gives it a fixture home.
+  Forward only: files already committed stay as they are. *Why:* at 100 KB the rule touches one file
+  in seven under `task/wo` and covers 85 % of its bytes (159.6 of 187.4 MB on `0eea5cd6`). The rule
+  lives in `task/wo/TEMPLATE.md`.
+- **DO keep `task/metrics.md`, narrowed.** Owner, 2026-11-19: "Adopt them all". A section is owed at
+  each incident retrospective (`coverage_misses`, `escaped_defects_by_origin`) and once per release
+  tag (those two plus review rounds per unit, clerk-filed); the other ref-08 metrics are optional;
+  one backfill section covers the escapes since v1.5.5. The binding manifest's
+  `metrics_ledger_location` row holds the rule. The portable SEPMO canon (`SKILL.md`,
+  `references/08-retrospective.md`) still calls the set of eight fixed; canon changes only at its
+  master home, so this is a project deviation by owner ruling.

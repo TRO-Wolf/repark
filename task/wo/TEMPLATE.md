@@ -39,4 +39,8 @@ commit-first briefs with a provisional hand-back for engines that cannot see the
 the scratch clone, never the live worktree; the TRO-Wolf identity and the `Authored-By:` trailer;
 the evidence home is `task/wo/<unit>/evidence/`, which holds a unit's briefs, verdicts, probe tables
 and replay inputs durably under version control, while `/tmp` holds only Cargo targets (Master Plan
-2026-11-08 §1.4).
+2026-11-08 §1.4). Summaries and tables are committed as Markdown; raw machine output (`.jsonl`,
+`.tsv`, `.json`, `.txt`, `.xml`) over 100 KB is committed gzipped, except a file a test reads, which
+stays uncompressed until it has a fixture home; files already committed stay as they are; a
+throwaway probe script is committed only when a summary cites it for replay (owner ruling
+2026-11-19).

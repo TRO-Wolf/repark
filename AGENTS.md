@@ -90,7 +90,7 @@ create one ahead of its first unit. Delivery state:
 | Lazy-frame IR, planning, optimizer hooks, `Session` | `crates/repark-core` | delivered |
 | Inference readers (CSV, Excel, JSON) | `crates/repark-io` | deferred — extracted when its code arrives |
 | Catalogs (Glue, S3 Tables) + Iceberg DML + maintenance; adapter over the owned fork | `crates/repark-iceberg` | delivered |
-| Postgres / MSSQL connectivity | `crates/repark-connect` | deferred — 1.6 |
+| Postgres / MSSQL connectivity | `crates/repark-connect` | delivered |
 | Native snapshot + CDC capture into Bronze | `crates/repark-cdc` | deferred — 1.7 |
 | Discovery runs, proposed specs | `crates/repark-crawler` | deferred — 1.7 |
 | The Spark SQL grammar | `crates/repark-spark-dialect` | deferred — tidy window |
@@ -109,9 +109,11 @@ DataFusion remains the engine under everything. Layout of record:
 
 `make verify` — a change is not done until lint, format, clippy, **Rust** tests, and each touched
 directory's `map.md`, where one exists, is current. `verify` is Rust-only on purpose (inner-loop
-speed); it does **not** build the native module. See [docs/testing.md](docs/testing.md). Before
-opening a PR, run `make preflight` — `verify` plus the facade suite (`make py-test-facade`, which
-carries the live-mirror gate) plus the security/workflow gates CI also runs. `make ci` is the
+speed); it does **not** build the native module. See [docs/testing.md](docs/testing.md). A
+delegated unit runs the scoped local gate and merges on CI's required checks (the binding
+manifest's `green_commands` row). `make preflight` — `verify` plus the facade suite
+(`make py-test-facade`, which carries the live-mirror gate) plus the security/workflow gates CI
+also runs — mirrors that roster for a developer with a box to spare. `make ci` is the
 canonical fast gate. Tool versions are pinned identically in the Makefile and the workflows, and
 CI-enforced tools never silently skip locally (uvx provisions the pinned tool on demand).
 
