@@ -1,7 +1,6 @@
 {
  "classes": {
-  "frame": "direct gap: the DataFrame frame answers unlike Spark under its own setting",
-  "part2": "TEMP-VIEW-SESSION-SETTINGS-1 part 2: a DataFrame frame inlined into a SQL view follows the reader"
+  "frame": "direct gap: the DataFrame frame answers unlike Spark under its own setting"
  },
  "false": {
   "sweep/ansi/add_date/off>on/read_off": {
@@ -116,46 +115,6 @@
    "answer": "",
    "class": "frame"
   },
-  "sweep/dec/dec_union/off>on/read_off": {
-   "answer": "CANNOT_UP_CAST_DATATYPE",
-   "class": "frame"
-  },
-  "sweep/dec/dec_union/off>on/read_on": {
-   "answer": [
-    "1.0000000000",
-    "1.5000000000",
-    "null",
-    "null"
-   ],
-   "class": "frame"
-  },
-  "sweep/dec/dec_union/on>off/read_off": {
-   "answer": [
-    "1",
-    "2",
-    "null",
-    "null"
-   ],
-   "class": "frame"
-  },
-  "sweep/dec/dec_union/on>off/read_on": {
-   "answer": "CANNOT_UP_CAST_DATATYPE",
-   "class": "frame"
-  },
-  "sweep/zone/case_zone/la>utc/read_utc": {
-   "answer": [
-    "2024-01-01 03:00:00",
-    "2024-01-01 08:00:00"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/case_zone/utc>la/read_la": {
-   "answer": [
-    "2023-12-31 16:00:00",
-    "2023-12-31 19:00:00"
-   ],
-   "class": "part2"
-  },
   "sweep/zone/date_add/la>utc/read_la": {
    "answer": "",
    "class": "frame"
@@ -188,18 +147,6 @@
    "answer": "",
    "class": "frame"
   },
-  "sweep/zone/date_ts/la>utc/read_utc": {
-   "answer": [
-    "1"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/date_ts/utc>la/read_la": {
-   "answer": [
-    "0"
-   ],
-   "class": "part2"
-  },
   "sweep/zone/hour_text/la>utc/read_la": {
    "answer": [
     "0",
@@ -227,78 +174,6 @@
     "0"
    ],
    "class": "frame"
-  },
-  "sweep/zone/hour_where/la>utc/read_utc": {
-   "answer": [
-    "1"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/hour_where/utc>la/read_la": {
-   "answer": [
-    "0"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_between/la>utc/read_utc": {
-   "answer": [
-    "2"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_between/utc>la/read_la": {
-   "answer": [
-    "1"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_eq/la>utc/read_utc": {
-   "answer": [
-    "1"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_eq/utc>la/read_la": {
-   "answer": [
-    "0"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_ge/la>utc/read_utc": {
-   "answer": [
-    "2"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_ge/utc>la/read_la": {
-   "answer": [
-    "1"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_ge_column/la>utc/read_utc": {
-   "answer": [
-    "2"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_ge_column/utc>la/read_la": {
-   "answer": [
-    "1"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_in/la>utc/read_utc": {
-   "answer": [
-    "2"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_in/utc>la/read_la": {
-   "answer": [
-    "0"
-   ],
-   "class": "part2"
   }
  },
  "true": {
@@ -414,46 +289,6 @@
    "answer": "",
    "class": "frame"
   },
-  "sweep/dec/dec_union/off>on/read_off": {
-   "answer": "CANNOT_UP_CAST_DATATYPE",
-   "class": "frame"
-  },
-  "sweep/dec/dec_union/off>on/read_on": {
-   "answer": [
-    "1.0000000000",
-    "1.5000000000",
-    "null",
-    "null"
-   ],
-   "class": "frame"
-  },
-  "sweep/dec/dec_union/on>off/read_off": {
-   "answer": [
-    "1",
-    "2",
-    "null",
-    "null"
-   ],
-   "class": "frame"
-  },
-  "sweep/dec/dec_union/on>off/read_on": {
-   "answer": "CANNOT_UP_CAST_DATATYPE",
-   "class": "frame"
-  },
-  "sweep/zone/case_zone/la>utc/read_utc": {
-   "answer": [
-    "2024-01-01 03:00:00",
-    "2024-01-01 08:00:00"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/case_zone/utc>la/read_la": {
-   "answer": [
-    "2023-12-31 16:00:00",
-    "2023-12-31 19:00:00"
-   ],
-   "class": "part2"
-  },
   "sweep/zone/date_add/la>utc/read_la": {
    "answer": "",
    "class": "frame"
@@ -486,18 +321,6 @@
    "answer": "",
    "class": "frame"
   },
-  "sweep/zone/date_ts/la>utc/read_utc": {
-   "answer": [
-    "1"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/date_ts/utc>la/read_la": {
-   "answer": [
-    "0"
-   ],
-   "class": "part2"
-  },
   "sweep/zone/hour_text/la>utc/read_la": {
    "answer": [
     "0",
@@ -525,78 +348,6 @@
     "0"
    ],
    "class": "frame"
-  },
-  "sweep/zone/hour_where/la>utc/read_utc": {
-   "answer": [
-    "1"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/hour_where/utc>la/read_la": {
-   "answer": [
-    "0"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_between/la>utc/read_utc": {
-   "answer": [
-    "2"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_between/utc>la/read_la": {
-   "answer": [
-    "1"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_eq/la>utc/read_utc": {
-   "answer": [
-    "1"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_eq/utc>la/read_la": {
-   "answer": [
-    "0"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_ge/la>utc/read_utc": {
-   "answer": [
-    "2"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_ge/utc>la/read_la": {
-   "answer": [
-    "1"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_ge_column/la>utc/read_utc": {
-   "answer": [
-    "2"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_ge_column/utc>la/read_la": {
-   "answer": [
-    "1"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_in/la>utc/read_utc": {
-   "answer": [
-    "2"
-   ],
-   "class": "part2"
-  },
-  "sweep/zone/ts_in/utc>la/read_la": {
-   "answer": [
-    "0"
-   ],
-   "class": "part2"
   }
  }
 }

@@ -1,0 +1,219 @@
+{"tag": "zone/utc_la/inner/held_left", "rows": ["(1, 3, 'x')", "(2, 12, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/utc_la/inner/held_right", "rows": ["(1, 'x', 19)", "(2, 'y', 4)"], "types": ["int", "string", "int"]}
+{"tag": "zone/utc_la/inner/both_held", "rows": ["(1, 3, 'x')", "(2, 12, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/utc_la/inner/cond_left", "rows": ["(1, 19, 1, 'x')", "(2, 4, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/utc_la/inner/cond_right", "rows": ["(1, 'x', 1, 19)", "(2, 'y', 2, 4)"], "types": ["int", "string", "int", "int"]}
+{"tag": "zone/utc_la/inner/cond_both", "rows": ["(1, 19, 1, 'x')", "(2, 4, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/utc_la/left/held_left", "rows": ["(1, 3, 'x')", "(2, 12, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/utc_la/left/held_right", "rows": ["(1, 'x', 19)", "(2, 'y', 4)"], "types": ["int", "string", "int"]}
+{"tag": "zone/utc_la/left/both_held", "rows": ["(1, 3, 'x')", "(2, 12, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/utc_la/left/cond_left", "rows": ["(1, 19, 1, 'x')", "(2, 4, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/utc_la/left/cond_right", "rows": ["(1, 'x', 1, 19)", "(2, 'y', 2, 4)"], "types": ["int", "string", "int", "int"]}
+{"tag": "zone/utc_la/left/cond_both", "rows": ["(1, 19, 1, 'x')", "(2, 4, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/utc_la/right/held_left", "rows": ["(1, 3, 'x')", "(2, 12, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/utc_la/right/held_right", "rows": ["(1, 'x', 19)", "(2, 'y', 4)"], "types": ["int", "string", "int"]}
+{"tag": "zone/utc_la/right/both_held", "rows": ["(1, 3, 'x')", "(2, 12, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/utc_la/right/cond_left", "rows": ["(1, 19, 1, 'x')", "(2, 4, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/utc_la/right/cond_right", "rows": ["(1, 'x', 1, 19)", "(2, 'y', 2, 4)"], "types": ["int", "string", "int", "int"]}
+{"tag": "zone/utc_la/right/cond_both", "rows": ["(1, 19, 1, 'x')", "(2, 4, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/utc_la/full/held_left", "rows": ["(1, 3, 'x')", "(2, 12, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/utc_la/full/held_right", "rows": ["(1, 'x', 19)", "(2, 'y', 4)"], "types": ["int", "string", "int"]}
+{"tag": "zone/utc_la/full/both_held", "rows": ["(1, 3, 'x')", "(2, 12, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/utc_la/full/cond_left", "rows": ["(1, 19, 1, 'x')", "(2, 4, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/utc_la/full/cond_right", "rows": ["(1, 'x', 1, 19)", "(2, 'y', 2, 4)"], "types": ["int", "string", "int", "int"]}
+{"tag": "zone/utc_la/full/cond_both", "rows": ["(1, 19, 1, 'x')", "(2, 4, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/utc_la/left_semi/held_left", "rows": ["(1, 3)", "(2, 12)"], "types": ["int", "int"]}
+{"tag": "zone/utc_la/left_semi/held_right", "rows": ["(1, 'x')", "(2, 'y')"], "types": ["int", "string"]}
+{"tag": "zone/utc_la/left_semi/both_held", "rows": ["(1, 3)", "(2, 12)"], "types": ["int", "int"]}
+{"tag": "zone/utc_la/left_semi/cond_left", "rows": ["(1, 19)", "(2, 4)"], "types": ["int", "int"]}
+{"tag": "zone/utc_la/left_semi/cond_right", "rows": ["(1, 'x')", "(2, 'y')"], "types": ["int", "string"]}
+{"tag": "zone/utc_la/left_semi/cond_both", "rows": ["(1, 19)", "(2, 4)"], "types": ["int", "int"]}
+{"tag": "zone/utc_la/left_anti/held_left", "rows": [], "types": ["int", "int"]}
+{"tag": "zone/utc_la/left_anti/held_right", "rows": [], "types": ["int", "string"]}
+{"tag": "zone/utc_la/left_anti/both_held", "rows": [], "types": ["int", "int"]}
+{"tag": "zone/utc_la/left_anti/cond_left", "rows": [], "types": ["int", "int"]}
+{"tag": "zone/utc_la/left_anti/cond_right", "rows": [], "types": ["int", "string"]}
+{"tag": "zone/utc_la/left_anti/cond_both", "rows": [], "types": ["int", "int"]}
+{"tag": "zone/utc_la/cross/held_left", "rows": ["(1, 19, 1, 'x')", "(1, 19, 2, 'y')", "(2, 4, 1, 'x')", "(2, 4, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/utc_la/cross/held_right", "rows": ["(1, 'x', 1, 19)", "(1, 'x', 2, 4)", "(2, 'y', 1, 19)", "(2, 'y', 2, 4)"], "types": ["int", "string", "int", "int"]}
+{"tag": "zone/utc_la/cross/both_held", "rows": ["(1, 19, 1, 'x')", "(1, 19, 2, 'y')", "(2, 4, 1, 'x')", "(2, 4, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/utc_la/cond_join", "rows": ["(1, 19)", "(2, 4)"], "types": ["int", "int"]}
+{"tag": "zone/utc_la/sql_over_join", "rows": ["(1, 3)", "(2, 12)"], "types": ["int", "int"]}
+{"tag": "callers/zone/utc_la/dtypes", "rows": ["('int', 'int')"]}
+{"tag": "callers/zone/utc_la/withcolumn", "rows": ["(1, 3)", "(2, 12)"], "types": ["int", "int"]}
+{"tag": "callers/zone/utc_la/filter_expr", "rows": ["(1, 3)", "(2, 12)"], "types": ["int", "int"]}
+{"tag": "callers/zone/utc_la/select_expr_col", "rows": ["(1, 3)", "(2, 12)"], "types": ["int", "int"]}
+{"tag": "callers/zone/utc_la/sql_df_arg", "error": "ReparkSession.sql() got an unexpected keyword argument 'h'"}
+{"tag": "callers/zone/utc_la/ctas_read", "rows": ["(1, 3)", "(2, 12)"], "types": ["int", "int"]}
+{"tag": "zone/utc_la/view_of_join", "rows": ["(1, 3)", "(2, 12)"], "types": ["int", "int"]}
+{"tag": "zone/la_utc/inner/held_left", "rows": ["(1, 19, 'x')", "(2, 4, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/la_utc/inner/held_right", "rows": ["(1, 'x', 3)", "(2, 'y', 12)"], "types": ["int", "string", "int"]}
+{"tag": "zone/la_utc/inner/both_held", "rows": ["(1, 19, 'x')", "(2, 4, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/la_utc/inner/cond_left", "rows": ["(1, 3, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/la_utc/inner/cond_right", "rows": ["(1, 'x', 1, 3)", "(2, 'y', 2, 12)"], "types": ["int", "string", "int", "int"]}
+{"tag": "zone/la_utc/inner/cond_both", "rows": ["(1, 3, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/la_utc/left/held_left", "rows": ["(1, 19, 'x')", "(2, 4, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/la_utc/left/held_right", "rows": ["(1, 'x', 3)", "(2, 'y', 12)"], "types": ["int", "string", "int"]}
+{"tag": "zone/la_utc/left/both_held", "rows": ["(1, 19, 'x')", "(2, 4, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/la_utc/left/cond_left", "rows": ["(1, 3, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/la_utc/left/cond_right", "rows": ["(1, 'x', 1, 3)", "(2, 'y', 2, 12)"], "types": ["int", "string", "int", "int"]}
+{"tag": "zone/la_utc/left/cond_both", "rows": ["(1, 3, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/la_utc/right/held_left", "rows": ["(1, 19, 'x')", "(2, 4, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/la_utc/right/held_right", "rows": ["(1, 'x', 3)", "(2, 'y', 12)"], "types": ["int", "string", "int"]}
+{"tag": "zone/la_utc/right/both_held", "rows": ["(1, 19, 'x')", "(2, 4, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/la_utc/right/cond_left", "rows": ["(1, 3, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/la_utc/right/cond_right", "rows": ["(1, 'x', 1, 3)", "(2, 'y', 2, 12)"], "types": ["int", "string", "int", "int"]}
+{"tag": "zone/la_utc/right/cond_both", "rows": ["(1, 3, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/la_utc/full/held_left", "rows": ["(1, 19, 'x')", "(2, 4, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/la_utc/full/held_right", "rows": ["(1, 'x', 3)", "(2, 'y', 12)"], "types": ["int", "string", "int"]}
+{"tag": "zone/la_utc/full/both_held", "rows": ["(1, 19, 'x')", "(2, 4, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/la_utc/full/cond_left", "rows": ["(1, 3, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/la_utc/full/cond_right", "rows": ["(1, 'x', 1, 3)", "(2, 'y', 2, 12)"], "types": ["int", "string", "int", "int"]}
+{"tag": "zone/la_utc/full/cond_both", "rows": ["(1, 3, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/la_utc/left_semi/held_left", "rows": ["(1, 19)", "(2, 4)"], "types": ["int", "int"]}
+{"tag": "zone/la_utc/left_semi/held_right", "rows": ["(1, 'x')", "(2, 'y')"], "types": ["int", "string"]}
+{"tag": "zone/la_utc/left_semi/both_held", "rows": ["(1, 19)", "(2, 4)"], "types": ["int", "int"]}
+{"tag": "zone/la_utc/left_semi/cond_left", "rows": ["(1, 3)", "(2, 12)"], "types": ["int", "int"]}
+{"tag": "zone/la_utc/left_semi/cond_right", "rows": ["(1, 'x')", "(2, 'y')"], "types": ["int", "string"]}
+{"tag": "zone/la_utc/left_semi/cond_both", "rows": ["(1, 3)", "(2, 12)"], "types": ["int", "int"]}
+{"tag": "zone/la_utc/left_anti/held_left", "rows": [], "types": ["int", "int"]}
+{"tag": "zone/la_utc/left_anti/held_right", "rows": [], "types": ["int", "string"]}
+{"tag": "zone/la_utc/left_anti/both_held", "rows": [], "types": ["int", "int"]}
+{"tag": "zone/la_utc/left_anti/cond_left", "rows": [], "types": ["int", "int"]}
+{"tag": "zone/la_utc/left_anti/cond_right", "rows": [], "types": ["int", "string"]}
+{"tag": "zone/la_utc/left_anti/cond_both", "rows": [], "types": ["int", "int"]}
+{"tag": "zone/la_utc/cross/held_left", "rows": ["(1, 3, 1, 'x')", "(1, 3, 2, 'y')", "(2, 12, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/la_utc/cross/held_right", "rows": ["(1, 'x', 1, 3)", "(1, 'x', 2, 12)", "(2, 'y', 1, 3)", "(2, 'y', 2, 12)"], "types": ["int", "string", "int", "int"]}
+{"tag": "zone/la_utc/cross/both_held", "rows": ["(1, 3, 1, 'x')", "(1, 3, 2, 'y')", "(2, 12, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/la_utc/cond_join", "rows": ["(1, 3)", "(2, 12)"], "types": ["int", "int"]}
+{"tag": "zone/la_utc/sql_over_join", "rows": ["(1, 19)", "(2, 4)"], "types": ["int", "int"]}
+{"tag": "callers/zone/la_utc/dtypes", "rows": ["('int', 'int')"]}
+{"tag": "callers/zone/la_utc/withcolumn", "rows": ["(1, 19)", "(2, 4)"], "types": ["int", "int"]}
+{"tag": "callers/zone/la_utc/filter_expr", "rows": ["(1, 19)", "(2, 4)"], "types": ["int", "int"]}
+{"tag": "callers/zone/la_utc/select_expr_col", "rows": ["(1, 19)", "(2, 4)"], "types": ["int", "int"]}
+{"tag": "callers/zone/la_utc/sql_df_arg", "error": "ReparkSession.sql() got an unexpected keyword argument 'h'"}
+{"tag": "callers/zone/la_utc/ctas_read", "rows": ["(1, 19)", "(2, 4)"], "types": ["int", "int"]}
+{"tag": "zone/la_utc/view_of_join", "rows": ["(1, 19)", "(2, 4)"], "types": ["int", "int"]}
+{"tag": "ansi/on_off/inner/held_left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/on_off/inner/held_right", "rows": ["(1, 'x', -2147483648)", "(2, 'y', 6)"], "types": ["int", "string", "int"]}
+{"tag": "ansi/on_off/inner/both_held", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/on_off/inner/cond_left", "rows": ["(1, -2147483648, 1, 'x')", "(2, 6, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "ansi/on_off/inner/cond_right", "rows": ["(1, 'x', 1, -2147483648)", "(2, 'y', 2, 6)"], "types": ["int", "string", "int", "int"]}
+{"tag": "ansi/on_off/inner/cond_both", "rows": ["(1, -2147483648, 1, 'x')", "(2, 6, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "ansi/on_off/left/held_left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/on_off/left/held_right", "rows": ["(1, 'x', -2147483648)", "(2, 'y', 6)"], "types": ["int", "string", "int"]}
+{"tag": "ansi/on_off/left/both_held", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/on_off/left/cond_left", "rows": ["(1, -2147483648, 1, 'x')", "(2, 6, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "ansi/on_off/left/cond_right", "rows": ["(1, 'x', 1, -2147483648)", "(2, 'y', 2, 6)"], "types": ["int", "string", "int", "int"]}
+{"tag": "ansi/on_off/left/cond_both", "rows": ["(1, -2147483648, 1, 'x')", "(2, 6, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "ansi/on_off/right/held_left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/on_off/right/held_right", "rows": ["(1, 'x', -2147483648)", "(2, 'y', 6)"], "types": ["int", "string", "int"]}
+{"tag": "ansi/on_off/right/both_held", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/on_off/right/cond_left", "rows": ["(1, -2147483648, 1, 'x')", "(2, 6, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "ansi/on_off/right/cond_right", "rows": ["(1, 'x', 1, -2147483648)", "(2, 'y', 2, 6)"], "types": ["int", "string", "int", "int"]}
+{"tag": "ansi/on_off/right/cond_both", "rows": ["(1, -2147483648, 1, 'x')", "(2, 6, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "ansi/on_off/full/held_left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/on_off/full/held_right", "rows": ["(1, 'x', -2147483648)", "(2, 'y', 6)"], "types": ["int", "string", "int"]}
+{"tag": "ansi/on_off/full/both_held", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/on_off/full/cond_left", "rows": ["(1, -2147483648, 1, 'x')", "(2, 6, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "ansi/on_off/full/cond_right", "rows": ["(1, 'x', 1, -2147483648)", "(2, 'y', 2, 6)"], "types": ["int", "string", "int", "int"]}
+{"tag": "ansi/on_off/full/cond_both", "rows": ["(1, -2147483648, 1, 'x')", "(2, 6, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "ansi/on_off/left_semi/held_left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/on_off/left_semi/held_right", "rows": ["(1, 'x')", "(2, 'y')"], "types": ["int", "string"]}
+{"tag": "ansi/on_off/left_semi/both_held", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/on_off/left_semi/cond_left", "rows": ["(1, -2147483648)", "(2, 6)"], "types": ["int", "int"]}
+{"tag": "ansi/on_off/left_semi/cond_right", "rows": ["(1, 'x')", "(2, 'y')"], "types": ["int", "string"]}
+{"tag": "ansi/on_off/left_semi/cond_both", "rows": ["(1, -2147483648)", "(2, 6)"], "types": ["int", "int"]}
+{"tag": "ansi/on_off/left_anti/held_left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/on_off/left_anti/held_right", "rows": [], "types": ["int", "string"]}
+{"tag": "ansi/on_off/left_anti/both_held", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/on_off/left_anti/cond_left", "rows": [], "types": ["int", "int"]}
+{"tag": "ansi/on_off/left_anti/cond_right", "rows": [], "types": ["int", "string"]}
+{"tag": "ansi/on_off/left_anti/cond_both", "rows": [], "types": ["int", "int"]}
+{"tag": "ansi/on_off/cross/held_left", "rows": ["(1, -2147483648, 1, 'x')", "(1, -2147483648, 2, 'y')", "(2, 6, 1, 'x')", "(2, 6, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "ansi/on_off/cross/held_right", "rows": ["(1, 'x', 1, -2147483648)", "(1, 'x', 2, 6)", "(2, 'y', 1, -2147483648)", "(2, 'y', 2, 6)"], "types": ["int", "string", "int", "int"]}
+{"tag": "ansi/on_off/cross/both_held", "rows": ["(1, -2147483648, 1, 'x')", "(1, -2147483648, 2, 'y')", "(2, 6, 1, 'x')", "(2, 6, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "ansi/on_off/cond_join", "rows": ["(1, -2147483648)", "(2, 6)"], "types": ["int", "int"]}
+{"tag": "ansi/on_off/sql_over_join", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "callers/ansi/on_off/dtypes", "rows": ["('int', 'int')"]}
+{"tag": "callers/ansi/on_off/withcolumn", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "callers/ansi/on_off/filter_expr", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "callers/ansi/on_off/select_expr_col", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "callers/ansi/on_off/sql_df_arg", "error": "ReparkSession.sql() got an unexpected keyword argument 'h'"}
+{"tag": "DDL:callers/ansi/on_off/ctas", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "callers/ansi/on_off/ctas_read", "error": "Error during planning: table 'lc.ns.c_ansi_on_off' not found"}
+{"tag": "ansi/on_off/view_of_join", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/inner/held_left", "rows": ["(1, -2147483648, 'x')", "(2, 6, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "ansi/off_on/inner/held_right", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/inner/both_held", "rows": ["(1, -2147483648, 'x')", "(2, 6, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "ansi/off_on/inner/cond_left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/inner/cond_right", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/inner/cond_both", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/left/held_left", "rows": ["(1, -2147483648, 'x')", "(2, 6, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "ansi/off_on/left/held_right", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/left/both_held", "rows": ["(1, -2147483648, 'x')", "(2, 6, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "ansi/off_on/left/cond_left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/left/cond_right", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/left/cond_both", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/right/held_left", "rows": ["(1, -2147483648, 'x')", "(2, 6, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "ansi/off_on/right/held_right", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/right/both_held", "rows": ["(1, -2147483648, 'x')", "(2, 6, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "ansi/off_on/right/cond_left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/right/cond_right", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/right/cond_both", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/full/held_left", "rows": ["(1, -2147483648, 'x')", "(2, 6, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "ansi/off_on/full/held_right", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/full/both_held", "rows": ["(1, -2147483648, 'x')", "(2, 6, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "ansi/off_on/full/cond_left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/full/cond_right", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/full/cond_both", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/left_semi/held_left", "rows": ["(1, -2147483648)", "(2, 6)"], "types": ["int", "int"]}
+{"tag": "ansi/off_on/left_semi/held_right", "rows": ["(1, 'x')", "(2, 'y')"], "types": ["int", "string"]}
+{"tag": "ansi/off_on/left_semi/both_held", "rows": ["(1, -2147483648)", "(2, 6)"], "types": ["int", "int"]}
+{"tag": "ansi/off_on/left_semi/cond_left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/left_semi/cond_right", "rows": ["(1, 'x')", "(2, 'y')"], "types": ["int", "string"]}
+{"tag": "ansi/off_on/left_semi/cond_both", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/left_anti/held_left", "rows": [], "types": ["int", "int"]}
+{"tag": "ansi/off_on/left_anti/held_right", "rows": [], "types": ["int", "string"]}
+{"tag": "ansi/off_on/left_anti/both_held", "rows": [], "types": ["int", "int"]}
+{"tag": "ansi/off_on/left_anti/cond_left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/left_anti/cond_right", "rows": [], "types": ["int", "string"]}
+{"tag": "ansi/off_on/left_anti/cond_both", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/cross/held_left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/cross/held_right", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/cross/both_held", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/cond_join", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/off_on/sql_over_join", "rows": ["(1, -2147483648)", "(2, 6)"], "types": ["int", "int"]}
+{"tag": "callers/ansi/off_on/dtypes", "rows": ["('int', 'int')"]}
+{"tag": "callers/ansi/off_on/withcolumn", "rows": ["(1, -2147483648)", "(2, 6)"], "types": ["int", "int"]}
+{"tag": "callers/ansi/off_on/filter_expr", "rows": ["(2, 6)"], "types": ["int", "int"]}
+{"tag": "callers/ansi/off_on/select_expr_col", "rows": ["(1, -2147483648)", "(2, 6)"], "types": ["int", "int"]}
+{"tag": "callers/ansi/off_on/sql_df_arg", "error": "ReparkSession.sql() got an unexpected keyword argument 'h'"}
+{"tag": "callers/ansi/off_on/ctas_read", "rows": ["(1, -2147483648)", "(2, 6)"], "types": ["int", "int"]}
+{"tag": "ansi/off_on/view_of_join", "rows": ["(1, -2147483648)", "(2, 6)"], "types": ["int", "int"]}
+{"tag": "zone/match/inner", "rows": ["(1, 3, 'x')", "(2, 12, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/match/cond_inner", "rows": ["(1, 3, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/match/left", "rows": ["(1, 3, 'x')", "(2, 12, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/match/cond_left", "rows": ["(1, 3, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/match/right", "rows": ["(1, 3, 'x')", "(2, 12, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/match/cond_right", "rows": ["(1, 3, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/match/full", "rows": ["(1, 3, 'x')", "(2, 12, 'y')"], "types": ["int", "int", "string"]}
+{"tag": "zone/match/cond_full", "rows": ["(1, 3, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "zone/match/left_semi", "rows": ["(1, 3)", "(2, 12)"], "types": ["int", "int"]}
+{"tag": "zone/match/cond_left_semi", "rows": ["(1, 3)", "(2, 12)"], "types": ["int", "int"]}
+{"tag": "zone/match/left_anti", "rows": [], "types": ["int", "int"]}
+{"tag": "zone/match/cond_left_anti", "rows": [], "types": ["int", "int"]}
+{"tag": "zone/match/cross", "rows": ["(1, 3, 1, 'x')", "(1, 3, 2, 'y')", "(2, 12, 1, 'x')", "(2, 12, 2, 'y')"], "types": ["int", "int", "int", "string"]}
+{"tag": "ansi/match/inner", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/match/cond_inner", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/match/left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/match/cond_left", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/match/right", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/match/cond_right", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/match/full", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/match/cond_full", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/match/left_semi", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/match/cond_left_semi", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/match/left_anti", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/match/cond_left_anti", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/match/cross", "error": "ARITHMETIC_OVERFLOW"}

@@ -1,15 +1,101 @@
 //! Build-time registration seam for SQL-door extensions.
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, PoisonError};
 
+use datafusion::catalog::TableProvider;
+use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::TreeNode;
 use datafusion::logical_expr::Expr;
 use datafusion::logical_expr::planner::TypePlanner;
 use datafusion::optimizer::AnalyzerRule;
-use datafusion::prelude::{SessionConfig, SessionContext};
+use datafusion::prelude::{DataFrame, SessionConfig, SessionContext};
 
 use crate::session_time_zone::SessionTimeZone;
+
+pub type FrameViewWrap =
+    fn(&str, &DataFrame, &ConfigOptions, LiveOptions) -> Arc<dyn TableProvider>;
+
+type ReadLive = dyn Fn() -> Option<Arc<ConfigOptions>> + Send + Sync;
+
+struct LastRead {
+    read: Arc<ReadLive>,
+    last: Mutex<Arc<ConfigOptions>>,
+}
+
+#[derive(Clone, Default)]
+pub struct LiveOptions(Option<Arc<LastRead>>);
+
+impl LiveOptions {
+    #[must_use]
+    pub fn new(start: Arc<ConfigOptions>, read: Arc<ReadLive>) -> Self {
+        Self(Some(Arc::new(LastRead {
+            read,
+            last: Mutex::new(start),
+        })))
+    }
+
+    #[must_use]
+    pub fn read(&self) -> Option<Arc<ConfigOptions>> {
+        let live = self.0.as_ref()?;
+        let fresh = (live.read)();
+        let mut last = live.last.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some(fresh) = fresh {
+            *last = fresh;
+        }
+        Some(Arc::clone(&last))
+    }
+}
+
+impl std::fmt::Debug for LiveOptions {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_tuple("LiveOptions")
+            .field(&self.0.is_some())
+            .finish()
+    }
+}
+
+#[derive(Clone)]
+pub struct FrameViewSeat {
+    wrap: FrameViewWrap,
+    rule: Arc<dyn AnalyzerRule + Send + Sync>,
+}
+
+impl FrameViewSeat {
+    #[must_use]
+    pub fn new(wrap: FrameViewWrap, rule: Arc<dyn AnalyzerRule + Send + Sync>) -> Self {
+        Self { wrap, rule }
+    }
+
+    pub(crate) fn rule(&self) -> Arc<dyn AnalyzerRule + Send + Sync> {
+        Arc::clone(&self.rule)
+    }
+
+    pub(crate) fn wrap(
+        &self,
+        name: &str,
+        frame: &DataFrame,
+        live: &ConfigOptions,
+        reader: LiveOptions,
+    ) -> Arc<dyn TableProvider> {
+        (self.wrap)(name, frame, live, reader)
+    }
+}
+
+impl std::fmt::Debug for FrameViewSeat {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("FrameViewSeat")
+            .field("rule", &self.rule.name())
+            .finish_non_exhaustive()
+    }
+}
+
+#[must_use]
+pub fn with_frame_view_seat(config: SessionConfig, seat: FrameViewSeat) -> SessionConfig {
+    config.with_extension(Arc::new(seat))
+}
 
 /// Values already resolved by `build()` and passed to the configure hook.
 #[derive(Debug, Clone, Copy)]

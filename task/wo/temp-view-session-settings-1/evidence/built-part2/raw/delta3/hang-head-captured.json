@@ -1,0 +1,26 @@
+{
+ "conf_sets": 9510438,
+ "elapsed_s": 75.16,
+ "landed": {},
+ "other": {},
+ "refused": {
+  "insertInto": 3000,
+  "insertInto_view_same": 3042,
+  "sqlInsert_view_other": 5549,
+  "writeTo": 1864,
+  "writeTo_view_other": 1774
+ },
+ "rows_tb": 0,
+ "rows_td": 0,
+ "settings": [
+  "spark.sql.caseSensitive",
+  "spark.sql.legacy.decimal.retainFractionDigitsOnTruncate",
+  "spark.sql.ansi.enabled",
+  "spark.sql.session.timeZone",
+  "spark.sql.ansi.enabled",
+  "spark.sql.session.timeZone"
+ ],
+ "slowest_write_s": 0.2510348999639973,
+ "texts": {},
+ "writes": 15229
+}

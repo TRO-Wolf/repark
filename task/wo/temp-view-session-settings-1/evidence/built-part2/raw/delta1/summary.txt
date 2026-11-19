@@ -1,0 +1,160 @@
+BAR rows 3004
+part1 Counter({'WRONG → EQUAL': 261, 'WRONG → WRONG (changed)': 10, 'EQUAL → RAISE': 5})
+part1 matching moves []
+part1 outside part2 Counter({('WRONG → EQUAL', 'sweep'): 40, ('WRONG → WRONG (changed)', 'sweep'): 8, ('WRONG → EQUAL', 'part1'): 1})
+| part1 | EQUAL → RAISE | `write/writeto-held/on/off/avg` | [["null"], ["decimal(38,4)"]] | [["null"], ["decimal(38,4)"]] | RAISE ARITHMETIC_OVERFLOW |
+| part1 | EQUAL → RAISE | `filter_sensitive/df/fdiv/on_off` | [["5.0"], ["double"]] | [["5.0"], ["double"]] | RAISE DIVIDE_BY_ZERO |
+| part1 | EQUAL → RAISE | `filter/or_mixed/df/fdiv/on_off` | [["5.0"], ["double"]] | [["5.0"], ["double"]] | RAISE DIVIDE_BY_ZERO |
+| part1 | EQUAL → RAISE | `filter/add_sens/df/fadd/on_off` | [["2"], ["int"]] | [["2"], ["int"]] | RAISE ARITHMETIC_OVERFLOW |
+| part1 | EQUAL → RAISE | `filter/agg_key_sens/df/fagg/on_off` | [["5.0"], ["double"]] | [["5.0"], ["double"]] | RAISE DIVIDE_BY_ZERO |
+pre Counter({'WRONG → EQUAL': 622, 'WRONG → WRONG (changed)': 33, 'EQUAL → RAISE': 9})
+pre matching moves []
+pre outside part2 Counter({('WRONG → EQUAL', 'part1'): 362, ('WRONG → EQUAL', 'sweep'): 40, ('WRONG → WRONG (changed)', 'part1'): 23, ('WRONG → WRONG (changed)', 'sweep'): 8, ('EQUAL → RAISE', 'part1'): 4})
+| pre | EQUAL → RAISE | `write/writeto-held/on/off/avg` | [["null"], ["decimal(38,4)"]] | [["null"], ["decimal(38,4)"]] | RAISE ARITHMETIC_OVERFLOW |
+| pre | EQUAL → RAISE | `filter_sensitive/sql/fdiv/on_off` | [["5.0"], ["double"]] | [["5.0"], ["double"]] | RAISE DIVIDE_BY_ZERO |
+| pre | EQUAL → RAISE | `filter_sensitive/df/fdiv/on_off` | [["5.0"], ["double"]] | [["5.0"], ["double"]] | RAISE DIVIDE_BY_ZERO |
+| pre | EQUAL → RAISE | `filter/or_mixed/sql/fdiv/on_off` | [["5.0"], ["double"]] | [["5.0"], ["double"]] | RAISE DIVIDE_BY_ZERO |
+| pre | EQUAL → RAISE | `filter/agg_key_sens/sql/fagg/on_off` | [["5.0"], ["double"]] | [["5.0"], ["double"]] | RAISE DIVIDE_BY_ZERO |
+| pre | EQUAL → RAISE | `filter/and_free/sql/fdiv/on_off` | [["5.0"], ["double"]] | [["5.0"], ["double"]] | RAISE DIVIDE_BY_ZERO |
+| pre | EQUAL → RAISE | `filter/or_mixed/df/fdiv/on_off` | [["5.0"], ["double"]] | [["5.0"], ["double"]] | RAISE DIVIDE_BY_ZERO |
+| pre | EQUAL → RAISE | `filter/add_sens/df/fadd/on_off` | [["2"], ["int"]] | [["2"], ["int"]] | RAISE ARITHMETIC_OVERFLOW |
+| pre | EQUAL → RAISE | `filter/agg_key_sens/df/fagg/on_off` | [["5.0"], ["double"]] | [["5.0"], ["double"]] | RAISE DIVIDE_BY_ZERO |
+targets EQUAL on build head 665; lost []
+cells differing from the build head: 12 [(('rev', 'direct/lts/UTC'), '[["12"], ["int"]]', '[["14"], ["int"]]'), (('rev', 'direct/lts/America/Los_Angeles'), '[["4"], ["int"]]', '[["6"], ["int"]]'), (('rev', 'direct/now/UTC'), '[["12"], ["int"]]', '[["14"], ["int"]]'), (('rev', 'direct/now/America/Los_Angeles'), '[["4"], ["int"]]', '[["6"], ["int"]]'), (('rev', 'now_fn/sql/lts/utc_la'), '[["12"], ["int"]]', '[["14"], ["int"]]'), (('rev', 'now_fn/sql/lts/la_utc'), '[["4"], ["int"]]', '[["6"], ["int"]]'), (('rev', 'now_fn/df/lts/utc_la'), '[["12"], ["int"]]', '[["14"], ["int"]]'), (('rev', 'now_fn/df/lts/la_utc'), '[["4"], ["int"]]', '[["6"], ["int"]]'), (('rev', 'now_fn/sql/now/utc_la'), '[["12"], ["int"]]', '[["14"], ["int"]]'), (('rev', 'now_fn/sql/now/la_utc'), '[["4"], ["int"]]', '[["6"], ["int"]]'), (('rev', 'now_fn/df/now/utc_la'), '[["12"], ["int"]]', '[["14"], ["int"]]'), (('rev', 'now_fn/df/now/la_utc'), '[["4"], ["int"]]', '[["6"], ["int"]]')]
+part2 non-EQUAL left 213
+| class | `write/writeto-held/on/off/avg` | REPARK_RAISES | [["null"], ["decimal(38,4)"]] | [["null"], ["decimal(38,4)"]] | RAISE ARITHMETIC_OVERFLOW |
+| class | `write/writeto-held/off/on/avg` | REPARK_ANSWERS | RAISE ARITHMETIC_OVERFLOW | [["null"], ["decimal(38,4)"]] | [["null"], ["decimal(38,4)"]] |
+| class | `filter_sensitive/df/fdiv/on_off` | REPARK_RAISES | [["5.0"], ["double"]] | [["5.0"], ["double"]] | RAISE DIVIDE_BY_ZERO |
+| class | `filter_sensitive/df/fdiv/off_on` | EQUAL | [["5.0"], ["double"]] | [["5.0"], ["double"]] | [["5.0"], ["double"]] |
+| class | `filter/or_mixed/df/fdiv/on_off` | REPARK_RAISES | [["5.0"], ["double"]] | [["5.0"], ["double"]] | RAISE DIVIDE_BY_ZERO |
+| class | `filter/or_mixed/df/fdiv/off_on` | EQUAL | [["5.0"], ["double"]] | [["5.0"], ["double"]] | [["5.0"], ["double"]] |
+| class | `filter/add_sens/df/fadd/on_off` | REPARK_RAISES | [["2"], ["int"]] | [["2"], ["int"]] | RAISE ARITHMETIC_OVERFLOW |
+| class | `filter/agg_key_sens/df/fagg/on_off` | REPARK_RAISES | [["5.0"], ["double"]] | [["5.0"], ["double"]] | RAISE DIVIDE_BY_ZERO |
+PROBE frames cells 30
+  vs part1 /  / WRONG → EQUAL / EQ: 4
+  vs part1 /  / unmoved / EQ: 17
+  vs part1 /  / unmoved / NE: 7
+  vs part1 /  / unmoved / noSpark: 2
+  vs pre /  / WRONG → EQUAL: 10
+  vs pre /  / unmoved: 20
+PROBE attack cells 133
+  vs part1 /  / WRONG → EQUAL / EQ: 2
+  vs part1 /  / WRONG → WRONG / NE: 1
+  vs part1 /  / unmoved / EQ: 97
+  vs part1 /  / unmoved / NE: 25
+  vs part1 /  / unmoved / noSpark: 8
+  vs pre /  / WRONG → EQUAL: 31
+  vs pre /  / WRONG → WRONG: 3
+  vs pre /  / unmoved: 99
+PROBE attack2 cells 16
+  vs part1 /  / unmoved / EQ: 8
+  vs part1 /  / unmoved / NE: 5
+  vs part1 /  / unmoved / noSpark: 3
+  vs pre /  / WRONG → EQUAL: 4
+  vs pre /  / unmoved: 12
+PROBE attack3 cells 7
+  vs part1 /  / unmoved / EQ: 7
+  vs pre /  / WRONG → EQUAL: 5
+  vs pre /  / unmoved: 2
+PROBE case cells 7
+  vs part1 /  / unmoved / EQ: 3
+  vs part1 /  / unmoved / NE: 4
+  vs pre /  / unmoved: 7
+PROBE fable cells 14
+  vs b74 /  / WRONG → EQUAL: 3
+  vs b74 /  / WRONG → WRONG: 1
+  vs b74 /  / moved (no Spark answer): 2
+  vs b74 /  / unmoved: 8
+  vs part1 /  / moved (no Spark answer) / noSpark: 2
+  vs part1 /  / unmoved / EQ: 7
+  vs part1 /  / unmoved / NE: 5
+  vs pre /  / moved (no Spark answer): 2
+  vs pre /  / unmoved: 12
+| smart vs part1 | moved (no Spark answer) | `false/Ame_UTC/sd` | — | (1, 1704078000, '2024-01-01 03:00:00') (2, 1704110400, '2024-01- | (1, 1704106800, '2024-01-01 11:00:00') (2, 1704139200, '2024-01- |
+| smart vs part1 | moved (no Spark answer) | `false/Ame_UTC/sf` | — | (1, 1704078000, '2024-01-01 03:00:00') (2, 1704110400, '2024-01- | (1, 1704106800, '2024-01-01 11:00:00') (2, 1704139200, '2024-01- |
+| smart vs part1 | moved (no Spark answer) | `false/Ame_UTC/sh` | — | (1, 1704078000, 3) (2, 1704110400, 12) | (1, 1704106800, 3) (2, 1704139200, 12) |
+| smart vs part1 | moved (no Spark answer) | `false/Ame_UTC/ss` | — | (1, 1704078000, '2024-01-01 03:00:00') (2, 1704110400, '2024-01- | (1, 1704106800, '2024-01-01 11:00:00') (2, 1704139200, '2024-01- |
+| smart vs part1 | moved (no Spark answer) | `false/UTC_Ame/sd` | — | (1, 1704106800, '2024-01-01 03:00:00') (2, 1704139200, '2024-01- | (1, 1704078000, '2023-12-31 19:00:00') (2, 1704110400, '2024-01- |
+| smart vs part1 | moved (no Spark answer) | `false/UTC_Ame/sf` | — | (1, 1704106800, '2024-01-01 03:00:00') (2, 1704139200, '2024-01- | (1, 1704078000, '2023-12-31 19:00:00') (2, 1704110400, '2024-01- |
+| smart vs part1 | moved (no Spark answer) | `false/UTC_Ame/sh` | — | (1, 1704106800, 3) (2, 1704139200, 12) | (1, 1704078000, 3) (2, 1704110400, 12) |
+| smart vs part1 | moved (no Spark answer) | `false/UTC_Ame/ss` | — | (1, 1704106800, '2024-01-01 03:00:00') (2, 1704139200, '2024-01- | (1, 1704078000, '2023-12-31 19:00:00') (2, 1704110400, '2024-01- |
+| smart vs part1 | moved (no Spark answer) | `true/Ame_UTC/sd` | — | (1, 1704078000, '2024-01-01 03:00:00') (2, 1704110400, '2024-01- | (1, 1704106800, '2024-01-01 11:00:00') (2, 1704139200, '2024-01- |
+| smart vs part1 | moved (no Spark answer) | `true/Ame_UTC/sf` | — | (1, 1704078000, '2024-01-01 03:00:00') (2, 1704110400, '2024-01- | (1, 1704106800, '2024-01-01 11:00:00') (2, 1704139200, '2024-01- |
+| smart vs part1 | moved (no Spark answer) | `true/Ame_UTC/sh` | — | (1, 1704078000, 3) (2, 1704110400, 12) | (1, 1704106800, 3) (2, 1704139200, 12) |
+| smart vs part1 | moved (no Spark answer) | `true/Ame_UTC/ss` | — | (1, 1704078000, '2024-01-01 03:00:00') (2, 1704110400, '2024-01- | (1, 1704106800, '2024-01-01 11:00:00') (2, 1704139200, '2024-01- |
+| smart vs part1 | moved (no Spark answer) | `true/UTC_Ame/sd` | — | (1, 1704106800, '2024-01-01 03:00:00') (2, 1704139200, '2024-01- | (1, 1704078000, '2023-12-31 19:00:00') (2, 1704110400, '2024-01- |
+| smart vs part1 | moved (no Spark answer) | `true/UTC_Ame/sf` | — | (1, 1704106800, '2024-01-01 03:00:00') (2, 1704139200, '2024-01- | (1, 1704078000, '2023-12-31 19:00:00') (2, 1704110400, '2024-01- |
+| smart vs part1 | moved (no Spark answer) | `true/UTC_Ame/sh` | — | (1, 1704106800, 3) (2, 1704139200, 12) | (1, 1704078000, 3) (2, 1704110400, 12) |
+| smart vs part1 | moved (no Spark answer) | `true/UTC_Ame/ss` | — | (1, 1704106800, '2024-01-01 03:00:00') (2, 1704139200, '2024-01- | (1, 1704078000, '2023-12-31 19:00:00') (2, 1704110400, '2024-01- |
+PROBE smart cells 20
+  vs b74 /  / unmoved: 20
+  vs part1 /  / moved (no Spark answer) / noSpark: 16
+  vs part1 /  / unmoved / noSpark: 4
+  vs pre /  / moved (no Spark answer): 16
+  vs pre /  / unmoved: 4
+| task2 | EQUAL → RAISE | `ansi/on_off/left_anti/cond_both` |  |  | RAISE ARITHMETIC_OVERFLOW |
+| task2 | EQUAL → RAISE | `ansi/on_off/left_anti/cond_left` |  |  | RAISE ARITHMETIC_OVERFLOW |
+PROBE joins cells 219
+  task2 vs head / EQUAL → RAISE: 2
+  task2 vs head / WRONG → EQUAL: 74
+  task2 vs head / unmoved: 143
+  vs b74 /  / unmoved: 219
+  vs part1 /  / WRONG → EQUAL / EQ: 13
+  vs part1 /  / unmoved / EQ: 105
+  vs part1 /  / unmoved / NE: 101
+  vs pre /  / WRONG → EQUAL: 13
+  vs pre /  / unmoved: 206
+PROBE readers cells 1328
+  reader / cdf / WRONG → EQUAL: 4
+  reader / cdf / WRONG → WRONG: 4
+  reader / cdf / unmoved: 68
+  reader / csv_i / unmoved: 76
+  reader / csv_n / unmoved: 76
+  reader / csv_ns / unmoved: 68
+  reader / csv_s / unmoved: 76
+  reader / excel / unmoved: 4
+  reader / ice_i / WRONG → EQUAL: 36
+  reader / ice_i / unmoved: 40
+  reader / ice_t / EQUAL → EQUAL: 2
+  reader / ice_t / WRONG → EQUAL: 18
+  reader / ice_t / unmoved: 20
+  reader / ice_v / WRONG → EQUAL: 36
+  reader / ice_v / unmoved: 40
+  reader / json_i / unmoved: 76
+  reader / json_s / unmoved: 76
+  reader / mixed / unmoved: 76
+  reader / orc / WRONG → EQUAL: 36
+  reader / orc / unmoved: 40
+  reader / orc_s / WRONG → EQUAL: 36
+  reader / orc_s / unmoved: 40
+  reader / pg / moved (no Spark answer): 36
+  reader / pg / unmoved: 40
+  reader / pg_tz / moved (no Spark answer): 36
+  reader / pg_tz / unmoved: 40
+  reader / pq / WRONG → EQUAL: 36
+  reader / pq / unmoved: 40
+  reader / text_p / WRONG → EQUAL: 36
+  reader / text_p / unmoved: 40
+  reader / text_v / unmoved: 76
+  vs b74 /  / EQUAL → EQUAL: 2
+  vs b74 /  / unmoved: 802
+  vs b74 / lineage / EQUAL → WRONG: 20
+  vs b74 / lineage / WRONG → EQUAL: 108
+  vs b74 / lineage / WRONG → WRONG: 216
+  vs b74 / lineage / unmoved: 180
+  vs part1 /  / EQUAL → EQUAL / EQ: 2
+  vs part1 /  / WRONG → EQUAL / EQ: 238
+  vs part1 /  / WRONG → WRONG / NE: 4
+  vs part1 /  / moved (no Spark answer) / noSpark: 72
+  vs part1 /  / unmoved / EQ: 304
+  vs part1 /  / unmoved / NE: 100
+  vs part1 /  / unmoved / noSpark: 84
+  vs part1 / lineage / unmoved / EQ: 190
+  vs part1 / lineage / unmoved / NE: 330
+  vs part1 / lineage / unmoved / noSpark: 4
+  vs pre /  / EQUAL → EQUAL: 2
+  vs pre /  / WRONG → EQUAL: 264
+  vs pre /  / WRONG → WRONG: 4
+  vs pre /  / moved (no Spark answer): 80
+  vs pre /  / unmoved: 454
+  vs pre / lineage / unmoved: 524

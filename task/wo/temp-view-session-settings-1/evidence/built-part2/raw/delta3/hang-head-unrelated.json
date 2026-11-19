@@ -1,0 +1,22 @@
+{
+ "conf_sets": 10185654,
+ "elapsed_s": 75.1,
+ "landed": {},
+ "other": {},
+ "refused": {
+  "insertInto": 3053,
+  "insertInto_view_same": 3021,
+  "sqlInsert_view_other": 5389,
+  "writeTo": 1851,
+  "writeTo_view_other": 1818
+ },
+ "rows_tb": 0,
+ "rows_td": 0,
+ "settings": [
+  "spark.sql.caseSensitive",
+  "spark.sql.legacy.decimal.retainFractionDigitsOnTruncate"
+ ],
+ "slowest_write_s": 0.20668891305103898,
+ "texts": {},
+ "writes": 15132
+}

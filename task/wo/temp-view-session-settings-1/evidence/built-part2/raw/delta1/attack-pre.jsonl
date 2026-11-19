@@ -1,0 +1,133 @@
+{"tag": "fixture", "rows": ["(1, 3000000000, '2024-01-01 03:00:00', Decimal('90000000000000000000000000000000000000'))", "(2, 5, '2024-01-01 12:00:00', Decimal('1'))"], "types": ["int", "bigint", "string", "decimal(38,0)"]}
+{"tag": "ansi/cast/true>false", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "ansi/cast/false>true", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "ansi/cast/true>true", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "ansi/cast/false>false", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "ansi/ddiv/true>false", "rows": ["(Decimal('2.0000000000000'),)", "(None,)"], "types": ["decimal(23,13)"]}
+{"tag": "ansi/ddiv/false>true", "error": "DIVIDE_BY_ZERO"}
+{"tag": "ansi/ddiv/true>true", "error": "DIVIDE_BY_ZERO"}
+{"tag": "ansi/ddiv/false>false", "rows": ["(Decimal('2.0000000000000'),)", "(None,)"], "types": ["decimal(23,13)"]}
+{"tag": "ansi/avgsum/true>false", "rows": ["(None, Decimal('-160282366920938463463374607431768211454'))"], "types": ["decimal(38,4)", "decimal(38,0)"]}
+{"tag": "ansi/avgsum/false>true", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/avgsum/true>true", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "ansi/avgsum/false>false", "rows": ["(None, Decimal('-160282366920938463463374607431768211454'))"], "types": ["decimal(38,4)", "decimal(38,0)"]}
+{"tag": "ansi/sumdec/true>false", "rows": ["(Decimal('3.00'), Decimal('1.500000'))"], "types": ["decimal(20,2)", "decimal(14,6)"]}
+{"tag": "ansi/sumdec/false>true", "rows": ["(Decimal('3.00'), Decimal('1.500000'))"], "types": ["decimal(20,2)", "decimal(14,6)"]}
+{"tag": "ansi/sumdec/true>true", "rows": ["(Decimal('3.00'), Decimal('1.500000'))"], "types": ["decimal(20,2)", "decimal(14,6)"]}
+{"tag": "ansi/sumdec/false>false", "rows": ["(Decimal('3.00'), Decimal('1.500000'))"], "types": ["decimal(20,2)", "decimal(14,6)"]}
+{"tag": "ansi/elem/true>false", "rows": ["(None,)", "(None,)"], "types": ["int"]}
+{"tag": "ansi/elem/false>true", "rows": ["(None,)", "(None,)"], "types": ["int"]}
+{"tag": "ansi/elem/true>true", "rows": ["(None,)", "(None,)"], "types": ["int"]}
+{"tag": "ansi/elem/false>false", "rows": ["(None,)", "(None,)"], "types": ["int"]}
+{"tag": "ansi/strint/true>false", "error": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"}
+{"tag": "ansi/strint/false>true", "error": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"}
+{"tag": "ansi/strint/true>true", "error": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"}
+{"tag": "ansi/strint/false>false", "error": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"}
+{"tag": "zone/curtz/UTC>America/Los_Angeles", "rows": ["('America/Los_Angeles',)"], "types": ["string"]}
+{"tag": "zone/curtz/America/Los_Angeles>UTC", "rows": ["('UTC',)"], "types": ["string"]}
+{"tag": "zone/curtz/America/Los_Angeles>America/Los_Angeles", "rows": ["('America/Los_Angeles',)"], "types": ["string"]}
+{"tag": "zone/fromutc/UTC>America/Los_Angeles", "rows": ["('2024-01-01 04:00:00',)", "('2024-01-01 13:00:00',)"], "types": ["string"]}
+{"tag": "zone/fromutc/America/Los_Angeles>UTC", "rows": ["('2024-01-01 12:00:00',)", "('2024-01-01 21:00:00',)"], "types": ["string"]}
+{"tag": "zone/fromutc/America/Los_Angeles>America/Los_Angeles", "rows": ["('2024-01-01 04:00:00',)", "('2024-01-01 13:00:00',)"], "types": ["string"]}
+{"tag": "zone/tots/UTC>America/Los_Angeles", "rows": ["(1704096000,)", "(1704139200,)"], "types": ["bigint"]}
+{"tag": "zone/tots/America/Los_Angeles>UTC", "rows": ["(1704067200,)", "(1704110400,)"], "types": ["bigint"]}
+{"tag": "zone/tots/America/Los_Angeles>America/Los_Angeles", "rows": ["(1704096000,)", "(1704139200,)"], "types": ["bigint"]}
+{"tag": "zone/lit/UTC>America/Los_Angeles", "rows": ["(1704096000,)"], "types": ["bigint"]}
+{"tag": "zone/lit/America/Los_Angeles>UTC", "rows": ["(1704067200,)"], "types": ["bigint"]}
+{"tag": "zone/lit/America/Los_Angeles>America/Los_Angeles", "rows": ["(1704096000,)"], "types": ["bigint"]}
+{"tag": "zone/fmt/UTC>America/Los_Angeles", "rows": ["('2023-12-31 19',)", "('2024-01-01 04',)"], "types": ["string"]}
+{"tag": "zone/fmt/America/Los_Angeles>UTC", "rows": ["('2024-01-01 03',)", "('2024-01-01 12',)"], "types": ["string"]}
+{"tag": "zone/fmt/America/Los_Angeles>America/Los_Angeles", "rows": ["('2023-12-31 19',)", "('2024-01-01 04',)"], "types": ["string"]}
+{"tag": "zone/hour/UTC>America/Los_Angeles", "rows": ["(19,)", "(4,)"], "types": ["int"]}
+{"tag": "zone/hour/America/Los_Angeles>UTC", "rows": ["(12,)", "(3,)"], "types": ["int"]}
+{"tag": "zone/hour/America/Los_Angeles>America/Los_Angeles", "rows": ["(19,)", "(4,)"], "types": ["int"]}
+{"tag": "nest/sql3", "rows": ["(1, 17, 'Pacific/Kiritimati', 17, 'Pacific/Kiritimati', 17, 'Pacific/Kiritimati')", "(2, 2, 'Pacific/Kiritimati', 2, 'Pacific/Kiritimati', 2, 'Pacific/Kiritimati')"], "types": ["int", "int", "string", "int", "string", "int", "string"]}
+{"tag": "nest/sql3_now", "rows": ["(1, 17, 17, 17, True)", "(2, 2, 2, 2, True)"], "types": ["int", "int", "int", "int", "boolean"]}
+{"tag": "nest/ansi3/read_on", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "nest/ansi3/read_off", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "nest/sql_over_dfcompute", "rows": ["(1, 12, 12)", "(2, 21, 21)"], "types": ["int", "int", "int"]}
+{"tag": "nest/sql_over_dfplain", "rows": ["(1, 12)", "(2, 21)"], "types": ["int", "int"]}
+{"tag": "nest/df_over_sql", "rows": ["(1, 12, 12, datetime.datetime(2024, 1, 1, 12, 0))", "(2, 21, 21, datetime.datetime(2024, 1, 1, 21, 0))"], "types": ["int", "int", "int", "timestamp"]}
+{"tag": "nest/dfplain_over_sql", "rows": ["(1, 12, datetime.datetime(2024, 1, 1, 12, 0))", "(2, 21, datetime.datetime(2024, 1, 1, 21, 0))"], "types": ["int", "int", "timestamp"]}
+{"tag": "nest/sql_df_sql", "rows": ["(1, 17, 17, 17)", "(2, 2, 2, 2)"], "types": ["int", "int", "int", "int"]}
+{"tag": "nest/sql_dfplain_sql", "rows": ["(1, 17, 17)", "(2, 2, 2)"], "types": ["int", "int", "int"]}
+{"tag": "join/two", "rows": ["(1, 12, 12)", "(2, 21, 21)"], "types": ["int", "int", "int"]}
+{"tag": "join/union", "rows": ["(12,)", "(12,)", "(21,)", "(21,)"], "types": ["int"]}
+{"tag": "join/self", "rows": ["(1, 12, 12)", "(2, 21, 21)"], "types": ["int", "int", "int"]}
+{"tag": "join/onhour", "rows": ["(1, 1)", "(2, 2)"], "types": ["int", "int"]}
+{"tag": "join/ansi_off_self_read_on", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "join/ansi_on_x_off_read_on", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "join/ansi_on_x_off_read_off", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "join/ansi_union_read_off", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "door/table", "rows": ["(19,)", "(4,)"], "types": ["int"]}
+{"tag": "door/sql", "rows": ["(19,)", "(4,)"], "types": ["int"]}
+{"tag": "door/fexpr", "error": "SQL error: ParserError(\"Expected: ), found: AS at Line: 1, Column: 15\")"}
+{"tag": "door/fexpr_filter", "rows": ["(19,)"], "types": ["int"]}
+{"tag": "door/in_subq", "rows": ["(1,)", "(2,)"], "types": ["int"]}
+{"tag": "door/scalar_subq", "rows": ["(19,)"], "types": ["int"]}
+{"tag": "door/exists", "rows": ["(1,)", "(2,)"], "types": ["int"]}
+{"tag": "DDL:w_create", "error": "NamespaceNotFound => No such namespace: NamespaceIdent([\"db\"])"}
+{"tag": "DDL:w3_create", "error": "NamespaceNotFound => No such namespace: NamespaceIdent([\"db\"])"}
+{"tag": "DDL:w3_seed", "error": "Error during planning: table 'lc.db.w3' not found"}
+{"tag": "DDL:w_insert", "error": "Error during planning: table 'lc.db.w' not found"}
+{"tag": "DDL:w2_ctas", "error": "NamespaceNotFound => No such namespace: NamespaceIdent([\"db\"])"}
+{"tag": "DDL:w3_merge", "error": "NamespaceNotFound => No such namespace: NamespaceIdent([\"db\"])"}
+{"tag": "write/w", "error": "Error during planning: table 'lc.db.w' not found"}
+{"tag": "write/w2", "error": "Error during planning: table 'lc.db.w2' not found"}
+{"tag": "write/w3", "error": "Error during planning: table 'lc.db.w3' not found"}
+{"tag": "overlay/start_time", "rows": ["(True, True, True, True)"], "types": ["boolean", "boolean", "boolean", "boolean"]}
+{"tag": "overlay/start_time_join", "rows": ["(1,)"], "types": ["bigint"]}
+{"tag": "DDL:cv", "error": "Error during planning: table 'lc.db.w' not found"}
+{"tag": "DDL:w_more", "error": "Error during planning: table 'lc.db.w' not found"}
+{"tag": "overlay/catalog", "error": "Error during planning: table 'spark_catalog.default.cv' not found"}
+{"tag": "capture/create_on_read_on", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "capture/replace_off_read_on", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "capture/renamed_read_on", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "capture/after_reset_ansi_now", "rows": ["('UTC',)"], "types": ["string"]}
+{"tag": "capture/created_off_read_after_reset", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "capture/created_la_read_after_reset", "rows": ["(12,)", "(3,)"], "types": ["int"]}
+{"tag": "limit/sensitive_above", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "limit/sensitive_above_order", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "limit/free_and_sensitive", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/false>true/x38_eq_frac", "rows": [], "types": ["int"]}
+{"tag": "allow/false>true/x38_gt_frac", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "allow/false>true/x38_in_frac", "rows": [], "types": ["int"]}
+{"tag": "allow/false>true/x38_cast_dec10", "error": "Arrow error: Invalid argument error: 90000000000000000000000000000000000000 is too large to store in a Decimal128 of precision 10. Max is 99"}
+{"tag": "allow/false>true/big_cast_int", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "allow/false>true/big_cast_int_eq", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "allow/false>true/big_trycast_int", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "allow/false>true/s_eq_int", "error": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"}
+{"tag": "allow/false>true/s_cast_int", "error": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"}
+{"tag": "allow/false>true/ts_eq_str", "rows": [], "types": ["int"]}
+{"tag": "allow/false>true/ts_ge_str", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/false>true/ts_between", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/false>true/ts_ntz", "rows": [], "types": ["int"]}
+{"tag": "allow/false>true/ts_gt_dt", "rows": [], "types": ["int"]}
+{"tag": "allow/false>true/dt_eq_str", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/false>true/d_eq_dbl", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/false>true/d_cast_dec1", "rows": ["(1,)", "(2,)"], "types": ["int"]}
+{"tag": "allow/false>true/n_dist", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/false>true/big_eq_dec", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "allow/false>true/x38_eq_big", "rows": [], "types": ["int"]}
+{"tag": "allow/false>true/x38_eq_d", "rows": [], "types": ["int"]}
+{"tag": "allow/true>false/x38_eq_frac", "rows": [], "types": ["int"]}
+{"tag": "allow/true>false/x38_gt_frac", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "allow/true>false/x38_in_frac", "rows": [], "types": ["int"]}
+{"tag": "allow/true>false/x38_cast_dec10", "error": "Arrow error: Invalid argument error: 90000000000000000000000000000000000000 is too large to store in a Decimal128 of precision 10. Max is 99"}
+{"tag": "allow/true>false/big_cast_int", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "allow/true>false/big_cast_int_eq", "error": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}
+{"tag": "allow/true>false/big_trycast_int", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "allow/true>false/s_eq_int", "error": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"}
+{"tag": "allow/true>false/s_cast_int", "error": "Arrow error: Cast error: Cannot cast string 'x' to value of Int32 type"}
+{"tag": "allow/true>false/ts_eq_str", "rows": [], "types": ["int"]}
+{"tag": "allow/true>false/ts_ge_str", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/ts_between", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/ts_ntz", "rows": [], "types": ["int"]}
+{"tag": "allow/true>false/ts_gt_dt", "rows": [], "types": ["int"]}
+{"tag": "allow/true>false/dt_eq_str", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/d_eq_dbl", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/d_cast_dec1", "rows": ["(1,)", "(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/n_dist", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/big_eq_dec", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "allow/true>false/x38_eq_big", "rows": [], "types": ["int"]}
+{"tag": "allow/true>false/x38_eq_d", "rows": [], "types": ["int"]}
