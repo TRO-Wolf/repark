@@ -1,0 +1,36 @@
+{"ansi": "false", "tp": 1, "table": "d32", "q": "g", "a": {"[[\"1\", \"0.625000\"]]": 20}}
+{"ansi": "false", "tp": 1, "table": "d32", "q": "u", "a": {"[[\"0.625000\"]]": 20}}
+{"ansi": "false", "tp": 1, "table": "d32", "q": "type", "a": {"[[\"decimal(9,2)\"]]": 20}}
+{"ansi": "false", "tp": 1, "table": "d64", "q": "g", "a": {"[[\"1\", \"0.6250\"]]": 20}}
+{"ansi": "false", "tp": 1, "table": "d64", "q": "u", "a": {"[[\"0.6250\"]]": 20}}
+{"ansi": "false", "tp": 1, "table": "d64", "q": "type", "a": {"[[\"decimal(18,0)\"]]": 20}}
+{"ansi": "false", "tp": 2, "table": "d32", "q": "g", "a": {"[[\"1\", \"None\"]]": 20}}
+{"ansi": "false", "tp": 2, "table": "d32", "q": "u", "a": {"[[\"None\"]]": 5, "[[\"0.625000\"]]": 15}}
+{"ansi": "false", "tp": 2, "table": "d32", "q": "type", "a": {"[[\"decimal(9,2)\"]]": 20}}
+{"ansi": "false", "tp": 2, "table": "d64", "q": "g", "a": {"[[\"1\", \"0.6250\"]]": 20}}
+{"ansi": "false", "tp": 2, "table": "d64", "q": "u", "a": {"[[\"0.6250\"]]": 20}}
+{"ansi": "false", "tp": 2, "table": "d64", "q": "type", "a": {"[[\"decimal(18,0)\"]]": 20}}
+{"ansi": "false", "tp": 4, "table": "d32", "q": "g", "a": {"[[\"1\", \"None\"]]": 20}}
+{"ansi": "false", "tp": 4, "table": "d32", "q": "u", "a": {"[[\"None\"]]": 20}}
+{"ansi": "false", "tp": 4, "table": "d32", "q": "type", "a": {"[[\"decimal(9,2)\"]]": 20}}
+{"ansi": "false", "tp": 4, "table": "d64", "q": "g", "a": {"[[\"1\", \"0.6250\"]]": 20}}
+{"ansi": "false", "tp": 4, "table": "d64", "q": "u", "a": {"[[\"0.6250\"]]": 20}}
+{"ansi": "false", "tp": 4, "table": "d64", "q": "type", "a": {"[[\"decimal(18,0)\"]]": 20}}
+{"ansi": "true", "tp": 1, "table": "d32", "q": "g", "a": {"[[\"1\", \"0.625000\"]]": 20}}
+{"ansi": "true", "tp": 1, "table": "d32", "q": "u", "a": {"[[\"0.625000\"]]": 20}}
+{"ansi": "true", "tp": 1, "table": "d32", "q": "type", "a": {"[[\"decimal(9,2)\"]]": 20}}
+{"ansi": "true", "tp": 1, "table": "d64", "q": "g", "a": {"[[\"1\", \"0.6250\"]]": 20}}
+{"ansi": "true", "tp": 1, "table": "d64", "q": "u", "a": {"[[\"0.6250\"]]": 20}}
+{"ansi": "true", "tp": 1, "table": "d64", "q": "type", "a": {"[[\"decimal(18,0)\"]]": 20}}
+{"ansi": "true", "tp": 2, "table": "d32", "q": "g", "a": {"\"ERR ARITHMETIC_OVERFLOW\"": 20}}
+{"ansi": "true", "tp": 2, "table": "d32", "q": "u", "a": {"\"ERR ARITHMETIC_OVERFLOW\"": 15, "[[\"0.625000\"]]": 5}}
+{"ansi": "true", "tp": 2, "table": "d32", "q": "type", "a": {"[[\"decimal(9,2)\"]]": 20}}
+{"ansi": "true", "tp": 2, "table": "d64", "q": "g", "a": {"[[\"1\", \"0.6250\"]]": 20}}
+{"ansi": "true", "tp": 2, "table": "d64", "q": "u", "a": {"[[\"0.6250\"]]": 20}}
+{"ansi": "true", "tp": 2, "table": "d64", "q": "type", "a": {"[[\"decimal(18,0)\"]]": 20}}
+{"ansi": "true", "tp": 4, "table": "d32", "q": "g", "a": {"\"ERR ARITHMETIC_OVERFLOW\"": 20}}
+{"ansi": "true", "tp": 4, "table": "d32", "q": "u", "a": {"\"ERR ARITHMETIC_OVERFLOW\"": 20}}
+{"ansi": "true", "tp": 4, "table": "d32", "q": "type", "a": {"[[\"decimal(9,2)\"]]": 20}}
+{"ansi": "true", "tp": 4, "table": "d64", "q": "g", "a": {"[[\"1\", \"0.6250\"]]": 20}}
+{"ansi": "true", "tp": 4, "table": "d64", "q": "u", "a": {"[[\"0.6250\"]]": 20}}
+{"ansi": "true", "tp": 4, "table": "d64", "q": "type", "a": {"[[\"decimal(18,0)\"]]": 20}}

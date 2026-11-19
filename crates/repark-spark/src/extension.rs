@@ -200,4 +200,6 @@ impl SessionExtension for SparkExtension {
 }
 
 #[cfg(test)]
+mod sum_window_tests;
+#[cfg(test)]
 mod tests;

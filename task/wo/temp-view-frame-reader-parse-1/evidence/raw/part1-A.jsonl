@@ -1,0 +1,884 @@
+{"tag": "A/true_false/json_s/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_s/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_f/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_i/d", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/json_i/f", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/json_i/e", "rows": ["(1, 2, 1704078000)", "(2147483648, 2147483649, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/json_i/j", "rows": ["(1, 3, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_false/json_i/o", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/json_i/sa", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/json_i/osa", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/json_i/eb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_false/json_i/jb_hour", "rows": ["(1, 0, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_false/json_i/ob_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_false/json_i/osb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_false/json_i/sb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_false/json_i/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/json_i/jb_mul", "rows": ["(1, 2000000000, 1704078000)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/json_i/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/json_i/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/json_i/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/csv_s/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_s/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sts/d", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/json_sts/f", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/json_sts/e", "rows": ["(1, 2, 1704078000)", "(2, 3, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_sts/j", "rows": ["(1, 3, 1704078000)", "(2, 12, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_sts/o", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/json_sts/sa", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/json_sts/osa", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/json_sts/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_sts/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_sts/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_sts/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_sts/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_sts/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_sts/jb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_sts/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_sts/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_sts/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_sov/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_sov/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sts/d", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/csv_sts/f", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/csv_sts/e", "rows": ["(1, 2, 1704078000)", "(2, 3, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/csv_sts/j", "rows": ["(1, 3, 1704078000)", "(2, 12, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/csv_sts/o", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/csv_sts/sa", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/csv_sts/osa", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/csv_sts/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/csv_sts/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/csv_sts/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/csv_sts/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/csv_sts/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/csv_sts/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/csv_sts/jb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/csv_sts/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/csv_sts/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/csv_sts/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/csv_sov/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/csv_sov/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_false/json_g/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/json_g/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/json_g/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_g/j", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_g/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/json_g/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/json_g/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/json_g/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_g/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_g/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_g/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_g/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_g/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_g/jb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_g/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_g/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/json_g/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/csv_g/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/csv_g/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/csv_g/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/csv_g/j", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_false/csv_g/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/csv_g/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/csv_g/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/csv_g/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_false/csv_g/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_false/csv_g/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_false/csv_g/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_false/csv_g/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_false/csv_g/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/csv_g/jb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/csv_g/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/csv_g/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/csv_g/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/pq/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/pq/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/pq/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/pq/j", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/pq/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/pq/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/pq/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_false/pq/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/pq/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/pq/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/pq/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/pq/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/pq/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/pq/jb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/pq/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/pq/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_false/pq/sb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/true_false/csv_i/d", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/csv_i/f", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/csv_i/e", "rows": ["(1, 2, 1704078000)", "(2147483648, 2147483649, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/csv_i/j", "rows": ["(1, 3, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_false/csv_i/o", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/csv_i/sa", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/csv_i/osa", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/csv_i/eb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_false/csv_i/jb_hour", "rows": ["(1, 0, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_false/csv_i/ob_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_false/csv_i/osb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_false/csv_i/sb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_false/csv_i/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/csv_i/jb_mul", "rows": ["(1, 2000000000, 1704078000)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/csv_i/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/csv_i/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/csv_i/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/smart/d", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/smart/f", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/smart/e", "rows": ["(1, 2, 1704078000)", "(2147483648, 2147483649, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/smart/j", "rows": ["(1, 3, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_false/smart/o", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_false/smart/sa", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/true_false/smart/osa", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/true_false/smart/eb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_false/smart/jb_hour", "rows": ["(1, 0, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_false/smart/ob_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_false/smart/osb_hour", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/true_false/smart/sb_hour", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/true_false/smart/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/smart/jb_mul", "rows": ["(1, 2000000000, 1704078000)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/smart/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_false/smart/osb_mul", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/true_false/smart/sb_mul", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/false_true/json_s/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_s/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_f/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_i/d", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/json_i/f", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/json_i/e", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/json_i/j", "rows": ["(1, 3, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_true/json_i/o", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/json_i/sa", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/json_i/osa", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/json_i/eb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_true/json_i/jb_hour", "rows": ["(1, 0, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_true/json_i/ob_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_true/json_i/osb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_true/json_i/sb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_true/json_i/eb_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/json_i/jb_mul", "rows": ["(1, 2000000000, 1704078000)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_true/json_i/ob_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/json_i/osb_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/json_i/sb_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/csv_s/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_s/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sts/d", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/f", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/e", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/j", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/o", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/sa", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/osa", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/eb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/jb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/ob_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/osb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/sb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/eb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/jb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/ob_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/osb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sts/sb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/json_sov/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_sov/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sts/d", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/f", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/e", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/j", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/o", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/sa", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/osa", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/eb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/jb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/ob_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/osb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/sb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/eb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/jb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/ob_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/osb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sts/sb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/false_true/csv_sov/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/csv_sov/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_true/json_g/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_true/json_g/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_true/json_g/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/json_g/j", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/json_g/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_true/json_g/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_true/json_g/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_true/json_g/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/json_g/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/json_g/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/json_g/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/json_g/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/json_g/eb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/false_true/json_g/jb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/false_true/json_g/ob_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/false_true/json_g/osb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/false_true/json_g/sb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/false_true/csv_g/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_true/csv_g/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_true/csv_g/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_true/csv_g/j", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_true/csv_g/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_true/csv_g/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_true/csv_g/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_true/csv_g/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_true/csv_g/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_true/csv_g/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_true/csv_g/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_true/csv_g/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_true/csv_g/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_true/csv_g/jb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_true/csv_g/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_true/csv_g/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_true/csv_g/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_true/pq/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_true/pq/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_true/pq/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/pq/j", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/pq/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_true/pq/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_true/pq/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_true/pq/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/pq/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/pq/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/pq/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/pq/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/pq/eb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/false_true/pq/jb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/false_true/pq/ob_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/false_true/pq/osb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/false_true/pq/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_true/csv_i/d", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/csv_i/f", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/csv_i/e", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/csv_i/j", "rows": ["(1, 3, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_true/csv_i/o", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/csv_i/sa", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/csv_i/osa", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/csv_i/eb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_true/csv_i/jb_hour", "rows": ["(1, 0, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_true/csv_i/ob_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_true/csv_i/osb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_true/csv_i/sb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_true/csv_i/eb_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/csv_i/jb_mul", "rows": ["(1, 2000000000, 1704078000)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_true/csv_i/ob_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/csv_i/osb_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/csv_i/sb_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/smart/d", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/smart/f", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/smart/e", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/smart/j", "rows": ["(1, 3, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_true/smart/o", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/smart/sa", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/false_true/smart/osa", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/false_true/smart/eb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_true/smart/jb_hour", "rows": ["(1, 0, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_true/smart/ob_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_true/smart/osb_hour", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/false_true/smart/sb_hour", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/false_true/smart/eb_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/smart/jb_mul", "rows": ["(1, 2000000000, 1704078000)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_true/smart/ob_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/false_true/smart/osb_mul", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/false_true/smart/sb_mul", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/true_true/json_s/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_s/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_f/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_i/d", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/json_i/f", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/json_i/e", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/json_i/j", "rows": ["(1, 3, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_true/json_i/o", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/json_i/sa", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/json_i/osa", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/json_i/eb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_true/json_i/jb_hour", "rows": ["(1, 0, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_true/json_i/ob_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_true/json_i/osb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_true/json_i/sb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_true/json_i/eb_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/json_i/jb_mul", "rows": ["(1, 2000000000, 1704078000)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_true/json_i/ob_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/json_i/osb_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/json_i/sb_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/csv_s/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_s/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sts/d", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/f", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/e", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/j", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/o", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/sa", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/osa", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/eb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/jb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/ob_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/osb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/sb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/eb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/jb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/ob_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/osb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sts/sb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/json_sov/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_sov/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sts/d", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/f", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/e", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/j", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/o", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/sa", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/osa", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/eb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/jb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/ob_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/osb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/sb_hour", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/eb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/jb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/ob_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/osb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sts/sb_mul", "error": "CAST_INVALID_INPUT"}
+{"tag": "A/true_true/csv_sov/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/csv_sov/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/true_true/json_g/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_true/json_g/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_true/json_g/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_true/json_g/j", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_true/json_g/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_true/json_g/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_true/json_g/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_true/json_g/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_true/json_g/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_true/json_g/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_true/json_g/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_true/json_g/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_true/json_g/eb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/true_true/json_g/jb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/true_true/json_g/ob_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/true_true/json_g/osb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/true_true/json_g/sb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/true_true/csv_g/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_true/csv_g/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_true/csv_g/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_true/csv_g/j", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_true/csv_g/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_true/csv_g/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_true/csv_g/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/true_true/csv_g/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_true/csv_g/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_true/csv_g/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_true/csv_g/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_true/csv_g/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_true/csv_g/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_true/csv_g/jb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_true/csv_g/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_true/csv_g/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_true/csv_g/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_true/pq/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_true/pq/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_true/pq/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_true/pq/j", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_true/pq/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_true/pq/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_true/pq/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/true_true/pq/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_true/pq/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_true/pq/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_true/pq/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_true/pq/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/true_true/pq/eb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/true_true/pq/jb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/true_true/pq/ob_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/true_true/pq/osb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/true_true/pq/sb_mul", "error": "ARITHMETIC_OVERFLOW"}
+{"tag": "A/true_true/csv_i/d", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/csv_i/f", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/csv_i/e", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/csv_i/j", "rows": ["(1, 3, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_true/csv_i/o", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/csv_i/sa", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/csv_i/osa", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/csv_i/eb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_true/csv_i/jb_hour", "rows": ["(1, 0, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_true/csv_i/ob_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_true/csv_i/osb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_true/csv_i/sb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_true/csv_i/eb_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/csv_i/jb_mul", "rows": ["(1, 2000000000, 1704078000)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_true/csv_i/ob_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/csv_i/osb_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/csv_i/sb_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/smart/d", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/smart/f", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/smart/e", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/smart/j", "rows": ["(1, 3, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_true/smart/o", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/smart/sa", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/true_true/smart/osa", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/true_true/smart/eb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_true/smart/jb_hour", "rows": ["(1, 0, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/true_true/smart/ob_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/true_true/smart/osb_hour", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/true_true/smart/sb_hour", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/true_true/smart/eb_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/smart/jb_mul", "rows": ["(1, 2000000000, 1704078000)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/true_true/smart/ob_mul", "error": "CANNOT_PARSE_TIMESTAMP"}
+{"tag": "A/true_true/smart/osb_mul", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/true_true/smart/sb_mul", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/false_false/json_s/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_s/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_f/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_i/d", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/json_i/f", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/json_i/e", "rows": ["(1, 2, 1704078000)", "(2147483648, 2147483649, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/json_i/j", "rows": ["(1, 3, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_false/json_i/o", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/json_i/sa", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/json_i/osa", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/json_i/eb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_false/json_i/jb_hour", "rows": ["(1, 0, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_false/json_i/ob_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_false/json_i/osb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_false/json_i/sb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_false/json_i/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/json_i/jb_mul", "rows": ["(1, 2000000000, 1704078000)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/json_i/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/json_i/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/json_i/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/csv_s/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_s/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sts/d", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/json_sts/f", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/json_sts/e", "rows": ["(1, 2, 1704078000)", "(2, 3, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_sts/j", "rows": ["(1, 3, 1704078000)", "(2, 12, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_sts/o", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/json_sts/sa", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/json_sts/osa", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/json_sts/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_sts/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_sts/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_sts/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_sts/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_sts/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_sts/jb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_sts/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_sts/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_sts/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_sov/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_sov/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sts/d", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/csv_sts/f", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/csv_sts/e", "rows": ["(1, 2, 1704078000)", "(2, 3, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/csv_sts/j", "rows": ["(1, 3, 1704078000)", "(2, 12, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/csv_sts/o", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/csv_sts/sa", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/csv_sts/osa", "rows": ["(1, 1704078000)", "(2, None)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/csv_sts/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/csv_sts/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/csv_sts/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/csv_sts/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/csv_sts/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, None, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/csv_sts/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/csv_sts/jb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/csv_sts/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/csv_sts/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/csv_sts/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, None)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/csv_sov/d", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/f", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/e", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/j", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/o", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/sa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/osa", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/eb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/jb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/ob_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/osb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/sb_hour", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/eb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/jb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/ob_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/osb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/csv_sov/sb_mul", "error": "Arrow error: Cast error: Can't cast value 2147483648 to type Int32"}
+{"tag": "A/false_false/json_g/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/json_g/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/json_g/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_g/j", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_g/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/json_g/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/json_g/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/json_g/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_g/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_g/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_g/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_g/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_g/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_g/jb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_g/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_g/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/json_g/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/csv_g/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/csv_g/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/csv_g/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/csv_g/j", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_false/csv_g/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/csv_g/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/csv_g/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/csv_g/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_false/csv_g/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_false/csv_g/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_false/csv_g/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_false/csv_g/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_false/csv_g/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/csv_g/jb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/csv_g/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/csv_g/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/csv_g/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, 4000000000, 1704110400)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/pq/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/pq/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/pq/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/pq/j", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/pq/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/pq/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/pq/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "A/false_false/pq/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/pq/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/pq/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/pq/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/pq/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/pq/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/pq/jb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/pq/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/pq/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/pq/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2, -294967296, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "A/false_false/csv_i/d", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/csv_i/f", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/csv_i/e", "rows": ["(1, 2, 1704078000)", "(2147483648, 2147483649, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/csv_i/j", "rows": ["(1, 3, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_false/csv_i/o", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/csv_i/sa", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/csv_i/osa", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/csv_i/eb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_false/csv_i/jb_hour", "rows": ["(1, 0, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_false/csv_i/ob_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_false/csv_i/osb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_false/csv_i/sb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_false/csv_i/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/csv_i/jb_mul", "rows": ["(1, 2000000000, 1704078000)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/csv_i/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/csv_i/osb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/csv_i/sb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/smart/d", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/smart/f", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/smart/e", "rows": ["(1, 2, 1704078000)", "(2147483648, 2147483649, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/smart/j", "rows": ["(1, 3, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_false/smart/o", "rows": ["(1, 1704078000)", "(2147483648, None)"], "types": ["bigint", "bigint"]}
+{"tag": "A/false_false/smart/sa", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/false_false/smart/osa", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/false_false/smart/eb_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_false/smart/jb_hour", "rows": ["(1, 0, 1704078000)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "A/false_false/smart/ob_hour", "error": "Arrow error: Cast error: Cannot cast string 'not a time' to value of Date32 type"}
+{"tag": "A/false_false/smart/osb_hour", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/false_false/smart/sb_hour", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/false_false/smart/eb_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/smart/jb_mul", "rows": ["(1, 2000000000, 1704078000)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/smart/ob_mul", "rows": ["(1, 2000000000, 1704078000)", "(2147483648, 4294967296000000000, None)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "A/false_false/smart/osb_mul", "error": "TABLE_OR_VIEW_NOT_FOUND"}
+{"tag": "A/false_false/smart/sb_mul", "error": "TABLE_OR_VIEW_NOT_FOUND"}

@@ -1,0 +1,672 @@
+{"ansi": "false", "tp": 1, "file": "wrap5_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_p19", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_p19", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 1, "file": "wrap5_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_p20", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 1, "file": "neg_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_p19", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_p19", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "false", "tp": 1, "file": "neg_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 1, "file": "neg_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_p20", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "false", "tp": 1, "file": "neg_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 1, "file": "fit_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_p19", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_p19", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 1, "file": "fit_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_p20", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 1, "file": "wrap5_two_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_two_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_two_p19", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_two_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_two_p19", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_two_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_two_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 1, "file": "wrap5_two_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_two_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_two_p20", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_two_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "wrap5_two_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 1, "file": "neg_two_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_two_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_two_p19", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_two_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_two_p19", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "false", "tp": 1, "file": "neg_two_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_two_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 1, "file": "neg_two_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_two_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_two_p20", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "false", "tp": 1, "file": "neg_two_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "neg_two_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 1, "file": "fit_two_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_two_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_two_p19", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_two_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_two_p19", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_two_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_two_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 1, "file": "fit_two_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_two_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_two_p20", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_two_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 1, "file": "fit_two_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 2, "file": "wrap5_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 2, "file": "wrap5_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 2, "file": "wrap5_p19", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 2, "file": "wrap5_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_p20", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 2, "file": "neg_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "neg_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "neg_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 2, "file": "neg_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 2, "file": "neg_p19", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "false", "tp": 2, "file": "neg_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "neg_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 2, "file": "neg_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "neg_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "neg_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "neg_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "neg_p20", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "false", "tp": 2, "file": "neg_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "neg_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 2, "file": "fit_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_p19", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_p19", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 2, "file": "fit_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_p20", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 2, "file": "wrap5_two_p19", "query": "sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 2, "file": "wrap5_two_p19", "query": "try_sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 2, "file": "wrap5_two_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 2, "file": "wrap5_two_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 2, "file": "wrap5_two_p19", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_two_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 2, "file": "wrap5_two_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_two_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_two_p20", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_two_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "wrap5_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 2, "file": "neg_two_p19", "query": "sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 2, "file": "neg_two_p19", "query": "try_sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 2, "file": "neg_two_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 2, "file": "neg_two_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 2, "file": "neg_two_p19", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "false", "tp": 2, "file": "neg_two_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "neg_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 2, "file": "neg_two_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "neg_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "neg_two_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "neg_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "neg_two_p20", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "false", "tp": 2, "file": "neg_two_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "neg_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 2, "file": "fit_two_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_two_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_two_p19", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_two_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_two_p19", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_two_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 2, "file": "fit_two_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_two_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_two_p20", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_two_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 2, "file": "fit_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 4, "file": "wrap5_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 4, "file": "wrap5_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 4, "file": "wrap5_p19", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 4, "file": "wrap5_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_p20", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 4, "file": "neg_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "neg_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "neg_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 4, "file": "neg_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 4, "file": "neg_p19", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "false", "tp": 4, "file": "neg_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "neg_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 4, "file": "neg_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "neg_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "neg_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "neg_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "neg_p20", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "false", "tp": 4, "file": "neg_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "neg_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 4, "file": "fit_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_p19", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_p19", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 4, "file": "fit_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_p20", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 4, "file": "wrap5_two_p19", "query": "sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 4, "file": "wrap5_two_p19", "query": "try_sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 4, "file": "wrap5_two_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 4, "file": "wrap5_two_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 4, "file": "wrap5_two_p19", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_two_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 4, "file": "wrap5_two_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_two_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_two_p20", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_two_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "wrap5_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 4, "file": "neg_two_p19", "query": "sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 4, "file": "neg_two_p19", "query": "try_sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 4, "file": "neg_two_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 4, "file": "neg_two_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 4, "file": "neg_two_p19", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "false", "tp": 4, "file": "neg_two_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "neg_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 4, "file": "neg_two_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "neg_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "neg_two_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "neg_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "neg_two_p20", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "false", "tp": 4, "file": "neg_two_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "neg_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 4, "file": "fit_two_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_two_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_two_p19", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_two_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_two_p19", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_two_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 4, "file": "fit_two_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_two_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_two_p20", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_two_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 4, "file": "fit_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 8, "file": "wrap5_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 8, "file": "wrap5_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 8, "file": "wrap5_p19", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 8, "file": "wrap5_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_p20", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 8, "file": "neg_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "neg_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "neg_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 8, "file": "neg_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 8, "file": "neg_p19", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "false", "tp": 8, "file": "neg_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "neg_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 8, "file": "neg_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "neg_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "neg_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "neg_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "neg_p20", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "false", "tp": 8, "file": "neg_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "neg_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 8, "file": "fit_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_p19", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_p19", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 8, "file": "fit_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_p20", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "false", "tp": 8, "file": "wrap5_two_p19", "query": "sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 8, "file": "wrap5_two_p19", "query": "try_sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 8, "file": "wrap5_two_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 8, "file": "wrap5_two_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 8, "file": "wrap5_two_p19", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_two_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 8, "file": "wrap5_two_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_two_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_two_p20", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_two_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "wrap5_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 8, "file": "neg_two_p19", "query": "sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 8, "file": "neg_two_p19", "query": "try_sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 8, "file": "neg_two_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 8, "file": "neg_two_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "false", "tp": 8, "file": "neg_two_p19", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "false", "tp": 8, "file": "neg_two_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "neg_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 8, "file": "neg_two_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "neg_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "neg_two_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "neg_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "neg_two_p20", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "false", "tp": 8, "file": "neg_two_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "neg_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 8, "file": "fit_two_p19", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_two_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_two_p19", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_two_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_two_p19", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_two_p19", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "false", "tp": 8, "file": "fit_two_p20", "query": "sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_two_p20", "query": "sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_two_p20", "query": "avg/ungrouped", "answer": [["None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_two_p20", "query": "avg/grouped", "answer": [["1", "None"]]}
+{"ansi": "false", "tp": 8, "file": "fit_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 1, "file": "wrap5_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "wrap5_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 1, "file": "wrap5_p19", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "wrap5_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 1, "file": "wrap5_p19", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "true", "tp": 1, "file": "wrap5_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "wrap5_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 1, "file": "wrap5_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "wrap5_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 1, "file": "wrap5_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "wrap5_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 1, "file": "wrap5_p20", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "true", "tp": 1, "file": "wrap5_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "wrap5_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 1, "file": "neg_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "neg_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 1, "file": "neg_p19", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "neg_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 1, "file": "neg_p19", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "true", "tp": 1, "file": "neg_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "neg_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 1, "file": "neg_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "neg_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 1, "file": "neg_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "neg_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 1, "file": "neg_p20", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "true", "tp": 1, "file": "neg_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "neg_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 1, "file": "fit_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 1, "file": "fit_p19", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 1, "file": "fit_p19", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 1, "file": "fit_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 1, "file": "fit_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 1, "file": "fit_p20", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 1, "file": "wrap5_two_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "wrap5_two_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 1, "file": "wrap5_two_p19", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "wrap5_two_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 1, "file": "wrap5_two_p19", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "true", "tp": 1, "file": "wrap5_two_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "wrap5_two_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 1, "file": "wrap5_two_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "wrap5_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 1, "file": "wrap5_two_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "wrap5_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 1, "file": "wrap5_two_p20", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "true", "tp": 1, "file": "wrap5_two_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "wrap5_two_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 1, "file": "neg_two_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "neg_two_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 1, "file": "neg_two_p19", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "neg_two_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 1, "file": "neg_two_p19", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "true", "tp": 1, "file": "neg_two_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "neg_two_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 1, "file": "neg_two_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "neg_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 1, "file": "neg_two_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "neg_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 1, "file": "neg_two_p20", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "true", "tp": 1, "file": "neg_two_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "neg_two_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 1, "file": "fit_two_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_two_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 1, "file": "fit_two_p19", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_two_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 1, "file": "fit_two_p19", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_two_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_two_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 1, "file": "fit_two_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 1, "file": "fit_two_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 1, "file": "fit_two_p20", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_two_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 1, "file": "fit_two_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 2, "file": "wrap5_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "wrap5_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 2, "file": "wrap5_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 2, "file": "wrap5_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 2, "file": "wrap5_p19", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "true", "tp": 2, "file": "wrap5_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "wrap5_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 2, "file": "wrap5_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "wrap5_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 2, "file": "wrap5_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "wrap5_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 2, "file": "wrap5_p20", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "true", "tp": 2, "file": "wrap5_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "wrap5_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 2, "file": "neg_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "neg_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 2, "file": "neg_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 2, "file": "neg_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 2, "file": "neg_p19", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "true", "tp": 2, "file": "neg_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "neg_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 2, "file": "neg_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "neg_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 2, "file": "neg_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "neg_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 2, "file": "neg_p20", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "true", "tp": 2, "file": "neg_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "neg_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 2, "file": "fit_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 2, "file": "fit_p19", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 2, "file": "fit_p19", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 2, "file": "fit_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 2, "file": "fit_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 2, "file": "fit_p20", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 2, "file": "wrap5_two_p19", "query": "sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 2, "file": "wrap5_two_p19", "query": "try_sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 2, "file": "wrap5_two_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 2, "file": "wrap5_two_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 2, "file": "wrap5_two_p19", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "true", "tp": 2, "file": "wrap5_two_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "wrap5_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 2, "file": "wrap5_two_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "wrap5_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 2, "file": "wrap5_two_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "wrap5_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 2, "file": "wrap5_two_p20", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "true", "tp": 2, "file": "wrap5_two_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "wrap5_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 2, "file": "neg_two_p19", "query": "sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 2, "file": "neg_two_p19", "query": "try_sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 2, "file": "neg_two_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 2, "file": "neg_two_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 2, "file": "neg_two_p19", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "true", "tp": 2, "file": "neg_two_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "neg_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 2, "file": "neg_two_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "neg_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 2, "file": "neg_two_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "neg_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 2, "file": "neg_two_p20", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "true", "tp": 2, "file": "neg_two_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "neg_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 2, "file": "fit_two_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_two_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 2, "file": "fit_two_p19", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_two_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 2, "file": "fit_two_p19", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_two_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 2, "file": "fit_two_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 2, "file": "fit_two_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 2, "file": "fit_two_p20", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_two_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 2, "file": "fit_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 4, "file": "wrap5_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "wrap5_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 4, "file": "wrap5_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 4, "file": "wrap5_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 4, "file": "wrap5_p19", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "true", "tp": 4, "file": "wrap5_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "wrap5_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 4, "file": "wrap5_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "wrap5_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 4, "file": "wrap5_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "wrap5_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 4, "file": "wrap5_p20", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "true", "tp": 4, "file": "wrap5_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "wrap5_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 4, "file": "neg_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "neg_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 4, "file": "neg_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 4, "file": "neg_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 4, "file": "neg_p19", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "true", "tp": 4, "file": "neg_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "neg_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 4, "file": "neg_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "neg_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 4, "file": "neg_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "neg_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 4, "file": "neg_p20", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "true", "tp": 4, "file": "neg_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "neg_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 4, "file": "fit_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 4, "file": "fit_p19", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 4, "file": "fit_p19", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 4, "file": "fit_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 4, "file": "fit_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 4, "file": "fit_p20", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 4, "file": "wrap5_two_p19", "query": "sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 4, "file": "wrap5_two_p19", "query": "try_sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 4, "file": "wrap5_two_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 4, "file": "wrap5_two_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 4, "file": "wrap5_two_p19", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "true", "tp": 4, "file": "wrap5_two_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "wrap5_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 4, "file": "wrap5_two_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "wrap5_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 4, "file": "wrap5_two_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "wrap5_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 4, "file": "wrap5_two_p20", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "true", "tp": 4, "file": "wrap5_two_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "wrap5_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 4, "file": "neg_two_p19", "query": "sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 4, "file": "neg_two_p19", "query": "try_sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 4, "file": "neg_two_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 4, "file": "neg_two_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 4, "file": "neg_two_p19", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "true", "tp": 4, "file": "neg_two_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "neg_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 4, "file": "neg_two_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "neg_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 4, "file": "neg_two_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "neg_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 4, "file": "neg_two_p20", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "true", "tp": 4, "file": "neg_two_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "neg_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 4, "file": "fit_two_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_two_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 4, "file": "fit_two_p19", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_two_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 4, "file": "fit_two_p19", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_two_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 4, "file": "fit_two_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 4, "file": "fit_two_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 4, "file": "fit_two_p20", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_two_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 4, "file": "fit_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 8, "file": "wrap5_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "wrap5_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 8, "file": "wrap5_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 8, "file": "wrap5_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 8, "file": "wrap5_p19", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "true", "tp": 8, "file": "wrap5_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "wrap5_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 8, "file": "wrap5_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "wrap5_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 8, "file": "wrap5_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "wrap5_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 8, "file": "wrap5_p20", "query": "avg/ungrouped", "answer": [["1.2500"]]}
+{"ansi": "true", "tp": 8, "file": "wrap5_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "wrap5_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 8, "file": "neg_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "neg_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 8, "file": "neg_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 8, "file": "neg_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 8, "file": "neg_p19", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "true", "tp": 8, "file": "neg_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "neg_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 8, "file": "neg_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "neg_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 8, "file": "neg_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "neg_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 8, "file": "neg_p20", "query": "avg/ungrouped", "answer": [["-1.2500"]]}
+{"ansi": "true", "tp": 8, "file": "neg_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "neg_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 8, "file": "fit_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 8, "file": "fit_p19", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 8, "file": "fit_p19", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_p19", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 8, "file": "fit_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 8, "file": "fit_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 8, "file": "fit_p20", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_p20", "query": "plan/ungrouped", "answer": "single"}
+{"ansi": "true", "tp": 8, "file": "wrap5_two_p19", "query": "sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 8, "file": "wrap5_two_p19", "query": "try_sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 8, "file": "wrap5_two_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 8, "file": "wrap5_two_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 8, "file": "wrap5_two_p19", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "true", "tp": 8, "file": "wrap5_two_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "wrap5_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 8, "file": "wrap5_two_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "wrap5_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 8, "file": "wrap5_two_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "wrap5_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 8, "file": "wrap5_two_p20", "query": "avg/ungrouped", "answer": [["1.0000"]]}
+{"ansi": "true", "tp": 8, "file": "wrap5_two_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "wrap5_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 8, "file": "neg_two_p19", "query": "sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 8, "file": "neg_two_p19", "query": "try_sum/ungrouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 8, "file": "neg_two_p19", "query": "sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 8, "file": "neg_two_p19", "query": "try_sum/grouped", "answer": "ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bits, so its input holds values past its declared precision"}
+{"ansi": "true", "tp": 8, "file": "neg_two_p19", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "true", "tp": 8, "file": "neg_two_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "neg_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 8, "file": "neg_two_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "neg_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 8, "file": "neg_two_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "neg_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 8, "file": "neg_two_p20", "query": "avg/ungrouped", "answer": [["-1.0000"]]}
+{"ansi": "true", "tp": 8, "file": "neg_two_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "neg_two_p20", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 8, "file": "fit_two_p19", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_two_p19", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 8, "file": "fit_two_p19", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_two_p19", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 8, "file": "fit_two_p19", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_two_p19", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_two_p19", "query": "plan/ungrouped", "answer": "partial"}
+{"ansi": "true", "tp": 8, "file": "fit_two_p20", "query": "sum/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_two_p20", "query": "try_sum/ungrouped", "answer": [["None"]]}
+{"ansi": "true", "tp": 8, "file": "fit_two_p20", "query": "sum/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_sum' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_two_p20", "query": "try_sum/grouped", "answer": [["1", "None"]]}
+{"ansi": "true", "tp": 8, "file": "fit_two_p20", "query": "avg/ungrouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_two_p20", "query": "avg/grouped", "answer": "ERR [ARITHMETIC_OVERFLOW] Overflow in sum of decimals. Use 'try_avg' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. SQLSTATE: 2200"}
+{"ansi": "true", "tp": 8, "file": "fit_two_p20", "query": "plan/ungrouped", "answer": "partial"}

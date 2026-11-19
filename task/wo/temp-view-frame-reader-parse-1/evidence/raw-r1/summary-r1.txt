@@ -1,0 +1,186 @@
+## midnight recount (rp.py Z passes, midnight data)
+('M base gap by body', 'la_utc', 'date') {"direct": 40, "equal": 50, "nospark": 20, "view": 50}
+('M base gap by body', 'la_utc', 'fmt') {"direct": 40, "equal": 50, "nospark": 20, "view": 50}
+('M base gap by body', 'la_utc', 'hour') {"direct": 70, "equal": 20, "nospark": 20, "view": 50}
+('M base gap by body', 'la_utc', 'str') {"direct": 40, "equal": 50, "nospark": 20, "view": 50}
+('M base gap by body', 'la_utc', 'ts') {"None": 8, "direct": 36, "equal": 144, "nospark": 28, "view": 16}
+('M base gap by body', 'la_utc', 'tz') {"direct": 20, "equal": 120, "nospark": 20}
+('M base gap by body', 'utc_la', 'date') {"direct": 40, "equal": 100, "nospark": 20}
+('M base gap by body', 'utc_la', 'fmt') {"direct": 40, "equal": 50, "nospark": 20, "view": 50}
+('M base gap by body', 'utc_la', 'hour') {"direct": 70, "equal": 20, "nospark": 20, "view": 50}
+('M base gap by body', 'utc_la', 'str') {"direct": 40, "equal": 50, "nospark": 20, "view": 50}
+('M base gap by body', 'utc_la', 'ts') {"None": 8, "direct": 60, "equal": 120, "nospark": 28, "view": 16}
+('M base gap by body', 'utc_la', 'tz') {"direct": 40, "equal": 100, "nospark": 20}
+('M changed', 'la_utc', 'ts', 'csv_0') {"None->nospark": 2}
+('M changed', 'la_utc', 'ts', 'csv_ns') {"None->nospark": 2}
+('M changed', 'la_utc', 'ts', 'csv_tf') {"None->nospark": 2}
+('M changed', 'la_utc', 'ts', 'json_tz') {"None->nospark": 2}
+('M changed', 'utc_la', 'date', 'csv_i') {"equal->view": 10}
+('M changed', 'utc_la', 'date', 'csv_n') {"equal->view": 8}
+('M changed', 'utc_la', 'date', 'json_f') {"equal->view": 10}
+('M changed', 'utc_la', 'date', 'json_m') {"equal->view": 10}
+('M changed', 'utc_la', 'date', 'json_s') {"equal->view": 10}
+('M changed', 'utc_la', 'ts', 'csv_0') {"None->nospark": 2}
+('M changed', 'utc_la', 'ts', 'csv_ns') {"None->nospark": 2}
+('M changed', 'utc_la', 'ts', 'csv_tf') {"None->nospark": 2}
+('M changed', 'utc_la', 'ts', 'json_tz') {"None->nospark": 2}
+('M emu twin', 'la_utc') {"EQUAL": 64}
+('M emu twin', 'utc_la') {"EQUAL": 64}
+('M gap by body', 'la_utc', 'date') {"direct": 40, "equal": 50, "nospark": 20, "view": 50}
+('M gap by body', 'la_utc', 'fmt') {"direct": 40, "equal": 50, "nospark": 20, "view": 50}
+('M gap by body', 'la_utc', 'hour') {"direct": 70, "equal": 20, "nospark": 20, "view": 50}
+('M gap by body', 'la_utc', 'str') {"direct": 40, "equal": 50, "nospark": 20, "view": 50}
+('M gap by body', 'la_utc', 'ts') {"direct": 36, "equal": 144, "nospark": 36, "view": 16}
+('M gap by body', 'la_utc', 'tz') {"direct": 20, "equal": 120, "nospark": 20}
+('M gap by body', 'utc_la', 'date') {"direct": 40, "equal": 52, "nospark": 20, "view": 48}
+('M gap by body', 'utc_la', 'fmt') {"direct": 40, "equal": 50, "nospark": 20, "view": 50}
+('M gap by body', 'utc_la', 'hour') {"direct": 70, "equal": 20, "nospark": 20, "view": 50}
+('M gap by body', 'utc_la', 'str') {"direct": 40, "equal": 50, "nospark": 20, "view": 50}
+('M gap by body', 'utc_la', 'ts') {"direct": 60, "equal": 120, "nospark": 36, "view": 16}
+('M gap by body', 'utc_la', 'tz') {"direct": 40, "equal": 100, "nospark": 20}
+('M gap', 'ansi_false', 'la_utc') {"direct": 123, "equal": 217, "nospark": 68, "view": 108}
+('M gap', 'ansi_false', 'utc_la') {"direct": 145, "equal": 196, "nospark": 68, "view": 107}
+('M gap', 'ansi_true', 'la_utc') {"direct": 123, "equal": 217, "nospark": 68, "view": 108}
+('M gap', 'ansi_true', 'utc_la') {"direct": 145, "equal": 196, "nospark": 68, "view": 107}
+('M matching', 'csv_0') {"EQUAL": 104, "NOSPARK": 4, "RAISE": 4, "WRONG": 20}
+('M matching', 'csv_f') {"EQUAL": 64, "WRONG": 64}
+('M matching', 'csv_fix') {"NOSPARK": 128}
+('M matching', 'csv_i') {"EQUAL": 128}
+('M matching', 'csv_n') {"EQUAL": 128}
+('M matching', 'csv_ns') {"EQUAL": 104, "NOSPARK": 4, "RAISE": 4, "WRONG": 20}
+('M matching', 'csv_s') {"EQUAL": 64, "WRONG": 64}
+('M matching', 'csv_tf') {"NOSPARK": 4, "RAISE": 128}
+('M matching', 'emu') {"EQUAL": 128}
+('M matching', 'json_f') {"EQUAL": 128}
+('M matching', 'json_i') {"EQUAL": 108, "WRONG": 20}
+('M matching', 'json_m') {"EQUAL": 128}
+('M matching', 'json_s') {"EQUAL": 128}
+('M matching', 'json_tz') {"NOSPARK": 4, "RAISE": 128}
+('M matching', 'pq') {"EQUAL": 128}
+('M matching', 'smart') {"NOSPARK": 128}
+('M moved main vs part1', 'csv_0') {"False": 264}
+('M moved main vs part1', 'csv_f') {"False": 256}
+('M moved main vs part1', 'csv_fix') {"False": 256}
+('M moved main vs part1', 'csv_i') {"False": 256}
+('M moved main vs part1', 'csv_n') {"False": 256}
+('M moved main vs part1', 'csv_ns') {"False": 264}
+('M moved main vs part1', 'csv_s') {"False": 256}
+('M moved main vs part1', 'csv_tf') {"False": 264}
+('M moved main vs part1', 'emu') {"False": 188, "True": 68}
+('M moved main vs part1', 'json_f') {"False": 256}
+('M moved main vs part1', 'json_i') {"False": 256}
+('M moved main vs part1', 'json_m') {"False": 256}
+('M moved main vs part1', 'json_s') {"False": 256}
+('M moved main vs part1', 'json_tz') {"False": 264}
+('M moved main vs part1', 'pq') {"False": 188, "True": 68}
+('M moved main vs part1', 'smart') {"False": 176, "True": 80}
+('M view by reader',) {"csv_0": 4, "csv_i": 84, "csv_n": 82, "csv_ns": 4, "json_f": 84, "json_i": 4, "json_m": 84, "json_s": 84}
+## revision cells by group, reader, door
+('D', 'csv_2i', 'd') {"main RAISE": 2}
+('D', 'csv_2i', 'eb_hour') {"main RAISE": 2}
+('D', 'csv_gz', 'd') {"main RAISE": 2}
+('D', 'csv_gz', 'eb_hour') {"main RAISE": 2}
+('D', 'csv_gzi', 'd') {"main RAISE": 2}
+('D', 'csv_gzi', 'eb_hour') {"main RAISE": 2}
+('D', 'json_ml', 'd') {"main RAISE": 2}
+('D', 'json_ml', 'eb_hour') {"main RAISE": 2}
+('D', 'json_ml', 'sb_hour') {"main RAISE": 2}
+('N', 'csv_i', 'ff') {"main WRONG": 6, "main col h1": 4, "main col h2": 6}
+('N', 'csv_i', 'fs') {"main WRONG": 6, "main col h1": 4, "main col h2": 6}
+('N', 'csv_i', 'sf') {"main WRONG": 6, "main col h1": 4, "main col h2": 6}
+('N', 'emu_live', 'ff') {"main EQUAL": 6, "moved": 6, "part1 WRONG": 6, "twin EQUAL": 6}
+('N', 'emu_live', 'fs') {"main EQUAL": 6, "moved": 6, "part1 WRONG": 6, "twin EQUAL": 6}
+('N', 'emu_live', 'sf') {"main EQUAL": 6, "moved": 6, "part1 WRONG": 6, "twin EQUAL": 6}
+('N', 'emu_mid', 'ff') {"main EQUAL": 6, "moved": 6, "part1 WRONG": 6, "twin WRONG": 6, "twin col h1": 6, "twin col h2": 6, "twin col h3": 6, "twin col ts": 6, "twin col u": 6}
+('N', 'emu_mid', 'fs') {"main EQUAL": 6, "moved": 6, "part1 WRONG": 6, "twin WRONG": 6, "twin col h1": 6, "twin col h2": 6, "twin col h3": 6, "twin col ts": 6, "twin col u": 6}
+('N', 'emu_mid', 'sf') {"main EQUAL": 6, "moved": 6, "part1 WRONG": 6, "twin WRONG": 6, "twin col h1": 6, "twin col h2": 6, "twin col h3": 6, "twin col ts": 6, "twin col u": 6}
+('N', 'json_s', 'ff') {"main WRONG": 6, "main col h1": 4, "main col h2": 6}
+('N', 'json_s', 'fs') {"main WRONG": 6, "main col h1": 4, "main col h2": 6}
+('N', 'json_s', 'sf') {"main WRONG": 6, "main col h1": 4, "main col h2": 6}
+('N', 'pq', 'ff') {"main EQUAL": 6, "moved": 6, "part1 WRONG": 6}
+('N', 'pq', 'fs') {"main EQUAL": 6, "moved": 6, "part1 WRONG": 6}
+('N', 'pq', 'sf') {"main EQUAL": 6, "moved": 6, "part1 WRONG": 6}
+('X', 'csv_i', 'cj') {"main WRONG": 2, "main col ph": 2}
+('X', 'csv_i', 'cjb') {"main WRONG": 2, "main col b": 2, "main col ph": 2}
+('X', 'csv_i', 'cross') {"main WRONG": 2, "main col b": 2}
+('X', 'csv_i', 'ffilter') {"main WRONG": 2, "main col n": 2, "main col ts": 2, "main col u": 2}
+('X', 'csv_i', 'nv') {"main EQUAL": 2}
+('X', 'csv_i', 'nv_hour') {"main WRONG": 2, "main col b": 2}
+('X', 'csv_i', 'sql_join') {"main WRONG": 2, "main col b": 2, "moved": 2, "part1 WRONG": 2}
+('X', 'csv_i', 'twice_hour') {"main WRONG": 2, "main col b": 2}
+('X', 'csv_i', 'union_hour') {"main WRONG": 2, "main col b": 2}
+('X', 'emu_c', 'cj') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin WRONG": 2, "twin col ts": 2, "twin col u": 2}
+('X', 'emu_c', 'cjb') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin WRONG": 2, "twin col b": 2, "twin col ts": 2, "twin col u": 2}
+('X', 'emu_c', 'cross') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin WRONG": 2, "twin col b": 2, "twin col ts": 2, "twin col u": 2}
+('X', 'emu_c', 'ffilter') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin WRONG": 2, "twin col n": 2, "twin col ts": 2, "twin col u": 2}
+('X', 'emu_c', 'nv') {"main EQUAL": 2, "twin WRONG": 2, "twin col ts": 2, "twin col u": 2}
+('X', 'emu_c', 'nv_hour') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin WRONG": 2, "twin col b": 2, "twin col ts": 2, "twin col u": 2}
+('X', 'emu_c', 'sql_join') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin WRONG": 2, "twin col b": 2, "twin col ts": 2, "twin col u": 2}
+('X', 'emu_c', 'twice_hour') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin WRONG": 2, "twin col b": 2, "twin col ts": 2, "twin col u": 2}
+('X', 'emu_c', 'union_hour') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin WRONG": 2, "twin col b": 2, "twin col ts": 2, "twin col u": 2}
+('X', 'emu_r', 'cj') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin EQUAL": 2}
+('X', 'emu_r', 'cjb') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin EQUAL": 2}
+('X', 'emu_r', 'cross') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin EQUAL": 2}
+('X', 'emu_r', 'ffilter') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin EQUAL": 2}
+('X', 'emu_r', 'nv') {"main EQUAL": 2, "twin EQUAL": 2}
+('X', 'emu_r', 'nv_hour') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin EQUAL": 2}
+('X', 'emu_r', 'sql_join') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin EQUAL": 2}
+('X', 'emu_r', 'twice_hour') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin EQUAL": 2}
+('X', 'emu_r', 'union_hour') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2, "twin EQUAL": 2}
+('X', 'json_s', 'cj') {"main WRONG": 2, "main col ph": 2}
+('X', 'json_s', 'cjb') {"main WRONG": 2, "main col b": 2, "main col ph": 2}
+('X', 'json_s', 'cross') {"main WRONG": 2, "main col b": 2}
+('X', 'json_s', 'ffilter') {"main WRONG": 2, "main col n": 2, "main col ts": 2, "main col u": 2}
+('X', 'json_s', 'nv') {"main EQUAL": 2}
+('X', 'json_s', 'nv_hour') {"main WRONG": 2, "main col b": 2}
+('X', 'json_s', 'sql_join') {"main WRONG": 2, "main col b": 2, "moved": 2, "part1 WRONG": 2}
+('X', 'json_s', 'twice_hour') {"main WRONG": 2, "main col b": 2}
+('X', 'json_s', 'union_hour') {"main WRONG": 2, "main col b": 2}
+('X', 'pq', 'cj') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2}
+('X', 'pq', 'cjb') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2}
+('X', 'pq', 'cross') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2}
+('X', 'pq', 'ffilter') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2}
+('X', 'pq', 'nv') {"main EQUAL": 2}
+('X', 'pq', 'nv_hour') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2}
+('X', 'pq', 'sql_join') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2}
+('X', 'pq', 'twice_hour') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2}
+('X', 'pq', 'union_hour') {"main EQUAL": 2, "moved": 2, "part1 WRONG": 2}
+('XC', 'csv_i', 'cache_lazy_hour') {"main WRONG": 2, "main col b": 2, "main col ts": 2, "main col u": 2}
+('XC', 'csv_i', 'cache_mat_hour') {"main EQUAL": 2}
+('XC', 'csv_i', 'cachetable_hour') {"main EQUAL": 2}
+('XC', 'emu_c', 'cache_lazy_hour') {"main EQUAL": 2, "twin WRONG": 2, "twin col b": 2, "twin col ts": 2, "twin col u": 2}
+('XC', 'emu_c', 'cache_mat_hour') {"main EQUAL": 2, "twin EQUAL": 2}
+('XC', 'emu_c', 'cachetable_hour') {"main EQUAL": 2, "twin EQUAL": 2}
+('XC', 'emu_r', 'cache_lazy_hour') {"main EQUAL": 2, "twin EQUAL": 2}
+('XC', 'emu_r', 'cache_mat_hour') {"main EQUAL": 2, "twin WRONG": 2, "twin col b": 2, "twin col ts": 2, "twin col u": 2}
+('XC', 'emu_r', 'cachetable_hour') {"main EQUAL": 2, "twin WRONG": 2, "twin col b": 2, "twin col ts": 2, "twin col u": 2}
+('XC', 'json_s', 'cache_lazy_hour') {"main WRONG": 2, "main col b": 2, "main col ts": 2, "main col u": 2}
+('XC', 'json_s', 'cache_mat_hour') {"main EQUAL": 2}
+('XC', 'json_s', 'cachetable_hour') {"main EQUAL": 2}
+('XC', 'pq', 'cache_lazy_hour') {"main EQUAL": 2}
+('XC', 'pq', 'cache_mat_hour') {"main EQUAL": 2}
+('XC', 'pq', 'cachetable_hour') {"main EQUAL": 2}
+E/csv_i/explain spark={"accepted": true, "lines": 5} main={"accepted": true, "lines": 9}
+E/csv_i/explain_extended spark={"accepted": true, "lines": 21} main={"accepted": false, "error": "SQL error: ParserError(\"Expected: an SQL statement, found: EXTENDED at Line: 1, Column: 9\")"}
+E/csv_i/explain_verbose spark={"accepted": false, "error": "PARSE_SYNTAX_ERROR"} main={"accepted": true, "lines": 219}
+E/json_s/explain spark={"accepted": true, "lines": 5} main={"accepted": true, "lines": 9}
+E/json_s/explain_extended spark={"accepted": true, "lines": 21} main={"accepted": false, "error": "SQL error: ParserError(\"Expected: an SQL statement, found: EXTENDED at Line: 1, Column: 9\")"}
+E/json_s/explain_verbose spark={"accepted": false, "error": "PARSE_SYNTAX_ERROR"} main={"accepted": true, "lines": 213}
+E/pq/explain spark={"accepted": true, "lines": 6} main={"accepted": true, "lines": 7}
+E/pq/explain_extended spark={"accepted": true, "lines": 22} main={"accepted": false, "error": "SQL error: ParserError(\"Expected: an SQL statement, found: EXTENDED at Line: 1, Column: 9\")"}
+E/pq/explain_verbose spark={"accepted": false, "error": "PARSE_SYNTAX_ERROR"} main={"accepted": true, "lines": 199}
+SS/csv_i/filters spark={"value": true} main={"value": true}
+SS/csv_i/other_filter spark={"value": false} main={"value": false}
+SS/csv_i/star spark={"value": true} main={"value": true}
+SS/csv_i/two_reads spark={"value": true} main={"value": true}
+SS/csv_i/two_reads_hash spark={"value": true} main={"value": true}
+SS/json_s/filters spark={"value": true} main={"value": true}
+SS/json_s/other_filter spark={"value": false} main={"value": false}
+SS/json_s/star spark={"value": true} main={"value": true}
+SS/json_s/two_reads spark={"value": true} main={"value": true}
+SS/json_s/two_reads_hash spark={"value": true} main={"value": true}
+SS/pq/filters spark={"value": true} main={"value": true}
+SS/pq/other_filter spark={"value": false} main={"value": false}
+SS/pq/star spark={"value": true} main={"value": true}
+SS/pq/two_reads spark={"value": true} main={"value": true}
+SS/pq/two_reads_hash spark={"value": true} main={"value": true}

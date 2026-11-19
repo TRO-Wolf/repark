@@ -21,4 +21,9 @@ the missing seats (`SlidingFrameReScan`, the DataFrame grouping-set, pivot and `
 marker (Q2), the missed shapes, the view cells, the cost list and the observations; sketch §9 records where it
 agrees and disagrees with the critic.
 
+**Built 2026-11-17** (product commit `a8016e75`, owner's "defaults on both"): seat A, a RePark `sum` / `try_sum`
+(`crates/repark-functions/src/aggregate/`), sentinel marker. HALT on the bar: 46 EQUAL→other cells, all pass-back
+sums that depend on the split or the partial order. [evidence/built/](evidence/built/map.md) holds the bar, the cost,
+the card's "Built" append and their scripts.
+
 Up: [../map.md](../map.md).

@@ -1,0 +1,340 @@
+{"tag": "T/LTZ_NTZ/json_s/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/j", "rows": ["(1, 19, 1704106800)", "(2, 4, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/eb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/jb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/ob_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/osb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/sb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_s/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/j", "rows": ["(1, 19, 1704106800)", "(2, 4, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/eb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/jb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/ob_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/osb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/sb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/json_i/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/j", "rows": ["(1, 19, 1704106800)", "(2, 4, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/eb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/jb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/ob_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/osb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/sb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_s/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/j", "rows": ["(1, 19, 1704106800)", "(2, 4, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/eb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/jb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/ob_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/osb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/sb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/csv_i/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/j", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/eb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/jb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/ob_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/osb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/sb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/eb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/jb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/ob_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/osb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_NTZ/pq/sb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/j", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_s/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/j", "rows": ["(1, 19, 1704106800)", "(2, 4, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/eb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/jb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/ob_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/osb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/sb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/json_i/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/j", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_s/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/j", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/csv_i/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/j", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/eb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/jb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/ob_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/osb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/sb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/eb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/jb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/ob_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/osb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_LTZ/pq/sb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/j", "rows": ["(1, 19, 1704106800)", "(2, 4, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/eb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/jb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/ob_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/osb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/sb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_s/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/j", "rows": ["(1, 19, 1704106800)", "(2, 4, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/eb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/jb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/ob_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/osb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/sb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/json_i/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/j", "rows": ["(1, 19, 1704106800)", "(2, 4, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/eb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/jb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/ob_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/osb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/sb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_s/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/j", "rows": ["(1, 19, 1704106800)", "(2, 4, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/eb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/jb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/ob_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/osb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/sb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/csv_i/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/j", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/eb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/jb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/ob_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/osb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/sb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/eb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/jb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/ob_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/osb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/LTZ_LTZ/pq/sb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/j", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_s/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/d", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/f", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/e", "rows": ["(1, 2, 1704106800)", "(2, 3, 1704139200)"], "types": ["bigint", "bigint", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/j", "rows": ["(1, 19, 1704106800)", "(2, 4, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/o", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/sa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/osa", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["bigint", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/eb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/jb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/ob_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/osb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/sb_hour", "rows": ["(1, 3, 1704106800)", "(2, 12, 1704139200)"], "types": ["bigint", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/json_i/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704106800)", "(2, '2024-01-01 12:00:00', 1704139200)"], "types": ["bigint", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/j", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_s/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/j", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/eb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/jb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/ob_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/osb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/sb_hour", "rows": ["(1, 3, 1704078000)", "(2, 12, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/eb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/jb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/ob_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/osb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/csv_i/sb_str", "rows": ["(1, '2024-01-01 03:00:00', 1704078000)", "(2, '2024-01-01 12:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/d", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/f", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/e", "rows": ["(1, 2, 1704078000)", "(2, 3, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/j", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/o", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/sa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/osa", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/eb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/jb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/ob_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/osb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/sb_hour", "rows": ["(1, 19, 1704078000)", "(2, 4, 1704110400)"], "types": ["int", "int", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/eb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/jb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/ob_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/osb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}
+{"tag": "T/NTZ_NTZ/pq/sb_str", "rows": ["(1, '2023-12-31 19:00:00', 1704078000)", "(2, '2024-01-01 04:00:00', 1704110400)"], "types": ["int", "string", "bigint"]}

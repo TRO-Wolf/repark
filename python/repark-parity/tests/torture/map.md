@@ -50,10 +50,10 @@ The suite needs the native module (the doors are repark's), so run it through
 - `test_torture_decimal_overflow.py` — the decimal_overflow cells (step 2): protocol
   conformance, Parquet row counts and the `decimal(38,0)` schema on both doors, CSV row
   counts, the per-column CSV type cells (both strict xfails citing
-  `CSV-INFER-20DIGIT`), the `SUM` overflow cell refusing loud on both doors
-  (`xfail(strict=True, reason="SUM-DEC-I128WRAP-1")` — repark answers the wrapped i128
-  value today), and the `AVG` overflow cell green on the measured loud refusal of both
-  doors.
+  `CSV-INFER-20DIGIT`), the `SUM` overflow cell refusing loud on both doors with Spark's
+  `[ARITHMETIC_OVERFLOW] Overflow in sum of decimals` (SUM-DEC-I128WRAP-1, 2026-11-17: the
+  strict xfail is gone, the cell pins Spark's answer), and the `AVG` overflow cell green on
+  the measured loud refusal of both doors.
 - `test_torture_secrets.py` — the secrets cells (step 3): protocol conformance and the
   needle-set membership pin (every `FLAGGED_COLUMN_NAMES` entry redacts through
   `_native.redact_property_value`, the live Rust key rule; every ordinary name does not —
