@@ -1,0 +1,24 @@
+{"tag": "E/json_s/explain", "accepted": true, "lines": 5, "plan": "== Physical Plan ==\n*(1) Filter (isnotnull(n#112) AND (n#112 > 0))\n+- FileScan json [n#112,ts#113] Batched: false, DataFilters: [isnotnull(n#112), (n#112 > 0)], Format: JSON, Location: InMemoryFileIndex(1 paths)[file:<scratchpad> PartitionFilters: [], PushedFilters: [IsNotNull(n), GreaterThan(n,0)], ReadSchema: struct<n:int,ts:timestamp>\n\n"}
+{"tag": "E/json_s/explain_extended", "accepted": true, "lines": 21, "plan": "== Parsed Logical Plan ==\n'Project [*]\n+- 'Filter ('n > 0)\n   +- 'UnresolvedRelation [ev_json_s], [], false\n\n== Analyzed Logical Plan ==\nn: int, ts: timestamp\nProject [n#112, ts#113]\n+- Filter (n#112 > 0)\n   +- SubqueryAlias ev_json_s\n      +- View (`ev_json_s`, [n#112, ts#113])\n         +- Relation [n#112,ts#113] json\n\n== Optimized Logical Plan ==\nFilter (isnotnull(n#112) AND (n#112 > 0))\n+- Relation [n#112,ts#113] json\n\n== Physical Plan ==\n*(1) Filter (isnotnull(n#112) AND (n#112 > 0))\n+- FileScan json [n#112,ts#113] Batched: false, DataFilters: [isnotnull(n#112), (n#112 > 0)], Format: JSON, Location: InMemoryFileIndex(1 paths)[file:<scratchpad> PartitionFilters: [], PushedFilters: [IsNotNull(n), GreaterThan(n,0)], ReadSchema: struct<n:int,ts:timestamp>\n"}
+{"tag": "E/json_s/explain_verbose", "accepted": false, "error": "PARSE_SYNTAX_ERROR"}
+{"tag": "SS/json_s/two_reads", "value": true}
+{"tag": "SS/json_s/two_reads_hash", "value": true}
+{"tag": "SS/json_s/star", "value": true}
+{"tag": "SS/json_s/filters", "value": true}
+{"tag": "SS/json_s/other_filter", "value": false}
+{"tag": "E/csv_i/explain", "accepted": true, "lines": 5, "plan": "== Physical Plan ==\n*(1) Filter (isnotnull(n#145) AND (n#145 > 0))\n+- FileScan csv [n#145,ts#146] Batched: false, DataFilters: [isnotnull(n#145), (n#145 > 0)], Format: CSV, Location: InMemoryFileIndex(1 paths)[file:<scratchpad> PartitionFilters: [], PushedFilters: [IsNotNull(n), GreaterThan(n,0)], ReadSchema: struct<n:int,ts:timestamp>\n\n"}
+{"tag": "E/csv_i/explain_extended", "accepted": true, "lines": 21, "plan": "== Parsed Logical Plan ==\n'Project [*]\n+- 'Filter ('n > 0)\n   +- 'UnresolvedRelation [ev_csv_i], [], false\n\n== Analyzed Logical Plan ==\nn: int, ts: timestamp\nProject [n#145, ts#146]\n+- Filter (n#145 > 0)\n   +- SubqueryAlias ev_csv_i\n      +- View (`ev_csv_i`, [n#145, ts#146])\n         +- Relation [n#145,ts#146] csv\n\n== Optimized Logical Plan ==\nFilter (isnotnull(n#145) AND (n#145 > 0))\n+- Relation [n#145,ts#146] csv\n\n== Physical Plan ==\n*(1) Filter (isnotnull(n#145) AND (n#145 > 0))\n+- FileScan csv [n#145,ts#146] Batched: false, DataFilters: [isnotnull(n#145), (n#145 > 0)], Format: CSV, Location: InMemoryFileIndex(1 paths)[file:<scratchpad> PartitionFilters: [], PushedFilters: [IsNotNull(n), GreaterThan(n,0)], ReadSchema: struct<n:int,ts:timestamp>\n"}
+{"tag": "E/csv_i/explain_verbose", "accepted": false, "error": "PARSE_SYNTAX_ERROR"}
+{"tag": "SS/csv_i/two_reads", "value": true}
+{"tag": "SS/csv_i/two_reads_hash", "value": true}
+{"tag": "SS/csv_i/star", "value": true}
+{"tag": "SS/csv_i/filters", "value": true}
+{"tag": "SS/csv_i/other_filter", "value": false}
+{"tag": "E/pq/explain", "accepted": true, "lines": 6, "plan": "== Physical Plan ==\n*(1) Filter (isnotnull(n#195) AND (n#195 > 0))\n+- *(1) ColumnarToRow\n   +- FileScan parquet [n#195,ts#196] Batched: true, DataFilters: [isnotnull(n#195), (n#195 > 0)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:<scratchpad> PartitionFilters: [], PushedFilters: [IsNotNull(n), GreaterThan(n,0)], ReadSchema: struct<n:int,ts:timestamp>\n\n"}
+{"tag": "E/pq/explain_extended", "accepted": true, "lines": 22, "plan": "== Parsed Logical Plan ==\n'Project [*]\n+- 'Filter ('n > 0)\n   +- 'UnresolvedRelation [ev_pq], [], false\n\n== Analyzed Logical Plan ==\nn: int, ts: timestamp\nProject [n#195, ts#196]\n+- Filter (n#195 > 0)\n   +- SubqueryAlias ev_pq\n      +- View (`ev_pq`, [n#195, ts#196])\n         +- Relation [n#195,ts#196] parquet\n\n== Optimized Logical Plan ==\nFilter (isnotnull(n#195) AND (n#195 > 0))\n+- Relation [n#195,ts#196] parquet\n\n== Physical Plan ==\n*(1) Filter (isnotnull(n#195) AND (n#195 > 0))\n+- *(1) ColumnarToRow\n   +- FileScan parquet [n#195,ts#196] Batched: true, DataFilters: [isnotnull(n#195), (n#195 > 0)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:<scratchpad> PartitionFilters: [], PushedFilters: [IsNotNull(n), GreaterThan(n,0)], ReadSchema: struct<n:int,ts:timestamp>\n"}
+{"tag": "E/pq/explain_verbose", "accepted": false, "error": "PARSE_SYNTAX_ERROR"}
+{"tag": "SS/pq/two_reads", "value": true}
+{"tag": "SS/pq/two_reads_hash", "value": true}
+{"tag": "SS/pq/star", "value": true}
+{"tag": "SS/pq/filters", "value": true}
+{"tag": "SS/pq/other_filter", "value": false}

@@ -77,6 +77,8 @@ class Rec:
             frame = build()
             rows = frame.collect()
             got: dict[str, Any] = {"rows": sorted(repr(tuple(row)) for row in rows)}
+            got["names"] = list(frame.columns)
+            got["cols"] = sorted([str(value) for value in row] for row in rows)
             got["types"] = [kind for _, kind in frame.dtypes]
         except Exception as error:
             got = {"error": condition(error)}

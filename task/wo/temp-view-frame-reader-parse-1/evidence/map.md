@@ -3,6 +3,8 @@
 - [probes/](probes/map.md) — the cell definitions and the analysis (comment-free Python).
 - [raw/](raw/map.md) — one JSON object per cell and engine, the verdicts, the summary, the plans.
 - [jar/](jar/map.md) — the `javap -c -p` excerpts of Spark 4.1.2's JSON and CSV file sources.
+- [raw-r1/](raw-r1/map.md) — the critic's round: the new cells (midnight data), per-column verdicts, the summary
+  and the critic's verdict.
 
 ## Provenance
 
@@ -21,5 +23,11 @@
   except that scratch paths read `<scratchpad>` and the `insertInto` cells' label was renamed `into` after the run
   (the spell check flags the first label).
 - **Analysis:** `python3 probes/cmp.py <raw> <out>`, then `python3 probes/tables.py <out>/verdicts.jsonl`.
+- **Round 1 (the critic's gaps), 2026-11-19, 03:09–03:18 UTC:** the same builds, interpreter, Spark and lock
+  discipline, one command per part: `probes/rv.py <engine> <scratch warehouse> <out> <part>` for `X`, `XC`, `D`, `N`,
+  `E`, then `probes/rp.py <engine> <scratch warehouse> <out> Z<i> midnight` for the eight zone passes, each engine
+  `main`, `spark`, `part1`; every RePark log printed `repark._native.__file__` from its package. Analysis:
+  `python3 probes/rvcmp.py raw-r1/r- raw-r1/m- raw/cells-verdicts.jsonl raw-r1` (run from this directory). Warehouses
+  in the session scratchpad, deleted after the runs. The third zone of the nesting set is `Asia/Tokyo`, a test value.
 
 Up: [../map.md](../map.md).

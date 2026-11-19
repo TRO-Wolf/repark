@@ -7,12 +7,15 @@ only) against Spark 4.1.2; documents and probes only. Card file: filed by the re
 [../temp-view-session-settings-1/](../temp-view-session-settings-1/map.md).
 
 - [sketch.md](sketch.md) — the findings, Spark's rule from the jars (the parse reads the live session at scan time;
-  everything above binds at the frame's analysis), RePark's mechanism, seats (a), (b) and (c), the cost cases, the
-  unit split and seven owner questions.
+  everything above binds at the frame's analysis), RePark's mechanism, seats (a) (amended after the critic's round:
+  the marker survives analysis and the first optimizer rule decides it under the live session), (b) and (c), the cost
+  cases K0–K4, the unit split with unit 1's per-column bar, eleven owner questions and the revision record (§9).
 - [domain-table.md](domain-table.md) — 5,732 cells per build: 382 zone, 30 ANSI and 128 write view cells, no
-  timestamp-type view gap, 0 moves against part 1 in the lineage, the emulation readers, every wrong write, eight
-  direct gaps (D1, the CSV schema timestamp parsed as UTC, silent).
-- [inventory.md](inventory.md) — the insertion inventory: 17 parse sites and 11 entries, "seen at the seat" for each.
+  timestamp-type view gap, 0 moves against part 1 in step 0's doors, the emulation readers, every wrong write, eight
+  direct gaps (D1, the CSV schema timestamp parsed as UTC, silent); §8 the critic's round: the midnight recount (430),
+  the new doors, the cache shapes, three-zone nesting, D9–D11, `EXPLAIN` spellings, per column.
+- [inventory.md](inventory.md) — the insertion inventory: 17 parse sites and 17 entries, "seen at the seat" for each,
+  and the seats that keep or read an analysed plan (A1–A12).
 - [evidence/](evidence/map.md) — probes, raw cells, verdicts, tables, `javap` excerpts, provenance.
 
 Up: [../map.md](../map.md).

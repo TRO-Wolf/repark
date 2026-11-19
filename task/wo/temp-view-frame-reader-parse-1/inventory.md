@@ -52,4 +52,51 @@ Tests and `map.md` files are not doors.
 | E10 | `select(F.expr(…))`, `withColumn` → `crates/repark-python/src/column/expr_build.rs:187` | a held frame analysed under the live state | outside the view seat (HELD-FRAME-DERIVED-ANSI-1, S2, carded) | no; carded |
 | E11 | `cache()`, `persist()` → `temp_views.rs:173` `register_collected_memtable` | materialisation | the frame is collected at its first action under that action's settings | not this card's door (part 2's seat 3; not measured here) |
 
+## 3. Revision (critic round 1): entries the first pass missed or left unmeasured
+
+The critic (Opus 5.5 medium, 2026-11-19, `VERDICT: GAPS`) found these; each is now measured on main against Spark 4.1.2
+([domain-table.md](domain-table.md) §8, data crossing midnight both ways).
+
+| # | entry (file:line) | path | main against Spark, per column | seen at the seat |
+|---|---|---|---|---|
+| E5 (re-read) | `frame.join(other, condition)`, `crossJoin` → `crates/repark-python/src/frame_lineage.rs:379` `analyze_built_plan`, `:380` `DataFrame::new(state, plan)` | the joined frame **is the analysed plan** | `cj`, `cjb`, `cross` 12 cells: `ts` and `u` EQUAL, `ph` and `b` WRONG | yes (exempted); any marker stripped during analysis is gone from this frame, so seat (a) must keep its marker through analysis (sketch §4) |
+| E11 (re-read) | `cache()`, `CACHE TABLE` → `crates/repark-core/src/session/temp_views.rs:173` `register_collected_memtable` (`:184` analyse, `:189` optimise, `:193` plan, under the frame's own state) | materialisation | `cache_mat`, `cachetable` 8 EQUAL; `cache_lazy` 4 WRONG in `ts`, `u` and `b` (main and part 1): RePark materialises when the view is registered, Spark at the first action | the parse is planned at materialisation, so no seat that plans it later moves `cache_lazy` (sketch §7 Q8) |
+| E12 | a held frame acted on after the settings change (`nv`, `nv_hour`) | the frame's action | `nv` 4 EQUAL; `nv_hour` 4 WRONG in `b` (Parquet gained under part 2) | yes; the JSON and CSV lineage takes the exemption |
+| E13 | `unionByName` with a Parquet frame → `python/repark/src/repark/spark/dataframe/core.py:2596` | a union | 4 WRONG in `b` on **both** branches; `pq` 2 EQUAL | yes; exempted, wider than the parse (as E4) |
+| E14 | `createOrReplaceTempView` of one frame twice, the second time under the reading settings (E1 twice) | re-registration | 4 WRONG in `b`; `pq` 2 EQUAL (Spark keeps the frame's settings) | yes; exempted |
+| E15 | a SQL view joining a JSON frame view with a Parquet frame view → `crates/repark-spark/src/view_ddl/temp_view.rs:177` | the SQL door | 4 WRONG in `b`; `ph` EQUAL on main, WRONG on part 1 (part 2 moved these 4 from one WRONG to another) | yes; the SQL fallback |
+| E16 | a zone-reading `filter` above the parse (`filter("hour(ts) >= 12")`) → E1 | the frame door | 4 WRONG by rows: Spark keeps 2 rows (`la_utc`) or 0 (`utc_la`), main 1 | yes; exempted |
+| E17 | views three deep under three zones (`ff`, `fs`, `sf`) → E1, E2, E3 at each layer | nesting | `json_s`, `csv_i` 36 WRONG in `h2` (36) and `h1` (24), `ts` and `u` EQUAL; `pq` 18 EQUAL | yes; the inner layer is decided with `config` set to the enclosing layer's settings (`frame_settings.rs:462-467`) |
+
+**Not doors** (the critic's search, confirmed): no Spark Connect door (`crates/repark-connect` is a Postgres
+connector); the native door is SQL-only (`python/repark/src/repark/__init__.py:97`) and refuses file-source SQL (P16);
+the global temp-view doors are refused (`python/repark/src/repark/spark/dataframe/core.py:2503`). So no session
+without the frame seat can build a reader frame.
+
+## 4. Where an analysed plan is kept or read (seat (a)'s marker now survives analysis)
+
+**How I searched.** `grep -rn` over `crates/` (tests excluded) for `execute_and_check`, `analyze_eagerly(` and
+`analyze_built_plan(`, then each caller read for what it does with the analysed plan; `DataFrame::new(` (39 sites) and
+`execute_logical_plan(` checked for one fed by an analysed plan (two: E5 and CTAS); `LogicalPlan::Extension` for the
+hand-written walkers that stop at an extension node. The column says what a `ReaderParse` node inside the analysed plan
+does there.
+
+| # | site (file:line) | what it does with the analysed plan | with the marker inside | action |
+|---|---|---|---|---|
+| A1 | `crates/repark-python/src/frame_lineage.rs:379`, `:380` | **keeps it** as the joined frame (E5) | kept; decided when the frame is planned | none beyond the seat; the bar checks `ts` and `u` per column |
+| A2 | `crates/repark-spark/src/view_ddl/frame_settings.rs:467`, `:468` | keeps it inside `FrameView::closed` | kept; decided by the optimizer inside the closed view's `plan_under_overlay` | none |
+| A3 | `crates/repark-spark/src/view_ddl/temp_settings.rs:304` | `plan_under_overlay`: analyses, then optimises (`:337`) and plans (`:340`) under the overlay | decided under the overlay's settings against the live session's | none |
+| A4 | `crates/repark-core/src/session/temp_views.rs:184` | cache materialisation: optimises (`:189`) and plans (`:193`) at once | decided at materialisation (E11) | none |
+| A5 | `crates/repark-spark/src/ctas.rs:207`, `:208` | CTAS: `execute_logical_plan(analysed)`, run through the optimizer | decided when the write runs | none |
+| A6 | `crates/repark-spark/src/spark_ast.rs:277` | `INSERT INTO`: analyses, conforms (`conform_insert_narrowed_ints`), fills defaults, then runs | kept through generic rewrites; decided when it runs | the write sweep |
+| A7 | `crates/repark-python/src/column/expr_build.rs:187` | `F.expr`: takes the projection **expression** out of the analysed fragment (`:170-215`) | never reaches an expression | none |
+| A8 | `crates/repark-python/src/dataframe/mod.rs:183`; `crates/repark-core/src/pre_execute.rs:99`; `crates/repark-spark/src/void_type.rs:285`; `crates/repark-iceberg/src/write/void_store.rs:30`, `conform_stage.rs:274`, `ntz_store.rs:121`, `store_overflow.rs:60` (callers `merge/insert.rs:123`, `:203`, `predicate_dml/lineage.rs:97`) | the schema or the column types only | the node's schema is its input's | none |
+| A9 | `crates/repark-core/src/plan_introspect.rs:167`, `:193` (`sameSemantics`, `semanticHash`) | hashes the analysed plan through `write_plan` (`:315`), whose catch-all hashes any other node as `Opaque` plus its `Debug` (`:444`) | **changes the hash**: the `Debug` carries attribute ids, so two reads of one file would stop being the same | `write_plan` hashes a `ReaderParse` as its input: a product file (sketch §4) |
+| A10 | `crates/repark-core/src/session/df_guards/attr_id.rs:642` | a hand-written walk that returns an `Extension` untouched, never descending | ids under the node would not be stripped | the decision runs before `repark_strip_attribute_ids` (optimizer index 0) |
+| A11 | `crates/repark-python/src/dataframe/mod.rs:147` `strip_for_execution` (`attr_id.rs:383`) | `transform_up_with_subqueries` over the unanalysed plan | sees through the node (its input is a child); the private unanalysed copy is planned separately, by its own optimizer | none |
+| A12 | `crates/repark-core/src/session/df_guards/join_exact.rs:23` `join_exact_sides`, called at `frame_lineage.rs:374` | rewrites both sides' **unanalysed** plans | a side may now be topped by the node | the reader sweep's join cells |
+
+Measured beside it: `sameSemantics` and `semanticHash` agree with Spark today in 15 of 15 checks (two reads of one
+file, `select("*")`, equal and unequal filters, for `json_s`, `csv_i` and `pq`; domain table §8.6).
+
 Up: [map.md](map.md).

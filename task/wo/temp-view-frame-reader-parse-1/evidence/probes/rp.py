@@ -6,15 +6,17 @@ from typing import Any
 from common import Rec, session
 
 engine, parent, out, part = sys.argv[1:5]
+DATA = sys.argv[5] if len(sys.argv) > 5 else "base"
 s, wh = session(engine, parent)
 r = Rec(s, out)
 LA = "America/Los_Angeles"
 UTC = "UTC"
 ZL = {LA: "la", UTC: "utc"}
 SCHEMA = "n INT, ts TIMESTAMP"
-GOOD_JSON = '{"n": 1, "ts": "2024-01-01 03:00:00"}\n{"n": 2, "ts": "2024-01-01 12:00:00"}\n'
+LATE = "2024-06-01 23:30:00" if DATA == "midnight" else "2024-01-01 12:00:00"
+GOOD_JSON = '{"n": 1, "ts": "2024-01-01 03:00:00"}\n{"n": 2, "ts": "' + LATE + '"}\n'
 BAD_JSON = '{"n": 1, "ts": "2024-01-01 03:00:00"}\n{"n": 2147483648, "ts": "not a time"}\n'
-GOOD_ROWS = "1,2024-01-01 03:00:00\n2,2024-01-01 12:00:00\n"
+GOOD_ROWS = "1,2024-01-01 03:00:00\n2," + LATE + "\n"
 BAD_ROWS = "1,2024-01-01 03:00:00\n2147483648,not a time\n"
 BODIES = {
     "hour": "hour(ts)",
@@ -37,7 +39,7 @@ put("jsond/b.json", GOOD_JSON.splitlines()[1] + "\n")
 put("jsonbad/a.json", BAD_JSON)
 put("csv/a.csv", GOOD_ROWS)
 put("csvh/a.csv", "n,ts\n" + GOOD_ROWS)
-put("csvn/a.csv", "n,ts\n1,2024-01-01 03:00:00\nNA,2024-01-01 12:00:00\n3,NA\n")
+put("csvn/a.csv", "n,ts\n1,2024-01-01 03:00:00\nNA," + LATE + "\n3,NA\n")
 put("csvbad/a.csv", BAD_ROWS)
 put("jsonts/a.json", '{"n": 1, "ts": "2024-01-01 03:00:00"}\n{"n": 2, "ts": "not a time"}\n')
 put(
@@ -52,7 +54,7 @@ put("smartbad/a.csv", "n,ts\n" + BAD_ROWS)
 r.conf(UTC, "true")
 s.sql(
     "SELECT CAST(n AS INT) AS n, CAST(ts AS TIMESTAMP) AS ts FROM VALUES "
-    "(1, '2024-01-01 03:00:00'), (2, '2024-01-01 12:00:00') t(n, ts)"
+    "(1, '2024-01-01 03:00:00'), (2, '" + LATE + "') t(n, ts)"
 ).write.mode("overwrite").parquet(wh + "/pq")
 for zone in (LA, UTC):
     r.conf(zone, "true")
