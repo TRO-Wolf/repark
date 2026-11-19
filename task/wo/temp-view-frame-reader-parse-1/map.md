@@ -17,5 +17,6 @@ only) against Spark 4.1.2; documents and probes only. Card file: filed by the re
 - [inventory.md](inventory.md) — the insertion inventory: 17 parse sites and 17 entries, "seen at the seat" for each,
   and the seats that keep or read an analysed plan (A1–A12).
 - [evidence/](evidence/map.md) — probes, raw cells, verdicts, tables, `javap` excerpts, provenance.
+- [built/](built/map.md) — unit 1's build record (map, bar, cost, evidence).
 
 Up: [../map.md](../map.md).

@@ -16,4 +16,6 @@ Fable's Q6 row, [M]: "It is not a reader gap. On main, `hour(c)`, `minute(c)` an
 
 **Main:** `hour`, `minute` and `second` answer `0` over an Iceberg v2 `STRING` column under matching settings. The six other functions in Fable's measurement (`year`, `month`, `dayofmonth`, `date_format`, `to_date`, `unix_timestamp`), and `hour(CAST(c AS TIMESTAMP))`, are right.
 
+- **2026-11-19 — an escape, closed by TEMP-VIEW-FRAME-READER-PARSE-1.** Unit 1's rebuild measured 7 ANSI cells (`A/true_false/{csv_i,json_i}/{eb,ob,osb,sb}_hour`: a view made under ANSI on and read under ANSI off) EQUAL before #1370 and WRONG after it on main: `hour` of the bad text answers under the reading ANSI off, where Spark raises `CAST_INVALID_INPUT`. Unit 1 restores them, because the frame is decided under the creating ANSI. It belongs in the escapes backfill of `task/metrics.md` (owner ruling 2026-11-19).
+
 Up: [map.md](map.md).

@@ -1,0 +1,90 @@
+{"cell": "provenance", "engine": "repark", "native": "<scratchpad>/ddu-work/pkg-rp1base-8bc26cba/repark/_native.abi3.so", "version": "1.5.6"}
+{"cell": "direct/fdiv/true", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "direct/fdiv/false", "result": {"rows": ["0|null", "2|5.0"], "types": ["int", "double"]}}
+{"cell": "direct/fadd/true", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "direct/fadd/false", "result": {"rows": ["0|-2147483648", "2|2"], "types": ["int", "int"]}}
+{"cell": "direct/fagg/true", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "direct/fagg/false", "result": {"rows": ["0|null", "2|5.0"], "types": ["int", "double"]}}
+{"cell": "direct/fcast/true", "result": {"error": "", "text": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}}
+{"cell": "direct/fcast/false", "result": {"error": "", "text": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}}
+{"cell": "direct/fhour/UTC", "result": {"rows": ["2024-01-01 02:30:00|2"], "types": ["timestamp", "int"]}}
+{"cell": "direct/fhour/America/Los_Angeles", "result": {"rows": ["2023-12-31 18:30:00|18"], "types": ["timestamp", "int"]}}
+{"cell": "direct/CAST(big/true", "result": {"error": "", "text": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}}
+{"cell": "direct/CAST(big/false", "result": {"error": "", "text": "Arrow error: Cast error: Can't cast value 3000000000 to type Int32"}}
+{"cell": "direct/b + 0/true", "result": {"rows": ["0", "2"], "types": ["int"]}}
+{"cell": "direct/b + 0/false", "result": {"rows": ["0", "2"], "types": ["int"]}}
+{"cell": "filter/or_free/sql/fdiv/on_off", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "filter/or_mixed/sql/fdiv/on_off", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "filter/or_mixed/sql/fdiv/off_on", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"cell": "filter/add_key/sql/fadd/on_off", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "filter/add_m/sql/fadd/off_on", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"cell": "filter/add_sens/sql/fadd/on_off", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "filter/agg_key/sql/fagg/on_off", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"cell": "filter/agg_key_sens/sql/fagg/on_off", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "filter/agg_m/sql/fagg/on_off", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "filter/agg_null/sql/fagg/off_on", "result": {"rows": ["null"], "types": ["double"]}}
+{"cell": "filter/cast_null/sql/fcast/off_on", "result": {"error": "", "text": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}}
+{"cell": "filter/numcast/sql/fcast/on_off", "result": {"error": "", "text": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}}
+{"cell": "filter/numcast/sql/fcast/off_on", "result": {"error": "", "text": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}}
+{"cell": "filter/zone_m/sql/fhour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "filter/zone_fn/sql/fhour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "filter/zone_strcast/sql/fhour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "filter/in_list/sql/fdiv/on_off", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"cell": "filter/between/sql/fdiv/on_off", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"cell": "filter/and_free/sql/fdiv/on_off", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "filter/and_free/sql/fdiv/on_on", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "filter/and_mixed/sql/fdiv/on_off", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"cell": "filter/agg_limit/sql/fagg/on_off", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"cell": "filter/or_free/df/fdiv/on_off", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "filter/or_mixed/df/fdiv/on_off", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "filter/or_mixed/df/fdiv/off_on", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"cell": "filter/add_key/df/fadd/on_off", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "filter/add_m/df/fadd/off_on", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"cell": "filter/add_sens/df/fadd/on_off", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "filter/agg_key/df/fagg/on_off", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"cell": "filter/agg_key_sens/df/fagg/on_off", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "filter/agg_m/df/fagg/on_off", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "filter/agg_null/df/fagg/off_on", "result": {"rows": ["null"], "types": ["double"]}}
+{"cell": "filter/cast_null/df/fcast/off_on", "result": {"error": "", "text": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}}
+{"cell": "filter/numcast/df/fcast/on_off", "result": {"error": "", "text": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}}
+{"cell": "filter/numcast/df/fcast/off_on", "result": {"error": "", "text": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}}
+{"cell": "filter/zone_m/df/fhour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "filter/zone_fn/df/fhour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "filter/zone_strcast/df/fhour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "filter/in_list/df/fdiv/on_off", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"cell": "filter/between/df/fdiv/on_off", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"cell": "filter/and_free/df/fdiv/on_off", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "filter/and_free/df/fdiv/on_on", "result": {"error": "DIVIDE_BY_ZERO", "text": "Execution error: [DIVIDE_BY_ZERO] Division by zero. Use try_divide to tolerate divisor being 0 and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "filter/and_mixed/df/fdiv/on_off", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"cell": "filter/agg_limit/df/fagg/on_off", "result": {"rows": ["5.0"], "types": ["double"]}}
+{"cell": "cache/sql_then_set", "result": {"cached": "True", "rows": ["2"], "types": ["int"]}}
+{"cell": "cache/df_lazy_then_set", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "cache/set_then_cache", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "cache/ansi_off_cached_on", "result": {"rows": ["-2147483648"], "types": ["int"]}}
+{"cell": "derive/selectexpr/add/on_off", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "derive/selectexpr/hour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "derive/join/add/on_off", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "derive/join/hour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "derive/unpivot/add/on_off", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "derive/unpivot/hour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "derive/explode/add/on_off", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "derive/explode/hour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "derive/intersect/add/on_off", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "derive/intersect/hour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "derive/regtt/add/on_off", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "derive/regtt/hour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "door/registertemptable/add/on_off", "result": {"error": "ARITHMETIC_OVERFLOW", "text": "[ARITHMETIC_OVERFLOW] integer overflow. Use 'try_add' to tolerate overflow and return NULL instead. If necessary set \"spark.sql.ansi.enabled\" to \"false\" to bypass this error. (ArithmeticException)"}}
+{"cell": "door/registertemptable/hour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "rename/view_no_set", "result": {"error": "TABLE_OR_VIEW_NOT_FOUND", "text": "Error during planning: [TABLE_OR_VIEW_NOT_FOUND] The table or view `spark_catalog`.`default`.`rv57` cannot be found. Verify the spelling and correctness of the schema and catalog. If you did not qualify the name with a schema, verify the current_schema() outpu"}}
+{"cell": "current_date/sql/utc_kir", "result": {"direct": ["2026-11-20"], "rows": ["2026-11-19"], "types": ["string"]}}
+{"cell": "current_date/sql/utc_pago", "result": {"direct": ["2026-11-19"], "rows": ["2026-11-19"], "types": ["string"]}}
+{"cell": "current_date/df/utc_kir", "result": {"direct": ["2026-11-20"], "rows": ["2026-11-19"], "types": ["string"]}}
+{"cell": "current_date/df/utc_pago", "result": {"direct": ["2026-11-19"], "rows": ["2026-11-19"], "types": ["string"]}}
+{"cell": "held_write/writeto/hour/utc_la", "result": {"rows": ["18"], "types": ["int"]}}
+{"cell": "held_write/writeto/hour/la_utc", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "held_write/writeto/str/utc_la", "result": {"rows": ["2023-12-31 18:30:00"], "types": ["string"]}}
+{"cell": "held_write/writeto/str/la_utc", "result": {"rows": ["2024-01-01 02:30:00"], "types": ["string"]}}
+{"cell": "held_write/writeto/date/utc_la", "result": {"rows": ["2023-12-31"], "types": ["date"]}}
+{"cell": "held_write/writeto/date/la_utc", "result": {"rows": ["2024-01-01"], "types": ["date"]}}
+{"cell": "held_write/saveastable/hour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}
+{"cell": "held_write/insertinto/hour/utc_la", "result": {"rows": ["2"], "types": ["int"]}}

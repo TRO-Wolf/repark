@@ -6006,6 +6006,38 @@ still open is `isModifiable`.
   card TEMP-VIEW-FRAME-READER-PARSE-1 (owner, 2026-11-18: "We better go with B to
   be safe"); [work order](../task/wo/csv-schema-timestamp-zone-1/map.md).
 
+### TEMP-VIEW-FRAME-READER-PARSE-1 — a JSON or CSV reader's parse runs under the session that reads it — **FIXED 2026-11-19 on the Spark door (branch `fix/temp-view-frame-reader-parse-1`)**
+
+- **repark** — Before (unit 0's head `aa9fd178`, main's reader and view tree): a DataFrame temp view, a SQL view over
+  one, and a held frame whose lineage reached a JSON or CSV reader took part 2's exemption (`reader_lineage`) and
+  were planned whole under the reader's settings, so every expression above the parse (`hour`, `CAST(ts AS STRING)`,
+  `CAST(ts AS DATE)`, `date_format`, `n * 2000000000`) answered the reader's zone and ANSI mode; a held frame built
+  before a `SET` and acted on after it parsed under the creating zone, with no view (`ts` itself wrong). After: the
+  facade wraps each JSON and CSV reader frame in a `ReaderParse` node; the optimizer's first rule decides it against
+  the session's live settings: the same, the node is its analysed input (main's plan); different, the parse is
+  planned under the live settings in a closed frame view, and everything above it keeps the frame's settings.
+  **This changes answers with no view involved** (the held-frame doors).
+- **spark** — Spark 4.1.2 parses a JSON or CSV file at scan time under the live conf of the session that made the
+  relation (`FileSourceScanExec` → `buildReader` → `getSqlConf`) and stamps the expressions above the relation when
+  the frame is analysed (`ResolveTimeZone`). *(oracle: step 0's recorded cells, Fable's probes and
+  `python/repark/tests/session/temp_view_frame_reader_parse_1_spark_oracle.json`, measured 2026-11-19.)*
+- **Still unlike Spark:** a view made under ANSI off over JSON or CSV timestamp text, read under ANSI on, raises
+  `CAST_INVALID_INPUT` where Spark's PERMISSIVE parse answers `NULL` (D2, 10 cells, READER-TYPED-SCAN-1); a lazily
+  cached frame and a UDF column are planned when built, under the creating settings (`cache_lazy` 4 cells, `udf` 4
+  cells, TEMP-VIEW-CACHE-LAZY-PARSE-1); a `multiLine` JSON array, a directory of `*.csv.gz` and a two-file
+  `inferSchema` whose types differ still raise (D9–D11, 18 cells); a SQL view over a `smartCsv` frame view raises (D6,
+  SMARTCSV-SQL-VIEW-1); RePark accepts `PREPARE`, which Spark refuses; `EXPLAIN VERBOSE` shows the `ReaderParse` node
+  and the `repark_reader_parse` rule (Q11); a query over a reader frame pays about 0.5 ms.
+- **Pin** — `python/repark/tests/session/test_temp_view_frame_reader_parse_1.py` (57 cells against Spark
+  4.1.2's recorded answers, `EXPLAIN` of a headerless CSV); Rust `repark-spark` `view_ddl/frame_settings/tests.rs`
+  (the rule's order, matching and differing settings, a node inside `IN` and scalar subqueries) and `repark-core`
+  `plan_introspect.rs` (the node hashes as its input).
+- **Bar and cost** — [built/bar.md](../task/wo/temp-view-frame-reader-parse-1/built/bar.md),
+  [built/cost.md](../task/wo/temp-view-frame-reader-parse-1/built/cost.md).
+- **Rationale** — the owner's ruling of 2026-11-18 ("We better go with B to be safe"); Fable's guidance under the
+  owner's delegation of 2026-11-19, not an owner ruling (seat (a) amended with G1 to G4, the held-frame family in the
+  bar, the Q9 stop rule, Q11 disclosed); [work order](../task/wo/temp-view-frame-reader-parse-1/built/map.md).
+
 ### FA-1 — lateral column aliases in `withColumns`
 
 - **repark** — has no lateral-alias resolution: `withColumns({"x": col("a")+1, "y": col("x")})`
