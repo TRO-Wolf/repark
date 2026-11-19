@@ -2,12 +2,16 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
+import struct
 from collections.abc import Iterator
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 import _sum_dec_i128wrap_1_cells as cells
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 from repark import ReparkSession
@@ -174,3 +178,111 @@ def test_a_multi_partial_total_is_the_exact_total_on_every_run_at_2_4_and_8_part
             assert condition(runs[0]) == want, (key, runs[0][:300])
         else:
             assert cells.same_answer(runs[0], want), (key, str(runs[0])[:300], str(want)[:300])
+
+
+OVER_A = 10**38 - 1
+OVER_SETS = {
+    "wrap5": [OVER_A, OVER_A, OVER_A, 2**128 + 5 - 3 * OVER_A],
+    "neg": [-OVER_A, -OVER_A, -OVER_A, -(2**128 + 5 - 3 * OVER_A)],
+    "fit": [OVER_A, OVER_A, -OVER_A, 7],
+    "filler": [0],
+}
+OVER_FILES = [
+    (name, p, files) for name in ("wrap5", "neg", "fit") for p in (19, 20) for files in (1, 2)
+]
+OVER_QUERIES = {
+    ("sum", "ungrouped"): "SELECT sum(c) FROM t",
+    ("try_sum", "ungrouped"): "SELECT try_sum(c) FROM t",
+    ("sum", "grouped"): "SELECT g, sum(c) FROM t GROUP BY g",
+    ("try_sum", "grouped"): "SELECT g, try_sum(c) FROM t GROUP BY g",
+}
+
+
+def write_past_precision(path: Path, values: list[int], precision: int) -> None:
+    table = pa.table(
+        {
+            "c": pa.array([Decimal(v) for v in values], pa.decimal128(38, 0)),
+            "g": pa.array([1] * len(values), pa.int64()),
+        }
+    )
+    pq.write_table(table, path, store_schema=False, write_statistics=False)
+    data = bytearray(path.read_bytes())
+    size = struct.unpack("<I", data[-8:-4])[0]
+    start = len(data) - 8 - size
+    footer = bytes(data[start:-8])
+    patched = footer.replace(b"\x15\x4c", bytes([0x15, precision * 2]))
+    assert len(patched) == len(footer) and patched != footer
+    data[start:-8] = patched
+    path.write_bytes(bytes(data))
+    back = pq.read_table(path)
+    assert back.schema.field("c").type == pa.decimal128(precision, 0)
+    assert [int(v) for v in back.column("c").to_pylist()] == values
+
+
+@pytest.fixture(scope="module")
+def past_precision_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    root = tmp_path_factory.mktemp("sum-past-precision")
+    for name, values in OVER_SETS.items():
+        for precision in (19, 20):
+            write_past_precision(root / f"{name}_p{precision}.parquet", values, precision)
+    for name, precision, files in OVER_FILES:
+        if files == 2:
+            two = root / f"{name}_p{precision}_two"
+            two.mkdir()
+            shutil.copy(root / f"{name}_p{precision}.parquet", two / "a.parquet")
+            shutil.copy(root / f"filler_p{precision}.parquet", two / "b.parquet")
+    return root
+
+
+def past_precision_outcome(answer: Any) -> str:
+    if isinstance(answer, dict) and answer["rows"] in (["null"], ["1|null"]):
+        return "NULL"
+    if isinstance(answer, str) and "past its declared precision" in answer:
+        return "PAST_DECLARED_PRECISION"
+    if isinstance(answer, str) and condition(answer) == "ARITHMETIC_OVERFLOW":
+        return "ARITHMETIC_OVERFLOW"
+    return f"a value or another error: {answer}"
+
+
+def past_precision_want(
+    name: str, precision: int, files: int, mode: str, partitions: int, query: tuple[str, str]
+) -> str:
+    function, shape = query
+    multi_phase = partitions > 1 and (shape == "grouped" or files == 2)
+    if multi_phase and precision == 19 and name != "fit":
+        return "PAST_DECLARED_PRECISION"
+    if mode == "true" and function == "sum":
+        return "ARITHMETIC_OVERFLOW"
+    return "NULL"
+
+
+@pytest.mark.parametrize("mode", ["false", "true"], ids=["ansi_off", "ansi_on"])
+@pytest.mark.parametrize("partitions", (1, 4), ids=lambda n: f"tp{n}")
+@pytest.mark.parametrize(
+    ("name", "precision", "files"),
+    OVER_FILES,
+    ids=[f"spark-refuses-the-read:{n}_p{p}-{f}-file" for n, p, f in OVER_FILES],
+)
+def test_a_total_of_values_past_their_declared_precision_is_never_a_value(
+    past_precision_root: Path, mode: str, partitions: int, name: str, precision: int, files: int
+) -> None:
+    path = past_precision_root / (
+        f"{name}_p{precision}_two" if files == 2 else f"{name}_p{precision}.parquet"
+    )
+    _reset_active_session_for_tests()
+    session = (
+        ReparkSession.builder.appName("test-sum-dec-i128wrap-1-past-precision")
+        .config("spark.sql.session.timeZone", "UTC")
+        .config("spark.sql.ansi.enabled", mode)
+        .getOrCreate()
+    )
+    try:
+        session.sql(f"SET datafusion.execution.target_partitions = {partitions}").collect()
+        session.read.parquet(str(path)).createOrReplaceTempView("t")
+        for query, sql in OVER_QUERIES.items():
+            answer = cells.attempt(lambda sql=sql: cells.answer_of(session.sql(sql)))
+            want = past_precision_want(name, precision, files, mode, partitions, query)
+            assert past_precision_outcome(answer) == want, (query, str(answer)[:300])
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
