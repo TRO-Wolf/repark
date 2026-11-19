@@ -1,0 +1,75 @@
+{"case": "match_read", "label": "main", "seconds": 0.2502860660897568, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_read", "label": "head", "seconds": 0.2590002149809152, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_read", "label": "main-aa", "seconds": 0.24054942606016994, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "main", "seconds": 0.20505902206059545, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "head", "seconds": 0.22037901100702584, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "main-aa", "seconds": 0.20559433102607727, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_join", "label": "main", "seconds": 0.35334684595, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_join", "label": "head", "seconds": 0.33386954001616687, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_join", "label": "main-aa", "seconds": 0.3155610099202022, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "main", "seconds": 0.1064741660375148, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "head", "seconds": 0.10532985592726618, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "main-aa", "seconds": 0.09977935906499624, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "main", "seconds": 0.13227220403496176, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "head", "seconds": 0.12660508695989847, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "main-aa", "seconds": 0.13360247493255883, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_read", "label": "main", "seconds": 0.22456816805060953, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_read", "label": "head", "seconds": 0.21789464098401368, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_read", "label": "main-aa", "seconds": 0.22589340899139643, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "main", "seconds": 0.20629862206988037, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "head", "seconds": 0.2069251249777153, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "main-aa", "seconds": 0.20786893600597978, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_join", "label": "main", "seconds": 0.3435224569402635, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_join", "label": "head", "seconds": 0.32566365704406053, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_join", "label": "main-aa", "seconds": 0.33108349796384573, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "main", "seconds": 0.0931998350424692, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "head", "seconds": 0.096704309922643, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "main-aa", "seconds": 0.09341032209340483, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "main", "seconds": 0.1345921269385144, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "head", "seconds": 0.1307285539805889, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "main-aa", "seconds": 0.13132595201022923, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_read", "label": "main", "seconds": 0.2466136859729886, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_read", "label": "head", "seconds": 0.24858671997208148, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_read", "label": "main-aa", "seconds": 0.23074217198882252, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "main", "seconds": 0.20694822492077947, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "head", "seconds": 0.21460444491822273, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "main-aa", "seconds": 0.20685495994985104, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_join", "label": "main", "seconds": 0.3374953899765387, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_join", "label": "head", "seconds": 0.34731136506889015, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_join", "label": "main-aa", "seconds": 0.3494831450516358, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "main", "seconds": 0.09577973594423383, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "head", "seconds": 0.09757348196581006, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "main-aa", "seconds": 0.09695843199733645, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "main", "seconds": 0.12805444898549467, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "head", "seconds": 0.13319472002331167, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "main-aa", "seconds": 0.1308307689614594, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_read", "label": "main", "seconds": 0.24933561403304338, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_read", "label": "head", "seconds": 0.25392320402897894, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_read", "label": "main-aa", "seconds": 0.23482964700087905, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "main", "seconds": 0.21934067399706692, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "head", "seconds": 0.21343770192470402, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "main-aa", "seconds": 0.21044124697800726, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_join", "label": "main", "seconds": 0.31134890601970255, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_join", "label": "head", "seconds": 0.31419137096963823, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_join", "label": "main-aa", "seconds": 0.3416299879318103, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "main", "seconds": 0.10347784007899463, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "head", "seconds": 0.09953252307604998, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "main-aa", "seconds": 0.10063784895464778, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "main", "seconds": 0.13178603700362146, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "head", "seconds": 0.12855789496097714, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "main-aa", "seconds": 0.1303513990715146, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_read", "label": "main", "seconds": 0.2315120439743623, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_read", "label": "head", "seconds": 0.24495541804935783, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_read", "label": "main-aa", "seconds": 0.24463079497218132, "reps": 20, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "main", "seconds": 0.21042659902013838, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "head", "seconds": 0.21826011396478862, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_filter", "label": "main-aa", "seconds": 0.2215080939931795, "reps": 8, "answer": "[[1484985, 4454880]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_join", "label": "main", "seconds": 0.35590788000263274, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_join", "label": "head", "seconds": 0.34780599898658693, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_join", "label": "main-aa", "seconds": 0.3392364949686453, "reps": 18, "answer": "[[2000000, 5999900]]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "main", "seconds": 0.09533876203931868, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "head", "seconds": 0.08742923301178962, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_insertinto", "label": "main-aa", "seconds": 0.08775426703505218, "reps": 3, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "main", "seconds": 0.12165301898494363, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "head", "seconds": 0.1250619919737801, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-view2-9aa2f182/repark/_native.abi3.so"}
+{"case": "match_writeto", "label": "main-aa", "seconds": 0.1329014990478754, "reps": 4, "answer": "[]", "native": "<scratchpad>/ddu-work/pkg-main-6286ba19/repark/_native.abi3.so"}
