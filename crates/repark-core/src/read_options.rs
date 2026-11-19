@@ -606,6 +606,43 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_file_url_csv_utf8_columns_read_types_only_the_named_columns_as_utf8() {
+        use arrow::datatypes::DataType;
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("data.csv");
+        std::fs::write(
+            &path,
+            "n,ts,d\n1,2024-03-10 02:30:00,1e2\n2,2024-01-01 03:00:00,1.5E-1\n",
+        )
+        .unwrap();
+        let session = crate::ReparkSession::builder().build().unwrap();
+        let types_of = |frame: &DataFrame| -> Vec<(String, DataType)> {
+            frame
+                .schema()
+                .fields()
+                .iter()
+                .map(|field| (field.name().clone(), field.data_type().clone()))
+                .collect()
+        };
+        let local = path.to_str().unwrap().to_string();
+        let typed = [DataType::Int64, DataType::Utf8, DataType::Float64];
+        let text = [DataType::Utf8, DataType::Utf8, DataType::Utf8];
+        for (target, expected) in [(format!("file://{local}"), typed), (local, text)] {
+            let pairs = [("header", "true"), ("utf8_columns", "ts")];
+            let frame = session
+                .read_csv(&target, &options_map(&pairs))
+                .await
+                .unwrap();
+            let names: Vec<String> = ["n", "ts", "d"].map(str::to_string).into();
+            assert_eq!(
+                types_of(&frame),
+                names.into_iter().zip(expected).collect::<Vec<_>>(),
+                "{target}"
+            );
+        }
+    }
+
+    #[tokio::test]
     async fn read_options_flag_secret_columns_json_refuse_names_flagged_columns() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("data.json");

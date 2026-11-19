@@ -502,12 +502,43 @@ class DataFrameReader:
         # Spark default header=false when unset — force it so DF does not default true.
         if "header" not in {key.lower() for key in native_options}:
             native_options["header"] = "false"
+        frame = self._session.read_csv(path_str, native_options)
+        naive = self._session_timestamp_text_columns(frame)
+        if naive:
+            local = Path(path_str)
+            native_options["utf8_columns"] = ",".join(naive)
+            literal = local.exists() and set("*?[").isdisjoint(path_str)
+            uri = local.absolute().as_uri() + "/" * local.is_dir() if literal else path_str
+            frame = self._session.read_csv(uri, native_options)
         return self._apply_reader_schema_semantics(
-            self._session.read_csv(path_str, native_options),
+            frame,
             infer_schema=self._option_bool("inferschema", default=False),
             header=self._option_bool("header", default=False),
             path=path_str,
         )
+
+    def _session_timestamp_text_columns(self, frame: DataFrame) -> list[str]:
+        """Name the scan's zone-less timestamp columns ``_load_csv`` re-reads as text.
+
+        Spark parses a CSV field from its text under the session zone when the user schema holds
+        a ``TIMESTAMP`` field, so the typed parse casts that text. A column the schema reads into
+        ``TIMESTAMP_NTZ`` keeps the scan's type; fields pair with columns as
+        ``_apply_reader_schema_semantics`` pairs them, by name and else by position.
+        """
+        from repark.spark.types import TimestampNTZType, TimestampType
+
+        fields = [] if self._schema is None else _schema_fields(self._schema)
+        if not any(isinstance(field["dataType"], TimestampType) for field in fields):
+            return []
+        columns = list(frame.columns)
+        by_case = {name.casefold(): name for name in columns}
+        hits = [field["name"].casefold() in by_case for field in fields]
+        generic = all(col.lower().startswith("column") or col.startswith("_c") for col in columns)
+        pairs = list(zip(columns, fields, strict=False))
+        if all(hits) or (any(hits) and not generic):
+            pairs = [(by_case.get(field["name"].casefold()), field) for field in fields]
+        ntz = {name for name, field in pairs if isinstance(field["dataType"], TimestampNTZType)}
+        return [col for col, dtype in frame.dtypes if dtype == "timestamp_ntz" and col not in ntz]
 
     def _load_json(self, path: str | Path | list[str]) -> DataFrame:
         """Materialize JSON via the session native reader + optional schema projection."""
