@@ -311,4 +311,69 @@ not see); seat (a) was the right direction with two mechanical holes and a missi
 6. **The records:** this section; domain table §8; inventory §3 (E5 and E11 re-read, E12–E17, the non-doors) and §4
    (the analysed-plan seats); raw cells, verdicts and the summary in [evidence/raw-r1/](evidence/raw-r1/map.md).
 
+## 10. Fable's guidance (2026-11-19)
+
+The delegation, owner, 2026-11-19, about 01:28 UTC, verbatim: "Go with your recommendations and tonight you don’t even need to wait on me even if fable says that it’s my call. Merge what you need, follow the goal and good luck".
+
+This section is guidance, not a ruling. Fable (`claude-fable-5-2`, medium effort) built nothing and edited no repository. Its marks are kept: [M] measurement, [R] reading, [Rec] recommendation. Its four probes ran on main `4c365814` and Spark 4.1.2, 60 cells; the scripts and raw output are in `<scratchpad>/fable-rp/`.
+
+### 10.1 Is amended seat (a) sound? (Fable's §1)
+
+- **Answer:** yes, the seat is sound. Fable found no hole in where the decision is made. No second critic round is needed before the build. [Rec]
+- **G1, the closed copy needs an analyzer.** [R] `closed_scan` analyses its input before it builds `FrameView::closed`, whose declared schema is the analysed plan's. [Rec] `ReaderParse` carries the analyzer too, taken from the state at wrap time; the differing branch analyses the copy under the live options, then calls `FrameView::closed`. No new file. Cell: any differing-settings read of `csv_i`, for example `Z/ansi_true/la_utc/csv_i/eb_hour`; Fable expects a loud schema error without the fix.
+- **G2, the rule must walk subqueries itself.** [Rec] `repark_reader_parse` uses `transform_down_with_subqueries`; a JSON frame view inside an `IN` or scalar subquery is then inlined under matching settings, and a rule that misses it fails loud ("no installed planner"). Cells: `subq/*`, 6 cells in G2, EQUAL on main and must stay EQUAL; add the matching-settings pass of the same query. [Clerk note: G2 says 6 cells for `subq/*`, while the §1.4 table below gives `subq` as 4 of 4 EQUAL. Both are copied as Fable wrote them; the builder counts the cells.]
+- **G3, analyzer rules that key on the plan root.** [R] A bare reader frame's root is now the node, so `SparkProjectionDisplay` (`spark_typed.rs:89-97`) returns early, where on main it sees the parse `Projection`. [Rec] Add one named cell: a headerless CSV with no schema (the `_cN` renames), `.columns` and `EXPLAIN`, under matching settings.
+- **G4, where the `LiveOptions` handle is built.** [R] Built inline at `temp_views.rs:57-66` today; the sketch says "`LiveOptions` from a context" in `extension.rs` (file 3). [Rec] Build it in `extension.rs` and leave `temp_views.rs` untouched. Use one handle per session, shared by every node, so the fallback in `LiveOptions::read` (`extension.rs:39-47`) is the session's last read, never a frame's creation settings. If the builder wants `temp_views.rs` to call the shared constructor, it takes the conditional ninth slot (`reader_support.py`); if both are needed, halt and report.
+- **§1.4, the cell family the bar lacks.** [M] A held JSON or CSV frame, built before a `SET` and acted on directly after it, parses under the creating zone on main, and `ts` is wrong silently with no view: 12 cells WRONG in `ts` with no view, and 4 path writes WRONG in `b`. [R] Seat (a) should fix `direct`, `cjdirect` and `cache_after` (the differing branch) and `pathwrite` (through the scratch view, like `eb_hour`); `udf` is not predictable from here and belongs with `cache_lazy` (Q8) if it materialises at column build. [Rec] Add `direct`, `cjdirect`, `cache_after` and `pathwrite` to unit 1's bar as "to EQUAL in every column" (14 cells over `json_s` and `csv_i`, both directions; `cache_after` over both readers); add `subq` as held EQUAL; add `udf` as measured and reported. Unit 1's PR text must say plainly that it changes answers with no view involved: the sketch's "the parse's own cells must not move" (§8) holds only for the doors step 0 measured.
+- **§1.5, second critic round.** [Rec] No. G1 to G4 and §1.4 go into the builder's brief as written here; the build's bar and the post-build verifier check them.
+
+| Q | ruling to act on | why |
+|---|---|---|
+| 1 | (a) amended now; (b) carded as READER-TYPED-SCAN-1 | [M] `emu_r` and `emu_live` predict (a) in every door; (b) moves matching cells and `EXPLAIN`. |
+| 2 | (i) own card CSV-SCHEMA-TIMESTAMP-ZONE-1, S1, label-blocking, unit 0 | [M] Silent, 64 of 128 matching cells, written wrong. It moves matching cells, so it cannot share unit 1's bar. |
+| 3 | Default: card READER-TYPED-SCAN-1, S3, not label-blocking | [M] Loud in all 34 direct cells. |
+| 4 | Default: fixed by unit 1, no extra file | [M] `pq` 34 of 34. |
+| 5 | Default: keep the ruled `smartCsv` behaviour; card D6 as S3 | The owner ruled it on 2026-11-18. D6 is loud. |
+| 6 | **Changed from the default: card D4 as S1 by class and label-blocking.** Own unit, not unit 1 | [M] It is not a reader gap. On main, `hour(c)`, `minute(c)` and `second(c)` over a `STRING` column of an **Iceberg v2 table** answer `0` for `'2024-01-01 03:04:05'` and `'2024-06-01 23:30:00'`, under matching settings. `year`, `month`, `dayofmonth`, `date_format`, `to_date` and `unix_timestamp` over the same column are right, and `hour(CAST(c AS TIMESTAMP))` is right. So it is three functions, silent, on a scalar column the label covers. I did not run Spark for these ten expressions; Spark's answers `3`, `4`, `5` are the domain table's D4 reading. |
+| 7 | Default: card D3; its first step measures an Iceberg `timestamp` (NTZ) column. Run that measurement this week | [R] An Iceberg NTZ column is in the label's scope. One clerk-grade probe settles whether it blocks. |
+| 8 | (ii) own card, S1 by class, label-blocking. **Widen it to the materialisation-timing family** | [M] `cache_lazy` 4 of 4 WRONG in `ts`. [R] The `udf` door above may be the same family. Its step 0 runs after unit 1 merges, because unit 1 changes when a held frame parses. |
+| 9 | (i) require `ph` and `b` EQUAL in the 12 E5 cells, with a stop rule | [M] `emu_r` 6 of 6 a direction and `pq` EQUAL on main. [Rec] Stop rule: if any of the 12 is not EQUAL in `ph` or `b` after the build, the builder adds no file; it reports the cell and leaves it to TEMP-VIEW-FRAME-CROSSJOIN-1. `ts` and `u` stay a hard bar. |
+| 10 | Default: card D9–D11 as S3 with D2 | [M] 18 of 18 loud. |
+| 11 | (i) accept and disclose | [M] Spark refuses `EXPLAIN VERBOSE`. Requiring it byte-equal loses E5 (`emu_c` WRONG in `ts`). |
+
+- **Where Fable would still want the owner:** Q6 and Q8, each adding a label-blocking card; for the owner's morning read.
+
+### 10.2 The file cap of nine (Fable's §3)
+
+- **Cap:** accept nine. Cut nothing. [Rec]
+- **File 5 (`plan_introspect.rs`) is required:** an unknown node is hashed as `Opaque` plus its `Debug`, which breaks the 15 of 15 `sameSemantics` agreement. [R]
+- **Files 7 and 8 are required:** `temp_view.rs:22` imports `reader_lineage`, and the helpers left behind in `temp_settings.rs:180-262` would be dead code. [R]
+- **The ninth slot is conditional** and holds `reader_support.py` or `temp_views.rs`, never both (G4). [Rec]
+- **`ReaderParse` needs `PartialEq`, `Hash` and `PartialOrd` over its input only**, as `FrameSettingsNode` does (`frame_settings.rs:94-116`); neither the copy nor the handle takes part. [Rec]
+
+### 10.3 The order (Fable's §4)
+
+Back to back on lane A, stacked, not folded.
+
+1. Unit 0 first, as its own PR: one file, and it moves matching cells, so it needs its own bar.
+2. Unit 1 branches from unit 0's head once unit 0's local gates are green; it does not wait for unit 0's verifier or merge. Both units edit `reader.py`, so stacking avoids a conflict.
+3. Unit 0's verifier (Opus 5.5 medium) runs in lane B's gap, between SUM-DEC-I128WRAP-1 finishing and the grouped decimal `avg` unit starting. That keeps the two-agent cap.
+4. Unit 0 merges on green CI and a PASS. Unit 1 then rebases onto main.
+5. If unit 0 fails its verifier, unit 1 keeps building; its bar excludes `csv_s` and `csv_f` until unit 0 lands, as sketch §6 already says.
+
+[R] Seven hours fits unit 0 whole and unit 1's build and first sweep. Unit 1's verifier and delta may run past the window; the sweeps (1,328 reader cells, 3,100 write cells) are not shortened to fit.
+
+### 10.4 What step 0 and the critic both missed (Fable's §5)
+
+- **[M] The held frame acted on directly (§1.4):** 12 cells WRONG in `ts` on main with no view, plus 4 path writes WRONG in `b`. Seat (a) should fix them; the bar must hold it to that.
+- **[M] D4 reaches Iceberg `STRING` columns (Q6):** it was filed as a reader gap. It is a function gap on label-scope tables.
+- **[R] G1:** the closed copy needs an analyzer handle; the sketch's mechanism skips `closed_scan`'s analysis step.
+- **[R] G3:** rules keyed on the plan root; the inventory's search could not find them.
+- **[R] `PREPARE`:** a prepared SQL statement over a frame view keeps the plan it built. Under seat (a) the node is decided when the statement is executed, which is Spark's rule. [Rec] Add one cell: `PREPARE` under A, `SET`, `EXECUTE` under B, over a JSON frame view with `hour(ts)`. Report it; do not hold the unit to it.
+- **[R] The micro-batch door:** `microbatch/relation.rs:156` takes a batch frame's parts. The track is frozen, so this is a note for its unfreeze, not for unit 1.
+
+### 10.5 Probe folder
+
+`<scratchpad>/fable-rp/` holds `p2.py`, `p3.py` and `p4.py`, and the raw outputs `main-p2.txt`, `spark-p2-raw.txt`, `main-p3.txt`, `spark-p3.txt` and `main-p4.txt`. Every RePark run printed `_native` from the `pkg-main-4c365814` package.
+
 Up: [map.md](map.md).
