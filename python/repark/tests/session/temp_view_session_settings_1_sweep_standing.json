@@ -146,34 +146,6 @@
   "sweep/zone/date_add_where/utc>la/read_utc": {
    "answer": "",
    "class": "frame"
-  },
-  "sweep/zone/hour_text/la>utc/read_la": {
-   "answer": [
-    "0",
-    "0"
-   ],
-   "class": "frame"
-  },
-  "sweep/zone/hour_text/la>utc/read_utc": {
-   "answer": [
-    "0",
-    "0"
-   ],
-   "class": "frame"
-  },
-  "sweep/zone/hour_text/utc>la/read_la": {
-   "answer": [
-    "0",
-    "0"
-   ],
-   "class": "frame"
-  },
-  "sweep/zone/hour_text/utc>la/read_utc": {
-   "answer": [
-    "0",
-    "0"
-   ],
-   "class": "frame"
   }
  },
  "true": {
@@ -319,34 +291,6 @@
   },
   "sweep/zone/date_add_where/utc>la/read_utc": {
    "answer": "",
-   "class": "frame"
-  },
-  "sweep/zone/hour_text/la>utc/read_la": {
-   "answer": [
-    "0",
-    "0"
-   ],
-   "class": "frame"
-  },
-  "sweep/zone/hour_text/la>utc/read_utc": {
-   "answer": [
-    "0",
-    "0"
-   ],
-   "class": "frame"
-  },
-  "sweep/zone/hour_text/utc>la/read_la": {
-   "answer": [
-    "0",
-    "0"
-   ],
-   "class": "frame"
-  },
-  "sweep/zone/hour_text/utc>la/read_utc": {
-   "answer": [
-    "0",
-    "0"
-   ],
    "class": "frame"
   }
  }

@@ -5905,6 +5905,46 @@ still open is `isModifiable`.
 - **Rationale** — the owner's rulings "Defaults, merge 1355" and "defaults on both" (2026-11-17); card
   [TEMP-VIEW-SESSION-SETTINGS-1](../task/roadmap/mid-term/temp-view-session-settings-1-card-2026-11-02.md).
 
+### STRING-HOUR-MINUTE-SECOND-1 — `hour`, `minute` and `second` of a `STRING` read the text as the instant — **FIXED 2026-11-19 on the Spark door (branch `fix/string-hour-minute-second-1`, not merged)**
+
+- **repark** — Before (main `81ae984e`, package `pkg-sum-845766fd` built from `2900efde`): `hour(c)`, `minute(c)` and
+  `second(c)` over a `STRING` planned as `hour(CAST(c AS Date32))` (`coerce_date_arg`, the date fields' rule), so
+  every text with a time of day answered `0`, silently, on every input, door, mode and zone, and every text arrow's
+  date parse refuses raised `Cast error` (`lead`, `trail`, `nosec`, `tonly`, `yonly`, `empty`, `bad`, `badtime`).
+  After, on the Spark door (SQL, `F.hour(col)`, `selectExpr`, `F.expr`, and `WHERE` / `GROUP BY` / `ORDER BY` over
+  the expression on SQL and on the frame): `DatePartWithoutTime::coerce_types` types a `Utf8`, `LargeUtf8` or
+  `Utf8View` argument `Timestamp(µs, "UTC")`, and `SparkLtzTimestampCast` turns the coercion's cast into
+  `to_timestamp(c)`, the plan of `hour(CAST(c AS TIMESTAMP))`: Spark's string grammar in the session zone, an offset
+  or `Z` keeping its instant, NULL with ANSI off and `CAST_INVALID_INPUT` with ANSI on for a text it cannot read.
+  `year` … `weekday` keep their `Date32` cast; `TIME` still refuses.
+- **spark** — Spark 4.1.2 `Hour`, `Minute`, `Second` are `GetTimeField` with `inputTypes = [AnyTimestampType]`; in
+  `TypeCoercion` and `AnsiTypeCoercion` a `STRING` takes `AnyTimestampType.defaultConcreteType`, `TimestampType`, as a
+  plain `Cast` in the session zone, whatever `spark.sql.timestampType` says. *(oracle: `javap` and 75,032 measured
+  cells, `task/wo/string-hour-minute-second-1/`.)*
+- **Still unlike Spark:**
+  - `F.expr` over a string literal outside UTC reads the text as UTC (N8, its own card by the owner's ruling 5):
+    `hour` of `date`, `full`, `tsep`, `frac`, `gap` in Los Angeles on that door, 10 `TIMESTAMP_LTZ` cells and 5
+    `TIMESTAMP_NTZ` ones; on main the two `date` cells and their NTZ twin answered `0`, Spark's answer, by reading a
+    midnight. The verifier found the family wider: a date-only literal loses that coincidental `0` in every non-UTC
+    zone, for `hour` and, in a zone with a half-hour or 45-minute offset, `minute`, as a projection and inside
+    `filter(F.expr(...))`, in all four configurations (49 more cells). The owner accepted the whole family;
+  - the native `repark.sql()` door and a Rust `AnsiDialect` session without the Spark extension have no `hour`
+    (`UNRESOLVED_ROUTINE`), on main as on the head; the `AnsiDialect` door on a Spark-extended session answers as the
+    Spark door ([evidence/built/doors.md](../task/wo/string-hour-minute-second-1/evidence/built/doors.md));
+  - the neighbours N1–N7, N9–N11 of the step 0 domain table (the date fields over an offset text, `date_trunc` and
+    `date_format`, `extract(SECOND …)`'s type, SQL `date_part` over a string, `CAST(<offset text> AS TIMESTAMP)` under
+    `TIMESTAMP_NTZ`), cards filed by the records clerk.
+- **Pin** — `python/repark/tests/timestamps/test_string_hour_minute_second_1.py` (3,480 cells against
+  `string_hour_minute_second_1_spark_oracle.json`: 16 texts × 4 inputs × 4 doors × 4 configurations for the three
+  functions, ruling 6's `TIMESTAMP_NTZ` cells over `off`, `zulu`, `gap`, `tonly`, the six multi-row doors; the 11
+  N8 cells named in each test id; the plan); Rust `repark-functions` `time_family::tests`.
+- **Bar and cost** — [bar.md](../task/wo/string-hour-minute-second-1/bar.md),
+  [cost.md](../task/wo/string-hour-minute-second-1/cost.md).
+- **Rationale** — the owner's rulings "Defaults on all six, merge 1369 on green", "go with recommendations",
+  "accept the three N8 cells, carry on" and "accept the whole N8 family, carry on" (2026-11-19; the last two accept
+  the EQUAL cells lost to N8); card
+  [STRING-HOUR-MINUTE-SECOND-1](../task/roadmap/mid-term/cards-2026-11-19/string-hour-minute-second-1-card-2026-11-19.md).
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### CSV-SCHEMA-TIMESTAMP-ZONE-1 — a CSV schema's `TIMESTAMP` field parses under the session zone — **FIXED 2026-11-19 on the Spark door (branch `fix/csv-schema-timestamp-zone-1`, not merged)**

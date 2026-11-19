@@ -9,6 +9,8 @@ The probes carry no comments and take every path as an argument. Raw run files (
 - [probes/](probes/map.md) — `cells.py`, `probe.py`, `cost.py`, `cmp.py`.
 - [verdicts/](verdicts/map.md) — `cmp.py`'s counts and the card's per-cell table.
 - [raw/](raw/map.md) — the `EXPLAIN` records of both engines and main's cost record.
+- [built/](built/map.md) — the build's probes (oracle extraction, the bar, D4, `EXPLAIN`, cost summary) and
+  records (`bar-summary.md`, `d4.txt`, `doors.md`, the `EXPLAIN` runs).
 
 Provenance (lane A, under `flock -s` of the measure lock, `nice -n 10 taskset -c 32-47 prlimit --as=51539607552`,
 Spark through `spark_slot.sh`): `probe.py spark <wh> <pq> <out> setup`, then for each configuration

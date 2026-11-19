@@ -1303,9 +1303,9 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `[DATATYPE_MISMATCH.VALUE_OUT_OF_RANGE]` past precision 6; `SparkTypeof`
   spelling Arrow types the way Spark does (`time(6)`, `timestamp_ntz`);
   `DatePartWithoutTime` wrapping the `datetime.rs` hour/minute/second kernels so
-  a TIME input refuses while timestamps answer (the file's own
-  `hour_minute_second_accept_time_and_timestamp` pin is rewritten to the
-  refusal, net −1 line with the ceiling row ratcheted 1700 to 1699);
+  a TIME input refuses while timestamps answer, and a STRING reads the
+  instant, `hour(to_timestamp(c))` as Spark plans (STRING-HOUR-
+  MINUTE-SECOND-1, 2026-11-19; pin `test_string_hour_minute_second_1`);
   `TimeCastGuard` analyzer rule refusing any
   `CAST`/`TryCast` to TIME whose inner is not a string literal, which is also
   what poisons plans reading the TIME frame. `TIME'…'` literals stay literal
