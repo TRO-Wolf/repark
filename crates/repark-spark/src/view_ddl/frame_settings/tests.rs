@@ -611,6 +611,54 @@ async fn under_differing_settings_a_reader_parse_reads_its_copy_under_the_live_s
 }
 
 #[tokio::test]
+async fn under_a_memo_a_reader_parse_keeps_the_settings_of_its_first_decision() {
+    let reader = zoned(true, LA);
+    let root = tempfile::tempdir().unwrap_or_else(|error| panic!("dir: {error}"));
+    let (_, parse) = reader_parse_frames(&reader, root.path()).await;
+    let memo = Arc::new(ReaderParseMemo::default());
+    let first = memo.run(|| optimized(&parse));
+    assert_eq!(closed_views(&first), 0);
+    live_zone(&reader, "UTC");
+    let kept = memo.run(|| optimized(&parse));
+    assert_eq!(
+        kept.display_indent_schema().to_string(),
+        first.display_indent_schema().to_string()
+    );
+    assert_eq!(closed_views(&optimized(&parse)), 1);
+    let fresh = Arc::new(ReaderParseMemo::default());
+    assert_eq!(closed_views(&fresh.run(|| optimized(&parse))), 1);
+    live_zone(&reader, LA);
+    assert_eq!(closed_views(&fresh.run(|| optimized(&parse))), 1);
+    assert_eq!(closed_views(&memo.run(|| optimized(&parse))), 0);
+    assert!(reader_parse_memo().is_none());
+}
+
+#[test]
+fn a_memo_scope_restores_the_outer_scope_on_return_and_on_unwind() {
+    let outer = Arc::new(ReaderParseMemo::default());
+    let inner = Arc::new(ReaderParseMemo::default());
+    let seen = |memo: &Arc<ReaderParseMemo>| {
+        reader_parse_memo().is_some_and(|current| Arc::ptr_eq(&current, memo))
+    };
+    outer.run(|| {
+        assert!(seen(&outer));
+        inner.run(|| assert!(seen(&inner)));
+        assert!(seen(&outer));
+        let unwound = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            inner.run(|| panic!("inside the inner scope"))
+        }));
+        assert!(unwound.is_err());
+        assert!(seen(&outer));
+    });
+    assert!(reader_parse_memo().is_none());
+    assert!(outer.run(|| {
+        std::thread::spawn(|| reader_parse_memo().is_none())
+            .join()
+            .unwrap_or(false)
+    }));
+}
+
+#[tokio::test]
 async fn a_reader_parse_inside_a_subquery_is_decided_under_both_settings() {
     let reader = zoned(true, LA);
     let root = tempfile::tempdir().unwrap_or_else(|error| panic!("dir: {error}"));

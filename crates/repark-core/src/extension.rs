@@ -1,5 +1,6 @@
 //! Build-time registration seam for SQL-door extensions.
 
+use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fmt;
@@ -69,6 +70,52 @@ impl LiveOptions {
             }),
         )
     }
+
+    fn same_source(&self, other: &Self) -> bool {
+        matches!((&self.0, &other.0), (Some(mine), Some(theirs)) if Arc::ptr_eq(mine, theirs))
+    }
+}
+
+thread_local! {
+    static READER_PARSE_MEMO: RefCell<Option<Arc<ReaderParseMemo>>> = const { RefCell::new(None) };
+}
+
+#[derive(Debug, Default)]
+pub struct ReaderParseMemo {
+    decided: Mutex<Vec<(LiveOptions, Arc<ConfigOptions>)>>,
+}
+
+impl ReaderParseMemo {
+    #[must_use]
+    pub fn settled(&self, live: &LiveOptions) -> Option<Arc<ConfigOptions>> {
+        let mut decided = self.decided.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some((_, options)) = decided.iter().find(|(source, _)| source.same_source(live)) {
+            return Some(Arc::clone(options));
+        }
+        let options = live.read()?;
+        decided.push((live.clone(), Arc::clone(&options)));
+        Some(options)
+    }
+
+    pub fn run<T>(self: &Arc<Self>, body: impl FnOnce() -> T) -> T {
+        let previous = READER_PARSE_MEMO.with(|slot| slot.replace(Some(Arc::clone(self))));
+        let _restore = MemoRestore(previous);
+        body()
+    }
+}
+
+struct MemoRestore(Option<Arc<ReaderParseMemo>>);
+
+impl Drop for MemoRestore {
+    fn drop(&mut self) {
+        let previous = self.0.take();
+        READER_PARSE_MEMO.with(|slot| *slot.borrow_mut() = previous);
+    }
+}
+
+#[must_use]
+pub fn reader_parse_memo() -> Option<Arc<ReaderParseMemo>> {
+    READER_PARSE_MEMO.with(|slot| slot.borrow().clone())
 }
 
 impl std::fmt::Debug for LiveOptions {

@@ -69,6 +69,19 @@ pub(crate) fn join_type_from_str(how: &str) -> PyResult<JoinType> {
     }
 }
 
+#[pyclass(frozen, name = "ReaderParseMemo", module = "repark._native")]
+pub struct PyReaderParseMemo(Arc<repark_core::extension::ReaderParseMemo>);
+
+#[pymethods]
+impl PyReaderParseMemo {
+    #[allow(clippy::missing_errors_doc)]
+    pub fn run(&self, body: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
+        fenced!("ReaderParseMemo.run", {
+            self.0.run(|| body.call0().map(Bound::unbind))
+        })
+    }
+}
+
 #[pyclass(name = "PyDataFrame", module = "repark._native")]
 pub struct PyDataFrame {
     pub(crate) df: std::mem::ManuallyDrop<DataFrame>,
@@ -349,6 +362,12 @@ impl PyDataFrame {
                 |ffi_schema, _ctx| drop(ffi_schema),
             )
         })
+    }
+
+    #[staticmethod]
+    #[pyo3(name = "_reader_parse_memo")]
+    pub fn reader_parse_memo() -> PyReaderParseMemo {
+        PyReaderParseMemo(Arc::default())
     }
 
     #[pyo3(name = "_reader_parse")]

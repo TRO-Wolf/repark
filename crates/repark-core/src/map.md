@@ -325,7 +325,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   blocks, coercion still strips); binary comparisons canonicalize operand
   order with operator flips and `AND`/`OR` chains flatten and sort.
 - `plan_introspect.rs` — **DF-PLAN-INTROSPECT-1 (2026-09-14; follow-ups 2026-09-15,
-  rounds 1–4):** three plan kernels; a `ReaderParse` hashes as its input.
+  rounds 1–4):** three plan kernels; `ReaderParse` hashes as input.
   `input_files` walks the built (never executed) physical plan and collects every
   `FileScanConfig` file-group entry behind a `DataSourceExec`, rendered as the
   object store names it (`file:///` for local paths, remote schemes unchanged) and
@@ -1027,7 +1027,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** `built_with_debug_assertions` moved here
   unchanged from `lib.rs` (still re-exported at the crate root) so `lib.rs` stays under its
   `check_lib_rs.py` ceiling after `mod parallel_window;`.
-- `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3): **TEMP-VIEW-SESSION-SETTINGS-1 part 2 (2026-11-18):** `FrameViewSeat` (wrap, rules, one handle) and `LiveOptions` (a last read). READER-PARSE-1: `ReaderParse`.
+- `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3): **TEMP-VIEW-SESSION-SETTINGS-1 part 2 (2026-11-18):** `FrameViewSeat` (wrap, rules, handle) and `LiveOptions` (last read). READER-PARSE-1: `ReaderParse`, frame memo.
   `SessionExtension` with three defaulted hooks (`configure` pre-assembly,
   `configure_analyzer_rules` during context assembly, and `register` post-context) at v1's inline
   registration positions; `NoopSessionExtension` is the

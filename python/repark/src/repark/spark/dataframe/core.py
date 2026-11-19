@@ -3193,14 +3193,14 @@ class DataFrame:
         O(rows) Python memory. ``prefetchPartitions`` is accepted and ignored.
         """
         del prefetchPartitions
-        yield from self._iter_rows_streaming()
+        return self._iter_rows_streaming()
 
     to_local_iterator = toLocalIterator
 
     def _iter_rows_streaming(self) -> Iterator[Row]:
         """Yield ``Row``s from the Arrow C stream without materializing the full table (P2b)."""
-        for batch in self.to_arrow_batches():
-            yield from self._iter_rows_from_record_batch(batch)
+        self._ensure_alive()
+        return surface_a._local_rows(self)
 
     @staticmethod
     def _iter_rows_from_record_batch(batch: Any) -> Iterator[Row]:
@@ -3261,7 +3261,7 @@ class DataFrame:
         pa = require_pyarrow()
         failure = None
         try:
-            table = pa.table(self)
+            table = surface_a._own_plan(self, pa.table)
         except pa.lib.ArrowException as arrow_error:
             failure = scrub_exception(arrow_error)
         if failure is not None:
@@ -3280,7 +3280,7 @@ class DataFrame:
         pa = require_pyarrow()
         failure = None
         try:
-            reader = pa.RecordBatchReader.from_stream(self)
+            reader = surface_a._own_plan(self, pa.RecordBatchReader.from_stream)
         except pa.lib.ArrowException as arrow_error:
             failure = scrub_exception(arrow_error)
         if failure is not None:

@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import warnings
+import weakref
+from collections.abc import Callable, Iterator
 from types import MethodType
 from typing import TYPE_CHECKING, Any
 
+from repark import _native
 from repark.errors import AnalysisException, PySparkTypeError, PySparkValueError
 from repark.spark import functions as F  # noqa: N812
 from repark.spark._integral import (
@@ -13,7 +16,9 @@ from repark.spark._integral import (
     _attached_message_parameters,
     _attached_sql_state,
 )
+from repark.spark._secrets import scrub_exception
 from repark.spark.column import Column
+from repark.spark.dataframe.export_errors import _export_engine_error
 from repark.spark.types import (
     ArrayType,
     BinaryType,
@@ -40,7 +45,10 @@ from repark.spark.types import (
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
+    from repark.spark.row import Row
     from repark.spark.session import SparkSession
+
+_PARSE_MEMOS: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
 
 _NUMERIC_TYPES = (
     ByteType,
@@ -376,7 +384,7 @@ def localCheckpoint(  # noqa: N802
     frame._persist_requested = False
     frame._storage_level = None
     if eager:
-        frame._materialize_cache_if_needed()
+        _own_plan(frame, lambda target: target._materialize_cache_if_needed())
     return frame
 
 
@@ -384,7 +392,49 @@ def checkpoint(frame: DataFrame, eager: bool = True) -> DataFrame:
     """Materialize like ``localCheckpoint`` (DF-CHECKPOINT-1). pins: C-003."""
     child = frame._identity_child()
     child._frame_node = None
+    _PARSE_MEMOS[child] = _parse_memo(frame)
     return localCheckpoint(child, eager=eager)
+
+
+def _parse_memo(frame: DataFrame) -> Any:
+    memo = _PARSE_MEMOS.get(frame)
+    if memo is None:
+        memo = _PARSE_MEMOS[frame] = _native.PyDataFrame._reader_parse_memo()
+    return memo
+
+
+def _own_plan(frame: DataFrame, run: Callable[[DataFrame], Any]) -> Any:
+    return _parse_memo(frame).run(lambda: run(frame))
+
+
+def _local_rows(frame: DataFrame) -> Iterator[Row]:
+    from repark.spark._pyarrow import require_pyarrow
+
+    pa = require_pyarrow()
+    failure = None
+    try:
+        reader = _own_plan(frame, pa.RecordBatchReader.from_stream)
+    except pa.lib.ArrowException as arrow_error:
+        failure = scrub_exception(arrow_error)
+    if failure is not None:
+        raise _export_engine_error(failure) from failure
+    return _streamed_rows(frame, _streamed_batches(frame, reader, pa))
+
+
+def _streamed_batches(frame: DataFrame, reader: Any, pa: Any) -> Iterator[Any]:
+    failure = None
+    try:
+        for batch in reader:
+            yield frame._apply_export_display_names(batch)
+    except pa.lib.ArrowException as arrow_error:
+        failure = scrub_exception(arrow_error)
+    if failure is not None:
+        raise _export_engine_error(failure) from failure
+
+
+def _streamed_rows(frame: DataFrame, batches: Iterator[Any]) -> Iterator[Row]:
+    for batch in batches:
+        yield from frame._iter_rows_from_record_batch(batch)
 
 
 def sparkSession(frame: DataFrame) -> SparkSession:  # noqa: N802

@@ -373,12 +373,12 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   removed `inputFiles`/`semanticHash` (R-5 — EXPLAIN-text introspection
   belongs to a Rust unit) and the `_schema_override` sticker (R-6 — the
   narrow-width divergence `to(…smallint)` reports is LOGICAL-WIDTH-1).
-  DF-RUST-3 (2026-09-15): `transpose` joins the surface here — the facade resolves the
+  DF-RUST-3 (2026-09-15): `transpose` joins here — the facade resolves the
   index argument (str / `Column` / None → first display column), reads
-  `spark.sql.transposeMaxValues` off the session conf, calls the native `transpose`
+  `spark.sql.transposeMaxValues` off the conf, calls the native `transpose`
   kernel, and attaches `_spark_error_class` / `_spark_message_parameters` /
-  `_spark_sql_state` from the conditioned engine error.
-  **COLUMN-PARITY-1 (2026-09-15):** `to()` and `withMetadata` keep passing `alias(name, metadata=)`; with the column overlay the stamp, replace, cache and `to()` target-override positions answer Spark, and DF-METADATA-1 narrows to the positions a plan transform still loses (an earlier plain-rename repair in this branch was reverted).
+  `_spark_sql_state` from the engine error.
+  **COLUMN-PARITY-1 (2026-09-15):** `to()` and `withMetadata` keep passing `alias(name, metadata=)`; with the column overlay the stamp, replace, cache and `to()` target-override positions answer Spark, and DF-METADATA-1 narrows to the positions a plan transform still loses (a plain-rename repair was reverted).
   **ATTR-ID-1 SJ-2 (2026-10-02):** `checkpoint` re-roots the child's frame
   node with `frame_root`. Pins: `python/repark/tests/resolution/test_attr_id_1_sj2.py`.
 - `plan_introspect.py` owns the DF-PLAN-INTROSPECT-1 method bodies (2026-09-14;
@@ -389,7 +389,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
   the live cache-view lineage map (view name to pre-cache native plan, gathered from
   the session token's tracked cache frames). `core.py` keeps its exact baseline by
   absorbing the two binding lines into one collapsed validation raise. Follow-up
-  round 2 (2026-09-15, R-6/R-7/R-8) needs no facade change: the bodies already pass
+  round 2 (2026-09-15, R-6/R-7/R-8) needs no facade change: the bodies pass
   the analyzed plan plus lineages through. Follow-up round 3 (2026-09-15, R-9/R-10):
   `sameSemantics` moves here behind the one-line class binding and compares the
   canonical analyzed-plan streams through native `same_semantics` (a user-written
@@ -1272,7 +1272,7 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 
 ## Durable contracts
 
-- Transformations remain lazy. Actions and Arrow exports execute the plan.
+- Transformations remain lazy. Actions and Arrow exports execute the plan; own-plan ones keep the frame's first parse (READER-PARSE-1 F1).
 - `to_arrow_batches` holds one Arrow batch and emits one typed empty batch for an empty result.
   `collect` materializes rows and converts maps to dictionaries; calendar intervals refuse.
 - `columns` reads the plan's logical schema, not the analyzed one. A dependent `withColumn`

@@ -25,7 +25,10 @@ use datafusion::logical_expr::{
 use datafusion::optimizer::{Analyzer, AnalyzerRule, OptimizerConfig, OptimizerRule};
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::{DataFrame, SessionConfig};
-use repark_core::extension::{FrameViewSeat, LiveOptions, ReaderParse, with_frame_view_seat};
+use repark_core::extension::{
+    FrameViewSeat, LiveOptions, ReaderParse, ReaderParseMemo, reader_parse_memo,
+    with_frame_view_seat,
+};
 use repark_core::frame_names;
 
 use crate::view_ddl::read::{MAX_VIEW_EXPANSION_DEPTH, nested_depth_refusal};
@@ -434,7 +437,8 @@ impl OptimizerRule for ReaderParseRule {
             return Ok(Transformed::no(plan));
         }
         let options = config.options();
-        plan.transform_down_with_subqueries(|node| parse_decided(node, &options))
+        let memo = reader_parse_memo();
+        plan.transform_down_with_subqueries(|node| parse_decided(node, &options, memo.as_deref()))
     }
 }
 
@@ -451,11 +455,16 @@ fn holds_parse(plan: &LogicalPlan) -> Result<bool> {
     Ok(found)
 }
 
-fn parse_decided(node: LogicalPlan, options: &ConfigOptions) -> Result<Transformed<LogicalPlan>> {
+fn parse_decided(
+    node: LogicalPlan,
+    options: &ConfigOptions,
+    memo: Option<&ReaderParseMemo>,
+) -> Result<Transformed<LogicalPlan>> {
     let mut current = node;
     let mut decided = false;
     while let Some(parse) = ReaderParse::of(&current) {
-        if let Some(live) = parse.live().read()
+        let live = memo.map_or_else(|| parse.live().read(), |memo| memo.settled(parse.live()));
+        if let Some(live) = live
             && !TempViewSettings::capture(&live).same_as(options)
         {
             return parse_closed(parse, &live, options).map(Transformed::yes);
