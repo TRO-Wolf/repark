@@ -67,19 +67,26 @@ fn render_uri(object_store_url: &ObjectStoreUrl, location: &ObjectPath) -> Strin
 
 pub(crate) fn plan_reads_s3_prefix(plan: &LogicalPlan, bucket: &str, prefix: &str) -> bool {
     let mut found = false;
-    let _ = plan.apply_with_subqueries(|node| {
-        if let LogicalPlan::TableScan(scan) = node
-            && let Ok(provider) = source_as_provider(&scan.source)
-            && let Some(table) = provider.downcast_ref::<ListingTable>()
-        {
-            found = found
-                || table
-                    .table_paths()
-                    .iter()
-                    .any(|url| scan_url_hits_prefix(url, bucket, prefix));
-        }
-        Ok(TreeNodeRecursion::Continue)
-    });
+    let mut pending = vec![plan.clone()];
+    while let Some(next) = pending.pop() {
+        let _ = next.apply_with_subqueries(|node| {
+            if let LogicalPlan::TableScan(scan) = node {
+                if let Some(inner) = scan.source.get_logical_plan() {
+                    pending.push(inner.into_owned());
+                }
+                if let Ok(provider) = source_as_provider(&scan.source)
+                    && let Some(table) = provider.downcast_ref::<ListingTable>()
+                {
+                    found = found
+                        || table
+                            .table_paths()
+                            .iter()
+                            .any(|url| scan_url_hits_prefix(url, bucket, prefix));
+                }
+            }
+            Ok(TreeNodeRecursion::Continue)
+        });
+    }
     found
 }
 
@@ -474,6 +481,11 @@ pub(crate) fn write_table_source<S: BuildHasher>(
         write_plan(table.logical_plan(), ctx, hash);
         return;
     }
+    if let Some(inner) = provider.get_logical_plan() {
+        hash.write(b"View");
+        write_plan(&inner, ctx, hash);
+        return;
+    }
     hash.write(b"Provider");
     match provider.table_type() {
         datafusion::logical_expr::TableType::Base => hash.write_u8(0),
@@ -484,7 +496,9 @@ pub(crate) fn write_table_source<S: BuildHasher>(
 
 #[cfg(test)]
 mod tests {
-    use super::semantic_hash;
+    use super::{
+        Arc, ListingTable, ListingTableUrl, LogicalPlan, plan_reads_s3_prefix, semantic_hash,
+    };
     use datafusion::prelude::SessionContext;
     use std::collections::HashMap;
 
@@ -654,5 +668,40 @@ mod tests {
         assert_eq!(plain, cast);
         let wrapped = fingerprint_in(&context, "SELECT * FROM t WHERE x > 705032704").await;
         assert_ne!(plain, wrapped);
+    }
+
+    fn plan_scan(view: std::sync::Arc<dyn datafusion::catalog::TableProvider>) -> LogicalPlan {
+        let source = datafusion::datasource::provider_as_source(view);
+        datafusion::logical_expr::TableScan::try_new("v", source, None, Vec::new(), None)
+            .map(LogicalPlan::TableScan)
+            .expect("a plan-carrying scan that is not inlined")
+    }
+
+    #[tokio::test]
+    async fn a_plan_carrying_scan_is_read_through_by_the_overwrite_check_and_the_hash() {
+        use datafusion::arrow::datatypes::{DataType, Field, Schema};
+        use datafusion::datasource::file_format::parquet::ParquetFormat;
+        use datafusion::datasource::listing::{ListingOptions, ListingTableConfig};
+        let context = SessionContext::new();
+        let url = ListingTableUrl::parse("s3://bucket/data/").expect("an s3 url");
+        let schema = Arc::new(Schema::new(vec![Field::new("x", DataType::Int64, true)]));
+        let config = ListingTableConfig::new(url)
+            .with_listing_options(ListingOptions::new(Arc::new(ParquetFormat::default())))
+            .with_schema(schema);
+        let table = ListingTable::try_new(config).expect("a listing table");
+        let frame = context.read_table(Arc::new(table)).expect("read the table");
+        let reading = plan_scan(frame.clone().into_view());
+        assert!(plan_reads_s3_prefix(&reading, "bucket", "data"));
+        assert!(!plan_reads_s3_prefix(&reading, "bucket", "other"));
+        let other = context
+            .sql("SELECT CAST(1 AS BIGINT) AS x")
+            .await
+            .expect("a frame");
+        let state = context.state();
+        let hash = |plan: &LogicalPlan| {
+            semantic_hash(&state, plan, &HashMap::new()).expect("the plan hashes")
+        };
+        assert_ne!(hash(&reading), hash(&plan_scan(other.into_view())));
+        assert_eq!(hash(&reading), hash(&plan_scan(frame.into_view())));
     }
 }

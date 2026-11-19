@@ -1,0 +1,125 @@
+{"tag": "fixture", "rows": ["(1, 3000000000, '2024-01-01 03:00:00', Decimal('90000000000000000000000000000000000000'))", "(2, 5, '2024-01-01 12:00:00', Decimal('1'))"], "types": ["int", "bigint", "string", "decimal(38,0)"]}
+{"tag": "ansi/cast/true>false", "error": "CAST_OVERFLOW"}
+{"tag": "ansi/cast/false>true", "rows": ["(-1294967296,)", "(5,)"], "types": ["int"]}
+{"tag": "ansi/cast/true>true", "error": "CAST_OVERFLOW"}
+{"tag": "ansi/cast/false>false", "rows": ["(-1294967296,)", "(5,)"], "types": ["int"]}
+{"tag": "ansi/ddiv/true>false", "error": "DIVIDE_BY_ZERO"}
+{"tag": "ansi/ddiv/false>true", "rows": ["(Decimal('2.0000000000000'),)", "(None,)"], "types": ["decimal(23,13)"]}
+{"tag": "ansi/ddiv/true>true", "error": "DIVIDE_BY_ZERO"}
+{"tag": "ansi/ddiv/false>false", "rows": ["(Decimal('2.0000000000000'),)", "(None,)"], "types": ["decimal(23,13)"]}
+{"tag": "ansi/avgsum/true>false", "error": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION"}
+{"tag": "ansi/avgsum/false>true", "rows": ["(None, None)"], "types": ["decimal(38,4)", "decimal(38,0)"]}
+{"tag": "ansi/avgsum/true>true", "error": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION"}
+{"tag": "ansi/avgsum/false>false", "rows": ["(None, None)"], "types": ["decimal(38,4)", "decimal(38,0)"]}
+{"tag": "ansi/sumdec/true>false", "rows": ["(Decimal('3.00'), Decimal('1.500000'))"], "types": ["decimal(20,2)", "decimal(14,6)"]}
+{"tag": "ansi/sumdec/false>true", "rows": ["(Decimal('3.00'), Decimal('1.500000'))"], "types": ["decimal(20,2)", "decimal(14,6)"]}
+{"tag": "ansi/sumdec/true>true", "rows": ["(Decimal('3.00'), Decimal('1.500000'))"], "types": ["decimal(20,2)", "decimal(14,6)"]}
+{"tag": "ansi/sumdec/false>false", "rows": ["(Decimal('3.00'), Decimal('1.500000'))"], "types": ["decimal(20,2)", "decimal(14,6)"]}
+{"tag": "ansi/elem/true>false", "error": "INVALID_ARRAY_INDEX_IN_ELEMENT_AT"}
+{"tag": "ansi/elem/false>true", "rows": ["(None,)", "(None,)"], "types": ["int"]}
+{"tag": "ansi/elem/true>true", "error": "INVALID_ARRAY_INDEX_IN_ELEMENT_AT"}
+{"tag": "ansi/elem/false>false", "rows": ["(None,)", "(None,)"], "types": ["int"]}
+{"tag": "ansi/strint/true>false", "error": "CAST_INVALID_INPUT"}
+{"tag": "ansi/strint/false>true", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "ansi/strint/true>true", "error": "CAST_INVALID_INPUT"}
+{"tag": "ansi/strint/false>false", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "zone/curtz/UTC>America/Los_Angeles", "rows": ["('America/Los_Angeles',)"], "types": ["string"]}
+{"tag": "zone/curtz/America/Los_Angeles>UTC", "rows": ["('UTC',)"], "types": ["string"]}
+{"tag": "zone/curtz/America/Los_Angeles>America/Los_Angeles", "rows": ["('America/Los_Angeles',)"], "types": ["string"]}
+{"tag": "zone/fromutc/UTC>America/Los_Angeles", "rows": ["('2024-01-01 12:00:00',)", "('2024-01-01 21:00:00',)"], "types": ["string"]}
+{"tag": "zone/fromutc/America/Los_Angeles>UTC", "rows": ["('2024-01-01 04:00:00',)", "('2024-01-01 13:00:00',)"], "types": ["string"]}
+{"tag": "zone/fromutc/America/Los_Angeles>America/Los_Angeles", "rows": ["('2024-01-01 04:00:00',)", "('2024-01-01 13:00:00',)"], "types": ["string"]}
+{"tag": "zone/tots/UTC>America/Los_Angeles", "rows": ["(1704067200,)", "(1704110400,)"], "types": ["bigint"]}
+{"tag": "zone/tots/America/Los_Angeles>UTC", "rows": ["(1704096000,)", "(1704139200,)"], "types": ["bigint"]}
+{"tag": "zone/tots/America/Los_Angeles>America/Los_Angeles", "rows": ["(1704096000,)", "(1704139200,)"], "types": ["bigint"]}
+{"tag": "zone/lit/UTC>America/Los_Angeles", "rows": ["(1704067200,)"], "types": ["bigint"]}
+{"tag": "zone/lit/America/Los_Angeles>UTC", "rows": ["(1704096000,)"], "types": ["bigint"]}
+{"tag": "zone/lit/America/Los_Angeles>America/Los_Angeles", "rows": ["(1704096000,)"], "types": ["bigint"]}
+{"tag": "zone/fmt/UTC>America/Los_Angeles", "rows": ["('2024-01-01 03',)", "('2024-01-01 12',)"], "types": ["string"]}
+{"tag": "zone/fmt/America/Los_Angeles>UTC", "rows": ["('2023-12-31 19',)", "('2024-01-01 04',)"], "types": ["string"]}
+{"tag": "zone/fmt/America/Los_Angeles>America/Los_Angeles", "rows": ["('2023-12-31 19',)", "('2024-01-01 04',)"], "types": ["string"]}
+{"tag": "zone/hour/UTC>America/Los_Angeles", "rows": ["(12,)", "(3,)"], "types": ["int"]}
+{"tag": "zone/hour/America/Los_Angeles>UTC", "rows": ["(19,)", "(4,)"], "types": ["int"]}
+{"tag": "zone/hour/America/Los_Angeles>America/Los_Angeles", "rows": ["(19,)", "(4,)"], "types": ["int"]}
+{"tag": "nest/sql3", "rows": ["(1, 3, 'Pacific/Kiritimati', 19, 'Pacific/Kiritimati', 12, 'Pacific/Kiritimati')", "(2, 12, 'Pacific/Kiritimati', 4, 'Pacific/Kiritimati', 21, 'Pacific/Kiritimati')"], "types": ["int", "int", "string", "int", "string", "int", "string"]}
+{"tag": "nest/sql3_now", "rows": ["(1, 3, 19, 12, True)", "(2, 12, 4, 21, True)"], "types": ["int", "int", "int", "int", "boolean"]}
+{"tag": "nest/ansi3/read_on", "error": "INVALID_ARRAY_INDEX_IN_ELEMENT_AT"}
+{"tag": "nest/ansi3/read_off", "error": "INVALID_ARRAY_INDEX_IN_ELEMENT_AT"}
+{"tag": "nest/sql_over_dfcompute", "rows": ["(1, 19, 3)", "(2, 4, 12)"], "types": ["int", "int", "int"]}
+{"tag": "nest/sql_over_dfplain", "rows": ["(1, 3)", "(2, 12)"], "types": ["int", "int"]}
+{"tag": "nest/df_over_sql", "rows": ["(1, 3, 19, datetime.datetime(2024, 1, 1, 3, 0))", "(2, 12, 4, datetime.datetime(2024, 1, 1, 12, 0))"], "types": ["int", "int", "int", "timestamp"]}
+{"tag": "nest/dfplain_over_sql", "rows": ["(1, 3, datetime.datetime(2024, 1, 1, 3, 0))", "(2, 12, datetime.datetime(2024, 1, 1, 12, 0))"], "types": ["int", "int", "timestamp"]}
+{"tag": "nest/sql_df_sql", "rows": ["(1, 3, 19, 12)", "(2, 12, 4, 21)"], "types": ["int", "int", "int", "int"]}
+{"tag": "nest/sql_dfplain_sql", "rows": ["(1, 3, 12)", "(2, 12, 21)"], "types": ["int", "int", "int"]}
+{"tag": "join/two", "rows": ["(1, 3, 19)", "(2, 12, 4)"], "types": ["int", "int", "int"]}
+{"tag": "join/union", "rows": ["(12,)", "(19,)", "(3,)", "(4,)"], "types": ["int"]}
+{"tag": "join/self", "rows": ["(1, 3, 3)", "(2, 12, 12)"], "types": ["int", "int", "int"]}
+{"tag": "join/onhour", "rows": [], "types": ["int", "int"]}
+{"tag": "join/ansi_off_self_read_on", "rows": ["(1, -1294967296, -1294967296)", "(2, 5, 5)"], "types": ["int", "int", "int"]}
+{"tag": "join/ansi_on_x_off_read_on", "rows": ["(1, -1294967296)", "(2, 5)"], "types": ["int", "int"]}
+{"tag": "join/ansi_on_x_off_read_off", "rows": ["(1, -1294967296)", "(2, 5)"], "types": ["int", "int"]}
+{"tag": "join/ansi_union_read_off", "error": "CAST_OVERFLOW"}
+{"tag": "door/table", "rows": ["(12,)", "(3,)"], "types": ["int"]}
+{"tag": "door/sql", "rows": ["(12,)", "(3,)"], "types": ["int"]}
+{"tag": "door/fexpr", "rows": ["(12,)", "(3,)"], "types": ["int"]}
+{"tag": "door/fexpr_filter", "rows": ["(12,)"], "types": ["int"]}
+{"tag": "door/in_subq", "rows": [], "types": ["int"]}
+{"tag": "door/scalar_subq", "rows": ["(12,)"], "types": ["int"]}
+{"tag": "door/exists", "rows": [], "types": ["int"]}
+{"tag": "write/w", "rows": ["(1, 3, -1294967296)", "(2, 12, 5)"], "types": ["int", "int", "int"]}
+{"tag": "write/w2", "rows": ["(1, 3, -1294967296)", "(2, 12, 5)"], "types": ["int", "int", "int"]}
+{"tag": "write/w3", "rows": ["(1, 3, -1294967296)", "(2, 12, 5)"], "types": ["int", "int", "int"]}
+{"tag": "overlay/start_time", "rows": ["(True, True, True, False)"], "types": ["boolean", "boolean", "boolean", "boolean"]}
+{"tag": "overlay/start_time_join", "rows": ["(1,)"], "types": ["bigint"]}
+{"tag": "overlay/catalog", "rows": ["(3,)"], "types": ["bigint"]}
+{"tag": "capture/create_on_read_on", "error": "CAST_OVERFLOW"}
+{"tag": "capture/replace_off_read_on", "rows": ["(-1294967296,)", "(5,)"], "types": ["int"]}
+{"tag": "capture/renamed_read_on", "rows": ["(-1294967296,)", "(5,)"], "types": ["int"]}
+{"tag": "capture/after_reset_ansi_now", "rows": ["('UTC',)"], "types": ["string"]}
+{"tag": "capture/created_off_read_after_reset", "rows": ["(-1294967296,)", "(5,)"], "types": ["int"]}
+{"tag": "capture/created_la_read_after_reset", "rows": ["(19,)", "(4,)"], "types": ["int"]}
+{"tag": "limit/sensitive_above", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "limit/sensitive_above_order", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "limit/free_and_sensitive", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/false>true/x38_eq_frac", "rows": [], "types": ["int"]}
+{"tag": "allow/false>true/x38_gt_frac", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "allow/false>true/x38_in_frac", "rows": [], "types": ["int"]}
+{"tag": "allow/false>true/x38_cast_dec10", "error": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION"}
+{"tag": "allow/false>true/big_cast_int", "error": "CAST_OVERFLOW"}
+{"tag": "allow/false>true/big_cast_int_eq", "error": "CAST_OVERFLOW"}
+{"tag": "allow/false>true/big_trycast_int", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "allow/false>true/s_eq_int", "error": "CAST_INVALID_INPUT"}
+{"tag": "allow/false>true/s_cast_int", "error": "CAST_INVALID_INPUT"}
+{"tag": "allow/false>true/ts_eq_str", "rows": [], "types": ["int"]}
+{"tag": "allow/false>true/ts_ge_str", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/false>true/ts_between", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/false>true/ts_ntz", "rows": [], "types": ["int"]}
+{"tag": "allow/false>true/ts_gt_dt", "rows": [], "types": ["int"]}
+{"tag": "allow/false>true/dt_eq_str", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/false>true/d_eq_dbl", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/false>true/d_cast_dec1", "rows": ["(1,)", "(2,)"], "types": ["int"]}
+{"tag": "allow/false>true/n_dist", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/false>true/big_eq_dec", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "allow/false>true/x38_eq_big", "rows": [], "types": ["int"]}
+{"tag": "allow/false>true/x38_eq_d", "rows": [], "types": ["int"]}
+{"tag": "allow/true>false/x38_eq_frac", "rows": [], "types": ["int"]}
+{"tag": "allow/true>false/x38_gt_frac", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "allow/true>false/x38_in_frac", "rows": [], "types": ["int"]}
+{"tag": "allow/true>false/x38_cast_dec10", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/big_cast_int", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "allow/true>false/big_cast_int_eq", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "allow/true>false/big_trycast_int", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "allow/true>false/s_eq_int", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/s_cast_int", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/ts_eq_str", "rows": [], "types": ["int"]}
+{"tag": "allow/true>false/ts_ge_str", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/ts_between", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/ts_ntz", "rows": [], "types": ["int"]}
+{"tag": "allow/true>false/ts_gt_dt", "rows": [], "types": ["int"]}
+{"tag": "allow/true>false/dt_eq_str", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/d_eq_dbl", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/d_cast_dec1", "rows": ["(1,)", "(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/n_dist", "rows": ["(2,)"], "types": ["int"]}
+{"tag": "allow/true>false/big_eq_dec", "rows": ["(1,)"], "types": ["int"]}
+{"tag": "allow/true>false/x38_eq_big", "rows": [], "types": ["int"]}
+{"tag": "allow/true>false/x38_eq_d", "rows": [], "types": ["int"]}

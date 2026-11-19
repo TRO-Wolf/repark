@@ -176,3 +176,110 @@ cell as main does. The bar re-run (2,772 cells): 0 moves against part 1 as built
 every held row ≤ 1.05x (C-012 0.997 / 0.994, timed inside the lock after a runner flaw was found). Records:
 [bar.md](../../wo/temp-view-session-settings-1/evidence/built-part1/bar.md) and
 [cost.md](../../wo/temp-view-session-settings-1/evidence/built-part1/cost.md) "Delta 1".
+
+
+## Built (part 2, the DataFrame door and materialisation) — 2026-11-18
+
+**Branch:** `fix/temp-view-session-settings-1-part2` (draft PR #1362), product and pins `74c22dfe`, delta 1 `513208ce`, delta 2 `9d71e030` and delta 3 `9aa2f182`. **Builder:** Claude Opus 5.5
+(`claude-opus-5-5`), effort xhigh.
+
+**Rulings carried (owner, verbatim):** 2026-11-17 "dispatch Opus xhigh effort levels for these fixes, then use Opus 5.5
+medium verifiers for the time and not muse, at least until these things are closed out"; "Defaults, merge 1355";
+"defaults on both" (question 4: the write doors follow Spark door by door, `writeTo` the captured ANSI and the writer's
+zone; question 5: HELD-FRAME-CURRENT-TIMEZONE-1 carded, not built; question 8: cache substitution not this unit's;
+question 9: the 22 held derivations, the 2 `registerTempTable` cells and the 4 new held-frame write cells in this bar,
+seat 3 for the 2 `cache()` cells; question 11 (a): the revised filter rule, its loud residual accepted, the wrapper
+carded as VIEW-FILTER-SETTINGS-WRAPPER-1). 2026-11-18 (overnight): "Proceed with the plans, use defaults, when it comes
+to any roadblocks or questions spin up a Fable medium session to ask for guidance. Merge any PRs needed as long as they
+get us to our end goal"; "Extend the window for 6 hours". Part 1's calls (Fable, under that delegation): the fallback
+replaced here; `caseSensitive` stays uncaptured (TEMP-VIEW-CASE-SENSITIVE-CAPTURE-1). 2026-11-18, about 14:30 UTC: "We
+better go with B to be safe" (TEMP-VIEW-FRAME-READER-PARSE-1 label-blocking, S1 by class); about 15:00 UTC: "Defaults on
+all three, extend the window 4 hours" (the proposed cards' severities below, and `smartCsv`).
+
+**Seat 2A, a marker decided by the analyzer.**
+- `crates/repark-spark/src/view_ddl/frame_settings.rs` (new): `frame_view` captures the four carriers from the frame's
+  own state (`into_parts`); a `_repark_writer_v2_` scratch view takes the writer's zone (question 4); the SQL door's
+  bare `ReplanningTempView` scan, a frame that only scans and (delta 1) a frame whose lineage reaches a JSON or CSV
+  reader scan keep `into_view`. `FrameView` inlines a `FrameSettings`
+  extension node; `FrameSettingsRule`, at analyzer index 0 after the extension's and the dialect's rules, unwraps it
+  when the planning state's settings match (today's plan) and otherwise closes it as a `TableScan` over the frame
+  analysed under its own settings and planned by part 1's overlay (the reader's start time, `current_timezone()` at
+  the reader's zone, the settings-free pushed conjuncts inside). `opened` and `definition_plan` read through a closed
+  frame.
+- `temp_settings.rs`: the inlined-frame fallback removed, then restored by delta 1 for the JSON and CSV lineage only; settings compare by effective value (an unset carrier equals
+  its default); the pushdown answer shared. `temp_view.rs`: the fallback call kept only when the re-planned body reaches a JSON or CSV scan (delta 1); the reference and dependency
+  walks read through closed frames; `definition_plan` answers a frame view.
+- Core: `extension.rs` (`FrameViewSeat`), `session/temp_views.rs` (the seat; seat 3A), `session/df_guards.rs` (the
+  rule at index 0), `plan_introspect.rs` (the S3 overwrite check and the semantic hash read a plan-carrying source).
+  One registration line in the Spark `extension.rs`, one `mod` line. **Seven product files (cap 7).**
+
+**Seat 3A:** `register_collected_memtable` plans under `frame.into_parts()`'s state, restamped by
+`mark_start_execution` (the frame's options, the materialisation's `now()`, pin (f)).
+
+**Delta 1 (2026-11-18): the JSON and CSV reader lineage.** The build halted on four EQUAL → WRONG cells of part 1's
+verifier and stated the cause as "RePark's JSON source reads the session zone at scan time". That was wrong: the
+facade's JSON and CSV readers build their typed parse as an ordinary projection over a scan of strings
+(`reader.py` `_apply_reader_schema_semantics`), so the zone lives in a frame expression and closing the frame parsed
+under the creation zone. Fable's guidance under the owner's delegation (not an owner ruling) set the invariant: a view
+of either door whose definition reaches a JSON or CSV listing scan, through any number of views, answers exactly as
+part 1's package does. `reader_lineage` (`frame_settings.rs`) detects it by source; such a frame keeps `into_view` with
+its inner markers unwrapped, and a SQL view whose re-planned body reaches one keeps part 1's inlined-frame fallback
+(restored in `temp_settings.rs`, taken in `temp_view.rs` for this lineage only). Commit `513208ce`, three of the seven
+files; no new product file. Reader inventory, sweep and judgement call (`smartCsv`):
+[bar.md](../../wo/temp-view-session-settings-1/evidence/built-part2/bar.md).
+
+**Delta 2 (2026-11-18): writes under matching settings.** PR #1362's CI failed
+`test_store_ts_to_numeric_1.py::test_store_assignment_cells_replay_spark`: with no setting changed, `-NULL` written
+into a `DATE`, `BOOLEAN` or `TIMESTAMP` column through `writeTo`, `insertInto`, `saveAsTable`, `mergeInto` or SQL
+`INSERT` or `MERGE` from a DataFrame view stored a NULL where main and Spark refuse with
+`INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`; the differing path did the same. The cause: the store-assignment
+check (`repark-iceberg` `negated_null_store::column_origin`) walks the write source's unanalysed plan, and any node it
+does not know ends the walk without a refusal; the build inlined the `FrameSettings` marker for every reader. The fix
+(`9d71e030`, four of the seven files, cap 7): the marker stays only inside a SQL view's body, re-planned by
+`ReplanningTempView` (`view_body`); elsewhere a frame view decides when it is inlined, against the session's live
+options read through a weak `LiveOptions` handle (`repark-core` `extension.rs`, `session/temp_views.rs`): its own plan
+when they match (main's plan, for every walker), the closed `TableScan` when they differ. The build's and delta 1's
+claim of no matching-settings moves covered reads; the write sweep (13 doors, 5 sources of 5 values, 6 target types,
+both ANSI modes, 3,100 cells) now shows writes too: 0 cells differ from main (delta 1: 216), and against Spark on six
+doors 1,376 of 1,400 EQUAL, the same 24 direct gaps as main.
+
+**Delta 3 (2026-11-18): the live read under a contended lock.** The verifier of #1362 (Opus 5.5) found F1, class (a),
+S2: delta 2's live read (`try_read_recursive`) failed while another thread held the session state's write lock (every
+`spark.conf.set` takes it), the frame view inlined the `FrameSettings` marker, and `-NULL` into `DATE` or `BOOLEAN` was
+stored where main and Spark refuse: 27 to 44 of 1,000 writes beside two `conf.set` threads. The owner's ruling
+(2026-11-18, about 20:25 UTC, verbatim): "Go with your recommendation, dispatch 1362 delta 3" (fix F1 inside the seven
+files, with the verifier's race probe as a test; stop at an eighth). The fix (`9aa2f182`, two of the seven files, cap
+7): the read waits for the lock at most one second (`try_read_recursive_for`), and `LiveOptions` answers the options it
+last read, from the view's creation on, when the wait expires, so outside a SQL view body a frame view never inlines
+the marker and nothing waits unbounded. No write-lock holder plans, awaits or takes a planner's lock (the audit is in
+bar.md). Measured with the verifier's probe (five doors, two setter threads): the head 0 of 5,000 writes landed in each of two runs, the merged delta 2 (`d4423a69`) 165, main now (`6286ba19`) 0; two 75-second hang runs on the head (one with the setters also flipping ANSI and the zone) landed 0 of about 15,000 writes each and ended inside their timeout. Pins: a facade race test (fails 10 of 10 runs on `d4423a69`, about 4 s) and two Rust tests holding the state's write lock. The re-check verifier (Opus 5.5 medium) passed `a3369e93` on 2026-11-19 with no class (a) or (b) finding, and its N1 (class (c), S3) is proposed as a card, rating the owner's.
+
+**The cap exception, not used:** Fable's guidance under the owner's delegation allowed an eighth product file,
+`crates/repark-python/src/frame_lineage.rs`, plus one helper in `repark-core/src/extension.rs`, for `crossJoin` and the
+exact-key join door. The fix was built (each side's plan through the seat before `join_exact_sides` analyses the join)
+and measured: 74 cells WRONG → EQUAL, but 2 EQUAL cells moved away from Spark
+(`ansi/on_off/left_anti/cond_left`, `ansi/on_off/left_anti/cond_both`: a held ANSI-on frame on the left of a left-anti
+join now raises `ARITHMETIC_OVERFLOW`; Spark pushes the anti join below the projection and answers empty, a direct gap
+RePark shows under matching settings too). By the back-out rule it was dropped before commit; the patch and its
+measurements are kept in the evidence.
+
+**Filed card, label-blocking (owner, 2026-11-18, about 14:30 UTC, verbatim: "We better go with B to be safe"; B:
+TEMP-VIEW-FRAME-READER-PARSE-1 blocks ICE-V2-FLAT-AWS-LABEL-1; part 2 still merges with the residue named, since no cell
+gets worse than main; the card's own unit must land before the label can be declared).** TEMP-VIEW-FRAME-READER-PARSE-1,
+S1 by class (the 2026-11-17 "S1 by class" ruling; the time-zone half blocks): Spark parses a JSON or CSV source under
+the reader's settings and decides everything above the parse under the frame's; RePark's JSON and CSV lineage answers
+as part 1 and main do. Its cells, the reader inventory with the settings each reader-built expression reads, and the
+`smartCsv` question are in bar.md.
+
+**Cards ruled by the owner (2026-11-18, about 15:00 UTC, verbatim: "Defaults on all three, extend the window 4 hours"):**
+TEMP-VIEW-FRAME-CROSSJOIN-1 (`crossJoin` and the exact-key join door analyse both held sides under the live state;
+silent; the left-anti direct gap is its prerequisite) and HELD-FRAME-USING-JOIN-1 (a USING join keeps only the left
+frame's state, `join_on_names`, so a held right side answers under the live settings; silent): **S1, label-blocking**;
+HELD-FRAME-DERIVED-ANSI-1 (`withColumn` and `select(F.expr(...))` over a held ANSI frame answer unlike Spark on every
+build, the column door's eager analysis, `column/expr_build.rs:187`): **S2**; LEFT-ANTI-PROJECTION-PUSHDOWN-1 (a
+left-anti or left-semi join evaluates the left projection on every row, where Spark pushes the join below it; loud):
+**S3**; `smartCsv`: the head's behaviour is accepted, and any change folds into TEMP-VIEW-FRAME-READER-PARSE-1.
+
+**Bar** ([evidence/built-part2/bar.md](../../wo/temp-view-session-settings-1/evidence/built-part2/bar.md), package `pkg-view2-9d71e030`; delta 3 on `pkg-view2-9aa2f182` gives every verdict as delta 2's, the write sweep 3,100 of 3,100 as main now, 0 of 10,000 racing writes landed): 3,004 cells, against part 1 261 WRONG → EQUAL, 10 WRONG → WRONG (changed), 5 EQUAL → RAISE (the ruled filter class's four DataFrame-door cells and question 4's `writeTo` `avg`), 0 EQUAL → WRONG, 0 matching-settings moves, every verdict as delta 1's; none of the 665 part 2 EQUAL targets lost; the JSON and CSV lineage 0 moves against part 1 (524 sweep cells); the write sweep under matching settings 0 cells differ from main in 3,100.
+
+**Cost** ([cost.md](../../wo/temp-view-session-settings-1/evidence/built-part2/cost.md), delta 2 on `pkg-view2-9d71e030` against `pkg-view1-c54f5fc7`, 5 alternating runs, 10 for the one row over the bar): every held matching row within 1.05x (0.980x to 1.032x; C-012 1.016x and 1.001x; `match_unpivot` 1.056x after 5 runs, 1.004x after 10); the differing path, reported, 0.982x to 1.054x. Delta 3 on `pkg-view2-9aa2f182` against main now (`pkg-main-6286ba19`), the seven held rows: 0.972x to 1.037x.

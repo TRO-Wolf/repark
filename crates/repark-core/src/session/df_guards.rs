@@ -169,7 +169,10 @@ pub(super) fn context_with_df_54_1_rule_guards(
 ) -> DataFusionResult<SessionContext> {
     let analyzer_rules =
         extension.configure_analyzer_rules(analyzer_rules_with_df_54_1_rule_guards()?)?;
-    let analyzer_rules = dialect.configure_analyzer_rules(analyzer_rules)?;
+    let mut analyzer_rules = dialect.configure_analyzer_rules(analyzer_rules)?;
+    if let Some(seat) = config.get_extension::<crate::extension::FrameViewSeat>() {
+        analyzer_rules.insert(0, seat.rule());
+    }
     let mut builder = SessionStateBuilder::new();
     if let Some(type_planner) = extension.type_planner().or_else(|| dialect.type_planner()) {
         builder = builder.with_type_planner(type_planner);

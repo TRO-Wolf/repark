@@ -1,6 +1,7 @@
 //! Temp views — the session-local registration family (`createOrReplaceTempView` and friends).
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use arrow::array::RecordBatch;
 use arrow::compute::{CastOptions, cast_with_options, concat_batches};
@@ -16,6 +17,8 @@ use repark_common::{Error, Result};
 
 use super::ReparkSession;
 use crate::engine_err;
+
+const LIVE_READ_WAIT: Duration = Duration::from_secs(1);
 
 impl ReparkSession {
     /// Register `batches` as a replaceable in-memory view named `name`.
@@ -40,7 +43,31 @@ impl ReparkSession {
     /// # Errors
     /// Returns [`Error::DataFusion`] if register fails; [`Error::Analysis`] if `name` is qualified.
     pub fn create_or_replace_temp_view_from(&self, name: &str, frame: &DataFrame) -> Result<()> {
-        self.replace_view(name, frame.clone().into_view())
+        let shared = self.context().state_ref();
+        let (seat, live) = {
+            let state = shared.read();
+            let seat = state
+                .config()
+                .get_extension::<crate::extension::FrameViewSeat>();
+            (seat, Arc::clone(state.config_options()))
+        };
+        let provider = match seat {
+            Some(seat) => {
+                let weak = Arc::downgrade(&shared);
+                let reader = crate::extension::LiveOptions::new(
+                    Arc::clone(&live),
+                    Arc::new(move || {
+                        let state = weak.upgrade()?;
+                        state
+                            .try_read_recursive_for(LIVE_READ_WAIT)
+                            .map(|guard| Arc::clone(guard.config_options()))
+                    }),
+                );
+                seat.wrap(name, frame, &live, reader)
+            }
+            None => frame.clone().into_view(),
+        };
+        self.replace_view(name, provider)
     }
 
     /// Collect `frame` once and register a [`MemTable`] temp view.
@@ -150,8 +177,8 @@ impl ReparkSession {
         max_bytes: Option<u64>,
         max_total_bytes: Option<u64>,
     ) -> Result<()> {
-        let plan = frame.logical_plan().clone();
-        let state = self.context().state();
+        let (mut state, plan) = frame.into_parts();
+        state.mark_start_execution();
         let analyzed = state
             .analyzer()
             .execute_and_check(plan, state.config_options(), |_, _| {})

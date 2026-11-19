@@ -1,0 +1,263 @@
+{
+ "classes": {
+  "and_guard": "AND-GUARD-ANSI-1: the AND evaluates the guarded division on the dropped row",
+  "cast_text": "direct gap: a string-to-integer cast raises Arrow's text in both modes",
+  "main": "kept as main answers: the walker reads through the closed frame as it read the inlined one",
+  "mod": "direct gap: 10 % 0 raises DIVIDE_BY_ZERO where Spark raises REMAINDER_BY_ZERO",
+  "native_join": "door not at the seat: crossJoin's native exact join plans both sides under the live state",
+  "ruled": "TEMP-VIEW-SESSION-SETTINGS-1 ruled class (question 11): a settings-sensitive conjunct kept above a raising body",
+  "suggestion": "direct gap: NUMERIC_VALUE_OUT_OF_RANGE without Spark's WITH_SUGGESTION subclass"
+ },
+ "false": {
+  "derive/crossjoin/add/on_off": {
+   "answer": {
+    "rows": [
+     "-2147483648"
+    ]
+   },
+   "class": "native_join"
+  },
+  "derive/crossjoin/hour/utc_la": {
+   "answer": {
+    "rows": [
+     "18"
+    ]
+   },
+   "class": "native_join"
+  },
+  "filter/df/add_sens/on_off": {
+   "answer": {
+    "error": "ARITHMETIC_OVERFLOW"
+   },
+   "class": "ruled"
+  },
+  "filter/df/agg_key_sens/on_off": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "ruled"
+  },
+  "filter/df/and_free/on_off": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "and_guard"
+  },
+  "filter/df/and_free/on_on": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "and_guard"
+  },
+  "filter/df/cast_null/off_on": {
+   "answer": {
+    "error": ""
+   },
+   "class": "cast_text"
+  },
+  "filter/df/numcast/off_on": {
+   "answer": {
+    "error": ""
+   },
+   "class": "cast_text"
+  },
+  "filter/df/numcast/on_off": {
+   "answer": {
+    "error": ""
+   },
+   "class": "cast_text"
+  },
+  "filter/df/or_mixed/on_off": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "ruled"
+  },
+  "read/df/cte/ansi/bool_dec/true>false": {
+   "answer": {
+    "error": "NUMERIC_VALUE_OUT_OF_RANGE"
+   },
+   "class": "suggestion"
+  },
+  "read/df/cte/ansi/mod/true>false": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "mod"
+  },
+  "read/df/join/ansi/bool_dec/true>false": {
+   "answer": {
+    "error": "NUMERIC_VALUE_OUT_OF_RANGE"
+   },
+   "class": "suggestion"
+  },
+  "read/df/join/ansi/mod/true>false": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "mod"
+  },
+  "read/df/plain/ansi/bool_dec/true>false": {
+   "answer": {
+    "error": "NUMERIC_VALUE_OUT_OF_RANGE"
+   },
+   "class": "suggestion"
+  },
+  "read/df/plain/ansi/mod/true>false": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "mod"
+  },
+  "read/df/subq/ansi/bool_dec/true>false": {
+   "answer": {
+    "error": "NUMERIC_VALUE_OUT_OF_RANGE"
+   },
+   "class": "suggestion"
+  },
+  "read/df/subq/ansi/mod/true>false": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "mod"
+  },
+  "read/vsd/ansi/bool_dec/true>false": {
+   "answer": {
+    "error": "NUMERIC_VALUE_OUT_OF_RANGE"
+   },
+   "class": "suggestion"
+  },
+  "read/vsd/ansi/mod/true>false": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "mod"
+  }
+ },
+ "true": {
+  "derive/crossjoin/add/on_off": {
+   "answer": {
+    "rows": [
+     "-2147483648"
+    ]
+   },
+   "class": "native_join"
+  },
+  "derive/crossjoin/hour/utc_la": {
+   "answer": {
+    "rows": [
+     "18"
+    ]
+   },
+   "class": "native_join"
+  },
+  "filter/df/add_sens/on_off": {
+   "answer": {
+    "error": "ARITHMETIC_OVERFLOW"
+   },
+   "class": "ruled"
+  },
+  "filter/df/agg_key_sens/on_off": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "ruled"
+  },
+  "filter/df/and_free/on_off": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "and_guard"
+  },
+  "filter/df/and_free/on_on": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "and_guard"
+  },
+  "filter/df/cast_null/off_on": {
+   "answer": {
+    "error": ""
+   },
+   "class": "cast_text"
+  },
+  "filter/df/numcast/off_on": {
+   "answer": {
+    "error": ""
+   },
+   "class": "cast_text"
+  },
+  "filter/df/numcast/on_off": {
+   "answer": {
+    "error": ""
+   },
+   "class": "cast_text"
+  },
+  "filter/df/or_mixed/on_off": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "ruled"
+  },
+  "read/df/cte/ansi/bool_dec/true>false": {
+   "answer": {
+    "error": "NUMERIC_VALUE_OUT_OF_RANGE"
+   },
+   "class": "suggestion"
+  },
+  "read/df/cte/ansi/mod/true>false": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "mod"
+  },
+  "read/df/join/ansi/bool_dec/true>false": {
+   "answer": {
+    "error": "NUMERIC_VALUE_OUT_OF_RANGE"
+   },
+   "class": "suggestion"
+  },
+  "read/df/join/ansi/mod/true>false": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "mod"
+  },
+  "read/df/plain/ansi/bool_dec/true>false": {
+   "answer": {
+    "error": "NUMERIC_VALUE_OUT_OF_RANGE"
+   },
+   "class": "suggestion"
+  },
+  "read/df/plain/ansi/mod/true>false": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "mod"
+  },
+  "read/df/subq/ansi/bool_dec/true>false": {
+   "answer": {
+    "error": "NUMERIC_VALUE_OUT_OF_RANGE"
+   },
+   "class": "suggestion"
+  },
+  "read/df/subq/ansi/mod/true>false": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "mod"
+  },
+  "read/vsd/ansi/bool_dec/true>false": {
+   "answer": {
+    "error": "NUMERIC_VALUE_OUT_OF_RANGE"
+   },
+   "class": "suggestion"
+  },
+  "read/vsd/ansi/mod/true>false": {
+   "answer": {
+    "error": "DIVIDE_BY_ZERO"
+   },
+   "class": "mod"
+  }
+ }
+}

@@ -1,0 +1,61 @@
+diff --git a/crates/repark-core/src/extension.rs b/crates/repark-core/src/extension.rs
+index 03bce81a..e22d5fc8 100644
+--- a/crates/repark-core/src/extension.rs
++++ b/crates/repark-core/src/extension.rs
+@@ -6,7 +6,7 @@ use std::sync::Arc;
+ use datafusion::catalog::TableProvider;
+ use datafusion::common::config::ConfigOptions;
+ use datafusion::common::tree_node::TreeNode;
+-use datafusion::logical_expr::Expr;
++use datafusion::logical_expr::{Expr, LogicalPlan};
+ use datafusion::logical_expr::planner::TypePlanner;
+ use datafusion::optimizer::AnalyzerRule;
+ use datafusion::prelude::{DataFrame, SessionConfig, SessionContext};
+@@ -55,6 +55,17 @@ pub fn with_frame_view_seat(config: SessionConfig, seat: FrameViewSeat) -> Sessi
+     config.with_extension(Arc::new(seat))
+ }
+ 
++#[must_use]
++pub fn seated_frame_plan(config: &SessionConfig, frame: DataFrame) -> LogicalPlan {
++    let Some(seat) = config.get_extension::<FrameViewSeat>() else {
++        return frame.into_parts().1;
++    };
++    match seat.wrap("", &frame, config.options()).get_logical_plan() {
++        Some(plan) => plan.into_owned(),
++        None => frame.into_parts().1,
++    }
++}
++
+ /// Values already resolved by `build()` and passed to the configure hook.
+ #[derive(Debug, Clone, Copy)]
+ pub struct SessionBuildConf<'a> {
+diff --git a/crates/repark-python/src/frame_lineage.rs b/crates/repark-python/src/frame_lineage.rs
+index 4470fdd0..79771740 100644
+--- a/crates/repark-python/src/frame_lineage.rs
++++ b/crates/repark-python/src/frame_lineage.rs
+@@ -366,16 +366,20 @@ pub fn join_exact_sides(
+         let frames = crate::deep_stack::max_depths(&left.depths(), &right.depths());
+         let need = crate::deep_stack::clone_need_bytes(frames.plan, frames.expression);
+         let joined = crate::deep_stack::grown_sync(need, || {
+-            let (_, left_plan) =
+-                crate::deep_stack::grown_clone_frame(left.inner(), &left.depths()).into_parts();
+-            let (_, right_plan) =
+-                crate::deep_stack::grown_clone_frame(right.inner(), &right.depths()).into_parts();
++            let state = session.session.context().state();
++            let left_plan = repark_core::extension::seated_frame_plan(
++                state.config(),
++                crate::deep_stack::grown_clone_frame(left.inner(), &left.depths()),
++            );
++            let right_plan = repark_core::extension::seated_frame_plan(
++                state.config(),
++                crate::deep_stack::grown_clone_frame(right.inner(), &right.depths()),
++            );
+             let Some(plan) =
+                 repark_core::frame_names::join_exact_sides(left_plan, right_plan, &join)?
+             else {
+                 return Ok(None);
+             };
+-            let state = session.session.context().state();
+             let plan = repark_spark::analyze_built_plan(&state, plan)?;
+             Ok(Some(DataFrame::new(state, plan)))
+         })
