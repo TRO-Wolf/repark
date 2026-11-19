@@ -567,7 +567,8 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   count; drain to two without killing running work, and start no second Opus builder while a
   verifier round is open. The cap has no review date and stands until the owner changes it (owner,
   2026-11-18, taking the default: "Defaults on  E, F and the integer card"). It supersedes the
-  2026-10-22 two-lane entry and the 2026-11-02 one-lane rule.
+  2026-10-22 two-lane entry and the owner's 2026-11-02 one-lane rule, which was never recorded
+  here: "lets start consolidating the lanes back to 1 at a time when we can for now".
 - **DO run clerks on Haiku 5.5 xhigh or Muse xhigh, verifiers on Muse 1.3 and builders on Opus 5.5
   high at the start of a usage week.** Owner, 2026-11-14 about 09:50 UTC: "Go with defaults and
   let's switch back off the opus clerk or verifiers since we're at the beginning of our usage week".
@@ -605,9 +606,9 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   sweep runs at each release tag, in the same pass as the release section of `task/metrics.md` (the
   orchestrator's default, shown to the owner on 2026-11-19: "Yeah proceed").
 - **DO move closed roadmap cards' rows to month sub-maps through a lifecycle `archive` verb, with
-  the month maps exempt from the size ratchet.** Owner, 2026-11-18, taking the default: "Defaults on
-  E, F and the integer card". *Why:* `task/roadmap/mid-term/map.md` sits at its row and every
-  records PR adds cards to it. The verb is harness item H-B, a small design unit.
+  the month maps exempt from the size ratchet.** Owner, 2026-11-18, taking the default:
+  "Defaults on  E, F and the integer card". *Why:* `task/roadmap/mid-term/map.md` sits at its
+  row and every records PR adds cards to it. The verb is harness item H-B, a small design unit.
 
 ## 2026-11-19 — harness items E to K, the doc ceilings, raw evidence and the metrics ledger
 

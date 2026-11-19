@@ -4,7 +4,9 @@ Entries moved out of [task/lessons.md](../../task/lessons.md) once a later owner
 them. Each keeps its text; its first line names what replaced it.
 
 ## 2026-10-22 — two Opus 5.5 lanes at a time; re-evaluate by 2026-11-22
-*Superseded by the 2026-11-02 one-lane rule and the 2026-11-14 two-agent cap in task/lessons.md; the 2026-11-22 review date did not carry over (owner, 2026-11-18).*
+*Superseded by the owner's 2026-11-02 one-lane rule, then by the 2026-11-14 two-agent cap in
+task/lessons.md, which quotes both; the 2026-11-22 review date did not carry over (owner,
+2026-11-18).*
 
 - **DO run at most two Opus 5.5 builds concurrently, not one.** *Why:* the one-lane rule of
   2026-09-26 came from the September usage spikes (eight Opus executors live at once), and the
