@@ -74,11 +74,14 @@ pub struct PyReaderParseMemo(Arc<repark_core::extension::ReaderParseMemo>);
 
 #[pymethods]
 impl PyReaderParseMemo {
-    #[allow(clippy::missing_errors_doc)]
-    pub fn run(&self, body: &Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
-        fenced!("ReaderParseMemo.run", {
-            self.0.run(|| body.call0().map(Bound::unbind))
-        })
+    pub fn enter(&self) -> Option<Self> {
+        self.0.enter().map(Self)
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (previous=None))]
+    pub fn leave(previous: Option<PyRef<'_, Self>>) {
+        repark_core::extension::ReaderParseMemo::restore(previous.map(|memo| Arc::clone(&memo.0)));
     }
 }
 

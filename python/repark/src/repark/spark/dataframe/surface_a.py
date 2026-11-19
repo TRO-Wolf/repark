@@ -404,7 +404,12 @@ def _parse_memo(frame: DataFrame) -> Any:
 
 
 def _own_plan(frame: DataFrame, run: Callable[[DataFrame], Any]) -> Any:
-    return _parse_memo(frame).run(lambda: run(frame))
+    memo = _parse_memo(frame)
+    previous = memo.enter()
+    try:
+        return run(frame)
+    finally:
+        memo.leave(previous)
 
 
 def _local_rows(frame: DataFrame) -> Iterator[Row]:

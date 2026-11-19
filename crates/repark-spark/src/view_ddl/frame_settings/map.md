@@ -31,8 +31,8 @@ Its delta (the verifier's F1, 2026-11-19): Spark fixes a Dataset's file scan at 
 `QueryExecution` (`collect`, `toLocalIterator`, `toArrow`, `toPandas`, `tail`, `rdd`, `foreach`, `foreachPartition`,
 `localCheckpoint`, `checkpoint`) and keeps it for every later own-plan action on that object; `count`, `show`,
 `take`, writes and derived frames plan afresh. So the decision is held per frame object, not per node, since derived
-frames share the node: the facade runs each own-plan action inside `ReaderParseMemo::run`
-(`repark_core::extension`), which holds the frame's memo in a thread-local for that call, and `ReaderParseRule`,
+frames share the node: the facade runs each own-plan action between `ReaderParseMemo::enter` and `restore`
+(`repark_core::extension`), which hold the frame's memo in a thread-local for that call, and `ReaderParseRule`,
 once `holds_parse` finds a node, decides it under the settings the memo recorded for the node's session at its first
 decision (recording the live ones then). With no memo in scope it reads the live settings as before.
 
@@ -54,7 +54,8 @@ decision (recording the live ones then). With no memo in scope it reads the live
   a reader parse optimizes to its analysed input's plan and answers as it; under differing settings it closes over its
   copy and answers as a frame parsed under the live zone; inside an `IN` and a scalar subquery it is decided under
   both. F1: under a memo the rule keeps its first decision after the live zone moves, a fresh memo decides live, and
-  no scope means live; a scope restores the outer one on return and on unwind, and another thread sees none.
+  no scope means live; a scope restores the outer one on return, on unwind and through `enter`/`restore`, and
+  another thread sees none.
 
 ## Pointers
 

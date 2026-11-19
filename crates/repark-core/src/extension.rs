@@ -97,9 +97,17 @@ impl ReaderParseMemo {
         Some(options)
     }
 
+    #[must_use]
+    pub fn enter(self: &Arc<Self>) -> Option<Arc<Self>> {
+        READER_PARSE_MEMO.with(|slot| slot.replace(Some(Arc::clone(self))))
+    }
+
+    pub fn restore(previous: Option<Arc<Self>>) {
+        READER_PARSE_MEMO.with(|slot| *slot.borrow_mut() = previous);
+    }
+
     pub fn run<T>(self: &Arc<Self>, body: impl FnOnce() -> T) -> T {
-        let previous = READER_PARSE_MEMO.with(|slot| slot.replace(Some(Arc::clone(self))));
-        let _restore = MemoRestore(previous);
+        let _restore = MemoRestore(self.enter());
         body()
     }
 }
@@ -108,8 +116,7 @@ struct MemoRestore(Option<Arc<ReaderParseMemo>>);
 
 impl Drop for MemoRestore {
     fn drop(&mut self) {
-        let previous = self.0.take();
-        READER_PARSE_MEMO.with(|slot| *slot.borrow_mut() = previous);
+        ReaderParseMemo::restore(self.0.take());
     }
 }
 

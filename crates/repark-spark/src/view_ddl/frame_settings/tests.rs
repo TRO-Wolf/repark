@@ -649,6 +649,10 @@ fn a_memo_scope_restores_the_outer_scope_on_return_and_on_unwind() {
         }));
         assert!(unwound.is_err());
         assert!(seen(&outer));
+        let previous = inner.enter();
+        assert!(seen(&inner));
+        ReaderParseMemo::restore(previous);
+        assert!(seen(&outer));
     });
     assert!(reader_parse_memo().is_none());
     assert!(outer.run(|| {
