@@ -14,5 +14,6 @@ Comment-free Python.
   main; the exact-total check of every moved value.
 - [spread/](spread/map.md) — the head's 401 multi-partial queries, 20 runs each, both modes.
 - [det/](det/map.md) — check 3: the determinism runner and its 24 configurations on the head.
+- [cost/](cost/map.md) — the cost runner's samples and per-case timings.
 
 Up: [../map.md](../map.md).

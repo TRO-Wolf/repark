@@ -54,3 +54,35 @@ Ratio = median head / median main; the band is the min to max of `main-aa / main
 - After the runs, `ruff` reformatted the scripts here and two long SQL literals in `sum_data.py` were split
   into implicit concatenations (the same text); `cost_table.py` and `compare_bar.py` print byte-identical output
   before and after.
+
+## Delta 2
+
+**Run:** the owner's ruling (2026-11-18, about 20:05 UTC): "Go with Fable's recommendations on all seven, re-run 1362".
+The head `fcb0c888` (package `pkg-sum-fcb0c888`) is measured against main now (`pkg-main-6286ba19`, the base of this
+series), with the delta 1 runner ([cost/run.sh](cost/run.sh)) copied. Cores 48–57; main, head and main again (`main-aa`)
+alternate, one sample at a time under the exclusive measure lock with the link lock and both cargo locks, the clock
+started inside the locks. Samples and the table: [delta2/cost/](delta2/cost/map.md).
+
+**Bars:** the held rows are at 1.05x, except `k1_sum_d38_off` and `k1_sum_d38_on`, held to 1.12x (the 1.12x bar is for
+precision 20 and up on K1 only). `k5_try_sum_d10_grouped` is reported, not held.
+
+| row | main (s) | head (s) | head / main | control main-aa / main | runs | answers equal | bar |
+|---|---|---|---|---|---|---|---|
+| C-012 `c012p6` | 38.8600 | 39.2900 | 1.011 | 0.976 to 1.012 | 5 | | 1.05x (held) |
+| C-012 `c012rest` | 42.3800 | 42.6700 | 1.007 | 0.993 to 1.005 | 5 | | 1.05x (held) |
+| `k1_sum_d10_off` | 0.0941 | 0.0942 | 1.001 | 0.811 to 1.216 | 10 | True | 1.05x (held) |
+| `k1_sum_d10_on` | 0.0936 | 0.0926 | 0.989 | 0.890 to 1.059 | 5 | True | 1.05x (held) |
+| `k1_sum_d38_off` | 0.1204 | 0.1307 | 1.085 | 0.926 to 1.062 | 5 | True | 1.12x (held) |
+| `k1_sum_d38_on` | 0.1205 | 0.1289 | 1.070 | 0.882 to 1.119 | 5 | True | 1.12x (held) |
+| `k3_sum_d38` | 0.0569 | 0.0562 | 0.989 | 0.919 to 1.058 | 5 | True | 1.05x (held) |
+| `k5_try_sum_d10_grouped` | 0.8482 | 0.0931 | 0.110 | 0.958 to 1.044 | 5 | True | reported |
+
+Every held row is within its bar.
+
+**Runs:** 5 for every row, and 10 for `k1_sum_d10_off`, which stood at 1.055 after 5 (inside its control band) and took
+runs 6 to 10 under the series' rule for a row over 1.05x.
+
+**Who ran it:** the builder ran the K rows' runs 1 to 3 before pausing at its context limit. The orchestrator ran the K
+rows' runs 4 and 5, C-012 runs 1 to 5, and `k1_sum_d10_off` runs 6 to 10, from 2026-11-19 at about 00:00 to 00:27 UTC.
+A partial run 4 and three partial C-012 records, from a runner that outlived the builder's hand-back, were removed
+first. The exclusive lock was starved for hours by long shared holds on lane A.
