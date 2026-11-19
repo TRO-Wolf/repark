@@ -34,4 +34,6 @@ Measure the three reads above on Spark 4.1.2, and the reach: integers, decimals,
 
 The owner adopted Fable's §9 on 2026-11-19, about 14:00 UTC, verbatim: "go with recommendations". So the re-check verifier's N1 cells fold into this card, S1 by class (Fable's §6.2). Over the rows `1e3,2.0` / `1.5,7` / `3,4`, an `INT` and a `BIGINT` field answer `(1000, 2)`, `(1, 7)`, `(3, 4)` where Spark answers `(NULL, NULL)`, `(NULL, 7)`, `(3, 4)`. Unit 0's head answers main's values silently, with or without a `TIMESTAMP` field, where its first head raised. It is the same seat: the reader lets DataFusion infer a type and then casts, where Spark parses each field's text by the declared type and gives NULL when the text does not fit. The first step measures N1 with the three reads above.
 
+**Dated 2026-11-19: a cost line to retire.** A CSV read whose schema holds a `TIMESTAMP` field pays one extra schema inference, at most 1 ms per read (Fable's reply of 2026-11-19, §1.4; ruling 2, item 2 in [rulings-2026-11-19.md](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-19.md)). Fable measured 0.86 ms like for like (16.24 to 17.10 ms on `k0_count`), and the instruction-count trial, held outside the repository, read +5.4M instructions per read on the same row. This card's seat, one all-text scan, removes the second inference.
+
 Up: [map.md](map.md).

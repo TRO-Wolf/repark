@@ -22,4 +22,6 @@
 
 **First step:** none is given in the source. Its action, as Fable puts it: "as its own Rust unit, not tonight and not label-blocking".
 
+**Dated 2026-11-19: the build sensitivity.** The text-parse loop is sensitive to the build's layout (Fable's reply of 2026-11-19, reader-parse units, §2.1). Fable's delta 1 build ran K2 at 1.158x of delta 2's, while the Parquet and NTZ rows stayed within 3 percent. In the trial, held outside the repository, the instruction count read 1.0000x on the same K2 and `k0_hour` rows while the cycle counts read 1.12x to 1.17x, so the sensitivity is in the layout. This card's bar measures two builds and uses instruction counts to attribute a flag, under the short-row rule of ruling 2, item 3 in [rulings-2026-11-19.md](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-19.md).
+
 Up: [map.md](map.md).

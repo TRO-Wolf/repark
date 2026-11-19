@@ -10,4 +10,8 @@ The owner's ruling of 2026-11-18 (about 20:05 UTC, decision I) says "The label t
 - **Registry:** the SUM-DEC-I128WRAP-1 entry of the [parity registry](../../../../docs/spark-sql-iceberg-parity.md), which carries the #1360 fix (merged as `77faf69e`).
 - **Ruling:** [rulings-2026-11-18.md](rulings-2026-11-18.md), section 8 (the owner's words "Go with Fable's recommendations on all seven, re-run 1362").
 
+## Outside the label: `PREPARE` on the Spark door (SPARK-DOOR-PREPARE-1)
+
+The label text names `PREPARE` as outside the label until the card refuses it. Unit 1's measurement and Fable's reply of 2026-11-19 (§6.3) show that RePark accepts `PREPARE` where Spark refuses it outright (`PARSE_SYNTAX_ERROR`), and ruling 2, item 8 refuses it on the Spark door as Spark does. The card is [SPARK-DOOR-PREPARE-1](../../../roadmap/mid-term/cards-2026-11-19/spark-door-prepare-1-card-2026-11-19.md), S3, not label-blocking.
+
 Up: [map.md](map.md).
