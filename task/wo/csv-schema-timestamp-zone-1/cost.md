@@ -85,4 +85,82 @@ split the cause: a pure `to_timestamp` over `range(2000000)` read 0.062 to 0.088
 is not found; this is a bar miss for the orchestrator to rule on. Samples: `<scratchpad>/csv-ts-delta1/cost/` and
 `cost2/` (`samples.jsonl`, `raw-csv.jsonl`).
 
+## Delta 2 (2026-11-19): the cost, isolated and removed
+
+**The call.** The orchestrator's call under the owner's delegation of 2026-11-19 (about 01:28 UTC, verbatim in
+[map.md](map.md)), not an owner ruling: a second delta, past the one-delta cap, for cost only. The owner sees it in the
+morning read and may stop it. Fable's bars stand unchanged: 1.05x on `k0_count` and C-012, a 1.45x ceiling on
+`k0_hour` and K2, in process.
+
+**The orchestrator's isolation** (before this delta; `<scratchpad>/costiso/`; medians of seconds per repetition against
+main `pkg-main-4c365814`):
+
+| case | first head `186c34b0` | delta 1, `target-sum` | delta 1 rebuilt in `target-head` | delta 1's `.so` + first head's `reader.py` | first head's `.so` + delta 1's `reader.py` | bar |
+|---|---|---|---|---|---|---|
+| `k0_count` | 1.030x | 1.084x | 1.120x | 1.077x | 0.939x | 1.05x |
+| `k0_hour` | 1.399x | 1.562x | 1.581x | 1.587x | 1.378x | 1.45x |
+| K2 | 1.318x | 1.643x | 1.743x | 1.724x | 1.475x | 1.45x |
+
+It showed that the cost travels with delta 1's native library, not with its `reader.py`, and that K2's plans are the
+same on both heads.
+
+**The cause, measured** ([evidence/raw/delta2-diag.txt](evidence/raw/delta2-diag.txt); one process per build per
+round, builds alternating, every process alone under the exclusive lock on cores 48-57; medians of 36 timed
+repetitions; `*_planned` plans the frame once outside the clock):
+
+1. **Not delta 1's logic [M].** Inside delta 1's own build, K2 and `k0_hour` over delta 1's named-only scan
+   (`[n Int64, ts Utf8]`) and over the all-text scan (`[Utf8, Utf8]`, by forcing the `inferSchema` pre-scan) run alike:
+   `k2_planned` 78.2 and 85.6 ms, `k0_hour_planned` 75.2 and 76.4 ms. A decode of `column_2` alone costs the same
+   under either file schema (25.1 ms).
+2. **Delta 1's build [M].** One executed path (delta 1's `reader.py`, the all-text scan, the same plan) on main
+   `2900efde`'s build and on delta 1's: `k2_planned` 77.7 → 88.9 ms (1.144x), `k0_hour_planned` 67.1 → 74.0 ms
+   (1.103x). The first head's `reader.py` on main `2900efde`'s build (exactly `c427b3b4`) runs as the first head:
+   `k2_planned` 0.889x, `k0_hour` 0.996x. Per-process minimums agree: K2's twin bottoms out at 52-53 ms on main
+   `4c365814`'s build, 57-59 ms on main `2900efde`'s, 63-70 ms on both delta 1 builds. No one kernel carries it
+   (over the same scan: the cast alone 1.115x, `max(hour())` over it 0.926x); `EXPLAIN ANALYZE` puts K2's extra time
+   in the scan's stream (`time_elapsed_processing` 472 → 563 ms summed over partitions), not in the cast
+   (`elapsed_compute` 147 → 151 ms). **[R]** `read_csv_path` lives in `repark-core`, one codegen unit under thin
+   LTO, so any change to it rebuilds that unit and moves the hot code it links with; the K2 twin's minimums spread
+   52-64 ms across five builds whose change never touches this path (two mains, two sum builds, an avg build).
+3. **A second inference [M].** Delta 1's re-read lets DataFusion infer again before it retypes: 0.08 → 0.55 ms per
+   native read, and the facade's read 2.0-2.2 → 2.4-2.8 ms. `k0_count` pays it on every repetition.
+
+**The remedy.** `read_csv_path` is main's again: the delta 2 build's loaded code is main `2900efde`'s byte for byte
+(against `pkg-sum-845766fd`, only `.strtab` and the build id differ). `_load_csv` re-reads an existing local path
+through its `file://` URL, which main's code re-reads named-only (bar.md "Delta 2").
+
+**The cost** (delta 1's runner and data, lane B, every sample alone under the exclusive lock, five runs in the order
+main, head, main again; head `S/ddu-work/pkg-csvts-468ba436`, `BUILT_FROM` `468ba436`; against main
+`pkg-main-4c365814`):
+
+| case | main / main again (median) | head (median) | ratio | control band (main again / main) | wall ratio | head runs | bar | holds | unit |
+|---|---|---|---|---|---|---|---|---|---|
+| k0_count | 0.0212 / 0.0209 | 0.0228 | **1.083x** | 0.988 | 1.042x | 5 | 1.05x | no | s per repetition, in process |
+| k0_hour | 0.0557 / 0.0532 | 0.0786 | **1.443x** | 0.955 | 1.237x | 5 | 1.45x | yes | s per repetition, in process |
+| k2 | 0.0526 / 0.0561 | 0.0771 | **1.415x** | 1.066 | 1.215x | 5 | 1.45x | yes | s per repetition, in process |
+| c012p6 | 39.1300 / 39.2300 | 39.3600 | **1.005x** | 1.003 | 1.005x | 5 | 1.05x | yes | s wall |
+| c012rest | 42.6900 / 42.5400 | 42.6800 | **1.000x** | 0.996 | 1.000x | 5 | 1.05x | yes | s wall |
+
+**Side by side** (a copy of the orchestrator's `run2.sh`, delta 2 in place of `newth`; five runs, each sample alone
+under the exclusive lock; medians of seconds per repetition against main `pkg-main-4c365814`):
+
+| case | main | first head `186c34b0` | delta 1 `1ee847b7` | delta 2 `468ba436` | bar | runs |
+|---|---|---|---|---|---|---|
+| `k0_count` | 0.0215 s | 0.0208 s, **0.966x** | 0.0221 s, **1.024x** | 0.0233 s, **1.082x** | 1.05x | 5 |
+| `k0_hour` | 0.0521 s | 0.0758 s, **1.453x** | 0.0827 s, **1.586x** | 0.0745 s, **1.428x** | 1.45x | 5 |
+| `k2` | 0.0537 s | 0.0765 s, **1.425x** | 0.0854 s, **1.590x** | 0.0783 s, **1.458x** | 1.45x | 5 |
+
+**Reading.** C-012 holds. K2 and `k0_hour` are back at the first head's cost: 1.415x and 1.443x in delta 1's runner,
+1.458x and 1.428x beside the first head's 1.425x and 1.453x in the same series, so delta 1's excess is gone and what is
+left is the text-timestamp parse of Fable's named exception, at the 1.45x ceiling. **`k0_count` misses 1.05x** (1.083x
+and 1.082x). **[M]** The named-only re-read needs a second DataFusion inference on main's code: the read is 1.00 ms
+on the first head and 1.52 ms on delta 2 in a warm loop (the native calls 0.58 → 1.04 ms per read), and 2.04 → 2.96 ms
+between queries. That is the price Fable put on option (b) when declining it ("about 1 ms of 20"). **[R]** No
+`reader.py` route avoids it on main's code: a local path's `utf8_columns` read makes every column text (F1 and F2
+again), and a URL's infers again. A Rust route that skips the second inference changes `repark-core`, which re-rolls
+the build (the 10-15 percent above) for about half a millisecond. This is a cost miss for the orchestrator: a ceiling
+ruling on `k0_count` (about 1.08x), or a Rust unit that hands the first read's types to the re-read, measured
+on its own build; TEXT-TIMESTAMP-PARSE-KERNEL-1 stays the way out for K2 and `k0_hour`. Samples: `<scratchpad>/csv-ts-delta2/cost/` and
+`costiso/`, and [evidence/raw/](evidence/raw/map.md) (`delta2-cost-*.jsonl`).
+
 Up: [map.md](map.md).

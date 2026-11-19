@@ -17,6 +17,13 @@ raise) and a `TIMESTAMP_NTZ` field from DST-gap text (an hour forward). `read_cs
 `inferSchema`, whose re-read was measured to rely on the all-text read; `_load_csv` leaves a `TIMESTAMP_NTZ` field's
 column on the scan's type. See [bar.md](bar.md) and [cost.md](cost.md), "Delta 1".
 
+**Delta 2 (2026-11-19), cost only.** Delta 1's cost came from its build, not its logic: the same plan over the same
+scan ran 10 to 15 percent slower in delta 1's native library than in main's. `read_csv_path` is main's again, so the
+native library's code is main's; `_load_csv` re-reads an existing local path through its `file://` URL, which main's
+code already re-reads named-only. Every bar cell equals delta 1's. K2, `k0_hour` and C-012 are back at the first
+head's cost; `k0_count` misses 1.05x (1.08x, the second inference), awaiting a ruling. See [bar.md](bar.md) and
+[cost.md](cost.md), "Delta 2".
+
 ## The rulings this unit carries
 
 - **Owner, 2026-11-19, about 01:28 UTC, verbatim:** "Go with your recommendations and tonight you don’t even need to
@@ -28,6 +35,8 @@ column on the scan's type. See [bar.md](bar.md) and [cost.md](cost.md), "Delta 1
 - **The orchestrator's call for delta 1, under that delegation:** take Fable's option (b), which the consult had
   declined on cost alone: on every path `utf8_columns` re-reads only the named columns, with `read_options.rs` as the
   second product file; Fable's cost exception and the 14 runtime `timestampType` cells stand.
+- **The orchestrator's call for delta 2, under that delegation, not an owner ruling:** a second delta, past the
+  one-delta cap, for cost only; the owner sees it in the morning read and may stop it. Fable's bars stand unchanged.
 - **The parent card** TEMP-VIEW-FRAME-READER-PARSE-1 is S1 and label-blocking (owner, 2026-11-18, about 14:30 UTC:
   "We better go with B to be safe").
 

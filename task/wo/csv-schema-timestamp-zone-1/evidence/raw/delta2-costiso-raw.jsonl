@@ -1,0 +1,60 @@
+{"case": "k0_count", "label": "main", "seconds": 0.12508495897054672, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "old", "seconds": 0.10398918099235743, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "d2", "seconds": 0.11954781098756939, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "new", "seconds": 0.11096890200860798, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "main", "seconds": 0.24964679207187146, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "old", "seconds": 0.37982759706210345, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "d2", "seconds": 0.3706527939066291, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "new", "seconds": 0.41353964305017143, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}
+{"case": "k2", "label": "main", "seconds": 0.2649520429549739, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k2", "label": "old", "seconds": 0.41401174396742135, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k2", "label": "d2", "seconds": 0.35626177699305117, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k2", "label": "new", "seconds": 0.46090140601154417, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "main", "seconds": 0.10140378202777356, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "old", "seconds": 0.11144420795608312, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "d2", "seconds": 0.09856618696358055, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "new", "seconds": 0.11028068896848708, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "main", "seconds": 0.28869286901317537, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "old", "seconds": 0.4116076900390908, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "d2", "seconds": 0.367522620013915, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "new", "seconds": 0.38545511988922954, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}
+{"case": "k2", "label": "main", "seconds": 0.2868085819063708, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k2", "label": "old", "seconds": 0.347701188060455, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k2", "label": "d2", "seconds": 0.40216215106192976, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k2", "label": "new", "seconds": 0.4070159239927307, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "main", "seconds": 0.0959669470321387, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "old", "seconds": 0.11295573296956718, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "d2", "seconds": 0.10934514494147152, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "new", "seconds": 0.10217635100707412, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "main", "seconds": 0.2634659770410508, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "old", "seconds": 0.35550470603629947, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "d2", "seconds": 0.39742445503361523, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "new", "seconds": 0.45937781303655356, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}
+{"case": "k2", "label": "main", "seconds": 0.2745036348933354, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k2", "label": "old", "seconds": 0.3482499959645793, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k2", "label": "d2", "seconds": 0.3917999101104215, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k2", "label": "new", "seconds": 0.4626154969446361, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "main", "seconds": 0.10767634003423154, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "old", "seconds": 0.10043308604508638, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "d2", "seconds": 0.11721884296275675, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "new", "seconds": 0.13193035498261452, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "main", "seconds": 0.25003072002436966, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "old", "seconds": 0.37879254296422005, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "d2", "seconds": 0.3723343510646373, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "new", "seconds": 0.4269531840691343, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}
+{"case": "k2", "label": "main", "seconds": 0.2684966779779643, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k2", "label": "old", "seconds": 0.3826363909756765, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k2", "label": "d2", "seconds": 0.39136454404797405, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k2", "label": "new", "seconds": 0.4162232329836115, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "main", "seconds": 0.11940248508471996, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "old", "seconds": 0.10149395908229053, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "d2", "seconds": 0.11653341597411782, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k0_count", "label": "new", "seconds": 0.10923187399748713, "reps": 5, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "main", "seconds": 0.2607076350832358, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "old", "seconds": 0.35701307107228786, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "d2", "seconds": 0.4082905560499057, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k0_hour", "label": "new", "seconds": 0.3908199210418388, "reps": 5, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}
+{"case": "k2", "label": "main", "seconds": 0.2472162590129301, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-main-4c365814/repark/_native.abi3.so"}
+{"case": "k2", "label": "old", "seconds": 0.39167212799657136, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-186c34b0/repark/_native.abi3.so"}
+{"case": "k2", "label": "d2", "seconds": 0.3083983390824869, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-468ba436/repark/_native.abi3.so"}
+{"case": "k2", "label": "new", "seconds": 0.42702700197696686, "reps": 5, "answer": "[Row(count(*)=2000000, max(hour(datafusion.public.k2v.ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-csvts-1ee847b7/repark/_native.abi3.so"}

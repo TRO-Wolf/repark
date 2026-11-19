@@ -5915,8 +5915,9 @@ still open is `isModifiable`.
   (step 0 of TEMP-VIEW-FRAME-READER-PARSE-1, D1: 64 of 128 matching cells wrong per reader). After: `_load_csv`
   re-reads the scan's zone-less timestamp columns as text (`utf8_columns`) when the user schema holds a `TIMESTAMP`
   field, and the typed parse casts the text under the session zone, as the JSON reader does. Since delta 1 the re-read
-  retypes only those columns on every path (`read_options.rs`), and a column the schema reads into `TIMESTAMP_NTZ`
-  keeps the scan's type, so the other fields keep main's typed parse.
+  retypes only those columns, and a column the schema reads into `TIMESTAMP_NTZ` keeps the scan's type, so the other
+  fields keep main's typed parse; since delta 2 a local path is re-read through its `file://` URL, which main's
+  `read_csv_path` re-reads that way.
   A local-mean-time offset with seconds (`1850-06-01T10:00:00.000-04:56:02`, card CSV-READ-OFFSET-SECONDS-1) read
   into a `TIMESTAMP` field now answers Spark's instant instead of refusing `Invalid timezone`.
 - **spark** — Spark 4.1.2 parses each CSV field from its text at scan time under the reading session's zone
@@ -5937,12 +5938,17 @@ still open is `isModifiable`.
 - **Pin** — `python/repark/tests/io/test_csv_schema_timestamp_zone_1.py` (36 cells, both ANSI modes, against Spark
   4.1.2's recorded answers; delta 1's 8 hold a `DECIMAL` over exponent text and a `TIMESTAMP_NTZ` field over a DST
   gap beside a `TIMESTAMP` field); `python/repark/tests/timestamps/test_text_write_timestamp_zone_1.py` (the LMT read);
-  `crates/repark-core/src/read_options.rs` `a_local_csv_utf8_columns_read_types_only_the_named_columns_as_utf8`.
+  `crates/repark-core/src/read_options.rs` `a_file_url_csv_utf8_columns_read_types_only_the_named_columns_as_utf8`.
 - **Delta 1 (2026-11-19)** — the verifier's FAIL on `ffe8e301` (F1: a `DECIMAL` field over exponent text raised; F2:
   a `TIMESTAMP_NTZ` field over a DST-gap wall clock moved an hour; both from the local path's all-text re-read). The
   re-read now retypes only the named columns (Fable's option (b), the orchestrator's call), except under `inferSchema`,
   whose re-read relies on the all-text read. F1 and F2 answer Spark; the `STRING`-field side gain is withdrawn; 0
   EQUAL lost against main outside the two exceptions. Its cost misses Fable's bars (K0 and K2; cost.md), unruled.
+- **Delta 2 (2026-11-19, cost only; the orchestrator's call under the owner's delegation, past the one-delta cap)** —
+  delta 1's cost came from its build, not its logic: one executed path ran 10 to 15 percent slower in delta 1's
+  native library than in main's. `read_csv_path` is main's again; `_load_csv` re-reads an existing local path
+  through its `file://` URL. Every bar cell equals delta 1's. K2 1.415x, `k0_hour` 1.443x and C-012 hold;
+  `k0_count` is 1.083x against 1.05x (the named re-read's second inference), unruled.
 - **Bar and cost** — [bar.md](../task/wo/csv-schema-timestamp-zone-1/bar.md),
   [cost.md](../task/wo/csv-schema-timestamp-zone-1/cost.md).
 - **Bar exceptions** — two, per Fable's guidance of 2026-11-19: the 14 runtime-`SET` timestamp cells (card TIMESTAMP-TYPE-RUNTIME-SET-1) and the text-timestamp parse cost, 1.379x in process on `k0_hour` and 1.403x on K2 under a 1.45x ceiling (card TEXT-TIMESTAMP-PARSE-KERNEL-1, its way out); the `STRING`-field card CSV-STRING-FIELD-TEXT-1 is filed beside them.

@@ -1,0 +1,32 @@
+# CSV-SCHEMA-TIMESTAMP-ZONE-1 delta 2: the bar, cell by cell against delta 1
+# Left: delta 1's package pkg-csvts-1ee847b7 (<scratchpad>/csv-ts-delta1/). Right: delta 2's package pkg-csvts-468ba436, BUILT_FROM 468ba4365c259e2d3bbb4486dbf3f6c0db8e3be7, the same probes.
+# Records pair by tag (or cell) in order. Normalised before comparing: scratchpad and warehouse paths, generated 32-hex view and frame ids, random temporary directory and Parquet file names, and the clock-relative ice_t snapshot time.
+# Steps (26, every exit 0): rp.py Z0-Z7 A T S W0-W3 E (step 0's table and its plans), readers.py, wsweep.py true/false, x.py, vp.py main and ntzb, vp2.py, vp3.py, vp4.py, delta1.py.
+
+d2-Z0.jsonl: 450 vs 450 records, 0 keys differ
+d2-Z1.jsonl: 450 vs 450 records, 0 keys differ
+d2-Z2.jsonl: 450 vs 450 records, 0 keys differ
+d2-Z3.jsonl: 450 vs 450 records, 0 keys differ
+d2-Z4.jsonl: 450 vs 450 records, 0 keys differ
+d2-Z5.jsonl: 450 vs 450 records, 0 keys differ
+d2-Z6.jsonl: 450 vs 450 records, 0 keys differ
+d2-Z7.jsonl: 450 vs 450 records, 0 keys differ
+d2-A.jsonl: 884 vs 884 records, 0 keys differ
+d2-T.jsonl: 408 vs 408 records, 0 keys differ
+d2-S.jsonl: 8 vs 8 records, 0 keys differ
+d2-W0.jsonl: 84 vs 84 records, 0 keys differ
+d2-W1.jsonl: 84 vs 84 records, 0 keys differ
+d2-W2.jsonl: 84 vs 84 records, 0 keys differ
+d2-W3.jsonl: 84 vs 84 records, 0 keys differ
+d2-E.jsonl: 16 vs 16 records, 0 keys differ
+readers-d2.jsonl: 1176 vs 1176 records, 0 keys differ
+d2-true.jsonl: 1551 vs 1551 records, 0 keys differ
+d2-false.jsonl: 1551 vs 1551 records, 0 keys differ
+d2-X.jsonl: 119 vs 119 records, 0 keys differ
+vp-main-d2.jsonl: 331 vs 331 records, 0 keys differ
+vp-ntzb-d2.jsonl: 12 vs 12 records, 0 keys differ
+vp2-main-d2.jsonl: 433 vs 433 records, 0 keys differ
+vp3-main-d2.jsonl: 86 vs 86 records, 0 keys differ
+vp4-main-d2.jsonl: 42 vs 42 records, 0 keys differ
+d1-d2-main.jsonl: 84 vs 84 records, 0 keys differ
+

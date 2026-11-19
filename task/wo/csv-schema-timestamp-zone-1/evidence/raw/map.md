@@ -13,5 +13,11 @@
   count, a hash and the late row.
 - `delta1-bar.txt` — delta 1's bar: the verifier's probes, the reader sweep, `x.py`, `delta1.py` and step 0's table,
   each on main, the old head and the delta 1 head, with every moved cell; the write sweep's comparison.
+- `delta2-bar.txt` — delta 2's bar: every bar probe's records on the delta 2 package against delta 1's, cell by
+  cell (0 differ).
+- `delta2-diag.txt` — where delta 1's cost went: the one-process A/B tables, the K2 twin on seven builds and the
+  `EXPLAIN ANALYZE` metrics (cost.md "Delta 2").
+- `delta2-cost-samples.jsonl`, `delta2-cost-raw-csv.jsonl` — delta 1's runner on the delta 2 package;
+  `delta2-costiso-raw.jsonl` — the side-by-side series (main, the first head, delta 1, delta 2).
 
 Up: [../map.md](../map.md).

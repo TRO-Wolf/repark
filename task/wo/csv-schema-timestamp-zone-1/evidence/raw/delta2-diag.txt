@@ -1,0 +1,85 @@
+# CSV-SCHEMA-TIMESTAMP-ZONE-1 delta 2: where delta 1's cost went (lane B, cores 48-57, every process alone under the exclusive measure lock)
+# Each table: one process per build per round, builds alternating; per process a warm-up then 9 timed repetitions of each case; median over all repetitions; ms.
+# *_planned: the frame is planned once outside the clock; k2/k0_hour: as csv_cost.py times them; read: s.read.schema(...).csv(path) alone.
+
+## ab1: main, the first head, delta 1 (4 rounds)
+case                     pkg-main-4c365814      pkg-csvts-186c34b0      pkg-csvts-1ee847b7
+k2                         51.33ms  1.000x         73.67ms  1.435x         78.59ms  1.531x
+k2_planned                 48.81ms  1.000x         68.38ms  1.401x         75.67ms  1.550x
+k0_hour                    48.30ms  1.000x         67.26ms  1.393x         78.80ms  1.632x
+k0_hour_planned            47.85ms  1.000x         63.57ms  1.329x         72.47ms  1.515x
+k0_count                   19.58ms  1.000x         21.80ms  1.113x         23.29ms  1.190x
+read                        1.22ms  1.000x          2.17ms  1.778x          2.81ms  2.297x
+
+## ab2: inside delta 1's build: its named-only scan [n Int64, ts Utf8] against the all-text scan [Utf8, Utf8] (the inferSchema pre-scan forced) (4 rounds)
+case                              d1:named              d1:alltext
+k2                         92.90ms  1.000x         95.18ms  1.025x
+k2_planned                 78.16ms  1.000x         85.58ms  1.095x
+k0_hour                    76.21ms  1.000x         77.67ms  1.019x
+k0_hour_planned            75.22ms  1.000x         76.37ms  1.015x
+k0_count                   22.99ms  1.000x         23.12ms  1.006x
+read                        3.12ms  1.000x          2.19ms  0.702x
+
+## ab3: the first head; the first head's reader.py on main 2900efde's build (pkg-sum-845766fd, = c427b3b4); delta 1 (4 rounds)
+case                    pkg-csvts-186c34b0  csv-ts-delta2/hyb-c427      pkg-csvts-1ee847b7
+k2                         78.13ms  1.000x         78.88ms  1.010x         85.13ms  1.090x
+k2_planned                 76.03ms  1.000x         67.55ms  0.889x         91.22ms  1.200x
+k0_hour                    67.84ms  1.000x         67.57ms  0.996x         77.46ms  1.142x
+k0_hour_planned            67.00ms  1.000x         66.10ms  0.987x         74.26ms  1.108x
+k0_count                   21.76ms  1.000x         20.67ms  0.950x         23.02ms  1.058x
+read                        1.99ms  1.000x          2.07ms  1.042x          2.65ms  1.333x
+
+## ab4: one executed path on two builds: delta 1's reader.py over the all-text scan on main 2900efde's build (hyb-d1py) and on delta 1's build (alltext); delta 1 as shipped (named) (4 rounds)
+case                        hyb-c427:named          hyb-d1py:named  csvts-1ee847b7:alltext  g-csvts-1ee847b7:named
+k2                         77.13ms  1.000x         84.03ms  1.089x         92.50ms  1.199x         91.85ms  1.191x
+k2_planned                 76.99ms  1.000x         77.65ms  1.009x         88.85ms  1.154x         88.58ms  1.151x
+k0_hour                    70.55ms  1.000x         70.48ms  0.999x         80.47ms  1.141x         78.04ms  1.106x
+k0_hour_planned            68.39ms  1.000x         67.09ms  0.981x         73.97ms  1.082x         72.43ms  1.059x
+k0_count                   22.14ms  1.000x         21.26ms  0.960x         21.72ms  0.981x         23.00ms  1.039x
+read                        2.25ms  1.000x          2.08ms  0.928x          2.25ms  1.000x          2.39ms  1.066x
+
+## micro2: single kernels over the all-text scan, main 2900efde's build against delta 1's (4 rounds)
+case                              hyb-d1py      pkg-csvts-1ee847b7
+count_star                 18.07ms  1.000x         18.24ms  1.010x
+count_text                 23.18ms  1.000x         24.73ms  1.067x
+count_ts                   66.41ms  1.000x         74.05ms  1.115x
+max_hour_ts                79.91ms  1.000x         73.96ms  0.926x
+max_hour_ntz               30.73ms  1.000x         31.74ms  1.033x
+max_n                      22.53ms  1.000x         22.92ms  1.017x
+
+## k2eq: a K2 twin (an all-text native read, the facade's TIMESTAMP cast, a frame view) on seven builds; per-process minimums show the build spread (3 rounds)
+case                      pkg-sum-845766fd      pkg-csvts-1ee847b7   pkg-csvts-1ee847b7-th       pkg-main-4c365814        pkg-sum-a8016e75        pkg-avg-27d6149f       pkg-main-6286ba19
+k2eq_planned               80.15ms  1.000x         90.06ms  1.124x         89.43ms  1.116x         58.65ms  0.732x         85.32ms  1.064x         79.17ms  0.988x         70.81ms  0.883x
+k2eq                       81.91ms  1.000x         95.60ms  1.167x         93.42ms  1.141x         76.57ms  0.935x         78.71ms  0.961x         81.64ms  0.997x         76.49ms  0.934x
+count_scan                 19.15ms  1.000x         19.86ms  1.037x         18.97ms  0.991x         20.02ms  1.046x         17.63ms  0.921x         17.85ms  0.932x         17.79ms  0.929x
+  min k2eq_planned pkg-sum-845766fd          57.4  58.1  59.4
+  min k2eq_planned pkg-csvts-1ee847b7        65.2  63.7  70.0
+  min k2eq_planned pkg-csvts-1ee847b7-th     66.1  65.5  63.4
+  min k2eq_planned pkg-main-4c365814         52.0  53.4  52.8
+  min k2eq_planned pkg-sum-a8016e75          60.9  58.4  63.6
+  min k2eq_planned pkg-avg-27d6149f          57.3  56.9  60.4
+  min k2eq_planned pkg-main-6286ba19         53.4  53.8  54.8
+
+## an1: EXPLAIN ANALYZE operator metrics, ms summed over partitions, median of 15 (main, first head, delta 1)
+case/op/key                                                              pkg-main-4c365814  pkg-csvts-186c34b0  pkg-csvts-1ee847b7
+k0_hour/AggregateExec/Partial/elapsed_compute                                        41.24               38.44               38.72
+k0_hour/DataSourceExec/elapsed_compute                                              216.86              161.65              169.65
+k0_hour/DataSourceExec/time_elapsed_opening                                          13.52               15.69               15.71
+k0_hour/DataSourceExec/time_elapsed_processing                                      220.71              168.08              177.73
+k0_hour/DataSourceExec/time_elapsed_scanning_total                                  292.65              354.33              404.36
+k0_hour/FilterExec/elapsed_compute                                                    3.67               23.76                4.00
+k0_hour/ProjectionExec/elapsed_compute                                               16.39               65.36               90.07
+k2/AggregateExec/Partial/elapsed_compute                                             83.88               87.95               85.70
+k2/DataSourceExec/elapsed_compute                                                   184.87              146.72              150.74
+k2/DataSourceExec/time_elapsed_opening                                               17.40               19.28               19.03
+k2/DataSourceExec/time_elapsed_processing                                           265.01              471.64              563.28
+k2/DataSourceExec/time_elapsed_scanning_total                                       343.85              548.27              642.71
+
+## ev1: the committed probe evidence/probes/delta2_ab.py on main, the first head, delta 1 and delta 2 (3 rounds; median ms, ratio to main, minimum ms)
+case                             -main-4c365814                csvts-186c34b0                csvts-1ee847b7                csvts-468ba436
+k2                     54.49 (1.000) min  40.36      79.71 (1.463) min  54.23      94.33 (1.731) min  70.53      82.07 (1.506) min  58.87
+k2_planned             47.66 (1.000) min  36.71      74.10 (1.555) min  53.66      90.63 (1.902) min  62.64      75.87 (1.592) min  56.50
+k0_hour                46.19 (1.000) min  41.70      66.54 (1.441) min  60.07      77.36 (1.675) min  68.06      70.30 (1.522) min  59.73
+k0_hour_planned        45.07 (1.000) min  37.12      64.31 (1.427) min  55.79      76.40 (1.695) min  63.56      64.66 (1.435) min  57.18
+k0_count               21.42 (1.000) min  14.05      21.26 (0.993) min  17.98      23.06 (1.077) min  18.44      21.67 (1.012) min  18.35
+read                    1.23 (1.000) min   1.05       2.04 (1.657) min   1.57       2.90 (2.349) min   2.25       2.96 (2.406) min   2.06

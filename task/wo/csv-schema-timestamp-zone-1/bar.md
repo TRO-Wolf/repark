@@ -238,4 +238,43 @@ Angeles and New York (`vp4` `ntz_gap_{cast,json,nullv}`). Spark keeps the wall c
 
 Raw: [evidence/raw/delta1-bar.txt](evidence/raw/delta1-bar.txt).
 
+## Delta 2 (2026-11-19): cost only
+
+**Why.** Delta 1 met the bar above but missed Fable's cost bars (cost.md "Delta 1"). The orchestrator's call under the
+owner's delegation: a second delta, past the one-delta cap, for cost only (cost.md "Delta 2" holds the isolation, the
+cause and the cost).
+
+**The remedy.** `read_csv_path` is main's again, so the native library is main's own. `_load_csv` re-reads an existing
+local path through its `file://` URL (`Path.as_uri()`, with a trailing `/` for a directory). Main's `read_csv_path`
+skips the local all-text pre-scan for a URL, so it lets DataFusion infer and re-reads only the named columns as Utf8:
+the path the `file://` cells of `vp3.py` and `delta1.py` already took. A glob, a remote path or a missing path keeps its
+spelling, and main's code already re-reads only the named columns there. The `inferSchema` re-read
+(`_finish_csv_infer_schema`) keeps its local path and its all-text pre-scan, as on main. `reader.py` drops delta 1's
+`inferschema` pop (main's code never reads that option) and adds one line; it is 999 lines.
+
+**The bar** (package `S/ddu-work/pkg-csvts-468ba436`, `BUILT_FROM` `468ba436`, cell by cell against delta 1's package
+`pkg-csvts-1ee847b7` on the same probes; generated view and frame ids, Parquet file names, warehouse paths and the
+clock-relative `ice_t` snapshot time are normalised): **0 cells differ from delta 1** in every file below, so every
+count in the delta 1 table above stands, and 0 EQUAL cells are lost against main outside the two named exceptions.
+
+| line | records | differ from delta 1 |
+|---|---|---|
+| the verifier's `vp.py`, builder opt-in, `vp2.py`, `vp3.py`, `vp4.py` | 331, 12, 433, 86, 42 | 0 |
+| `delta1.py` (with the `inferSchema` caller's 32 cells) | 84 | 0 |
+| step 0's table (`Z0`-`Z7`, `A`, `T`, `S`, `W0`-`W3`, `E`: `csv_s`/`csv_f` matching, cross-setting, the 8 writes, the 16 plans) | 5,252 | 0 |
+| `x.py` (115 cells and its plans) | 119 | 0 |
+| the reader sweep | 1,176 | 0 |
+| part 2's write sweep, both ANSI modes | 3,102 | 0 |
+
+- F1 and F2 answer Spark as on delta 1; the `TIMESTAMP_NTZ` field keeps the scan's type; `EXPLAIN` for step 0's 16
+  plans and `x.py`'s plans equals delta 1's, so the local path's `csv_s` plan is delta 1's (above).
+- **Pins.** Delta 1's 8 cells and the LMT read stay green (`test_csv_schema_timestamp_zone_1.py`,
+  `test_text_write_timestamp_zone_1.py`, with `test_csv_infer_perf_1.py`: 351 passed, 3 skipped (two live-oracle tiers and moto), as on delta 1's package). No new pin: the behaviour is
+  delta 1's. The Rust test delta 1 added pinned the withdrawn `read_csv_path` change, so it now pins the contract
+  `_load_csv` relies on: `read_options::tests::a_file_url_csv_utf8_columns_read_types_only_the_named_columns_as_utf8`
+  (a `file://` URL with `utf8_columns=ts` types `Int64`, `Utf8`, `Float64`; the local path types all three `Utf8`).
+  It passes on main's code by design.
+
+Raw: [evidence/raw/delta2-bar.txt](evidence/raw/delta2-bar.txt).
+
 Up: [map.md](map.md).

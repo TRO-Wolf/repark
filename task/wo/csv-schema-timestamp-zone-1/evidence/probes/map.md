@@ -16,5 +16,8 @@
 - `delta1.py <engine> <wh> <out>` — delta 1's cells (Spark live): the verifier's F1 and F2 shapes, its N1 shapes, a
   `STRING`/`DATE` field beside a `TIMESTAMP` field, and the `inferSchema` re-read's shapes on a local and a `file://`
   path (a column empty for its first 1,100 rows, header names with spaces or empty, a `comment` line, `multiLine`).
+- `delta2_ab.py <label> <data> <out> named|alltext|twin` — delta 2's one-process A/B: K2, `k0_hour`, `k0_count`
+  and the read, each also planned once; `alltext` forces the `inferSchema` pre-scan on the re-read, `twin` builds K2
+  over an all-text read and the facade's cast.
 
 Up: [../map.md](../map.md).
