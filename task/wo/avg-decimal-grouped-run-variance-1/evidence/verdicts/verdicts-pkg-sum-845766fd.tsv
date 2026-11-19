@@ -1,0 +1,1241 @@
+query	ansi	configs	vs_local1	vs_local4	exact	answers
+big/c/g/avg/all	false	4c on,SET 4	V4 V5	V4 V5	vv	rows=3000 nulls=398 x22; rows=3000 nulls=583 x9; rows=3000 nulls=618 x6; rows=3000 nulls=352 x2
+big/c/g/avg/all	true	4c on,SET 4	E E	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+big/c/g/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	rows=3000 nulls=0 x120
+big/c/g/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	rows=3000 nulls=0 x120
+big/c/g/try_avg/all	false	4c on,SET 4	V3 V4	V3 V4	vv	rows=3000 nulls=398 x16; rows=3000 nulls=618 x11; rows=3000 nulls=583 x10; rows=3000 nulls=352 x3
+big/c/g/try_avg/all	true	4c on,SET 4	V3 V4	V3 V4	vv	rows=3000 nulls=398 x23; rows=3000 nulls=618 x8; rows=3000 nulls=583 x6; rows=3000 nulls=645 x3
+big/c/g/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	rows=3000 nulls=0 x120
+big/c/g/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	rows=3000 nulls=0 x120
+big/c/u/avg/all	false	4c on,SET 4	X X	E E	nn	NULL x40
+big/c/u/avg/all	true	4c on,SET 4	R R	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+big/c/u/avg/g7	false	4c on,SET 4	E E	E E	yy	0.0167 x40
+big/c/u/avg/g7	true	4c on,SET 4	E E	E E	yy	0.0167 x40
+big/c/u/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	15000 x120
+big/c/u/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	R R R R R R	yyyyyy	15000 x120
+big/c/u/sum/g7	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5 x120
+big/c/u/sum/g7	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5 x120
+big/c/u/try_avg/all	false	4c on,SET 4	X X	E E	nn	NULL x40
+big/c/u/try_avg/all	true	4c on,SET 4	X X	E E	nn	NULL x40
+big/c/u/try_avg/g7	false	4c on,SET 4	E E	E E	yy	0.0167 x40
+big/c/u/try_avg/g7	true	4c on,SET 4	E E	E E	yy	0.0167 x40
+big/c/u/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	15000 x120
+big/c/u/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	15000 x120
+big/c/u/try_sum/g7	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5 x120
+big/c/u/try_sum/g7	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5 x120
+over/fit_p19/g/avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/fit_p19/g/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p19/g/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/fit_p19/g/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/fit_p19/g/try_avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/fit_p19/g/try_avg/all	true	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/fit_p19/g/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/fit_p19/g/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/fit_p19/slide/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/fit_p19/slide/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p19/u/avg/all	false	4c on,SET 4	R R	R R	yy	NULL x40
+over/fit_p19/u/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p19/u/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/fit_p19/u/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/fit_p19/u/try_avg/all	false	4c on,SET 4	R R	R R	yy	NULL x40
+over/fit_p19/u/try_avg/all	true	4c on,SET 4	R R	R R	yy	NULL x40
+over/fit_p19/u/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/fit_p19/u/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/fit_p19/win/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/fit_p19/win/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p19_two/g/avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/fit_p19_two/g/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p19_two/g/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/fit_p19_two/g/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/fit_p19_two/g/try_avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/fit_p19_two/g/try_avg/all	true	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/fit_p19_two/g/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/fit_p19_two/g/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/fit_p19_two/slide/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", "3.5"], ["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/fit_p19_two/slide/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p19_two/u/avg/all	false	4c on,SET 4	R R	R R	yy	NULL x40
+over/fit_p19_two/u/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p19_two/u/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/fit_p19_two/u/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/fit_p19_two/u/try_avg/all	false	4c on,SET 4	R R	R R	yy	NULL x40
+over/fit_p19_two/u/try_avg/all	true	4c on,SET 4	R R	R R	yy	NULL x40
+over/fit_p19_two/u/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/fit_p19_two/u/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/fit_p19_two/win/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", null], ["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/fit_p19_two/win/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p20/g/avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/fit_p20/g/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p20/g/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/fit_p20/g/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/fit_p20/g/try_avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/fit_p20/g/try_avg/all	true	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/fit_p20/g/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/fit_p20/g/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/fit_p20/slide/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/fit_p20/slide/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p20/u/avg/all	false	4c on,SET 4	R R	R R	yy	NULL x40
+over/fit_p20/u/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p20/u/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/fit_p20/u/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/fit_p20/u/try_avg/all	false	4c on,SET 4	R R	R R	yy	NULL x40
+over/fit_p20/u/try_avg/all	true	4c on,SET 4	R R	R R	yy	NULL x40
+over/fit_p20/u/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/fit_p20/u/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/fit_p20/win/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/fit_p20/win/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p20_two/g/avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/fit_p20_two/g/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p20_two/g/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/fit_p20_two/g/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/fit_p20_two/g/try_avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/fit_p20_two/g/try_avg/all	true	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/fit_p20_two/g/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/fit_p20_two/g/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/fit_p20_two/slide/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", "3.5"], ["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/fit_p20_two/slide/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p20_two/u/avg/all	false	4c on,SET 4	R R	R R	yy	NULL x40
+over/fit_p20_two/u/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/fit_p20_two/u/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/fit_p20_two/u/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/fit_p20_two/u/try_avg/all	false	4c on,SET 4	R R	R R	yy	NULL x40
+over/fit_p20_two/u/try_avg/all	true	4c on,SET 4	R R	R R	yy	NULL x40
+over/fit_p20_two/u/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/fit_p20_two/u/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/fit_p20_two/win/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", null], ["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/fit_p20_two/win/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/neg_p19/g/avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/neg_p19/g/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/neg_p19/g/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/neg_p19/g/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/neg_p19/g/try_avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/neg_p19/g/try_avg/all	true	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/neg_p19/g/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/neg_p19/g/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/neg_p19/slide/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/neg_p19/slide/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/neg_p19/u/avg/all	false	4c on,SET 4	R R	R R	nn	-1.25 x40
+over/neg_p19/u/avg/all	true	4c on,SET 4	R R	R R	nn	-1.25 x40
+over/neg_p19/u/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/neg_p19/u/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/neg_p19/u/try_avg/all	false	4c on,SET 4	R R	R R	nn	-1.25 x40
+over/neg_p19/u/try_avg/all	true	4c on,SET 4	R R	R R	nn	-1.25 x40
+over/neg_p19/u/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/neg_p19/u/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/neg_p19/win/avg/all	false	4c on,SET 4	R R	R R	nn	[["1", "-1.25"], ["1", "-1.25"], ["1", "-1.25"], ["1", "-1.25"]] x40
+over/neg_p19/win/avg/all	true	4c on,SET 4	R R	R R	nn	[["1", "-1.25"], ["1", "-1.25"], ["1", "-1.25"], ["1", "-1.25"]] x40
+over/neg_p19_two/g/avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/neg_p19_two/g/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/neg_p19_two/g/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/neg_p19_two/g/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/neg_p19_two/g/try_avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/neg_p19_two/g/try_avg/all	true	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/neg_p19_two/g/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/neg_p19_two/g/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/neg_p19_two/slide/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", null], ["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/neg_p19_two/slide/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/neg_p19_two/u/avg/all	false	4c on,SET 4	R R	R R	nn	-1 x40
+over/neg_p19_two/u/avg/all	true	4c on,SET 4	R R	R R	nn	-1 x40
+over/neg_p19_two/u/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/neg_p19_two/u/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/neg_p19_two/u/try_avg/all	false	4c on,SET 4	R R	R R	nn	-1 x40
+over/neg_p19_two/u/try_avg/all	true	4c on,SET 4	R R	R R	nn	-1 x40
+over/neg_p19_two/u/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/neg_p19_two/u/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/neg_p19_two/win/avg/all	false	4c on,SET 4	R R	R R	nn	[["1", "-1"], ["1", "-1"], ["1", "-1"], ["1", "-1"], ["1", "-1"]] x40
+over/neg_p19_two/win/avg/all	true	4c on,SET 4	R R	R R	nn	[["1", "-1"], ["1", "-1"], ["1", "-1"], ["1", "-1"], ["1", "-1"]] x40
+over/neg_p20/g/avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/neg_p20/g/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/neg_p20/g/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/neg_p20/g/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/neg_p20/g/try_avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/neg_p20/g/try_avg/all	true	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/neg_p20/g/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/neg_p20/g/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/neg_p20/slide/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/neg_p20/slide/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/neg_p20/u/avg/all	false	4c on,SET 4	R R	R R	nn	-1.25 x40
+over/neg_p20/u/avg/all	true	4c on,SET 4	R R	R R	nn	-1.25 x40
+over/neg_p20/u/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/neg_p20/u/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/neg_p20/u/try_avg/all	false	4c on,SET 4	R R	R R	nn	-1.25 x40
+over/neg_p20/u/try_avg/all	true	4c on,SET 4	R R	R R	nn	-1.25 x40
+over/neg_p20/u/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/neg_p20/u/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/neg_p20/win/avg/all	false	4c on,SET 4	R R	R R	nn	[["1", "-1.25"], ["1", "-1.25"], ["1", "-1.25"], ["1", "-1.25"]] x40
+over/neg_p20/win/avg/all	true	4c on,SET 4	R R	R R	nn	[["1", "-1.25"], ["1", "-1.25"], ["1", "-1.25"], ["1", "-1.25"]] x40
+over/neg_p20_two/g/avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/neg_p20_two/g/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/neg_p20_two/g/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/neg_p20_two/g/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/neg_p20_two/g/try_avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/neg_p20_two/g/try_avg/all	true	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/neg_p20_two/g/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/neg_p20_two/g/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/neg_p20_two/slide/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", null], ["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/neg_p20_two/slide/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/neg_p20_two/u/avg/all	false	4c on,SET 4	R R	R R	nn	-1 x40
+over/neg_p20_two/u/avg/all	true	4c on,SET 4	R R	R R	nn	-1 x40
+over/neg_p20_two/u/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/neg_p20_two/u/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/neg_p20_two/u/try_avg/all	false	4c on,SET 4	R R	R R	nn	-1 x40
+over/neg_p20_two/u/try_avg/all	true	4c on,SET 4	R R	R R	nn	-1 x40
+over/neg_p20_two/u/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/neg_p20_two/u/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/neg_p20_two/win/avg/all	false	4c on,SET 4	R R	R R	nn	[["1", "-1"], ["1", "-1"], ["1", "-1"], ["1", "-1"], ["1", "-1"]] x40
+over/neg_p20_two/win/avg/all	true	4c on,SET 4	R R	R R	nn	[["1", "-1"], ["1", "-1"], ["1", "-1"], ["1", "-1"], ["1", "-1"]] x40
+over/wrap5_p19/g/avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/wrap5_p19/g/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/wrap5_p19/g/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/wrap5_p19/g/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/wrap5_p19/g/try_avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/wrap5_p19/g/try_avg/all	true	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/wrap5_p19/g/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/wrap5_p19/g/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/wrap5_p19/slide/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/wrap5_p19/slide/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/wrap5_p19/u/avg/all	false	4c on,SET 4	R R	R R	nn	1.25 x40
+over/wrap5_p19/u/avg/all	true	4c on,SET 4	R R	R R	nn	1.25 x40
+over/wrap5_p19/u/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/wrap5_p19/u/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/wrap5_p19/u/try_avg/all	false	4c on,SET 4	R R	R R	nn	1.25 x40
+over/wrap5_p19/u/try_avg/all	true	4c on,SET 4	R R	R R	nn	1.25 x40
+over/wrap5_p19/u/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/wrap5_p19/u/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/wrap5_p19/win/avg/all	false	4c on,SET 4	R R	R R	nn	[["1", "1.25"], ["1", "1.25"], ["1", "1.25"], ["1", "1.25"]] x40
+over/wrap5_p19/win/avg/all	true	4c on,SET 4	R R	R R	nn	[["1", "1.25"], ["1", "1.25"], ["1", "1.25"], ["1", "1.25"]] x40
+over/wrap5_p19_two/g/avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/wrap5_p19_two/g/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/wrap5_p19_two/g/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/wrap5_p19_two/g/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/wrap5_p19_two/g/try_avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/wrap5_p19_two/g/try_avg/all	true	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/wrap5_p19_two/g/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/wrap5_p19_two/g/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/wrap5_p19_two/slide/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", "0"], ["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/wrap5_p19_two/slide/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/wrap5_p19_two/u/avg/all	false	4c on,SET 4	R R	R R	nn	1 x40
+over/wrap5_p19_two/u/avg/all	true	4c on,SET 4	R R	R R	nn	1 x40
+over/wrap5_p19_two/u/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/wrap5_p19_two/u/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/wrap5_p19_two/u/try_avg/all	false	4c on,SET 4	R R	R R	nn	1 x40
+over/wrap5_p19_two/u/try_avg/all	true	4c on,SET 4	R R	R R	nn	1 x40
+over/wrap5_p19_two/u/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/wrap5_p19_two/u/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	nnnnnn	ERR Execution error: sum state: a partial of a decimal of precision 19 or under passed 128 bit x120
+over/wrap5_p19_two/win/avg/all	false	4c on,SET 4	R R	R R	nn	[["1", "1"], ["1", "1"], ["1", "1"], ["1", "1"], ["1", "1"]] x40
+over/wrap5_p19_two/win/avg/all	true	4c on,SET 4	R R	R R	nn	[["1", "1"], ["1", "1"], ["1", "1"], ["1", "1"], ["1", "1"]] x40
+over/wrap5_p20/g/avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/wrap5_p20/g/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/wrap5_p20/g/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/wrap5_p20/g/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/wrap5_p20/g/try_avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/wrap5_p20/g/try_avg/all	true	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/wrap5_p20/g/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/wrap5_p20/g/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/wrap5_p20/slide/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/wrap5_p20/slide/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/wrap5_p20/u/avg/all	false	4c on,SET 4	R R	R R	nn	1.25 x40
+over/wrap5_p20/u/avg/all	true	4c on,SET 4	R R	R R	nn	1.25 x40
+over/wrap5_p20/u/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/wrap5_p20/u/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/wrap5_p20/u/try_avg/all	false	4c on,SET 4	R R	R R	nn	1.25 x40
+over/wrap5_p20/u/try_avg/all	true	4c on,SET 4	R R	R R	nn	1.25 x40
+over/wrap5_p20/u/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/wrap5_p20/u/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/wrap5_p20/win/avg/all	false	4c on,SET 4	R R	R R	nn	[["1", "1.25"], ["1", "1.25"], ["1", "1.25"], ["1", "1.25"]] x40
+over/wrap5_p20/win/avg/all	true	4c on,SET 4	R R	R R	nn	[["1", "1.25"], ["1", "1.25"], ["1", "1.25"], ["1", "1.25"]] x40
+over/wrap5_p20_two/g/avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/wrap5_p20_two/g/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/wrap5_p20_two/g/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/wrap5_p20_two/g/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/wrap5_p20_two/g/try_avg/all	false	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/wrap5_p20_two/g/try_avg/all	true	4c on,SET 4	R R	R R	yy	1|NULL x40
+over/wrap5_p20_two/g/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/wrap5_p20_two/g/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|NULL x120
+over/wrap5_p20_two/slide/avg/all	false	4c on,SET 4	R R	R R	yy	[["1", "0"], ["1", null], ["1", null], ["1", null], ["1", null]] x40
+over/wrap5_p20_two/slide/avg/all	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+over/wrap5_p20_two/u/avg/all	false	4c on,SET 4	R R	R R	nn	1 x40
+over/wrap5_p20_two/u/avg/all	true	4c on,SET 4	R R	R R	nn	1 x40
+over/wrap5_p20_two/u/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/wrap5_p20_two/u/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	C C C C C C	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+over/wrap5_p20_two/u/try_avg/all	false	4c on,SET 4	R R	R R	nn	1 x40
+over/wrap5_p20_two/u/try_avg/all	true	4c on,SET 4	R R	R R	nn	1 x40
+over/wrap5_p20_two/u/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/wrap5_p20_two/u/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	NULL x120
+over/wrap5_p20_two/win/avg/all	false	4c on,SET 4	R R	R R	nn	[["1", "1"], ["1", "1"], ["1", "1"], ["1", "1"], ["1", "1"]] x40
+over/wrap5_p20_two/win/avg/all	true	4c on,SET 4	R R	R R	nn	[["1", "1"], ["1", "1"], ["1", "1"], ["1", "1"], ["1", "1"]] x40
+t/c10_2/g/sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-0.12"], ["1", "0.05"], ["10", "0"], ["11", "0.13"], ["12",... x100
+t/c10_2/g/sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-0.12"], ["1", "0.05"], ["10", "0"], ["11", "0.13"], ["12",... x100
+t/c10_2/g/sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-0.12 x100
+t/c10_2/g/sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-0.12 x100
+t/c10_2/g/sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|0.05 x100
+t/c10_2/g/sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|0.05 x100
+t/c10_2/g/sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c10_2/g/sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c10_2/g/sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|0.13 x100
+t/c10_2/g/sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|0.13 x100
+t/c10_2/g/sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c10_2/g/sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c10_2/g/sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|299999999.97 x100
+t/c10_2/g/sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|299999999.97 x100
+t/c10_2/g/sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-299999999.97 x100
+t/c10_2/g/sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-299999999.97 x100
+t/c10_2/g/sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|99999999.99 x100
+t/c10_2/g/sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|99999999.99 x100
+t/c10_2/g/sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|100000000 x100
+t/c10_2/g/sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|100000000 x100
+t/c10_2/g/sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|0.01 x100
+t/c10_2/g/sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|0.01 x100
+t/c10_2/g/sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c10_2/g/sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c10_2/g/sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-0.03 x100
+t/c10_2/g/sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-0.03 x100
+t/c10_2/g/sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|49999999.99 x100
+t/c10_2/g/sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|49999999.99 x100
+t/c10_2/g/try_sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-0.12"], ["1", "0.05"], ["10", "0"], ["11", "0.13"], ["12",... x100
+t/c10_2/g/try_sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-0.12"], ["1", "0.05"], ["10", "0"], ["11", "0.13"], ["12",... x100
+t/c10_2/g/try_sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-0.12 x100
+t/c10_2/g/try_sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-0.12 x100
+t/c10_2/g/try_sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|0.05 x100
+t/c10_2/g/try_sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|0.05 x100
+t/c10_2/g/try_sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c10_2/g/try_sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c10_2/g/try_sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|0.13 x100
+t/c10_2/g/try_sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|0.13 x100
+t/c10_2/g/try_sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c10_2/g/try_sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c10_2/g/try_sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|299999999.97 x100
+t/c10_2/g/try_sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|299999999.97 x100
+t/c10_2/g/try_sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-299999999.97 x100
+t/c10_2/g/try_sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-299999999.97 x100
+t/c10_2/g/try_sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|99999999.99 x100
+t/c10_2/g/try_sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|99999999.99 x100
+t/c10_2/g/try_sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|100000000 x100
+t/c10_2/g/try_sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|100000000 x100
+t/c10_2/g/try_sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|0.01 x100
+t/c10_2/g/try_sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|0.01 x100
+t/c10_2/g/try_sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c10_2/g/try_sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c10_2/g/try_sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-0.03 x100
+t/c10_2/g/try_sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-0.03 x100
+t/c10_2/g/try_sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|49999999.99 x100
+t/c10_2/g/try_sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|49999999.99 x100
+t/c10_2/u/sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	250000000.02 x100
+t/c10_2/u/sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	250000000.02 x100
+t/c10_2/u/sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.12 x100
+t/c10_2/u/sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.12 x100
+t/c10_2/u/sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.05 x100
+t/c10_2/u/sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.05 x100
+t/c10_2/u/sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c10_2/u/sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c10_2/u/sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.13 x100
+t/c10_2/u/sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.13 x100
+t/c10_2/u/sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c10_2/u/sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c10_2/u/sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	299999999.97 x100
+t/c10_2/u/sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	299999999.97 x100
+t/c10_2/u/sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-299999999.97 x100
+t/c10_2/u/sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-299999999.97 x100
+t/c10_2/u/sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	99999999.99 x100
+t/c10_2/u/sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	99999999.99 x100
+t/c10_2/u/sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	100000000 x100
+t/c10_2/u/sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	100000000 x100
+t/c10_2/u/sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.01 x100
+t/c10_2/u/sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.01 x100
+t/c10_2/u/sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c10_2/u/sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c10_2/u/sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.03 x100
+t/c10_2/u/sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.03 x100
+t/c10_2/u/sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	49999999.99 x100
+t/c10_2/u/sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	49999999.99 x100
+t/c10_2/u/try_sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	250000000.02 x100
+t/c10_2/u/try_sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	250000000.02 x100
+t/c10_2/u/try_sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.12 x100
+t/c10_2/u/try_sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.12 x100
+t/c10_2/u/try_sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.05 x100
+t/c10_2/u/try_sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.05 x100
+t/c10_2/u/try_sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c10_2/u/try_sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c10_2/u/try_sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.13 x100
+t/c10_2/u/try_sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.13 x100
+t/c10_2/u/try_sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c10_2/u/try_sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c10_2/u/try_sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	299999999.97 x100
+t/c10_2/u/try_sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	299999999.97 x100
+t/c10_2/u/try_sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-299999999.97 x100
+t/c10_2/u/try_sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-299999999.97 x100
+t/c10_2/u/try_sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	99999999.99 x100
+t/c10_2/u/try_sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	99999999.99 x100
+t/c10_2/u/try_sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	100000000 x100
+t/c10_2/u/try_sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	100000000 x100
+t/c10_2/u/try_sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.01 x100
+t/c10_2/u/try_sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.01 x100
+t/c10_2/u/try_sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c10_2/u/try_sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c10_2/u/try_sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.03 x100
+t/c10_2/u/try_sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.03 x100
+t/c10_2/u/try_sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	49999999.99 x100
+t/c10_2/u/try_sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	49999999.99 x100
+t/c18_0/g/sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x100
+t/c18_0/g/sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x100
+t/c18_0/g/sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-12 x100
+t/c18_0/g/sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-12 x100
+t/c18_0/g/sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|5 x100
+t/c18_0/g/sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|5 x100
+t/c18_0/g/sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c18_0/g/sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c18_0/g/sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|13 x100
+t/c18_0/g/sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|13 x100
+t/c18_0/g/sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c18_0/g/sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c18_0/g/sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|2999999999999999997 x100
+t/c18_0/g/sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|2999999999999999997 x100
+t/c18_0/g/sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-2999999999999999997 x100
+t/c18_0/g/sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-2999999999999999997 x100
+t/c18_0/g/sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|999999999999999999 x100
+t/c18_0/g/sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|999999999999999999 x100
+t/c18_0/g/sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|1000000000000000000 x100
+t/c18_0/g/sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|1000000000000000000 x100
+t/c18_0/g/sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|1 x100
+t/c18_0/g/sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|1 x100
+t/c18_0/g/sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c18_0/g/sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c18_0/g/sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-3 x100
+t/c18_0/g/sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-3 x100
+t/c18_0/g/sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|499999999999999999 x100
+t/c18_0/g/sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|499999999999999999 x100
+t/c18_0/g/try_sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x100
+t/c18_0/g/try_sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x100
+t/c18_0/g/try_sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-12 x100
+t/c18_0/g/try_sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-12 x100
+t/c18_0/g/try_sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|5 x100
+t/c18_0/g/try_sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|5 x100
+t/c18_0/g/try_sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c18_0/g/try_sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c18_0/g/try_sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|13 x100
+t/c18_0/g/try_sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|13 x100
+t/c18_0/g/try_sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c18_0/g/try_sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c18_0/g/try_sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|2999999999999999997 x100
+t/c18_0/g/try_sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|2999999999999999997 x100
+t/c18_0/g/try_sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-2999999999999999997 x100
+t/c18_0/g/try_sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-2999999999999999997 x100
+t/c18_0/g/try_sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|999999999999999999 x100
+t/c18_0/g/try_sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|999999999999999999 x100
+t/c18_0/g/try_sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|1000000000000000000 x100
+t/c18_0/g/try_sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|1000000000000000000 x100
+t/c18_0/g/try_sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|1 x100
+t/c18_0/g/try_sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|1 x100
+t/c18_0/g/try_sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c18_0/g/try_sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c18_0/g/try_sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-3 x100
+t/c18_0/g/try_sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-3 x100
+t/c18_0/g/try_sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|499999999999999999 x100
+t/c18_0/g/try_sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|499999999999999999 x100
+t/c18_0/u/sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2500000000000000002 x100
+t/c18_0/u/sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2500000000000000002 x100
+t/c18_0/u/sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-12 x100
+t/c18_0/u/sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-12 x100
+t/c18_0/u/sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5 x100
+t/c18_0/u/sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5 x100
+t/c18_0/u/sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c18_0/u/sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c18_0/u/sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	13 x100
+t/c18_0/u/sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	13 x100
+t/c18_0/u/sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c18_0/u/sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c18_0/u/sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2999999999999999997 x100
+t/c18_0/u/sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2999999999999999997 x100
+t/c18_0/u/sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-2999999999999999997 x100
+t/c18_0/u/sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-2999999999999999997 x100
+t/c18_0/u/sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	999999999999999999 x100
+t/c18_0/u/sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	999999999999999999 x100
+t/c18_0/u/sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1000000000000000000 x100
+t/c18_0/u/sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1000000000000000000 x100
+t/c18_0/u/sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1 x100
+t/c18_0/u/sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1 x100
+t/c18_0/u/sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c18_0/u/sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c18_0/u/sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-3 x100
+t/c18_0/u/sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-3 x100
+t/c18_0/u/sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	499999999999999999 x100
+t/c18_0/u/sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	499999999999999999 x100
+t/c18_0/u/try_sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2500000000000000002 x100
+t/c18_0/u/try_sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2500000000000000002 x100
+t/c18_0/u/try_sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-12 x100
+t/c18_0/u/try_sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-12 x100
+t/c18_0/u/try_sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5 x100
+t/c18_0/u/try_sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5 x100
+t/c18_0/u/try_sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c18_0/u/try_sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c18_0/u/try_sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	13 x100
+t/c18_0/u/try_sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	13 x100
+t/c18_0/u/try_sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c18_0/u/try_sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c18_0/u/try_sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2999999999999999997 x100
+t/c18_0/u/try_sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2999999999999999997 x100
+t/c18_0/u/try_sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-2999999999999999997 x100
+t/c18_0/u/try_sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-2999999999999999997 x100
+t/c18_0/u/try_sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	999999999999999999 x100
+t/c18_0/u/try_sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	999999999999999999 x100
+t/c18_0/u/try_sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1000000000000000000 x100
+t/c18_0/u/try_sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1000000000000000000 x100
+t/c18_0/u/try_sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1 x100
+t/c18_0/u/try_sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1 x100
+t/c18_0/u/try_sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c18_0/u/try_sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c18_0/u/try_sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-3 x100
+t/c18_0/u/try_sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-3 x100
+t/c18_0/u/try_sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	499999999999999999 x100
+t/c18_0/u/try_sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	499999999999999999 x100
+t/c19_0/g/sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x100
+t/c19_0/g/sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x100
+t/c19_0/g/sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-12 x100
+t/c19_0/g/sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-12 x100
+t/c19_0/g/sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|5 x100
+t/c19_0/g/sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|5 x100
+t/c19_0/g/sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c19_0/g/sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c19_0/g/sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|13 x100
+t/c19_0/g/sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|13 x100
+t/c19_0/g/sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c19_0/g/sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c19_0/g/sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|29999999999999999997 x100
+t/c19_0/g/sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|29999999999999999997 x100
+t/c19_0/g/sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-29999999999999999997 x100
+t/c19_0/g/sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-29999999999999999997 x100
+t/c19_0/g/sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|9999999999999999999 x100
+t/c19_0/g/sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|9999999999999999999 x100
+t/c19_0/g/sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|10000000000000000000 x100
+t/c19_0/g/sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|10000000000000000000 x100
+t/c19_0/g/sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|1 x100
+t/c19_0/g/sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|1 x100
+t/c19_0/g/sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c19_0/g/sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c19_0/g/sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-3 x100
+t/c19_0/g/sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-3 x100
+t/c19_0/g/sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|4999999999999999999 x100
+t/c19_0/g/sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|4999999999999999999 x100
+t/c19_0/g/try_sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x100
+t/c19_0/g/try_sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x100
+t/c19_0/g/try_sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-12 x100
+t/c19_0/g/try_sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-12 x100
+t/c19_0/g/try_sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|5 x100
+t/c19_0/g/try_sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|5 x100
+t/c19_0/g/try_sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c19_0/g/try_sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c19_0/g/try_sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|13 x100
+t/c19_0/g/try_sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|13 x100
+t/c19_0/g/try_sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c19_0/g/try_sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c19_0/g/try_sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|29999999999999999997 x100
+t/c19_0/g/try_sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|29999999999999999997 x100
+t/c19_0/g/try_sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-29999999999999999997 x100
+t/c19_0/g/try_sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-29999999999999999997 x100
+t/c19_0/g/try_sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|9999999999999999999 x100
+t/c19_0/g/try_sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|9999999999999999999 x100
+t/c19_0/g/try_sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|10000000000000000000 x100
+t/c19_0/g/try_sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|10000000000000000000 x100
+t/c19_0/g/try_sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|1 x100
+t/c19_0/g/try_sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|1 x100
+t/c19_0/g/try_sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c19_0/g/try_sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c19_0/g/try_sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-3 x100
+t/c19_0/g/try_sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-3 x100
+t/c19_0/g/try_sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|4999999999999999999 x100
+t/c19_0/g/try_sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|4999999999999999999 x100
+t/c19_0/u/sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	25000000000000000002 x100
+t/c19_0/u/sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	25000000000000000002 x100
+t/c19_0/u/sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-12 x100
+t/c19_0/u/sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-12 x100
+t/c19_0/u/sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5 x100
+t/c19_0/u/sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5 x100
+t/c19_0/u/sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c19_0/u/sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c19_0/u/sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	13 x100
+t/c19_0/u/sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	13 x100
+t/c19_0/u/sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c19_0/u/sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c19_0/u/sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	29999999999999999997 x100
+t/c19_0/u/sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	29999999999999999997 x100
+t/c19_0/u/sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-29999999999999999997 x100
+t/c19_0/u/sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-29999999999999999997 x100
+t/c19_0/u/sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9999999999999999999 x100
+t/c19_0/u/sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9999999999999999999 x100
+t/c19_0/u/sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10000000000000000000 x100
+t/c19_0/u/sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10000000000000000000 x100
+t/c19_0/u/sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1 x100
+t/c19_0/u/sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1 x100
+t/c19_0/u/sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c19_0/u/sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c19_0/u/sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-3 x100
+t/c19_0/u/sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-3 x100
+t/c19_0/u/sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4999999999999999999 x100
+t/c19_0/u/sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4999999999999999999 x100
+t/c19_0/u/try_sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	25000000000000000002 x100
+t/c19_0/u/try_sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	25000000000000000002 x100
+t/c19_0/u/try_sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-12 x100
+t/c19_0/u/try_sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-12 x100
+t/c19_0/u/try_sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5 x100
+t/c19_0/u/try_sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5 x100
+t/c19_0/u/try_sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c19_0/u/try_sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c19_0/u/try_sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	13 x100
+t/c19_0/u/try_sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	13 x100
+t/c19_0/u/try_sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c19_0/u/try_sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c19_0/u/try_sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	29999999999999999997 x100
+t/c19_0/u/try_sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	29999999999999999997 x100
+t/c19_0/u/try_sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-29999999999999999997 x100
+t/c19_0/u/try_sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-29999999999999999997 x100
+t/c19_0/u/try_sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9999999999999999999 x100
+t/c19_0/u/try_sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9999999999999999999 x100
+t/c19_0/u/try_sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10000000000000000000 x100
+t/c19_0/u/try_sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10000000000000000000 x100
+t/c19_0/u/try_sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1 x100
+t/c19_0/u/try_sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1 x100
+t/c19_0/u/try_sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c19_0/u/try_sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c19_0/u/try_sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-3 x100
+t/c19_0/u/try_sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-3 x100
+t/c19_0/u/try_sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4999999999999999999 x100
+t/c19_0/u/try_sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4999999999999999999 x100
+t/c20_0/g/sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x100
+t/c20_0/g/sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x100
+t/c20_0/g/sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-12 x100
+t/c20_0/g/sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-12 x100
+t/c20_0/g/sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|5 x100
+t/c20_0/g/sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|5 x100
+t/c20_0/g/sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c20_0/g/sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c20_0/g/sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|13 x100
+t/c20_0/g/sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|13 x100
+t/c20_0/g/sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c20_0/g/sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c20_0/g/sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|299999999999999999997 x100
+t/c20_0/g/sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|299999999999999999997 x100
+t/c20_0/g/sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-299999999999999999997 x100
+t/c20_0/g/sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-299999999999999999997 x100
+t/c20_0/g/sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|99999999999999999999 x100
+t/c20_0/g/sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|99999999999999999999 x100
+t/c20_0/g/sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|100000000000000000000 x100
+t/c20_0/g/sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|100000000000000000000 x100
+t/c20_0/g/sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|1 x100
+t/c20_0/g/sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|1 x100
+t/c20_0/g/sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c20_0/g/sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c20_0/g/sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-3 x100
+t/c20_0/g/sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-3 x100
+t/c20_0/g/sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|49999999999999999999 x100
+t/c20_0/g/sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|49999999999999999999 x100
+t/c20_0/g/try_sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x100
+t/c20_0/g/try_sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x100
+t/c20_0/g/try_sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-12 x100
+t/c20_0/g/try_sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-12 x100
+t/c20_0/g/try_sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|5 x100
+t/c20_0/g/try_sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|5 x100
+t/c20_0/g/try_sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c20_0/g/try_sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c20_0/g/try_sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|13 x100
+t/c20_0/g/try_sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|13 x100
+t/c20_0/g/try_sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c20_0/g/try_sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c20_0/g/try_sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|299999999999999999997 x100
+t/c20_0/g/try_sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|299999999999999999997 x100
+t/c20_0/g/try_sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-299999999999999999997 x100
+t/c20_0/g/try_sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-299999999999999999997 x100
+t/c20_0/g/try_sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|99999999999999999999 x100
+t/c20_0/g/try_sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|99999999999999999999 x100
+t/c20_0/g/try_sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|100000000000000000000 x100
+t/c20_0/g/try_sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|100000000000000000000 x100
+t/c20_0/g/try_sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|1 x100
+t/c20_0/g/try_sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|1 x100
+t/c20_0/g/try_sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c20_0/g/try_sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c20_0/g/try_sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-3 x100
+t/c20_0/g/try_sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-3 x100
+t/c20_0/g/try_sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|49999999999999999999 x100
+t/c20_0/g/try_sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|49999999999999999999 x100
+t/c20_0/u/sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	250000000000000000002 x100
+t/c20_0/u/sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	250000000000000000002 x100
+t/c20_0/u/sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-12 x100
+t/c20_0/u/sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-12 x100
+t/c20_0/u/sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5 x100
+t/c20_0/u/sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5 x100
+t/c20_0/u/sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c20_0/u/sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c20_0/u/sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	13 x100
+t/c20_0/u/sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	13 x100
+t/c20_0/u/sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c20_0/u/sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c20_0/u/sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	299999999999999999997 x100
+t/c20_0/u/sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	299999999999999999997 x100
+t/c20_0/u/sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-299999999999999999997 x100
+t/c20_0/u/sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-299999999999999999997 x100
+t/c20_0/u/sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	99999999999999999999 x100
+t/c20_0/u/sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	99999999999999999999 x100
+t/c20_0/u/sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	100000000000000000000 x100
+t/c20_0/u/sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	100000000000000000000 x100
+t/c20_0/u/sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1 x100
+t/c20_0/u/sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1 x100
+t/c20_0/u/sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c20_0/u/sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c20_0/u/sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-3 x100
+t/c20_0/u/sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-3 x100
+t/c20_0/u/sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	49999999999999999999 x100
+t/c20_0/u/sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	49999999999999999999 x100
+t/c20_0/u/try_sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	250000000000000000002 x100
+t/c20_0/u/try_sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	250000000000000000002 x100
+t/c20_0/u/try_sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-12 x100
+t/c20_0/u/try_sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-12 x100
+t/c20_0/u/try_sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5 x100
+t/c20_0/u/try_sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5 x100
+t/c20_0/u/try_sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c20_0/u/try_sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c20_0/u/try_sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	13 x100
+t/c20_0/u/try_sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	13 x100
+t/c20_0/u/try_sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c20_0/u/try_sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c20_0/u/try_sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	299999999999999999997 x100
+t/c20_0/u/try_sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	299999999999999999997 x100
+t/c20_0/u/try_sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-299999999999999999997 x100
+t/c20_0/u/try_sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-299999999999999999997 x100
+t/c20_0/u/try_sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	99999999999999999999 x100
+t/c20_0/u/try_sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	99999999999999999999 x100
+t/c20_0/u/try_sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	100000000000000000000 x100
+t/c20_0/u/try_sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	100000000000000000000 x100
+t/c20_0/u/try_sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1 x100
+t/c20_0/u/try_sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1 x100
+t/c20_0/u/try_sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c20_0/u/try_sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c20_0/u/try_sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-3 x100
+t/c20_0/u/try_sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-3 x100
+t/c20_0/u/try_sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	49999999999999999999 x100
+t/c20_0/u/try_sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	49999999999999999999 x100
+t/c28_4/g/sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-0.0012"], ["1", "0.0005"], ["10", "0"], ["11", "0.0013"], ... x100
+t/c28_4/g/sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-0.0012"], ["1", "0.0005"], ["10", "0"], ["11", "0.0013"], ... x100
+t/c28_4/g/sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-0.0012 x100
+t/c28_4/g/sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-0.0012 x100
+t/c28_4/g/sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|0.0005 x100
+t/c28_4/g/sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|0.0005 x100
+t/c28_4/g/sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c28_4/g/sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c28_4/g/sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|0.0013 x100
+t/c28_4/g/sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|0.0013 x100
+t/c28_4/g/sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c28_4/g/sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c28_4/g/sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|2999999999999999999999999.9997 x100
+t/c28_4/g/sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|2999999999999999999999999.9997 x100
+t/c28_4/g/sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-2999999999999999999999999.9997 x100
+t/c28_4/g/sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-2999999999999999999999999.9997 x100
+t/c28_4/g/sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|999999999999999999999999.9999 x100
+t/c28_4/g/sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|999999999999999999999999.9999 x100
+t/c28_4/g/sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|1000000000000000000000000 x100
+t/c28_4/g/sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|1000000000000000000000000 x100
+t/c28_4/g/sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|0.0001 x100
+t/c28_4/g/sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|0.0001 x100
+t/c28_4/g/sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c28_4/g/sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c28_4/g/sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-0.0003 x100
+t/c28_4/g/sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-0.0003 x100
+t/c28_4/g/sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|499999999999999999999999.9999 x100
+t/c28_4/g/sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|499999999999999999999999.9999 x100
+t/c28_4/g/try_sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-0.0012"], ["1", "0.0005"], ["10", "0"], ["11", "0.0013"], ... x100
+t/c28_4/g/try_sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	[["0", "-0.0012"], ["1", "0.0005"], ["10", "0"], ["11", "0.0013"], ... x100
+t/c28_4/g/try_sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-0.0012 x100
+t/c28_4/g/try_sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0|-0.0012 x100
+t/c28_4/g/try_sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|0.0005 x100
+t/c28_4/g/try_sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1|0.0005 x100
+t/c28_4/g/try_sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c28_4/g/try_sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	10|0 x100
+t/c28_4/g/try_sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|0.0013 x100
+t/c28_4/g/try_sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	11|0.0013 x100
+t/c28_4/g/try_sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c28_4/g/try_sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	12|NULL x100
+t/c28_4/g/try_sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|2999999999999999999999999.9997 x100
+t/c28_4/g/try_sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2|2999999999999999999999999.9997 x100
+t/c28_4/g/try_sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-2999999999999999999999999.9997 x100
+t/c28_4/g/try_sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	3|-2999999999999999999999999.9997 x100
+t/c28_4/g/try_sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|999999999999999999999999.9999 x100
+t/c28_4/g/try_sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	4|999999999999999999999999.9999 x100
+t/c28_4/g/try_sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|1000000000000000000000000 x100
+t/c28_4/g/try_sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	5|1000000000000000000000000 x100
+t/c28_4/g/try_sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|0.0001 x100
+t/c28_4/g/try_sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	6|0.0001 x100
+t/c28_4/g/try_sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c28_4/g/try_sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	7|0 x100
+t/c28_4/g/try_sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-0.0003 x100
+t/c28_4/g/try_sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	8|-0.0003 x100
+t/c28_4/g/try_sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|499999999999999999999999.9999 x100
+t/c28_4/g/try_sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	9|499999999999999999999999.9999 x100
+t/c28_4/u/sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2500000000000000000000000.0002 x100
+t/c28_4/u/sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2500000000000000000000000.0002 x100
+t/c28_4/u/sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.0012 x100
+t/c28_4/u/sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.0012 x100
+t/c28_4/u/sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.0005 x100
+t/c28_4/u/sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.0005 x100
+t/c28_4/u/sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c28_4/u/sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c28_4/u/sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.0013 x100
+t/c28_4/u/sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.0013 x100
+t/c28_4/u/sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c28_4/u/sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c28_4/u/sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2999999999999999999999999.9997 x100
+t/c28_4/u/sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2999999999999999999999999.9997 x100
+t/c28_4/u/sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-2999999999999999999999999.9997 x100
+t/c28_4/u/sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-2999999999999999999999999.9997 x100
+t/c28_4/u/sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	999999999999999999999999.9999 x100
+t/c28_4/u/sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	999999999999999999999999.9999 x100
+t/c28_4/u/sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1000000000000000000000000 x100
+t/c28_4/u/sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1000000000000000000000000 x100
+t/c28_4/u/sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.0001 x100
+t/c28_4/u/sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.0001 x100
+t/c28_4/u/sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c28_4/u/sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c28_4/u/sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.0003 x100
+t/c28_4/u/sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.0003 x100
+t/c28_4/u/sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	499999999999999999999999.9999 x100
+t/c28_4/u/sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	499999999999999999999999.9999 x100
+t/c28_4/u/try_sum/all	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2500000000000000000000000.0002 x100
+t/c28_4/u/try_sum/all	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2500000000000000000000000.0002 x100
+t/c28_4/u/try_sum/g0	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.0012 x100
+t/c28_4/u/try_sum/g0	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.0012 x100
+t/c28_4/u/try_sum/g1	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.0005 x100
+t/c28_4/u/try_sum/g1	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.0005 x100
+t/c28_4/u/try_sum/g10	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c28_4/u/try_sum/g10	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c28_4/u/try_sum/g11	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.0013 x100
+t/c28_4/u/try_sum/g11	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.0013 x100
+t/c28_4/u/try_sum/g12	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c28_4/u/try_sum/g12	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	NULL x100
+t/c28_4/u/try_sum/g2	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2999999999999999999999999.9997 x100
+t/c28_4/u/try_sum/g2	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	2999999999999999999999999.9997 x100
+t/c28_4/u/try_sum/g3	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-2999999999999999999999999.9997 x100
+t/c28_4/u/try_sum/g3	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-2999999999999999999999999.9997 x100
+t/c28_4/u/try_sum/g4	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	999999999999999999999999.9999 x100
+t/c28_4/u/try_sum/g4	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	999999999999999999999999.9999 x100
+t/c28_4/u/try_sum/g5	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1000000000000000000000000 x100
+t/c28_4/u/try_sum/g5	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	1000000000000000000000000 x100
+t/c28_4/u/try_sum/g6	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.0001 x100
+t/c28_4/u/try_sum/g6	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0.0001 x100
+t/c28_4/u/try_sum/g7	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c28_4/u/try_sum/g7	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	0 x100
+t/c28_4/u/try_sum/g8	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.0003 x100
+t/c28_4/u/try_sum/g8	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	-0.0003 x100
+t/c28_4/u/try_sum/g9	false	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	499999999999999999999999.9999 x100
+t/c28_4/u/try_sum/g9	true	2c on,4c off,SET 2,SET 4,SET 8	E E E E E	E E E E E	yyyyy	499999999999999999999999.9999 x100
+t/c38_0/distinct/avg/g0	false	4c on,SET 4	E E	E E	yy	0 x40
+t/c38_0/distinct/avg/g0	true	4c on,SET 4	E E	E E	yy	0 x40
+t/c38_0/distinct/avg/g1	false	4c on,SET 4	E E	E E	yy	1.6667 x40
+t/c38_0/distinct/avg/g1	true	4c on,SET 4	E E	E E	yy	1.6667 x40
+t/c38_0/distinct/avg/g10	false	4c on,SET 4	E E	E E	yy	0 x40
+t/c38_0/distinct/avg/g10	true	4c on,SET 4	E E	E E	yy	0 x40
+t/c38_0/distinct/avg/g11	false	4c on,SET 4	E E	E E	yy	2.1667 x40
+t/c38_0/distinct/avg/g11	true	4c on,SET 4	E E	E E	yy	2.1667 x40
+t/c38_0/distinct/avg/g12	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/distinct/avg/g12	true	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/distinct/avg/g2	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/distinct/avg/g2	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/distinct/avg/g3	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/distinct/avg/g3	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/distinct/avg/g4	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/distinct/avg/g4	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/distinct/avg/g5	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/distinct/avg/g5	true	4c on,SET 4	C C	E E	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/distinct/avg/g6	false	4c on,SET 4	X X	X X	nn	NULL x40
+t/c38_0/distinct/avg/g6	true	4c on,SET 4	R R	R R	nn	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/distinct/avg/g7	false	4c on,SET 4	E E	E E	yy	0 x40
+t/c38_0/distinct/avg/g7	true	4c on,SET 4	E E	E E	yy	0 x40
+t/c38_0/distinct/avg/g8	false	4c on,SET 4	E E	E E	yy	-1 x40
+t/c38_0/distinct/avg/g8	true	4c on,SET 4	E E	E E	yy	-1 x40
+t/c38_0/distinct/avg/g9	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/distinct/avg/g9	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/expr/avg/g0	false	4c on,SET 4	E E	E E	yy	0|0.01 x40
+t/c38_0/expr/avg/g0	true	4c on,SET 4	E E	E E	yy	0|0.01 x40
+t/c38_0/expr/avg/g1	false	4c on,SET 4	E E	E E	nn	1|NULL x40
+t/c38_0/expr/avg/g1	true	4c on,SET 4	E E	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/expr/avg/g10	false	4c on,SET 4	E E	E E	yy	10|0 x40
+t/c38_0/expr/avg/g10	true	4c on,SET 4	E E	E E	yy	10|0 x40
+t/c38_0/expr/avg/g11	false	4c on,SET 4	E E	E E	yy	11|2.1667 x40
+t/c38_0/expr/avg/g11	true	4c on,SET 4	E E	E E	yy	11|2.1667 x40
+t/c38_0/expr/avg/g12	false	4c on,SET 4	E E	E E	yy	12|NULL x40
+t/c38_0/expr/avg/g12	true	4c on,SET 4	E E	E E	yy	12|NULL x40
+t/c38_0/expr/avg/g2	false	4c on,SET 4	E E	E E	yy	2|NULL x40
+t/c38_0/expr/avg/g2	true	4c on,SET 4	E E	E E	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/expr/avg/g3	false	4c on,SET 4	E E	E E	yy	3|NULL x40
+t/c38_0/expr/avg/g3	true	4c on,SET 4	E E	E E	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/expr/avg/g4	false	4c on,SET 4	E E	E E	yy	4|NULL x40
+t/c38_0/expr/avg/g4	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/expr/avg/g5	false	4c on,SET 4	E E	E E	yy	5|NULL x40
+t/c38_0/expr/avg/g5	true	4c on,SET 4	E E	E E	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/expr/avg/g6	false	4c on,SET 4	X X	E E	nn	6|NULL x40
+t/c38_0/expr/avg/g6	true	4c on,SET 4	R R	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/expr/avg/g7	false	4c on,SET 4	E E	E E	nn	7|NULL x40
+t/c38_0/expr/avg/g7	true	4c on,SET 4	E E	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/expr/avg/g8	false	4c on,SET 4	E E	E E	nn	8|NULL x40
+t/c38_0/expr/avg/g8	true	4c on,SET 4	E E	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/expr/avg/g9	false	4c on,SET 4	E E	E E	yy	9|NULL x40
+t/c38_0/expr/avg/g9	true	4c on,SET 4	E E	E E	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/filter/avg/all	false	4c on,SET 4	E E	E E	nn	[["0", "-0.01"], ["1", null], ["10", null], ["11", "1.25"], ["12", ... x40
+t/c38_0/filter/avg/all	true	4c on,SET 4	V2 V2	V2 V2	vv	ERR ARITHMETIC_OVERFLOW x28; ERR NUMERIC_VALUE_OUT_OF_RANGE x12
+t/c38_0/g/avg/all	false	4c on,SET 4	X X	E E	nn	[["0", "-0.01"], ["1", null], ["10", "0"], ["11", "2.1667"], ["12",... x40
+t/c38_0/g/avg/all	true	4c on,SET 4	V2 V2	V2 V2	vv	ERR ARITHMETIC_OVERFLOW x37; ERR NUMERIC_VALUE_OUT_OF_RANGE x3
+t/c38_0/g/avg/g0	false	4c on,SET 4	E E	E E	yy	0|-0.01 x40
+t/c38_0/g/avg/g0	true	4c on,SET 4	E E	E E	yy	0|-0.01 x40
+t/c38_0/g/avg/g1	false	4c on,SET 4	E E	E E	nn	1|NULL x40
+t/c38_0/g/avg/g1	true	4c on,SET 4	E E	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/g/avg/g10	false	4c on,SET 4	E E	E E	yy	10|0 x40
+t/c38_0/g/avg/g10	true	4c on,SET 4	E E	E E	yy	10|0 x40
+t/c38_0/g/avg/g11	false	4c on,SET 4	E E	E E	yy	11|2.1667 x40
+t/c38_0/g/avg/g11	true	4c on,SET 4	E E	E E	yy	11|2.1667 x40
+t/c38_0/g/avg/g12	false	4c on,SET 4	E E	E E	yy	12|NULL x40
+t/c38_0/g/avg/g12	true	4c on,SET 4	E E	E E	yy	12|NULL x40
+t/c38_0/g/avg/g2	false	4c on,SET 4	E E	E E	yy	2|NULL x40
+t/c38_0/g/avg/g2	true	4c on,SET 4	E E	E E	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/g/avg/g3	false	4c on,SET 4	E E	E E	yy	3|NULL x40
+t/c38_0/g/avg/g3	true	4c on,SET 4	E E	E E	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/g/avg/g4	false	4c on,SET 4	E E	E E	yy	4|NULL x40
+t/c38_0/g/avg/g4	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/g/avg/g5	false	4c on,SET 4	E E	E E	yy	5|NULL x40
+t/c38_0/g/avg/g5	true	4c on,SET 4	E E	E E	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/g/avg/g6	false	4c on,SET 4	X X	E E	nn	6|NULL x40
+t/c38_0/g/avg/g6	true	4c on,SET 4	R R	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/g/avg/g7	false	4c on,SET 4	E E	E E	nn	7|NULL x40
+t/c38_0/g/avg/g7	true	4c on,SET 4	E E	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/g/avg/g8	false	4c on,SET 4	E E	E E	nn	8|NULL x40
+t/c38_0/g/avg/g8	true	4c on,SET 4	E E	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/g/avg/g9	false	4c on,SET 4	E E	E E	yy	9|NULL x40
+t/c38_0/g/avg/g9	true	4c on,SET 4	E E	E E	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/g/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x120
+t/c38_0/g/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+t/c38_0/g/sum/g0	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	0|-12 x120
+t/c38_0/g/sum/g0	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	0|-12 x120
+t/c38_0/g/sum/g1	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	1|5 x120
+t/c38_0/g/sum/g1	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	1|5 x120
+t/c38_0/g/sum/g10	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	10|0 x120
+t/c38_0/g/sum/g10	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	10|0 x120
+t/c38_0/g/sum/g11	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	11|13 x120
+t/c38_0/g/sum/g11	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	11|13 x120
+t/c38_0/g/sum/g12	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	12|NULL x120
+t/c38_0/g/sum/g12	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	12|NULL x120
+t/c38_0/g/sum/g2	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	2|NULL x120
+t/c38_0/g/sum/g2	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+t/c38_0/g/sum/g3	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	3|NULL x120
+t/c38_0/g/sum/g3	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+t/c38_0/g/sum/g4	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	4|99999999999999999999999999999999999999 x120
+t/c38_0/g/sum/g4	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	4|99999999999999999999999999999999999999 x120
+t/c38_0/g/sum/g5	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5|NULL x120
+t/c38_0/g/sum/g5	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+t/c38_0/g/sum/g6	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	6|1 x120
+t/c38_0/g/sum/g6	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	R R R R R R	yyyyyy	6|1 x120
+t/c38_0/g/sum/g7	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	7|0 x120
+t/c38_0/g/sum/g7	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	7|0 x120
+t/c38_0/g/sum/g8	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	8|-3 x120
+t/c38_0/g/sum/g8	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	8|-3 x120
+t/c38_0/g/sum/g9	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	9|49999999999999999999999999999999999999 x120
+t/c38_0/g/sum/g9	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	9|49999999999999999999999999999999999999 x120
+t/c38_0/g/try_avg/all	false	4c on,SET 4	X X	E E	nn	[["0", "-0.01"], ["1", null], ["10", "0"], ["11", "2.1667"], ["12",... x40
+t/c38_0/g/try_avg/all	true	4c on,SET 4	X X	E E	nn	[["0", "-0.01"], ["1", null], ["10", "0"], ["11", "2.1667"], ["12",... x40
+t/c38_0/g/try_avg/g0	false	4c on,SET 4	E E	E E	yy	0|-0.01 x40
+t/c38_0/g/try_avg/g0	true	4c on,SET 4	E E	E E	yy	0|-0.01 x40
+t/c38_0/g/try_avg/g1	false	4c on,SET 4	E E	E E	nn	1|NULL x40
+t/c38_0/g/try_avg/g1	true	4c on,SET 4	E E	E E	nn	1|NULL x40
+t/c38_0/g/try_avg/g10	false	4c on,SET 4	E E	E E	yy	10|0 x40
+t/c38_0/g/try_avg/g10	true	4c on,SET 4	E E	E E	yy	10|0 x40
+t/c38_0/g/try_avg/g11	false	4c on,SET 4	E E	E E	yy	11|2.1667 x40
+t/c38_0/g/try_avg/g11	true	4c on,SET 4	E E	E E	yy	11|2.1667 x40
+t/c38_0/g/try_avg/g12	false	4c on,SET 4	E E	E E	yy	12|NULL x40
+t/c38_0/g/try_avg/g12	true	4c on,SET 4	E E	E E	yy	12|NULL x40
+t/c38_0/g/try_avg/g2	false	4c on,SET 4	E E	E E	yy	2|NULL x40
+t/c38_0/g/try_avg/g2	true	4c on,SET 4	E E	E E	yy	2|NULL x40
+t/c38_0/g/try_avg/g3	false	4c on,SET 4	E E	E E	yy	3|NULL x40
+t/c38_0/g/try_avg/g3	true	4c on,SET 4	E E	E E	yy	3|NULL x40
+t/c38_0/g/try_avg/g4	false	4c on,SET 4	E E	E E	yy	4|NULL x40
+t/c38_0/g/try_avg/g4	true	4c on,SET 4	E E	E E	yy	4|NULL x40
+t/c38_0/g/try_avg/g5	false	4c on,SET 4	E E	E E	yy	5|NULL x40
+t/c38_0/g/try_avg/g5	true	4c on,SET 4	E E	E E	yy	5|NULL x40
+t/c38_0/g/try_avg/g6	false	4c on,SET 4	X X	E E	nn	6|NULL x40
+t/c38_0/g/try_avg/g6	true	4c on,SET 4	X X	E E	nn	6|NULL x40
+t/c38_0/g/try_avg/g7	false	4c on,SET 4	E E	E E	nn	7|NULL x40
+t/c38_0/g/try_avg/g7	true	4c on,SET 4	E E	E E	nn	7|NULL x40
+t/c38_0/g/try_avg/g8	false	4c on,SET 4	E E	E E	nn	8|NULL x40
+t/c38_0/g/try_avg/g8	true	4c on,SET 4	E E	E E	nn	8|NULL x40
+t/c38_0/g/try_avg/g9	false	4c on,SET 4	E E	E E	yy	9|NULL x40
+t/c38_0/g/try_avg/g9	true	4c on,SET 4	E E	E E	yy	9|NULL x40
+t/c38_0/g/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x120
+t/c38_0/g/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	[["0", "-12"], ["1", "5"], ["10", "0"], ["11", "13"], ["12", null],... x120
+t/c38_0/g/try_sum/g0	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	0|-12 x120
+t/c38_0/g/try_sum/g0	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	0|-12 x120
+t/c38_0/g/try_sum/g1	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	1|5 x120
+t/c38_0/g/try_sum/g1	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	1|5 x120
+t/c38_0/g/try_sum/g10	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	10|0 x120
+t/c38_0/g/try_sum/g10	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	10|0 x120
+t/c38_0/g/try_sum/g11	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	11|13 x120
+t/c38_0/g/try_sum/g11	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	11|13 x120
+t/c38_0/g/try_sum/g12	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	12|NULL x120
+t/c38_0/g/try_sum/g12	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	12|NULL x120
+t/c38_0/g/try_sum/g2	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	2|NULL x120
+t/c38_0/g/try_sum/g2	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	2|NULL x120
+t/c38_0/g/try_sum/g3	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	3|NULL x120
+t/c38_0/g/try_sum/g3	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	3|NULL x120
+t/c38_0/g/try_sum/g4	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	4|99999999999999999999999999999999999999 x120
+t/c38_0/g/try_sum/g4	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	4|99999999999999999999999999999999999999 x120
+t/c38_0/g/try_sum/g5	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5|NULL x120
+t/c38_0/g/try_sum/g5	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5|NULL x120
+t/c38_0/g/try_sum/g6	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	6|1 x120
+t/c38_0/g/try_sum/g6	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	6|1 x120
+t/c38_0/g/try_sum/g7	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	7|0 x120
+t/c38_0/g/try_sum/g7	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	7|0 x120
+t/c38_0/g/try_sum/g8	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	8|-3 x120
+t/c38_0/g/try_sum/g8	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	8|-3 x120
+t/c38_0/g/try_sum/g9	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	9|49999999999999999999999999999999999999 x120
+t/c38_0/g/try_sum/g9	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	9|49999999999999999999999999999999999999 x120
+t/c38_0/having/avg/all	false	4c on,SET 4	X X	E E	nn	11|2.1667 x40
+t/c38_0/having/avg/all	true	4c on,SET 4	V2 V2	V2 V2	vv	ERR ARITHMETIC_OVERFLOW x37; ERR NUMERIC_VALUE_OUT_OF_RANGE x3
+t/c38_0/ice/avg/all	false	4c on,SET 4	X X	E E	nn	stmt ok; [["0", "-0.01"], ["1", null], ["10", "0"], ["11", "2.1667"], ["12",... x40
+t/c38_0/ice/avg/all	true	4c on,SET 4	V2 V2	V2 V2	vv	stmt ERR ARITHMETIC_OVERFLOW; ERR x2; stmt ERR NUMERIC_VALUE_OUT_OF_RANGE; ERR x2
+t/c38_0/rollup/avg/all	false	4c on,SET 4	X X	E E	nn	[["0", "-0.01"], ["1", null], ["10", "0"], ["11", "2.1667"], ["12",... x40
+t/c38_0/rollup/avg/all	true	4c on,SET 4	E E	E E	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/slide/avg/g0	false	4c on,SET 4	E E	E E	yy	rows=1200 nulls=0 x40
+t/c38_0/slide/avg/g0	true	4c on,SET 4	E E	E E	yy	rows=1200 nulls=0 x40
+t/c38_0/slide/avg/g1	false	4c on,SET 4	E E	E E	yy	[["0", null], ["1", null], ["1053", "1.6667"], ["1054", "1.6667"], ... x40
+t/c38_0/slide/avg/g1	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/slide/avg/g10	false	4c on,SET 4	E E	E E	yy	rows=84 nulls=80 x40
+t/c38_0/slide/avg/g10	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/slide/avg/g11	false	4c on,SET 4	E E	E E	yy	[["1059", "2.3333"], ["1060", "5.5"], ["432", "0.3333"], ["66", "1"... x40
+t/c38_0/slide/avg/g11	true	4c on,SET 4	E E	E E	yy	[["1059", "2.3333"], ["1060", "5.5"], ["432", "0.3333"], ["66", "1"... x40
+t/c38_0/slide/avg/g12	false	4c on,SET 4	E E	E E	yy	[["433", null], ["69", null]] x40
+t/c38_0/slide/avg/g12	true	4c on,SET 4	E E	E E	yy	[["433", null], ["69", null]] x40
+t/c38_0/slide/avg/g2	false	4c on,SET 4	E E	E E	yy	[["3", null], ["4", null], ["735", null]] x40
+t/c38_0/slide/avg/g2	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/slide/avg/g3	false	4c on,SET 4	E E	E E	yy	[["1055", null], ["373", null], ["5", null]] x40
+t/c38_0/slide/avg/g3	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/slide/avg/g4	false	4c on,SET 4	E E	E E	yy	[["1056", "0"], ["374", null], ["6", null], ["736", null]] x40
+t/c38_0/slide/avg/g4	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/slide/avg/g5	false	4c on,SET 4	E E	E E	yy	[["375", null], ["7", null]] x40
+t/c38_0/slide/avg/g5	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/slide/avg/g6	false	4c on,SET 4	E E	E E	yy	[["376", null], ["737", null], ["738", null], ["8", null], ["9", nu... x40
+t/c38_0/slide/avg/g6	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/slide/avg/g7	false	4c on,SET 4	E E	E E	yy	[["10", null], ["11", null], ["12", null], ["13", null], ["377", nu... x40
+t/c38_0/slide/avg/g7	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/slide/avg/g8	false	4c on,SET 4	E E	E E	yy	[["14", null], ["15", null], ["16", null], ["17", null], ["18", nul... x40
+t/c38_0/slide/avg/g8	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/slide/avg/g9	false	4c on,SET 4	E E	E E	yy	[["1057", null], ["19", null], ["20", null], ["21", null], ["22", n... x40
+t/c38_0/slide/avg/g9	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/u/avg/all	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/avg/all	true	4c on,SET 4	E E	E E	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/u/avg/g0	false	4c on,SET 4	E E	E E	yy	-0.01 x40
+t/c38_0/u/avg/g0	true	4c on,SET 4	E E	E E	yy	-0.01 x40
+t/c38_0/u/avg/g1	false	4c on,SET 4	X X	E E	nn	NULL x40
+t/c38_0/u/avg/g1	true	4c on,SET 4	R R	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/u/avg/g10	false	4c on,SET 4	E E	E E	yy	0 x40
+t/c38_0/u/avg/g10	true	4c on,SET 4	E E	E E	yy	0 x40
+t/c38_0/u/avg/g11	false	4c on,SET 4	E E	E E	yy	2.1667 x40
+t/c38_0/u/avg/g11	true	4c on,SET 4	E E	E E	yy	2.1667 x40
+t/c38_0/u/avg/g12	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/avg/g12	true	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/avg/g2	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/avg/g2	true	4c on,SET 4	E E	E E	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/u/avg/g3	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/avg/g3	true	4c on,SET 4	E E	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/u/avg/g4	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/avg/g4	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/u/avg/g5	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/avg/g5	true	4c on,SET 4	E E	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/u/avg/g6	false	4c on,SET 4	X X	E E	nn	NULL x40
+t/c38_0/u/avg/g6	true	4c on,SET 4	R R	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/u/avg/g7	false	4c on,SET 4	X X	E E	nn	NULL x40
+t/c38_0/u/avg/g7	true	4c on,SET 4	R R	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/u/avg/g8	false	4c on,SET 4	X X	E E	nn	NULL x40
+t/c38_0/u/avg/g8	true	4c on,SET 4	R R	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/u/avg/g9	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/avg/g9	true	4c on,SET 4	C C	E E	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/u/sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+t/c38_0/u/sum/g0	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	-12 x120
+t/c38_0/u/sum/g0	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	-12 x120
+t/c38_0/u/sum/g1	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	5 x120
+t/c38_0/u/sum/g1	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	R R R R R R	yyyyyy	5 x120
+t/c38_0/u/sum/g10	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	0 x120
+t/c38_0/u/sum/g10	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	0 x120
+t/c38_0/u/sum/g11	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	13 x120
+t/c38_0/u/sum/g11	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	13 x120
+t/c38_0/u/sum/g12	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/sum/g12	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/sum/g2	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/sum/g2	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+t/c38_0/u/sum/g3	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/sum/g3	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+t/c38_0/u/sum/g4	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	99999999999999999999999999999999999999 x120
+t/c38_0/u/sum/g4	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	99999999999999999999999999999999999999 x120
+t/c38_0/u/sum/g5	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/sum/g5	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+t/c38_0/u/sum/g6	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	1 x120
+t/c38_0/u/sum/g6	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	R R R R R R	yyyyyy	1 x120
+t/c38_0/u/sum/g7	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	0 x120
+t/c38_0/u/sum/g7	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	R R R R R R	yyyyyy	0 x120
+t/c38_0/u/sum/g8	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	-3 x120
+t/c38_0/u/sum/g8	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	R R R R R R	yyyyyy	-3 x120
+t/c38_0/u/sum/g9	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	49999999999999999999999999999999999999 x120
+t/c38_0/u/sum/g9	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	R R R R R R	yyyyyy	49999999999999999999999999999999999999 x120
+t/c38_0/u/try_avg/all	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/try_avg/all	true	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/try_avg/g0	false	4c on,SET 4	E E	E E	yy	-0.01 x40
+t/c38_0/u/try_avg/g0	true	4c on,SET 4	E E	E E	yy	-0.01 x40
+t/c38_0/u/try_avg/g1	false	4c on,SET 4	X X	E E	nn	NULL x40
+t/c38_0/u/try_avg/g1	true	4c on,SET 4	X X	E E	nn	NULL x40
+t/c38_0/u/try_avg/g10	false	4c on,SET 4	E E	E E	yy	0 x40
+t/c38_0/u/try_avg/g10	true	4c on,SET 4	E E	E E	yy	0 x40
+t/c38_0/u/try_avg/g11	false	4c on,SET 4	E E	E E	yy	2.1667 x40
+t/c38_0/u/try_avg/g11	true	4c on,SET 4	E E	E E	yy	2.1667 x40
+t/c38_0/u/try_avg/g12	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/try_avg/g12	true	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/try_avg/g2	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/try_avg/g2	true	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/try_avg/g3	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/try_avg/g3	true	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/try_avg/g4	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/try_avg/g4	true	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/try_avg/g5	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/try_avg/g5	true	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/try_avg/g6	false	4c on,SET 4	X X	E E	nn	NULL x40
+t/c38_0/u/try_avg/g6	true	4c on,SET 4	X X	E E	nn	NULL x40
+t/c38_0/u/try_avg/g7	false	4c on,SET 4	X X	E E	nn	NULL x40
+t/c38_0/u/try_avg/g7	true	4c on,SET 4	X X	E E	nn	NULL x40
+t/c38_0/u/try_avg/g8	false	4c on,SET 4	X X	E E	nn	NULL x40
+t/c38_0/u/try_avg/g8	true	4c on,SET 4	X X	E E	nn	NULL x40
+t/c38_0/u/try_avg/g9	false	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/try_avg/g9	true	4c on,SET 4	E E	E E	yy	NULL x40
+t/c38_0/u/try_sum/all	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/try_sum/all	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/try_sum/g0	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	-12 x120
+t/c38_0/u/try_sum/g0	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	-12 x120
+t/c38_0/u/try_sum/g1	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	5 x120
+t/c38_0/u/try_sum/g1	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	5 x120
+t/c38_0/u/try_sum/g10	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	0 x120
+t/c38_0/u/try_sum/g10	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	0 x120
+t/c38_0/u/try_sum/g11	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	13 x120
+t/c38_0/u/try_sum/g11	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	13 x120
+t/c38_0/u/try_sum/g12	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/try_sum/g12	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/try_sum/g2	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/try_sum/g2	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/try_sum/g3	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/try_sum/g3	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/try_sum/g4	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	99999999999999999999999999999999999999 x120
+t/c38_0/u/try_sum/g4	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	99999999999999999999999999999999999999 x120
+t/c38_0/u/try_sum/g5	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/try_sum/g5	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t/c38_0/u/try_sum/g6	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	1 x120
+t/c38_0/u/try_sum/g6	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	1 x120
+t/c38_0/u/try_sum/g7	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	0 x120
+t/c38_0/u/try_sum/g7	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	0 x120
+t/c38_0/u/try_sum/g8	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	-3 x120
+t/c38_0/u/try_sum/g8	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	-3 x120
+t/c38_0/u/try_sum/g9	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	49999999999999999999999999999999999999 x120
+t/c38_0/u/try_sum/g9	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	49999999999999999999999999999999999999 x120
+t/c38_0/win/avg/g0	false	4c on,SET 4	E E	E E	yy	rows=1200 nulls=0 x40
+t/c38_0/win/avg/g0	true	4c on,SET 4	E E	E E	yy	rows=1200 nulls=0 x40
+t/c38_0/win/avg/g1	false	4c on,SET 4	E E	E E	yy	[["1", "0.5556"], ["1", "0.5556"], ["1", "0.5556"], ["1", "0.5556"]... x40
+t/c38_0/win/avg/g1	true	4c on,SET 4	E E	E E	yy	[["1", "0.5556"], ["1", "0.5556"], ["1", "0.5556"], ["1", "0.5556"]... x40
+t/c38_0/win/avg/g10	false	4c on,SET 4	E E	E E	yy	rows=84 nulls=0 x40
+t/c38_0/win/avg/g10	true	4c on,SET 4	E E	E E	yy	rows=84 nulls=0 x40
+t/c38_0/win/avg/g11	false	4c on,SET 4	E E	E E	yy	[["11", "2.1667"], ["11", "2.1667"], ["11", "2.1667"], ["11", "2.16... x40
+t/c38_0/win/avg/g11	true	4c on,SET 4	E E	E E	yy	[["11", "2.1667"], ["11", "2.1667"], ["11", "2.1667"], ["11", "2.16... x40
+t/c38_0/win/avg/g12	false	4c on,SET 4	E E	E E	yy	[["12", null], ["12", null]] x40
+t/c38_0/win/avg/g12	true	4c on,SET 4	E E	E E	yy	[["12", null], ["12", null]] x40
+t/c38_0/win/avg/g2	false	4c on,SET 4	E E	E E	yy	[["2", null], ["2", null], ["2", null]] x40
+t/c38_0/win/avg/g2	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/win/avg/g3	false	4c on,SET 4	E E	E E	yy	[["3", null], ["3", null], ["3", null]] x40
+t/c38_0/win/avg/g3	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/win/avg/g4	false	4c on,SET 4	E E	E E	yy	[["4", null], ["4", null], ["4", null], ["4", null]] x40
+t/c38_0/win/avg/g4	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t/c38_0/win/avg/g5	false	4c on,SET 4	E E	E E	yy	[["5", null], ["5", null]] x40
+t/c38_0/win/avg/g5	true	4c on,SET 4	C C	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+t/c38_0/win/avg/g6	false	4c on,SET 4	E E	E E	yy	[["6", "0.2"], ["6", "0.2"], ["6", "0.2"], ["6", "0.2"], ["6", "0.2"]] x40
+t/c38_0/win/avg/g6	true	4c on,SET 4	E E	E E	yy	[["6", "0.2"], ["6", "0.2"], ["6", "0.2"], ["6", "0.2"], ["6", "0.2"]] x40
+t/c38_0/win/avg/g7	false	4c on,SET 4	E E	E E	yy	[["7", "0"], ["7", "0"], ["7", "0"], ["7", "0"], ["7", "0"], ["7", ... x40
+t/c38_0/win/avg/g7	true	4c on,SET 4	E E	E E	yy	[["7", "0"], ["7", "0"], ["7", "0"], ["7", "0"], ["7", "0"], ["7", ... x40
+t/c38_0/win/avg/g8	false	4c on,SET 4	E E	E E	yy	[["8", "-0.2727"], ["8", "-0.2727"], ["8", "-0.2727"], ["8", "-0.27... x40
+t/c38_0/win/avg/g8	true	4c on,SET 4	E E	E E	yy	[["8", "-0.2727"], ["8", "-0.2727"], ["8", "-0.2727"], ["8", "-0.27... x40
+t/c38_0/win/avg/g9	false	4c on,SET 4	E E	E E	yy	[["9", null], ["9", null], ["9", null], ["9", null], ["9", null], [... x40
+t/c38_0/win/avg/g9	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t4/c38_0/g/avg/g21	false	4c on,SET 4	E E	E E	yy	21|NULL x40
+t4/c38_0/g/avg/g21	true	4c on,SET 4	C C	C C	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t4/c38_0/g/avg/g22	false	4c on,SET 4	E E	E E	yy	22|NULL x40
+t4/c38_0/g/avg/g22	true	4c on,SET 4	E E	E E	yy	ERR ARITHMETIC_OVERFLOW x40
+t4/c38_0/g/avg/g23	false	4c on,SET 4	X X	E E	nn	23|NULL x40
+t4/c38_0/g/avg/g23	true	4c on,SET 4	R R	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+t4/c38_0/g/avg/g24	false	4c on,SET 4	W W	E E	yy	24|1 x40
+t4/c38_0/g/avg/g24	true	4c on,SET 4	R R	E E	yy	24|1 x40
+t4/c38_0/g/avg/g25	false	4c on,SET 4	E E	E E	yy	25|1.6667 x40
+t4/c38_0/g/avg/g25	true	4c on,SET 4	E E	E E	yy	25|1.6667 x40
+t4/c38_0/g/sum/g21	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	21|99999999999999999999999999999999999999 x120
+t4/c38_0/g/sum/g21	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	R R R R R R	yyyyyy	21|99999999999999999999999999999999999999 x120
+t4/c38_0/g/sum/g22	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	22|NULL x120
+t4/c38_0/g/sum/g22	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+t4/c38_0/g/sum/g23	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	23|5 x120
+t4/c38_0/g/sum/g23	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	R R R R R R	yyyyyy	23|5 x120
+t4/c38_0/g/sum/g24	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	E E E E E E	yyyyyy	24|5 x120
+t4/c38_0/g/sum/g24	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	R R R R R R	E E E E E E	yyyyyy	24|5 x120
+t4/c38_0/g/sum/g25	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	25|5 x120
+t4/c38_0/g/sum/g25	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	25|5 x120
+t4/c38_0/g/try_avg/g21	false	4c on,SET 4	E E	E E	yy	21|NULL x40
+t4/c38_0/g/try_avg/g21	true	4c on,SET 4	E E	E E	yy	21|NULL x40
+t4/c38_0/g/try_avg/g22	false	4c on,SET 4	E E	E E	yy	22|NULL x40
+t4/c38_0/g/try_avg/g22	true	4c on,SET 4	E E	E E	yy	22|NULL x40
+t4/c38_0/g/try_avg/g23	false	4c on,SET 4	X X	E E	nn	23|NULL x40
+t4/c38_0/g/try_avg/g23	true	4c on,SET 4	X X	E E	nn	23|NULL x40
+t4/c38_0/g/try_avg/g24	false	4c on,SET 4	W W	E E	yy	24|1 x40
+t4/c38_0/g/try_avg/g24	true	4c on,SET 4	W W	E E	yy	24|1 x40
+t4/c38_0/g/try_avg/g25	false	4c on,SET 4	E E	E E	yy	25|1.6667 x40
+t4/c38_0/g/try_avg/g25	true	4c on,SET 4	E E	E E	yy	25|1.6667 x40
+t4/c38_0/g/try_sum/g21	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	21|99999999999999999999999999999999999999 x120
+t4/c38_0/g/try_sum/g21	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	W W W W W W	yyyyyy	21|99999999999999999999999999999999999999 x120
+t4/c38_0/g/try_sum/g22	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	22|NULL x120
+t4/c38_0/g/try_sum/g22	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	22|NULL x120
+t4/c38_0/g/try_sum/g23	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	23|5 x120
+t4/c38_0/g/try_sum/g23	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	23|5 x120
+t4/c38_0/g/try_sum/g24	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	E E E E E E	yyyyyy	24|5 x120
+t4/c38_0/g/try_sum/g24	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	W W W W W W	E E E E E E	yyyyyy	24|5 x120
+t4/c38_0/g/try_sum/g25	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	25|5 x120
+t4/c38_0/g/try_sum/g25	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	25|5 x120
+t4/c38_0/u/avg/g21	false	4c on,SET 4	E E	E E	yy	NULL x40
+t4/c38_0/u/avg/g21	true	4c on,SET 4	E E	E E	yy	ERR NUMERIC_VALUE_OUT_OF_RANGE x40
+t4/c38_0/u/avg/g22	false	4c on,SET 4	E E	E E	yy	NULL x40
+t4/c38_0/u/avg/g22	true	4c on,SET 4	E E	C C	yy	ERR ARITHMETIC_OVERFLOW x40
+t4/c38_0/u/avg/g23	false	4c on,SET 4	X X	E E	nn	NULL x40
+t4/c38_0/u/avg/g23	true	4c on,SET 4	R R	E E	nn	ERR ARITHMETIC_OVERFLOW x40
+t4/c38_0/u/avg/g24	false	4c on,SET 4	E E	E E	yy	1 x40
+t4/c38_0/u/avg/g24	true	4c on,SET 4	E E	E E	yy	1 x40
+t4/c38_0/u/avg/g25	false	4c on,SET 4	E E	E E	yy	1.6667 x40
+t4/c38_0/u/avg/g25	true	4c on,SET 4	E E	E E	yy	1.6667 x40
+t4/c38_0/u/sum/g21	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	99999999999999999999999999999999999999 x120
+t4/c38_0/u/sum/g21	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	99999999999999999999999999999999999999 x120
+t4/c38_0/u/sum/g22	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t4/c38_0/u/sum/g22	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	C C C C C C	yyyyyy	ERR ARITHMETIC_OVERFLOW x120
+t4/c38_0/u/sum/g23	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	5 x120
+t4/c38_0/u/sum/g23	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	R R R R R R	yyyyyy	5 x120
+t4/c38_0/u/sum/g24	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5 x120
+t4/c38_0/u/sum/g24	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5 x120
+t4/c38_0/u/sum/g25	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5 x120
+t4/c38_0/u/sum/g25	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5 x120
+t4/c38_0/u/try_avg/g21	false	4c on,SET 4	E E	E E	yy	NULL x40
+t4/c38_0/u/try_avg/g21	true	4c on,SET 4	E E	E E	yy	NULL x40
+t4/c38_0/u/try_avg/g22	false	4c on,SET 4	E E	E E	yy	NULL x40
+t4/c38_0/u/try_avg/g22	true	4c on,SET 4	E E	E E	yy	NULL x40
+t4/c38_0/u/try_avg/g23	false	4c on,SET 4	X X	E E	nn	NULL x40
+t4/c38_0/u/try_avg/g23	true	4c on,SET 4	X X	E E	nn	NULL x40
+t4/c38_0/u/try_avg/g24	false	4c on,SET 4	E E	E E	yy	1 x40
+t4/c38_0/u/try_avg/g24	true	4c on,SET 4	E E	E E	yy	1 x40
+t4/c38_0/u/try_avg/g25	false	4c on,SET 4	E E	E E	yy	1.6667 x40
+t4/c38_0/u/try_avg/g25	true	4c on,SET 4	E E	E E	yy	1.6667 x40
+t4/c38_0/u/try_sum/g21	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	99999999999999999999999999999999999999 x120
+t4/c38_0/u/try_sum/g21	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	99999999999999999999999999999999999999 x120
+t4/c38_0/u/try_sum/g22	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t4/c38_0/u/try_sum/g22	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	NULL x120
+t4/c38_0/u/try_sum/g23	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	5 x120
+t4/c38_0/u/try_sum/g23	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	W W W W W W	yyyyyy	5 x120
+t4/c38_0/u/try_sum/g24	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5 x120
+t4/c38_0/u/try_sum/g24	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5 x120
+t4/c38_0/u/try_sum/g25	false	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5 x120
+t4/c38_0/u/try_sum/g25	true	2c on,4c on,4c off,SET 2,SET 4,SET 8	E E E E E E	E E E E E E	yyyyyy	5 x120
