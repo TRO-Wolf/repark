@@ -1,6 +1,6 @@
 # map — task/roadmap/mid-term/cards-2026-11-19/
 
-Ten cards filed from the 2026-11-18 window, under the owner's rulings recorded in [rulings-2026-11-18.md](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-18.md). Six are the view residue of TEMP-VIEW-SESSION-SETTINGS-1 part 2 (five view cards and the race card); four come from the decimal units (the verify-ddl and sum step 0 verdicts). Each card's severity and label status are the ruling's, quoted in the card. None is dispatched. Six more, filed 2026-11-19 from Fable's guidance on TEMP-VIEW-FRAME-READER-PARSE-1 step 0, are listed after the ten: CSV-SCHEMA-TIMESTAMP-ZONE-1 is building on its own branch, and the other five are not dispatched.
+Ten cards filed from the 2026-11-18 window, under the owner's rulings recorded in [rulings-2026-11-18.md](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-18.md). Six are the view residue of TEMP-VIEW-SESSION-SETTINGS-1 part 2 (five view cards and the race card); four come from the decimal units (the verify-ddl and sum step 0 verdicts). Each card's severity and label status are the ruling's, quoted in the card. None is dispatched. Six more, filed 2026-11-19 from Fable's guidance on TEMP-VIEW-FRAME-READER-PARSE-1 step 0, are listed after the ten: CSV-SCHEMA-TIMESTAMP-ZONE-1 is building on its own branch, and the other five are not dispatched. Five more, filed 2026-11-19 from the `sum` bar and from the AVG-DECIMAL-GROUPED-RUN-VARIANCE-1 step 0 critic, are listed last: the `sum` card is rated, and the four critic cards are not.
 
 ## Cards
 
@@ -20,5 +20,10 @@ Ten cards filed from the 2026-11-18 window, under the owner's rulings recorded i
 - [READER-TYPED-SCAN-1](reader-typed-scan-1-card-2026-11-19.md) (S3, not label-blocking, Fable's Q1, Q3 and Q10; seat (b)) — **card:** a JSON or CSV typed parse raises where Spark answers (D2 and D9–D11).
 - [UNIX-TIMESTAMP-NTZ-ZONE-1](unix-timestamp-ntz-zone-1-card-2026-11-19.md) (not rated, Fable's Q7; its first step measures an Iceberg NTZ column) — **card:** `unix_timestamp` of a `TIMESTAMP_NTZ` column reads the session zone.
 - [SMARTCSV-SQL-VIEW-1](smartcsv-sql-view-1-card-2026-11-19.md) (S3, not label-blocking, Fable's Q5; `smartCsv`'s ruled behaviour kept) — **card:** a SQL view over a `smartCsv` frame view raises `TABLE_OR_VIEW_NOT_FOUND`.
+- [SUM-EXACT-TOTAL-DIVERGENCE-1](sum-exact-total-divergence-1-card-2026-11-19.md) (owner-accepted kept divergence, decision I, 2026-11-18; the label text names it) — **card:** `sum` and `try_sum` answer the exact total past 38 digits where Spark's running total comes back as NULL or raises.
+- [CUBE-GROUPING-EXPR-PLAN-1](cube-grouping-expr-plan-1-card-2026-11-19.md) (not rated; rating owed, measured once by the AVG-DECIMAL-GROUPED-RUN-VARIANCE-1 step 0 critic) — **card:** `CUBE(g, id % 2)` with an expression fails to plan, where `CUBE(g, h)` over plain columns plans.
+- [AVG-DISTINCT-MIXED-COUNT-1](avg-distinct-mixed-count-1-card-2026-11-19.md) (not rated; rating owed, measured once by the AVG-DECIMAL-GROUPED-RUN-VARIANCE-1 step 0 critic) — **card:** `avg(DISTINCT c), count(DISTINCT id)` refuses where Spark answers `[1, 8]`.
+- [DECIMAL256-SUM-WRAP-1](decimal256-sum-wrap-1-card-2026-11-19.md) (not rated; rating owed, measured once by the AVG-DECIMAL-GROUPED-RUN-VARIANCE-1 step 0 critic) — **card:** a Parquet `decimal256(76,0)` file: `avg` and `sum` answer wrong values where Spark refuses the read.
+- [SPILL-SMALL-POOL-STALL-1](spill-small-pool-stall-1-card-2026-11-19.md) (not rated; rating owed, measured once by the AVG-DECIMAL-GROUPED-RUN-VARIANCE-1 step 0 critic) — **card:** a grouped `sum` under a 3 MB memory pool sits near 3% CPU for over 100 s.
 
 Up: [../map.md](../map.md).
