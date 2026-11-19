@@ -203,4 +203,9 @@ Product commit `8efe8e69` (over `a30a8d60`); package `pkg-ddl-8efe8e69` (its `BU
   card is closed by this delta).
 - **Gates:** the delta's hand-back carries the gate table (run on the product commit `5b34022f`).
 
+**Verifier record notes (PR #1361, 2026-11-18).** Copied from the verify verdict's section "Record notes (no measured contradiction)":
+
+- **R2:** card 2 names the written `CAST(3 AS DECIMAL(20,0))` narrowing in `*` and `+`; `-` is narrowed too (`attack1 suf/d10_2/CAST(3 AS DECIMAL(20,0))/-/{l,r}`, main alike).
+- **R3:** card 7 names the view created before `SET …=false`; the mirror (built `false`, `SET true`) refuses the same way.
+
 Up: [map.md](map.md).
