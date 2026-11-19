@@ -5925,7 +5925,9 @@ still open is `isModifiable`.
   - `F.expr` over a string literal outside UTC reads the text as UTC (N8, its own card by the owner's ruling 5):
     `hour` of `date`, `full`, `tsep`, `frac`, `gap` in Los Angeles on that door, 10 `TIMESTAMP_LTZ` cells and 5
     `TIMESTAMP_NTZ` ones; on main the two `date` cells and their NTZ twin answered `0`, Spark's answer, by reading a
-    midnight;
+    midnight. The verifier found the family wider: a date-only literal loses that coincidental `0` in every non-UTC
+    zone, for `hour` and, in a zone with a half-hour or 45-minute offset, `minute`, as a projection and inside
+    `filter(F.expr(...))`, in all four configurations (49 more cells). The owner accepted the whole family;
   - the native `repark.sql()` door and a Rust `AnsiDialect` session without the Spark extension have no `hour`
     (`UNRESOLVED_ROUTINE`), on main as on the head; the `AnsiDialect` door on a Spark-extended session answers as the
     Spark door ([evidence/built/doors.md](../task/wo/string-hour-minute-second-1/evidence/built/doors.md));
@@ -5938,8 +5940,9 @@ still open is `isModifiable`.
   N8 cells named in each test id; the plan); Rust `repark-functions` `time_family::tests`.
 - **Bar and cost** — [bar.md](../task/wo/string-hour-minute-second-1/bar.md),
   [cost.md](../task/wo/string-hour-minute-second-1/cost.md).
-- **Rationale** — the owner's rulings "Defaults on all six, merge 1369 on green", "go with recommendations" and
-  "accept the three N8 cells, carry on" (2026-11-19; the last accepts the three EQUAL cells lost to N8); card
+- **Rationale** — the owner's rulings "Defaults on all six, merge 1369 on green", "go with recommendations",
+  "accept the three N8 cells, carry on" and "accept the whole N8 family, carry on" (2026-11-19; the last two accept
+  the EQUAL cells lost to N8); card
   [STRING-HOUR-MINUTE-SECOND-1](../task/roadmap/mid-term/cards-2026-11-19/string-hour-minute-second-1-card-2026-11-19.md).
 
 ## 5. Facade drop-in semantics (DECLARED)

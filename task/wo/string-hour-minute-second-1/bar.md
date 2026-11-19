@@ -25,6 +25,13 @@ A, under the shared measure lock; every run printed `repark._native.__file__`. T
   grants a merge on green CI and a clean verifier PASS.
 - **Owner, 2026-11-19, about 15:47 UTC, verbatim: "accept the three N8 cells, carry on".** It accepts the three
   EQUAL cells lost inside the N8 forecast ("Lost EQUAL: 3" below); they stay with the N8 card.
+- **Owner, 2026-11-19, about 17:40 UTC, verbatim: "accept the whole N8 family, carry on".** It answers the
+  verifier's finding F1: the N8 family is wider than those three cells. `F.expr` over a date-only string literal
+  outside UTC loses the `0` that main answered only by reading a midnight. It does so in every non-UTC zone, for
+  `hour` and, in a zone with a half-hour or 45-minute offset, `minute`. It happens as a projection and inside
+  `filter(F.expr(...))`, where the row count flips, in all four ANSI and `spark.sql.timestampType` configurations.
+  The verifier measured 49 such cells beyond the three, plus 20 N8 cells that were WRONG on main too. All are
+  accepted and stay with the N8 card, which is S1 and label-blocking by ruling 3.
 
 ## What was built
 
@@ -60,7 +67,8 @@ A, under the shared measure lock; every run printed `repark._native.__file__`. T
 - **Lost EQUAL: 3**, all inside the forecast's N8 residue: `hour` of `date` (`2024-01-01`) on `F.expr` over the
   literal in `a0-la`, `a1-la` and `a1-la-ntz`. Main answered `0`, Spark's answer, because it read a midnight `DATE`;
   the head reads the text as the UTC instant on that door (N8) and answers `16`. The other 12 N8 cells were WRONG on
-  main (`0`) and are WRONG on the head (`19`, `18`, `16`). The owner accepted the three at about 15:47 UTC (above).
+  main (`0`) and are WRONG on the head (`19`, `18`, `16`). The owner accepted the three at about 15:47 UTC, and the
+  whole N8 family at about 17:40 UTC (above). Step 0's table holds only these three of the family.
 - **The 216 multi-row cells** (`WHERE`, `GROUP BY`, `ORDER BY` on SQL and on the frame, inputs `I`, `P`, `V`, four
   configurations, the twelve-row table): all 216 RAISE on base (the table holds `lead`, `trail`, `nosec`, `yonly`,
   which arrow's date cast refuses), all 216 EQUAL on the head.
