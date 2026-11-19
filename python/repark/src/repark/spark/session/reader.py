@@ -507,7 +507,8 @@ class DataFrameReader:
         if naive:
             local = Path(path_str)
             native_options["utf8_columns"] = ",".join(naive)
-            uri = local.absolute().as_uri() + "/" * local.is_dir() if local.exists() else path_str
+            literal = local.exists() and set("*?[").isdisjoint(path_str)
+            uri = local.absolute().as_uri() + "/" * local.is_dir() if literal else path_str
             frame = self._session.read_csv(uri, native_options)
         return self._apply_reader_schema_semantics(
             frame,
