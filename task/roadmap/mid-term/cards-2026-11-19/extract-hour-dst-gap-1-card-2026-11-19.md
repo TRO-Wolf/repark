@@ -4,7 +4,7 @@
 
 **Status:** filed 2026-11-19; not dispatched.
 
-**Severity: rating owed, for the owner.** The ruled lists of 2026-11-19 do not name N7, and the domain table marks it "silent / loud". The orchestrator's reading is S1 by class for its silent half, under ruling 1's class rule. Do not mark it label-blocking until the owner rules.
+**Severity: S1 by class, label-blocking** (owner, 2026-11-19, about 18:00 UTC, verbatim: "merge 1371 on green, N7 S1, residual S3, carry on"). The ruled lists of 2026-11-19 did not name N7, and the domain table marks it "silent / loud"; the owner rated it S1, which ruling 1's class rule makes label-blocking.
 
 ## Finding
 

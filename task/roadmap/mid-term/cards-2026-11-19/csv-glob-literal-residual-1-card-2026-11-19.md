@@ -4,7 +4,7 @@
 
 **Status:** filed 2026-11-19; not dispatched.
 
-**Severity: not rated; rating owed, for the owner.** Accepted under ruling 3 (owner, about 14:45 UTC, verbatim: "go with delta 3"), which accepts delta 3 of [CSV-SCHEMA-TIMESTAMP-ZONE-1](csv-schema-timestamp-zone-1-card-2026-11-19.md) with this residual named.
+**Severity: S3, not label-blocking** (owner, 2026-11-19, about 18:00 UTC, verbatim: "merge 1371 on green, N7 S1, residual S3, carry on"). Accepted under ruling 3 (owner, about 14:45 UTC, verbatim: "go with delta 3"), which accepts delta 3 of [CSV-SCHEMA-TIMESTAMP-ZONE-1](csv-schema-timestamp-zone-1-card-2026-11-19.md) with this residual named.
 
 ## Finding
 
