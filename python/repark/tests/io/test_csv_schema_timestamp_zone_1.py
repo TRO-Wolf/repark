@@ -1,0 +1,194 @@
+from __future__ import annotations
+
+from collections.abc import Callable, Iterator
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from repark import ReparkSession
+from repark.spark.session import _reset_active_session_for_tests
+
+pytestmark = pytest.mark.xdist_group("csv_schema_timestamp_zone_1")
+LA = "America/Los_Angeles"
+TK = "Asia/Tokyo"
+UTC = "UTC"
+SCHEMA = "n INT, ts TIMESTAMP"
+UTC_PARSE = [(1, 1704078000), (2, 1704110400)]
+LA_PARSE = [(1, 1704106800), (2, 1704139200)]
+SPARK_BY_ZONE = {UTC: UTC_PARSE, LA: LA_PARSE}
+FILES = {
+    "base": "1,2024-01-01 03:00:00\n2,2024-01-01 12:00:00\n",
+    "dst": "1,2024-03-10 02:30:00\n2,2024-11-03 01:30:00\n",
+    "iso": "1,2024-01-01T03:00:00\n2,2024-06-01T23:30:00\n",
+    "hdr": "n,ts\n1,2024-01-01 03:00:00\n2,2024-06-01 23:30:00\n",
+    "hdrpos": "a,b\n1,2024-01-01 03:00:00\n2,2024-06-01 23:30:00\n",
+    "twots": "1,2024-01-01 03:00:00,2024-06-01 23:30:00\n",
+    "emptyts": "1,\n2,2024-01-01 03:00:00\n",
+}
+U = "SELECT n, unix_timestamp(ts) AS u FROM shape"
+SHAPES: dict[str, tuple[Callable[[Any, Path], Any], str, dict[str, list[tuple]]]] = {
+    "dst": (
+        lambda read, root: read.schema(SCHEMA).csv(str(root / "dst")),
+        U,
+        {LA: [(1, 1710066600), (2, 1730622600)], TK: [(1, 1710005400), (2, 1730565000)]},
+    ),
+    "iso": (
+        lambda read, root: read.schema(SCHEMA).csv(str(root / "iso")),
+        U,
+        {LA: [(1, 1704106800), (2, 1717309800)], TK: [(1, 1704045600), (2, 1717252200)]},
+    ),
+    "header": (
+        lambda read, root: read.option("header", "true").schema(SCHEMA).csv(str(root / "hdr")),
+        U,
+        {LA: [(1, 1704106800), (2, 1717309800)], TK: [(1, 1704045600), (2, 1717252200)]},
+    ),
+    "header_by_position": (
+        lambda read, root: read.option("header", "true").schema(SCHEMA).csv(str(root / "hdrpos")),
+        U,
+        {LA: [(1, 1704106800), (2, 1717309800)], TK: [(1, 1704045600), (2, 1717252200)]},
+    ),
+    "two_fields": (
+        lambda read, root: read.schema("n INT, a TIMESTAMP, b TIMESTAMP").csv(str(root / "twots")),
+        "SELECT n, unix_timestamp(a), unix_timestamp(b) FROM shape",
+        {LA: [(1, 1704106800, 1717309800)], TK: [(1, 1704045600, 1717252200)]},
+    ),
+    "empty_field": (
+        lambda read, root: read.schema(SCHEMA).csv(str(root / "emptyts")),
+        U,
+        {LA: [(1, None), (2, 1704106800)], TK: [(1, None), (2, 1704045600)]},
+    ),
+}
+WRITES: dict[str, Callable[[Any, str], None]] = {
+    "ctas": lambda session, table: session.sql(
+        f"CREATE TABLE {table} USING iceberg AS SELECT * FROM made_utc"
+    ).collect(),
+    "insert": lambda session, table: session.sql(
+        f"INSERT INTO {table} SELECT * FROM made_utc"
+    ).collect(),
+    "write_to": lambda session, table: (
+        session.table("made_utc").writeTo(table).using("iceberg").create()
+    ),
+    "insert_into": lambda session, table: session.table("made_utc").write.insertInto(table),
+}
+
+
+def conf(session: Any, zone: str) -> None:
+    session.sql(f"SET spark.sql.session.timeZone={zone}").collect()
+
+
+def rows(session: Any, query: str) -> list[tuple]:
+    return sorted(tuple(row) for row in session.sql(query).collect())
+
+
+def read_base(session: Any, root: Path, reader: str) -> Any:
+    path = str(root / "base")
+    if reader == "csv_s":
+        return session.read.schema(SCHEMA).csv(path)
+    return session.read.format("csv").schema(SCHEMA).load(path)
+
+
+def measure_matching(session: Any, root: Path, found: dict[str, Any]) -> None:
+    for reader in ("csv_s", "csv_f"):
+        for zone in (UTC, LA):
+            conf(session, zone)
+            frame = read_base(session, root, reader)
+            frame.createOrReplaceTempView("matching")
+            found[f"matching/{reader}/{zone}"] = (
+                frame.dtypes,
+                rows(session, "SELECT n, unix_timestamp(ts) FROM matching"),
+            )
+
+
+def measure_views(session: Any, root: Path, found: dict[str, Any]) -> None:
+    for made, read in ((LA, UTC), (UTC, LA)):
+        conf(session, made)
+        read_base(session, root, "csv_s").createOrReplaceTempView("made")
+        session.sql("CREATE OR REPLACE TEMP VIEW made_sql AS SELECT * FROM made").collect()
+        conf(session, read)
+        for door, view in (("frame_view", "made"), ("sql_view", "made_sql")):
+            query = f"SELECT n, unix_timestamp(ts) FROM {view}"
+            found[f"view/{door}/{made}/{read}"] = rows(session, query)
+
+
+def measure_writes(session: Any, root: Path, found: dict[str, Any]) -> None:
+    conf(session, UTC)
+    read_base(session, root, "csv_s").createOrReplaceTempView("made_utc")
+    session.sql("CREATE NAMESPACE IF NOT EXISTS lc.w").collect()
+    for write, action in WRITES.items():
+        table = f"lc.w.{write}"
+        if write in ("insert", "insert_into"):
+            session.sql(
+                f"CREATE TABLE {table} USING iceberg AS SELECT * FROM made_utc WHERE false"
+            ).collect()
+        conf(session, LA)
+        action(session, table)
+        conf(session, UTC)
+        found[f"write/{write}"] = rows(session, f"SELECT n, unix_timestamp(ts) FROM {table}")
+
+
+def measure_shapes(session: Any, root: Path, found: dict[str, Any]) -> None:
+    for shape, (build, query, _) in SHAPES.items():
+        for zone in (LA, TK):
+            conf(session, zone)
+            build(session.read, root).createOrReplaceTempView("shape")
+            found[f"shape/{shape}/{zone}"] = rows(session, query)
+
+
+@pytest.fixture(scope="module", params=["true", "false"])
+def measured(
+    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
+) -> Iterator[dict[str, Any]]:
+    root = tmp_path_factory.mktemp(f"csv-ts-zone-{request.param}")
+    for name, text in FILES.items():
+        (root / name).mkdir()
+        (root / name / "a.csv").write_text(text)
+    _reset_active_session_for_tests()
+    session = (
+        ReparkSession.builder.appName("test-csv-schema-timestamp-zone-1")
+        .config("spark.sql.catalog.lc", "org.apache.iceberg.spark.SparkCatalog")
+        .config("spark.sql.catalog.lc.type", "hadoop")
+        .config("spark.sql.catalog.lc.warehouse", str(root / "lc"))
+        .config("spark.sql.session.timeZone", UTC)
+        .config("spark.sql.ansi.enabled", request.param)
+        .getOrCreate()
+    )
+    found: dict[str, Any] = {}
+    for step in (measure_matching, measure_views, measure_writes, measure_shapes):
+        step(session, root, found)
+    session.stop()
+    _reset_active_session_for_tests()
+    yield found
+
+
+@pytest.mark.parametrize("reader", ["csv_s", "csv_f"])
+def test_a_schema_timestamp_parses_under_the_session_zone(
+    measured: dict[str, Any], reader: str
+) -> None:
+    for zone in (UTC, LA):
+        dtypes, got = measured[f"matching/{reader}/{zone}"]
+        assert dtypes == [("n", "int"), ("ts", "timestamp")], zone
+        assert got == SPARK_BY_ZONE[zone], zone
+
+
+@pytest.mark.parametrize("door", ["frame_view", "sql_view"])
+def test_a_view_read_in_another_zone_parses_under_the_reading_zone(
+    measured: dict[str, Any], door: str
+) -> None:
+    for made, read in ((LA, UTC), (UTC, LA)):
+        assert measured[f"view/{door}/{made}/{read}"] == SPARK_BY_ZONE[read], (made, read)
+
+
+@pytest.mark.parametrize("write", sorted(WRITES))
+def test_a_write_in_another_zone_stores_the_writing_zone_parse(
+    measured: dict[str, Any], write: str
+) -> None:
+    assert measured[f"write/{write}"] == LA_PARSE
+
+
+@pytest.mark.parametrize("shape", sorted(SHAPES))
+def test_every_schema_timestamp_shape_parses_under_the_session_zone(
+    measured: dict[str, Any], shape: str
+) -> None:
+    for zone in (LA, TK):
+        assert measured[f"shape/{shape}/{zone}"] == SHAPES[shape][2][zone], zone

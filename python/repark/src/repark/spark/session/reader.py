@@ -502,12 +502,30 @@ class DataFrameReader:
         # Spark default header=false when unset — force it so DF does not default true.
         if "header" not in {key.lower() for key in native_options}:
             native_options["header"] = "false"
+        frame = self._session.read_csv(path_str, native_options)
+        naive = [name for name, dtype in frame.dtypes if dtype == "timestamp_ntz"]
+        if naive and self._schema_has_session_timestamp():
+            native_options["utf8_columns"] = ",".join(naive)
+            frame = self._session.read_csv(path_str, native_options)
         return self._apply_reader_schema_semantics(
-            self._session.read_csv(path_str, native_options),
+            frame,
             infer_schema=self._option_bool("inferschema", default=False),
             header=self._option_bool("header", default=False),
             path=path_str,
         )
+
+    def _schema_has_session_timestamp(self) -> bool:
+        """Tell whether the user schema holds a ``TIMESTAMP`` field.
+
+        Spark parses such a CSV field from its text under the session zone, so ``_load_csv``
+        re-reads the scan's zone-less timestamp columns as text for the typed parse to cast.
+        """
+        from repark.spark.types import TimestampType
+
+        if self._schema is None:
+            return False
+        fields = _schema_fields(self._schema)
+        return any(isinstance(field["dataType"], TimestampType) for field in fields)
 
     def _load_json(self, path: str | Path | list[str]) -> DataFrame:
         """Materialize JSON via the session native reader + optional schema projection."""
