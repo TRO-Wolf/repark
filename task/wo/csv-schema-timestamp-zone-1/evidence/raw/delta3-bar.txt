@@ -1,0 +1,150 @@
+# delta 3 bar (package pkg-csvts-364f2013, BUILT_FROM 364f2013) against delta 2 (pkg-csvts-468ba436)
+
+## native library, section by section against delta 2
+same section names: True 32
+file sizes 240452416 240452416
+
+## delta 2's record set on delta 3 (cmp against delta 2's records)
+d3-Z0.jsonl: 450 vs 450 records, 0 keys differ
+d3-Z1.jsonl: 450 vs 450 records, 0 keys differ
+d3-Z2.jsonl: 450 vs 450 records, 0 keys differ
+d3-Z3.jsonl: 450 vs 450 records, 0 keys differ
+d3-Z4.jsonl: 450 vs 450 records, 0 keys differ
+d3-Z5.jsonl: 450 vs 450 records, 0 keys differ
+d3-Z6.jsonl: 450 vs 450 records, 0 keys differ
+d3-Z7.jsonl: 450 vs 450 records, 0 keys differ
+d3-A.jsonl: 884 vs 884 records, 0 keys differ
+d3-T.jsonl: 408 vs 408 records, 0 keys differ
+d3-S.jsonl: 8 vs 8 records, 0 keys differ
+d3-W0.jsonl: 84 vs 84 records, 0 keys differ
+d3-W1.jsonl: 84 vs 84 records, 0 keys differ
+d3-W2.jsonl: 84 vs 84 records, 0 keys differ
+d3-W3.jsonl: 84 vs 84 records, 0 keys differ
+d3-E.jsonl: 16 vs 16 records, 0 keys differ
+readers-d3.jsonl: 1176 vs 1176 records, 0 keys differ
+d3-true.jsonl: 1551 vs 1551 records, 0 keys differ
+d3-false.jsonl: 1551 vs 1551 records, 0 keys differ
+d3-X.jsonl: 119 vs 119 records, 0 keys differ
+vp-main-d3.jsonl: 331 vs 331 records, 0 keys differ
+vp-ntzb-d3.jsonl: 12 vs 12 records, 0 keys differ
+vp2-main-d3.jsonl: 433 vs 433 records, 0 keys differ
+vp3-main-d3.jsonl: 86 vs 86 records, 0 keys differ
+vp4-main-d3.jsonl: 42 vs 42 records, 0 keys differ
+d1-d3-main.jsonl: 84 vs 84 records, 0 keys differ
+
+## the verifier's rp.py (main), rp.py (fifo), rp2.py: verdicts, and every cell that moves from delta 2
+main {'EQUAL': 126, 'WRONG': 130, 'ANSWERS': 8, 'BOTHERR': 8}
+d1 {'EQUAL': 196, 'WRONG': 60, 'ANSWERS': 8, 'BOTHERR': 8}
+d2 {'EQUAL': 192, 'WRONG': 64, 'ANSWERS': 8, 'BOTHERR': 8}
+d3 {'EQUAL': 192, 'WRONG': 60, 'ANSWERS': 8, 'BOTHERR': 8, 'RAISE': 4}
+MOVE d2 -> d3 true/utc/P/symbroken/full BOTHERR -> BOTHERR | others: ['BOTHERR', 'BOTHERR']
+MOVE d2 -> d3 true/utc/P/symbroken/nots BOTHERR -> BOTHERR | others: ['BOTHERR', 'BOTHERR']
+MOVE d2 -> d3 true/utc/P/star_literal/full WRONG -> RAISE | others: ['EQUAL', 'EQUAL']
+MOVE d2 -> d3 true/los_angeles/P/symbroken/full BOTHERR -> BOTHERR | others: ['BOTHERR', 'BOTHERR']
+MOVE d2 -> d3 true/los_angeles/P/symbroken/nots BOTHERR -> BOTHERR | others: ['BOTHERR', 'BOTHERR']
+MOVE d2 -> d3 true/los_angeles/P/star_literal/full WRONG -> RAISE | others: ['WRONG', 'EQUAL']
+MOVE d2 -> d3 false/utc/P/symbroken/full BOTHERR -> BOTHERR | others: ['BOTHERR', 'BOTHERR']
+MOVE d2 -> d3 false/utc/P/symbroken/nots BOTHERR -> BOTHERR | others: ['BOTHERR', 'BOTHERR']
+MOVE d2 -> d3 false/utc/P/star_literal/full WRONG -> RAISE | others: ['EQUAL', 'EQUAL']
+MOVE d2 -> d3 false/los_angeles/P/symbroken/full BOTHERR -> BOTHERR | others: ['BOTHERR', 'BOTHERR']
+MOVE d2 -> d3 false/los_angeles/P/symbroken/nots BOTHERR -> BOTHERR | others: ['BOTHERR', 'BOTHERR']
+MOVE d2 -> d3 false/los_angeles/P/star_literal/full WRONG -> RAISE | others: ['WRONG', 'EQUAL']
+moves {('BOTHERR', 'BOTHERR'): 8, ('WRONG', 'RAISE'): 4} byte-equal 260 of 272
+main {'RAISE': 8}
+d2 {'RAISE': 8}
+d3 {'RAISE': 8}
+moves {} byte-equal 8 of 8
+main {'EQUAL': 36, 'WRONG': 12}
+d1 {'EQUAL': 48}
+d2 {'WRONG': 16, 'EQUAL': 32}
+d3 {'RAISE': 20, 'EQUAL': 28}
+MOVE d2 -> d3 true/utc/G/star_file/full WRONG -> RAISE | others: ['EQUAL', 'EQUAL']
+MOVE d2 -> d3 true/utc/G/qmark_file/full WRONG -> RAISE | others: ['EQUAL', 'EQUAL']
+MOVE d2 -> d3 true/utc/G/brack_file/full WRONG -> RAISE | others: ['EQUAL', 'EQUAL']
+MOVE d2 -> d3 true/utc/G/star_dir/full WRONG -> RAISE | others: ['EQUAL', 'EQUAL']
+MOVE d2 -> d3 true/utc/G/star_alone/full EQUAL -> RAISE | others: ['EQUAL', 'EQUAL']
+MOVE d2 -> d3 true/los_angeles/G/star_file/full WRONG -> RAISE | others: ['WRONG', 'EQUAL']
+MOVE d2 -> d3 true/los_angeles/G/qmark_file/full WRONG -> RAISE | others: ['WRONG', 'EQUAL']
+MOVE d2 -> d3 true/los_angeles/G/brack_file/full WRONG -> RAISE | others: ['WRONG', 'EQUAL']
+MOVE d2 -> d3 true/los_angeles/G/star_dir/full WRONG -> RAISE | others: ['WRONG', 'EQUAL']
+MOVE d2 -> d3 true/los_angeles/G/star_alone/full EQUAL -> RAISE | others: ['WRONG', 'EQUAL']
+MOVE d2 -> d3 false/utc/G/star_file/full WRONG -> RAISE | others: ['EQUAL', 'EQUAL']
+MOVE d2 -> d3 false/utc/G/qmark_file/full WRONG -> RAISE | others: ['EQUAL', 'EQUAL']
+MOVE d2 -> d3 false/utc/G/brack_file/full WRONG -> RAISE | others: ['EQUAL', 'EQUAL']
+MOVE d2 -> d3 false/utc/G/star_dir/full WRONG -> RAISE | others: ['EQUAL', 'EQUAL']
+MOVE d2 -> d3 false/utc/G/star_alone/full EQUAL -> RAISE | others: ['EQUAL', 'EQUAL']
+MOVE d2 -> d3 false/los_angeles/G/star_file/full WRONG -> RAISE | others: ['WRONG', 'EQUAL']
+MOVE d2 -> d3 false/los_angeles/G/qmark_file/full WRONG -> RAISE | others: ['WRONG', 'EQUAL']
+MOVE d2 -> d3 false/los_angeles/G/brack_file/full WRONG -> RAISE | others: ['WRONG', 'EQUAL']
+MOVE d2 -> d3 false/los_angeles/G/star_dir/full WRONG -> RAISE | others: ['WRONG', 'EQUAL']
+MOVE d2 -> d3 false/los_angeles/G/star_alone/full EQUAL -> RAISE | others: ['WRONG', 'EQUAL']
+moves {('WRONG', 'RAISE'): 16, ('EQUAL', 'RAISE'): 4} byte-equal 28 of 48
+
+## rp3.py EXPLAIN: 40 plans, 0 differ from delta 2 after path normalisation
+## K2, k0_hour, k0_count EXPLAIN on delta 3 against delta 2: equal (k2, k0_hour, k0_count)
+
+## the residual probe (delta3_glob.py), per cell group; letters main,d1,first,d2,d3
+main {'EQUAL': 144, 'WRONG': 144}
+d1 {'EQUAL': 240, 'WRONG': 48}
+first {'RAISE': 84, 'EQUAL': 170, 'WRONG': 34}
+d2 {'WRONG': 138, 'EQUAL': 150}
+d3 {'RAISE': 72, 'EQUAL': 184, 'WRONG': 32}
+cell: per zone, ansi true then false; letters per build in order main d1 first d2 d3
+| flavour/case/schema | utc | la | ny |
+|---|---|---|---|
+| x/star_file/full | E,E,R,W,R E,E,R,W,R | W,E,R,W,R W,E,R,W,R | W,E,R,W,R W,E,R,W,R |
+| x/star_file/f1 | E,E,R,W,R E,E,R,W,R | W,E,R,W,R W,E,R,W,R | W,E,R,W,R W,E,R,W,R |
+| x/star_file/f2 | W,W,E,W,E W,W,E,W,E | W,W,W,W,W W,W,W,W,W | W,W,W,W,W W,W,W,W,W |
+| x/star_file/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| x/qmark_file/full | E,E,R,W,R E,E,R,W,R | W,E,R,W,R W,E,R,W,R | W,E,R,W,R W,E,R,W,R |
+| x/qmark_file/f1 | E,E,R,W,R E,E,R,W,R | W,E,R,W,R W,E,R,W,R | W,E,R,W,R W,E,R,W,R |
+| x/qmark_file/f2 | W,W,E,W,E W,W,E,W,E | W,W,W,W,W W,W,W,W,W | W,W,W,W,W W,W,W,W,W |
+| x/qmark_file/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| x/brack_file/full | E,E,R,W,R E,E,R,W,R | W,E,R,W,R W,E,R,W,R | W,E,R,W,R W,E,R,W,R |
+| x/brack_file/f1 | E,E,R,W,R E,E,R,W,R | W,E,R,W,R W,E,R,W,R | W,E,R,W,R W,E,R,W,R |
+| x/brack_file/f2 | W,W,E,W,E W,W,E,W,E | W,W,E,W,E W,W,E,W,E | W,W,E,W,E W,W,E,W,E |
+| x/brack_file/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| x/star_dir/full | E,E,R,W,R E,E,R,W,R | W,E,R,W,R W,E,R,W,R | W,E,R,W,R W,E,R,W,R |
+| x/star_dir/f1 | E,E,R,W,R E,E,R,W,R | W,E,R,W,R W,E,R,W,R | W,E,R,W,R W,E,R,W,R |
+| x/star_dir/f2 | W,W,E,W,E W,W,E,W,E | W,W,W,W,W W,W,W,W,W | W,W,W,W,W W,W,W,W,W |
+| x/star_dir/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| x/five_star/full | E,E,R,W,R E,E,R,W,R | W,E,R,W,R W,E,R,W,R | W,E,R,W,R W,E,R,W,R |
+| x/five_star/f1 | E,E,R,W,R E,E,R,W,R | W,E,R,W,R W,E,R,W,R | W,E,R,W,R W,E,R,W,R |
+| x/five_star/f2 | W,W,E,W,E W,W,E,W,E | W,W,W,W,W W,W,W,W,W | W,W,W,W,W W,W,W,W,W |
+| x/five_star/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| x/star_alone/full | E,E,R,E,R E,E,R,E,R | W,E,R,E,R W,E,R,E,R | W,E,R,E,R W,E,R,E,R |
+| x/star_alone/f1 | E,E,R,E,R E,E,R,E,R | W,E,R,E,R W,E,R,E,R | W,E,R,E,R W,E,R,E,R |
+| x/star_alone/f2 | W,W,E,W,E W,W,E,W,E | W,W,W,W,W W,W,W,W,W | W,W,W,W,W W,W,W,W,W |
+| x/star_alone/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| x/ctl_file/full | E,E,R,E,E E,E,R,E,E | W,E,R,E,E W,E,R,E,E | W,E,R,E,E W,E,R,E,E |
+| x/ctl_file/f1 | E,E,R,E,E E,E,R,E,E | W,E,R,E,E W,E,R,E,E | W,E,R,E,E W,E,R,E,E |
+| x/ctl_file/f2 | W,W,E,W,W W,W,E,W,W | W,W,W,W,W W,W,W,W,W | W,W,W,W,W W,W,W,W,W |
+| x/ctl_file/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| x/ctl_glob/full | E,E,E,E,E E,E,E,E,E | W,E,W,E,E W,E,W,E,E | W,E,W,E,E W,E,W,E,E |
+| x/ctl_glob/f1 | E,E,E,E,E E,E,E,E,E | W,E,E,E,E W,E,E,E,E | W,E,E,E,E W,E,E,E,E |
+| x/ctl_glob/f2 | W,W,W,W,W W,W,W,W,W | W,W,W,W,W W,W,W,W,W | W,W,W,W,W W,W,W,W,W |
+| x/ctl_glob/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| c/star_file/full | E,E,E,W,E E,E,E,W,E | W,E,E,W,E W,E,E,W,E | W,E,E,W,E W,E,E,W,E |
+| c/star_file/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| c/qmark_file/full | E,E,E,W,E E,E,E,W,E | W,E,E,W,E W,E,E,W,E | W,E,E,W,E W,E,E,W,E |
+| c/qmark_file/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| c/brack_file/full | E,E,E,W,E E,E,E,W,E | W,E,E,W,E W,E,E,W,E | W,E,E,W,E W,E,E,W,E |
+| c/brack_file/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| c/star_dir/full | E,E,E,W,E E,E,E,W,E | W,E,E,W,E W,E,E,W,E | W,E,E,W,E W,E,E,W,E |
+| c/star_dir/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| c/five_star/full | E,E,E,W,E E,E,E,W,E | W,E,E,W,E W,E,E,W,E | W,E,E,W,E W,E,E,W,E |
+| c/five_star/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| c/star_alone/full | E,E,E,E,E E,E,E,E,E | W,E,E,E,E W,E,E,E,E | W,E,E,E,E W,E,E,E,E |
+| c/star_alone/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| c/ctl_file/full | E,E,E,E,E E,E,E,E,E | W,E,E,E,E W,E,E,E,E | W,E,E,E,E W,E,E,E,E |
+| c/ctl_file/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+| c/ctl_glob/full | E,E,E,E,E E,E,E,E,E | W,E,E,E,E W,E,E,E,E | W,E,E,E,E W,E,E,E,E |
+| c/ctl_glob/nots | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E | E,E,E,E,E E,E,E,E,E |
+
+## Fable's risk.py (78) and risk2.py (16) on delta 3 against delta 2
+risk: 1 differs: la/specialdir/q?m (a directory named q?m): delta 2 EQUAL, delta 3 RAISE (F1, the residual); risk2: 0 differ
+
+## pins (test_csv_schema_timestamp_zone_1.py, -n 6)
+d2: 10 failed, 36 passed in 2.32s
+main: 42 failed, 4 passed in 2.45s
+d3: 46 passed in 2.35s

@@ -11,6 +11,24 @@ scan's zone-less timestamp columns as text through the existing `utf8_columns` o
 path the scan's pre-scan makes every column text once `utf8_columns` is set (`csv_utf8_schema_from_path`), as the
 `nullValue` and `multiLine` schema reads already do. One product file; no Rust.
 
+**Delta 1 (2026-11-19), the verifier's F1 and F2.** That all-text read cast a `DECIMAL` field from exponent text (a
+raise) and a `TIMESTAMP_NTZ` field from DST-gap text (an hour forward). `read_csv_path`
+(`crates/repark-core/src/read_options.rs`, the second product file) now re-reads only the named columns, except under
+`inferSchema`, whose re-read was measured to rely on the all-text read; `_load_csv` leaves a `TIMESTAMP_NTZ` field's
+column on the scan's type. See [bar.md](bar.md) and [cost.md](cost.md), "Delta 1".
+
+**Delta 2 (2026-11-19), cost only.** Delta 1's cost came from its build, not its logic: the same plan over the same
+scan ran 10 to 15 percent slower in delta 1's native library than in main's. `read_csv_path` is main's again, so the
+native library's code is main's; `_load_csv` re-reads an existing local path through its `file://` URL, which main's
+code already re-reads named-only. Every bar cell equals delta 1's. K2, `k0_hour` and C-012 are back at the first
+head's cost; `k0_count` misses 1.05x (1.08x, the second inference), awaiting a ruling. See [bar.md](bar.md) and
+[cost.md](cost.md), "Delta 2".
+
+**Delta 3 (2026-11-19), the glob spelling.** The re-check verifier's G1: a spelling whose own name holds `*`, `?` or
+`[` and exists on disk re-read only the literal file through `file://`. `_load_csv` now takes that route only for a
+spelling with none of them; such a spelling takes main's all-text pre-scan, so F1 and F2 come back for it alone (the
+residual). Every other record equals delta 2's. See [bar.md](bar.md) and [cost.md](cost.md), "Delta 3".
+
 ## The rulings this unit carries
 
 - **Owner, 2026-11-19, about 01:28 UTC, verbatim:** "Go with your recommendations and tonight you don’t even need to
@@ -19,6 +37,15 @@ path the scan's pre-scan makes every column text once `utf8_columns` is set (`cs
   on step 0, §2 Q2 and §4): D1 gets its own card, CSV-SCHEMA-TIMESTAMP-ZONE-1, S1 and label-blocking; it is unit 0,
   built first as its own PR; it moves matching cells, so it cannot share unit 1's bar; the cost cases are K0 (CSV),
   K2 and C-012.
+- **The orchestrator's call for delta 1, under that delegation:** take Fable's option (b), which the consult had
+  declined on cost alone: on every path `utf8_columns` re-reads only the named columns, with `read_options.rs` as the
+  second product file; Fable's cost exception and the 14 runtime `timestampType` cells stand.
+- **The orchestrator's call for delta 2, under that delegation, not an owner ruling:** a second delta, past the
+  one-delta cap, for cost only; the owner sees it in the morning read and may stop it. Fable's bars stand unchanged.
+- **Owner, 2026-11-19, about 14:00 UTC, verbatim:** "go with recommendations" (Fable's §9 of his reply on the
+  reader-parse units: `k0_count` recorded by its cause, the K2 and `k0_hour` exception as "no dearer than the first
+  head", N1 folded into CSV-STRING-FIELD-TEXT-1).
+- **Owner, 2026-11-19, about 14:45 UTC, verbatim:** "go with delta 3".
 - **The parent card** TEMP-VIEW-FRAME-READER-PARSE-1 is S1 and label-blocking (owner, 2026-11-18, about 14:30 UTC:
   "We better go with B to be safe").
 

@@ -21,6 +21,7 @@ from repark.spark.session.reader_support import (
     _jdbc_bound_is_temporal,
     _parse_as_of_timestamp_option,
     _parse_snapshot_id_option,
+    _session_timestamp_text_columns,
 )
 from repark.spark.dataframe import io_declared as _io_declared
 
@@ -508,10 +509,13 @@ class DataFrameReader:
         if "header" not in {key.lower() for key in native_options}:
             native_options["header"] = "false"
         frame = self._session.read_csv(path_str, native_options)
-        naive = [name for name, dtype in frame.dtypes if dtype == "timestamp_ntz"]
-        if naive and self._schema_has_session_timestamp():
+        naive = _session_timestamp_text_columns(self._schema, frame)
+        if naive:
+            local = Path(path_str)
             native_options["utf8_columns"] = ",".join(naive)
-            frame = self._session.read_csv(path_str, native_options)
+            literal = local.exists() and set("*?[").isdisjoint(path_str)
+            uri = local.absolute().as_uri() + "/" * local.is_dir() if literal else path_str
+            frame = self._session.read_csv(uri, native_options)
         return _reader_parse(
             self._apply_reader_schema_semantics(
                 frame,
@@ -520,19 +524,6 @@ class DataFrameReader:
                 path=path_str,
             )
         )
-
-    def _schema_has_session_timestamp(self) -> bool:
-        """Tell whether the user schema holds a ``TIMESTAMP`` field.
-
-        Spark parses such a CSV field from its text under the session zone, so ``_load_csv``
-        re-reads the scan's zone-less timestamp columns as text for the typed parse to cast.
-        """
-        from repark.spark.types import TimestampType
-
-        if self._schema is None:
-            return False
-        fields = _schema_fields(self._schema)
-        return any(isinstance(field["dataType"], TimestampType) for field in fields)
 
     def _load_json(self, path: str | Path | list[str]) -> DataFrame:
         """Materialize JSON via the session native reader + optional schema projection."""
