@@ -10,7 +10,7 @@ the input holding no value past its declared precision, or on which rows meet in
 | # | path | file:line | what it does | trusts | `sum` after #1360 |
 |---|---|---|---|---|---|
 | A1 | sum precision | `:189-200` | `min(p + 10, 38)` for `Decimal128` (`76` for `Decimal256`); `sum_limit = 10^that` | no | `SumCheck::new` (`sum_decimal.rs:50`), result precision |
-| A2 | per-value carry | `:101-110` (`i128`), `:45-54` (`i32`), `:73-82` (`i64`), `:129-134` (`i256`, wrapping) | add or subtract one value, counting each wrap past the native width | no | the same trait (`sum_decimal.rs:11` imports it) |
+| A2 | per-value carry | `:101-110` (`i128`), `:45-54` (`i32`), `:73-82` (`i64`), `:129-134` (`i256`, wrapping) | add or subtract one value, counting each wrap past the native width | **`i256`: yes** (r1: `wrapping_add` with no count; `m_d256` answers `0.4167`) | the same trait (`sum_decimal.rs:11` imports it) |
 | A3 | `safe_rows` | `:303-317` | `N::MAX / (10^p - 1)`: the row count under which the batch sum "cannot wrap", from the **declared** precision | **yes (declared precision)** | removed in delta 3 (`bounded_rows` gone) |
 | A4 | `add_batch` | `:319-337` | at or under `safe_rows`, Arrow's **wrapping** `sum` of the batch, one carry for the total; above it, every row with the carry | **yes**: an over-precision batch wraps with no carry | `fold_batch` + `exact_total` (`sum_decimal.rs:112`, `:130`): checked lanes, per-row carry on overflow |
 | A5 | `sub_batch` | `:339-357` | the retract twin of A4 | **yes** | `fold_batch` with `sub_carry` |
@@ -33,7 +33,7 @@ the input holding no value past its declared precision, or on which rows meet in
 |---|---|---|---|---|
 | W1 | `avg`, `mean`, `try_avg` UDFs | `aggregate.rs:55-76` | `AvgMode::Ansi` / `Try`; `decimal_null_on_overflow` `:127` | no |
 | W2 | ANSI-off swap | `aggregate.rs:297-351` (`SparkAvgAnsiMode`, `legacy_avg_expr`) | swaps `avg` for the legacy (NULL on overflow) UDF when ANSI is off, plans and windows | no |
-| W3 | return type | `aggregate.rs:149-175` | `decimal(min(p+4, 38), min(s+4, 38))` | no |
+| W3 | return type | `aggregate.rs:149-175` | `decimal(min(p+4, 38), min(s+4, 38))` | **r1: yes for `Decimal32` / `Decimal64`**: capped at `Decimal32(9, s+4)` / `Decimal64(18, s+4)`, a steady wrong NULL / NVOOR at one partition |
 | W4 | ungrouped / window accumulator | `aggregate.rs:177-230` | `Decimal32/64/128/256` → `DecimalAvgAccumulator<T>`; `DISTINCT` refuses here (`DistinctAvgAccumulator`) | no |
 | W5 | **state schema** | `aggregate.rs:248-285` | decimal: `[count UInt64, sum <input type>]` for every precision | the seat for a wrap column (DataFusion passes `input_fields`, `datafusion-physical-expr-54.1.0/src/aggregate.rs:732-741`) |
 | W6 | grouped accumulator | `aggregate.rs:232-246` → `avg_groups.rs:30-116` | `DecimalAvgGroups<T>`; refuses `DISTINCT` | no |
@@ -90,5 +90,35 @@ At `845766fd` (`crates/repark-functions/src/aggregate/sum_decimal.rs`):
   precision (or a widening to `i128` before the add), since the narrow bound (`n × 10^p < 2^127`) is an `i128` bound.
 - The state schema seat is `aggregate.rs:248-285` (W5), not `spark_sum.rs`; #1360's `Carrier` decides it the same
   way.
+
+## Revision r1: lines at `d9eebe06`, the analyzer, the codec, the file sizes
+
+The tables above cite main `6903fb48`. Between it and `d9eebe06` only `aggregate.rs` changed (#1360's `sum`
+placement, 959 → 989 lines); `avg_decimal.rs`, `avg_groups.rs` and `crates/repark-distributed/src/codec.rs` are
+byte-equal, so every A-row cite holds (the critic checked them at `92be8309`).
+
+| # | path at `d9eebe06` | file:line | what it does | r1 finding |
+|---|---|---|---|---|
+| W3 | return type | `aggregate.rs:163-189` | `Decimal32` → `Decimal32(min(p+4, 9), min(s+4, 9))`, `Decimal64` → `Decimal64(min(p+4, 18), …)` | Spark's type is `decimal(min(p+4, 38), s+4)`: `m_d32` reads `decimal(9,6)` against Spark's `decimal(13,6)`, `m_d64` `decimal(18,4)` against `decimal(22,4)` |
+| W4 | accumulator, `DISTINCT` refusal | `aggregate.rs:191-244` (`:193-197`) | a mixed `DISTINCT` refuses with `DistinctAvgAccumulator` | outside the card: AVG-DISTINCT-MIXED-COUNT-1 (filed in #1366) |
+| W5 | **state schema** | `aggregate.rs:262-299` | decimal: `[count UInt64, sum <input type>]` | the sum ships past its declared type; seat A declares `decimal(min(p+10, 38), s)` (`SumCheck::data_type`, `aggregate/sum_decimal.rs:59-61`) |
+| W2a | the ANSI rule | `aggregate.rs:310-328` (`SparkAvgAnsiMode::analyze`) | per plan node: `place_of(grouped(node))` (`aggregate/spark_sum.rs:50-60`), then each expression | one rule routes `avg` and `sum` |
+| W2b | the routing | `aggregate.rs:330-339` (`ansi_mode_udaf`), `:341-369` (`legacy_avg_expr`) | ANSI on: `spark_sum::placed` (a `sum` takes `Grouped`, `Ungrouped` or `Window`; `avg` is untouched); ANSI off: `legacy_avg_udaf` (`:371-379`), else `spark_sum::legacy`. A window arm always passes `Place::Window` | **`avg` has no place.** Seat A's quotient-only window needs one: a field on `SparkAvgWithRetract`, set in both modes by the window arm |
+| C1 | distributed codec, UDAFs | `crates/repark-distributed/src/codec.rs:121-127` | delegates `try_decode_udaf` / `try_encode_udaf` to Ballista's codec, which keeps the `PhysicalExtensionCodec` trait's default methods (`datafusion-proto-54.1.0/src/physical_plan/mod.rs:3883-3891`: encode writes nothing, decode refuses) | an aggregate or window UDAF crosses **by name only** (`to_proto.rs:73-89`: `fun_definition` empty) and is looked up again in the executor's registry (`mod.rs:1303-1312`, `from_proto.rs:166-173`) |
+| C2 | distributed codec, state | the same; `AggregateExprBuilder::new` at `mod.rs:1320` | the executor rebuilds each aggregate from the registry's UDAF, so its `state_fields` run again there | the state schema round-trips **by recomputation**: it must depend only on the UDAF's name and input type, never on `mode` or `place`. Seat A's schema (by input type and precision) does; no codec change |
+
+**What the codec does not carry (a reading, not measured; outside this unit).** Because a UDAF crosses by name, the
+executor gets the registered `avg` (`AvgMode::Ansi`, and no place). The scheduler's ANSI-off swap to `Legacy`
+(W2b) and #1360's `sum` place are lost on that path today, and seat A's window place would be lost the same way.
+Recorded for the orchestrator; no card filed here.
+
+**File sizes at `d9eebe06`** (ceiling 1,000, `scripts/check_rust_file_size.py`, no exception row for any of them):
+
+| file | lines | of which tests | seat A's need |
+|---|---|---|---|
+| `crates/repark-functions/src/aggregate.rs` | 989 | `mod tests` `:454-989` (536 lines) | the window place, the narrow return types, `state_fields` by native type: about 40 lines |
+| `crates/repark-functions/src/avg_decimal.rs` | 961 | `mod tests` `:689-961` (273 lines) | the `Decimal128` fold, the `i256` wrap count, the window path: about 60 lines |
+| `crates/repark-functions/src/avg_groups.rs` | 896 | tests from `:437` | the narrow arms of `create_groups` (`:44-65`) to the `Decimal128` accumulator: about 10 lines |
+| `crates/repark-functions/src/aggregate/sum_decimal.rs` | 508 | — | visibility only |
 
 Up: [map.md](map.md).
