@@ -64,7 +64,7 @@ Fable's guidance under the owner's delegation, not an owner ruling. Source: Fabl
 - **Q10, `REFRESH TABLE` as an epoch source: adopted (a).** Without it a held frame on Glue or S3 Tables stays old after a refresh, where Spark answers 3, 3. The two local cells stay WRONG on `type=hadoop` under either option; Fable records them as the local catalog's existing divergence.
 - **Q11, the `CALL` procedures: adopted (a).** They commit through the decorated handle and need no file. Caution: 1a fixes `expire_snapshots` only for an action that re-binds. Measure `collect`, `INSERT OVERWRITE`, `expire_snapshots`, `collect` on Spark and record it; do not chase it in 1a.
 - **§12, the build: unit 1a may start now,** on an Opus 5.5 xhigh builder with an Opus 5.5 medium verifier, beside CSV-STRING-FIELD-TEXT-1's wiring build. The brief carries: cost first (main's baseline under the exclusive lock before product code); one Spark cell by name or field id before the check is written; the other schema changes measured and pinned as Spark answers; the frozen epoch signature; session table state owned by one session; the line ceilings (`session.rs` 1,000, `core.py` 3,461); and the builder gate, the whole facade tree plus `make rust-panic-ban`. Ruling 6 of §1 allows no new build until A1's series and 1a's cost sample are in.
-- **§13, the loud cells in the gap: Fable's reading, not a measurement.** 1a may merge before 1b, and they need not merge together. Fable's count of the 113 unit-1b cells (ANSI on): 53 write the current table after a drop, rename, recreate or drop-then-create and raise under either split; 13 write after an added column; 35 raise `COLUMNS_MISMATCH`; 12 raise a target or text error. With the command scope in 1a, every gap cell is loud. Fable recommends that, and 1b as the next slot; whether 1b blocks the label is the owner's. (The section heading says "53 loud cells"; its text says the gap is larger than 53 and not all loud.)
+- **§13, the loud cells in the gap: Fable's reading, not a measurement.** 1a may merge before 1b, and they need not merge together. Fable's count of the 113 unit-1b cells (ANSI on): in 53, after a drop, rename, recreate or drop-then-create, Spark writes the current table and RePark raises under either split; 13 write after an added column; 35 raise `COLUMNS_MISMATCH`; 12 raise a target or text error. With the command scope in 1a, every gap cell is loud. Fable recommends that, and 1b as the next slot; whether 1b blocks the label is the owner's. (The section heading says "53 loud cells"; its text says the gap is larger than 53 and not all loud.)
 - **§14, the AWS gap: adopted (a).** The label is not declared without a live held-frame run on both `glue` and `s3tables`, which runs after 1a merges because the leg accepts only main. Nothing was contacted; the dispatch is the owner's. Fable gives eight cells, each to run on both catalogs. It numbers them and names none:
   1. hold `spark.table(t)`; `INSERT`; held `count` and `show` answer the new rows;
   2. hold; `DELETE`; `held.writeTo(other).append()` into a table made before the write; read it back: the deleted row is absent;
@@ -75,30 +75,11 @@ Fable's guidance under the owner's delegation, not an owner ruling. Source: Fabl
   7. the external writer (a second session with its own catalog handle), in both orders: held `count`, fresh `count`, held `count`, `REFRESH TABLE t`, held and fresh (under Q2 (b): 2, 3, 3, then 3, 3); and held `count`, `REFRESH TABLE t`, held `count` with no fresh read between (2, then 3), which decides Q10;
   8. a same-session `INSERT` after the external one: held and fresh both answer 4.
 
-## 4. The open label-blocking list
+## 4. The label-blocking set
 
-Copied from [rulings-2026-11-17.md](rulings-2026-11-17.md), its section "The open label-blocking list, later the same evening", which is the newest record that carries one. [rulings-2026-11-18.md](rulings-2026-11-18.md), [rulings-2026-11-19.md](rulings-2026-11-19.md) and [rulings-2026-11-20.md](rulings-2026-11-20.md) carry no such list. Each item's Status is as that record read it. This record changes nothing in the list except to add item 18.
+[ICE-HELD-FRAME-SNAPSHOT-1](../../../roadmap/mid-term/cards-2026-11-19/ice-held-frame-snapshot-1-card-2026-11-20.md) joins the label's blocking set (S1, confirmed by the owner 2026-11-20).
 
-1. [NAN-MINMAX-1](../../../roadmap/mid-term/nan-minmax-1-card-2026-11-13.md), part 2, the float aggregate. Status: part 1 **MERGED** as #1333 (`d843d37e`); part 2 **open**.
-2. [DOUBLE-DECIMAL-DATAFRAME-1](../../../roadmap/mid-term/double-decimal-dataframe-1-card-2026-11-13.md), with FEXPR-DECIMAL-LITERAL-1 folded in. Status: filed, not dispatched.
-3. [SIGNED-ZERO-UPDATE-IN-LIST-1](../../../roadmap/mid-term/signed-zero-update-in-list-1-card-2026-11-15.md). Status: filed; not dispatched.
-4. [STRING-CAST-SILENT-1](../../../roadmap/mid-term/string-cast-silent-1-card-2026-11-16.md). Status: ruled 2026-11-16, not dispatched. Label-blocking. Its build absorbs NUMERIC-TIMESTAMP-CAST-1.
-5. [NUMERIC-TIMESTAMP-CAST-1](../../../roadmap/mid-term/sweep-2026-11-16/numeric-timestamp-cast-1-card-2026-11-16.md). Status: ruled 2026-11-16, not dispatched; label-blocking. Built inside the string-cast unit.
-6. [DATE-PART-SESSION-ZONE-1](../../../roadmap/mid-term/sweep-2026-11-16/date-part-session-zone-1-card-2026-11-16.md). Status: ruled 2026-11-16, not dispatched; label-blocking.
-7. [TINYINT-SMALLINT-ARITH-ANSI-1](../../../roadmap/mid-term/sweep-2026-11-16/tinyint-smallint-arith-ansi-1-card-2026-11-16.md). Status: ruled 2026-11-16, not dispatched; label-blocking.
-8. [RAND-SHARED-VALUE-1](../../../roadmap/mid-term/sweep-2026-11-16/rand-shared-value-1-card-2026-11-16.md). Status: ruled 2026-11-16, not dispatched; label-blocking.
-9. [DATAFUSION-SIMPLIFIER-UPSTREAM-1](../../../roadmap/mid-term/sweep-2026-11-16/datafusion-simplifier-upstream-1-card-2026-11-16.md). Status: ruled 2026-11-16, not dispatched; label-blocking (S1).
-10. [DECIMAL-DIVIDE-LITERAL-1](../../../roadmap/mid-term/consult-2026-11-17/decimal-divide-literal-1-card-2026-11-17.md). Status: filed 2026-11-17, not dispatched. S1, label-blocking (ruling 2).
-11. [NAN-ARRAY-MINMAX-1](../../../roadmap/mid-term/consult-2026-11-17/nan-array-minmax-1-card-2026-11-17.md). Status: filed 2026-11-17, not dispatched. S1, label-blocking (ruling 3); not placed.
-12. [NAN-QUANTILE-SIGNSET-1](../../../roadmap/mid-term/consult-2026-11-17/nan-quantile-signset-1-card-2026-11-17.md). Status: filed 2026-11-17, not dispatched. S1, label-blocking (ruling 3); not placed.
-13. [TRY-ARITH-DECIMAL-INT-1](../../../roadmap/mid-term/consult-2026-11-17/try-arith-decimal-int-1-card-2026-11-17.md). Status: filed 2026-11-17, not dispatched. S1, label-blocking (ruling 6); not placed.
-14. [TEMP-VIEW-SESSION-SETTINGS-1](../../../roadmap/mid-term/temp-view-session-settings-1-card-2026-11-02.md), its time-zone half. Status: step 0 PR #1356; S1 by class; the time-zone half blocks the label, the ANSI half does not (owner, 2026-11-17).
-15. [SUM-DEC-I128WRAP-1](../../../roadmap/mid-term/consult-2026-11-17/sum-dec-i128wrap-1-card-2026-11-17.md). Status: step 0 PR #1357; S1, label-blocking (owner, 2026-11-17).
-16. [SUM-BIGINT-ANSI-OVERFLOW-1](../../../roadmap/mid-term/consult-2026-11-17/sum-bigint-ansi-overflow-1-card-2026-11-17.md). Status: filed 2026-11-17, not dispatched. S1, label-blocking (owner, 2026-11-17, question 4).
-17. [ICE-DECIMAL-WRITE-PRECISION-1](../../../roadmap/mid-term/consult-2026-11-17/ice-decimal-write-precision-1-card-2026-11-17.md). Status: filed 2026-11-17, not dispatched. S1, label-blocking until the writer checks each value (owner, 2026-11-17, question 5(b)).
-18. [ICE-HELD-FRAME-SNAPSHOT-1](../../../roadmap/mid-term/cards-2026-11-19/ice-held-frame-snapshot-1-card-2026-11-20.md) (S1, confirmed by the owner 2026-11-20).
-
-FEXPR-DECIMAL-LITERAL-1 is still not a separate line; it is label-blocking through its fold into DOUBLE-DECIMAL-DATAFRAME-1 (item 2). STRUCT-COLLECT-ROW-1 is S2 and not label-blocking, so it is not on this list.
+The last full list is the one in [rulings-2026-11-17.md](rulings-2026-11-17.md) ("The open label-blocking list, later the same evening"). It has not been re-issued since. The items added or closed after it are in [rulings-2026-11-18.md](rulings-2026-11-18.md), [rulings-2026-11-19.md](rulings-2026-11-19.md) and [rulings-2026-11-20.md](rulings-2026-11-20.md). A re-issued list, with each item's status checked against main, is owed.
 
 ## Filed with this record
 
