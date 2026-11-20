@@ -1,0 +1,52 @@
+lazy/iterator-set-before-pull/json_s spark=L base=L rebuild=U head=L
+lazy/iterator-then-collect/json_s spark=L base=L rebuild=U head=L
+lazy/iterator-unpulled-then-collect/json_s spark=L base=L rebuild=U head=L
+subq/first/json_s spark=L base=L rebuild=L head=L
+subq/second/json_s spark=L base=L rebuild=U head=L
+subq/derived/json_s spark=U base=L rebuild=U head=U
+join/first/json_s spark=L base=L rebuild=L head=L
+join/second/json_s spark=L base=L rebuild=U head=L
+lazy/iterator-set-before-pull/csv_i spark=L base=L rebuild=U head=L
+lazy/iterator-then-collect/csv_i spark=L base=L rebuild=U head=L
+lazy/iterator-unpulled-then-collect/csv_i spark=L base=L rebuild=U head=L
+subq/first/csv_i spark=L base=L rebuild=L head=L
+subq/second/csv_i spark=L base=L rebuild=U head=L
+subq/derived/csv_i spark=U base=L rebuild=U head=U
+join/first/csv_i spark=L base=L rebuild=L head=L
+join/second/csv_i spark=L base=L rebuild=U head=L
+nest/driver-loop/json_s spark={"inner": [], "outer": [["1", "2024-01-01 03:00:00", "3", "1704106800"]]} base={"inner": [["1", "2024-01-01 03:00:00", "3", "1704106800"]], "outer": [["1", "2024-01-01 03:00:00", "3", "1704106800"]]} rebuild={"inner": null, "outer": []} head={"inner": [], "outer": [["1", "2024-01-01 03:00:00", "3", "1704106800"]]}
+nest/inner-again/json_s spark=U base=L rebuild=U head=U
+nest/outer-again/json_s spark=L base=L rebuild=U head=L
+nest/third-count/json_s spark=U base=L rebuild=U head=U
+nest/third-collect/json_s spark=U base=L rebuild=U head=U
+nest/driver-loop/csv_i spark={"inner": [], "outer": [["1", "2024-01-01 03:00:00", "3", "1704106800"]]} base={"inner": [["1", "2024-01-01 03:00:00", "3", "1704106800"]], "outer": [["1", "2024-01-01 03:00:00", "3", "1704106800"]]} rebuild={"inner": null, "outer": []} head={"inner": [], "outer": [["1", "2024-01-01 03:00:00", "3", "1704106800"]]}
+nest/inner-again/csv_i spark=U base=L rebuild=U head=U
+nest/outer-again/csv_i spark=L base=L rebuild=U head=L
+nest/third-count/csv_i spark=U base=L rebuild=U head=U
+nest/third-collect/csv_i spark=U base=L rebuild=U head=U
+err/cast-toArrow/json_s spark=ERROR CAST_INVALID_INPUT base=ERROR Arrow error: Cast error: Cannot cast string '2024-01-01 03:00:00' to value of Int32 type rebuild=ERROR Arrow error: Cast error: Cannot cast string '2024-01-01 03:00:00' to value of Int32 type head=ERROR Arrow error: Cast error: Cannot cast string '2024-01-01 03:00:00' to value of Int32 type
+err/cast-collect/json_s spark=ERROR CAST_INVALID_INPUT base=ERROR Arrow error: Cast error: Cannot cast string '2024-01-01 03:00:00' to value of Int32 type rebuild=ERROR Arrow error: Cast error: Cannot cast string '2024-01-01 03:00:00' to value of Int32 type head=ERROR Arrow error: Cast error: Cannot cast string '2024-01-01 03:00:00' to value of Int32 type
+err/after-count/json_s spark=U base=L rebuild=U head=U
+err/after-collect/json_s spark=U base=L rebuild=U head=U
+err/cast-toArrow/csv_i spark=ERROR CAST_INVALID_INPUT base=ERROR Arrow error: Cast error: Cannot cast string '2024-01-01 03:00:00' to value of Int32 type rebuild=ERROR Arrow error: Cast error: Cannot cast string '2024-01-01 03:00:00' to value of Int32 type head=ERROR Arrow error: Cast error: Cannot cast string '2024-01-01 03:00:00' to value of Int32 type
+err/cast-collect/csv_i spark=ERROR CAST_INVALID_INPUT base=ERROR Arrow error: Cast error: Cannot cast string '2024-01-01 03:00:00' to value of Int32 type rebuild=ERROR Arrow error: Cast error: Cannot cast string '2024-01-01 03:00:00' to value of Int32 type head=ERROR Arrow error: Cast error: Cannot cast string '2024-01-01 03:00:00' to value of Int32 type
+err/after-count/csv_i spark=U base=L rebuild=U head=U
+err/after-collect/csv_i spark=U base=L rebuild=U head=U
+err/missing-toArrow/json_s spark=ERROR FAILED_READ_FILE.FILE_NOT_EXIST base=U rebuild=U head=U
+err/missing-collect/json_s spark=ERROR FAILED_READ_FILE.FILE_NOT_EXIST base=U rebuild=U head=U
+err/missing-after-count/json_s spark=U base=L rebuild=U head=U
+err/missing-after-collect/json_s spark=U base=L rebuild=U head=U
+thread/concurrent/json_s spark={"errors": [], "tally": {"a": {"L": 20}, "b": {"U": 20}, "c": {"U": 20}}} base={"errors": [], "tally": {"a": {"L": 100}, "b": {"L": 100}, "c": {"L": 100}}} rebuild={"errors": [], "tally": {"a": {"U": 100}, "b": {"U": 100}, "c": {"U": 100}}} head={"errors": [], "tally": {"a": {"L": 100}, "b": {"U": 100}, "c": {"U": 100}}}
+thread/handoff/json_s spark={"first": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]]], "later": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]]]} base={"first": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]]], "later": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]]]} rebuild={"first": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]]], "later": [[]]} head={"first": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]]], "later": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]]]}
+thread/concurrent/csv_i spark={"errors": [], "tally": {"a": {"L": 20}, "b": {"U": 20}, "c": {"U": 20}}} base={"errors": [], "tally": {"a": {"L": 100}, "b": {"L": 100}, "c": {"L": 100}}} rebuild={"errors": [], "tally": {"a": {"U": 100}, "b": {"U": 100}, "c": {"U": 100}}} head={"errors": [], "tally": {"a": {"L": 100}, "b": {"U": 100}, "c": {"U": 100}}}
+thread/handoff/csv_i spark={"first": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]]], "later": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]]]} base={"first": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]]], "later": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]]]} rebuild={"first": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]]], "later": [[]]} head={"first": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]]], "later": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]]]}
+lazy/batches-set-before-pull/json_s spark=- base=L rebuild=U head=U
+lazy/batches-then-collect/json_s spark=- base=L rebuild=T head=U
+lazy/batches-set-before-pull/csv_i spark=- base=L rebuild=U head=U
+lazy/batches-then-collect/csv_i spark=- base=L rebuild=T head=U
+nest/map-func/json_s spark=- base={"inner": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]], 1], "outer": [["1", "2024-01-01 03:00:00", "3", "1704106800"]]} rebuild={"inner": [[], 0], "outer": []} head={"inner": [[], 0], "outer": []}
+nest/map-inner-again/json_s spark=- base=L rebuild=U head=U
+nest/map-count-again/json_s spark=- base=L rebuild=U head=U
+nest/map-func/csv_i spark=- base={"inner": [[["1", "2024-01-01 03:00:00", "3", "1704106800"]], 1], "outer": [["1", "2024-01-01 03:00:00", "3", "1704106800"]]} rebuild={"inner": [[], 0], "outer": []} head={"inner": [[], 0], "outer": []}
+nest/map-inner-again/csv_i spark=- base=L rebuild=U head=U
+nest/map-count-again/csv_i spark=- base=L rebuild=U head=U

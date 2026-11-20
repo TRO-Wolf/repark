@@ -69,6 +69,22 @@ pub(crate) fn join_type_from_str(how: &str) -> PyResult<JoinType> {
     }
 }
 
+#[pyclass(frozen, name = "ReaderParseMemo", module = "repark._native")]
+pub struct PyReaderParseMemo(Arc<repark_core::extension::ReaderParseMemo>);
+
+#[pymethods]
+impl PyReaderParseMemo {
+    pub fn enter(&self) -> Option<Self> {
+        self.0.enter().map(Self)
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (previous=None))]
+    pub fn leave(previous: Option<PyRef<'_, Self>>) {
+        repark_core::extension::ReaderParseMemo::restore(previous.map(|memo| Arc::clone(&memo.0)));
+    }
+}
+
 #[pyclass(name = "PyDataFrame", module = "repark._native")]
 pub struct PyDataFrame {
     pub(crate) df: std::mem::ManuallyDrop<DataFrame>,
@@ -348,6 +364,22 @@ impl PyDataFrame {
                 ARROW_SCHEMA_CAPSULE_NAME,
                 |ffi_schema, _ctx| drop(ffi_schema),
             )
+        })
+    }
+
+    #[staticmethod]
+    #[pyo3(name = "_reader_parse_memo")]
+    pub fn reader_parse_memo() -> PyReaderParseMemo {
+        PyReaderParseMemo(Arc::default())
+    }
+
+    #[pyo3(name = "_reader_parse")]
+    #[allow(clippy::missing_errors_doc)]
+    pub fn reader_parse(&self) -> PyResult<Option<Self>> {
+        fenced!("PyDataFrame._reader_parse", {
+            let need = clone_need_bytes(self.depths.plan, self.depths.expression);
+            let wrapped = grown_sync(need, || repark_core::extension::reader_parse(self.inner()));
+            Ok(wrapped.map(|df| self.derived(df, grown_child(&self.depths, 1))))
         })
     }
 

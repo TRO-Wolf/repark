@@ -17,6 +17,8 @@ SCHEMA = "n INT, ts TIMESTAMP"
 UTC_PARSE = [(1, 1704078000), (2, 1704110400)]
 LA_PARSE = [(1, 1704106800), (2, 1704139200)]
 SPARK_BY_ZONE = {UTC: UTC_PARSE, LA: LA_PARSE}
+TK_PARSE = [(1, 1704045600), (2, 1704078000)]
+SPECIAL_PATHS = {"space": ("sp ace", "a b.csv"), "hash": ("ha#sh", "a#b.csv")}
 GAP = "2024-03-10 02:30:00"
 FILES = {
     "base": "1,2024-01-01 03:00:00\n2,2024-01-01 12:00:00\n",
@@ -233,6 +235,22 @@ def measure_globs(session: Any, root: Path, found: dict[str, Any]) -> None:
             found[f"glob/{shape}/{zone}"] = rows(session, "SELECT n, unix_timestamp(ts) FROM glob")
 
 
+def measure_special_paths(session: Any, root: Path, found: dict[str, Any]) -> None:
+    for shape, (folder, name) in SPECIAL_PATHS.items():
+        target = root / "special" / folder / name
+        target.parent.mkdir(parents=True)
+        target.write_text(FILES["base"])
+        for zone in (LA, TK):
+            conf(session, zone)
+            for kind, path in (("file", target), ("dir", target.parent)):
+                try:
+                    session.read.schema(SCHEMA).csv(str(path)).createOrReplaceTempView("special")
+                    query = "SELECT n, unix_timestamp(ts) FROM special"
+                    found[f"special/{shape}/{kind}/{zone}"] = rows(session, query)
+                except Exception as error:
+                    found[f"special/{shape}/{kind}/{zone}"] = type(error).__name__
+
+
 @pytest.fixture(scope="module", params=["true", "false"])
 def measured(
     request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
@@ -259,6 +277,7 @@ def measured(
         measure_shapes,
         measure_delta_1,
         measure_globs,
+        measure_special_paths,
     )
     for step in steps:
         step(session, root, found)
@@ -315,3 +334,12 @@ def test_a_literal_name_holding_a_glob_character_reads_every_file_its_glob_match
     for zone in (UTC, LA):
         expected = sorted(row[zone] for row in GLOBS[shape][2])
         assert measured[f"glob/{shape}/{zone}"] == expected, zone
+
+
+@pytest.mark.parametrize("shape", sorted(SPECIAL_PATHS))
+def test_a_path_holding_a_space_or_a_hash_parses_under_the_session_zone(
+    measured: dict[str, Any], shape: str
+) -> None:
+    for zone, expected in ((LA, LA_PARSE), (TK, TK_PARSE)):
+        for kind in ("file", "dir"):
+            assert measured[f"special/{shape}/{kind}/{zone}"] == expected, (kind, zone)

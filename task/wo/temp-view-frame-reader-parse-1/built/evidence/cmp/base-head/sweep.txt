@@ -1,0 +1,71 @@
+readers: cells 1032 (old 1032), moved 238; vs spark EQUAL 642 -> 798, lost 0, gained 156
+  GAINED ansi_true/la_utc/json_s/h
+  GAINED ansi_true/la_utc/json_s/oh
+  GAINED ansi_true/la_utc/json_s/sh_d
+  GAINED ansi_true/la_utc/json_s/sh_f
+  GAINED ansi_true/la_utc/json_s/sh_e
+  GAINED ansi_true/la_utc/json_s/sa_h
+  GAINED ansi_true/la_utc/json_s/sh_h
+  GAINED ansi_true/la_utc/json_s/sh_o
+  GAINED ansi_true/la_utc/json_s/sa_oh
+  GAINED ansi_true/la_utc/json_s/sh_oh
+  GAINED ansi_true/la_utc/csv_s/h
+  GAINED ansi_true/la_utc/csv_s/oh
+  GAINED ansi_true/la_utc/csv_s/sh_d
+  GAINED ansi_true/la_utc/csv_s/sh_f
+  GAINED ansi_true/la_utc/csv_s/sh_e
+  GAINED ansi_true/la_utc/csv_s/sa_h
+  GAINED ansi_true/la_utc/csv_s/sh_h
+  GAINED ansi_true/la_utc/csv_s/sh_o
+  GAINED ansi_true/la_utc/csv_s/sa_oh
+  GAINED ansi_true/la_utc/csv_s/sh_oh
+  GAINED ansi_true/la_utc/mixed/d
+  GAINED ansi_true/la_utc/mixed/f
+  GAINED ansi_true/la_utc/mixed/e
+  GAINED ansi_true/la_utc/mixed/h
+  GAINED ansi_true/la_utc/mixed/o
+  GAINED ansi_true/la_utc/mixed/oh
+  GAINED ansi_true/la_utc/mixed/sa_d
+  GAINED ansi_true/la_utc/mixed/sh_d
+  GAINED ansi_true/la_utc/mixed/sa_f
+  GAINED ansi_true/la_utc/mixed/sh_f
+  GAINED ansi_true/la_utc/mixed/sa_e
+  GAINED ansi_true/la_utc/mixed/sh_e
+  GAINED ansi_true/la_utc/mixed/sa_h
+  GAINED ansi_true/la_utc/mixed/sh_h
+  GAINED ansi_true/la_utc/mixed/sa_o
+  GAINED ansi_true/la_utc/mixed/sh_o
+  GAINED ansi_true/la_utc/mixed/sa_oh
+  GAINED ansi_true/la_utc/mixed/sh_oh
+  GAINED ansi_true/la_utc/mixed/osa
+  GAINED ansi_true/utc_la/json_s/h
+joins: cells 219 (old 219), moved 0; vs spark EQUAL 116 -> 116, lost 0, gained 0
+smart: cells 20 (old 20), moved 0
+frames: cells 30 (old 30), moved 1; vs spark EQUAL 24 -> 25, lost 0, gained 1
+  GAINED csv/sqlview_hour_utc/read_America/Los_Angeles
+attack: cells 133 (old 133), moved 0; vs spark EQUAL 86 -> 86, lost 0, gained 0
+attack2: cells 16 (old 16), moved 0; vs spark EQUAL 6 -> 6, lost 0, gained 0
+attack3: cells 7 (old 7), moved 0; vs spark EQUAL 7 -> 7, lost 0, gained 0
+case: cells 7 (old 7), moved 0; vs spark EQUAL 3 -> 3, lost 0, gained 0
+fable-view2: cells 14 (old 14), moved 2; vs spark EQUAL 7 -> 8, lost 0, gained 1
+  GAINED json/derived_hour/read_UTC
+  MOVED explain/jf_differ | old {"rows": ["('logical_plan', 'SubqueryAlias: jf\\n  Projection: CAST(?table?.n AS Int32) AS n, to_timestamp(?ta | new {"rows": ["('logical_plan', 'SubqueryAlias: jf\\n  Projection: ?table?.n AS n, ?table?.ts AS ts\\n    TableSca
+bar-true: cells 3472 (old 3472), moved 0; vs spark EQUAL 2684 -> 2684, lost 0, gained 0
+bar-unset: cells 43 (old 43), moved 0; vs spark EQUAL 32 -> 32, lost 0, gained 0
+bar-rev: cells 157 (old 157), moved 0; vs spark EQUAL 126 -> 126, lost 0, gained 0
+bar-rc: cells 90 (old 90), moved 0; vs spark EQUAL 64 -> 64, lost 0, gained 0
+ws-true: cells 1551 (old 1551), moved 0
+ws-false: cells 1551 (old 1551), moved 0
+explain10: cells 22 (old 22), moved 11
+  MOVED agg | old "logical_plan | Projection: v.h, count(Int64(1)) AS count(*), sum(v.b)\n  Aggregate: groupBy=[[v.h]], aggr=[[c | new "logical_plan | Projection: v.h, count(Int64(1)) AS count(*), sum(v.b)\n  Aggregate: groupBy=[[v.h]], aggr=[[c
+  MOVED filter_free | old "logical_plan | SubqueryAlias: v\n  TableScan: ?table? projection=[n, b, h, q], full_filters=[?table?.n > Int3 | new "logical_plan | SubqueryAlias: v\n  TableScan: ?table? projection=[n, b, h, q], full_filters=[?table?.n > Int3
+  MOVED filter_limit | old "logical_plan | SubqueryAlias: v\n  Limit: skip=0, fetch=2\n    TableScan: ?table? projection=[n], full_filter | new "logical_plan | SubqueryAlias: v\n  Limit: skip=0, fetch=2\n    TableScan: ?table? projection=[n], full_filter
+  MOVED filter_sens | old "logical_plan | SubqueryAlias: v\n  TableScan: ?table? projection=[n, b, h, q], full_filters=[__repark_spark_i | new "logical_plan | SubqueryAlias: v\n  TableScan: ?table? projection=[n, b, h, q], full_filters=[__repark_spark_i
+  MOVED in_subq | old "logical_plan | LeftSemi Join: t.n = __correlated_sq_1.n\n  SubqueryAlias: t\n    TableScan: ?table? projectio | new "logical_plan | LeftSemi Join: t.n = __correlated_sq_1.n\n  SubqueryAlias: t\n    TableScan: ?table? projectio
+  MOVED join | old "logical_plan | Projection: a.n, b.h\n  Inner Join: a.n = b.n\n    SubqueryAlias: a\n      SubqueryAlias: v\n  | new "logical_plan | Projection: a.n, b.h\n  Inner Join: a.n = b.n\n    SubqueryAlias: a\n      SubqueryAlias: v\n 
+  MOVED limit | old "logical_plan | SubqueryAlias: v\n  Limit: skip=0, fetch=3\n    TableScan: ?table? projection=[n, b, h, q], fe | new "logical_plan | SubqueryAlias: v\n  Limit: skip=0, fetch=3\n    TableScan: ?table? projection=[n, b, h, q], fe
+  MOVED nested | old "logical_plan | SubqueryAlias: w\n  TableScan: ?table? projection=[n, h1] || physical_plan | DataSourceExec: f | new "logical_plan | SubqueryAlias: w\n  TableScan: ?table? projection=[n, h1] || physical_plan | DataSourceExec: f
+  MOVED nested3 | old "logical_plan | SubqueryAlias: x\n  TableScan: ?table? projection=[n, z] || physical_plan | DataSourceExec: fi | new "logical_plan | SubqueryAlias: x\n  TableScan: ?table? projection=[n, z] || physical_plan | DataSourceExec: fi
+  MOVED read | old "logical_plan | SubqueryAlias: v\n  TableScan: ?table? projection=[n, b, h, q] || physical_plan | DataSourceEx | new "logical_plan | SubqueryAlias: v\n  TableScan: ?table? projection=[n, b, h, q] || physical_plan | DataSourceEx
+  MOVED union | old "logical_plan | Union\n  SubqueryAlias: v\n    TableScan: ?table? projection=[n]\n  SubqueryAlias: w\n    Tabl | new "logical_plan | Union\n  SubqueryAlias: v\n    TableScan: ?table? projection=[n]\n  SubqueryAlias: w\n    Tabl
+explain_joins: cells 7 (old 7), moved 0

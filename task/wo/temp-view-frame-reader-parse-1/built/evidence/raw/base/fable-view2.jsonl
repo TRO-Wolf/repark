@@ -1,0 +1,14 @@
+{"tag": "explain/jf_same", "rows": ["('logical_plan', 'SubqueryAlias: jf\\n  Projection: CAST(?table?.n AS Int32) AS n, to_timestamp(?table?.ts) AS ts\\n    TableScan: ?table? projection=[n, ts]')", "('physical_plan', 'ProjectionExec: expr=[CAST(n@0 AS Int32) as n, to_timestamp(ts@1) as ts]\\n  RepartitionExec: partitioning=RoundRobinBatch(10), input_partitions=1\\n    DataSourceExec: file_groups={1 group: [[tmp/claude-1000/-home-john-CodeRepos-LocalRepark-repark/8f75ce21-5e0d-46cd-91e8-afa15f5dd03f/scratchpad/ddu-work/rp1b-wh/base/v-repark-h3hadk1v/json/a.json]]}, projection=[n, ts], file_type=json\\n')"], "types": ["string", "string"]}
+{"tag": "json/direct/read_UTC", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "json/derived_filter/read_UTC", "rows": ["(1, 1704078000)", "(2, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "json/derived_expr/read_UTC", "rows": ["(2, 1704078000)", "(3, 1704110400)"], "types": ["int", "bigint"]}
+{"tag": "json/derived_hour/read_UTC", "rows": ["(1, 1704078000, 3)", "(2, 1704110400, 12)"], "types": ["int", "bigint", "int"]}
+{"tag": "json/direct/read_America/Los_Angeles", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "json/derived_filter/read_America/Los_Angeles", "rows": ["(1, 1704106800)", "(2, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "json/derived_expr/read_America/Los_Angeles", "rows": ["(2, 1704106800)", "(3, 1704139200)"], "types": ["int", "bigint"]}
+{"tag": "json/derived_hour/read_America/Los_Angeles", "rows": ["(1, 1704106800, 3)", "(2, 1704139200, 12)"], "types": ["int", "bigint", "int"]}
+{"tag": "explain/jf_differ", "rows": ["('logical_plan', 'SubqueryAlias: jf\\n  Projection: CAST(?table?.n AS Int32) AS n, to_timestamp(?table?.ts) AS ts\\n    TableScan: ?table? projection=[n, ts]')", "('physical_plan', 'ProjectionExec: expr=[CAST(n@0 AS Int32) as n, to_timestamp(ts@1) as ts]\\n  RepartitionExec: partitioning=RoundRobinBatch(10), input_partitions=1\\n    DataSourceExec: file_groups={1 group: [[tmp/claude-1000/-home-john-CodeRepos-LocalRepark-repark/8f75ce21-5e0d-46cd-91e8-afa15f5dd03f/scratchpad/ddu-work/rp1b-wh/base/v-repark-h3hadk1v/json/a.json]]}, projection=[n, ts], file_type=json\\n')"], "types": ["string", "string"]}
+{"tag": "bad/made_true/read_false", "error": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}
+{"tag": "bad/made_false/read_true", "error": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}
+{"tag": "bad/made_true/read_true", "error": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}
+{"tag": "bad/made_false/read_false", "error": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}
