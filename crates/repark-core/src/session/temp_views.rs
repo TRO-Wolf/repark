@@ -125,6 +125,20 @@ impl ReparkSession {
     }
 
     #[allow(clippy::missing_errors_doc)]
+    pub async fn set_lazy_cache_budgets(
+        &self,
+        name: &str,
+        budgets: (Option<u64>, Option<u64>),
+    ) -> Result<bool> {
+        let provider = self.lazy_cache_provider(name).await?;
+        let table = provider.as_deref().and_then(lazy_cache_of);
+        if let Some(table) = table {
+            table.set_budgets(budgets);
+        }
+        Ok(table.is_some())
+    }
+
+    #[allow(clippy::missing_errors_doc)]
     pub async fn lazy_cache_filled(&self, name: &str) -> Result<Option<bool>> {
         let provider = self.lazy_cache_provider(name).await?;
         Ok(provider

@@ -473,6 +473,23 @@ impl PyReparkSession {
     }
 
     #[allow(clippy::missing_errors_doc)]
+    #[pyo3(signature = (name, budgets=(None, None)))]
+    pub fn set_lazy_cache_budgets(
+        &self,
+        py: Python<'_>,
+        name: &str,
+        budgets: (Option<u64>, Option<u64>),
+    ) -> PyResult<bool> {
+        fenced!("PyReparkSession.set_lazy_cache_budgets", {
+            py.detach(|| {
+                self.runtime
+                    .block_on(self.session.set_lazy_cache_budgets(name, budgets))
+            })
+            .map_err(to_py_err)
+        })
+    }
+
+    #[allow(clippy::missing_errors_doc)]
     pub fn lazy_cache_filled(&self, py: Python<'_>, name: &str) -> PyResult<Option<bool>> {
         fenced!("PyReparkSession.lazy_cache_filled", {
             py.detach(|| self.runtime.block_on(self.session.lazy_cache_filled(name)))

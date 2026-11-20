@@ -138,7 +138,10 @@ def _bind_lazy(frame: Any) -> None:
 
     view_name = scratch_view_name(frame._session, _CACHE_VIEW_PREFIX)
     lineage = frame._inner
-    budgets = _resolve_cache_budgets(frame._alive_token)
+    try:
+        budgets = _resolve_cache_budgets(frame._alive_token)
+    except Exception:
+        budgets = (None, None)
     try:
         _own_plan(
             frame, lambda _: frame._session.register_lazy_cache_view(view_name, lineage, budgets)
@@ -147,6 +150,17 @@ def _bind_lazy(frame: Any) -> None:
         _LOGGER.debug("lazy cache registration fell back to the action", exc_info=True)
         return
     bind_registered_view(frame, view_name, lineage)
+
+
+def _refresh_budgets(frame: Any) -> None:
+    views = [handle.view_name for handle in frame._handles if not handle.released]
+    if not views:
+        return
+    from repark.spark.dataframe.eager import _resolve_cache_budgets
+
+    budgets = _resolve_cache_budgets(frame._alive_token)
+    for view in views:
+        frame._session.set_lazy_cache_budgets(view, budgets)
 
 
 def _view_filled(frame: Any) -> bool:

@@ -370,6 +370,7 @@ class DataFrame:
         """Return the native frame for an action, re-running uncached bridges."""
         self._ensure_alive()
         surface_b.fill_on_action(self)
+        cache_handle._refresh_budgets(self)
         if self._map_bridge is not None:
             if self._cache_view is not None:
                 return self._inner

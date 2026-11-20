@@ -143,7 +143,7 @@ struct Shared {
     home: Weak<TempViewHome>,
     schema: SchemaRef,
     order: Vec<SortExpr>,
-    budgets: (Option<u64>, Option<u64>),
+    budgets: Mutex<(Option<u64>, Option<u64>)>,
     stacks: LazyStacks,
     owner: Option<Weak<ReaderParseMemo>>,
     mode: Mutex<Mode>,
@@ -197,7 +197,7 @@ impl LazyCacheTable {
                 home: Arc::downgrade(&session.temp_view_home),
                 schema,
                 order,
-                budgets,
+                budgets: Mutex::new(budgets),
                 stacks,
                 owner: owner
                     .filter(|memo| memo.is_settled())
@@ -213,6 +213,14 @@ impl LazyCacheTable {
             .mode
             .lock()
             .unwrap_or_else(PoisonError::into_inner) = Mode::Released;
+    }
+
+    pub(crate) fn set_budgets(&self, budgets: (Option<u64>, Option<u64>)) {
+        *self
+            .shared
+            .budgets
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner) = budgets;
     }
 
     #[must_use]
@@ -430,8 +438,8 @@ impl Shared {
             }
             Step::Serve(fill) => fill,
             Step::Fill(cell, decided, memo) => {
-                let filling =
-                    Box::pin(self.collect(decided, Some(Arc::clone(&memo)), self.budgets));
+                let budgets = *self.budgets.lock().unwrap_or_else(PoisonError::into_inner);
+                let filling = Box::pin(self.collect(decided, Some(Arc::clone(&memo)), budgets));
                 let fill = cell
                     .get_or_try_init(|| async move {
                         filling

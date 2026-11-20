@@ -55,10 +55,10 @@ def test_take_materializes_cache(spark: ReparkSession) -> None:
     """take/isEmpty are actions — they must fill the MemTable."""
     frame = spark.sql("SELECT 1 AS id UNION ALL SELECT 2").cache()
     assert frame.is_cached is True
-    assert frame._cache_view is None
+    assert frame._session.lazy_cache_filled(frame._cache_view) is False
     taken = {row[0] for row in frame.take(2)}
     assert taken == {1, 2}
-    assert frame._cache_view is not None
+    assert frame._session.lazy_cache_filled(frame._cache_view) is True
     assert frame.isEmpty() is False
 
 
@@ -183,7 +183,7 @@ def test_clear_cache_clears_lazy_mark_before_materialize(spark: ReparkSession) -
     """clearCache also clears persist marks that have not yet materialize'd."""
     frame = spark.sql("SELECT 1 AS id").cache()
     assert frame.is_cached is True
-    assert frame._cache_view is None
+    assert frame._session.lazy_cache_filled(frame._cache_view) is False
     spark.catalog.clearCache()
     assert frame.is_cached is False
 
@@ -253,9 +253,7 @@ def test_cache_max_bytes_refuses_oversized_materialize(spark: ReparkSession) -> 
     frame = spark.sql("SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3").cache()
     with pytest.raises(IllegalArgumentException, match=r"repark\.cache\.max_bytes"):
         frame.count()
-    # Failed materialize must not leave a cache pin; lineage must not be half-committed.
-    assert frame._cache_view is None
-    assert frame._lineage_inner is None
+    assert frame._session.lazy_cache_filled(frame._cache_view) is False
     assert frame.is_cached is True  # mark remains until unpersist (Spark-like)
 
 
@@ -333,9 +331,9 @@ def test_cache_materialize_uses_cache_entry_point_not_temp_view(spark: ReparkSes
     calls = {"cache": 0, "temp": 0}
 
     class _SessionProxy:
-        def materialize_as_cache_view(self, *args: object, **kwargs: object) -> object:
+        def register_lazy_cache_view(self, *args: object, **kwargs: object) -> object:
             calls["cache"] += 1
-            return real_session.materialize_as_cache_view(*args, **kwargs)
+            return real_session.register_lazy_cache_view(*args, **kwargs)
 
         def materialize_as_temp_view(self, *args: object, **kwargs: object) -> object:
             calls["temp"] += 1
@@ -348,7 +346,7 @@ def test_cache_materialize_uses_cache_entry_point_not_temp_view(spark: ReparkSes
     try:
         frame.cache()
         assert frame.count() == 2
-        assert calls["cache"] == 1, "cache materialize must use materialize_as_cache_view"
+        assert calls["cache"] == 1, "cache must register through register_lazy_cache_view"
         assert calls["temp"] == 0, "cache path must not call materialize_as_temp_view"
     finally:
         frame._session = real_session

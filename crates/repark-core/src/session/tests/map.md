@@ -221,6 +221,12 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
   walked (M-A6) reds `k_on_union_named_second_input_answers`; `emits_right` ignored (M-A7) reds none
   (see `../df_guards/map.md`). `attr_id.rs` and `attr_id_verify.rs` now call `remint_shared` with
   `join_collisions`, the old behaviour.
+- `lazy_cache.rs` — **TEMP-VIEW-CACHE-LAZY-PARSE-1 A1 (2026-11-20):** the lazy cache table's states through
+  `ReparkSession::register_lazy_cache_view`: physical planning and `EXPLAIN` fill nothing and the first execution
+  fills; a fill refused by `repark.cache.max_bytes` keeps nothing, keeps the old text and retries at the next use;
+  two concurrent first uses serve one fill (one buffer); the retained total counts a filled table; a released
+  table passes through and keeps nothing; a `LIMIT 1` read fills the whole table; the session's state frees with
+  a filled table registered (the table holds only a weak reader of it).
 - `join_qualifiers.rs` — **CASESENS-2 port (2026-10-03):** six pins for
   `predicate_names::bind_condition_qualifiers` through `prepare_join_condition` on stamped frames
   with facade qualifiers: alias-qualified names bind per side under both rules (and in compound
