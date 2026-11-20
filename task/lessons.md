@@ -602,7 +602,7 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   and its sidecar." *Why:* 92 of the 130 commits after MAP-GOVERNANCE-1 (#1221) edited
   `scripts/check_map_size.py`, 87 of them only to lower rows (median 18 bytes), and a records PR
   that lowered one row ran the whole code roster, about 75 runner-minutes. The code change is
-  harness item H-A; until it merges, `scripts/check_map_size.py` still compares exactly. The clerk
+  harness item H-A, merged as #1374 on 2026-11-19. The clerk
   sweep runs at each release tag, in the same pass as the release section of `task/metrics.md` (the
   orchestrator's default, shown to the owner on 2026-11-19: "Yeah proceed").
 - **DO move closed roadmap cards' rows to month sub-maps through a lifecycle `archive` verb, with
@@ -634,3 +634,21 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   `metrics_ledger_location` row holds the rule. The portable SEPMO canon (`SKILL.md`,
   `references/08-retrospective.md`) still calls the set of eight fixed; canon changes only at its
   master home, so this is a project deviation by owner ruling.
+
+## 2026-11-19 (evening) — a unit may fix a map row it makes false; the lockstep warning covers added and renamed files
+
+- **DO change a map row when your unit makes that row's statement false.** Owner, 2026-11-19 evening,
+  verbatim: "The map-row ruling gains one clause: a unit may also change a row when the unit makes that
+  row's statement false." It amends the 2026-11-18 entry above. *Why:* #1374 removed the exact-match
+  rule and corrected the two map rows that stated it; the owner kept them ("Keep the two corrected map
+  rows").
+- **DO expect the map.md lockstep warning only for an added or renamed code file.** Owner, verbatim:
+  "Lockstep warning: narrow to added and renamed files (--diff-filter=AR, both modes); deletions stay
+  ignored (C-004)." *Why:* the 2026-11-18 ruling says a map row changes only when a file is added,
+  removed or renamed, and a warning on every modified file told units to edit maps the ruling leaves
+  alone. Files under `task/wo/` are skipped as well (harness item E, #1375).
+- **DO NOT let an Anthropic model reword the `check-map-size` help text in the `Makefile`, the first
+  line of the `scripts/check_map_size.py` docstring, or that docstring's rule numbering.** Owner,
+  verbatim: "Makefile:430, check_map_size.py line 2 and the docstring's 1/3/4 numbering: a Muse clerk
+  rewords them with the next non-Anthropic harness change." *Why:* Anthropic models never reword a
+  comment, and those strings still say "exact-baseline".

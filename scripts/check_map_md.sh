@@ -7,14 +7,14 @@ if [[ "${1:-}" == "--base" ]]; then
     echo "ERROR: --base ${base} is not a commit in this repository" >&2
     exit 2
   fi
-  changed_code="$(git diff --name-only --diff-filter=d "${base}...HEAD")"
+  changed_code="$(git diff --name-only --diff-filter=AR "${base}...HEAD")"
   changed_all="$(git diff --name-only "${base}...HEAD")"
   branch_mode=1
 elif [[ $# -gt 0 ]]; then
   echo "usage: check_map_md.sh [--base <ref>]" >&2
   exit 2
 else
-  changed_code="$(git diff --cached --name-only --diff-filter=d)"
+  changed_code="$(git diff --cached --name-only --diff-filter=AR)"
   changed_all="$(git diff --cached --name-only)"
   branch_mode=0
 fi
