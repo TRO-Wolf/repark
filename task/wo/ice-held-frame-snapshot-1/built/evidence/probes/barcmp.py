@@ -73,7 +73,11 @@ rows: list[dict[str, Any]] = []
 for key in sorted(spark):
     if key[0] == "X":
         continue
-    record: dict[str, Any] = {"key": "|".join(key), "spark": spark[key], "unit": unit(key, spark[key])}
+    record: dict[str, Any] = {
+        "key": "|".join(key),
+        "spark": spark[key],
+        "unit": unit(key, spark[key]),
+    }
     for label in labels:
         got = cells[label].get(key, "MISSING")
         record[label] = got
@@ -111,11 +115,29 @@ if len(labels) == 2:
     print("moved", dict(moved))
     print("EQUAL lost", len(lost))
     for record in lost:
-        print("  LOST", record["key"], "spark", record["spark"], first, record[first], second, record[second])
+        print(
+            "  LOST",
+            record["key"],
+            "spark",
+            record["spark"],
+            first,
+            record[first],
+            second,
+            record[second],
+        )
     left = [r for r in rows if r["v_" + second] in ("WRONG", "RAISE")]
     print("still not EQUAL on", second, len(left))
     for record in left:
-        print("  LEFT", record["v_" + second], record["unit"], record["key"], "spark", record["spark"], second, record[second])
+        print(
+            "  LEFT",
+            record["v_" + second],
+            record["unit"],
+            record["key"],
+            "spark",
+            record["spark"],
+            second,
+            record[second],
+        )
 for label in labels:
     for key, got in sorted(cells[label].items()):
         if key[0] == "X":
