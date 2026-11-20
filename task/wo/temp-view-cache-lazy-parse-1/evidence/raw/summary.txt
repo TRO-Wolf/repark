@@ -1,0 +1,1203 @@
+cells with a Spark record: 2402
+== main
+  C EQUAL: 1188
+  C WRONG: 492
+  L EQUAL: 24
+  L WRONG: 56
+  N EQUAL: 100
+  N WRONG: 20
+  Q EQUAL: 5
+  Q WRONG: 10
+  R EQUAL: 15
+  R WRONG: 12
+  T EQUAL: 180
+  T RAISE: 60
+  U EQUAL: 144
+  U WRONG: 96
+== base
+  C EQUAL: 768
+  C WRONG: 912
+  L EQUAL: 24
+  L WRONG: 56
+  N EQUAL: 40
+  N WRONG: 80
+  Q EQUAL: 5
+  Q WRONG: 10
+  R EQUAL: 11
+  R WRONG: 16
+  T EQUAL: 108
+  T RAISE: 60
+  T WRONG: 72
+  U EQUAL: 144
+  U WRONG: 96
+== moved base -> main
+  WRONG -> EQUAL: 556
+== not EQUAL on main (group, door, action, reader, mode, verdict, columns)
+  C after_set join csv_i false WRONG h,t: 2
+  C after_set join csv_i true WRONG h,t: 2
+  C after_set join csv_s false WRONG h,t: 2
+  C after_set join csv_s true WRONG h,t: 2
+  C after_set join ice false WRONG h,t: 2
+  C after_set join ice true WRONG h,t: 2
+  C after_set join json_s false WRONG h,t: 2
+  C after_set join json_s true WRONG h,t: 2
+  C after_set join pq false WRONG h,t: 2
+  C after_set join pq true WRONG h,t: 2
+  C cache join csv_i false WRONG h,t: 2
+  C cache join csv_i true WRONG h,t: 2
+  C cache join csv_s false WRONG h,t: 2
+  C cache join csv_s true WRONG h,t: 2
+  C cache join ice false WRONG h,t: 2
+  C cache join ice true WRONG h,t: 2
+  C cache join json_s false WRONG h,t: 2
+  C cache join json_s true WRONG h,t: 2
+  C cache join pq false WRONG h,t: 2
+  C cache join pq true WRONG h,t: 2
+  C cache_view collect csv_i false WRONG h,t,u: 2
+  C cache_view collect csv_i true WRONG h,t,u: 2
+  C cache_view collect csv_s false WRONG h,t,u: 2
+  C cache_view collect csv_s true WRONG h,t,u: 2
+  C cache_view collect json_s false WRONG h,t,u: 2
+  C cache_view collect json_s true WRONG h,t,u: 2
+  C cache_view count csv_i false WRONG h,t,u: 2
+  C cache_view count csv_i true WRONG h,t,u: 2
+  C cache_view count csv_s false WRONG h,t,u: 2
+  C cache_view count csv_s true WRONG h,t,u: 2
+  C cache_view count json_s false WRONG h,t,u: 2
+  C cache_view count json_s true WRONG h,t,u: 2
+  C cache_view derived csv_i false WRONG h,t,u: 2
+  C cache_view derived csv_i true WRONG h,t,u: 2
+  C cache_view derived csv_s false WRONG h,t,u: 2
+  C cache_view derived csv_s true WRONG h,t,u: 2
+  C cache_view derived json_s false WRONG h,t,u: 2
+  C cache_view derived json_s true WRONG h,t,u: 2
+  C cache_view join csv_i false WRONG h,t,u: 2
+  C cache_view join csv_i true WRONG h,t,u: 2
+  C cache_view join csv_s false WRONG h,t,u: 2
+  C cache_view join csv_s true WRONG h,t,u: 2
+  C cache_view join json_s false WRONG h,t,u: 2
+  C cache_view join json_s true WRONG h,t,u: 2
+  C cache_view show csv_i false WRONG other: 2
+  C cache_view show csv_i true WRONG other: 2
+  C cache_view show csv_s false WRONG other: 2
+  C cache_view show csv_s true WRONG other: 2
+  C cache_view show json_s false WRONG other: 2
+  C cache_view show json_s true WRONG other: 2
+  C cache_view write csv_i false WRONG h,t,u: 2
+  C cache_view write csv_i true WRONG h,t,u: 2
+  C cache_view write csv_s false WRONG h,t,u: 2
+  C cache_view write csv_s true WRONG h,t,u: 2
+  C cache_view write json_s false WRONG h,t,u: 2
+  C cache_view write json_s true WRONG h,t,u: 2
+  C cache_view_sql collect csv_i false WRONG h,t,u: 2
+  C cache_view_sql collect csv_i true WRONG h,t,u: 2
+  C cache_view_sql collect csv_s false WRONG h,t,u: 2
+  C cache_view_sql collect csv_s true WRONG h,t,u: 2
+  C cache_view_sql collect json_s false WRONG h,t,u: 2
+  C cache_view_sql collect json_s true WRONG h,t,u: 2
+  C cache_view_sql count csv_i false WRONG h,t,u: 2
+  C cache_view_sql count csv_i true WRONG h,t,u: 2
+  C cache_view_sql count csv_s false WRONG h,t,u: 2
+  C cache_view_sql count csv_s true WRONG h,t,u: 2
+  C cache_view_sql count json_s false WRONG h,t,u: 2
+  C cache_view_sql count json_s true WRONG h,t,u: 2
+  C cache_view_sql derived csv_i false WRONG h,t,u: 2
+  C cache_view_sql derived csv_i true WRONG h,t,u: 2
+  C cache_view_sql derived csv_s false WRONG h,t,u: 2
+  C cache_view_sql derived csv_s true WRONG h,t,u: 2
+  C cache_view_sql derived json_s false WRONG h,t,u: 2
+  C cache_view_sql derived json_s true WRONG h,t,u: 2
+  C cache_view_sql join csv_i false WRONG h,t,u: 2
+  C cache_view_sql join csv_i true WRONG h,t,u: 2
+  C cache_view_sql join csv_s false WRONG h,t,u: 2
+  C cache_view_sql join csv_s true WRONG h,t,u: 2
+  C cache_view_sql join json_s false WRONG h,t,u: 2
+  C cache_view_sql join json_s true WRONG h,t,u: 2
+  C cache_view_sql show csv_i false WRONG other: 2
+  C cache_view_sql show csv_i true WRONG other: 2
+  C cache_view_sql show csv_s false WRONG other: 2
+  C cache_view_sql show csv_s true WRONG other: 2
+  C cache_view_sql show json_s false WRONG other: 2
+  C cache_view_sql show json_s true WRONG other: 2
+  C cache_view_sql write csv_i false WRONG h,t,u: 2
+  C cache_view_sql write csv_i true WRONG h,t,u: 2
+  C cache_view_sql write csv_s false WRONG h,t,u: 2
+  C cache_view_sql write csv_s true WRONG h,t,u: 2
+  C cache_view_sql write json_s false WRONG h,t,u: 2
+  C cache_view_sql write json_s true WRONG h,t,u: 2
+  C catcache collect csv_i false WRONG h,t,u: 2
+  C catcache collect csv_i true WRONG h,t,u: 2
+  C catcache collect csv_s false WRONG h,t,u: 2
+  C catcache collect csv_s true WRONG h,t,u: 2
+  C catcache collect json_s false WRONG h,t,u: 2
+  C catcache collect json_s true WRONG h,t,u: 2
+  C catcache count csv_i false WRONG h,t,u: 2
+  C catcache count csv_i true WRONG h,t,u: 2
+  C catcache count csv_s false WRONG h,t,u: 2
+  C catcache count csv_s true WRONG h,t,u: 2
+  C catcache count json_s false WRONG h,t,u: 2
+  C catcache count json_s true WRONG h,t,u: 2
+  C catcache derived csv_i false WRONG h,t,u: 2
+  C catcache derived csv_i true WRONG h,t,u: 2
+  C catcache derived csv_s false WRONG h,t,u: 2
+  C catcache derived csv_s true WRONG h,t,u: 2
+  C catcache derived json_s false WRONG h,t,u: 2
+  C catcache derived json_s true WRONG h,t,u: 2
+  C catcache join csv_i false WRONG h,t,u: 2
+  C catcache join csv_i true WRONG h,t,u: 2
+  C catcache join csv_s false WRONG h,t,u: 2
+  C catcache join csv_s true WRONG h,t,u: 2
+  C catcache join json_s false WRONG h,t,u: 2
+  C catcache join json_s true WRONG h,t,u: 2
+  C catcache show csv_i false WRONG other: 2
+  C catcache show csv_i true WRONG other: 2
+  C catcache show csv_s false WRONG other: 2
+  C catcache show csv_s true WRONG other: 2
+  C catcache show json_s false WRONG other: 2
+  C catcache show json_s true WRONG other: 2
+  C catcache write csv_i false WRONG h,t,u: 2
+  C catcache write csv_i true WRONG h,t,u: 2
+  C catcache write csv_s false WRONG h,t,u: 2
+  C catcache write csv_s true WRONG h,t,u: 2
+  C catcache write json_s false WRONG h,t,u: 2
+  C catcache write json_s true WRONG h,t,u: 2
+  C clazy collect csv_i false WRONG h,t,u: 2
+  C clazy collect csv_i true WRONG h,t,u: 2
+  C clazy collect csv_s false WRONG h,t,u: 2
+  C clazy collect csv_s true WRONG h,t,u: 2
+  C clazy collect json_s false WRONG h,t,u: 2
+  C clazy collect json_s true WRONG h,t,u: 2
+  C clazy count csv_i false WRONG h,t,u: 2
+  C clazy count csv_i true WRONG h,t,u: 2
+  C clazy count csv_s false WRONG h,t,u: 2
+  C clazy count csv_s true WRONG h,t,u: 2
+  C clazy count json_s false WRONG h,t,u: 2
+  C clazy count json_s true WRONG h,t,u: 2
+  C clazy derived csv_i false WRONG h,t,u: 2
+  C clazy derived csv_i true WRONG h,t,u: 2
+  C clazy derived csv_s false WRONG h,t,u: 2
+  C clazy derived csv_s true WRONG h,t,u: 2
+  C clazy derived json_s false WRONG h,t,u: 2
+  C clazy derived json_s true WRONG h,t,u: 2
+  C clazy join csv_i false WRONG h,t,u: 2
+  C clazy join csv_i true WRONG h,t,u: 2
+  C clazy join csv_s false WRONG h,t,u: 2
+  C clazy join csv_s true WRONG h,t,u: 2
+  C clazy join json_s false WRONG h,t,u: 2
+  C clazy join json_s true WRONG h,t,u: 2
+  C clazy show csv_i false WRONG other: 2
+  C clazy show csv_i true WRONG other: 2
+  C clazy show csv_s false WRONG other: 2
+  C clazy show csv_s true WRONG other: 2
+  C clazy show json_s false WRONG other: 2
+  C clazy show json_s true WRONG other: 2
+  C clazy write csv_i false WRONG h,t,u: 2
+  C clazy write csv_i true WRONG h,t,u: 2
+  C clazy write csv_s false WRONG h,t,u: 2
+  C clazy write csv_s true WRONG h,t,u: 2
+  C clazy write json_s false WRONG h,t,u: 2
+  C clazy write json_s true WRONG h,t,u: 2
+  C clazy_sql count csv_i false WRONG h,t,u: 2
+  C clazy_sql count csv_i true WRONG h,t,u: 2
+  C clazy_sql count csv_s false WRONG h,t,u: 2
+  C clazy_sql count csv_s true WRONG h,t,u: 2
+  C clazy_sql count json_s false WRONG h,t,u: 2
+  C clazy_sql count json_s true WRONG h,t,u: 2
+  C ctable_sql collect csv_i false WRONG h,t,u: 2
+  C ctable_sql collect csv_i true WRONG h,t,u: 2
+  C ctable_sql collect csv_s false WRONG h,t,u: 2
+  C ctable_sql collect csv_s true WRONG h,t,u: 2
+  C ctable_sql collect json_s false WRONG h,t,u: 2
+  C ctable_sql collect json_s true WRONG h,t,u: 2
+  C ctable_sql count csv_i false WRONG h,t,u: 2
+  C ctable_sql count csv_i true WRONG h,t,u: 2
+  C ctable_sql count csv_s false WRONG h,t,u: 2
+  C ctable_sql count csv_s true WRONG h,t,u: 2
+  C ctable_sql count json_s false WRONG h,t,u: 2
+  C ctable_sql count json_s true WRONG h,t,u: 2
+  C ctable_sql derived csv_i false WRONG h,t,u: 2
+  C ctable_sql derived csv_i true WRONG h,t,u: 2
+  C ctable_sql derived csv_s false WRONG h,t,u: 2
+  C ctable_sql derived csv_s true WRONG h,t,u: 2
+  C ctable_sql derived json_s false WRONG h,t,u: 2
+  C ctable_sql derived json_s true WRONG h,t,u: 2
+  C ctable_sql join csv_i false WRONG h,t,u: 2
+  C ctable_sql join csv_i true WRONG h,t,u: 2
+  C ctable_sql join csv_s false WRONG h,t,u: 2
+  C ctable_sql join csv_s true WRONG h,t,u: 2
+  C ctable_sql join json_s false WRONG h,t,u: 2
+  C ctable_sql join json_s true WRONG h,t,u: 2
+  C ctable_sql show csv_i false WRONG other: 2
+  C ctable_sql show csv_i true WRONG other: 2
+  C ctable_sql show csv_s false WRONG other: 2
+  C ctable_sql show csv_s true WRONG other: 2
+  C ctable_sql show json_s false WRONG other: 2
+  C ctable_sql show json_s true WRONG other: 2
+  C ctable_sql write csv_i false WRONG h,t,u: 2
+  C ctable_sql write csv_i true WRONG h,t,u: 2
+  C ctable_sql write csv_s false WRONG h,t,u: 2
+  C ctable_sql write csv_s true WRONG h,t,u: 2
+  C ctable_sql write json_s false WRONG h,t,u: 2
+  C ctable_sql write json_s true WRONG h,t,u: 2
+  C persist_disk join csv_i false WRONG h,t: 2
+  C persist_disk join csv_i true WRONG h,t: 2
+  C persist_disk join csv_s false WRONG h,t: 2
+  C persist_disk join csv_s true WRONG h,t: 2
+  C persist_disk join ice false WRONG h,t: 2
+  C persist_disk join ice true WRONG h,t: 2
+  C persist_disk join json_s false WRONG h,t: 2
+  C persist_disk join json_s true WRONG h,t: 2
+  C persist_disk join pq false WRONG h,t: 2
+  C persist_disk join pq true WRONG h,t: 2
+  C persist_mo join csv_i false WRONG h,t: 2
+  C persist_mo join csv_i true WRONG h,t: 2
+  C persist_mo join csv_s false WRONG h,t: 2
+  C persist_mo join csv_s true WRONG h,t: 2
+  C persist_mo join ice false WRONG h,t: 2
+  C persist_mo join ice true WRONG h,t: 2
+  C persist_mo join json_s false WRONG h,t: 2
+  C persist_mo join json_s true WRONG h,t: 2
+  C persist_mo join pq false WRONG h,t: 2
+  C persist_mo join pq true WRONG h,t: 2
+  C recache join csv_i false WRONG h,t: 2
+  C recache join csv_i true WRONG h,t: 2
+  C recache join csv_s false WRONG h,t: 2
+  C recache join csv_s true WRONG h,t: 2
+  C recache join ice false WRONG h,t: 2
+  C recache join ice true WRONG h,t: 2
+  C recache join json_s false WRONG h,t: 2
+  C recache join json_s true WRONG h,t: 2
+  C recache join pq false WRONG h,t: 2
+  C recache join pq true WRONG h,t: 2
+  C recache_after join csv_i false WRONG h,t: 2
+  C recache_after join csv_i true WRONG h,t: 2
+  C recache_after join csv_s false WRONG h,t: 2
+  C recache_after join csv_s true WRONG h,t: 2
+  C recache_after join ice false WRONG h,t: 2
+  C recache_after join ice true WRONG h,t: 2
+  C recache_after join json_s false WRONG h,t: 2
+  C recache_after join json_s true WRONG h,t: 2
+  C recache_after join pq false WRONG h,t: 2
+  C recache_after join pq true WRONG h,t: 2
+  L cache create csv_i false WRONG h,t: 2
+  L cache create csv_i true WRONG h,t: 2
+  L cache create csv_s false WRONG h,t: 2
+  L cache create csv_s true WRONG h,t: 2
+  L cache create ice false WRONG h,t: 2
+  L cache create ice true WRONG h,t: 2
+  L cache create json_s false WRONG h,t: 2
+  L cache create json_s true WRONG h,t: 2
+  L cache create pq false WRONG h,t: 2
+  L cache create pq true WRONG h,t: 2
+  L cache insert csv_i false WRONG h,t,u,x: 2
+  L cache insert csv_i true WRONG h,t,u,x: 2
+  L cache insert csv_s false WRONG h,t,u,x: 2
+  L cache insert csv_s true WRONG h,t,u,x: 2
+  L cache insert json_s false WRONG h,t,u,x: 2
+  L cache insert json_s true WRONG h,t,u,x: 2
+  L udf create csv_i false WRONG h,t,u,x: 2
+  L udf create csv_i true WRONG h,t,u,x: 2
+  L udf create csv_s false WRONG h,t,u,x: 2
+  L udf create csv_s true WRONG h,t,u,x: 2
+  L udf create json_s false WRONG h,t,u,x: 2
+  L udf create json_s true WRONG h,t,u,x: 2
+  L udf insert csv_i false WRONG h,t,u,x: 2
+  L udf insert csv_i true WRONG h,t,u,x: 2
+  L udf insert csv_s false WRONG h,t,u,x: 2
+  L udf insert csv_s true WRONG h,t,u,x: 2
+  L udf insert json_s false WRONG h,t,u,x: 2
+  L udf insert json_s true WRONG h,t,u,x: 2
+  N none join csv_i false WRONG h,t: 2
+  N none join csv_i true WRONG h,t: 2
+  N none join csv_s false WRONG h,t: 2
+  N none join csv_s true WRONG h,t: 2
+  N none join ice false WRONG h,t: 2
+  N none join ice true WRONG h,t: 2
+  N none join json_s false WRONG h,t: 2
+  N none join json_s true WRONG h,t: 2
+  N none join pq false WRONG h,t: 2
+  N none join pq true WRONG h,t: 2
+  Q bare_lazy - csv_i - WRONG h,t,u: 1
+  Q bare_lazy - json_s - WRONG h,t,u: 1
+  Q bare_mat - csv_i - WRONG h,t,u: 1
+  Q bare_mat - json_s - WRONG h,t,u: 1
+  Q newsess_bare_lazy - csv_i - WRONG h,t,u: 1
+  Q newsess_bare_lazy - json_s - WRONG h,t,u: 1
+  Q newsess_bare_mat - csv_i - WRONG h,t,u: 1
+  Q newsess_bare_mat - json_s - WRONG h,t,u: 1
+  Q twin_plan - csv_i - WRONG h,t,u: 1
+  Q twin_plan - json_s - WRONG h,t,u: 1
+  R child_before - csv_i - WRONG h,t,u: 1
+  R child_before - json_s - WRONG h,t,u: 1
+  R clazy_then - csv_i - WRONG h,t,u: 1
+  R clazy_then - json_s - WRONG h,t,u: 1
+  R explain_first - csv_i - WRONG h,t,u: 1
+  R explain_first - json_s - WRONG h,t,u: 1
+  R mia_cache - csv_i - WRONG h,t,u: 1
+  R mia_cache - json_s - WRONG h,t,u: 1
+  R own_then_cache - csv_i - WRONG other: 1
+  R own_then_cache - json_s - WRONG other: 1
+  R udf_cache - csv_i - WRONG h,t,u: 1
+  R udf_cache - json_s - WRONG h,t,u: 1
+  T mip countfirst csv_i false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst csv_i true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst csv_s false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst csv_s true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst ice false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst ice true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst json_s false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst json_s true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst pq false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst pq true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first csv_i false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first csv_i true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first csv_s false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first csv_s true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first ice false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first ice true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first json_s false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first json_s true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first pq false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first pq true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second csv_i false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second csv_i true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second csv_s false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second csv_s true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second ice false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second ice true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second json_s false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second json_s true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second pq false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second pq true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  U mia countfirst csv_i false WRONG h,t,u: 2
+  U mia countfirst csv_i true WRONG h,t,u: 2
+  U mia countfirst csv_s false WRONG h,t,u: 2
+  U mia countfirst csv_s true WRONG h,t,u: 2
+  U mia countfirst json_s false WRONG h,t,u: 2
+  U mia countfirst json_s true WRONG h,t,u: 2
+  U mia first csv_i false WRONG h,t,u: 2
+  U mia first csv_i true WRONG h,t,u: 2
+  U mia first csv_s false WRONG h,t,u: 2
+  U mia first csv_s true WRONG h,t,u: 2
+  U mia first json_s false WRONG h,t,u: 2
+  U mia first json_s true WRONG h,t,u: 2
+  U mip countfirst csv_i false WRONG h,t,u: 2
+  U mip countfirst csv_i true WRONG h,t,u: 2
+  U mip countfirst csv_s false WRONG h,t,u: 2
+  U mip countfirst csv_s true WRONG h,t,u: 2
+  U mip countfirst json_s false WRONG h,t,u: 2
+  U mip countfirst json_s true WRONG h,t,u: 2
+  U mip first csv_i false WRONG h,t,u: 2
+  U mip first csv_i true WRONG h,t,u: 2
+  U mip first csv_s false WRONG h,t,u: 2
+  U mip first csv_s true WRONG h,t,u: 2
+  U mip first json_s false WRONG h,t,u: 2
+  U mip first json_s true WRONG h,t,u: 2
+  U pudf countfirst csv_i false WRONG h,t,u: 2
+  U pudf countfirst csv_i true WRONG h,t,u: 2
+  U pudf countfirst csv_s false WRONG h,t,u: 2
+  U pudf countfirst csv_s true WRONG h,t,u: 2
+  U pudf countfirst json_s false WRONG h,t,u: 2
+  U pudf countfirst json_s true WRONG h,t,u: 2
+  U pudf first csv_i false WRONG h,t,u: 2
+  U pudf first csv_i true WRONG h,t,u: 2
+  U pudf first csv_s false WRONG h,t,u: 2
+  U pudf first csv_s true WRONG h,t,u: 2
+  U pudf first json_s false WRONG h,t,u: 2
+  U pudf first json_s true WRONG h,t,u: 2
+  U udf countfirst csv_i false WRONG h,t,u: 2
+  U udf countfirst csv_i true WRONG h,t,u: 2
+  U udf countfirst csv_s false WRONG h,t,u: 2
+  U udf countfirst csv_s true WRONG h,t,u: 2
+  U udf countfirst json_s false WRONG h,t,u: 2
+  U udf countfirst json_s true WRONG h,t,u: 2
+  U udf first csv_i false WRONG h,t,u: 2
+  U udf first csv_i true WRONG h,t,u: 2
+  U udf first csv_s false WRONG h,t,u: 2
+  U udf first csv_s true WRONG h,t,u: 2
+  U udf first json_s false WRONG h,t,u: 2
+  U udf first json_s true WRONG h,t,u: 2
+== not EQUAL on base (group, door, action, reader, mode, verdict, columns)
+  C after_set collect csv_i false WRONG h,t,u: 2
+  C after_set collect csv_i true WRONG h,t,u: 2
+  C after_set collect csv_s false WRONG h,t,u: 2
+  C after_set collect csv_s true WRONG h,t,u: 2
+  C after_set collect json_s false WRONG h,t,u: 2
+  C after_set collect json_s true WRONG h,t,u: 2
+  C after_set count csv_i false WRONG h,t,u: 2
+  C after_set count csv_i true WRONG h,t,u: 2
+  C after_set count csv_s false WRONG h,t,u: 2
+  C after_set count csv_s true WRONG h,t,u: 2
+  C after_set count json_s false WRONG h,t,u: 2
+  C after_set count json_s true WRONG h,t,u: 2
+  C after_set derived csv_i false WRONG h,t,u: 2
+  C after_set derived csv_i true WRONG h,t,u: 2
+  C after_set derived csv_s false WRONG h,t,u: 2
+  C after_set derived csv_s true WRONG h,t,u: 2
+  C after_set derived json_s false WRONG h,t,u: 2
+  C after_set derived json_s true WRONG h,t,u: 2
+  C after_set join csv_i false WRONG h,t: 2
+  C after_set join csv_i true WRONG h,t: 2
+  C after_set join csv_s false WRONG h,t: 2
+  C after_set join csv_s true WRONG h,t: 2
+  C after_set join ice false WRONG h,t: 2
+  C after_set join ice true WRONG h,t: 2
+  C after_set join json_s false WRONG h,t: 2
+  C after_set join json_s true WRONG h,t: 2
+  C after_set join pq false WRONG h,t: 2
+  C after_set join pq true WRONG h,t: 2
+  C after_set show csv_i false WRONG other: 2
+  C after_set show csv_i true WRONG other: 2
+  C after_set show csv_s false WRONG other: 2
+  C after_set show csv_s true WRONG other: 2
+  C after_set show json_s false WRONG other: 2
+  C after_set show json_s true WRONG other: 2
+  C after_set write csv_i false WRONG h,t,u: 2
+  C after_set write csv_i true WRONG h,t,u: 2
+  C after_set write csv_s false WRONG h,t,u: 2
+  C after_set write csv_s true WRONG h,t,u: 2
+  C after_set write json_s false WRONG h,t,u: 2
+  C after_set write json_s true WRONG h,t,u: 2
+  C cache collect csv_i false WRONG h,t,u: 2
+  C cache collect csv_i true WRONG h,t,u: 2
+  C cache collect csv_s false WRONG h,t,u: 2
+  C cache collect csv_s true WRONG h,t,u: 2
+  C cache collect json_s false WRONG h,t,u: 2
+  C cache collect json_s true WRONG h,t,u: 2
+  C cache count csv_i false WRONG h,t,u: 2
+  C cache count csv_i true WRONG h,t,u: 2
+  C cache count csv_s false WRONG h,t,u: 2
+  C cache count csv_s true WRONG h,t,u: 2
+  C cache count json_s false WRONG h,t,u: 2
+  C cache count json_s true WRONG h,t,u: 2
+  C cache derived csv_i false WRONG h,t,u: 2
+  C cache derived csv_i true WRONG h,t,u: 2
+  C cache derived csv_s false WRONG h,t,u: 2
+  C cache derived csv_s true WRONG h,t,u: 2
+  C cache derived json_s false WRONG h,t,u: 2
+  C cache derived json_s true WRONG h,t,u: 2
+  C cache join csv_i false WRONG h,t: 2
+  C cache join csv_i true WRONG h,t: 2
+  C cache join csv_s false WRONG h,t: 2
+  C cache join csv_s true WRONG h,t: 2
+  C cache join ice false WRONG h,t: 2
+  C cache join ice true WRONG h,t: 2
+  C cache join json_s false WRONG h,t: 2
+  C cache join json_s true WRONG h,t: 2
+  C cache join pq false WRONG h,t: 2
+  C cache join pq true WRONG h,t: 2
+  C cache show csv_i false WRONG other: 2
+  C cache show csv_i true WRONG other: 2
+  C cache show csv_s false WRONG other: 2
+  C cache show csv_s true WRONG other: 2
+  C cache show json_s false WRONG other: 2
+  C cache show json_s true WRONG other: 2
+  C cache write csv_i false WRONG h,t,u: 2
+  C cache write csv_i true WRONG h,t,u: 2
+  C cache write csv_s false WRONG h,t,u: 2
+  C cache write csv_s true WRONG h,t,u: 2
+  C cache write json_s false WRONG h,t,u: 2
+  C cache write json_s true WRONG h,t,u: 2
+  C cache_view collect csv_i false WRONG h,t,u: 2
+  C cache_view collect csv_i true WRONG h,t,u: 2
+  C cache_view collect csv_s false WRONG h,t,u: 2
+  C cache_view collect csv_s true WRONG h,t,u: 2
+  C cache_view collect json_s false WRONG h,t,u: 2
+  C cache_view collect json_s true WRONG h,t,u: 2
+  C cache_view count csv_i false WRONG h,t,u: 2
+  C cache_view count csv_i true WRONG h,t,u: 2
+  C cache_view count csv_s false WRONG h,t,u: 2
+  C cache_view count csv_s true WRONG h,t,u: 2
+  C cache_view count json_s false WRONG h,t,u: 2
+  C cache_view count json_s true WRONG h,t,u: 2
+  C cache_view derived csv_i false WRONG h,t,u: 2
+  C cache_view derived csv_i true WRONG h,t,u: 2
+  C cache_view derived csv_s false WRONG h,t,u: 2
+  C cache_view derived csv_s true WRONG h,t,u: 2
+  C cache_view derived json_s false WRONG h,t,u: 2
+  C cache_view derived json_s true WRONG h,t,u: 2
+  C cache_view join csv_i false WRONG h,t,u: 2
+  C cache_view join csv_i true WRONG h,t,u: 2
+  C cache_view join csv_s false WRONG h,t,u: 2
+  C cache_view join csv_s true WRONG h,t,u: 2
+  C cache_view join json_s false WRONG h,t,u: 2
+  C cache_view join json_s true WRONG h,t,u: 2
+  C cache_view show csv_i false WRONG other: 2
+  C cache_view show csv_i true WRONG other: 2
+  C cache_view show csv_s false WRONG other: 2
+  C cache_view show csv_s true WRONG other: 2
+  C cache_view show json_s false WRONG other: 2
+  C cache_view show json_s true WRONG other: 2
+  C cache_view write csv_i false WRONG h,t,u: 2
+  C cache_view write csv_i true WRONG h,t,u: 2
+  C cache_view write csv_s false WRONG h,t,u: 2
+  C cache_view write csv_s true WRONG h,t,u: 2
+  C cache_view write json_s false WRONG h,t,u: 2
+  C cache_view write json_s true WRONG h,t,u: 2
+  C cache_view_sql collect csv_i false WRONG h,t,u: 2
+  C cache_view_sql collect csv_i true WRONG h,t,u: 2
+  C cache_view_sql collect csv_s false WRONG h,t,u: 2
+  C cache_view_sql collect csv_s true WRONG h,t,u: 2
+  C cache_view_sql collect json_s false WRONG h,t,u: 2
+  C cache_view_sql collect json_s true WRONG h,t,u: 2
+  C cache_view_sql count csv_i false WRONG h,t,u: 2
+  C cache_view_sql count csv_i true WRONG h,t,u: 2
+  C cache_view_sql count csv_s false WRONG h,t,u: 2
+  C cache_view_sql count csv_s true WRONG h,t,u: 2
+  C cache_view_sql count json_s false WRONG h,t,u: 2
+  C cache_view_sql count json_s true WRONG h,t,u: 2
+  C cache_view_sql derived csv_i false WRONG h,t,u: 2
+  C cache_view_sql derived csv_i true WRONG h,t,u: 2
+  C cache_view_sql derived csv_s false WRONG h,t,u: 2
+  C cache_view_sql derived csv_s true WRONG h,t,u: 2
+  C cache_view_sql derived json_s false WRONG h,t,u: 2
+  C cache_view_sql derived json_s true WRONG h,t,u: 2
+  C cache_view_sql join csv_i false WRONG h,t,u: 2
+  C cache_view_sql join csv_i true WRONG h,t,u: 2
+  C cache_view_sql join csv_s false WRONG h,t,u: 2
+  C cache_view_sql join csv_s true WRONG h,t,u: 2
+  C cache_view_sql join json_s false WRONG h,t,u: 2
+  C cache_view_sql join json_s true WRONG h,t,u: 2
+  C cache_view_sql show csv_i false WRONG other: 2
+  C cache_view_sql show csv_i true WRONG other: 2
+  C cache_view_sql show csv_s false WRONG other: 2
+  C cache_view_sql show csv_s true WRONG other: 2
+  C cache_view_sql show json_s false WRONG other: 2
+  C cache_view_sql show json_s true WRONG other: 2
+  C cache_view_sql write csv_i false WRONG h,t,u: 2
+  C cache_view_sql write csv_i true WRONG h,t,u: 2
+  C cache_view_sql write csv_s false WRONG h,t,u: 2
+  C cache_view_sql write csv_s true WRONG h,t,u: 2
+  C cache_view_sql write json_s false WRONG h,t,u: 2
+  C cache_view_sql write json_s true WRONG h,t,u: 2
+  C catcache collect csv_i false WRONG h,t,u: 2
+  C catcache collect csv_i true WRONG h,t,u: 2
+  C catcache collect csv_s false WRONG h,t,u: 2
+  C catcache collect csv_s true WRONG h,t,u: 2
+  C catcache collect json_s false WRONG h,t,u: 2
+  C catcache collect json_s true WRONG h,t,u: 2
+  C catcache count csv_i false WRONG h,t,u: 2
+  C catcache count csv_i true WRONG h,t,u: 2
+  C catcache count csv_s false WRONG h,t,u: 2
+  C catcache count csv_s true WRONG h,t,u: 2
+  C catcache count json_s false WRONG h,t,u: 2
+  C catcache count json_s true WRONG h,t,u: 2
+  C catcache derived csv_i false WRONG h,t,u: 2
+  C catcache derived csv_i true WRONG h,t,u: 2
+  C catcache derived csv_s false WRONG h,t,u: 2
+  C catcache derived csv_s true WRONG h,t,u: 2
+  C catcache derived json_s false WRONG h,t,u: 2
+  C catcache derived json_s true WRONG h,t,u: 2
+  C catcache join csv_i false WRONG h,t,u: 2
+  C catcache join csv_i true WRONG h,t,u: 2
+  C catcache join csv_s false WRONG h,t,u: 2
+  C catcache join csv_s true WRONG h,t,u: 2
+  C catcache join json_s false WRONG h,t,u: 2
+  C catcache join json_s true WRONG h,t,u: 2
+  C catcache show csv_i false WRONG other: 2
+  C catcache show csv_i true WRONG other: 2
+  C catcache show csv_s false WRONG other: 2
+  C catcache show csv_s true WRONG other: 2
+  C catcache show json_s false WRONG other: 2
+  C catcache show json_s true WRONG other: 2
+  C catcache write csv_i false WRONG h,t,u: 2
+  C catcache write csv_i true WRONG h,t,u: 2
+  C catcache write csv_s false WRONG h,t,u: 2
+  C catcache write csv_s true WRONG h,t,u: 2
+  C catcache write json_s false WRONG h,t,u: 2
+  C catcache write json_s true WRONG h,t,u: 2
+  C clazy collect csv_i false WRONG h,t,u: 2
+  C clazy collect csv_i true WRONG h,t,u: 2
+  C clazy collect csv_s false WRONG h,t,u: 2
+  C clazy collect csv_s true WRONG h,t,u: 2
+  C clazy collect json_s false WRONG h,t,u: 2
+  C clazy collect json_s true WRONG h,t,u: 2
+  C clazy count csv_i false WRONG h,t,u: 2
+  C clazy count csv_i true WRONG h,t,u: 2
+  C clazy count csv_s false WRONG h,t,u: 2
+  C clazy count csv_s true WRONG h,t,u: 2
+  C clazy count json_s false WRONG h,t,u: 2
+  C clazy count json_s true WRONG h,t,u: 2
+  C clazy derived csv_i false WRONG h,t,u: 2
+  C clazy derived csv_i true WRONG h,t,u: 2
+  C clazy derived csv_s false WRONG h,t,u: 2
+  C clazy derived csv_s true WRONG h,t,u: 2
+  C clazy derived json_s false WRONG h,t,u: 2
+  C clazy derived json_s true WRONG h,t,u: 2
+  C clazy join csv_i false WRONG h,t,u: 2
+  C clazy join csv_i true WRONG h,t,u: 2
+  C clazy join csv_s false WRONG h,t,u: 2
+  C clazy join csv_s true WRONG h,t,u: 2
+  C clazy join json_s false WRONG h,t,u: 2
+  C clazy join json_s true WRONG h,t,u: 2
+  C clazy show csv_i false WRONG other: 2
+  C clazy show csv_i true WRONG other: 2
+  C clazy show csv_s false WRONG other: 2
+  C clazy show csv_s true WRONG other: 2
+  C clazy show json_s false WRONG other: 2
+  C clazy show json_s true WRONG other: 2
+  C clazy write csv_i false WRONG h,t,u: 2
+  C clazy write csv_i true WRONG h,t,u: 2
+  C clazy write csv_s false WRONG h,t,u: 2
+  C clazy write csv_s true WRONG h,t,u: 2
+  C clazy write json_s false WRONG h,t,u: 2
+  C clazy write json_s true WRONG h,t,u: 2
+  C clazy_sql collect csv_i false WRONG h,t: 2
+  C clazy_sql collect csv_i true WRONG h,t: 2
+  C clazy_sql collect csv_s false WRONG h,t: 2
+  C clazy_sql collect csv_s true WRONG h,t: 2
+  C clazy_sql collect json_s false WRONG h,t: 2
+  C clazy_sql collect json_s true WRONG h,t: 2
+  C clazy_sql count csv_i false WRONG h,t: 2
+  C clazy_sql count csv_i true WRONG h,t: 2
+  C clazy_sql count csv_s false WRONG h,t: 2
+  C clazy_sql count csv_s true WRONG h,t: 2
+  C clazy_sql count json_s false WRONG h,t: 2
+  C clazy_sql count json_s true WRONG h,t: 2
+  C clazy_sql derived csv_i false WRONG h,t: 2
+  C clazy_sql derived csv_i true WRONG h,t: 2
+  C clazy_sql derived csv_s false WRONG h,t: 2
+  C clazy_sql derived csv_s true WRONG h,t: 2
+  C clazy_sql derived json_s false WRONG h,t: 2
+  C clazy_sql derived json_s true WRONG h,t: 2
+  C clazy_sql join csv_i false WRONG h,t: 2
+  C clazy_sql join csv_i true WRONG h,t: 2
+  C clazy_sql join csv_s false WRONG h,t: 2
+  C clazy_sql join csv_s true WRONG h,t: 2
+  C clazy_sql join json_s false WRONG h,t: 2
+  C clazy_sql join json_s true WRONG h,t: 2
+  C clazy_sql show csv_i false WRONG other: 2
+  C clazy_sql show csv_i true WRONG other: 2
+  C clazy_sql show csv_s false WRONG other: 2
+  C clazy_sql show csv_s true WRONG other: 2
+  C clazy_sql show json_s false WRONG other: 2
+  C clazy_sql show json_s true WRONG other: 2
+  C clazy_sql write csv_i false WRONG h,t: 2
+  C clazy_sql write csv_i true WRONG h,t: 2
+  C clazy_sql write csv_s false WRONG h,t: 2
+  C clazy_sql write csv_s true WRONG h,t: 2
+  C clazy_sql write json_s false WRONG h,t: 2
+  C clazy_sql write json_s true WRONG h,t: 2
+  C ctable_sql collect csv_i false WRONG u: 2
+  C ctable_sql collect csv_i true WRONG u: 2
+  C ctable_sql collect csv_s false WRONG u: 2
+  C ctable_sql collect csv_s true WRONG u: 2
+  C ctable_sql collect json_s false WRONG u: 2
+  C ctable_sql collect json_s true WRONG u: 2
+  C ctable_sql count csv_i false WRONG u: 2
+  C ctable_sql count csv_i true WRONG u: 2
+  C ctable_sql count csv_s false WRONG u: 2
+  C ctable_sql count csv_s true WRONG u: 2
+  C ctable_sql count json_s false WRONG u: 2
+  C ctable_sql count json_s true WRONG u: 2
+  C ctable_sql derived csv_i false WRONG u: 2
+  C ctable_sql derived csv_i true WRONG u: 2
+  C ctable_sql derived csv_s false WRONG u: 2
+  C ctable_sql derived csv_s true WRONG u: 2
+  C ctable_sql derived json_s false WRONG u: 2
+  C ctable_sql derived json_s true WRONG u: 2
+  C ctable_sql join csv_i false WRONG u: 2
+  C ctable_sql join csv_i true WRONG u: 2
+  C ctable_sql join csv_s false WRONG u: 2
+  C ctable_sql join csv_s true WRONG u: 2
+  C ctable_sql join json_s false WRONG u: 2
+  C ctable_sql join json_s true WRONG u: 2
+  C ctable_sql show csv_i false WRONG other: 2
+  C ctable_sql show csv_i true WRONG other: 2
+  C ctable_sql show csv_s false WRONG other: 2
+  C ctable_sql show csv_s true WRONG other: 2
+  C ctable_sql show json_s false WRONG other: 2
+  C ctable_sql show json_s true WRONG other: 2
+  C ctable_sql write csv_i false WRONG u: 2
+  C ctable_sql write csv_i true WRONG u: 2
+  C ctable_sql write csv_s false WRONG u: 2
+  C ctable_sql write csv_s true WRONG u: 2
+  C ctable_sql write json_s false WRONG u: 2
+  C ctable_sql write json_s true WRONG u: 2
+  C persist_disk collect csv_i false WRONG h,t,u: 2
+  C persist_disk collect csv_i true WRONG h,t,u: 2
+  C persist_disk collect csv_s false WRONG h,t,u: 2
+  C persist_disk collect csv_s true WRONG h,t,u: 2
+  C persist_disk collect json_s false WRONG h,t,u: 2
+  C persist_disk collect json_s true WRONG h,t,u: 2
+  C persist_disk count csv_i false WRONG h,t,u: 2
+  C persist_disk count csv_i true WRONG h,t,u: 2
+  C persist_disk count csv_s false WRONG h,t,u: 2
+  C persist_disk count csv_s true WRONG h,t,u: 2
+  C persist_disk count json_s false WRONG h,t,u: 2
+  C persist_disk count json_s true WRONG h,t,u: 2
+  C persist_disk derived csv_i false WRONG h,t,u: 2
+  C persist_disk derived csv_i true WRONG h,t,u: 2
+  C persist_disk derived csv_s false WRONG h,t,u: 2
+  C persist_disk derived csv_s true WRONG h,t,u: 2
+  C persist_disk derived json_s false WRONG h,t,u: 2
+  C persist_disk derived json_s true WRONG h,t,u: 2
+  C persist_disk join csv_i false WRONG h,t: 2
+  C persist_disk join csv_i true WRONG h,t: 2
+  C persist_disk join csv_s false WRONG h,t: 2
+  C persist_disk join csv_s true WRONG h,t: 2
+  C persist_disk join ice false WRONG h,t: 2
+  C persist_disk join ice true WRONG h,t: 2
+  C persist_disk join json_s false WRONG h,t: 2
+  C persist_disk join json_s true WRONG h,t: 2
+  C persist_disk join pq false WRONG h,t: 2
+  C persist_disk join pq true WRONG h,t: 2
+  C persist_disk show csv_i false WRONG other: 2
+  C persist_disk show csv_i true WRONG other: 2
+  C persist_disk show csv_s false WRONG other: 2
+  C persist_disk show csv_s true WRONG other: 2
+  C persist_disk show json_s false WRONG other: 2
+  C persist_disk show json_s true WRONG other: 2
+  C persist_disk write csv_i false WRONG h,t,u: 2
+  C persist_disk write csv_i true WRONG h,t,u: 2
+  C persist_disk write csv_s false WRONG h,t,u: 2
+  C persist_disk write csv_s true WRONG h,t,u: 2
+  C persist_disk write json_s false WRONG h,t,u: 2
+  C persist_disk write json_s true WRONG h,t,u: 2
+  C persist_mo collect csv_i false WRONG h,t,u: 2
+  C persist_mo collect csv_i true WRONG h,t,u: 2
+  C persist_mo collect csv_s false WRONG h,t,u: 2
+  C persist_mo collect csv_s true WRONG h,t,u: 2
+  C persist_mo collect json_s false WRONG h,t,u: 2
+  C persist_mo collect json_s true WRONG h,t,u: 2
+  C persist_mo count csv_i false WRONG h,t,u: 2
+  C persist_mo count csv_i true WRONG h,t,u: 2
+  C persist_mo count csv_s false WRONG h,t,u: 2
+  C persist_mo count csv_s true WRONG h,t,u: 2
+  C persist_mo count json_s false WRONG h,t,u: 2
+  C persist_mo count json_s true WRONG h,t,u: 2
+  C persist_mo derived csv_i false WRONG h,t,u: 2
+  C persist_mo derived csv_i true WRONG h,t,u: 2
+  C persist_mo derived csv_s false WRONG h,t,u: 2
+  C persist_mo derived csv_s true WRONG h,t,u: 2
+  C persist_mo derived json_s false WRONG h,t,u: 2
+  C persist_mo derived json_s true WRONG h,t,u: 2
+  C persist_mo join csv_i false WRONG h,t: 2
+  C persist_mo join csv_i true WRONG h,t: 2
+  C persist_mo join csv_s false WRONG h,t: 2
+  C persist_mo join csv_s true WRONG h,t: 2
+  C persist_mo join ice false WRONG h,t: 2
+  C persist_mo join ice true WRONG h,t: 2
+  C persist_mo join json_s false WRONG h,t: 2
+  C persist_mo join json_s true WRONG h,t: 2
+  C persist_mo join pq false WRONG h,t: 2
+  C persist_mo join pq true WRONG h,t: 2
+  C persist_mo show csv_i false WRONG other: 2
+  C persist_mo show csv_i true WRONG other: 2
+  C persist_mo show csv_s false WRONG other: 2
+  C persist_mo show csv_s true WRONG other: 2
+  C persist_mo show json_s false WRONG other: 2
+  C persist_mo show json_s true WRONG other: 2
+  C persist_mo write csv_i false WRONG h,t,u: 2
+  C persist_mo write csv_i true WRONG h,t,u: 2
+  C persist_mo write csv_s false WRONG h,t,u: 2
+  C persist_mo write csv_s true WRONG h,t,u: 2
+  C persist_mo write json_s false WRONG h,t,u: 2
+  C persist_mo write json_s true WRONG h,t,u: 2
+  C recache collect csv_i false WRONG h,t,u: 2
+  C recache collect csv_i true WRONG h,t,u: 2
+  C recache collect csv_s false WRONG h,t,u: 2
+  C recache collect csv_s true WRONG h,t,u: 2
+  C recache collect json_s false WRONG h,t,u: 2
+  C recache collect json_s true WRONG h,t,u: 2
+  C recache count csv_i false WRONG h,t,u: 2
+  C recache count csv_i true WRONG h,t,u: 2
+  C recache count csv_s false WRONG h,t,u: 2
+  C recache count csv_s true WRONG h,t,u: 2
+  C recache count json_s false WRONG h,t,u: 2
+  C recache count json_s true WRONG h,t,u: 2
+  C recache derived csv_i false WRONG h,t,u: 2
+  C recache derived csv_i true WRONG h,t,u: 2
+  C recache derived csv_s false WRONG h,t,u: 2
+  C recache derived csv_s true WRONG h,t,u: 2
+  C recache derived json_s false WRONG h,t,u: 2
+  C recache derived json_s true WRONG h,t,u: 2
+  C recache join csv_i false WRONG h,t: 2
+  C recache join csv_i true WRONG h,t: 2
+  C recache join csv_s false WRONG h,t: 2
+  C recache join csv_s true WRONG h,t: 2
+  C recache join ice false WRONG h,t: 2
+  C recache join ice true WRONG h,t: 2
+  C recache join json_s false WRONG h,t: 2
+  C recache join json_s true WRONG h,t: 2
+  C recache join pq false WRONG h,t: 2
+  C recache join pq true WRONG h,t: 2
+  C recache show csv_i false WRONG other: 2
+  C recache show csv_i true WRONG other: 2
+  C recache show csv_s false WRONG other: 2
+  C recache show csv_s true WRONG other: 2
+  C recache show json_s false WRONG other: 2
+  C recache show json_s true WRONG other: 2
+  C recache write csv_i false WRONG h,t,u: 2
+  C recache write csv_i true WRONG h,t,u: 2
+  C recache write csv_s false WRONG h,t,u: 2
+  C recache write csv_s true WRONG h,t,u: 2
+  C recache write json_s false WRONG h,t,u: 2
+  C recache write json_s true WRONG h,t,u: 2
+  C recache_after collect csv_i false WRONG h,t,u: 2
+  C recache_after collect csv_i true WRONG h,t,u: 2
+  C recache_after collect csv_s false WRONG h,t,u: 2
+  C recache_after collect csv_s true WRONG h,t,u: 2
+  C recache_after collect json_s false WRONG h,t,u: 2
+  C recache_after collect json_s true WRONG h,t,u: 2
+  C recache_after count csv_i false WRONG h,t,u: 2
+  C recache_after count csv_i true WRONG h,t,u: 2
+  C recache_after count csv_s false WRONG h,t,u: 2
+  C recache_after count csv_s true WRONG h,t,u: 2
+  C recache_after count json_s false WRONG h,t,u: 2
+  C recache_after count json_s true WRONG h,t,u: 2
+  C recache_after derived csv_i false WRONG h,t,u: 2
+  C recache_after derived csv_i true WRONG h,t,u: 2
+  C recache_after derived csv_s false WRONG h,t,u: 2
+  C recache_after derived csv_s true WRONG h,t,u: 2
+  C recache_after derived json_s false WRONG h,t,u: 2
+  C recache_after derived json_s true WRONG h,t,u: 2
+  C recache_after join csv_i false WRONG h,t: 2
+  C recache_after join csv_i true WRONG h,t: 2
+  C recache_after join csv_s false WRONG h,t: 2
+  C recache_after join csv_s true WRONG h,t: 2
+  C recache_after join ice false WRONG h,t: 2
+  C recache_after join ice true WRONG h,t: 2
+  C recache_after join json_s false WRONG h,t: 2
+  C recache_after join json_s true WRONG h,t: 2
+  C recache_after join pq false WRONG h,t: 2
+  C recache_after join pq true WRONG h,t: 2
+  C recache_after show csv_i false WRONG other: 2
+  C recache_after show csv_i true WRONG other: 2
+  C recache_after show csv_s false WRONG other: 2
+  C recache_after show csv_s true WRONG other: 2
+  C recache_after show json_s false WRONG other: 2
+  C recache_after show json_s true WRONG other: 2
+  C recache_after write csv_i false WRONG h,t,u: 2
+  C recache_after write csv_i true WRONG h,t,u: 2
+  C recache_after write csv_s false WRONG h,t,u: 2
+  C recache_after write csv_s true WRONG h,t,u: 2
+  C recache_after write json_s false WRONG h,t,u: 2
+  C recache_after write json_s true WRONG h,t,u: 2
+  L cache create csv_i false WRONG u,x: 2
+  L cache create csv_i true WRONG u,x: 2
+  L cache create csv_s false WRONG u,x: 2
+  L cache create csv_s true WRONG u,x: 2
+  L cache create ice false WRONG h,t: 2
+  L cache create ice true WRONG h,t: 2
+  L cache create json_s false WRONG u,x: 2
+  L cache create json_s true WRONG u,x: 2
+  L cache create pq false WRONG h,t: 2
+  L cache create pq true WRONG h,t: 2
+  L cache insert csv_i false WRONG h,t,u,x: 2
+  L cache insert csv_i true WRONG h,t,u,x: 2
+  L cache insert csv_s false WRONG h,t,u,x: 2
+  L cache insert csv_s true WRONG h,t,u,x: 2
+  L cache insert json_s false WRONG h,t,u,x: 2
+  L cache insert json_s true WRONG h,t,u,x: 2
+  L udf create csv_i false WRONG h,t,u,x: 2
+  L udf create csv_i true WRONG h,t,u,x: 2
+  L udf create csv_s false WRONG h,t,u,x: 2
+  L udf create csv_s true WRONG h,t,u,x: 2
+  L udf create json_s false WRONG h,t,u,x: 2
+  L udf create json_s true WRONG h,t,u,x: 2
+  L udf insert csv_i false WRONG h,t,u,x: 2
+  L udf insert csv_i true WRONG h,t,u,x: 2
+  L udf insert csv_s false WRONG h,t,u,x: 2
+  L udf insert csv_s true WRONG h,t,u,x: 2
+  L udf insert json_s false WRONG h,t,u,x: 2
+  L udf insert json_s true WRONG h,t,u,x: 2
+  N none collect csv_i false WRONG h,t,u: 2
+  N none collect csv_i true WRONG h,t,u: 2
+  N none collect csv_s false WRONG h,t,u: 2
+  N none collect csv_s true WRONG h,t,u: 2
+  N none collect json_s false WRONG h,t,u: 2
+  N none collect json_s true WRONG h,t,u: 2
+  N none count csv_i false WRONG h,t,u: 2
+  N none count csv_i true WRONG h,t,u: 2
+  N none count csv_s false WRONG h,t,u: 2
+  N none count csv_s true WRONG h,t,u: 2
+  N none count json_s false WRONG h,t,u: 2
+  N none count json_s true WRONG h,t,u: 2
+  N none derived csv_i false WRONG h,t,u: 2
+  N none derived csv_i true WRONG h,t,u: 2
+  N none derived csv_s false WRONG h,t,u: 2
+  N none derived csv_s true WRONG h,t,u: 2
+  N none derived json_s false WRONG h,t,u: 2
+  N none derived json_s true WRONG h,t,u: 2
+  N none join csv_i false WRONG h,t: 2
+  N none join csv_i true WRONG h,t: 2
+  N none join csv_s false WRONG h,t: 2
+  N none join csv_s true WRONG h,t: 2
+  N none join ice false WRONG h,t: 2
+  N none join ice true WRONG h,t: 2
+  N none join json_s false WRONG h,t: 2
+  N none join json_s true WRONG h,t: 2
+  N none join pq false WRONG h,t: 2
+  N none join pq true WRONG h,t: 2
+  N none show csv_i false WRONG other: 2
+  N none show csv_i true WRONG other: 2
+  N none show csv_s false WRONG other: 2
+  N none show csv_s true WRONG other: 2
+  N none show json_s false WRONG other: 2
+  N none show json_s true WRONG other: 2
+  N none write csv_i false WRONG h,t: 2
+  N none write csv_i true WRONG h,t: 2
+  N none write csv_s false WRONG h,t: 2
+  N none write csv_s true WRONG h,t: 2
+  N none write json_s false WRONG h,t: 2
+  N none write json_s true WRONG h,t: 2
+  Q bare_lazy - csv_i - WRONG h,t,u: 1
+  Q bare_lazy - json_s - WRONG h,t,u: 1
+  Q bare_mat - csv_i - WRONG h,t,u: 1
+  Q bare_mat - json_s - WRONG h,t,u: 1
+  Q newsess_bare_lazy - csv_i - WRONG h,t,u: 1
+  Q newsess_bare_lazy - json_s - WRONG h,t,u: 1
+  Q newsess_bare_mat - csv_i - WRONG h,t,u: 1
+  Q newsess_bare_mat - json_s - WRONG h,t,u: 1
+  Q twin_plan - csv_i - WRONG h,t,u: 1
+  Q twin_plan - json_s - WRONG h,t,u: 1
+  R child_before - csv_i - WRONG h,t,u: 1
+  R child_before - json_s - WRONG h,t,u: 1
+  R clazy_then - csv_i - WRONG h,t,u: 1
+  R clazy_then - json_s - WRONG h,t,u: 1
+  R explain_first - csv_i - WRONG h,t,u: 1
+  R explain_first - json_s - WRONG h,t,u: 1
+  R lazy_two - csv_i - WRONG other: 1
+  R lazy_two - json_s - WRONG other: 1
+  R mia_cache - csv_i - WRONG h,t,u: 1
+  R mia_cache - json_s - WRONG h,t,u: 1
+  R newsess_lazy - csv_i - WRONG h,t,u: 1
+  R newsess_lazy - json_s - WRONG h,t,u: 1
+  R own_then_cache - csv_i - WRONG other: 1
+  R own_then_cache - json_s - WRONG other: 1
+  R udf_cache - csv_i - WRONG h,t,u: 1
+  R udf_cache - json_s - WRONG h,t,u: 1
+  T mia countfirst csv_i false WRONG h,t,u: 2
+  T mia countfirst csv_i true WRONG h,t,u: 2
+  T mia countfirst csv_s false WRONG h,t,u: 2
+  T mia countfirst csv_s true WRONG h,t,u: 2
+  T mia countfirst json_s false WRONG h,t,u: 2
+  T mia countfirst json_s true WRONG h,t,u: 2
+  T mia first csv_i false WRONG h,t,u: 2
+  T mia first csv_i true WRONG h,t,u: 2
+  T mia first csv_s false WRONG h,t,u: 2
+  T mia first csv_s true WRONG h,t,u: 2
+  T mia first json_s false WRONG h,t,u: 2
+  T mia first json_s true WRONG h,t,u: 2
+  T mip countfirst csv_i false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst csv_i true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst csv_s false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst csv_s true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst ice false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst ice true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst json_s false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst json_s true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst pq false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip countfirst pq true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first csv_i false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first csv_i true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first csv_s false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first csv_s true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first ice false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first ice true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first json_s false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first json_s true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first pq false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip first pq true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second csv_i false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second csv_i true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second csv_s false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second csv_s true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second ice false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second ice true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second json_s false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second json_s true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second pq false RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T mip second pq true RAISE PySparkException: mapInArrow schema mismatch on field 't': expected type string (string), got large_string: 2
+  T pudf countfirst csv_i false WRONG h,t,u: 2
+  T pudf countfirst csv_i true WRONG h,t,u: 2
+  T pudf countfirst csv_s false WRONG h,t,u: 2
+  T pudf countfirst csv_s true WRONG h,t,u: 2
+  T pudf countfirst json_s false WRONG h,t,u: 2
+  T pudf countfirst json_s true WRONG h,t,u: 2
+  T pudf first csv_i false WRONG h,t,u: 2
+  T pudf first csv_i true WRONG h,t,u: 2
+  T pudf first csv_s false WRONG h,t,u: 2
+  T pudf first csv_s true WRONG h,t,u: 2
+  T pudf first json_s false WRONG h,t,u: 2
+  T pudf first json_s true WRONG h,t,u: 2
+  T udf countfirst csv_i false WRONG h,t,u: 2
+  T udf countfirst csv_i true WRONG h,t,u: 2
+  T udf countfirst csv_s false WRONG h,t,u: 2
+  T udf countfirst csv_s true WRONG h,t,u: 2
+  T udf countfirst json_s false WRONG h,t,u: 2
+  T udf countfirst json_s true WRONG h,t,u: 2
+  T udf first csv_i false WRONG h,t,u: 2
+  T udf first csv_i true WRONG h,t,u: 2
+  T udf first csv_s false WRONG h,t,u: 2
+  T udf first csv_s true WRONG h,t,u: 2
+  T udf first json_s false WRONG h,t,u: 2
+  T udf first json_s true WRONG h,t,u: 2
+  U mia countfirst csv_i false WRONG h,t,u: 2
+  U mia countfirst csv_i true WRONG h,t,u: 2
+  U mia countfirst csv_s false WRONG h,t,u: 2
+  U mia countfirst csv_s true WRONG h,t,u: 2
+  U mia countfirst json_s false WRONG h,t,u: 2
+  U mia countfirst json_s true WRONG h,t,u: 2
+  U mia first csv_i false WRONG h,t,u: 2
+  U mia first csv_i true WRONG h,t,u: 2
+  U mia first csv_s false WRONG h,t,u: 2
+  U mia first csv_s true WRONG h,t,u: 2
+  U mia first json_s false WRONG h,t,u: 2
+  U mia first json_s true WRONG h,t,u: 2
+  U mip countfirst csv_i false WRONG h,t,u: 2
+  U mip countfirst csv_i true WRONG h,t,u: 2
+  U mip countfirst csv_s false WRONG h,t,u: 2
+  U mip countfirst csv_s true WRONG h,t,u: 2
+  U mip countfirst json_s false WRONG h,t,u: 2
+  U mip countfirst json_s true WRONG h,t,u: 2
+  U mip first csv_i false WRONG h,t,u: 2
+  U mip first csv_i true WRONG h,t,u: 2
+  U mip first csv_s false WRONG h,t,u: 2
+  U mip first csv_s true WRONG h,t,u: 2
+  U mip first json_s false WRONG h,t,u: 2
+  U mip first json_s true WRONG h,t,u: 2
+  U pudf countfirst csv_i false WRONG h,t,u: 2
+  U pudf countfirst csv_i true WRONG h,t,u: 2
+  U pudf countfirst csv_s false WRONG h,t,u: 2
+  U pudf countfirst csv_s true WRONG h,t,u: 2
+  U pudf countfirst json_s false WRONG h,t,u: 2
+  U pudf countfirst json_s true WRONG h,t,u: 2
+  U pudf first csv_i false WRONG h,t,u: 2
+  U pudf first csv_i true WRONG h,t,u: 2
+  U pudf first csv_s false WRONG h,t,u: 2
+  U pudf first csv_s true WRONG h,t,u: 2
+  U pudf first json_s false WRONG h,t,u: 2
+  U pudf first json_s true WRONG h,t,u: 2
+  U udf countfirst csv_i false WRONG h,t,u: 2
+  U udf countfirst csv_i true WRONG h,t,u: 2
+  U udf countfirst csv_s false WRONG h,t,u: 2
+  U udf countfirst csv_s true WRONG h,t,u: 2
+  U udf countfirst json_s false WRONG h,t,u: 2
+  U udf countfirst json_s true WRONG h,t,u: 2
+  U udf first csv_i false WRONG h,t,u: 2
+  U udf first csv_i true WRONG h,t,u: 2
+  U udf first csv_s false WRONG h,t,u: 2
+  U udf first csv_s true WRONG h,t,u: 2
+  U udf first json_s false WRONG h,t,u: 2
+  U udf first json_s true WRONG h,t,u: 2
+== grid: group door action | text not-EQUAL main/base of n | controls main/base of n
+  C after_set collect | 0/12 of 12 | 0/0 of 8
+  C after_set count | 0/12 of 12 | 0/0 of 8
+  C after_set derived | 0/12 of 12 | 0/0 of 8
+  C after_set join | 12/12 of 12 | 8/8 of 8
+  C after_set show | 0/12 of 12 | 0/0 of 8
+  C after_set write | 0/12 of 12 | 0/0 of 8
+  C cache collect | 0/12 of 12 | 0/0 of 8
+  C cache count | 0/12 of 12 | 0/0 of 8
+  C cache derived | 0/12 of 12 | 0/0 of 8
+  C cache join | 12/12 of 12 | 8/8 of 8
+  C cache show | 0/12 of 12 | 0/0 of 8
+  C cache write | 0/12 of 12 | 0/0 of 8
+  C cache_view collect | 12/12 of 12 | 0/0 of 8
+  C cache_view count | 12/12 of 12 | 0/0 of 8
+  C cache_view derived | 12/12 of 12 | 0/0 of 8
+  C cache_view join | 12/12 of 12 | 0/0 of 8
+  C cache_view show | 12/12 of 12 | 0/0 of 8
+  C cache_view write | 12/12 of 12 | 0/0 of 8
+  C cache_view_sql collect | 12/12 of 12 | 0/0 of 8
+  C cache_view_sql count | 12/12 of 12 | 0/0 of 8
+  C cache_view_sql derived | 12/12 of 12 | 0/0 of 8
+  C cache_view_sql join | 12/12 of 12 | 0/0 of 8
+  C cache_view_sql show | 12/12 of 12 | 0/0 of 8
+  C cache_view_sql write | 12/12 of 12 | 0/0 of 8
+  C catcache collect | 12/12 of 12 | 0/0 of 8
+  C catcache count | 12/12 of 12 | 0/0 of 8
+  C catcache derived | 12/12 of 12 | 0/0 of 8
+  C catcache join | 12/12 of 12 | 0/0 of 8
+  C catcache show | 12/12 of 12 | 0/0 of 8
+  C catcache write | 12/12 of 12 | 0/0 of 8
+  C clazy collect | 12/12 of 12 | 0/0 of 8
+  C clazy count | 12/12 of 12 | 0/0 of 8
+  C clazy derived | 12/12 of 12 | 0/0 of 8
+  C clazy join | 12/12 of 12 | 0/0 of 8
+  C clazy show | 12/12 of 12 | 0/0 of 8
+  C clazy write | 12/12 of 12 | 0/0 of 8
+  C clazy_sql collect | 0/12 of 12 | 0/0 of 8
+  C clazy_sql count | 12/12 of 12 | 0/0 of 8
+  C clazy_sql derived | 0/12 of 12 | 0/0 of 8
+  C clazy_sql join | 0/12 of 12 | 0/0 of 8
+  C clazy_sql show | 0/12 of 12 | 0/0 of 8
+  C clazy_sql write | 0/12 of 12 | 0/0 of 8
+  C ctable collect | 0/0 of 12 | 0/0 of 8
+  C ctable count | 0/0 of 12 | 0/0 of 8
+  C ctable derived | 0/0 of 12 | 0/0 of 8
+  C ctable join | 0/0 of 12 | 0/0 of 8
+  C ctable show | 0/0 of 12 | 0/0 of 8
+  C ctable write | 0/0 of 12 | 0/0 of 8
+  C ctable_sql collect | 12/12 of 12 | 0/0 of 8
+  C ctable_sql count | 12/12 of 12 | 0/0 of 8
+  C ctable_sql derived | 12/12 of 12 | 0/0 of 8
+  C ctable_sql join | 12/12 of 12 | 0/0 of 8
+  C ctable_sql show | 12/12 of 12 | 0/0 of 8
+  C ctable_sql write | 12/12 of 12 | 0/0 of 8
+  C mat collect | 0/0 of 12 | 0/0 of 8
+  C mat count | 0/0 of 12 | 0/0 of 8
+  C mat derived | 0/0 of 12 | 0/0 of 8
+  C mat join | 0/0 of 12 | 0/0 of 8
+  C mat show | 0/0 of 12 | 0/0 of 8
+  C mat write | 0/0 of 12 | 0/0 of 8
+  C persist_disk collect | 0/12 of 12 | 0/0 of 8
+  C persist_disk count | 0/12 of 12 | 0/0 of 8
+  C persist_disk derived | 0/12 of 12 | 0/0 of 8
+  C persist_disk join | 12/12 of 12 | 8/8 of 8
+  C persist_disk show | 0/12 of 12 | 0/0 of 8
+  C persist_disk write | 0/12 of 12 | 0/0 of 8
+  C persist_mo collect | 0/12 of 12 | 0/0 of 8
+  C persist_mo count | 0/12 of 12 | 0/0 of 8
+  C persist_mo derived | 0/12 of 12 | 0/0 of 8
+  C persist_mo join | 12/12 of 12 | 8/8 of 8
+  C persist_mo show | 0/12 of 12 | 0/0 of 8
+  C persist_mo write | 0/12 of 12 | 0/0 of 8
+  C recache collect | 0/12 of 12 | 0/0 of 8
+  C recache count | 0/12 of 12 | 0/0 of 8
+  C recache derived | 0/12 of 12 | 0/0 of 8
+  C recache join | 12/12 of 12 | 8/8 of 8
+  C recache show | 0/12 of 12 | 0/0 of 8
+  C recache write | 0/12 of 12 | 0/0 of 8
+  C recache_after collect | 0/12 of 12 | 0/0 of 8
+  C recache_after count | 0/12 of 12 | 0/0 of 8
+  C recache_after derived | 0/12 of 12 | 0/0 of 8
+  C recache_after join | 12/12 of 12 | 8/8 of 8
+  C recache_after show | 0/12 of 12 | 0/0 of 8
+  C recache_after write | 0/12 of 12 | 0/0 of 8
+  L cache create | 12/12 of 12 | 8/8 of 8
+  L cache insert | 12/12 of 12 | 0/0 of 8
+  L udf create | 12/12 of 12 | 0/0 of 8
+  L udf insert | 12/12 of 12 | 0/0 of 8
+  N none collect | 0/12 of 12 | 0/0 of 8
+  N none count | 0/12 of 12 | 0/0 of 8
+  N none derived | 0/12 of 12 | 0/0 of 8
+  N none join | 12/12 of 12 | 8/8 of 8
+  N none show | 0/12 of 12 | 0/0 of 8
+  N none write | 0/12 of 12 | 0/0 of 8
+  T mia countfirst | 0/12 of 12 | 0/0 of 8
+  T mia first | 0/12 of 12 | 0/0 of 8
+  T mia second | 0/0 of 12 | 0/0 of 8
+  T mip countfirst | 12/12 of 12 | 8/8 of 8
+  T mip first | 12/12 of 12 | 8/8 of 8
+  T mip second | 12/12 of 12 | 8/8 of 8
+  T pudf countfirst | 0/12 of 12 | 0/0 of 8
+  T pudf first | 0/12 of 12 | 0/0 of 8
+  T pudf second | 0/0 of 12 | 0/0 of 8
+  T udf countfirst | 0/12 of 12 | 0/0 of 8
+  T udf first | 0/12 of 12 | 0/0 of 8
+  T udf second | 0/0 of 12 | 0/0 of 8
+  U mia countfirst | 12/12 of 12 | 0/0 of 8
+  U mia first | 12/12 of 12 | 0/0 of 8
+  U mia second | 0/0 of 12 | 0/0 of 8
+  U mip countfirst | 12/12 of 12 | 0/0 of 8
+  U mip first | 12/12 of 12 | 0/0 of 8
+  U mip second | 0/0 of 12 | 0/0 of 8
+  U pudf countfirst | 12/12 of 12 | 0/0 of 8
+  U pudf first | 12/12 of 12 | 0/0 of 8
+  U pudf second | 0/0 of 12 | 0/0 of 8
+  U udf countfirst | 12/12 of 12 | 0/0 of 8
+  U udf first | 12/12 of 12 | 0/0 of 8
+  U udf second | 0/0 of 12 | 0/0 of 8
