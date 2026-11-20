@@ -17,7 +17,13 @@ Comment-free Python, run by the commands in [../map.md](../map.md) (Provenance).
 - [trace.py](trace.py) — RePark only: wraps the facade's cache, registration, own-plan and bridge sites and records the
   live zone at each call, for twelve scenarios (the inventory's "when it plans").
 - [cost.py](cost.py) — the cost cases on 2M-row files: a cached JSON read (`count` then `collect`, `collect` first,
-  a view then `count`), a UDF column over a CSV read with the shape on top and with the UDF on top.
+  a view then `count`, a selective child's `count` before and after the parent's fill), a UDF column over a CSV read with the shape on top and with the UDF on top.
+- [missed.py](missed.py) — the revision round's cells (`M`): `REFRESH TABLE` on a cached view, `clearCache()` after
+  a lazy view and after a materialised cache, `CACHE [LAZY] TABLE … AS SELECT`, `unpersist(blocking=True)` and
+  `unpersist` re-reads, cached siblings, a cached self-join, frames on a UDF or map frame (siblings; `count`, `show`,
+  `take` or a write, then `collect`), a held Iceberg frame after a write to its table (cached, lazy, `CACHE TABLE`,
+  uncached), ANSI flips over an unparsable timestamp (plain, cached, `count`), a `CAST(s AS INT)` across an ANSI
+  flip. `missed.py <engine> <warehouse parent> <out>`.
 - [cmp.py](cmp.py) — pairs each cell with Spark's; `EQUAL` / `WRONG` / `RAISE` for main and for main before unit 1, the
   columns that differ (`u` the parse, `t` and `h` the zone the frame's own expressions read), the moves between the
   two builds; writes `verdicts.jsonl` and `summary.txt`.

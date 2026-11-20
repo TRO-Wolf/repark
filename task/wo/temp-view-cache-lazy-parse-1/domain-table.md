@@ -20,9 +20,12 @@ control cells. Raw: [evidence/raw/](evidence/raw/map.md); verdicts `verdicts.jso
 | `U` UDF frame with the shape on top | 240 | 144 / 96 / 0 | 144 / 96 / 0 |
 | `T` UDF frame acted on directly | 240 | 180 / 0 / 60 | 108 / 72 / 60 |
 | `L` the label path | 80 | 24 / 56 / 0 | 24 / 56 / 0 |
-| **all** | **2,402** | **1,656 / 686 / 60** | **1,100 / 1,242 / 60** |
+| **all, step 0** | **2,402** | **1,656 / 686 / 60** | **1,100 / 1,242 / 60** |
+| `M` the revision round (§8) | 240 | 78 / 128 / 34 | 60 / 146 / 34 |
+| **both rounds** | **2,642** | **1,734 / 814 / 94** | **1,160 / 1,388 / 94** |
 
-ANSI on and off give the same counts in every group. Main's WRONG cells by reader: `json_s`, `csv_s`, `csv_i` 200
+ANSI on and off give the same counts in every step 0 group: those groups never flip ANSI between building a frame
+and its first action; §8 does. Main's WRONG cells by reader: `json_s`, `csv_s`, `csv_i` 200
 each, `pq` 32 and `ice` 32 (the join and `writeTo` stamp cells, F7 and F8).
 
 ## 1. Spark's rule cells (`R`, `Q`; `json_s`, `csv_i`, `pq`; ANSI on; create LA, then UTC, then Tokyo)
@@ -115,7 +118,7 @@ on both builds: `mapInArrow schema mismatch on field 't': expected type string (
 | F4 the bridge snapshot | 124 | `U` first and countfirst 96; `udf_cache`, `mia_cache` 4; `L` UDF 24 |
 | F5 object-identity cache | 12 | `Q` 10, `child_before` 2 |
 | F6 cache after a first own-plan action | 2 | `own_then_cache` |
-| F7 held frame joined after a `SET` | 140 | `N` join 20, held doors' join 120 |
+| F7 held frame joined after a `SET` | 140 | `N` join 20, held doors' join 120; the filed TEMP-VIEW-FRAME-CROSSJOIN-1 (S1, label-blocking) |
 | F8 `writeTo` of a cached frame | 20 | `L` cached `writeTo` |
 | **all WRONG** | **686** | every one silent: text readers 600 and controls 64 (F7 56, F8 8) in `C`, `N`, `U`, `L`; `R` and `Q` 22 |
 
@@ -137,5 +140,36 @@ From `evidence/raw/trace-main.jsonl` (the live zone at each wrapped call):
 | `cache()`, `explain`, `SET`, `collect` | `explain` → `_explain_text` → registration → materialise, then a `toLocalIterator` | LA | LA |
 | a view, `CACHE TABLE` / `CACHE LAZY TABLE` / `catalog.cacheTable`, `SET` | `catalog_surface.cache_table` → `count` → materialise | LA | `spark.table` LA; `spark.sql` UTC (re-planned) |
 | `udf`, `pandas_udf`, `mapInArrow`, `mapInPandas`, then `selectExpr`, `SET`, `collect` | `selectExpr` → `_plan` → `_prepare_for_plan` → `_materialize_map_bridge_once` → `_execute_map_in_arrow_bridge` | LA | LA |
+
+## 8. The revision round (`M`, 240 cells per build; [evidence/probes/missed.py](evidence/probes/missed.py))
+
+Created under Los Angeles, read under UTC and Tokyo unless an ANSI flip is named. Readers as above (`csv_i` cast to
+`INT` for the bridge); 6 text cells and 2 controls per shape unless named (3 text readers and `pq`, 2 ANSI modes).
+Verdicts as above; a cell where both engines raise is EQUAL by class.
+
+| shape | Spark | main | base | home |
+|---|---|---|---|---|
+| `refresh`: `CACHE TABLE v`; `SET`; `REFRESH TABLE v`; `SET`; `spark.table`, SQL | refills under Tokyo | 6 WRONG (`spark.table`); controls EQUAL | 6 WRONG | F2-family door, A2 (`refresh_table`'s view return) |
+| `clear_view`: `cache()`, a view; `SET`; `clearCache()`; `SET`; the view, the frame | Tokyo | 6 WRONG (the view keeps its registration snapshot) | 6 WRONG | F1 with `clearCache`, A2 |
+| `clear_mat`: `cache()`, `count()`; `SET`; `clearCache()`; `SET`; own, child | Tokyo | EQUAL | 6 WRONG | unit 1 moved it; must hold |
+| `ctas`, `ctas_lazy`: `CACHE [LAZY] TABLE x AS SELECT …` | eager: Los Angeles; lazy: UTC | 16 RAISE (not implemented) | 16 RAISE | loud, Q12 |
+| `unpersist_blocking`: `collect` under UTC, `unpersist(blocking=True)`, own `collect` and a child under Tokyo | own UTC, child Tokyo | EQUAL | 6 WRONG | must hold under seat A (Q1) |
+| `unpersist_reread`: `count` under UTC, `unpersist`, own and child under Tokyo | Tokyo for both | EQUAL | 6 WRONG | must hold (Q1) |
+| `cache_siblings`: two children of a cached frame, then the frame | UTC for all | 6 WRONG | 6 WRONG | F5 children, A1 |
+| `selfjoin`: a cached frame joined with itself after the `SET` | the frame's stamps | 8 WRONG (`t`, `h`; controls too) | 8 WRONG | F7 shape; A1's side effect |
+| `bridge_sibling`: two frames on one UDF or map frame, acted on under UTC, then Tokyo | `a` UTC, `b` Tokyo | 18 WRONG (`udf`, `pandas_udf`, `mapInArrow`) | 18 WRONG | F4, seat B's rule (§4) |
+| `bridge_count`, `bridge_show`, `bridge_take`, `bridge_write`: that action under UTC, then `collect` under Tokyo | Tokyo | 72 WRONG | 72 WRONG | F4; seat B as written would leave all 72 |
+| `ice_stale` (`sql`, `append`, `lazy`, `ctable`, `held`, `held_append`; 6 × 2 modes): a held `spark.table(t)` over Iceberg v2, cached or not, a write to `t`, then the held frame's `count` | 2 | 12 WRONG (1) | 12 WRONG | not the cache: Q11 |
+| `ansi_plain`, `ansi_cache`, `ansi_count` (`json`, `csv` with an unparsable timestamp), built under ANSI off, acted on under on | `NULL` (PERMISSIVE) | 6 RAISE `CAST_INVALID_INPUT` | 6 EQUAL | unit 1 moved them EQUAL → RAISE; Q10 |
+| the same, built under on, acted on under off | `NULL` | 6 EQUAL | 6 RAISE | unit 1 moved them RAISE → EQUAL |
+| the same, steady on | `NULL` | 6 RAISE | 6 RAISE | READER-TYPED-SCAN-1 D2 (Q10) |
+| the same, steady off | `NULL` | 6 EQUAL | 6 EQUAL | control |
+| `ansi_cast`: `CAST(s AS INT)` over `'y'` (`json`, `csv`, Parquet), built under off, acted on under on or off | `NULL` | 6 RAISE (Arrow cast error) | 6 RAISE | SET-ANSI-RUNTIME-3 (the cast path never reads the flag) |
+| the same, built under on | `CAST_INVALID_INPUT` | 6 EQUAL (both raise) | 6 EQUAL | control |
+
+**Unit 1 in `M`:** 18 WRONG → EQUAL (`clear_mat`, `unpersist_blocking`, `unpersist_reread`), 6 RAISE → EQUAL, **6
+EQUAL → RAISE** (the off → on flips). Main's 128 WRONG: F4 90, `ice_stale` 12, `selfjoin` 8, `cache_siblings` 6,
+`clear_view` 6, `refresh` 6, all silent; its 34 RAISE: AS SELECT 16, the ANSI parse 12, the cast 6, all loud.
+Verdicts: [evidence/raw/m-verdicts.jsonl](evidence/raw/m-verdicts.jsonl); raw `m-{spark,main,base}.jsonl.gz`.
 
 Up: [map.md](map.md).

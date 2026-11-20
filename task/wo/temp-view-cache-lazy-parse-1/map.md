@@ -5,11 +5,14 @@ label-blocking; the owner's "We better go with B to be safe", 2026-11-18). Measu
 TEMP-VIEW-FRAME-READER-PARSE-1 merged, #1373) and on main before unit 1 (`8bc26cba`) against Spark 4.1.2; documents
 and probes only. Parent: [../temp-view-frame-reader-parse-1/](../temp-view-frame-reader-parse-1/map.md).
 
-- [sketch.md](sketch.md) — Spark's rule (from the jar and live), RePark's mechanism, what unit 1 moved, two seats
-  with their cells, files, caps and cost, the unit split under the one-round cap, and the questions.
+- [sketch.md](sketch.md) — Spark's rule (from the jar and live), RePark's mechanism, what unit 1 moved, seat A (built
+  as A1 and A2) and seat B (not ready to build, re-sketched later) with their cells, files, caps and cost, the unit
+  split under the one-round cap, the questions Q1 to Q12 and the revision record (the critic's round, 2026-11-20).
 - [domain-table.md](domain-table.md) — the cells: Spark's rule cells, fourteen cache doors × six actions, the
   no-cache control, the four UDF doors two ways, the label path into Iceberg v2; per door, action, reader, mode and
-  column; what unit 1 moved; the trace of when each door plans.
+  column; what unit 1 moved; the trace of when each door plans;
+  §8 the revision round's 240 cells (`REFRESH`, `clearCache`, AS SELECT, a held Iceberg frame after a write, ANSI
+  flips, frames on a UDF frame under Spark's per-plan rule).
 - [inventory.md](inventory.md) — the insertion inventory: every cache, cache-table and UDF planning site with
   file:line and when it plans.
 - [evidence/](evidence/map.md) — probes, raw cells (gzipped), verdicts, the trace, cost samples, `javap` excerpts,

@@ -22,5 +22,10 @@
   main, Spark, base. `trace.py` once on main. Cost: `flock -x`, one sample at a time, `cost.py <data> <out> <case>`,
   stopped after two rounds. Warehouses and the 2M-row data in the session scratchpad, deleted after the runs.
 - **Analysis:** `python3 probes/cmp.py <raw> <out>` over the per-chunk files.
+- **Revision round** (2026-11-20, about 04:45–05:05 UTC): the same builds, interpreters, pandas links, lock and
+  cores; `probes/missed.py <engine> <scratch warehouse> <out>`, one command per engine (main, base, Spark), run
+  twice (the second run adds the uncached Iceberg controls and supersedes the first). Verdicts by the rule in
+  [../domain-table.md](../domain-table.md) §8. Cost: `flock -x -w 600`, one sample at a time, at most 5 rounds, a
+  40-minute deadline.
 
 Up: [../map.md](../map.md).

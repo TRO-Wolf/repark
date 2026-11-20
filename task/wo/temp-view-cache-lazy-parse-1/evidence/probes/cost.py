@@ -59,6 +59,15 @@ elif case == "json_cache_collect_first":
     mark("collect")
     f.count()
     mark("count")
+elif case == "json_cache_selective_child":
+    f = reader("json").selectExpr(*SHAPE).cache()
+    mark("build")
+    f.filter("n = 7").count()
+    mark("child_count")
+    f.count()
+    mark("parent_count")
+    f.filter("n = 7").count()
+    mark("child_after")
 elif case == "json_cache_view":
     f = reader("json").selectExpr(*SHAPE).cache()
     f.createOrReplaceTempView("cv")

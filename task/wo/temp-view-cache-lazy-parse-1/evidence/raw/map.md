@@ -13,5 +13,13 @@ Scratch paths read `S`, `<scratchpad>`, `<home>` or `<tmp>`.
   live zone at each.
 - [cost-samples.jsonl](cost-samples.jsonl) — `cost.py` on main: cumulative milliseconds at each phase, one sample per
   line (rounds 1 and 2; stopped there).
+- `m-spark.jsonl.gz`, `m-main.jsonl.gz`, `m-base.jsonl.gz` — the revision round's 240 cells per engine
+  (`missed.py`), one JSON object per cell.
+- [m-verdicts.jsonl](m-verdicts.jsonl) — their verdicts for `main` and `base` (a cell where both engines raise is
+  EQUAL by class).
+- [m-runs.txt](m-runs.txt) — the revision runs' `repark._native.__file__` lines, exit codes, seconds and line
+  counts (the first run, without the `held` controls, was superseded by this one).
+- The revision round's cost series (`cost.py`, with the selective-child case) took no sample: lane A's cargo
+  builder held the measure lock; the first `flock -x -w 600` timed out and the series was stopped.
 
 Up: [../map.md](../map.md).
