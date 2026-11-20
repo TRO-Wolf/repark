@@ -6091,7 +6091,8 @@ still open is `isModifiable`.
   the creating session, where Spark's `CacheManager` is shared across sessions (no zone effect on Parquet or
   Iceberg); the budgets follow the conf read at the last action of a frame holding the cache, so a fill reached only
   through SQL over a view uses the budgets of that moment; `EXPLAIN` shows a `LazyCacheExec` leaf (`pending`,
-  `filled`) where main showed the lineage, then a `MemTable` scan.
+  `filled`) where main showed the lineage, then a `MemTable` scan; `dropTempView` of a view over a cached frame keeps
+  the cache, where Spark uncaches it (A2).
 - **Pin** — `python/repark/tests/session/test_temp_view_cache_lazy_parse_1.py` (56 cells against Spark 4.1.2's
   recorded answers, 24 red on main: Fable's five must-hold shapes, both `explain` cells, `take(1)` and `limit(0)`,
   views by `spark.table` and SQL, `INSERT … SELECT` into Iceberg, the four `writeTo` verbs both ways, a first
@@ -6105,6 +6106,10 @@ still open is `isModifiable`.
   defaults across the board" (2026-11-20); Fable's guidance under that delegation, not an owner ruling (Q1 rule (a)
   with two additions, the 188 and 128 bar split, Q6's verbs, §14's twelve items);
   [work order](../task/wo/temp-view-cache-lazy-parse-1/built/map.md).
+- **Release note (v1.5.7, owner 2026-11-20)** — "A child of a cached DataFrame (for example `df.cache()`, then
+  `df.filter(...).count()`) now fills the whole cache on its first action, as Spark does. That first action can take
+  several times as long as before (about 5x on a 2M-row JSON read). Later actions on the cache, other children
+  included, read it (about 0.05x)."
 
 ### FA-1 — lateral column aliases in `withColumns`
 

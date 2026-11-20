@@ -112,4 +112,10 @@ the V2 writer's registration (`writer_layout.run_through_temp_view`, the `_repar
 A cached frame's plan shows a `LazyCacheExec: pending` leaf before its first use and `LazyCacheExec: filled` after
 it, where main showed the lineage before materialisation and a `MemTable` scan after it. Disclosed, as unit 1's Q11.
 
+## 9. Pins whose meaning changed, and an uncovered path
+
+- **C-007 of EAGER-BUDGET-1** (`test_eager_budget_1.py:218` and `:237`): the "before" snapshot now comes after `cache()`, so the armed lazy table counts as present. A refused or failed fill still adds no table, temp name or handle beyond it, and keeps no batches. `:309`'s table count moves from 1 to 2, and `test_cache_persist.py`'s `_cache_view is None` checks become `lazy_cache_filled` checks. The ledger carries a dated note.
+- **C-006 of EAGER-BUDGET-1:** the bound is now 60% of the 48 MB cached result (`54ec22b5`): 0.464 on the head and 0.442 on main, over five runs each. A refusal after the collection (a 47 MB budget) reads 1.29x of the cached size and fails the bound (the verifier's mutation run, 2026-11-20).
+- **`_bind_lazy`'s fallback** (`cache_handle.py`, the `except` that logs "lazy cache registration fell back to the action") is not covered by any cell. It is reached when the lazy registration raises: the parse memo, plan depth over the maximum, the strip, re-analysis, the stored schema, or `replace_view`. The frame then takes main's eager cache at its first own action. None of the verifier's 26 cached frame shapes took it.
+
 Up: [map.md](map.md).
