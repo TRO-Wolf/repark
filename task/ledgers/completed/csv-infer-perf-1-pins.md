@@ -5,4 +5,4 @@ C-002: python/repark/tests/io/test_csv_infer_perf_1.py::test_infer_schema_true_s
 C-003: python/repark/tests/io/test_csv_infer_perf_1.py::test_infer_schema_true_stays_under_half_second, python/repark/tests/parity/test_cutover_schema_1.py, python/repark/tests/types/test_nullability_2.py
 C-004: python/repark/tests/io/test_csv_infer_perf_1.py::test_infer_schema_true_stays_under_half_second
 C-005: python/repark/tests/io/test_csv_infer_perf_1.py::test_infer_schema_true_stays_under_half_second
-C-006: python/repark-parity/tests/test_cap_1_source_file_line_cap.py::_RUST_BASELINES, python/repark/tests/io/test_csv_infer_perf_1.py::test_infer_schema_true_stays_under_half_second, scripts/check_rust_file_size.py
+C-006: python/repark/tests/io/test_csv_infer_perf_1.py::test_infer_schema_true_stays_under_half_second, scripts/check_rust_file_size.py
