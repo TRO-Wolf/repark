@@ -1,0 +1,1254 @@
+{"index": 0, "text": " ", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 0, "text": " ", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 0, "text": " ", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 0, "text": " ", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 0, "text": " ", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 0, "text": " ", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 0, "text": " ", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 0, "text": " ", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 0, "text": " ", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 0, "text": " ", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 0, "text": " ", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 0, "text": " ", "type": "STRING", "xs": " ", "isnull": false, "py": " "}
+{"index": 0, "text": " ", "type": "BINARY", "xs": " ", "isnull": false, "py": "b' '"}
+{"index": 0, "text": " ", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 0, "text": " ", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 0, "text": " ", "type": "VARIANT", "xs": " ", "isnull": false, "py": "\" \""}
+{"index": 0, "text": " ", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 0, "text": " ", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 0, "text": " ", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "STRING", "xs": ".", "isnull": false, "py": "."}
+{"index": 1, "text": ".", "type": "BINARY", "xs": ".", "isnull": false, "py": "b'.'"}
+{"index": 1, "text": ".", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 1, "text": ".", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "VARIANT", "xs": ".", "isnull": false, "py": "\".\""}
+{"index": 1, "text": ".", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 1, "text": ".", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 2, "text": "+NaN", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 2, "text": "+NaN", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 2, "text": "+NaN", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 2, "text": "+NaN", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 2, "text": "+NaN", "type": "FLOAT", "xs": "NaN", "isnull": false, "py": "nan"}
+{"index": 2, "text": "+NaN", "type": "DOUBLE", "xs": "NaN", "isnull": false, "py": "nan"}
+{"index": 2, "text": "+NaN", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 2, "text": "+NaN", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 2, "text": "+NaN", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 2, "text": "+NaN", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 2, "text": "+NaN", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 2, "text": "+NaN", "type": "STRING", "xs": "+NaN", "isnull": false, "py": "+NaN"}
+{"index": 2, "text": "+NaN", "type": "BINARY", "xs": "+NaN", "isnull": false, "py": "b'+NaN'"}
+{"index": 2, "text": "+NaN", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 2, "text": "+NaN", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 2, "text": "+NaN", "type": "VARIANT", "xs": "+NaN", "isnull": false, "py": "\"+NaN\""}
+{"index": 2, "text": "+NaN", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 2, "text": "+NaN", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 2, "text": "+NaN", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 3, "text": "-NaN", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 3, "text": "-NaN", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 3, "text": "-NaN", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 3, "text": "-NaN", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 3, "text": "-NaN", "type": "FLOAT", "xs": "NaN", "isnull": false, "py": "nan"}
+{"index": 3, "text": "-NaN", "type": "DOUBLE", "xs": "NaN", "isnull": false, "py": "nan"}
+{"index": 3, "text": "-NaN", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 3, "text": "-NaN", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 3, "text": "-NaN", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 3, "text": "-NaN", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 3, "text": "-NaN", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 3, "text": "-NaN", "type": "STRING", "xs": "-NaN", "isnull": false, "py": "-NaN"}
+{"index": 3, "text": "-NaN", "type": "BINARY", "xs": "-NaN", "isnull": false, "py": "b'-NaN'"}
+{"index": 3, "text": "-NaN", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 3, "text": "-NaN", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 3, "text": "-NaN", "type": "VARIANT", "xs": "-NaN", "isnull": false, "py": "\"-NaN\""}
+{"index": 3, "text": "-NaN", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 3, "text": "-NaN", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 3, "text": "-NaN", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 4, "text": "NaN ", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 4, "text": "NaN ", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 4, "text": "NaN ", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 4, "text": "NaN ", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 4, "text": "NaN ", "type": "FLOAT", "xs": "NaN", "isnull": false, "py": "nan"}
+{"index": 4, "text": "NaN ", "type": "DOUBLE", "xs": "NaN", "isnull": false, "py": "nan"}
+{"index": 4, "text": "NaN ", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 4, "text": "NaN ", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 4, "text": "NaN ", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 4, "text": "NaN ", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 4, "text": "NaN ", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 4, "text": "NaN ", "type": "STRING", "xs": "NaN ", "isnull": false, "py": "NaN "}
+{"index": 4, "text": "NaN ", "type": "BINARY", "xs": "NaN ", "isnull": false, "py": "b'NaN '"}
+{"index": 4, "text": "NaN ", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 4, "text": "NaN ", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 4, "text": "NaN ", "type": "VARIANT", "xs": "NaN ", "isnull": false, "py": "\"NaN \""}
+{"index": 4, "text": "NaN ", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 4, "text": "NaN ", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 4, "text": "NaN ", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "STRING", "xs": " Inf", "isnull": false, "py": " Inf"}
+{"index": 5, "text": " Inf", "type": "BINARY", "xs": " Inf", "isnull": false, "py": "b' Inf'"}
+{"index": 5, "text": " Inf", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 5, "text": " Inf", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "VARIANT", "xs": " Inf", "isnull": false, "py": "\" Inf\""}
+{"index": 5, "text": " Inf", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 5, "text": " Inf", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 6, "text": "+Infinity", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 6, "text": "+Infinity", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 6, "text": "+Infinity", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 6, "text": "+Infinity", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 6, "text": "+Infinity", "type": "FLOAT", "xs": "Infinity", "isnull": false, "py": "inf"}
+{"index": 6, "text": "+Infinity", "type": "DOUBLE", "xs": "Infinity", "isnull": false, "py": "inf"}
+{"index": 6, "text": "+Infinity", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 6, "text": "+Infinity", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 6, "text": "+Infinity", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 6, "text": "+Infinity", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 6, "text": "+Infinity", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 6, "text": "+Infinity", "type": "STRING", "xs": "+Infinity", "isnull": false, "py": "+Infinity"}
+{"index": 6, "text": "+Infinity", "type": "BINARY", "xs": "+Infinity", "isnull": false, "py": "b'+Infinity'"}
+{"index": 6, "text": "+Infinity", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 6, "text": "+Infinity", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 6, "text": "+Infinity", "type": "VARIANT", "xs": "+Infinity", "isnull": false, "py": "\"+Infinity\""}
+{"index": 6, "text": "+Infinity", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 6, "text": "+Infinity", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 6, "text": "+Infinity", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 7, "text": "1D", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 7, "text": "1D", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 7, "text": "1D", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 7, "text": "1D", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 7, "text": "1D", "type": "FLOAT", "xs": "1.0", "isnull": false, "py": "1.0"}
+{"index": 7, "text": "1D", "type": "DOUBLE", "xs": "1.0", "isnull": false, "py": "1.0"}
+{"index": 7, "text": "1D", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 7, "text": "1D", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 7, "text": "1D", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 7, "text": "1D", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 7, "text": "1D", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 7, "text": "1D", "type": "STRING", "xs": "1D", "isnull": false, "py": "1D"}
+{"index": 7, "text": "1D", "type": "BINARY", "xs": "1D", "isnull": false, "py": "b'1D'"}
+{"index": 7, "text": "1D", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 7, "text": "1D", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 7, "text": "1D", "type": "VARIANT", "xs": "1D", "isnull": false, "py": "\"1D\""}
+{"index": 7, "text": "1D", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 7, "text": "1D", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 7, "text": "1D", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 8, "text": "1e3f", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 8, "text": "1e3f", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 8, "text": "1e3f", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 8, "text": "1e3f", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 8, "text": "1e3f", "type": "FLOAT", "xs": "1000.0", "isnull": false, "py": "1000.0"}
+{"index": 8, "text": "1e3f", "type": "DOUBLE", "xs": "1000.0", "isnull": false, "py": "1000.0"}
+{"index": 8, "text": "1e3f", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 8, "text": "1e3f", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 8, "text": "1e3f", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 8, "text": "1e3f", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 8, "text": "1e3f", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 8, "text": "1e3f", "type": "STRING", "xs": "1e3f", "isnull": false, "py": "1e3f"}
+{"index": 8, "text": "1e3f", "type": "BINARY", "xs": "1e3f", "isnull": false, "py": "b'1e3f'"}
+{"index": 8, "text": "1e3f", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 8, "text": "1e3f", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 8, "text": "1e3f", "type": "VARIANT", "xs": "1e3f", "isnull": false, "py": "\"1e3f\""}
+{"index": 8, "text": "1e3f", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 8, "text": "1e3f", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 8, "text": "1e3f", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 9, "text": "\u00017", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 9, "text": "\u00017", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 9, "text": "\u00017", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 9, "text": "\u00017", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 9, "text": "\u00017", "type": "FLOAT", "xs": "7.0", "isnull": false, "py": "7.0"}
+{"index": 9, "text": "\u00017", "type": "DOUBLE", "xs": "7.0", "isnull": false, "py": "7.0"}
+{"index": 9, "text": "\u00017", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 9, "text": "\u00017", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 9, "text": "\u00017", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 9, "text": "\u00017", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 9, "text": "\u00017", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 9, "text": "\u00017", "type": "STRING", "xs": "\u00017", "isnull": false, "py": "\u00017"}
+{"index": 9, "text": "\u00017", "type": "BINARY", "xs": "\u00017", "isnull": false, "py": "b'\\x017'"}
+{"index": 9, "text": "\u00017", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 9, "text": "\u00017", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 9, "text": "\u00017", "type": "VARIANT", "xs": "\u00017", "isnull": false, "py": "\"\\u00017\""}
+{"index": 9, "text": "\u00017", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 9, "text": "\u00017", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 9, "text": "\u00017", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "STRING", "xs": "\u00a07", "isnull": false, "py": "\u00a07"}
+{"index": 10, "text": "\u00a07", "type": "BINARY", "xs": "\u00a07", "isnull": false, "py": "b'\\xc2\\xa07'"}
+{"index": 10, "text": "\u00a07", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 10, "text": "\u00a07", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "VARIANT", "xs": "\u00a07", "isnull": false, "py": "\"\\u00a07\""}
+{"index": 10, "text": "\u00a07", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 10, "text": "\u00a07", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "STRING", "xs": "\u20037", "isnull": false, "py": "\u20037"}
+{"index": 11, "text": "\u20037", "type": "BINARY", "xs": "\u20037", "isnull": false, "py": "b'\\xe2\\x80\\x837'"}
+{"index": 11, "text": "\u20037", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 11, "text": "\u20037", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "VARIANT", "xs": "\u20037", "isnull": false, "py": "\"\\u20037\""}
+{"index": 11, "text": "\u20037", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 11, "text": "\u20037", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 12, "text": "fal\u017fe", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 12, "text": "fal\u017fe", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 12, "text": "fal\u017fe", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 12, "text": "fal\u017fe", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 12, "text": "fal\u017fe", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 12, "text": "fal\u017fe", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 12, "text": "fal\u017fe", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 12, "text": "fal\u017fe", "type": "BOOLEAN", "xs": "false", "isnull": false, "py": "False"}
+{"index": 12, "text": "fal\u017fe", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 12, "text": "fal\u017fe", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 12, "text": "fal\u017fe", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 12, "text": "fal\u017fe", "type": "STRING", "xs": "fal\u017fe", "isnull": false, "py": "fal\u017fe"}
+{"index": 12, "text": "fal\u017fe", "type": "BINARY", "xs": "fal\u017fe", "isnull": false, "py": "b'fal\\xc5\\xbfe'"}
+{"index": 12, "text": "fal\u017fe", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 12, "text": "fal\u017fe", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 12, "text": "fal\u017fe", "type": "VARIANT", "xs": "fal\u017fe", "isnull": false, "py": "\"fal\\u017fe\""}
+{"index": 12, "text": "fal\u017fe", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 12, "text": "fal\u017fe", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 12, "text": "fal\u017fe", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 13, "text": "FAL\u017fE", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 13, "text": "FAL\u017fE", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 13, "text": "FAL\u017fE", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 13, "text": "FAL\u017fE", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 13, "text": "FAL\u017fE", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 13, "text": "FAL\u017fE", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 13, "text": "FAL\u017fE", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 13, "text": "FAL\u017fE", "type": "BOOLEAN", "xs": "false", "isnull": false, "py": "False"}
+{"index": 13, "text": "FAL\u017fE", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 13, "text": "FAL\u017fE", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 13, "text": "FAL\u017fE", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 13, "text": "FAL\u017fE", "type": "STRING", "xs": "FAL\u017fE", "isnull": false, "py": "FAL\u017fE"}
+{"index": 13, "text": "FAL\u017fE", "type": "BINARY", "xs": "FAL\u017fE", "isnull": false, "py": "b'FAL\\xc5\\xbfE'"}
+{"index": 13, "text": "FAL\u017fE", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 13, "text": "FAL\u017fE", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 13, "text": "FAL\u017fE", "type": "VARIANT", "xs": "FAL\u017fE", "isnull": false, "py": "\"FAL\\u017fE\""}
+{"index": 13, "text": "FAL\u017fE", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 13, "text": "FAL\u017fE", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 13, "text": "FAL\u017fE", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "TINYINT", "xs": "123", "isnull": false, "py": "123"}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "SMALLINT", "xs": "123", "isnull": false, "py": "123"}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "INT", "xs": "123", "isnull": false, "py": "123"}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "BIGINT", "xs": "123", "isnull": false, "py": "123"}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "DECIMAL(10,2)", "xs": "123.00", "isnull": false, "py": "123.00"}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "STRING", "xs": "\u0661\u0662\u0663", "isnull": false, "py": "\u0661\u0662\u0663"}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "BINARY", "xs": "\u0661\u0662\u0663", "isnull": false, "py": "b'\\xd9\\xa1\\xd9\\xa2\\xd9\\xa3'"}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "VARIANT", "xs": "123", "isnull": false, "py": "123"}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "DECIMAL(38,10)", "xs": "123.0000000000", "isnull": false, "py": "123.0000000000"}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "DECIMAL(3,0)", "xs": "123", "isnull": false, "py": "123"}
+{"index": 14, "text": "\u0661\u0662\u0663", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 15, "text": "\uff11\uff12", "type": "TINYINT", "xs": "12", "isnull": false, "py": "12"}
+{"index": 15, "text": "\uff11\uff12", "type": "SMALLINT", "xs": "12", "isnull": false, "py": "12"}
+{"index": 15, "text": "\uff11\uff12", "type": "INT", "xs": "12", "isnull": false, "py": "12"}
+{"index": 15, "text": "\uff11\uff12", "type": "BIGINT", "xs": "12", "isnull": false, "py": "12"}
+{"index": 15, "text": "\uff11\uff12", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 15, "text": "\uff11\uff12", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 15, "text": "\uff11\uff12", "type": "DECIMAL(10,2)", "xs": "12.00", "isnull": false, "py": "12.00"}
+{"index": 15, "text": "\uff11\uff12", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 15, "text": "\uff11\uff12", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 15, "text": "\uff11\uff12", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 15, "text": "\uff11\uff12", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 15, "text": "\uff11\uff12", "type": "STRING", "xs": "\uff11\uff12", "isnull": false, "py": "\uff11\uff12"}
+{"index": 15, "text": "\uff11\uff12", "type": "BINARY", "xs": "\uff11\uff12", "isnull": false, "py": "b'\\xef\\xbc\\x91\\xef\\xbc\\x92'"}
+{"index": 15, "text": "\uff11\uff12", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 15, "text": "\uff11\uff12", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 15, "text": "\uff11\uff12", "type": "VARIANT", "xs": "12", "isnull": false, "py": "12"}
+{"index": 15, "text": "\uff11\uff12", "type": "DECIMAL(38,10)", "xs": "12.0000000000", "isnull": false, "py": "12.0000000000"}
+{"index": 15, "text": "\uff11\uff12", "type": "DECIMAL(3,0)", "xs": "12", "isnull": false, "py": "12"}
+{"index": 15, "text": "\uff11\uff12", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 16, "text": "1e-400", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 16, "text": "1e-400", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 16, "text": "1e-400", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 16, "text": "1e-400", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 16, "text": "1e-400", "type": "FLOAT", "xs": "0.0", "isnull": false, "py": "0.0"}
+{"index": 16, "text": "1e-400", "type": "DOUBLE", "xs": "0.0", "isnull": false, "py": "0.0"}
+{"index": 16, "text": "1e-400", "type": "DECIMAL(10,2)", "xs": "0.00", "isnull": false, "py": "0.00"}
+{"index": 16, "text": "1e-400", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 16, "text": "1e-400", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 16, "text": "1e-400", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 16, "text": "1e-400", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 16, "text": "1e-400", "type": "STRING", "xs": "1e-400", "isnull": false, "py": "1e-400"}
+{"index": 16, "text": "1e-400", "type": "BINARY", "xs": "1e-400", "isnull": false, "py": "b'1e-400'"}
+{"index": 16, "text": "1e-400", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 16, "text": "1e-400", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 16, "text": "1e-400", "type": "VARIANT", "xs": "1e-400", "isnull": false, "py": "\"1e-400\""}
+{"index": 16, "text": "1e-400", "type": "DECIMAL(38,10)", "xs": "0.0000000000", "isnull": false, "py": "0E-10"}
+{"index": 16, "text": "1e-400", "type": "DECIMAL(3,0)", "xs": "0", "isnull": false, "py": "0"}
+{"index": 16, "text": "1e-400", "type": "DECIMAL(4,4)", "xs": "0.0000", "isnull": false, "py": "0.0000"}
+{"index": 17, "text": "0x1.8p1", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 17, "text": "0x1.8p1", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 17, "text": "0x1.8p1", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 17, "text": "0x1.8p1", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 17, "text": "0x1.8p1", "type": "FLOAT", "xs": "3.0", "isnull": false, "py": "3.0"}
+{"index": 17, "text": "0x1.8p1", "type": "DOUBLE", "xs": "3.0", "isnull": false, "py": "3.0"}
+{"index": 17, "text": "0x1.8p1", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 17, "text": "0x1.8p1", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 17, "text": "0x1.8p1", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 17, "text": "0x1.8p1", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 17, "text": "0x1.8p1", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 17, "text": "0x1.8p1", "type": "STRING", "xs": "0x1.8p1", "isnull": false, "py": "0x1.8p1"}
+{"index": 17, "text": "0x1.8p1", "type": "BINARY", "xs": "0x1.8p1", "isnull": false, "py": "b'0x1.8p1'"}
+{"index": 17, "text": "0x1.8p1", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 17, "text": "0x1.8p1", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 17, "text": "0x1.8p1", "type": "VARIANT", "xs": "0x1.8p1", "isnull": false, "py": "\"0x1.8p1\""}
+{"index": 17, "text": "0x1.8p1", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 17, "text": "0x1.8p1", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 17, "text": "0x1.8p1", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 18, "text": "-0x1p-2", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 18, "text": "-0x1p-2", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 18, "text": "-0x1p-2", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 18, "text": "-0x1p-2", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 18, "text": "-0x1p-2", "type": "FLOAT", "xs": "-0.25", "isnull": false, "py": "-0.25"}
+{"index": 18, "text": "-0x1p-2", "type": "DOUBLE", "xs": "-0.25", "isnull": false, "py": "-0.25"}
+{"index": 18, "text": "-0x1p-2", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 18, "text": "-0x1p-2", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 18, "text": "-0x1p-2", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 18, "text": "-0x1p-2", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 18, "text": "-0x1p-2", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 18, "text": "-0x1p-2", "type": "STRING", "xs": "-0x1p-2", "isnull": false, "py": "-0x1p-2"}
+{"index": 18, "text": "-0x1p-2", "type": "BINARY", "xs": "-0x1p-2", "isnull": false, "py": "b'-0x1p-2'"}
+{"index": 18, "text": "-0x1p-2", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 18, "text": "-0x1p-2", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 18, "text": "-0x1p-2", "type": "VARIANT", "xs": "-0x1p-2", "isnull": false, "py": "\"-0x1p-2\""}
+{"index": 18, "text": "-0x1p-2", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 18, "text": "-0x1p-2", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 18, "text": "-0x1p-2", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 19, "text": "0X10P0", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 19, "text": "0X10P0", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 19, "text": "0X10P0", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 19, "text": "0X10P0", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 19, "text": "0X10P0", "type": "FLOAT", "xs": "16.0", "isnull": false, "py": "16.0"}
+{"index": 19, "text": "0X10P0", "type": "DOUBLE", "xs": "16.0", "isnull": false, "py": "16.0"}
+{"index": 19, "text": "0X10P0", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 19, "text": "0X10P0", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 19, "text": "0X10P0", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 19, "text": "0X10P0", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 19, "text": "0X10P0", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 19, "text": "0X10P0", "type": "STRING", "xs": "0X10P0", "isnull": false, "py": "0X10P0"}
+{"index": 19, "text": "0X10P0", "type": "BINARY", "xs": "0X10P0", "isnull": false, "py": "b'0X10P0'"}
+{"index": 19, "text": "0X10P0", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 19, "text": "0X10P0", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 19, "text": "0X10P0", "type": "VARIANT", "xs": "0X10P0", "isnull": false, "py": "\"0X10P0\""}
+{"index": 19, "text": "0X10P0", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 19, "text": "0X10P0", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 19, "text": "0X10P0", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 20, "text": "0x1p3d", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 20, "text": "0x1p3d", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 20, "text": "0x1p3d", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 20, "text": "0x1p3d", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 20, "text": "0x1p3d", "type": "FLOAT", "xs": "8.0", "isnull": false, "py": "8.0"}
+{"index": 20, "text": "0x1p3d", "type": "DOUBLE", "xs": "8.0", "isnull": false, "py": "8.0"}
+{"index": 20, "text": "0x1p3d", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 20, "text": "0x1p3d", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 20, "text": "0x1p3d", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 20, "text": "0x1p3d", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 20, "text": "0x1p3d", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 20, "text": "0x1p3d", "type": "STRING", "xs": "0x1p3d", "isnull": false, "py": "0x1p3d"}
+{"index": 20, "text": "0x1p3d", "type": "BINARY", "xs": "0x1p3d", "isnull": false, "py": "b'0x1p3d'"}
+{"index": 20, "text": "0x1p3d", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 20, "text": "0x1p3d", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 20, "text": "0x1p3d", "type": "VARIANT", "xs": "0x1p3d", "isnull": false, "py": "\"0x1p3d\""}
+{"index": 20, "text": "0x1p3d", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 20, "text": "0x1p3d", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 20, "text": "0x1p3d", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "STRING", "xs": "1e", "isnull": false, "py": "1e"}
+{"index": 21, "text": "1e", "type": "BINARY", "xs": "1e", "isnull": false, "py": "b'1e'"}
+{"index": 21, "text": "1e", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 21, "text": "1e", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "VARIANT", "xs": "1e", "isnull": false, "py": "\"1e\""}
+{"index": 21, "text": "1e", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 21, "text": "1e", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "STRING", "xs": "-", "isnull": false, "py": "-"}
+{"index": 22, "text": "-", "type": "BINARY", "xs": "-", "isnull": false, "py": "b'-'"}
+{"index": 22, "text": "-", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 22, "text": "-", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "VARIANT", "xs": "-", "isnull": false, "py": "\"-\""}
+{"index": 22, "text": "-", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 22, "text": "-", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "STRING", "xs": "+", "isnull": false, "py": "+"}
+{"index": 23, "text": "+", "type": "BINARY", "xs": "+", "isnull": false, "py": "b'+'"}
+{"index": 23, "text": "+", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 23, "text": "+", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "VARIANT", "xs": "+", "isnull": false, "py": "\"+\""}
+{"index": 23, "text": "+", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 23, "text": "+", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "STRING", "xs": "1.2.3", "isnull": false, "py": "1.2.3"}
+{"index": 24, "text": "1.2.3", "type": "BINARY", "xs": "1.2.3", "isnull": false, "py": "b'1.2.3'"}
+{"index": 24, "text": "1.2.3", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 24, "text": "1.2.3", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "VARIANT", "xs": "1.2.3", "isnull": false, "py": "\"1.2.3\""}
+{"index": 24, "text": "1.2.3", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 24, "text": "1.2.3", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "STRING", "xs": "--1", "isnull": false, "py": "--1"}
+{"index": 25, "text": "--1", "type": "BINARY", "xs": "--1", "isnull": false, "py": "b'--1'"}
+{"index": 25, "text": "--1", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 25, "text": "--1", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "VARIANT", "xs": "--1", "isnull": false, "py": "\"--1\""}
+{"index": 25, "text": "--1", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 25, "text": "--1", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "STRING", "xs": ",", "isnull": false, "py": ","}
+{"index": 26, "text": ",", "type": "BINARY", "xs": ",", "isnull": false, "py": "b','"}
+{"index": 26, "text": ",", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 26, "text": ",", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "VARIANT", "xs": ",", "isnull": false, "py": "\",\""}
+{"index": 26, "text": ",", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 26, "text": ",", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 27, "text": "1,,000", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 27, "text": "1,,000", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 27, "text": "1,,000", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 27, "text": "1,,000", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 27, "text": "1,,000", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 27, "text": "1,,000", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 27, "text": "1,,000", "type": "DECIMAL(10,2)", "xs": "1000.00", "isnull": false, "py": "1000.00"}
+{"index": 27, "text": "1,,000", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 27, "text": "1,,000", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 27, "text": "1,,000", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 27, "text": "1,,000", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 27, "text": "1,,000", "type": "STRING", "xs": "1,,000", "isnull": false, "py": "1,,000"}
+{"index": 27, "text": "1,,000", "type": "BINARY", "xs": "1,,000", "isnull": false, "py": "b'1,,000'"}
+{"index": 27, "text": "1,,000", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 27, "text": "1,,000", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 27, "text": "1,,000", "type": "VARIANT", "xs": "1000", "isnull": false, "py": "1000"}
+{"index": 27, "text": "1,,000", "type": "DECIMAL(38,10)", "xs": "1000.0000000000", "isnull": false, "py": "1000.0000000000"}
+{"index": 27, "text": "1,,000", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 27, "text": "1,,000", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 28, "text": "-1,5", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 28, "text": "-1,5", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 28, "text": "-1,5", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 28, "text": "-1,5", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 28, "text": "-1,5", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 28, "text": "-1,5", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 28, "text": "-1,5", "type": "DECIMAL(10,2)", "xs": "-15.00", "isnull": false, "py": "-15.00"}
+{"index": 28, "text": "-1,5", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 28, "text": "-1,5", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 28, "text": "-1,5", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 28, "text": "-1,5", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 28, "text": "-1,5", "type": "STRING", "xs": "-1,5", "isnull": false, "py": "-1,5"}
+{"index": 28, "text": "-1,5", "type": "BINARY", "xs": "-1,5", "isnull": false, "py": "b'-1,5'"}
+{"index": 28, "text": "-1,5", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 28, "text": "-1,5", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 28, "text": "-1,5", "type": "VARIANT", "xs": "-15", "isnull": false, "py": "-15"}
+{"index": 28, "text": "-1,5", "type": "DECIMAL(38,10)", "xs": "-15.0000000000", "isnull": false, "py": "-15.0000000000"}
+{"index": 28, "text": "-1,5", "type": "DECIMAL(3,0)", "xs": "-15", "isnull": false, "py": "-15"}
+{"index": 28, "text": "-1,5", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "STRING", "xs": "2024-02-30", "isnull": false, "py": "2024-02-30"}
+{"index": 29, "text": "2024-02-30", "type": "BINARY", "xs": "2024-02-30", "isnull": false, "py": "b'2024-02-30'"}
+{"index": 29, "text": "2024-02-30", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 29, "text": "2024-02-30", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "VARIANT", "xs": "2024-02-30", "isnull": false, "py": "\"2024-02-30\""}
+{"index": 29, "text": "2024-02-30", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 29, "text": "2024-02-30", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 30, "text": "2024-02-29", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 30, "text": "2024-02-29", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 30, "text": "2024-02-29", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 30, "text": "2024-02-29", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 30, "text": "2024-02-29", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 30, "text": "2024-02-29", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 30, "text": "2024-02-29", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 30, "text": "2024-02-29", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 30, "text": "2024-02-29", "type": "DATE", "xs": "2024-02-29", "isnull": false, "py": "2024-02-29"}
+{"index": 30, "text": "2024-02-29", "type": "TIMESTAMP", "xs": "2024-02-29 00:00:00", "isnull": false, "py": "2024-02-29 00:00:00"}
+{"index": 30, "text": "2024-02-29", "type": "TIMESTAMP_NTZ", "xs": "2024-02-29 00:00:00", "isnull": false, "py": "2024-02-29 00:00:00"}
+{"index": 30, "text": "2024-02-29", "type": "STRING", "xs": "2024-02-29", "isnull": false, "py": "2024-02-29"}
+{"index": 30, "text": "2024-02-29", "type": "BINARY", "xs": "2024-02-29", "isnull": false, "py": "b'2024-02-29'"}
+{"index": 30, "text": "2024-02-29", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 30, "text": "2024-02-29", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 30, "text": "2024-02-29", "type": "VARIANT", "xs": "2024-02-29", "isnull": false, "py": "\"2024-02-29\""}
+{"index": 30, "text": "2024-02-29", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 30, "text": "2024-02-29", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 30, "text": "2024-02-29", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 31, "text": "GMT2024-01-15", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 31, "text": "GMT2024-01-15", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 31, "text": "GMT2024-01-15", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 31, "text": "GMT2024-01-15", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 31, "text": "GMT2024-01-15", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 31, "text": "GMT2024-01-15", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 31, "text": "GMT2024-01-15", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 31, "text": "GMT2024-01-15", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 31, "text": "GMT2024-01-15", "type": "DATE", "xs": "2024-01-15", "isnull": false, "py": "2024-01-15"}
+{"index": 31, "text": "GMT2024-01-15", "type": "TIMESTAMP", "xs": "2024-01-15 00:00:00", "isnull": false, "py": "2024-01-15 00:00:00"}
+{"index": 31, "text": "GMT2024-01-15", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 31, "text": "GMT2024-01-15", "type": "STRING", "xs": "GMT2024-01-15", "isnull": false, "py": "GMT2024-01-15"}
+{"index": 31, "text": "GMT2024-01-15", "type": "BINARY", "xs": "GMT2024-01-15", "isnull": false, "py": "b'GMT2024-01-15'"}
+{"index": 31, "text": "GMT2024-01-15", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 31, "text": "GMT2024-01-15", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 31, "text": "GMT2024-01-15", "type": "VARIANT", "xs": "GMT2024-01-15", "isnull": false, "py": "\"GMT2024-01-15\""}
+{"index": 31, "text": "GMT2024-01-15", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 31, "text": "GMT2024-01-15", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 31, "text": "GMT2024-01-15", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 32, "text": "2024-01-15GMT", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 32, "text": "2024-01-15GMT", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 32, "text": "2024-01-15GMT", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 32, "text": "2024-01-15GMT", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 32, "text": "2024-01-15GMT", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 32, "text": "2024-01-15GMT", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 32, "text": "2024-01-15GMT", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 32, "text": "2024-01-15GMT", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 32, "text": "2024-01-15GMT", "type": "DATE", "xs": "2024-01-15", "isnull": false, "py": "2024-01-15"}
+{"index": 32, "text": "2024-01-15GMT", "type": "TIMESTAMP", "xs": "2024-01-15 00:00:00", "isnull": false, "py": "2024-01-15 00:00:00"}
+{"index": 32, "text": "2024-01-15GMT", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 32, "text": "2024-01-15GMT", "type": "STRING", "xs": "2024-01-15GMT", "isnull": false, "py": "2024-01-15GMT"}
+{"index": 32, "text": "2024-01-15GMT", "type": "BINARY", "xs": "2024-01-15GMT", "isnull": false, "py": "b'2024-01-15GMT'"}
+{"index": 32, "text": "2024-01-15GMT", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 32, "text": "2024-01-15GMT", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 32, "text": "2024-01-15GMT", "type": "VARIANT", "xs": "2024-01-15GMT", "isnull": false, "py": "\"2024-01-15GMT\""}
+{"index": 32, "text": "2024-01-15GMT", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 32, "text": "2024-01-15GMT", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 32, "text": "2024-01-15GMT", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "DATE", "xs": "2024-01-15", "isnull": false, "py": "2024-01-15"}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "TIMESTAMP", "xs": "2024-01-15 10:30:00", "isnull": false, "py": "2024-01-15 10:30:00"}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "STRING", "xs": "2024-01-15 10:30:00GMT", "isnull": false, "py": "2024-01-15 10:30:00GMT"}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "BINARY", "xs": "2024-01-15 10:30:00GMT", "isnull": false, "py": "b'2024-01-15 10:30:00GMT'"}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "VARIANT", "xs": "2024-01-15 10:30:00", "isnull": false, "py": "\"2024-01-15 10:30:00+00:00\""}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 33, "text": "2024-01-15 10:30:00GMT", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "DATE", "xs": "2024-01-15", "isnull": false, "py": "2024-01-15"}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "TIMESTAMP", "xs": "2024-01-15 10:30:00", "isnull": false, "py": "2024-01-15 10:30:00"}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "STRING", "xs": "2024-01-15 10:30:00UTC", "isnull": false, "py": "2024-01-15 10:30:00UTC"}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "BINARY", "xs": "2024-01-15 10:30:00UTC", "isnull": false, "py": "b'2024-01-15 10:30:00UTC'"}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "VARIANT", "xs": "2024-01-15 10:30:00", "isnull": false, "py": "\"2024-01-15 10:30:00+00:00\""}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 34, "text": "2024-01-15 10:30:00UTC", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "DATE", "xs": "2024-01-15", "isnull": false, "py": "2024-01-15"}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "TIMESTAMP", "xs": "2024-01-15 10:30:00.123456", "isnull": false, "py": "2024-01-15 10:30:00.123456"}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "TIMESTAMP_NTZ", "xs": "2024-01-15 10:30:00.123456", "isnull": false, "py": "2024-01-15 10:30:00.123456"}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "STRING", "xs": "2024-01-15T10:30:00.1234567", "isnull": false, "py": "2024-01-15T10:30:00.1234567"}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "BINARY", "xs": "2024-01-15T10:30:00.1234567", "isnull": false, "py": "b'2024-01-15T10:30:00.1234567'"}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "VARIANT", "xs": "2024-01-15 10:30:00.123456", "isnull": false, "py": "\"2024-01-15 10:30:00.123456+00:00\""}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 35, "text": "2024-01-15T10:30:00.1234567", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 36, "text": "+2024-01-15", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 36, "text": "+2024-01-15", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 36, "text": "+2024-01-15", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 36, "text": "+2024-01-15", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 36, "text": "+2024-01-15", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 36, "text": "+2024-01-15", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 36, "text": "+2024-01-15", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 36, "text": "+2024-01-15", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 36, "text": "+2024-01-15", "type": "DATE", "xs": "2024-01-15", "isnull": false, "py": "2024-01-15"}
+{"index": 36, "text": "+2024-01-15", "type": "TIMESTAMP", "xs": "2024-01-15 00:00:00", "isnull": false, "py": "2024-01-15 00:00:00"}
+{"index": 36, "text": "+2024-01-15", "type": "TIMESTAMP_NTZ", "xs": "2024-01-15 00:00:00", "isnull": false, "py": "2024-01-15 00:00:00"}
+{"index": 36, "text": "+2024-01-15", "type": "STRING", "xs": "+2024-01-15", "isnull": false, "py": "+2024-01-15"}
+{"index": 36, "text": "+2024-01-15", "type": "BINARY", "xs": "+2024-01-15", "isnull": false, "py": "b'+2024-01-15'"}
+{"index": 36, "text": "+2024-01-15", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 36, "text": "+2024-01-15", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 36, "text": "+2024-01-15", "type": "VARIANT", "xs": "2024-01-15 00:00:00", "isnull": false, "py": "\"2024-01-15 00:00:00+00:00\""}
+{"index": 36, "text": "+2024-01-15", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 36, "text": "+2024-01-15", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 36, "text": "+2024-01-15", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 37, "text": "-0001-01-01", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 37, "text": "-0001-01-01", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 37, "text": "-0001-01-01", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 37, "text": "-0001-01-01", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 37, "text": "-0001-01-01", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 37, "text": "-0001-01-01", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 37, "text": "-0001-01-01", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 37, "text": "-0001-01-01", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 37, "text": "-0001-01-01", "type": "DATE", "xs": "-0001-01-01", "isnull": false, "py_error": "ordinal must be >= 1"}
+{"index": 37, "text": "-0001-01-01", "type": "TIMESTAMP", "xs": "-0001-01-01 00:00:00", "isnull": false, "py_error": "year -1 is out of range"}
+{"index": 37, "text": "-0001-01-01", "type": "TIMESTAMP_NTZ", "xs": "-0001-01-01 00:00:00", "isnull": false, "py_error": "year -1 is out of range"}
+{"index": 37, "text": "-0001-01-01", "type": "STRING", "xs": "-0001-01-01", "isnull": false, "py": "-0001-01-01"}
+{"index": 37, "text": "-0001-01-01", "type": "BINARY", "xs": "-0001-01-01", "isnull": false, "py": "b'-0001-01-01'"}
+{"index": 37, "text": "-0001-01-01", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 37, "text": "-0001-01-01", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 37, "text": "-0001-01-01", "type": "VARIANT", "xs": "-0001-01-01", "isnull": false, "py_error": "ordinal must be >= 1"}
+{"index": 37, "text": "-0001-01-01", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 37, "text": "-0001-01-01", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 37, "text": "-0001-01-01", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 38, "text": "12024-01-15", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 38, "text": "12024-01-15", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 38, "text": "12024-01-15", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 38, "text": "12024-01-15", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 38, "text": "12024-01-15", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 38, "text": "12024-01-15", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 38, "text": "12024-01-15", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 38, "text": "12024-01-15", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 38, "text": "12024-01-15", "type": "DATE", "xs": "+12024-01-15", "isnull": false, "py_error": "year 12024 is out of range"}
+{"index": 38, "text": "12024-01-15", "type": "TIMESTAMP", "xs": "+12024-01-15 00:00:00", "isnull": false, "py_error": "year 12024 is out of range"}
+{"index": 38, "text": "12024-01-15", "type": "TIMESTAMP_NTZ", "xs": "+12024-01-15 00:00:00", "isnull": false, "py_error": "year 12024 is out of range"}
+{"index": 38, "text": "12024-01-15", "type": "STRING", "xs": "12024-01-15", "isnull": false, "py": "12024-01-15"}
+{"index": 38, "text": "12024-01-15", "type": "BINARY", "xs": "12024-01-15", "isnull": false, "py": "b'12024-01-15'"}
+{"index": 38, "text": "12024-01-15", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 38, "text": "12024-01-15", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 38, "text": "12024-01-15", "type": "VARIANT", "xs": "+12024-01-15 00:00:00", "isnull": false, "py_error": "date value out of range"}
+{"index": 38, "text": "12024-01-15", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 38, "text": "12024-01-15", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 38, "text": "12024-01-15", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 39, "text": "1234567-01-01", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 39, "text": "1234567-01-01", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 39, "text": "1234567-01-01", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 39, "text": "1234567-01-01", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 39, "text": "1234567-01-01", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 39, "text": "1234567-01-01", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 39, "text": "1234567-01-01", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 39, "text": "1234567-01-01", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 39, "text": "1234567-01-01", "type": "DATE", "xs": "+1234567-01-01", "isnull": false, "py_error": "year 1234567 is out of range"}
+{"index": 39, "text": "1234567-01-01", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 39, "text": "1234567-01-01", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 39, "text": "1234567-01-01", "type": "STRING", "xs": "1234567-01-01", "isnull": false, "py": "1234567-01-01"}
+{"index": 39, "text": "1234567-01-01", "type": "BINARY", "xs": "1234567-01-01", "isnull": false, "py": "b'1234567-01-01'"}
+{"index": 39, "text": "1234567-01-01", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 39, "text": "1234567-01-01", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 39, "text": "1234567-01-01", "type": "VARIANT", "xs": "1234567-01-01", "isnull": false, "py": "\"1234567-01-01\""}
+{"index": 39, "text": "1234567-01-01", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 39, "text": "1234567-01-01", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 39, "text": "1234567-01-01", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 40, "text": "2024-1-5 garbage", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 40, "text": "2024-1-5 garbage", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 40, "text": "2024-1-5 garbage", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 40, "text": "2024-1-5 garbage", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 40, "text": "2024-1-5 garbage", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 40, "text": "2024-1-5 garbage", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 40, "text": "2024-1-5 garbage", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 40, "text": "2024-1-5 garbage", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 40, "text": "2024-1-5 garbage", "type": "DATE", "xs": "2024-01-05", "isnull": false, "py": "2024-01-05"}
+{"index": 40, "text": "2024-1-5 garbage", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 40, "text": "2024-1-5 garbage", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 40, "text": "2024-1-5 garbage", "type": "STRING", "xs": "2024-1-5 garbage", "isnull": false, "py": "2024-1-5 garbage"}
+{"index": 40, "text": "2024-1-5 garbage", "type": "BINARY", "xs": "2024-1-5 garbage", "isnull": false, "py": "b'2024-1-5 garbage'"}
+{"index": 40, "text": "2024-1-5 garbage", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 40, "text": "2024-1-5 garbage", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 40, "text": "2024-1-5 garbage", "type": "VARIANT", "xs": "2024-1-5 garbage", "isnull": false, "py": "\"2024-1-5 garbage\""}
+{"index": 40, "text": "2024-1-5 garbage", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 40, "text": "2024-1-5 garbage", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 40, "text": "2024-1-5 garbage", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "DATE", "xs": "2024-01-15", "isnull": false, "py": "2024-01-15"}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "STRING", "xs": "2024-01-15  10:30:00", "isnull": false, "py": "2024-01-15  10:30:00"}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "BINARY", "xs": "2024-01-15  10:30:00", "isnull": false, "py": "b'2024-01-15  10:30:00'"}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "VARIANT", "xs": "2024-01-15  10:30:00", "isnull": false, "py": "\"2024-01-15  10:30:00\""}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 41, "text": "2024-01-15  10:30:00", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 42, "text": "2024-01-15\t", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 42, "text": "2024-01-15\t", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 42, "text": "2024-01-15\t", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 42, "text": "2024-01-15\t", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 42, "text": "2024-01-15\t", "type": "FLOAT", "xs": null, "isnull": true, "py": null}
+{"index": 42, "text": "2024-01-15\t", "type": "DOUBLE", "xs": null, "isnull": true, "py": null}
+{"index": 42, "text": "2024-01-15\t", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 42, "text": "2024-01-15\t", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 42, "text": "2024-01-15\t", "type": "DATE", "xs": "2024-01-15", "isnull": false, "py": "2024-01-15"}
+{"index": 42, "text": "2024-01-15\t", "type": "TIMESTAMP", "xs": "2024-01-15 00:00:00", "isnull": false, "py": "2024-01-15 00:00:00"}
+{"index": 42, "text": "2024-01-15\t", "type": "TIMESTAMP_NTZ", "xs": "2024-01-15 00:00:00", "isnull": false, "py": "2024-01-15 00:00:00"}
+{"index": 42, "text": "2024-01-15\t", "type": "STRING", "xs": "2024-01-15\t", "isnull": false, "py": "2024-01-15\t"}
+{"index": 42, "text": "2024-01-15\t", "type": "BINARY", "xs": "2024-01-15\t", "isnull": false, "py": "b'2024-01-15\\t'"}
+{"index": 42, "text": "2024-01-15\t", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 42, "text": "2024-01-15\t", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 42, "text": "2024-01-15\t", "type": "VARIANT", "xs": "2024-01-15 00:00:00", "isnull": false, "py": "\"2024-01-15 00:00:00+00:00\""}
+{"index": 42, "text": "2024-01-15\t", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 42, "text": "2024-01-15\t", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 42, "text": "2024-01-15\t", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 43, "text": "1e10", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 43, "text": "1e10", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 43, "text": "1e10", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 43, "text": "1e10", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 43, "text": "1e10", "type": "FLOAT", "xs": "1.0E10", "isnull": false, "py": "10000000000.0"}
+{"index": 43, "text": "1e10", "type": "DOUBLE", "xs": "1.0E10", "isnull": false, "py": "10000000000.0"}
+{"index": 43, "text": "1e10", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 43, "text": "1e10", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 43, "text": "1e10", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 43, "text": "1e10", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 43, "text": "1e10", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 43, "text": "1e10", "type": "STRING", "xs": "1e10", "isnull": false, "py": "1e10"}
+{"index": 43, "text": "1e10", "type": "BINARY", "xs": "1e10", "isnull": false, "py": "b'1e10'"}
+{"index": 43, "text": "1e10", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 43, "text": "1e10", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 43, "text": "1e10", "type": "VARIANT", "xs": "10000000000", "isnull": false, "py": "10000000000"}
+{"index": 43, "text": "1e10", "type": "DECIMAL(38,10)", "xs": "10000000000.0000000000", "isnull": false, "py": "10000000000.0000000000"}
+{"index": 43, "text": "1e10", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 43, "text": "1e10", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 44, "text": "-1e-3", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 44, "text": "-1e-3", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 44, "text": "-1e-3", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 44, "text": "-1e-3", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 44, "text": "-1e-3", "type": "FLOAT", "xs": "-0.001", "isnull": false, "py": "-0.0010000000474974513"}
+{"index": 44, "text": "-1e-3", "type": "DOUBLE", "xs": "-0.001", "isnull": false, "py": "-0.001"}
+{"index": 44, "text": "-1e-3", "type": "DECIMAL(10,2)", "xs": "0.00", "isnull": false, "py": "0.00"}
+{"index": 44, "text": "-1e-3", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 44, "text": "-1e-3", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 44, "text": "-1e-3", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 44, "text": "-1e-3", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 44, "text": "-1e-3", "type": "STRING", "xs": "-1e-3", "isnull": false, "py": "-1e-3"}
+{"index": 44, "text": "-1e-3", "type": "BINARY", "xs": "-1e-3", "isnull": false, "py": "b'-1e-3'"}
+{"index": 44, "text": "-1e-3", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 44, "text": "-1e-3", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 44, "text": "-1e-3", "type": "VARIANT", "xs": "-0.001", "isnull": false, "py": "-0.001"}
+{"index": 44, "text": "-1e-3", "type": "DECIMAL(38,10)", "xs": "-0.0010000000", "isnull": false, "py": "-0.0010000000"}
+{"index": 44, "text": "-1e-3", "type": "DECIMAL(3,0)", "xs": "0", "isnull": false, "py": "0"}
+{"index": 44, "text": "-1e-3", "type": "DECIMAL(4,4)", "xs": "-0.0010", "isnull": false, "py": "-0.0010"}
+{"index": 45, "text": "0.005", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 45, "text": "0.005", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 45, "text": "0.005", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 45, "text": "0.005", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 45, "text": "0.005", "type": "FLOAT", "xs": "0.005", "isnull": false, "py": "0.004999999888241291"}
+{"index": 45, "text": "0.005", "type": "DOUBLE", "xs": "0.005", "isnull": false, "py": "0.005"}
+{"index": 45, "text": "0.005", "type": "DECIMAL(10,2)", "xs": "0.01", "isnull": false, "py": "0.01"}
+{"index": 45, "text": "0.005", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 45, "text": "0.005", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 45, "text": "0.005", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 45, "text": "0.005", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 45, "text": "0.005", "type": "STRING", "xs": "0.005", "isnull": false, "py": "0.005"}
+{"index": 45, "text": "0.005", "type": "BINARY", "xs": "0.005", "isnull": false, "py": "b'0.005'"}
+{"index": 45, "text": "0.005", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 45, "text": "0.005", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 45, "text": "0.005", "type": "VARIANT", "xs": "0.005", "isnull": false, "py": "0.005"}
+{"index": 45, "text": "0.005", "type": "DECIMAL(38,10)", "xs": "0.0050000000", "isnull": false, "py": "0.0050000000"}
+{"index": 45, "text": "0.005", "type": "DECIMAL(3,0)", "xs": "0", "isnull": false, "py": "0"}
+{"index": 45, "text": "0.005", "type": "DECIMAL(4,4)", "xs": "0.0050", "isnull": false, "py": "0.0050"}
+{"index": 46, "text": "-0.005", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 46, "text": "-0.005", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 46, "text": "-0.005", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 46, "text": "-0.005", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 46, "text": "-0.005", "type": "FLOAT", "xs": "-0.005", "isnull": false, "py": "-0.004999999888241291"}
+{"index": 46, "text": "-0.005", "type": "DOUBLE", "xs": "-0.005", "isnull": false, "py": "-0.005"}
+{"index": 46, "text": "-0.005", "type": "DECIMAL(10,2)", "xs": "-0.01", "isnull": false, "py": "-0.01"}
+{"index": 46, "text": "-0.005", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 46, "text": "-0.005", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 46, "text": "-0.005", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 46, "text": "-0.005", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 46, "text": "-0.005", "type": "STRING", "xs": "-0.005", "isnull": false, "py": "-0.005"}
+{"index": 46, "text": "-0.005", "type": "BINARY", "xs": "-0.005", "isnull": false, "py": "b'-0.005'"}
+{"index": 46, "text": "-0.005", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 46, "text": "-0.005", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 46, "text": "-0.005", "type": "VARIANT", "xs": "-0.005", "isnull": false, "py": "-0.005"}
+{"index": 46, "text": "-0.005", "type": "DECIMAL(38,10)", "xs": "-0.0050000000", "isnull": false, "py": "-0.0050000000"}
+{"index": 46, "text": "-0.005", "type": "DECIMAL(3,0)", "xs": "0", "isnull": false, "py": "0"}
+{"index": 46, "text": "-0.005", "type": "DECIMAL(4,4)", "xs": "-0.0050", "isnull": false, "py": "-0.0050"}
+{"index": 47, "text": "0.0049999", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 47, "text": "0.0049999", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 47, "text": "0.0049999", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 47, "text": "0.0049999", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 47, "text": "0.0049999", "type": "FLOAT", "xs": "0.0049999", "isnull": false, "py": "0.00499989977106452"}
+{"index": 47, "text": "0.0049999", "type": "DOUBLE", "xs": "0.0049999", "isnull": false, "py": "0.0049999"}
+{"index": 47, "text": "0.0049999", "type": "DECIMAL(10,2)", "xs": "0.00", "isnull": false, "py": "0.00"}
+{"index": 47, "text": "0.0049999", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 47, "text": "0.0049999", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 47, "text": "0.0049999", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 47, "text": "0.0049999", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 47, "text": "0.0049999", "type": "STRING", "xs": "0.0049999", "isnull": false, "py": "0.0049999"}
+{"index": 47, "text": "0.0049999", "type": "BINARY", "xs": "0.0049999", "isnull": false, "py": "b'0.0049999'"}
+{"index": 47, "text": "0.0049999", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 47, "text": "0.0049999", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 47, "text": "0.0049999", "type": "VARIANT", "xs": "0.0049999", "isnull": false, "py": "0.0049999"}
+{"index": 47, "text": "0.0049999", "type": "DECIMAL(38,10)", "xs": "0.0049999000", "isnull": false, "py": "0.0049999000"}
+{"index": 47, "text": "0.0049999", "type": "DECIMAL(3,0)", "xs": "0", "isnull": false, "py": "0"}
+{"index": 47, "text": "0.0049999", "type": "DECIMAL(4,4)", "xs": "0.0050", "isnull": false, "py": "0.0050"}
+{"index": 48, "text": "1E+2", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 48, "text": "1E+2", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 48, "text": "1E+2", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 48, "text": "1E+2", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 48, "text": "1E+2", "type": "FLOAT", "xs": "100.0", "isnull": false, "py": "100.0"}
+{"index": 48, "text": "1E+2", "type": "DOUBLE", "xs": "100.0", "isnull": false, "py": "100.0"}
+{"index": 48, "text": "1E+2", "type": "DECIMAL(10,2)", "xs": "100.00", "isnull": false, "py": "100.00"}
+{"index": 48, "text": "1E+2", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 48, "text": "1E+2", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 48, "text": "1E+2", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 48, "text": "1E+2", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 48, "text": "1E+2", "type": "STRING", "xs": "1E+2", "isnull": false, "py": "1E+2"}
+{"index": 48, "text": "1E+2", "type": "BINARY", "xs": "1E+2", "isnull": false, "py": "b'1E+2'"}
+{"index": 48, "text": "1E+2", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 48, "text": "1E+2", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 48, "text": "1E+2", "type": "VARIANT", "xs": "100", "isnull": false, "py": "100"}
+{"index": 48, "text": "1E+2", "type": "DECIMAL(38,10)", "xs": "100.0000000000", "isnull": false, "py": "100.0000000000"}
+{"index": 48, "text": "1E+2", "type": "DECIMAL(3,0)", "xs": "100", "isnull": false, "py": "100"}
+{"index": 48, "text": "1E+2", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 49, "text": "00.50", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 49, "text": "00.50", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 49, "text": "00.50", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 49, "text": "00.50", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 49, "text": "00.50", "type": "FLOAT", "xs": "0.5", "isnull": false, "py": "0.5"}
+{"index": 49, "text": "00.50", "type": "DOUBLE", "xs": "0.5", "isnull": false, "py": "0.5"}
+{"index": 49, "text": "00.50", "type": "DECIMAL(10,2)", "xs": "0.50", "isnull": false, "py": "0.50"}
+{"index": 49, "text": "00.50", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 49, "text": "00.50", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 49, "text": "00.50", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 49, "text": "00.50", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 49, "text": "00.50", "type": "STRING", "xs": "00.50", "isnull": false, "py": "00.50"}
+{"index": 49, "text": "00.50", "type": "BINARY", "xs": "00.50", "isnull": false, "py": "b'00.50'"}
+{"index": 49, "text": "00.50", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 49, "text": "00.50", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 49, "text": "00.50", "type": "VARIANT", "xs": "0.5", "isnull": false, "py": "0.50"}
+{"index": 49, "text": "00.50", "type": "DECIMAL(38,10)", "xs": "0.5000000000", "isnull": false, "py": "0.5000000000"}
+{"index": 49, "text": "00.50", "type": "DECIMAL(3,0)", "xs": "1", "isnull": false, "py": "1"}
+{"index": 49, "text": "00.50", "type": "DECIMAL(4,4)", "xs": "0.5000", "isnull": false, "py": "0.5000"}
+{"index": 50, "text": "1.0e0", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 50, "text": "1.0e0", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 50, "text": "1.0e0", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 50, "text": "1.0e0", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 50, "text": "1.0e0", "type": "FLOAT", "xs": "1.0", "isnull": false, "py": "1.0"}
+{"index": 50, "text": "1.0e0", "type": "DOUBLE", "xs": "1.0", "isnull": false, "py": "1.0"}
+{"index": 50, "text": "1.0e0", "type": "DECIMAL(10,2)", "xs": "1.00", "isnull": false, "py": "1.00"}
+{"index": 50, "text": "1.0e0", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 50, "text": "1.0e0", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 50, "text": "1.0e0", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 50, "text": "1.0e0", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 50, "text": "1.0e0", "type": "STRING", "xs": "1.0e0", "isnull": false, "py": "1.0e0"}
+{"index": 50, "text": "1.0e0", "type": "BINARY", "xs": "1.0e0", "isnull": false, "py": "b'1.0e0'"}
+{"index": 50, "text": "1.0e0", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 50, "text": "1.0e0", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 50, "text": "1.0e0", "type": "VARIANT", "xs": "1", "isnull": false, "py": "1.0"}
+{"index": 50, "text": "1.0e0", "type": "DECIMAL(38,10)", "xs": "1.0000000000", "isnull": false, "py": "1.0000000000"}
+{"index": 50, "text": "1.0e0", "type": "DECIMAL(3,0)", "xs": "1", "isnull": false, "py": "1"}
+{"index": 50, "text": "1.0e0", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 51, "text": "1e-2147483648", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 51, "text": "1e-2147483648", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 51, "text": "1e-2147483648", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 51, "text": "1e-2147483648", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 51, "text": "1e-2147483648", "type": "FLOAT", "xs": "0.0", "isnull": false, "py": "0.0"}
+{"index": 51, "text": "1e-2147483648", "type": "DOUBLE", "xs": "0.0", "isnull": false, "py": "0.0"}
+{"index": 51, "text": "1e-2147483648", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 51, "text": "1e-2147483648", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 51, "text": "1e-2147483648", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 51, "text": "1e-2147483648", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 51, "text": "1e-2147483648", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 51, "text": "1e-2147483648", "type": "STRING", "xs": "1e-2147483648", "isnull": false, "py": "1e-2147483648"}
+{"index": 51, "text": "1e-2147483648", "type": "BINARY", "xs": "1e-2147483648", "isnull": false, "py": "b'1e-2147483648'"}
+{"index": 51, "text": "1e-2147483648", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 51, "text": "1e-2147483648", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 51, "text": "1e-2147483648", "type": "VARIANT", "xs": "1e-2147483648", "isnull": false, "py": "\"1e-2147483648\""}
+{"index": 51, "text": "1e-2147483648", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 51, "text": "1e-2147483648", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 51, "text": "1e-2147483648", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 52, "text": "1e2147483648", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 52, "text": "1e2147483648", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 52, "text": "1e2147483648", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 52, "text": "1e2147483648", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 52, "text": "1e2147483648", "type": "FLOAT", "xs": "Infinity", "isnull": false, "py": "inf"}
+{"index": 52, "text": "1e2147483648", "type": "DOUBLE", "xs": "Infinity", "isnull": false, "py": "inf"}
+{"index": 52, "text": "1e2147483648", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 52, "text": "1e2147483648", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 52, "text": "1e2147483648", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 52, "text": "1e2147483648", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 52, "text": "1e2147483648", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 52, "text": "1e2147483648", "type": "STRING", "xs": "1e2147483648", "isnull": false, "py": "1e2147483648"}
+{"index": 52, "text": "1e2147483648", "type": "BINARY", "xs": "1e2147483648", "isnull": false, "py": "b'1e2147483648'"}
+{"index": 52, "text": "1e2147483648", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 52, "text": "1e2147483648", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 52, "text": "1e2147483648", "type": "VARIANT", "xs": "1e2147483648", "isnull": false, "py": "\"1e2147483648\""}
+{"index": 52, "text": "1e2147483648", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 52, "text": "1e2147483648", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 52, "text": "1e2147483648", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 53, "text": "1e9999999999", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 53, "text": "1e9999999999", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 53, "text": "1e9999999999", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 53, "text": "1e9999999999", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 53, "text": "1e9999999999", "type": "FLOAT", "xs": "Infinity", "isnull": false, "py": "inf"}
+{"index": 53, "text": "1e9999999999", "type": "DOUBLE", "xs": "Infinity", "isnull": false, "py": "inf"}
+{"index": 53, "text": "1e9999999999", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 53, "text": "1e9999999999", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 53, "text": "1e9999999999", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 53, "text": "1e9999999999", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 53, "text": "1e9999999999", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 53, "text": "1e9999999999", "type": "STRING", "xs": "1e9999999999", "isnull": false, "py": "1e9999999999"}
+{"index": 53, "text": "1e9999999999", "type": "BINARY", "xs": "1e9999999999", "isnull": false, "py": "b'1e9999999999'"}
+{"index": 53, "text": "1e9999999999", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 53, "text": "1e9999999999", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 53, "text": "1e9999999999", "type": "VARIANT", "xs": "1e9999999999", "isnull": false, "py": "\"1e9999999999\""}
+{"index": 53, "text": "1e9999999999", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 53, "text": "1e9999999999", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 53, "text": "1e9999999999", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 54, "text": "-128", "type": "TINYINT", "xs": "-128", "isnull": false, "py": "-128"}
+{"index": 54, "text": "-128", "type": "SMALLINT", "xs": "-128", "isnull": false, "py": "-128"}
+{"index": 54, "text": "-128", "type": "INT", "xs": "-128", "isnull": false, "py": "-128"}
+{"index": 54, "text": "-128", "type": "BIGINT", "xs": "-128", "isnull": false, "py": "-128"}
+{"index": 54, "text": "-128", "type": "FLOAT", "xs": "-128.0", "isnull": false, "py": "-128.0"}
+{"index": 54, "text": "-128", "type": "DOUBLE", "xs": "-128.0", "isnull": false, "py": "-128.0"}
+{"index": 54, "text": "-128", "type": "DECIMAL(10,2)", "xs": "-128.00", "isnull": false, "py": "-128.00"}
+{"index": 54, "text": "-128", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 54, "text": "-128", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 54, "text": "-128", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 54, "text": "-128", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 54, "text": "-128", "type": "STRING", "xs": "-128", "isnull": false, "py": "-128"}
+{"index": 54, "text": "-128", "type": "BINARY", "xs": "-128", "isnull": false, "py": "b'-128'"}
+{"index": 54, "text": "-128", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 54, "text": "-128", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 54, "text": "-128", "type": "VARIANT", "xs": "-128", "isnull": false, "py": "-128"}
+{"index": 54, "text": "-128", "type": "DECIMAL(38,10)", "xs": "-128.0000000000", "isnull": false, "py": "-128.0000000000"}
+{"index": 54, "text": "-128", "type": "DECIMAL(3,0)", "xs": "-128", "isnull": false, "py": "-128"}
+{"index": 54, "text": "-128", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 55, "text": "-32768", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 55, "text": "-32768", "type": "SMALLINT", "xs": "-32768", "isnull": false, "py": "-32768"}
+{"index": 55, "text": "-32768", "type": "INT", "xs": "-32768", "isnull": false, "py": "-32768"}
+{"index": 55, "text": "-32768", "type": "BIGINT", "xs": "-32768", "isnull": false, "py": "-32768"}
+{"index": 55, "text": "-32768", "type": "FLOAT", "xs": "-32768.0", "isnull": false, "py": "-32768.0"}
+{"index": 55, "text": "-32768", "type": "DOUBLE", "xs": "-32768.0", "isnull": false, "py": "-32768.0"}
+{"index": 55, "text": "-32768", "type": "DECIMAL(10,2)", "xs": "-32768.00", "isnull": false, "py": "-32768.00"}
+{"index": 55, "text": "-32768", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 55, "text": "-32768", "type": "DATE", "xs": "-32768-01-01", "isnull": false, "py_error": "ordinal must be >= 1"}
+{"index": 55, "text": "-32768", "type": "TIMESTAMP", "xs": "-32768-01-01 00:00:00", "isnull": false, "py_error": "year -32768 is out of range"}
+{"index": 55, "text": "-32768", "type": "TIMESTAMP_NTZ", "xs": "-32768-01-01 00:00:00", "isnull": false, "py_error": "year -32768 is out of range"}
+{"index": 55, "text": "-32768", "type": "STRING", "xs": "-32768", "isnull": false, "py": "-32768"}
+{"index": 55, "text": "-32768", "type": "BINARY", "xs": "-32768", "isnull": false, "py": "b'-32768'"}
+{"index": 55, "text": "-32768", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 55, "text": "-32768", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 55, "text": "-32768", "type": "VARIANT", "xs": "-32768", "isnull": false, "py": "-32768"}
+{"index": 55, "text": "-32768", "type": "DECIMAL(38,10)", "xs": "-32768.0000000000", "isnull": false, "py": "-32768.0000000000"}
+{"index": 55, "text": "-32768", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 55, "text": "-32768", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 56, "text": "-2147483648", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 56, "text": "-2147483648", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 56, "text": "-2147483648", "type": "INT", "xs": "-2147483648", "isnull": false, "py": "-2147483648"}
+{"index": 56, "text": "-2147483648", "type": "BIGINT", "xs": "-2147483648", "isnull": false, "py": "-2147483648"}
+{"index": 56, "text": "-2147483648", "type": "FLOAT", "xs": "-2.14748365E9", "isnull": false, "py": "-2147483648.0"}
+{"index": 56, "text": "-2147483648", "type": "DOUBLE", "xs": "-2.147483648E9", "isnull": false, "py": "-2147483648.0"}
+{"index": 56, "text": "-2147483648", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 56, "text": "-2147483648", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 56, "text": "-2147483648", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 56, "text": "-2147483648", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 56, "text": "-2147483648", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 56, "text": "-2147483648", "type": "STRING", "xs": "-2147483648", "isnull": false, "py": "-2147483648"}
+{"index": 56, "text": "-2147483648", "type": "BINARY", "xs": "-2147483648", "isnull": false, "py": "b'-2147483648'"}
+{"index": 56, "text": "-2147483648", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 56, "text": "-2147483648", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 56, "text": "-2147483648", "type": "VARIANT", "xs": "-2147483648", "isnull": false, "py": "-2147483648"}
+{"index": 56, "text": "-2147483648", "type": "DECIMAL(38,10)", "xs": "-2147483648.0000000000", "isnull": false, "py": "-2147483648.0000000000"}
+{"index": 56, "text": "-2147483648", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 56, "text": "-2147483648", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 57, "text": "-9223372036854775808", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 57, "text": "-9223372036854775808", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 57, "text": "-9223372036854775808", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 57, "text": "-9223372036854775808", "type": "BIGINT", "xs": "-9223372036854775808", "isnull": false, "py": "-9223372036854775808"}
+{"index": 57, "text": "-9223372036854775808", "type": "FLOAT", "xs": "-9.223372E18", "isnull": false, "py": "-9.223372036854776e+18"}
+{"index": 57, "text": "-9223372036854775808", "type": "DOUBLE", "xs": "-9.223372036854776E18", "isnull": false, "py": "-9.223372036854776e+18"}
+{"index": 57, "text": "-9223372036854775808", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 57, "text": "-9223372036854775808", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 57, "text": "-9223372036854775808", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 57, "text": "-9223372036854775808", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 57, "text": "-9223372036854775808", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 57, "text": "-9223372036854775808", "type": "STRING", "xs": "-9223372036854775808", "isnull": false, "py": "-9223372036854775808"}
+{"index": 57, "text": "-9223372036854775808", "type": "BINARY", "xs": "-9223372036854775808", "isnull": false, "py": "b'-9223372036854775808'"}
+{"index": 57, "text": "-9223372036854775808", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 57, "text": "-9223372036854775808", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 57, "text": "-9223372036854775808", "type": "VARIANT", "xs": "-9223372036854775808", "isnull": false, "py": "-9223372036854775808"}
+{"index": 57, "text": "-9223372036854775808", "type": "DECIMAL(38,10)", "xs": "-9223372036854775808.0000000000", "isnull": false, "py": "-9223372036854775808.0000000000"}
+{"index": 57, "text": "-9223372036854775808", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 57, "text": "-9223372036854775808", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "TINYINT", "xs": "7", "isnull": false, "py": "7"}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "SMALLINT", "xs": "7", "isnull": false, "py": "7"}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "INT", "xs": "7", "isnull": false, "py": "7"}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "BIGINT", "xs": "7", "isnull": false, "py": "7"}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "FLOAT", "xs": "7.0", "isnull": false, "py": "7.0"}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "DOUBLE", "xs": "7.0", "isnull": false, "py": "7.0"}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "DECIMAL(10,2)", "xs": "7.00", "isnull": false, "py": "7.00"}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "STRING", "xs": "0000000000000000000000000000007", "isnull": false, "py": "0000000000000000000000000000007"}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "BINARY", "xs": "0000000000000000000000000000007", "isnull": false, "py": "b'0000000000000000000000000000007'"}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "VARIANT", "xs": "7", "isnull": false, "py": "7"}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "DECIMAL(38,10)", "xs": "7.0000000000", "isnull": false, "py": "7.0000000000"}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "DECIMAL(3,0)", "xs": "7", "isnull": false, "py": "7"}
+{"index": 58, "text": "0000000000000000000000000000007", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "FLOAT", "xs": "1.0E38", "isnull": false, "py": "9.999999680285692e+37"}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "DOUBLE", "xs": "1.0E38", "isnull": false, "py": "1e+38"}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "STRING", "xs": "99999999999999999999999999999999999999", "isnull": false, "py": "99999999999999999999999999999999999999"}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "BINARY", "xs": "99999999999999999999999999999999999999", "isnull": false, "py": "b'99999999999999999999999999999999999999'"}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "VARIANT", "xs": "99999999999999999999999999999999999999", "isnull": false, "py": "1.000000000000000000000000000E+38"}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 59, "text": "99999999999999999999999999999999999999", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "FLOAT", "xs": "Infinity", "isnull": false, "py": "inf"}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "DOUBLE", "xs": "1.0E39", "isnull": false, "py": "1e+39"}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "DECIMAL(10,2)", "xs": null, "isnull": true, "py": null}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "STRING", "xs": "999999999999999999999999999999999999999", "isnull": false, "py": "999999999999999999999999999999999999999"}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "BINARY", "xs": "999999999999999999999999999999999999999", "isnull": false, "py": "b'999999999999999999999999999999999999999'"}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "VARIANT", "xs": "999999999999999999999999999999999999999", "isnull": false, "py": "\"999999999999999999999999999999999999999\""}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "DECIMAL(38,10)", "xs": null, "isnull": true, "py": null}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 60, "text": "999999999999999999999999999999999999999", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 61, "text": "0.99995", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 61, "text": "0.99995", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 61, "text": "0.99995", "type": "INT", "xs": null, "isnull": true, "py": null}
+{"index": 61, "text": "0.99995", "type": "BIGINT", "xs": null, "isnull": true, "py": null}
+{"index": 61, "text": "0.99995", "type": "FLOAT", "xs": "0.99995", "isnull": false, "py": "0.9999499917030334"}
+{"index": 61, "text": "0.99995", "type": "DOUBLE", "xs": "0.99995", "isnull": false, "py": "0.99995"}
+{"index": 61, "text": "0.99995", "type": "DECIMAL(10,2)", "xs": "1.00", "isnull": false, "py": "1.00"}
+{"index": 61, "text": "0.99995", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 61, "text": "0.99995", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 61, "text": "0.99995", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 61, "text": "0.99995", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 61, "text": "0.99995", "type": "STRING", "xs": "0.99995", "isnull": false, "py": "0.99995"}
+{"index": 61, "text": "0.99995", "type": "BINARY", "xs": "0.99995", "isnull": false, "py": "b'0.99995'"}
+{"index": 61, "text": "0.99995", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 61, "text": "0.99995", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 61, "text": "0.99995", "type": "VARIANT", "xs": "0.99995", "isnull": false, "py": "0.99995"}
+{"index": 61, "text": "0.99995", "type": "DECIMAL(38,10)", "xs": "0.9999500000", "isnull": false, "py": "0.9999500000"}
+{"index": 61, "text": "0.99995", "type": "DECIMAL(3,0)", "xs": "1", "isnull": false, "py": "1"}
+{"index": 61, "text": "0.99995", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 62, "text": "-0", "type": "TINYINT", "xs": "0", "isnull": false, "py": "0"}
+{"index": 62, "text": "-0", "type": "SMALLINT", "xs": "0", "isnull": false, "py": "0"}
+{"index": 62, "text": "-0", "type": "INT", "xs": "0", "isnull": false, "py": "0"}
+{"index": 62, "text": "-0", "type": "BIGINT", "xs": "0", "isnull": false, "py": "0"}
+{"index": 62, "text": "-0", "type": "FLOAT", "xs": "-0.0", "isnull": false, "py": "-0.0"}
+{"index": 62, "text": "-0", "type": "DOUBLE", "xs": "-0.0", "isnull": false, "py": "-0.0"}
+{"index": 62, "text": "-0", "type": "DECIMAL(10,2)", "xs": "0.00", "isnull": false, "py": "0.00"}
+{"index": 62, "text": "-0", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 62, "text": "-0", "type": "DATE", "xs": null, "isnull": true, "py": null}
+{"index": 62, "text": "-0", "type": "TIMESTAMP", "xs": null, "isnull": true, "py": null}
+{"index": 62, "text": "-0", "type": "TIMESTAMP_NTZ", "xs": null, "isnull": true, "py": null}
+{"index": 62, "text": "-0", "type": "STRING", "xs": "-0", "isnull": false, "py": "-0"}
+{"index": 62, "text": "-0", "type": "BINARY", "xs": "-0", "isnull": false, "py": "b'-0'"}
+{"index": 62, "text": "-0", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 62, "text": "-0", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 62, "text": "-0", "type": "VARIANT", "xs": "0", "isnull": false, "py": "0"}
+{"index": 62, "text": "-0", "type": "DECIMAL(38,10)", "xs": "0.0000000000", "isnull": false, "py": "0E-10"}
+{"index": 62, "text": "-0", "type": "DECIMAL(3,0)", "xs": "0", "isnull": false, "py": "0"}
+{"index": 62, "text": "-0", "type": "DECIMAL(4,4)", "xs": "0.0000", "isnull": false, "py": "0.0000"}
+{"index": 63, "text": "32767", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 63, "text": "32767", "type": "SMALLINT", "xs": "32767", "isnull": false, "py": "32767"}
+{"index": 63, "text": "32767", "type": "INT", "xs": "32767", "isnull": false, "py": "32767"}
+{"index": 63, "text": "32767", "type": "BIGINT", "xs": "32767", "isnull": false, "py": "32767"}
+{"index": 63, "text": "32767", "type": "FLOAT", "xs": "32767.0", "isnull": false, "py": "32767.0"}
+{"index": 63, "text": "32767", "type": "DOUBLE", "xs": "32767.0", "isnull": false, "py": "32767.0"}
+{"index": 63, "text": "32767", "type": "DECIMAL(10,2)", "xs": "32767.00", "isnull": false, "py": "32767.00"}
+{"index": 63, "text": "32767", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 63, "text": "32767", "type": "DATE", "xs": "+32767-01-01", "isnull": false, "py_error": "year 32767 is out of range"}
+{"index": 63, "text": "32767", "type": "TIMESTAMP", "xs": "+32767-01-01 00:00:00", "isnull": false, "py_error": "year 32767 is out of range"}
+{"index": 63, "text": "32767", "type": "TIMESTAMP_NTZ", "xs": "+32767-01-01 00:00:00", "isnull": false, "py_error": "year 32767 is out of range"}
+{"index": 63, "text": "32767", "type": "STRING", "xs": "32767", "isnull": false, "py": "32767"}
+{"index": 63, "text": "32767", "type": "BINARY", "xs": "32767", "isnull": false, "py": "b'32767'"}
+{"index": 63, "text": "32767", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 63, "text": "32767", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 63, "text": "32767", "type": "VARIANT", "xs": "32767", "isnull": false, "py": "32767"}
+{"index": 63, "text": "32767", "type": "DECIMAL(38,10)", "xs": "32767.0000000000", "isnull": false, "py": "32767.0000000000"}
+{"index": 63, "text": "32767", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 63, "text": "32767", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 64, "text": "32768", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 64, "text": "32768", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 64, "text": "32768", "type": "INT", "xs": "32768", "isnull": false, "py": "32768"}
+{"index": 64, "text": "32768", "type": "BIGINT", "xs": "32768", "isnull": false, "py": "32768"}
+{"index": 64, "text": "32768", "type": "FLOAT", "xs": "32768.0", "isnull": false, "py": "32768.0"}
+{"index": 64, "text": "32768", "type": "DOUBLE", "xs": "32768.0", "isnull": false, "py": "32768.0"}
+{"index": 64, "text": "32768", "type": "DECIMAL(10,2)", "xs": "32768.00", "isnull": false, "py": "32768.00"}
+{"index": 64, "text": "32768", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 64, "text": "32768", "type": "DATE", "xs": "+32768-01-01", "isnull": false, "py_error": "year 32768 is out of range"}
+{"index": 64, "text": "32768", "type": "TIMESTAMP", "xs": "+32768-01-01 00:00:00", "isnull": false, "py_error": "year 32768 is out of range"}
+{"index": 64, "text": "32768", "type": "TIMESTAMP_NTZ", "xs": "+32768-01-01 00:00:00", "isnull": false, "py_error": "year 32768 is out of range"}
+{"index": 64, "text": "32768", "type": "STRING", "xs": "32768", "isnull": false, "py": "32768"}
+{"index": 64, "text": "32768", "type": "BINARY", "xs": "32768", "isnull": false, "py": "b'32768'"}
+{"index": 64, "text": "32768", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 64, "text": "32768", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 64, "text": "32768", "type": "VARIANT", "xs": "32768", "isnull": false, "py": "32768"}
+{"index": 64, "text": "32768", "type": "DECIMAL(38,10)", "xs": "32768.0000000000", "isnull": false, "py": "32768.0000000000"}
+{"index": 64, "text": "32768", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 64, "text": "32768", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}
+{"index": 65, "text": "40000", "type": "TINYINT", "xs": null, "isnull": true, "py": null}
+{"index": 65, "text": "40000", "type": "SMALLINT", "xs": null, "isnull": true, "py": null}
+{"index": 65, "text": "40000", "type": "INT", "xs": "40000", "isnull": false, "py": "40000"}
+{"index": 65, "text": "40000", "type": "BIGINT", "xs": "40000", "isnull": false, "py": "40000"}
+{"index": 65, "text": "40000", "type": "FLOAT", "xs": "40000.0", "isnull": false, "py": "40000.0"}
+{"index": 65, "text": "40000", "type": "DOUBLE", "xs": "40000.0", "isnull": false, "py": "40000.0"}
+{"index": 65, "text": "40000", "type": "DECIMAL(10,2)", "xs": "40000.00", "isnull": false, "py": "40000.00"}
+{"index": 65, "text": "40000", "type": "BOOLEAN", "xs": null, "isnull": true, "py": null}
+{"index": 65, "text": "40000", "type": "DATE", "xs": "+40000-01-01", "isnull": false, "py_error": "year 40000 is out of range"}
+{"index": 65, "text": "40000", "type": "TIMESTAMP", "xs": "+40000-01-01 00:00:00", "isnull": false, "py_error": "year 40000 is out of range"}
+{"index": 65, "text": "40000", "type": "TIMESTAMP_NTZ", "xs": "+40000-01-01 00:00:00", "isnull": false, "py_error": "year 40000 is out of range"}
+{"index": 65, "text": "40000", "type": "STRING", "xs": "40000", "isnull": false, "py": "40000"}
+{"index": 65, "text": "40000", "type": "BINARY", "xs": "40000", "isnull": false, "py": "b'40000'"}
+{"index": 65, "text": "40000", "type": "INTERVAL YEAR TO MONTH", "xs": null, "isnull": true, "py_error": "[NOT_IMPLEMENTED] YearMonthIntervalType.fromInternal is not implemented."}
+{"index": 65, "text": "40000", "type": "INTERVAL DAY TO SECOND", "xs": null, "isnull": true, "py": null}
+{"index": 65, "text": "40000", "type": "VARIANT", "xs": "40000", "isnull": false, "py": "40000"}
+{"index": 65, "text": "40000", "type": "DECIMAL(38,10)", "xs": "40000.0000000000", "isnull": false, "py": "40000.0000000000"}
+{"index": 65, "text": "40000", "type": "DECIMAL(3,0)", "xs": null, "isnull": true, "py": null}
+{"index": 65, "text": "40000", "type": "DECIMAL(4,4)", "xs": null, "isnull": true, "py": null}

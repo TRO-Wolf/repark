@@ -850,6 +850,12 @@ impl PyColumn {
         })
     }
 
+    pub fn csv_field(&self, type_spec: &str) -> PyResult<Self> {
+        fenced!("Column.csv_field", {
+            expr_build::csv_field_column(self, type_spec)
+        })
+    }
+
     // ---- aggregate functions --------------------------------------------------------------------
 
     /// The column schema name supplies facade aggregate aliases such as `sum(x)`.

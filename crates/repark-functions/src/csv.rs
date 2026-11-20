@@ -10,6 +10,7 @@ use datafusion::common::{Result, ScalarValue, plan_err};
 use crate::datetime::localize_wall_micros_in_zone;
 use crate::java_datetime::{ParsedPattern, compile_java_pattern, parse_wall_text};
 
+pub mod field;
 pub(crate) mod fold;
 pub(crate) mod from_csv;
 pub(crate) mod schema_of_csv;
@@ -500,5 +501,9 @@ pub(crate) fn spark_type_name(data_type: &DataType) -> String {
 }
 
 pub(crate) fn functions() -> Vec<Arc<datafusion::logical_expr::ScalarUDF>> {
-    vec![from_csv::from_csv_udf(), schema_of_csv::schema_of_csv_udf()]
+    vec![
+        from_csv::from_csv_udf(),
+        schema_of_csv::schema_of_csv_udf(),
+        field::csv_field_udf(),
+    ]
 }

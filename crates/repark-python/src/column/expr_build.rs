@@ -631,6 +631,48 @@ pub(super) fn cast_to(expr: Expr, spec: &str, try_cast: bool) -> Result<Expr, St
     })
 }
 
+const CSV_INTERVAL_WORDS: [&str; 7] = ["year", "month", "day", "hour", "minute", "second", "to"];
+
+fn csv_refused_type_name(spec: &str) -> Option<String> {
+    if spec == "variant" {
+        return Some("VARIANT".to_string());
+    }
+    let mut rest = spec.strip_prefix("interval")?;
+    let mut name = String::from("INTERVAL");
+    while !rest.is_empty() {
+        let Some(word) = CSV_INTERVAL_WORDS
+            .iter()
+            .find(|word| rest.starts_with(**word))
+        else {
+            return Some(spec.to_ascii_uppercase());
+        };
+        name.push(' ');
+        name.push_str(&word.to_ascii_uppercase());
+        rest = &rest[word.len()..];
+    }
+    Some(name)
+}
+
+pub(super) fn csv_field_column(column: &PyColumn, type_spec: &str) -> PyResult<PyColumn> {
+    let spec = type_spec
+        .split_whitespace()
+        .collect::<String>()
+        .to_ascii_lowercase();
+    if let Some(name) = csv_refused_type_name(&spec) {
+        return Err(crate::AnalysisException::new_err(
+            crate::exceptions::mask_user_visible(
+                repark_functions::csv::field::unsupported_csv_field_text(&name),
+            ),
+        ));
+    }
+    let target = parse_data_type(&spec).map_err(|error| {
+        crate::AnalysisException::new_err(crate::exceptions::mask_user_visible(error))
+    })?;
+    let expr = repark_functions::csv::field::csv_field_expr(column.expr(), &target)
+        .map_err(crate::datafusion_to_py_err)?;
+    Ok(PyColumn::combine(expr, [column], 1))
+}
+
 /// Parse a `decimal(precision,scale)` type string into an Arrow `Decimal128`.
 fn parse_decimal_type(spec: &str) -> Result<DataType, String> {
     let inner = spec

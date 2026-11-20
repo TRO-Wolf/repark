@@ -1,0 +1,20 @@
+perf-cast-1,15732974391,,instructions:u,1727424462,100.00,3.30,insn per cycle
+perf-cast-1,4769194805,,cycles:u,1727424462,100.00,,
+perf-cast-2,15732158148,,instructions:u,1653729448,100.00,3.24,insn per cycle
+perf-cast-2,4855448525,,cycles:u,1653729448,100.00,,
+perf-cast-3,15732562685,,instructions:u,1728309821,100.00,3.24,insn per cycle
+perf-cast-3,4848455444,,cycles:u,1728309821,100.00,,
+perf-cast-4,15732254723,,instructions:u,1703091321,100.00,3.29,insn per cycle
+perf-cast-4,4778077000,,cycles:u,1703091321,100.00,,
+perf-cast-5,15732641105,,instructions:u,1707859829,100.00,3.27,insn per cycle
+perf-cast-5,4810471675,,cycles:u,1707859829,100.00,,
+perf-kernel-1,16193605666,,instructions:u,1763311647,100.00,3.22,insn per cycle
+perf-kernel-1,5022352958,,cycles:u,1763311647,100.00,,
+perf-kernel-2,16191806335,,instructions:u,1690218976,100.00,3.22,insn per cycle
+perf-kernel-2,5027853358,,cycles:u,1690218976,100.00,,
+perf-kernel-3,16191287085,,instructions:u,1720926375,100.00,3.25,insn per cycle
+perf-kernel-3,4982984760,,cycles:u,1720926375,100.00,,
+perf-kernel-4,16191968941,,instructions:u,1831949325,100.00,3.25,insn per cycle
+perf-kernel-4,4981342608,,cycles:u,1831949325,100.00,,
+perf-kernel-5,16192353986,,instructions:u,1728155609,100.00,3.29,insn per cycle
+perf-kernel-5,4924431188,,cycles:u,1728155609,100.00,,
