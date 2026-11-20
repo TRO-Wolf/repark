@@ -1,4 +1,4 @@
-# CSV-STRING-FIELD-TEXT-1 — the domain table, measured (step 0, 2026-11-20)
+# CSV-STRING-FIELD-TEXT-1 — the domain table, measured (step 0, 2026-11-20; revised the same day)
 
 **Builds.** Main `6d3739ab`, package `S/ddu-work/pkg-rp1base-8bc26cba` (its product tree equals `8bc26cba`'s).
 Unit 1's head (PR #1373), package `S/ddu-work/pkg-rp1d-acd27d6e`. Spark 4.1.2 live, the Iceberg 1.11.0 runtime jar,
@@ -211,5 +211,80 @@ modes (1,696 cells):
 columns ([inventory.md](inventory.md) §3), so a `STRING` field keeps the typed scan unless its own text has a
 timestamp shape, and `2024-01-15 10:30:00` round-trips through the cast. The bar's delta 1 records the shapes where
 it still shows (ISO `T` text).
+
+## 6. Revision cells (2026-11-20; the critic's items) [M]
+
+`revision.py` on both packages and Spark 4.1.2 live, UTC unless named; main and unit 1 are byte-equal in all 5,156
+records. The kernel's per-type oracle and the non-UTC zone cells are in [oracle.md](oracle.md).
+
+### 6.1 The scan condition: a user schema overrides `inferSchema=true`
+
+| cell (header on, `007,abc`) | Spark | unit 1 | the all-text scan, the facade's casts |
+|---|---|---|---|
+| `x STRING, k STRING` + `inferSchema=true` | (`007`, `abc`) | (`7`, `abc`) | EQUAL |
+| `x INT, k INT` + `inferSchema=true` | (7, NULL) | RAISE `Cannot cast string 'abc'` | RAISE (the facade's `CAST`; the kernel answers NULL) |
+
+Spark ignores `inferSchema` when a schema is given. **The all-text scan applies whenever a user schema is given, or
+whenever `inferSchema` is not true.**
+
+### 6.2 Pairing a user schema with the header (Q8)
+
+Spark pairs by position (`enforceSchema=true`, its default); the facade pairs by name when the names match
+(`reader.py:722-760`, unit 1 `:709-747`), the same sites seat A rewrites. Header on unless named; both ANSI modes
+answer alike (18 cells).
+
+| cell | header | schema | Spark | unit 1 | seat A as sketched (all-text, name pairing) |
+|---|---|---|---|---|---|
+| `swap_int` | `k,x` over `abc,007` | `x INT, k STRING` | (NULL, `007`) | (7, `abc`) | (7, `abc`) WRONG |
+| `swap_string` | `k,x` | `x STRING, k STRING` | (`abc`, `007`) | (`7`, `abc`) | (`007`, `abc`) WRONG |
+| `part_int` | `x,z` over `007,abc` | `x INT, k STRING` | (7, `abc`) | (7, NULL) | (7, NULL) WRONG |
+| `part_string` | `x,z` | `x STRING, k STRING` | (`007`, `abc`) | (`7`, NULL) | (`007`, NULL) WRONG |
+| `emptyname_schema` | `,k` over `007,k1` | `x STRING, k STRING` | (`007`, `k1`) | (NULL, `k1`) | (NULL, `k1`) WRONG |
+| `case_string` | `X,K` | `x STRING, k STRING` | (`007`, `abc`) | (`7`, `abc`) | EQUAL |
+| `plain_string` | `x,k` | `x STRING, k STRING` | (`007`, `abc`) | (`7`, `abc`) | EQUAL |
+| `swap_none`, `part_none` | `k,x`; `x,z` | none | the header's names, the text | the text cast (`7`) | EQUAL |
+| `swap_off` | header off | `x STRING, k STRING` | positional | EQUAL | EQUAL |
+
+Silent and stored: 9 WRONG cells (four shapes in both modes, and `emptyname_schema`) that seat A keeps unless it pairs by position. A two-file read whose headers
+differ in order (§6.3) is the same class.
+
+### 6.3 Seat A's scan, emulated as `schema_infer_max_records(0)`
+
+**The emulation.** Every existing local path goes through its `file://` URL, so `read_csv_path` skips the local
+first-record pre-scan, DataFusion names the columns from the header row as `schema_infer_max_records(0)` does, and
+the facade re-reads every column as Utf8 (`utf8_columns` naming all of them). For one file this is seat A's scan. It
+still infers and merges over several files, so the glob and two-file cells cannot reach the first-object rule; they
+are stated by reading (inventory rows 21-22).
+
+| cell | Spark | unit 1 | seat A's scan |
+|---|---|---|---|
+| `file://` URL, `x STRING, k STRING` / no schema | `007` | `7` | EQUAL / EQUAL |
+| `compression=gzip`, `.csv.gz` / no schema | `007` | `7` | EQUAL / EQUAL |
+| `sep=';'` / no schema | `007` | `7` | EQUAL / EQUAL |
+| a UTF-8 BOM before the header / no schema | `007` | `7` | EQUAL / EQUAL |
+| an empty header name `,k`, no schema | `_c0`, `007` | `''`, `7` | `''`, `7`: **WRONG** (the name; Q2's pin) |
+| an empty header name, `x STRING, k STRING` | (`007`, `k1`) | (NULL, `k1`) | (NULL, `k1`): **WRONG** (Q8) |
+| untrimmed names ` x , k ` / with a schema | ` x `, ` k `, `007` | RAISE `No field named x` | RAISE, as unit 1; the cause is not isolated: **a pin for the build** |
+| a glob `glob/*.csv` (same header; `007`, `1.50`) | both rows' text | RAISE `Fail to merge schema` (Int64 and Float64) | RAISE in the emulation; [R] seat A reads one object's header and Utf8 for all, so no merge |
+| two files, headers `x,k` (1 row) and `k,x` (2 rows), no schema | names `k, x` (the larger file), values positional | RAISE `Fail to merge schema` | RAISE in the emulation; [R] seat A names from the first-listed object (readdir order: here the larger file too; S3: lexicographic, `a.csv`) |
+| the same, `x STRING, k STRING` | positional: (`007`, `k1`), (`k2`, `1e3`), (`k3`, `TRUE`) | RAISE | [R] by name, the facade pairs `x` with each file's second column: WRONG; by position (Q8): Spark's |
+
+**S3 [R only].** No S3 or external call was made. Seat A's option reaches S3 unchanged (inventory row 22): the
+first listed object's header, decompressed, every column Utf8. No cell measures it: **a gap for the build's
+verifier (moto cells for the scan, a glob and a multi-file prefix).**
+
+### 6.4 The tokenizer, `emptyValue` and `USING csv`
+
+| cell (header on, `x STRING, k STRING`) | Spark | unit 1 | the all-text scan |
+|---|---|---|---|
+| `"a\"b"` | `a"b` (Spark's default `escape` is `\`) | `a\b"` | `a\b"` |
+| `"a""b"` | `"a""b"` raw | `a"b` | `a"b` |
+| `""` (quoted empty) | NULL | NULL | NULL |
+| `""` with `emptyValue='E'` | `E` | NULL: the option is dropped | NULL |
+| `""` with `nullValue='NA'` | `''` | NULL | NULL |
+| `CREATE OR REPLACE TEMPORARY VIEW … USING csv OPTIONS (path …)` | `_c0, _c1` text rows | RAISE at parse | — |
+| the same with a column list `(x STRING, k STRING)` and `header 'true'` | (`007`, `abc`) | RAISE at parse | — |
+
+None of these moves with seat A; they are card candidates (sketch §7).
 
 Up: [map.md](map.md).

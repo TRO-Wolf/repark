@@ -7,12 +7,15 @@ rewrites `1.50`, `1e3` and `TRUE`. N1 folds in (the owner's "go with recommendat
 
 **Step 0 (2026-11-20, Claude Opus 5.5 xhigh; no product code).** 7,704 cells per build, identical on main `6d3739ab`
 and unit 1's head `acd27d6e`: 1,908 WRONG, all silent, and 2,670 RAISE where Spark answers. Seat A: one all-text scan
-in Rust and a Rust Spark-CSV field kernel; split into two units.
+in Rust, a Rust Spark-CSV field kernel and positional pairing; split into two units. Revised the same day after the
+critic's GAPS (268 cells re-measured, 0 disagreements): 5,156 more records, the oracle, eight questions.
 
 - [sketch.md](sketch.md) — Spark's rule, the reach, the two seats, cost estimates, the split and seven questions.
 - [domain-table.md](domain-table.md) — the cells by read, door, type, shape, ANSI mode and the label path, and the
   seat emulations.
 - [inventory.md](inventory.md) — every site that decides or casts a CSV column's type, with file:line.
+- [oracle.md](oracle.md) — Spark's answer per declared type (16 types × 74 texts) and in three non-UTC zones: the
+  kernel unit's test oracle.
 - [evidence/](evidence/map.md) — the probes and the raw cells.
 
 Up: [../map.md](../map.md).

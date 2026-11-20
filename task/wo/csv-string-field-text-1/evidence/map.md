@@ -18,5 +18,9 @@
   `seat_emu.py repark <wh> <data> <out> text_cast|text_try:<ansi>` on unit 1's package, classified with
   `classify.py <raw> <out> unit1 text_cast text_try`. `kernel.py gen`, then per engine and mode. `castrule.py`.
   `cost.py gen`, then `cost.py <case> base|seat <label> <data> <out>`.
+- **Revision (2026-11-20):** `revision.py gen _ <data> _ _`, then `revision.py <spark|repark> <wh> <data> <out>
+  <part>` for `oracle:true`, `oracle:false`, `zones`, `topo`, `pair:true`, `pair:false`, `extra`;
+  `rev_tables.py <raw>`. The cost series: `cost.py` per case and variant, each sample under `flock -x <measure lock>
+  nice -n 10 taskset -c 32-47`, five rounds, then `cost_table.py <samples>`.
 
 Up: [../map.md](../map.md).

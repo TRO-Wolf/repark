@@ -12,5 +12,10 @@
 - `castrule.py` — `CAST` and `TRY_CAST` over 11 texts and 5 types in SQL, both engines and modes.
 - `cost.py` — the cost cases (`k0_count`, `k0_hour`, `is_count`, `is_sum`, `is_none`, `is_infer`) for the base
   reader and the seat's emulation, a warm-up and five timed repetitions in one process.
+- `revision.py` — the revision's cells: `oracle` (16 types × 74 texts), `zones` (three non-UTC zones, as text and
+  epoch seconds), `topo` (seat A's scan emulated through the `file://` route), `pair` (schema-to-header pairing),
+  `extra` (the scan condition, the tokenizer, `emptyValue`, `USING csv`).
+- `rev_tables.py` — the revision's tables from `revision.py`'s cells (oracle, zones, topology, pairing, extra).
+- `cost_table.py` — the cost series' medians per case, build and variant.
 
 Up: [../map.md](../map.md).

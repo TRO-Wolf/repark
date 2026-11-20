@@ -1,4 +1,4 @@
-# CSV-STRING-FIELD-TEXT-1 — the insertion inventory (the owner's rule of 2026-11-09)
+# CSV-STRING-FIELD-TEXT-1 — the insertion inventory (the owner's rule of 2026-11-09; revised 2026-11-20)
 
 Every place a CSV read's column types are decided or cast. Main is `6d3739ab` (its product tree equals `8bc26cba`'s;
 `git diff --name-only 8bc26cba 6d3739ab -- crates python/repark/src` is empty). Unit 1 is PR #1373 at `acd27d6e`
@@ -25,6 +25,17 @@ Every place a CSV read's column types are decided or cast. Main is `6d3739ab` (i
 | 14 | `_apply_reader_schema_semantics`, no schema | `reader.py:786-788` | `:773-775` | **The defect's second cast.** `inferSchema` false or unset: `CAST(<inferred column> AS STRING)` over the typed scan, so the default read answers `7`, `1.5`, `1000.0`, `true`. |
 | 15 | `_cast_inferred_naive_timestamps` | `reader_support.py:531-551` (cast `:544`) | the same | `inferSchema=true`: zone-less timestamps through a string to `TIMESTAMP`. |
 | 16 | the engine cast every facade cast builds | `crates/repark-python/src/column/display.rs:274-287` (`engine_cast` → `cast_to`) | the same | `CAST`; `TRY_CAST` exists (`column/mod.rs:840`) and answers NULL on failure, by the Spark `CAST` rule. |
+
+**Added in the revision (2026-11-20, the critic's items):**
+
+| # | site | main | unit 1 | what it decides |
+|---|---|---|---|---|
+| 17 | `smartCsv` (a RePark extension, not a Spark door) | `reader.py:120-275` → `python/repark/src/repark/spark/_csv_smart.py:774-875` | the same | Parses rows in Python, `createDataFrame(data_rows, schema=string_schema)` (`:858`), then SQL `CAST(CASE WHEN … = '' THEN NULL ELSE … END AS <rung>)` (`:870`); the rung tokens come from `crates/repark-spark/src/type_table.rs:554` (`csv_sql_cast_token`) and `:564` (`csv_rung_type`) through `crates/repark-python/src/type_bridge.rs:383-412`. **Untouched by either seat.** |
+| 18 | `CREATE [OR REPLACE] TEMPORARY VIEW … USING csv OPTIONS (path …)`, with and without a column list | no route | no route | **[M]** raises at parse on both builds: `could not parse CREATE TEMPORARY VIEW: expected AS with the view query`. Spark answers (`007`). Joins Q6's card. |
+| 19 | the option gate `_reject_csv_json_parse_options` | `reader_support.py:584-618`, denylist `:59-80` | `:601-635` | Refuses `nanValue`, `positiveInf`, `negativeInf`, `dateFormat`, `timestampFormat`, `locale`, `samplingRatio`, `enforceSchema`, `columnNameOfCorruptRecord`, `ignoreLeading/TrailingWhiteSpace` and the two non-default modes. **`emptyValue` is not on it, and `_native_options_for` (`reader.py:662-669`; keys `reader_support.py:118-132`) drops it: silently ignored [M].** |
+| 20 | the local pre-scan's naming | `read_options.rs:353-370`, `split_csv_header_line` `:378-401` | the same | Trims header names, maps an empty name to `_c<i>`, and hard-codes `"` as the quote. `schema_infer_max_records(0)` does neither: arrow's header row keeps the names untrimmed and an empty name `''` [M, §6 of the domain table]. |
+| 21 | the listing a multi-file read infers from | `datafusion-catalog-listing-54.1.0/src/options.rs:279-310`; `object_store-0.13.2/src/local.rs:717-722`; `aws/mod.rs:286` | — | Zero-byte files are dropped and the list is not sorted. The local store walks with `WalkDir` and no `sort_by`, so readdir order; S3's `ListObjectsV2` returns keys in lexicographic order [R]. With `schema_infer_max_records(0)`, `infer_schema` stops after the first object (`file_format.rs:401-404`), so **the first-listed file alone names the columns**. Spark takes the header from the largest file [M, §6]. |
+| 22 | S3, read through seat A's scan [R only; no S3 or external call was made] | `read_options.rs:217` `resolve_s3_prefix_for_read` (`object_store_s3.rs:224-240`) → `context.read_csv` | the same | A key prefix ending `/` is re-encoded; DataFusion resolves the registered S3 store, lists (row 21) and streams the first object through `read_to_delimited_chunks`, decompressing as the local path does. `csv_utf8_schema_from_path` returns `None` for any `://` path, so today an S3 read infers and the named-column re-read is the only all-text route. **A gap for the build's verifier: S3 (moto) cells for the scan.** |
 
 Nothing else types a CSV column: `git grep -n "read_csv"` reaches only `read_options.rs:212`, `session.rs:783-791`
 (core), `repark-python/src/session.rs:237-246`, `session_core.py:903-911` (pass-throughs), the two reader files
@@ -62,12 +73,17 @@ residual (CSV-GLOB-LITERAL-RESIDUAL-1) is the one spelling that still takes the 
 
 ## 4. Where a seat can sit
 
-- **Row 2/6 (Rust, the scan).** An all-Utf8 scan for every read that does not infer: either the existing first-record
-  pre-scan, which is local only, or DataFusion's own `schema_infer_max_records(0)` (row 6), which reads the header
-  alone on every object store. Either removes the inference and unit 0's second read.
-- **Rows 12, 14 (the casts).** The per-type text rule must replace `CAST` here: a cast from text by the declared type
-  with Spark's NULL on misfit (row 16's `TRY_CAST` is close but follows the `CAST` rule: it trims spaces, and
-  truncates `1.5` to `1` for `INT` under ANSI off).
-- **Untouched:** rows 13 and 15 (`inferSchema=true`), the JSON reader, and the write paths.
+- **Row 2/6 (Rust, the scan).** An all-Utf8 scan **whenever a user schema is given, or whenever `inferSchema` is not
+  true** (a schema overrides `inferSchema=true` on Spark: the domain table §6.1). Either the existing first-record
+  pre-scan, which is local only, or DataFusion's own `schema_infer_max_records(0)` (row 6), which reads the first
+  listed object's header on every store (rows 21-22). Either removes the inference and unit 0's second read.
+- **Rows 12, 14 (the casts).** The per-type text rule must replace `CAST` here: a parse from text by the declared
+  type with Spark's NULL on misfit. Row 16's `TRY_CAST` is close but follows RePark's `CAST` rule, not the CSV
+  converters: it misses 200 of the oracle's 1,184 cells ([oracle.md](oracle.md); for example `BOOLEAN` over `t`,
+  `DECIMAL` over `1e3`, `DOUBLE` over ` 7 `, and a `TIMESTAMP_NTZ` gap moved through the session zone).
+- **The pairing (row 12's sites).** Spark pairs a CSV schema by position (`enforceSchema=true`); the facade pairs by
+  name, a branch the JSON reader shares, so a positional rule must be CSV-only (sketch Q8).
+- **Untouched:** rows 13 and 15 (`inferSchema=true` with no schema), row 17 (`smartCsv`), the JSON reader, and the
+  write paths.
 
 Up: [map.md](map.md).
