@@ -25,6 +25,9 @@ proposal ([sketch.md](sketch.md) Q1).
   sort-merge `AsOfJoinExec` through `StackExtensionPlanner`. One unit under the one-round cap either way;
   [sketch.md](sketch.md) §5 to §6.
 - **Side findings, carded separately if the owner wants them:** a correlated scalar subquery with a non-equality
-  predicate fails in DataFusion's `scalar_subquery_to_join` with a schema error (Spark answers); `df.select([cols])`
-  raises `PySparkTypeError` (PySpark accepts a list); `l ASOF JOIN r ON …` is a plain inner join with alias `ASOF` on
+  predicate fails in DataFusion's `scalar_subquery_to_join` with a schema error (Spark answers); `select` (including
+  string lists), `groupBy` and `orderBy` refuse a list with
+  `PySparkTypeError` (PySpark accepts a list); the subquery refuses in every non-equality shape measured; proposed
+  severities S3 for each, and S2 for the list finding if the owner chooses; `l ASOF JOIN r ON …` is a plain inner join
+  with alias `ASOF` on
   Spark and a parse error on RePark.

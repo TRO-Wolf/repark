@@ -20,6 +20,7 @@
 - **Cost:** `measure.sh exclusive nice -n 10 taskset -c 32-47 timeout 900 [spark_slot.sh] <python> cost.py …`, one
   case per command (Spark `local[16]`, 16 GB driver). A first Spark case at 2M × 2M with keys was withdrawn before it
   ran, once the plan showed it quadratic; the 2M no-key W2 case ran twice (both kept).
-- **Not measured:** Spark's grid with ANSI off; seat estimates are not samples.
+- **Ran later:** the critic ran Spark's grid with ANSI off on 2026-11-20 (2,268 records, `raw/critic-spark-false-G-*`);
+  seat estimates are not samples.
 
 Up: [../map.md](../map.md).

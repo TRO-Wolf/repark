@@ -11,4 +11,27 @@
 - `cost.jsonl.gz` — the cost samples: engine, surface, rows a side, keys, the seconds per repeat, peak RSS, the
   `count` and `sum(rid)` result (`probes/cost.py`).
 
+- `critic-spark-false-G-BIGINT.jsonl.gz` — the grid with ANSI off, type BIGINT (324 records), Spark, from the critic's
+  run of 2026-11-20; the same record format as the files above.
+- `critic-spark-false-G-DATE.jsonl.gz` — the grid with ANSI off, type DATE (324 records), Spark, from the critic's run
+  of 2026-11-20; the same record format as the files above.
+- `critic-spark-false-G-DECIMAL102.jsonl.gz` — the grid with ANSI off, type DECIMAL102 (324 records), Spark, from the
+  critic's run of 2026-11-20; the same record format as the files above.
+- `critic-spark-false-G-DOUBLE.jsonl.gz` — the grid with ANSI off, type DOUBLE (324 records), Spark, from the critic's
+  run of 2026-11-20; the same record format as the files above.
+- `critic-spark-false-G-INT.jsonl.gz` — the grid with ANSI off, type INT (324 records), Spark, from the critic's run
+  of 2026-11-20; the same record format as the files above.
+- `critic-spark-false-G-TIMESTAMP.jsonl.gz` — the grid with ANSI off, type TIMESTAMP (324 records), Spark, from the
+  critic's run of 2026-11-20; the same record format as the files above.
+- `critic-spark-false-G-TIMESTAMP_NTZ.jsonl.gz` — the grid with ANSI off, type TIMESTAMP_NTZ (324 records), Spark,
+  from the critic's run of 2026-11-20; the same record format as the files above.
+- `critic-spark-false-off.jsonl.gz` — Spark, ANSI off, groups `E`, `M`, `O`, `N`, `Q9` and `S`, from the critic's run
+  of 2026-11-20.
+- `critic-spark-true-off.jsonl.gz` — Spark, ANSI on, groups `M`, `O`, `N`, `Q9` and `S`, from the critic's run of
+  2026-11-20.
+- `critic-main-false-off.jsonl.gz` — main, ANSI off, groups `M`, `O`, `N`, `Q9` and `S`, from the critic's run of
+  2026-11-20.
+- `critic-main-true-off.jsonl.gz` — main, ANSI on, groups `M`, `O`, `N`, `Q9` and `S`, from the critic's run of
+  2026-11-20.
+
 Up: [../map.md](../map.md).

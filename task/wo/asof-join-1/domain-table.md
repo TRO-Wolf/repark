@@ -1,7 +1,8 @@
 # ASOF-JOIN-1 — domain table
 
 Every cell ran on Spark 4.1.2 and on main `9a48932f` (product of `a4d8857f`), session zone UTC, in both ANSI modes except
-Spark's grid (`G`), which ran with ANSI on only; main ran every group in both modes, and a main cell with no Spark
+Spark's grid (`G`), which the builder ran with ANSI on only and the critic ran with ANSI off on 2026-11-20 (2,268
+records); main ran every group in both modes, and a main cell with no Spark
 answer has no verdict ([evidence/](evidence/map.md) has the provenance). Spark's answer is `left._joinAsOf(...)` (surface `D`), the
 oracle for every verdict. Main's cells are three surfaces: the same direct call (`main-D`), and the two workarounds
 a user can write today, W1 (a range join plus `row_number`) and W2 (a union plus a window fill)
@@ -34,7 +35,19 @@ availability; `P` `merge_asof` beside the `_joinAsOf` call it lowers to (`PD`).
 | main-DataFrame | 2 | RAISE 2 |
 | **all main cells** | **3523** | the direct call 1280, the workarounds 2088, `merge_asof` 135, SQL and helpers 20 |
 
-Spark records 3868 and main records 5692 (every surface, both modes, `EXPLAIN` included). Groups by main cells: C 26, E 138, G 2268, M 288, N 72, O 144, P 135, S 20, T 432.
+All main cells per mode, with the critic's ANSI-off grid (2026-11-20; 5,791 classified main cells = 3,523 + 3 × 756):
+
+| pair | ANSI on | ANSI off |
+|---|---|---|
+| main-D | 1018: MISSING 1018 | 1018: MISSING 1018 |
+| main-W1 | 936: EQUAL 262, TIE 628, WRONG 28, RAISE 18 | 936: EQUAL 266, TIE 628, WRONG 28, RAISE 14 |
+| main-W2 | 864: EQUAL 520, TIE 324, WRONG 16, RAISE 4 | 864: EQUAL 520, TIE 324, WRONG 20 |
+| main-P | MISSING 68 | MISSING 67 |
+| main-SQL / F.expr / F / DataFrame | EQUAL 2, RAISE 8 | EQUAL 2, RAISE 8 |
+
+Spark records 3868 (3,655 unique; `spark-true-EM-` holds its 213 `E` and `M` records twice) and main records 5692
+(every surface, both modes, `EXPLAIN` included). Groups by main cells: C 26, E 138, G 2268, M 288, N 72, O 144, P 135,
+S 20, T 432.
 
 Spark's `EXPLAIN` for each direction, with and without keys: [evidence/raw/explain-spark.txt](evidence/raw/explain-spark.txt);
 main's W1 and W2 plans: [evidence/raw/explain-main.txt](evidence/raw/explain-main.txt).
@@ -54,6 +67,11 @@ main's W1 and W2 plans: [evidence/raw/explain-main.txt](evidence/raw/explain-mai
 | G | true | main-W2 | 476 | 280 | 0 | 0 | 0 | 0 | 0 |
 | G | true | spark-W1 | 436 | 320 | 0 | 0 | 0 | 0 | 0 |
 | G | true | spark-W2 | 476 | 280 | 0 | 0 | 0 | 0 | 0 |
+| G | false | main-D | 0 | 0 | 0 | 0 | 0 | 0 | 756 |
+| G | false | main-W1 | 210 | 546 | 0 | 0 | 0 | 0 | 0 |
+| G | false | main-W2 | 476 | 280 | 0 | 0 | 0 | 0 | 0 |
+| G | false | spark-W1 | 439 | 317 | 0 | 0 | 0 | 0 | 0 |
+| G | false | spark-W2 | 476 | 280 | 0 | 0 | 0 | 0 | 0 |
 | M | false | main-D | 0 | 0 | 0 | 0 | 0 | 0 | 72 |
 | M | false | main-W1 | 12 | 30 | 16 | 0 | 0 | 14 | 0 |
 | M | false | spark-W1 | 68 | 0 | 4 | 0 | 0 | 0 | 0 |
@@ -103,7 +121,7 @@ main's W1 and W2 plans: [evidence/raw/explain-main.txt](evidence/raw/explain-mai
 | T | true | spark-W1 | 72 | 0 | 0 | 0 | 0 | 0 | 0 |
 | T | true | spark-W2 | 28 | 44 | 0 | 0 | 0 | 0 | 0 |
 
-### Grid: main's workarounds against Spark's _joinAsOf, by type and direction (both modes)
+### Grid: main's workarounds against Spark's _joinAsOf, by type and direction (ANSI on)
 
 | type | direction | pair | EQUAL | TIE | WRONG | WRONG-NAMES | WRONG-TYPE | RAISE | MISSING |
 |---|---|---|---|---|---|---|---|---|---|
@@ -333,6 +351,7 @@ main's W1 and W2 plans: [evidence/raw/explain-main.txt](evidence/raw/explain-mai
 | TIMESTAMP>DATE nearest exact=True tol=None | 14 rows timestamp,date | 14 rows timestamp,date |
 | TIMESTAMP>TIMESTAMP_NTZ nearest exact=True tol=None | 14 rows timestamp,timestamp_ntz | 14 rows timestamp,timestamp_ntz |
 | TIMESTAMP_NTZ>TIMESTAMP nearest exact=True tol=None | 14 rows timestamp_ntz,timestamp | 14 rows timestamp_ntz,timestamp |
+| main-W2 (critic check 4) | M on: EQ 43, TIE 10, tie-pick-only 4, WRONG 4, RAISE 11 | M off: the same |
 
 ### Overflow at the integer bounds, on=k1, how=left
 
@@ -651,3 +670,6 @@ tie group T: picks per (order, partitioning, shuffle partitions, payload) over 2
   spark W2 nearest lid2 false {'y18': 24} by order: {'asis': ['y18'], 'reversed': ['y18'], 'rotated': ['y18']}
   spark W2 nearest lid2 true {'y18': 24} by order: {'asis': ['y18'], 'reversed': ['y18'], 'rotated': ['y18']}
 ```
+
+Main W2: a `nearest` tie goes to the earlier row in 756 of 756; at duplicate right values it takes the higher `rid` in
+1,400 cells and the lowest in 532.
