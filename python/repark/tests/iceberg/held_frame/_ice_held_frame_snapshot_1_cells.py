@@ -19,6 +19,18 @@ def rows(frame: Any) -> list[str]:
     return sorted(repr(tuple(row)) for row in frame.collect())
 
 
+def named(text: str) -> str | None:
+    found = CONDITION.search(" ".join(text.split()))
+    return found.group(1) if found else None
+
+
+def explained(frame: Any, *mode: Any) -> list[Any]:
+    buffer = io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        frame.explain(*mode)
+    return ["PRINTED", named(buffer.getvalue())]
+
+
 class Cells:
     def __init__(self, session: Any) -> None:
         self.s = session
@@ -213,6 +225,50 @@ class Cells:
         self.run_sql("TRUNCATE TABLE " + t)
         return held.count()
 
+    def insert_explain(self) -> Any:
+        t = self.make()
+        held = self.s.table(t)
+        self.insert(t)
+        return explained(held)
+
+    def drop_column_explain(self) -> Any:
+        t = self.make()
+        held = self.s.table(t)
+        self.drop_column(t)
+        return explained(held)
+
+    def drop_column_filter_explain(self) -> Any:
+        t = self.make()
+        held = self.s.table(t).filter("n > 0")
+        self.drop_column(t)
+        return explained(held)
+
+    def drop_column_explain_extended(self) -> Any:
+        t = self.make()
+        held = self.s.table(t)
+        self.drop_column(t)
+        return explained(held, True)
+
+    def recreate_explain(self) -> Any:
+        t = self.make()
+        held = self.s.table(t)
+        self.recreate(t)
+        return explained(held)
+
+    def dropped_table_explain(self) -> Any:
+        t = self.make()
+        held = self.s.table(t)
+        self.run_sql("DROP TABLE " + t)
+        return explained(held)
+
+    def dfview_drop_column_sql_explain(self) -> Any:
+        t = self.make()
+        view = "hv" + str(self.counter)
+        self.s.table(t).createOrReplaceTempView(view)
+        self.drop_column(t)
+        found = self.s.sql("EXPLAIN SELECT * FROM " + view).collect()
+        return ["ROWS", named(" ".join(str(value) for row in found for value in row))]
+
     def run(self) -> dict[str, Any]:
         cells: dict[str, Callable[[], Any]] = {
             "insert_collect": self.insert_collect,
@@ -238,6 +294,13 @@ class Cells:
             "version_as_of_pinned": self.version_as_of_pinned,
             "join_with_fresh": self.join_with_fresh,
             "truncate_count": self.truncate_count,
+            "insert_explain": self.insert_explain,
+            "drop_column_explain": self.drop_column_explain,
+            "drop_column_filter_explain": self.drop_column_filter_explain,
+            "drop_column_explain_extended": self.drop_column_explain_extended,
+            "recreate_explain": self.recreate_explain,
+            "dropped_table_explain": self.dropped_table_explain,
+            "dfview_drop_column_sql_explain": self.dfview_drop_column_sql_explain,
         }
         found: dict[str, Any] = {}
         for key, body in cells.items():

@@ -97,7 +97,7 @@ def test_a_held_frame_read_after_a_refused_write_answers_as_before(
 ) -> None:
     found = enc_measured[key]
     assert found["refusal"] == REFUSED[key], (key, found)
-    assert found["held_after"] == found["before"] == found["fresh_after"] == SEED, (key, found)
+    assert found["held_after"] == found["before"] == found["fresh_after"] == [2, SEED], (key, found)
 
 
 @pytest.mark.parametrize("key", sorted(PAIRS))

@@ -28,15 +28,30 @@
    "(2, 'b')"
   ],
   "dfview_drop_column": "ERROR INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION",
+  "dfview_drop_column_sql_explain": [
+   "ROWS",
+   "INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION"
+  ],
   "dfview_recreate": [
    "(5, 'r')"
   ],
   "drop_column_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "drop_column_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "drop_column_explain_extended": [
+   "PRINTED",
+   "INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH"
+  ],
+  "drop_column_filter_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
   "dropped_table_count": "ERROR TABLE_OR_VIEW_NOT_FOUND",
+  "dropped_table_explain": "ERROR TABLE_OR_VIEW_NOT_FOUND",
   "insert_collect": [
    "(1, 'a')",
    "(2, 'b')",
    "(9, 'z')"
+  ],
+  "insert_explain": [
+   "PRINTED",
+   null
   ],
   "join_with_fresh": [
    "(1, 'a')",
@@ -70,6 +85,7 @@
    "(9, 'z')"
   ],
   "recreate_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+  "recreate_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
   "reorder_collect": [
    "(1, 'a')",
    "(2, 'b')",
@@ -119,15 +135,30 @@
    "(2, 'b')"
   ],
   "dfview_drop_column": "ERROR INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION",
+  "dfview_drop_column_sql_explain": [
+   "ROWS",
+   "INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION"
+  ],
   "dfview_recreate": [
    "(5, 'r')"
   ],
   "drop_column_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "drop_column_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "drop_column_explain_extended": [
+   "PRINTED",
+   "INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH"
+  ],
+  "drop_column_filter_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
   "dropped_table_count": "ERROR TABLE_OR_VIEW_NOT_FOUND",
+  "dropped_table_explain": "ERROR TABLE_OR_VIEW_NOT_FOUND",
   "insert_collect": [
    "(1, 'a')",
    "(2, 'b')",
    "(9, 'z')"
+  ],
+  "insert_explain": [
+   "PRINTED",
+   null
   ],
   "join_with_fresh": [
    "(1, 'a')",
@@ -161,6 +192,7 @@
    "(9, 'z')"
   ],
   "recreate_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+  "recreate_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
   "reorder_collect": [
    "(1, 'a')",
    "(2, 'b')",

@@ -50,13 +50,13 @@ class EncCells:
     def refused_keeps_held(self, write: Callable[[str, Any], Any]) -> dict[str, Any]:
         t = self.make(keyed=True)
         held = self.s.table(t)
-        before = rows(held)
+        before = [held.count(), rows(held.select("n", "c"))]
         refusal = answer(lambda: write(t, held))
         return {
             "before": before,
             "refusal": refusal,
-            "held_after": rows(held),
-            "fresh_after": rows(self.s.table(t)),
+            "held_after": [held.count(), rows(held.select("n", "c"))],
+            "fresh_after": [self.s.table(t).count(), rows(self.s.table(t))],
         }
 
     def refused_sql_insert(self) -> Any:

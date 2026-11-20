@@ -2477,7 +2477,7 @@ class DataFrame:
         surface_b.register_view_without_fill(self, view, rename_fields=False)
         try:
             plan = surface_a._owned(self, self._session.sql_built(f"{sql} SELECT * FROM {view}"))
-            rows = [(row["plan_type"], row["plan"]) for row in surface_b.rows_without_fill(plan)]
+            rows = surface_a._explain_rows(self, plan, view, selected, keys)
         finally:
             self._session.drop_temp_view(view)
         return _render_explain_sections(selected, keys, rows)
