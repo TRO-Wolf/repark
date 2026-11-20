@@ -15,5 +15,13 @@
   package and fix round 1's head against Spark's recorded answers: the tables, the moves and every cell not
   EQUAL on the head.
 - `fix1-cost-samples.jsonl`, `fix1-cost-perf.txt`, `fix1-c012-samples.jsonl` — fix round 1's cost series.
+- `delta2-verifier-table.md.txt` — the round-2 verifier's `mine.py` and V1's `probe.py` and `probe2.py` (816
+  records) on Spark 4.1.2 (re-run), the base, the round-2 head `35bc6e3a` (the verifier's run) and delta 2's head
+  `ef5abef1`: the counts, the EQUAL cells lost and the moves.
+- `delta2-callers-spark.jsonl`, `delta2-callers-base.jsonl`, `delta2-callers-before.jsonl`,
+  `delta2-callers-after.jsonl` and `delta2-callers-table.md.txt` — `probes/delta2_callers.py` (every caller of
+  `java_case`'s lowering, 72 cells) on Spark, the base, `35bc6e3a` and `ef5abef1`, and the verdict table.
+- `delta2-java-lower.txt` — the 76 strings of `java_case.rs`'s final-sigma test
+  with Zulu 17's `String.toLowerCase()` answers, from `probes/JavaLower.java`.
 
 Up: [../map.md](../map.md).

@@ -40,4 +40,6 @@ The owner adopted Fable's §9 on 2026-11-19, about 14:00 UTC, verbatim: "go with
 
 **Dated 2026-11-20, the wiring unit's fix round 1 (branch `fix/csv-string-field-text-1`, not merged).** With no schema, a repeated header name takes its index ignoring case only under `spark.sql.caseSensitive=false`, as Spark's `makeSafeHeader`; with a user schema the header names are never consulted; and a read schema holding the field named by `columnNameOfCorruptRecord` is refused by name. Short rows, long rows (more fields than the header) and exact duplicate header names, two empty or two `nullValue` names among them, still raise (card CSV-READ-MODES-AND-SHAPES-1).
 
+**Dated 2026-11-20, the wiring unit's delta 2 (branch `fix/csv-string-field-text-1`, not merged).** A header name's Greek final sigma lowers by Java's own rule (`ConditionalSpecialCasing`'s Final_Cased over the word `BreakIterator`), in `repark_common::java_case::string_lowered`, so `withColumns`' duplicate check and the `fillna`/`dropna`/free-Column `drop` fold follow it too. The owner question on the corrupt-record refusal now covers any read schema holding that column over a file with no malformed row (6 cells).
+
 Up: [map.md](map.md).

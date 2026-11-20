@@ -19,4 +19,17 @@
 - `cost.py` — the cost cases (`k0_count`, `k0_hour`, `is_count`, `is_sum`, `is_none`, `is_infer`): a warm-up, then
   ten timed queries inside a `perf stat --control` window.
 
+- `WordClassTable.java` — delta 2's generator of `java_case.rs`'s `WORD_CLASS_RUNS`: each code point's class in the
+  legacy word `BreakIterator` rules and `ConditionalSpecialCasing.isCased`, from Zulu 17's `Character.getType`.
+- `JavaLower.java` — Zulu 17's `String.toLowerCase()` over a file of `\u{…}`-escaped strings (the final-sigma
+  test table's answers).
+- `JavaSweep.java` — Zulu 17's sigma forms for every code point in 22 contexts around a U+03A3; the same contexts
+  through `string_lowered` gave 0 differences in 24,465,408 strings.
+- `JavaFuzz.java` — seeded random strings (1 to 16 code points) with Zulu 17's lowered output; three runs, 9,000,000
+  strings, 0 differences against `string_lowered`.
+- `delta2_callers.py` — one Spark cell family per caller of `java_case`'s lowering (the CSV header rule, the
+  `withColumns` duplicate check, the `fillna`/`dropna`/free-Column `drop` fold, and the `equalsIgnoreCase` fold's
+  `drop`, `dropDuplicates` and map struct keys), each under an explicit `spark.sql.caseSensitive`;
+  `delta2_compare.py` tabulates the verdicts.
+
 Up: [../map.md](../map.md).
