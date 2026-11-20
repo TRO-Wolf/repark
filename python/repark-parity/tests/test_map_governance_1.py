@@ -558,7 +558,7 @@ def test_lockstep_branch_mode_warns_with_the_advisory_note(tmp_path: Path) -> No
     _git(repo, "add", "-A")
     _git(repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "base")
     base = _git(repo, "rev-parse", "HEAD").strip()
-    _write(repo, "pkg/mod.rs", "fn b() {}\n")
+    _write(repo, "pkg/new.rs", "fn b() {}\n")
     _git(repo, "add", "-A")
     _git(repo, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "work")
     result = subprocess.run(
