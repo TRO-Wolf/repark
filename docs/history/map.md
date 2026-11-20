@@ -37,6 +37,8 @@ Links from these frozen copies to ledgers or cards that later moved are left as 
 - [sem/](sem/map.md) — **The Spark semantics fixes (SEM)**: the workstream's STATUS record, cut 2026-09-04 (closed by #343).
 - [dml/](dml/map.md) — **Iceberg DML remainder (v0.6)**: the workstream's STATUS record, cut 2026-09-04 (closed by #343).
 - [facade-tests/](facade-tests/map.md) — **facade-tests map pilot**: `python/repark/tests/map.md` as it stood at main `7882504c`, archived 2026-10-30 when MAP-TESTS-PILOT-1 rewrote it as a file index.
+- [task-wo/](task-wo/map.md) — **work-order map**: `task/wo/map.md` as it stood on 2026-11-20, archived when RECORDS-ROOM-1 condensed its descriptions; every row kept, links re-based.
+- [map-ratchet-1/](map-ratchet-1/map.md) — **map-ratchet-1**: the MAP-RATCHET-1 condensations, cut file by file as each excepted map is rewritten as a file index.
 - [lessons-superseded.md](lessons-superseded.md) — the superseded entries moved out of [task/lessons.md](../../task/lessons.md), each under its original heading with what replaced it.
 
 ## I want to...

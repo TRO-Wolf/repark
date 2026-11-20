@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Enforce a size ceiling on every tracked `map.md`, with exact-baseline exceptions.
+"""Enforce a size ceiling on every tracked `map.md`, with exception rows as ceilings too.
 
 SSOT for map size (MAP-GOVERNANCE-1). Prose points here and never restates the numbers.
 
 Rules over every tracked file named `map.md`:
 1. A map stays within DEFAULT_LINES lines and DEFAULT_BYTES bytes; crossing either fails.
    Blank lines count.
-3. EXEMPT and EXEMPT_PATTERNS list the ledger-bin and archive-month maps the lifecycle script
+2. EXEMPT and EXEMPT_PATTERNS list the ledger-bin and archive-month maps the lifecycle script
    rewrites on every `move` and `archive`; they are inventories outside the ratchet, each with
    its reason. A pattern's `*` matches one path segment.
-4. `--update-baselines` rewrites each EXCEPTIONS row to the tree's size: a shrunk row is
+3. `--update-baselines` rewrites each EXCEPTIONS row to the tree's size: a shrunk row is
    lowered and a row whose map is within both ceilings is deleted. A row is raised only by the
    growth main made to its map since the row was committed: the map's size at the merge base
    of HEAD with `origin/main` less its size at the merge base of the commit that set the row,
