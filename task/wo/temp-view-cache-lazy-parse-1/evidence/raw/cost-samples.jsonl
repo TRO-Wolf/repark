@@ -1,0 +1,7 @@
+{"case": "json_cache_count_collect", "ms": {"build": 6.5, "count": 302.5, "collect": 2079.9}}
+{"case": "json_cache_collect_first", "ms": {"build": 6.3, "collect": 2054.3, "count": 2062.8}}
+{"case": "json_cache_view", "ms": {"register": 271.9, "count": 275.7}}
+{"case": "csv_udf_derived", "ms": {"build": 618.9, "count": 620.6, "count2": 621.6}}
+{"case": "csv_udf_top", "ms": {"build": 11.6, "count": 677.4, "count2": 1362.7}}
+{"case": "json_cache_count_collect", "ms": {"build": 6.3, "count": 298.8, "collect": 2076.4}}
+{"case": "json_cache_collect_first", "ms": {"build": 6.3, "collect": 2101.8, "count": 2109.7}}
