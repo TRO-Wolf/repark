@@ -55,6 +55,37 @@ exclusive measure lock, cores 32-47; 40 samples, none with a nonzero exit
 Ten rounds: rounds 1 to 7 ran first; rounds 8 to 10 ran after the gates, with the order still alternating by
 round.
 
-Raw: [raw/cost-samples.jsonl](raw/cost-samples.jsonl), [raw/cost-perf.txt](raw/cost-perf.txt).
+## Fix round 1 (head `8ac58878`, package `S/ddu-work/pkg-wire-8ac58878`)
+
+Round 0's two scripts, copied unchanged apart from their output directories: five short rounds (base and head
+alternating by round, each sample alone under the exclusive measure lock, cores 32-47, `perf stat` instruction
+counts) and five C-012 runs.
+
+| case | base ms | head ms | head / base | rounds | base spread | instr base | instr head | instr ratio | cycles ratio | answers equal |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `k0_count` | 17.91 | 16.54 | **0.923x** | 5/5 | 16.82-18.52 | 1,029.4 M | 1,021.9 M | 0.9928 | 1.019 | True |
+| `k0_hour` | 59.20 | 61.30 | **1.035x** | 5/5 | 56.86-62.47 | 4,071.2 M | 4,191.4 M | 1.0295 | 1.038 | True |
+| `is_count` | 12.85 | 12.18 | **0.948x** | 5/5 | 11.74-13.54 | 705.9 M | 704.4 M | 0.9978 | 1.005 | True |
+| `is_sum` | 22.30 | 25.05 | **1.123x** | 5/5 | 21.26-22.80 | 1,500.9 M | 1,619.4 M | 1.0790 | 1.105 | True |
+| `is_none` | 25.99 | 20.19 | **0.777x** | 5/5 | 24.01-27.19 | 1,853.6 M | 1,256.5 M | 0.6779 | 0.702 | True |
+| `is_infer` | 53.39 | 54.39 | **1.019x** | 5/5 | 52.39-57.31 | 3,958.4 M | 3,958.4 M | 1.0000 | 0.996 | True |
+
+| case | main | head | head / main | main's band (max / min) | runs | bar | verdict |
+|---|---|---|---|---|---|---|---|
+| `c012p6` | 41.86 s | 39.79 s | **0.951x** | 1.129 | 5/5 | 1.05x hard | pass |
+| `c012rest` | 42.89 s | 43.16 s | **1.006x** | 1.014 | 5/5 | 1.05x hard | pass |
+
+- **`is_sum` is the flag, attributed by instruction counts to round 0's owner-accepted row, not to the fix.** Its
+  head executes 1,619.4 M instructions per query in both rounds (ratio 1.0790 both times) and its cycles ratio is
+  1.105 against round 0's 1.102; the head's wall time is 25.05 ms against round 0's 24.99 ms. The wall ratio moved
+  from 1.058x to 1.123x because this round's base samples ran faster (22.30 ms against 23.62 ms, band 21.26-22.80).
+  Under 1.15x; the fix round changes no field parse, only the scan's column names and two facade checks.
+- **The other rows** are within 1.05x, and `is_infer` (unchanged code) is 1.0000x in instructions.
+- **C-012** passes the hard 1.05x in both halves (20 samples, none with a nonzero exit). C-012 reads no CSV.
+
+Raw: [raw/fix1-cost-samples.jsonl](raw/fix1-cost-samples.jsonl), [raw/fix1-cost-perf.txt](raw/fix1-cost-perf.txt),
+[raw/fix1-c012-samples.jsonl](raw/fix1-c012-samples.jsonl).
+
+Round 0's raw: [raw/cost-samples.jsonl](raw/cost-samples.jsonl), [raw/cost-perf.txt](raw/cost-perf.txt).
 
 Up: [map.md](map.md).
