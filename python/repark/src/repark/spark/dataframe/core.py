@@ -330,12 +330,7 @@ class DataFrame:
         prefix = "__repark_ckpt_" if is_checkpoint else _CACHE_VIEW_PREFIX
         view_name = scratch_view_name(self._session, prefix)
         if not is_checkpoint:
-            budgets = _resolve_cache_budgets(self._alive_token)
-            lineage = self._inner
-            self._session.materialize_as_cache_view(view_name, lineage, budgets)
-            cache_handle.bind_registered_view(self, view_name, lineage)
-            _register_cache_frame(self._alive_token, self)
-            return
+            return cache_handle._materialize_now(self, view_name)
         old_cache_view = self._cache_view
         cache_handle.bind_checkpoint_scan(self, view_name, self._inner)
         if old_cache_view is not None and old_cache_view != view_name:
@@ -740,6 +735,7 @@ class DataFrame:
         self._persist_requested = True
         self._storage_level = level
         _register_cache_frame(self._alive_token, self)
+        cache_handle._bind_lazy(self)
         return self
 
     def unpersist(self, blocking: bool = False) -> DataFrame:
@@ -3448,7 +3444,6 @@ from repark.spark.dataframe.grouped_udf import (  # noqa: E402
 )
 from repark.spark.dataframe import udf_projection, udf_window_projection  # noqa: E402
 from repark.spark.dataframe import display, sampling  # noqa: E402
-from repark.spark.dataframe.eager import _resolve_cache_budgets  # noqa: E402
 from repark.spark.dataframe.sampling import _coerce_sample_seed  # noqa: E402
 
 __all__ = [

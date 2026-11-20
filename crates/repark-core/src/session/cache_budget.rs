@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use arrow::array::RecordBatch;
+use datafusion::catalog::SchemaProvider;
 use datafusion::datasource::MemTable;
 use repark_common::Result;
 
@@ -47,24 +48,33 @@ impl ReparkSession {
         let Some(schema) = self.temp_view_home.provider.as_ref() else {
             return Ok((HashSet::new(), 0));
         };
-        let mut seen = HashSet::new();
-        let mut total = 0_u64;
-        for name in schema.table_names() {
-            if !name.starts_with(CACHE_VIEW_PREFIX) {
-                continue;
-            }
-            let Some(provider) = schema.table(&name).await.map_err(engine_err)? else {
-                continue;
-            };
-            let provider_any: &dyn std::any::Any = provider.as_ref();
-            let Some(table) = provider_any.downcast_ref::<MemTable>() else {
-                continue;
-            };
-            for partition in &table.batches {
-                let batches = partition.read().await.clone();
-                total = total.saturating_add(distinct_buffer_bytes(&batches, &mut seen));
-            }
-        }
-        Ok((seen, total))
+        buffer_set_of(schema.as_ref()).await
     }
+}
+
+pub(crate) async fn buffer_set_of(schema: &dyn SchemaProvider) -> Result<(HashSet<usize>, u64)> {
+    let mut seen = HashSet::new();
+    let mut total = 0_u64;
+    for name in schema.table_names() {
+        if !name.starts_with(CACHE_VIEW_PREFIX) {
+            continue;
+        }
+        let Some(provider) = schema.table(&name).await.map_err(engine_err)? else {
+            continue;
+        };
+        if let Some(lazy) = super::temp_views::lazy_cache_of(provider.as_ref()) {
+            total =
+                total.saturating_add(distinct_buffer_bytes(&lazy.retained_batches(), &mut seen));
+            continue;
+        }
+        let provider_any: &dyn std::any::Any = provider.as_ref();
+        let Some(table) = provider_any.downcast_ref::<MemTable>() else {
+            continue;
+        };
+        for partition in &table.batches {
+            let batches = partition.read().await.clone();
+            total = total.saturating_add(distinct_buffer_bytes(&batches, &mut seen));
+        }
+    }
+    Ok((seen, total))
 }

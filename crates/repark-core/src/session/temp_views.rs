@@ -18,6 +18,10 @@ use repark_common::{Error, Result};
 use super::ReparkSession;
 use crate::engine_err;
 
+mod lazy_cache;
+
+pub(crate) use lazy_cache::lazy_cache_of;
+
 const LIVE_READ_WAIT: Duration = Duration::from_secs(1);
 
 impl ReparkSession {
@@ -93,6 +97,60 @@ impl ReparkSession {
     ) -> Result<()> {
         self.register_collected_memtable(name, frame, budgets.0, budgets.1)
             .await
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn register_lazy_cache_view(
+        &self,
+        name: &str,
+        frame: DataFrame,
+        budgets: (Option<u64>, Option<u64>),
+        segment: Option<usize>,
+        owner: Option<Arc<crate::extension::ReaderParseMemo>>,
+    ) -> Result<()> {
+        let stacks = lazy_cache::LazyStacks { segment };
+        let table =
+            lazy_cache::LazyCacheTable::try_new(self, frame, budgets, stacks, owner).await?;
+        self.replace_view(name, Arc::new(table))
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn release_lazy_cache(&self, name: &str) -> Result<bool> {
+        let provider = self.lazy_cache_provider(name).await?;
+        let table = provider.as_deref().and_then(lazy_cache_of);
+        if let Some(table) = table {
+            table.release();
+        }
+        Ok(table.is_some())
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn lazy_cache_filled(&self, name: &str) -> Result<Option<bool>> {
+        let provider = self.lazy_cache_provider(name).await?;
+        Ok(provider
+            .as_deref()
+            .and_then(lazy_cache_of)
+            .map(|table| table.filled() && !table.released()))
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub async fn lazy_cache_lineage_options(
+        &self,
+        name: &str,
+    ) -> Result<Option<Arc<datafusion::common::config::ConfigOptions>>> {
+        let provider = self.lazy_cache_provider(name).await?;
+        Ok(provider
+            .as_deref()
+            .and_then(lazy_cache_of)
+            .map(lazy_cache::LazyCacheTable::lineage_options))
+    }
+
+    async fn lazy_cache_provider(
+        &self,
+        name: &str,
+    ) -> Result<Option<Arc<dyn datafusion::datasource::TableProvider>>> {
+        let reference = self.temp_view_ref(name)?;
+        Ok(self.context().table_provider(reference).await.ok())
     }
 
     /// Register pre-built Arrow [`RecordBatch`]es as a [`MemTable`] temp view.
@@ -196,57 +254,17 @@ impl ReparkSession {
         let ordering = physical.properties().output_ordering().cloned();
         let physical_schema = physical.schema();
         let single_partition = physical.output_partitioning().partition_count() == 1;
-        let (mut seen, retained) = if max_total_bytes.is_some() {
+        let (seen, retained) = if max_total_bytes.is_some() {
             self.live_cache_buffer_set().await?
         } else {
             (std::collections::HashSet::new(), 0)
         };
         let task_ctx = Arc::new(datafusion::execution::TaskContext::from(&state));
-        let mut stream =
+        let stream =
             datafusion::physical_plan::execute_stream(physical, task_ctx).map_err(engine_err)?;
-        let mut batches = Vec::new();
-        let mut admitted = 0_u64;
-        let mut total = 0_u64;
-        let mut over_limit = false;
-        while let Some(item) = futures::StreamExt::next(&mut stream).await {
-            let batch = item.map_err(engine_err)?;
-            if max_total_bytes.is_some() {
-                admitted = admitted.saturating_add(super::cache_budget::distinct_buffer_bytes(
-                    std::slice::from_ref(&batch),
-                    &mut seen,
-                ));
-            }
-            if let Some(limit) = max_bytes {
-                total = total.saturating_add(
-                    u64::try_from(batch.get_array_memory_size()).unwrap_or(u64::MAX),
-                );
-                over_limit = over_limit || total > limit;
-            }
-            if let Some(budget) = max_total_bytes
-                && retained.saturating_add(admitted) > budget
-            {
-                return Err(Error::Config(format!(
-                    "[REPARK_CACHE_BUDGET_EXCEEDED] cache materialize refused: \
-                     repark.cache.max_total_bytes={budget}, retained {retained} bytes, \
-                     admitted {admitted} bytes before refusal; release cached/eager frames \
-                     with unpersist() or spark.catalog.clearCache(), or raise \
-                     repark.cache.max_total_bytes"
-                )));
-            }
-            if !over_limit {
-                batches.push(batch);
-            }
-        }
-        if let Some(limit) = max_bytes
-            && over_limit
-        {
-            return Err(Error::Config(format!(
-                "cache materialize size {total} bytes exceeds \
-                 repark.cache.max_bytes={limit}; raise the conf or avoid \
-                 cache()/persist() on this plan (single-node MemTable pin; no disk spill)"
-            )));
-        }
-        drop(stream);
+        let batches = drain_budgeted(stream, (max_bytes, max_total_bytes), (seen, retained))
+            .await
+            .map_err(engine_err)?;
         let (schema, batches) = crate::sorted_view::apply_tighten_provenance_on_materialize(
             &analyzed, schema, batches,
         )?;
@@ -478,6 +496,59 @@ fn written_last_segment(name: &str) -> Option<String> {
     crate::parse_table_identifier_segments(name)
         .ok()
         .and_then(|mut parts| parts.pop())
+}
+
+async fn drain_budgeted(
+    mut stream: datafusion::execution::SendableRecordBatchStream,
+    (max_bytes, max_total_bytes): (Option<u64>, Option<u64>),
+    (mut seen, retained): (std::collections::HashSet<usize>, u64),
+) -> datafusion::error::Result<Vec<RecordBatch>> {
+    let mut batches = Vec::new();
+    let mut admitted = 0_u64;
+    let mut total = 0_u64;
+    let mut over_limit = false;
+    while let Some(item) = futures::StreamExt::next(&mut stream).await {
+        let batch = item?;
+        if max_total_bytes.is_some() {
+            admitted = admitted.saturating_add(super::cache_budget::distinct_buffer_bytes(
+                std::slice::from_ref(&batch),
+                &mut seen,
+            ));
+        }
+        if let Some(limit) = max_bytes {
+            total = total
+                .saturating_add(u64::try_from(batch.get_array_memory_size()).unwrap_or(u64::MAX));
+            over_limit = over_limit || total > limit;
+        }
+        if let Some(budget) = max_total_bytes
+            && retained.saturating_add(admitted) > budget
+        {
+            return Err(budget_refusal(format!(
+                "[REPARK_CACHE_BUDGET_EXCEEDED] cache materialize refused: \
+                 repark.cache.max_total_bytes={budget}, retained {retained} bytes, \
+                 admitted {admitted} bytes before refusal; release cached/eager frames \
+                 with unpersist() or spark.catalog.clearCache(), or raise \
+                 repark.cache.max_total_bytes"
+            )));
+        }
+        if !over_limit {
+            batches.push(batch);
+        }
+    }
+    if let Some(limit) = max_bytes
+        && over_limit
+    {
+        return Err(budget_refusal(format!(
+            "cache materialize size {total} bytes exceeds \
+             repark.cache.max_bytes={limit}; raise the conf or avoid \
+             cache()/persist() on this plan (single-node MemTable pin; no disk spill)"
+        )));
+    }
+    Ok(batches)
+}
+
+fn budget_refusal(message: String) -> datafusion::error::DataFusionError {
+    crate::illegal_argument_error(Error::Config(message).to_string())
 }
 
 const ORDERED_CACHE_CONCAT_LIMIT_BYTES: u64 = 1 << 30;

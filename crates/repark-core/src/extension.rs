@@ -110,6 +110,34 @@ impl ReaderParseMemo {
         let _restore = MemoRestore(self.enter());
         body()
     }
+
+    pub fn within<T>(memo: Option<Arc<Self>>, body: impl FnOnce() -> T) -> T {
+        let _restore = MemoRestore(READER_PARSE_MEMO.with(|slot| slot.replace(memo)));
+        body()
+    }
+
+    #[must_use]
+    pub fn is_settled(&self) -> bool {
+        !self
+            .decided
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .is_empty()
+    }
+
+    pub fn adopt(&self, other: &Self) {
+        let theirs = other
+            .decided
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        let mut mine = self.decided.lock().unwrap_or_else(PoisonError::into_inner);
+        for (source, options) in theirs {
+            if !mine.iter().any(|(held, _)| held.same_source(&source)) {
+                mine.push((source, options));
+            }
+        }
+    }
 }
 
 struct MemoRestore(Option<Arc<ReaderParseMemo>>);

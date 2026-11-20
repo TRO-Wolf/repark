@@ -78,6 +78,7 @@ class CacheViewHandle:
             return
         self._finalizer.detach()
         if self._alive_token.get("alive", True):
+            self._session.release_lazy_cache(self._view_name)
             self._session.drop_temp_view(self._view_name)
         self._released = True
 
@@ -115,6 +116,51 @@ def bind_registered_view(frame: Any, view_name: str, lineage: Any) -> None:
     from repark.spark.catalog_surface import _note_frame_cached
 
     _note_frame_cached(frame)
+
+
+def _materialize_now(frame: Any, view_name: str) -> None:
+    from repark.spark.dataframe.eager import _resolve_cache_budgets
+
+    lineage = frame._inner
+    budgets = _resolve_cache_budgets(frame._alive_token)
+    frame._session.materialize_as_cache_view(view_name, lineage, budgets)
+    bind_registered_view(frame, view_name, lineage)
+    _register_cache_frame(frame._alive_token, frame)
+
+
+def _bind_lazy(frame: Any) -> None:
+    if frame._map_bridge is not None or frame._checkpoint_lazy or frame._cache_view is not None:
+        return
+    from repark.spark._temp_views import scratch_view_name
+    from repark.spark.dataframe.core import _CACHE_VIEW_PREFIX
+    from repark.spark.dataframe.eager import _resolve_cache_budgets
+    from repark.spark.dataframe.surface_a import _own_plan
+
+    view_name = scratch_view_name(frame._session, _CACHE_VIEW_PREFIX)
+    lineage = frame._inner
+    budgets = _resolve_cache_budgets(frame._alive_token)
+    try:
+        _own_plan(
+            frame, lambda _: frame._session.register_lazy_cache_view(view_name, lineage, budgets)
+        )
+    except Exception:
+        _LOGGER.debug("lazy cache registration fell back to the action", exc_info=True)
+        return
+    bind_registered_view(frame, view_name, lineage)
+
+
+def _view_filled(frame: Any) -> bool:
+    view = frame._cache_view
+    return view is not None and frame._session.lazy_cache_filled(view) is not False
+
+
+def _writer_source(frame: Any, native: Any) -> Any:
+    view = frame._cache_view
+    if view is None or frame._lineage_inner is None:
+        return native
+    if not frame._session.lazy_cache_settings_differ(view):
+        return native
+    return frame._lineage_inner
 
 
 def bind_checkpoint_scan(frame: Any, view_name: str, lineage: Any) -> None:
