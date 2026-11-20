@@ -63,5 +63,6 @@ The full rows as of 2026-11-20 are in [docs/history/task-wo/wo-map-2026-11-20.md
 - [temp-view-frame-reader-parse-1/](temp-view-frame-reader-parse-1/map.md) — **TEMP-VIEW-FRAME-READER-PARSE-1 step 0 (2026-11-19):** a JSON or CSV frame view's parse vs Spark 4.1.2. Unit 1 built 2026-11-19 ([built/](temp-view-frame-reader-parse-1/built/map.md)).
 - [string-hour-minute-second-1/](string-hour-minute-second-1/map.md) — **STRING-HOUR-MINUTE-SECOND-1 step 0 (S1, 2026-11-19):** `hour`, `minute`, `second` over a `STRING` vs Spark 4.1.2, 75,032 cells.
 - [map-ratchet-ceiling-1/](map-ratchet-ceiling-1/order.md) — **MAP-RATCHET-CEILING-1, grade A (H-A, 2026-11-19):** map size rows are ceilings.
+- [csv-string-field-text-1/](csv-string-field-text-1/map.md) — **CSV-STRING-FIELD-TEXT-1 step 0 (S1, 2026-11-20):** a CSV `STRING` field's text vs Spark 4.1.2, 7,704 cells.
 
 Up: [../map.md](../map.md).
