@@ -609,3 +609,6 @@ impl ExecutionPlan for LazyCacheExec {
         )))
     }
 }
+
+#[cfg(test)]
+mod tests;

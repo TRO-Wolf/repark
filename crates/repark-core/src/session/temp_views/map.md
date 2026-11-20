@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Child modules of [../temp_views.rs](../temp_views.rs) (`mod lazy_cache;`), declared there because `../../session.rs`
+Child modules of [../temp_views.rs](../temp_views.rs) (`mod lazy_cache;`, pins in [lazy_cache/](lazy_cache/map.md)), declared there because `../../session.rs`
 sits at its line ceiling.
 
 ## Contents

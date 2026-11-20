@@ -1,0 +1,61 @@
+cells with a Spark record: 2812
+  C head EQUAL: 1188
+  C head WRONG: 228
+  C main EQUAL: 1188
+  C main WRONG: 228
+  F8 head EQUAL: 160
+  F8 main EQUAL: 80
+  F8 main WRONG: 80
+  L head EQUAL: 24
+  L head WRONG: 24
+  L main EQUAL: 24
+  L main WRONG: 24
+  M head EQUAL: 78
+  M head RAISE: 16
+  M head WRONG: 132
+  M main EQUAL: 72
+  M main RAISE: 16
+  M main WRONG: 138
+  N head EQUAL: 100
+  N head WRONG: 20
+  N main EQUAL: 100
+  N main WRONG: 20
+  Q head EQUAL: 5
+  Q head WRONG: 10
+  Q main EQUAL: 5
+  Q main WRONG: 10
+  R head EQUAL: 15
+  R head WRONG: 6
+  R main EQUAL: 15
+  R main WRONG: 6
+  T head EQUAL: 180
+  T head RAISE: 60
+  T main EQUAL: 180
+  T main RAISE: 60
+  U head EQUAL: 144
+  U head WRONG: 96
+  U main EQUAL: 144
+  U main WRONG: 96
+  fable head EQUAL: 10
+  fable main EQUAL: 9
+  fable main WRONG: 1
+  fc:join head EQUAL: 128
+  fc:join main WRONG: 128
+  req:F1 head EQUAL: 158
+  req:F1 main WRONG: 158
+  req:F5 head EQUAL: 8
+  req:F5 main WRONG: 8
+  req:F8 head EQUAL: 20
+  req:F8 main WRONG: 20
+  req:own_then_cache head EQUAL: 2
+  req:own_then_cache main WRONG: 2
+== moves main -> head
+  F8 WRONG -> EQUAL: 80
+  M WRONG -> EQUAL: 6
+  fable WRONG -> EQUAL: 1
+  fc:join WRONG -> EQUAL: 128
+  req:F1 WRONG -> EQUAL: 158
+  req:F5 WRONG -> EQUAL: 8
+  req:F8 WRONG -> EQUAL: 20
+  req:own_then_cache WRONG -> EQUAL: 2
+== EQUAL lost: 0

@@ -1,4 +1,4 @@
-use super::super::*;
+use super::super::super::*;
 use arrow::array::{Array, Int32Array, RecordBatch};
 use arrow::datatypes::{DataType, Field, Schema};
 use datafusion::datasource::MemTable;
