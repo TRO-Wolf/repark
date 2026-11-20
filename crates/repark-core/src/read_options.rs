@@ -691,7 +691,7 @@ mod tests {
     }
 
     fn text_scan_rows(frame_batches: &[arrow::array::RecordBatch]) -> Vec<Vec<Option<String>>> {
-        use arrow::array::AsArray;
+        use arrow::array::{Array, AsArray};
         let mut rows = Vec::new();
         for batch in frame_batches {
             for row in 0..batch.num_rows() {
