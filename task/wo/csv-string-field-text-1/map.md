@@ -17,5 +17,7 @@ critic's GAPS (268 cells re-measured, 0 disagreements): 5,156 more records, the 
 - [oracle.md](oracle.md) — Spark's answer per declared type (16 types × 74 texts) and in three non-UTC zones: the
   kernel unit's test oracle.
 - [evidence/](evidence/map.md) — the probes and the raw cells.
+- [kernel/](kernel/map.md) — CSV-FIELD-KERNEL-1 (2026-11-20): the kernel unit's bar, cost and probes; the oracle
+  gained 62 measured texts.
 
 Up: [../map.md](../map.md).

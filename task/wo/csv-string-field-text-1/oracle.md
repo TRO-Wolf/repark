@@ -168,4 +168,97 @@ In the table, **†** marks a cell where unit 1 differs from Spark and **‡** o
 | Tokyo | beside | TIMESTAMP_NTZ | `2024-01-15 10:30:00+02:00` | None | 2024-01-15 08:30:00 | 2024-01-15 10:30:00 |
 | Tokyo | beside | TIMESTAMP_NTZ | `007` | None | RAISE DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTIO | None |
 
+## Added texts (CSV-FIELD-KERNEL-1, 2026-11-20) [M]
+
+Spark 4.1.2 live, the same one-row read, header off, session zone UTC; each value is `CAST(x AS STRING)`, and
+`FLOAT`/`DOUBLE` as PySpark collects them. Probe: [kernel/probes/added.py](kernel/probes/added.py); raw:
+[kernel/raw/added-spark.jsonl](kernel/raw/added-spark.jsonl) (1,254 cells, 19 types, none raised). The texts are a
+lone space and `.`, Fable's §10 items 2 to 5 (a signed `NaN` and `Infinity`, `NaN ` and ` Inf`, `1D`, `1e3f`, Java's
+trim set, `fal\u017fe`, Unicode digits), and the edges the kernel's grammars turn on: hex floats, `GMT`, year widths,
+exponents and the integer bounds. Three decimal types join `DECIMAL(10,2)`. Every `STRING` cell answers the text and
+every `BINARY` cell its UTF-8 bytes; the interval and `VARIANT` cells are in the raw file (the kernel refuses those
+types).
+
+| text | TINYINT | SMALLINT | INT | BIGINT | FLOAT | DOUBLE | DECIMAL(10,2) | BOOLEAN | DATE | TIMESTAMP | TIMESTAMP_NTZ | DECIMAL(38,10) | DECIMAL(3,0) | DECIMAL(4,4) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| ` ` (a space) | None | None | None | None | None | None | None | None | None | None | None | None | None | None |
+| `.` | None | None | None | None | None | None | None | None | None | None | None | None | None | None |
+| `+NaN` | None | None | None | None | nan | nan | None | None | None | None | None | None | None | None |
+| `-NaN` | None | None | None | None | nan | nan | None | None | None | None | None | None | None | None |
+| `NaN ` | None | None | None | None | nan | nan | None | None | None | None | None | None | None | None |
+| ` Inf` | None | None | None | None | None | None | None | None | None | None | None | None | None | None |
+| `+Infinity` | None | None | None | None | inf | inf | None | None | None | None | None | None | None | None |
+| `1D` | None | None | None | None | 1.0 | 1.0 | None | None | None | None | None | None | None | None |
+| `1e3f` | None | None | None | None | 1000.0 | 1000.0 | None | None | None | None | None | None | None | None |
+| `\x017` | None | None | None | None | 7.0 | 7.0 | None | None | None | None | None | None | None | None |
+| `\xa07` | None | None | None | None | None | None | None | None | None | None | None | None | None | None |
+| `\u20037` | None | None | None | None | None | None | None | None | None | None | None | None | None | None |
+| `fal\u017fe` | None | None | None | None | None | None | None | false | None | None | None | None | None | None |
+| `FAL\u017fE` | None | None | None | None | None | None | None | false | None | None | None | None | None | None |
+| `\u0661\u0662\u0663` | 123 | 123 | 123 | 123 | None | None | 123.00 | None | None | None | None | 123.0000000000 | 123 | None |
+| `\uff11\uff12` | 12 | 12 | 12 | 12 | None | None | 12.00 | None | None | None | None | 12.0000000000 | 12 | None |
+| `1e-400` | None | None | None | None | 0.0 | 0.0 | 0.00 | None | None | None | None | 0.0000000000 | 0 | 0.0000 |
+| `0x1.8p1` | None | None | None | None | 3.0 | 3.0 | None | None | None | None | None | None | None | None |
+| `-0x1p-2` | None | None | None | None | -0.25 | -0.25 | None | None | None | None | None | None | None | None |
+| `0X10P0` | None | None | None | None | 16.0 | 16.0 | None | None | None | None | None | None | None | None |
+| `0x1p3d` | None | None | None | None | 8.0 | 8.0 | None | None | None | None | None | None | None | None |
+| `1e` | None | None | None | None | None | None | None | None | None | None | None | None | None | None |
+| `-` | None | None | None | None | None | None | None | None | None | None | None | None | None | None |
+| `+` | None | None | None | None | None | None | None | None | None | None | None | None | None | None |
+| `1.2.3` | None | None | None | None | None | None | None | None | None | None | None | None | None | None |
+| `--1` | None | None | None | None | None | None | None | None | None | None | None | None | None | None |
+| `,` | None | None | None | None | None | None | None | None | None | None | None | None | None | None |
+| `1,,000` | None | None | None | None | None | None | 1000.00 | None | None | None | None | 1000.0000000000 | None | None |
+| `-1,5` | None | None | None | None | None | None | -15.00 | None | None | None | None | -15.0000000000 | -15 | None |
+| `2024-02-30` | None | None | None | None | None | None | None | None | None | None | None | None | None | None |
+| `2024-02-29` | None | None | None | None | None | None | None | None | 2024-02-29 | 2024-02-29 00:00:00 | 2024-02-29 00:00:00 | None | None | None |
+| `GMT2024-01-15` | None | None | None | None | None | None | None | None | 2024-01-15 | 2024-01-15 00:00:00 | None | None | None | None |
+| `2024-01-15GMT` | None | None | None | None | None | None | None | None | 2024-01-15 | 2024-01-15 00:00:00 | None | None | None | None |
+| `2024-01-15 10:30:00GMT` | None | None | None | None | None | None | None | None | 2024-01-15 | 2024-01-15 10:30:00 | None | None | None | None |
+| `2024-01-15 10:30:00UTC` | None | None | None | None | None | None | None | None | 2024-01-15 | 2024-01-15 10:30:00 | None | None | None | None |
+| `2024-01-15T10:30:00.1234567` | None | None | None | None | None | None | None | None | 2024-01-15 | 2024-01-15 10:30:00.123456 | 2024-01-15 10:30:00.123456 | None | None | None |
+| `+2024-01-15` | None | None | None | None | None | None | None | None | 2024-01-15 | 2024-01-15 00:00:00 | 2024-01-15 00:00:00 | None | None | None |
+| `-0001-01-01` | None | None | None | None | None | None | None | None | -0001-01-01 | -0001-01-01 00:00:00 | -0001-01-01 00:00:00 | None | None | None |
+| `12024-01-15` | None | None | None | None | None | None | None | None | +12024-01-15 | +12024-01-15 00:00:00 | +12024-01-15 00:00:00 | None | None | None |
+| `1234567-01-01` | None | None | None | None | None | None | None | None | +1234567-01-01 | None | None | None | None | None |
+| `2024-1-5 garbage` | None | None | None | None | None | None | None | None | 2024-01-05 | None | None | None | None | None |
+| `2024-01-15  10:30:00` | None | None | None | None | None | None | None | None | 2024-01-15 | None | None | None | None | None |
+| `2024-01-15\t` | None | None | None | None | None | None | None | None | 2024-01-15 | 2024-01-15 00:00:00 | 2024-01-15 00:00:00 | None | None | None |
+| `1e10` | None | None | None | None | 10000000000.0 | 10000000000.0 | None | None | None | None | None | 10000000000.0000000000 | None | None |
+| `-1e-3` | None | None | None | None | -0.0010000000474974513 | -0.001 | 0.00 | None | None | None | None | -0.0010000000 | 0 | -0.0010 |
+| `0.005` | None | None | None | None | 0.004999999888241291 | 0.005 | 0.01 | None | None | None | None | 0.0050000000 | 0 | 0.0050 |
+| `-0.005` | None | None | None | None | -0.004999999888241291 | -0.005 | -0.01 | None | None | None | None | -0.0050000000 | 0 | -0.0050 |
+| `0.0049999` | None | None | None | None | 0.00499989977106452 | 0.0049999 | 0.00 | None | None | None | None | 0.0049999000 | 0 | 0.0050 |
+| `1E+2` | None | None | None | None | 100.0 | 100.0 | 100.00 | None | None | None | None | 100.0000000000 | 100 | None |
+| `00.50` | None | None | None | None | 0.5 | 0.5 | 0.50 | None | None | None | None | 0.5000000000 | 1 | 0.5000 |
+| `1.0e0` | None | None | None | None | 1.0 | 1.0 | 1.00 | None | None | None | None | 1.0000000000 | 1 | None |
+| `1e-2147483648` | None | None | None | None | 0.0 | 0.0 | None | None | None | None | None | None | None | None |
+| `1e2147483648` | None | None | None | None | inf | inf | None | None | None | None | None | None | None | None |
+| `1e9999999999` | None | None | None | None | inf | inf | None | None | None | None | None | None | None | None |
+| `-128` | -128 | -128 | -128 | -128 | -128.0 | -128.0 | -128.00 | None | None | None | None | -128.0000000000 | -128 | None |
+| `-32768` | None | -32768 | -32768 | -32768 | -32768.0 | -32768.0 | -32768.00 | None | -32768-01-01 | -32768-01-01 00:00:00 | -32768-01-01 00:00:00 | -32768.0000000000 | None | None |
+| `-2147483648` | None | None | -2147483648 | -2147483648 | -2147483648.0 | -2147483648.0 | None | None | None | None | None | -2147483648.0000000000 | None | None |
+| `-9223372036854775808` | None | None | None | -9223372036854775808 | -9.223372036854776e+18 | -9.223372036854776e+18 | None | None | None | None | None | -9223372036854775808.0000000000 | None | None |
+| `0000000000000000000000000000007` | 7 | 7 | 7 | 7 | 7.0 | 7.0 | 7.00 | None | None | None | None | 7.0000000000 | 7 | None |
+| `99999999999999999999999999999999999999` | None | None | None | None | 9.999999680285692e+37 | 1e+38 | None | None | None | None | None | None | None | None |
+| `999999999999999999999999999999999999999` | None | None | None | None | inf | 1e+39 | None | None | None | None | None | None | None | None |
+| `0.99995` | None | None | None | None | 0.9999499917030334 | 0.99995 | 1.00 | None | None | None | None | 0.9999500000 | 1 | None |
+
+**The client artifacts above, recorded through `CAST(x AS STRING)`** (Python cannot hold a year past 9999), and the
+three decimal types over four old texts:
+
+| text (re-measured) | DATE | TIMESTAMP | TIMESTAMP_NTZ | DECIMAL(38,10) | DECIMAL(3,0) | DECIMAL(4,4) |
+|---|---|---|---|---|---|---|
+| `-0` | None | None | None | 0.0000000000 | 0 | 0.0000 |
+| `32767` | +32767-01-01 | +32767-01-01 00:00:00 | +32767-01-01 00:00:00 | 32767.0000000000 | None | None |
+| `32768` | +32768-01-01 | +32768-01-01 00:00:00 | +32768-01-01 00:00:00 | 32768.0000000000 | None | None |
+| `40000` | +40000-01-01 | +40000-01-01 00:00:00 | +40000-01-01 00:00:00 | 40000.0000000000 | None | None |
+
+- **Declared difference (14 cells).** Spark parses Unicode decimal digits (`\u0661\u0662\u0663`, `\uff11\uff12`)
+  for `TINYINT` to `BIGINT` and `DECIMAL` (`Integer.parseInt` and `BigDecimal` take any Unicode digit) and answers
+  NULL for `DOUBLE`; the kernel takes ASCII digits only and answers NULL in all of them (Fable §10 item 5; a card,
+  S2).
+- **Unmeasured:** `DECIMAL` over `1e1000000000`. Spark's `setScale` would expand it; the kernel answers NULL (a
+  precision overflow) without that work.
+
 Up: [map.md](map.md).
