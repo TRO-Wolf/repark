@@ -80,7 +80,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split scalar UDF declarations from pandas UDF batch contracts.",
     ),
     "python/repark/src/repark/spark/ml/feature/_transformers.py": (
-        2717,
+        2715,
         "ML feature transformer facades share one module.",
         "Split transformers by feature family with stable public re-exports.",
     ),

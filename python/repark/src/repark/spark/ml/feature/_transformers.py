@@ -120,10 +120,8 @@ def _materialize_rid_view(frame: Any, source_view: str, prefix: str) -> tuple[An
         f"SELECT row_number() OVER () AS {_quote_ident(rid_col)}, {source_view}.* "
         f"FROM {source_view}",
     )
-    if hasattr(indexed, "cache"):
-        indexed.cache()
-    if hasattr(indexed, "count"):
-        indexed.count()  # force cache fill
+    if hasattr(indexed, "localCheckpoint"):
+        indexed = indexed.localCheckpoint()
     else:
         indexed.collect()
     indexed.createOrReplaceTempView(rid_view)
