@@ -9,6 +9,9 @@
   engine reads byte-identical local files on Spark.
 - `shapes.py` — empty and header-only files, a directory whose first file is empty, `multiLine`, duplicate header
   names, a short row and the field types Spark's CSV source refuses.
+- `fix1.py` — the fix round's cells, each under an explicit `spark.sql.caseSensitive`: case-differing and
+  colliding header names with and without a schema, and the corrupt-record column first, in the middle, last,
+  typed `INT`, named by the option or by `spark.sql.columnNameOfCorruptRecord`, and in another case.
 - `rerun.py` — step 0's domain, revision and kernel cells on the base and the head against Spark's recorded cells:
   verdicts per set and build, the moves, and the EQUAL cells lost.
 - `cost_table.py` — the cost table from `cost.py`'s samples and `perf stat` files: medians, ratios, instruction and

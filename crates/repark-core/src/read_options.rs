@@ -221,9 +221,9 @@ pub(crate) async fn read_csv_path(
     let multiline = options
         .get("multiline")
         .is_some_and(|raw| parse_bool_option("multiLine", raw).ok() == Some(true));
-    let utf8_schema = if options.contains_key(CSV_TEXT_SCAN_OPTION) {
+    let utf8_schema = if let Some(scan) = csv_text_scan(options)? {
         let null_value = options.get("nullvalue").map(String::as_str);
-        Some(csv_text_scan_schema(context, &resolved, &csv_options, null_value).await?)
+        Some(csv_text_scan_schema(context, &resolved, &csv_options, null_value, scan).await?)
     } else if csv_force_utf8_schema(options) || options.contains_key("utf8_columns") || multiline {
         csv_utf8_schema_from_path(path, csv_options.has_header, csv_options.delimiter)?
     } else {
@@ -253,11 +253,69 @@ pub(crate) async fn read_csv_path(
 
 pub(crate) const CSV_TEXT_SCAN_OPTION: &str = "text_scan";
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CsvTextScan {
+    Positions,
+    Header { case_sensitive: bool },
+}
+
+pub(crate) fn csv_text_scan(options: &HashMap<String, String>) -> Result<Option<CsvTextScan>> {
+    let Some(raw) = options.get(CSV_TEXT_SCAN_OPTION) else {
+        return Ok(None);
+    };
+    match raw.as_str() {
+        "positions" => Ok(Some(CsvTextScan::Positions)),
+        "header" => Ok(Some(CsvTextScan::Header {
+            case_sensitive: false,
+        })),
+        "header_case_sensitive" => Ok(Some(CsvTextScan::Header {
+            case_sensitive: true,
+        })),
+        _ => Err(Error::Analysis(format!(
+            "reader option \"{CSV_TEXT_SCAN_OPTION}\" accepts only \"positions\", \"header\" or \
+             \"header_case_sensitive\"; got {:?}",
+            repark_common::redaction::mask_value_credentials(raw)
+        ))),
+    }
+}
+
+pub(crate) fn spark_safe_header(
+    names: &[&str],
+    null_value: Option<&str>,
+    case_sensitive: bool,
+) -> Vec<String> {
+    let key = |name: &str| {
+        if case_sensitive {
+            name.to_string()
+        } else {
+            repark_common::java_case::string_lowered(name)
+        }
+    };
+    let mut seen: HashMap<String, usize> = HashMap::new();
+    for name in names {
+        *seen.entry(key(name)).or_default() += 1;
+    }
+    names
+        .iter()
+        .enumerate()
+        .map(|(index, name)| {
+            if name.is_empty() || null_value == Some(*name) {
+                format!("_c{index}")
+            } else if seen.get(&key(name)).is_some_and(|count| *count > 1) {
+                format!("{name}{index}")
+            } else {
+                (*name).to_string()
+            }
+        })
+        .collect()
+}
+
 async fn csv_text_scan_schema(
     context: &SessionContext,
     path: &str,
     csv_options: &CsvReadOptions<'_>,
     null_value: Option<&str>,
+    scan: CsvTextScan,
 ) -> Result<arrow::datatypes::Schema> {
     use arrow::datatypes::{DataType, Field, Schema};
     use datafusion::datasource::file_format::options::ReadOptions;
@@ -269,30 +327,23 @@ async fn csv_text_scan_schema(
         .get_resolved_schema(&context.copied_config(), context.state(), table_path)
         .await
         .map_err(engine_err)?;
-    let mut seen: HashMap<String, usize> = HashMap::new();
-    for field in scanned.fields() {
-        *seen.entry(field.name().to_lowercase()).or_default() += 1;
-    }
-    let fields: Vec<Field> = scanned
+    let names: Vec<&str> = scanned
         .fields()
         .iter()
-        .enumerate()
-        .map(|(index, field)| {
-            let name = field.name().as_str();
-            let spark_name = if !csv_options.has_header {
-                name.to_string()
-            } else if name.is_empty() || null_value == Some(name) {
-                format!("_c{index}")
-            } else if seen
-                .get(&name.to_lowercase())
-                .is_some_and(|count| *count > 1)
-            {
-                format!("{name}{index}")
-            } else {
-                name.to_string()
-            };
-            Field::new(spark_name, DataType::Utf8, true)
-        })
+        .map(|field| field.name().as_str())
+        .collect();
+    let spark_names: Vec<String> = match scan {
+        CsvTextScan::Positions => (0..names.len()).map(|index| format!("_c{index}")).collect(),
+        CsvTextScan::Header { .. } if !csv_options.has_header => {
+            names.iter().map(ToString::to_string).collect()
+        }
+        CsvTextScan::Header { case_sensitive } => {
+            spark_safe_header(&names, null_value, case_sensitive)
+        }
+    };
+    let fields: Vec<Field> = spark_names
+        .into_iter()
+        .map(|name| Field::new(name, DataType::Utf8, true))
         .collect();
     Ok(Schema::new(fields))
 }
@@ -716,7 +767,9 @@ mod tests {
     ) -> (Vec<String>, Vec<Vec<Option<String>>>) {
         let session = crate::ReparkSession::builder().build().unwrap();
         let mut options = options_map(pairs);
-        options.insert(CSV_TEXT_SCAN_OPTION.to_string(), "true".to_string());
+        options
+            .entry(CSV_TEXT_SCAN_OPTION.to_string())
+            .or_insert_with(|| "header".to_string());
         let frame = session.read_csv(target, &options).await.unwrap();
         let names = frame
             .schema()
@@ -760,6 +813,48 @@ mod tests {
         std::fs::write(&path, "x,X,k\n1,2,3\n").unwrap();
         let (names, _) = text_scan(path.to_str().unwrap(), &[("header", "true")]).await;
         assert_eq!(names, ["x0", "X1", "k"]);
+    }
+
+    #[test]
+    fn the_safe_header_folds_case_only_when_the_session_is_case_insensitive() {
+        let names = ["x", "X", "k", "\u{e4}", "\u{c4}"];
+        assert_eq!(
+            spark_safe_header(&names, None, false),
+            ["x0", "X1", "k", "\u{e4}3", "\u{c4}4"]
+        );
+        assert_eq!(spark_safe_header(&names, None, true), names);
+        assert_eq!(
+            spark_safe_header(&["a", "A", "a"], None, true),
+            ["a0", "A", "a2"]
+        );
+        assert_eq!(
+            spark_safe_header(&["", "NA", "na"], Some("NA"), false),
+            ["_c0", "_c1", "na2"]
+        );
+    }
+
+    #[test]
+    fn the_text_scan_option_refuses_a_value_outside_its_modes() {
+        let Err(error) = csv_text_scan(&options_map(&[("text_scan", "true")])) else {
+            panic!("a value outside the three modes must refuse");
+        };
+        assert!(error.to_string().contains("text_scan"), "{error}");
+        assert_eq!(csv_text_scan(&options_map(&[])).unwrap(), None);
+    }
+
+    #[tokio::test]
+    async fn a_text_scan_by_position_never_names_a_field_from_the_header() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("data.csv");
+        std::fs::write(&path, "_c1,,k\n1,2,3\n").unwrap();
+        let pairs = [("header", "true"), ("text_scan", "positions")];
+        let (names, rows) = text_scan(path.to_str().unwrap(), &pairs).await;
+        assert_eq!(names, ["_c0", "_c1", "_c2"]);
+        assert_eq!(rows, [texts(&["1", "2", "3"])]);
+        std::fs::write(&path, "x,X,k\n1,2,3\n").unwrap();
+        let pairs = [("header", "true"), ("text_scan", "header_case_sensitive")];
+        let (names, _) = text_scan(path.to_str().unwrap(), &pairs).await;
+        assert_eq!(names, ["x", "X", "k"]);
     }
 
     #[tokio::test]

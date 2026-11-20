@@ -501,6 +501,7 @@ class DataFrameReader:
         # Semantic I/O options (pathGlobFilter / ignoreCorruptFiles / mergeSchema / …) must fail
         # loud on the `.csv()` shorthand too — not only format().load.
         self._reject_unsupported_semantic_options()
+        _reader_support._refuse_csv_corrupt_record_field(self._session, self._schema, self._options)
         self._reject_csv_json_parse_options(is_csv=True)
         path_str = _reader_path_to_str(path)
         native_options = self._native_options_for(_CSV_NATIVE_OPTION_KEYS)
@@ -508,8 +509,9 @@ class DataFrameReader:
         if "header" not in {key.lower() for key in native_options}:
             native_options["header"] = "false"
         infer_schema = self._option_bool("inferschema", default=False)
-        if self._schema is not None or not infer_schema:
-            native_options["text_scan"] = "true"
+        scan = _reader_support._csv_text_scan(self._session, self._schema, infer_schema)
+        if scan is not None:
+            native_options["text_scan"] = scan
         frame = self._session.read_csv(path_str, native_options)
         return _reader_parse(
             self._apply_reader_schema_semantics(

@@ -636,6 +636,36 @@ def _csv_text_frame(
     return frame.select(*selects)
 
 
+def _csv_text_scan(session: Any, schema: Any, infer_schema: bool) -> str | None:
+    from repark import _native
+
+    if schema is not None:
+        return "positions"
+    if infer_schema:
+        return None
+    if _native.session_case_sensitive(session._ensure_alive()):
+        return "header_case_sensitive"
+    return "header"
+
+
+def _refuse_csv_corrupt_record_field(session: Any, schema: Any, options: dict[str, str]) -> None:
+    from repark.errors import AnalysisException
+
+    if schema is None:
+        return
+    named = [value for key, value in options.items() if key.lower() == "columnnameofcorruptrecord"]
+    if named:
+        corrupt = str(named[-1])
+    else:
+        corrupt = session.conf.get("spark.sql.columnNameOfCorruptRecord", "_corrupt_record")
+    if any(field["name"] == corrupt for field in _schema_fields(schema)):
+        raise AnalysisException(
+            f"reader schema field {mask_credentials(corrupt)!r} is the corrupt-record column "
+            "named by columnNameOfCorruptRecord, which repark does not fill with a malformed "
+            "CSV row's text yet; a CSV read schema holding it is refused"
+        )
+
+
 def _reject_csv_json_parse_options(options: dict[str, str], *, is_csv: bool) -> None:
     from repark.errors import AnalysisException
 

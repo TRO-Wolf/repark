@@ -3,6 +3,7 @@ from __future__ import annotations
 import gzip
 from collections.abc import Callable, Iterator
 from decimal import Decimal
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +41,10 @@ FILES: dict[str, bytes] = {
     "glob/b.csv": b"x,k\n1.50,k2\n",
     "two/a.csv": b"x,k\n007,k1\n",
     "two/b.csv": b"k,x\nk2,1e3\nk3,TRUE\n",
+    "unicode.csv": "\u00e4,\u00c4,k\n1,2,3\n".encode(),
+    "c0.csv": b"_c1,,k\n1,2,3\n",
+    "x0.csv": b"x,X,x0\n1,2,3\n",
+    "modes.csv": b"a,b\n1,x\nabc,y\n3,z\n",
 }
 LATE = ("count(*) AS n", "count(x) AS nx", "max(CAST(x AS STRING)) AS mx")
 CARD_TEXT = [("007", "1.50", "1e3", "TRUE")]
@@ -314,6 +319,167 @@ CELLS: dict[str, tuple[Read, list[str], list[str], list[tuple[Any, ...]]]] = {
         [("007", "abc")],
     ),
 }
+SENSITIVE = {"spark.sql.caseSensitive": "true"}
+INSENSITIVE = {"spark.sql.caseSensitive": "false"}
+NAMED_BAD = {"spark.sql.caseSensitive": "false", "spark.sql.columnNameOfCorruptRecord": "bad"}
+S3 = ["string"] * 3
+SESSION_CELLS: dict[
+    str, tuple[dict[str, str], Read, list[str], list[str], list[tuple[Any, ...]]]
+] = {
+    "sensitive/case_dup": (
+        SENSITIVE,
+        lambda r, p: header(r).csv(str(p / "dup.csv")),
+        ["x", "X", "k"],
+        S3,
+        [("1", "2", "3")],
+    ),
+    "sensitive/unicode_case": (
+        SENSITIVE,
+        lambda r, p: header(r).csv(str(p / "unicode.csv")),
+        ["\u00e4", "\u00c4", "k"],
+        S3,
+        [("1", "2", "3")],
+    ),
+    "sensitive/select": (
+        SENSITIVE,
+        lambda r, p: header(r).csv(str(p / "dup.csv")).select("x"),
+        ["x"],
+        ["string"],
+        [("1",)],
+    ),
+    "sensitive/schema_case_dup": (
+        SENSITIVE,
+        lambda r, p: header(r.schema("x STRING, X STRING, k STRING")).csv(str(p / "dup.csv")),
+        ["x", "X", "k"],
+        S3,
+        [("1", "2", "3")],
+    ),
+    "sensitive/schema_c0_clash": (
+        SENSITIVE,
+        lambda r, p: header(r.schema("p STRING, q STRING")).csv(str(p / "c0.csv")),
+        ["p", "q"],
+        S2,
+        [("1", "2")],
+    ),
+    "insensitive/case_dup": (
+        INSENSITIVE,
+        lambda r, p: header(r).csv(str(p / "dup.csv")),
+        ["x0", "X1", "k"],
+        S3,
+        [("1", "2", "3")],
+    ),
+    "insensitive/unicode_case": (
+        INSENSITIVE,
+        lambda r, p: header(r).csv(str(p / "unicode.csv")),
+        ["\u00e40", "\u00c41", "k"],
+        S3,
+        [("1", "2", "3")],
+    ),
+    "insensitive/schema_c0_clash": (
+        INSENSITIVE,
+        lambda r, p: header(r.schema("p STRING, q STRING")).csv(str(p / "c0.csv")),
+        ["p", "q"],
+        S2,
+        [("1", "2")],
+    ),
+    "insensitive/schema_c0_clash_int": (
+        INSENSITIVE,
+        lambda r, p: header(r.schema("p INT, q INT, k INT")).csv(str(p / "c0.csv")),
+        ["p", "q", "k"],
+        ["int"] * 3,
+        [(1, 2, 3)],
+    ),
+    "insensitive/schema_x0_clash": (
+        INSENSITIVE,
+        lambda r, p: header(r.schema("p STRING, q STRING, k STRING")).csv(str(p / "x0.csv")),
+        ["p", "q", "k"],
+        S3,
+        [("1", "2", "3")],
+    ),
+    "corrupt/other_case_is_an_ordinary_field": (
+        INSENSITIVE,
+        lambda r, p: header(r.schema("a INT, b STRING, _CORRUPT_RECORD STRING")).csv(
+            str(p / "modes.csv")
+        ),
+        ["a", "b", "_CORRUPT_RECORD"],
+        ["int", "string", "string"],
+        [(1, "x", None), (3, "z", None), (None, "y", None)],
+    ),
+    "corrupt/default_name_under_a_named_conf": (
+        NAMED_BAD,
+        lambda r, p: header(r.schema("a STRING, b STRING, _corrupt_record STRING")).csv(
+            str(p / "modes.csv")
+        ),
+        ["a", "b", "_corrupt_record"],
+        S3,
+        [("1", "x", None), ("3", "z", None), ("abc", "y", None)],
+    ),
+}
+CORRUPT: dict[str, tuple[dict[str, str], str, Read]] = {
+    "first": (
+        INSENSITIVE,
+        "_corrupt_record",
+        lambda r, p: header(r.schema("_corrupt_record STRING, a INT, b STRING")).csv(
+            str(p / "modes.csv")
+        ),
+    ),
+    "middle": (
+        INSENSITIVE,
+        "_corrupt_record",
+        lambda r, p: header(r.schema("a INT, _corrupt_record STRING, b STRING")).csv(
+            str(p / "modes.csv")
+        ),
+    ),
+    "last": (
+        INSENSITIVE,
+        "_corrupt_record",
+        lambda r, p: header(r.schema("a INT, b STRING, _corrupt_record STRING")).csv(
+            str(p / "modes.csv")
+        ),
+    ),
+    "last_no_header": (
+        INSENSITIVE,
+        "_corrupt_record",
+        lambda r, p: r.schema("a INT, b STRING, _corrupt_record STRING").csv(str(p / "modes.csv")),
+    ),
+    "int_typed": (
+        INSENSITIVE,
+        "_corrupt_record",
+        lambda r, p: header(r.schema("a INT, b STRING, _corrupt_record INT")).csv(
+            str(p / "modes.csv")
+        ),
+    ),
+    "clean_rows": (
+        SENSITIVE,
+        "_corrupt_record",
+        lambda r, p: header(r.schema("a STRING, b STRING, _corrupt_record STRING")).csv(
+            str(p / "modes.csv")
+        ),
+    ),
+    "option_default": (
+        INSENSITIVE,
+        "_corrupt_record",
+        lambda r, p: (
+            header(r.schema("a INT, b STRING, _corrupt_record STRING"))
+            .option("columnNameOfCorruptRecord", "_corrupt_record")
+            .csv(str(p / "modes.csv"))
+        ),
+    ),
+    "option_named": (
+        INSENSITIVE,
+        "bad",
+        lambda r, p: (
+            header(r.schema("a INT, b STRING, bad STRING"))
+            .option("columnNameOfCorruptRecord", "bad")
+            .csv(str(p / "modes.csv"))
+        ),
+    ),
+    "conf_named": (
+        NAMED_BAD,
+        "bad",
+        lambda r, p: header(r.schema("a INT, b STRING, bad STRING")).csv(str(p / "modes.csv")),
+    ),
+}
 DECIMAL_2_5 = StructType([StructField("x", DecimalType(2, 5)), StructField("k", StringType())])
 DECIMAL_5_M2 = StructType([StructField("x", DecimalType(5, -2)), StructField("k", StringType())])
 REFUSED: dict[str, tuple[Any, str]] = {
@@ -362,6 +528,43 @@ def refusal(build: Callable[[], Any]) -> str:
     return "no refusal"
 
 
+def under_conf(session: Any, conf: dict[str, str], build: Callable[[], Any]) -> Any:
+    for key, value in conf.items():
+        session.conf.set(key, value)
+    try:
+        return build()
+    finally:
+        session.conf.set("spark.sql.caseSensitive", "false")
+        if "spark.sql.columnNameOfCorruptRecord" in conf:
+            session.conf.unset("spark.sql.columnNameOfCorruptRecord")
+
+
+def read_answer(session: Any, root: Path, build: Read) -> Any:
+    return answer(build(session.read, root))
+
+
+def read_rows(session: Any, root: Path, build: Read) -> Any:
+    return build(session.read, root).collect()
+
+
+def session_cells(session: Any, root: Path) -> dict[str, Any]:
+    found: dict[str, Any] = {}
+    for tag, (conf, build, _, _, _) in SESSION_CELLS.items():
+        read = partial(read_answer, session, root, build)
+        found[f"session/{tag}"] = refusal_or(partial(under_conf, session, conf, read))
+    for shape, (conf, _, build) in CORRUPT.items():
+        read = partial(read_rows, session, root, build)
+        found[f"corrupt/{shape}"] = refusal(partial(under_conf, session, conf, read))
+    return found
+
+
+def refusal_or(build: Callable[[], Any]) -> Any:
+    try:
+        return build()
+    except Exception as error:
+        return f"{type(error).__name__}: {error}"
+
+
 def plan_and_options(session: Any, root: Path) -> dict[str, Any]:
     found: dict[str, Any] = {}
     for shape, (schema, _) in REFUSED.items():
@@ -405,6 +608,7 @@ def measured(
             found[tag] = f"{type(error).__name__}: {error}"
     found["label"] = write_label(session, root, request.param)
     found.update(plan_and_options(session, root))
+    found.update(session_cells(session, root))
     session.stop()
     _reset_active_session_for_tests()
     yield found
@@ -448,3 +652,21 @@ def test_the_text_scan_option_is_never_taken_from_the_user(measured: dict[str, A
     plain, forced = measured["text_scan"]
     assert forced == plain
     assert dict(forced)["x"] != "string"
+
+
+@pytest.mark.parametrize("tag", sorted(SESSION_CELLS))
+def test_a_csv_read_under_an_explicit_session_conf_answers_spark_recorded_cell(
+    measured: dict[str, Any], tag: str
+) -> None:
+    _, _, names, kinds, rows = SESSION_CELLS[tag]
+    assert measured[f"session/{tag}"] == (names, kinds, ordered(rows))
+
+
+@pytest.mark.parametrize("shape", sorted(CORRUPT))
+def test_a_read_schema_holding_the_corrupt_record_column_is_refused_by_name(
+    measured: dict[str, Any], shape: str
+) -> None:
+    found = measured[f"corrupt/{shape}"]
+    assert found.startswith("True: ")
+    assert f"reader schema field {CORRUPT[shape][1]!r} is the corrupt-record column" in found
+    assert "columnNameOfCorruptRecord" in found
