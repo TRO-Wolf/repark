@@ -3261,7 +3261,7 @@ class DataFrame:
         pa = require_pyarrow()
         failure = None
         try:
-            table = surface_a._own_plan(self, pa.RecordBatchReader.from_stream).read_all()
+            table = surface_a._own_plan(self, pa.lib.RecordBatchReader.from_stream).read_all()
         except pa.lib.ArrowException as arrow_error:
             failure = scrub_exception(arrow_error)
         if failure is not None:

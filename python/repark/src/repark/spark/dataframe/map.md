@@ -1272,16 +1272,16 @@ callbacks run only where the API accepts user UDFs and receive Arrow batches.
 
 ## Durable contracts
 
-- Transformations remain lazy. Actions and Arrow exports execute the plan; own-plan opens use the frame's first parse (READER-PARSE-1 F1).
-- `to_arrow_batches` holds one Arrow batch and emits one typed empty batch for an empty result.
+- Transformations remain lazy. Actions and Arrow exports run the plan; own-plan opens use the frame's first parse (READER-PARSE-1 F1; `to_arrow` via `pa.lib`).
+- `to_arrow_batches` holds one Arrow batch and emits a typed empty batch for an empty result.
   `collect` materializes rows and converts maps to dictionaries; calendar intervals refuse.
 - `columns` reads the plan's logical schema, not the analyzed one. A dependent `withColumn`
-  chain used to pay one analyzer pass per existing column per call — 5,750 `column_names` calls
+  chain paid one analyzer pass per existing column per call — 5,750 `column_names` calls
   at depth 100 — because `_bind_schema_column` re-resolved each name against `self.columns`.
-  `_iter_bound_columns` now reads `columns` once and passes the canonical name through, falling
+  `_iter_bound_columns` reads `columns` once and passes the canonical name through, falling
   back to the resolving path when the frame carries duplicate names so the `[AMBIGUOUS_REFERENCE]`
   contract is unchanged.
-- Arrow export maps execution failures to `PySparkException` while preserving the engine message.
+- Arrow export maps execution failures to `PySparkException`, keeping the engine message.
   Planning and analysis errors keep their classified facade exceptions.
 - DataFrame origins preserve side identity through joins. Semi and anti joins emit left columns
   only; right-origin columns remain unavailable until an emitting join restores them.
