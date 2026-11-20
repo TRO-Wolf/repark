@@ -704,11 +704,6 @@ class DataFrame:
         MemTable — peak memory O(result). Despite the Spark default name
         ``MEMORY_AND_DISK_DESER``, repark does **not** spill to disk. Optional size guards:
         ``repark.cache.max_bytes`` / ``repark.cache.max_total_bytes`` refuse oversized materialize.
-
-        **Object-identity only (not Spark plan-matching cache):** ``df.cache().filter(…).count()``
-        does **not** materialize ``df`` or share a MemTable with the child — only actions on the
-        same Python object after ``cache()`` trigger materialize. Two separately
-        built identical plans never share a cache. Child-plan cache sharing is OUT (architectural).
         """
         from repark.spark.storage import StorageLevel
 
