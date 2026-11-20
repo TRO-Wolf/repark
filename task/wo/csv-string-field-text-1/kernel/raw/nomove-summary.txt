@@ -1,0 +1,16 @@
+E-false: 7 main records, 7 head records, same tags True, 0 differ
+E-true: 7 main records, 7 head records, same tags True, 0 differ
+F-false: 240 main records, 240 head records, same tags True, 0 differ
+F-true: 240 main records, 240 head records, same tags True, 0 differ
+L-false: 342 main records, 342 head records, same tags True, 0 differ
+L-true: 342 main records, 342 head records, same tags True, 0 differ
+M-false: 688 main records, 688 head records, same tags True, 0 differ
+M-true: 688 main records, 688 head records, same tags True, 0 differ
+N-false: 278 main records, 278 head records, same tags True, 0 differ
+N-true: 278 main records, 278 head records, same tags True, 0 differ
+S-false: 2064 main records, 2064 head records, same tags True, 0 differ
+S-true: 2064 main records, 2064 head records, same tags True, 0 differ
+T-false: 240 main records, 240 head records, same tags True, 0 differ
+T-true: 240 main records, 240 head records, same tags True, 0 differ
+all: 7718 records per build, 0 differ
+raw lines byte-equal before any normalising: every one (0 differ)

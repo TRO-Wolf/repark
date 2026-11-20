@@ -1,0 +1,8 @@
+cells 1018
+main {'WRONG': 916, 'EQUAL': 88, 'RAISE': 14}
+base {'WRONG': 916, 'EQUAL': 88, 'RAISE': 14}
+group B ansi false {'WRONG': 445, 'EQUAL': 39, 'RAISE': 6}
+group B ansi true {'WRONG': 445, 'EQUAL': 39, 'RAISE': 6}
+group M ansi false {'WRONG': 13, 'RAISE': 1, 'EQUAL': 5}
+group M ansi true {'WRONG': 13, 'RAISE': 1, 'EQUAL': 5}
+mode_dependent 0
