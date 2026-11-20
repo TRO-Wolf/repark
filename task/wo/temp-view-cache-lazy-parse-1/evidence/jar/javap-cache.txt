@@ -1,0 +1,124 @@
+# javap -c -p excerpts, spark-sql_2.13-4.1.2.jar (classes extracted into a scratch directory; the jar untouched)
+
+## Dataset.persist(StorageLevel) (cache() -> persist() -> persist(defaultCacheStorageLevel))
+  public org.apache.spark.sql.classic.Dataset<T> persist();
+invokevirtual #455  // Method sparkSession:()Lorg/apache/spark/sql/classic/SparkSession;
+invokevirtual #461  // Method org/apache/spark/sql/classic/SparkSession.sessionState:()Lorg/apache/spark/sql/internal/SessionState;
+invokevirtual #1016  // Method org/apache/spark/sql/internal/SessionState.conf:()Lorg/apache/spark/sql/internal/SQLConf;
+invokevirtual #2796  // Method org/apache/spark/sql/internal/SQLConf.defaultCacheStorageLevel:()Lorg/apache/spark/storage/StorageLevel;
+invokevirtual #2799  // Method persist:(Lorg/apache/spark/storage/StorageLevel;)Lorg/apache/spark/sql/classic/Dataset;
+  public org.apache.spark.sql.classic.Dataset<T> cache();
+invokevirtual #2801  // Method persist:()Lorg/apache/spark/sql/classic/Dataset;
+  public org.apache.spark.sql.classic.Dataset<T> persist(org.apache.spark.storage.StorageLevel);
+invokevirtual #455  // Method sparkSession:()Lorg/apache/spark/sql/classic/SparkSession;
+invokevirtual #2807  // Method org/apache/spark/sql/classic/SparkSession.sharedState:()Lorg/apache/spark/sql/internal/SharedState;
+invokevirtual #2813  // Method org/apache/spark/sql/internal/SharedState.cacheManager:()Lorg/apache/spark/sql/execution/CacheManager;
+invokevirtual #2819  // Method org/apache/spark/sql/execution/CacheManager.cacheQuery:(Lorg/apache/spark/sql/classic/Dataset;Lscala/Option;Lorg/apache/spark/storage/StorageLevel;)V
+invokevirtual #455  // Method sparkSession:()Lorg/apache/spark/sql/classic/SparkSession;
+
+## Dataset.collectToPython (the Dataset's own final queryExecution field)
+  private final transient org.apache.spark.sql.execution.QueryExecution queryExecution;
+  public java.lang.Object[] collectToPython();
+invokevirtual #3397  // Method org/apache/spark/sql/execution/python/EvaluatePython$.registerPicklers:()V
+invokevirtual #379  // Method queryExecution:()Lorg/apache/spark/sql/execution/QueryExecution;
+invokespecial #1083  // Method withAction:(Ljava/lang/String;Lorg/apache/spark/sql/execution/QueryExecution;Lscala/Function1;)Ljava/lang/Object;
+
+## CacheManager.cacheQuery(Dataset, Option, StorageLevel) (the normalized analysed plan)
+  public void cacheQuery(org.apache.spark.sql.classic.Dataset<?>, scala.Option<java.lang.String>, org.apache.spark.storage.StorageLevel);
+invokevirtual #391  // Method org/apache/spark/sql/classic/Dataset.sparkSession:()Lorg/apache/spark/sql/classic/SparkSession;
+invokevirtual #395  // Method org/apache/spark/sql/classic/Dataset.queryExecution:()Lorg/apache/spark/sql/execution/QueryExecution;
+invokevirtual #401  // Method org/apache/spark/sql/execution/QueryExecution.analyzed:()Lorg/apache/spark/sql/catalyst/plans/logical/LogicalPlan;
+invokevirtual #395  // Method org/apache/spark/sql/classic/Dataset.queryExecution:()Lorg/apache/spark/sql/execution/QueryExecution;
+invokevirtual #404  // Method org/apache/spark/sql/execution/QueryExecution.normalized:()Lorg/apache/spark/sql/catalyst/plans/logical/LogicalPlan;
+invokespecial #408  // Method cacheQueryInternal:(Lorg/apache/spark/sql/classic/SparkSession;Lorg/apache/spark/sql/catalyst/plans/logical/LogicalPlan;Lorg/apache/spark/sql/catalyst/plans/logical/LogicalPlan;Lscala/Option;Lorg/apache/spark/storage/StorageLevel;)V
+
+## CacheManager.cacheQueryInternal (the plan is executed in getOrCloneSessionWithConfigsOff's session; InMemoryRelation built, not run)
+  private void cacheQueryInternal(org.apache.spark.sql.classic.SparkSession, org.apache.spark.sql.catalyst.plans.logical.LogicalPlan, org.apache.spark.sql.catalyst.plans.logical.LogicalPlan, scala.Option<java.lang.String>, org.apache.spark.storage.StorageLevel);
+invokevirtual #435  // Method org/apache/spark/storage/StorageLevel$.NONE:()Lorg/apache/spark/storage/StorageLevel;
+invokevirtual #439  // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+instanceof    #441  // class org/apache/spark/sql/catalyst/plans/logical/Command
+invokevirtual #464  // Method org$apache$spark$sql$execution$CacheManager$$lookupCachedDataInternal:(Lorg/apache/spark/sql/catalyst/plans/logical/LogicalPlan;)Lscala/Option;
+invokevirtual #469  // Method scala/Option.nonEmpty:()Z
+invokespecial #483  // Method getOrCloneSessionWithConfigsOff:(Lorg/apache/spark/sql/classic/SparkSession;)Lorg/apache/spark/sql/classic/SparkSession;
+invokedynamic #493,  0  // InvokeDynamic #4:apply:(Lorg/apache/spark/sql/classic/SparkSession;Lorg/apache/spark/sql/catalyst/plans/logical/LogicalPlan;Lorg/apache/spark/storage/StorageLevel;Lscala/Option;)Lscala/Function0;
+invokevirtual #499  // Method org/apache/spark/sql/classic/SparkSession.withActive:(Lscala/Function0;)Ljava/lang/Object;
+checkcast     #501  // class org/apache/spark/sql/execution/columnar/InMemoryRelation
+invokevirtual #464  // Method org$apache$spark$sql$execution$CacheManager$$lookupCachedDataInternal:(Lorg/apache/spark/sql/catalyst/plans/logical/LogicalPlan;)Lscala/Option;
+invokevirtual #469  // Method scala/Option.nonEmpty:()Z
+new           #508  // class org/apache/spark/sql/execution/CachedData
+  public static final org.apache.spark.sql.execution.columnar.InMemoryRelation $anonfun$cacheQueryInternal$3(org.apache.spark.sql.classic.SparkSession, org.apache.spark.sql.catalyst.plans.logical.LogicalPlan, org.apache.spark.storage.StorageLevel, scala.Option);
+invokevirtual #1063  // Method org/apache/spark/sql/classic/SparkSession.sessionState:()Lorg/apache/spark/sql/internal/SessionState;
+invokevirtual #1063  // Method org/apache/spark/sql/classic/SparkSession.sessionState:()Lorg/apache/spark/sql/internal/SessionState;
+invokevirtual #1308  // Method org/apache/spark/sql/internal/SessionState.executePlan$default$2:()Lscala/Enumeration$Value;
+invokevirtual #1312  // Method org/apache/spark/sql/internal/SessionState.executePlan:(Lorg/apache/spark/sql/catalyst/plans/logical/LogicalPlan;Lscala/Enumeration$Value;)Lorg/apache/spark/sql/execution/QueryExecution;
+invokevirtual #1320  // Method org/apache/spark/sql/execution/columnar/InMemoryRelation$.apply:(Lorg/apache/spark/storage/StorageLevel;Lorg/apache/spark/sql/execution/QueryExecution;Lscala/Option;)Lorg/apache/spark/sql/execution/columnar/InMemoryRelation;
+
+## CacheManager.getOrCloneSessionWithConfigsOff (clones the session when AUTO_BUCKETED_SCAN_ENABLED or, with CAN_CHANGE_CACHED_PLAN_OUTPUT_PARTITIONING off, AQE final-stage optimizations are on)
+  private org.apache.spark.sql.classic.SparkSession getOrCloneSessionWithConfigsOff(org.apache.spark.sql.classic.SparkSession);
+invokevirtual #1210  // Method org/apache/spark/sql/internal/SQLConf$.AUTO_BUCKETED_SCAN_ENABLED:()Lorg/apache/spark/internal/config/ConfigEntry;
+invokespecial #1213  // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+invokevirtual #1063  // Method org/apache/spark/sql/classic/SparkSession.sessionState:()Lorg/apache/spark/sql/internal/SessionState;
+invokevirtual #1216  // Method org/apache/spark/sql/internal/SessionState.conf:()Lorg/apache/spark/sql/internal/SQLConf;
+invokevirtual #1219  // Method org/apache/spark/sql/internal/SQLConf$.CAN_CHANGE_CACHED_PLAN_OUTPUT_PARTITIONING:()Lorg/apache/spark/internal/config/ConfigEntry;
+invokevirtual #1223  // Method org/apache/spark/sql/internal/SQLConf.getConf:(Lorg/apache/spark/internal/config/ConfigEntry;)Ljava/lang/Object;
+invokestatic  #1226  // Method scala/runtime/BoxesRunTime.unboxToBoolean:(Ljava/lang/Object;)Z
+invokevirtual #1229  // Method org/apache/spark/sql/internal/SQLConf$.ADAPTIVE_EXECUTION_APPLY_FINAL_STAGE_SHUFFLE_OPTIMIZATIONS:()Lorg/apache/spark/internal/config/ConfigEntry;
+invokeinterface #1232,  2  // InterfaceMethod scala/collection/immutable/Seq.$colon$plus:(Ljava/lang/Object;)Ljava/lang/Object;
+invokevirtual #1240  // Method org/apache/spark/sql/classic/SparkSession$.getOrCloneSessionWithConfigsOff:(Lorg/apache/spark/sql/classic/SparkSession;Lscala/collection/immutable/Seq;)Lorg/apache/spark/sql/classic/SparkSession;
+invokevirtual #786  // Method org/apache/spark/sql/execution/CachedData.cachedRepresentation:()Lorg/apache/spark/sql/execution/columnar/InMemoryRelation;
+invokevirtual #1247  // Method org/apache/spark/sql/execution/columnar/InMemoryRelation.cacheBuilder:()Lorg/apache/spark/sql/execution/columnar/CachedRDDBuilder;
+invokevirtual #786  // Method org/apache/spark/sql/execution/CachedData.cachedRepresentation:()Lorg/apache/spark/sql/execution/columnar/InMemoryRelation;
+invokevirtual #1247  // Method org/apache/spark/sql/execution/columnar/InMemoryRelation.cacheBuilder:()Lorg/apache/spark/sql/execution/columnar/CachedRDDBuilder;
+invokevirtual #1252  // Method org/apache/spark/sql/execution/columnar/CachedRDDBuilder.clearCache$default$1:()Z
+invokevirtual #1254  // Method org/apache/spark/sql/execution/columnar/CachedRDDBuilder.clearCache:(Z)V
+
+## CachedRDDBuilder.cachedColumnBuffers / buildBuffers (the cached plan executes on the first ask, then is kept)
+  public synchronized org.apache.spark.rdd.RDD<org.apache.spark.sql.columnar.CachedBatch> cachedColumnBuffers();
+invokespecial #121  // Method _cachedColumnBuffers:()Lorg/apache/spark/rdd/RDD;
+invokespecial #124  // Method buildBuffers:()Lorg/apache/spark/rdd/RDD;
+invokespecial #126  // Method _cachedColumnBuffers_$eq:(Lorg/apache/spark/rdd/RDD;)V
+invokespecial #121  // Method _cachedColumnBuffers:()Lorg/apache/spark/rdd/RDD;
+  private org.apache.spark.rdd.RDD<org.apache.spark.sql.columnar.CachedBatch> buildBuffers();
+invokevirtual #170  // Method supportsColumnarInput:()Z
+invokevirtual #172  // Method serializer:()Lorg/apache/spark/sql/columnar/CachedBatchSerializer;
+invokevirtual #174  // Method cachedPlan:()Lorg/apache/spark/sql/execution/SparkPlan;
+invokevirtual #179  // Method org/apache/spark/sql/execution/SparkPlan.executeColumnar:()Lorg/apache/spark/rdd/RDD;
+invokevirtual #174  // Method cachedPlan:()Lorg/apache/spark/sql/execution/SparkPlan;
+invokevirtual #183  // Method org/apache/spark/sql/execution/SparkPlan.output:()Lscala/collection/immutable/Seq;
+invokevirtual #185  // Method storageLevel:()Lorg/apache/spark/storage/StorageLevel;
+invokevirtual #174  // Method cachedPlan:()Lorg/apache/spark/sql/execution/SparkPlan;
+
+## BaseCacheTableExec.run (CACHE [LAZY] TABLE: cacheQuery, then count() unless isLazy)
+  public default scala.collection.immutable.Seq<org.apache.spark.sql.catalyst.InternalRow> run();
+invokevirtual #157  // Method org/apache/spark/sql/execution/SparkPlan.session:()Lorg/apache/spark/sql/classic/SparkSession;
+invokeinterface #159,  1  // InterfaceMethod planToCache:()Lorg/apache/spark/sql/catalyst/plans/logical/LogicalPlan;
+invokevirtual #163  // Method org/apache/spark/sql/classic/Dataset$.ofRows:(Lorg/apache/spark/sql/classic/SparkSession;Lorg/apache/spark/sql/catalyst/plans/logical/LogicalPlan;)Lorg/apache/spark/sql/classic/Dataset;
+invokevirtual #157  // Method org/apache/spark/sql/execution/SparkPlan.session:()Lorg/apache/spark/sql/classic/SparkSession;
+invokevirtual #169  // Method org/apache/spark/sql/classic/SparkSession.sharedState:()Lorg/apache/spark/sql/internal/SharedState;
+invokevirtual #175  // Method org/apache/spark/sql/internal/SharedState.cacheManager:()Lorg/apache/spark/sql/execution/CacheManager;
+invokeinterface #179,  1  // InterfaceMethod relationName:()Ljava/lang/String;
+invokespecial #183  // Method scala/Some."<init>":(Ljava/lang/Object;)V
+invokeinterface #191,  1  // InterfaceMethod isLazy:()Z
+invokevirtual #197  // Method org/apache/spark/sql/classic/Dataset.count:()J
+
+## Catalog.cacheTable(String, StorageLevel) (spark.catalog.cacheTable: cacheQuery only, no count)
+  public void cacheTable(java.lang.String, org.apache.spark.storage.StorageLevel);
+invokevirtual #1335  // Method org/apache/spark/sql/classic/SparkSession.sharedState:()Lorg/apache/spark/sql/internal/SharedState;
+invokevirtual #1341  // Method org/apache/spark/sql/internal/SharedState.cacheManager:()Lorg/apache/spark/sql/execution/CacheManager;
+invokevirtual #1274  // Method org/apache/spark/sql/classic/SparkSession.table:(Ljava/lang/String;)Lorg/apache/spark/sql/classic/Dataset;
+invokespecial #278  // Method scala/Some."<init>":(Ljava/lang/Object;)V
+invokevirtual #1406  // Method org/apache/spark/sql/execution/CacheManager.cacheQuery:(Lorg/apache/spark/sql/classic/Dataset;Lscala/Option;Lorg/apache/spark/storage/StorageLevel;)V
+
+## Python execs read the child and the session zone at doExecute
+### BatchEvalPythonExec
+  public org.apache.spark.rdd.RDD<org.apache.spark.sql.catalyst.InternalRow> doExecute();
+### ArrowEvalPythonExec
+  public org.apache.spark.rdd.RDD<org.apache.spark.sql.catalyst.InternalRow> doExecute();
+invokevirtual #179  // Method org/apache/spark/sql/internal/SQLConf.sessionLocalTimeZone:()Ljava/lang/String;
+invokevirtual #192  // Method org/apache/spark/sql/execution/python/ArrowPythonRunner$.getPythonRunnerConfMap:(Lorg/apache/spark/sql/internal/SQLConf;)Lscala/collection/immutable/Map;
+### MapInBatchExec
+  public default org.apache.spark.rdd.RDD<org.apache.spark.sql.catalyst.InternalRow> doExecute();
+invokevirtual #94  // Method org/apache/spark/sql/execution/python/ArrowPythonRunner$.getPythonRunnerConfMap:(Lorg/apache/spark/sql/internal/SQLConf;)Lscala/collection/immutable/Map;
+invokevirtual #159  // Method org/apache/spark/sql/internal/SQLConf.sessionLocalTimeZone:()Ljava/lang/String;
+invokevirtual #181  // Method org/apache/spark/sql/execution/SparkPlan.execute:()Lorg/apache/spark/rdd/RDD;
+invokevirtual #181  // Method org/apache/spark/sql/execution/SparkPlan.execute:()Lorg/apache/spark/rdd/RDD;

@@ -1,0 +1,10 @@
+m-main: NATIVE S/ddu-work/pkg-rp1d-52f468ce/repark/_native.abi3.so
+m-base: NATIVE S/ddu-work/pkg-rp1base-8bc26cba/repark/_native.abi3.so
+main rc=0 secs=5 lines=237
+base rc=0 secs=5 lines=237
+spark rc=0 secs=70 lines=237
+ALLDONE3
+main rc=0 secs=5 lines=241
+base rc=0 secs=5 lines=241
+spark rc=0 secs=72 lines=241
+ALLDONE3
