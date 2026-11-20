@@ -128,7 +128,7 @@ def main() -> None:
     base = records([EVID / "main.jsonl.gz", EVID / "m-main.jsonl.gz"])
     base.update(records([FABLE / "child-main.jsonl"]))
     base.update(records([F8 / "f8-main.jsonl"]))
-    head = records(sorted(BAR.glob("head-*.jsonl")) + [BAR / "m-head.jsonl"])
+    head = records([*sorted(BAR.glob("head-*.jsonl")), BAR / "m-head.jsonl"])
     head.update(records([BAR / "child-head.jsonl"]))
     head.update(records([BAR / "f8-head.jsonl"]))
     tally: Counter[tuple[str, str, str]] = Counter()
@@ -139,7 +139,7 @@ def main() -> None:
         fam = family(tag)
         if fam.startswith("c_") or tag.startswith("c_"):
             fam = "fable"
-        m, mc = verdict(record, base.get(tag))
+        m, _mc = verdict(record, base.get(tag))
         h, hc = verdict(record, head.get(tag))
         tally[(fam, "main", m)] += 1
         tally[(fam, "head", h)] += 1

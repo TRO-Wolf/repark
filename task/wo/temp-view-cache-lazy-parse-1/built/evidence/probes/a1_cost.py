@@ -2,6 +2,7 @@ import json
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import repark._native as native
 from repark import ReparkSession
@@ -30,7 +31,7 @@ def mark(name: str) -> None:
     marks[name] = round((time.perf_counter() - start) * 1000, 2)
 
 
-def frame():
+def frame() -> Any:
     return s.read.schema("n INT, ts TIMESTAMP").json(str(json_dir)).selectExpr(*SHAPE)
 
 

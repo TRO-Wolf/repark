@@ -1,17 +1,13 @@
 import contextlib
-import functools
-import io
 import json
 import os
 import re
 import shutil
 import sys
 import tempfile
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-
-import pandas as pd
 
 engine, parent, out_path = sys.argv[1:4]
 GROUPS = sys.argv[4].split(",") if len(sys.argv) > 4 else ["R", "C", "U", "L"]
@@ -26,9 +22,7 @@ READERS = ["json_s", "csv_s", "csv_i", "pq", "ice"]
 wh = tempfile.mkdtemp(prefix="cl-" + engine + "-", dir=parent)
 
 if engine == "spark":
-    from pyspark import StorageLevel
     from pyspark.sql import SparkSession
-    from pyspark.sql import functions as fn
 
     builder = (
         SparkSession.builder.master("local[1]")
@@ -40,8 +34,7 @@ if engine == "spark":
     )
 else:
     import repark._native as native
-    from repark import ReparkSession, StorageLevel
-    from repark.spark import functions as fn
+    from repark import ReparkSession
 
     print("NATIVE", native.__file__, flush=True)
     builder = ReparkSession.builder.appName("cache-lazy")
@@ -119,8 +112,6 @@ def base(key: str, k: int, session: Any = None, ts: bool = False) -> Any:
     return reader(key, session).selectExpr(*shape(k, ts))
 
 
-
-
 def rows(frame: Any) -> list[list[Any]]:
     got = [[None if v is None else str(v) for v in r] for r in frame.collect()]
     return sorted(got, key=json.dumps)
@@ -137,7 +128,7 @@ COLS = "n INT, ts TIMESTAMP, t STRING, h INT, u BIGINT, k INT"
 
 
 def verb_cell(mode: str, direction: Any, key: str, verb: str, cached: bool, fill: str) -> None:
-    label, made, read, third = direction
+    label, made, read, _third = direction
     counter[0] += 1
     k = counter[0]
     table = "lc.db.w" + str(k)
