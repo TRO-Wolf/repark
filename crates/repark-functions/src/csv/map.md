@@ -30,9 +30,9 @@ record per row; the `fold` analyzer rule validates the options literal and folds
   (`stringToTimestamp` in the session zone, the same retry); `csv_timestamp_ntz`
   (`parseWithoutTimeZone`: a zone or a time alone is a misfit, and no zone is ever read). The
   array kernel `csv_field_array` answers NULL for a NULL text and for a misfit, and
-  `misfit_rows` reports the misfits apart from NULL input. `__repark_csv_field__` (a typed NULL
-  second argument names the target type) registers through `functions()`; `csv_field_expr`
-  builds it. `nullValue` stays outside the kernel. Intervals, `VARIANT` and every type without a
+  `misfit_rows` reports the misfits apart from NULL input. `__repark_csv_field__` (its second
+  argument, a string literal, is the Arrow type's name: a typed NULL would meet the integer
+  literal narrowing) registers through `functions()`; `csv_field_expr` builds it. `nullValue` stays outside the kernel. Intervals, `VARIANT` and every type without a
   converter refuse by name at plan time (`check_csv_field_target`). Unicode digits are a declared
   divergence (Spark parses them for the integers and `DECIMAL`). Nothing reads through it yet.
   Tests: [field/map.md](field/map.md).

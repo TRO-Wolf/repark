@@ -746,10 +746,28 @@ impl Hash for SparkCsvField {
     }
 }
 
+fn marker_target(marker: Option<&ScalarValue>) -> Result<DataType> {
+    let Some(
+        ScalarValue::Utf8(Some(name))
+        | ScalarValue::LargeUtf8(Some(name))
+        | ScalarValue::Utf8View(Some(name)),
+    ) = marker
+    else {
+        return plan_err!(
+            "'{CSV_FIELD_UDF}' names its field type with a string literal second argument"
+        );
+    };
+    DataType::from_str(name).map_err(|_| {
+        DataFusionError::Plan(format!(
+            "'{CSV_FIELD_UDF}' got {name:?}, which names no type"
+        ))
+    })
+}
+
 fn wrong_arity(count: usize) -> DataFusionError {
     DataFusionError::Plan(format!(
-        "'{CSV_FIELD_UDF}' takes the text and a typed NULL naming the field type, not {count} \
-         arguments"
+        "'{CSV_FIELD_UDF}' takes the text and a string literal naming the field type, not \
+         {count} arguments"
     ))
 }
 
@@ -769,24 +787,18 @@ impl ScalarUDFImpl for SparkCsvField {
         }
     }
 
-    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        match arg_types {
-            [_, target] => Ok(target.clone()),
-            _ => Err(wrong_arity(arg_types.len())),
-        }
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        plan_err!("'{CSV_FIELD_UDF}' reads its field type from the literal second argument")
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        let [text, target] = args.arg_fields else {
+        let [text, _] = args.arg_fields else {
             return Err(wrong_arity(args.arg_fields.len()));
         };
         check_text_type(text.data_type())?;
-        check_csv_field_target(target.data_type())?;
-        Ok(Arc::new(Field::new(
-            self.name(),
-            target.data_type().clone(),
-            true,
-        )))
+        let target = marker_target(args.scalar_arguments.get(1).copied().flatten())?;
+        check_csv_field_target(&target)?;
+        Ok(Arc::new(Field::new(self.name(), target, true)))
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -825,10 +837,9 @@ pub fn csv_field_udf() -> Arc<ScalarUDF> {
 #[allow(clippy::missing_errors_doc)]
 pub fn csv_field_expr(text: Expr, target: &DataType) -> Result<Expr> {
     check_csv_field_target(target)?;
-    let marker = ScalarValue::try_from(target)?;
     Ok(Expr::ScalarFunction(ScalarFunction::new_udf(
         csv_field_udf(),
-        vec![text, lit(marker)],
+        vec![text, lit(target.to_string())],
     )))
 }
 

@@ -255,45 +255,61 @@ fn intervals_variant_and_nested_types_refuse_by_name() {
     }
 }
 
-fn sql_cell(query: &str) -> String {
+fn run_sql(query: &str) -> datafusion::common::Result<Vec<datafusion::arrow::array::RecordBatch>> {
     let ctx = SessionContext::new();
     crate::register_all(&ctx);
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .expect("runtime");
-    let batches = runtime
-        .block_on(async { ctx.sql(query).await?.collect().await })
-        .expect("query");
+    runtime.block_on(async { ctx.sql(query).await?.collect().await })
+}
+
+fn sql_cell(query: &str) -> String {
+    let batches = run_sql(query).expect("query");
     datafusion::common::ScalarValue::try_from_array(batches[0].column(0), 0)
         .expect("scalar")
         .to_string()
 }
 
 #[test]
+fn every_target_type_survives_its_string_marker() {
+    for name in ADDED_COLUMNS {
+        let wanted = target(name);
+        let named = wanted.to_string();
+        assert_eq!(
+            DataType::from_str(&named).expect("marker"),
+            wanted,
+            "{named}"
+        );
+    }
+    let wide = DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("America/New_York")));
+    assert_eq!(DataType::from_str(&wide.to_string()).expect("zone"), wide);
+}
+
+#[test]
 fn the_registered_udf_answers_the_declared_type() {
-    assert_eq!(
-        sql_cell("SELECT __repark_csv_field__('007', CAST(NULL AS INT))"),
-        "7"
-    );
+    assert_eq!(sql_cell("SELECT __repark_csv_field__('007', 'Int32')"), "7");
     assert_eq!(
         sql_cell(
-            "SELECT __repark_csv_field__(x, CAST(NULL AS DECIMAL(10,2))) FROM (VALUES ('1,000.5')) AS t(x)"
+            "SELECT __repark_csv_field__(x, 'Decimal128(10, 2)') FROM (VALUES ('1,000.5')) AS t(x)"
         ),
         "Some(100050),10,2"
     );
     assert_eq!(
-        sql_cell(
-            "SELECT __repark_csv_field__(x, CAST(NULL AS DOUBLE)) FROM (VALUES (' 7 ')) AS t(x)"
-        ),
+        sql_cell("SELECT __repark_csv_field__(x, 'Float64') FROM (VALUES (' 7 ')) AS t(x)"),
         "7"
     );
     assert_eq!(
-        sql_cell(
-            "SELECT __repark_csv_field__(x, CAST(NULL AS BOOLEAN)) FROM (VALUES ('t')) AS t(x)"
-        ),
+        sql_cell("SELECT __repark_csv_field__(x, 'Boolean') FROM (VALUES ('t')) AS t(x)"),
         "NULL"
     );
+    assert_eq!(
+        sql_cell("SELECT __repark_csv_field__('2147483648', 'Int64')"),
+        "2147483648"
+    );
+    assert!(run_sql("SELECT __repark_csv_field__('1', 'NoSuchType')").is_err());
+    assert!(run_sql("SELECT __repark_csv_field__(x, x) FROM (VALUES ('1')) AS t(x)").is_err());
 }
 
 const ORACLE: &[(&str, &str)] = &[

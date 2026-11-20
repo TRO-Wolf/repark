@@ -314,7 +314,10 @@ def _canon(spec: str, value: Any, text: str) -> bool | str:
     if spec in ("float", "double"):
         return value
     if spec.startswith("decimal"):
-        return str(int(value.replace(".", "")))
+        sign, digits, exponent = value.as_tuple()
+        scale = int(spec.rstrip(")").split(",")[1])
+        units = int("".join(str(digit) for digit in digits)) * 10 ** (exponent + scale)
+        return str(-units if sign else units)
     if spec == "boolean":
         return "true" if value else "false"
     if spec == "string":
@@ -329,8 +332,6 @@ def _column(arrow: pa.ChunkedArray, spec: str) -> list[Any]:
         arrow = arrow.cast(pa.int32())
     elif spec in ("timestamp", "timestamp_ntz"):
         arrow = arrow.cast(pa.int64())
-    elif spec.startswith("decimal"):
-        arrow = arrow.cast(pa.string())
     return arrow.to_pylist()
 
 
