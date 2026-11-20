@@ -4,6 +4,42 @@ A Fable medium consult under the overnight window's terms (continued by the owne
 
 Every section below copies Fable's consult reply (2026-11-20).
 
+## The one thing that changes several answers
+
+Seat (a) picks the right row that is **adjacent** to the left row in the as-of order. That equals Spark's
+`min_by(distance)` pick only where the distance grows steadily with the order. The step 0 already found one shape
+where it does not (the non-equality `on`, Q11). There are three more, and two of the sketch's defaults (Q7 and Q10)
+ask seat (a) to mirror them, which it cannot do:
+
+| Shape | What Spark does | Evidence |
+|---|---|---|
+| Integer bounds, ANSI off | The distance wraps, and Spark returns the row with the smallest wrapped distance, which is a far row. For BIGINT backward, left `MAX` gets `rmin1` (`-MAX`) although `rtop` (`MAX`, distance 0) is there. | `spark-false-ONEMTCS-`, group `O`, first record |
+| STRING as-of, ANSI off | The condition compares as strings and the distance subtracts as numbers. Backward, left `'2'` gets `r16b`: `'2' >= '16'` holds as text, and `2 - 16 = -14` is the smallest distance. | same file, `string_asof:backward` |
+| Equal infinities | `inf - inf` is NaN, which `min_by` ranks last, so Spark never picks the exactly equal infinite row while any other candidate exists. | measured here, below |
+
+In each of these Spark's row is not the nearest row by Spark's own stated rule. Reproducing them needs a second
+lookup per left row, not a fill.
+
+## What I measured (three short commands)
+
+Fable's probes (`lists.py`, `structfill.py`, `inf.py`) ran in the orchestrator's scratch space. Main is
+`pkg-main-9a48932f`, and both main runs printed its `_native.abi3.so`. Each ran under `measure.sh shared` on cores
+32 to 47; the Spark one also under `spark_slot.sh`.
+
+1. **Equal infinities on Spark 4.1.2, ANSI on.** Left `inf`, `-inf`, `1.0`; right `inf`, `0.5`, `-inf` in two input
+   orders; `how="left"`, no key, no tolerance.
+   - Backward, left `inf` gets `-inf` in one order and `0.5` in the other. It never gets the right `inf`.
+   - Forward, left `-inf` gets `0.5` or `inf`. It never gets the right `-inf`.
+   - ANSI off was not run.
+2. **A struct-carrying fill on main, through the SQL door.** `last_value(named_struct(...)) IGNORE NULLS` over the
+   union, one ascending and one descending pass, on 5 left and 5 right rows.
+   - It answers, and both passes plan as `BoundedWindowAggExec`.
+   - A right row with a NULL payload column is kept (the struct is non-null, the field is NULL).
+   - A left row with a NULL as-of value got a forward match (`rid` 1), because NULL sorts first in the descending
+     pass. The seat must keep NULL as-of left rows out of the fill, as W2 does.
+   - Cost was not measured.
+3. **List arguments on main.** See Q14.
+
 ## Q1. The rating
 
 **Guidance: S3, as proposed. The rating is the owner's.** The direct call refuses loudly in every direct cell and
