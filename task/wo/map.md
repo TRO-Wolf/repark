@@ -66,5 +66,6 @@ The full rows as of 2026-11-20 are in [docs/history/task-wo/wo-map-2026-11-20.md
 - [csv-string-field-text-1/](csv-string-field-text-1/map.md) — **CSV-STRING-FIELD-TEXT-1 step 0 (S1, 2026-11-20):** a CSV `STRING` field's text vs Spark 4.1.2, 7,704 cells.
 - [ice-held-frame-snapshot-1/](ice-held-frame-snapshot-1/map.md) — **ICE-HELD-FRAME-SNAPSHOT-1 step 0, revised (S1, 2026-11-20):** a held Iceberg frame after a same-session write vs Spark 4.1.2, 3,896 cells.
 - [temp-view-cache-lazy-parse-1/](temp-view-cache-lazy-parse-1/map.md) — **TEMP-VIEW-CACHE-LAZY-PARSE-1 step 0 (S1, 2026-11-20):** a cache's and a UDF frame's parse vs Spark 4.1.2, 2,402 cells.
+- [asof-join-1/](asof-join-1/map.md) — **ASOF-JOIN-1 step 0 (S3 proposed, 2026-11-20):** `DataFrame._joinAsOf` and `merge_asof` vs Spark 4.1.2, 3,523 main cells.
 
 Up: [../map.md](../map.md).
