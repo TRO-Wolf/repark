@@ -8,5 +8,6 @@
 - `verdicts.jsonl.gz`, [summary.txt](summary.txt) — `bar_cmp.py`'s verdict per cell and its counts (the `M` group's
   counts here use this rule; [../../bar.md](../../bar.md) reports them by step 0's verdicts).
 - `readers-main.jsonl.gz`, `readers-head.jsonl.gz` — the reader sweep on main and the head.
+- `cost-raw.jsonl.gz`, [cost-c012.jsonl](cost-c012.jsonl) — the partial cost samples (rows; C-012 walls).
 
 Up: [../map.md](../map.md).
