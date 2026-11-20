@@ -25,7 +25,7 @@ Numbers and native-module checks need `maturin develop --release`. Prove `__debu
 Live PySpark is the oracle when a unit asserts Spark values. Provision with `--extra record` as `make parity-live` does. One JVM beside at most one other. Wait for an empty box (60 s poll, up to 15 min). Redirect ivy into the lane (`cp -a ~/.ivy2.5.2 <lane>/.ivy2` + `PYSPARK_SUBMIT_ARGS="--conf spark.jars.ivy=<lane>/.ivy2 pyspark-shell"`). `JAVA_HOME` is Java 17. ANSI on; UTC session zone unless the case is about zones. Kill what you start.
 
 ### Size ceilings
-Size ceilings only ratchet down. A new Python file stays under 1000 lines. A ratchet is one row edit in `scripts/check_lib_py.py`; `python/repark-parity/tests/test_cap_1_source_file_line_cap.py` checks the live tree. Do not raise a gate baseline without owner approval. Do not change what any gate requires.
+Size ceilings only ratchet down. A new Python file stays under 1000 lines. A ratchet is a single-row edit in `scripts/check_lib_py.py`; `python/repark-parity/tests/test_cap_1_source_file_line_cap.py` checks the tree. Do not raise a gate baseline without owner approval. Do not change what any gate requires.
 
 ### Map lockstep
 `map.md` in every directory, updated in the same change. A new directory gets a new `map.md`. No amends.
