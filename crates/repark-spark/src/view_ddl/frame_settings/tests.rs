@@ -477,7 +477,7 @@ async fn json_frame(reader: &ReparkSession, root: &std::path::Path) -> DataFrame
 }
 
 #[tokio::test]
-async fn a_json_reader_lineage_keeps_todays_provider_through_views() {
+async fn a_json_reader_lineage_registers_as_any_frame_does() {
     let reader = session(true);
     let root = tempfile::tempdir().unwrap_or_else(|error| panic!("dir: {error}"));
     let json = json_frame(&reader, root.path()).await;
@@ -487,8 +487,7 @@ async fn a_json_reader_lineage_keeps_todays_provider_through_views() {
             datafusion::logical_expr::col("n") + datafusion::logical_expr::lit(1),
         ])
         .unwrap_or_else(|error| panic!("compute: {error}"));
-    assert!(reader_lineage(computing.logical_plan()));
-    assert!(frame_plan(wrapped(&computing).as_ref()).is_none());
+    assert!(frame_plan(wrapped(&computing).as_ref()).is_some());
     reader
         .context()
         .register_table("jv", wrapped(&json))
@@ -502,36 +501,196 @@ async fn a_json_reader_lineage_keeps_todays_provider_through_views() {
             datafusion::logical_expr::col("n") * datafusion::logical_expr::lit(2),
         ])
         .unwrap_or_else(|error| panic!("over: {error}"));
-    assert!(frame_plan(wrapped(&over).as_ref()).is_none());
-    let held = reader
-        .context()
-        .sql(OVERFLOW)
-        .await
-        .unwrap_or_else(|error| panic!("held: {error}"));
-    assert!(!reader_lineage(held.logical_plan()));
+    assert!(frame_plan(wrapped(&over).as_ref()).is_some());
+}
+
+const LA: &str = "America/Los_Angeles";
+const PARSE: &str = "SELECT n, CAST(t AS TIMESTAMP) AS ts FROM raw";
+
+async fn reader_parse_frames(
+    reader: &ReparkSession,
+    root: &std::path::Path,
+) -> (DataFrame, DataFrame) {
+    let raw = json_frame(reader, root).await;
     reader
         .context()
-        .register_table("pv", wrapped(&held))
-        .unwrap_or_else(|error| panic!("register: {error}"));
-    let marked = reader
+        .register_table("raw", raw.into_view())
+        .unwrap_or_else(|error| panic!("register raw: {error}"));
+    let bare = reader
         .context()
-        .table("pv")
+        .sql(PARSE)
         .await
-        .unwrap_or_else(|error| panic!("table: {error}"));
-    assert!(holds_marker(marked.logical_plan()).unwrap_or_else(|error| panic!("{error}")));
-    let mixed = DataFrame::new(
-        reader.context().state(),
-        LogicalPlanBuilder::from(marked.logical_plan().clone())
-            .cross_join(computing.logical_plan().clone())
-            .and_then(LogicalPlanBuilder::build)
-            .unwrap_or_else(|error| panic!("join: {error}")),
+        .unwrap_or_else(|error| panic!("parse: {error}"));
+    let parse = repark_core::extension::reader_parse(&bare)
+        .unwrap_or_else(|| panic!("the frame seat wraps a reader parse"));
+    (bare, parse)
+}
+
+fn live_zone(reader: &ReparkSession, zone: &str) {
+    let settings = TempViewSettings::capture(zoned(true, zone).context().state().config_options());
+    settings.apply(
+        reader
+            .context()
+            .state_ref()
+            .write()
+            .config_mut()
+            .options_mut(),
     );
-    let provider = wrapped(&mixed);
-    assert!(frame_plan(provider.as_ref()).is_none());
-    let inlined = provider
-        .get_logical_plan()
-        .unwrap_or_else(|| panic!("a frame provider inlines"));
-    assert!(!holds_marker(inlined.as_ref()).unwrap_or_else(|error| panic!("{error}")));
+}
+
+fn optimized(frame: &DataFrame) -> LogicalPlan {
+    frame
+        .clone()
+        .into_optimized_plan()
+        .unwrap_or_else(|error| panic!("optimize: {error}"))
+}
+
+async fn parsed_under(zone: &str, sql: &str) -> std::result::Result<String, String> {
+    let fresh = zoned(true, zone);
+    let root = tempfile::tempdir().unwrap_or_else(|error| panic!("dir: {error}"));
+    let (bare, _) = reader_parse_frames(&fresh, root.path()).await;
+    fresh
+        .context()
+        .register_table("jv", bare.into_view())
+        .unwrap_or_else(|error| panic!("register: {error}"));
+    let frame = fresh
+        .context()
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("{sql}: {error}"));
+    rows(frame).await
+}
+
+#[test]
+fn the_reader_parse_rule_runs_first_in_the_optimizer() {
+    let state = session(true).context().state();
+    let names = state
+        .optimizers()
+        .iter()
+        .map(|rule| rule.name().to_string())
+        .collect::<Vec<_>>();
+    assert_eq!(names.first().map(String::as_str), Some(READER_PARSE_RULE));
+    assert_eq!(
+        names
+            .iter()
+            .filter(|name| *name == READER_PARSE_RULE)
+            .count(),
+        1
+    );
+}
+
+#[tokio::test]
+async fn under_matching_settings_a_reader_parse_becomes_its_analysed_input() {
+    let reader = zoned(true, LA);
+    let root = tempfile::tempdir().unwrap_or_else(|error| panic!("dir: {error}"));
+    let (bare, parse) = reader_parse_frames(&reader, root.path()).await;
+    assert!(holds_parse(parse.logical_plan()).unwrap_or(false));
+    let decided = optimized(&parse);
+    assert!(!holds_parse(&decided).unwrap_or(true));
+    assert_eq!(closed_views(&decided), 0);
+    assert_eq!(
+        decided.display_indent_schema().to_string(),
+        optimized(&bare).display_indent_schema().to_string()
+    );
+    assert_eq!(rows(parse).await, rows(bare).await);
+}
+
+#[tokio::test]
+async fn under_differing_settings_a_reader_parse_reads_its_copy_under_the_live_settings() {
+    let reader = zoned(true, LA);
+    let root = tempfile::tempdir().unwrap_or_else(|error| panic!("dir: {error}"));
+    let (bare, parse) = reader_parse_frames(&reader, root.path()).await;
+    live_zone(&reader, "UTC");
+    let decided = optimized(&parse);
+    assert!(!holds_parse(&decided).unwrap_or(true));
+    assert_eq!(closed_views(&decided), 1);
+    let utc = parsed_under("UTC", "SELECT * FROM jv").await;
+    assert!(utc.is_ok(), "{utc:?}");
+    assert_eq!(rows(parse).await, utc);
+    assert_ne!(rows(bare).await, utc);
+}
+
+#[tokio::test]
+async fn under_a_memo_a_reader_parse_keeps_the_settings_of_its_first_decision() {
+    let reader = zoned(true, LA);
+    let root = tempfile::tempdir().unwrap_or_else(|error| panic!("dir: {error}"));
+    let (_, parse) = reader_parse_frames(&reader, root.path()).await;
+    let memo = Arc::new(ReaderParseMemo::default());
+    let first = memo.run(|| optimized(&parse));
+    assert_eq!(closed_views(&first), 0);
+    live_zone(&reader, "UTC");
+    let kept = memo.run(|| optimized(&parse));
+    assert_eq!(
+        kept.display_indent_schema().to_string(),
+        first.display_indent_schema().to_string()
+    );
+    assert_eq!(closed_views(&optimized(&parse)), 1);
+    let fresh = Arc::new(ReaderParseMemo::default());
+    assert_eq!(closed_views(&fresh.run(|| optimized(&parse))), 1);
+    live_zone(&reader, LA);
+    assert_eq!(closed_views(&fresh.run(|| optimized(&parse))), 1);
+    assert_eq!(closed_views(&memo.run(|| optimized(&parse))), 0);
+    assert!(reader_parse_memo().is_none());
+}
+
+#[test]
+fn a_memo_scope_restores_the_outer_scope_on_return_and_on_unwind() {
+    let outer = Arc::new(ReaderParseMemo::default());
+    let inner = Arc::new(ReaderParseMemo::default());
+    let seen = |memo: &Arc<ReaderParseMemo>| {
+        reader_parse_memo().is_some_and(|current| Arc::ptr_eq(&current, memo))
+    };
+    outer.run(|| {
+        assert!(seen(&outer));
+        inner.run(|| assert!(seen(&inner)));
+        assert!(seen(&outer));
+        let unwound = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            inner.run(|| panic!("inside the inner scope"))
+        }));
+        assert!(unwound.is_err());
+        assert!(seen(&outer));
+        let previous = inner.enter();
+        assert!(seen(&inner));
+        ReaderParseMemo::restore(previous);
+        assert!(seen(&outer));
+    });
+    assert!(reader_parse_memo().is_none());
+    assert!(outer.run(|| {
+        std::thread::spawn(|| reader_parse_memo().is_none())
+            .join()
+            .unwrap_or(false)
+    }));
+}
+
+#[tokio::test]
+async fn a_reader_parse_inside_a_subquery_is_decided_under_both_settings() {
+    let reader = zoned(true, LA);
+    let root = tempfile::tempdir().unwrap_or_else(|error| panic!("dir: {error}"));
+    let (_, parse) = reader_parse_frames(&reader, root.path()).await;
+    reader
+        .context()
+        .register_table("jv", parse.into_view())
+        .unwrap_or_else(|error| panic!("register: {error}"));
+    let sql = "SELECT n, (SELECT max(ts) FROM jv) AS m FROM raw WHERE n IN (SELECT n FROM jv)";
+    let frame = reader
+        .context()
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("{sql}: {error}"));
+    assert!(holds_parse(frame.logical_plan()).unwrap_or(false));
+    let decided = optimized(&frame);
+    assert!(!holds_parse(&decided).unwrap_or(true));
+    assert_eq!(closed_views(&decided), 0);
+    let la = parsed_under(LA, sql).await;
+    assert!(la.is_ok(), "{la:?}");
+    assert_eq!(rows(frame.clone()).await, la);
+    live_zone(&reader, "UTC");
+    let decided = optimized(&frame);
+    assert!(!holds_parse(&decided).unwrap_or(true));
+    assert_eq!(closed_views(&decided), 2);
+    let utc = parsed_under("UTC", sql).await;
+    assert_ne!(la, utc);
+    assert_eq!(rows(frame).await, utc);
 }
 
 fn inlined_view(plan: &LogicalPlan, name: &str) -> Option<LogicalPlan> {

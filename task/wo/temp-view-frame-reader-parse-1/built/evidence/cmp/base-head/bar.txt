@@ -1,0 +1,189 @@
+A|cross|gained {'csv_i': 4, 'csv_sts': 5, 'json_g': 10, 'json_i': 3, 'json_sts': 5}
+A|cross|maingap=direct {'base EQUAL': 4, 'base RAISE': 194, 'base WRONG': 10, 'head EQUAL': 4, 'head RAISE': 194, 'head WRONG': 10}
+A|cross|maingap=equal {'base EQUAL': 163, 'base WRONG': 7, 'head EQUAL': 170}
+A|cross|maingap=nospark {'base NOSPARK': 34, 'head NOSPARK': 34}
+A|cross|maingap=view {'base RAISE': 15, 'base WRONG': 15, 'head EQUAL': 20, 'head RAISE': 10}
+A|matching|maingap=matching {'base EQUAL': 204, 'base NOSPARK': 34, 'base RAISE': 194, 'base WRONG': 10, 'head EQUAL': 204, 'head NOSPARK': 34, 'head RAISE': 194, 'head WRONG': 10}
+R1-D| {'base RAISE': 18, 'head RAISE': 18}
+R1-M|direct {'base EQUAL': 104, 'base RAISE': 264, 'base WRONG': 168, 'head EQUAL': 272, 'head RAISE': 264}
+R1-M|equal {'base EQUAL': 826, 'head EQUAL': 826}
+R1-M|gained {'eb': 112, 'j': 40, 'jb': 110, 'ob': 112, 'osb': 112, 'sb': 112}
+R1-M|matching {'base EQUAL': 1528, 'base NOSPARK': 272, 'base RAISE': 264, 'head EQUAL': 1528, 'head NOSPARK': 272, 'head RAISE': 264}
+R1-M|nospark {'base NOSPARK': 272, 'head NOSPARK': 272}
+R1-M|view {'base WRONG': 430, 'head EQUAL': 430}
+R1-N| {'base EQUAL': 54, 'base WRONG': 36, 'head EQUAL': 90}
+R1-N|gained {'ff': 12, 'fs': 12, 'sf': 12}
+R1-XC| {'base EQUAL': 26, 'base WRONG': 4, 'head EQUAL': 26, 'head WRONG': 4, 'head col b': 4, 'head col ts': 4, 'head col u': 4}
+R1-X| {'base EQUAL': 58, 'base WRONG': 32, 'head EQUAL': 90}
+R1-X|gained {'cj': 4, 'cjb': 4, 'cross': 4, 'ffilter': 4, 'nv_hour': 4, 'sql_join': 4, 'twice_hour': 4, 'union_hour': 4}
+S|matching|maingap=view {'base RAISE': 8, 'head RAISE': 8}
+T|cross|maingap=direct {'base EQUAL': 27, 'base WRONG': 44, 'head EQUAL': 27, 'head WRONG': 44}
+T|cross|maingap=equal {'base EQUAL': 92, 'base WRONG': 7, 'head EQUAL': 92, 'head WRONG': 7}
+T|cross|maingap=nospark {'base NOSPARK': 34, 'head NOSPARK': 34}
+T|matching|maingap=matching {'base EQUAL': 119, 'base NOSPARK': 34, 'base WRONG': 51, 'head EQUAL': 119, 'head NOSPARK': 34, 'head WRONG': 51}
+W|cross|gained {'csv_i': 32, 'csv_s': 32, 'json_s': 32}
+W|cross|maingap=csv_view {'base WRONG': 32, 'head EQUAL': 32}
+W|cross|maingap=equal {'base EQUAL': 152, 'head EQUAL': 152}
+W|cross|maingap=nospark {'base NOSPARK': 48, 'head NOSPARK': 48}
+W|cross|maingap=view {'base EQUAL': 40, 'base WRONG': 64, 'head EQUAL': 104}
+Z|cross|gained {'csv_0': 4, 'csv_f': 74, 'csv_i': 74, 'csv_n': 74, 'csv_ns': 4, 'csv_s': 74, 'json_f': 74, 'json_i': 4, 'json_m': 74, 'json_s': 74}
+Z|cross|maingap=csv_view {'base WRONG': 148, 'head EQUAL': 148}
+Z|cross|maingap=direct {'base EQUAL': 124, 'base RAISE': 264, 'head EQUAL': 124, 'head RAISE': 264}
+Z|cross|maingap=equal {'base EQUAL': 874, 'head EQUAL': 874}
+Z|cross|maingap=nospark {'base NOSPARK': 256, 'head NOSPARK': 256}
+Z|cross|maingap=view {'base WRONG': 382, 'head EQUAL': 382}
+Z|matching|maingap=matching {'base EQUAL': 1528, 'base NOSPARK': 256, 'base RAISE': 264, 'head EQUAL': 1528, 'head NOSPARK': 256, 'head RAISE': 264}
+MOVES 153
+CHANGED | A/false_true/csv_i/eb_hour | EQUAL | EQUAL | RAISE CANNOT_PARSE_TIMESTAMP | RAISE CAST_INVALID_INPUT | RAISE CANNOT_PARSE_TIMESTAMP
+CHANGED | A/false_true/csv_i/ob_hour | EQUAL | EQUAL | RAISE CANNOT_PARSE_TIMESTAMP | RAISE CAST_INVALID_INPUT | RAISE CANNOT_PARSE_TIMESTAMP
+CHANGED | A/false_true/csv_i/osb_hour | EQUAL | EQUAL | RAISE CANNOT_PARSE_TIMESTAMP | RAISE CAST_INVALID_INPUT | RAISE CANNOT_PARSE_TIMESTAMP
+CHANGED | A/false_true/csv_i/sb_hour | EQUAL | EQUAL | RAISE CANNOT_PARSE_TIMESTAMP | RAISE CAST_INVALID_INPUT | RAISE CANNOT_PARSE_TIMESTAMP
+BAR-MISS | A/false_true/csv_sts/eb_mul | RAISE | RAISE | (1, 2000000000, 1704078000) (2, -294967296, None) | RAISE CAST_INVALID_INPUT | RAISE CAST_INVALID_INPUT
+BAR-MISS | A/false_true/csv_sts/jb_mul | RAISE | RAISE | (1, 2000000000, 1704078000) (2, -294967296, None) | RAISE CAST_INVALID_INPUT | RAISE CAST_INVALID_INPUT
+BAR-MISS | A/false_true/csv_sts/ob_mul | RAISE | RAISE | (1, 2000000000, 1704078000) (2, -294967296, None) | RAISE CAST_INVALID_INPUT | RAISE CAST_INVALID_INPUT
+BAR-MISS | A/false_true/csv_sts/osb_mul | RAISE | RAISE | (1, 2000000000, 1704078000) (2, -294967296, None) | RAISE CAST_INVALID_INPUT | RAISE CAST_INVALID_INPUT
+BAR-MISS | A/false_true/csv_sts/sb_mul | RAISE | RAISE | (1, 2000000000, 1704078000) (2, -294967296, None) | RAISE CAST_INVALID_INPUT | RAISE CAST_INVALID_INPUT
+CHANGED | A/false_true/json_i/eb_hour | EQUAL | EQUAL | RAISE CANNOT_PARSE_TIMESTAMP | RAISE CAST_INVALID_INPUT | RAISE CANNOT_PARSE_TIMESTAMP
+CHANGED | A/false_true/json_i/ob_hour | EQUAL | EQUAL | RAISE CANNOT_PARSE_TIMESTAMP | RAISE CAST_INVALID_INPUT | RAISE CANNOT_PARSE_TIMESTAMP
+CHANGED | A/false_true/json_i/osb_hour | EQUAL | EQUAL | RAISE CANNOT_PARSE_TIMESTAMP | RAISE CAST_INVALID_INPUT | RAISE CANNOT_PARSE_TIMESTAMP
+BAR-MISS | A/false_true/json_sts/eb_mul | RAISE | RAISE | (1, 2000000000, 1704078000) (2, -294967296, None) | RAISE CAST_INVALID_INPUT | RAISE CAST_INVALID_INPUT
+BAR-MISS | A/false_true/json_sts/jb_mul | RAISE | RAISE | (1, 2000000000, 1704078000) (2, -294967296, None) | RAISE CAST_INVALID_INPUT | RAISE CAST_INVALID_INPUT
+BAR-MISS | A/false_true/json_sts/ob_mul | RAISE | RAISE | (1, 2000000000, 1704078000) (2, -294967296, None) | RAISE CAST_INVALID_INPUT | RAISE CAST_INVALID_INPUT
+BAR-MISS | A/false_true/json_sts/osb_mul | RAISE | RAISE | (1, 2000000000, 1704078000) (2, -294967296, None) | RAISE CAST_INVALID_INPUT | RAISE CAST_INVALID_INPUT
+BAR-MISS | A/false_true/json_sts/sb_mul | RAISE | RAISE | (1, 2000000000, 1704078000) (2, -294967296, None) | RAISE CAST_INVALID_INPUT | RAISE CAST_INVALID_INPUT
+BAR-MISS | S/ansi_false/la_utc/path_json/d | RAISE | RAISE | (1, 1704078000) (2, 1704110400) | RAISE Error during planning: table 'datafusion.json.<lane-scratchpad> | RAISE Error during planning: table 'datafusion.json.<lane-scratchpad>
+BAR-MISS | S/ansi_false/la_utc/sql_over_csv/d | RAISE | RAISE | (1, datetime.datetime(2023, 12, 31, 22, 0), 19) (2, datetime.datetime(2024, 1, 1, 7, 0), 4) | RAISE at create: Error during planning: table 'spark_catalog.default.s_uc' not found | RAISE at create: Error during planning: table 'spark_catalog.default.s_uc' not found
+BAR-MISS | S/ansi_false/la_utc/using_csv/d | RAISE | RAISE | (1, datetime.datetime(2023, 12, 31, 22, 0)) (2, datetime.datetime(2024, 1, 1, 7, 0)) | RAISE at create: Error during planning: could not parse `CREATE TEMPORARY VIEW`: expect | RAISE at create: Error during planning: could not parse `CREATE TEMPORARY VIEW`: expect
+BAR-MISS | S/ansi_false/la_utc/using_json/d | RAISE | RAISE | (1, '2024-01-01 03:00:00') (2, '2024-01-01 12:00:00') | RAISE at create: Error during planning: could not parse `CREATE TEMPORARY VIEW`: expect | RAISE at create: Error during planning: could not parse `CREATE TEMPORARY VIEW`: expect
+BAR-MISS | S/ansi_true/la_utc/path_json/d | RAISE | RAISE | (1, 1704078000) (2, 1704110400) | RAISE Error during planning: table 'datafusion.json.<lane-scratchpad> | RAISE Error during planning: table 'datafusion.json.<lane-scratchpad>
+BAR-MISS | S/ansi_true/la_utc/sql_over_csv/d | RAISE | RAISE | (1, datetime.datetime(2023, 12, 31, 22, 0), 19) (2, datetime.datetime(2024, 1, 1, 7, 0), 4) | RAISE at create: Error during planning: table 'spark_catalog.default.s_uc' not found | RAISE at create: Error during planning: table 'spark_catalog.default.s_uc' not found
+BAR-MISS | S/ansi_true/la_utc/using_csv/d | RAISE | RAISE | (1, datetime.datetime(2023, 12, 31, 22, 0)) (2, datetime.datetime(2024, 1, 1, 7, 0)) | RAISE at create: Error during planning: could not parse `CREATE TEMPORARY VIEW`: expect | RAISE at create: Error during planning: could not parse `CREATE TEMPORARY VIEW`: expect
+BAR-MISS | S/ansi_true/la_utc/using_json/d | RAISE | RAISE | (1, '2024-01-01 03:00:00') (2, '2024-01-01 12:00:00') | RAISE at create: Error during planning: could not parse `CREATE TEMPORARY VIEW`: expect | RAISE at create: Error during planning: could not parse `CREATE TEMPORARY VIEW`: expect
+CHANGED | Z/ansi_false/la_utc/csv_fix/d | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704078000) (2, 1704110400) | (1, 1704106800) (2, 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/e | NOSPARK | NOSPARK | RAISE at create: ? | (1, 2, 1704078000) (2, 3, 1704110400) | (1, 2, 1704106800) (2, 3, 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/eb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400) | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/eb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400) | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/eb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704078000) (2, 12, 1704110400) | (1, 3, 1704106800) (2, 12, 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/eb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400) | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/eb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'UTC', 1704078000) (2, 'UTC', 1704110400) | (1, 'UTC', 1704106800) (2, 'UTC', 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/f | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704078000) (2, 1704110400) | (1, 1704106800) (2, 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/j | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704078000) (2, 12, 1704110400) | (1, 19, 1704106800) (2, 4, 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/jb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400) | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/jb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400) | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/jb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704078000) (2, 12, 1704110400) | (1, 3, 1704106800) (2, 12, 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/jb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400) | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/jb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'UTC', 1704078000) (2, 'UTC', 1704110400) | (1, 'UTC', 1704106800) (2, 'UTC', 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/o | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704078000) (2, 1704110400) | (1, 1704106800) (2, 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/ob_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400) | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/ob_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400) | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/ob_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704078000) (2, 12, 1704110400) | (1, 3, 1704106800) (2, 12, 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/ob_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400) | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/ob_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'UTC', 1704078000) (2, 'UTC', 1704110400) | (1, 'UTC', 1704106800) (2, 'UTC', 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/osa | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704078000) (2, 1704110400) | (1, 1704106800) (2, 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/osb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400) | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/osb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400) | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/osb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704078000) (2, 12, 1704110400) | (1, 3, 1704106800) (2, 12, 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/osb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400) | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/osb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'UTC', 1704078000) (2, 'UTC', 1704110400) | (1, 'UTC', 1704106800) (2, 'UTC', 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/sa | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704078000) (2, 1704110400) | (1, 1704106800) (2, 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/sb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400) | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/sb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400) | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/sb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704078000) (2, 12, 1704110400) | (1, 3, 1704106800) (2, 12, 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/sb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400) | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+CHANGED | Z/ansi_false/la_utc/csv_fix/sb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'UTC', 1704078000) (2, 'UTC', 1704110400) | (1, 'UTC', 1704106800) (2, 'UTC', 1704139200)
+CHANGED | Z/ansi_false/utc_la/csv_fix/d | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704106800) (2, 1704139200) | (1, 1704078000) (2, 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/e | NOSPARK | NOSPARK | RAISE at create: ? | (1, 2, 1704106800) (2, 3, 1704139200) | (1, 2, 1704078000) (2, 3, 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/eb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200) | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/eb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200) | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/eb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704106800) (2, 12, 1704139200) | (1, 3, 1704078000) (2, 12, 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/eb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200) | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/eb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'America/Los_Angeles', 1704106800) (2, 'America/Los_Angeles', 1704139200) | (1, 'America/Los_Angeles', 1704078000) (2, 'America/Los_Angeles', 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/f | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704106800) (2, 1704139200) | (1, 1704078000) (2, 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/j | NOSPARK | NOSPARK | RAISE at create: ? | (1, 19, 1704106800) (2, 4, 1704139200) | (1, 3, 1704078000) (2, 12, 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/jb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200) | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/jb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200) | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/jb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704106800) (2, 12, 1704139200) | (1, 3, 1704078000) (2, 12, 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/jb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200) | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/jb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'America/Los_Angeles', 1704106800) (2, 'America/Los_Angeles', 1704139200) | (1, 'America/Los_Angeles', 1704078000) (2, 'America/Los_Angeles', 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/o | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704106800) (2, 1704139200) | (1, 1704078000) (2, 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/ob_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200) | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/ob_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200) | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/ob_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704106800) (2, 12, 1704139200) | (1, 3, 1704078000) (2, 12, 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/ob_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200) | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/ob_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'America/Los_Angeles', 1704106800) (2, 'America/Los_Angeles', 1704139200) | (1, 'America/Los_Angeles', 1704078000) (2, 'America/Los_Angeles', 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/osa | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704106800) (2, 1704139200) | (1, 1704078000) (2, 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/osb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200) | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/osb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200) | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/osb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704106800) (2, 12, 1704139200) | (1, 3, 1704078000) (2, 12, 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/osb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200) | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/osb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'America/Los_Angeles', 1704106800) (2, 'America/Los_Angeles', 1704139200) | (1, 'America/Los_Angeles', 1704078000) (2, 'America/Los_Angeles', 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/sa | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704106800) (2, 1704139200) | (1, 1704078000) (2, 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/sb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200) | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/sb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200) | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/sb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704106800) (2, 12, 1704139200) | (1, 3, 1704078000) (2, 12, 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/sb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200) | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400)
+CHANGED | Z/ansi_false/utc_la/csv_fix/sb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'America/Los_Angeles', 1704106800) (2, 'America/Los_Angeles', 1704139200) | (1, 'America/Los_Angeles', 1704078000) (2, 'America/Los_Angeles', 1704110400)
+CHANGED | Z/ansi_true/la_utc/csv_fix/d | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704078000) (2, 1704110400) | (1, 1704106800) (2, 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/e | NOSPARK | NOSPARK | RAISE at create: ? | (1, 2, 1704078000) (2, 3, 1704110400) | (1, 2, 1704106800) (2, 3, 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/eb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400) | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/eb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400) | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/eb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704078000) (2, 12, 1704110400) | (1, 3, 1704106800) (2, 12, 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/eb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400) | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/eb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'UTC', 1704078000) (2, 'UTC', 1704110400) | (1, 'UTC', 1704106800) (2, 'UTC', 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/f | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704078000) (2, 1704110400) | (1, 1704106800) (2, 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/j | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704078000) (2, 12, 1704110400) | (1, 19, 1704106800) (2, 4, 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/jb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400) | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/jb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400) | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/jb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704078000) (2, 12, 1704110400) | (1, 3, 1704106800) (2, 12, 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/jb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400) | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/jb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'UTC', 1704078000) (2, 'UTC', 1704110400) | (1, 'UTC', 1704106800) (2, 'UTC', 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/o | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704078000) (2, 1704110400) | (1, 1704106800) (2, 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/ob_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400) | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/ob_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400) | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/ob_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704078000) (2, 12, 1704110400) | (1, 3, 1704106800) (2, 12, 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/ob_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400) | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/ob_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'UTC', 1704078000) (2, 'UTC', 1704110400) | (1, 'UTC', 1704106800) (2, 'UTC', 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/osa | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704078000) (2, 1704110400) | (1, 1704106800) (2, 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/osb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400) | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/osb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400) | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/osb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704078000) (2, 12, 1704110400) | (1, 3, 1704106800) (2, 12, 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/osb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400) | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/osb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'UTC', 1704078000) (2, 'UTC', 1704110400) | (1, 'UTC', 1704106800) (2, 'UTC', 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/sa | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704078000) (2, 1704110400) | (1, 1704106800) (2, 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/sb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400) | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/sb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400) | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/sb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704078000) (2, 12, 1704110400) | (1, 3, 1704106800) (2, 12, 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/sb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400) | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200)
+CHANGED | Z/ansi_true/la_utc/csv_fix/sb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'UTC', 1704078000) (2, 'UTC', 1704110400) | (1, 'UTC', 1704106800) (2, 'UTC', 1704139200)
+CHANGED | Z/ansi_true/utc_la/csv_fix/d | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704106800) (2, 1704139200) | (1, 1704078000) (2, 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/e | NOSPARK | NOSPARK | RAISE at create: ? | (1, 2, 1704106800) (2, 3, 1704139200) | (1, 2, 1704078000) (2, 3, 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/eb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200) | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/eb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200) | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/eb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704106800) (2, 12, 1704139200) | (1, 3, 1704078000) (2, 12, 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/eb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200) | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/eb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'America/Los_Angeles', 1704106800) (2, 'America/Los_Angeles', 1704139200) | (1, 'America/Los_Angeles', 1704078000) (2, 'America/Los_Angeles', 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/f | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704106800) (2, 1704139200) | (1, 1704078000) (2, 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/j | NOSPARK | NOSPARK | RAISE at create: ? | (1, 19, 1704106800) (2, 4, 1704139200) | (1, 3, 1704078000) (2, 12, 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/jb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200) | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/jb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200) | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/jb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704106800) (2, 12, 1704139200) | (1, 3, 1704078000) (2, 12, 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/jb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200) | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/jb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'America/Los_Angeles', 1704106800) (2, 'America/Los_Angeles', 1704139200) | (1, 'America/Los_Angeles', 1704078000) (2, 'America/Los_Angeles', 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/o | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704106800) (2, 1704139200) | (1, 1704078000) (2, 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/ob_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200) | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/ob_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200) | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/ob_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704106800) (2, 12, 1704139200) | (1, 3, 1704078000) (2, 12, 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/ob_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200) | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/ob_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'America/Los_Angeles', 1704106800) (2, 'America/Los_Angeles', 1704139200) | (1, 'America/Los_Angeles', 1704078000) (2, 'America/Los_Angeles', 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/osa | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704106800) (2, 1704139200) | (1, 1704078000) (2, 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/osb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200) | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/osb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200) | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/osb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704106800) (2, 12, 1704139200) | (1, 3, 1704078000) (2, 12, 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/osb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200) | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/osb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'America/Los_Angeles', 1704106800) (2, 'America/Los_Angeles', 1704139200) | (1, 'America/Los_Angeles', 1704078000) (2, 'America/Los_Angeles', 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/sa | NOSPARK | NOSPARK | RAISE at create: ? | (1, 1704106800) (2, 1704139200) | (1, 1704078000) (2, 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/sb_date | NOSPARK | NOSPARK | RAISE at create: ? | (1, datetime.date(2024, 1, 1), 1704106800) (2, datetime.date(2024, 1, 1), 1704139200) | (1, datetime.date(2024, 1, 1), 1704078000) (2, datetime.date(2024, 1, 1), 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/sb_fmt | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00', 1704106800) (2, '2024-01-01 12:00', 1704139200) | (1, '2024-01-01 03:00', 1704078000) (2, '2024-01-01 12:00', 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/sb_hour | NOSPARK | NOSPARK | RAISE at create: ? | (1, 3, 1704106800) (2, 12, 1704139200) | (1, 3, 1704078000) (2, 12, 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/sb_str | NOSPARK | NOSPARK | RAISE at create: ? | (1, '2024-01-01 03:00:00', 1704106800) (2, '2024-01-01 12:00:00', 1704139200) | (1, '2024-01-01 03:00:00', 1704078000) (2, '2024-01-01 12:00:00', 1704110400)
+CHANGED | Z/ansi_true/utc_la/csv_fix/sb_tz | NOSPARK | NOSPARK | RAISE at create: ? | (1, 'America/Los_Angeles', 1704106800) (2, 'America/Los_Angeles', 1704139200) | (1, 'America/Los_Angeles', 1704078000) (2, 'America/Los_Angeles', 1704110400)

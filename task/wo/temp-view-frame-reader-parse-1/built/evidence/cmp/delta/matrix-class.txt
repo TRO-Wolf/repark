@@ -1,0 +1,732 @@
+CLASS ('b2', 'DIFF', 'EQUAL', 'DIFF', '') 5
+CLASS ('b2', 'EQUAL', 'EQUAL', 'DIFF', '') 10
+CLASS ('born-utc', 'DIFF', 'EQUAL', 'EQUAL', '') 5
+CLASS ('born-utc', 'EQUAL', 'EQUAL', 'DIFF', '') 5
+CLASS ('born-utc', 'EQUAL', 'EQUAL', 'EQUAL', '') 5
+CLASS ('derive-before', 'DIFF', 'EQUAL', 'DIFF', '') 5
+CLASS ('derive-before', 'DIFF', 'EQUAL', 'EQUAL', '') 5
+CLASS ('derive-before', 'EQUAL', 'EQUAL', 'DIFF', '') 5
+CLASS ('derive-before', 'EQUAL', 'EQUAL', 'EQUAL', '') 5
+CLASS ('m/x=cache_count', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=cache_count', 'EQUAL', 'EQUAL', 'EQUAL', '') 65
+CLASS ('m/x=checkpoint', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=checkpoint', 'DIFF', 'EQUAL', 'EQUAL', '') 40
+CLASS ('m/x=checkpoint', 'EQUAL', 'EQUAL', 'DIFF', '') 25
+CLASS ('m/x=collect', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=collect', 'DIFF', 'EQUAL', 'EQUAL', '') 40
+CLASS ('m/x=collect', 'EQUAL', 'EQUAL', 'DIFF', '') 25
+CLASS ('m/x=count', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=count', 'EQUAL', 'EQUAL', 'DIFF', '') 65
+CLASS ('m/x=explain', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=explain', 'EQUAL', 'EQUAL', 'DIFF', '') 65
+CLASS ('m/x=explain_ext', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=explain_ext', 'EQUAL', 'EQUAL', 'DIFF', '') 65
+CLASS ('m/x=foreach', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=foreach', 'DIFF', 'EQUAL', 'EQUAL', '') 40
+CLASS ('m/x=foreach', 'EQUAL', 'EQUAL', 'DIFF', '') 25
+CLASS ('m/x=foreachPartition', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=foreachPartition', 'DIFF', 'EQUAL', 'EQUAL', '') 40
+CLASS ('m/x=foreachPartition', 'EQUAL', 'EQUAL', 'DIFF', '') 25
+CLASS ('m/x=localCheckpoint', 'DIFF', 'DIFF', 'DIFF', 'RePark localCheckpoint turns the frame itself into the checkpoint scan') 25
+CLASS ('m/x=localCheckpoint', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=localCheckpoint', 'EQUAL', 'EQUAL', 'EQUAL', '') 40
+CLASS ('m/x=none', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=none', 'EQUAL', 'EQUAL', 'DIFF', '') 65
+CLASS ('m/x=rdd_access', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=rdd_access', 'DIFF', 'DIFF', 'EQUAL', 'rdd NOT_IMPLEMENTED in RePark') 40
+CLASS ('m/x=rdd_access', 'EQUAL', 'EQUAL', 'DIFF', '') 25
+CLASS ('m/x=rdd_collect', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=rdd_collect', 'DIFF', 'DIFF', 'EQUAL', 'rdd NOT_IMPLEMENTED in RePark') 40
+CLASS ('m/x=rdd_collect', 'EQUAL', 'EQUAL', 'DIFF', '') 25
+CLASS ('m/x=show', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=show', 'EQUAL', 'EQUAL', 'DIFF', '') 65
+CLASS ('m/x=tail', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=tail', 'DIFF', 'EQUAL', 'EQUAL', '') 40
+CLASS ('m/x=tail', 'EQUAL', 'EQUAL', 'DIFF', '') 25
+CLASS ('m/x=take1', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=take1', 'EQUAL', 'EQUAL', 'DIFF', '') 65
+CLASS ('m/x=toArrow', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=toArrow', 'DIFF', 'EQUAL', 'EQUAL', '') 40
+CLASS ('m/x=toArrow', 'EQUAL', 'EQUAL', 'DIFF', '') 25
+CLASS ('m/x=toLocalIterator', 'DIFF', 'DIFF', 'DIFF', 'rdd NOT_IMPLEMENTED in RePark') 5
+CLASS ('m/x=toLocalIterator', 'DIFF', 'EQUAL', 'EQUAL', '') 40
+CLASS ('m/x=toLocalIterator', 'EQUAL', 'EQUAL', 'DIFF', '') 25
+CLASS ('newsess', 'DIFF', 'EQUAL', 'DIFF', '') 5
+CLASS ('newsess', 'DIFF', 'EQUAL', 'EQUAL', '') 5
+CLASS ('newsess', 'EQUAL', 'EQUAL', 'DIFF', '') 5
+CLASS ('newsess', 'EQUAL', 'EQUAL', 'EQUAL', '') 5
+CLASS ('thrice', 'DIFF', 'EQUAL', 'EQUAL', '') 10
+CLASS ('thrice', 'EQUAL', 'EQUAL', 'EQUAL', '') 5
+CLASS ('toPandas', 'DIFF-BY-SOURCE') 5
+CLASS ('toPandas', 'EQUAL-BY-SOURCE') 65
+CLASS ('toPandas', 'SAME-AS-toArrow') 90
+m/json_s/none/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/json_s/none/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/collect/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/collect/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/collect/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/collect/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/collect/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/collect/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/collect/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/collect/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/collect/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/collect/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toLocalIterator/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toLocalIterator/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toLocalIterator/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toLocalIterator/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/toLocalIterator/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toLocalIterator/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/toLocalIterator/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toLocalIterator/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toLocalIterator/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toLocalIterator/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toArrow/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toArrow/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toArrow/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toArrow/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/toArrow/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toArrow/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/toArrow/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toArrow/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toArrow/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toArrow/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/toPandas/collect EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/toPandas/toLocalIterator EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/toPandas/toArrow EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/toPandas/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/toPandas/tail EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/toPandas/rdd_collect DIFF-BY-SOURCE head=('err', 'NOT_IMPLEMENTED') spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/toPandas/foreach EQUAL-BY-SOURCE head=('v', 1704106800) spark-ref=('v', 1704106800)
+m/json_s/toPandas/foreachPartition EQUAL-BY-SOURCE head=('v', 1704106800) spark-ref=('v', 1704106800)
+m/json_s/toPandas/localCheckpoint EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/toPandas/checkpoint EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/toPandas/count EQUAL-BY-SOURCE head=('v', 0) spark-ref=('v', 0)
+m/json_s/toPandas/show EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/json_s/toPandas/take1 EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/json_s/toPandas/cache_count EQUAL-BY-SOURCE head=('v', 0) spark-ref=('v', 0)
+m/json_s/toPandas/derived EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/json_s/tail/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/tail/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/tail/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/tail/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/tail/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/tail/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/tail/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/tail/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/tail/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/tail/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/explain/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/json_s/explain/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/explain_ext/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/json_s/explain_ext/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_access/collect rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_access/toLocalIterator rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_access/toArrow rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_access/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/rdd_access/tail rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_access/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_access/foreach rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_access/foreachPartition rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_access/localCheckpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_access/checkpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_collect/collect rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_collect/toLocalIterator rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_collect/toArrow rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_collect/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/rdd_collect/tail rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_collect/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_collect/foreach rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_collect/foreachPartition rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_collect/localCheckpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/rdd_collect/checkpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/json_s/foreach/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreach/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreach/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreach/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/foreach/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreach/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/foreach/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreach/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreach/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreach/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreachPartition/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreachPartition/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreachPartition/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreachPartition/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/foreachPartition/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreachPartition/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/foreachPartition/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreachPartition/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreachPartition/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/foreachPartition/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/localCheckpoint/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/localCheckpoint/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/localCheckpoint/count rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/json_s/localCheckpoint/show rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/json_s/localCheckpoint/take1 rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/json_s/localCheckpoint/cache_count rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/json_s/localCheckpoint/derived rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/json_s/checkpoint/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/checkpoint/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/checkpoint/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/checkpoint/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/checkpoint/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/checkpoint/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/checkpoint/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/checkpoint/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/checkpoint/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/checkpoint/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/json_s/count/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/json_s/count/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/show/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/json_s/show/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/take1/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/json_s/take1/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/json_s/cache_count/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/json_s/cache_count/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/none/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/csv_s/none/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/collect/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/collect/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/collect/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/collect/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/collect/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/collect/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/collect/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/collect/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/collect/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/collect/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toLocalIterator/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toLocalIterator/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toLocalIterator/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toLocalIterator/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/toLocalIterator/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toLocalIterator/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/toLocalIterator/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toLocalIterator/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toLocalIterator/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toLocalIterator/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toArrow/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toArrow/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toArrow/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toArrow/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/toArrow/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toArrow/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/toArrow/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toArrow/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toArrow/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toArrow/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/toPandas/collect EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/toPandas/toLocalIterator EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/toPandas/toArrow EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/toPandas/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/toPandas/tail EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/toPandas/rdd_collect DIFF-BY-SOURCE head=('err', 'NOT_IMPLEMENTED') spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/toPandas/foreach EQUAL-BY-SOURCE head=('v', 1704106800) spark-ref=('v', 1704106800)
+m/csv_s/toPandas/foreachPartition EQUAL-BY-SOURCE head=('v', 1704106800) spark-ref=('v', 1704106800)
+m/csv_s/toPandas/localCheckpoint EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/toPandas/checkpoint EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/toPandas/count EQUAL-BY-SOURCE head=('v', 0) spark-ref=('v', 0)
+m/csv_s/toPandas/show EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/csv_s/toPandas/take1 EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/csv_s/toPandas/cache_count EQUAL-BY-SOURCE head=('v', 0) spark-ref=('v', 0)
+m/csv_s/toPandas/derived EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/csv_s/tail/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/tail/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/tail/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/tail/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/tail/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/tail/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/tail/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/tail/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/tail/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/tail/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/explain/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/csv_s/explain/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/explain_ext/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/csv_s/explain_ext/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_access/collect rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_access/toLocalIterator rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_access/toArrow rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_access/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/rdd_access/tail rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_access/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_access/foreach rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_access/foreachPartition rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_access/localCheckpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_access/checkpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_collect/collect rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_collect/toLocalIterator rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_collect/toArrow rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_collect/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/rdd_collect/tail rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_collect/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_collect/foreach rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_collect/foreachPartition rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_collect/localCheckpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/rdd_collect/checkpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/foreach/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreach/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreach/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreach/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/foreach/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreach/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/foreach/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreach/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreach/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreach/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreachPartition/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreachPartition/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreachPartition/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreachPartition/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/foreachPartition/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreachPartition/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/foreachPartition/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreachPartition/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreachPartition/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/foreachPartition/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/localCheckpoint/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/localCheckpoint/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/localCheckpoint/count rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/csv_s/localCheckpoint/show rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/csv_s/localCheckpoint/take1 rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/csv_s/localCheckpoint/cache_count rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/csv_s/localCheckpoint/derived rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/csv_s/checkpoint/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/checkpoint/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/checkpoint/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/checkpoint/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/checkpoint/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/checkpoint/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/checkpoint/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/checkpoint/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/checkpoint/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/checkpoint/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_s/count/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/csv_s/count/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/show/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/csv_s/show/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/take1/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/csv_s/take1/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_s/cache_count/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_s/cache_count/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/none/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/csv_i/none/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/collect/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/collect/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/collect/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/collect/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/collect/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/collect/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/collect/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/collect/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/collect/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/collect/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toLocalIterator/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toLocalIterator/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toLocalIterator/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toLocalIterator/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/toLocalIterator/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toLocalIterator/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/toLocalIterator/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toLocalIterator/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toLocalIterator/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toLocalIterator/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toArrow/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toArrow/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toArrow/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toArrow/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/toArrow/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toArrow/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/toArrow/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toArrow/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toArrow/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toArrow/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/toPandas/collect EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/toPandas/toLocalIterator EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/toPandas/toArrow EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/toPandas/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/toPandas/tail EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/toPandas/rdd_collect DIFF-BY-SOURCE head=('err', 'NOT_IMPLEMENTED') spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/toPandas/foreach EQUAL-BY-SOURCE head=('v', 1704106800) spark-ref=('v', 1704106800)
+m/csv_i/toPandas/foreachPartition EQUAL-BY-SOURCE head=('v', 1704106800) spark-ref=('v', 1704106800)
+m/csv_i/toPandas/localCheckpoint EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/toPandas/checkpoint EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/toPandas/count EQUAL-BY-SOURCE head=('v', 0) spark-ref=('v', 0)
+m/csv_i/toPandas/show EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/csv_i/toPandas/take1 EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/csv_i/toPandas/cache_count EQUAL-BY-SOURCE head=('v', 0) spark-ref=('v', 0)
+m/csv_i/toPandas/derived EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/csv_i/tail/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/tail/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/tail/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/tail/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/tail/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/tail/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/tail/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/tail/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/tail/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/tail/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/explain/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/csv_i/explain/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/explain_ext/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/csv_i/explain_ext/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_access/collect rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_access/toLocalIterator rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_access/toArrow rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_access/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/rdd_access/tail rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_access/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_access/foreach rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_access/foreachPartition rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_access/localCheckpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_access/checkpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_collect/collect rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_collect/toLocalIterator rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_collect/toArrow rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_collect/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/rdd_collect/tail rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_collect/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_collect/foreach rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_collect/foreachPartition rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_collect/localCheckpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/rdd_collect/checkpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/foreach/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreach/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreach/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreach/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/foreach/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreach/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/foreach/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreach/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreach/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreach/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreachPartition/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreachPartition/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreachPartition/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreachPartition/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/foreachPartition/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreachPartition/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/foreachPartition/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreachPartition/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreachPartition/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/foreachPartition/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/localCheckpoint/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/localCheckpoint/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/localCheckpoint/count rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/csv_i/localCheckpoint/show rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/csv_i/localCheckpoint/take1 rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/csv_i/localCheckpoint/cache_count rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/csv_i/localCheckpoint/derived rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/csv_i/checkpoint/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/checkpoint/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/checkpoint/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/checkpoint/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/checkpoint/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/checkpoint/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/checkpoint/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/checkpoint/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/checkpoint/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/checkpoint/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/csv_i/count/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/csv_i/count/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/show/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/csv_i/show/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/take1/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/csv_i/take1/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/csv_i/cache_count/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/csv_i/cache_count/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/none/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/sqlv_json_s/none/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/collect/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/collect/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/collect/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/collect/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/collect/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/collect/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/collect/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/collect/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/collect/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/collect/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toLocalIterator/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toLocalIterator/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toLocalIterator/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toLocalIterator/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/toLocalIterator/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toLocalIterator/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/toLocalIterator/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toLocalIterator/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toLocalIterator/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toLocalIterator/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toArrow/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toArrow/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toArrow/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toArrow/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/toArrow/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toArrow/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/toArrow/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toArrow/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toArrow/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toArrow/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/toPandas/collect EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/toPandas/toLocalIterator EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/toPandas/toArrow EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/toPandas/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/toPandas/tail EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/toPandas/rdd_collect DIFF-BY-SOURCE head=('err', 'NOT_IMPLEMENTED') spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/toPandas/foreach EQUAL-BY-SOURCE head=('v', 1704106800) spark-ref=('v', 1704106800)
+m/sqlv_json_s/toPandas/foreachPartition EQUAL-BY-SOURCE head=('v', 1704106800) spark-ref=('v', 1704106800)
+m/sqlv_json_s/toPandas/localCheckpoint EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/toPandas/checkpoint EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/toPandas/count EQUAL-BY-SOURCE head=('v', 0) spark-ref=('v', 0)
+m/sqlv_json_s/toPandas/show EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/sqlv_json_s/toPandas/take1 EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/sqlv_json_s/toPandas/cache_count EQUAL-BY-SOURCE head=('v', 0) spark-ref=('v', 0)
+m/sqlv_json_s/toPandas/derived EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/sqlv_json_s/tail/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/tail/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/tail/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/tail/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/tail/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/tail/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/tail/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/tail/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/tail/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/tail/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/explain/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/sqlv_json_s/explain/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/explain_ext/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/sqlv_json_s/explain_ext/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_access/collect rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_access/toLocalIterator rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_access/toArrow rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_access/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/rdd_access/tail rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_access/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_access/foreach rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_access/foreachPartition rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_access/localCheckpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_access/checkpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_collect/collect rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_collect/toLocalIterator rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_collect/toArrow rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_collect/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/rdd_collect/tail rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_collect/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_collect/foreach rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_collect/foreachPartition rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_collect/localCheckpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/rdd_collect/checkpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/foreach/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreach/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreach/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreach/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/foreach/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreach/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/foreach/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreach/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreach/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreach/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreachPartition/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreachPartition/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreachPartition/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreachPartition/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/foreachPartition/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreachPartition/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/foreachPartition/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreachPartition/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreachPartition/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/foreachPartition/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/localCheckpoint/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/localCheckpoint/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/localCheckpoint/count rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/sqlv_json_s/localCheckpoint/show rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/sqlv_json_s/localCheckpoint/take1 rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/sqlv_json_s/localCheckpoint/cache_count rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/sqlv_json_s/localCheckpoint/derived rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/sqlv_json_s/checkpoint/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/checkpoint/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/checkpoint/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/checkpoint/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/checkpoint/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/checkpoint/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/checkpoint/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/checkpoint/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/checkpoint/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/checkpoint/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_json_s/count/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/sqlv_json_s/count/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/show/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/sqlv_json_s/show/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/take1/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/sqlv_json_s/take1/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_json_s/cache_count/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_json_s/cache_count/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/none/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/sqlv_csv_s/none/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/collect/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/collect/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/collect/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/collect/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/collect/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/collect/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/collect/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/collect/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/collect/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/collect/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toLocalIterator/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toLocalIterator/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toLocalIterator/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toLocalIterator/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/toLocalIterator/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toLocalIterator/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/toLocalIterator/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toLocalIterator/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toLocalIterator/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toLocalIterator/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toArrow/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toArrow/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toArrow/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toArrow/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/toArrow/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toArrow/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/toArrow/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toArrow/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toArrow/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toArrow/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/toPandas/collect EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/toPandas/toLocalIterator EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/toPandas/toArrow EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/toPandas/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/toPandas/tail EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/toPandas/rdd_collect DIFF-BY-SOURCE head=('err', 'NOT_IMPLEMENTED') spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/toPandas/foreach EQUAL-BY-SOURCE head=('v', 1704106800) spark-ref=('v', 1704106800)
+m/sqlv_csv_s/toPandas/foreachPartition EQUAL-BY-SOURCE head=('v', 1704106800) spark-ref=('v', 1704106800)
+m/sqlv_csv_s/toPandas/localCheckpoint EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/toPandas/checkpoint EQUAL-BY-SOURCE head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/toPandas/count EQUAL-BY-SOURCE head=('v', 0) spark-ref=('v', 0)
+m/sqlv_csv_s/toPandas/show EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/sqlv_csv_s/toPandas/take1 EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/sqlv_csv_s/toPandas/cache_count EQUAL-BY-SOURCE head=('v', 0) spark-ref=('v', 0)
+m/sqlv_csv_s/toPandas/derived EQUAL-BY-SOURCE head=('v', []) spark-ref=('v', [])
+m/sqlv_csv_s/tail/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/tail/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/tail/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/tail/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/tail/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/tail/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/tail/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/tail/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/tail/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/tail/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/explain/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/sqlv_csv_s/explain/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/explain_ext/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/sqlv_csv_s/explain_ext/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_access/collect rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_access/toLocalIterator rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_access/toArrow rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_access/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/rdd_access/tail rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_access/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_access/foreach rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_access/foreachPartition rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_access/localCheckpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_access/checkpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_collect/collect rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_collect/toLocalIterator rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_collect/toArrow rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_collect/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/rdd_collect/tail rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_collect/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_collect/foreach rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_collect/foreachPartition rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_collect/localCheckpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/rdd_collect/checkpoint rebuild:DIFF -> head:DIFF (main EQUAL) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/foreach/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreach/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreach/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreach/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/foreach/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreach/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/foreach/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreach/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreach/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreach/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreachPartition/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreachPartition/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreachPartition/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreachPartition/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/foreachPartition/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreachPartition/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/foreachPartition/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreachPartition/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreachPartition/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/foreachPartition/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/localCheckpoint/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/localCheckpoint/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/localCheckpoint/count rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/sqlv_csv_s/localCheckpoint/show rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/sqlv_csv_s/localCheckpoint/take1 rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/sqlv_csv_s/localCheckpoint/cache_count rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/sqlv_csv_s/localCheckpoint/derived rebuild:DIFF -> head:DIFF (main DIFF) RePark localCheckpoint turns the frame itself into the checkpoint scan
+m/sqlv_csv_s/checkpoint/collect rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/checkpoint/toLocalIterator rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/checkpoint/toArrow rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/checkpoint/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/checkpoint/tail rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/checkpoint/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/checkpoint/foreach rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/checkpoint/foreachPartition rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/checkpoint/localCheckpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/checkpoint/checkpoint rebuild:DIFF -> head:EQUAL (main EQUAL) 
+m/sqlv_csv_s/count/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/sqlv_csv_s/count/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/show/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/sqlv_csv_s/show/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/take1/toPandas SAME-AS-toArrow head=('v', []) spark-ref=('v', [])
+m/sqlv_csv_s/take1/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+m/sqlv_csv_s/cache_count/toPandas SAME-AS-toArrow head=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']]) spark-ref=('v', [['1', '2024-01-01 03:00:00', '3', '1704106800']])
+m/sqlv_csv_s/cache_count/rdd_collect rebuild:DIFF -> head:DIFF (main DIFF) rdd NOT_IMPLEMENTED in RePark
+b2/json_s/same-object-after-second-set rebuild:DIFF -> head:EQUAL (main DIFF) 
+thrice/json_s/second rebuild:DIFF -> head:EQUAL (main EQUAL) 
+thrice/json_s/third rebuild:DIFF -> head:EQUAL (main EQUAL) 
+born-utc/json_s/second rebuild:DIFF -> head:EQUAL (main EQUAL) 
+derive-before/json_s/child-second-after-set rebuild:DIFF -> head:EQUAL (main DIFF) 
+derive-before/json_s/parent-again rebuild:DIFF -> head:EQUAL (main EQUAL) 
+b2/csv_s/same-object-after-second-set rebuild:DIFF -> head:EQUAL (main DIFF) 
+thrice/csv_s/second rebuild:DIFF -> head:EQUAL (main EQUAL) 
+thrice/csv_s/third rebuild:DIFF -> head:EQUAL (main EQUAL) 
+born-utc/csv_s/second rebuild:DIFF -> head:EQUAL (main EQUAL) 
+derive-before/csv_s/child-second-after-set rebuild:DIFF -> head:EQUAL (main DIFF) 
+derive-before/csv_s/parent-again rebuild:DIFF -> head:EQUAL (main EQUAL) 
+b2/csv_i/same-object-after-second-set rebuild:DIFF -> head:EQUAL (main DIFF) 
+thrice/csv_i/second rebuild:DIFF -> head:EQUAL (main EQUAL) 
+thrice/csv_i/third rebuild:DIFF -> head:EQUAL (main EQUAL) 
+born-utc/csv_i/second rebuild:DIFF -> head:EQUAL (main EQUAL) 
+derive-before/csv_i/child-second-after-set rebuild:DIFF -> head:EQUAL (main DIFF) 
+derive-before/csv_i/parent-again rebuild:DIFF -> head:EQUAL (main EQUAL) 
+b2/sqlv_json_s/same-object-after-second-set rebuild:DIFF -> head:EQUAL (main DIFF) 
+thrice/sqlv_json_s/second rebuild:DIFF -> head:EQUAL (main EQUAL) 
+thrice/sqlv_json_s/third rebuild:DIFF -> head:EQUAL (main EQUAL) 
+born-utc/sqlv_json_s/second rebuild:DIFF -> head:EQUAL (main EQUAL) 
+derive-before/sqlv_json_s/child-second-after-set rebuild:DIFF -> head:EQUAL (main DIFF) 
+derive-before/sqlv_json_s/parent-again rebuild:DIFF -> head:EQUAL (main EQUAL) 
+b2/sqlv_csv_s/same-object-after-second-set rebuild:DIFF -> head:EQUAL (main DIFF) 
+thrice/sqlv_csv_s/second rebuild:DIFF -> head:EQUAL (main EQUAL) 
+thrice/sqlv_csv_s/third rebuild:DIFF -> head:EQUAL (main EQUAL) 
+born-utc/sqlv_csv_s/second rebuild:DIFF -> head:EQUAL (main EQUAL) 
+derive-before/sqlv_csv_s/child-second-after-set rebuild:DIFF -> head:EQUAL (main DIFF) 
+derive-before/sqlv_csv_s/parent-again rebuild:DIFF -> head:EQUAL (main EQUAL) 
+newsess/json_s/own-after-own-set rebuild:DIFF -> head:EQUAL (main EQUAL) 
+newsess/json_s/other-frame-after-its-set rebuild:DIFF -> head:EQUAL (main DIFF) 
+newsess/csv_s/own-after-own-set rebuild:DIFF -> head:EQUAL (main EQUAL) 
+newsess/csv_s/other-frame-after-its-set rebuild:DIFF -> head:EQUAL (main DIFF) 
+newsess/csv_i/own-after-own-set rebuild:DIFF -> head:EQUAL (main EQUAL) 
+newsess/csv_i/other-frame-after-its-set rebuild:DIFF -> head:EQUAL (main DIFF) 
+newsess/sqlv_json_s/own-after-own-set rebuild:DIFF -> head:EQUAL (main EQUAL) 
+newsess/sqlv_json_s/other-frame-after-its-set rebuild:DIFF -> head:EQUAL (main DIFF) 
+newsess/sqlv_csv_s/own-after-own-set rebuild:DIFF -> head:EQUAL (main EQUAL) 
+newsess/sqlv_csv_s/other-frame-after-its-set rebuild:DIFF -> head:EQUAL (main DIFF) 

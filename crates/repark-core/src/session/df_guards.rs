@@ -170,8 +170,11 @@ pub(super) fn context_with_df_54_1_rule_guards(
     let analyzer_rules =
         extension.configure_analyzer_rules(analyzer_rules_with_df_54_1_rule_guards()?)?;
     let mut analyzer_rules = dialect.configure_analyzer_rules(analyzer_rules)?;
-    if let Some(seat) = config.get_extension::<crate::extension::FrameViewSeat>() {
+    let mut optimizer_rules = unnest_safe_optimizer_rules(extension.signed_zero_policy());
+    let seat = config.get_extension::<crate::extension::FrameViewSeat>();
+    if let Some(seat) = &seat {
         analyzer_rules.insert(0, seat.rule());
+        optimizer_rules.insert(0, seat.parse_rule());
     }
     let mut builder = SessionStateBuilder::new();
     if let Some(type_planner) = extension.type_planner().or_else(|| dialect.type_planner()) {
@@ -182,7 +185,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
         .with_runtime_env(runtime)
         .with_default_features()
         .with_query_planner(Arc::new(crate::stack::StackQueryPlanner))
-        .with_optimizer_rules(unnest_safe_optimizer_rules(extension.signed_zero_policy()))
+        .with_optimizer_rules(optimizer_rules)
         .with_analyzer_rules(analyzer_rules)
         .with_physical_optimizer_rules(skipping_limit::skip_safe_physical_optimizer_rules())
         .with_physical_optimizer_rule(Arc::new(crate::nlj_build_reset::NljBuildSideReset))
@@ -190,6 +193,9 @@ pub(super) fn context_with_df_54_1_rule_guards(
         .with_physical_optimizer_rule(Arc::new(crate::parallel_window::ParallelProjectionRule))
         .build();
     let context = SessionContext::new_with_state(state);
+    if let Some(seat) = &seat {
+        seat.bind(&context);
+    }
     crate::stack::register_stack(&context);
     crate::update_fields::register_update_fields(&context);
     crate::isnan::register_repark_isnan(&context);

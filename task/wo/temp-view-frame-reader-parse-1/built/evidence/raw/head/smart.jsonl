@@ -1,0 +1,20 @@
+{"tag": "true/Ame_UTC/dtypes", "rows": ["('int', 'timestamp', 'decimal(2,1)')"]}
+{"tag": "true/Ame_UTC/sd", "rows": ["(1, 1704106800, '2024-01-01 11:00:00')", "(2, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "true/Ame_UTC/sf", "rows": ["(1, 1704106800, '2024-01-01 11:00:00')", "(2, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "true/Ame_UTC/ss", "rows": ["(1, 1704106800, '2024-01-01 11:00:00')", "(2, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "true/Ame_UTC/sh", "rows": ["(1, 1704106800, 3)", "(2, 1704139200, 12)"], "types": ["int", "bigint", "int"]}
+{"tag": "true/UTC_Ame/dtypes", "rows": ["('int', 'timestamp', 'decimal(2,1)')"]}
+{"tag": "true/UTC_Ame/sd", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "true/UTC_Ame/sf", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "true/UTC_Ame/ss", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "true/UTC_Ame/sh", "rows": ["(1, 1704078000, 3)", "(2, 1704110400, 12)"], "types": ["int", "bigint", "int"]}
+{"tag": "false/Ame_UTC/dtypes", "rows": ["('int', 'timestamp', 'decimal(2,1)')"]}
+{"tag": "false/Ame_UTC/sd", "rows": ["(1, 1704106800, '2024-01-01 11:00:00')", "(2, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "false/Ame_UTC/sf", "rows": ["(1, 1704106800, '2024-01-01 11:00:00')", "(2, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "false/Ame_UTC/ss", "rows": ["(1, 1704106800, '2024-01-01 11:00:00')", "(2, 1704139200, '2024-01-01 20:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "false/Ame_UTC/sh", "rows": ["(1, 1704106800, 3)", "(2, 1704139200, 12)"], "types": ["int", "bigint", "int"]}
+{"tag": "false/UTC_Ame/dtypes", "rows": ["('int', 'timestamp', 'decimal(2,1)')"]}
+{"tag": "false/UTC_Ame/sd", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "false/UTC_Ame/sf", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "false/UTC_Ame/ss", "rows": ["(1, 1704078000, '2023-12-31 19:00:00')", "(2, 1704110400, '2024-01-01 04:00:00')"], "types": ["int", "bigint", "string"]}
+{"tag": "false/UTC_Ame/sh", "rows": ["(1, 1704078000, 3)", "(2, 1704110400, 12)"], "types": ["int", "bigint", "int"]}

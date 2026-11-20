@@ -1,0 +1,3 @@
+32 ('D4', 'v0', 'oldbase WRONG', 'base EQUAL', 'head EQUAL')
+60 ('D4', 'v1', 'oldbase WRONG', 'base EQUAL', 'head EQUAL')
+60 ('M4', 'v1', 'oldbase WRONG', 'base EQUAL', 'head EQUAL')
