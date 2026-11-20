@@ -29,7 +29,7 @@
 
 ## Closure (2026-11-02, at `914e5bbb`)
 
-- **Ledger:** [ident-dialect-1-ledger.md](../../ledgers/completed/ident-dialect-1-ledger.md), clauses C-001 to C-012; C-012 is OPEN.
+- **Ledger:** [ident-dialect-1-ledger.md](../../ledgers/archive/2026-11/2026-11-03-ident-dialect-1-ledger.md), clauses C-001 to C-012; C-012 is OPEN.
 - **Ruling:** a table identifier follows Spark's grammar on every head and both doors (the Spark door through the facade and the Rust router door). A double- or single-quoted segment is PARSE_SYNTAX_ERROR at the token; a second target after a comma is PARSE_SYNTAX_ERROR at the comma; a trailing comment is stripped; a non-ASCII unquoted identifier is INVALID_IDENTIFIER (SQLSTATE 42602). After the delta, every relation after a top-level comma in a FROM clause reads through the same grammar.
 - **Counts before the fix (red):** class 1, quoted segment, 252 of 312; class 2, non-ASCII unquoted, 104 of 104; class 4, over-refusals, 54 of 156; class 5, multi-name target, 32 of 52; controls, 0 of 520 moved. Delta: 16 of 28 red at `c3c2a76b`, 28 of 28 green at `914e5bbb`.
 - **Verification:** round 1, Opus 5.5 FAIL on F1 (S1, a relation after a comma escapes the grammar), F2 (S3, the JOIN arm unpinned) and F3 (S3, a re-pin drops the reopen check); Muse MAX PASS with no findings. Delta re-check, Opus 5.5 FAIL on G1 (S1, a relation after a VALUES row list or a LATERAL subquery escapes the comma grammar); Muse MAX PASS with no findings. Round 1 findings are closed in the delta.

@@ -1,6 +1,6 @@
 # Card NATIVE-MOR-FULL-DELETE-FILE-1: a full DELETE on the native door over v2 merge-on-read writes a position-delete file where Spark leaves data/ unchanged
 
-**Date:** 2026-11-08. **Filed by:** the records clerk (`claude-haiku-5-5`), from the verdicts of EMPTY-DML-SHARED-GUARD-1 (ledger [empty-dml-shared-guard-1-ledger.md](../../ledgers/completed/empty-dml-shared-guard-1-ledger.md), clause C-014).
+**Date:** 2026-11-08. **Filed by:** the records clerk (`claude-haiku-5-5`), from the verdicts of EMPTY-DML-SHARED-GUARD-1 (ledger [empty-dml-shared-guard-1-ledger.md](../../ledgers/archive/2026-11/2026-11-09-empty-dml-shared-guard-1-ledger.md), clause C-014).
 
 **Status:** filed 2026-11-08, severity S3, not dispatched; awaiting the owner's charter. Rows and snapshot equal Spark's, so this is not a wrong write.
 

@@ -22,4 +22,4 @@ one warmup.
 
 - Up: [../map.md](../map.md)
 - Baseline doc: [../facade-3-cdf-baseline-2026-09-13.md](../facade-3-cdf-baseline-2026-09-13.md)
-- Ledger: [../../../task/ledgers/completed/facade-3-ledger.md](../../../task/ledgers/completed/facade-3-ledger.md)
+- Ledger: [../../../task/ledgers/completed/facade-3-ledger.md](../../../task/ledgers/archive/2026-09/2026-09-13-facade-3-ledger.md)

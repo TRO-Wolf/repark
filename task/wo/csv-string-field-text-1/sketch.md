@@ -256,6 +256,8 @@ correction (§4), not a question.
    - *Cells:* §6.2, 9 WRONG that seat A as sketched keeps (`swap_int`, `swap_string`, `part_int`, `part_string` in
      both modes, and `emptyname_schema`); 5 EQUAL controls; the two-file schema read of §6.3 [R].
 
+Fable's guidance of 2026-11-20 on these questions is in [rulings-2026-11-20.md](../ice-v2-flat-aws-label-1/design/rulings-2026-11-20.md) §2.
+
 ## 8. Card candidates, with proposed ratings (not filed here)
 
 | candidate | cells | rating | label-blocking |

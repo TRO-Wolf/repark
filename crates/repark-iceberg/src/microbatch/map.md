@@ -10,7 +10,7 @@ the [MB-1 order](../../../../task/wo/microbatch/mb-1-source.md), and the
 Round 1 landed `mod.rs`, `offset.rs` and `error.rs`; round 2 adds the
 window and provider. Fold 1 (2026-10-07) reworks the window after the
 verifier's FAIL on PR #979, against the measured MB0b-R14…R16 cells.
-Progress: the [MB-1 ledger](../../../../task/ledgers/completed/mb-1-ledger.md).
+Progress: the [MB-1 ledger](../../../../task/ledgers/archive/2026-10/2026-10-07-mb-1-ledger.md).
 
 ## Contents
 

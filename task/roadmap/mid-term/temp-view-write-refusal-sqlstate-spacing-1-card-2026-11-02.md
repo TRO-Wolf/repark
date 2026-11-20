@@ -10,4 +10,4 @@
 
 **Retires:** the card when the AUD-006 write refusals print Spark's text byte for byte, with a pin that asserts the two spaces.
 
-**Relation:** [SPARK-DOOR-TEMP-VIEW-TARGET-1 card](spark-door-temp-view-target-1-card-2026-10-29.md) and its [unit ledger](../../ledgers/completed/spark-door-temp-view-target-1-ledger.md) (the write refusals this text lives in); [SPARK-DOOR-TEMP-VIEW-DDL-1 ledger](../../ledgers/staging/spark-door-temp-view-ddl-1-ledger.md) (lead L2; this unit's ALTER texts already copy Spark's spacing).
+**Relation:** [SPARK-DOOR-TEMP-VIEW-TARGET-1 card](spark-door-temp-view-target-1-card-2026-10-29.md) and its [unit ledger](../../ledgers/archive/2026-10/2026-10-30-spark-door-temp-view-target-1-ledger.md) (the write refusals this text lives in); [SPARK-DOOR-TEMP-VIEW-DDL-1 ledger](../../ledgers/staging/spark-door-temp-view-ddl-1-ledger.md) (lead L2; this unit's ALTER texts already copy Spark's spacing).

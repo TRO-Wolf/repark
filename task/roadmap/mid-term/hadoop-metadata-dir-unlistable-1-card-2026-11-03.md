@@ -1,6 +1,6 @@
 # Card HADOOP-METADATA-DIR-UNLISTABLE-1: a metadata directory that cannot be listed, with no readable hint, is refused where Java may read version 0
 
-**Date:** 2026-11-03. **Filed by:** the records clerk (`claude-haiku-5-5`) on the owner's ruling of 2026-11-03, from the Opus 5.5 verifier's finding F3 and the Muse verifier's probe P16 on HADOOP-DISCOVERY-RULE-1 (PR #1251; ledger clause C-013 of [its ledger](../../ledgers/completed/hadoop-discovery-rule-1-ledger.md)).
+**Date:** 2026-11-03. **Filed by:** the records clerk (`claude-haiku-5-5`) on the owner's ruling of 2026-11-03, from the Opus 5.5 verifier's finding F3 and the Muse verifier's probe P16 on HADOOP-DISCOVERY-RULE-1 (PR #1251; ledger clause C-013 of [its ledger](../../ledgers/archive/2026-11/2026-11-03-hadoop-discovery-rule-1-ledger.md)).
 
 **Status:** open. Grade C (clerk). S3, refusal class: no wrong read was measured. Not dispatched; no build is owed until the owner charters it. Not a label blocker under the label gate, which reads a refusal as a card.
 

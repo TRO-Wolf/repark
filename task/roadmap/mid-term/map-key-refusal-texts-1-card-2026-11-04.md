@@ -1,6 +1,6 @@
 # Card MAP-KEY-REFUSAL-TEXTS-1: refusal texts and parse refusals around map-key fields that differ from Spark's (leads L4 to L10)
 
-**Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`) from leads L4 to L10 (clauses C-012 to C-018) of [MAP-KEY-ALTER-1](../../ledgers/completed/map-key-alter-1-ledger.md).
+**Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`) from leads L4 to L10 (clauses C-012 to C-018) of [MAP-KEY-ALTER-1](../../ledgers/archive/2026-11/2026-11-04-map-key-alter-1-ledger.md).
 
 **Status:** filed, not dispatched. Verifier class S3. In every cell below the statement is refused and nothing is committed; the cards are about the text or the parse path, not about a wrong read or write.
 

@@ -1,6 +1,6 @@
 # Card DEREFERENCE-FORMS-2: an array-of-struct field, a `struct(...)` field name and a lambda variable's field are not dereferenced as Spark does
 
-**Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`) from ledger lead L4 (clause C-010) of [SUBSCRIPT-DOT-ACCESS-1](../../ledgers/completed/subscript-dot-access-1-ledger.md): the Opus verifier's findings F4 and F5 and the Muse cards C1 and C2.
+**Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`) from ledger lead L4 (clause C-010) of [SUBSCRIPT-DOT-ACCESS-1](../../ledgers/archive/2026-11/2026-11-04-subscript-dot-access-1-ledger.md): the Opus verifier's findings F4 and F5 and the Muse cards C1 and C2.
 
 **Status:** filed, not dispatched. Verifier class S3 (refusals, no wrong value).
 

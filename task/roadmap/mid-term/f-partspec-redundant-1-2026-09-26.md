@@ -95,6 +95,6 @@ name moves.
 ## Pointers
 
 - Up: [map.md](map.md) · Ledger:
-  [../../ledgers/staging/partname-1-ledger.md](../../ledgers/completed/partname-1-ledger.md)
+  [../../ledgers/staging/partname-1-ledger.md](../../ledgers/archive/2026-10/2026-10-30-partname-1-ledger.md)
   (residue R-1) · Pins:
   [../../../python/repark/tests/iceberg/test_partname_1.py](../../../python/repark/tests/iceberg/test_partname_1.py)

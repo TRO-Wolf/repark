@@ -1,6 +1,6 @@
 # Card HADOOP-HINT-UNICODE-DIGITS-1: a version hint written in non-ASCII decimal digits falls to the listing, where Java parses it
 
-**Date:** 2026-11-03. **Filed by:** the records clerk (`claude-haiku-5-5`) on the owner's ruling of 2026-11-03, from the Opus 5.5 verifier's finding F1 on HADOOP-DISCOVERY-RULE-1 (PR #1251; ledger clause C-012 of [its ledger](../../ledgers/completed/hadoop-discovery-rule-1-ledger.md)).
+**Date:** 2026-11-03. **Filed by:** the records clerk (`claude-haiku-5-5`) on the owner's ruling of 2026-11-03, from the Opus 5.5 verifier's finding F1 on HADOOP-DISCOVERY-RULE-1 (PR #1251; ledger clause C-012 of [its ledger](../../ledgers/archive/2026-11/2026-11-03-hadoop-discovery-rule-1-ledger.md)).
 
 **Status:** accepted leniency (owner, 2026-11-03). Grade C (clerk). S3. Not dispatched; no build is owed until the owner rules a port. Not a label blocker: the v2 label draft's exclusions table carries it as an accepted leniency.
 
