@@ -21,7 +21,6 @@ from repark.spark.session.reader_support import (
     _jdbc_bound_is_temporal,
     _parse_as_of_timestamp_option,
     _parse_snapshot_id_option,
-    _session_timestamp_text_columns,
 )
 from repark.spark.dataframe import io_declared as _io_declared
 
@@ -508,18 +507,14 @@ class DataFrameReader:
         # Spark default header=false when unset — force it so DF does not default true.
         if "header" not in {key.lower() for key in native_options}:
             native_options["header"] = "false"
+        infer_schema = self._option_bool("inferschema", default=False)
+        if self._schema is not None or not infer_schema:
+            native_options["text_scan"] = "true"
         frame = self._session.read_csv(path_str, native_options)
-        naive = _session_timestamp_text_columns(self._schema, frame)
-        if naive:
-            local = Path(path_str)
-            native_options["utf8_columns"] = ",".join(naive)
-            literal = local.exists() and set("*?[").isdisjoint(path_str)
-            uri = local.absolute().as_uri() + "/" * local.is_dir() if literal else path_str
-            frame = self._session.read_csv(uri, native_options)
         return _reader_parse(
             self._apply_reader_schema_semantics(
                 frame,
-                infer_schema=self._option_bool("inferschema", default=False),
+                infer_schema=infer_schema,
                 header=self._option_bool("header", default=False),
                 path=path_str,
             )
@@ -682,9 +677,6 @@ class DataFrameReader:
     ) -> DataFrame:
         """Apply user schema / Spark inferSchema=false / no-header column naming.
 
-        * User ``schema`` → project **by name** when source has matching field names; otherwise
-          by position (CSV no-header).
-        * ``inferSchema=false`` without user schema → cast all columns to string (Spark default).
         * ``nullValue`` → engine-side ``when``→NULL (DataFusion ``null_regex`` is not applied on
           the scan path reliably; facade maps Spark nullValue honestly).
         * No header and no user schema → rename DF ``column_N`` names to Spark ``_c0``, ``_c1``.
@@ -694,6 +686,8 @@ class DataFrameReader:
         schema = self._schema
         columns = list(frame.columns)
         null_token = self._option_str("nullvalue")
+        if path is not None and (schema is not None or not infer_schema):
+            return _reader_support._csv_text_frame(frame, schema, header, null_token)
 
         # Apply nullValue on the string form of every column before casts (Spark parse nulls).
         # Engine may already have Utf8-forced the scan when nullValue is set (R1-C1-001).
@@ -712,8 +706,6 @@ class DataFrameReader:
             if not fields:
                 return frame
             column_by_case = {name.casefold(): name for name in columns}
-            # Prefer name-based projection when every schema field exists on the source
-            # (JSON / CSV-with-header). Fall back to position for CSV no-header generic names.
             name_based = all(field["name"].casefold() in column_by_case for field in fields)
             selects = []
             if name_based:
@@ -721,9 +713,6 @@ class DataFrameReader:
                     source_name = column_by_case[field["name"].casefold()]
                     selects.append(F.col(source_name).cast(field["dataType"]).alias(field["name"]))
             else:
-                # Partial name match (JSON / header CSV with user schema listing extra fields):
-                # null-fill missing names — Spark shape. Skip when source names
-                # look like DF generic no-header columns so positional CSV still works.
                 generic_source = bool(columns) and all(
                     name.lower().startswith("column") or name.startswith("_c") for name in columns
                 )
@@ -769,10 +758,6 @@ class DataFrameReader:
             if needs_rename:
                 frame = frame.select(*renames)
                 columns = list(frame.columns)
-
-        if not infer_schema:
-            # Spark CSV default: all string columns.
-            return frame.select(*[F.col(name).cast("string").alias(name) for name in columns])
 
         # inferSchema=true after nullValue Utf8 force: re-promote integer/double/boolean columns
         # via engine casts (Python only builds the plan — no row loops).
