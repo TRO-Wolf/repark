@@ -1,6 +1,6 @@
 # Card V3-LINEAGE-NATIVE-ASSERT-1: the empty-DML table asserts v3 lineage on the Spark door only
 
-**Date:** 2026-11-08. **Filed by:** the records clerk (`claude-haiku-5-5`), from the Opus 5.5 verdict of EMPTY-DML-SHARED-GUARD-1 (ledger [empty-dml-shared-guard-1-ledger.md](../../ledgers/completed/empty-dml-shared-guard-1-ledger.md), clause C-015, Opus 5.5 F5).
+**Date:** 2026-11-08. **Filed by:** the records clerk (`claude-haiku-5-5`), from the Opus 5.5 verdict of EMPTY-DML-SHARED-GUARD-1 (ledger [empty-dml-shared-guard-1-ledger.md](../../ledgers/archive/2026-11/2026-11-09-empty-dml-shared-guard-1-ledger.md), clause C-015, Opus 5.5 F5).
 
 **Status:** filed 2026-11-08, severity S3, not dispatched; awaiting the owner's charter. A test-adequacy lead; no behavior is in question.
 

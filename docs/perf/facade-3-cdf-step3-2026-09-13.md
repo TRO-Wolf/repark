@@ -217,4 +217,4 @@ All three within +5 % — the gate is one pointer compare per temporal cell.
   [facade-3-cdf-step2-2026-09-13.md](facade-3-cdf-step2-2026-09-13.md)
 - Step-1 baseline + runner:
   [facade-3-cdf-baseline-2026-09-13.md](facade-3-cdf-baseline-2026-09-13.md)
-- Ledger: [../../task/ledgers/completed/facade-3-ledger.md](../../task/ledgers/completed/facade-3-ledger.md)
+- Ledger: [../../task/ledgers/completed/facade-3-ledger.md](../../task/ledgers/archive/2026-09/2026-09-13-facade-3-ledger.md)

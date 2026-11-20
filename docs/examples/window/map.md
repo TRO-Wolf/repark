@@ -38,4 +38,4 @@ twins, measured Spark-equal. The tied-key ordered default frame is §7
 
 - Up: [../map.md](../map.md)
 - Pins: [../../../python/repark/tests/parity/test_examples_window_catalog.py](../../../python/repark/tests/parity/test_examples_window_catalog.py)
-- Ledger: [../../../task/ledgers/staging/ex-20-window-catalog-ledger.md](../../../task/ledgers/completed/ex-20-window-catalog-ledger.md)
+- Ledger: [../../../task/ledgers/staging/ex-20-window-catalog-ledger.md](../../../task/ledgers/archive/2026-09/2026-09-11-ex-20-window-catalog-ledger.md)

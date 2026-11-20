@@ -4,7 +4,7 @@
 
 **Unit:** IDENT-DIALECT-2. **Grade:** C. **Priority:** P2. **Status:** open, not built, not dispatched.
 
-**Why:** IDENT-DIALECT-1 applies Spark's table-identifier grammar to the head target and to every relation in FROM and JOIN clauses (ledger [ident-dialect-1-ledger.md](../../ledgers/completed/ident-dialect-1-ledger.md), clauses C-002 to C-008). The positions below are outside that clause. The owner routed them to this card on 2026-11-02. Spark's answers are measured. RePark's answers are as the verifier recorded them at `c3c2a76b` where it ran them, and `unmeasured` where it did not.
+**Why:** IDENT-DIALECT-1 applies Spark's table-identifier grammar to the head target and to every relation in FROM and JOIN clauses (ledger [ident-dialect-1-ledger.md](../../ledgers/archive/2026-11/2026-11-03-ident-dialect-1-ledger.md), clauses C-002 to C-008). The positions below are outside that clause. The owner routed them to this card on 2026-11-02. Spark's answers are measured. RePark's answers are as the verifier recorded them at `c3c2a76b` where it ran them, and `unmeasured` where it did not.
 
 **Leads.**
 - **L, the grammar on every identifier position:** column references, MERGE USING sources, CREATE, DESCRIBE and CTAS targets, RENAME destinations, nested and between-segment comments, and numeric segments.

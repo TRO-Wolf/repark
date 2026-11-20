@@ -1,6 +1,6 @@
 # Card ICE-CREATE-MAP-KEY-FIELD-IDS-1: CREATE numbers a map key's struct children before the value id, so a map-key refusal text carries different field ids from Spark's
 
-**Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`) from ledger lead L3 (clause C-011) of [MAP-KEY-ALTER-1](../../ledgers/completed/map-key-alter-1-ledger.md), from the PR #1256 body ("Not changed").
+**Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`) from ledger lead L3 (clause C-011) of [MAP-KEY-ALTER-1](../../ledgers/archive/2026-11/2026-11-04-map-key-alter-1-ledger.md), from the PR #1256 body ("Not changed").
 
 **Status:** filed, not dispatched. Verifier class S3 (refusal text only).
 

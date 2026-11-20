@@ -27,8 +27,8 @@ Eight cells: `u_overflow_lit`, `where_overflow_lit`, `u_overflow39` and `coalesc
 
 ## Related cards
 
-- [ANSI-OFF-NARROWING-OVERFLOW-1](../../../roadmap/mid-term/ansi-off-narrowing-overflow-1-card-2026-11-16.md) (S2) covers numeric narrowing casts, not a string literal. This card's ANSI-off half sits beside it.
-- [AND-GUARD-ANSI-1](../../../roadmap/mid-term/sweep-2026-11-16/and-guard-ansi-1-card-2026-11-16.md) and [CASE-BOOL-GUARD-ANSI-1](../../../roadmap/mid-term/sweep-2026-11-16/case-bool-guard-ansi-1-card-2026-11-16.md) (S2, not label-blocking) list the `coalesce_overflow_lit` shape, a planning fold that raises in a branch Spark never evaluates.
-- [STRING-CAST-SILENT-1](../../../roadmap/mid-term/string-cast-silent-1-card-2026-11-16.md) is the string-cast build. This card is not folded into it.
+- [ANSI-OFF-NARROWING-OVERFLOW-1](../ansi-off-narrowing-overflow-1-card-2026-11-16.md) (S2) covers numeric narrowing casts, not a string literal. This card's ANSI-off half sits beside it.
+- [AND-GUARD-ANSI-1](../sweep-2026-11-16/and-guard-ansi-1-card-2026-11-16.md) and [CASE-BOOL-GUARD-ANSI-1](../sweep-2026-11-16/case-bool-guard-ansi-1-card-2026-11-16.md) (S2, not label-blocking) list the `coalesce_overflow_lit` shape, a planning fold that raises in a branch Spark never evaluates.
+- [STRING-CAST-SILENT-1](../string-cast-silent-1-card-2026-11-16.md) is the string-cast build. This card is not folded into it.
 
 Up: [map.md](map.md).

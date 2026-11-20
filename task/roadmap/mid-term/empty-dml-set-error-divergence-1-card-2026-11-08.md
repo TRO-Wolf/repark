@@ -1,6 +1,6 @@
 # Card EMPTY-DML-SET-ERROR-DIVERGENCE-1: a no-op UPDATE whose SET expression errors answers count 0 where Spark refuses on v2 merge-on-read, and no test on main pins it
 
-**Date:** 2026-11-08. **Filed by:** the records clerk (`claude-haiku-5-5`), from the Opus 5.5 verdict of EMPTY-DML-SHARED-GUARD-1 (ledger [empty-dml-shared-guard-1-ledger.md](../../ledgers/completed/empty-dml-shared-guard-1-ledger.md), clause C-011, Opus 5.5 F2).
+**Date:** 2026-11-08. **Filed by:** the records clerk (`claude-haiku-5-5`), from the Opus 5.5 verdict of EMPTY-DML-SHARED-GUARD-1 (ledger [empty-dml-shared-guard-1-ledger.md](../../ledgers/archive/2026-11/2026-11-09-empty-dml-shared-guard-1-ledger.md), clause C-011, Opus 5.5 F2).
 
 **Status:** filed 2026-11-08, severity S3, not dispatched; awaiting the owner's charter for the pin. The owner's ruling "All recommendations" (item 8) declares it: ruling D extends to Spark's errors from a no-op DML's SET expression.
 

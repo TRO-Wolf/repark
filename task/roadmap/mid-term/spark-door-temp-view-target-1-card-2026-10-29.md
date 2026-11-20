@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-29. **Filed by:** the second-audit records round (`claude-haiku-5-5`), from the second independent audit of the format-v2 label, finding AUD-006 ([the report](../../../docs/audits/iceberg-v2-label-independent-reaudit-2026-10-29.md), section 3).
 
-**Status:** CLOSED 2026-10-30: merged as PR #1219, squash `58e8b2a3`; verification round 3 PASS from both verifiers at `bfce6032`, pin `3c699355`. Grade A (Opus 5.5 build, with two verifiers: the Opus 5.5 verifier and the standing Muse MAX second verifier, merge gated on the union). The unit ledger is [spark-door-temp-view-target-1-ledger.md](../../ledgers/completed/spark-door-temp-view-target-1-ledger.md).
+**Status:** CLOSED 2026-10-30: merged as PR #1219, squash `58e8b2a3`; verification round 3 PASS from both verifiers at `bfce6032`, pin `3c699355`. Grade A (Opus 5.5 build, with two verifiers: the Opus 5.5 verifier and the standing Muse MAX second verifier, merge gated on the union). The unit ledger is [spark-door-temp-view-target-1-ledger.md](../../ledgers/archive/2026-10/2026-10-30-spark-door-temp-view-target-1-ledger.md).
 
 **Measured on the domain table (2026-11-02):** with a view of the bare name in scope, INSERT INTO, INSERT OVERWRITE, DELETE, UPDATE and MERGE refuse and hold both objects on both catalogs. The quoted and qualified-quoted spellings are carded as IDENT-DIALECT-1. See [spark-door-temp-view-ddl-1-domain-table.md](../../ledgers/staging/spark-door-temp-view-ddl-1-domain-table.md).
 

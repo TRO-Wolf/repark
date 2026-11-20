@@ -46,4 +46,4 @@ Grok critic-logic round before the PR.
 
 ## Pointers
 
-- Up: [map.md](map.md) · Ledger: [../../ledgers/staging/eager-budget-1-ledger.md](../../ledgers/completed/eager-budget-1-ledger.md)
+- Up: [map.md](map.md) · Ledger: [../../ledgers/staging/eager-budget-1-ledger.md](../../ledgers/archive/2026-09/2026-09-13-eager-budget-1-ledger.md)

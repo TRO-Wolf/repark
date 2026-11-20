@@ -1,6 +1,6 @@
 # Card DF-APPEND-MAP-KEY-UNION-1: a DataFrame append whose only change is inside a map key never reaches the schema-evolution union (scope decision)
 
-**Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`) from ledger lead L1 (clause C-009) of [MAP-KEY-ALTER-1](../../ledgers/completed/map-key-alter-1-ledger.md): the builder's question 1 and the Opus verifier's findings C6 and C7, re-checked in round two.
+**Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`) from ledger lead L1 (clause C-009) of [MAP-KEY-ALTER-1](../../ledgers/archive/2026-11/2026-11-04-map-key-alter-1-ledger.md): the builder's question 1 and the Opus verifier's findings C6 and C7, re-checked in round two.
 
 **Status:** filed, not dispatched. Verifier class S3. The owner decides the scope.
 

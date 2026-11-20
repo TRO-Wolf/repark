@@ -86,7 +86,7 @@ The **live-Spark oracle** tier needs a JVM: `make parity-live` / `parity-live.ym
 The **dbt-adapter** suite (`python/dbt-repark/tests`, DBT-1, 2026-09-04) needs the native module
 and `dbt-core`, so it sits beside the facade suite in `preflight` as `make py-test-dbt`; **no CI
 job runs it yet**, and the wiring it wants is recorded in
-[task/ledgers/completed/dbt-1-adapter-ledger.md](task/ledgers/completed/dbt-1-adapter-ledger.md) §9.
+[task/ledgers/completed/dbt-1-adapter-ledger.md](task/ledgers/archive/2026-09/2026-09-11-dbt-1-adapter-ledger.md) §9.
 
 **Facade suite layout.** Since FACADE-TESTS-LAYOUT-1 (2026-10-19) `python/repark/tests` is split
 into thirteen subsystem directories (`iceberg/`, `writes/`, `timestamps/`, `types/`,

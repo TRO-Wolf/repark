@@ -324,4 +324,4 @@ Defaults used above: `--target-file-size-bytes 524288 --sample-rows 200000
 --batches 200 --batch-rows 2000`. The script is
 [python/repark-parity/bench/adaptpart/run_adaptpart.py](../../python/repark-parity/bench/adaptpart/run_adaptpart.py);
 its clause table is
-[task/ledgers/staging/ap-0-ledger.md](../../task/ledgers/completed/ap-0-ledger.md).
+[task/ledgers/staging/ap-0-ledger.md](../../task/ledgers/archive/2026-09/2026-09-10-ap-0-ledger.md).

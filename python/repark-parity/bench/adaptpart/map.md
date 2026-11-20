@@ -64,7 +64,7 @@ makes never is — beds live under the `--scratch` root the caller names.
 | Reproduce the AP-1 step-2 plan frames | the same command plus `--plan`; the beds rebuild, then each bed's plan frame prints after its ranked table |
 | Reproduce the RP-16 re-measure | the same `--plan` command with `--scratch /tmp/ap1r-bed`; numbers in [adapt-part-ap1-remeasure-2026-09-11.md](../../../../docs/perf/adapt-part-ap1-remeasure-2026-09-11.md) |
 | Read the measured numbers | [docs/perf/ap-0-partition-candidates-2026-09-10.md](../../../../docs/perf/ap-0-partition-candidates-2026-09-10.md) |
-| Read the clause table | [task/ledgers/staging/ap-0-ledger.md](../../../../task/ledgers/completed/ap-0-ledger.md) |
+| Read the clause table | [task/ledgers/staging/ap-0-ledger.md](../../../../task/ledgers/archive/2026-09/2026-09-10-ap-0-ledger.md) |
 | Run smaller (fewer batches, fewer rows per batch) | `--batches N --batch-rows M` (the document's rows need the defaults) |
 | Change the P-3 target or the sample size | `--target-file-size-bytes B --sample-rows N` (the document's rows need 524288 and 200000) |
 
@@ -81,5 +81,5 @@ directory as the orchestrator's O-run.
 
 - The numbers this script produces:
   [docs/perf/ap-0-partition-candidates-2026-09-10.md](../../../../docs/perf/ap-0-partition-candidates-2026-09-10.md).
-- The clause table: [task/ledgers/staging/ap-0-ledger.md](../../../../task/ledgers/completed/ap-0-ledger.md).
+- The clause table: [task/ledgers/staging/ap-0-ledger.md](../../../../task/ledgers/archive/2026-09/2026-09-10-ap-0-ledger.md).
 - Up: [bench/map.md](../map.md).

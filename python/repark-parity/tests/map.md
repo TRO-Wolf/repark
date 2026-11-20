@@ -57,7 +57,7 @@ only above 3x the measured noise floor, so a wide floor queues nothing.
   resumable JSONL → folded CSV), the CI-tier cells (`sort`, `hash_aggregate`,
   `hash_join` at 2× the 64 MB limit), `ci_golden.csv`, and the committed-CSV pin.
   Needs the native module: run through `make py-test-spill-matrix`. Ledger:
-  [../../../task/ledgers/staging/neveroom-1-ledger.md](../../../task/ledgers/completed/neveroom-1-ledger.md).
+  [../../../task/ledgers/staging/neveroom-1-ledger.md](../../../task/ledgers/archive/2026-09/2026-09-11-neveroom-1-ledger.md).
 - [torture/](torture/map.md) — **TORTURE-1 steps 1–4:** the both-door torture
   suite (all eight families — `nested`, `inference`, `extreme_types`, `smartcsv`,
   `temporal`, `decimal_overflow`, `secrets`, and the Spark-written `v3_dv` DV-table
@@ -66,7 +66,7 @@ only above 3x the measured noise floor, so a wide floor queues nothing.
   families, the manifest reuse rule, the `flag_secret_columns` option pins, and the
   CI-tier 60-second workload pin). Divergent cells are strict xfails naming their
   registry rows. Needs the native module: run through `make py-test-torture`. Ledger:
-  [../../../task/ledgers/staging/torture-1-ledger.md](../../../task/ledgers/completed/torture-1-ledger.md).
+  [../../../task/ledgers/staging/torture-1-ledger.md](../../../task/ledgers/archive/2026-09/2026-09-11-torture-1-ledger.md).
 - `test_sepmo_packet.py` — **SEPMO-E2 (2026-09-06, round 3):** compact worker
   packet pins: schema validity, prefix byte-identity across five briefs,
   constraint preservation (dropped prefix rule, dropped sidecar

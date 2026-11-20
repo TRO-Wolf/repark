@@ -1,6 +1,6 @@
 # Card AVRO-MAP-ENTRY-ORDER-1: RePark reads Spark-written Avro map entries in another order, and the order changes between runs
 
-**Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`) from ledger lead L6 (clause C-012) of [SUBSCRIPT-DOT-ACCESS-1](../../ledgers/completed/subscript-dot-access-1-ledger.md), the Opus verifier's finding F6.
+**Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`) from ledger lead L6 (clause C-012) of [SUBSCRIPT-DOT-ACCESS-1](../../ledgers/archive/2026-11/2026-11-04-subscript-dot-access-1-ledger.md), the Opus verifier's finding F6.
 
 **Status:** filed, not dispatched. Verifier class S3.
 
