@@ -1,6 +1,6 @@
 # map — python/repark-parity/tests
 
-Dated CAP-1 mirror history is being moved out of this map: the mirror tuples and exact-baseline rows hold current values, and `git log -- python/repark-parity/tests/map.md` holds the record of each change.
+Dated CAP-1 mirror history is being moved out of this map: the size gates' exact-baseline rows hold current values, and `git log -- python/repark-parity/tests/map.md` holds the record of each change.
 
 ## Purpose
 
@@ -272,8 +272,8 @@ only above 3x the measured noise floor, so a wide floor queues nothing.
   ceiling), `write/merge/tests/streaming_scan.rs` 3020 → 3018 and
   `write/predicate_dml/tests/predicate_dml.rs` 1440 → 1435 (the identity spec builder becomes
   `PredicateDmlSpec::identity`).
-  **Round 2 (2026-09-19):** the exception COUNT follows the dropped row, 38 → 37, to match
-  the gate (`test_cap_1_exception_tables_equal_the_measured_debt`).
+  **Round 2 (2026-09-19):** the dropped row leaves the gate table, which the census checks
+  (`test_cap_1_exception_tables_equal_the_measured_debt`).
 - `test_cap_1_source_file_line_cap.py` — **ICE-CATALOG-SESSION-1 round 3 rebase (2026-09-20, run 27):**
   mirror rows follow the measured debt after the IPI-29 rebase: `catalog_config.rs`
   1028 → 1007 and `repark-spark/src/alter.rs` 1444 → 1439 with

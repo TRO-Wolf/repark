@@ -58,7 +58,7 @@ Kernel math is **not** here — it stays in `../overlap.rs` etc.
   rows **of each window partition** NULL in the validity bitmap over the same values buffer
   (no copy; values, and every later NaN, unchanged). `is_ta_window` tells the facade's series
   rewrite that a window function is a TA kernel. `udf/mod.rs` shrinks 1801 → 1791 and its exact
-  baseline and the CAP-1 mirror ratchet with it.
+  baseline ratchets with it.
 - `price.rs` — price-transform family (`avgprice`/`medprice`/`typprice`/
   `wclprice`).
 
