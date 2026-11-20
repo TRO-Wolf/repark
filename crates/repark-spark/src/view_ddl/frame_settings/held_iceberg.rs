@@ -13,7 +13,8 @@ use datafusion::physical_plan::ExecutionPlan;
 use iceberg::table::Table;
 use repark_core::extension::ReaderParseMemo;
 use repark_iceberg::catalog::session_tables::{
-    BindMode, Binding, TableState, binding, conformed, rebound_clone, rebound_provider, same_state,
+    BindMode, Binding, HeldTable, TableState, binding, conformed, rebound_clone, rebound_provider,
+    same_state,
 };
 
 const WRITER_VIEW: &str = "_repark_writer_";
@@ -22,7 +23,7 @@ const INTERNAL_VIEWS: [&str; 3] = ["_repark_", "__repark_", "__rp_"];
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone)]
 enum Decided {
-    Live(Table),
+    Live(HeldTable),
     Dropped,
     Unknown,
 }
@@ -157,11 +158,11 @@ fn step(
         Decided::Live(table) => table,
     };
     let held = bound.table();
-    if same_state(held, &table) {
+    if same_state(held, table.table()) {
         return Ok(None);
     }
-    if bound.mode() != BindMode::View && table.metadata().uuid() != held.metadata().uuid() {
-        return Err(table_id_mismatch(bound, held, &table));
+    if bound.mode() != BindMode::View && table.table().metadata().uuid() != held.metadata().uuid() {
+        return Err(table_id_mismatch(bound, held, table.table()));
     }
     let rebound =
         rebound_provider(&table).map_err(|error| DataFusionError::External(Box::new(error)))?;

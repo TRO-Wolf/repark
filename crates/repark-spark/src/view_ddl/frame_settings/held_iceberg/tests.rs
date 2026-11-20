@@ -171,7 +171,12 @@ async fn bed() -> Bed {
         .build()
         .unwrap_or_else(|error| panic!("session: {error}"));
     session
-        .register_iceberg_catalog("c", Arc::clone(&counted) as Arc<dyn Catalog>)
+        .register_iceberg_catalog(
+            "c",
+            repark_iceberg::catalog::EncryptionGuardCatalog::install(
+                Arc::clone(&counted) as Arc<dyn Catalog>
+            ),
+        )
         .await
         .unwrap_or_else(|error| panic!("register: {error}"));
     let bed = Bed {

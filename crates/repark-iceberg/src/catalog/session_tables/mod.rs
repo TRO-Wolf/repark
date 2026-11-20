@@ -28,6 +28,8 @@ use iceberg::{
 };
 use iceberg_datafusion::IcebergTableProvider;
 
+use super::{EncryptionGuardCatalog, GuardedCatalog};
+
 type TableKey = (String, TableIdent);
 type Slot = Arc<Mutex<Option<Resolved>>>;
 type BoxedResolve<'a> =
@@ -61,17 +63,27 @@ pub fn same_state(seen: &Table, table: &Table) -> bool {
         && seen.metadata().last_updated_ms() == table.metadata().last_updated_ms()
 }
 
+#[derive(Debug, Clone)]
+pub struct HeldTable(Table);
+
+impl HeldTable {
+    #[must_use]
+    pub fn table(&self) -> &Table {
+        &self.0
+    }
+}
+
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone)]
 pub enum TableState {
-    Live(Table),
+    Live(HeldTable),
     Dropped,
 }
 
 impl TableState {
     fn same_as(&self, table: &Table) -> bool {
         match self {
-            Self::Live(seen) => same_state(seen, table),
+            Self::Live(seen) => same_state(seen.table(), table),
             Self::Dropped => false,
         }
     }
@@ -117,14 +129,14 @@ impl SessionTables {
         &self,
         catalog: &str,
         ident: &TableIdent,
-        table: &Table,
+        table: &HeldTable,
         before: u64,
         refresh: bool,
     ) {
         let key = (catalog.to_string(), ident.clone());
         let mut seen = locked(&self.seen);
         if let Some(entry) = seen.get(&key)
-            && (entry.epoch != before || (!refresh && entry.state.same_as(table)))
+            && (entry.epoch != before || (!refresh && entry.state.same_as(table.table())))
         {
             return;
         }
@@ -171,13 +183,9 @@ pub async fn session_catalog_provider(
         .read()
         .config()
         .get_extension::<SessionTables>();
-    let catalog = match tables {
-        Some(tables) => Arc::new(SessionTablesCatalog {
-            inner: catalog,
-            name: name.to_string(),
-            tables,
-        }) as Arc<dyn Catalog>,
-        None => catalog,
+    let catalog = match (tables, EncryptionGuardCatalog::guarded(&catalog)) {
+        (Some(tables), Some(guarded)) => SessionTablesCatalog::over(guarded, name, tables),
+        _ => catalog,
     };
     let provider = super::build_iceberg_catalog_provider(Arc::clone(&catalog)).await?;
     Ok((catalog, provider))
@@ -188,7 +196,7 @@ struct Resolved {
     tables: Weak<SessionTables>,
     catalog: String,
     ident: TableIdent,
-    table: Table,
+    table: HeldTable,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -207,7 +215,7 @@ pub struct Binding {
 impl Binding {
     #[must_use]
     pub fn table(&self) -> &Table {
-        &self.resolved.table
+        self.resolved.table.table()
     }
 
     #[must_use]
@@ -304,8 +312,8 @@ pub fn rebound_clone(
 }
 
 #[allow(clippy::missing_errors_doc)]
-pub fn rebound_provider(table: &Table) -> Result<IcebergTableProvider> {
-    let ident = table.identifier().clone();
+pub fn rebound_provider(table: &HeldTable) -> Result<IcebergTableProvider> {
+    let ident = table.table().identifier().clone();
     let shim: Arc<dyn Catalog> = Arc::new(OneTableCatalog {
         table: table.clone(),
     });
@@ -421,7 +429,7 @@ impl SchemaProvider for CapturingSchema {
 
 #[derive(Debug)]
 struct OneTableCatalog {
-    table: Table,
+    table: HeldTable,
 }
 
 fn outside_one_table() -> Error {
@@ -470,8 +478,8 @@ impl Catalog for OneTableCatalog {
     }
 
     async fn load_table(&self, ident: &TableIdent) -> Result<Table> {
-        if ident == self.table.identifier() {
-            Ok(self.table.clone())
+        if ident == self.table.table().identifier() {
+            Ok(self.table.table().clone())
         } else {
             Err(outside_one_table())
         }
@@ -482,7 +490,7 @@ impl Catalog for OneTableCatalog {
     }
 
     async fn table_exists(&self, ident: &TableIdent) -> Result<bool> {
-        Ok(ident == self.table.identifier())
+        Ok(ident == self.table.table().identifier())
     }
 
     async fn rename_table(&self, _: &TableIdent, _: &TableIdent) -> Result<()> {
@@ -499,23 +507,35 @@ impl Catalog for OneTableCatalog {
 }
 
 struct SessionTablesCatalog {
-    inner: Arc<dyn Catalog>,
+    guarded: GuardedCatalog,
     name: String,
     tables: Arc<SessionTables>,
 }
 
 impl fmt::Debug for SessionTablesCatalog {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.inner.fmt(formatter)
+        self.inner().fmt(formatter)
     }
 }
 
 impl SessionTablesCatalog {
+    fn over(guarded: GuardedCatalog, name: &str, tables: Arc<SessionTables>) -> Arc<dyn Catalog> {
+        Arc::new(Self {
+            guarded,
+            name: name.to_string(),
+            tables,
+        })
+    }
+
+    fn inner(&self) -> &dyn Catalog {
+        self.guarded.handle().as_ref()
+    }
+
     fn recorded(&self, table: Table) -> Table {
         self.tables.record(
             &self.name,
             table.identifier(),
-            TableState::Live(table.clone()),
+            TableState::Live(HeldTable(table.clone())),
         );
         table
     }
@@ -527,7 +547,7 @@ impl Catalog for SessionTablesCatalog {
         &self,
         parent: Option<&NamespaceIdent>,
     ) -> Result<Vec<NamespaceIdent>> {
-        self.inner.list_namespaces(parent).await
+        self.inner().list_namespaces(parent).await
     }
 
     async fn create_namespace(
@@ -535,15 +555,15 @@ impl Catalog for SessionTablesCatalog {
         namespace: &NamespaceIdent,
         properties: HashMap<String, String>,
     ) -> Result<Namespace> {
-        self.inner.create_namespace(namespace, properties).await
+        self.inner().create_namespace(namespace, properties).await
     }
 
     async fn get_namespace(&self, namespace: &NamespaceIdent) -> Result<Namespace> {
-        self.inner.get_namespace(namespace).await
+        self.inner().get_namespace(namespace).await
     }
 
     async fn namespace_exists(&self, namespace: &NamespaceIdent) -> Result<bool> {
-        self.inner.namespace_exists(namespace).await
+        self.inner().namespace_exists(namespace).await
     }
 
     async fn update_namespace(
@@ -551,7 +571,7 @@ impl Catalog for SessionTablesCatalog {
         namespace: &NamespaceIdent,
         properties: HashMap<String, String>,
     ) -> Result<()> {
-        self.inner.update_namespace(namespace, properties).await
+        self.inner().update_namespace(namespace, properties).await
     }
 
     async fn update_namespace_properties(
@@ -560,7 +580,7 @@ impl Catalog for SessionTablesCatalog {
         removals: HashSet<String>,
         updates: HashMap<String, String>,
     ) -> Result<()> {
-        self.inner
+        self.inner()
             .update_namespace_properties(namespace, removals, updates)
             .await
     }
@@ -570,7 +590,7 @@ impl Catalog for SessionTablesCatalog {
         namespace: &NamespaceIdent,
         updates: HashMap<String, String>,
     ) -> Result<()> {
-        self.inner
+        self.inner()
             .set_namespace_properties(namespace, updates)
             .await
     }
@@ -580,17 +600,17 @@ impl Catalog for SessionTablesCatalog {
         namespace: &NamespaceIdent,
         removals: HashSet<String>,
     ) -> Result<()> {
-        self.inner
+        self.inner()
             .remove_namespace_properties(namespace, removals)
             .await
     }
 
     async fn drop_namespace(&self, namespace: &NamespaceIdent) -> Result<()> {
-        self.inner.drop_namespace(namespace).await
+        self.inner().drop_namespace(namespace).await
     }
 
     async fn list_tables(&self, namespace: &NamespaceIdent) -> Result<Vec<TableIdent>> {
-        self.inner.list_tables(namespace).await
+        self.inner().list_tables(namespace).await
     }
 
     async fn create_table(
@@ -598,16 +618,16 @@ impl Catalog for SessionTablesCatalog {
         namespace: &NamespaceIdent,
         creation: TableCreation,
     ) -> Result<Table> {
-        let table = self.inner.create_table(namespace, creation).await?;
+        let table = self.inner().create_table(namespace, creation).await?;
         Ok(self.recorded(table))
     }
 
     async fn load_table(&self, ident: &TableIdent) -> Result<Table> {
         let refresh = REFRESHING.with(Cell::get);
         let before = self.tables.epoch(&self.name, ident);
-        let table = self.inner.load_table(ident).await?;
+        let held = HeldTable(self.inner().load_table(ident).await?);
         self.tables
-            .observe(&self.name, ident, &table, before, refresh);
+            .observe(&self.name, ident, &held, before, refresh);
         RESOLVING.with(|current| {
             if let Some(slot) = current.borrow().as_ref() {
                 let mut slot = locked(slot);
@@ -616,43 +636,46 @@ impl Catalog for SessionTablesCatalog {
                         tables: Arc::downgrade(&self.tables),
                         catalog: self.name.clone(),
                         ident: ident.clone(),
-                        table: table.clone(),
+                        table: held.clone(),
                     });
                 }
             }
         });
-        Ok(table)
+        Ok(held.0)
     }
 
     async fn drop_table(&self, ident: &TableIdent) -> Result<()> {
-        self.inner.drop_table(ident).await?;
+        self.inner().drop_table(ident).await?;
         self.tables.record(&self.name, ident, TableState::Dropped);
         Ok(())
     }
 
     async fn table_exists(&self, ident: &TableIdent) -> Result<bool> {
-        self.inner.table_exists(ident).await
+        self.inner().table_exists(ident).await
     }
 
     async fn rename_table(&self, src: &TableIdent, dest: &TableIdent) -> Result<()> {
-        self.inner.rename_table(src, dest).await?;
+        self.inner().rename_table(src, dest).await?;
         self.tables.record(&self.name, src, TableState::Dropped);
         self.tables.forget(&self.name, dest);
         Ok(())
     }
 
     async fn register_table(&self, ident: &TableIdent, metadata_location: String) -> Result<Table> {
-        let table = self.inner.register_table(ident, metadata_location).await?;
+        let table = self
+            .inner()
+            .register_table(ident, metadata_location)
+            .await?;
         Ok(self.recorded(table))
     }
 
     async fn update_table(&self, commit: TableCommit) -> Result<Table> {
-        let table = self.inner.update_table(commit).await?;
+        let table = self.inner().update_table(commit).await?;
         Ok(self.recorded(table))
     }
 
     async fn publish_create_table(&self, table: Table) -> Result<Table> {
-        let table = self.inner.publish_create_table(table).await?;
+        let table = self.inner().publish_create_table(table).await?;
         Ok(self.recorded(table))
     }
 
@@ -662,14 +685,14 @@ impl Catalog for SessionTablesCatalog {
         expected_base_metadata_location: Option<String>,
     ) -> Result<Table> {
         let table = self
-            .inner
+            .inner()
             .publish_replace_table(table, expected_base_metadata_location)
             .await?;
         Ok(self.recorded(table))
     }
 
     async fn list_views(&self, namespace: &NamespaceIdent) -> Result<Vec<TableIdent>> {
-        self.inner.list_views(namespace).await
+        self.inner().list_views(namespace).await
     }
 
     async fn create_view(
@@ -677,43 +700,43 @@ impl Catalog for SessionTablesCatalog {
         namespace: &NamespaceIdent,
         creation: ViewCreation,
     ) -> Result<View> {
-        self.inner.create_view(namespace, creation).await
+        self.inner().create_view(namespace, creation).await
     }
 
     async fn load_view(&self, view: &TableIdent) -> Result<View> {
-        self.inner.load_view(view).await
+        self.inner().load_view(view).await
     }
 
     async fn drop_view(&self, view: &TableIdent) -> Result<()> {
-        self.inner.drop_view(view).await
+        self.inner().drop_view(view).await
     }
 
     async fn view_exists(&self, view: &TableIdent) -> Result<bool> {
-        self.inner.view_exists(view).await
+        self.inner().view_exists(view).await
     }
 
     async fn rename_view(&self, src: &TableIdent, dest: &TableIdent) -> Result<()> {
-        self.inner.rename_view(src, dest).await
+        self.inner().rename_view(src, dest).await
     }
 
     async fn update_view(&self, commit: ViewCommit) -> Result<View> {
-        self.inner.update_view(commit).await
+        self.inner().update_view(commit).await
     }
 
     fn name(&self) -> &str {
-        self.inner.name()
+        self.inner().name()
     }
 
     fn properties(&self) -> &HashMap<String, String> {
-        self.inner.properties()
+        self.inner().properties()
     }
 
     async fn invalidate_table(&self, ident: &TableIdent) -> Result<()> {
-        self.inner.invalidate_table(ident).await
+        self.inner().invalidate_table(ident).await
     }
 
     async fn invalidate_view(&self, view: &TableIdent) -> Result<()> {
-        self.inner.invalidate_view(view).await
+        self.inner().invalidate_view(view).await
     }
 }
 
