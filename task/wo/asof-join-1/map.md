@@ -10,6 +10,7 @@ which has no door for either. Asked by the owner on 2026-11-20; rating proposed 
   group, type, direction and mode; the errors, mixed types, bounds, NaN, ties, call forms, SQL and `merge_asof`.
 - [inventory.md](inventory.md) — the insertion inventory: every site an as-of join would enter, with file:line.
 - [card.md](card.md) — the card's text for the orchestrator's clerk to file.
+- [guidance.md](guidance.md) — Fable's medium consult on step 0 (2026-11-20): guidance on Q1 to Q11 and §12 to §15, and the owner's list. Guidance, not an owner ruling.
 - [evidence/](evidence/map.md) — probes, raw cells (gzipped), plans, cost samples, `javap` excerpts, provenance.
 
 Up: [../map.md](../map.md).

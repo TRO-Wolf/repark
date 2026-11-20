@@ -291,6 +291,7 @@ is built). Neither seat changes a cost case of C-012.
 ## 7. Questions (each rules from the table)
 
 For a Fable medium consult; each rules from [domain-table.md](domain-table.md) alone.
+Fable's guidance on every question (2026-11-20) is in [guidance.md](guidance.md); the owner rates Q1.
 
 - **Q1 — the rating.** (A) **S3** — a missing capability: RePark refuses loudly (`ATTRIBUTE_NOT_SUPPORTED`, never a
   wrong row), two workarounds give Spark's rows on the grid up to ties, and it is a private PySpark API off the
