@@ -8,5 +8,12 @@
   classes it for main and the head, by step 0's verdict rule; families `req:*` (the 188) and `fc:join` (the 128).
 - [a1_cost.py](a1_cost.py) — the cost cases on a 2M-row JSON file: `count` then `collect`, `collect` first, a view
   then `count`, a selective child's `count`, a second child's `count`. `a1_cost.py <case> <build> <data> <out>`.
+- [a1_cost_table.py](a1_cost_table.py) — the ten-round cost table from `a1_cost.py`'s samples and C-012's walls:
+  `a1_cost_table.py <raw.jsonl> <samples.jsonl>`.
+- [a1_perf.py](a1_perf.py) — one counted action (`fill_count`, `view_total`, `plain_count`) on the same 2M-row file,
+  enabling `perf stat` or `perf record` through a control FIFO around the action only.
+  `a1_perf.py <label> <case> <round> <data> <ctl fifo> <ack fifo> <out>`.
+- [a1_perf_table.py](a1_perf_table.py) — medians of `perf stat -x,` outputs per package and case, as ratios to the
+  first package: `a1_perf_table.py <dir> "<packages>" "<cases>"`.
 
 Up: [../map.md](../map.md).
