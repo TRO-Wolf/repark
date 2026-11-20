@@ -175,3 +175,37 @@ No cell outside the two allowed classes moved. **No finding.**
 The first run (head `f9cc698e` on unit 0's head `aa9fd178`) measured the left-hand column of the table above; this rebuild supersedes it.
 
 The comparison and probe scripts of this rebuild are not committed; step 0's probes under [../evidence/probes/](../evidence/probes/map.md) replay its cell sets, and the path and user-`CAST` cells are pinned in the test files.
+
+## Delta F1
+
+The verifier failed the first head, `76e9ef0e` (its product code equals `ba1957bf`, the rebuild above), on two findings. **F1** (class a, S2): a held JSON or CSV frame, collected, then after a `SET` collected again as the same object, answered the live zone; Spark 4.1.2 and main keep the first plan's parse (9 cells EQUAL to WRONG against main). **F2** (class b): the records said a held frame "acted on after" a `SET` parses under the live settings "as Spark does"; Spark does that on the frame's first own-plan action only. Then owner, 'Merge it and continue' (read by the orchestrator as option A, a delta; reading reported to the owner).
+
+The delta is `e2251812`, `e2be5707`, `82ec1036` and `acd27d6e`, then `52f468ce` (`to_arrow` opens its stream through `pa.lib.RecordBatchReader`, the same class, so a `mapInArrow` test that patches `pa.RecordBatchReader` passes). The matrix, scope, sticky and attack runs, the bar sweep and EXPLAIN ran on the delta head `acd27d6e`. `52f468ce` changes that one token; its scope rows were compared with this head (59 of 59 the same) and its pin file passes (95 passed).
+
+**Matrix** (`evidence/cmp/delta/matrix.txt.gz`, `matrix-class.txt`): 1,435 cells, 5 readers, 18 first actions and 15 second actions, answered by Spark 4.1.2, main (`8bc26cba`), the rebuild's head (`ba1957bf`) and this head.
+
+- EQUAL to Spark: main 510, the rebuild's head 830, this head 1,110. This head differs on 235 answered cells and has no Spark answer for 90 (`toPandas` as a second action; the oracle has no pandas).
+- The 235 are explained by class. **`rdd` (170):** RePark refuses `rdd` with `NOT_IMPLEMENTED`; this covers the second action `rdd.collect()` (90 cells) and a first action `rdd` or `rdd.collect()` with another second action (80 cells). **`localCheckpoint` as the first action (25):** RePark turns the frame itself into the checkpoint scan; the same on main and on the rebuild's head. **`toPandas` as the first action (40):** Spark's first action raised with no pandas installed, so its recording shows no first-action fix; this head equals its `toArrow` twin on all 40, which the PySpark source supports (`pyspark/sql/pandas/conversion.py`, own-plan on both paths).
+- Moves against the rebuild's head: 320 cells move to EQUAL and 40 move away (the `toPandas` first-action cells). Against main: 680 move to EQUAL and 80 move away (the `rdd` first-action cells). Those 80 were EQUAL on main, DIFF on the rebuild's head and DIFF here, so this delta leaves them where the rebuild put them.
+
+**Sticky and attack cells**, re-run on this head (`sticky-rebuild-head.txt`, `attack-rebuild-head.txt`; not copied): 12 sticky cells move WRONG to EQUAL: A2, A4, B2 and E1 on `json_s`, `csv_s` and `csv_i`, three readers each. Six attack cells move WRONG to EQUAL: `newsess/own-after-own-set` and `newsess/other-frame-after-its-set` on the same three readers. No other cell moves in either run, and the derived families A3, C1 and D1 stay EQUAL.
+
+**Scope checks** (`evidence/cmp/delta/scope.txt`, 52 rows, Spark 4.1.2 against main, the rebuild's head and this head): 42 rows have a Spark answer and this head equals it on 34.
+
+- Lazy streams: an iterator opened under the live zone keeps that zone when a `SET` runs before its first pull, and an iterator never pulled does the same, as Spark does, because the parse is fixed at the `toLocalIterator()` call (6 rows, `json_s` and `csv_i`; this head equals Spark on all six).
+- Nesting: the driver loop and the inner, outer and third-frame reads agree with Spark on every row Spark answers.
+- Errors: the cast rows (4) answer RePark's Arrow cast error where Spark raises `CAST_INVALID_INPUT`, and the deleted-file rows (2) answer where Spark raises `FAILED_READ_FILE`. Main gives the same answers on all six.
+- Threads: `a` keeps the live zone and `b` and `c` the UTC zone, as Spark does; this head ran 100 rounds per thread, Spark 20.
+- Open, not explained by the delta's notes: `nest/map-func` (no Spark answer; a `mapInArrow` function that collects two reader frames with a `SET` between). Main returns `{"inner": [[row], 1], "outer": [row]}`. This head and the rebuild's head both return `{"inner": [[], 0], "outer": []}`. No residual is recorded for this row until the orchestrator rules on it.
+
+**Bar sweep, head side** (`evidence/cmp/delta/bar-head.txt`; this head against the rebuild's head, per file): 61 cells moved, each either a new F1 pin cell or clock-dependent.
+
+- 37 new F1 pin cells (`pins.json`: 94 cells, of which 57 are old and 37 are new; the 37 have no old record).
+- 24 clock-dependent cells: `current_date` 7 (`bar-rc.jsonl` 4, `bar-rev.jsonl` 3), `localtimestamp` 6 and `now` 6 (`bar-rev.jsonl`), `overlay/start_time` 3 (`attack`, `attack2`, `attack3`; the pair compares UTC's and Kiritimati's `current_date()`, see `task/wo/temp-view-session-settings-1/evidence/built-part2/bar.md` line 242), and a snapshot time inside an error message 2 (`readers.jsonl`, `ansi_false` and `ansi_true` on `utc_la` `ice_t create`).
+- No cell with an old record that does not depend on the clock moved.
+
+**EXPLAIN** (`explain-head-rooted.json`, 506 keys each; scratch, not copied): against the rebuild's head, nothing differs (0 keys). The rooted file is this head's output with its warehouse root name aligned from `rp1d-wh` to `rp1b-wh`, because the path filter of the explain diff does not match the delta's warehouse name; 418 keys differ by that name alone. Against main, only `EXPLAIN VERBOSE` differs (22 keys: the `ReaderParse` node and the `repark_reader_parse` rule; Q11, accepted).
+
+**Pins** (`test_temp_view_frame_reader_parse_1.py`): 94 cells, the 57 old cells byte-identical to their recordings and 37 new F1 cells. This head: 95 passed, cells and EXPLAIN. The rebuild's head: 27 red, all F1 cells. Main: 53 red (38 of the unit's cells and 15 F1). Rust `frame_settings` tests: 22 passed.
+
+**Cost and perf:** [cost.md](cost.md), Delta F1.

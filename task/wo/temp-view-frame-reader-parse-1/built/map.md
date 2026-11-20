@@ -14,10 +14,9 @@ live options with those the plan is optimized under: the same, the node becomes 
 becomes a closed `FrameView` over the copy, analysed under the live settings. Part 2's reader-lineage exemption and
 the SQL door's fallback are removed; `write_plan` hashes the node as its input.
 
-**This unit changes answers with no view involved.** A held JSON or CSV frame built before a `SET` and acted on after
-it (`collect()`, `cache()` then an action, a path write, an exact-key join) now parses under the live settings and
-evaluates the expressions above the parse under the frame's, as Spark does. Step 0's sentence "the parse's own cells
-must not move" (sketch §8) held only for the doors step 0 measured.
+**Delta F1 (verifier, 2026-11-19; owner, 'Merge it and continue' (read by the orchestrator as option A, a delta; reading reported to the owner)).** The decision is held per frame object, not per node, because derived frames share the node: `ReaderParseMemo` (`crates/repark-core/src/extension.rs`) is held per Python `DataFrame` in a `WeakKeyDictionary` (`python/repark/src/repark/spark/dataframe/surface_a.py`). The facade enters and leaves the memo's thread-local scope around each own-plan action (`enter`/`leave`; `run` serves Rust callers), and `repark_reader_parse` decides each node under the settings the memo recorded for its session at its first decision. Product files: 11 of the delta brief's cap of 12 (`core.py` and `surface_a.py` beyond the nine).
+
+**This unit changes answers with no view involved.** A held JSON or CSV frame built before a `SET` parses under the live settings at its first own-plan action (`collect()`, `toLocalIterator()`, `toArrow()`, `toPandas()`, `tail()`, `foreach`, `foreachPartition`, a checkpoint) and keeps that parse for every later own-plan action on the same object, as Spark's per-`QueryExecution` scan does (delta F1). `count()`, `show()` and `take(1)` decide afresh under the live settings, and so does a derived `select("*")` (the matrix). Step 0's sentence "the parse's own cells must not move" (sketch §8) held only for the doors step 0 measured.
 
 ## The rulings this unit carries
 
@@ -39,5 +38,6 @@ must not move" (sketch §8) held only for the doors step 0 measured.
   after, G1 to G4 with their cells and the root-shape rule list.
 - [cost.md](cost.md) — K0 to K4, like-for-like medians against main `8bc26cba`, head package built from `ba1957bf`.
 - [evidence/](evidence/map.md) — the raw cells and the verdicts.
+- [evidence/cmp/delta/](evidence/cmp/delta/map.md) — the F1 delta's matrix, scope checks and bar sweep (bar.md, Delta F1).
 
 Up: [../map.md](../map.md).

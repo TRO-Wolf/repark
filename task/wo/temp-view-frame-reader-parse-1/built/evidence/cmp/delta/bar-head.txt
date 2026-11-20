@@ -1,0 +1,111 @@
+A.jsonl: cells 884 (old 884), moved 0
+E.jsonl: cells 16 (old 16), moved 0
+S.jsonl: cells 8 (old 8), moved 0
+T.jsonl: cells 408 (old 408), moved 0
+W0.jsonl: cells 84 (old 84), moved 0
+W1.jsonl: cells 84 (old 84), moved 0
+W2.jsonl: cells 84 (old 84), moved 0
+W3.jsonl: cells 84 (old 84), moved 0
+Z0.jsonl: cells 450 (old 450), moved 0
+Z1.jsonl: cells 450 (old 450), moved 0
+Z2.jsonl: cells 450 (old 450), moved 0
+Z3.jsonl: cells 450 (old 450), moved 0
+Z4.jsonl: cells 450 (old 450), moved 0
+Z5.jsonl: cells 450 (old 450), moved 0
+Z6.jsonl: cells 450 (old 450), moved 0
+Z7.jsonl: cells 450 (old 450), moved 0
+attack.jsonl: cells 133 (old 133), moved 1
+  MOVED attack.jsonl overlay/start_time | old {"rows": ["(True, True, True, False)"], "types": ["boolean", "boolean", "boolean", "boolean"]} | new {"rows": ["(True, True, True, True)"], "types": ["boolean", "boolean", "boolean", "boolean"]}
+attack2.jsonl: cells 16 (old 16), moved 1
+  MOVED attack2.jsonl overlay/start_time | old {"rows": ["(True, True, True, False)"], "types": ["boolean", "boolean", "boolean", "boolean"]} | new {"rows": ["(True, True, True, True)"], "types": ["boolean", "boolean", "boolean", "boolean"]}
+attack3.jsonl: cells 7 (old 7), moved 1
+  MOVED attack3.jsonl overlay/start_time | old {"rows": ["(True, True, True, False)"], "types": ["boolean", "boolean", "boolean", "boolean"]} | new {"rows": ["(True, True, True, True)"], "types": ["boolean", "boolean", "boolean", "boolean"]}
+bar-rc.jsonl: cells 90 (old 90), moved 4
+  MOVED bar-rc.jsonl current_date/df/utc_kir | old {"result": {"direct": ["2026-11-20"], "rows": ["2026-11-19"], "types": ["string"]}} | new {"result": {"direct": ["2026-11-20"], "rows": ["2026-11-20"], "types": ["string"]}}
+  MOVED bar-rc.jsonl current_date/df/utc_pago | old {"result": {"direct": ["2026-11-19"], "rows": ["2026-11-19"], "types": ["string"]}} | new {"result": {"direct": ["2026-11-19"], "rows": ["2026-11-20"], "types": ["string"]}}
+  MOVED bar-rc.jsonl current_date/sql/utc_kir | old {"result": {"direct": ["2026-11-20"], "rows": ["2026-11-19"], "types": ["string"]}} | new {"result": {"direct": ["2026-11-20"], "rows": ["2026-11-20"], "types": ["string"]}}
+  MOVED bar-rc.jsonl current_date/sql/utc_pago | old {"result": {"direct": ["2026-11-19"], "rows": ["2026-11-19"], "types": ["string"]}} | new {"result": {"direct": ["2026-11-19"], "rows": ["2026-11-20"], "types": ["string"]}}
+bar-rev.jsonl: cells 157 (old 157), moved 15
+  MOVED bar-rev.jsonl direct/cdate/UTC | old {"body": "cdate", "kind": "direct", "result": {"rows": ["2026-11-19"], "types": ["string"]}} | new {"body": "cdate", "kind": "direct", "result": {"rows": ["2026-11-20"], "types": ["string"]}}
+  MOVED bar-rev.jsonl direct/lts/America/Los_Angeles | old {"body": "lts", "kind": "direct", "result": {"rows": ["10"], "types": ["int"]}} | new {"body": "lts", "kind": "direct", "result": {"rows": ["18"], "types": ["int"]}}
+  MOVED bar-rev.jsonl direct/lts/UTC | old {"body": "lts", "kind": "direct", "result": {"rows": ["18"], "types": ["int"]}} | new {"body": "lts", "kind": "direct", "result": {"rows": ["2"], "types": ["int"]}}
+  MOVED bar-rev.jsonl direct/now/America/Los_Angeles | old {"body": "now", "kind": "direct", "result": {"rows": ["10"], "types": ["int"]}} | new {"body": "now", "kind": "direct", "result": {"rows": ["18"], "types": ["int"]}}
+  MOVED bar-rev.jsonl direct/now/UTC | old {"body": "now", "kind": "direct", "result": {"rows": ["18"], "types": ["int"]}} | new {"body": "now", "kind": "direct", "result": {"rows": ["2"], "types": ["int"]}}
+  MOVED bar-rev.jsonl now_fn/df/cdate/utc_la | old {"body": "cdate", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["2026-11-19"], "types": ["string"]}} | new {"body": "cdate", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["2026-11-20"], "types": ["string"]}}
+  MOVED bar-rev.jsonl now_fn/df/lts/la_utc | old {"body": "lts", "dir": "la_utc", "kind": "now_fn", "result": {"rows": ["10"], "types": ["int"]}} | new {"body": "lts", "dir": "la_utc", "kind": "now_fn", "result": {"rows": ["18"], "types": ["int"]}}
+  MOVED bar-rev.jsonl now_fn/df/lts/utc_la | old {"body": "lts", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["18"], "types": ["int"]}} | new {"body": "lts", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["2"], "types": ["int"]}}
+  MOVED bar-rev.jsonl now_fn/df/now/la_utc | old {"body": "now", "dir": "la_utc", "kind": "now_fn", "result": {"rows": ["10"], "types": ["int"]}} | new {"body": "now", "dir": "la_utc", "kind": "now_fn", "result": {"rows": ["18"], "types": ["int"]}}
+  MOVED bar-rev.jsonl now_fn/df/now/utc_la | old {"body": "now", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["18"], "types": ["int"]}} | new {"body": "now", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["2"], "types": ["int"]}}
+  MOVED bar-rev.jsonl now_fn/sql/cdate/utc_la | old {"body": "cdate", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["2026-11-19"], "types": ["string"]}} | new {"body": "cdate", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["2026-11-20"], "types": ["string"]}}
+  MOVED bar-rev.jsonl now_fn/sql/lts/la_utc | old {"body": "lts", "dir": "la_utc", "kind": "now_fn", "result": {"rows": ["10"], "types": ["int"]}} | new {"body": "lts", "dir": "la_utc", "kind": "now_fn", "result": {"rows": ["18"], "types": ["int"]}}
+  MOVED bar-rev.jsonl now_fn/sql/lts/utc_la | old {"body": "lts", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["18"], "types": ["int"]}} | new {"body": "lts", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["2"], "types": ["int"]}}
+  MOVED bar-rev.jsonl now_fn/sql/now/la_utc | old {"body": "now", "dir": "la_utc", "kind": "now_fn", "result": {"rows": ["10"], "types": ["int"]}} | new {"body": "now", "dir": "la_utc", "kind": "now_fn", "result": {"rows": ["18"], "types": ["int"]}}
+  MOVED bar-rev.jsonl now_fn/sql/now/utc_la | old {"body": "now", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["18"], "types": ["int"]}} | new {"body": "now", "dir": "utc_la", "kind": "now_fn", "result": {"rows": ["2"], "types": ["int"]}}
+bar-true.jsonl: cells 3472 (old 3472), moved 0
+bar-unset.jsonl: cells 43 (old 43), moved 0
+case.jsonl: cells 7 (old 7), moved 0
+explain10.jsonl: cells 22 (old 22), moved 0
+explain_joins.jsonl: cells 7 (old 7), moved 0
+fable-view2.jsonl: cells 14 (old 14), moved 0
+frames.jsonl: cells 30 (old 30), moved 0
+joins.jsonl: cells 219 (old 219), moved 0
+m-Z0.jsonl: cells 450 (old 450), moved 0
+m-Z1.jsonl: cells 450 (old 450), moved 0
+m-Z2.jsonl: cells 450 (old 450), moved 0
+m-Z3.jsonl: cells 450 (old 450), moved 0
+m-Z4.jsonl: cells 450 (old 450), moved 0
+m-Z5.jsonl: cells 450 (old 450), moved 0
+m-Z6.jsonl: cells 450 (old 450), moved 0
+m-Z7.jsonl: cells 450 (old 450), moved 0
+r-D.jsonl: cells 18 (old 18), moved 0
+r-E.jsonl: cells 24 (old 24), moved 0
+r-N.jsonl: cells 90 (old 90), moved 0
+r-X.jsonl: cells 90 (old 90), moved 0
+r-XC.jsonl: cells 30 (old 30), moved 0
+readers.jsonl: cells 1032 (old 1032), moved 2
+  MOVED readers.jsonl ansi_false/utc_la/ice_t/create | old {"error": "Cannot find a snapshot older than 2026-11-19T14:39:18+00:00"} | new {"error": "Cannot find a snapshot older than 2026-11-19T22:09:32+00:00"}
+  MOVED readers.jsonl ansi_true/utc_la/ice_t/create | old {"error": "Cannot find a snapshot older than 2026-11-19T14:39:18+00:00"} | new {"error": "Cannot find a snapshot older than 2026-11-19T22:09:32+00:00"}
+smart.jsonl: cells 20 (old 20), moved 0
+ws-false.jsonl: cells 1551 (old 1551), moved 0
+ws-true.jsonl: cells 1551 (old 1551), moved 0
+bar-sweep.json: cells 2 (old 2), moved 0
+explains.json: cells 506 (old 506), moved 0
+pins.json: cells 94 (old 57), moved 37
+  MOVED pins.json F1/A2/csv_i | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["bigint", "string", "int", "string"]}
+  MOVED pins.json F1/A2/csv_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/A2/json_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/A3/csv_i | old  | new {"rows": ["1|2023-12-31 19:00:00|19|1704078000", "2|2024-06-01 16:30:00|16|1717284600"], "types": ["bigint", "string", "int", "string"]}
+  MOVED pins.json F1/A3/csv_s | old  | new {"rows": ["1|2023-12-31 19:00:00|19|1704078000", "2|2024-06-01 16:30:00|16|1717284600"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/A3/json_s | old  | new {"rows": ["1|2023-12-31 19:00:00|19|1704078000", "2|2024-06-01 16:30:00|16|1717284600"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/A4/csv_i | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["bigint", "string", "int", "string"]}
+  MOVED pins.json F1/A4/csv_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/A4/json_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/B2/csv_i | old  | new {"rows": ["1|2023-12-31 19:00:00|19|1704078000", "2|2024-06-01 16:30:00|16|1717284600"], "types": ["bigint", "string", "int", "string"]}
+  MOVED pins.json F1/B2/csv_s | old  | new {"rows": ["1|2023-12-31 19:00:00|19|1704078000", "2|2024-06-01 16:30:00|16|1717284600"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/B2/json_s | old  | new {"rows": ["1|2023-12-31 19:00:00|19|1704078000", "2|2024-06-01 16:30:00|16|1717284600"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/C1/csv_i | old  | new {"rows": ["1|2023-12-31 19:00:00|19|1704078000", "2|2024-06-01 16:30:00|16|1717284600"], "types": ["bigint", "string", "int", "string"]}
+  MOVED pins.json F1/C1/csv_s | old  | new {"rows": ["1|2023-12-31 19:00:00|19|1704078000", "2|2024-06-01 16:30:00|16|1717284600"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/C1/json_s | old  | new {"rows": ["1|2023-12-31 19:00:00|19|1704078000", "2|2024-06-01 16:30:00|16|1717284600"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/D1/csv_i | old  | new {"rows": ["1|2023-12-31 19:00:00|19|1704078000", "2|2024-06-01 16:30:00|16|1717284600"], "types": ["bigint", "string", "int", "string"]}
+  MOVED pins.json F1/D1/csv_s | old  | new {"rows": ["1|2023-12-31 19:00:00|19|1704078000", "2|2024-06-01 16:30:00|16|1717284600"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/D1/json_s | old  | new {"rows": ["1|2023-12-31 19:00:00|19|1704078000", "2|2024-06-01 16:30:00|16|1717284600"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/E1/csv_i | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["bigint", "string", "int", "string"]}
+  MOVED pins.json F1/E1/csv_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/E1/json_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/X/checkpoint/json_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/X/foreach/json_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/X/foreachPartition/json_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/X/localCheckpoint/json_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/X/tail/json_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/X/toArrow/json_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/X/toLocalIterator/json_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/Y/checkpoint/json_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/Y/localCheckpoint/json_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/late_pull/json_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"]}
+  MOVED pins.json F1/newsess/other/csv_i | old  | new {"rows": ["1|2023-12-31 10:00:00|10|1704045600", "2|2024-06-01 07:30:00|7|1717252200"], "types": ["bigint", "string", "int", "string"]}
+  MOVED pins.json F1/newsess/other/csv_s | old  | new {"rows": ["1|2023-12-31 10:00:00|10|1704045600", "2|2024-06-01 07:30:00|7|1717252200"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/newsess/other/json_s | old  | new {"rows": ["1|2023-12-31 10:00:00|10|1704045600", "2|2024-06-01 07:30:00|7|1717252200"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/newsess/own/csv_i | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["bigint", "string", "int", "string"]}
+  MOVED pins.json F1/newsess/own/csv_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+  MOVED pins.json F1/newsess/own/json_s | old  | new {"rows": ["1|2024-01-01 03:00:00|3|1704106800", "2|2024-06-01 23:30:00|23|1717309800"], "types": ["int", "string", "int", "string"]}
+TOTAL MOVED 61

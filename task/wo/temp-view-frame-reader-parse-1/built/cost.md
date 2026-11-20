@@ -60,3 +60,35 @@ Instruction counts (`perf stat -D -1 --control fifo`, `instructions:u`, `cycles:
 - Six short-row flags (`k0_json_count`, `k0_json_hour`, `k1`, `k1_d`, `k3`, `k3_d`, 1.056x to 1.107x) are attributed to the build by instruction counts (head over base within 1.002); they do not block under the short-row rule (owner, 2026-11-19, about 14:00 UTC: "go with recommendations"). No row is above 1.15x.
 - The fixed cost per query over a reader frame is 0.51 ms (`tiny_csv`, head against swap). There is no way out of it in this unit (S3, Fable's reply §3).
 - The `pq_hour` and `ntz_hour` twin rows hold.
+
+## Delta F1: cost and perf
+
+Head `acd27d6e` (`pkg-rp1d-acd27d6e`) against main `8bc26cba` (`pkg-rp1base-8bc26cba`). The swap column is the rebuild's head `ba1957bf` (`pkg-rp1-ba1957bf`), so the delta's cost is read against the rebuild it replaces. Ten runs per row, five for C-012. The fix round `52f468ce` changes one token in `to_arrow` and was not re-measured for cost.
+
+Ten-round table, with the reading column as the run recorded it (source `cost/table.md`):
+
+| case | base ms | head ms | swap ms | base-again ms | head/bases | head/base | head/base-again | band (base-again/base) | swap/bases | head/swap | runs | rc!=0 | reading |
+| ---|---|---|---|---|---|---|---|---|---|---|---|---|--- |
+| k0_csv_count | 21.81 | 21.84 | 22.01 | 21.93 | 0.999 | 1.002 | 0.996 | 1.006 | 1.006 | 0.993 | 10 | 0 | holds |
+| k0_csv_hour | 76.10 | 76.78 | 77.85 | 74.60 | 1.019 | 1.009 | 1.029 | 0.980 | 1.033 | 0.986 | 10 | 0 | holds |
+| k0_json_count | 44.60 | 44.35 | 48.54 | 45.40 | 0.986 | 0.995 | 0.977 | 1.018 | 1.079 | 0.914 | 10 | 0 | holds |
+| k0_json_hour | 95.05 | 94.89 | 101.23 | 94.47 | 1.001 | 0.998 | 1.004 | 0.994 | 1.068 | 0.937 | 10 | 0 | holds |
+| k1 | 89.93 | 93.80 | 96.87 | 88.27 | 1.053 | 1.043 | 1.063 | 0.982 | 1.087 | 0.968 | 10 | 0 | FLAG |
+| k1_d | 85.82 | 86.22 | 88.38 | 87.70 | 0.994 | 1.005 | 0.983 | 1.022 | 1.019 | 0.976 | 10 | 0 | holds |
+| k2 | 71.22 | 72.93 | 77.65 | 72.73 | 1.013 | 1.024 | 1.003 | 1.021 | 1.079 | 0.939 | 10 | 0 | holds |
+| k2_d | 67.79 | 69.79 | 69.21 | 66.17 | 1.042 | 1.030 | 1.055 | 0.976 | 1.033 | 1.008 | 10 | 0 | holds |
+| k3 | 94.22 | 95.79 | 99.77 | 92.32 | 1.027 | 1.017 | 1.038 | 0.980 | 1.070 | 0.960 | 10 | 0 | holds |
+| k3_d | 87.82 | 90.34 | 95.48 | 88.62 | 1.024 | 1.029 | 1.019 | 1.009 | 1.082 | 0.946 | 10 | 0 | holds |
+| ntz_hour | 36.29 | 36.16 | 37.83 | 36.47 | 0.994 | 0.996 | 0.992 | 1.005 | 1.040 | 0.956 | 10 | 0 | holds |
+| pq_hour | 23.59 | 22.76 | 24.05 | 23.63 | 0.964 | 0.965 | 0.963 | 1.002 | 1.019 | 0.946 | 10 | 0 | holds |
+| tiny_csv | 5.42 | 5.92 | 5.97 | 5.43 | 1.092 | 1.092 | 1.092 | 1.000 | 1.101 | 0.992 | 10 | 0 | FLAG |
+| c012p6 | 39.33 s | 39.39 s | - | 39.37 s | 1.001 | 1.002 | 1.001 | 1.001 | - | - | 5 | 0 | holds |
+| c012rest | 42.84 s | 42.82 s | - | 42.72 s | 1.001 | 1.000 | 1.002 | 0.997 | - | - | 5 | 0 | holds |
+| C-012 total | 82.17 s | 82.21 s | - | 82.09 s | 1.001 | 1.000 | 1.001 | 0.999 | - | - | | | holds |
+
+Instruction counts (source `perf/table.md`: five rounds, instruction counts per repetition):
+
+- **k1** (FLAG, head/bases 1.053 over ten runs): attributed to the build under the owner's short-row rule (2026-11-19, about 14:00 UTC). The instruction ratios are head/base 1.0002 and head/swap 1.0000. The wall ratios in the same five rounds are head/base 0.934, swap/base 1.001 and head/swap 0.933, so the 1.053 reading does not reproduce in the perf rounds.
+- **tiny_csv** (FLAG, the named fixed cost): 5.42 ms base, 5.92 ms head and 5.97 ms swap over ten runs, so the fixed cost per query over a reader frame is 0.50 ms (head against base). Its instruction ratios are head/base 1.0627 and head/swap 0.9901: its instruction count moves by 6.3 percent, where every other row moves by 0.15 percent or less.
+- **C-012** reads head/bases 1.001 over five runs, under the hard 1.05x.
+- Every other row reads at or under 1.042 head/bases, and no row is over 1.15x.
