@@ -6060,6 +6060,31 @@ still open is `isModifiable`.
   owner's delegation of 2026-11-19, not an owner ruling (seat (a) amended with G1 to G4, the held-frame family in the
   bar, the Q9 stop rule, Q11 disclosed); [work order](../task/wo/temp-view-frame-reader-parse-1/built/map.md).
 
+### ICE-HELD-FRAME-SNAPSHOT-1 — a held Iceberg frame answers the table as of the action, as Spark re-binds it — **FIXED 2026-11-20 on the Spark door for unit 1a (branch `fix/ice-held-frame-snapshot-1a`); 1b, unit 2 and the path read open**
+
+- **repark** — Before (main `9a48932f`): a frame resolved from an Iceberg table, a frame derived from it, or a DataFrame
+  view over it kept the snapshot of its planning load for its whole life (the fork's planning fast path), so after a
+  same-session write every action answered or stored the old rows: a deleted row came back and was written by
+  `writeTo().create()`, `insertInto`, `saveAsTable` and `INSERT … SELECT`; a dropped column, a recreate or an `INSERT
+  OVERWRITE` was invisible (step 0: 785 of 974 cells per build and mode WRONG, all silent, 509 stored; this build's main run stores the old rows in 507 per mode). After: the session keeps
+  its own state of each table, written by every same-session commit, drop, rename, `CALL`, refresh and load through a
+  decorator on the registered handle; the optimizer's first rule re-binds each held scan to it once per
+  `(catalog, identifier)` per plan, with Spark's checks (`TABLE_ID_MISMATCH` for another table UUID, `COLUMNS_MISMATCH`
+  for a column gone or of another type or nullability, by name; an added column read with the frame's columns);
+  a write's input (the `_repark_writer_` scratch view every DataFrame write door uses) is checked under
+  `PROHIBIT_CHANGES`, so an added column raises there too; a DataFrame view re-binds with no identity check and
+  raises `INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION`; a frame's own-plan actions (`collect`,
+  `toLocalIterator`, `tail`, `toArrow`, `toPandas`, `localCheckpoint`, `checkpoint`, and now `explain`) keep their
+  first binding through unit 1's memo. No catalog call is added: the re-bound scan reads the session's table
+  through a one-table shim (a counting catalog under the decorator sees zero loads per held action).
+- **spark** — Spark 4.1.2 refreshes every catalog relation without a time-travel spec once per `QueryExecution`
+  (`V2TableRefreshUtil.refresh`), from the session's `CachingCatalog`, and validates it (`ALLOW_NEW_FIELDS` for a
+  query, `PROHIBIT_CHANGES` for a command); a Dataset's own plan is refreshed once and kept. Columns are matched by
+  name: a dropped and re-added `c` reads `NULL` for the old rows; a widened type and a relaxed `NOT NULL` raise
+  `COLUMNS_MISMATCH`; a reordered column reads in the frame's order. *(oracle: step 0's 3,896 recorded cells, the
+  deciding cells of this build and `python/repark/tests/iceberg/held_frame/ice_held_frame_snapshot_1_spark_oracle.json`,
+  measured 2026-11-20.)*
+
 ### FA-1 — lateral column aliases in `withColumns`
 
 - **repark** — has no lateral-alias resolution: `withColumns({"x": col("a")+1, "y": col("x")})`
