@@ -1,0 +1,98 @@
+### WRONG by subclass (silent: every WRONG cell answers without an error)
+| part | value | type | answers | total |
+|---|---|---|---|---|
+| S | 1068 | 0 | 0 | 1068 |
+| N | 216 | 0 | 0 | 216 |
+| F | 216 | 0 | 0 | 216 |
+| T | 72 | 120 | 0 | 192 |
+| L | 216 | 0 | 0 | 216 |
+
+### WRONG and RAISE by read and door
+| read | csv:WRONG | csv:RAISE | load:WRONG | load:RAISE | view:WRONG | view:RAISE | sql:WRONG | sql:RAISE | total |
+|---|---|---|---|---|---|---|---|---|---|
+| user schema | 356 | 490 | 356 | 490 | 356 | 490 | 0 | 0 | 2538 |
+| no options | 72 | 0 | 72 | 0 | 72 | 0 | 0 | 76 | 292 |
+| inferSchema=false | 72 | 0 | 72 | 0 | 72 | 0 | 0 | 0 | 216 |
+| inferSchema=true | 64 | 0 | 64 | 0 | 64 | 0 | 0 | 0 | 192 |
+
+### WRONG by shape and read (all doors, both ANSI modes)
+| shape | S | N | F | T | L | total |
+|---|---|---|---|---|---|---|
+| plain | 48 | 0 | 0 | 24 | 4 | 76 |
+| lead0 | 72 | 24 | 24 | 24 | 20 | 164 |
+| plus | 0 | 0 | 0 | 24 | 0 | 24 |
+| frac | 120 | 24 | 24 | 0 | 24 | 192 |
+| exp | 120 | 24 | 24 | 0 | 24 | 192 |
+| expneg | 120 | 24 | 24 | 0 | 24 | 192 |
+| dot | 120 | 24 | 24 | 24 | 24 | 216 |
+| upper | 120 | 24 | 24 | 0 | 28 | 196 |
+| title | 120 | 24 | 24 | 0 | 28 | 196 |
+| yes | 24 | 0 | 0 | 0 | 4 | 28 |
+| space | 24 | 0 | 0 | 24 | 4 | 52 |
+| nullv | 0 | 0 | 0 | 24 | 0 | 24 |
+| quoted | 72 | 24 | 24 | 24 | 20 | 164 |
+| ovf32 | 48 | 0 | 0 | 0 | 4 | 52 |
+| ovf64 | 0 | 0 | 0 | 24 | 0 | 24 |
+| ts | 36 | 0 | 0 | 0 | 8 | 44 |
+| n1 | 24 | 24 | 24 | 0 | 0 | 72 |
+
+### The user-schema read by declared type, alone and beside a `TIMESTAMP` field
+| type | alone:EQUAL | alone:WRONG | alone:RAISE | beside:EQUAL | beside:WRONG | beside:RAISE | total |
+|---|---|---|---|---|---|---|---|
+| STRING | 132 | 96 | 0 | 132 | 96 | 0 | 456 |
+| INT | 72 | 84 | 72 | 72 | 72 | 84 | 456 |
+| BIGINT | 84 | 84 | 60 | 84 | 72 | 72 | 456 |
+| DECIMAL(10,2) | 120 | 36 | 72 | 120 | 36 | 72 | 456 |
+| DOUBLE | 168 | 36 | 24 | 174 | 24 | 30 | 456 |
+| BOOLEAN | 36 | 108 | 84 | 36 | 108 | 84 | 456 |
+| DATE | 36 | 0 | 192 | 36 | 0 | 192 | 456 |
+| TIMESTAMP | 72 | 96 | 60 | 72 | 96 | 60 | 456 |
+| TIMESTAMP_NTZ | 72 | 0 | 156 | 72 | 0 | 156 | 456 |
+| N1 | 0 | 12 | 0 | 0 | 12 | 0 | 24 |
+
+### WRONG and RAISE by ANSI mode
+| part | true:WRONG | true:RAISE | false:WRONG | false:RAISE | total |
+|---|---|---|---|---|---|
+| S | 534 | 822 | 534 | 648 | 2538 |
+| N | 108 | 38 | 108 | 38 | 292 |
+| F | 108 | 0 | 108 | 0 | 216 |
+| T | 96 | 0 | 96 | 0 | 192 |
+| L | 108 | 76 | 108 | 72 | 364 |
+| M | 0 | 478 | 0 | 478 | 956 |
+
+### A `STRING` field, alone and beside a `TIMESTAMP` field (3 doors, 2 headers, 2 modes)
+| shape | alone:EQUAL | alone:WRONG | beside:EQUAL | beside:WRONG | total |
+|---|---|---|---|---|---|
+| plain | 12 | 0 | 12 | 0 | 24 |
+| lead0 | 0 | 12 | 0 | 12 | 24 |
+| plus | 12 | 0 | 12 | 0 | 24 |
+| frac | 0 | 12 | 0 | 12 | 24 |
+| exp | 0 | 12 | 0 | 12 | 24 |
+| expneg | 0 | 12 | 0 | 12 | 24 |
+| dot | 0 | 12 | 0 | 12 | 24 |
+| upper | 0 | 12 | 0 | 12 | 24 |
+| title | 0 | 12 | 0 | 12 | 24 |
+| yes | 12 | 0 | 12 | 0 | 24 |
+| space | 12 | 0 | 12 | 0 | 24 |
+| empty | 12 | 0 | 12 | 0 | 24 |
+| nullv | 12 | 0 | 12 | 0 | 24 |
+| quoted | 0 | 12 | 0 | 12 | 24 |
+| bad | 12 | 0 | 12 | 0 | 24 |
+| ovf32 | 12 | 0 | 12 | 0 | 24 |
+| ovf64 | 12 | 0 | 12 | 0 | 24 |
+| date | 12 | 0 | 12 | 0 | 24 |
+| ts | 12 | 0 | 12 | 0 | 24 |
+
+### main's raise texts (first 70 characters)
+- 688: `reader option mode='DROPMALFORMED' is not supported by repark yet`
+- 268: `reader option mode='FAILFAST' is not supported by repark yet (only`
+- 240: `DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION`
+- 174: `CAST_INVALID_INPUT`
+- 144: `DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION`
+- 96: `This feature is not implemented: Unsupported CAST from Float64 to`
+- 96: `This feature is not implemented: Unsupported CAST from Boolean to`
+- 76: `Error during planning: table`
+- 72: `Arrow error: Cast error: Cannot cast string '99999999999999999999' to`
+- 72: `This feature is not implemented: Unsupported CAST from Date32 to`
+- 68: `write: datafusion engine error: Arrow error: Cast error: Cannot cast`
+- 36: `Arrow error: Cast error: Cannot cast string '2024-01-15 10:30:00' to`

@@ -1,0 +1,20 @@
+| case | main base | main seat | unit 1 base | unit 1 seat | seat / base, unit 1 | unit 1 / main base | rounds |
+|---|---|---|---|---|---|---|---|
+| k0_count | 17.76 | 16.10 | 18.36 | 16.23 | **0.884x** | 1.034x | 5 |
+| k0_hour | 56.96 | 53.98 | 61.56 | 57.06 | **0.927x** | 1.081x | 5 |
+| is_count | 12.25 | 12.02 | 12.35 | 12.20 | **0.988x** | 1.008x | 5 |
+| is_sum | 22.68 | 23.20 | 23.52 | 24.81 | **1.055x** | 1.037x | 5 |
+| is_none | 26.38 | 20.27 | 26.32 | 22.25 | **0.845x** | 0.998x | 5 |
+| is_infer | 52.74 | — | 54.89 | — | — | 1.041x | 5 |
+
+- answers is_count base: 1 distinct
+- answers is_count seat: 1 distinct
+- answers is_infer base: 1 distinct
+- answers is_none base: 1 distinct
+- answers is_none seat: 1 distinct
+- answers is_sum base: 1 distinct
+- answers is_sum seat: 1 distinct
+- answers k0_count base: 1 distinct
+- answers k0_count seat: 1 distinct
+- answers k0_hour base: 1 distinct
+- answers k0_hour seat: 1 distinct

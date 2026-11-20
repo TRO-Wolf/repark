@@ -1,0 +1,12 @@
+{"case": "k0_count", "variant": "base", "label": "check", "seconds": 0.01878095781430602, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-rp1d-acd27d6e/repark/_native.abi3.so"}
+{"case": "k0_count", "variant": "seat", "label": "check", "seconds": 0.018349524401128293, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-rp1d-acd27d6e/repark/_native.abi3.so"}
+{"case": "k0_hour", "variant": "base", "label": "check", "seconds": 0.05802803877741099, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-rp1d-acd27d6e/repark/_native.abi3.so"}
+{"case": "k0_hour", "variant": "seat", "label": "check", "seconds": 0.0570209976285696, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-rp1d-acd27d6e/repark/_native.abi3.so"}
+{"case": "is_count", "variant": "base", "label": "check", "seconds": 0.01273013218306005, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-rp1d-acd27d6e/repark/_native.abi3.so"}
+{"case": "is_count", "variant": "seat", "label": "check", "seconds": 0.012315849028527736, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-rp1d-acd27d6e/repark/_native.abi3.so"}
+{"case": "is_sum", "variant": "base", "label": "check", "seconds": 0.024042179994285106, "answer": "[Row(sum(n)=1999999000000, max(s)='s999')]", "native": "<scratchpad>/ddu-work/pkg-rp1d-acd27d6e/repark/_native.abi3.so"}
+{"case": "is_sum", "variant": "seat", "label": "check", "seconds": 0.025019835960119963, "answer": "[Row(sum(n)=1999999000000, max(s)='s999')]", "native": "<scratchpad>/ddu-work/pkg-rp1d-acd27d6e/repark/_native.abi3.so"}
+{"case": "is_none", "variant": "base", "label": "check", "seconds": 0.026885516196489333, "answer": "[Row(count(_c0)=2000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-rp1d-acd27d6e/repark/_native.abi3.so"}
+{"case": "is_none", "variant": "seat", "label": "check", "seconds": 0.022596591990441083, "answer": "[Row(count(_c0)=2000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-rp1d-acd27d6e/repark/_native.abi3.so"}
+{"case": "is_infer", "variant": "base", "label": "check", "seconds": 0.05401379000395536, "answer": "[Row(sum(_c0)=1999999000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-rp1d-acd27d6e/repark/_native.abi3.so"}
+{"case": "is_infer", "variant": "seat", "label": "check", "seconds": 0.05484314179047942, "answer": "[Row(sum(_c0)=1999999000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-rp1d-acd27d6e/repark/_native.abi3.so"}

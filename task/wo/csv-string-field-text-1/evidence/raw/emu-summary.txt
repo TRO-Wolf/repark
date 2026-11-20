@@ -1,0 +1,159 @@
+cells: 1696 ({'F': 160, 'N': 160, 'S': 1376})
+
+## verdicts on unit1 by part
+| | EQUAL | WRONG | RAISE | BOTHERR | NOSPARK |
+|---|---|---|---|---|---|
+| F | 88 | 72 | 0 | 0 | 0 |
+| N | 88 | 72 | 0 | 0 | 0 |
+| S | 530 | 356 | 490 | 0 | 0 |
+
+## verdicts on text_cast by part
+| | EQUAL | WRONG | RAISE | BOTHERR | NOSPARK |
+|---|---|---|---|---|---|
+| F | 160 | 0 | 0 | 0 | 0 |
+| N | 160 | 0 | 0 | 0 | 0 |
+| S | 672 | 16 | 688 | 0 | 0 |
+
+## verdicts on text_try by part
+| | EQUAL | WRONG | RAISE | BOTHERR | NOSPARK |
+|---|---|---|---|---|---|
+| F | 160 | 0 | 0 | 0 | 0 |
+| N | 160 | 0 | 0 | 0 | 0 |
+| S | 1336 | 40 | 0 | 0 | 0 |
+
+## unit1 against text_cast: 552 verdicts move, 732 differ
+- EQUAL -> RAISE: 16
+- RAISE -> EQUAL: 52
+- WRONG -> EQUAL: 250
+- WRONG -> RAISE: 234
+- lost EQUAL S/false/csv/on/alone/DECIMAL(10,2)/exp
+- lost EQUAL S/false/csv/on/alone/DECIMAL(10,2)/expneg
+- lost EQUAL S/false/csv/on/beside/DECIMAL(10,2)/exp
+- lost EQUAL S/false/csv/on/beside/DECIMAL(10,2)/expneg
+- lost EQUAL S/false/csv/off/alone/DECIMAL(10,2)/exp
+- lost EQUAL S/false/csv/off/alone/DECIMAL(10,2)/expneg
+- lost EQUAL S/false/csv/off/beside/DECIMAL(10,2)/exp
+- lost EQUAL S/false/csv/off/beside/DECIMAL(10,2)/expneg
+- lost EQUAL S/true/csv/on/alone/DECIMAL(10,2)/exp
+- lost EQUAL S/true/csv/on/alone/DECIMAL(10,2)/expneg
+- lost EQUAL S/true/csv/on/beside/DECIMAL(10,2)/exp
+- lost EQUAL S/true/csv/on/beside/DECIMAL(10,2)/expneg
+- lost EQUAL S/true/csv/off/alone/DECIMAL(10,2)/exp
+- lost EQUAL S/true/csv/off/alone/DECIMAL(10,2)/expneg
+- lost EQUAL S/true/csv/off/beside/DECIMAL(10,2)/exp
+- lost EQUAL S/true/csv/off/beside/DECIMAL(10,2)/expneg
+
+## unit1 against text_try: 998 verdicts move, 998 differ
+- EQUAL -> WRONG: 24
+- RAISE -> EQUAL: 490
+- WRONG -> EQUAL: 484
+- lost EQUAL S/false/csv/on/alone/DECIMAL(10,2)/exp
+- lost EQUAL S/false/csv/on/alone/DECIMAL(10,2)/expneg
+- lost EQUAL S/false/csv/on/alone/DOUBLE/space
+- lost EQUAL S/false/csv/on/beside/DECIMAL(10,2)/exp
+- lost EQUAL S/false/csv/on/beside/DECIMAL(10,2)/expneg
+- lost EQUAL S/false/csv/on/beside/DOUBLE/space
+- lost EQUAL S/false/csv/off/alone/DECIMAL(10,2)/exp
+- lost EQUAL S/false/csv/off/alone/DECIMAL(10,2)/expneg
+- lost EQUAL S/false/csv/off/alone/DOUBLE/space
+- lost EQUAL S/false/csv/off/beside/DECIMAL(10,2)/exp
+- lost EQUAL S/false/csv/off/beside/DECIMAL(10,2)/expneg
+- lost EQUAL S/false/csv/off/beside/DOUBLE/space
+- lost EQUAL S/true/csv/on/alone/DECIMAL(10,2)/exp
+- lost EQUAL S/true/csv/on/alone/DECIMAL(10,2)/expneg
+- lost EQUAL S/true/csv/on/alone/DOUBLE/space
+- lost EQUAL S/true/csv/on/beside/DECIMAL(10,2)/exp
+- lost EQUAL S/true/csv/on/beside/DECIMAL(10,2)/expneg
+- lost EQUAL S/true/csv/on/beside/DOUBLE/space
+- lost EQUAL S/true/csv/off/alone/DECIMAL(10,2)/exp
+- lost EQUAL S/true/csv/off/alone/DECIMAL(10,2)/expneg
+- lost EQUAL S/true/csv/off/alone/DOUBLE/space
+- lost EQUAL S/true/csv/off/beside/DECIMAL(10,2)/exp
+- lost EQUAL S/true/csv/off/beside/DECIMAL(10,2)/expneg
+- lost EQUAL S/true/csv/off/beside/DOUBLE/space
+
+## unit1's WRONG and RAISE by ansi
+| | F:WRONG | F:RAISE | N:WRONG | N:RAISE | S:WRONG | S:RAISE |
+|---|---|---|---|---|---|---|
+| false | 36 | 0 | 36 | 0 | 178 | 216 |
+| true | 36 | 0 | 36 | 0 | 178 | 274 |
+
+## unit1's WRONG and RAISE by door
+| | F:WRONG | F:RAISE | N:WRONG | N:RAISE | S:WRONG | S:RAISE |
+|---|---|---|---|---|---|---|
+| csv | 72 | 0 | 72 | 0 | 356 | 490 |
+
+## unit1's WRONG and RAISE by hdr
+| | F:WRONG | F:RAISE | N:WRONG | N:RAISE | S:WRONG | S:RAISE |
+|---|---|---|---|---|---|---|
+| on | 36 | 0 | 36 | 0 | 178 | 245 |
+| off | 36 | 0 | 36 | 0 | 178 | 245 |
+
+## unit1's WRONG and RAISE by comp
+| | F:WRONG | F:RAISE | N:WRONG | N:RAISE | S:WRONG | S:RAISE |
+|---|---|---|---|---|---|---|
+| alone | 36 | 0 | 36 | 0 | 184 | 240 |
+| beside | 36 | 0 | 36 | 0 | 172 | 250 |
+
+## unit1's WRONG and RAISE by type
+| | F:WRONG | F:RAISE | N:WRONG | N:RAISE | S:WRONG | S:RAISE |
+|---|---|---|---|---|---|---|
+| - | 72 | 0 | 72 | 0 | 0 | 0 |
+| STRING | 0 | 0 | 0 | 0 | 64 | 0 |
+| INT | 0 | 0 | 0 | 0 | 52 | 52 |
+| BIGINT | 0 | 0 | 0 | 0 | 52 | 44 |
+| DECIMAL(10,2) | 0 | 0 | 0 | 0 | 24 | 48 |
+| DOUBLE | 0 | 0 | 0 | 0 | 20 | 18 |
+| BOOLEAN | 0 | 0 | 0 | 0 | 72 | 56 |
+| DATE | 0 | 0 | 0 | 0 | 0 | 128 |
+| TIMESTAMP | 0 | 0 | 0 | 0 | 64 | 40 |
+| TIMESTAMP_NTZ | 0 | 0 | 0 | 0 | 0 | 104 |
+| N1 | 0 | 0 | 0 | 0 | 8 | 0 |
+
+## unit1's WRONG and RAISE by shape
+| | F:WRONG | F:RAISE | N:WRONG | N:RAISE | S:WRONG | S:RAISE |
+|---|---|---|---|---|---|---|
+| plain | 0 | 0 | 0 | 0 | 16 | 16 |
+| lead0 | 8 | 0 | 8 | 0 | 24 | 16 |
+| plus | 0 | 0 | 0 | 0 | 0 | 24 |
+| frac | 8 | 0 | 8 | 0 | 40 | 16 |
+| exp | 8 | 0 | 8 | 0 | 40 | 16 |
+| expneg | 8 | 0 | 8 | 0 | 40 | 16 |
+| dot | 8 | 0 | 8 | 0 | 40 | 16 |
+| upper | 8 | 0 | 8 | 0 | 40 | 24 |
+| title | 8 | 0 | 8 | 0 | 40 | 24 |
+| yes | 0 | 0 | 0 | 0 | 8 | 44 |
+| space | 0 | 0 | 0 | 0 | 8 | 40 |
+| empty | 0 | 0 | 0 | 0 | 0 | 0 |
+| nullv | 0 | 0 | 0 | 0 | 0 | 24 |
+| quoted | 8 | 0 | 8 | 0 | 24 | 16 |
+| bad | 0 | 0 | 0 | 0 | 0 | 52 |
+| ovf32 | 0 | 0 | 0 | 0 | 16 | 32 |
+| ovf64 | 0 | 0 | 0 | 0 | 0 | 48 |
+| date | 0 | 0 | 0 | 0 | 0 | 40 |
+| ts | 0 | 0 | 0 | 0 | 12 | 26 |
+| n1 | 8 | 0 | 8 | 0 | 8 | 0 |
+
+## Spark's x by type and shape (S, csv door, header off, alone; ANSI on | off)
+| shape | STRING | INT | BIGINT | DECIMAL(10,2) | DOUBLE | BOOLEAN | DATE | TIMESTAMP | TIMESTAMP_NTZ | N1 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| bad | abc | None | None | None | None | None | None | None | None |  |
+| date | 2024-01-15 | None | None | None | None | None | 2024-01-15 | 2024-01-15 00:00:00 | 2024-01-15 00:00:00 |  |
+| dot | 5. | None | None | 5.00 | 5.0 | None | None | None | None |  |
+| empty | None | None | None | None | None | None | None | None | None |  |
+| exp | 1e3 | None | None | 1000.00 | 1000.0 | None | None | None | None |  |
+| expneg | 1E-2 | None | None | 0.01 | 0.01 | None | None | None | None |  |
+| frac | 1.50 | None | None | 1.50 | 1.5 | None | None | None | None |  |
+| lead0 | 007 | 7 | 7 | 7.00 | 7.0 | None | None | None | None |  |
+| n1 |  |  |  |  |  |  |  |  |  | 3;None;None |
+| nullv | 007;None | 7;None | 7;None | 7.00;None | 7.0;None | None;None | None;None | None;None | None;None |  |
+| ovf32 | 2147483648 | None | 2147483648 | None | 2147483648.0 | None | None | None | None |  |
+| ovf64 | 99999999999999999999 | None | None | None | 1e+20 | None | None | None | None |  |
+| plain | 42 | 42 | 42 | 42.00 | 42.0 | None | None | None | None |  |
+| plus | +5 | 5 | 5 | 5.00 | 5.0 | None | None | None | None |  |
+| quoted | 007 | 7 | 7 | 7.00 | 7.0 | None | None | None | None |  |
+| space |  7  | None | None | None | 7.0 | None | None | None | None |  |
+| title | True | None | None | None | None | True | None | None | None |  |
+| ts | 2024-01-15 10:30:00 | None | None | None | None | None | 2024-01-15 | 2024-01-15 10:30:00 | 2024-01-15 10:30:00 |  |
+| upper | TRUE | None | None | None | None | True | None | None | None |  |
+| yes | yes | None | None | None | None | None | None | None | None |  |

@@ -1,0 +1,264 @@
+{"tag": "K/false/spark/INT/0", "rows": ["(-7, 'k')"], "names": ["x", "k"], "cols": [["-7", "k"]], "types": ["int", "string"]}
+{"tag": "K/false/spark/INT/1", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/false/spark/INT/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/false/spark/INT/3", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/false/spark/INT/4", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/false/spark/INT/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/false/spark/BIGINT/0", "rows": ["(-7, 'k')"], "names": ["x", "k"], "cols": [["-7", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/false/spark/BIGINT/1", "rows": ["(9223372036854775807, 'k')"], "names": ["x", "k"], "cols": [["9223372036854775807", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/false/spark/BIGINT/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/false/spark/BOOLEAN/0", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/spark/BOOLEAN/1", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/spark/BOOLEAN/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/spark/BOOLEAN/3", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/spark/BOOLEAN/4", "rows": ["(False, 'k')"], "names": ["x", "k"], "cols": [["False", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/spark/BOOLEAN/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/spark/BOOLEAN/6", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/spark/DOUBLE/0", "rows": ["(nan, 'k')"], "names": ["x", "k"], "cols": [["nan", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/spark/DOUBLE/1", "rows": ["(inf, 'k')"], "names": ["x", "k"], "cols": [["inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/spark/DOUBLE/2", "rows": ["(-inf, 'k')"], "names": ["x", "k"], "cols": [["-inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/spark/DOUBLE/3", "rows": ["(inf, 'k')"], "names": ["x", "k"], "cols": [["inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/spark/DOUBLE/4", "rows": ["(1.0, 'k')"], "names": ["x", "k"], "cols": [["1.0", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/spark/DOUBLE/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/spark/DOUBLE/6", "rows": ["(1000.0, 'k')"], "names": ["x", "k"], "cols": [["1000.0", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/spark/DOUBLE/7", "rows": ["(1.5, 'k')"], "names": ["x", "k"], "cols": [["1.5", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/spark/DECIMAL(10,2)/0", "rows": ["(Decimal('1000.50'), 'k')"], "names": ["x", "k"], "cols": [["1000.50", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/spark/DECIMAL(10,2)/1", "rows": ["(Decimal('1.01'), 'k')"], "names": ["x", "k"], "cols": [["1.01", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/spark/DECIMAL(10,2)/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/spark/DECIMAL(10,2)/3", "rows": ["(Decimal('-0.50'), 'k')"], "names": ["x", "k"], "cols": [["-0.50", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/spark/DECIMAL(10,2)/4", "rows": ["(Decimal('5.00'), 'k')"], "names": ["x", "k"], "cols": [["5.00", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/spark/DECIMAL(10,2)/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/spark/DECIMAL(10,2)/6", "rows": ["(Decimal('0.50'), 'k')"], "names": ["x", "k"], "cols": [["0.50", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/spark/DATE/0", "rows": ["(datetime.date(2024, 1, 5), 'k')"], "names": ["x", "k"], "cols": [["2024-01-05", "k"]], "types": ["date", "string"]}
+{"tag": "K/false/spark/DATE/1", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/false/spark/DATE/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["date", "string"]}
+{"tag": "K/false/spark/DATE/3", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/false/spark/DATE/4", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/false/spark/TIMESTAMP/0", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/spark/TIMESTAMP/1", "rows": ["(datetime.datetime(2024, 1, 15, 8, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 08:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/spark/TIMESTAMP/2", "rows": ["(datetime.datetime(2024, 1, 15, 0, 0), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 00:00:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/spark/TIMESTAMP/3", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/spark/TIMESTAMP/4", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/spark/TIMESTAMP_NTZ/0", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/false/spark/TIMESTAMP_NTZ/1", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/false/spark/TIMESTAMP_NTZ/2", "rows": ["(datetime.datetime(2024, 1, 15, 0, 0), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 00:00:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/true/spark/INT/0", "rows": ["(-7, 'k')"], "names": ["x", "k"], "cols": [["-7", "k"]], "types": ["int", "string"]}
+{"tag": "K/true/spark/INT/1", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/true/spark/INT/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/true/spark/INT/3", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/true/spark/INT/4", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/true/spark/INT/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/true/spark/BIGINT/0", "rows": ["(-7, 'k')"], "names": ["x", "k"], "cols": [["-7", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/true/spark/BIGINT/1", "rows": ["(9223372036854775807, 'k')"], "names": ["x", "k"], "cols": [["9223372036854775807", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/true/spark/BIGINT/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/true/spark/BOOLEAN/0", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/spark/BOOLEAN/1", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/spark/BOOLEAN/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/spark/BOOLEAN/3", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/spark/BOOLEAN/4", "rows": ["(False, 'k')"], "names": ["x", "k"], "cols": [["False", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/spark/BOOLEAN/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/spark/BOOLEAN/6", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/spark/DOUBLE/0", "rows": ["(nan, 'k')"], "names": ["x", "k"], "cols": [["nan", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/spark/DOUBLE/1", "rows": ["(inf, 'k')"], "names": ["x", "k"], "cols": [["inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/spark/DOUBLE/2", "rows": ["(-inf, 'k')"], "names": ["x", "k"], "cols": [["-inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/spark/DOUBLE/3", "rows": ["(inf, 'k')"], "names": ["x", "k"], "cols": [["inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/spark/DOUBLE/4", "rows": ["(1.0, 'k')"], "names": ["x", "k"], "cols": [["1.0", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/spark/DOUBLE/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/spark/DOUBLE/6", "rows": ["(1000.0, 'k')"], "names": ["x", "k"], "cols": [["1000.0", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/spark/DOUBLE/7", "rows": ["(1.5, 'k')"], "names": ["x", "k"], "cols": [["1.5", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/spark/DECIMAL(10,2)/0", "rows": ["(Decimal('1000.50'), 'k')"], "names": ["x", "k"], "cols": [["1000.50", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/spark/DECIMAL(10,2)/1", "rows": ["(Decimal('1.01'), 'k')"], "names": ["x", "k"], "cols": [["1.01", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/spark/DECIMAL(10,2)/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/spark/DECIMAL(10,2)/3", "rows": ["(Decimal('-0.50'), 'k')"], "names": ["x", "k"], "cols": [["-0.50", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/spark/DECIMAL(10,2)/4", "rows": ["(Decimal('5.00'), 'k')"], "names": ["x", "k"], "cols": [["5.00", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/spark/DECIMAL(10,2)/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/spark/DECIMAL(10,2)/6", "rows": ["(Decimal('0.50'), 'k')"], "names": ["x", "k"], "cols": [["0.50", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/spark/DATE/0", "rows": ["(datetime.date(2024, 1, 5), 'k')"], "names": ["x", "k"], "cols": [["2024-01-05", "k"]], "types": ["date", "string"]}
+{"tag": "K/true/spark/DATE/1", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/true/spark/DATE/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["date", "string"]}
+{"tag": "K/true/spark/DATE/3", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/true/spark/DATE/4", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/true/spark/TIMESTAMP/0", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/spark/TIMESTAMP/1", "rows": ["(datetime.datetime(2024, 1, 15, 8, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 08:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/spark/TIMESTAMP/2", "rows": ["(datetime.datetime(2024, 1, 15, 0, 0), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 00:00:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/spark/TIMESTAMP/3", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/spark/TIMESTAMP/4", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/spark/TIMESTAMP_NTZ/0", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/true/spark/TIMESTAMP_NTZ/1", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/true/spark/TIMESTAMP_NTZ/2", "rows": ["(datetime.datetime(2024, 1, 15, 0, 0), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 00:00:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/false/base/INT/0", "rows": ["(-7, 'k')"], "names": ["x", "k"], "cols": [["-7", "k"]], "types": ["int", "string"]}
+{"tag": "K/false/text_try/INT/0", "rows": ["(-7, 'k')"], "names": ["x", "k"], "cols": [["-7", "k"]], "types": ["int", "string"]}
+{"tag": "K/false/base/INT/1", "rows": ["(1, 'k')"], "names": ["x", "k"], "cols": [["1", "k"]], "types": ["int", "string"]}
+{"tag": "K/false/text_try/INT/1", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/false/base/INT/2", "error": "Arrow error: Cast error: Cannot cast string '0x10' to value of Int32 type"}
+{"tag": "K/false/text_try/INT/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/false/base/INT/3", "error": "Arrow error: Cast error: Cannot cast string '1_000' to value of Int32 type"}
+{"tag": "K/false/text_try/INT/3", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/false/base/INT/4", "error": "Arrow error: Cast error: Cannot cast string ' 7' to value of Int32 type"}
+{"tag": "K/false/text_try/INT/4", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/false/base/INT/5", "error": "Arrow error: Cast error: Cannot cast string '7 ' to value of Int32 type"}
+{"tag": "K/false/text_try/INT/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/false/base/BIGINT/0", "rows": ["(-7, 'k')"], "names": ["x", "k"], "cols": [["-7", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/false/text_try/BIGINT/0", "rows": ["(-7, 'k')"], "names": ["x", "k"], "cols": [["-7", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/false/base/BIGINT/1", "rows": ["(9223372036854775807, 'k')"], "names": ["x", "k"], "cols": [["9223372036854775807", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/false/text_try/BIGINT/1", "rows": ["(9223372036854775807, 'k')"], "names": ["x", "k"], "cols": [["9223372036854775807", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/false/base/BIGINT/2", "error": "Arrow error: Cast error: Cannot cast string '9223372036854775808' to value of Int64 type"}
+{"tag": "K/false/text_try/BIGINT/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/false/base/BOOLEAN/0", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/text_try/BOOLEAN/0", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/base/BOOLEAN/1", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/text_try/BOOLEAN/1", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/base/BOOLEAN/2", "rows": ["(False, 'k')"], "names": ["x", "k"], "cols": [["False", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/text_try/BOOLEAN/2", "rows": ["(False, 'k')"], "names": ["x", "k"], "cols": [["False", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/base/BOOLEAN/3", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/text_try/BOOLEAN/3", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/base/BOOLEAN/4", "rows": ["(False, 'k')"], "names": ["x", "k"], "cols": [["False", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/text_try/BOOLEAN/4", "rows": ["(False, 'k')"], "names": ["x", "k"], "cols": [["False", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/base/BOOLEAN/5", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/text_try/BOOLEAN/5", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/base/BOOLEAN/6", "rows": ["(False, 'k')"], "names": ["x", "k"], "cols": [["False", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/text_try/BOOLEAN/6", "rows": ["(False, 'k')"], "names": ["x", "k"], "cols": [["False", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/false/base/DOUBLE/0", "rows": ["(nan, 'k')"], "names": ["x", "k"], "cols": [["nan", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/text_try/DOUBLE/0", "rows": ["(nan, 'k')"], "names": ["x", "k"], "cols": [["nan", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/base/DOUBLE/1", "rows": ["(inf, 'k')"], "names": ["x", "k"], "cols": [["inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/text_try/DOUBLE/1", "rows": ["(inf, 'k')"], "names": ["x", "k"], "cols": [["inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/base/DOUBLE/2", "rows": ["(-inf, 'k')"], "names": ["x", "k"], "cols": [["-inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/text_try/DOUBLE/2", "rows": ["(-inf, 'k')"], "names": ["x", "k"], "cols": [["-inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/base/DOUBLE/3", "rows": ["(inf, 'k')"], "names": ["x", "k"], "cols": [["inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/text_try/DOUBLE/3", "rows": ["(inf, 'k')"], "names": ["x", "k"], "cols": [["inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/base/DOUBLE/4", "rows": ["(1.0, 'k')"], "names": ["x", "k"], "cols": [["1.0", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/text_try/DOUBLE/4", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/base/DOUBLE/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/text_try/DOUBLE/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/base/DOUBLE/6", "rows": ["(1000.0, 'k')"], "names": ["x", "k"], "cols": [["1000.0", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/text_try/DOUBLE/6", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/base/DOUBLE/7", "rows": ["(1.5, 'k')"], "names": ["x", "k"], "cols": [["1.5", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/text_try/DOUBLE/7", "rows": ["(1.5, 'k')"], "names": ["x", "k"], "cols": [["1.5", "k"]], "types": ["double", "string"]}
+{"tag": "K/false/base/DECIMAL(10,2)/0", "error": "Arrow error: Cast error: Cannot cast string '1,000.5' to value of Decimal128(38, 10) type"}
+{"tag": "K/false/text_try/DECIMAL(10,2)/0", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/base/DECIMAL(10,2)/1", "rows": ["(Decimal('1.01'), 'k')"], "names": ["x", "k"], "cols": [["1.01", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/text_try/DECIMAL(10,2)/1", "rows": ["(Decimal('1.01'), 'k')"], "names": ["x", "k"], "cols": [["1.01", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/base/DECIMAL(10,2)/2", "error": "Arrow error: Invalid argument error: 123456789.10 is too large to store in a Decimal128 of precision 10. Max is 99999999.99"}
+{"tag": "K/false/text_try/DECIMAL(10,2)/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/base/DECIMAL(10,2)/3", "rows": ["(Decimal('-0.50'), 'k')"], "names": ["x", "k"], "cols": [["-0.50", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/text_try/DECIMAL(10,2)/3", "rows": ["(Decimal('-0.50'), 'k')"], "names": ["x", "k"], "cols": [["-0.50", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/base/DECIMAL(10,2)/4", "rows": ["(Decimal('5.00'), 'k')"], "names": ["x", "k"], "cols": [["5.00", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/text_try/DECIMAL(10,2)/4", "rows": ["(Decimal('5.00'), 'k')"], "names": ["x", "k"], "cols": [["5.00", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/base/DECIMAL(10,2)/5", "error": "Arrow error: Cast error: Cannot cast to Decimal128(10, 2). Overflowing on inf"}
+{"tag": "K/false/text_try/DECIMAL(10,2)/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/base/DECIMAL(10,2)/6", "rows": ["(Decimal('0.50'), 'k')"], "names": ["x", "k"], "cols": [["0.50", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/text_try/DECIMAL(10,2)/6", "rows": ["(Decimal('0.50'), 'k')"], "names": ["x", "k"], "cols": [["0.50", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/false/base/DATE/0", "rows": ["(datetime.date(2024, 1, 5), 'k')"], "names": ["x", "k"], "cols": [["2024-01-05", "k"]], "types": ["date", "string"]}
+{"tag": "K/false/text_try/DATE/0", "rows": ["(datetime.date(2024, 1, 5), 'k')"], "names": ["x", "k"], "cols": [["2024-01-05", "k"]], "types": ["date", "string"]}
+{"tag": "K/false/base/DATE/1", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/false/text_try/DATE/1", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/false/base/DATE/2", "error": "DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION"}
+{"tag": "K/false/text_try/DATE/2", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/false/base/DATE/3", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/false/text_try/DATE/3", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/false/base/DATE/4", "error": "Arrow error: Cast error: Cannot cast string ' 2024-01-15' to value of Date32 type"}
+{"tag": "K/false/text_try/DATE/4", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["date", "string"]}
+{"tag": "K/false/base/TIMESTAMP/0", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/text_try/TIMESTAMP/0", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/base/TIMESTAMP/1", "rows": ["(datetime.datetime(2024, 1, 15, 8, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 08:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/text_try/TIMESTAMP/1", "rows": ["(datetime.datetime(2024, 1, 15, 8, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 08:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/base/TIMESTAMP/2", "rows": ["(datetime.datetime(2024, 1, 15, 0, 0), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 00:00:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/text_try/TIMESTAMP/2", "rows": ["(datetime.datetime(2024, 1, 15, 0, 0), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 00:00:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/base/TIMESTAMP/3", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/text_try/TIMESTAMP/3", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/base/TIMESTAMP/4", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/text_try/TIMESTAMP/4", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/false/base/TIMESTAMP_NTZ/0", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/false/text_try/TIMESTAMP_NTZ/0", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/false/base/TIMESTAMP_NTZ/1", "rows": ["(datetime.datetime(2024, 1, 15, 8, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 08:30:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/false/text_try/TIMESTAMP_NTZ/1", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/false/base/TIMESTAMP_NTZ/2", "rows": ["(datetime.datetime(2024, 1, 15, 0, 0), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 00:00:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/false/text_try/TIMESTAMP_NTZ/2", "rows": ["(datetime.datetime(2024, 1, 15, 0, 0), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 00:00:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/true/base/INT/0", "rows": ["(-7, 'k')"], "names": ["x", "k"], "cols": [["-7", "k"]], "types": ["int", "string"]}
+{"tag": "K/true/text_try/INT/0", "rows": ["(-7, 'k')"], "names": ["x", "k"], "cols": [["-7", "k"]], "types": ["int", "string"]}
+{"tag": "K/true/base/INT/1", "rows": ["(1, 'k')"], "names": ["x", "k"], "cols": [["1", "k"]], "types": ["int", "string"]}
+{"tag": "K/true/text_try/INT/1", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/true/base/INT/2", "error": "Arrow error: Cast error: Cannot cast string '0x10' to value of Int32 type"}
+{"tag": "K/true/text_try/INT/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/true/base/INT/3", "error": "Arrow error: Cast error: Cannot cast string '1_000' to value of Int32 type"}
+{"tag": "K/true/text_try/INT/3", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/true/base/INT/4", "error": "Arrow error: Cast error: Cannot cast string ' 7' to value of Int32 type"}
+{"tag": "K/true/text_try/INT/4", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/true/base/INT/5", "error": "Arrow error: Cast error: Cannot cast string '7 ' to value of Int32 type"}
+{"tag": "K/true/text_try/INT/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["int", "string"]}
+{"tag": "K/true/base/BIGINT/0", "rows": ["(-7, 'k')"], "names": ["x", "k"], "cols": [["-7", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/true/text_try/BIGINT/0", "rows": ["(-7, 'k')"], "names": ["x", "k"], "cols": [["-7", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/true/base/BIGINT/1", "rows": ["(9223372036854775807, 'k')"], "names": ["x", "k"], "cols": [["9223372036854775807", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/true/text_try/BIGINT/1", "rows": ["(9223372036854775807, 'k')"], "names": ["x", "k"], "cols": [["9223372036854775807", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/true/base/BIGINT/2", "error": "Arrow error: Cast error: Cannot cast string '9223372036854775808' to value of Int64 type"}
+{"tag": "K/true/text_try/BIGINT/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["bigint", "string"]}
+{"tag": "K/true/base/BOOLEAN/0", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/text_try/BOOLEAN/0", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/base/BOOLEAN/1", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/text_try/BOOLEAN/1", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/base/BOOLEAN/2", "rows": ["(False, 'k')"], "names": ["x", "k"], "cols": [["False", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/text_try/BOOLEAN/2", "rows": ["(False, 'k')"], "names": ["x", "k"], "cols": [["False", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/base/BOOLEAN/3", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/text_try/BOOLEAN/3", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/base/BOOLEAN/4", "rows": ["(False, 'k')"], "names": ["x", "k"], "cols": [["False", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/text_try/BOOLEAN/4", "rows": ["(False, 'k')"], "names": ["x", "k"], "cols": [["False", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/base/BOOLEAN/5", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/text_try/BOOLEAN/5", "rows": ["(True, 'k')"], "names": ["x", "k"], "cols": [["True", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/base/BOOLEAN/6", "rows": ["(False, 'k')"], "names": ["x", "k"], "cols": [["False", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/text_try/BOOLEAN/6", "rows": ["(False, 'k')"], "names": ["x", "k"], "cols": [["False", "k"]], "types": ["boolean", "string"]}
+{"tag": "K/true/base/DOUBLE/0", "rows": ["(nan, 'k')"], "names": ["x", "k"], "cols": [["nan", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/text_try/DOUBLE/0", "rows": ["(nan, 'k')"], "names": ["x", "k"], "cols": [["nan", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/base/DOUBLE/1", "rows": ["(inf, 'k')"], "names": ["x", "k"], "cols": [["inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/text_try/DOUBLE/1", "rows": ["(inf, 'k')"], "names": ["x", "k"], "cols": [["inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/base/DOUBLE/2", "rows": ["(-inf, 'k')"], "names": ["x", "k"], "cols": [["-inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/text_try/DOUBLE/2", "rows": ["(-inf, 'k')"], "names": ["x", "k"], "cols": [["-inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/base/DOUBLE/3", "rows": ["(inf, 'k')"], "names": ["x", "k"], "cols": [["inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/text_try/DOUBLE/3", "rows": ["(inf, 'k')"], "names": ["x", "k"], "cols": [["inf", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/base/DOUBLE/4", "rows": ["(1.0, 'k')"], "names": ["x", "k"], "cols": [["1.0", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/text_try/DOUBLE/4", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/base/DOUBLE/5", "error": "CAST_INVALID_INPUT"}
+{"tag": "K/true/text_try/DOUBLE/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/base/DOUBLE/6", "rows": ["(1000.0, 'k')"], "names": ["x", "k"], "cols": [["1000.0", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/text_try/DOUBLE/6", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/base/DOUBLE/7", "rows": ["(1.5, 'k')"], "names": ["x", "k"], "cols": [["1.5", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/text_try/DOUBLE/7", "rows": ["(1.5, 'k')"], "names": ["x", "k"], "cols": [["1.5", "k"]], "types": ["double", "string"]}
+{"tag": "K/true/base/DECIMAL(10,2)/0", "error": "Arrow error: Cast error: Cannot cast string '1,000.5' to value of Decimal128(38, 10) type"}
+{"tag": "K/true/text_try/DECIMAL(10,2)/0", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/base/DECIMAL(10,2)/1", "rows": ["(Decimal('1.01'), 'k')"], "names": ["x", "k"], "cols": [["1.01", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/text_try/DECIMAL(10,2)/1", "rows": ["(Decimal('1.01'), 'k')"], "names": ["x", "k"], "cols": [["1.01", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/base/DECIMAL(10,2)/2", "error": "Arrow error: Invalid argument error: 123456789.10 is too large to store in a Decimal128 of precision 10. Max is 99999999.99"}
+{"tag": "K/true/text_try/DECIMAL(10,2)/2", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/base/DECIMAL(10,2)/3", "rows": ["(Decimal('-0.50'), 'k')"], "names": ["x", "k"], "cols": [["-0.50", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/text_try/DECIMAL(10,2)/3", "rows": ["(Decimal('-0.50'), 'k')"], "names": ["x", "k"], "cols": [["-0.50", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/base/DECIMAL(10,2)/4", "rows": ["(Decimal('5.00'), 'k')"], "names": ["x", "k"], "cols": [["5.00", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/text_try/DECIMAL(10,2)/4", "rows": ["(Decimal('5.00'), 'k')"], "names": ["x", "k"], "cols": [["5.00", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/base/DECIMAL(10,2)/5", "error": "Arrow error: Cast error: Cannot cast to Decimal128(10, 2). Overflowing on inf"}
+{"tag": "K/true/text_try/DECIMAL(10,2)/5", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/base/DECIMAL(10,2)/6", "rows": ["(Decimal('0.50'), 'k')"], "names": ["x", "k"], "cols": [["0.50", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/text_try/DECIMAL(10,2)/6", "rows": ["(Decimal('0.50'), 'k')"], "names": ["x", "k"], "cols": [["0.50", "k"]], "types": ["decimal(10,2)", "string"]}
+{"tag": "K/true/base/DATE/0", "rows": ["(datetime.date(2024, 1, 5), 'k')"], "names": ["x", "k"], "cols": [["2024-01-05", "k"]], "types": ["date", "string"]}
+{"tag": "K/true/text_try/DATE/0", "rows": ["(datetime.date(2024, 1, 5), 'k')"], "names": ["x", "k"], "cols": [["2024-01-05", "k"]], "types": ["date", "string"]}
+{"tag": "K/true/base/DATE/1", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/true/text_try/DATE/1", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/true/base/DATE/2", "error": "DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION"}
+{"tag": "K/true/text_try/DATE/2", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/true/base/DATE/3", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/true/text_try/DATE/3", "rows": ["(datetime.date(2024, 1, 15), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15", "k"]], "types": ["date", "string"]}
+{"tag": "K/true/base/DATE/4", "error": "Arrow error: Cast error: Cannot cast string ' 2024-01-15' to value of Date32 type"}
+{"tag": "K/true/text_try/DATE/4", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["date", "string"]}
+{"tag": "K/true/base/TIMESTAMP/0", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/text_try/TIMESTAMP/0", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/base/TIMESTAMP/1", "rows": ["(datetime.datetime(2024, 1, 15, 8, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 08:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/text_try/TIMESTAMP/1", "rows": ["(datetime.datetime(2024, 1, 15, 8, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 08:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/base/TIMESTAMP/2", "rows": ["(datetime.datetime(2024, 1, 15, 0, 0), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 00:00:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/text_try/TIMESTAMP/2", "rows": ["(datetime.datetime(2024, 1, 15, 0, 0), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 00:00:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/base/TIMESTAMP/3", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/text_try/TIMESTAMP/3", "rows": ["(None, 'k')"], "names": ["x", "k"], "cols": [["None", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/base/TIMESTAMP/4", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/text_try/TIMESTAMP/4", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp", "string"]}
+{"tag": "K/true/base/TIMESTAMP_NTZ/0", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/true/text_try/TIMESTAMP_NTZ/0", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/true/base/TIMESTAMP_NTZ/1", "rows": ["(datetime.datetime(2024, 1, 15, 8, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 08:30:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/true/text_try/TIMESTAMP_NTZ/1", "rows": ["(datetime.datetime(2024, 1, 15, 10, 30), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 10:30:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/true/base/TIMESTAMP_NTZ/2", "rows": ["(datetime.datetime(2024, 1, 15, 0, 0), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 00:00:00", "k"]], "types": ["timestamp_ntz", "string"]}
+{"tag": "K/true/text_try/TIMESTAMP_NTZ/2", "rows": ["(datetime.datetime(2024, 1, 15, 0, 0), 'k')"], "names": ["x", "k"], "cols": [["2024-01-15 00:00:00", "k"]], "types": ["timestamp_ntz", "string"]}

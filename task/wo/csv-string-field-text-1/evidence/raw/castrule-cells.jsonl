@@ -1,0 +1,440 @@
+{"tag": "C/true/CAST/INT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["int"]}
+{"tag": "C/true/CAST/INT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["int"]}
+{"tag": "C/true/CAST/INT/2", "error": "Arrow error: Cast error: Cannot cast string '1.50' to value of Int32 type"}
+{"tag": "C/true/CAST/INT/3", "error": "Arrow error: Cast error: Cannot cast string '1e3' to value of Int32 type"}
+{"tag": "C/true/CAST/INT/4", "error": "Arrow error: Cast error: Cannot cast string '5.' to value of Int32 type"}
+{"tag": "C/true/CAST/INT/5", "error": "Arrow error: Cast error: Cannot cast string ' 7 ' to value of Int32 type"}
+{"tag": "C/true/CAST/INT/6", "error": "Arrow error: Cast error: Cannot cast string '1.5' to value of Int32 type"}
+{"tag": "C/true/CAST/INT/7", "error": "Arrow error: Cast error: Cannot cast string 'TRUE' to value of Int32 type"}
+{"tag": "C/true/CAST/INT/8", "error": "Arrow error: Cast error: Cannot cast string 'yes' to value of Int32 type"}
+{"tag": "C/true/CAST/INT/9", "error": "Arrow error: Cast error: Cannot cast string '2147483648' to value of Int32 type"}
+{"tag": "C/true/CAST/INT/10", "error": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}
+{"tag": "C/true/TRY_CAST/INT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/2", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/4", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/5", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/6", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/CAST/BIGINT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["bigint"]}
+{"tag": "C/true/CAST/BIGINT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["bigint"]}
+{"tag": "C/true/CAST/BIGINT/2", "error": "Arrow error: Cast error: Cannot cast string '1.50' to value of Int64 type"}
+{"tag": "C/true/CAST/BIGINT/3", "error": "Arrow error: Cast error: Cannot cast string '1e3' to value of Int64 type"}
+{"tag": "C/true/CAST/BIGINT/4", "error": "Arrow error: Cast error: Cannot cast string '5.' to value of Int64 type"}
+{"tag": "C/true/CAST/BIGINT/5", "error": "Arrow error: Cast error: Cannot cast string ' 7 ' to value of Int64 type"}
+{"tag": "C/true/CAST/BIGINT/6", "error": "Arrow error: Cast error: Cannot cast string '1.5' to value of Int64 type"}
+{"tag": "C/true/CAST/BIGINT/7", "error": "Arrow error: Cast error: Cannot cast string 'TRUE' to value of Int64 type"}
+{"tag": "C/true/CAST/BIGINT/8", "error": "Arrow error: Cast error: Cannot cast string 'yes' to value of Int64 type"}
+{"tag": "C/true/CAST/BIGINT/9", "rows": ["(2147483648,)"], "names": ["v"], "cols": [["2147483648"]], "types": ["bigint"]}
+{"tag": "C/true/CAST/BIGINT/10", "error": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int64 type"}
+{"tag": "C/true/TRY_CAST/BIGINT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/2", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/4", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/5", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/6", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/9", "rows": ["(2147483648,)"], "names": ["v"], "cols": [["2147483648"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/0", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/1", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/2", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/3", "error": "Arrow error: Cast error: Cannot cast string '1e3' to value of Decimal128(38, 10) type"}
+{"tag": "C/true/CAST/DECIMAL(10,2)/4", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/5", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/6", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/7", "error": "Arrow error: Cast error: Cannot cast string 'TRUE' to value of Decimal128(38, 10) type"}
+{"tag": "C/true/CAST/DECIMAL(10,2)/8", "error": "Arrow error: Cast error: Cannot cast string 'yes' to value of Decimal128(38, 10) type"}
+{"tag": "C/true/CAST/DECIMAL(10,2)/9", "error": "Arrow error: Invalid argument error: 2147483648.00 is too large to store in a Decimal128 of precision 10. Max is 99999999.99"}
+{"tag": "C/true/CAST/DECIMAL(10,2)/10", "error": "Arrow error: Cast error: Cannot cast string 'abc' to value of Decimal128(38, 10) type"}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/0", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/1", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/2", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/4", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/5", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/6", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DOUBLE/0", "rows": ["(7.0,)"], "names": ["v"], "cols": [["7.0"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/1", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/2", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/3", "rows": ["(1000.0,)"], "names": ["v"], "cols": [["1000.0"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/4", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/5", "rows": ["(7.0,)"], "names": ["v"], "cols": [["7.0"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/6", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/7", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/DOUBLE/8", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/DOUBLE/9", "rows": ["(2147483648.0,)"], "names": ["v"], "cols": [["2147483648.0"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/10", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/TRY_CAST/DOUBLE/0", "rows": ["(7.0,)"], "names": ["v"], "cols": [["7.0"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/1", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/2", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/3", "rows": ["(1000.0,)"], "names": ["v"], "cols": [["1000.0"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/4", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/5", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/6", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/9", "rows": ["(2147483648.0,)"], "names": ["v"], "cols": [["2147483648.0"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/true/CAST/BOOLEAN/0", "error": "Arrow error: Cast error: Cannot cast value '007' to value of Boolean type"}
+{"tag": "C/true/CAST/BOOLEAN/1", "error": "Arrow error: Cast error: Cannot cast value '+5' to value of Boolean type"}
+{"tag": "C/true/CAST/BOOLEAN/2", "error": "Arrow error: Cast error: Cannot cast value '1.50' to value of Boolean type"}
+{"tag": "C/true/CAST/BOOLEAN/3", "error": "Arrow error: Cast error: Cannot cast value '1e3' to value of Boolean type"}
+{"tag": "C/true/CAST/BOOLEAN/4", "error": "Arrow error: Cast error: Cannot cast value '5.' to value of Boolean type"}
+{"tag": "C/true/CAST/BOOLEAN/5", "error": "Arrow error: Cast error: Cannot cast value '7' to value of Boolean type"}
+{"tag": "C/true/CAST/BOOLEAN/6", "error": "Arrow error: Cast error: Cannot cast value '1.5' to value of Boolean type"}
+{"tag": "C/true/CAST/BOOLEAN/7", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/true/CAST/BOOLEAN/8", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/true/CAST/BOOLEAN/9", "error": "Arrow error: Cast error: Cannot cast value '2147483648' to value of Boolean type"}
+{"tag": "C/true/CAST/BOOLEAN/10", "error": "Arrow error: Cast error: Cannot cast value 'abc' to value of Boolean type"}
+{"tag": "C/true/TRY_CAST/BOOLEAN/0", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/1", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/2", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/4", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/5", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/6", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/7", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/8", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/CAST/INT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["int"]}
+{"tag": "C/false/CAST/INT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["int"]}
+{"tag": "C/false/CAST/INT/2", "error": "Arrow error: Cast error: Cannot cast string '1.50' to value of Int32 type"}
+{"tag": "C/false/CAST/INT/3", "error": "Arrow error: Cast error: Cannot cast string '1e3' to value of Int32 type"}
+{"tag": "C/false/CAST/INT/4", "error": "Arrow error: Cast error: Cannot cast string '5.' to value of Int32 type"}
+{"tag": "C/false/CAST/INT/5", "error": "Arrow error: Cast error: Cannot cast string ' 7 ' to value of Int32 type"}
+{"tag": "C/false/CAST/INT/6", "error": "Arrow error: Cast error: Cannot cast string '1.5' to value of Int32 type"}
+{"tag": "C/false/CAST/INT/7", "error": "Arrow error: Cast error: Cannot cast string 'TRUE' to value of Int32 type"}
+{"tag": "C/false/CAST/INT/8", "error": "Arrow error: Cast error: Cannot cast string 'yes' to value of Int32 type"}
+{"tag": "C/false/CAST/INT/9", "error": "Arrow error: Cast error: Cannot cast string '2147483648' to value of Int32 type"}
+{"tag": "C/false/CAST/INT/10", "error": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}
+{"tag": "C/false/TRY_CAST/INT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/2", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/4", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/5", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/6", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/CAST/BIGINT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/BIGINT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/BIGINT/2", "error": "Arrow error: Cast error: Cannot cast string '1.50' to value of Int64 type"}
+{"tag": "C/false/CAST/BIGINT/3", "error": "Arrow error: Cast error: Cannot cast string '1e3' to value of Int64 type"}
+{"tag": "C/false/CAST/BIGINT/4", "error": "Arrow error: Cast error: Cannot cast string '5.' to value of Int64 type"}
+{"tag": "C/false/CAST/BIGINT/5", "error": "Arrow error: Cast error: Cannot cast string ' 7 ' to value of Int64 type"}
+{"tag": "C/false/CAST/BIGINT/6", "error": "Arrow error: Cast error: Cannot cast string '1.5' to value of Int64 type"}
+{"tag": "C/false/CAST/BIGINT/7", "error": "Arrow error: Cast error: Cannot cast string 'TRUE' to value of Int64 type"}
+{"tag": "C/false/CAST/BIGINT/8", "error": "Arrow error: Cast error: Cannot cast string 'yes' to value of Int64 type"}
+{"tag": "C/false/CAST/BIGINT/9", "rows": ["(2147483648,)"], "names": ["v"], "cols": [["2147483648"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/BIGINT/10", "error": "Arrow error: Cast error: Cannot cast string 'abc' to value of Int64 type"}
+{"tag": "C/false/TRY_CAST/BIGINT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/2", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/4", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/5", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/6", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/9", "rows": ["(2147483648,)"], "names": ["v"], "cols": [["2147483648"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/0", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/1", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/2", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/3", "error": "Arrow error: Cast error: Cannot cast string '1e3' to value of Decimal128(38, 10) type"}
+{"tag": "C/false/CAST/DECIMAL(10,2)/4", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/5", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/6", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/7", "error": "Arrow error: Cast error: Cannot cast string 'TRUE' to value of Decimal128(38, 10) type"}
+{"tag": "C/false/CAST/DECIMAL(10,2)/8", "error": "Arrow error: Cast error: Cannot cast string 'yes' to value of Decimal128(38, 10) type"}
+{"tag": "C/false/CAST/DECIMAL(10,2)/9", "error": "Arrow error: Invalid argument error: 2147483648.00 is too large to store in a Decimal128 of precision 10. Max is 99999999.99"}
+{"tag": "C/false/CAST/DECIMAL(10,2)/10", "error": "Arrow error: Cast error: Cannot cast string 'abc' to value of Decimal128(38, 10) type"}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/0", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/1", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/2", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/4", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/5", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/6", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DOUBLE/0", "rows": ["(7.0,)"], "names": ["v"], "cols": [["7.0"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/1", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/2", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/3", "rows": ["(1000.0,)"], "names": ["v"], "cols": [["1000.0"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/4", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/5", "rows": ["(7.0,)"], "names": ["v"], "cols": [["7.0"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/6", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/9", "rows": ["(2147483648.0,)"], "names": ["v"], "cols": [["2147483648.0"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/0", "rows": ["(7.0,)"], "names": ["v"], "cols": [["7.0"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/1", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/2", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/3", "rows": ["(1000.0,)"], "names": ["v"], "cols": [["1000.0"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/4", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/5", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/6", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/9", "rows": ["(2147483648.0,)"], "names": ["v"], "cols": [["2147483648.0"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/false/CAST/BOOLEAN/0", "error": "Arrow error: Cast error: Cannot cast value '007' to value of Boolean type"}
+{"tag": "C/false/CAST/BOOLEAN/1", "error": "Arrow error: Cast error: Cannot cast value '+5' to value of Boolean type"}
+{"tag": "C/false/CAST/BOOLEAN/2", "error": "Arrow error: Cast error: Cannot cast value '1.50' to value of Boolean type"}
+{"tag": "C/false/CAST/BOOLEAN/3", "error": "Arrow error: Cast error: Cannot cast value '1e3' to value of Boolean type"}
+{"tag": "C/false/CAST/BOOLEAN/4", "error": "Arrow error: Cast error: Cannot cast value '5.' to value of Boolean type"}
+{"tag": "C/false/CAST/BOOLEAN/5", "error": "Arrow error: Cast error: Cannot cast value '7' to value of Boolean type"}
+{"tag": "C/false/CAST/BOOLEAN/6", "error": "Arrow error: Cast error: Cannot cast value '1.5' to value of Boolean type"}
+{"tag": "C/false/CAST/BOOLEAN/7", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/false/CAST/BOOLEAN/8", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/false/CAST/BOOLEAN/9", "error": "Arrow error: Cast error: Cannot cast value '2147483648' to value of Boolean type"}
+{"tag": "C/false/CAST/BOOLEAN/10", "error": "Arrow error: Cast error: Cannot cast value 'abc' to value of Boolean type"}
+{"tag": "C/false/TRY_CAST/BOOLEAN/0", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/1", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/2", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/4", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/5", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/6", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/7", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/8", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/CAST/INT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["int"]}
+{"tag": "C/true/CAST/INT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["int"]}
+{"tag": "C/true/CAST/INT/2", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/INT/3", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/INT/4", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/INT/5", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["int"]}
+{"tag": "C/true/CAST/INT/6", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/INT/7", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/INT/8", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/INT/9", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/INT/10", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/TRY_CAST/INT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/2", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/4", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/5", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/6", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/TRY_CAST/INT/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/true/CAST/BIGINT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["bigint"]}
+{"tag": "C/true/CAST/BIGINT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["bigint"]}
+{"tag": "C/true/CAST/BIGINT/2", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/BIGINT/3", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/BIGINT/4", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/BIGINT/5", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["bigint"]}
+{"tag": "C/true/CAST/BIGINT/6", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/BIGINT/7", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/BIGINT/8", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/BIGINT/9", "rows": ["(2147483648,)"], "names": ["v"], "cols": [["2147483648"]], "types": ["bigint"]}
+{"tag": "C/true/CAST/BIGINT/10", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/TRY_CAST/BIGINT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/2", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/4", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/5", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/6", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/9", "rows": ["(2147483648,)"], "names": ["v"], "cols": [["2147483648"]], "types": ["bigint"]}
+{"tag": "C/true/TRY_CAST/BIGINT/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/0", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/1", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/2", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/3", "rows": ["(Decimal('1000.00'),)"], "names": ["v"], "cols": [["1000.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/4", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/5", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/6", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DECIMAL(10,2)/7", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/DECIMAL(10,2)/8", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/DECIMAL(10,2)/9", "error": "NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION"}
+{"tag": "C/true/CAST/DECIMAL(10,2)/10", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/0", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/1", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/2", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/3", "rows": ["(Decimal('1000.00'),)"], "names": ["v"], "cols": [["1000.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/4", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/5", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/6", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/TRY_CAST/DECIMAL(10,2)/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/true/CAST/DOUBLE/0", "rows": ["(7.0,)"], "names": ["v"], "cols": [["7.0"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/1", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/2", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/3", "rows": ["(1000.0,)"], "names": ["v"], "cols": [["1000.0"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/4", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/5", "rows": ["(7.0,)"], "names": ["v"], "cols": [["7.0"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/6", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/7", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/DOUBLE/8", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/DOUBLE/9", "rows": ["(2147483648.0,)"], "names": ["v"], "cols": [["2147483648.0"]], "types": ["double"]}
+{"tag": "C/true/CAST/DOUBLE/10", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/TRY_CAST/DOUBLE/0", "rows": ["(7.0,)"], "names": ["v"], "cols": [["7.0"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/1", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/2", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/3", "rows": ["(1000.0,)"], "names": ["v"], "cols": [["1000.0"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/4", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/5", "rows": ["(7.0,)"], "names": ["v"], "cols": [["7.0"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/6", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/9", "rows": ["(2147483648.0,)"], "names": ["v"], "cols": [["2147483648.0"]], "types": ["double"]}
+{"tag": "C/true/TRY_CAST/DOUBLE/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/true/CAST/BOOLEAN/0", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/BOOLEAN/1", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/BOOLEAN/2", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/BOOLEAN/3", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/BOOLEAN/4", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/BOOLEAN/5", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/BOOLEAN/6", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/BOOLEAN/7", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/true/CAST/BOOLEAN/8", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/true/CAST/BOOLEAN/9", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/CAST/BOOLEAN/10", "error": "CAST_INVALID_INPUT"}
+{"tag": "C/true/TRY_CAST/BOOLEAN/0", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/1", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/2", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/4", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/5", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/6", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/7", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/8", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/true/TRY_CAST/BOOLEAN/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/CAST/INT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["int"]}
+{"tag": "C/false/CAST/INT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["int"]}
+{"tag": "C/false/CAST/INT/2", "rows": ["(1,)"], "names": ["v"], "cols": [["1"]], "types": ["int"]}
+{"tag": "C/false/CAST/INT/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/CAST/INT/4", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["int"]}
+{"tag": "C/false/CAST/INT/5", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["int"]}
+{"tag": "C/false/CAST/INT/6", "rows": ["(1,)"], "names": ["v"], "cols": [["1"]], "types": ["int"]}
+{"tag": "C/false/CAST/INT/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/CAST/INT/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/CAST/INT/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/CAST/INT/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/2", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/4", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/5", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/6", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/TRY_CAST/INT/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["int"]}
+{"tag": "C/false/CAST/BIGINT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/BIGINT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/BIGINT/2", "rows": ["(1,)"], "names": ["v"], "cols": [["1"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/BIGINT/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/BIGINT/4", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/BIGINT/5", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/BIGINT/6", "rows": ["(1,)"], "names": ["v"], "cols": [["1"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/BIGINT/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/BIGINT/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/BIGINT/9", "rows": ["(2147483648,)"], "names": ["v"], "cols": [["2147483648"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/BIGINT/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/0", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/1", "rows": ["(5,)"], "names": ["v"], "cols": [["5"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/2", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/4", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/5", "rows": ["(7,)"], "names": ["v"], "cols": [["7"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/6", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/9", "rows": ["(2147483648,)"], "names": ["v"], "cols": [["2147483648"]], "types": ["bigint"]}
+{"tag": "C/false/TRY_CAST/BIGINT/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["bigint"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/0", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/1", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/2", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/3", "rows": ["(Decimal('1000.00'),)"], "names": ["v"], "cols": [["1000.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/4", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/5", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/6", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DECIMAL(10,2)/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/0", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/1", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/2", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/3", "rows": ["(Decimal('1000.00'),)"], "names": ["v"], "cols": [["1000.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/4", "rows": ["(Decimal('5.00'),)"], "names": ["v"], "cols": [["5.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/5", "rows": ["(Decimal('7.00'),)"], "names": ["v"], "cols": [["7.00"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/6", "rows": ["(Decimal('1.50'),)"], "names": ["v"], "cols": [["1.50"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/TRY_CAST/DECIMAL(10,2)/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["decimal(10,2)"]}
+{"tag": "C/false/CAST/DOUBLE/0", "rows": ["(7.0,)"], "names": ["v"], "cols": [["7.0"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/1", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/2", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/3", "rows": ["(1000.0,)"], "names": ["v"], "cols": [["1000.0"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/4", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/5", "rows": ["(7.0,)"], "names": ["v"], "cols": [["7.0"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/6", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/9", "rows": ["(2147483648.0,)"], "names": ["v"], "cols": [["2147483648.0"]], "types": ["double"]}
+{"tag": "C/false/CAST/DOUBLE/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/0", "rows": ["(7.0,)"], "names": ["v"], "cols": [["7.0"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/1", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/2", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/3", "rows": ["(1000.0,)"], "names": ["v"], "cols": [["1000.0"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/4", "rows": ["(5.0,)"], "names": ["v"], "cols": [["5.0"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/5", "rows": ["(7.0,)"], "names": ["v"], "cols": [["7.0"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/6", "rows": ["(1.5,)"], "names": ["v"], "cols": [["1.5"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/7", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/8", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/9", "rows": ["(2147483648.0,)"], "names": ["v"], "cols": [["2147483648.0"]], "types": ["double"]}
+{"tag": "C/false/TRY_CAST/DOUBLE/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["double"]}
+{"tag": "C/false/CAST/BOOLEAN/0", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/CAST/BOOLEAN/1", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/CAST/BOOLEAN/2", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/CAST/BOOLEAN/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/CAST/BOOLEAN/4", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/CAST/BOOLEAN/5", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/CAST/BOOLEAN/6", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/CAST/BOOLEAN/7", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/false/CAST/BOOLEAN/8", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/false/CAST/BOOLEAN/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/CAST/BOOLEAN/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/0", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/1", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/2", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/3", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/4", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/5", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/6", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/7", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/8", "rows": ["(True,)"], "names": ["v"], "cols": [["True"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/9", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
+{"tag": "C/false/TRY_CAST/BOOLEAN/10", "rows": ["(None,)"], "names": ["v"], "cols": [["None"]], "types": ["boolean"]}
