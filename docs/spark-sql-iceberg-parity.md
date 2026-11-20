@@ -6039,7 +6039,11 @@ still open is `isModifiable`.
   `inferSchema` whose types differ still raise (D9–D11, 18 cells); a SQL view over a `smartCsv` frame view raises (D6,
   SMARTCSV-SQL-VIEW-1); RePark accepts `PREPARE`, which Spark refuses; `EXPLAIN VERBOSE` shows the `ReaderParse` node
   and the `repark_reader_parse` rule (Q11); a query over a reader frame pays about 0.5 ms. RePark has no `rdd`
-  (`NOT_IMPLEMENTED`), so an `rdd` first action fixes nothing where Spark's touch does; `localCheckpoint()` turns the
+  (`NOT_IMPLEMENTED`), so an `rdd` first action fixes nothing where Spark's touch does (80 matrix cells EQUAL on
+  main only because main never re-plans; a named residual, S3, on Fable's guidance of 2026-11-20 under the owner's
+  delegation; a future `rdd` must enter the frame's own-plan scope); a `count()` on a reader frame inside a
+  `mapInArrow` function, while its frame's own-plan action is open, decides under that frame's recorded settings,
+  not the live ones (no Spark answer: Spark runs no actions inside a worker); `localCheckpoint()` turns the
   frame itself into the checkpoint scan, so `count`, `show`, `take`, `cache` and derived later actions read the live
   zone where Spark keeps the zone the frame was built under (25 cells, the same on main); `to_arrow_batches` (a RePark
   extension) opens at its first pull.
