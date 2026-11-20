@@ -583,7 +583,7 @@ def _schema_fields(schema: Any) -> list[dict[str, Any]]:
 
 def _csv_field_spec(data_type: Any) -> str:
     from repark.errors import AnalysisException
-    from repark.spark.types import CharType, DecimalType, VarcharType
+    from repark.spark.types import CharType, DecimalType, VarcharType, refuse_evaluated_collation
 
     if isinstance(data_type, (CharType, VarcharType)):
         raise AnalysisException(
@@ -601,7 +601,8 @@ def _csv_field_spec(data_type: Any) -> str:
             f"Decimal scale ({data_type.scale}) cannot be greater than precision "
             f"({data_type.precision})."
         )
-    return data_type.simpleString()
+    refuse_evaluated_collation(data_type)
+    return data_type._engine_type()
 
 
 def _csv_text_frame(
@@ -609,7 +610,6 @@ def _csv_text_frame(
 ) -> DataFrame:
     from repark.spark import functions
     from repark.spark.column import Column
-    from repark.spark.types import StringType
 
     texts = [frame[index] for index in range(len(frame.columns))]
     if null_token is not None:
@@ -629,8 +629,8 @@ def _csv_text_frame(
     selects = []
     for index, field in enumerate(fields):
         text = texts[index] if index < len(texts) else absent
-        if not isinstance(field["dataType"], StringType):
-            spec = _csv_field_spec(field["dataType"])
+        spec = _csv_field_spec(field["dataType"])
+        if spec != "string":
             text = Column(text._inner.csv_field(spec))
         selects.append(text.alias(field["name"]))
     return frame.select(*selects)
