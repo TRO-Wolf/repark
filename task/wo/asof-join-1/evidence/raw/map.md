@@ -34,4 +34,8 @@
 - `critic-main-true-off.jsonl.gz` — main, ANSI on, groups `M`, `O`, `N`, `Q9` and `S`, from the critic's run of
   2026-11-20.
 
+The `critic-` files are not read by `probes/cmp.py` and `probes/matrix.py`, whose loader takes the `spark-` and
+`repark-` prefixes only. The ANSI-off totals in [../../domain-table.md](../../domain-table.md) "Totals" come from the
+critic's own run of the same two scripts over the builder's files plus these.
+
 Up: [../map.md](../map.md).

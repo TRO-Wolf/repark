@@ -172,6 +172,11 @@ S 20, T 432.
   32, WRONG 16, W2 EQUAL 18, WRONG 30; NaN W1 EQUAL 20, WRONG 4, W2 EQUAL 16, WRONG 8 ([domain-table.md](domain-
   table.md) "Mixed as-of types", "Overflow at the integer bounds", "DOUBLE NaN, -0.0 and infinities" and "Non-grid
   verdicts by pair").
+- **The mixed-type W1 WRONG 32, as the critic reads it (2026-11-20):** 24 of the 32 differ from Spark only in the
+  tied right row (DATE>TIMESTAMP 4, STRING>BIGINT 4, TIMESTAMP>TIMESTAMP_NTZ 8, TIMESTAMP_NTZ>TIMESTAMP 8). `cmp.py`
+  builds `M` tie sets for numeric pairs only, so it counts them WRONG. Widening it to every pair moved 20 of the 24,
+  and the model then disagreed with Spark in 12 `M` cells per mode, so the counts stand as `cmp.py` gives them. A tie
+  model with Spark's cross-type coercion is still owed. The 8 BIGINT>STRING cells are WRONG on Spark's own W1 too.
 
 ## 4. What a seat must get right (from the cells)
 
@@ -228,7 +233,7 @@ by one more downcast in `StackExtensionPlanner::plan_extension` (`stack/planner.
 last right row at or before each left row and the next one after it, applies the tolerance and the `nearest`
 choice, and emits the left row with its pick.
 
-- **Product files (cap 9):** seat (a)'s (1) to (3), `session.rs` and `lib.rs` (as in seat (a)), plus (4)
+- **Product files (cap 10):** seat (a)'s (1) to (3), `session.rs` and `lib.rs` (as in seat (a)), plus (4)
   `crates/repark-core/src/stack/asof_join.rs` (the node),
   (5) `crates/repark-core/src/stack/asof_exec.rs` (the operator), (6) `stack/planner.rs` (the downcast), (7)
   `crates/repark-core/src/stack.rs` (`mod` lines), (8) the validation module.
