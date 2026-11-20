@@ -82,3 +82,39 @@
 {"label": "head", "case": "is_none", "round": 7, "median": 0.022229504538699985, "answer": "[Row(count(_c0)=2000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
 {"label": "base", "case": "is_infer", "round": 7, "median": 0.05787620949558914, "answer": "[Row(sum(_c0)=1999999000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
 {"label": "head", "case": "is_infer", "round": 7, "median": 0.054242378449998796, "answer": "[Row(sum(_c0)=1999999000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "head", "case": "k0_count", "round": 8, "median": 0.017988718929700553, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "k0_count", "round": 8, "median": 0.01720622752327472, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "k0_hour", "round": 8, "median": 0.06525976245757192, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "k0_hour", "round": 8, "median": 0.06366629048716277, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "is_count", "round": 8, "median": 0.01215343363583088, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "is_count", "round": 8, "median": 0.012255525449290872, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "is_sum", "round": 8, "median": 0.02315217151772231, "answer": "[Row(sum(n)=1999999000000, max(s)='s999')]", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "is_sum", "round": 8, "median": 0.023271201527677476, "answer": "[Row(sum(n)=1999999000000, max(s)='s999')]", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "is_none", "round": 8, "median": 0.021319108549505472, "answer": "[Row(count(_c0)=2000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "is_none", "round": 8, "median": 0.026653493521735072, "answer": "[Row(count(_c0)=2000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "is_infer", "round": 8, "median": 0.054320024442858994, "answer": "[Row(sum(_c0)=1999999000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "is_infer", "round": 8, "median": 0.06471717299427837, "answer": "[Row(sum(_c0)=1999999000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "base", "case": "k0_count", "round": 9, "median": 0.018026765901595354, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "k0_count", "round": 9, "median": 0.01670618902426213, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "k0_hour", "round": 9, "median": 0.06054418860003352, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "k0_hour", "round": 9, "median": 0.05980642745271325, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "is_count", "round": 9, "median": 0.012895768973976374, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "is_count", "round": 9, "median": 0.011614911374635994, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "is_sum", "round": 9, "median": 0.023096341989003122, "answer": "[Row(sum(n)=1999999000000, max(s)='s999')]", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "is_sum", "round": 9, "median": 0.024302106932736933, "answer": "[Row(sum(n)=1999999000000, max(s)='s999')]", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "is_none", "round": 9, "median": 0.02664108050521463, "answer": "[Row(count(_c0)=2000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "is_none", "round": 9, "median": 0.020294974907301366, "answer": "[Row(count(_c0)=2000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "is_infer", "round": 9, "median": 0.05232969345524907, "answer": "[Row(sum(_c0)=1999999000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "is_infer", "round": 9, "median": 0.057135452050715685, "answer": "[Row(sum(_c0)=1999999000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "head", "case": "k0_count", "round": 10, "median": 0.016752511030063033, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "k0_count", "round": 10, "median": 0.01820750196930021, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "k0_hour", "round": 10, "median": 0.06354915408883244, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "k0_hour", "round": 10, "median": 0.060046199476346374, "answer": "[Row(max(hour(ts))=23)]", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "is_count", "round": 10, "median": 0.012789107509888709, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "is_count", "round": 10, "median": 0.012171451584436, "answer": "2000000", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "is_sum", "round": 10, "median": 0.02485388284549117, "answer": "[Row(sum(n)=1999999000000, max(s)='s999')]", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "is_sum", "round": 10, "median": 0.024130357545800507, "answer": "[Row(sum(n)=1999999000000, max(s)='s999')]", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "is_none", "round": 10, "median": 0.02066015510354191, "answer": "[Row(count(_c0)=2000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "is_none", "round": 10, "median": 0.027697123121470213, "answer": "[Row(count(_c0)=2000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}
+{"label": "head", "case": "is_infer", "round": 10, "median": 0.05568490002769977, "answer": "[Row(sum(_c0)=1999999000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-wire-3bde1153/repark/_native.abi3.so"}
+{"label": "base", "case": "is_infer", "round": 10, "median": 0.05317612609360367, "answer": "[Row(sum(_c0)=1999999000000, max(_c1)='s999')]", "native": "<scratchpad>/ddu-work/pkg-main-9a48932f/repark/_native.abi3.so"}

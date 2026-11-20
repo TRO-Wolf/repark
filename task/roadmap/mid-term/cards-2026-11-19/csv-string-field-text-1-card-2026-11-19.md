@@ -38,4 +38,6 @@ The owner adopted Fable's §9 on 2026-11-19, about 14:00 UTC, verbatim: "go with
 
 **Dated 2026-11-20: the wiring has landed on branch `fix/csv-string-field-text-1` (not merged).** A CSV read with a user schema, or without `inferSchema=true`, scans every column as text from the header alone and parses each field with CSV-FIELD-KERNEL-1's kernel, paired by position (Fable's guidance under the owner's delegation, 2026-11-20, Q1, Q2, Q7 and Q8). Unit 0's re-read is gone, so the cost line above retires. Records: [built/](../../../wo/csv-string-field-text-1/built/map.md).
 
+**Dated 2026-11-20, the wiring unit's fix round 1 (branch `fix/csv-string-field-text-1`, not merged).** With no schema, a repeated header name takes its index ignoring case only under `spark.sql.caseSensitive=false`, as Spark's `makeSafeHeader`; with a user schema the header names are never consulted; and a read schema holding the field named by `columnNameOfCorruptRecord` is refused by name. Short rows, long rows (more fields than the header) and exact duplicate header names, two empty or two `nullValue` names among them, still raise (card CSV-READ-MODES-AND-SHAPES-1).
+
 Up: [map.md](map.md).
