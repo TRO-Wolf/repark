@@ -17,6 +17,25 @@ record per row; the `fold` analyzer rule validates the options literal and folds
   field `[UNSUPPORTED_DATATYPE]`, non-string option `[INVALID_OPTIONS.NON_STRING_TYPE]`,
   non-map options `[INVALID_OPTIONS.NON_MAP_FUNCTION]`; the struct answers NULL for
   a NULL document and carries the input nullability.
+- `field.rs` — **CSV-FIELD-KERNEL-1 (2026-11-20):** Spark 4.1.2's CSV field converters
+  (`UnivocityParser.makeConverter`) as one Rust kernel, the single converter home `from_csv` can
+  call later (re-seating it is an S2 card). Per-token converters: `java_long` / `java_integral`
+  (Java's radix-10 parse, ASCII digits); `csv_float` / `csv_double` (the `NaN`, `Inf`, `-Inf`
+  tokens, then Java's `parseFloat` / `parseDouble` grammar: Java's trim of code points up to
+  U+0020, `NaN` and `Infinity` with a sign, one `fFdD` suffix, hex floats rounded to nearest even;
+  never `str::parse` alone); `csv_boolean` (`equalsIgnoreCase`, so `falſe` is `false`);
+  `csv_decimal` (`new BigDecimal(text.replaceAll(",", ""))`, HALF_UP to the scale, NULL on a
+  precision overflow, an exponent answered without work proportional to it); `csv_date`
+  (`stringToDate`, years of four to seven digits, then the `GMT`-stripped retry); `csv_timestamp`
+  (`stringToTimestamp` in the session zone, the same retry); `csv_timestamp_ntz`
+  (`parseWithoutTimeZone`: a zone or a time alone is a misfit, and no zone is ever read). The
+  array kernel `csv_field_array` answers NULL for a NULL text and for a misfit, and
+  `misfit_rows` reports the misfits apart from NULL input. `__repark_csv_field__` (a typed NULL
+  second argument names the target type) registers through `functions()`; `csv_field_expr`
+  builds it. `nullValue` stays outside the kernel. Intervals, `VARIANT` and every type without a
+  converter refuse by name at plan time (`check_csv_field_target`). Unicode digits are a declared
+  divergence (Spark parses them for the integers and `DECIMAL`). Nothing reads through it yet.
+  Tests: [field/map.md](field/map.md).
 - `fold.rs` — the `CsvFold` analyzer rule, registered before `TypeCoercion` so a
   `map('sep', 1)`-style literal still carries its declared types. It refuses a
   `DROPMALFORMED` mode on a readable literal options map with
