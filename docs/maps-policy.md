@@ -17,7 +17,7 @@ A `map.md` routes a reader to the document or code that owns a fact. It is a nav
 - Routes, owners, boundaries and the verification for its directory.
 - Not history. History lives in ledgers, PRs or `docs/history/`, never in a map.
 - Transition: a map that still holds dated history is not wrong until its ratchet row is lowered. Lowering the row is the moment the history must leave.
-- A unit adds or changes a map row only when it adds, removes or renames a file; its claims live in its ledger and sidecar (owner, 2026-11-18, [task/lessons.md](../task/lessons.md)).
+- A unit adds or changes a map row only when it adds, removes or renames a file, or when the unit makes that row's statement false; its claims live in its ledger and sidecar (owner, 2026-11-18 and 2026-11-19, [task/lessons.md](../task/lessons.md)).
 - Not pins. A clause's pin is a sidecar line, never a `pins:` citation in a map. The migration removed 2,650 citation lines from 231 maps and wrote no map prose.
 
 ## Ownership
@@ -27,7 +27,7 @@ A `map.md` routes a reader to the document or code that owns a fact. It is a nav
 
 ## Verification
 
-- Lockstep warns. `scripts/check_map_md.sh` prints `WARNING:` when a touched directory's map is not touched. It exits 0 in both modes, staged and branch.
+- Lockstep warns. `scripts/check_map_md.sh` prints `WARNING:` when a directory gains an added or renamed code file and its map is not touched (owner, 2026-11-19); a modified or deleted file, or one under `task/wo/`, does not warn. It exits 0 in both modes, staged and branch.
 - `scripts/sync_map_md.py --check` (`make check-map-sync`) gates link validity and duplicate rows. Coverage is reported only under `--strict`.
 - `scripts/check_map_size.py` (`make check-map-size`) gates size. It runs in `make ci` and in the ci.yml guards step on pull requests.
 
