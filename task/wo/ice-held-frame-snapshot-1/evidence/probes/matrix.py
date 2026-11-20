@@ -60,7 +60,16 @@ if "HA" in groups:
 if "P" in groups:
     cols = [(w, a) for w in ordered(2, "P") for a in ordered(3, "P")]
     table("P", ordered(1, "P"), cols, True)
-for group in ("S", "C", "Q", "X"):
+if "B" in groups:
+    actions = ordered(3, "B")
+    print("| hold | write | " + " | ".join("`" + a + "`" for a in actions) + " |")
+    print("|---" * (len(actions) + 2) + "|")
+    for hold in ordered(1, "B"):
+        for write in ordered(2, "B"):
+            marks = [mark(("B", hold, write, a)) for a in actions]
+            print("| `" + hold + "` | `" + write + "` | " + " | ".join(marks) + " |")
+    print()
+for group in ("S", "C", "Q", "X", "M"):
     for key in keys:
         if key[0] == group:
             print(group, key[1], mark(key))

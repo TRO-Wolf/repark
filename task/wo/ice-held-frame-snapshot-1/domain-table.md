@@ -13,17 +13,20 @@ frame's old rows are written into an Iceberg table; `R` RAISE where Spark answer
 every cell, and no cell's verdict moves with the ANSI mode**, so each mark stands for four cells (main and base, ANSI
 on and off).
 
-## 0. Totals
+## 0. Totals (corrected by the revision round, §8)
 
-| | cells per build and mode | main | base |
-|---|---|---|---|
-| verdict cells (groups `HW`, `WA`, `HA`, `P`, `S`, `C`, `Q`) | 465 | 327 WRONG, 138 EQUAL, 0 RAISE | identical |
-| of the WRONG: stored into an Iceberg table (`S`) | | 62 | 62 |
-| of the WRONG: Spark raises, RePark answers (`w`, and 2 of the `S`) | | 44 | 44 |
-| external-writer cells (`X`, described in §6, no verdict) | 6 | | |
+| | cells per build and mode | WRONG (silent) | stored | Spark raises, RePark answers | RAISE | EQUAL |
+|---|---|---|---|---|---|---|
+| first pass (`HW`, `WA`, `HA`, `P`, `S`, `C`, `Q`) | 465 | 327 | 62 | 44 | 0 | 138 |
+| revision: writes of a held frame (`B`, §8.1) | 490 | 445 | 445 | 207 | 6 | 39 |
+| revision: the missed shapes (`M`, §8.2) | 19 | 13 | 2 | 1 | 1 | 5 |
+| **total** | **974** | **785** | **509** | **252** | **7** | **182** |
+| external-writer cells (`X`, §6, no verdict) | 6 | | | | | |
 
-Over both builds and both modes: 1,860 verdict cells, **1,308 WRONG, all silent**, 552 EQUAL, 0 RAISE; 248 stored.
-The WRONG set by the seat that would move it is in §7.
+Base equals main in every cell, and no verdict moves with the ANSI mode. Over both builds and both modes: 3,896
+verdict cells, **3,140 WRONG, all silent**, 2,036 of them stored into an Iceberg table, 28 RAISE where Spark answers
+(the first version's "0 RAISE" was wrong), 728 EQUAL. Eight stored shapes (§8). The WRONG set by the unit that would move
+it is in §7.
 
 ## 1. Holds × writes (`HW`), action `collect` (sorted rows)
 
@@ -88,7 +91,9 @@ SELECT * FROM v`, then read `u` (`insel`), and a self-join `held.alias("x").join
 
 82 WRONG and 8 EQUAL per build and mode; 34 stored. The three `count` cells marked `E` keep two rows on both engines.
 
-**A write of the held frame re-resolves the table by name on Spark.** After a schema or identity change, where
+**For this bare hold, `writeTo` re-plans the frame by name on Spark** (revised: §8.1 shows that it holds only for
+`writeTo` of a frame built from a name or SQL text; a derived frame's `writeTo` and every `insertInto` /
+`saveAsTable` raise `INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS`). After a schema or identity change, where
 `count`, `show` and the self-join raise, `held.writeTo(copy).create()` answers the **current** table in its current
 shape: `(1,a,None) (2,b,None) (9,z,5)` after `ADD COLUMN`, `(1,) (2,) (9,)` after `DROP COLUMN`, `(1,a) (2,b) (9,z)`
 after `RENAME COLUMN`, `(5,r)` after a recreate, `(7,o)` after `DROP` then `writeTo().create()`. The view of the held
@@ -157,7 +162,7 @@ A held `spark.table(t)` and the listed steps; the answers in order.
 | Parquet: the same, never acted before the append | 1, 2 | 2, 2 | W |
 
 **The first six rows are EQUAL only because main is stale and Spark pins a Dataset's own plan** (sketch §1 point 3):
-a fix that re-resolves every action would turn these 12 cells per build WRONG, the deleted-row one included. They
+a fix that re-resolves every action would turn these 12 cells per build WRONG (22 with §8.2's five), the deleted-row one included. They
 are the must-hold set for the own-plan memo. The four cached rows need A1's lazy cache table to drop its fill on a
 same-session write (sketch §5). The Parquet rows are Fable's inverse cell: RePark is fresher than Spark (S3).
 
@@ -183,21 +188,106 @@ again; in `own`, a same-session `INSERT` after the external one.
   a refresh; a held frame keeps its resolution snapshot today. The seats' answers there are in sketch §4 (a read, not
   a measurement).
 
-## 7. The WRONG set by what moves it (per build and mode)
+## 7. The WRONG and RAISE set by what moves it (per build and mode, revised)
 
-| family | WRONG (all silent) | stored | Spark raises | moved by |
-|---|---|---|---|---|
-| catalog-table frames in `HW`, `WA`, `HA` (`table`, `sql`, `read`, `filter`, `agg`, the joins) | 242 | 54 | 38 | unit 1 |
-| DataFrame views in `HW`, `HA` | 27 | 4 | 2 | unit 1 (the same rebinding point; the view's own rules, Q6) |
-| the path read in `HW`, `HA` | 27 | 4 | 4 | unit 1 only under Q4 (a); else a separate card |
-| refs and metadata tables, `P` | 16 | 0 | 0 | unit 1 |
-| action sequences, `S` | 9 | 0 | 0 | unit 1 (the memo keeps §5's six `E` rows) |
-| cached, `C` | 4 | 0 | 0 | unit 2, after A1 |
-| Parquet inverse, `Q` | 2 | 0 | 0 | none: a named divergence (S3) |
-| **total** | **327** | **62** | **44** | |
+| family | WRONG or RAISE | stored | moved by |
+|---|---|---|---|
+| first pass: catalog-table frames, DataFrame views, refs and metadata tables, sequences | 294 | 58 | unit 1a, except the 5 `WA` `copy` cells after a schema or identity change (unit 1b) |
+| first pass: the path read | 27 | 4 | unit 1a only under Q4 (a); else a separate card |
+| first pass: cached, `C` | 4 | 0 | unit 2, after A1 |
+| first pass: Parquet inverse, `Q` | 2 | 0 | none: a named divergence (S3) |
+| `B`: write paths after `INSERT` or `DELETE`, and after a schema or identity change where Spark reads by name in a view or raises a query check | 338 | 338 | unit 1a |
+| `B`: a name- or text-built frame's `writeTo` after a schema or identity change, and an added column under a write | 113 (6 of them RAISE) | 107 | unit 1b (Q6 (a)) |
+| `M`: the `CALL`s, spec and sort changes, the other-namespace recreate, the `MERGE` source, two held frames, the held join, ten rounds, the cast, the self-append, `first` | 13 | 2 | unit 1a (the three `CALL`s under Q11) |
+| `M`: `REFRESH TABLE` after an external commit | 1 | 0 | none on `type=hadoop` (the catalog never sees the commit); the AWS leg's cell (Q10) |
+| **total** | **792** | **509** | unit 1a 640, unit 1b 118, unit 2 4, Q4 27, none 3 |
 
-The EQUAL cells a fix must keep (per build and mode): the 68 pinned and ref `P` cells, the 28 SQL-view cells, the
-six own-plan `S` rows, the 14 `none` controls outside the SQL view, and the 22 coincidental `E` cells of §1 to §3
-(68 + 28 + 6 + 14 + 22 = 138).
+The EQUAL cells a fix must keep (per build and mode, 182): the 68 pinned and ref `P` cells, the 28 SQL-view cells,
+the 11 own-plan rows (six in §5, five in §8.2), the 14 `none` controls outside the SQL view, the 22 coincidental `E`
+cells of §1 to §3, and the 39 `B` cells where both engines refuse the same write (the join side's `USING` failure,
+`agg`'s self-append and the like).
+
+## 8. The revision round (the critic's required items; [evidence/probes/rev.py](evidence/probes/rev.py))
+
+The same builds, interpreter, Spark, catalog and modes. Spark ran with pandas linked into its path (from the RePark
+interpreter's environment, both Python 3.12.3) for the `toPandas` cells. Raw: `evidence/raw/rev-{spark,main,base}.jsonl.gz`.
+Verdicts: [evidence/raw/rev-verdicts.jsonl.gz](evidence/raw/rev-verdicts.jsonl.gz). Base equals main in every cell
+and no verdict moves with ANSI.
+
+### 8.1 Writes of a held frame (`B`): 10 holds × 7 writes × 7 write paths, 490 cells per build and mode
+
+Holds: the bare `spark.table`, `read.table`, `spark.sql("SELECT * FROM t")`, and `spark.sql("SELECT n, c FROM t
+WHERE n > 0")` (`sqlf`, built from SQL text but not bare); the derived `filter`, `select("n")`, `select("n", "c")`
+(`sel_all`), `groupBy("c").count()`, a join side; a DataFrame view made before the write. Writes: `INSERT`, `DELETE`,
+`ALTER` add, drop, rename, drop and recreate, `DROP` then `writeTo().create()`. Write paths (each reads its target
+back, columns and rows): `writeTo(copy).create()` (`copy`), `writeTo(new).createOrReplace()` (`cor`),
+`writeTo(other).append()` into a table made before the write (`app`), `write.insertInto(other)` (`ins_into`),
+`write.saveAsTable(new)` (`sat`), a view of the frame made after the write and `INSERT INTO other SELECT * FROM view`
+(`insel`), and `writeTo(t).append()` into its own table (`self`).
+
+**Spark's answer after a schema or identity change** (ANSI on; off is identical). `new` is the current table read by
+name (the shape it gives), `COL` / `ID` are `INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH` /
+`.TABLE_ID_MISMATCH`, `VIEW` is `INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION`, `tgt` a target-side
+arity or type refusal, `txt` the SQL text failing to resolve a dropped or renamed column (`UNRESOLVED_COLUMN`), `join`
+the `USING` join failing on both engines.
+
+| hold | write | `copy` | `cor` | `app` | `ins_into` | `sat` | `insel` | `self` |
+|---|---|---|---|---|---|---|---|---|
+| `table`, `read`, `sql` | add | new (n,c,d) | new (n,c,d) | tgt | COL | COL | new (n,c) | new (n,c,d) |
+| | drop | new (n) | new (n) | new (n, c NULL) | COL | COL | VIEW | new (n) |
+| | rename | new (n,e) | new (n,e) | tgt | COL | COL | VIEW | new (n,e) |
+| | recreate, `wt_create` | new | new | new | ID | ID | new | new |
+| `sqlf` | add | new (n,c) | new (n,c) | new (n,c) | COL | COL | new (n,c) | new (n,c,d) |
+| | drop, rename | txt | txt | txt | COL | COL | VIEW | txt |
+| | recreate, `wt_create` | new | new | new | ID | ID | new | new |
+| `filter`, `select`, `sel_all`, `agg` | add, drop, rename | COL | COL | COL | COL | COL | new (frame's columns) for add, VIEW for drop and rename | COL or tgt |
+| | recreate, `wt_create` | ID | ID | ID | ID | ID | new | ID (`agg`: tgt) |
+| join side | add | COL | COL | tgt | tgt | COL | tgt | COL |
+| | drop, rename | join | join | join | join | join | join | join |
+| | recreate, `wt_create` | ID | ID | ID | ID | ID | new | ID |
+| DataFrame view | add, recreate, `wt_create` | new (n,c) | new (n,c) | new (n,c) | new (n,c) | new (n,c) | new (n,c) | new (n,c,d) for add, new (n,c) otherwise |
+| | drop, rename | VIEW | VIEW | VIEW | VIEW | VIEW | VIEW | VIEW |
+
+**Spark's rule, read from these cells.** (1) `writeTo(…)` (`create`, `createOrReplace`, `append`, the self-append)
+of a frame **built from a name or SQL text** re-plans it from that name or text: the current table, in the shape the
+text gives (`SELECT *` gives the new columns; an explicit list keeps its columns; a text naming a dropped column fails
+to resolve). (2) `writeTo` of a **derived** frame (any DataFrame-API operation, `select("n", "c")` included), and
+`write.insertInto` / `write.saveAsTable` of **any** frame, are checked under `PROHIBIT_CHANGES`: `COL` for any column
+change, an added one included, `ID` for a new table. (3) A **view** (made before or after the change) re-resolves its
+tables by name with no identity check: the current rows in the view's columns, `VIEW` for a dropped or renamed column.
+
+**Main** answers or stores the seeded rows (`(1,a) (2,b)`), silently, in every cell where the write succeeds; where
+Spark answers `new` after a drop or rename, main's self-append is refused (6 RAISE: `INSERT_COLUMN_ARITY_MISMATCH`,
+`INCOMPATIBLE_DATA_FOR_TABLE.EXTRA_COLUMNS`). After `INSERT` and `DELETE` every write path of every hold stores the
+seeded rows on main (the deleted row included) where Spark stores the current ones, except `agg`'s self-append (both
+engines refuse the shape); the join side after a `DELETE` and after a dropped or renamed column is EQUAL (the inner join drops the row; both engines fail the `USING` join).
+
+| per build and mode | WRONG | of which stored | Spark raises, main stores | RAISE | EQUAL |
+|---|---|---|---|---|---|
+| `B` | 445 | 445 | 207 | 6 | 39 |
+
+### 8.2 The missed shapes (`M`), one cell each per build and mode
+
+| shape | Spark | main | |
+|---|---|---|---|
+| `INSERT`; hold; `CALL rollback_to_snapshot(<seed>)`; held count and rows, fresh count | 2, (1,a) (2,b), 2 | 3, with (9,z), 2 | W |
+| `INSERT`; hold; `CALL rewrite_data_files`; `DELETE n = 1`; count, rows | 2, (2,b) (9,z) | 3, the deleted row included | W |
+| hold; `INSERT OVERWRITE`; `CALL expire_snapshots(retain_last => 1)`; count, rows | 1, (7,o) | **raises** `Failed to load manifest list` | R |
+| hold; `ALTER TABLE … ADD PARTITION FIELD c`; `INSERT`; count, rows | 3 | 2 | W |
+| hold; `ALTER TABLE … WRITE ORDERED BY n`; `INSERT`; count, rows | 3 | 2 | W |
+| hold `db.t`; `DROP`; create and fill `db2.t` (the same name, another namespace) | `TABLE_OR_VIEW_NOT_FOUND` | the old rows | w |
+| a DataFrame view as the `MERGE` source; `INSERT` into the source; `MERGE … WHEN NOT MATCHED THEN INSERT *` into an empty table | (1,a) (2,b) (9,z) | (1,a) (2,b): stored | S |
+| two held frames; `h1.filter("n = 1").writeTo(t).append()`; both counts, `h2`'s rows | 3, 3, (1,a) (1,a) (2,b) | 2, 2, (1,a) (2,b) | W |
+| a held join; `writeTo(t).overwrite(n > 0)`; a child `select`, the join's `count` | (1,o); 1 | the old rows; 2 | W |
+| ten rounds of `count` then `INSERT` on one held frame | 2, 3, …, 12 | 2 in every round | W |
+| held `cast(c AS INT)` over `'1'`, `'2'`; `INSERT (9, 'zz')`; `collect`, `count` | ANSI on: `CAST_INVALID_INPUT`, 3; off: (1,1) (2,2) (None,9), 3 | (1,1) (2,2), 2 in both modes: the ANSI error is hidden | W |
+| hold; `INSERT`; `held.writeTo(t).append()` (Fable §13 row 9) | each of the three rows twice | (1,a) (2,b) twice, (9,z) once: stored | S |
+| hold; `DELETE n = 1`; `first`, `head(5)` | (2,b); [(2,b)] | (1,a); [(1,a) (2,b)]: the deleted row | W |
+| own-plan, an `INSERT` between: `collect` then `toPandas`; `toPandas` twice; `collect` then `toArrow`; `toArrow` twice; `toArrow` then `collect` | the first binding kept in all five | the same | E (5) |
+| another session (Spark) or a Spark process (RePark) inserts; held and fresh count; SQL `REFRESH TABLE`; again | 2, 2 then 3, 3 | 2, 2 then 2, 2 | W |
+
+`toPandas` and `toArrow` keep their first binding on Spark, as `collect` does: Q3's own-plan set is now measured for
+all six actions. `refresh_sql_external` is the SQL `REFRESH TABLE` form of §6's `refreshTable`; `type=hadoop` RePark
+never sees the external commit, so it stays WRONG under either seat on this catalog (Q10).
 
 Up: [map.md](map.md).

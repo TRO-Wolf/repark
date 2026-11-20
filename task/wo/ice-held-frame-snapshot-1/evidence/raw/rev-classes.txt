@@ -1,0 +1,56 @@
+== alter_add
+table    new:n,c,d | new:n,c,d | err:INSERT_COLUMN_ARIT | COL | COL | new:n,c | new:n,c,d
+read     new:n,c,d | new:n,c,d | err:INSERT_COLUMN_ARIT | COL | COL | new:n,c | new:n,c,d
+sql      new:n,c,d | new:n,c,d | err:INSERT_COLUMN_ARIT | COL | COL | new:n,c | new:n,c,d
+sqlf     new:n,c | new:n,c | new:n,c | COL | COL | new:n,c | new:n,c,d
+filter   COL | COL | COL | COL | COL | new:n,c | COL
+select   COL | COL | COL | COL | COL | new:n | COL
+sel_all  COL | COL | COL | COL | COL | new:n,c | COL
+agg      COL | COL | COL | COL | COL | new:c,count | err:INCOMPATIBLE_DATA_
+join_l   COL | COL | err:INSERT_COLUMN_ARIT | err:INSERT_COLUMN_ARIT | COL | err:INSERT_COLUMN_ARIT | COL
+dfview   new:n,c | new:n,c | new:n,c | new:n,c | new:n,c | new:n,c | new:n,c,d
+== alter_drop
+table    new:n | new:n | new:n,c | COL | COL | VIEW | new:n
+read     new:n | new:n | new:n,c | COL | COL | VIEW | new:n
+sql      new:n | new:n | new:n,c | COL | COL | VIEW | new:n
+sqlf     err:UNRESOLVED_COLUMN. | err:UNRESOLVED_COLUMN. | err:UNRESOLVED_COLUMN. | COL | COL | VIEW | err:UNRESOLVED_COLUMN.
+filter   COL | COL | COL | COL | COL | VIEW | err:INSERT_COLUMN_ARIT
+select   COL | COL | COL | COL | COL | VIEW | COL
+sel_all  COL | COL | COL | COL | COL | VIEW | err:INSERT_COLUMN_ARIT
+agg      COL | COL | COL | COL | COL | VIEW | err:INSERT_COLUMN_ARIT
+join_l   err:UNRESOLVED_USING_C | err:UNRESOLVED_USING_C | err:UNRESOLVED_USING_C | err:UNRESOLVED_USING_C | err:UNRESOLVED_USING_C | err:UNRESOLVED_USING_C | err:UNRESOLVED_USING_C
+dfview   VIEW | VIEW | VIEW | VIEW | VIEW | VIEW | VIEW
+== alter_rename
+table    new:n,e | new:n,e | err:INCOMPATIBLE_DATA_ | COL | COL | VIEW | new:n,e
+read     new:n,e | new:n,e | err:INCOMPATIBLE_DATA_ | COL | COL | VIEW | new:n,e
+sql      new:n,e | new:n,e | err:INCOMPATIBLE_DATA_ | COL | COL | VIEW | new:n,e
+sqlf     err:UNRESOLVED_COLUMN. | err:UNRESOLVED_COLUMN. | err:UNRESOLVED_COLUMN. | COL | COL | VIEW | err:UNRESOLVED_COLUMN.
+filter   COL | COL | COL | COL | COL | VIEW | err:INCOMPATIBLE_DATA_
+select   COL | COL | COL | COL | COL | VIEW | COL
+sel_all  COL | COL | COL | COL | COL | VIEW | err:INCOMPATIBLE_DATA_
+agg      COL | COL | COL | COL | COL | VIEW | err:INCOMPATIBLE_DATA_
+join_l   err:UNRESOLVED_USING_C | err:UNRESOLVED_USING_C | err:UNRESOLVED_USING_C | err:UNRESOLVED_USING_C | err:UNRESOLVED_USING_C | err:UNRESOLVED_USING_C | err:UNRESOLVED_USING_C
+dfview   VIEW | VIEW | VIEW | VIEW | VIEW | VIEW | VIEW
+== recreate
+table    new:n,c | new:n,c | new:n,c | ID | ID | new:n,c | new:n,c
+read     new:n,c | new:n,c | new:n,c | ID | ID | new:n,c | new:n,c
+sql      new:n,c | new:n,c | new:n,c | ID | ID | new:n,c | new:n,c
+sqlf     new:n,c | new:n,c | new:n,c | ID | ID | new:n,c | new:n,c
+filter   ID | ID | ID | ID | ID | new:n,c | ID
+select   ID | ID | ID | ID | ID | new:n | ID
+sel_all  ID | ID | ID | ID | ID | new:n,c | ID
+agg      ID | ID | ID | ID | ID | new:c,count | err:INCOMPATIBLE_DATA_
+join_l   ID | ID | ID | ID | ID | new:n,c | ID
+dfview   new:n,c | new:n,c | new:n,c | new:n,c | new:n,c | new:n,c | new:n,c
+== wt_create
+table    new:n,c | new:n,c | new:n,c | ID | ID | new:n,c | new:n,c
+read     new:n,c | new:n,c | new:n,c | ID | ID | new:n,c | new:n,c
+sql      new:n,c | new:n,c | new:n,c | ID | ID | new:n,c | new:n,c
+sqlf     new:n,c | new:n,c | new:n,c | ID | ID | new:n,c | new:n,c
+filter   ID | ID | ID | ID | ID | new:n,c | ID
+select   ID | ID | ID | ID | ID | new:n | ID
+sel_all  ID | ID | ID | ID | ID | new:n,c | ID
+agg      ID | ID | ID | ID | ID | new:c,count | err:INCOMPATIBLE_DATA_
+join_l   ID | ID | ID | ID | ID | new:n,c | ID
+dfview   new:n,c | new:n,c | new:n,c | new:n,c | new:n,c | new:n,c | new:n,c
+units per build and mode {'1b': 113, '1a': 338}

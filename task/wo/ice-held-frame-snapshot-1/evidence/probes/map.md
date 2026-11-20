@@ -8,6 +8,11 @@
   external writer).
 - `writer.py` — the external writer `X` starts in a second process: one statement on the other engine, the same
   warehouse.
+- `rev.py` — the revision round's cells: `rev.py <engine> <warehouse parent> <out> <group> <ansi>`; groups `B` (10
+  holds × 7 writes × 7 write paths; `B2` runs the SQL-text and `select("n", "c")` holds) and `M` (the missed
+  shapes, the `toPandas`/`toArrow` own-plan cells, SQL `REFRESH TABLE` after an external commit).
+- `classes.py` — Spark's answer class per hold, schema write and write path, and the unit 1a / 1b split, from the
+  revision's verdicts.
 - `cmp.py` — verdicts: `cmp.py <raw dir> <verdicts.jsonl>`; EQUAL, WRONG or RAISE against Spark, both raising is
   EQUAL by class.
 - `matrix.py` — the domain table's matrices from the verdicts.

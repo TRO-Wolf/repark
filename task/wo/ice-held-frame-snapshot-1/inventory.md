@@ -44,7 +44,7 @@ reach B1 to B3 through the same schema provider.
 
 | # | door | site | binds through |
 |---|---|---|---|
-| F1 | `spark.table(t)` | `python/repark/src/repark/spark/session/session_core.py:964` → `catalog_surface.py:340-363` `session_table` | `inner.sql_built("SELECT * FROM t")` (`crates/repark-python/src/session.rs:202-215` → `crates/repark-core/src/session/write_options.rs:66-77`): B1 at the call |
+| F1 | `spark.table(t)` | `python/repark/src/repark/spark/session/session_core.py:964` → `python/repark/src/repark/spark/catalog_surface.py:340-366` `session_table` (`:366` records the frame in `_frame_identities`: the one place a bare `spark.table`/`read.table` frame is known as bare) | `inner.sql_built("SELECT * FROM t")` (`crates/repark-python/src/session.rs:202-215` → `crates/repark-core/src/session/write_options.rs:66-77`): B1 at the call |
 | F2 | `spark.read.table(t)` | `session/reader.py:368-386` | no travel option: F1 (`:386`); a travel option: §5 T2 |
 | F3 | `spark.sql(...)` | `session_core.py:149` → the native SQL planner | B1 for every Iceberg name in the statement, at the call |
 | F4 | the path read `format("iceberg").load(path)` | `session/reader.py:468-472` → `reader_iceberg_path.py:25` → `crates/repark-core/src/iceberg_path.rs:41` | `IcebergStaticTableProvider::try_new_from_table`: a static provider, pinned at load by design (Spark refreshes it; domain table §2 `path`) |
@@ -81,7 +81,7 @@ this list is not the insertion list**: every one of them commits through the R1 
 |---|---|---|---|
 | T1 | SQL `VERSION AS OF`, `TIMESTAMP AS OF`, `VERSION AS OF '<ref>'` | `crates/repark-spark/src/time_travel.rs:145`, `:149` | `IcebergStaticTableProvider::try_new_from_table_ref` / `_snapshot`: resolved at analysis, static |
 | T2 | reader `versionAsOf`, `timestampAsOf`, `branch` options | `crates/repark-core/src/time_travel.rs:352`, `:359` | the same static providers |
-| T3 | `t.branch_b`, `t.tag_g` identifiers | `crates/repark-spark/src/time_travel.rs:434`, `:494-495` (the `branch_`/`tag_` suffix), then the T1 constructors | static at analysis; Spark refreshes the identifier form (domain table §5) |
+| T3 | `t.branch_b`, `t.tag_g` identifiers | the facade's identifier path `crates/repark-core/src/time_travel.rs:139-142` (`RefSelector`), and `crates/repark-spark/src/time_travel.rs:434`, `:494-495` (the `branch_`/`tag_` suffix), then the T1 constructors | static at analysis; Spark refreshes the identifier form (domain table §5) |
 | T4 | metadata tables `t.snapshots`, `t.files`, `t.history` | fork `schema.rs:250-262` → `table/mod.rs:166-173` `metadata_table` | `load_table` at resolve, then `IcebergMetadataTableProvider` over that `Table`: pinned at B1's moment |
 | T5 | write-audit-publish reads | `crates/repark-spark/src/wap.rs:220` | static by snapshot id |
 
@@ -89,21 +89,38 @@ this list is not the insertion list**: every one of them commits through the R1 
 
 | # | site | binding |
 |---|---|---|
-| V1 | `df.createOrReplaceTempView(v)`: `catalog_surface.py:320-331` `_register_temp_view` → `crates/repark-python/src/session.rs:362` → `crates/repark-core/src/session/temp_views.rs:45-73` → `crates/repark-spark/src/view_ddl/frame_settings.rs:156`, `:261` `frame_view` (`FrameView.plan`; `:255` `ViewTable::new(self.plan.clone())`) | the frame's `LogicalPlan`, so the B1 provider; every SQL over `v` re-plans it and B3 reads the old snapshot |
+| V1 | `df.createOrReplaceTempView(v)`: `python/repark/src/repark/spark/catalog_surface.py:320-331` `_register_temp_view` → `crates/repark-python/src/session.rs:362` → `crates/repark-core/src/session/temp_views.rs:45-73` → `crates/repark-spark/src/view_ddl/frame_settings.rs:156`, `:261` `frame_view` (`FrameView.plan`; `:255` `ViewTable::new(self.plan.clone())`) | the frame's `LogicalPlan`, so the B1 provider; every SQL over `v` re-plans it and B3 reads the old snapshot |
 | V2 | SQL `CREATE TEMPORARY VIEW v AS SELECT`: `crates/repark-spark/src/view_ddl/temp_view.rs:120-151` (`TempViewProvider::scan`) | **re-plans the definition at every scan** (`plan_definition`, `:142-147`), so B1 runs afresh: EQUAL in every cell |
 | V3 | Iceberg catalog views: `crates/repark-spark/src/view_ddl/read.rs:117-147` | re-expanded at each resolution |
-| C1 | C-009 identity token: `catalog_surface.py:233-243` `_cache_identity_token` (`current-snapshot-id` via `DESCRIBE TABLE EXTENDED`), `:246-251`, `:254-276` `_drop_stale_identity_frames`, `:278-292` `_note_frame_cached` | compared only inside `session_table` (`:350-363`) and `isCached`: a new `spark.table(t)` or `isCached` evicts a stale cache. The held cached frame's own `count` is never checked (domain table §7 `C`) |
+| C1 | C-009 identity token: `python/repark/src/repark/spark/catalog_surface.py:233-243` `_cache_identity_token` (`current-snapshot-id` via `DESCRIBE TABLE EXTENDED`), `:246-251`, `:254-276` `_drop_stale_identity_frames`, `:278-292` `_note_frame_cached` | compared only inside `session_table` (`:350-363`) and `isCached`: a new `spark.table(t)` or `isCached` evicts a stale cache. The held cached frame's own `count` is never checked (domain table §7 `C`) |
 | C2 | `dataframe/cache_handle.py:102` `bind_registered_view` | records the token baseline at materialise time |
 | C3 | unit 1's own-plan memo: `python/repark/src/repark/spark/dataframe/surface_a.py:51`, `:399-413` (`_PARSE_MEMOS`, `_parse_memo`, `_own_plan`), `crates/repark-core/src/extension.rs:84-136` `ReaderParseMemo` | the per-frame-object memo entered around every own-plan action: the seat both proposals reuse for Spark's per-`QueryExecution` pin |
+| C4 | what that memo holds today: `ReaderParseMemo { decided: Mutex<Vec<(LiveOptions, Arc<ConfigOptions>)>> }` (`crates/repark-core/src/extension.rs:84-86`), reader options only | **no table decision**: either seat adds a slot for `(catalog, ident) → Table` decisions; the decision is taken in a **synchronous** `OptimizerRule` (`ReaderParseRule`, `crates/repark-spark/src/view_ddl/frame_settings.rs:425`) |
 
-## 7. What each seat must touch (cross-reference to [sketch.md](sketch.md) §4)
+## 6b. Sites added by the revision (the critic's round, 2026-11-20)
 
-- **Both seats:** one rebinding point for every catalog-backed Iceberg scan at physical planning (B3's consumer),
-  keyed by `(catalog, ident)` once per plan, skipping T1 to T5 static providers, under C3's memo for own-plan
-  actions; a Spark-shaped identity and column check (domain table §4); V1 needs nothing more (its scan re-plans
-  through the same point); F4 becomes catalog-backed or stays a named divergence (Q4).
-- **Seat A only:** a decorator over the R1 handle (beside R5) that records the `Table` each same-session commit
-  returns, and the per-table commit epoch the cache (C1, A1's lazy table) can compare instead of `DESCRIBE EXTENDED`.
-- **Seat B only:** a `load_table` at the rebinding point (R6 to R8 costs), nothing at the commit doors.
+| # | site | binding or role |
+|---|---|---|
+| K1 | fork `table/mod.rs:118-137` `IcebergTableProvider::refreshed(&self)` | **public**: a new provider over a fresh `load_table` through the provider's own catalog, with the current schema, `planning_table: None`, the flags (`uuid_as_string`, commit branch, properties, output spec) kept: the hook of the fork-free wrapper (sketch §4) |
+| K2 | `python/repark/src/repark/spark/catalog.py:768-777` `refreshTable` → `python/repark/src/repark/spark/catalog_surface.py:731-747` `refresh_table` | unpersists and rebuilds the catalog provider (`refresh_catalog_provider`); touches no held frame: an epoch source for seat A |
+| K3 | SQL `REFRESH TABLE`: `crates/repark-spark/src/router.rs:600-612` (`try_parse_refresh`) | the same, by SQL: an epoch source |
+| K4 | `CALL` procedures: `crates/repark-spark/src/call/branch_ops.rs:190`, `:241`, `:279`, `:354`, `call/rewrite_manifests.rs:80` (`tx.commit(catalog)` through the handle passed in), `call.rs:266` `execute_expire_snapshots` | commit through the R1 handle, so seat A's decorator sees them; `expire_snapshots` deletes files a held old snapshot still names, which is main's `Failed to load manifest list` RAISE |
+| K5 | the frame write doors: `python/repark/src/repark/spark/dataframe/core.py:2916` `writeTo`; `dataframe/writer_readwriter.py:194` `saveAsTable`, `:215` `insertInto`, `:797` `create`, `:813` `createOrReplace`, `:851` `append` (998 lines, under a 1,000-line ceiling) | each plans the held frame's own `LogicalPlan` as the write's input: where Spark's bare/derived split (sketch §1 point 7) must be applied |
+
+## 7. What each seat must touch (cross-reference to [sketch.md](sketch.md) §4, revised)
+
+- **Both seats:** one synchronous rebinding rule for every catalog-backed Iceberg scan at optimisation (B3's
+  consumer), keyed by `(catalog, ident)` once per plan, skipping T1, T2 and T5 static providers, re-binding T3's
+  identifier refs and T4's metadata tables; a new table-decision slot in C4's memo for own-plan actions; Spark's
+  identity and column checks, with a command scope entered by the K5 write doors (`PROHIBIT_CHANGES`); the bare-frame
+  re-plan: the native frame carries its name (F1, F2) or SQL text (F3), and the `writeTo` entry of K5 re-plans a frame
+  that has one; V1 needs nothing more (its scan re-plans through the same rule); F4 becomes catalog-backed or stays a
+  named divergence (Q4).
+- **Seat A only:** a decorator over the R1 handle (beside R5) that records what every same-session commit returns
+  (inventory §4 and K4 included), a writer at K2 and K3 that loads the table once and records it, and the per-table
+  epoch A1's lazy table and C1 compare. With the fork-free wrapper (Q9 (a)) the re-bound provider comes from K1
+  through the decorator in a map-serving mode; with Q9 (b), from two fork constructors.
+- **Seat B only:** a `load_table` at the rebinding point (R6 to R8 costs), behind a `block_on` in the synchronous rule
+  or in the async wrapper; nothing at the commit doors.
 
 Up: [map.md](map.md).

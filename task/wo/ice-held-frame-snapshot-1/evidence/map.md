@@ -29,6 +29,12 @@
   <scratch> <out> <round>`, one sample at a time, at most five rounds, main only (no seat is built). The first round
   waited from about 05:42 UTC for its 600 s while another lane's cargo build held the lock's shared side, and the series
   was stopped by hand at 05:52 UTC with no sample; [../sketch.md](../sketch.md) §6 gives read estimates.
+- **Revision round** (2026-11-20, about 06:50–07:01 UTC): the same builds, interpreters, lock and cores;
+  `probes/rev.py <engine> <scratch warehouse parent> <out> <B|B2|M> <true|false>`, one command per engine, group and
+  mode, the RePark `M` group inside `spark_slot.sh` (its refresh cell starts Spark as the external writer). Spark's
+  `toPandas` cells ran with a scratch directory on `PYTHONPATH` holding links to the RePark interpreter's pandas 3.0.5,
+  NumPy 2.5.1 and `dateutil` (both Python 3.12.3; the oracle environment unchanged; it has its own pyarrow).
+  Verdicts by `probes/cmp.py` over the three engines; no verdict depends on the mode.
 - **Not measured:** Glue and S3 Tables (no external service was contacted; the sketch's §6 reads the path from the
   code), a local REST catalog (none available offline on this machine), and Spark's view of a second
   RePark process's commit (a RePark session cannot see a table another session created on a `type=hadoop` catalog,

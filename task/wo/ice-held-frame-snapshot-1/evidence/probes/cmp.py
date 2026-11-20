@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 raw, out = Path(sys.argv[1]), Path(sys.argv[2])
-STORED = {"copy", "insel"}
+STORED = {"copy", "insel", "cor", "app", "ins_into", "sat", "self"}
 
 
 def load(engine: str) -> dict[tuple[str, ...], Any]:
