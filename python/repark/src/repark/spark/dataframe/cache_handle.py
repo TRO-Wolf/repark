@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
 
 from repark import _native
+from repark.spark.dataframe.eager import _resolve_cache_budgets
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -119,7 +120,6 @@ def bind_registered_view(frame: Any, view_name: str, lineage: Any) -> None:
 
 
 def _materialize_now(frame: Any, view_name: str) -> None:
-    from repark.spark.dataframe.eager import _resolve_cache_budgets
 
     lineage = frame._inner
     budgets = _resolve_cache_budgets(frame._alive_token)
@@ -133,7 +133,6 @@ def _bind_lazy(frame: Any) -> None:
         return
     from repark.spark._temp_views import scratch_view_name
     from repark.spark.dataframe.core import _CACHE_VIEW_PREFIX
-    from repark.spark.dataframe.eager import _resolve_cache_budgets
     from repark.spark.dataframe.surface_a import _own_plan
 
     view_name = scratch_view_name(frame._session, _CACHE_VIEW_PREFIX)
@@ -156,7 +155,6 @@ def _refresh_budgets(frame: Any) -> None:
     views = [handle.view_name for handle in frame._handles if not handle.released]
     if not views:
         return
-    from repark.spark.dataframe.eager import _resolve_cache_budgets
 
     budgets = _resolve_cache_budgets(frame._alive_token)
     for view in views:
