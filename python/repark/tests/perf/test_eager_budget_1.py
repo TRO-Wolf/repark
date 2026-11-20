@@ -432,11 +432,13 @@ def test_refusal_happens_before_result_peak() -> None:
     assert result["hwm_refused"] < result["hwm_full"]
     assert result["growth_refused"] > 0
     assert result["growth_full"] > 0
-    assert result["growth_refused"] < 0.6 * result["growth_full"], (
+    assert result["retained"] == 48000000
+    assert result["growth_refused"] < 0.6 * result["retained"], (
         f"refused growth {result['growth_refused']} not below 60% of "
-        f"unbudgeted growth {result['growth_full']} "
-        f"(baseline {result['baseline']}, hwm_refused {result['hwm_refused']}, "
-        f"hwm_full {result['hwm_full']}, retained {result['retained']})"
+        f"the cached result's {result['retained']} bytes "
+        f"(unbudgeted growth {result['growth_full']}, "
+        f"baseline {result['baseline']}, hwm_refused {result['hwm_refused']}, "
+        f"hwm_full {result['hwm_full']})"
     )
 
 
