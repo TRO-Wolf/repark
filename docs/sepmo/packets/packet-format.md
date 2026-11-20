@@ -46,7 +46,7 @@ The stable prefix states these constraints, verbatim:
   quiet box)
 - live-oracle provisioning (`--extra record` as `make parity-live`, ivy
   redirect, `PYSPARK_SUBMIT_ARGS`, `JAVA_HOME`, ANSI/UTC, JVM wait)
-- size ceilings (ratchet down; new Python under 1000 lines; cap-table mirror
+- size ceilings (ratchet down; new Python under 1000 lines; size-gate pins
   in `test_cap_1_source_file_line_cap.py`)
 - do not change what any gate requires
 - `map.md` size and sync gates hold (lockstep warns); no amends
