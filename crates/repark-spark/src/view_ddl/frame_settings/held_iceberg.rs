@@ -13,7 +13,7 @@ use datafusion::physical_plan::ExecutionPlan;
 use iceberg::table::Table;
 use repark_core::extension::ReaderParseMemo;
 use repark_iceberg::catalog::session_tables::{
-    BindMode, Binding, TableState, binding, conformed, rebound_clone, rebound_provider,
+    BindMode, Binding, TableState, binding, conformed, rebound_clone, rebound_provider, same_state,
 };
 
 const WRITER_VIEW: &str = "_repark_writer_";
@@ -157,8 +157,7 @@ fn step(
         Decided::Live(table) => table,
     };
     let held = bound.table();
-    if table.metadata_location().is_some() && table.metadata_location() == held.metadata_location()
-    {
+    if same_state(held, &table) {
         return Ok(None);
     }
     if bound.mode() != BindMode::View && table.metadata().uuid() != held.metadata().uuid() {
