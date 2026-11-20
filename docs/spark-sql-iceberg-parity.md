@@ -6042,8 +6042,9 @@ still open is `isModifiable`.
   (`NOT_IMPLEMENTED`), so an `rdd` first action fixes nothing where Spark's touch does (80 matrix cells EQUAL on
   main only because main never re-plans; a named residual, S3, on Fable's guidance of 2026-11-20 under the owner's
   delegation; a future `rdd` must enter the frame's own-plan scope); a `count()` on a reader frame inside a
-  `mapInArrow` function, while its frame's own-plan action is open, decides under that frame's recorded settings,
-  not the live ones (no Spark answer: Spark runs no actions inside a worker); `localCheckpoint()` turns the
+  scalar `udf` or a `mapInArrow` function, while its frame's own-plan action is open, decides under that frame's
+  recorded settings, not the live ones, because the whole function runs inside the action's scope (no Spark answer:
+  Spark runs no actions inside a worker; the re-check verifier's N1, S3); `localCheckpoint()` turns the
   frame itself into the checkpoint scan, so `count`, `show`, `take`, `cache` and derived later actions read the live
   zone where Spark keeps the zone the frame was built under (25 cells, the same on main); `to_arrow_batches` (a RePark
   extension) opens at its first pull.
