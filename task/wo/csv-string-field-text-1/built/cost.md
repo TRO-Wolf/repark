@@ -41,12 +41,14 @@ retires: the head reads once, with a header-only inference. `k0_count` (unit 0's
 
 ## C-012
 
-| case | main | head | head / main | main's band (max / min) | runs | bar | verdict |
-|---|---|---|---|---|---|---|---|
+**Not yet measured** (the builder's turn budget ran out under lock contention; the hand-back names the exact
+command). C-012 reads no CSV ([R]: `replay_work.py` and its directory).
 
-Process wall of `replay_work.py`'s two halves, main and head alternating by run, each sample alone under `flock -x` on the measure lock, cores 32-47. 0 samples, 0 with a nonzero exit. Nothing in C-012 reads CSV.
+## Rounds
 
-Raw: [raw/cost-samples.jsonl](raw/cost-samples.jsonl), [raw/cost-perf.txt](raw/cost-perf.txt),
-[raw/c012-samples.jsonl](raw/c012-samples.jsonl).
+Seven complete rounds of ten: the exclusive samples starved behind the other lane's cargo tests and C-012 series
+(one sample waited about 20 minutes), so the eighth round's partial samples were discarded and the series stopped.
+
+Raw: [raw/cost-samples.jsonl](raw/cost-samples.jsonl), [raw/cost-perf.txt](raw/cost-perf.txt).
 
 Up: [map.md](map.md).

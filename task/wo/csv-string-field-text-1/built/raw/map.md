@@ -7,6 +7,6 @@
 - `shapes-spark.jsonl`, `shapes-main.jsonl`, `shapes-head.jsonl` — `probes/shapes.py`.
 - `rerun-base.jsonl.gz`, `rerun-head.jsonl.gz` — step 0's domain, revision and kernel probes on each package
   (13,050 records each); `rerun-verdicts.jsonl.gz` and `rerun-table.md.txt` — `probes/rerun.py`'s verdicts and table.
-- `cost-samples.jsonl`, `cost-perf.txt`, `c012-samples.jsonl` — the cost series ([../cost.md](../cost.md)).
+- `cost-samples.jsonl`, `cost-perf.txt` — the short-row cost series ([../cost.md](../cost.md)).
 
 Up: [../map.md](../map.md).
