@@ -5,8 +5,11 @@ By Claude Opus 5.5 (`claude-opus-5-5`), effort xhigh, on Fable's guidance of 202
 rule of 2026-11-19 (C-012 a hard 1.05x; a short row over 1.05x a flag; nothing over 1.15x without the owner).
 
 - [bar.md](bar.md) — the deciding cell, the new schema-change cells, the bar on the step 0 cells, the must-hold
-  sets, the gap cells and the EQUAL lost.
-- [cost.md](cost.md) — main's baseline and the head under the exclusive lock.
+  sets, the gap cells and the EQUAL lost; fix round 1's re-run, its ENC-1 cells, the classes of the cells round 0
+  left open and the 8 stored cells.
+- [cost.md](cost.md) — main's baseline and the head under the exclusive lock, and fix round 1's cause of the C-012
+  miss.
+- [cards.md](cards.md) — fix round 1's residual card for the orchestrator to file.
 - [evidence/](evidence/map.md) — the probes and the raw cells of this build.
 
 ## What 1a builds (seat A, Q9 (a), the command scope moved in)
@@ -16,7 +19,8 @@ rule of 2026-11-19 (C-012 a hard 1.05x; a short row over 1.05x a flag; nothing o
    same-session commit, drop, rename, refresh and load, ordered by a session counter, with the race guard.
 2. **The binding at resolution:** the catalog provider's schemas capture each planning load and register the
    resolved provider with it, so the re-bind knows what a held scan was bound to (its table UUID, metadata location
-   and schema) without a fork accessor.
+   and schema) without a fork accessor. Fix round 1: each Iceberg schema is wrapped once, where the provider registers
+   it, so `schema()` keeps one `Arc` and a non-Iceberg schema comes back as registered (F0, F1).
 3. **The re-bind** (`crates/repark-spark/src/view_ddl/frame_settings/held_iceberg.rs`, its row in the
    [map](../../../../crates/repark-spark/src/view_ddl/frame_settings/map.md)): inside the optimizer's first rule,
    once per `(catalog, identifier)` per plan, with the own-plan memo's table slot (`ReaderParseMemo::held_table` and
@@ -29,6 +33,10 @@ rule of 2026-11-19 (C-012 a hard 1.05x; a short row over 1.05x a flag; nothing o
    `core.py` changed, line-neutral).
 6. **`REFRESH TABLE` and `catalog.refreshTable`:** both load the named table once through the decorator (the
    epoch moves); `refreshTable` now runs the SQL door.
+7. **ENC-1 (fix round 1, F2, owner 2026-11-20):** the decorator and the one-table shim join the guard gate's
+   allowlist on three conditions: they wrap the guarded handle only (the decorator takes the guard's own
+   `GuardedCatalog` token), a refused commit records nothing, and a map-served table behaves as a fresh guarded load.
+   The tests are named in the module's map; the facade pairs are in `bar.md`.
 
 Not in 1a: the bare `writeTo` re-plan (unit 1b), the cached cells (unit 2, after A1), the path read (Q4 (b), its own
 card), and **refs and metadata tables (Q5): shed** (the two `time_travel.rs` files), as Fable §5 allows; their 16

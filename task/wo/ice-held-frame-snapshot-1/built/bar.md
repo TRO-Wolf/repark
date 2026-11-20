@@ -109,8 +109,36 @@ RePark writes `(1, 'a')`, `(2, 'b')`, `(9, 'z')` where Spark writes `('a', 1)`, 
 tags it `unit D`, so the gap's "0 silent" holds only with D excluded. `local_checkpoint_after_collect` is silent in the
 same way (count 2 against Spark's 3, on both builds) and is tagged D too.
 
+## The cells round 0 left open (fix round 1, F3)
+
+Each class is taken from the verdict files and checked against a fresh frame on main and on the head.
+
+| cell (per ANSI mode) | Spark | main | head | class |
+|---|---|---|---|---|
+| `M\|held_cast` (1) | ANSI on `CAST_INVALID_INPUT`; ANSI off the rows, `'zz'` as `NULL` | the old two rows | `Cannot cast string 'zz' to value of Int32 type` | **not 1a's: an existing card.** A fresh frame raises the same Arrow cast error on main and on the head, in both modes (and so does an in-memory frame), so the held frame now answers as a fresh read does. The cast is [STRING-CAST-LENIENT-1](../../../roadmap/mid-term/string-cast-lenient-1-card-2026-11-16.md) (junk text to the INT family refuses loudly). |
+| `D\|table\|local_checkpoint_after_collect` (1) | final `held.count()` 3 | 2 | 2 | **not 1a's: an existing card.** RePark's `localCheckpoint` returns its receiver, materialised, so the later `held.count()` reads the checkpoint; Spark returns a new Dataset and the original re-binds. [LOCAL-CHECKPOINT-NEW-FRAME-1](../../../roadmap/mid-term/local-checkpoint-new-frame-1-card-2026-10-03.md). The checkpoint's own rows and count match Spark. |
+| `D\|table\|own_collect_ow_expire_collect` (1) | `SparkException` (job aborted, the file is gone), then count 1 | `DataInvalid` (failed to open file), then count 2 | `DataInvalid`, then count 1 | **its own residual**, carded in [cards.md](cards.md) (ICE-EXPIRED-FILE-READ-ERROR-1): both engines raise on the deleted file, with a different error; the binding agrees. |
+| `WA\|table\|{alter_add, alter_drop, alter_rename, recreate, wt_create}\|copy` (5) | the new table's rows | the old rows | `COLUMNS_MISMATCH` or `TABLE_ID_MISMATCH` | **1b's.** The source is a bare `s.table(t)` and the action is `writeTo(copy).create()`: Spark re-plans the bare frame by name, which is 1b's re-plan; 1a raises loud where 1b will answer, as in group `B`'s 66 gap cells. |
+
+None of the four classes is fixed in this round: none is 1a's.
+
+## The 8 stored cells (fix round 1, F4)
+
+The head `58c7e307` stores old rows in 8 cells (4 per mode). **None of them is a bare-`writeTo` re-plan, so none is
+1b's: all 8 are the path read** (Q4 (b), [ICE-HELD-PATH-READ-1](../../../roadmap/mid-term/cards-2026-11-19/ice-held-path-read-1-card-2026-11-20.md)),
+a frame held from `spark.read.format("iceberg").load(<path>)`.
+
+| cell (both ANSI modes) | Spark stores | the head stores |
+|---|---|---|
+| `HA\|path\|delete\|copy` | `(2, 'b')` | `(1, 'a')`, `(2, 'b')` |
+| `HA\|path\|delete\|insel` | `(2, 'b')` | `(1, 'a')`, `(2, 'b')` |
+| `HA\|path\|insert\|copy` | `(1, 'a')`, `(2, 'b')`, `(9, 'z')` | `(1, 'a')`, `(2, 'b')` |
+| `HA\|path\|insert\|insel` | `(1, 'a')`, `(2, 'b')`, `(9, 'z')` | `(1, 'a')`, `(2, 'b')` |
+
+`copy` is `writeTo(<new>).create()` and `insel` is `INSERT INTO <new> SELECT * FROM` a view of the frame.
+
 ## Gates
 
-The head's Rust gates and facade suites are being re-run by the orchestrator, and the PR carries them.
+The fix round's gates are in [cost.md](cost.md)'s sibling section below and in the hand-back; the PR carries them.
 
 Up: [map.md](map.md).

@@ -7,12 +7,20 @@ texts (the main answer of a RAISE cell, in both verdict files) became `N`. The D
 file is gzipped with `gzip -9n`.
 
 - [probes/decide.py](probes/decide.py) — the D group's probe: the deciding cell and the schema-change writes under a held
-  table, with the own-plan actions after `collect` and `localCheckpoint`. Run as
-  `decide.py <engine> <warehouse parent> <out> <ansi>`. It imports `common`, which is not committed here (the lane's probe
-  directory holds it), so it runs from there.
+  table, with the own-plan actions after `collect` and `localCheckpoint`. Run from this directory as
+  `decide.py <engine> <warehouse parent> <out> <ansi>`; the Spark engine reads the runtime jar from `ICEBERG_JAR`.
+- [probes/common.py](probes/common.py) — the session builder (`lc`, a `type=hadoop` catalog, one per engine), the
+  condition reader and the row shapes `decide.py` imports (fix round 1, F5).
 - [probes/barcmp.py](probes/barcmp.py) — pairs each recorded cell with Spark's answer and writes one verdict per cell, with
-  the counts. Run as `barcmp.py <step 0 evidence/raw> <D raw dir> <bar dir> <verdicts out> main head`. Its bar run
-  directories are not committed.
+  the counts. Run as `barcmp.py <step 0 raw> <D raw> <bar> <verdicts out> <label> <label>`. It reads exactly three
+  directories, and only the first is in the repository:
+  1. `<step 0 raw>`: [../../evidence/raw/](../../evidence/raw/map.md), its `spark.jsonl.gz` and `rev-spark.jsonl.gz`.
+  2. `<D raw>`: `N/ice-1a-out/raw/`, holding `D-spark-true.jsonl` and `D-spark-false.jsonl`. They are the two
+     `raw/D-spark-ansi-*.jsonl.gz` files below, unzipped and renamed.
+  3. `<bar>`: `N/ice-1a-out/bar/`, one sub-directory per label, each holding the `<group>-<ansi>.jsonl` files the bar
+     runner writes (`cells.py` for `HW`, `WA`, `HA`, `P`, `S` and `X`; `rev.py` for `B`, `B2` and `M`; `decide.py` for
+     `D`). The labels are `main` (`9a48932f`), `head` (`58c7e307`) and `head-fix1` (this round's package). The bar
+     probes other than `decide.py` are in that session directory, not here.
 - [raw/head-58c7e307-verdicts.jsonl.gz](raw/head-58c7e307-verdicts.jsonl.gz) — the head `58c7e307` verdicts: 1980 rows (both
   ANSI modes, D included), each with the key, Spark's answer, main's and the head's answers, both verdicts, the stored
   flags and the unit tag.

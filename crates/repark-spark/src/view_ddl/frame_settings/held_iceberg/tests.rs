@@ -326,3 +326,46 @@ fn a_view_name_picks_the_binding_mode() {
     assert_eq!(view_mode("__rp_jl_1"), None);
     assert_eq!(view_mode("dv1"), Some(BindMode::View));
 }
+
+fn epoch(bed: &Bed) -> Option<u64> {
+    repark_iceberg::catalog::session_tables::table_epoch(
+        &bed.session.context().copied_config(),
+        "c",
+        &TableIdent::from_strs(["ns", "t"]).unwrap_or_else(|error| panic!("ident: {error}")),
+    )
+}
+
+async fn refused(bed: &Bed, sql: &str) -> String {
+    let text = match bed.session.sql(sql).await {
+        Ok(frame) => frame
+            .collect()
+            .await
+            .map_or_else(|error| error.to_string(), |_| String::new()),
+        Err(error) => error.to_string(),
+    };
+    assert!(text.contains("(ENC-1)"), "{sql}: {text}");
+    text
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_refused_write_moves_no_epoch_and_a_held_frame_answers_as_before() {
+    let bed = bed().await;
+    bed.run("ALTER TABLE c.ns.t SET TBLPROPERTIES ('encryption.key-id' = 'review-test-key')")
+        .await;
+    let held = bed.held().await;
+    assert_eq!(numbers(&held).await, vec![1, 2]);
+    let before = epoch(&bed);
+    assert!(before.is_some_and(|epoch| epoch > 0));
+    for sql in [
+        "INSERT INTO c.ns.t VALUES (9, 'z')",
+        "INSERT OVERWRITE c.ns.t VALUES (9, 'z')",
+        "DELETE FROM c.ns.t WHERE n = 1",
+        "UPDATE c.ns.t SET c = 'u' WHERE n = 1",
+        "MERGE INTO c.ns.t AS t USING (SELECT 9 AS n, 'z' AS c) AS s ON t.n = s.n \
+         WHEN NOT MATCHED THEN INSERT *",
+    ] {
+        refused(&bed, sql).await;
+        assert_eq!(epoch(&bed), before, "{sql}");
+        assert_eq!(numbers(&held).await, vec![1, 2], "{sql}");
+    }
+}
