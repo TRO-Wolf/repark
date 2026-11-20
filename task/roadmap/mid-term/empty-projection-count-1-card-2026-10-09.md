@@ -2,7 +2,7 @@
 
 **Status: CLOSED 2026-10-09** by unit EMPTY-PROJECTION-COUNT-1 (branch
 `fix/empty-projection-count-1`, ledger
-[empty-projection-count-1-ledger.md](../../ledgers/completed/empty-projection-count-1-ledger.md)):
+[empty-projection-count-1-ledger.md](../../ledgers/archive/2026-10/2026-10-09-empty-projection-count-1-ledger.md)):
 the three repros below answer on the head with Spark-equal counts, and the shared fix also
 covers the fourth `conform_batch` caller (the micro-batch provider). The MB-4 branch carries
 an open copy of this card; the later merge must reconcile the two (ledger D-1).

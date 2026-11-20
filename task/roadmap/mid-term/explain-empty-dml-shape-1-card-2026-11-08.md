@@ -1,6 +1,6 @@
 # Card EXPLAIN-EMPTY-DML-SHAPE-1: plain EXPLAIN of an empty DML shows the rewritten plan, and its pin asserts only that the output is non-empty
 
-**Date:** 2026-11-08. **Filed by:** the records clerk (`claude-haiku-5-5`), from the Opus 5.5 verdict of EMPTY-DML-SHARED-GUARD-1 (ledger [empty-dml-shared-guard-1-ledger.md](../../ledgers/completed/empty-dml-shared-guard-1-ledger.md), clause C-012, Opus 5.5 F1).
+**Date:** 2026-11-08. **Filed by:** the records clerk (`claude-haiku-5-5`), from the Opus 5.5 verdict of EMPTY-DML-SHARED-GUARD-1 (ledger [empty-dml-shared-guard-1-ledger.md](../../ledgers/archive/2026-11/2026-11-09-empty-dml-shared-guard-1-ledger.md), clause C-012, Opus 5.5 F1).
 
 **Status:** filed 2026-11-08, severity S3, not dispatched; awaiting the owner's charter. Advisory: no write either way.
 

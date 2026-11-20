@@ -122,4 +122,4 @@ override.
 
 - Up: [../map.md](../map.md)
 - Numbers: [../../../../docs/perf/facade-boundary-baseline.md](../../../../docs/perf/facade-boundary-baseline.md)
-- Ledger: [../../../../task/ledgers/staging/perf-facade-1-ledger.md](../../../../task/ledgers/completed/perf-facade-1-ledger.md)
+- Ledger: [../../../../task/ledgers/staging/perf-facade-1-ledger.md](../../../../task/ledgers/archive/2026-09/2026-09-11-perf-facade-1-ledger.md)

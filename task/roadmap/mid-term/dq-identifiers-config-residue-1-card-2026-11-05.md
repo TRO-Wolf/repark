@@ -1,6 +1,6 @@
 # Card DQ-IDENTIFIERS-CONFIG-RESIDUE-1: ten open leads from the double-quoted-identifiers refusal and its two verifiers
 
-**Date:** 2026-11-05. **Filed by:** the records clerk (`claude-haiku-5-5`), from the closure of [DQ-IDENTIFIERS-CONFIG-REFUSE-1](dq-identifiers-config-refuse-1-card-2026-11-05.md) (ledger [dq-identifiers-config-refuse-1-ledger.md](../../ledgers/completed/dq-identifiers-config-refuse-1-ledger.md), leads C-009 to C-018).
+**Date:** 2026-11-05. **Filed by:** the records clerk (`claude-haiku-5-5`), from the closure of [DQ-IDENTIFIERS-CONFIG-REFUSE-1](dq-identifiers-config-refuse-1-card-2026-11-05.md) (ledger [dq-identifiers-config-refuse-1-ledger.md](../../ledgers/archive/2026-11/2026-11-05-dq-identifiers-config-refuse-1-ledger.md), leads C-009 to C-018).
 
 **Status:** filed 2026-11-05, severity S3, not dispatched; awaiting the owner's charter. Neither verifier graded any lead as blocking. Lead L4 changes an answer after a `RESET` on a path that main already had; its grade is the owner's.
 

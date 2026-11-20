@@ -1,0 +1,18 @@
+{"tag": "D/la_utc/json_ml/d", "create_error": "datafusion engine error: Arrow error: Json error: Not valid JSON: EOF while parsing an object at line 1 column 1"}
+{"tag": "D/la_utc/json_ml/eb_hour", "create_error": "datafusion engine error: Arrow error: Json error: Not valid JSON: EOF while parsing an object at line 1 column 1"}
+{"tag": "D/la_utc/json_ml/sb_hour", "create_error": "datafusion engine error: Arrow error: Json error: Not valid JSON: EOF while parsing an object at line 1 column 1"}
+{"tag": "D/la_utc/csv_gz/d", "create_error": "Error during planning: No files found at file://<lane-scratchpad>"}
+{"tag": "D/la_utc/csv_gz/eb_hour", "create_error": "Error during planning: No files found at file://<lane-scratchpad>"}
+{"tag": "D/la_utc/csv_gzi/d", "create_error": "Error during planning: No files found at file://<lane-scratchpad>"}
+{"tag": "D/la_utc/csv_gzi/eb_hour", "create_error": "Error during planning: No files found at file://<lane-scratchpad>"}
+{"tag": "D/la_utc/csv_2i/d", "create_error": "datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'n' because the from data_type = Int64 does not equal Float64"}
+{"tag": "D/la_utc/csv_2i/eb_hour", "create_error": "datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'n' because the from data_type = Int64 does not equal Float64"}
+{"tag": "D/utc_la/json_ml/d", "create_error": "datafusion engine error: Arrow error: Json error: Not valid JSON: EOF while parsing an object at line 1 column 1"}
+{"tag": "D/utc_la/json_ml/eb_hour", "create_error": "datafusion engine error: Arrow error: Json error: Not valid JSON: EOF while parsing an object at line 1 column 1"}
+{"tag": "D/utc_la/json_ml/sb_hour", "create_error": "datafusion engine error: Arrow error: Json error: Not valid JSON: EOF while parsing an object at line 1 column 1"}
+{"tag": "D/utc_la/csv_gz/d", "create_error": "Error during planning: No files found at file://<lane-scratchpad>"}
+{"tag": "D/utc_la/csv_gz/eb_hour", "create_error": "Error during planning: No files found at file://<lane-scratchpad>"}
+{"tag": "D/utc_la/csv_gzi/d", "create_error": "Error during planning: No files found at file://<lane-scratchpad>"}
+{"tag": "D/utc_la/csv_gzi/eb_hour", "create_error": "Error during planning: No files found at file://<lane-scratchpad>"}
+{"tag": "D/utc_la/csv_2i/d", "create_error": "datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'n' because the from data_type = Int64 does not equal Float64"}
+{"tag": "D/utc_la/csv_2i/eb_hour", "create_error": "datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'n' because the from data_type = Int64 does not equal Float64"}

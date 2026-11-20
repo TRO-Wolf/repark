@@ -16,29 +16,29 @@ use datafusion::common::config::ConfigOptions;
 use datafusion::common::metadata::FieldMetadata;
 use datafusion::common::tree_node::{Transformed, TreeNodeRecursion};
 use datafusion::common::{DFSchemaRef, internal_datafusion_err};
-use datafusion::datasource::file_format::csv::CsvFormat;
-use datafusion::datasource::file_format::json::JsonFormat;
-use datafusion::datasource::listing::ListingTable;
-use datafusion::datasource::{ViewTable, provider_as_source, source_as_provider};
+use datafusion::datasource::{ViewTable, provider_as_source};
 use datafusion::error::Result;
 use datafusion::logical_expr::{
     Expr, Extension, LogicalPlan, Projection, TableProviderFilterPushDown, TableScan, TableType,
     UNNAMED_TABLE, UserDefinedLogicalNodeCore,
 };
-use datafusion::optimizer::{Analyzer, AnalyzerRule};
+use datafusion::optimizer::{Analyzer, AnalyzerRule, OptimizerConfig, OptimizerRule};
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::{DataFrame, SessionConfig};
-use repark_core::extension::{FrameViewSeat, LiveOptions, with_frame_view_seat};
+use repark_core::extension::{
+    FrameViewSeat, LiveOptions, ReaderParse, ReaderParseMemo, reader_parse_memo,
+    with_frame_view_seat,
+};
 use repark_core::frame_names;
 
 use crate::view_ddl::read::{MAX_VIEW_EXPANSION_DEPTH, nested_depth_refusal};
 use crate::view_ddl::temp_settings::{TempViewSettings, plan_under_overlay, view_filter_pushdown};
-use crate::view_ddl::temp_view::{definition_plan, replanning_scan};
+use crate::view_ddl::temp_view::replanning_scan;
 
 pub(crate) const FRAME_SETTINGS_RULE: &str = "repark_frame_settings";
+pub(crate) const READER_PARSE_RULE: &str = "repark_reader_parse";
 const NODE_NAME: &str = "FrameSettings";
 const WRITER_V2: &str = "_repark_writer_v2_";
-const MAX_LINEAGE_WALK: usize = 4096;
 
 thread_local! {
     static VIEW_BODY: Cell<usize> = const { Cell::new(0) };
@@ -265,9 +265,6 @@ pub(crate) fn frame_view(
     reader: LiveOptions,
 ) -> Arc<dyn TableProvider> {
     let (state, plan) = frame.clone().into_parts();
-    if reader_lineage(&plan) {
-        return DataFrame::new(state, unmarked(plan)).into_view();
-    }
     if replanning_scan(&plan) || scans_only(&plan) {
         return DataFrame::new(state, plan).into_view();
     }
@@ -311,57 +308,6 @@ fn scans_only(plan: &LogicalPlan) -> bool {
     walked.is_ok() && only
 }
 
-pub(crate) fn reader_lineage(plan: &LogicalPlan) -> bool {
-    let mut pending = vec![plan.clone()];
-    let mut walked = 0;
-    let mut found = false;
-    while let Some(next) = pending.pop() {
-        walked += 1;
-        if walked > MAX_LINEAGE_WALK {
-            return true;
-        }
-        let visited = next.apply_with_subqueries(|node| {
-            if let LogicalPlan::TableScan(scan) = node
-                && let Ok(provider) = source_as_provider(&scan.source)
-            {
-                if reader_scan(provider.as_ref()) {
-                    found = true;
-                    return Ok(TreeNodeRecursion::Stop);
-                }
-                if let Some(inner) = definition_plan(provider.as_ref())
-                    .or_else(|| provider.get_logical_plan().map(Cow::into_owned))
-                {
-                    pending.push(inner);
-                }
-            }
-            Ok(TreeNodeRecursion::Continue)
-        });
-        if found || visited.is_err() {
-            return true;
-        }
-    }
-    false
-}
-
-fn reader_scan(provider: &dyn TableProvider) -> bool {
-    let any: &dyn Any = provider;
-    any.downcast_ref::<ListingTable>().is_some_and(|table| {
-        let format: &dyn Any = table.options().format.as_ref();
-        format.is::<JsonFormat>() || format.is::<CsvFormat>()
-    })
-}
-
-fn unmarked(plan: LogicalPlan) -> LogicalPlan {
-    let original = plan.clone();
-    plan.transform_up_with_subqueries(|node| {
-        Ok(match marker(&node) {
-            Some(found) => Transformed::yes(found.input.clone()),
-            None => Transformed::no(node),
-        })
-    })
-    .map_or(original, |done| done.data)
-}
-
 fn writer_v2(name: &str) -> bool {
     name.rsplit('.')
         .next()
@@ -372,7 +318,11 @@ fn writer_v2(name: &str) -> bool {
 pub(crate) fn install(config: SessionConfig) -> SessionConfig {
     with_frame_view_seat(
         config,
-        FrameViewSeat::new(frame_view, Arc::new(FrameSettingsRule)),
+        FrameViewSeat::new(
+            frame_view,
+            Arc::new(FrameSettingsRule),
+            Arc::new(ReaderParseRule),
+        ),
     )
 }
 
@@ -466,6 +416,85 @@ fn closed_scan(found: &FrameSettingsNode, config: &ConfigOptions) -> Result<Logi
         .analyzer
         .execute_and_check(found.input.clone(), &options, |_, _| {})?;
     let view = FrameView::closed(analysed, Arc::clone(&found.settings));
+    closed_under(view, found.input.schema())
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct ReaderParseRule;
+
+impl OptimizerRule for ReaderParseRule {
+    #[allow(clippy::unnecessary_literal_bound)]
+    fn name(&self) -> &str {
+        READER_PARSE_RULE
+    }
+
+    fn rewrite(
+        &self,
+        plan: LogicalPlan,
+        config: &dyn OptimizerConfig,
+    ) -> Result<Transformed<LogicalPlan>> {
+        if !holds_parse(&plan)? {
+            return Ok(Transformed::no(plan));
+        }
+        let options = config.options();
+        let memo = reader_parse_memo();
+        plan.transform_down_with_subqueries(|node| parse_decided(node, &options, memo.as_deref()))
+    }
+}
+
+fn holds_parse(plan: &LogicalPlan) -> Result<bool> {
+    let mut found = false;
+    plan.apply_with_subqueries(|node| {
+        found = ReaderParse::of(node).is_some();
+        Ok(if found {
+            TreeNodeRecursion::Stop
+        } else {
+            TreeNodeRecursion::Continue
+        })
+    })?;
+    Ok(found)
+}
+
+fn parse_decided(
+    node: LogicalPlan,
+    options: &ConfigOptions,
+    memo: Option<&ReaderParseMemo>,
+) -> Result<Transformed<LogicalPlan>> {
+    let mut current = node;
+    let mut decided = false;
+    while let Some(parse) = ReaderParse::of(&current) {
+        let live = memo.map_or_else(|| parse.live().read(), |memo| memo.settled(parse.live()));
+        if let Some(live) = live
+            && !TempViewSettings::capture(&live).same_as(options)
+        {
+            return parse_closed(parse, &live, options).map(Transformed::yes);
+        }
+        let input = parse.input().clone();
+        current = input;
+        decided = true;
+    }
+    Ok(Transformed::new_transformed(current, decided))
+}
+
+fn parse_closed(
+    parse: &ReaderParse,
+    live: &ConfigOptions,
+    options: &ConfigOptions,
+) -> Result<LogicalPlan> {
+    let settings = Arc::new(TempViewSettings::capture(live));
+    let mut analysis = options.clone();
+    settings.apply(&mut analysis);
+    let analysed =
+        parse
+            .analyzer()
+            .execute_and_check(parse.copy().clone(), &analysis, |_, _| {})?;
+    closed_under(
+        FrameView::closed(analysed, settings),
+        parse.input().schema(),
+    )
+}
+
+fn closed_under(view: FrameView, wanted: &DFSchemaRef) -> Result<LogicalPlan> {
     let scan = TableScan::try_new(
         UNNAMED_TABLE,
         provider_as_source(Arc::new(view)),
@@ -474,7 +503,6 @@ fn closed_scan(found: &FrameSettingsNode, config: &ConfigOptions) -> Result<Logi
         None,
     )?;
     let columns = scan.projected_schema.columns();
-    let wanted = Arc::clone(found.input.schema());
     let exprs = columns
         .into_iter()
         .zip(wanted.iter())

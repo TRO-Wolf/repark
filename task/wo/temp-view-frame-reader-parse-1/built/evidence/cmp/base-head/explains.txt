@@ -1,0 +1,14 @@
+columns SAME 22
+df/codegen SAME 66
+df/cost SAME 66
+df/extended SAME 66
+df/formatted SAME 66
+df/simple SAME 66
+sql/explain SAME 22
+sql/explain_o SAME 22
+sql/explain_sa SAME 22
+sql/explain_where SAME 22
+sql/explain_where_o SAME 22
+sql/explain_where_sa SAME 22
+verbose DIFF 22
+DIFF KEYS 22

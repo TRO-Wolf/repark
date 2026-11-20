@@ -241,7 +241,7 @@ COVERAGE_ATTESTATION:
 - Gate: [../../../scripts/check_example_coverage.py](../../../scripts/check_example_coverage.py)
 - Pins: [../../../python/repark/tests/parity/test_examples_dataframe_d.py](../../../python/repark/tests/parity/test_examples_dataframe_d.py), [../../../python/repark/tests/parity/test_examples_window_catalog.py](../../../python/repark/tests/parity/test_examples_window_catalog.py)
 - Registry: [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) §7
-- Sibling: [ex-28-scalar-remainder-ledger.md](../completed/ex-28-scalar-remainder-ledger.md)
+- Sibling: [ex-28-scalar-remainder-ledger.md](../archive/2026-09/2026-09-11-ex-28-scalar-remainder-ledger.md)
 
 ```yaml
 SHIPPED_FLAG_REGISTER:

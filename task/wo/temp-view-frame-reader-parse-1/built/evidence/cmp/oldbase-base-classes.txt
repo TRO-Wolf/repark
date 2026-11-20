@@ -1,0 +1,134 @@
+SKIP not line json explain10.jsonl
+SKIP not line json explain_joins.jsonl
+A.jsonl
+    4 ('string-hms', 'csv_i', 'b')
+    8 ('string-hms', 'csv_i', 'error->rows')
+    8 ('string-hms', 'csv_i', 'shape')
+    4 ('string-hms', 'json_i', 'b')
+    7 ('string-hms', 'json_i', 'error->rows')
+    9 ('string-hms', 'json_i', 'shape')
+    4 ('string-hms', 'smart', 'b')
+    2 ('string-hms', 'smart', 'error->rows')
+    6 ('string-hms', 'smart', 'shape')
+    68 ('unit0-csv-user-schema', 'csv_sov', 'shape')
+E.jsonl
+    4 ('OTHER', '?', 'shape')
+T.jsonl
+    20 ('string-hms', 'json_i', 'b')
+    6 ('string-hms', 'smart', 'b')
+W0.jsonl
+    8 ('string-hms', 'json_i', 'b')
+W1.jsonl
+    8 ('string-hms', 'json_i', 'b')
+W2.jsonl
+    8 ('string-hms', 'json_i', 'b')
+W3.jsonl
+    8 ('string-hms', 'json_i', 'b')
+Z0.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+Z1.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+Z2.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+Z3.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+Z4.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+Z5.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+Z6.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+Z7.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+attack.jsonl
+    1 ('OTHER', '?', 'shape')
+attack2.jsonl
+    1 ('OTHER', '?', 'shape')
+attack3.jsonl
+    1 ('OTHER', '?', 'shape')
+bar-rc.jsonl
+    4 ('OTHER', '?', 'shape')
+bar-rev.jsonl
+    15 ('OTHER', '?', 'shape')
+m-Z0.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+m-Z1.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+m-Z2.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+m-Z3.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+m-Z4.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+m-Z5.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+m-Z6.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+m-Z7.jsonl
+    5 ('string-hms', 'csv_0', 'b')
+    5 ('string-hms', 'csv_ns', 'b')
+    5 ('string-hms', 'json_i', 'b')
+readers.jsonl
+    2 ('OTHER', '?', 'shape')
+    36 ('string-hms', 'csv_ns', 'shape')
+    40 ('string-hms', 'json_i', 'shape')
+    40 ('string-hms', 'text_v', 'shape')
+OTHER 28
+E.jsonl | E/la/x_csv_s | ['shape'] | {'tag': 'E/la/x_csv_s', 'plan': 'logical_plan | SubqueryAlias: x_csv_s\n  Projection: CAST(?table?.column_1 AS Int32) AS n, to_timestamp(?table?.column_2) AS ts\n    Filter: CAST(?table?.column_1 AS I | {'tag': 'E/la/x_csv_s', 'plan': 'logical_plan | SubqueryAlias: x_csv_s\n  Projection: CAST(?table?.column_1 AS Int32) AS n, to_timestamp(?table?.column_2) AS ts\n    Filter: __repark_cast_shield__(CAS
+E.jsonl | E/la/xh_csv_s | ['shape'] | {'tag': 'E/la/xh_csv_s', 'plan': 'logical_plan | SubqueryAlias: xh_csv_s\n  Projection: datafusion.public.__repark_selx_843b0eca76b8426983576c9a69823c1c.n AS n, datafusion.public.__repark_selx_843b0ec | {'tag': 'E/la/xh_csv_s', 'plan': 'logical_plan | SubqueryAlias: xh_csv_s\n  Projection: datafusion.public.__repark_selx_515fa7ee083743c2845dafb993ac6726.n AS n, datafusion.public.__repark_selx_515fa7e
+E.jsonl | E/utc/x_csv_s | ['shape'] | {'tag': 'E/utc/x_csv_s', 'plan': 'logical_plan | SubqueryAlias: x_csv_s\n  Projection: CAST(?table?.column_1 AS Int32) AS n, to_timestamp(?table?.column_2) AS ts\n    Filter: CAST(?table?.column_1 AS  | {'tag': 'E/utc/x_csv_s', 'plan': 'logical_plan | SubqueryAlias: x_csv_s\n  Projection: CAST(?table?.column_1 AS Int32) AS n, to_timestamp(?table?.column_2) AS ts\n    Filter: __repark_cast_shield__(CA
+E.jsonl | E/utc/xh_csv_s | ['shape'] | {'tag': 'E/utc/xh_csv_s', 'plan': 'logical_plan | SubqueryAlias: xh_csv_s\n  Projection: datafusion.public.__repark_selx_843b0eca76b8426983576c9a69823c1c.n AS n, datafusion.public.__repark_selx_843b0e | {'tag': 'E/utc/xh_csv_s', 'plan': 'logical_plan | SubqueryAlias: xh_csv_s\n  Projection: datafusion.public.__repark_selx_515fa7ee083743c2845dafb993ac6726.n AS n, datafusion.public.__repark_selx_515fa7
+attack.jsonl | overlay/start_time | ['shape'] | {'tag': 'overlay/start_time', 'rows': ['(True, True, True, True)'], 'types': ['boolean', 'boolean', 'boolean', 'boolean']} | {'tag': 'overlay/start_time', 'rows': ['(True, True, True, False)'], 'types': ['boolean', 'boolean', 'boolean', 'boolean']}
+attack2.jsonl | overlay/start_time | ['shape'] | {'tag': 'overlay/start_time', 'rows': ['(True, True, True, True)'], 'types': ['boolean', 'boolean', 'boolean', 'boolean']} | {'tag': 'overlay/start_time', 'rows': ['(True, True, True, False)'], 'types': ['boolean', 'boolean', 'boolean', 'boolean']}
+attack3.jsonl | overlay/start_time | ['shape'] | {'tag': 'overlay/start_time', 'rows': ['(True, True, True, True)'], 'types': ['boolean', 'boolean', 'boolean', 'boolean']} | {'tag': 'overlay/start_time', 'rows': ['(True, True, True, False)'], 'types': ['boolean', 'boolean', 'boolean', 'boolean']}
+bar-rc.jsonl | current_date/df/utc_kir | ['shape'] | {'cell': 'current_date/df/utc_kir', 'result': {'direct': ['2026-11-19'], 'rows': ['2026-11-19'], 'types': ['string']}} | {'cell': 'current_date/df/utc_kir', 'result': {'direct': ['2026-11-20'], 'rows': ['2026-11-19'], 'types': ['string']}}
+bar-rc.jsonl | current_date/df/utc_pago | ['shape'] | {'cell': 'current_date/df/utc_pago', 'result': {'direct': ['2026-11-18'], 'rows': ['2026-11-19'], 'types': ['string']}} | {'cell': 'current_date/df/utc_pago', 'result': {'direct': ['2026-11-19'], 'rows': ['2026-11-19'], 'types': ['string']}}
+bar-rc.jsonl | current_date/sql/utc_kir | ['shape'] | {'cell': 'current_date/sql/utc_kir', 'result': {'direct': ['2026-11-19'], 'rows': ['2026-11-19'], 'types': ['string']}} | {'cell': 'current_date/sql/utc_kir', 'result': {'direct': ['2026-11-20'], 'rows': ['2026-11-19'], 'types': ['string']}}
+bar-rc.jsonl | current_date/sql/utc_pago | ['shape'] | {'cell': 'current_date/sql/utc_pago', 'result': {'direct': ['2026-11-18'], 'rows': ['2026-11-19'], 'types': ['string']}} | {'cell': 'current_date/sql/utc_pago', 'result': {'direct': ['2026-11-19'], 'rows': ['2026-11-19'], 'types': ['string']}}
+bar-rev.jsonl | direct/cdate/America/Los_Angeles | ['shape'] | {'body': 'cdate', 'cell': 'direct/cdate/America/Los_Angeles', 'kind': 'direct', 'result': {'rows': ['2026-11-18'], 'types': ['string']}} | {'body': 'cdate', 'cell': 'direct/cdate/America/Los_Angeles', 'kind': 'direct', 'result': {'rows': ['2026-11-19'], 'types': ['string']}}
+bar-rev.jsonl | direct/lts/America/Los_Angeles | ['shape'] | {'body': 'lts', 'cell': 'direct/lts/America/Los_Angeles', 'kind': 'direct', 'result': {'rows': ['23'], 'types': ['int']}} | {'body': 'lts', 'cell': 'direct/lts/America/Los_Angeles', 'kind': 'direct', 'result': {'rows': ['10'], 'types': ['int']}}
+bar-rev.jsonl | direct/lts/UTC | ['shape'] | {'body': 'lts', 'cell': 'direct/lts/UTC', 'kind': 'direct', 'result': {'rows': ['7'], 'types': ['int']}} | {'body': 'lts', 'cell': 'direct/lts/UTC', 'kind': 'direct', 'result': {'rows': ['18'], 'types': ['int']}}
+bar-rev.jsonl | direct/now/America/Los_Angeles | ['shape'] | {'body': 'now', 'cell': 'direct/now/America/Los_Angeles', 'kind': 'direct', 'result': {'rows': ['23'], 'types': ['int']}} | {'body': 'now', 'cell': 'direct/now/America/Los_Angeles', 'kind': 'direct', 'result': {'rows': ['10'], 'types': ['int']}}
+bar-rev.jsonl | direct/now/UTC | ['shape'] | {'body': 'now', 'cell': 'direct/now/UTC', 'kind': 'direct', 'result': {'rows': ['7'], 'types': ['int']}} | {'body': 'now', 'cell': 'direct/now/UTC', 'kind': 'direct', 'result': {'rows': ['18'], 'types': ['int']}}
+bar-rev.jsonl | now_fn/df/cdate/la_utc | ['shape'] | {'body': 'cdate', 'cell': 'now_fn/df/cdate/la_utc', 'dir': 'la_utc', 'kind': 'now_fn', 'result': {'rows': ['2026-11-18'], 'types': ['string']}} | {'body': 'cdate', 'cell': 'now_fn/df/cdate/la_utc', 'dir': 'la_utc', 'kind': 'now_fn', 'result': {'rows': ['2026-11-19'], 'types': ['string']}}
+bar-rev.jsonl | now_fn/df/lts/la_utc | ['shape'] | {'body': 'lts', 'cell': 'now_fn/df/lts/la_utc', 'dir': 'la_utc', 'kind': 'now_fn', 'result': {'rows': ['23'], 'types': ['int']}} | {'body': 'lts', 'cell': 'now_fn/df/lts/la_utc', 'dir': 'la_utc', 'kind': 'now_fn', 'result': {'rows': ['10'], 'types': ['int']}}
+bar-rev.jsonl | now_fn/df/lts/utc_la | ['shape'] | {'body': 'lts', 'cell': 'now_fn/df/lts/utc_la', 'dir': 'utc_la', 'kind': 'now_fn', 'result': {'rows': ['7'], 'types': ['int']}} | {'body': 'lts', 'cell': 'now_fn/df/lts/utc_la', 'dir': 'utc_la', 'kind': 'now_fn', 'result': {'rows': ['18'], 'types': ['int']}}
+bar-rev.jsonl | now_fn/df/now/la_utc | ['shape'] | {'body': 'now', 'cell': 'now_fn/df/now/la_utc', 'dir': 'la_utc', 'kind': 'now_fn', 'result': {'rows': ['23'], 'types': ['int']}} | {'body': 'now', 'cell': 'now_fn/df/now/la_utc', 'dir': 'la_utc', 'kind': 'now_fn', 'result': {'rows': ['10'], 'types': ['int']}}
+bar-rev.jsonl | now_fn/df/now/utc_la | ['shape'] | {'body': 'now', 'cell': 'now_fn/df/now/utc_la', 'dir': 'utc_la', 'kind': 'now_fn', 'result': {'rows': ['7'], 'types': ['int']}} | {'body': 'now', 'cell': 'now_fn/df/now/utc_la', 'dir': 'utc_la', 'kind': 'now_fn', 'result': {'rows': ['18'], 'types': ['int']}}
+bar-rev.jsonl | now_fn/sql/cdate/la_utc | ['shape'] | {'body': 'cdate', 'cell': 'now_fn/sql/cdate/la_utc', 'dir': 'la_utc', 'kind': 'now_fn', 'result': {'rows': ['2026-11-18'], 'types': ['string']}} | {'body': 'cdate', 'cell': 'now_fn/sql/cdate/la_utc', 'dir': 'la_utc', 'kind': 'now_fn', 'result': {'rows': ['2026-11-19'], 'types': ['string']}}
+bar-rev.jsonl | now_fn/sql/lts/la_utc | ['shape'] | {'body': 'lts', 'cell': 'now_fn/sql/lts/la_utc', 'dir': 'la_utc', 'kind': 'now_fn', 'result': {'rows': ['23'], 'types': ['int']}} | {'body': 'lts', 'cell': 'now_fn/sql/lts/la_utc', 'dir': 'la_utc', 'kind': 'now_fn', 'result': {'rows': ['10'], 'types': ['int']}}
+bar-rev.jsonl | now_fn/sql/lts/utc_la | ['shape'] | {'body': 'lts', 'cell': 'now_fn/sql/lts/utc_la', 'dir': 'utc_la', 'kind': 'now_fn', 'result': {'rows': ['7'], 'types': ['int']}} | {'body': 'lts', 'cell': 'now_fn/sql/lts/utc_la', 'dir': 'utc_la', 'kind': 'now_fn', 'result': {'rows': ['18'], 'types': ['int']}}
+bar-rev.jsonl | now_fn/sql/now/la_utc | ['shape'] | {'body': 'now', 'cell': 'now_fn/sql/now/la_utc', 'dir': 'la_utc', 'kind': 'now_fn', 'result': {'rows': ['23'], 'types': ['int']}} | {'body': 'now', 'cell': 'now_fn/sql/now/la_utc', 'dir': 'la_utc', 'kind': 'now_fn', 'result': {'rows': ['10'], 'types': ['int']}}
+bar-rev.jsonl | now_fn/sql/now/utc_la | ['shape'] | {'body': 'now', 'cell': 'now_fn/sql/now/utc_la', 'dir': 'utc_la', 'kind': 'now_fn', 'result': {'rows': ['7'], 'types': ['int']}} | {'body': 'now', 'cell': 'now_fn/sql/now/utc_la', 'dir': 'utc_la', 'kind': 'now_fn', 'result': {'rows': ['18'], 'types': ['int']}}
+readers.jsonl | ansi_false/utc_la/ice_t/create | ['shape'] | {'tag': 'ansi_false/utc_la/ice_t/create', 'error': 'Cannot find a snapshot older than 2026-11-19T03:43:47+00:00'} | {'tag': 'ansi_false/utc_la/ice_t/create', 'error': 'Cannot find a snapshot older than 2026-11-19T14:26:56+00:00'}
+readers.jsonl | ansi_true/utc_la/ice_t/create | ['shape'] | {'tag': 'ansi_true/utc_la/ice_t/create', 'error': 'Cannot find a snapshot older than 2026-11-19T03:43:47+00:00'} | {'tag': 'ansi_true/utc_la/ice_t/create', 'error': 'Cannot find a snapshot older than 2026-11-19T14:26:56+00:00'}

@@ -581,6 +581,23 @@ def _schema_fields(schema: Any) -> list[dict[str, Any]]:
     )
 
 
+def _session_timestamp_text_columns(schema: Any, frame: DataFrame) -> list[str]:
+    from repark.spark.types import TimestampNTZType, TimestampType
+
+    fields = [] if schema is None else _schema_fields(schema)
+    if not any(isinstance(field["dataType"], TimestampType) for field in fields):
+        return []
+    columns = list(frame.columns)
+    by_case = {name.casefold(): name for name in columns}
+    hits = [field["name"].casefold() in by_case for field in fields]
+    generic = all(col.lower().startswith("column") or col.startswith("_c") for col in columns)
+    pairs = list(zip(columns, fields, strict=False))
+    if all(hits) or (any(hits) and not generic):
+        pairs = [(by_case.get(field["name"].casefold()), field) for field in fields]
+    ntz = {name for name, field in pairs if isinstance(field["dataType"], TimestampNTZType)}
+    return [col for col, dtype in frame.dtypes if dtype == "timestamp_ntz" and col not in ntz]
+
+
 def _reject_csv_json_parse_options(options: dict[str, str], *, is_csv: bool) -> None:
     from repark.errors import AnalysisException
 

@@ -2,7 +2,7 @@
 
 **Filed:** 2026-11-03. **Filed by:** `claude-haiku-5-5` (the RP-65 records round), from the Opus 5.5 builder's hand-back and the landed line of the fork card.
 
-**Status:** closed 2026-11-03 at `bbd87737` (the RP-65 PR #1246, squashed to main as `63bbb1b6`) after the two verifiers. The unit ledger is [rp-65-idless-repin-1-ledger.md](../../ledgers/completed/rp-65-idless-repin-1-ledger.md). Lead L1 stays open on its own card, and lead L2 is recorded below against the fork's S-40.
+**Status:** closed 2026-11-03 at `bbd87737` (the RP-65 PR #1246, squashed to main as `63bbb1b6`) after the two verifiers. The unit ledger is [rp-65-idless-repin-1-ledger.md](../../ledgers/archive/2026-11/2026-11-03-rp-65-idless-repin-1-ledger.md). Lead L1 stays open on its own card, and lead L2 is recorded below against the fork's S-40.
 
 **Target pin:** `66901f02a2df26098cfe073605152aeb518808f5`, the squash of fork PR `#381` (F-IDLESS-TOPLEVEL-POSITIONAL-1, merged 2026-11-02), moved from `56ff5545` (fork PR `#380`). The fork card is [f-idless-toplevel-positional-1-card-2026-11-01.md](f-idless-toplevel-positional-1-card-2026-11-01.md).
 

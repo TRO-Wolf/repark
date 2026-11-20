@@ -1,6 +1,6 @@
 # Card META-DELETE-EMPTY-COMMIT-1: a DELETE on a required column that matches no row commits an empty snapshot through the metadata-delete door
 
-**Date:** 2026-11-08. **Filed by:** the records clerk (`claude-haiku-5-5`), from the verdicts of EMPTY-DML-SHARED-GUARD-1 (ledger [empty-dml-shared-guard-1-ledger.md](../../ledgers/completed/empty-dml-shared-guard-1-ledger.md), clause C-013).
+**Date:** 2026-11-08. **Filed by:** the records clerk (`claude-haiku-5-5`), from the verdicts of EMPTY-DML-SHARED-GUARD-1 (ledger [empty-dml-shared-guard-1-ledger.md](../../ledgers/archive/2026-11/2026-11-09-empty-dml-shared-guard-1-ledger.md), clause C-013).
 
 **Status:** filed 2026-11-08, severity S3, not dispatched; awaiting the owner's charter. The verdicts recorded the residue and did not grade it. It is not a wrong write: rows and data files are unchanged.
 

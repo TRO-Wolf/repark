@@ -11,6 +11,8 @@ transforms, terminal actions, schema introspection, and Arrow C Stream export.
 
 - [`mod.rs`](mod.rs) — the binding: plan access, terminals, builders, schema, and
   stream export.
+  **TEMP-VIEW-FRAME-READER-PARSE-1 (2026-11-19):** `_reader_parse`, private to the facade's JSON and CSV reader, wraps the frame in `repark_core::extension::ReaderParse` when its session carries the frame seat, else answers `None`.
+  F1: `ReaderParseMemo` (not added to the module; `PyDataFrame._reader_parse_memo()` makes one) wraps `repark_core::extension::ReaderParseMemo`; `enter()` puts the memo in scope and answers the one it replaced, `leave(previous)` restores that one; the facade's own-plan actions run between them in a `finally`. No Rust frame calls back into Python, so pyarrow's GIL release inside an action stays balanced (a callback inside a PyO3 method aborted the process on `pa.table`).
   **STAMP-2-R5P6-2 (2026-10-07):** `join_type_from_str` widens to `pub(crate)`: the
   native join door in `../frame_lineage.rs` maps the facade's join type through it.
   **STAMP-2-R5P6-2 step 3 (2026-10-07):** `PyDataFrame` reads its name rule once per

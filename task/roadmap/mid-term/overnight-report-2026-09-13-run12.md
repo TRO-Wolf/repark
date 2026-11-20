@@ -116,6 +116,6 @@ After the critic-logic remediation (exact-type gates), a same-box A/B put the ga
 
 ## Pointers
 
-- Up: [map.md](map.md) · Ledger: [../../ledgers/completed/facade-3-ledger.md](../../ledgers/completed/facade-3-ledger.md)
+- Up: [map.md](map.md) · Ledger: [../../ledgers/completed/facade-3-ledger.md](../../ledgers/archive/2026-09/2026-09-13-facade-3-ledger.md)
 - Perf: [../../../docs/perf/facade-3-cdf-step3-2026-09-13.md](../../../docs/perf/facade-3-cdf-step3-2026-09-13.md)
 - Audit: [../epic-term/facade-audit-2026-09-10.md](../epic-term/facade-audit-2026-09-10.md)
