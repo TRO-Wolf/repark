@@ -53,6 +53,14 @@ fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
+#[must_use]
+pub fn same_state(seen: &Table, table: &Table) -> bool {
+    seen.metadata_location().is_some()
+        && seen.metadata_location() == table.metadata_location()
+        && seen.metadata().uuid() == table.metadata().uuid()
+        && seen.metadata().last_updated_ms() == table.metadata().last_updated_ms()
+}
+
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone)]
 pub enum TableState {
@@ -63,10 +71,7 @@ pub enum TableState {
 impl TableState {
     fn same_as(&self, table: &Table) -> bool {
         match self {
-            Self::Live(seen) => {
-                seen.metadata_location().is_some()
-                    && seen.metadata_location() == table.metadata_location()
-            }
+            Self::Live(seen) => same_state(seen, table),
             Self::Dropped => false,
         }
     }
