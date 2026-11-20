@@ -1,0 +1,342 @@
+===== spark surface=D direction=backward on=k1 (BIGINT, tolerance 2, how=left, ANSI on)
+== Parsed Logical Plan ==
+'AsOfJoin ((t#21322L >= t#21323L) AND (t#21323L >= (t#21322L - 2))), (k1#21313 = k1#21318), LeftOuter
+:- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+:  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
++- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+   +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Analyzed Logical Plan ==
+lid: int, k1: string, k2: int, t: bigint, lv: string, rid: int, k1: string, k2: int, t: bigint, rv: string
+AsOfJoin ((t#21322L >= t#21323L) AND (t#21323L >= (t#21322L - cast(2 as bigint)))), (k1#21313 = k1#21318), LeftOuter
+:- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+:  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
++- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+   +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Optimized Logical Plan ==
+Project [lid#21312, k1#21313, k2#21314, t#21322L, lv#21316, __nearest_right__#21325.rid AS rid#21328, __nearest_right__#21325.k1 AS k1#21329, __nearest_right__#21325.k2 AS k2#21330, __nearest_right__#21325.t AS t#21331L, __nearest_right__#21325.rv AS rv#21332]
++- Join LeftOuter, ((t#21333L <=> t#21322L) AND (k1#21313 = k1#21318))
+   :- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+   :  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
+   +- Aggregate [t#21333L, k1#21318], [min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), (t#21333L - t#21323L)) AS __nearest_right__#21325, t#21333L, k1#21318]
+      +- Join Inner, ((t#21333L >= t#21323L) AND (t#21323L >= (t#21333L - 2)))
+         :- Aggregate [t#21322L], [t#21322L AS t#21333L]
+         :  +- Project [cast(s#21315 as bigint) AS t#21322L]
+         :     +- Filter (isnotnull(s#21315) AND isnotnull(cast(s#21315 as bigint)))
+         :        +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
+         +- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+            +- Filter ((isnotnull(s#21320) AND isnotnull(cast(s#21320 as bigint))) AND isnotnull(k1#21318))
+               +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- Project [lid#21312, k1#21313, k2#21314, t#21322L, lv#21316, __nearest_right__#21325.rid AS rid#21328, __nearest_right__#21325.k1 AS k1#21329, __nearest_right__#21325.k2 AS k2#21330, __nearest_right__#21325.t AS t#21331L, __nearest_right__#21325.rv AS rv#21332]
+   +- SortMergeJoin [coalesce(t#21322L, 0), isnull(t#21322L), k1#21313], [coalesce(t#21333L, 0), isnull(t#21333L), k1#21318], LeftOuter
+      :- Sort [coalesce(t#21322L, 0) ASC NULLS FIRST, isnull(t#21322L) ASC NULLS FIRST, k1#21313 ASC NULLS FIRST], false, 0
+      :  +- Exchange hashpartitioning(coalesce(t#21322L, 0), isnull(t#21322L), k1#21313, 1), ENSURE_REQUIREMENTS, [plan_id=181280]
+      :     +- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+      :        +- Scan ExistingRDD[lid#21312,k1#21313,k2#21314,s#21315,lv#21316]
+      +- Sort [coalesce(t#21333L, 0) ASC NULLS FIRST, isnull(t#21333L) ASC NULLS FIRST, k1#21318 ASC NULLS FIRST], false, 0
+         +- Exchange hashpartitioning(coalesce(t#21333L, 0), isnull(t#21333L), k1#21318, 1), ENSURE_REQUIREMENTS, [plan_id=181281]
+            +- SortAggregate(key=[t#21333L, k1#21318], functions=[min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), (t#21333L - t#21323L))], output=[__nearest_right__#21325, t#21333L, k1#21318])
+               +- Sort [t#21333L ASC NULLS FIRST, k1#21318 ASC NULLS FIRST], false, 0
+                  +- Exchange hashpartitioning(t#21333L, k1#21318, 1), ENSURE_REQUIREMENTS, [plan_id=181275]
+                     +- SortAggregate(key=[t#21333L, k1#21318], functions=[partial_min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), (t#21333L - t#21323L))], output=[t#21333L, k1#21318, valueWithExtremumOrdering#21336, extremumOrdering#21337L])
+                        +- Sort [t#21333L ASC NULLS FIRST, k1#21318 ASC NULLS FIRST], false, 0
+                           +- CartesianProduct ((t#21333L >= t#21323L) AND (t#21323L >= (t#21333L - 2)))
+                              :- HashAggregate(keys=[t#21322L], functions=[], output=[t#21333L])
+                              :  +- Exchange hashpartitioning(t#21322L, 1), ENSURE_REQUIREMENTS, [plan_id=181268]
+                              :     +- HashAggregate(keys=[t#21322L], functions=[], output=[t#21322L])
+                              :        +- Project [cast(s#21315 as bigint) AS t#21322L]
+                              :           +- Filter (isnotnull(s#21315) AND isnotnull(cast(s#21315 as bigint)))
+                              :              +- Scan ExistingRDD[lid#21312,k1#21313,k2#21314,s#21315,lv#21316]
+                              +- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+                                 +- Filter ((isnotnull(s#21320) AND isnotnull(cast(s#21320 as bigint))) AND isnotnull(k1#21318))
+                                    +- Scan ExistingRDD[rid#21317,k1#21318,k2#21319,s#21320,rv#21321]
+
+===== spark surface=D direction=backward on=none (BIGINT, tolerance 2, how=left, ANSI on)
+== Parsed Logical Plan ==
+'AsOfJoin ((t#21322L >= t#21323L) AND (t#21323L >= (t#21322L - 2))), LeftOuter
+:- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+:  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
++- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+   +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Analyzed Logical Plan ==
+lid: int, k1: string, k2: int, t: bigint, lv: string, rid: int, k1: string, k2: int, t: bigint, rv: string
+AsOfJoin ((t#21322L >= t#21323L) AND (t#21323L >= (t#21322L - cast(2 as bigint)))), LeftOuter
+:- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+:  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
++- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+   +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Optimized Logical Plan ==
+Project [lid#21312, k1#21313, k2#21314, t#21322L, lv#21316, __nearest_right__#21419.rid AS rid#21422, __nearest_right__#21419.k1 AS k1#21423, __nearest_right__#21419.k2 AS k2#21424, __nearest_right__#21419.t AS t#21425L, __nearest_right__#21419.rv AS rv#21426]
++- Join LeftOuter, (t#21427L <=> t#21322L)
+   :- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+   :  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
+   +- Aggregate [t#21427L], [min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), (t#21427L - t#21323L)) AS __nearest_right__#21419, t#21427L]
+      +- Join Inner, ((t#21427L >= t#21323L) AND (t#21323L >= (t#21427L - 2)))
+         :- Aggregate [t#21322L], [t#21322L AS t#21427L]
+         :  +- Project [cast(s#21315 as bigint) AS t#21322L]
+         :     +- Filter (isnotnull(s#21315) AND isnotnull(cast(s#21315 as bigint)))
+         :        +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
+         +- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+            +- Filter (isnotnull(s#21320) AND isnotnull(cast(s#21320 as bigint)))
+               +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- Project [lid#21312, k1#21313, k2#21314, t#21322L, lv#21316, __nearest_right__#21419.rid AS rid#21422, __nearest_right__#21419.k1 AS k1#21423, __nearest_right__#21419.k2 AS k2#21424, __nearest_right__#21419.t AS t#21425L, __nearest_right__#21419.rv AS rv#21426]
+   +- SortMergeJoin [coalesce(t#21322L, 0), isnull(t#21322L)], [coalesce(t#21427L, 0), isnull(t#21427L)], LeftOuter
+      :- Sort [coalesce(t#21322L, 0) ASC NULLS FIRST, isnull(t#21322L) ASC NULLS FIRST], false, 0
+      :  +- Exchange hashpartitioning(coalesce(t#21322L, 0), isnull(t#21322L), 1), ENSURE_REQUIREMENTS, [plan_id=181498]
+      :     +- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+      :        +- Scan ExistingRDD[lid#21312,k1#21313,k2#21314,s#21315,lv#21316]
+      +- Sort [coalesce(t#21427L, 0) ASC NULLS FIRST, isnull(t#21427L) ASC NULLS FIRST], false, 0
+         +- Exchange hashpartitioning(coalesce(t#21427L, 0), isnull(t#21427L), 1), ENSURE_REQUIREMENTS, [plan_id=181499]
+            +- SortAggregate(key=[t#21427L], functions=[min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), (t#21427L - t#21323L))], output=[__nearest_right__#21419, t#21427L])
+               +- Sort [t#21427L ASC NULLS FIRST], false, 0
+                  +- Exchange hashpartitioning(t#21427L, 1), ENSURE_REQUIREMENTS, [plan_id=181493]
+                     +- SortAggregate(key=[t#21427L], functions=[partial_min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), (t#21427L - t#21323L))], output=[t#21427L, valueWithExtremumOrdering#21430, extremumOrdering#21431L])
+                        +- Sort [t#21427L ASC NULLS FIRST], false, 0
+                           +- CartesianProduct ((t#21427L >= t#21323L) AND (t#21323L >= (t#21427L - 2)))
+                              :- HashAggregate(keys=[t#21322L], functions=[], output=[t#21427L])
+                              :  +- Exchange hashpartitioning(t#21322L, 1), ENSURE_REQUIREMENTS, [plan_id=181486]
+                              :     +- HashAggregate(keys=[t#21322L], functions=[], output=[t#21322L])
+                              :        +- Project [cast(s#21315 as bigint) AS t#21322L]
+                              :           +- Filter (isnotnull(s#21315) AND isnotnull(cast(s#21315 as bigint)))
+                              :              +- Scan ExistingRDD[lid#21312,k1#21313,k2#21314,s#21315,lv#21316]
+                              +- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+                                 +- Filter (isnotnull(s#21320) AND isnotnull(cast(s#21320 as bigint)))
+                                    +- Scan ExistingRDD[rid#21317,k1#21318,k2#21319,s#21320,rv#21321]
+
+===== spark surface=D direction=forward on=k1 (BIGINT, tolerance 2, how=left, ANSI on)
+== Parsed Logical Plan ==
+'AsOfJoin ((t#21322L <= t#21323L) AND (t#21323L <= (t#21322L + 2))), (k1#21313 = k1#21318), LeftOuter
+:- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+:  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
++- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+   +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Analyzed Logical Plan ==
+lid: int, k1: string, k2: int, t: bigint, lv: string, rid: int, k1: string, k2: int, t: bigint, rv: string
+AsOfJoin ((t#21322L <= t#21323L) AND (t#21323L <= (t#21322L + cast(2 as bigint)))), (k1#21313 = k1#21318), LeftOuter
+:- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+:  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
++- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+   +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Optimized Logical Plan ==
+Project [lid#21312, k1#21313, k2#21314, t#21322L, lv#21316, __nearest_right__#21511.rid AS rid#21514, __nearest_right__#21511.k1 AS k1#21515, __nearest_right__#21511.k2 AS k2#21516, __nearest_right__#21511.t AS t#21517L, __nearest_right__#21511.rv AS rv#21518]
++- Join LeftOuter, ((t#21519L <=> t#21322L) AND (k1#21313 = k1#21318))
+   :- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+   :  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
+   +- Aggregate [t#21519L, k1#21318], [min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), (t#21323L - t#21519L)) AS __nearest_right__#21511, t#21519L, k1#21318]
+      +- Join Inner, ((t#21519L <= t#21323L) AND (t#21323L <= (t#21519L + 2)))
+         :- Aggregate [t#21322L], [t#21322L AS t#21519L]
+         :  +- Project [cast(s#21315 as bigint) AS t#21322L]
+         :     +- Filter (isnotnull(s#21315) AND isnotnull(cast(s#21315 as bigint)))
+         :        +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
+         +- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+            +- Filter ((isnotnull(s#21320) AND isnotnull(cast(s#21320 as bigint))) AND isnotnull(k1#21318))
+               +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- Project [lid#21312, k1#21313, k2#21314, t#21322L, lv#21316, __nearest_right__#21511.rid AS rid#21514, __nearest_right__#21511.k1 AS k1#21515, __nearest_right__#21511.k2 AS k2#21516, __nearest_right__#21511.t AS t#21517L, __nearest_right__#21511.rv AS rv#21518]
+   +- SortMergeJoin [coalesce(t#21322L, 0), isnull(t#21322L), k1#21313], [coalesce(t#21519L, 0), isnull(t#21519L), k1#21318], LeftOuter
+      :- Sort [coalesce(t#21322L, 0) ASC NULLS FIRST, isnull(t#21322L) ASC NULLS FIRST, k1#21313 ASC NULLS FIRST], false, 0
+      :  +- Exchange hashpartitioning(coalesce(t#21322L, 0), isnull(t#21322L), k1#21313, 1), ENSURE_REQUIREMENTS, [plan_id=181711]
+      :     +- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+      :        +- Scan ExistingRDD[lid#21312,k1#21313,k2#21314,s#21315,lv#21316]
+      +- Sort [coalesce(t#21519L, 0) ASC NULLS FIRST, isnull(t#21519L) ASC NULLS FIRST, k1#21318 ASC NULLS FIRST], false, 0
+         +- Exchange hashpartitioning(coalesce(t#21519L, 0), isnull(t#21519L), k1#21318, 1), ENSURE_REQUIREMENTS, [plan_id=181712]
+            +- SortAggregate(key=[t#21519L, k1#21318], functions=[min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), (t#21323L - t#21519L))], output=[__nearest_right__#21511, t#21519L, k1#21318])
+               +- Sort [t#21519L ASC NULLS FIRST, k1#21318 ASC NULLS FIRST], false, 0
+                  +- Exchange hashpartitioning(t#21519L, k1#21318, 1), ENSURE_REQUIREMENTS, [plan_id=181706]
+                     +- SortAggregate(key=[t#21519L, k1#21318], functions=[partial_min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), (t#21323L - t#21519L))], output=[t#21519L, k1#21318, valueWithExtremumOrdering#21522, extremumOrdering#21523L])
+                        +- Sort [t#21519L ASC NULLS FIRST, k1#21318 ASC NULLS FIRST], false, 0
+                           +- CartesianProduct ((t#21519L <= t#21323L) AND (t#21323L <= (t#21519L + 2)))
+                              :- HashAggregate(keys=[t#21322L], functions=[], output=[t#21519L])
+                              :  +- Exchange hashpartitioning(t#21322L, 1), ENSURE_REQUIREMENTS, [plan_id=181699]
+                              :     +- HashAggregate(keys=[t#21322L], functions=[], output=[t#21322L])
+                              :        +- Project [cast(s#21315 as bigint) AS t#21322L]
+                              :           +- Filter (isnotnull(s#21315) AND isnotnull(cast(s#21315 as bigint)))
+                              :              +- Scan ExistingRDD[lid#21312,k1#21313,k2#21314,s#21315,lv#21316]
+                              +- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+                                 +- Filter ((isnotnull(s#21320) AND isnotnull(cast(s#21320 as bigint))) AND isnotnull(k1#21318))
+                                    +- Scan ExistingRDD[rid#21317,k1#21318,k2#21319,s#21320,rv#21321]
+
+===== spark surface=D direction=forward on=none (BIGINT, tolerance 2, how=left, ANSI on)
+== Parsed Logical Plan ==
+'AsOfJoin ((t#21322L <= t#21323L) AND (t#21323L <= (t#21322L + 2))), LeftOuter
+:- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+:  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
++- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+   +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Analyzed Logical Plan ==
+lid: int, k1: string, k2: int, t: bigint, lv: string, rid: int, k1: string, k2: int, t: bigint, rv: string
+AsOfJoin ((t#21322L <= t#21323L) AND (t#21323L <= (t#21322L + cast(2 as bigint)))), LeftOuter
+:- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+:  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
++- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+   +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Optimized Logical Plan ==
+Project [lid#21312, k1#21313, k2#21314, t#21322L, lv#21316, __nearest_right__#21606.rid AS rid#21609, __nearest_right__#21606.k1 AS k1#21610, __nearest_right__#21606.k2 AS k2#21611, __nearest_right__#21606.t AS t#21612L, __nearest_right__#21606.rv AS rv#21613]
++- Join LeftOuter, (t#21614L <=> t#21322L)
+   :- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+   :  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
+   +- Aggregate [t#21614L], [min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), (t#21323L - t#21614L)) AS __nearest_right__#21606, t#21614L]
+      +- Join Inner, ((t#21614L <= t#21323L) AND (t#21323L <= (t#21614L + 2)))
+         :- Aggregate [t#21322L], [t#21322L AS t#21614L]
+         :  +- Project [cast(s#21315 as bigint) AS t#21322L]
+         :     +- Filter (isnotnull(s#21315) AND isnotnull(cast(s#21315 as bigint)))
+         :        +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
+         +- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+            +- Filter (isnotnull(s#21320) AND isnotnull(cast(s#21320 as bigint)))
+               +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- Project [lid#21312, k1#21313, k2#21314, t#21322L, lv#21316, __nearest_right__#21606.rid AS rid#21609, __nearest_right__#21606.k1 AS k1#21610, __nearest_right__#21606.k2 AS k2#21611, __nearest_right__#21606.t AS t#21612L, __nearest_right__#21606.rv AS rv#21613]
+   +- SortMergeJoin [coalesce(t#21322L, 0), isnull(t#21322L)], [coalesce(t#21614L, 0), isnull(t#21614L)], LeftOuter
+      :- Sort [coalesce(t#21322L, 0) ASC NULLS FIRST, isnull(t#21322L) ASC NULLS FIRST], false, 0
+      :  +- Exchange hashpartitioning(coalesce(t#21322L, 0), isnull(t#21322L), 1), ENSURE_REQUIREMENTS, [plan_id=181929]
+      :     +- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+      :        +- Scan ExistingRDD[lid#21312,k1#21313,k2#21314,s#21315,lv#21316]
+      +- Sort [coalesce(t#21614L, 0) ASC NULLS FIRST, isnull(t#21614L) ASC NULLS FIRST], false, 0
+         +- Exchange hashpartitioning(coalesce(t#21614L, 0), isnull(t#21614L), 1), ENSURE_REQUIREMENTS, [plan_id=181930]
+            +- SortAggregate(key=[t#21614L], functions=[min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), (t#21323L - t#21614L))], output=[__nearest_right__#21606, t#21614L])
+               +- Sort [t#21614L ASC NULLS FIRST], false, 0
+                  +- Exchange hashpartitioning(t#21614L, 1), ENSURE_REQUIREMENTS, [plan_id=181924]
+                     +- SortAggregate(key=[t#21614L], functions=[partial_min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), (t#21323L - t#21614L))], output=[t#21614L, valueWithExtremumOrdering#21617, extremumOrdering#21618L])
+                        +- Sort [t#21614L ASC NULLS FIRST], false, 0
+                           +- CartesianProduct ((t#21614L <= t#21323L) AND (t#21323L <= (t#21614L + 2)))
+                              :- HashAggregate(keys=[t#21322L], functions=[], output=[t#21614L])
+                              :  +- Exchange hashpartitioning(t#21322L, 1), ENSURE_REQUIREMENTS, [plan_id=181917]
+                              :     +- HashAggregate(keys=[t#21322L], functions=[], output=[t#21322L])
+                              :        +- Project [cast(s#21315 as bigint) AS t#21322L]
+                              :           +- Filter (isnotnull(s#21315) AND isnotnull(cast(s#21315 as bigint)))
+                              :              +- Scan ExistingRDD[lid#21312,k1#21313,k2#21314,s#21315,lv#21316]
+                              +- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+                                 +- Filter (isnotnull(s#21320) AND isnotnull(cast(s#21320 as bigint)))
+                                    +- Scan ExistingRDD[rid#21317,k1#21318,k2#21319,s#21320,rv#21321]
+
+===== spark surface=D direction=nearest on=k1 (BIGINT, tolerance 2, how=left, ANSI on)
+== Parsed Logical Plan ==
+'AsOfJoin ((t#21323L >= (t#21322L - 2)) AND (t#21323L <= (t#21322L + 2))), (k1#21313 = k1#21318), LeftOuter
+:- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+:  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
++- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+   +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Analyzed Logical Plan ==
+lid: int, k1: string, k2: int, t: bigint, lv: string, rid: int, k1: string, k2: int, t: bigint, rv: string
+AsOfJoin ((t#21323L >= (t#21322L - cast(2 as bigint))) AND (t#21323L <= (t#21322L + cast(2 as bigint)))), (k1#21313 = k1#21318), LeftOuter
+:- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+:  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
++- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+   +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Optimized Logical Plan ==
+Project [lid#21312, k1#21313, k2#21314, t#21322L, lv#21316, __nearest_right__#21699.rid AS rid#21702, __nearest_right__#21699.k1 AS k1#21703, __nearest_right__#21699.k2 AS k2#21704, __nearest_right__#21699.t AS t#21705L, __nearest_right__#21699.rv AS rv#21706]
++- Join LeftOuter, ((t#21707L <=> t#21322L) AND (k1#21313 = k1#21318))
+   :- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+   :  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
+   +- Aggregate [t#21707L, k1#21318], [min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), if ((t#21707L > t#21323L)) (t#21707L - t#21323L) else (t#21323L - t#21707L)) AS __nearest_right__#21699, t#21707L, k1#21318]
+      +- Join Inner, ((t#21323L >= (t#21707L - 2)) AND (t#21323L <= (t#21707L + 2)))
+         :- Aggregate [t#21322L], [t#21322L AS t#21707L]
+         :  +- Project [cast(s#21315 as bigint) AS t#21322L]
+         :     +- Filter (isnotnull(s#21315) AND isnotnull(cast(s#21315 as bigint)))
+         :        +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
+         +- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+            +- Filter ((isnotnull(s#21320) AND isnotnull(cast(s#21320 as bigint))) AND isnotnull(k1#21318))
+               +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- Project [lid#21312, k1#21313, k2#21314, t#21322L, lv#21316, __nearest_right__#21699.rid AS rid#21702, __nearest_right__#21699.k1 AS k1#21703, __nearest_right__#21699.k2 AS k2#21704, __nearest_right__#21699.t AS t#21705L, __nearest_right__#21699.rv AS rv#21706]
+   +- SortMergeJoin [coalesce(t#21322L, 0), isnull(t#21322L), k1#21313], [coalesce(t#21707L, 0), isnull(t#21707L), k1#21318], LeftOuter
+      :- Sort [coalesce(t#21322L, 0) ASC NULLS FIRST, isnull(t#21322L) ASC NULLS FIRST, k1#21313 ASC NULLS FIRST], false, 0
+      :  +- Exchange hashpartitioning(coalesce(t#21322L, 0), isnull(t#21322L), k1#21313, 1), ENSURE_REQUIREMENTS, [plan_id=182142]
+      :     +- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+      :        +- Scan ExistingRDD[lid#21312,k1#21313,k2#21314,s#21315,lv#21316]
+      +- Sort [coalesce(t#21707L, 0) ASC NULLS FIRST, isnull(t#21707L) ASC NULLS FIRST, k1#21318 ASC NULLS FIRST], false, 0
+         +- Exchange hashpartitioning(coalesce(t#21707L, 0), isnull(t#21707L), k1#21318, 1), ENSURE_REQUIREMENTS, [plan_id=182143]
+            +- SortAggregate(key=[t#21707L, k1#21318], functions=[min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), if ((t#21707L > t#21323L)) (t#21707L - t#21323L) else (t#21323L - t#21707L))], output=[__nearest_right__#21699, t#21707L, k1#21318])
+               +- Sort [t#21707L ASC NULLS FIRST, k1#21318 ASC NULLS FIRST], false, 0
+                  +- Exchange hashpartitioning(t#21707L, k1#21318, 1), ENSURE_REQUIREMENTS, [plan_id=182137]
+                     +- SortAggregate(key=[t#21707L, k1#21318], functions=[partial_min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), if ((t#21707L > t#21323L)) (t#21707L - t#21323L) else (t#21323L - t#21707L))], output=[t#21707L, k1#21318, valueWithExtremumOrdering#21710, extremumOrdering#21711L])
+                        +- Sort [t#21707L ASC NULLS FIRST, k1#21318 ASC NULLS FIRST], false, 0
+                           +- CartesianProduct ((t#21323L >= (t#21707L - 2)) AND (t#21323L <= (t#21707L + 2)))
+                              :- HashAggregate(keys=[t#21322L], functions=[], output=[t#21707L])
+                              :  +- Exchange hashpartitioning(t#21322L, 1), ENSURE_REQUIREMENTS, [plan_id=182130]
+                              :     +- HashAggregate(keys=[t#21322L], functions=[], output=[t#21322L])
+                              :        +- Project [cast(s#21315 as bigint) AS t#21322L]
+                              :           +- Filter (isnotnull(s#21315) AND isnotnull(cast(s#21315 as bigint)))
+                              :              +- Scan ExistingRDD[lid#21312,k1#21313,k2#21314,s#21315,lv#21316]
+                              +- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+                                 +- Filter ((isnotnull(s#21320) AND isnotnull(cast(s#21320 as bigint))) AND isnotnull(k1#21318))
+                                    +- Scan ExistingRDD[rid#21317,k1#21318,k2#21319,s#21320,rv#21321]
+
+===== spark surface=D direction=nearest on=none (BIGINT, tolerance 2, how=left, ANSI on)
+== Parsed Logical Plan ==
+'AsOfJoin ((t#21323L >= (t#21322L - 2)) AND (t#21323L <= (t#21322L + 2))), LeftOuter
+:- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+:  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
++- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+   +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Analyzed Logical Plan ==
+lid: int, k1: string, k2: int, t: bigint, lv: string, rid: int, k1: string, k2: int, t: bigint, rv: string
+AsOfJoin ((t#21323L >= (t#21322L - cast(2 as bigint))) AND (t#21323L <= (t#21322L + cast(2 as bigint)))), LeftOuter
+:- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+:  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
++- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+   +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Optimized Logical Plan ==
+Project [lid#21312, k1#21313, k2#21314, t#21322L, lv#21316, __nearest_right__#21794.rid AS rid#21797, __nearest_right__#21794.k1 AS k1#21798, __nearest_right__#21794.k2 AS k2#21799, __nearest_right__#21794.t AS t#21800L, __nearest_right__#21794.rv AS rv#21801]
++- Join LeftOuter, (t#21802L <=> t#21322L)
+   :- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+   :  +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
+   +- Aggregate [t#21802L], [min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), if ((t#21802L > t#21323L)) (t#21802L - t#21323L) else (t#21323L - t#21802L)) AS __nearest_right__#21794, t#21802L]
+      +- Join Inner, ((t#21323L >= (t#21802L - 2)) AND (t#21323L <= (t#21802L + 2)))
+         :- Aggregate [t#21322L], [t#21322L AS t#21802L]
+         :  +- Project [cast(s#21315 as bigint) AS t#21322L]
+         :     +- Filter (isnotnull(s#21315) AND isnotnull(cast(s#21315 as bigint)))
+         :        +- LogicalRDD [lid#21312, k1#21313, k2#21314, s#21315, lv#21316], false
+         +- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+            +- Filter (isnotnull(s#21320) AND isnotnull(cast(s#21320 as bigint)))
+               +- LogicalRDD [rid#21317, k1#21318, k2#21319, s#21320, rv#21321], false
+
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- Project [lid#21312, k1#21313, k2#21314, t#21322L, lv#21316, __nearest_right__#21794.rid AS rid#21797, __nearest_right__#21794.k1 AS k1#21798, __nearest_right__#21794.k2 AS k2#21799, __nearest_right__#21794.t AS t#21800L, __nearest_right__#21794.rv AS rv#21801]
+   +- SortMergeJoin [coalesce(t#21322L, 0), isnull(t#21322L)], [coalesce(t#21802L, 0), isnull(t#21802L)], LeftOuter
+      :- Sort [coalesce(t#21322L, 0) ASC NULLS FIRST, isnull(t#21322L) ASC NULLS FIRST], false, 0
+      :  +- Exchange hashpartitioning(coalesce(t#21322L, 0), isnull(t#21322L), 1), ENSURE_REQUIREMENTS, [plan_id=182391]
+      :     +- Project [lid#21312, k1#21313, k2#21314, cast(s#21315 as bigint) AS t#21322L, lv#21316]
+      :        +- Scan ExistingRDD[lid#21312,k1#21313,k2#21314,s#21315,lv#21316]
+      +- Sort [coalesce(t#21802L, 0) ASC NULLS FIRST, isnull(t#21802L) ASC NULLS FIRST], false, 0
+         +- Exchange hashpartitioning(coalesce(t#21802L, 0), isnull(t#21802L), 1), ENSURE_REQUIREMENTS, [plan_id=182392]
+            +- SortAggregate(key=[t#21802L], functions=[min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), if ((t#21802L > t#21323L)) (t#21802L - t#21323L) else (t#21323L - t#21802L))], output=[__nearest_right__#21794, t#21802L])
+               +- Sort [t#21802L ASC NULLS FIRST], false, 0
+                  +- Exchange hashpartitioning(t#21802L, 1), ENSURE_REQUIREMENTS, [plan_id=182386]
+                     +- SortAggregate(key=[t#21802L], functions=[partial_min_by(named_struct(rid, rid#21317, k1, k1#21318, k2, k2#21319, t, t#21323L, rv, rv#21321), if ((t#21802L > t#21323L)) (t#21802L - t#21323L) else (t#21323L - t#21802L))], output=[t#21802L, valueWithExtremumOrdering#21805, extremumOrdering#21806L])
+                        +- Sort [t#21802L ASC NULLS FIRST], false, 0
+                           +- CartesianProduct ((t#21323L >= (t#21802L - 2)) AND (t#21323L <= (t#21802L + 2)))
+                              :- HashAggregate(keys=[t#21322L], functions=[], output=[t#21802L])
+                              :  +- Exchange hashpartitioning(t#21322L, 1), ENSURE_REQUIREMENTS, [plan_id=182379]
+                              :     +- HashAggregate(keys=[t#21322L], functions=[], output=[t#21322L])
+                              :        +- Project [cast(s#21315 as bigint) AS t#21322L]
+                              :           +- Filter (isnotnull(s#21315) AND isnotnull(cast(s#21315 as bigint)))
+                              :              +- Scan ExistingRDD[lid#21312,k1#21313,k2#21314,s#21315,lv#21316]
+                              +- Project [rid#21317, k1#21318, k2#21319, cast(s#21320 as bigint) AS t#21323L, rv#21321]
+                                 +- Filter (isnotnull(s#21320) AND isnotnull(cast(s#21320 as bigint)))
+                                    +- Scan ExistingRDD[rid#21317,k1#21318,k2#21319,s#21320,rv#21321]
+
