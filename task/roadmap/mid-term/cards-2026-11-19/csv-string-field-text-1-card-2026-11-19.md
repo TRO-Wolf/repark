@@ -36,4 +36,6 @@ The owner adopted Fable's §9 on 2026-11-19, about 14:00 UTC, verbatim: "go with
 
 **Dated 2026-11-19: a cost line to retire.** A CSV read whose schema holds a `TIMESTAMP` field pays one extra schema inference, at most 1 ms per read (Fable's reply of 2026-11-19, §1.4; ruling 2, item 2 in [rulings-2026-11-19.md](../../../wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-19.md)). Fable measured 0.86 ms like for like (16.24 to 17.10 ms on `k0_count`), and the instruction-count trial, held outside the repository, read +5.4M instructions per read on the same row. This card's seat, one all-text scan, removes the second inference.
 
+**Dated 2026-11-20: the wiring has landed on branch `fix/csv-string-field-text-1` (not merged).** A CSV read with a user schema, or without `inferSchema=true`, scans every column as text from the header alone and parses each field with CSV-FIELD-KERNEL-1's kernel, paired by position (Fable's guidance under the owner's delegation, 2026-11-20, Q1, Q2, Q7 and Q8). Unit 0's re-read is gone, so the cost line above retires. Records: [built/](../../../wo/csv-string-field-text-1/built/map.md).
+
 Up: [map.md](map.md).

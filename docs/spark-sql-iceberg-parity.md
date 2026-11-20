@@ -6006,6 +6006,43 @@ still open is `isModifiable`.
   card TEMP-VIEW-FRAME-READER-PARSE-1 (owner, 2026-11-18: "We better go with B to
   be safe"); [work order](../task/wo/csv-schema-timestamp-zone-1/map.md).
 
+### CSV-STRING-FIELD-TEXT-1 — a CSV field is parsed from its text by the declared type, paired by position — **FIXED 2026-11-20 on the Spark door (branch `fix/csv-string-field-text-1`, not merged)**
+
+- **repark** — Before (main `9a48932f`): a CSV read with a user schema, or without `inferSchema=true`, let
+  DataFusion infer each column and then cast the typed column to the declared type, pairing a schema with the header
+  by name: a `STRING` field over `007` answered `7`, the default read rewrote `1.50`, `1e3` and `TRUE`, an `INT` over
+  `1.5` answered `1` and over `1e3` `1000` (N1), a misfit raised, a misfit past row 1,000 raised at the scan, and every
+  such value was stored so by the Iceberg writes (step 0: 1,908 of 7,704 cells WRONG, all silent; 2,670 RAISE). After:
+  such a read scans every column as text from the first listed file's header alone (the engine's facade-only
+  `text_scan`, DataFusion's `schema_infer_max_records(0)`), names the header by Spark's `makeSafeHeader` rule (an
+  empty or `nullValue` name is `_c<i>`, a case-insensitive repeat takes its index, untrimmed names are kept), and
+  parses each field with CSV-FIELD-KERNEL-1's kernel, paired by position: the first M columns, NULL past the file's
+  width. A misfit is NULL for that field. Unit 0's re-read is removed. A non-empty `emptyValue` is refused by name;
+  `char`/`varchar`, a negative decimal scale and a scale over the precision are refused when the frame is planned,
+  with Spark's texts.
+- **spark** — Spark 4.1.2's `UnivocityParser` converts each field's text by the declared type, never through `CAST`
+  and never under the ANSI flag; `enforceSchema=true` pairs a schema by position; with no schema every column is the
+  file's text. *(oracle: step 0's recorded cells, `task/wo/csv-string-field-text-1/evidence/`, and the wiring unit's,
+  `task/wo/csv-string-field-text-1/built/raw/`, measured 2026-11-20.)*
+- **Still unlike Spark:** `inferSchema=true` with no schema keeps today's inference (card CSV-INFER-SCHEMA-SHAPES-1;
+  EX-IO-3, CSV-INFER-INT32-WIDTH, CSV-INFER-20DIGIT); `DROPMALFORMED` and `FAILFAST` refuse (card
+  CSV-READ-MODES-AND-SHAPES-1, with short rows and exact duplicate header names); the tokenizer's backslash escape
+  and doubled quote (cards CSV-TOKENIZER-BACKSLASH-ESCAPE-1, CSV-TOKENIZER-QUOTE-EMPTY-1); ``csv.`path` `` and `USING
+  csv` (card CSV-SQL-PATH-DOOR-1); Unicode digits (card CSV-UNICODE-DIGITS-1); with files whose headers differ, the
+  first listed file names the columns where Spark takes the largest file (values positional and equal); an S3 glob
+  finds no files on both builds (loud).
+- **Pin** — `python/repark/tests/io/test_csv_string_field_text_1.py` (108 tests, both ANSI modes, against Spark
+  4.1.2's recorded answers; red on main in 103, the 5 others are controls);
+  `crates/repark-core/src/read_options.rs` `a_text_scan_*` (four tests); unit 0's and #1373's pin files green.
+- **Bar and cost** — [bar.md](../task/wo/csv-string-field-text-1/built/bar.md) (the full re-run: 0 EQUAL lost; S3
+  on moto), [cost.md](../task/wo/csv-string-field-text-1/built/cost.md) (unit 0's "one extra schema inference, at
+  most 1 ms per read" retires).
+- **Rationale** — Fable's guidance of 2026-11-20 under the owner's delegation ("Let's go with defaults across the
+  board", about 00:22 UTC): seat A, `schema_infer_max_records(0)` on every path, two units, Q7's fold of
+  READER-TYPED-SCAN-1's CSV half (D2) and Q8's positional pairing with the width rule; card
+  [CSV-STRING-FIELD-TEXT-1](../task/roadmap/mid-term/cards-2026-11-19/csv-string-field-text-1-card-2026-11-19.md)
+  (S1 by class, label-blocking); [work order](../task/wo/csv-string-field-text-1/map.md).
+
 ### TEMP-VIEW-FRAME-READER-PARSE-1 — a JSON or CSV reader's parse runs under the session that reads it — **FIXED 2026-11-19 on the Spark door (branch `fix/temp-view-frame-reader-parse-1`)**
 
 - **repark** — Before (unit 0's head `aa9fd178`, main's reader and view tree): a DataFrame temp view, a SQL view over
