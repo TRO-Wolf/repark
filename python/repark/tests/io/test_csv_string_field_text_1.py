@@ -16,8 +16,8 @@ from repark.spark.types import DecimalType, StringType, StructField, StructType
 pytestmark = pytest.mark.xdist_group("csv_string_field_text_1")
 LATE_ROWS = "".join(f"{index},k\n" for index in range(1, 1201)) + "abc,k\n1.5,k\n"
 FILES: dict[str, bytes] = {
-    "card.csv": b"007\n1.50\n1e3\nTRUE\n",
-    "card_h.csv": b"x\n007\n1.50\n1e3\nTRUE\n",
+    "card.csv": b"007,1.50,1e3,TRUE\n",
+    "card_h.csv": b"a,b,c,d\n007,1.50,1e3,TRUE\n",
     "infer.csv": b"x,k\n007,abc\n",
     "n1.csv": b"1e3,2.0\n1.5,7\n3,4\n",
     "mis.csv": b"abc,k1\n2147483648,k2\n42,k3\n 7 ,k4\n1e3,k5\n",
@@ -32,6 +32,7 @@ FILES: dict[str, bytes] = {
     "late.csv": LATE_ROWS.encode(),
     "nullname.csv": b"NA,k\n007,NA\n",
     "untrimmed.csv": b" x , k \n007,abc\n",
+    "dup.csv": b"x,X,k\n1,2,3\n",
     "gz.csv.gz": gzip.compress(b"x,k\n007,1e3\n"),
     "semi.csv": b"x;k\n007;1e3\n",
     "bom.csv": b"\xef\xbb\xbfx,k\n007,1e3\n",
@@ -41,7 +42,9 @@ FILES: dict[str, bytes] = {
     "two/b.csv": b"k,x\nk2,1e3\nk3,TRUE\n",
 }
 LATE = ("count(*) AS n", "count(x) AS nx", "max(CAST(x AS STRING)) AS mx")
-CARD_TEXT = [("007",), ("1.50",), ("1e3",), ("TRUE",)]
+CARD_TEXT = [("007", "1.50", "1e3", "TRUE")]
+S4 = "a STRING, b STRING, c STRING, d STRING"
+C4 = ["_c0", "_c1", "_c2", "_c3"]
 S2 = ["string", "string"]
 Read = Callable[[Any, Path], Any]
 
@@ -51,31 +54,29 @@ def header(read: Any) -> Any:
 
 
 CELLS: dict[str, tuple[Read, list[str], list[str], list[tuple[Any, ...]]]] = {
-    "card/default": (lambda r, p: r.csv(str(p / "card.csv")), ["_c0"], ["string"], CARD_TEXT),
+    "card/default": (lambda r, p: r.csv(str(p / "card.csv")), C4, ["string"] * 4, CARD_TEXT),
     "card/infer_false": (
         lambda r, p: r.option("inferSchema", "false").csv(str(p / "card.csv")),
-        ["_c0"],
-        ["string"],
+        C4,
+        ["string"] * 4,
         CARD_TEXT,
     ),
     "card/string": (
-        lambda r, p: r.schema("x STRING").csv(str(p / "card.csv")),
-        ["x"],
-        ["string"],
+        lambda r, p: r.schema(S4).csv(str(p / "card.csv")),
+        list("abcd"),
+        ["string"] * 4,
         CARD_TEXT,
     ),
     "card/load": (
-        lambda r, p: r.format("csv").schema("x STRING").load(str(p / "card.csv")),
-        ["x"],
-        ["string"],
+        lambda r, p: r.format("csv").schema(S4).load(str(p / "card.csv")),
+        list("abcd"),
+        ["string"] * 4,
         CARD_TEXT,
     ),
     "card/header_infer_true": (
-        lambda r, p: header(r.schema("x STRING").option("inferSchema", "true")).csv(
-            str(p / "card_h.csv")
-        ),
-        ["x"],
-        ["string"],
+        lambda r, p: header(r.schema(S4).option("inferSchema", "true")).csv(str(p / "card_h.csv")),
+        list("abcd"),
+        ["string"] * 4,
         CARD_TEXT,
     ),
     "infer/string": (
@@ -232,6 +233,12 @@ CELLS: dict[str, tuple[Read, list[str], list[str], list[tuple[Any, ...]]]] = {
         S2,
         [("007", None)],
     ),
+    "names/duplicate": (
+        lambda r, p: header(r).csv(str(p / "dup.csv")),
+        ["x0", "X1", "k"],
+        ["string"] * 3,
+        [("1", "2", "3")],
+    ),
     "names/untrimmed": (
         lambda r, p: header(r).csv(str(p / "untrimmed.csv")),
         [" x ", " k "],
@@ -306,17 +313,6 @@ CELLS: dict[str, tuple[Read, list[str], list[str], list[tuple[Any, ...]]]] = {
         S2,
         [("007", "abc")],
     ),
-    "user_text_scan": (
-        lambda r, p: (
-            header(r)
-            .option("inferSchema", "true")
-            .option("text_scan", "true")
-            .csv(str(p / "infer.csv"))
-        ),
-        ["x", "k"],
-        ["int", "string"],
-        [(7, "abc")],
-    ),
 }
 DECIMAL_2_5 = StructType([StructField("x", DecimalType(2, 5)), StructField("k", StringType())])
 DECIMAL_5_M2 = StructType([StructField("x", DecimalType(5, -2)), StructField("k", StringType())])
@@ -325,11 +321,10 @@ REFUSED: dict[str, tuple[Any, str]] = {
     "decimal_5_m2": (DECIMAL_5_M2, "[NEGATIVE_SCALE_DISALLOWED] Negative scale is not allowed"),
     "char": ("x CHAR(5), k STRING", "[UNSUPPORTED_CHAR_OR_VARCHAR_AS_STRING]"),
 }
-MISFIT_TEXT = [(" 7 ", "k4"), ("1e3", "k5"), ("2147483648", "k2"), ("42", "k3"), ("abc", "k1")]
 LABEL: dict[str, list[tuple[Any, ...]]] = {
-    "STRING": MISFIT_TEXT,
-    "INT": CELLS["misfit/int"][3],
-    "DECIMAL(10,2)": CELLS["misfit/decimal"][3],
+    "STRING": CARD_TEXT,
+    "INT": [(7, None, None, None)],
+    "DECIMAL(10,2)": [(Decimal("7.00"), Decimal("1.50"), Decimal("1000.00"), None)],
 }
 
 
@@ -346,16 +341,41 @@ def write_label(session: Any, root: Path, ansi: str) -> dict[str, Any]:
     session.sql("CREATE NAMESPACE IF NOT EXISTS lc.w").collect()
     for kind in LABEL:
         name = f"lc.w.t{kind.split('(')[0].lower()}{ansi}"
-        source = session.read.schema(f"x {kind}, k STRING").csv(str(root / "mis.csv"))
+        ddl = ", ".join(f"{column} {kind}" for column in "abcd")
+        source = session.read.schema(ddl).csv(str(root / "card.csv"))
         source.writeTo(f"{name}_wt").tableProperty("format-version", "2").create()
         found[f"write_to/{kind}"] = ordered(session.table(f"{name}_wt").collect())
         source.createOrReplaceTempView("src")
         session.sql(
-            f"CREATE TABLE {name}_in (x {kind}, k STRING) USING iceberg "
-            "TBLPROPERTIES ('format-version'='2')"
+            f"CREATE TABLE {name}_in ({ddl}) USING iceberg TBLPROPERTIES ('format-version'='2')"
         ).collect()
         session.sql(f"INSERT INTO {name}_in SELECT * FROM src").collect()
         found[f"insert/{kind}"] = ordered(session.table(f"{name}_in").collect())
+    return found
+
+
+def refusal(build: Callable[[], Any]) -> str:
+    try:
+        build()
+    except Exception as error:
+        return f"{isinstance(error, AnalysisException)}: {error}"
+    return "no refusal"
+
+
+def plan_and_options(session: Any, root: Path) -> dict[str, Any]:
+    found: dict[str, Any] = {}
+    for shape, (schema, _) in REFUSED.items():
+        reader = session.read.schema(schema).option("header", "true")
+        found[f"refused/{shape}"] = refusal(lambda r=reader: r.csv(str(root / "infer.csv")))
+    reader = session.read.option("header", "true").option("emptyValue", "E")
+    found["empty_value"] = refusal(lambda: reader.csv(str(root / "infer.csv")))
+    session.read.schema("x INT, k STRING").csv(str(root / "mis.csv")).createOrReplaceTempView("pv")
+    plan = session.sql("EXPLAIN SELECT * FROM pv").collect()
+    found["plan"] = " ".join(str(cell) for row in plan for cell in row)
+    path = str(root / "infer.csv")
+    plain = session.read.option("header", "true").option("inferSchema", "true").csv(path)
+    forced = session.read.option("header", "true").option("inferSchema", "true")
+    found["text_scan"] = (plain.dtypes, forced.option("text_scan", "true").csv(path).dtypes)
     return found
 
 
@@ -377,16 +397,17 @@ def measured(
         .config("spark.sql.ansi.enabled", request.param)
         .getOrCreate()
     )
-    found: dict[str, Any] = {"root": root, "session": session}
+    found: dict[str, Any] = {}
     for tag, (build, _, _, _) in CELLS.items():
         try:
             found[tag] = answer(build(session.read, root))
         except Exception as error:
             found[tag] = f"{type(error).__name__}: {error}"
     found["label"] = write_label(session, root, request.param)
-    yield found
+    found.update(plan_and_options(session, root))
     session.stop()
     _reset_active_session_for_tests()
+    yield found
 
 
 @pytest.mark.parametrize("tag", sorted(CELLS))
@@ -407,30 +428,23 @@ def test_an_iceberg_v2_write_stores_the_field_spark_reads(
 def test_a_field_type_spark_refuses_is_refused_when_the_frame_is_planned(
     measured: dict[str, Any], shape: str
 ) -> None:
-    schema, text = REFUSED[shape]
-    reader = measured["session"].read.schema(schema).option("header", "true")
-    with pytest.raises(AnalysisException) as raised:
-        reader.csv(str(measured["root"] / "infer.csv"))
-    assert text in str(raised.value)
+    assert measured[f"refused/{shape}"].startswith("True: ")
+    assert REFUSED[shape][1] in measured[f"refused/{shape}"]
 
 
 def test_a_non_empty_empty_value_is_refused_by_name(measured: dict[str, Any]) -> None:
-    reader = measured["session"].read.option("header", "true").option("emptyValue", "E")
-    with pytest.raises(AnalysisException) as raised:
-        reader.csv(str(measured["root"] / "infer.csv"))
-    assert "'emptyValue' is not supported by repark yet" in str(raised.value)
+    assert measured["empty_value"].startswith("True: ")
+    assert "'emptyValue' is not supported by repark yet" in measured["empty_value"]
 
 
 def test_the_plan_parses_each_field_with_the_kernel_over_a_text_scan(
     measured: dict[str, Any],
 ) -> None:
-    session = measured["session"]
-    frame = session.read.schema("x INT, k STRING").csv(str(measured["root"] / "mis.csv"))
-    frame.createOrReplaceTempView("plan_view")
-    plan = " ".join(
-        str(cell)
-        for row in session.sql("EXPLAIN SELECT * FROM plan_view").collect()
-        for cell in row
-    )
-    assert "__repark_csv_field__" in plan
-    assert "CAST(" not in plan
+    assert "__repark_csv_field__" in measured["plan"]
+    assert "CAST(" not in measured["plan"]
+
+
+def test_the_text_scan_option_is_never_taken_from_the_user(measured: dict[str, Any]) -> None:
+    plain, forced = measured["text_scan"]
+    assert forced == plain
+    assert dict(forced)["x"] != "string"

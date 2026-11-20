@@ -269,15 +269,25 @@ async fn csv_text_scan_schema(
         .get_resolved_schema(&context.copied_config(), context.state(), table_path)
         .await
         .map_err(engine_err)?;
+    let mut seen: HashMap<String, usize> = HashMap::new();
+    for field in scanned.fields() {
+        *seen.entry(field.name().to_lowercase()).or_default() += 1;
+    }
     let fields: Vec<Field> = scanned
         .fields()
         .iter()
         .enumerate()
         .map(|(index, field)| {
             let name = field.name().as_str();
-            let unnamed = name.is_empty() || null_value == Some(name);
-            let spark_name = if csv_options.has_header && unnamed {
+            let spark_name = if !csv_options.has_header {
+                name.to_string()
+            } else if name.is_empty() || null_value == Some(name) {
                 format!("_c{index}")
+            } else if seen
+                .get(&name.to_lowercase())
+                .is_some_and(|count| *count > 1)
+            {
+                format!("{name}{index}")
             } else {
                 name.to_string()
             };
@@ -747,6 +757,9 @@ mod tests {
         assert_eq!(rows, [texts(&["007", "1.5", "abc"])]);
         let (names, _) = text_scan(path.to_str().unwrap(), &[("header", "true")]).await;
         assert_eq!(names, ["_c0", "NA", " k "]);
+        std::fs::write(&path, "x,X,k\n1,2,3\n").unwrap();
+        let (names, _) = text_scan(path.to_str().unwrap(), &[("header", "true")]).await;
+        assert_eq!(names, ["x0", "X1", "k"]);
     }
 
     #[tokio::test]
