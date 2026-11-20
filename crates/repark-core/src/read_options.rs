@@ -766,9 +766,8 @@ mod tests {
     async fn a_text_scan_reads_a_misfit_past_the_inference_window() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("late.csv");
-        let mut body: String = (0..1200).map(|index| format!("{index}\n")).collect();
-        body.insert_str(0, "n\n");
-        body.push_str("abc\n1.5\n");
+        let numbers: Vec<String> = (0..1200).map(|index| index.to_string()).collect();
+        let body = format!("n\n{}\nabc\n1.5\n", numbers.join("\n"));
         std::fs::write(&path, body).unwrap();
         let (_, rows) = text_scan(path.to_str().unwrap(), &[("header", "true")]).await;
         assert_eq!(rows.len(), 1202);
