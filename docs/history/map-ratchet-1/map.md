@@ -6,6 +6,7 @@ Archived record of the MAP-RATCHET-1 condensations, cut file by file as each exc
 ## Contents
 - [crates-repark-spark-src-tests-map-2026-11-20.md](crates-repark-spark-src-tests-map-2026-11-20.md) — `crates/repark-spark/src/tests/map.md` as it stood at main `6d3739ab`, before the chunk-1 condensation.
 - [crates-repark-spark-src-map-2026-11-20.md](crates-repark-spark-src-map-2026-11-20.md) — `crates/repark-spark/src/map.md` as it stood at main `6d3739ab`, before the chunk-1 condensation.
+- [crates-repark-iceberg-src-write-map-2026-11-20.md](crates-repark-iceberg-src-write-map-2026-11-20.md) — `crates/repark-iceberg/src/write/map.md` as it stood at main `6d3739ab`, before the chunk-1 condensation.
 
 ## Pointers
 - Up: [../map.md](../map.md)
