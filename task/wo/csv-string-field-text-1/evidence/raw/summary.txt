@@ -1,0 +1,124 @@
+cells: 7704 ({'F': 480, 'L': 684, 'M': 1376, 'N': 556, 'S': 4128, 'T': 480})
+
+## verdicts on main by part
+| | EQUAL | WRONG | RAISE | BOTHERR | NOSPARK |
+|---|---|---|---|---|---|
+| F | 264 | 216 | 0 | 0 | 0 |
+| L | 320 | 216 | 148 | 0 | 0 |
+| M | 0 | 0 | 956 | 420 | 0 |
+| N | 264 | 216 | 76 | 0 | 0 |
+| S | 1590 | 1068 | 1470 | 0 | 0 |
+| T | 288 | 192 | 0 | 0 | 0 |
+
+## verdicts on unit1 by part
+| | EQUAL | WRONG | RAISE | BOTHERR | NOSPARK |
+|---|---|---|---|---|---|
+| F | 264 | 216 | 0 | 0 | 0 |
+| L | 320 | 216 | 148 | 0 | 0 |
+| M | 0 | 0 | 956 | 420 | 0 |
+| N | 264 | 216 | 76 | 0 | 0 |
+| S | 1590 | 1068 | 1470 | 0 | 0 |
+| T | 288 | 192 | 0 | 0 | 0 |
+
+## main against unit1: 0 verdicts move, 0 differ
+
+## main's WRONG and RAISE by ansi
+| | F:WRONG | F:RAISE | L:WRONG | L:RAISE | M:WRONG | M:RAISE | N:WRONG | N:RAISE | S:WRONG | S:RAISE | T:WRONG | T:RAISE |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| false | 108 | 0 | 108 | 72 | 0 | 478 | 108 | 38 | 534 | 648 | 96 | 0 |
+| true | 108 | 0 | 108 | 76 | 0 | 478 | 108 | 38 | 534 | 822 | 96 | 0 |
+
+## main's WRONG and RAISE by door
+| | F:WRONG | F:RAISE | L:WRONG | L:RAISE | M:WRONG | M:RAISE | N:WRONG | N:RAISE | S:WRONG | S:RAISE | T:WRONG | T:RAISE |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| csv | 72 | 0 | 0 | 0 | 0 | 0 | 72 | 0 | 356 | 490 | 64 | 0 |
+| load | 72 | 0 | 0 | 0 | 0 | 0 | 72 | 0 | 356 | 490 | 64 | 0 |
+| view | 72 | 0 | 0 | 0 | 0 | 0 | 72 | 0 | 356 | 490 | 64 | 0 |
+| create | 0 | 0 | 108 | 74 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| insert | 0 | 0 | 108 | 74 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| DROPMALFORMED | 0 | 0 | 0 | 0 | 0 | 688 | 0 | 0 | 0 | 0 | 0 | 0 |
+| FAILFAST | 0 | 0 | 0 | 0 | 0 | 268 | 0 | 0 | 0 | 0 | 0 | 0 |
+| sql | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 76 | 0 | 0 | 0 | 0 |
+
+## main's WRONG and RAISE by hdr
+| | F:WRONG | F:RAISE | L:WRONG | L:RAISE | M:WRONG | M:RAISE | N:WRONG | N:RAISE | S:WRONG | S:RAISE | T:WRONG | T:RAISE |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| on | 108 | 0 | 216 | 148 | 0 | 0 | 108 | 0 | 534 | 735 | 96 | 0 |
+| off | 108 | 0 | 0 | 0 | 0 | 956 | 108 | 76 | 534 | 735 | 96 | 0 |
+
+## main's WRONG and RAISE by comp
+| | F:WRONG | F:RAISE | L:WRONG | L:RAISE | M:WRONG | M:RAISE | N:WRONG | N:RAISE | S:WRONG | S:RAISE | T:WRONG | T:RAISE |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| alone | 108 | 0 | 184 | 148 | 0 | 478 | 108 | 38 | 552 | 720 | 96 | 0 |
+| beside | 108 | 0 | 32 | 0 | 0 | 478 | 108 | 38 | 516 | 750 | 96 | 0 |
+
+## main's WRONG and RAISE by type
+| | F:WRONG | F:RAISE | L:WRONG | L:RAISE | M:WRONG | M:RAISE | N:WRONG | N:RAISE | S:WRONG | S:RAISE | T:WRONG | T:RAISE |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| - | 216 | 0 | 0 | 0 | 0 | 0 | 216 | 76 | 0 | 0 | 192 | 0 |
+| SSTRING | 0 | 0 | 64 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| SINT | 0 | 0 | 28 | 24 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| SDECIMAL(10,2) | 0 | 0 | 12 | 24 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| SDOUBLE | 0 | 0 | 12 | 8 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| SBOOLEAN | 0 | 0 | 36 | 28 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| SDATE | 0 | 0 | 0 | 64 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| N | 0 | 0 | 32 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| F | 0 | 0 | 32 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| STRING | 0 | 0 | 0 | 0 | 0 | 152 | 0 | 0 | 192 | 0 | 0 | 0 |
+| INT | 0 | 0 | 0 | 0 | 0 | 100 | 0 | 0 | 156 | 156 | 0 | 0 |
+| BIGINT | 0 | 0 | 0 | 0 | 0 | 104 | 0 | 0 | 156 | 132 | 0 | 0 |
+| DECIMAL(10,2) | 0 | 0 | 0 | 0 | 0 | 116 | 0 | 0 | 72 | 144 | 0 | 0 |
+| DOUBLE | 0 | 0 | 0 | 0 | 0 | 128 | 0 | 0 | 60 | 54 | 0 | 0 |
+| BOOLEAN | 0 | 0 | 0 | 0 | 0 | 88 | 0 | 0 | 216 | 168 | 0 | 0 |
+| DATE | 0 | 0 | 0 | 0 | 0 | 88 | 0 | 0 | 0 | 384 | 0 | 0 |
+| TIMESTAMP | 0 | 0 | 0 | 0 | 0 | 88 | 0 | 0 | 192 | 120 | 0 | 0 |
+| TIMESTAMP_NTZ | 0 | 0 | 0 | 0 | 0 | 88 | 0 | 0 | 0 | 312 | 0 | 0 |
+| N1 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 24 | 0 | 0 | 0 |
+
+## main's WRONG and RAISE by shape
+| | F:WRONG | F:RAISE | L:WRONG | L:RAISE | M:WRONG | M:RAISE | N:WRONG | N:RAISE | S:WRONG | S:RAISE | T:WRONG | T:RAISE |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| plain | 0 | 0 | 4 | 4 | 0 | 56 | 0 | 4 | 48 | 48 | 24 | 0 |
+| lead0 | 24 | 0 | 20 | 4 | 0 | 56 | 24 | 4 | 72 | 48 | 24 | 0 |
+| plus | 0 | 0 | 0 | 8 | 0 | 56 | 0 | 4 | 0 | 72 | 24 | 0 |
+| frac | 24 | 0 | 24 | 4 | 0 | 48 | 24 | 4 | 120 | 48 | 0 | 0 |
+| exp | 24 | 0 | 24 | 4 | 0 | 48 | 24 | 4 | 120 | 48 | 0 | 0 |
+| expneg | 24 | 0 | 24 | 4 | 0 | 48 | 24 | 4 | 120 | 48 | 0 | 0 |
+| dot | 24 | 0 | 24 | 4 | 0 | 48 | 24 | 4 | 120 | 48 | 24 | 0 |
+| upper | 24 | 0 | 28 | 4 | 0 | 44 | 24 | 4 | 120 | 72 | 0 | 0 |
+| title | 24 | 0 | 28 | 4 | 0 | 44 | 24 | 4 | 120 | 72 | 0 | 0 |
+| yes | 0 | 0 | 4 | 14 | 0 | 40 | 0 | 4 | 24 | 132 | 0 | 0 |
+| space | 0 | 0 | 4 | 12 | 0 | 44 | 0 | 4 | 24 | 120 | 24 | 0 |
+| empty | 0 | 0 | 0 | 0 | 0 | 72 | 0 | 4 | 0 | 0 | 0 | 0 |
+| nullv | 0 | 0 | 0 | 8 | 0 | 56 | 0 | 0 | 0 | 72 | 24 | 0 |
+| quoted | 24 | 0 | 20 | 4 | 0 | 56 | 24 | 4 | 72 | 48 | 24 | 0 |
+| bad | 0 | 0 | 0 | 18 | 0 | 40 | 0 | 4 | 0 | 156 | 0 | 0 |
+| ovf32 | 0 | 0 | 4 | 12 | 0 | 48 | 0 | 4 | 48 | 96 | 0 | 0 |
+| ovf64 | 0 | 0 | 0 | 16 | 0 | 44 | 0 | 4 | 0 | 144 | 24 | 0 |
+| date | 0 | 0 | 0 | 16 | 0 | 52 | 0 | 4 | 0 | 120 | 0 | 0 |
+| ts | 0 | 0 | 8 | 8 | 0 | 52 | 0 | 4 | 36 | 78 | 0 | 0 |
+| n1 | 24 | 0 | 0 | 0 | 0 | 4 | 24 | 4 | 24 | 0 | 0 | 0 |
+
+## Spark's x by type and shape (S, csv door, header off, alone; ANSI on | off)
+| shape | STRING | INT | BIGINT | DECIMAL(10,2) | DOUBLE | BOOLEAN | DATE | TIMESTAMP | TIMESTAMP_NTZ | N1 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| bad | abc | None | None | None | None | None | None | None | None |  |
+| date | 2024-01-15 | None | None | None | None | None | 2024-01-15 | 2024-01-15 00:00:00 | 2024-01-15 00:00:00 |  |
+| dot | 5. | None | None | 5.00 | 5.0 | None | None | None | None |  |
+| empty | None | None | None | None | None | None | None | None | None |  |
+| exp | 1e3 | None | None | 1000.00 | 1000.0 | None | None | None | None |  |
+| expneg | 1E-2 | None | None | 0.01 | 0.01 | None | None | None | None |  |
+| frac | 1.50 | None | None | 1.50 | 1.5 | None | None | None | None |  |
+| lead0 | 007 | 7 | 7 | 7.00 | 7.0 | None | None | None | None |  |
+| n1 |  |  |  |  |  |  |  |  |  | 3;None;None |
+| nullv | 007;None | 7;None | 7;None | 7.00;None | 7.0;None | None;None | None;None | None;None | None;None |  |
+| ovf32 | 2147483648 | None | 2147483648 | None | 2147483648.0 | None | None | None | None |  |
+| ovf64 | 99999999999999999999 | None | None | None | 1e+20 | None | None | None | None |  |
+| plain | 42 | 42 | 42 | 42.00 | 42.0 | None | None | None | None |  |
+| plus | +5 | 5 | 5 | 5.00 | 5.0 | None | None | None | None |  |
+| quoted | 007 | 7 | 7 | 7.00 | 7.0 | None | None | None | None |  |
+| space |  7  | None | None | None | 7.0 | None | None | None | None |  |
+| title | True | None | None | None | None | True | None | None | None |  |
+| ts | 2024-01-15 10:30:00 | None | None | None | None | None | 2024-01-15 | 2024-01-15 10:30:00 | 2024-01-15 10:30:00 |  |
+| upper | TRUE | None | None | None | None | True | None | None | None |  |
+| yes | yes | None | None | None | None | None | None | None | None |  |

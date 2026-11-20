@@ -1,0 +1,49 @@
+| ANSI | type | text | Spark | unit 1 | all-text + TRY_CAST |
+|---|---|---|---|---|---|
+| true | INT | `-007` | -7 | -7 | -7 |
+| true | INT | `1.0` | None | **1** | None |
+| true | INT | `0x10` | None | **RAISE** | None |
+| true | INT | `1_000` | None | **RAISE** | None |
+| true | INT | ` 7` | None | **RAISE** | None |
+| true | INT | `7 ` | None | **RAISE** | None |
+| true | BIGINT | `-007` | -7 | -7 | -7 |
+| true | BIGINT | `9223372036854775807` | 9223372036854775807 | 9223372036854775807 | 9223372036854775807 |
+| true | BIGINT | `9223372036854775808` | None | **RAISE** | None |
+| true | BOOLEAN | `t` | None | **True** | **True** |
+| true | BOOLEAN | `1` | None | **True** | **True** |
+| true | BOOLEAN | `0` | None | **False** | **False** |
+| true | BOOLEAN | ` true` | None | **True** | **True** |
+| true | BOOLEAN | `FALSE` | False | False | False |
+| true | BOOLEAN | `y` | None | **True** | **True** |
+| true | BOOLEAN | `false ` | None | **False** | **False** |
+| true | DOUBLE | `NaN` | nan | nan | nan |
+| true | DOUBLE | `Inf` | inf | inf | inf |
+| true | DOUBLE | `-Inf` | -inf | -inf | -inf |
+| true | DOUBLE | `Infinity` | inf | inf | inf |
+| true | DOUBLE | `1d` | 1.0 | 1.0 | **None** |
+| true | DOUBLE | `1,5` | None | **RAISE** | None |
+| true | DOUBLE | ` 1e3` | 1000.0 | 1000.0 | **None** |
+| true | DOUBLE | `+1.5` | 1.5 | 1.5 | 1.5 |
+| true | DECIMAL(10,2) | `1,000.5` | 1000.50 | **RAISE** | **None** |
+| true | DECIMAL(10,2) | `1.005` | 1.01 | 1.01 | 1.01 |
+| true | DECIMAL(10,2) | `123456789.1` | None | **RAISE** | None |
+| true | DECIMAL(10,2) | `-0.5` | -0.50 | -0.50 | -0.50 |
+| true | DECIMAL(10,2) | `+5` | 5.00 | 5.00 | 5.00 |
+| true | DECIMAL(10,2) | `1e400` | None | **RAISE** | None |
+| true | DECIMAL(10,2) | `.5` | 0.50 | 0.50 | 0.50 |
+| true | DATE | `2024-1-5` | 2024-01-05 | 2024-01-05 | 2024-01-05 |
+| true | DATE | `2024-01-15T10:30:00` | 2024-01-15 | 2024-01-15 | 2024-01-15 |
+| true | DATE | `20240115` | None | **RAISE** | **2024-01-15** |
+| true | DATE | `2024-01-15 10:30:00` | 2024-01-15 | 2024-01-15 | 2024-01-15 |
+| true | DATE | ` 2024-01-15` | 2024-01-15 | **RAISE** | **None** |
+| true | TIMESTAMP | `2024-01-15T10:30:00Z` | 2024-01-15 10:30:00 | 2024-01-15 10:30:00 | 2024-01-15 10:30:00 |
+| true | TIMESTAMP | `2024-01-15 10:30:00+02:00` | 2024-01-15 08:30:00 | 2024-01-15 08:30:00 | 2024-01-15 08:30:00 |
+| true | TIMESTAMP | `2024-01-15` | 2024-01-15 00:00:00 | 2024-01-15 00:00:00 | 2024-01-15 00:00:00 |
+| true | TIMESTAMP | `1705314600` | None | **2024-01-15 10:30:00** | None |
+| true | TIMESTAMP | `2024-01-15 10:30` | 2024-01-15 10:30:00 | 2024-01-15 10:30:00 | 2024-01-15 10:30:00 |
+| true | TIMESTAMP_NTZ | `2024-01-15T10:30:00` | 2024-01-15 10:30:00 | 2024-01-15 10:30:00 | 2024-01-15 10:30:00 |
+| true | TIMESTAMP_NTZ | `2024-01-15 10:30:00+02:00` | None | **2024-01-15 08:30:00** | **2024-01-15 10:30:00** |
+| true | TIMESTAMP_NTZ | `2024-01-15` | 2024-01-15 00:00:00 | 2024-01-15 00:00:00 | 2024-01-15 00:00:00 |
+| false | DOUBLE | `1,5` | None | None | None |
+
+EQUAL: {'base': '49 of 88', 'text_try': '64 of 88'}
