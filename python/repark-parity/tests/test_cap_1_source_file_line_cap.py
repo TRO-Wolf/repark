@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import importlib.util
 import re
+import subprocess
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -19,71 +21,6 @@ _PYTHON_GATE_PATH = _REPO / "scripts" / "check_lib_py.py"
 _APPROVED_EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (
     ("tests", "goldens"),
     ("tests", "fixtures"),
-)
-_RUST_BASELINES: tuple[tuple[str, int], ...] = (
-    ("crates/repark-core/src/dynamic_flatten/tests.rs", 1442),
-    ("crates/repark-core/src/session/tests/session.rs", 1406),
-    ("crates/repark-core/tests/declared_sorted.rs", 1348),
-    ("crates/repark-functions/src/analyzer.rs", 1150),
-    ("crates/repark-functions/src/analyzer/time_window/mod.rs", 1416),
-    ("crates/repark-functions/src/datetime.rs", 1655),
-    ("crates/repark-functions/src/expr_fn.rs", 1001),
-    ("crates/repark-functions/src/spark_time_window.rs", 1125),
-    ("crates/repark-iceberg/src/catalog/tests/catalog.rs", 1843),
-    ("crates/repark-iceberg/src/write/alter.rs", 1556),
-    ("crates/repark-iceberg/src/write/append.rs", 1736),
-    ("crates/repark-iceberg/src/write/merge/tests/merge.rs", 1032),
-    ("crates/repark-iceberg/src/write/merge/tests/occ_conflict.rs", 1023),
-    ("crates/repark-iceberg/src/write/merge/tests/streaming_scan.rs", 3018),
-    ("crates/repark-iceberg/src/write/overwrite.rs", 1049),
-    ("crates/repark-iceberg/src/write/predicate_dml/tests/predicate_dml.rs", 1435),
-    ("crates/repark-spark/src/alter.rs", 1272),
-    ("crates/repark-spark/src/metadata_tables.rs", 1059),
-    ("crates/repark-spark/src/tests/alter.rs", 1181),
-    ("crates/repark-spark/src/tests/call.rs", 1287),
-    ("crates/repark-spark/src/tests/ctas.rs", 1356),
-    ("crates/repark-spark/src/tests/dml.rs", 1139),
-    ("crates/repark-spark/src/tests/insert_overwrite.rs", 1233),
-    ("crates/repark-spark/src/tests/merge.rs", 1303),
-    ("crates/repark-spark/src/tests/partitioned_merge.rs", 1068),
-    ("crates/repark-spark/src/tests/transform_overwrite.rs", 1181),
-    ("crates/repark-spark/src/window_range.rs", 1225),
-    ("crates/repark-sql/src/tests.rs", 1513),
-    ("crates/repark-sql/tests/cross_door.rs", 1253),
-    ("crates/repark-ta/src/momentum.rs", 2098),
-    ("crates/repark-ta/src/overlap.rs", 1578),
-    ("crates/repark-ta/src/udf/mod.rs", 1791),
-)
-_PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
-    ("python/repark-parity/bench/tpcds/runner.py", 1252),
-    ("python/repark-parity/bench/tpch/runner.py", 1773),
-    ("python/repark-parity/compat/runner.py", 1279),
-    ("python/repark-parity/tests/test_compat_harness.py", 1021),
-    ("python/repark/src/repark/spark/column.py", 1331),
-    ("python/repark/src/repark/spark/dataframe/core.py", 3461),
-    ("python/repark/src/repark/spark/functions.py", 1908),
-    ("python/repark/src/repark/spark/functions_expr.py", 2171),
-    ("python/repark/src/repark/spark/functions_udf.py", 1287),
-    ("python/repark/src/repark/spark/ml/feature/_transformers.py", 2717),
-    ("python/repark/src/repark/spark/session/session_core.py", 2274),
-    ("python/repark/src/repark/spark/ta.py", 1795),
-    ("python/repark/src/repark/spark/types.py", 1772),
-    ("python/repark/tests/_live_parity.py", 1753),
-    ("python/repark/tests/dataframe/test_display_styles.py", 1175),
-    ("python/repark/tests/dataframe/test_dynamic_flatten.py", 1618),
-    ("python/repark/tests/dataframe/test_explode_rewrite.py", 1133),
-    ("python/repark/tests/functions/test_fnp_win_1.py", 1449),
-    ("python/repark/tests/io/test_interchange_parity.py", 1533),
-    ("python/repark/tests/dataframe/test_join_parity.py", 1232),
-    ("python/repark/tests/io/test_mapinarrow.py", 1578),
-    ("python/repark/tests/ml/test_ml_boost_oracle.py", 2241),
-    ("python/repark/tests/io/test_pandas_udf.py", 1478),
-    ("python/repark/tests/writes/test_partition_value_audit.py", 1665),
-    ("python/repark/tests/timestamps/test_session_timezone_parity.py", 1318),
-    ("python/repark/tests/functions/test_ta.py", 1020),
-    ("python/repark/tests/perf/test_tpch_compare_unit.py", 1551),
-    ("python/repark/tests/io/test_udf.py", 1170),
-    ("python/repark/tests/functions/test_window_parity.py", 1422),
 )
 
 
@@ -163,16 +100,19 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     python_measured = _measure_sources(("python", "scripts"), ".py")
     rust_debt = {path: count for path, count in rust_measured.items() if count > 1000}
     python_debt = {path: count for path, count in python_measured.items() if count > 1000}
-    rust_approved = dict(_RUST_BASELINES)
-    python_approved = dict(_PYTHON_BASELINES)
     assert rust_gate.DEFAULT_CEILING == 1000
     assert python_gate.DEFAULT_CEILING == 1000
-    assert _baselines(rust_gate) == rust_approved
-    assert _baselines(python_gate) == python_approved
-    assert rust_debt == rust_approved
-    assert python_debt == python_approved
-    assert len(rust_approved) == 32
-    assert len(python_approved) == 29
+    assert _baselines(rust_gate) == rust_debt
+    assert _baselines(python_gate) == python_debt
+    for gate_path in (_RUST_GATE_PATH, _PYTHON_GATE_PATH):
+        result = subprocess.run(
+            [sys.executable, str(gate_path)],
+            capture_output=True,
+            text=True,
+            check=False,
+            cwd=_REPO,
+        )
+        assert result.returncode == 0, result.stderr
 
 
 def test_cap_1_growth_above_exact_baseline_fails(
