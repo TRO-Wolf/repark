@@ -84,7 +84,7 @@ honestly"). SQL routing and session-build registration are seam-inverted
   only, never values); S3 Tables ARN shape check; `CatalogSpec` hand-written `Debug` redacts
   secret-like prop values. Parsed at `build()`, registered by `register_configured_catalogs`.
 - `src/read_options.rs` — CSV/JSON Spark option-map helpers; `read_csv_path` (nullValue
-  Utf8 scan; `utf8_columns` and `text_scan` re-reads).
+  Utf8 scan; `utf8_columns` and `text_scan`).
 - `src/text_scan.rs` — text read: `TableProvider` over local files, plain dirs
   (hidden skipped, `key=value` dirs descended iteratively, partitioned leaves
   win over root files), and Hadoop globs (bare globs discover nothing, `basePath`
