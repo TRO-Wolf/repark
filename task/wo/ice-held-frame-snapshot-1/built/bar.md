@@ -194,4 +194,102 @@ rust-panic-ban`, `cargo test --locked -p` for repark-iceberg (1,081), repark-cor
 size, lib-py, map-size, map-sync and docs-links checks, `typos`, `ruff check`, `ruff format --check`, and the comment
 gate against the merge base `a4d8857f` (0).
 
+## Delta 1: `explain` after an incompatible change (A1), and the refused-write cells (C1)
+
+The delta-1 package `pkg-ice1a-afb78fb1` (`BUILT_FROM` `afb78fb1`) changes two Python files of the 12; its native
+library is byte-identical to `eced2285`'s. The probes are in `N/ice-1a-out/delta1-probe/` (Spark 4.1.2 with Iceberg
+1.11.0, the fix-round package and the delta-1 code, both ANSI modes; every answer is the same in both modes).
+
+**A1, the cause.** After a dropped, renamed or retyped column, a recreate or a `DROP TABLE`, a held frame's re-bind
+refusal is raised inside the first optimizer rule, `repark_reader_parse` (`held_iceberg::rebind`). `explain` runs
+`EXPLAIN SELECT * FROM <scratch view>`, and DataFusion 54.1's EXPLAIN does not raise a failed rule: the optimizer wraps
+the error as `Optimizer rule 'repark_reader_parse' failed`, `SessionState::optimize` turns it into a `logical_plan
+after Optimizer rule 'repark_reader_parse' failed` row and marks the logical optimization failed, and the physical
+planner then lists every stored step instead of a plan. `_render_explain_sections` keeps only the `logical_plan` and
+`physical_plan` rows, so `explain()` and `explain(True)` printed nothing, and `explain("formatted")` printed the whole
+listing. Main printed its stale plan. `explain("cost")` runs `EXPLAIN ANALYZE`, which executes, so it already raised.
+
+**The fix** (`surface_a._explain_rows`, called from `core.py`'s `_explain_text` in place of one line, so `core.py`
+keeps its exact size): when the rows carry `initial_logical_plan`, which DataFusion lists only when the logical
+optimization failed (the facade never asks for `VERBOSE`), the frame is planned once more outside EXPLAIN, under its
+own parse memo, through the plan-only `input_files` path (`create_physical_plan`, nothing executes). That raises the
+error the frame's next action raises, the same exception with the same text. The modes follow Spark, as measured:
+
+| mode | Spark 4.1.2 | fix-round head | delta 1 |
+|---|---|---|---|
+| `explain()`, `explain("simple")`, a child's `explain()` | raises | prints nothing | raises |
+| `explain("formatted")` | raises | prints the step listing | raises |
+| `explain(True)`, `explain(mode="extended")` | prints its sections, each holding the `AnalysisException` | prints nothing | prints both sections, each holding the error |
+| `explain("codegen")` | prints the `AnalysisException` | prints the codegen note only | prints the physical section holding the error, and the note |
+| `explain("cost")` | prints the `AnalysisException` | raises | raises (unchanged; a residual below) |
+
+The conditions are Spark's in every cell: `INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH` after a dropped,
+renamed or retyped column, `...TABLE_ID_MISMATCH` after a recreate, and `TABLE_OR_VIEW_NOT_FOUND` after a drop. A
+`SELECT * FROM <DataFrame view of the held frame>` frame's `explain()` raises Spark's
+`INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION` (Spark raises it when the frame is built). After an
+insert, an added column or a recreate under a view, `explain` prints a plan on every build, as Spark does.
+
+**SQL `EXPLAIN` over a DataFrame view of a held frame.** Spark does not raise: `EXPLAIN SELECT * FROM <view>`
+returns the rows `Error occurred during query planning:` and the error's lines, naming the view's condition
+(`INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION` after a dropped, renamed or retyped column,
+`TABLE_OR_VIEW_NOT_FOUND` after a drop). The head does not raise either: it returns DataFusion's listing for a failed
+optimization (54 rows and 3,601 characters for one table), whose last row, `logical_plan after Optimizer rule
+'repark_reader_parse' failed`, carries the same condition. Main returned its stale two-row plan. RePark's SQL
+`EXPLAIN` answers DataFusion's `(plan_type, plan)` rows for every query, against Spark's one `plan` column, on main as
+on the head; that shape is not 1a's and is unchanged. The pin compares the condition the rows name.
+
+**The text.** The error is the frame's own: `Optimizer rule 'repark_reader_parse' failed caused by Error during
+planning: [<condition>] ...`, as `count()` raises it on the fix-round head. Its sentence differs from Spark's in two
+places that predate this delta: the DataFusion prefix, and the column list (`` `c` has been removed. `` and `` `n`
+type has changed from Int32 to Int64 ``, where Spark writes `` - `c` STRING has been removed `` and `` - `n` type
+has changed from INT to BIGINT ``). The cells, Spark's and the verifier's, compare the condition.
+
+**The pins** (`test_ice_held_frame_snapshot_1.py`, both ANSI modes, Spark's recorded answers; re-recording left every
+earlier answer unchanged):
+
+| cell | Spark (both modes) | main | fix-round head | delta 1 |
+|---|---|---|---|---|
+| `insert_explain` | prints, no condition | equal | equal | equal |
+| `drop_column_explain` | `COLUMNS_MISMATCH` | red | red | equal |
+| `drop_column_filter_explain` | `COLUMNS_MISMATCH` | red | red | equal |
+| `drop_column_explain_extended` | prints `COLUMNS_MISMATCH` | red | red | equal |
+| `recreate_explain` | `TABLE_ID_MISMATCH` | red | red | equal |
+| `dropped_table_explain` | `TABLE_OR_VIEW_NOT_FOUND` | red | red | equal |
+| `dfview_drop_column_sql_explain` | rows naming `INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION` | red | equal | equal |
+
+**C1, the refused-write cells.** The 4 cells now read the held frame by `count` and by a child (`select("n", "c")`)
+before and after the refusal, and the fresh frame by `count` and `collect`; `collect` on the held frame keeps its
+first binding (`own_collect_twice`), so it could not show a moved map entry. **The mutant** (in a scratch clone,
+`N/ice-1a-out/delta1-mutant/mutant.diff`, never in the lane clone): when `refuse_encrypted_table` refuses, the
+decorator's map records a table the refused write never committed (the same metadata with the `main` ref removed,
+under a new metadata location), so the held frame's binding moves while the catalog does not. On the mutant's package,
+the 4 cells in their fix-round form all pass (the held `collect` answers the seed rows before and after), and in
+their delta-1 form all 4 fail: the held frame counts 0 and its child reads no rows, while a fresh read answers the
+seed rows. The committed pin file on the mutant: 4 failed (exactly these), 69 passed. On the head package: 73 passed.
+
+**The verifier's cells** (`V/mycells.sh` and `V/probes/`, copied to `N/ice-1a-out/delta1-mine/`, run on Spark, the
+delta-1 package and main, 129 cells per mode): 248 of 258 equal Spark on the head, against 238 in the verifier's run
+of the fix-round head. The 10 that moved are exactly A1's (`A|tab|{dropc,ren,widen}|explain` and
+`O|tab|{recreate,drop}|explain`, both modes); every other head answer is byte-identical to the verifier's. The 10 left
+are the named residuals: `K|cache_held` (2, unit 2), `N|*` (6, `newSession` and a hadoop table) and `V|global|ins`
+(2, R-DF-BATCH2). Spark's answers equal the verifier's run; main's differ in one cell, `X|ext|count` with ANSI off,
+which the verifier's overlapping clean-up broke in its run and which equals Spark here.
+
+## Delta 1: the bar re-run
+
+`BAROUT=N/ice-1a-out/delta1-bar`, the turnstile copy `run_v.sh` on `pkg-ice1a-afb78fb1`, compared by the committed
+[barcmp.py](evidence/probes/barcmp.py): 1,730 EQUAL, 142 RAISE, 108 WRONG, 8 stored, and **0 EQUAL lost** from main
+(1,360 WRONG to EQUAL, 2 RAISE to EQUAL, 130 WRONG to RAISE). Unit 1a 750 of 750; gap 1b 98 EQUAL and 132 RAISE.
+**Against the fix-round run (`verdicts-fix1.jsonl`) no verdict moved**: the bar holds no cell where an `explain` meets
+an incompatible change (its one `explain` cell, `S|s_explain_collect`, is EQUAL on every build). 36 answers differ,
+each only in a generated `_repark_jl_` or `_repark_jr_` view name inside an error both engines raise. The pin file on
+the delta-1 package: 73 passed (60 Spark cells, 13 ENC-1); main: 52 failed (the 38 earlier Spark cells, 12 of the new
+explain cells, and `key_added_read` and `key_removed_read`).
+
+**Delta 1 gates** (`N/ice-1a-out/delta1-gates`, head `afb78fb1`, package `afb78fb1`), each exit 0: `cargo fmt --check`,
+the file size, lib-py, map-size, map-sync and docs-links checks, `typos`, `ruff check`, `ruff format --check`, the
+comment gate against `a4d8857f` (0), `make rust-clippy`, `make rust-panic-ban`, `cargo test --locked -p` for
+repark-iceberg (1,081), repark-core (1,692) and repark-spark (3,262), `make py-test-facade FACADE_WORKERS=6`
+(41,156 passed), the package facade at `-n 6` (41,161 passed) and `make py-test` (1,133 passed).
+
 Up: [map.md](map.md).

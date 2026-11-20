@@ -70,4 +70,25 @@ action after the insert, and on the head that action is the first read of the ne
 manifest, and the re-bound provider), which main's held frame never reads. Not split further this round:
 `held_filter_count` stays at 1.19x in the series' shape, over 1.15x, so it goes to the owner.
 
+## Delta 1
+
+The delta-1 package `pkg-ice1a-afb78fb1` against main, `N/ice-1a-out/cost/run_ts.sh` with `OUTC=N/ice-1a-out/delta1-cost`,
+`RUNS=5` and `C012_RUNS=5`, every sample under the exclusive lock (20:01 to 20:23 UTC, 30 C-012 replays, all exit 0):
+
+| case | base | head | base again | head / mean |
+|---|---|---|---|---|
+| `c012p6` (s) | 39.31 | 39.52 | 39.40 | **1.004** |
+| `c012rest` (s) | 42.87 | 43.08 | 42.95 | **1.004** |
+| `held_nowrite` (ms) | 9.88 | 8.36 | 10.02 | 0.840 |
+| `held_write` (ms) | 10.05 | 11.46 | 10.64 | 1.108 (flag) |
+| `fresh_write` (ms) | 12.93 | 12.65 | 12.82 | 0.983 |
+| `plan_100` (ms) | 0.53 | 0.57 | 0.56 | 1.046 |
+| `held_filter_count` (ms) | 10.90 | 11.40 | 11.00 | 1.041 |
+
+**C-012 passes at 1.004x on both cases.** The short rows are medians of 5 single samples of about 10 ms. The delta
+changes no Rust (the native library is byte-identical to `eced2285`'s) and no Python path these rows run, since none
+calls `explain`; their movement from fix round 1's 10-round series (`held_write` 1.064 to 1.108, `held_filter_count`
+1.190 to 1.041, `held_nowrite` 1.037 to 0.840) is the spread of the series at n=5, not the delta. The instruction
+counts of fix round 1 stand for the same native code.
+
 Up: [map.md](map.md).
