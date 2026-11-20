@@ -54,7 +54,7 @@ answers what main answered. The four append doors (`writeTo().append()`, `insert
 precision with no error and no warning; keeping the digits is the create-door card's
 session setting.
 
-Ledger: [ice-tsns-frame-door-1-ledger.md](../../ledgers/completed/ice-tsns-frame-door-1-ledger.md)
+Ledger: [ice-tsns-frame-door-1-ledger.md](../../ledgers/archive/2026-10/2026-10-13-ice-tsns-frame-door-1-ledger.md)
 (oracle: 90 live Spark cells; the UTC relabel and the 1.5.5 behaviour-change date are the
 owner's rulings of 2026-10-13).
 

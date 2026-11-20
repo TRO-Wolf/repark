@@ -90,5 +90,5 @@ Measured facts this harness is built on (base `8936346a`, release native,
 
 - Up: [../map.md](../map.md)
 - Sibling harness style: [../spill/map.md](../spill/map.md)
-- Ledger: [../../../../task/ledgers/staging/eager-own-1-ledger.md](../../../../task/ledgers/completed/eager-own-1-ledger.md)
+- Ledger: [../../../../task/ledgers/staging/eager-own-1-ledger.md](../../../../task/ledgers/archive/2026-09/2026-09-13-eager-own-1-ledger.md)
 - Committed measurement: [../../../../docs/perf/eager-own-1-2026-09-13/map.md](../../../../docs/perf/eager-own-1-2026-09-13/map.md)

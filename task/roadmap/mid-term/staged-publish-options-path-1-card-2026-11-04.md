@@ -8,4 +8,4 @@
 
 **Fix:** Not designed. First measure both doors on the options path (a hadoop RTAS, and a uuid CTAS on success) with the Java reader, then pin the result or fix the numbering.
 
-**Relation:** [STAGED-PUBLISH-CLEANUP-1](staged-publish-cleanup-1-card-2026-11-04.md) (its ledger lead L1, clause C-008 of [the ledger](../../ledgers/completed/staged-publish-cleanup-1-ledger.md)).
+**Relation:** [STAGED-PUBLISH-CLEANUP-1](staged-publish-cleanup-1-card-2026-11-04.md) (its ledger lead L1, clause C-008 of [the ledger](../../ledgers/archive/2026-11/2026-11-05-staged-publish-cleanup-1-ledger.md)).

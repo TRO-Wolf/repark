@@ -1,6 +1,6 @@
 # Card FACADE-AFFECTED-ROW-SHAPE-1: the facade's affected-row column depends on the route
 
-**Date:** 2026-11-08. **Filed by:** the records clerk (`claude-haiku-5-5`), from the Muse MAX verdict of EMPTY-DML-SHARED-GUARD-1 (ledger [empty-dml-shared-guard-1-ledger.md](../../ledgers/completed/empty-dml-shared-guard-1-ledger.md), clause C-016, Muse MAX F1).
+**Date:** 2026-11-08. **Filed by:** the records clerk (`claude-haiku-5-5`), from the Muse MAX verdict of EMPTY-DML-SHARED-GUARD-1 (ledger [empty-dml-shared-guard-1-ledger.md](../../ledgers/archive/2026-11/2026-11-09-empty-dml-shared-guard-1-ledger.md), clause C-016, Muse MAX F1).
 
 **Status:** filed 2026-11-08, severity S3, not dispatched; awaiting the owner's charter. The Muse MAX verdict graded it as not blocking, with no action required. It predates the unit.
 

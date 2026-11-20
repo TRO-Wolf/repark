@@ -13,7 +13,7 @@ STATUS.md, tags and the release pipeline untouched. **Procedure:**
 |---|---|---|---|
 | EAGER-OWN-1: a refcounted handle owns every `__repark_cache_*` view; bare `eager()` no longer leaks; eager-on-eager reuses the backing | #565 | `abed32c9` | Devin 4 (step 0, step 1, step 2, review fix; one session, $0), Grok critic-logic 1 ($1.00), Grok Python perf reviewer 1 ($1.06) |
 
-Ledger: [eager-own-1-ledger.md](../../ledgers/completed/eager-own-1-ledger.md). The owner's review is archived at
+Ledger: [eager-own-1-ledger.md](../../ledgers/archive/2026-09/2026-09-13-eager-own-1-ledger.md). The owner's review is archived at
 [docs/history/eager-own-1/](../../../docs/history/eager-own-1/map.md). Nothing is parked. Devin needed no Grok fallback.
 
 ## 2. Step 0 — before and after

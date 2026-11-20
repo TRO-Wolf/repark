@@ -8,7 +8,7 @@
 
 ## Why
 
-The ENC-1 refusal holds: 862 keyed write attempts, 0 plaintext data, delete, manifest, puffin or stats files written into a keyed table, 0 orphans. The re-verify found five things that sit beside that claim. None writes plaintext into a keyed table through a product path. They are recorded here so they are decided, not forgotten. The ledger rows are in [enc-1-ledger.md](../../ledgers/completed/enc-1-ledger.md), section "Fold 2".
+The ENC-1 refusal holds: 862 keyed write attempts, 0 plaintext data, delete, manifest, puffin or stats files written into a keyed table, 0 orphans. The re-verify found five things that sit beside that claim. None writes plaintext into a keyed table through a product path. They are recorded here so they are decided, not forgotten. The ledger rows are in [enc-1-ledger.md](../../ledgers/archive/2026-10/2026-10-10-enc-1-ledger.md), section "Fold 2".
 
 ## Items
 

@@ -11,7 +11,7 @@ G-4 **Grok** actor and Grok critic (no Devin, Muse or GLM), G-5 no. Release pipe
 |---|---|---|---|
 | COMMENT-CORE-1: in-code comments removed from `python/repark/src/repark/spark/dataframe/core.py`, no code change | #561 | `893e72be` | Grok actor 2 ($2.67), Grok critic-logic 1 ($0.33) |
 
-Ledger: [comment-core-1-ledger.md](../../ledgers/completed/comment-core-1-ledger.md). The unit is complete and nothing is parked.
+Ledger: [comment-core-1-ledger.md](../../ledgers/archive/2026-09/2026-09-13-comment-core-1-ledger.md). The unit is complete and nothing is parked.
 
 ## 2. What was removed and what moved
 

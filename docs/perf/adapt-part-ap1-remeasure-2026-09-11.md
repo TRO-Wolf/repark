@@ -29,7 +29,7 @@ bytes (a same-codec rewrite into fewer, larger files does not compress worse),
 pinned on the three beds with the candidate ranking unchanged. This document's
 measurements stand; its residue verdict is superseded by the closing errata at
 the top of
-[task/ledgers/completed/ap-1-ledger.md](../../task/ledgers/completed/ap-1-ledger.md).
+[task/ledgers/completed/ap-1-ledger.md](../../task/ledgers/archive/2026-09/2026-09-11-ap-1-ledger.md).
 
 ## Measured codecs and byte ratios
 

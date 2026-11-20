@@ -6,7 +6,7 @@
 `repark.sql()`. It exists so cutover step C6 can move the gold stage off Spark/Glue
 ([../../docs/cutover/inventory.md](../../docs/cutover/inventory.md) ruling 2). The unit that
 built it is DBT-1; the design, the measured refusals and the acceptance result live in
-[../../task/ledgers/staging/dbt-1-adapter-ledger.md](../../task/ledgers/completed/dbt-1-adapter-ledger.md).
+[../../task/ledgers/staging/dbt-1-adapter-ledger.md](../../task/ledgers/archive/2026-09/2026-09-11-dbt-1-adapter-ledger.md).
 
 **Not published in this unit.** There is no wheel, no PyPI name reserved, no entry in the root
 `pyproject.toml` uv workspace, and no row in `uv.lock`. Adding a workspace member would pull

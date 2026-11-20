@@ -30,7 +30,7 @@ Multiplication and addition agree with Spark. Division does not.
 
 ## Correction to the INTDIV-1 ledger
 
-Residue R-INTDIV-2 of [intdiv-1-ledger.md](../../../ledgers/completed/intdiv-1-ledger.md), dated 2026-09-28, says "values equal". Fable's `1.0 / 3` cell (0.333333 against 0.333333333333) shows the values differ when the quotient does not terminate. This card records that correction. The ledger is not edited.
+Residue R-INTDIV-2 of [intdiv-1-ledger.md](../../../ledgers/archive/2026-10/2026-10-30-intdiv-1-ledger.md), dated 2026-09-28, says "values equal". Fable's `1.0 / 3` cell (0.333333 against 0.333333333333) shows the values differ when the quotient does not terminate. This card records that correction. The ledger is not edited.
 
 ## Seat
 

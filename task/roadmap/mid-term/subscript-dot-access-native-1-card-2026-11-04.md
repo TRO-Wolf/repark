@@ -1,6 +1,6 @@
 # Card SUBSCRIPT-DOT-ACCESS-NATIVE-1: the native (ANSI) door does not answer a field access after a subscript, a call or a parenthesis
 
-**Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`) from ledger lead L1 (clause C-007) of [SUBSCRIPT-DOT-ACCESS-1](../../ledgers/completed/subscript-dot-access-1-ledger.md): the builder's question 1, held by the orchestrator's ruling Q1 (b).
+**Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`) from ledger lead L1 (clause C-007) of [SUBSCRIPT-DOT-ACCESS-1](../../ledgers/archive/2026-11/2026-11-04-subscript-dot-access-1-ledger.md): the builder's question 1, held by the orchestrator's ruling Q1 (b).
 
 **Status:** filed, not dispatched. Depends on D5: the native array subscript is one-based, and the wiring is unsafe until that is fixed.
 

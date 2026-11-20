@@ -21,7 +21,7 @@ new state and one line of the unit ledger's evidence: `enable_page_index`,
 structures that read them (`PASSES THROUGH`); `coalesce_batches` is `REFUSED`
 loud at build and at runtime `conf.set` — DataFusion 54.1.0 defines the option
 but no engine path reads it. §5's counts are re-derived again. Ledger:
-[../../task/ledgers/completed/conf-unread-1-ledger.md](../../task/ledgers/completed/conf-unread-1-ledger.md).
+[../../task/ledgers/completed/conf-unread-1-ledger.md](../../task/ledgers/archive/2026-09/2026-09-10-conf-unread-1-ledger.md).
 
 ## 1. Method
 

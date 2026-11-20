@@ -79,5 +79,5 @@ snake legs, which share the divergent function objects.
 
 - Up: [../map.md](../map.md)
 - Pins: [../../../python/repark/tests/parity/test_examples_window_catalog.py](../../../python/repark/tests/parity/test_examples_window_catalog.py)
-- Ledger: [../../../task/ledgers/staging/ex-20-window-catalog-ledger.md](../../../task/ledgers/completed/ex-20-window-catalog-ledger.md)
-- Ledger: [../../../task/ledgers/staging/ex-21-catalog-session-ledger.md](../../../task/ledgers/completed/ex-21-catalog-session-ledger.md)
+- Ledger: [../../../task/ledgers/staging/ex-20-window-catalog-ledger.md](../../../task/ledgers/archive/2026-09/2026-09-11-ex-20-window-catalog-ledger.md)
+- Ledger: [../../../task/ledgers/staging/ex-21-catalog-session-ledger.md](../../../task/ledgers/archive/2026-09/2026-09-11-ex-21-catalog-session-ledger.md)

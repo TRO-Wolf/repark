@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`), from the unit's ledger.
 
-**Status:** closed 2026-11-04 at `20389129` (PR #1261, squashed to main as `ca06fec6`) after the two verifiers. Ledger: [staged-publish-cleanup-1-ledger.md](../../ledgers/completed/staged-publish-cleanup-1-ledger.md).
+**Status:** closed 2026-11-04 at `20389129` (PR #1261, squashed to main as `ca06fec6`) after the two verifiers. Ledger: [staged-publish-cleanup-1-ledger.md](../../ledgers/archive/2026-11/2026-11-05-staged-publish-cleanup-1-ledger.md).
 
 **Why:** The commit-outcome rule's D2 group ([commit-rule-2026-11-04.md](../../../docs/corpus/commit-rule-2026-11-04.md)): a staged CTAS, RTAS or CREATE TABLE whose publish call failed left its staged metadata file on disk, and the reopen read that file as the committed table, on both doors and both catalogs (12 cells, FAILURE_REPORTED_COMMITTED_ON_REOPEN).
 

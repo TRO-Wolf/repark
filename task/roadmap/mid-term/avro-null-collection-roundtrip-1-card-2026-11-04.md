@@ -1,6 +1,6 @@
 # Card AVRO-NULL-COLLECTION-ROUNDTRIP-1: RePark's Avro round trip reads a null map or list back as an empty one
 
-**Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`) from ledger lead L5 (clause C-011) of [SUBSCRIPT-DOT-ACCESS-1](../../ledgers/completed/subscript-dot-access-1-ledger.md), the Opus verifier's question 3.
+**Date:** 2026-11-04. **Filed by:** the records clerk (`claude-haiku-5-5`) from ledger lead L5 (clause C-011) of [SUBSCRIPT-DOT-ACCESS-1](../../ledgers/archive/2026-11/2026-11-04-subscript-dot-access-1-ledger.md), the Opus verifier's question 3.
 
 **Status:** filed, not dispatched. Verifier class S2.
 
