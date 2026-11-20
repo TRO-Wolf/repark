@@ -1,0 +1,1034 @@
+# javap -c -p excerpts, Spark 4.1.2 (spark-catalyst_2.13-4.1.2.jar, spark-sql_2.13-4.1.2.jar, spark-sql-api_2.13-4.1.2.jar)
+# Filtered to object creation, calls, loads and branches; package prefix org/apache/spark/sql/ dropped.
+
+## catalyst.plans.logical.AsOfJoin$ (apply, makeAsOfCond, makeOrderingExpr, the tolerance assertion)
+ public org.apache.spark.sql.catalyst.plans.logical.AsOfJoin apply(org.apache.spark.sql.catalyst.plans.logical.LogicalPlan, org.apache.spark.sql.catalyst.plans.logical.Lo
+ 0: aload_0
+ 1: aload_3
+ 2: aload 4
+ 4: aload 7
+ 8: aload 9
+ 10: invokespecial #37 // Method makeAsOfCond:(catalyst/expressions/Expression;catalyst/expressions/Expression;Lscala/Option;Zcatalyst/plans/AsOfJoinDirection;)catalyst/e
+ 15: aload_0
+ 16: aload_3
+ 17: aload 4
+ 19: aload 9
+ 21: invokespecial #41 // Method makeOrderingExpr:(catalyst/expressions/Expression;catalyst/expressions/Expression;catalyst/plans/AsOfJoinDirection;)catalyst/expressions/
+ 26: new #43 // class catalyst/plans/logical/AsOfJoin
+ 30: aload_1
+ 31: aload_2
+ 32: aload 10
+ 34: aload 5
+ 36: aload 6
+ 38: aload 11
+ 40: aload 7
+ 42: invokedynamic #63, 0 // InvokeDynamic #0:apply:()Lscala/Function1;
+ 47: invokevirtual #69 // Method scala/Option.map:(Lscala/Function1;)Lscala/Option;
+ 50: invokespecial #72 // Method catalyst/plans/logical/AsOfJoin."<init>":(catalyst/plans/logical/LogicalPlan;catalyst/plans/logical/LogicalPlan;catalyst/expressions/Expr
+ 53: areturn
+ private org.apache.spark.sql.catalyst.expressions.Expression makeAsOfCond(org.apache.spark.sql.catalyst.expressions.Expression, org.apache.spark.sql.catalyst.expressions
+ 0: new #84 // class scala/Tuple2
+ 6: invokestatic #90 // Method scala/runtime/BoxesRunTime.boxToBoolean:(Z)Ljava/lang/Boolean;
+ 9: aload 5
+ 11: invokespecial #93 // Method scala/Tuple2."<init>":(Ljava/lang/Object;Ljava/lang/Object;)V
+ 16: aload 10
+ 21: aload 10
+ 23: invokevirtual #97 // Method scala/Tuple2._1$mcZ$sp:()Z
+ 28: aload 10
+ 30: invokevirtual #101 // Method scala/Tuple2._2:()Ljava/lang/Object;
+ 44: getstatic #108 // Field catalyst/plans/Backward$.MODULE$:catalyst/plans/Backward$;
+ 47: aload 12
+ 49: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 52: ifeq 67
+ 55: new #114 // class catalyst/expressions/GreaterThanOrEqual
+ 59: aload_1
+ 60: aload_2
+ 61: invokespecial #117 // Method catalyst/expressions/GreaterThanOrEqual."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 73: aload 10
+ 78: aload 10
+ 80: invokevirtual #97 // Method scala/Tuple2._1$mcZ$sp:()Z
+ 85: aload 10
+ 87: invokevirtual #101 // Method scala/Tuple2._2:()Ljava/lang/Object;
+ 101: getstatic #108 // Field catalyst/plans/Backward$.MODULE$:catalyst/plans/Backward$;
+ 104: aload 14
+ 106: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 109: ifeq 124
+ 112: new #119 // class catalyst/expressions/GreaterThan
+ 116: aload_1
+ 117: aload_2
+ 118: invokespecial #120 // Method catalyst/expressions/GreaterThan."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 130: aload 10
+ 135: aload 10
+ 137: invokevirtual #97 // Method scala/Tuple2._1$mcZ$sp:()Z
+ 142: aload 10
+ 144: invokevirtual #101 // Method scala/Tuple2._2:()Ljava/lang/Object;
+ 158: getstatic #125 // Field catalyst/plans/Forward$.MODULE$:catalyst/plans/Forward$;
+ 161: aload 16
+ 163: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 166: ifeq 181
+ 169: new #127 // class catalyst/expressions/LessThanOrEqual
+ 173: aload_1
+ 174: aload_2
+ 175: invokespecial #128 // Method catalyst/expressions/LessThanOrEqual."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 187: aload 10
+ 192: aload 10
+ 194: invokevirtual #97 // Method scala/Tuple2._1$mcZ$sp:()Z
+ 199: aload 10
+ 201: invokevirtual #101 // Method scala/Tuple2._2:()Ljava/lang/Object;
+ 215: getstatic #125 // Field catalyst/plans/Forward$.MODULE$:catalyst/plans/Forward$;
+ 218: aload 18
+ 220: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 223: ifeq 238
+ 226: new #130 // class catalyst/expressions/LessThan
+ 230: aload_1
+ 231: aload_2
+ 232: invokespecial #131 // Method catalyst/expressions/LessThan."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 244: aload 10
+ 249: aload 10
+ 251: invokevirtual #97 // Method scala/Tuple2._1$mcZ$sp:()Z
+ 256: aload 10
+ 258: invokevirtual #101 // Method scala/Tuple2._2:()Ljava/lang/Object;
+ 272: getstatic #136 // Field catalyst/plans/Nearest$.MODULE$:catalyst/plans/Nearest$;
+ 275: aload 20
+ 277: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 280: ifeq 292
+ 283: getstatic #141 // Field catalyst/expressions/Literal$.MODULE$:catalyst/expressions/Literal$;
+ 286: invokevirtual #145 // Method catalyst/expressions/Literal$.TrueLiteral:()catalyst/expressions/Literal;
+ 298: aload 10
+ 303: aload 10
+ 305: invokevirtual #97 // Method scala/Tuple2._1$mcZ$sp:()Z
+ 310: aload 10
+ 312: invokevirtual #101 // Method scala/Tuple2._2:()Ljava/lang/Object;
+ 326: getstatic #136 // Field catalyst/plans/Nearest$.MODULE$:catalyst/plans/Nearest$;
+ 329: aload 22
+ 331: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 334: ifeq 356
+ 337: new #147 // class catalyst/expressions/Not
+ 341: new #149 // class catalyst/expressions/EqualTo
+ 345: aload_1
+ 346: aload_2
+ 347: invokespecial #150 // Method catalyst/expressions/EqualTo."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 350: invokespecial #153 // Method catalyst/expressions/Not."<init>":(catalyst/expressions/Expression;)V
+ 362: new #155 // class scala/MatchError
+ 366: aload 10
+ 368: invokespecial #158 // Method scala/MatchError."<init>":(Ljava/lang/Object;)V
+ 374: aload_3
+ 377: aload 23
+ 379: instanceof #160 // class scala/Some
+ 382: ifeq 955
+ 385: aload 23
+ 392: aload 24
+ 394: invokevirtual #163 // Method scala/Some.value:()Ljava/lang/Object;
+ 402: new #84 // class scala/Tuple2
+ 408: invokestatic #90 // Method scala/runtime/BoxesRunTime.boxToBoolean:(Z)Ljava/lang/Boolean;
+ 411: aload 5
+ 413: invokespecial #93 // Method scala/Tuple2."<init>":(Ljava/lang/Object;Ljava/lang/Object;)V
+ 418: aload 26
+ 423: aload 26
+ 425: invokevirtual #97 // Method scala/Tuple2._1$mcZ$sp:()Z
+ 430: aload 26
+ 432: invokevirtual #101 // Method scala/Tuple2._2:()Ljava/lang/Object;
+ 446: getstatic #108 // Field catalyst/plans/Backward$.MODULE$:catalyst/plans/Backward$;
+ 449: aload 28
+ 451: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 454: ifeq 491
+ 457: new #167 // class catalyst/expressions/And
+ 461: aload 9
+ 463: new #114 // class catalyst/expressions/GreaterThanOrEqual
+ 467: aload_2
+ 468: new #169 // class catalyst/expressions/Subtract
+ 472: aload_1
+ 473: aload 25
+ 475: getstatic #174 // Field catalyst/expressions/Subtract$.MODULE$:catalyst/expressions/Subtract$;
+ 481: invokespecial #181 // Method catalyst/expressions/Subtract."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;catalyst/expressions/NumericEva
+ 484: invokespecial #117 // Method catalyst/expressions/GreaterThanOrEqual."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 487: invokespecial #182 // Method catalyst/expressions/And."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 490: areturn
+ 497: aload 26
+ 502: aload 26
+ 504: invokevirtual #97 // Method scala/Tuple2._1$mcZ$sp:()Z
+ 509: aload 26
+ 511: invokevirtual #101 // Method scala/Tuple2._2:()Ljava/lang/Object;
+ 525: getstatic #108 // Field catalyst/plans/Backward$.MODULE$:catalyst/plans/Backward$;
+ 528: aload 30
+ 530: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 533: ifeq 570
+ 536: new #167 // class catalyst/expressions/And
+ 540: aload 9
+ 542: new #119 // class catalyst/expressions/GreaterThan
+ 546: aload_2
+ 547: new #169 // class catalyst/expressions/Subtract
+ 551: aload_1
+ 552: aload 25
+ 554: getstatic #174 // Field catalyst/expressions/Subtract$.MODULE$:catalyst/expressions/Subtract$;
+ 560: invokespecial #181 // Method catalyst/expressions/Subtract."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;catalyst/expressions/NumericEva
+ 563: invokespecial #120 // Method catalyst/expressions/GreaterThan."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 566: invokespecial #182 // Method catalyst/expressions/And."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 569: areturn
+ 576: aload 26
+ 581: aload 26
+ 583: invokevirtual #97 // Method scala/Tuple2._1$mcZ$sp:()Z
+ 588: aload 26
+ 590: invokevirtual #101 // Method scala/Tuple2._2:()Ljava/lang/Object;
+ 604: getstatic #125 // Field catalyst/plans/Forward$.MODULE$:catalyst/plans/Forward$;
+ 607: aload 32
+ 609: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 612: ifeq 649
+ 615: new #167 // class catalyst/expressions/And
+ 619: aload 9
+ 621: new #127 // class catalyst/expressions/LessThanOrEqual
+ 625: aload_2
+ 626: new #184 // class catalyst/expressions/Add
+ 630: aload_1
+ 631: aload 25
+ 633: getstatic #189 // Field catalyst/expressions/Add$.MODULE$:catalyst/expressions/Add$;
+ 639: invokespecial #191 // Method catalyst/expressions/Add."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;catalyst/expressions/NumericEvalCont
+ 642: invokespecial #128 // Method catalyst/expressions/LessThanOrEqual."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 645: invokespecial #182 // Method catalyst/expressions/And."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 648: areturn
+ 655: aload 26
+ 660: aload 26
+ 662: invokevirtual #97 // Method scala/Tuple2._1$mcZ$sp:()Z
+ 667: aload 26
+ 669: invokevirtual #101 // Method scala/Tuple2._2:()Ljava/lang/Object;
+ 683: getstatic #125 // Field catalyst/plans/Forward$.MODULE$:catalyst/plans/Forward$;
+ 686: aload 34
+ 688: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 691: ifeq 728
+ 694: new #167 // class catalyst/expressions/And
+ 698: aload 9
+ 700: new #130 // class catalyst/expressions/LessThan
+ 704: aload_2
+ 705: new #184 // class catalyst/expressions/Add
+ 709: aload_1
+ 710: aload 25
+ 712: getstatic #189 // Field catalyst/expressions/Add$.MODULE$:catalyst/expressions/Add$;
+ 718: invokespecial #191 // Method catalyst/expressions/Add."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;catalyst/expressions/NumericEvalCont
+ 721: invokespecial #131 // Method catalyst/expressions/LessThan."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 724: invokespecial #182 // Method catalyst/expressions/And."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 727: areturn
+ 734: aload 26
+ 739: aload 26
+ 741: invokevirtual #97 // Method scala/Tuple2._1$mcZ$sp:()Z
+ 746: aload 26
+ 748: invokevirtual #101 // Method scala/Tuple2._2:()Ljava/lang/Object;
+ 762: getstatic #136 // Field catalyst/plans/Nearest$.MODULE$:catalyst/plans/Nearest$;
+ 765: aload 36
+ 767: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 770: ifeq 829
+ 773: new #167 // class catalyst/expressions/And
+ 777: new #114 // class catalyst/expressions/GreaterThanOrEqual
+ 781: aload_2
+ 782: new #169 // class catalyst/expressions/Subtract
+ 786: aload_1
+ 787: aload 25
+ 789: getstatic #174 // Field catalyst/expressions/Subtract$.MODULE$:catalyst/expressions/Subtract$;
+ 795: invokespecial #181 // Method catalyst/expressions/Subtract."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;catalyst/expressions/NumericEva
+ 798: invokespecial #117 // Method catalyst/expressions/GreaterThanOrEqual."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 801: new #127 // class catalyst/expressions/LessThanOrEqual
+ 805: aload_2
+ 806: new #184 // class catalyst/expressions/Add
+ 810: aload_1
+ 811: aload 25
+ 813: getstatic #189 // Field catalyst/expressions/Add$.MODULE$:catalyst/expressions/Add$;
+ 819: invokespecial #191 // Method catalyst/expressions/Add."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;catalyst/expressions/NumericEvalCont
+ 822: invokespecial #128 // Method catalyst/expressions/LessThanOrEqual."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 825: invokespecial #182 // Method catalyst/expressions/And."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 828: areturn
+ 835: aload 26
+ 840: aload 26
+ 842: invokevirtual #97 // Method scala/Tuple2._1$mcZ$sp:()Z
+ 847: aload 26
+ 849: invokevirtual #101 // Method scala/Tuple2._2:()Ljava/lang/Object;
+ 863: getstatic #136 // Field catalyst/plans/Nearest$.MODULE$:catalyst/plans/Nearest$;
+ 866: aload 38
+ 868: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 871: ifeq 939
+ 874: new #167 // class catalyst/expressions/And
+ 878: aload 9
+ 880: new #167 // class catalyst/expressions/And
+ 884: new #119 // class catalyst/expressions/GreaterThan
+ 888: aload_2
+ 889: new #169 // class catalyst/expressions/Subtract
+ 893: aload_1
+ 894: aload 25
+ 896: getstatic #174 // Field catalyst/expressions/Subtract$.MODULE$:catalyst/expressions/Subtract$;
+ 902: invokespecial #181 // Method catalyst/expressions/Subtract."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;catalyst/expressions/NumericEva
+ 905: invokespecial #120 // Method catalyst/expressions/GreaterThan."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 908: new #130 // class catalyst/expressions/LessThan
+ 912: aload_2
+ 913: new #184 // class catalyst/expressions/Add
+ 917: aload_1
+ 918: aload 25
+ 920: getstatic #189 // Field catalyst/expressions/Add$.MODULE$:catalyst/expressions/Add$;
+ 926: invokespecial #191 // Method catalyst/expressions/Add."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;catalyst/expressions/NumericEvalCont
+ 929: invokespecial #131 // Method catalyst/expressions/LessThan."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 932: invokespecial #182 // Method catalyst/expressions/And."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 935: invokespecial #182 // Method catalyst/expressions/And."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 938: areturn
+ 945: new #155 // class scala/MatchError
+ 949: aload 26
+ 951: invokespecial #158 // Method scala/MatchError."<init>":(Ljava/lang/Object;)V
+ 958: getstatic #196 // Field scala/None$.MODULE$:Lscala/None$;
+ 961: aload 23
+ 963: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 966: ifeq 972
+ 969: aload 9
+ 971: areturn
+ 975: new #155 // class scala/MatchError
+ 979: aload 23
+ 981: invokespecial #158 // Method scala/MatchError."<init>":(Ljava/lang/Object;)V
+ private org.apache.spark.sql.catalyst.expressions.Expression makeOrderingExpr(org.apache.spark.sql.catalyst.expressions.Expression, org.apache.spark.sql.catalyst.express
+ 0: aload_3
+ 3: getstatic #108 // Field catalyst/plans/Backward$.MODULE$:catalyst/plans/Backward$;
+ 6: aload 5
+ 8: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 11: ifeq 30
+ 14: new #169 // class catalyst/expressions/Subtract
+ 18: aload_1
+ 19: aload_2
+ 20: getstatic #174 // Field catalyst/expressions/Subtract$.MODULE$:catalyst/expressions/Subtract$;
+ 26: invokespecial #181 // Method catalyst/expressions/Subtract."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;catalyst/expressions/NumericEval
+ 29: areturn
+ 33: getstatic #125 // Field catalyst/plans/Forward$.MODULE$:catalyst/plans/Forward$;
+ 36: aload 5
+ 38: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 41: ifeq 60
+ 44: new #169 // class catalyst/expressions/Subtract
+ 48: aload_2
+ 49: aload_1
+ 50: getstatic #174 // Field catalyst/expressions/Subtract$.MODULE$:catalyst/expressions/Subtract$;
+ 56: invokespecial #181 // Method catalyst/expressions/Subtract."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;catalyst/expressions/NumericEval
+ 59: areturn
+ 63: getstatic #136 // Field catalyst/plans/Nearest$.MODULE$:catalyst/plans/Nearest$;
+ 66: aload 5
+ 68: invokevirtual #112 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 71: ifeq 121
+ 74: new #199 // class catalyst/expressions/If
+ 78: new #119 // class catalyst/expressions/GreaterThan
+ 82: aload_1
+ 83: aload_2
+ 84: invokespecial #120 // Method catalyst/expressions/GreaterThan."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 87: new #169 // class catalyst/expressions/Subtract
+ 91: aload_1
+ 92: aload_2
+ 93: getstatic #174 // Field catalyst/expressions/Subtract$.MODULE$:catalyst/expressions/Subtract$;
+ 99: invokespecial #181 // Method catalyst/expressions/Subtract."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;catalyst/expressions/NumericEval
+ 102: new #169 // class catalyst/expressions/Subtract
+ 106: aload_2
+ 107: aload_1
+ 108: getstatic #174 // Field catalyst/expressions/Subtract$.MODULE$:catalyst/expressions/Subtract$;
+ 114: invokespecial #181 // Method catalyst/expressions/Subtract."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;catalyst/expressions/NumericEva
+ 117: invokespecial #202 // Method catalyst/expressions/If."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 120: areturn
+ 124: new #155 // class scala/MatchError
+ 128: aload 5
+ 130: invokespecial #158 // Method scala/MatchError."<init>":(Ljava/lang/Object;)V
+ public org.apache.spark.sql.catalyst.plans.logical.AsOfJoin apply(org.apache.spark.sql.catalyst.plans.logical.LogicalPlan, org.apache.spark.sql.catalyst.plans.logical.Lo
+ 0: new #43 // class catalyst/plans/logical/AsOfJoin
+ 4: aload_1
+ 5: aload_2
+ 6: aload_3
+ 7: aload 4
+ 9: aload 5
+ 11: aload 6
+ 13: aload 7
+ 15: invokespecial #72 // Method catalyst/plans/logical/AsOfJoin."<init>":(catalyst/plans/logical/LogicalPlan;catalyst/plans/logical/LogicalPlan;catalyst/expressions/Expr
+ 18: areturn
+ public scala.Option<scala.Tuple7<org.apache.spark.sql.catalyst.plans.logical.LogicalPlan, org.apache.spark.sql.catalyst.plans.logical.LogicalPlan, org.apache.spark.sql.c
+ 0: aload_1
+ 4: getstatic #196 // Field scala/None$.MODULE$:Lscala/None$;
+ 7: areturn
+ 8: new #160 // class scala/Some
+ 12: new #213 // class scala/Tuple7
+ 16: aload_1
+ 17: invokevirtual #216 // Method catalyst/plans/logical/AsOfJoin.left:()catalyst/plans/logical/LogicalPlan;
+ 20: aload_1
+ 21: invokevirtual #218 // Method catalyst/plans/logical/AsOfJoin.right:()catalyst/plans/logical/LogicalPlan;
+ 24: aload_1
+ 25: invokevirtual #221 // Method catalyst/plans/logical/AsOfJoin.asOfCondition:()catalyst/expressions/Expression;
+ 28: aload_1
+ 29: invokevirtual #224 // Method catalyst/plans/logical/AsOfJoin.condition:()Lscala/Option;
+ 32: aload_1
+ 33: invokevirtual #227 // Method catalyst/plans/logical/AsOfJoin.joinType:()catalyst/plans/JoinType;
+ 36: aload_1
+ 37: invokevirtual #229 // Method catalyst/plans/logical/AsOfJoin.orderExpression:()catalyst/expressions/Expression;
+ 40: aload_1
+ 41: invokevirtual #231 // Method catalyst/plans/logical/AsOfJoin.toleranceAssertion:()Lscala/Option;
+ 44: invokespecial #234 // Method scala/Tuple7."<init>":(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava
+ 47: invokespecial #235 // Method scala/Some."<init>":(Ljava/lang/Object;)V
+ 50: areturn
+ private java.lang.Object writeReplace();
+ 0: new #239 // class scala/runtime/ModuleSerializationProxy
+ 4: ldc #2 // class catalyst/plans/logical/AsOfJoin$
+ 6: invokespecial #242 // Method scala/runtime/ModuleSerializationProxy."<init>":(Ljava/lang/Class;)V
+ 9: areturn
+ public static final org.apache.spark.sql.catalyst.expressions.GreaterThanOrEqual $anonfun$apply$7(org.apache.spark.sql.catalyst.expressions.Expression);
+ 0: new #114 // class catalyst/expressions/GreaterThanOrEqual
+ 4: aload_0
+ 5: getstatic #141 // Field catalyst/expressions/Literal$.MODULE$:catalyst/expressions/Literal$;
+ 8: aload_0
+ 9: invokevirtual #247 // Method catalyst/expressions/Expression.dataType:()types/DataType;
+ 12: invokevirtual #251 // Method catalyst/expressions/Literal$.default:(types/DataType;)catalyst/expressions/Literal;
+ 15: invokespecial #117 // Method catalyst/expressions/GreaterThanOrEqual."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 18: areturn
+ private org.apache.spark.sql.catalyst.plans.logical.AsOfJoin$();
+ 0: aload_0
+ 1: invokespecial #252 // Method java/lang/Object."<init>":()V
+ private static java.lang.Object $deserializeLambda$(java.lang.invoke.SerializedLambda);
+
+## catalyst.plans.logical.AsOfJoin (output, resolved, constructor require)
+ public scala.collection.immutable.Seq<org.apache.spark.sql.catalyst.expressions.Attribute> output();
+ 0: aload_0
+ 1: invokevirtual #126 // Method joinType:()catalyst/plans/JoinType;
+ 5: getstatic #131 // Field catalyst/plans/LeftOuter$.MODULE$:catalyst/plans/LeftOuter$;
+ 8: aload_2
+ 9: invokevirtual #137 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 12: ifeq 51
+ 15: aload_0
+ 16: invokevirtual #139 // Method left:()catalyst/plans/logical/LogicalPlan;
+ 19: invokevirtual #141 // Method catalyst/plans/logical/LogicalPlan.output:()Lscala/collection/immutable/Seq;
+ 22: aload_0
+ 23: invokevirtual #143 // Method right:()catalyst/plans/logical/LogicalPlan;
+ 26: invokevirtual #141 // Method catalyst/plans/logical/LogicalPlan.output:()Lscala/collection/immutable/Seq;
+ 29: invokedynamic #164, 0 // InvokeDynamic #0:apply:()Lscala/Function1;
+ 34: invokeinterface #170, 2 // InterfaceMethod scala/collection/immutable/Seq.map:(Lscala/Function1;)Ljava/lang/Object;
+ 42: invokeinterface #176, 2 // InterfaceMethod scala/collection/immutable/Seq.$plus$plus:(Lscala/collection/IterableOnce;)Ljava/lang/Object;
+ 50: areturn
+ 54: aload_0
+ 55: invokevirtual #139 // Method left:()catalyst/plans/logical/LogicalPlan;
+ 58: invokevirtual #141 // Method catalyst/plans/logical/LogicalPlan.output:()Lscala/collection/immutable/Seq;
+ 61: aload_0
+ 62: invokevirtual #143 // Method right:()catalyst/plans/logical/LogicalPlan;
+ 65: invokevirtual #141 // Method catalyst/plans/logical/LogicalPlan.output:()Lscala/collection/immutable/Seq;
+ 68: invokeinterface #176, 2 // InterfaceMethod scala/collection/immutable/Seq.$plus$plus:(Lscala/collection/IterableOnce;)Ljava/lang/Object;
+ 76: areturn
+ public boolean duplicateResolved();
+ 0: aload_0
+ 1: invokevirtual #139 // Method left:()catalyst/plans/logical/LogicalPlan;
+ 4: invokevirtual #184 // Method catalyst/plans/logical/LogicalPlan.outputSet:()catalyst/expressions/AttributeSet;
+ 7: aload_0
+ 8: invokevirtual #143 // Method right:()catalyst/plans/logical/LogicalPlan;
+ 11: invokevirtual #184 // Method catalyst/plans/logical/LogicalPlan.outputSet:()catalyst/expressions/AttributeSet;
+ 14: invokevirtual #190 // Method catalyst/expressions/AttributeSet.intersect:(catalyst/expressions/AttributeSet;)catalyst/expressions/AttributeSet;
+ 17: invokevirtual #193 // Method catalyst/expressions/AttributeSet.isEmpty:()Z
+ private boolean resolved$lzycompute();
+ 0: aload_0
+ 4: aload_0
+ 11: aload_0
+ 12: aload_0
+ 13: invokevirtual #199 // Method childrenResolved:()Z
+ 16: ifeq 107
+ 19: aload_0
+ 20: invokevirtual #202 // Method expressions:()Lscala/collection/immutable/Seq;
+ 23: invokedynamic #209, 0 // InvokeDynamic #1:apply:()Lscala/Function1;
+ 28: invokeinterface #213, 2 // InterfaceMethod scala/collection/immutable/Seq.forall:(Lscala/Function1;)Z
+ 33: ifeq 107
+ 36: aload_0
+ 37: invokevirtual #215 // Method duplicateResolved:()Z
+ 40: ifeq 107
+ 43: aload_0
+ 44: invokevirtual #217 // Method asOfCondition:()catalyst/expressions/Expression;
+ 47: invokevirtual #223 // Method catalyst/expressions/Expression.dataType:()types/DataType;
+ 50: getstatic #228 // Field types/BooleanType$.MODULE$:types/BooleanType$;
+ 59: aload_2
+ 66: aload_2
+ 67: invokevirtual #137 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 70: ifeq 107
+ 73: aload_0
+ 74: invokevirtual #230 // Method condition:()Lscala/Option;
+ 77: invokedynamic #235, 0 // InvokeDynamic #2:apply:()Lscala/Function1;
+ 82: invokevirtual #238 // Method scala/Option.forall:(Lscala/Function1;)Z
+ 85: ifeq 107
+ 88: aload_0
+ 89: invokevirtual #240 // Method toleranceAssertion:()Lscala/Option;
+ 92: invokedynamic #245, 0 // InvokeDynamic #3:apply:()Lscala/Function1;
+ 97: invokevirtual #238 // Method scala/Option.forall:(Lscala/Function1;)Z
+ 100: ifeq 107
+ 111: aload_0
+ 116: aload_1
+ 121: aload_1
+ 124: aload_0
+ public boolean resolved();
+ 0: aload_0
+ 7: aload_0
+ 8: invokespecial #251 // Method resolved$lzycompute:()Z
+ 12: aload_0
+ public final scala.collection.immutable.Seq<scala.Enumeration$Value> nodePatterns();
+ public static final java.lang.String $anonfun$new$9(org.apache.spark.sql.catalyst.plans.logical.AsOfJoin);
+ 0: aload_0
+ 1: invokevirtual #126 // Method joinType:()catalyst/plans/JoinType;
+ 4: invokedynamic #345, 0 // InvokeDynamic #4:makeConcatWithConstants:(catalyst/plans/JoinType;)Ljava/lang/String;
+ 9: areturn
+ public static final org.apache.spark.sql.catalyst.expressions.Attribute $anonfun$output$12(org.apache.spark.sql.catalyst.expressions.Attribute);
+ 0: aload_0
+ 2: invokevirtual #352 // Method catalyst/expressions/Attribute.withNullability:(Z)catalyst/expressions/Attribute;
+ 5: areturn
+ public static final boolean $anonfun$resolved$10(org.apache.spark.sql.catalyst.expressions.Expression);
+ 0: aload_0
+ 1: invokevirtual #358 // Method catalyst/expressions/Expression.resolved:()Z
+ public static final boolean $anonfun$resolved$11(org.apache.spark.sql.catalyst.expressions.Expression);
+ 0: aload_0
+ 1: invokevirtual #223 // Method catalyst/expressions/Expression.dataType:()types/DataType;
+ 4: getstatic #228 // Field types/BooleanType$.MODULE$:types/BooleanType$;
+ 13: aload_1
+ 20: aload_1
+ 21: invokevirtual #137 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 24: ifeq 31
+ public static final boolean $anonfun$resolved$12(org.apache.spark.sql.catalyst.expressions.Expression);
+ 0: aload_0
+ 1: invokevirtual #365 // Method catalyst/expressions/Expression.foldable:()Z
+ 4: ifeq 25
+ 7: aload_0
+ 8: aload_0
+ 9: invokevirtual #369 // Method catalyst/expressions/Expression.eval$default$1:()catalyst/InternalRow;
+ 12: invokevirtual #373 // Method catalyst/expressions/Expression.eval:(catalyst/InternalRow;)Ljava/lang/Object;
+ 15: invokestatic #378 // Method scala/runtime/BoxesRunTime.unboxToBoolean:(Ljava/lang/Object;)Z
+ 18: ifeq 25
+ public org.apache.spark.sql.catalyst.plans.logical.AsOfJoin(org.apache.spark.sql.catalyst.plans.logical.LogicalPlan, org.apache.spark.sql.catalyst.plans.logical.LogicalP
+ 0: aload_0
+ 1: aload_1
+ 5: aload_0
+ 6: aload_2
+ 10: aload_0
+ 11: aload_3
+ 15: aload_0
+ 16: aload 4
+ 21: aload_0
+ 22: aload 5
+ 27: aload_0
+ 28: aload 6
+ 33: aload_0
+ 34: aload 7
+ 39: aload_0
+ 40: invokespecial #382 // Method catalyst/plans/logical/LogicalPlan."<init>":()V
+ 43: aload_0
+ 44: invokestatic #386 // InterfaceMethod catalyst/trees/BinaryLike.$init$:(catalyst/trees/BinaryLike;)V
+ 47: getstatic #391 // Field scala/Predef$.MODULE$:Lscala/Predef$;
+ 50: new #393 // class scala/collection/immutable/$colon$colon
+ 54: getstatic #398 // Field catalyst/plans/Inner$.MODULE$:catalyst/plans/Inner$;
+ 57: new #393 // class scala/collection/immutable/$colon$colon
+ 61: getstatic #131 // Field catalyst/plans/LeftOuter$.MODULE$:catalyst/plans/LeftOuter$;
+ 64: getstatic #403 // Field scala/collection/immutable/Nil$.MODULE$:Lscala/collection/immutable/Nil$;
+ 67: invokespecial #406 // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+ 70: invokespecial #406 // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+ 73: aload 5
+ 75: invokevirtual #409 // Method scala/collection/immutable/$colon$colon.contains:(Ljava/lang/Object;)Z
+ 78: aload_0
+ 79: invokedynamic #418, 0 // InvokeDynamic #5:apply:(catalyst/plans/logical/AsOfJoin;)Lscala/Function0;
+ 84: invokevirtual #422 // Method scala/Predef$.require:(ZLscala/Function0;)V
+ 87: aload_0
+ 88: new #393 // class scala/collection/immutable/$colon$colon
+ 92: getstatic #427 // Field catalyst/trees/TreePattern$.MODULE$:catalyst/trees/TreePattern$;
+ 95: invokevirtual #431 // Method catalyst/trees/TreePattern$.AS_OF_JOIN:()Lscala/Enumeration$Value;
+ 98: getstatic #403 // Field scala/collection/immutable/Nil$.MODULE$:Lscala/collection/immutable/Nil$;
+ 101: invokespecial #406 // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+
+## catalyst.plans.AsOfJoinDirection$ (apply)
+public final class org.apache.spark.sql.catalyst.plans.AsOfJoinDirection$ {
+ public static final org.apache.spark.sql.catalyst.plans.AsOfJoinDirection$ MODULE$;
+ private static final scala.collection.immutable.Seq<java.lang.String> supported;
+ public static {};
+ 0: new #2 // class catalyst/plans/AsOfJoinDirection$
+ 4: invokespecial #20 // Method "<init>":()V
+ 10: new #24 // class scala/collection/immutable/$colon$colon
+ 14: ldc #26 // String forward
+ 16: new #24 // class scala/collection/immutable/$colon$colon
+ 20: ldc #28 // String backward
+ 22: new #24 // class scala/collection/immutable/$colon$colon
+ 26: ldc #30 // String nearest
+ 28: getstatic #35 // Field scala/collection/immutable/Nil$.MODULE$:Lscala/collection/immutable/Nil$;
+ 31: invokespecial #38 // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+ 34: invokespecial #38 // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+ 37: invokespecial #38 // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+ public scala.collection.immutable.Seq<java.lang.String> supported();
+ 0: getstatic #40 // Field supported:Lscala/collection/immutable/Seq;
+ 3: areturn
+ public org.apache.spark.sql.catalyst.plans.AsOfJoinDirection apply(java.lang.String);
+ 0: aload_1
+ 1: getstatic #52 // Field java/util/Locale.ROOT:Ljava/util/Locale;
+ 4: invokevirtual #58 // Method java/lang/String.toLowerCase:(Ljava/util/Locale;)Ljava/lang/String;
+ 8: aload_3
+ 16: aload_3
+ 17: invokevirtual #62 // Method java/lang/String.hashCode:()I
+ 56: ldc #26 // String forward
+ 58: aload_3
+ 59: invokevirtual #66 // Method java/lang/String.equals:(Ljava/lang/Object;)Z
+ 62: ifeq 69
+ 65: getstatic #71 // Field catalyst/plans/Forward$.MODULE$:catalyst/plans/Forward$;
+ 68: areturn
+ 72: ldc #30 // String nearest
+ 74: aload_3
+ 75: invokevirtual #66 // Method java/lang/String.equals:(Ljava/lang/Object;)Z
+ 78: ifeq 85
+ 81: getstatic #76 // Field catalyst/plans/Nearest$.MODULE$:catalyst/plans/Nearest$;
+ 84: areturn
+ 88: ldc #28 // String backward
+ 90: aload_3
+ 91: invokevirtual #66 // Method java/lang/String.equals:(Ljava/lang/Object;)Z
+ 94: ifeq 101
+ 97: getstatic #81 // Field catalyst/plans/Backward$.MODULE$:catalyst/plans/Backward$;
+ 100: areturn
+ 107: new #83 // class AnalysisException
+ 111: ldc #85 // String AS_OF_JOIN.UNSUPPORTED_DIRECTION
+ 113: getstatic #90 // Field scala/Predef$.MODULE$:Lscala/Predef$;
+ 116: invokevirtual #94 // Method scala/Predef$.Map:()Lscala/collection/immutable/Map$;
+ 119: getstatic #99 // Field scala/runtime/ScalaRunTime$.MODULE$:Lscala/runtime/ScalaRunTime$;
+ 128: getstatic #104 // Field scala/Predef$ArrowAssoc$.MODULE$:Lscala/Predef$ArrowAssoc$;
+ 131: getstatic #90 // Field scala/Predef$.MODULE$:Lscala/Predef$;
+ 134: ldc #105 // String direction
+ 136: invokevirtual #109 // Method scala/Predef$.ArrowAssoc:(Ljava/lang/Object;)Ljava/lang/Object;
+ 139: aload_1
+ 140: invokevirtual #113 // Method scala/Predef$ArrowAssoc$.$minus$greater$extension:(Ljava/lang/Object;Ljava/lang/Object;)Lscala/Tuple2;
+ 146: getstatic #104 // Field scala/Predef$ArrowAssoc$.MODULE$:Lscala/Predef$ArrowAssoc$;
+ 149: getstatic #90 // Field scala/Predef$.MODULE$:Lscala/Predef$;
+ 152: ldc #114 // String supported
+ 154: invokevirtual #109 // Method scala/Predef$.ArrowAssoc:(Ljava/lang/Object;)Ljava/lang/Object;
+ 157: aload_0
+ 158: invokevirtual #116 // Method supported:()Lscala/collection/immutable/Seq;
+ 161: ldc #118 // String \'
+ 163: ldc #120 // String \', \'
+ 165: ldc #118 // String \'
+ 167: invokeinterface #126, 4 // InterfaceMethod scala/collection/immutable/Seq.mkString:(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+ 172: invokevirtual #113 // Method scala/Predef$ArrowAssoc$.$minus$greater$extension:(Ljava/lang/Object;Ljava/lang/Object;)Lscala/Tuple2;
+ 179: invokevirtual #132 // Method scala/runtime/ScalaRunTime$.wrapRefArray:([Ljava/lang/Object;)Lscala/collection/immutable/ArraySeq;
+ 182: invokevirtual #137 // Method scala/collection/immutable/Map$.apply:(Lscala/collection/immutable/Seq;)Ljava/lang/Object;
+ 188: invokespecial #142 // Method AnalysisException."<init>":(Ljava/lang/String;Lscala/collection/immutable/Map;)V
+ private org.apache.spark.sql.catalyst.plans.AsOfJoinDirection$();
+ 0: aload_0
+ 1: invokespecial #144 // Method java/lang/Object."<init>":()V
+
+## catalyst.optimizer.RewriteAsOfJoin$$anonfun$apply$1 (applyOrElse)
+public final class org.apache.spark.sql.catalyst.optimizer.RewriteAsOfJoin$$anonfun$apply$1 extends scala.runtime.AbstractPartialFunction<org.apache.spark.sql.catalyst.pl
+ private static final long serialVersionUID;
+ public final <A1 extends org.apache.spark.sql.catalyst.plans.logical.LogicalPlan, B1> B1 applyOrElse(A1, scala.Function1<A1, B1>);
+ 0: aload_1
+ 3: aload 5
+ 5: instanceof #38 // class catalyst/plans/logical/AsOfJoin
+ 8: ifeq 573
+ 11: aload 5
+ 18: aload 6
+ 20: invokevirtual #42 // Method catalyst/plans/logical/AsOfJoin.left:()catalyst/plans/logical/LogicalPlan;
+ 25: aload 6
+ 27: invokevirtual #45 // Method catalyst/plans/logical/AsOfJoin.right:()catalyst/plans/logical/LogicalPlan;
+ 32: aload 6
+ 34: invokevirtual #49 // Method catalyst/plans/logical/AsOfJoin.asOfCondition:()catalyst/expressions/Expression;
+ 39: aload 6
+ 41: invokevirtual #53 // Method catalyst/plans/logical/AsOfJoin.condition:()Lscala/Option;
+ 46: aload 6
+ 48: invokevirtual #57 // Method catalyst/plans/logical/AsOfJoin.joinType:()catalyst/plans/JoinType;
+ 53: aload 6
+ 55: invokevirtual #60 // Method catalyst/plans/logical/AsOfJoin.orderExpression:()catalyst/expressions/Expression;
+ 60: aload 10
+ 62: aload 9
+ 64: invokedynamic #81, 0 // InvokeDynamic #0:apply:(catalyst/expressions/Expression;)Lscala/Function1;
+ 69: invokevirtual #87 // Method scala/Option.map:(Lscala/Function1;)Lscala/Option;
+ 72: aload 9
+ 74: invokedynamic #98, 0 // InvokeDynamic #1:apply:(catalyst/expressions/Expression;)Lscala/Function0;
+ 79: invokevirtual #102 // Method scala/Option.getOrElse:(Lscala/Function0;)Ljava/lang/Object;
+ 85: new #20 // class catalyst/optimizer/RewriteAsOfJoin$$anonfun$apply$1$$anonfun$1
+ 90: aload 7
+ 92: invokespecial #108 // Method catalyst/optimizer/RewriteAsOfJoin$$anonfun$apply$1$$anonfun$1."<init>":(catalyst/optimizer/RewriteAsOfJoin$$anonfun$apply$1;catalyst/pl
+ 95: invokevirtual #112 // Method catalyst/trees/TreeNode.transformUp:(Lscala/PartialFunction;)catalyst/trees/TreeNode;
+ 103: new #116 // class catalyst/plans/logical/Filter
+ 107: aload 13
+ 109: aload 8
+ 111: invokespecial #119 // Method catalyst/plans/logical/Filter."<init>":(catalyst/expressions/Expression;catalyst/plans/logical/LogicalPlan;)V
+ 116: aload 12
+ 118: new #22 // class catalyst/optimizer/RewriteAsOfJoin$$anonfun$apply$1$$anonfun$2
+ 123: aload 7
+ 125: invokespecial #120 // Method catalyst/optimizer/RewriteAsOfJoin$$anonfun$apply$1$$anonfun$2."<init>":(catalyst/optimizer/RewriteAsOfJoin$$anonfun$apply$1;catalyst/p
+ 128: invokevirtual #121 // Method catalyst/expressions/Expression.transformUp:(Lscala/PartialFunction;)catalyst/trees/TreeNode;
+ 136: getstatic #127 // Field catalyst/expressions/CreateStruct$.MODULE$:catalyst/expressions/CreateStruct$;
+ 139: aload 8
+ 141: invokevirtual #133 // Method catalyst/plans/logical/LogicalPlan.output:()Lscala/collection/immutable/Seq;
+ 144: invokevirtual #136 // Method catalyst/expressions/CreateStruct$.apply:(Lscala/collection/immutable/Seq;)catalyst/expressions/CreateNamedStruct;
+ 149: new #138 // class catalyst/expressions/aggregate/MinBy
+ 153: aload 16
+ 155: aload 15
+ 157: invokespecial #141 // Method catalyst/expressions/aggregate/MinBy."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 160: invokevirtual #145 // Method catalyst/expressions/aggregate/MinBy.toAggregateExpression:()catalyst/expressions/aggregate/AggregateExpression;
+ 165: aload 17
+ 169: ldc #147 // String __nearest_right__
+ 173: getstatic #152 // Field catalyst/expressions/Alias$.MODULE$:catalyst/expressions/Alias$;
+ 176: aload 19
+ 178: ldc #147 // String __nearest_right__
+ 185: getstatic #152 // Field catalyst/expressions/Alias$.MODULE$:catalyst/expressions/Alias$;
+ 188: aload 19
+ 190: ldc #147 // String __nearest_right__
+ 197: getstatic #152 // Field catalyst/expressions/Alias$.MODULE$:catalyst/expressions/Alias$;
+ 200: aload 19
+ 202: ldc #147 // String __nearest_right__
+ 209: getstatic #152 // Field catalyst/expressions/Alias$.MODULE$:catalyst/expressions/Alias$;
+ 212: aload 19
+ 214: ldc #147 // String __nearest_right__
+ 221: new #169 // class catalyst/expressions/Alias
+ 225: aload 19
+ 227: ldc #147 // String __nearest_right__
+ 229: aload 21
+ 231: aload 22
+ 233: aload 23
+ 235: aload 24
+ 237: invokespecial #172 // Method catalyst/expressions/Alias."<init>":(catalyst/expressions/Expression;Ljava/lang/String;catalyst/expressions/ExprId;Lscala/collection/im
+ 242: new #174 // class catalyst/plans/logical/Aggregate
+ 246: getstatic #179 // Field scala/package$.MODULE$:Lscala/package$;
+ 249: invokevirtual #183 // Method scala/package$.Seq:()Lscala/collection/immutable/Seq$;
+ 252: invokevirtual #189 // Method scala/collection/immutable/Seq$.empty:()Lscala/collection/SeqOps;
+ 258: new #193 // class scala/collection/immutable/$colon$colon
+ 262: aload 18
+ 264: getstatic #198 // Field scala/collection/immutable/Nil$.MODULE$:Lscala/collection/immutable/Nil$;
+ 267: invokespecial #201 // Method scala/collection/immutable/$colon$colon."<init>":(Ljava/lang/Object;Lscala/collection/immutable/List;)V
+ 270: aload 14
+ 272: getstatic #206 // Field catalyst/plans/logical/Aggregate$.MODULE$:catalyst/plans/logical/Aggregate$;
+ 278: invokespecial #211 // Method catalyst/plans/logical/Aggregate."<init>":(Lscala/collection/immutable/Seq;Lscala/collection/immutable/Seq;catalyst/plans/logical/Logic
+ 283: new #213 // class catalyst/plans/logical/Project
+ 287: aload 7
+ 289: invokevirtual #133 // Method catalyst/plans/logical/LogicalPlan.output:()Lscala/collection/immutable/Seq;
+ 292: new #215 // class catalyst/expressions/ScalarSubquery
+ 296: aload 25
+ 298: aload 7
+ 300: invokevirtual #133 // Method catalyst/plans/logical/LogicalPlan.output:()Lscala/collection/immutable/Seq;
+ 303: getstatic #220 // Field catalyst/expressions/ScalarSubquery$.MODULE$:catalyst/expressions/ScalarSubquery$;
+ 309: getstatic #220 // Field catalyst/expressions/ScalarSubquery$.MODULE$:catalyst/expressions/ScalarSubquery$;
+ 315: getstatic #220 // Field catalyst/expressions/ScalarSubquery$.MODULE$:catalyst/expressions/ScalarSubquery$;
+ 321: getstatic #220 // Field catalyst/expressions/ScalarSubquery$.MODULE$:catalyst/expressions/ScalarSubquery$;
+ 327: getstatic #220 // Field catalyst/expressions/ScalarSubquery$.MODULE$:catalyst/expressions/ScalarSubquery$;
+ 333: invokespecial #235 // Method catalyst/expressions/ScalarSubquery."<init>":(catalyst/plans/logical/LogicalPlan;Lscala/collection/immutable/Seq;catalyst/expressions/E
+ 338: ldc #237 // String __right__
+ 342: getstatic #152 // Field catalyst/expressions/Alias$.MODULE$:catalyst/expressions/Alias$;
+ 345: aload 27
+ 347: ldc #237 // String __right__
+ 354: getstatic #152 // Field catalyst/expressions/Alias$.MODULE$:catalyst/expressions/Alias$;
+ 357: aload 27
+ 359: ldc #237 // String __right__
+ 366: getstatic #152 // Field catalyst/expressions/Alias$.MODULE$:catalyst/expressions/Alias$;
+ 369: aload 27
+ 371: ldc #237 // String __right__
+ 378: getstatic #152 // Field catalyst/expressions/Alias$.MODULE$:catalyst/expressions/Alias$;
+ 381: aload 27
+ 383: ldc #237 // String __right__
+ 390: new #169 // class catalyst/expressions/Alias
+ 394: aload 27
+ 396: ldc #237 // String __right__
+ 398: aload 29
+ 400: aload 30
+ 402: aload 31
+ 404: aload 32
+ 406: invokespecial #172 // Method catalyst/expressions/Alias."<init>":(catalyst/expressions/Expression;Ljava/lang/String;catalyst/expressions/ExprId;Lscala/collection/im
+ 409: invokeinterface #240, 2 // InterfaceMethod scala/collection/immutable/Seq.$colon$plus:(Ljava/lang/Object;)Ljava/lang/Object;
+ 417: aload 7
+ 419: invokespecial #243 // Method catalyst/plans/logical/Project."<init>":(Lscala/collection/immutable/Seq;catalyst/plans/logical/LogicalPlan;)V
+ 424: aload 11
+ 428: getstatic #248 // Field catalyst/plans/LeftOuter$.MODULE$:catalyst/plans/LeftOuter$;
+ 431: aload 34
+ 433: invokevirtual #254 // Method java/lang/Object.equals:(Ljava/lang/Object;)Z
+ 436: ifeq 444
+ 439: aload 26
+ 447: new #116 // class catalyst/plans/logical/Filter
+ 451: new #256 // class catalyst/expressions/IsNotNull
+ 455: aload 26
+ 457: invokevirtual #257 // Method catalyst/plans/logical/Project.output:()Lscala/collection/immutable/Seq;
+ 460: invokeinterface #260, 1 // InterfaceMethod scala/collection/immutable/Seq.last:()Ljava/lang/Object;
+ 468: invokespecial #263 // Method catalyst/expressions/IsNotNull."<init>":(catalyst/expressions/Expression;)V
+ 471: aload 26
+ 473: invokespecial #119 // Method catalyst/plans/logical/Filter."<init>":(catalyst/expressions/Expression;catalyst/plans/logical/LogicalPlan;)V
+ 481: new #213 // class catalyst/plans/logical/Project
+ 485: aload 7
+ 487: invokevirtual #133 // Method catalyst/plans/logical/LogicalPlan.output:()Lscala/collection/immutable/Seq;
+ 490: aload 8
+ 492: invokevirtual #133 // Method catalyst/plans/logical/LogicalPlan.output:()Lscala/collection/immutable/Seq;
+ 495: invokeinterface #266, 1 // InterfaceMethod scala/collection/immutable/Seq.zipWithIndex:()Ljava/lang/Object;
+ 503: aload 33
+ 505: invokedynamic #278, 0 // InvokeDynamic #2:apply:(catalyst/plans/logical/OrderPreservingUnaryNode;)Lscala/Function1;
+ 510: invokeinterface #281, 2 // InterfaceMethod scala/collection/IterableOps.map:(Lscala/Function1;)Ljava/lang/Object;
+ 518: invokeinterface #287, 2 // InterfaceMethod scala/collection/immutable/Seq.$plus$plus:(Lscala/collection/IterableOnce;)Ljava/lang/Object;
+ 526: aload 33
+ 531: invokespecial #243 // Method catalyst/plans/logical/Project."<init>":(Lscala/collection/immutable/Seq;catalyst/plans/logical/LogicalPlan;)V
+ 536: aload 6
+ 538: invokevirtual #288 // Method catalyst/plans/logical/AsOfJoin.output:()Lscala/collection/immutable/Seq;
+ 541: aload 35
+ 543: invokevirtual #257 // Method catalyst/plans/logical/Project.output:()Lscala/collection/immutable/Seq;
+ 546: invokeinterface #291, 2 // InterfaceMethod scala/collection/immutable/Seq.zip:(Lscala/collection/IterableOnce;)Ljava/lang/Object;
+ 556: getstatic #294 // Field scala/Predef$ArrowAssoc$.MODULE$:Lscala/Predef$ArrowAssoc$;
+ 559: getstatic #299 // Field scala/Predef$.MODULE$:Lscala/Predef$;
+ 562: aload 35
+ 564: invokevirtual #302 // Method scala/Predef$.ArrowAssoc:(Ljava/lang/Object;)Ljava/lang/Object;
+ 567: aload 36
+ 569: invokevirtual #306 // Method scala/Predef$ArrowAssoc$.$minus$greater$extension:(Ljava/lang/Object;Ljava/lang/Object;)Lscala/Tuple2;
+ 572: areturn
+ 576: aload_2
+ 577: aload_1
+ 578: invokeinterface #310, 2 // InterfaceMethod scala/Function1.apply:(Ljava/lang/Object;)Ljava/lang/Object;
+ 583: areturn
+ public final boolean isDefinedAt(org.apache.spark.sql.catalyst.plans.logical.LogicalPlan);
+ 0: aload_1
+ 2: aload_3
+ 3: instanceof #38 // class catalyst/plans/logical/AsOfJoin
+ 6: ifeq 11
+ public boolean isDefinedAt(java.lang.Object);
+ 0: aload_0
+ 1: aload_1
+ 5: invokevirtual #366 // Method isDefinedAt:(catalyst/plans/logical/LogicalPlan;)Z
+ public java.lang.Object applyOrElse(java.lang.Object, scala.Function1);
+ 0: aload_0
+ 1: aload_1
+ 5: aload_2
+ 6: invokevirtual #370 // Method applyOrElse:(catalyst/plans/logical/LogicalPlan;Lscala/Function1;)Ljava/lang/Object;
+ 9: areturn
+ public static final org.apache.spark.sql.catalyst.expressions.And $anonfun$applyOrElse$1(org.apache.spark.sql.catalyst.expressions.Expression, org.apache.spark.sql.catal
+ 0: new #373 // class catalyst/expressions/And
+ 4: aload_1
+ 5: aload_0
+ 6: invokespecial #374 // Method catalyst/expressions/And."<init>":(catalyst/expressions/Expression;catalyst/expressions/Expression;)V
+ 9: areturn
+ public static final org.apache.spark.sql.catalyst.expressions.Expression $anonfun$applyOrElse$2(org.apache.spark.sql.catalyst.expressions.Expression);
+ 0: aload_0
+ 1: areturn
+ public static final org.apache.spark.sql.catalyst.expressions.NamedExpression $anonfun$applyOrElse$3(org.apache.spark.sql.catalyst.plans.logical.OrderPreservingUnaryNode
+ 0: aload_1
+ 2: aload_3
+ 6: aload_3
+ 7: invokevirtual #381 // Method scala/Tuple2._1:()Ljava/lang/Object;
+ 15: aload_3
+ 16: invokevirtual #387 // Method scala/Tuple2._2$mcI$sp:()I
+ 21: new #389 // class catalyst/expressions/GetStructField
+ 25: aload_0
+ 29: invokevirtual #392 // Method catalyst/plans/QueryPlan.output:()Lscala/collection/immutable/Seq;
+ 32: invokeinterface #260, 1 // InterfaceMethod scala/collection/immutable/Seq.last:()Ljava/lang/Object;
+ 42: getstatic #397 // Field catalyst/expressions/GetStructField$.MODULE$:catalyst/expressions/GetStructField$;
+ 48: invokespecial #402 // Method catalyst/expressions/GetStructField."<init>":(catalyst/expressions/Expression;ILscala/Option;)V
+ 53: aload 4
+ 55: invokevirtual #406 // Method catalyst/expressions/Attribute.name:()Ljava/lang/String;
+ 60: getstatic #152 // Field catalyst/expressions/Alias$.MODULE$:catalyst/expressions/Alias$;
+ 63: aload 6
+ 65: aload 7
+ 72: getstatic #152 // Field catalyst/expressions/Alias$.MODULE$:catalyst/expressions/Alias$;
+ 75: aload 6
+ 77: aload 7
+ 84: getstatic #152 // Field catalyst/expressions/Alias$.MODULE$:catalyst/expressions/Alias$;
+ 87: aload 6
+ 89: aload 7
+ 96: getstatic #152 // Field catalyst/expressions/Alias$.MODULE$:catalyst/expressions/Alias$;
+ 99: aload 6
+ 101: aload 7
+ 108: new #169 // class catalyst/expressions/Alias
+ 112: aload 6
+ 114: aload 7
+ 116: aload 8
+ 118: aload 9
+ 120: aload 10
+ 122: aload 11
+ 124: invokespecial #172 // Method catalyst/expressions/Alias."<init>":(catalyst/expressions/Expression;Ljava/lang/String;catalyst/expressions/ExprId;Lscala/collection/im
+ 127: areturn
+ 131: new #408 // class scala/MatchError
+ 135: aload_3
+ 136: invokespecial #411 // Method scala/MatchError."<init>":(Ljava/lang/Object;)V
+ public org.apache.spark.sql.catalyst.optimizer.RewriteAsOfJoin$$anonfun$apply$1();
+ 0: aload_0
+ 1: invokespecial #426 // Method scala/runtime/AbstractPartialFunction."<init>":()V
+ private static java.lang.Object $deserializeLambda$(java.lang.invoke.SerializedLambda);
+ 0: aload_0
+ 1: invokedynamic #438, 0 // InvokeDynamic #3:lambdaDeserialize:(Ljava/lang/invoke/SerializedLambda;)Ljava/lang/Object;
+ 6: areturn
+
+## classic.Dataset (joinAsOf x2, createAsOfJoinPlan$1, the usingColumns lambdas)
+ public org.apache.spark.sql.classic.Dataset<org.apache.spark.sql.Row> joinAsOf(org.apache.spark.sql.classic.Dataset<?>, org.apache.spark.sql.Column, org.apache.spark.sql
+ 0: aload 4
+ 2: aload_0
+ 3: aload_1
+ 4: invokedynamic #1489, 0 // InvokeDynamic #29:apply:(classic/Dataset;classic/Dataset;)Lscala/Function1;
+ 9: invokeinterface #636, 2 // InterfaceMethod scala/collection/immutable/Seq.map:(Lscala/Function1;)Ljava/lang/Object;
+ 19: aload 9
+ 21: invokedynamic #1496, 0 // InvokeDynamic #30:apply:()Lscala/Function2;
+ 26: invokeinterface #1500, 2 // InterfaceMethod scala/collection/immutable/Seq.reduceOption:(Lscala/Function2;)Lscala/Option;
+ 31: getstatic #1505 // Field scala/$less$colon$less$.MODULE$:Lscala/$less$colon$less$;
+ 34: invokevirtual #1509 // Method scala/$less$colon$less$.refl:()Lscala/$eq$colon$eq;
+ 37: invokevirtual #1513 // Method scala/Option.orNull:(Lscala/$less$colon$less;)Ljava/lang/Object;
+ 45: aload_0
+ 46: aload_1
+ 47: aload_2
+ 48: aload_3
+ 49: aload 10
+ 51: aload 5
+ 53: aload 6
+ 57: aload 8
+ 59: invokevirtual #1518 // Method joinAsOf:(classic/Dataset;Column;Column;Column;Ljava/lang/String;Column;ZLjava/lang/String;)classic/Dataset;
+ 62: areturn
+ public org.apache.spark.sql.classic.Dataset<org.apache.spark.sql.Row> joinAsOf(org.apache.spark.sql.classic.Dataset<?>, org.apache.spark.sql.Column, org.apache.spark.sql
+ 0: aload_0
+ 1: aload_1
+ 2: getstatic #1526 // Field scala/Option$.MODULE$:Lscala/Option$;
+ 5: aload 4
+ 7: invokevirtual #1529 // Method scala/Option$.apply:(Ljava/lang/Object;)Lscala/Option;
+ 10: aload 5
+ 12: invokespecial #1364 // Method resolveSelfJoinCondition:(classic/Dataset;Lscala/Option;Ljava/lang/String;)catalyst/plans/logical/LogicalPlan;
+ 17: aload 10
+ 19: instanceof #1304 // class catalyst/plans/logical/Project
+ 22: ifeq 106
+ 25: aload 10
+ 32: aload 11
+ 34: invokevirtual #1307 // Method catalyst/plans/logical/Project.child:()catalyst/plans/logical/LogicalPlan;
+ 39: aload 12
+ 41: instanceof #1204 // class catalyst/plans/logical/Join
+ 44: ifeq 103
+ 47: aload 12
+ 54: aload_0
+ 55: aload 13
+ 57: aload_2
+ 58: aload_3
+ 59: aload_1
+ 60: aload 6
+ 64: aload 8
+ 66: invokespecial #1533 // Method createAsOfJoinPlan$1:(catalyst/plans/logical/Join;Column;Column;classic/Dataset;Column;ZLjava/lang/String;)catalyst/plans/logical/AsOfJ
+ 71: aload 11
+ 73: invokevirtual #1318 // Method catalyst/plans/logical/Project.copy$default$1:()Lscala/collection/immutable/Seq;
+ 78: aload 11
+ 80: aload 16
+ 82: aload 15
+ 84: invokevirtual #1322 // Method catalyst/plans/logical/Project.copy:(Lscala/collection/immutable/Seq;catalyst/plans/logical/LogicalPlan;)catalyst/plans/logical/Project
+ 89: aload 14
+ 91: aload 11
+ 93: invokevirtual #1326 // Method catalyst/plans/logical/Project.copyTagsFrom:(catalyst/trees/TreeNode;)V
+ 96: aload_0
+ 97: aload 14
+ 99: invokespecial #1024 // Method withPlan:(catalyst/plans/logical/LogicalPlan;)classic/Dataset;
+ 102: areturn
+ 109: aload 10
+ 111: instanceof #1204 // class catalyst/plans/logical/Join
+ 114: ifeq 144
+ 117: aload 10
+ 124: aload_0
+ 125: aload_0
+ 126: aload 17
+ 128: aload_2
+ 129: aload_3
+ 130: aload_1
+ 131: aload 6
+ 135: aload 8
+ 137: invokespecial #1533 // Method createAsOfJoinPlan$1:(catalyst/plans/logical/Join;Column;Column;classic/Dataset;Column;ZLjava/lang/String;)catalyst/plans/logical/AsOf
+ 140: invokespecial #1024 // Method withPlan:(catalyst/plans/logical/LogicalPlan;)classic/Dataset;
+ 143: areturn
+ 147: getstatic #1331 // Field org/apache/spark/SparkException$.MODULE$:Lorg/apache/spark/SparkException$;
+ 150: aload 10
+ 152: invokevirtual #1335 // Method catalyst/plans/logical/LogicalPlan.getClass:()Ljava/lang/Class;
+ 155: invokevirtual #1340 // Method java/lang/Class.getName:()Ljava/lang/String;
+ 158: invokedynamic #1536, 0 // InvokeDynamic #31:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+ 163: invokevirtual #1348 // Method org/apache/spark/SparkException$.internalError:(Ljava/lang/String;)Lorg/apache/spark/SparkException;
+ public org.apache.spark.sql.classic.Dataset<T> hint(java.lang.String, scala.collection.immutable.Seq<java.lang.Object>);
+ 0: aload_0
+ 1: aload_2
+ 2: aload_0
+ 3: invokedynamic #1547, 0 // InvokeDynamic #32:apply:(classic/Dataset;)Lscala/Function1;
+ 8: invokeinterface #636, 2 // InterfaceMethod scala/collection/immutable/Seq.map:(Lscala/Function1;)Ljava/lang/Object;
+ 17: new #1549 // class catalyst/plans/logical/UnresolvedHint
+ 21: aload_1
+ 22: aload_3
+ 23: aload_0
+ 24: invokevirtual #623 // Method logicalPlan:()catalyst/plans/logical/LogicalPlan;
+ 27: invokespecial #1552 // Method catalyst/plans/logical/UnresolvedHint."<init>":(Ljava/lang/String;Lscala/collection/immutable/Seq;catalyst/plans/logical/LogicalPlan;)V
+ 30: aload_0
+ 31: invokespecial #1165 // Method encoderImpl:()Encoder;
+ 34: invokespecial #1169 // Method withTypedPlan:(catalyst/plans/logical/LogicalPlan;Encoder;)classic/Dataset;
+ 37: areturn
+ public org.apache.spark.sql.Column col(java.lang.String);
+ 0: aload_1
+ 2: aload_3
+ 10: aload_3
+ 11: invokevirtual #1555 // Method java/lang/String.hashCode:()I
+ 32: ldc_w #1557 // String *
+ 35: aload_3
+ 36: invokevirtual #1560 // Method java/lang/String.equals:(Ljava/lang/Object;)Z
+ 39: ifeq 72
+ 42: getstatic #1209 // Field classic/ClassicConversions$.MODULE$:classic/ClassicConversions$;
+ public static final org.apache.spark.sql.Column $anonfun$joinAsOf$1(org.apache.spark.sql.classic.Dataset, org.apache.spark.sql.classic.Dataset, java.lang.String);
+ 0: aload_0
+ 1: aload_2
+ 2: invokevirtual #2396 // Method apply:(Ljava/lang/String;)Column;
+ 5: aload_1
+ 6: aload_2
+ 7: invokevirtual #2396 // Method apply:(Ljava/lang/String;)Column;
+ 10: invokevirtual #4272 // Method Column.$eq$eq$eq:(Ljava/lang/Object;)Column;
+ 13: areturn
+ public static final org.apache.spark.sql.Column $anonfun$joinAsOf$2(org.apache.spark.sql.Column, org.apache.spark.sql.Column);
+ 0: aload_0
+ 1: aload_1
+ 2: invokevirtual #4277 // Method Column.$amp$amp:(Ljava/lang/Object;)Column;
+ 5: areturn
+ public static final org.apache.spark.sql.catalyst.expressions.Expression $anonfun$joinAsOf$3(org.apache.spark.sql.classic.Dataset, org.apache.spark.sql.Column);
+ 0: aload_0
+ 1: invokevirtual #455 // Method sparkSession:()classic/SparkSession;
+ 4: aload_1
+ 5: invokevirtual #1378 // Method classic/SparkSession.toRichColumn:(Column;)classic/RichColumn;
+ 8: invokevirtual #1383 // Method classic/RichColumn.expr:()catalyst/expressions/Expression;
+ 11: areturn
+ private final org.apache.spark.sql.catalyst.plans.logical.AsOfJoin createAsOfJoinPlan$1(org.apache.spark.sql.catalyst.plans.logical.Join, org.apache.spark.sql.Column, or
+ 0: aload_0
+ 1: invokevirtual #455 // Method sparkSession:()classic/SparkSession;
+ 4: aload_2
+ 5: invokevirtual #1378 // Method classic/SparkSession.toRichColumn:(Column;)classic/RichColumn;
+ 8: invokevirtual #1383 // Method classic/RichColumn.expr:()catalyst/expressions/Expression;
+ 11: new #64 // class classic/Dataset$$anonfun$1
+ 15: aload_0
+ 16: aload_1
+ 17: invokespecial #4289 // Method classic/Dataset$$anonfun$1."<init>":(classic/Dataset;catalyst/plans/logical/Join;)V
+ 20: invokevirtual #4292 // Method catalyst/expressions/Expression.transformUp:(Lscala/PartialFunction;)catalyst/trees/TreeNode;
+ 28: aload_0
+ 29: invokevirtual #455 // Method sparkSession:()classic/SparkSession;
+ 32: aload_3
+ 33: invokevirtual #1378 // Method classic/SparkSession.toRichColumn:(Column;)classic/RichColumn;
+ 36: invokevirtual #1383 // Method classic/RichColumn.expr:()catalyst/expressions/Expression;
+ 39: new #66 // class classic/Dataset$$anonfun$2
+ 44: aload 4
+ 46: aload_1
+ 47: invokespecial #4295 // Method classic/Dataset$$anonfun$2."<init>":(classic/Dataset;classic/Dataset;catalyst/plans/logical/Join;)V
+ 50: invokevirtual #4292 // Method catalyst/expressions/Expression.transformUp:(Lscala/PartialFunction;)catalyst/trees/TreeNode;
+ 58: getstatic #4300 // Field catalyst/plans/logical/AsOfJoin$.MODULE$:catalyst/plans/logical/AsOfJoin$;
+ 61: aload_1
+ 62: invokevirtual #1258 // Method catalyst/plans/logical/Join.left:()catalyst/plans/logical/LogicalPlan;
+ 65: aload_1
+ 66: invokevirtual #1260 // Method catalyst/plans/logical/Join.right:()catalyst/plans/logical/LogicalPlan;
+ 69: aload 8
+ 71: aload 9
+ 73: aload_1
+ 74: invokevirtual #4302 // Method catalyst/plans/logical/Join.condition:()Lscala/Option;
+ 77: aload_1
+ 78: invokevirtual #4305 // Method catalyst/plans/logical/Join.joinType:()catalyst/plans/JoinType;
+ 81: getstatic #1526 // Field scala/Option$.MODULE$:Lscala/Option$;
+ 84: aload 5
+ 86: invokevirtual #1529 // Method scala/Option$.apply:(Ljava/lang/Object;)Lscala/Option;
+ 89: aload_0
+ 90: invokedynamic #4309, 0 // InvokeDynamic #115:apply:(classic/Dataset;)Lscala/Function1;
+ 95: invokevirtual #1286 // Method scala/Option.map:(Lscala/Function1;)Lscala/Option;
+ 100: getstatic #4314 // Field catalyst/plans/AsOfJoinDirection$.MODULE$:catalyst/plans/AsOfJoinDirection$;
+ 103: aload 7
+ 105: invokevirtual #4317 // Method catalyst/plans/AsOfJoinDirection$.apply:(Ljava/lang/String;)catalyst/plans/AsOfJoinDirection;
+ 108: invokevirtual #4320 // Method catalyst/plans/logical/AsOfJoin$.apply:(catalyst/plans/logical/LogicalPlan;catalyst/plans/logical/LogicalPlan;catalyst/expressions/Exp
+ 111: areturn
+ public static final org.apache.spark.sql.catalyst.expressions.Expression $anonfun$hint$1(org.apache.spark.sql.classic.Dataset, java.lang.Object);
+ 0: aload_1
+ 2: aload_3
+ 3: instanceof #1515 // class Column
+ 6: ifeq 28
+ 9: aload_3
+ 15: aload_0
+ 16: invokevirtual #455 // Method sparkSession:()classic/SparkSession;
+ 19: aload 4
+ 21: invokevirtual #1378 // Method classic/SparkSession.toRichColumn:(Column;)classic/RichColumn;
+ 24: invokevirtual #1383 // Method classic/RichColumn.expr:()catalyst/expressions/Expression;
+ 27: areturn
+ 31: aload_3
+ 32: instanceof #4324 // class scala/Symbol
+ 35: ifeq 66
+ 38: aload_3
+ 44: aload_0
+ 45: invokevirtual #455 // Method sparkSession:()classic/SparkSession;
+ 48: getstatic #1565 // Field Column$.MODULE$:Column$;
+ 51: aload 5
+ 53: invokevirtual #4325 // Method scala/Symbol.name:()Ljava/lang/String;
+ 56: invokevirtual #4326 // Method Column$.apply:(Ljava/lang/String;)Column;
+ 59: invokevirtual #1378 // Method classic/SparkSession.toRichColumn:(Column;)classic/RichColumn;
+ 62: invokevirtual #1383 // Method classic/RichColumn.expr:()catalyst/expressions/Expression;
+ 65: areturn
+
+## SqlBaseLexer / SqlBaseParser$JoinTypeContext (no ASOF token; join types)
+SqlBaseLexer constant pool: no 'ASOF' entry (javap -v | grep -ci "'ASOF'" = 0); JoinTypeContext terminals: INNER CROSS LEFT OUTER SEMI RIGHT FULL ANTI
