@@ -108,7 +108,10 @@ impl CatalogProvider for ReparkCatalogProvider {
             .schemas
             .read()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        guard.get(name).cloned()
+        guard
+            .get(name)
+            .cloned()
+            .map(super::session_tables::capturing_schema)
     }
 
     fn register_schema(

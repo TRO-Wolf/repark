@@ -403,6 +403,12 @@ def _parse_memo(frame: DataFrame) -> Any:
     return memo
 
 
+def _owned(frame: DataFrame, inner: Any) -> DataFrame:
+    child = frame._spawn(inner)
+    _PARSE_MEMOS[child] = _parse_memo(frame)
+    return child
+
+
 def _own_plan(frame: DataFrame, run: Callable[[DataFrame], Any]) -> Any:
     memo = _parse_memo(frame)
     previous = memo.enter()

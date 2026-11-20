@@ -25,6 +25,7 @@ mod metadata_columns;
 mod no_overwrite_storage;
 mod provider;
 pub(crate) mod scan_batches;
+pub mod session_tables;
 mod snapshot_metadata_table;
 pub mod uuid_presentation;
 

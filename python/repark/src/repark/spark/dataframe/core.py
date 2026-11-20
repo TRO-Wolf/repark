@@ -2476,7 +2476,7 @@ class DataFrame:
         view = scratch_view_name(self._session, "__repark_explain_")
         surface_b.register_view_without_fill(self, view, rename_fields=False)
         try:
-            plan = self._spawn(self._session.sql_built(f"{sql} SELECT * FROM {view}"))
+            plan = surface_a._owned(self, self._session.sql_built(f"{sql} SELECT * FROM {view}"))
             rows = [(row["plan_type"], row["plan"]) for row in surface_b.rows_without_fill(plan)]
         finally:
             self._session.drop_temp_view(view)
