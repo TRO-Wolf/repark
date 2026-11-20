@@ -109,6 +109,46 @@ RePark writes `(1, 'a')`, `(2, 'b')`, `(9, 'z')` where Spark writes `('a', 1)`, 
 tags it `unit D`, so the gap's "0 silent" holds only with D excluded. `local_checkpoint_after_collect` is silent in the
 same way (count 2 against Spark's 3, on both builds) and is tagged D too.
 
+## ENC-1 cells (fix round 1, F2)
+
+RePark only: Spark 4.1.2 has no table encryption gate and writes plaintext (ES-3, a dated divergence), so there is no
+Spark answer to record. The cells are in the pin file's `_ice_held_frame_snapshot_1_enc_1_cells.py`, run by
+`test_ice_held_frame_snapshot_1.py` on one `type=hadoop` session; each keyed table holds `(1, 'a')`, `(2, 'b')` and
+then `encryption.key-id`. Measured on the fix-round package `eced2285` and on main `9a48932f`.
+
+**Condition 2, a refused write records nothing** (4 cells): a frame held on a keyed table is read, a write is
+refused, and the held frame is read again. On the head and on main the refusal is RePark's ENC-1 sentence
+(`UnsupportedOperationException: Table db.eN carries property 'encryption.key-id': ...`), and the held frame, before
+and after, and a fresh read after, all answer the two seed rows.
+
+| cell | the refused write |
+|---|---|
+| `refused_sql_insert` | `INSERT INTO t VALUES (9, 'z')` |
+| `refused_sql_delete` | `DELETE FROM t WHERE n = 1` |
+| `refused_held_append` | `held.writeTo(t).append()` |
+| `refused_frame_insert_into` | `createDataFrame(...).write.insertInto(t)` |
+
+**Condition 3, a map-served table behaves as a fresh guarded load** (9 pairs): each pair runs the action once through
+the map-served frame and once through a fresh frame, on the same table where the action is refused or a read, and on
+twin tables where it writes. Every pair is identical on the head, refusal text included.
+
+| pair | map-served side | fresh side | both answer | main |
+|---|---|---|---|---|
+| `keyed_read` | frame held, then a property commit | `s.table(t)` | the seed rows | EQUAL |
+| `keyed_view_read` | DataFrame view, then a property commit | `s.table(t)` | the seed rows | EQUAL |
+| `keyed_append` | `held.writeTo(t).append()` | the same from a fresh frame | the ENC-1 refusal | EQUAL |
+| `keyed_insert_into` | `held.filter(...).write.insertInto(t)` | the same from a fresh frame | the ENC-1 refusal | EQUAL |
+| `keyed_sql_from_view` | `INSERT INTO t SELECT * FROM <view>` | `INSERT INTO t SELECT * FROM t` | the ENC-1 refusal | EQUAL |
+| `key_added_read` | held, then `INSERT (9, 'z')` and the key added | `s.table(t)` | three rows | **red** (held: two rows) |
+| `key_added_append` | held, then the key added, then `writeTo(t).append()` | the same from a fresh frame | the ENC-1 refusal | EQUAL |
+| `key_removed_read` | held keyed, the key removed, then `INSERT (9, 'z')` | `s.table(t)` | three rows | **red** (held: two rows) |
+| `key_removed_append` | held keyed, the key removed, then `writeTo(t).append()` | the same from a fresh frame (twin table) | `OK`, four rows | EQUAL |
+
+The Rust side of the three conditions is in the module's map
+([session_tables](../../../../crates/repark-iceberg/src/catalog/session_tables/map.md)); the Spark-door test
+`a_refused_write_moves_no_epoch_and_a_held_frame_answers_as_before` holds the epoch across a refused `INSERT`, `INSERT
+OVERWRITE`, `DELETE`, `UPDATE` and `MERGE`.
+
 ## The cells round 0 left open (fix round 1, F3)
 
 Each class is taken from the verdict files and checked against a fresh frame on main and on the head.
@@ -137,8 +177,21 @@ a frame held from `spark.read.format("iceberg").load(<path>)`.
 
 `copy` is `writeTo(<new>).create()` and `insel` is `INSERT INTO <new> SELECT * FROM` a view of the frame.
 
+## Fix round 1: the bar re-run
+
+The fix-round package `eced2285` against main `9a48932f`, the same 1,980 cells (both ANSI modes, D included): 1,730
+EQUAL, 142 RAISE, 108 WRONG, 8 stored; moved from main 1,360 WRONG to EQUAL, 2 RAISE to EQUAL, 130 WRONG to RAISE;
+**0 EQUAL lost**. Unit 1a 750 of 750 EQUAL; gap 1b 98 EQUAL and 132 RAISE. Against the round-0 head no verdict moved;
+36 answers differ only in a generated scratch-view name inside an error both engines raise. The pins: the 46 Spark
+cells and the 13 ENC-1 cells pass on the head (main: 38 of the Spark cells red, and the 2 ENC-1 reads that follow a
+same-session commit), with #1373's 95.
+
 ## Gates
 
-The fix round's gates are in [cost.md](cost.md)'s sibling section below and in the hand-back; the PR carries them.
+On the fix-round head `85675c24` and package `eced2285`, each exit 0: `cargo fmt --check`, `make rust-clippy`, `make
+rust-panic-ban`, `cargo test --locked -p` for repark-iceberg (1,081), repark-core (1,645) and repark-spark (2,992),
+`make py-test-facade FACADE_WORKERS=6`, the package facade at `-n 6` (41,147 passed), `make py-test` (1,133), the file
+size, lib-py, map-size, map-sync and docs-links checks, `typos`, `ruff check`, `ruff format --check`, and the comment
+gate against the merge base `a4d8857f` (0).
 
 Up: [map.md](map.md).
