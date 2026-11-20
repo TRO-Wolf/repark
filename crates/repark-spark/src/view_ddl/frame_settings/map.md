@@ -71,7 +71,11 @@ decision (recording the live ones then). With no memo in scope it reads the live
   the held schema when only field metadata differs (a dropped and re-added column). `bound_for_view` gives a DataFrame
   view's scans a clone of the provider bound in view mode, a `_repark_writer_` scratch view's in command mode, and
   leaves other internal scratch views (`_repark_`, `__repark_`, `__rp_`) in query mode. The wrapper lives only in an
-  optimised plan.
+  optimised plan. Delta 2 (D1): a frame built over such a view takes its table at its build, as Spark analyses it
+  (`referenced`, from `FrameView::get_logical_plan` and from `HeldView`, which `frame_table` puts over a scan-only
+  view's `into_view` when the plan holds a view-mode binding): each view-mode scan becomes a query-mode clone
+  (`session_tables::referenced_clone`), so a later recreate raises `TABLE_ID_MISMATCH` and a dropped column
+  `COLUMNS_MISMATCH`, where the view's own re-bind skipped the identity check and named the view's error.
 - [held_iceberg/](held_iceberg/map.md) — its unit tests (the zero-inner-load proof).
 
 ## Pointers
