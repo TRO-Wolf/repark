@@ -88,4 +88,28 @@ Raw: [raw/fix1-cost-samples.jsonl](raw/fix1-cost-samples.jsonl), [raw/fix1-cost-
 
 Round 0's raw: [raw/cost-samples.jsonl](raw/cost-samples.jsonl), [raw/cost-perf.txt](raw/cost-perf.txt).
 
+## Delta 2 (head `ef5abef1`, five rounds and five C-012 runs, run by the orchestrator)
+
+The same scripts as fix round 1, copied into the delta's folder. The exclusive lock was used, on cores 32-47, base
+against head in alternating order.
+
+| case | base ms | head ms | head / base | instructions ratio | cycles ratio |
+|---|---|---|---|---|---|
+| `k0_count` | 17.76 | 16.51 | 0.929x | 0.9928 | 1.001 |
+| `k0_hour` | 58.54 | 60.73 | 1.037x | 1.0295 | 1.045 |
+| `is_count` | 12.58 | 12.21 | 0.970x | 0.9978 | 0.986 |
+| `is_sum` | 22.49 | 24.08 | 1.070x | 1.0790 | 1.085 |
+| `is_none` | 26.87 | 19.77 | 0.736x | 0.6779 | 0.693 |
+| `is_infer` | 55.87 | 56.48 | 1.011x | 1.0000 | 1.002 |
+| C-012 `c012p6` (s) | 39.87 | 39.84 | **0.999x** | | |
+| C-012 `c012rest` (s) | 43.75 | 43.23 | **0.988x** | | |
+
+- **C-012 passes** the hard 1.05x in both halves (20 samples, none with a nonzero exit).
+- **`is_sum`** is round 0's owner-accepted row: the instruction ratio is 1.0790, as in round 0 and fix round 1. It is
+  under 1.15x.
+- **No cost row holds a Σ,** so `string_lowered` takes its unchanged path on every row.
+
+Raw: [raw/delta2-cost-samples.jsonl](raw/delta2-cost-samples.jsonl), [raw/delta2-cost-perf.txt](raw/delta2-cost-perf.txt),
+[raw/delta2-c012-samples.jsonl](raw/delta2-c012-samples.jsonl).
+
 Up: [map.md](map.md).

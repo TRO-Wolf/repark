@@ -17,4 +17,11 @@ as one dated line.
    header names (`,,k`, `NA,NA,k`, `x,,X,`) still raise, under the exact-duplicates residual: the header-only
    schema merges equal names before Spark's `_c<i>` rule can apply, where Spark answers `_c0, _c1, …`."
 
+4. **A new card, not a line on CSV-READ-MODES-AND-SHAPES-1:** WITHCOLUMNS-KEY-COLLISION-1. "Dated 2026-11-20 (the wiring
+   unit's delta 2): when two `withColumns` keys match one existing column under `caseSensitive=false`, Spark takes
+   the first key and keeps its name; RePark takes the last. This is silent, and it is on main too:
+   `withColumns({"I": 5, "ı": 6})` over a column `I` answers `I` = 5 on Spark and `ı` = 6 on main. Delta 2's Java
+   final sigma lets `withColumns({"ΑΣ Β": 5, "ασ β": 6})` reach the same path (RAISE to WRONG, 2 cells). The fix
+   lives in the facade's `withColumns`." Proposed S2 (silent), off the label path; the owner rates it.
+
 Up: [map.md](map.md).

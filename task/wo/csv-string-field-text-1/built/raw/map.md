@@ -23,5 +23,7 @@
   `java_case`'s lowering, 72 cells) on Spark, the base, `35bc6e3a` and `ef5abef1`, and the verdict table.
 - `delta2-java-lower.txt` — the 76 strings of `java_case.rs`'s final-sigma test
   with Zulu 17's `String.toLowerCase()` answers, from `probes/JavaLower.java`.
+- `delta2-cost-samples.jsonl`, `delta2-cost-perf.txt`, `delta2-c012-samples.jsonl` — delta 2's cost series (five
+  rounds and five C-012 runs).
 
 Up: [../map.md](../map.md).
