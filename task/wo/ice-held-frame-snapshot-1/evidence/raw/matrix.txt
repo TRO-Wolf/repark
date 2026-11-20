@@ -1,0 +1,82 @@
+| HW | alter_add:collect | alter_drop:collect | alter_rename:collect | delete:collect | ins_ow:collect | ins_ow_dyn:collect | insert:collect | merge:collect | none:collect | recreate:collect | rtas:collect | update:collect | wt_append:collect | wt_cor:collect | wt_create:collect | wt_overwrite:collect | wt_ow_parts:collect | wt_replace:collect |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `agg` | W | w | w | W | W | E | W | W | E | w | W | E | W | W | w | W | E | W |
+| `dfview` | W | w | w | W | W | W | W | W | E | W | W | W | W | W | W | W | W | W |
+| `filter` | W | w | w | W | W | W | W | W | E | w | W | W | W | W | w | W | W | W |
+| `join_l` | W | E | E | E | W | W | W | W | E | w | W | W | W | W | w | W | W | W |
+| `join_r` | W | E | E | E | W | W | W | W | E | w | W | W | W | W | w | W | W | W |
+| `path` | W | w | w | W | W | W | W | W | E | w | W | W | W | W | w | W | W | W |
+| `read` | W | w | w | W | W | W | W | W | E | w | W | W | W | W | w | W | W | W |
+| `sql` | W | w | w | W | W | W | W | W | E | w | W | W | W | W | w | W | W | W |
+| `sqlview` | E | E | E | E | E | E | E | E | E | E | E | E | E | E | E | E | E | E |
+| `table` | W | w | w | W | W | W | W | W | E | w | W | W | W | W | w | W | W | W |
+
+| WA | copy | count | insel | selfjoin | show |
+|---|---|---|---|---|---|
+| `alter_add` | S | W | S | W | W |
+| `alter_drop` | S | w | S | w | w |
+| `alter_rename` | S | w | S | w | w |
+| `delete` | S | W | S | W | W |
+| `ins_ow` | S | W | S | W | W |
+| `ins_ow_dyn` | S | E | S | W | W |
+| `insert` | S | W | S | W | W |
+| `merge` | S | W | S | W | W |
+| `none` | E | E | E | E | E |
+| `recreate` | S | w | S | w | w |
+| `rtas` | S | W | S | W | W |
+| `update` | S | E | S | W | W |
+| `wt_append` | S | W | S | W | W |
+| `wt_cor` | S | W | S | W | W |
+| `wt_create` | S | w | S | w | w |
+| `wt_overwrite` | S | W | S | W | W |
+| `wt_ow_parts` | S | E | S | W | W |
+| `wt_replace` | S | W | S | W | W |
+
+| HA | delete:copy | delete:count | delete:insel | delete:selfjoin | delete:show | insert:copy | insert:count | insert:insel | insert:selfjoin | insert:show |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `agg` | S | W | S | W | W | S | W | S | W | W |
+| `dfview` | S | W | S | W | W | S | W | S | W | W |
+| `filter` | S | W | S | W | W | S | W | S | W | W |
+| `join_l` | E | E | E | E | E | S | W | S | W | W |
+| `join_r` | E | E | E | E | E | S | W | S | W | W |
+| `path` | S | W | S | W | W | S | W | S | W | W |
+| `read` | S | W | S | W | W | S | W | S | W | W |
+| `sql` | S | W | S | W | W | S | W | S | W | W |
+| `sqlview` | E | E | E | E | E | E | E | E | E | E |
+
+| P | b_insert:collect | b_insert:count | delete:collect | delete:count | insert:collect | insert:count | tag_move:collect | tag_move:count |
+|---|---|---|---|---|---|---|---|---|
+| `branch_id` | W | W | E | E | E | E | E | E |
+| `branch_opt` | W | W | E | E | E | E | E | E |
+| `branch_vao` | E | E | E | E | E | E | E | E |
+| `files` | - | - | E | E | W | W | - | - |
+| `history` | - | - | W | W | W | W | - | - |
+| `rvao` | E | E | E | E | E | E | E | E |
+| `snapshots` | - | - | W | W | W | W | - | - |
+| `tag_id` | E | E | E | E | E | E | W | W |
+| `tag_vao` | E | E | E | E | E | E | E | E |
+| `tao` | E | E | E | E | E | E | E | E |
+| `tao_future` | E | E | E | E | E | E | E | E |
+| `vao` | E | E | E | E | E | E | E | E |
+
+S s_collect_child W
+S s_collect_collect E
+S s_collect_count W
+S s_collect_delete_collect E
+S s_collect_iter E
+S s_collect_show W
+S s_collect_tail E
+S s_collect_take W
+S s_columns_collect W
+S s_count_collect W
+S s_count_thrice W
+S s_empty_count W
+S s_explain_collect E
+S s_ins_collect_ins_collect W
+S s_iter_iter E
+C cache_append W
+C cache_count W
+C cache_lazy W
+C cache_table W
+Q parquet_acted W
+Q parquet_never W

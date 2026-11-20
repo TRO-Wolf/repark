@@ -1,0 +1,18 @@
+cells 930
+main {'WRONG': 654, 'EQUAL': 276}
+base {'WRONG': 654, 'EQUAL': 276}
+group C ansi false {'WRONG': 4}
+group C ansi true {'WRONG': 4}
+group HA ansi false {'WRONG': 70, 'EQUAL': 20}
+group HA ansi true {'WRONG': 70, 'EQUAL': 20}
+group HW ansi false {'WRONG': 144, 'EQUAL': 36}
+group HW ansi true {'WRONG': 144, 'EQUAL': 36}
+group P ansi false {'WRONG': 16, 'EQUAL': 68}
+group P ansi true {'WRONG': 16, 'EQUAL': 68}
+group Q ansi false {'WRONG': 2}
+group Q ansi true {'WRONG': 2}
+group S ansi false {'WRONG': 9, 'EQUAL': 6}
+group S ansi true {'WRONG': 9, 'EQUAL': 6}
+group WA ansi false {'WRONG': 82, 'EQUAL': 8}
+group WA ansi true {'WRONG': 82, 'EQUAL': 8}
+mode_dependent 0

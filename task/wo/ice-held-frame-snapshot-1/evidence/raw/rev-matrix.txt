@@ -1,0 +1,92 @@
+| hold | write | `app` | `copy` | `cor` | `ins_into` | `insel` | `sat` | `self` |
+|---|---|---|---|---|---|---|---|---|
+| `agg` | `alter_add` | S | S | S | S | S | S | E |
+| `agg` | `alter_drop` | S | S | S | S | S | S | E |
+| `agg` | `alter_rename` | S | S | S | S | S | S | E |
+| `agg` | `delete` | S | S | S | S | S | S | E |
+| `agg` | `insert` | S | S | S | S | S | S | E |
+| `agg` | `recreate` | S | S | S | S | S | S | E |
+| `agg` | `wt_create` | S | S | S | S | S | S | E |
+| `dfview` | `alter_add` | S | S | S | S | S | S | S |
+| `dfview` | `alter_drop` | S | S | S | S | S | S | E |
+| `dfview` | `alter_rename` | S | S | S | S | S | S | E |
+| `dfview` | `delete` | S | S | S | S | S | S | S |
+| `dfview` | `insert` | S | S | S | S | S | S | S |
+| `dfview` | `recreate` | S | S | S | S | S | S | S |
+| `dfview` | `wt_create` | S | S | S | S | S | S | S |
+| `filter` | `alter_add` | S | S | S | S | S | S | S |
+| `filter` | `alter_drop` | S | S | S | S | S | S | E |
+| `filter` | `alter_rename` | S | S | S | S | S | S | E |
+| `filter` | `delete` | S | S | S | S | S | S | S |
+| `filter` | `insert` | S | S | S | S | S | S | S |
+| `filter` | `recreate` | S | S | S | S | S | S | S |
+| `filter` | `wt_create` | S | S | S | S | S | S | S |
+| `join_l` | `alter_add` | E | S | S | E | E | S | S |
+| `join_l` | `alter_drop` | E | E | E | E | E | E | E |
+| `join_l` | `alter_rename` | E | E | E | E | E | E | E |
+| `join_l` | `delete` | E | E | E | E | E | E | E |
+| `join_l` | `insert` | S | S | S | S | S | S | S |
+| `join_l` | `recreate` | S | S | S | S | S | S | S |
+| `join_l` | `wt_create` | S | S | S | S | S | S | S |
+| `read` | `alter_add` | S | S | S | S | S | S | S |
+| `read` | `alter_drop` | S | S | S | S | S | S | R |
+| `read` | `alter_rename` | S | S | S | S | S | S | R |
+| `read` | `delete` | S | S | S | S | S | S | S |
+| `read` | `insert` | S | S | S | S | S | S | S |
+| `read` | `recreate` | S | S | S | S | S | S | S |
+| `read` | `wt_create` | S | S | S | S | S | S | S |
+| `sel_all` | `alter_add` | S | S | S | S | S | S | S |
+| `sel_all` | `alter_drop` | S | S | S | S | S | S | E |
+| `sel_all` | `alter_rename` | S | S | S | S | S | S | E |
+| `sel_all` | `delete` | S | S | S | S | S | S | S |
+| `sel_all` | `insert` | S | S | S | S | S | S | S |
+| `sel_all` | `recreate` | S | S | S | S | S | S | S |
+| `sel_all` | `wt_create` | S | S | S | S | S | S | S |
+| `select` | `alter_add` | S | S | S | S | S | S | S |
+| `select` | `alter_drop` | S | S | S | S | S | S | S |
+| `select` | `alter_rename` | S | S | S | S | S | S | S |
+| `select` | `delete` | S | S | S | S | S | S | S |
+| `select` | `insert` | S | S | S | S | S | S | S |
+| `select` | `recreate` | S | S | S | S | S | S | S |
+| `select` | `wt_create` | S | S | S | S | S | S | S |
+| `sql` | `alter_add` | S | S | S | S | S | S | S |
+| `sql` | `alter_drop` | S | S | S | S | S | S | R |
+| `sql` | `alter_rename` | S | S | S | S | S | S | R |
+| `sql` | `delete` | S | S | S | S | S | S | S |
+| `sql` | `insert` | S | S | S | S | S | S | S |
+| `sql` | `recreate` | S | S | S | S | S | S | S |
+| `sql` | `wt_create` | S | S | S | S | S | S | S |
+| `sqlf` | `alter_add` | S | S | S | S | S | S | S |
+| `sqlf` | `alter_drop` | S | S | S | S | S | S | E |
+| `sqlf` | `alter_rename` | S | S | S | S | S | S | E |
+| `sqlf` | `delete` | S | S | S | S | S | S | S |
+| `sqlf` | `insert` | S | S | S | S | S | S | S |
+| `sqlf` | `recreate` | S | S | S | S | S | S | S |
+| `sqlf` | `wt_create` | S | S | S | S | S | S | S |
+| `table` | `alter_add` | S | S | S | S | S | S | S |
+| `table` | `alter_drop` | S | S | S | S | S | S | R |
+| `table` | `alter_rename` | S | S | S | S | S | S | R |
+| `table` | `delete` | S | S | S | S | S | S | S |
+| `table` | `insert` | S | S | S | S | S | S | S |
+| `table` | `recreate` | S | S | S | S | S | S | S |
+| `table` | `wt_create` | S | S | S | S | S | S | S |
+
+M call_rewrite_then_delete W
+M call_rollback W
+M first_head_after_delete W
+M held_cast W
+M ins_ow_then_expire R
+M merge_source_dfview W
+M overwrite_cond_mid_join W
+M own_collect_toarrow E
+M own_collect_topandas E
+M own_toarrow_collect E
+M own_toarrow_toarrow E
+M own_topandas_topandas E
+M recreate_other_ns w
+M refresh_sql_external W
+M self_append W
+M sort_change W
+M spec_change W
+M ten_rounds W
+M two_held_one_written W
