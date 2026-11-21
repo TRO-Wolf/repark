@@ -9,7 +9,7 @@ stay pinned. The parent [../map.md](../map.md) is at its size ceiling, so the pi
 
 ## Contents
 
-- `test_ice_held_frame_snapshot_1.py` — 60 cells (30 shapes in both ANSI modes) against the recorded Spark answers:
+- `test_ice_held_frame_snapshot_1.py` — 82 cells (41 shapes in both ANSI modes) against the recorded Spark answers:
   re-bound reads, deleted rows stored by `writeTo().create()` and `insertInto`, the self-append, own-plan `collect`,
   `explain` and `localCheckpoint`, `TABLE_ID_MISMATCH`, `COLUMNS_MISMATCH` (a dropped or widened column, and an added
   one under a derived frame's write), a DataFrame view after a recreate and after a dropped column, a dropped and
@@ -33,6 +33,12 @@ stay pinned. The parent [../map.md](../map.md) is at its size ceiling, so the pi
   (ICE-CATALOG-SESSION-HADOOP-1: a second session cannot see the table, pinned by its refusal); the cache-interval
   rule of Spark's pinned answers is pinned on the measured pauses; the cost rows print parseable lines.
   pins: ice-held-frame-snapshot-1/live-aws.
+  Delta 2 (2026-11-20, D1): 22 of the 82 Spark cells (11 shapes) pin a frame `spark.sql("SELECT * FROM <view>")` built
+  over a DataFrame view of a held frame before the change. After a recreate its `count`, `collect` and `explain()`
+  raise `TABLE_ID_MISMATCH`, also over a filtered frame's view and when a write came between the view and the frame;
+  after a dropped column `count` and `explain()` raise `COLUMNS_MISMATCH`; after a drop `TABLE_OR_VIEW_NOT_FOUND`;
+  after an insert `count` answers 3 and `explain` prints a plan. 20 are red on main and 14 on the delta 1 head.
+  pins: ice-held-frame-snapshot-1/1a-delta-2.
 - `_ice_held_frame_snapshot_1_cells.py` — the cells, engine-agnostic, shared by the test and the recorder.
 - `_ice_held_frame_snapshot_1_enc_1_cells.py` — the ENC-1 cells (fix round 1), RePark only.
 - `_record_ice_held_frame_snapshot_1.py` — re-records the oracle on live PySpark 4.1.2 with Iceberg 1.11.0:

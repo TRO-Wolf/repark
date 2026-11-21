@@ -13,6 +13,7 @@ rule of 2026-11-19 (C-012 a hard 1.05x; a short row over 1.05x a flag; nothing o
 - [live-aws.md](live-aws.md) — the held-frame cells for the live Glue and S3 Tables run (2026-11-21, tests only):
   the cells and their live tests, Spark's measured answers and cache interval, main's local answers, the
   local-only list and how to read the cost lines.
+- [cards.md](cards.md) — the residual cards of fix round 1 and delta 2 for the orchestrator to file.
 - [evidence/](evidence/map.md) — the probes and the raw cells of this build.
 
 ## What 1a builds (seat A, Q9 (a), the command scope moved in)
@@ -32,6 +33,8 @@ rule of 2026-11-19 (C-012 a hard 1.05x; a short row over 1.05x a flag; nothing o
 4. **The command scope:** a `_repark_writer_` scratch view (every DataFrame write door goes through one) binds its
    scans in command mode, checked under `PROHIBIT_CHANGES`; a user DataFrame view binds in view mode (no identity
    check, Spark's view error), and keeps it under a writer view; other internal scratch views stay in query mode.
+   Delta 2: a frame built over a user DataFrame view binds those scans in query mode at its build, to the table the
+   session holds then, as Spark analyses it.
 5. **`explain` under the memo:** the `EXPLAIN` frame shares the held frame's memo (`surface_a._owned`, one line of
    `core.py` changed, line-neutral).
 6. **`REFRESH TABLE` and `catalog.refreshTable`:** both load the named table once through the decorator (the
