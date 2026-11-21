@@ -13,6 +13,9 @@ rule of 2026-11-19 (C-012 a hard 1.05x; a short row over 1.05x a flag; nothing o
   invalidation surface (97 cells per mode), the design (a lazy cache fill bound to the session table map's epochs,
   kept across a schema-only change), the three product files, the bar against 1a's and A1's, the mutation proof, the
   cost and the gates, a card line and the C-009 question.
+- [live-aws.md](live-aws.md) — the held-frame cells for the live Glue and S3 Tables run (2026-11-21, tests only):
+  the cells and their live tests, Spark's measured answers and cache interval, main's local answers, the
+  local-only list and how to read the cost lines.
 - [cards.md](cards.md) — the residual cards of fix round 1 and delta 2 for the orchestrator to file.
 - [evidence/](evidence/map.md) — the probes and the raw cells of this build.
 

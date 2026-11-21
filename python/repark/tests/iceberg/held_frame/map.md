@@ -39,6 +39,12 @@ stay pinned. The parent [../map.md](../map.md) is at its size ceiling, so the pi
 - `_ice_held_frame_snapshot_1_cached_cells.py` — unit 2's cells, engine-agnostic.
 - `_record_ice_held_frame_snapshot_1_cached.py` — re-records unit 2's oracle, as the recorder below does.
 - `ice_held_frame_snapshot_1_cached_spark_oracle.json` — unit 2's recorded Spark answers, keyed by ANSI mode.
+- `test_ice_held_frame_snapshot_1_live_twin.py` — the live Glue and S3 Tables cells' local twin (2026-11-21): the
+  helper `../../parity/_acceptance_held_frame.py` on a `type=hadoop` catalog in both ANSI modes. The `insert`, `delete`
+  and `copy` rows answer Spark's held and fresh answers; the external-writer and refresh cells are strict xfails
+  (ICE-CATALOG-SESSION-HADOOP-1: a second session cannot see the table, pinned by its refusal); the cache-interval
+  rule of Spark's pinned answers is pinned on the measured pauses; the cost rows print parseable lines.
+  pins: ice-held-frame-snapshot-1/live-aws.
   Delta 2 (2026-11-20, D1): 22 of the 82 Spark cells (11 shapes) pin a frame `spark.sql("SELECT * FROM <view>")` built
   over a DataFrame view of a held frame before the change. After a recreate its `count`, `collect` and `explain()`
   raise `TABLE_ID_MISMATCH`, also over a filtered frame's view and when a write came between the view and the frame;
