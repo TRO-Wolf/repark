@@ -20,10 +20,8 @@ only.
   snapshot or provider, with file:line, and what each seat must touch.
 - [evidence/](evidence/map.md) — probes, raw cells (gzipped where large), verdicts, cost samples, `javap` excerpts,
   provenance.
-- [built/](built/map.md) — **1a, built (2026-11-20):** the re-bind and the command scope; its bar, cost (pending)
-  and evidence. **Unit 2, built (2026-11-21):** the cached cells, a lazy cache that refills after a same-session
+- [built/](built/map.md) — **1a, built (2026-11-20):** the re-bind and the command scope; its bar, cost and
+  evidence. **Unit 2, built (2026-11-21):** the cached cells, a lazy cache that refills after a same-session
   commit.
-- [built/](built/map.md) — **1a, built (2026-11-20):** the re-bind and the command scope; its bar, cost
-  and evidence.
 
 Up: [../map.md](../map.md).
