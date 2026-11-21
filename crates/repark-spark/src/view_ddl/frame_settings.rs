@@ -223,10 +223,10 @@ impl TableProvider for FrameView {
     }
 
     fn get_logical_plan(&self) -> Option<Cow<'_, LogicalPlan>> {
-        Some(match &self.inlined {
+        Some(held_iceberg::referenced(match &self.inlined {
             Some(marked) => self.inlined_for_reader(marked),
             None => Cow::Borrowed(&self.plan),
-        })
+        }))
     }
 
     fn supports_filters_pushdown(
@@ -269,7 +269,7 @@ pub(crate) fn frame_view(
     let (state, plan) = frame.clone().into_parts();
     let plan = held_iceberg::bound_for_view(name, plan);
     if replanning_scan(&plan) || scans_only(&plan) {
-        return DataFrame::new(state, plan).into_view();
+        return held_iceberg::frame_table(DataFrame::new(state, plan).into_view());
     }
     let captured = TempViewSettings::capture(state.config_options());
     let settings = Arc::new(if writer_v2(name) {

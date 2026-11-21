@@ -311,6 +311,34 @@ pub fn rebound_clone(
     Some(clone)
 }
 
+#[must_use]
+pub fn referenced_clone(provider: &Arc<dyn TableProvider>) -> Option<Arc<dyn TableProvider>> {
+    let found = binding(provider).filter(|found| found.mode == BindMode::View)?;
+    let Some(TableState::Live(current)) = found.current() else {
+        return None;
+    };
+    let clone: Arc<dyn TableProvider> = if same_state(found.table(), current.table()) {
+        let any: &dyn Any = provider.as_ref();
+        Arc::new(any.downcast_ref::<IcebergTableProvider>()?.clone())
+    } else {
+        Arc::new(rebound_provider(&current).ok()?)
+    };
+    if clone.schema() != provider.schema() {
+        return None;
+    }
+    note(
+        &clone,
+        Binding {
+            resolved: Resolved {
+                table: current,
+                ..found.resolved
+            },
+            mode: BindMode::Query,
+        },
+    );
+    Some(clone)
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub fn rebound_provider(table: &HeldTable) -> Result<IcebergTableProvider> {
     let ident = table.table().identifier().clone();
