@@ -54,7 +54,7 @@ Paths are under `python/repark/tests/parity/`. `FM` is `test_aws_acceptance_flat
 
 `test_flat_matrix_controls.py`. "Main" is the same test file run against a copy of main's `_flat_matrix_cells.py`
 with an adapter that projects the persisted state to ids and calls main's `classify`, as main's observer did
-(`FM:227-233`, `FM:418-454`). Main fails 13 of the 21 controls.
+(`FM:227-233`, `FM:418-454`). Main fails 14 of the 22 controls.
 
 | Control | Catalog | It proves | Main | Head |
 |---|---|---|---|---|
@@ -78,6 +78,7 @@ with an adapter that projects the persisted state to ids and calls main's `class
 | Spark success | S3 Tables | a Spark answer turns the seat red (the declaration no longer holds) | EQUAL | STAGE-CREATE-ANSWERED |
 | the same refusal on Glue | Glue | the declaration is S3 Tables only | ACCEPTED-WHERE-SPARK-REFUSED | ACCEPTED-WHERE-SPARK-REFUSED |
 | read-back differs | S3 Tables | condition 2 holds the declaration | ACCEPTED-WHERE-SPARK-REFUSED | ACCEPTED-WHERE-SPARK-REFUSED, WRONG-WRITE |
+| read-back rows equal, schema differs | S3 Tables | condition 2 compares types and nullability (`CTAS_SCHEMA`), not rows only | ACCEPTED-WHERE-SPARK-REFUSED | ACCEPTED-WHERE-SPARK-REFUSED, WRONG-WRITE |
 
 ## The Stage-create default and the open 400 question
 
@@ -89,7 +90,8 @@ and `*_status`, a status code parsed only next to the word HTTP, status or code 
 - **Default:** condition 1 requires the class `BadRequestException` and the exact message. The status is recorded,
   not required. The default is the one predicate `stage_create_status_holds` in `FC`; a ruling that the 400 must
   appear changes its body to `return status == 400`, and the record field `status_rule` says which rule ran.
-- **Condition 2:** Spark's read of RePark's table must equal the reference rows. The S3 Tables job cannot read the
+- **Condition 2:** Spark's read of RePark's table must equal the reference rows, and its schema must equal the
+  committed `CTAS_SCHEMA` (types and nullability; delta 1, after the verifier's F1). The S3 Tables job cannot read the
   Glue job's cell, so the reference is Spark's answer to the same Column predicate over the same seed with no
   catalog (`_stage_create_reference`), and for p15 the IEEE truth rows. Both jobs keep the rows (`repark_state`,
   `stage_create.reference_state`), so a reviewer can join the S3 Tables record with the Glue record of the same
@@ -108,6 +110,9 @@ and `*_status`, a status code parsed only next to the word HTTP, status or code 
 
 What S3 Tables cannot report as a graded value: a commit delta free of the service's own commits. The value read
 carries every S3 Tables cell.
+
+One residual, from the verifier: on a p15 class B cell, a failed read of Spark's own oracle table is not flagged
+`OBSERVATION-MISSING`. RePark's grade is unaffected, because p15 grades against the IEEE truth rows.
 
 ## Reading a run's JSONL artifact
 

@@ -4,6 +4,7 @@ from typing import Any
 
 import pytest
 from _flat_matrix_cells import (
+    CTAS_SCHEMA,
     DDL_SCHEMA,
     SEED_CANONICAL,
     STAGE_CREATE_ERROR_CLASS,
@@ -68,9 +69,11 @@ def _committed(cell_id: str) -> Observation:
     return committed_observation(_cell(cell_id), entry)
 
 
-def _created(ids: list[int]) -> Observation:
+def _created(
+    ids: list[int], schema: tuple[tuple[str, str, bool], ...] = CTAS_SCHEMA
+) -> Observation:
     state = _rows(ids)
-    return Observation("ANSWERED", answer=_answer(state), state=state, schema=DDL_SCHEMA, commits=1)
+    return Observation("ANSWERED", answer=_answer(state), state=state, schema=schema, commits=1)
 
 
 def _refused(error: str, error_class: str, status: int | None = None) -> Observation:
@@ -212,6 +215,15 @@ STAGE_CONTROLS: tuple[tuple[str, str, str, Observation, Observation, Any, str], 
         "s3tables",
         CREATE_P15,
         _created([6]),
+        _refused(STAGE_ERROR, STAGE_CLASS),
+        None,
+        "ACCEPTED-WHERE-SPARK-REFUSED, WRONG-WRITE",
+    ),
+    (
+        "readback rows equal, schema differs",
+        "s3tables",
+        CREATE_P15,
+        _created([4, 6], DDL_SCHEMA),
         _refused(STAGE_ERROR, STAGE_CLASS),
         None,
         "ACCEPTED-WHERE-SPARK-REFUSED, WRONG-WRITE",

@@ -774,6 +774,7 @@ def grade_cell(
         expected_state, expected_schema = graded_oracle.state, graded_oracle.schema
     elif stage is not None:
         expected_state = stage["reference_state"]
+        expected_schema = committed_schema(combo)
     if repark.outcome in ("ANSWERED", "REFUSED") and _state_differs(
         repark, expected_state, expected_schema
     ):
