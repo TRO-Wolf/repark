@@ -20,4 +20,8 @@
 
 Measure the short-row and multi-file width cells on Spark 4.1.2 and on main, which the step 0 table does not hold (sketch §8).
 
+- Dated 2026-11-20 (the wiring unit's fix round 1): a CSV read schema holding the field named by `columnNameOfCorruptRecord` (the option, else `spark.sql.columnNameOfCorruptRecord`, else `_corrupt_record`; matched exactly, as Spark's `StructType.getFieldIndex` does) is refused by name before the read, where Spark keeps that field out of positional pairing and fills it with a malformed row's raw line; capturing it belongs to this card (the wiring verifier's 10 cells, plus `corrupt/clean_rows`, where no row is malformed and Spark answers NULL). Widened in delta 2 to the family: any read schema holding the corrupt-record column over a file with no malformed row (6 cells: `corrupt/clean_rows` 2, `corrupt/default_clean_last` under both `caseSensitive` values 4).
+- Dated 2026-11-20: long rows (more fields than the header) raise `incorrect number of fields` on main and on the wiring head, beside short rows, where Spark drops the extra tokens.
+- Dated 2026-11-20: two empty or two `nullValue` header names (`,,k`, `NA,NA,k`, `x,,X,`) still raise, under the exact-duplicates residual: the header-only schema merges equal names before Spark's `_c<i>` rule can apply, where Spark answers `_c0, _c1, …`.
+
 Up: [map.md](map.md).

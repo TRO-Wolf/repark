@@ -1,0 +1,15 @@
+{"ansi": "true", "tag": "empty/schema", "names": ["x", "k"], "types": ["int", "string"], "rows": []}
+{"ansi": "true", "tag": "empty/none", "names": [], "types": [], "rows": []}
+{"ansi": "true", "tag": "hdr/schema", "names": ["x", "k"], "types": ["int", "string"], "rows": []}
+{"ansi": "true", "tag": "hdr/none", "names": ["x", "k"], "types": ["string", "string"], "rows": []}
+{"ansi": "true", "tag": "dir_first_empty/schema", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('007', 'k1')"]}
+{"ansi": "true", "tag": "dir_first_empty/none", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('007', 'k1')"]}
+{"ansi": "true", "tag": "multiline/schema", "names": ["x", "k"], "types": ["string", "int"], "rows": ["('a\\nb', 7)"]}
+{"ansi": "true", "tag": "multiline/none", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('a\\nb', '007')"]}
+{"ansi": "true", "tag": "dup_case/none", "names": ["x0", "X1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "dup_exact/none", "error": "PySparkException: Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+{"ansi": "true", "tag": "short_row/schema", "error": "PySparkException: Arrow error: Csv error: incorrect number of fields for line 3, expected 2 got 1"}
+{"ansi": "true", "tag": "void/schema", "error": "AnalysisException: unknown cast type \"void\""}
+{"ansi": "true", "tag": "array/schema", "error": "AnalysisException: unknown cast type \"array<int>\""}
+{"ansi": "true", "tag": "interval/schema", "error": "ValueError: cannot parse datatype: 'x INTERVAL DAY TO SECOND, k STRING'"}
+{"ansi": "true", "tag": "time/schema", "error": "AnalysisException: unknown cast type \"time(6)\""}

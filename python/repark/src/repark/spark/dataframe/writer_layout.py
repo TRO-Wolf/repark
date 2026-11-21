@@ -23,6 +23,7 @@ from repark.spark._integral import (
 )
 from repark.spark._secrets import mask_credentials
 from repark.spark._temp_views import scratch_view_name
+from repark.spark.dataframe import cache_handle
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
@@ -68,9 +69,14 @@ def _refuse_duplicate_output_columns(frame: Any, *, exact_only: bool = False) ->
         seen.append(name)
 
 
-def _registration_frame(dataframe: DataFrame, *, duplicate_tolerant: bool = False) -> Any:
+def _registration_frame(
+    dataframe: DataFrame, *, duplicate_tolerant: bool = False, writer_v2: bool = False
+) -> Any:
     """Return the stripped native frame writers register, renamed to unique display names."""
-    stripped = _native.strip_attribute_ids(dataframe._native_for_registration())
+    native = dataframe._native_for_registration()
+    if writer_v2:
+        native = cache_handle._writer_source(dataframe, native)
+    stripped = _native.strip_attribute_ids(native)
     if duplicate_tolerant:
         return _rename_duplicate_tolerant(dataframe, stripped)
     return _rename_to_unique_display_names(dataframe, stripped)
@@ -106,7 +112,9 @@ def run_through_temp_view(
     dataframe._ensure_alive()
     session = dataframe._session
     view_name = scratch_view_name(session, prefix)
-    registered = _registration_frame(dataframe, duplicate_tolerant=duplicate_tolerant)
+    registered = _registration_frame(
+        dataframe, duplicate_tolerant=duplicate_tolerant, writer_v2=prefix == "_repark_writer_v2_"
+    )
     session.create_or_replace_temp_view(view_name, registered)
     try:
         _native.session_sql_with_write_options(

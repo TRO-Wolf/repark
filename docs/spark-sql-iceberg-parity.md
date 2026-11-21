@@ -6006,6 +6006,58 @@ still open is `isModifiable`.
   card TEMP-VIEW-FRAME-READER-PARSE-1 (owner, 2026-11-18: "We better go with B to
   be safe"); [work order](../task/wo/csv-schema-timestamp-zone-1/map.md).
 
+### CSV-STRING-FIELD-TEXT-1 — a CSV field is parsed from its text by the declared type, paired by position — **FIXED 2026-11-20 on the Spark door (branch `fix/csv-string-field-text-1`, not merged)**
+
+- **repark** — Before (main `9a48932f`): a CSV read with a user schema, or without `inferSchema=true`, let
+  DataFusion infer each column and then cast the typed column to the declared type, pairing a schema with the header
+  by name: a `STRING` field over `007` answered `7`, the default read rewrote `1.50`, `1e3` and `TRUE`, an `INT` over
+  `1.5` answered `1` and over `1e3` `1000` (N1), a misfit raised, a misfit past row 1,000 raised at the scan, and every
+  such value was stored so by the Iceberg writes (step 0: 1,908 of 7,704 cells WRONG, all silent; 2,670 RAISE). After:
+  such a read scans every column as text from the first listed file's header alone (the engine's facade-only
+  `text_scan`, DataFusion's `schema_infer_max_records(0)`), names the header by Spark's `makeSafeHeader` rule when no
+  schema is given (an empty or `nullValue` name is `_c<i>`, a repeat takes its index, untrimmed names are kept; the
+  repeat ignores case only under `spark.sql.caseSensitive=false`, the live session value, lowering as Java's
+  `toLowerCase` does, Greek final sigma by its word rule), never consults the header names under a user schema
+  (except that exact duplicate names still set the scan's width and raise), and parses each field with CSV-FIELD-KERNEL-1's kernel, paired by position: the first M
+  columns, NULL past the file's width. A misfit is NULL for that field. Unit 0's re-read is removed. A non-empty
+  `emptyValue` is refused by name, and so is a read schema holding the field named by `columnNameOfCorruptRecord`
+  (`_corrupt_record` by default; Spark fills it with a malformed row's text); `char`/`varchar`, a negative decimal
+  scale and a scale over the precision are refused when the frame is planned, with Spark's texts.
+  Except a final sigma beside a tag character or an unassigned plane-2 code point with a cased mark between (JAVA-CASE-WORD-CLASS-TABLE-1, S4).
+- **spark** — Spark 4.1.2's `UnivocityParser` converts each field's text by the declared type, never through `CAST`
+  and never under the ANSI flag; `enforceSchema=true` pairs a schema by position; with no schema every column is the
+  file's text. *(oracle: step 0's recorded cells, `task/wo/csv-string-field-text-1/evidence/`, and the wiring unit's,
+  `task/wo/csv-string-field-text-1/built/raw/`, measured 2026-11-20.)*
+- **Still unlike Spark:** `inferSchema=true` with no schema keeps today's inference (card CSV-INFER-SCHEMA-SHAPES-1;
+  EX-IO-3, CSV-INFER-INT32-WIDTH, CSV-INFER-20DIGIT); `DROPMALFORMED` and `FAILFAST` refuse (card
+  CSV-READ-MODES-AND-SHAPES-1, with short rows, long rows (more fields than the header), the corrupt-record field's
+  capture, and exact duplicate header names, two empty or two `nullValue` names among them); the tokenizer's
+  backslash escape
+  and doubled quote (cards CSV-TOKENIZER-BACKSLASH-ESCAPE-1, CSV-TOKENIZER-QUOTE-EMPTY-1); ``csv.`path` `` and `USING
+  csv` (card CSV-SQL-PATH-DOOR-1); Unicode digits (card CSV-UNICODE-DIGITS-1); with files whose headers differ, the
+  first listed file names the columns where Spark takes the largest file (values positional and equal); an S3 glob
+  finds no files on both builds (loud).
+- **Release note (v1.5.7, owner 2026-11-21)** — "A CSV read whose schema holds the corrupt-record column (the field
+  named by `columnNameOfCorruptRecord`, `_corrupt_record` by default) is now refused before the read. Spark fills that
+  column with a malformed row's raw line, and RePark does not yet capture it (CSV-READ-MODES-AND-SHAPES-1). Earlier
+  releases refused most such reads, but answered one over a file with no malformed row."
+- **Pin** — `python/repark/tests/io/test_csv_string_field_text_1.py` (158 tests, both ANSI modes, fix round 1's
+  and delta 2's cells each under an explicit `spark.sql.caseSensitive`, against Spark 4.1.2's recorded answers; red
+  on main in 137, the 21 others are controls and no-move pins); `crates/repark-core/src/read_options.rs`
+  `a_text_scan_*`, `the_safe_header_*` and `the_text_scan_option_*`; `crates/repark-common/src/java_case.rs`
+  `final_sigma_follows_java_word_boundaries` (76 strings with Zulu 17's answers); unit 0's and #1373's pin files
+  green.
+- **Bar and cost** — [bar.md](../task/wo/csv-string-field-text-1/built/bar.md) (step 0's full re-run: 0 EQUAL
+  lost; the wiring verifier's 448 records after fix round 1: 2 EQUAL lost, the `corrupt/clean_rows` cells the
+  corrupt-record refusal takes by design; the round-2 verifier's 368 cells after delta 2: 4 more of that family
+  lost, put to the owner with the 2; S3 on moto), [cost.md](../task/wo/csv-string-field-text-1/built/cost.md) (unit 0's "one extra schema inference, at
+  most 1 ms per read" retires).
+- **Rationale** — Fable's guidance of 2026-11-20 under the owner's delegation ("Let's go with defaults across the
+  board", about 00:22 UTC): seat A, `schema_infer_max_records(0)` on every path, two units, Q7's fold of
+  READER-TYPED-SCAN-1's CSV half (D2) and Q8's positional pairing with the width rule; card
+  [CSV-STRING-FIELD-TEXT-1](../task/roadmap/mid-term/cards-2026-11-19/csv-string-field-text-1-card-2026-11-19.md)
+  (S1 by class, label-blocking); [work order](../task/wo/csv-string-field-text-1/map.md).
+
 ### TEMP-VIEW-FRAME-READER-PARSE-1 — a JSON or CSV reader's parse runs under the session that reads it — **FIXED 2026-11-19 on the Spark door (branch `fix/temp-view-frame-reader-parse-1`)**
 
 - **repark** — Before (unit 0's head `aa9fd178`, main's reader and view tree): a DataFrame temp view, a SQL view over
@@ -6059,6 +6111,57 @@ still open is `isModifiable`.
 - **Rationale** — the owner's ruling of 2026-11-18 ("We better go with B to be safe"); Fable's guidance under the
   owner's delegation of 2026-11-19, not an owner ruling (seat (a) amended with G1 to G4, the held-frame family in the
   bar, the Q9 stop rule, Q11 disclosed); [work order](../task/wo/temp-view-frame-reader-parse-1/built/map.md).
+
+### TEMP-VIEW-CACHE-LAZY-PARSE-1 A1 — a lazy `cache()` fills at its first use, under the live settings — **FIXED 2026-11-20 on the DataFrame doors (branch `fix/temp-view-cache-lazy-a1`)**
+
+- **repark** — Before (main `0436fdf9`): a pending `cache()` of a JSON or CSV frame materialised under the creating
+  zone at a view's registration, at `explain`, at a write and at a `mergeInto` source. A child built after `cache()`
+  never read the parent's cache (object identity), and `writeTo` of a cached frame kept the frame's stamps. After:
+  `cache()` and `persist()` register a lazy cache table and bind the frame to it at once. The table fills at the
+  first execution of a plan that reads it (never at `scan`, so `explain` and `EXPLAIN` fill nothing), under a fresh
+  reader-parse memo, and the acting frame's memo adopts the fill's decisions. `unpersist` and `clearCache` release
+  it to a pass-through decided under the acting frame's memo. A frame acted on before `cache()` keeps its own
+  lineage for its own-plan actions. The V2 writer reads the lineage when the frame's settings differ from the live
+  ones.
+  **This changes answers and cost with no zone involved:** children, views and joins built after `cache()` read
+  the parent's cache. A selective child's first action fills the whole parent (and can now meet the parent's
+  `repark.cache.max_bytes` refusal); a second child reads the cache where it re-read the source.
+- **spark** — Spark 4.1.2 builds the cached plan at `cache()` (`CacheManager.cacheQuery`, `InMemoryRelation`) and
+  fills it at the first execution of any plan that matches, under the reader session's live conf
+  (`CachedRDDBuilder.buildBuffers`, `FileSourceScanExec.inputRDD`). `explain` and `storageLevel` do not fill;
+  `take(1)` fills the whole cache; `unpersist` and `clearCache` remove the entry; a Dataset whose own plan was built
+  before `cache()` keeps it. `DataFrameWriterV2` re-analyses the plan under the session's settings, so it reads the
+  cache only when they equal the frame's (all four verbs measured). *(cells: step 0's 2,642, Fable's 10, 160
+  `writeTo` cells, measured 2026-11-20; the call sites are from the 4.1.2 bytecode.)* *(oracle:
+  `python/repark/tests/session/temp_view_cache_lazy_parse_1_spark_oracle.json`, measured 2026-11-20.)*
+- **Still unlike Spark:** the cache-table doors (`CACHE LAZY TABLE` and `catalog.cacheTable` count at the call; SQL
+  over a view after `CACHE TABLE` skips the cache; `REFRESH TABLE` on a cached view keeps the fill; A2,
+  CACHE-HONESTY-1); a frame on a `udf`, `pandas_udf`, `mapInArrow` or `mapInPandas` frame still snapshots the
+  bridge when built, and a cached bridge frame still materialises at its action (seat B); a twin plan, a bare reader
+  cache read through a new frame and another session's frame share no cache (10 cells, F5's named residual, S3); a
+  held frame joined after a `SET` with no cache (20 cells, TEMP-VIEW-FRAME-CROSSJOIN-1); the cache table belongs to
+  the creating session, where Spark's `CacheManager` is shared across sessions (no zone effect on Parquet or
+  Iceberg); the budgets follow the conf read at the last action of a frame holding the cache, so a fill reached only
+  through SQL over a view uses the budgets of that moment; `EXPLAIN` shows a `LazyCacheExec` leaf (`pending`,
+  `filled`) where main showed the lineage, then a `MemTable` scan; `dropTempView` of a view over a cached frame keeps
+  the cache, where Spark uncaches it (A2).
+- **Pin** — `python/repark/tests/session/test_temp_view_cache_lazy_parse_1.py` (56 cells against Spark 4.1.2's
+  recorded answers, 24 red on main: Fable's five must-hold shapes, both `explain` cells, `take(1)` and `limit(0)`,
+  views by `spark.table` and SQL, `INSERT … SELECT` into Iceberg, the four `writeTo` verbs both ways, a first
+  own-plan action before `cache()`, a child before the fill, siblings, `clearCache` then a later zone, `unpersist`,
+  a sorted frame read in order; plus the budget, `repr` and deep-lineage subprocess pins); Rust `repark-core`
+  `session/temp_views/lazy_cache/tests.rs` (planning and `EXPLAIN` fill nothing; a refused fill keeps nothing; concurrent first
+  uses fill once; release; `LIMIT 1` fills the whole table; the session frees).
+- **Bar and cost** — [built/bar.md](../task/wo/temp-view-cache-lazy-parse-1/built/bar.md),
+  [built/cost.md](../task/wo/temp-view-cache-lazy-parse-1/built/cost.md).
+- **Rationale** — the owner's ruling of 2026-11-18 ("We better go with B to be safe"); the owner's "Let's go with
+  defaults across the board" (2026-11-20); Fable's guidance under that delegation, not an owner ruling (Q1 rule (a)
+  with two additions, the 188 and 128 bar split, Q6's verbs, §14's twelve items);
+  [work order](../task/wo/temp-view-cache-lazy-parse-1/built/map.md).
+- **Release note (v1.5.7, owner 2026-11-20)** — "A child of a cached DataFrame (for example `df.cache()`, then
+  `df.filter(...).count()`) now fills the whole cache on its first action, as Spark does. That first action can take
+  several times as long as before (about 5x on a 2M-row JSON read). Later actions on the cache, other children
+  included, read it (about 0.05x)."
 
 ### ICE-HELD-FRAME-SNAPSHOT-1 — a held Iceberg frame answers the table as of the action, as Spark re-binds it — **FIXED 2026-11-20 on the Spark door for unit 1a (branch `fix/ice-held-frame-snapshot-1a`); 1b, unit 2 and the path read open**
 

@@ -1,0 +1,24 @@
+{"ansi": "true", "tag": "one/none", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('007', '1e3')"]}
+{"ansi": "true", "tag": "one/string_double", "names": ["x", "k"], "types": ["string", "double"], "rows": ["('007', 1000.0)"]}
+{"ansi": "true", "tag": "one/int_string", "names": ["x", "k"], "types": ["int", "string"], "rows": ["(7, '1e3')"]}
+{"ansi": "true", "tag": "prefix/none", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('007', 'k1')", "('1.50', 'k2')"]}
+{"ansi": "true", "tag": "prefix/decimal", "names": ["x", "k"], "types": ["decimal(10,2)", "string"], "rows": ["(Decimal('1.50'), 'k2')", "(Decimal('7.00'), 'k1')"]}
+{"ansi": "true", "tag": "glob/none", "error": "AnalysisException: Error during planning: No files found at s3://csvwire/multi/*.csv. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table."}
+{"ansi": "true", "tag": "glob/string", "error": "AnalysisException: Error during planning: No files found at s3://csvwire/multi/*.csv. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table."}
+{"ansi": "true", "tag": "two/schema", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('007', 'k1')", "('k2', '1e3')", "('k3', 'TRUE')"]}
+{"ansi": "true", "tag": "two/values", "names": ["p", "q"], "types": ["string", "string"], "rows": ["('007', 'k1')", "('k2', '1e3')", "('k3', 'TRUE')"]}
+{"ansi": "true", "tag": "gzip/none", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('007', '1e3')"]}
+{"ansi": "true", "tag": "late/int", "names": ["n", "nx", "mx"], "types": ["bigint", "bigint", "string"], "rows": ["(1202, 1200, '999')"]}
+{"ansi": "true", "tag": "late/string", "names": ["n", "nx", "mx"], "types": ["bigint", "bigint", "string"], "rows": ["(1202, 1202, 'abc')"]}
+{"ansi": "false", "tag": "one/none", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('007', '1e3')"]}
+{"ansi": "false", "tag": "one/string_double", "names": ["x", "k"], "types": ["string", "double"], "rows": ["('007', 1000.0)"]}
+{"ansi": "false", "tag": "one/int_string", "names": ["x", "k"], "types": ["int", "string"], "rows": ["(7, '1e3')"]}
+{"ansi": "false", "tag": "prefix/none", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('007', 'k1')", "('1.50', 'k2')"]}
+{"ansi": "false", "tag": "prefix/decimal", "names": ["x", "k"], "types": ["decimal(10,2)", "string"], "rows": ["(Decimal('1.50'), 'k2')", "(Decimal('7.00'), 'k1')"]}
+{"ansi": "false", "tag": "glob/none", "error": "AnalysisException: Error during planning: No files found at s3://csvwire/multi/*.csv. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table."}
+{"ansi": "false", "tag": "glob/string", "error": "AnalysisException: Error during planning: No files found at s3://csvwire/multi/*.csv. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table."}
+{"ansi": "false", "tag": "two/schema", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('007', 'k1')", "('k2', '1e3')", "('k3', 'TRUE')"]}
+{"ansi": "false", "tag": "two/values", "names": ["p", "q"], "types": ["string", "string"], "rows": ["('007', 'k1')", "('k2', '1e3')", "('k3', 'TRUE')"]}
+{"ansi": "false", "tag": "gzip/none", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('007', '1e3')"]}
+{"ansi": "false", "tag": "late/int", "names": ["n", "nx", "mx"], "types": ["bigint", "bigint", "string"], "rows": ["(1202, 1200, '999')"]}
+{"ansi": "false", "tag": "late/string", "names": ["n", "nx", "mx"], "types": ["bigint", "bigint", "string"], "rows": ["(1202, 1202, 'abc')"]}

@@ -176,13 +176,13 @@ Source for `repark-common` — shared types, the `Error` enum, and concise API c
   ignoring case to an earlier one) and `column_already_exists` (Spark's
   42711 text) with the `folded_duplicate_reports_the_lower_cased_twin` pin.
 - `java_case.rs` — **ATTR-ID-1 S3d R-S3d-1 (2026-10-01):** the single Java
-  case-fold home (the binding's fold tables moved out of the Python facade so
-  the three copies cannot drift). `fold_b_equal` is OpenJDK
+  case-fold home (the fold tables moved out of the Python facade so
+  no copy can drift). `fold_b_equal` is OpenJDK
   `String.equalsIgnoreCase` (equal length plus per-codepoint equal, upper, and
-  lower-of-upper — the lower step runs on the uppers, which is what equates
+  lower-of-upper — the lower step runs on the uppers, which equates
   U+0130 with `i`/`ı`), and `string_lower_equal` is equal length plus
   `String.toLowerCase` (U+0130 expands to `i`+U+0307, U+03A3 takes U+03C2
-  word-finally else U+03C3, every other codepoint lowers 1:1), both over Rust
+  by Java's Final_Cased (word-bounded) else U+03C3, other codepoints lower 1:1), both over Rust
   `char` mappings plus correction tables for the Java-17 divergence (the
   Rust-newer identity sets, the Greek single-upper map, U+0130 lowering to
   `i`). A full-codepoint unit test pins every mapping against

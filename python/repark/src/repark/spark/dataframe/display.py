@@ -7,6 +7,7 @@ import warnings
 from typing import TYPE_CHECKING, Any
 
 from repark.errors import PySparkTypeError
+from repark.spark.dataframe import cache_handle
 from repark.spark.dataframe.plan_collapse import (
     _box_rule,
     _column_widths,
@@ -143,7 +144,7 @@ def _repr(frame: DataFrame) -> str:
 
 def _repr_renders_schema(frame: DataFrame) -> bool:
     """Whether ``repr`` shows the schema header: no stored shape, no materialised view."""
-    return frame._eager_shape is None and frame._cache_view is None
+    return frame._eager_shape is None and not cache_handle._view_filled(frame)
 
 
 def _lazy_first_line(column_count: int) -> str:

@@ -217,11 +217,11 @@ def test_total_budget_refusal_counts_live_retained_and_recovers(
 
 def test_no_registration_survives_refusal(spark: ReparkSession) -> None:
     """C-007: a budget refusal leaves no view, no temp name, and no new handle."""
+    spark.conf.set(_TOTAL_KEY, "1")
+    cached = spark.sql(_TWO_ROW_SQL).cache()
     tables_before = _cache_view_table_names(spark)
     temp_before = sorted(spark.list_temp_view_names())
     handles_before = _handle_count(spark)
-    spark.conf.set(_TOTAL_KEY, "1")
-    cached = spark.sql(_TWO_ROW_SQL).cache()
     with pytest.raises(IllegalArgumentException):
         cached.count()
     with pytest.raises(IllegalArgumentException):
@@ -229,8 +229,8 @@ def test_no_registration_survives_refusal(spark: ReparkSession) -> None:
     assert _cache_view_table_names(spark) == tables_before
     assert sorted(spark.list_temp_view_names()) == temp_before
     assert _handle_count(spark) == handles_before
-    assert cached._cache_view is None
-    assert cached._lineage_inner is None
+    assert cached._session.lazy_cache_filled(cached._cache_view) is False
+    assert _retained(spark) == 0
     assert cached.is_cached is True
 
 
@@ -243,12 +243,14 @@ def test_no_registration_survives_collection_failure(spark: ReparkSession) -> No
         .getOrCreate()
     )
     try:
+        overflow = ansi.range(4).select((F.col("id") + F.lit(2147483647)).cast("int").alias("x"))
+        cached = overflow.cache()
         tables_before = _cache_view_table_names(ansi)
         temp_before = sorted(ansi.list_temp_view_names())
         handles_before = _handle_count(ansi)
-        overflow = ansi.range(4).select((F.col("id") + F.lit(2147483647)).cast("int").alias("x"))
         with pytest.raises(PySparkException):
-            overflow.cache().count()
+            cached.count()
+        assert cached._session.lazy_cache_filled(cached._cache_view) is False
         with pytest.raises(PySparkException):
             ansi.range(4).select((F.col("id") + F.lit(2147483647)).cast("int").alias("x")).eager()
         assert _cache_view_table_names(ansi) == tables_before
@@ -303,8 +305,8 @@ def test_max_bytes_stays_per_result_with_total_budget(spark: ReparkSession) -> N
     assert "cache materialize size" in message
     assert "exceeds repark.cache.max_bytes=1" in message
     assert "REPARK_CACHE_BUDGET_EXCEEDED" not in message
-    assert scan._cache_view is None
-    assert len(_cache_view_table_names(spark)) == 1
+    assert scan._session.lazy_cache_filled(scan._cache_view) is False
+    assert len(_cache_view_table_names(spark)) == 2
     spark.conf.unset(_MAX_BYTES_KEY)
     assert scan.count() == 2
 
@@ -430,11 +432,13 @@ def test_refusal_happens_before_result_peak() -> None:
     assert result["hwm_refused"] < result["hwm_full"]
     assert result["growth_refused"] > 0
     assert result["growth_full"] > 0
-    assert result["growth_refused"] < 0.6 * result["growth_full"], (
+    assert result["retained"] == 48000000
+    assert result["growth_refused"] < 0.6 * result["retained"], (
         f"refused growth {result['growth_refused']} not below 60% of "
-        f"unbudgeted growth {result['growth_full']} "
-        f"(baseline {result['baseline']}, hwm_refused {result['hwm_refused']}, "
-        f"hwm_full {result['hwm_full']}, retained {result['retained']})"
+        f"the cached result's {result['retained']} bytes "
+        f"(unbudgeted growth {result['growth_full']}, "
+        f"baseline {result['baseline']}, hwm_refused {result['hwm_refused']}, "
+        f"hwm_full {result['hwm_full']})"
     )
 
 

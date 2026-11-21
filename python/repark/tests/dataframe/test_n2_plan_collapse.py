@@ -314,7 +314,9 @@ def test_stage_b_cache_blocks_merge(bars: object) -> None:
     frame = frame.cache()  # type: ignore[attr-defined]
     frame = frame.withColumn("sma10", ta.sma("close", timeperiod=10).over(window))  # type: ignore[attr-defined]
     plan = _physical_plan_text(frame)
-    assert _window_operator_count(plan) == 2, plan[:2000]
+    assert _window_operator_count(plan) == 1, plan[:2000]
+    assert "LazyCacheExec" in plan, plan[:2000]
+    assert "ta_ema" not in plan, plan[:2000]
     table = frame.to_arrow()  # type: ignore[attr-defined]
     assert "ema5" in table.column_names and "sma10" in table.column_names
 

@@ -1,0 +1,572 @@
+# The wiring verifier's probes re-run (fix round 1): Spark 4.1.2's recorded answers, main's package (base) and the head 8ac58878
+
+## probe.py (336 records)
+
+true  type/int                           base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "int"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(3, None)", "(4, None)", "(5, None)", "(6
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/int/na                        base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "int"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(3, None)", "(4, None)", "(5, None)", "(6
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/int/hdr                       base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "int"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(3, None)", "(4, None)", "(5, None)", "(6
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+true  type/bigint                        base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "bigint"], "rows": ["(0, 1)", "(1, -7)", "(10, 2147483648)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(3, None)", "(4, None)", "(5, No
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/bigint/na                     base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "bigint"], "rows": ["(0, 1)", "(1, -7)", "(10, 2147483648)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(3, None)", "(4, None)", "(5, No
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/bigint/hdr                    base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "bigint"], "rows": ["(0, 1)", "(1, -7)", "(10, 2147483648)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(3, None)", "(4, None)", "(5, No
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+true  type/smallint                      base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "smallint"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(20, None)", "(3, None)", "(4, None)
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/smallint/na                   base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "smallint"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(20, None)", "(3, None)", "(4, None)
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/smallint/hdr                  base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "smallint"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(20, None)", "(3, None)", "(4, None)
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+true  type/tinyint                       base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "tinyint"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(20, None)", "(3, None)", "(4, None)"
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/tinyint/na                    base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "tinyint"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(20, None)", "(3, None)", "(4, None)"
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/tinyint/hdr                   base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "tinyint"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(20, None)", "(3, None)", "(4, None)"
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+true  type/double                        base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "double"], "rows": ["(0, 1.0)", "(1, -7.0)", "(10, 2147483648.0)", "(11, 3.0)", "(12, nan)", "(13, inf)", "(14, -0.0)", "(15, None)", "(16, 1.0)", "(17, 9.223372036854776e+18)", "(18, 1.0)", "(19, None)", "(2, 7.0)", "(20
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/double/na                     base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "double"], "rows": ["(0, 1.0)", "(1, -7.0)", "(10, 2147483648.0)", "(11, 3.0)", "(12, nan)", "(13, inf)", "(14, -0.0)", "(15, None)", "(16, 1.0)", "(17, 9.223372036854776e+18)", "(18, 1.0)", "(19, None)", "(2, 7.0)", "(20
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/double/hdr                    base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "double"], "rows": ["(0, 1.0)", "(1, -7.0)", "(10, 2147483648.0)", "(11, 3.0)", "(12, nan)", "(13, inf)", "(14, -0.0)", "(15, None)", "(16, 1.0)", "(17, 9.223372036854776e+18)", "(18, 1.0)", "(19, None)", "(2, 7.0)", "(20
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+true  type/float                         base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "float"], "rows": ["(0, 1.0)", "(1, -7.0)", "(10, 2147483648.0)", "(11, 3.0)", "(12, nan)", "(13, inf)", "(14, -0.0)", "(15, None)", "(16, 1.0)", "(17, 9.223372036854776e+18)", "(18, 1.0)", "(19, None)", "(2, 7.0)", "(20,
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/float/na                      base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "float"], "rows": ["(0, 1.0)", "(1, -7.0)", "(10, 2147483648.0)", "(11, 3.0)", "(12, nan)", "(13, inf)", "(14, -0.0)", "(15, None)", "(16, 1.0)", "(17, 9.223372036854776e+18)", "(18, 1.0)", "(19, None)", "(2, 7.0)", "(20,
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/float/hdr                     base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "float"], "rows": ["(0, 1.0)", "(1, -7.0)", "(10, 2147483648.0)", "(11, 3.0)", "(12, nan)", "(13, inf)", "(14, -0.0)", "(15, None)", "(16, 1.0)", "(17, 9.223372036854776e+18)", "(18, 1.0)", "(19, None)", "(2, 7.0)", "(20,
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+true  type/decimal(10,2)                 base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "decimal(10,2)"], "rows": ["(0, Decimal('1.00'))", "(1, Decimal('-7.00'))", "(10, None)", "(11, Decimal('3.00'))", "(12, None)", "(13, None)", "(14, Decimal('0.00'))", "(15, None)", "(16, None)", "(17, None)", "(18, Decim
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/decimal(10,2)/na              base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "decimal(10,2)"], "rows": ["(0, Decimal('1.00'))", "(1, Decimal('-7.00'))", "(10, None)", "(11, Decimal('3.00'))", "(12, None)", "(13, None)", "(14, Decimal('0.00'))", "(15, None)", "(16, None)", "(17, None)", "(18, Decim
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/decimal(10,2)/hdr             base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "decimal(10,2)"], "rows": ["(0, Decimal('1.00'))", "(1, Decimal('-7.00'))", "(10, None)", "(11, Decimal('3.00'))", "(12, None)", "(13, None)", "(14, Decimal('0.00'))", "(15, None)", "(16, None)", "(17, None)", "(18, Decim
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+true  type/decimal(38,10)                base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "decimal(38,10)"], "rows": ["(0, Decimal('1.0000000000'))", "(1, Decimal('-7.0000000000'))", "(10, Decimal('2147483648.0000000000'))", "(11, Decimal('3.0000000000'))", "(12, None)", "(13, None)", "(14, Decimal('0E-10'))",
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/decimal(38,10)/na             base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "decimal(38,10)"], "rows": ["(0, Decimal('1.0000000000'))", "(1, Decimal('-7.0000000000'))", "(10, Decimal('2147483648.0000000000'))", "(11, Decimal('3.0000000000'))", "(12, None)", "(13, None)", "(14, Decimal('0E-10'))",
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/decimal(38,10)/hdr            base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "decimal(38,10)"], "rows": ["(0, Decimal('1.0000000000'))", "(1, Decimal('-7.0000000000'))", "(10, Decimal('2147483648.0000000000'))", "(11, Decimal('3.0000000000'))", "(12, None)", "(13, None)", "(14, Decimal('0E-10'))",
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+true  type/string/na                     base=WRONG   head=WRONG  
+   spark: {"names": ["i", "v"], "types": ["int", "string"], "rows": ["(0, 'abc')", "(1, None)", "(2, '')", "(3, None)", "(4, ' x ')", "(5, '007')", "(6, 'a,b')", "(7, '\\\\N')", "(8, 'null')"]}
+   head : {"names": ["i", "v"], "types": ["int", "string"], "rows": ["(0, 'abc')", "(1, None)", "(2, None)", "(3, None)", "(4, ' x ')", "(5, '007')", "(6, 'a,b')", "(7, '\\\\N')", "(8, 'null')"]}
+true  type/none                          base=RAISE   head=RAISE  
+   spark: {"names": ["_c0", "_c1"], "types": ["string", "string"], "rows": ["('0', '1')", "('1', '-7')", "('10', '2147483648')", "('11', '+3')", "('12', 'NaN')", "('13', 'Infinity')", "('14', '-0')", "('15', '0x10')", "('16', '1d')", "('17', '9223372036854775808')", "('
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/none_na                       base=RAISE   head=RAISE  
+   spark: {"names": ["_c0", "_c1"], "types": ["string", "string"], "rows": ["('0', '1')", "('1', '-7')", "('10', '2147483648')", "('11', '+3')", "('12', 'NaN')", "('13', 'Infinity')", "('14', '-0')", "('15', '0x10')", "('16', '1d')", "('17', '9223372036854775808')", "('
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+true  type/none_hdr                      base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["string", "string"], "rows": ["('0', '1')", "('1', '-7')", "('10', '2147483648')", "('11', '+3')", "('12', 'NaN')", "('13', 'Infinity')", "('14', '-0')", "('15', '0x10')", "('16', '1d')", "('17', '9223372036854775808')", "('18',
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+true  width/short_row                    base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b", "c"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')", "('4', '5', None)"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 3, expected 3 got 2"}
+true  width/short_row_schema             base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b", "c"], "types": ["int", "int", "int"], "rows": ["(1, 2, 3)", "(4, 5, None)"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 3, expected 3 got 2"}
+true  width/long_row                     base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["string", "string"], "rows": ["('1', '2')", "('3', '4')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 3, expected 2 got 3"}
+true  width/long_row_schema              base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["int", "int"], "rows": ["(1, 2)", "(3, 4)"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 3, expected 2 got 3"}
+true  width/short_off                    base=RAISE   head=RAISE  
+   spark: {"names": ["_c0", "_c1", "_c2"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')", "('4', '5', None)"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 2, expected 3 got 2"}
+true  width/long_off                     base=RAISE   head=RAISE  
+   spark: {"names": ["_c0", "_c1"], "types": ["string", "string"], "rows": ["('1', '2')", "('3', '4')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 2, expected 2 got 3"}
+true  names/exact_dup                    base=RAISE   head=RAISE  
+   spark: {"names": ["x0", "x1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+true  names/exact_dup/schema             base=RAISE   head=RAISE  
+   spark: {"names": ["p", "q"], "types": ["string", "string"], "rows": ["('1', '2')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+true  names/triple                       base=RAISE   head=RAISE  
+   spark: {"names": ["a0", "A1", "a2"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+true  names/triple/schema                base=RAISE   head=RAISE  
+   spark: {"names": ["p", "q"], "types": ["string", "string"], "rows": ["('1', '2')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+true  names/two_empty                    base=RAISE   head=RAISE  
+   spark: {"names": ["_c0", "_c1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+true  names/two_empty/schema             base=RAISE   head=RAISE  
+   spark: {"names": ["p", "q"], "types": ["string", "string"], "rows": ["('1', '2')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+true  names/two_null                     base=RAISE   head=RAISE  
+   spark: {"names": ["_c0", "_c1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+true  names/two_null/schema              base=RAISE   head=RAISE  
+   spark: {"names": ["p", "q"], "types": ["string", "string"], "rows": ["('1', '2')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+true  names/dup_with_empty               base=RAISE   head=RAISE  
+   spark: {"names": ["x0", "_c1", "X2", "_c3"], "types": ["string", "string", "string", "string"], "rows": ["('1', '2', '3', '4')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 3 got more than 3"}
+true  names/dup_with_empty/schema        base=RAISE   head=RAISE  
+   spark: {"names": ["p", "q"], "types": ["string", "string"], "rows": ["('1', '2')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 3 got more than 3"}
+true  names/c0_clash                     base=WRONG   head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[COLUMN_ALREADY_EXISTS] The column `_c1` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"}
+   head : {"error": "AnalysisException", "text": "Schema error: Schema contains duplicate qualified field name \"?table?\"._c1"}
+   base : {"names": ["_c1", "", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+true  names/triple/sensitive             base=RAISE   head=RAISE  
+   spark: {"names": ["a0", "A", "a2"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+true  infer/true_noschema                base=WRONG   head=WRONG  
+   spark: {"names": ["x", "k", "d"], "types": ["int", "string", "double"], "rows": ["(12, '7', 2.0)", "(7, 'abc', 1.5)"]}
+   head : {"names": ["x", "k", "d"], "types": ["bigint", "string", "double"], "rows": ["(12, '7', 2.0)", "(7, 'abc', 1.5)"]}
+true  refuse/char                        base=WRONG   head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[UNSUPPORTED_CHAR_OR_VARCHAR_AS_STRING] The char/varchar type can't be used in the table schema. If you want Spark treat them as string type as same as Spark 3.0 and earlier, please set \"spark.sql.legacy.charVarcharAsSt
+   head : {"error": "AnalysisException", "text": "[UNSUPPORTED_CHAR_OR_VARCHAR_AS_STRING] The char/varchar type can't be used in the table schema. If you want Spark treat them as string type as same as Spark 3.0 and earlier, please set \"spark.sql.legacy.charVarcharAsSt
+   base : {"names": ["x", "k", "d"], "types": ["string", "string", "string"], "rows": ["('12', '7', '2.0')", "('7', 'abc', '1.5')"]}
+true  refuse/varchar                     base=WRONG   head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[UNSUPPORTED_CHAR_OR_VARCHAR_AS_STRING] The char/varchar type can't be used in the table schema. If you want Spark treat them as string type as same as Spark 3.0 and earlier, please set \"spark.sql.legacy.charVarcharAsSt
+   head : {"error": "AnalysisException", "text": "[UNSUPPORTED_CHAR_OR_VARCHAR_AS_STRING] The char/varchar type can't be used in the table schema. If you want Spark treat them as string type as same as Spark 3.0 and earlier, please set \"spark.sql.legacy.charVarcharAsSt
+   base : {"names": ["x", "k", "d"], "types": ["string", "string", "string"], "rows": ["('12', '7', '2.0')", "('7', 'abc', '1.5')"]}
+true  refuse/decimal_2_5                 base=BOTHERR head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "Decimal scale (5) cannot be greater than precision (2)."}
+   head : {"error": "AnalysisException", "text": "Decimal scale (5) cannot be greater than precision (2)."}
+true  refuse/decimal_5_m2                base=BOTHERR head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[NEGATIVE_SCALE_DISALLOWED] Negative scale is not allowed: '-2'. Set the config \"spark.sql.legacy.allowNegativeScaleOfDecimal\" to \"true\" to allow it. SQLSTATE: 0A000"}
+   head : {"error": "AnalysisException", "text": "[NEGATIVE_SCALE_DISALLOWED] Negative scale is not allowed: '-2'. Set the config \"spark.sql.legacy.allowNegativeScaleOfDecimal\" to \"true\" to allow it."}
+true  refuse/empty_value_e               base=WRONG   head=RAISE  
+   spark: {"names": ["x", "k", "d"], "types": ["string", "string", "string"], "rows": ["('007', 'abc', '1.5')", "('12', '7', '2')"]}
+   head : {"error": "AnalysisException", "text": "reader option 'emptyValue' is not supported by repark yet (repark reads a quoted empty field as NULL, never as the emptyValue text)"}
+   base : {"names": ["x", "k", "d"], "types": ["string", "string", "string"], "rows": ["('12', '7', '2.0')", "('7', 'abc', '1.5')"]}
+true  refuse/empty_value_e_schema        base=WRONG   head=RAISE  
+   spark: {"names": ["x", "k", "d"], "types": ["string", "string", "string"], "rows": ["('007', 'abc', '1.5')", "('12', '7', '2')"]}
+   head : {"error": "AnalysisException", "text": "reader option 'emptyValue' is not supported by repark yet (repark reads a quoted empty field as NULL, never as the emptyValue text)"}
+   base : {"names": ["x", "k", "d"], "types": ["string", "string", "string"], "rows": ["('12', '7', '2.0')", "('7', 'abc', '1.5')"]}
+true  refuse/array                       base=BOTHERR head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE] The CSV datasource doesn't support the column `x` of the type \"ARRAY<INT>\". SQLSTATE: 0A000"}
+   head : {"error": "AnalysisException", "text": "unknown cast type \"array<int>\""}
+true  refuse/struct                      base=BOTHERR head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE] The CSV datasource doesn't support the column `x` of the type \"STRUCT<a: INT>\". SQLSTATE: 0A000"}
+   head : {"error": "AnalysisException", "text": "unknown cast type \"struct<a:int>\""}
+true  refuse/map                         base=BOTHERR head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE] The CSV datasource doesn't support the column `x` of the type \"MAP<STRING, INT>\". SQLSTATE: 0A000"}
+   head : {"error": "AnalysisException", "text": "unknown cast type \"map<string,int>\""}
+true  opt/dateFormat                     base=RAISE   head=RAISE  
+   spark: {"names": ["d", "t"], "types": ["date", "string"], "rows": ["(None, '2024-01-15 10:30:00')", "(datetime.date(2024, 1, 15), '15/01/2024 10:30')"]}
+   head : {"error": "AnalysisException", "text": "reader option 'dateFormat' is not supported by repark yet (would silently change load semantics if ignored)"}
+true  opt/timestampFormat                base=RAISE   head=RAISE  
+   spark: {"names": ["d", "t"], "types": ["string", "timestamp"], "rows": ["('15/01/2024', datetime.datetime(2024, 1, 15, 10, 30))", "('2024-01-15', None)"]}
+   head : {"error": "AnalysisException", "text": "reader option 'timestampFormat' is not supported by repark yet (would silently change load semantics if ignored)"}
+true  opt/timestampNTZFormat             base=RAISE   head=RAISE  
+   spark: {"names": ["d", "t"], "types": ["string", "timestamp_ntz"], "rows": ["('15/01/2024', datetime.datetime(2024, 1, 15, 10, 30))", "('2024-01-15', None)"]}
+   head : {"error": "AnalysisException", "text": "reader option 'timestampNTZFormat' is not supported by repark yet (would silently change load semantics if ignored)"}
+true  opt/nanValue                       base=RAISE   head=RAISE  
+   spark: {"names": ["v"], "types": ["double"], "rows": ["(-inf,)", "(1.5,)", "(None,)", "(None,)", "(inf,)", "(nan,)", "(nan,)"]}
+   head : {"error": "AnalysisException", "text": "reader option 'nanValue' is not supported by repark yet (would silently change load semantics if ignored)"}
+true  opt/positiveInf                    base=RAISE   head=RAISE  
+   spark: {"names": ["v"], "types": ["double"], "rows": ["(-inf,)", "(1.5,)", "(None,)", "(None,)", "(inf,)", "(inf,)", "(nan,)"]}
+   head : {"error": "AnalysisException", "text": "reader option 'positiveInf' is not supported by repark yet (would silently change load semantics if ignored)"}
+true  opt/negativeInf                    base=RAISE   head=RAISE  
+   spark: {"names": ["v"], "types": ["double"], "rows": ["(-inf,)", "(-inf,)", "(1.5,)", "(None,)", "(None,)", "(inf,)", "(nan,)"]}
+   head : {"error": "AnalysisException", "text": "reader option 'negativeInf' is not supported by repark yet (would silently change load semantics if ignored)"}
+true  opt/ignoreLeading                  base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["string", "int"], "rows": ["('x  ', None)", "('y', None)"]}
+   head : {"error": "AnalysisException", "text": "reader option 'ignoreLeadingWhiteSpace' is not supported by repark yet (would silently change load semantics if ignored)"}
+true  opt/ignoreTrailing                 base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["string", "int"], "rows": ["('  x', None)", "(' y', 8)"]}
+   head : {"error": "AnalysisException", "text": "reader option 'ignoreTrailingWhiteSpace' is not supported by repark yet (would silently change load semantics if ignored)"}
+true  opt/locale                         base=RAISE   head=RAISE  
+   spark: {"names": ["d", "t"], "types": ["date", "string"], "rows": ["(None, '15/01/2024 10:30')", "(datetime.date(2024, 1, 15), '2024-01-15 10:30:00')"]}
+   head : {"error": "AnalysisException", "text": "reader option 'locale' is not supported by repark yet (would silently change load semantics if ignored)"}
+true  opt/mode_dropmalformed             base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["int", "string"], "rows": ["(1, 'x')", "(3, 'z')"]}
+   head : {"error": "AnalysisException", "text": "reader option mode='DROPMALFORMED' is not supported by repark yet (only PERMISSIVE / default; FAILFAST/DROPMALFORMED are unsupported-loud)"}
+true  opt/mode_failfast                  base=BOTHERR head=BOTHERR
+   spark: {"error": "Py4JJavaError", "text": "An error occurred while calling o1218.collectToPython. : org.apache.spark.SparkException: [FAILED_READ_FILE.NO_HINT] Encountered error while reading file file://<tmp>
+   head : {"error": "AnalysisException", "text": "reader option mode='FAILFAST' is not supported by repark yet (only PERMISSIVE / default; FAILFAST/DROPMALFORMED are unsupported-loud)"}
+true  opt/corrupt_record                 base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b", "_corrupt_record"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'y', 'abc,y')"]}
+   head : {"error": "AnalysisException", "text": "reader schema field '_corrupt_record' is the corrupt-record column named by columnNameOfCorruptRecord, which repark does not fill with a malformed CSV row's text yet; a CSV read schema holding it is refused"}
+true  opt/corrupt_record_default         base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b", "_corrupt_record"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'y', 'abc,y')"]}
+   head : {"error": "AnalysisException", "text": "reader schema field '_corrupt_record' is the corrupt-record column named by columnNameOfCorruptRecord, which repark does not fill with a malformed CSV row's text yet; a CSV read schema holding it is refused"}
+true  opt/enforceSchema_false            base=BOTHERR head=BOTHERR
+   spark: {"error": "Py4JJavaError", "text": "An error occurred while calling o1251.collectToPython. : org.apache.spark.SparkException: [FAILED_READ_FILE.NO_HINT] Encountered error while reading file file://<tmp>
+   head : {"error": "AnalysisException", "text": "reader option 'enforceSchema' is not supported by repark yet (would silently change load semantics if ignored)"}
+true  opt/encoding_latin1                base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["string", "int"], "rows": ["('café', 1)"]}
+   head : {"error": "AnalysisException", "text": "reader option encoding='ISO-8859-1' is not supported (only UTF-8)"}
+true  opt/samplingRatio                  base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["string", "string"], "rows": ["('1', 'x')", "('3', 'z')", "('abc', 'y')"]}
+   head : {"error": "AnalysisException", "text": "reader option 'samplingRatio' is not supported by repark yet (would silently change load semantics if ignored)"}
+true  door/load_kw                       base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["int", "string"], "rows": ["(1, 'x')", "(3, 'z')", "(None, 'y')"]}
+   head : {"error": "AnalysisException", "text": "DATA_SOURCE_NOT_FOUND: Failed to find the data source: (empty). Call format(...) before load(...) (repark does not default empty format to parquet)."}
+false type/int                           base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "int"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(3, None)", "(4, None)", "(5, None)", "(6
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/int/na                        base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "int"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(3, None)", "(4, None)", "(5, None)", "(6
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/int/hdr                       base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "int"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(3, None)", "(4, None)", "(5, None)", "(6
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+false type/bigint                        base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "bigint"], "rows": ["(0, 1)", "(1, -7)", "(10, 2147483648)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(3, None)", "(4, None)", "(5, No
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/bigint/na                     base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "bigint"], "rows": ["(0, 1)", "(1, -7)", "(10, 2147483648)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(3, None)", "(4, None)", "(5, No
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/bigint/hdr                    base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "bigint"], "rows": ["(0, 1)", "(1, -7)", "(10, 2147483648)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(3, None)", "(4, None)", "(5, No
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+false type/smallint                      base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "smallint"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(20, None)", "(3, None)", "(4, None)
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/smallint/na                   base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "smallint"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(20, None)", "(3, None)", "(4, None)
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/smallint/hdr                  base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "smallint"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(20, None)", "(3, None)", "(4, None)
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+false type/tinyint                       base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "tinyint"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(20, None)", "(3, None)", "(4, None)"
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/tinyint/na                    base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "tinyint"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(20, None)", "(3, None)", "(4, None)"
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/tinyint/hdr                   base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "tinyint"], "rows": ["(0, 1)", "(1, -7)", "(10, None)", "(11, 3)", "(12, None)", "(13, None)", "(14, 0)", "(15, None)", "(16, None)", "(17, None)", "(18, 1)", "(19, None)", "(2, 7)", "(20, None)", "(3, None)", "(4, None)"
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+false type/double                        base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "double"], "rows": ["(0, 1.0)", "(1, -7.0)", "(10, 2147483648.0)", "(11, 3.0)", "(12, nan)", "(13, inf)", "(14, -0.0)", "(15, None)", "(16, 1.0)", "(17, 9.223372036854776e+18)", "(18, 1.0)", "(19, None)", "(2, 7.0)", "(20
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/double/na                     base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "double"], "rows": ["(0, 1.0)", "(1, -7.0)", "(10, 2147483648.0)", "(11, 3.0)", "(12, nan)", "(13, inf)", "(14, -0.0)", "(15, None)", "(16, 1.0)", "(17, 9.223372036854776e+18)", "(18, 1.0)", "(19, None)", "(2, 7.0)", "(20
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/double/hdr                    base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "double"], "rows": ["(0, 1.0)", "(1, -7.0)", "(10, 2147483648.0)", "(11, 3.0)", "(12, nan)", "(13, inf)", "(14, -0.0)", "(15, None)", "(16, 1.0)", "(17, 9.223372036854776e+18)", "(18, 1.0)", "(19, None)", "(2, 7.0)", "(20
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+false type/float                         base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "float"], "rows": ["(0, 1.0)", "(1, -7.0)", "(10, 2147483648.0)", "(11, 3.0)", "(12, nan)", "(13, inf)", "(14, -0.0)", "(15, None)", "(16, 1.0)", "(17, 9.223372036854776e+18)", "(18, 1.0)", "(19, None)", "(2, 7.0)", "(20,
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/float/na                      base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "float"], "rows": ["(0, 1.0)", "(1, -7.0)", "(10, 2147483648.0)", "(11, 3.0)", "(12, nan)", "(13, inf)", "(14, -0.0)", "(15, None)", "(16, 1.0)", "(17, 9.223372036854776e+18)", "(18, 1.0)", "(19, None)", "(2, 7.0)", "(20,
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/float/hdr                     base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "float"], "rows": ["(0, 1.0)", "(1, -7.0)", "(10, 2147483648.0)", "(11, 3.0)", "(12, nan)", "(13, inf)", "(14, -0.0)", "(15, None)", "(16, 1.0)", "(17, 9.223372036854776e+18)", "(18, 1.0)", "(19, None)", "(2, 7.0)", "(20,
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+false type/decimal(10,2)                 base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "decimal(10,2)"], "rows": ["(0, Decimal('1.00'))", "(1, Decimal('-7.00'))", "(10, None)", "(11, Decimal('3.00'))", "(12, None)", "(13, None)", "(14, Decimal('0.00'))", "(15, None)", "(16, None)", "(17, None)", "(18, Decim
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/decimal(10,2)/na              base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "decimal(10,2)"], "rows": ["(0, Decimal('1.00'))", "(1, Decimal('-7.00'))", "(10, None)", "(11, Decimal('3.00'))", "(12, None)", "(13, None)", "(14, Decimal('0.00'))", "(15, None)", "(16, None)", "(17, None)", "(18, Decim
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/decimal(10,2)/hdr             base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "decimal(10,2)"], "rows": ["(0, Decimal('1.00'))", "(1, Decimal('-7.00'))", "(10, None)", "(11, Decimal('3.00'))", "(12, None)", "(13, None)", "(14, Decimal('0.00'))", "(15, None)", "(16, None)", "(17, None)", "(18, Decim
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+false type/decimal(38,10)                base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "decimal(38,10)"], "rows": ["(0, Decimal('1.0000000000'))", "(1, Decimal('-7.0000000000'))", "(10, Decimal('2147483648.0000000000'))", "(11, Decimal('3.0000000000'))", "(12, None)", "(13, None)", "(14, Decimal('0E-10'))",
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/decimal(38,10)/na             base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "decimal(38,10)"], "rows": ["(0, Decimal('1.0000000000'))", "(1, Decimal('-7.0000000000'))", "(10, Decimal('2147483648.0000000000'))", "(11, Decimal('3.0000000000'))", "(12, None)", "(13, None)", "(14, Decimal('0E-10'))",
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/decimal(38,10)/hdr            base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["int", "decimal(38,10)"], "rows": ["(0, Decimal('1.0000000000'))", "(1, Decimal('-7.0000000000'))", "(10, Decimal('2147483648.0000000000'))", "(11, Decimal('3.0000000000'))", "(12, None)", "(13, None)", "(14, Decimal('0E-10'))",
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+false type/string/na                     base=WRONG   head=WRONG  
+   spark: {"names": ["i", "v"], "types": ["int", "string"], "rows": ["(0, 'abc')", "(1, None)", "(2, '')", "(3, None)", "(4, ' x ')", "(5, '007')", "(6, 'a,b')", "(7, '\\\\N')", "(8, 'null')"]}
+   head : {"names": ["i", "v"], "types": ["int", "string"], "rows": ["(0, 'abc')", "(1, None)", "(2, None)", "(3, None)", "(4, ' x ')", "(5, '007')", "(6, 'a,b')", "(7, '\\\\N')", "(8, 'null')"]}
+false type/none                          base=RAISE   head=RAISE  
+   spark: {"names": ["_c0", "_c1"], "types": ["string", "string"], "rows": ["('0', '1')", "('1', '-7')", "('10', '2147483648')", "('11', '+3')", "('12', 'NaN')", "('13', 'Infinity')", "('14', '-0')", "('15', '0x10')", "('16', '1d')", "('17', '9223372036854775808')", "('
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/none_na                       base=RAISE   head=RAISE  
+   spark: {"names": ["_c0", "_c1"], "types": ["string", "string"], "rows": ["('0', '1')", "('1', '-7')", "('10', '2147483648')", "('11', '+3')", "('12', 'NaN')", "('13', 'Infinity')", "('14', '-0')", "('15', '0x10')", "('16', '1d')", "('17', '9223372036854775808')", "('
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 19, expected 2 got 3"}
+false type/none_hdr                      base=RAISE   head=RAISE  
+   spark: {"names": ["i", "v"], "types": ["string", "string"], "rows": ["('0', '1')", "('1', '-7')", "('10', '2147483648')", "('11', '+3')", "('12', 'NaN')", "('13', 'Infinity')", "('14', '-0')", "('15', '0x10')", "('16', '1d')", "('17', '9223372036854775808')", "('18',
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 20, expected 2 got 3"}
+false width/short_row                    base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b", "c"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')", "('4', '5', None)"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 3, expected 3 got 2"}
+false width/short_row_schema             base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b", "c"], "types": ["int", "int", "int"], "rows": ["(1, 2, 3)", "(4, 5, None)"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 3, expected 3 got 2"}
+false width/long_row                     base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["string", "string"], "rows": ["('1', '2')", "('3', '4')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 3, expected 2 got 3"}
+false width/long_row_schema              base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["int", "int"], "rows": ["(1, 2)", "(3, 4)"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 3, expected 2 got 3"}
+false width/short_off                    base=RAISE   head=RAISE  
+   spark: {"names": ["_c0", "_c1", "_c2"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')", "('4', '5', None)"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 2, expected 3 got 2"}
+false width/long_off                     base=RAISE   head=RAISE  
+   spark: {"names": ["_c0", "_c1"], "types": ["string", "string"], "rows": ["('1', '2')", "('3', '4')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 2, expected 2 got 3"}
+false names/exact_dup                    base=RAISE   head=RAISE  
+   spark: {"names": ["x0", "x1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+false names/exact_dup/schema             base=RAISE   head=RAISE  
+   spark: {"names": ["p", "q"], "types": ["string", "string"], "rows": ["('1', '2')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+false names/triple                       base=RAISE   head=RAISE  
+   spark: {"names": ["a0", "A1", "a2"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+false names/triple/schema                base=RAISE   head=RAISE  
+   spark: {"names": ["p", "q"], "types": ["string", "string"], "rows": ["('1', '2')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+false names/two_empty                    base=RAISE   head=RAISE  
+   spark: {"names": ["_c0", "_c1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+false names/two_empty/schema             base=RAISE   head=RAISE  
+   spark: {"names": ["p", "q"], "types": ["string", "string"], "rows": ["('1', '2')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+false names/two_null                     base=RAISE   head=RAISE  
+   spark: {"names": ["_c0", "_c1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+false names/two_null/schema              base=RAISE   head=RAISE  
+   spark: {"names": ["p", "q"], "types": ["string", "string"], "rows": ["('1', '2')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+false names/dup_with_empty               base=RAISE   head=RAISE  
+   spark: {"names": ["x0", "_c1", "X2", "_c3"], "types": ["string", "string", "string", "string"], "rows": ["('1', '2', '3', '4')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 3 got more than 3"}
+false names/dup_with_empty/schema        base=RAISE   head=RAISE  
+   spark: {"names": ["p", "q"], "types": ["string", "string"], "rows": ["('1', '2')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 3 got more than 3"}
+false names/c0_clash                     base=WRONG   head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[COLUMN_ALREADY_EXISTS] The column `_c1` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"}
+   head : {"error": "AnalysisException", "text": "Schema error: Schema contains duplicate qualified field name \"?table?\"._c1"}
+   base : {"names": ["_c1", "", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+false names/triple/sensitive             base=RAISE   head=RAISE  
+   spark: {"names": ["a0", "A", "a2"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+   head : {"error": "PySparkException", "text": "Arrow error: Csv error: incorrect number of fields for line 1, expected 2 got more than 2"}
+false infer/true_noschema                base=WRONG   head=WRONG  
+   spark: {"names": ["x", "k", "d"], "types": ["int", "string", "double"], "rows": ["(12, '7', 2.0)", "(7, 'abc', 1.5)"]}
+   head : {"names": ["x", "k", "d"], "types": ["bigint", "string", "double"], "rows": ["(12, '7', 2.0)", "(7, 'abc', 1.5)"]}
+false refuse/char                        base=WRONG   head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[UNSUPPORTED_CHAR_OR_VARCHAR_AS_STRING] The char/varchar type can't be used in the table schema. If you want Spark treat them as string type as same as Spark 3.0 and earlier, please set \"spark.sql.legacy.charVarcharAsSt
+   head : {"error": "AnalysisException", "text": "[UNSUPPORTED_CHAR_OR_VARCHAR_AS_STRING] The char/varchar type can't be used in the table schema. If you want Spark treat them as string type as same as Spark 3.0 and earlier, please set \"spark.sql.legacy.charVarcharAsSt
+   base : {"names": ["x", "k", "d"], "types": ["string", "string", "string"], "rows": ["('12', '7', '2.0')", "('7', 'abc', '1.5')"]}
+false refuse/varchar                     base=WRONG   head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[UNSUPPORTED_CHAR_OR_VARCHAR_AS_STRING] The char/varchar type can't be used in the table schema. If you want Spark treat them as string type as same as Spark 3.0 and earlier, please set \"spark.sql.legacy.charVarcharAsSt
+   head : {"error": "AnalysisException", "text": "[UNSUPPORTED_CHAR_OR_VARCHAR_AS_STRING] The char/varchar type can't be used in the table schema. If you want Spark treat them as string type as same as Spark 3.0 and earlier, please set \"spark.sql.legacy.charVarcharAsSt
+   base : {"names": ["x", "k", "d"], "types": ["string", "string", "string"], "rows": ["('12', '7', '2.0')", "('7', 'abc', '1.5')"]}
+false refuse/decimal_2_5                 base=BOTHERR head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "Decimal scale (5) cannot be greater than precision (2)."}
+   head : {"error": "AnalysisException", "text": "Decimal scale (5) cannot be greater than precision (2)."}
+false refuse/decimal_5_m2                base=BOTHERR head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[NEGATIVE_SCALE_DISALLOWED] Negative scale is not allowed: '-2'. Set the config \"spark.sql.legacy.allowNegativeScaleOfDecimal\" to \"true\" to allow it. SQLSTATE: 0A000"}
+   head : {"error": "AnalysisException", "text": "[NEGATIVE_SCALE_DISALLOWED] Negative scale is not allowed: '-2'. Set the config \"spark.sql.legacy.allowNegativeScaleOfDecimal\" to \"true\" to allow it."}
+false refuse/empty_value_e               base=WRONG   head=RAISE  
+   spark: {"names": ["x", "k", "d"], "types": ["string", "string", "string"], "rows": ["('007', 'abc', '1.5')", "('12', '7', '2')"]}
+   head : {"error": "AnalysisException", "text": "reader option 'emptyValue' is not supported by repark yet (repark reads a quoted empty field as NULL, never as the emptyValue text)"}
+   base : {"names": ["x", "k", "d"], "types": ["string", "string", "string"], "rows": ["('12', '7', '2.0')", "('7', 'abc', '1.5')"]}
+false refuse/empty_value_e_schema        base=WRONG   head=RAISE  
+   spark: {"names": ["x", "k", "d"], "types": ["string", "string", "string"], "rows": ["('007', 'abc', '1.5')", "('12', '7', '2')"]}
+   head : {"error": "AnalysisException", "text": "reader option 'emptyValue' is not supported by repark yet (repark reads a quoted empty field as NULL, never as the emptyValue text)"}
+   base : {"names": ["x", "k", "d"], "types": ["string", "string", "string"], "rows": ["('12', '7', '2.0')", "('7', 'abc', '1.5')"]}
+false refuse/array                       base=BOTHERR head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE] The CSV datasource doesn't support the column `x` of the type \"ARRAY<INT>\". SQLSTATE: 0A000"}
+   head : {"error": "AnalysisException", "text": "unknown cast type \"array<int>\""}
+false refuse/struct                      base=BOTHERR head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE] The CSV datasource doesn't support the column `x` of the type \"STRUCT<a: INT>\". SQLSTATE: 0A000"}
+   head : {"error": "AnalysisException", "text": "unknown cast type \"struct<a:int>\""}
+false refuse/map                         base=BOTHERR head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE] The CSV datasource doesn't support the column `x` of the type \"MAP<STRING, INT>\". SQLSTATE: 0A000"}
+   head : {"error": "AnalysisException", "text": "unknown cast type \"map<string,int>\""}
+false opt/dateFormat                     base=RAISE   head=RAISE  
+   spark: {"names": ["d", "t"], "types": ["date", "string"], "rows": ["(None, '2024-01-15 10:30:00')", "(datetime.date(2024, 1, 15), '15/01/2024 10:30')"]}
+   head : {"error": "AnalysisException", "text": "reader option 'dateFormat' is not supported by repark yet (would silently change load semantics if ignored)"}
+false opt/timestampFormat                base=RAISE   head=RAISE  
+   spark: {"names": ["d", "t"], "types": ["string", "timestamp"], "rows": ["('15/01/2024', datetime.datetime(2024, 1, 15, 10, 30))", "('2024-01-15', None)"]}
+   head : {"error": "AnalysisException", "text": "reader option 'timestampFormat' is not supported by repark yet (would silently change load semantics if ignored)"}
+false opt/timestampNTZFormat             base=RAISE   head=RAISE  
+   spark: {"names": ["d", "t"], "types": ["string", "timestamp_ntz"], "rows": ["('15/01/2024', datetime.datetime(2024, 1, 15, 10, 30))", "('2024-01-15', None)"]}
+   head : {"error": "AnalysisException", "text": "reader option 'timestampNTZFormat' is not supported by repark yet (would silently change load semantics if ignored)"}
+false opt/nanValue                       base=RAISE   head=RAISE  
+   spark: {"names": ["v"], "types": ["double"], "rows": ["(-inf,)", "(1.5,)", "(None,)", "(None,)", "(inf,)", "(nan,)", "(nan,)"]}
+   head : {"error": "AnalysisException", "text": "reader option 'nanValue' is not supported by repark yet (would silently change load semantics if ignored)"}
+false opt/positiveInf                    base=RAISE   head=RAISE  
+   spark: {"names": ["v"], "types": ["double"], "rows": ["(-inf,)", "(1.5,)", "(None,)", "(None,)", "(inf,)", "(inf,)", "(nan,)"]}
+   head : {"error": "AnalysisException", "text": "reader option 'positiveInf' is not supported by repark yet (would silently change load semantics if ignored)"}
+false opt/negativeInf                    base=RAISE   head=RAISE  
+   spark: {"names": ["v"], "types": ["double"], "rows": ["(-inf,)", "(-inf,)", "(1.5,)", "(None,)", "(None,)", "(inf,)", "(nan,)"]}
+   head : {"error": "AnalysisException", "text": "reader option 'negativeInf' is not supported by repark yet (would silently change load semantics if ignored)"}
+false opt/ignoreLeading                  base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["string", "int"], "rows": ["('x  ', None)", "('y', None)"]}
+   head : {"error": "AnalysisException", "text": "reader option 'ignoreLeadingWhiteSpace' is not supported by repark yet (would silently change load semantics if ignored)"}
+false opt/ignoreTrailing                 base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["string", "int"], "rows": ["('  x', None)", "(' y', 8)"]}
+   head : {"error": "AnalysisException", "text": "reader option 'ignoreTrailingWhiteSpace' is not supported by repark yet (would silently change load semantics if ignored)"}
+false opt/locale                         base=RAISE   head=RAISE  
+   spark: {"names": ["d", "t"], "types": ["date", "string"], "rows": ["(None, '15/01/2024 10:30')", "(datetime.date(2024, 1, 15), '2024-01-15 10:30:00')"]}
+   head : {"error": "AnalysisException", "text": "reader option 'locale' is not supported by repark yet (would silently change load semantics if ignored)"}
+false opt/mode_dropmalformed             base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["int", "string"], "rows": ["(1, 'x')", "(3, 'z')"]}
+   head : {"error": "AnalysisException", "text": "reader option mode='DROPMALFORMED' is not supported by repark yet (only PERMISSIVE / default; FAILFAST/DROPMALFORMED are unsupported-loud)"}
+false opt/mode_failfast                  base=BOTHERR head=BOTHERR
+   spark: {"error": "Py4JJavaError", "text": "An error occurred while calling o2713.collectToPython. : org.apache.spark.SparkException: [FAILED_READ_FILE.NO_HINT] Encountered error while reading file file://<tmp>
+   head : {"error": "AnalysisException", "text": "reader option mode='FAILFAST' is not supported by repark yet (only PERMISSIVE / default; FAILFAST/DROPMALFORMED are unsupported-loud)"}
+false opt/corrupt_record                 base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b", "_corrupt_record"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'y', 'abc,y')"]}
+   head : {"error": "AnalysisException", "text": "reader schema field '_corrupt_record' is the corrupt-record column named by columnNameOfCorruptRecord, which repark does not fill with a malformed CSV row's text yet; a CSV read schema holding it is refused"}
+false opt/corrupt_record_default         base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b", "_corrupt_record"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'y', 'abc,y')"]}
+   head : {"error": "AnalysisException", "text": "reader schema field '_corrupt_record' is the corrupt-record column named by columnNameOfCorruptRecord, which repark does not fill with a malformed CSV row's text yet; a CSV read schema holding it is refused"}
+false opt/enforceSchema_false            base=BOTHERR head=BOTHERR
+   spark: {"error": "Py4JJavaError", "text": "An error occurred while calling o2746.collectToPython. : org.apache.spark.SparkException: [FAILED_READ_FILE.NO_HINT] Encountered error while reading file file://<tmp>
+   head : {"error": "AnalysisException", "text": "reader option 'enforceSchema' is not supported by repark yet (would silently change load semantics if ignored)"}
+false opt/encoding_latin1                base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["string", "int"], "rows": ["('café', 1)"]}
+   head : {"error": "AnalysisException", "text": "reader option encoding='ISO-8859-1' is not supported (only UTF-8)"}
+false opt/samplingRatio                  base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["string", "string"], "rows": ["('1', 'x')", "('3', 'z')", "('abc', 'y')"]}
+   head : {"error": "AnalysisException", "text": "reader option 'samplingRatio' is not supported by repark yet (would silently change load semantics if ignored)"}
+false door/load_kw                       base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b"], "types": ["int", "string"], "rows": ["(1, 'x')", "(3, 'z')", "(None, 'y')"]}
+   head : {"error": "AnalysisException", "text": "DATA_SOURCE_NOT_FOUND: Failed to find the data source: (empty). Call format(...) before load(...) (repark does not default empty format to parquet)."}
+
+| group | build | EQUAL | WRONG | RAISE | BOTHERR |
+| ALL | base | 87 | 50 | 185 | 14 |
+| ALL | head | 190 | 4 | 122 | 20 |
+| big | base | 4 | 0 | 2 | 0 |
+| big | head | 6 | 0 | 0 | 0 |
+| door | base | 2 | 0 | 4 | 0 |
+| door | head | 4 | 0 | 2 | 0 |
+| empty | base | 2 | 0 | 4 | 0 |
+| empty | head | 6 | 0 | 0 | 0 |
+| hdronly | base | 6 | 0 | 0 | 0 |
+| hdronly | head | 6 | 0 | 0 | 0 |
+| infer | base | 2 | 6 | 2 | 0 |
+| infer | head | 8 | 2 | 0 | 0 |
+| late | base | 2 | 0 | 12 | 0 |
+| late | head | 14 | 0 | 0 | 0 |
+| names | base | 18 | 18 | 30 | 0 |
+| names | head | 42 | 0 | 22 | 2 |
+| nul | base | 4 | 0 | 0 | 0 |
+| nul | head | 4 | 0 | 0 | 0 |
+| opt | base | 30 | 6 | 40 | 4 |
+| opt | head | 48 | 0 | 28 | 4 |
+| refuse | base | 0 | 9 | 1 | 10 |
+| refuse | head | 2 | 0 | 4 | 14 |
+| type | base | 7 | 5 | 72 | 0 |
+| type | head | 28 | 2 | 54 | 0 |
+| wide | base | 6 | 0 | 0 | 0 |
+| wide | head | 6 | 0 | 0 | 0 |
+| width | base | 4 | 6 | 18 | 0 |
+| width | head | 16 | 0 | 12 | 0 |
+
+move BOTHERR -> BOTHERR: 14
+move EQUAL -> EQUAL: 87
+move RAISE -> EQUAL: 67
+move RAISE -> RAISE: 118
+move WRONG -> BOTHERR: 6
+move WRONG -> EQUAL: 36
+move WRONG -> RAISE: 4
+move WRONG -> WRONG: 4
+
+
+## probe2.py (112 records)
+
+true  type/string/na                     base=WRONG   head=WRONG  
+   spark: {"names": ["i", "v"], "types": ["int", "string"], "rows": ["(0, 'abc')", "(1, None)", "(2, '')", "(3, None)", "(4, ' x ')", "(5, '007')", "(6, 'a,b')", "(7, '\\\\N')", "(8, 'null')"]}
+   head : {"names": ["i", "v"], "types": ["int", "string"], "rows": ["(0, 'abc')", "(1, None)", "(2, None)", "(3, None)", "(4, ' x ')", "(5, '007')", "(6, 'a,b')", "(7, '\\\\N')", "(8, 'null')"]}
+true  type/none_na                       base=WRONG   head=WRONG  
+   spark: {"names": ["_c0", "_c1"], "types": ["string", "string"], "rows": ["('0', '1')", "('1', '-7')", "('10', '2147483648')", "('11', '+3')", "('12', 'NaN')", "('13', 'Infinity')", "('14', '-0')", "('15', '0x10')", "('16', '1d')", "('17', '9223372036854775808')", "('
+   head : {"names": ["_c0", "_c1"], "types": ["string", "string"], "rows": ["('0', '1')", "('1', '-7')", "('10', '2147483648')", "('11', '+3')", "('12', 'NaN')", "('13', 'Infinity')", "('14', '-0')", "('15', '0x10')", "('16', '1d')", "('17', '9223372036854775808')", "('
+true  corrupt/first                      base=RAISE   head=RAISE  
+   spark: {"names": ["_corrupt_record", "a", "b"], "types": ["string", "int", "string"], "rows": ["('abc,y', None, 'y')", "(None, 1, 'x')", "(None, 3, 'z')"]}
+   head : {"error": "AnalysisException", "text": "reader schema field '_corrupt_record' is the corrupt-record column named by columnNameOfCorruptRecord, which repark does not fill with a malformed CSV row's text yet; a CSV read schema holding it is refused"}
+true  corrupt/middle                     base=RAISE   head=RAISE  
+   spark: {"names": ["a", "_corrupt_record", "b"], "types": ["int", "string", "string"], "rows": ["(1, None, 'x')", "(3, None, 'z')", "(None, 'abc,y', 'y')"]}
+   head : {"error": "AnalysisException", "text": "reader schema field '_corrupt_record' is the corrupt-record column named by columnNameOfCorruptRecord, which repark does not fill with a malformed CSV row's text yet; a CSV read schema holding it is refused"}
+true  corrupt/last_noheader              base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b", "_corrupt_record"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'b', 'a,b')", "(None, 'y', 'abc,y')"]}
+   head : {"error": "AnalysisException", "text": "reader schema field '_corrupt_record' is the corrupt-record column named by columnNameOfCorruptRecord, which repark does not fill with a malformed CSV row's text yet; a CSV read schema holding it is refused"}
+true  corrupt/int_typed                  base=BOTHERR head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[INVALID_CORRUPT_RECORD_TYPE] The column `_corrupt_record` for corrupt records must have the nullable STRING type, but got \"INT\". SQLSTATE: 42804"}
+   head : {"error": "AnalysisException", "text": "reader schema field '_corrupt_record' is the corrupt-record column named by columnNameOfCorruptRecord, which repark does not fill with a malformed CSV row's text yet; a CSV read schema holding it is refused"}
+true  corrupt/clean_rows                 base=EQUAL   head=RAISE   LOST
+   spark: {"names": ["a", "b", "_corrupt_record"], "types": ["string", "string", "string"], "rows": ["('1', 'x', None)", "('3', 'z', None)", "('abc', 'y', None)"]}
+   head : {"error": "AnalysisException", "text": "reader schema field '_corrupt_record' is the corrupt-record column named by columnNameOfCorruptRecord, which repark does not fill with a malformed CSV row's text yet; a CSV read schema holding it is refused"}
+   base : {"names": ["a", "b", "_corrupt_record"], "types": ["string", "string", "string"], "rows": ["('1', 'x', None)", "('3', 'z', None)", "('abc', 'y', None)"]}
+true  names/x0_clash                     base=BOTHERR head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[COLUMN_ALREADY_EXISTS] The column `x0` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"}
+   head : {"error": "AnalysisException", "text": "Schema error: Schema contains duplicate qualified field name \"?table?\".x0"}
+true  schema/empty_struct                base=WRONG   head=WRONG  
+   spark: {"names": [], "types": [], "rows": ["()", "()", "()"]}
+   head : {"names": ["_c0", "_c1"], "types": ["string", "string"], "rows": ["('1', 'x')", "('3', 'z')", "('abc', 'y')"]}
+false type/string/na                     base=WRONG   head=WRONG  
+   spark: {"names": ["i", "v"], "types": ["int", "string"], "rows": ["(0, 'abc')", "(1, None)", "(2, '')", "(3, None)", "(4, ' x ')", "(5, '007')", "(6, 'a,b')", "(7, '\\\\N')", "(8, 'null')"]}
+   head : {"names": ["i", "v"], "types": ["int", "string"], "rows": ["(0, 'abc')", "(1, None)", "(2, None)", "(3, None)", "(4, ' x ')", "(5, '007')", "(6, 'a,b')", "(7, '\\\\N')", "(8, 'null')"]}
+false type/none_na                       base=WRONG   head=WRONG  
+   spark: {"names": ["_c0", "_c1"], "types": ["string", "string"], "rows": ["('0', '1')", "('1', '-7')", "('10', '2147483648')", "('11', '+3')", "('12', 'NaN')", "('13', 'Infinity')", "('14', '-0')", "('15', '0x10')", "('16', '1d')", "('17', '9223372036854775808')", "('
+   head : {"names": ["_c0", "_c1"], "types": ["string", "string"], "rows": ["('0', '1')", "('1', '-7')", "('10', '2147483648')", "('11', '+3')", "('12', 'NaN')", "('13', 'Infinity')", "('14', '-0')", "('15', '0x10')", "('16', '1d')", "('17', '9223372036854775808')", "('
+false corrupt/first                      base=RAISE   head=RAISE  
+   spark: {"names": ["_corrupt_record", "a", "b"], "types": ["string", "int", "string"], "rows": ["('abc,y', None, 'y')", "(None, 1, 'x')", "(None, 3, 'z')"]}
+   head : {"error": "AnalysisException", "text": "reader schema field '_corrupt_record' is the corrupt-record column named by columnNameOfCorruptRecord, which repark does not fill with a malformed CSV row's text yet; a CSV read schema holding it is refused"}
+false corrupt/middle                     base=RAISE   head=RAISE  
+   spark: {"names": ["a", "_corrupt_record", "b"], "types": ["int", "string", "string"], "rows": ["(1, None, 'x')", "(3, None, 'z')", "(None, 'abc,y', 'y')"]}
+   head : {"error": "AnalysisException", "text": "reader schema field '_corrupt_record' is the corrupt-record column named by columnNameOfCorruptRecord, which repark does not fill with a malformed CSV row's text yet; a CSV read schema holding it is refused"}
+false corrupt/last_noheader              base=RAISE   head=RAISE  
+   spark: {"names": ["a", "b", "_corrupt_record"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'b', 'a,b')", "(None, 'y', 'abc,y')"]}
+   head : {"error": "AnalysisException", "text": "reader schema field '_corrupt_record' is the corrupt-record column named by columnNameOfCorruptRecord, which repark does not fill with a malformed CSV row's text yet; a CSV read schema holding it is refused"}
+false corrupt/int_typed                  base=BOTHERR head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[INVALID_CORRUPT_RECORD_TYPE] The column `_corrupt_record` for corrupt records must have the nullable STRING type, but got \"INT\". SQLSTATE: 42804"}
+   head : {"error": "AnalysisException", "text": "reader schema field '_corrupt_record' is the corrupt-record column named by columnNameOfCorruptRecord, which repark does not fill with a malformed CSV row's text yet; a CSV read schema holding it is refused"}
+false corrupt/clean_rows                 base=EQUAL   head=RAISE   LOST
+   spark: {"names": ["a", "b", "_corrupt_record"], "types": ["string", "string", "string"], "rows": ["('1', 'x', None)", "('3', 'z', None)", "('abc', 'y', None)"]}
+   head : {"error": "AnalysisException", "text": "reader schema field '_corrupt_record' is the corrupt-record column named by columnNameOfCorruptRecord, which repark does not fill with a malformed CSV row's text yet; a CSV read schema holding it is refused"}
+   base : {"names": ["a", "b", "_corrupt_record"], "types": ["string", "string", "string"], "rows": ["('1', 'x', None)", "('3', 'z', None)", "('abc', 'y', None)"]}
+false names/x0_clash                     base=BOTHERR head=BOTHERR
+   spark: {"error": "AnalysisException", "text": "[COLUMN_ALREADY_EXISTS] The column `x0` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"}
+   head : {"error": "AnalysisException", "text": "Schema error: Schema contains duplicate qualified field name \"?table?\".x0"}
+false schema/empty_struct                base=WRONG   head=WRONG  
+   spark: {"names": [], "types": [], "rows": ["()", "()", "()"]}
+   head : {"names": ["_c0", "_c1"], "types": ["string", "string"], "rows": ["('1', 'x')", "('3', 'z')", "('abc', 'y')"]}
+
+| group | build | EQUAL | WRONG | RAISE | BOTHERR |
+| ALL | base | 22 | 16 | 70 | 4 |
+| ALL | head | 94 | 6 | 8 | 4 |
+| corrupt | base | 2 | 0 | 6 | 2 |
+| corrupt | head | 0 | 0 | 8 | 2 |
+| names | base | 6 | 4 | 4 | 2 |
+| names | head | 14 | 0 | 0 | 2 |
+| schema | base | 0 | 2 | 0 | 0 |
+| schema | head | 0 | 2 | 0 | 0 |
+| type | base | 14 | 10 | 60 | 0 |
+| type | head | 80 | 4 | 0 | 0 |
+
+move BOTHERR -> BOTHERR: 4
+move EQUAL -> EQUAL: 20
+move EQUAL -> RAISE: 2
+move RAISE -> EQUAL: 64
+move RAISE -> RAISE: 6
+move WRONG -> EQUAL: 10
+move WRONG -> WRONG: 6
+

@@ -1,0 +1,106 @@
+{"ansi": "true", "tag": "card/default", "names": ["_c0", "_c1", "_c2", "_c3"], "types": ["string", "string", "string", "string"], "rows": ["('7', '1.5', '1000.0', 'true')"]}
+{"ansi": "true", "tag": "card/infer_false", "names": ["_c0", "_c1", "_c2", "_c3"], "types": ["string", "string", "string", "string"], "rows": ["('7', '1.5', '1000.0', 'true')"]}
+{"ansi": "true", "tag": "card/string", "names": ["a", "b", "c", "d"], "types": ["string", "string", "string", "string"], "rows": ["('7', '1.5', '1000.0', 'true')"]}
+{"ansi": "true", "tag": "card/load", "names": ["a", "b", "c", "d"], "types": ["string", "string", "string", "string"], "rows": ["('7', '1.5', '1000.0', 'true')"]}
+{"ansi": "true", "tag": "card/header_infer_true", "names": ["a", "b", "c", "d"], "types": ["string", "string", "string", "string"], "rows": ["('7', '1.5', '1000.0', 'true')"]}
+{"ansi": "true", "tag": "infer/string", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "true", "tag": "infer/int", "error": "PySparkException: Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}
+{"ansi": "true", "tag": "n1", "names": ["a", "b"], "types": ["int", "bigint"], "rows": ["(1, 7)", "(1000, 2)", "(3, 4)"]}
+{"ansi": "true", "tag": "misfit/int", "error": "PySparkException: Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}
+{"ansi": "true", "tag": "misfit/boolean", "error": "PySparkException: Arrow error: Cast error: Cannot cast value 'abc' to value of Boolean type"}
+{"ansi": "true", "tag": "misfit/double", "error": "PySparkException: Execution error: [CAST_INVALID_INPUT] The value 'abc' of the type \"STRING\" cannot be cast to \"DOUBLE\" because it is malformed. Correct the value as per the syntax, or change its target type. Use `try_cast` to tolerate malformed input and re"}
+{"ansi": "true", "tag": "misfit/decimal", "error": "PySparkException: Arrow error: Cast error: Cannot cast string 'abc' to value of Decimal128(38, 10) type"}
+{"ansi": "true", "tag": "pair/swap_int", "names": ["x", "k"], "types": ["int", "string"], "rows": ["(7, 'abc')"]}
+{"ansi": "true", "tag": "pair/swap_string", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "true", "tag": "pair/part_int", "names": ["x", "k"], "types": ["int", "string"], "rows": ["(7, None)"]}
+{"ansi": "true", "tag": "pair/part_string", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', None)"]}
+{"ansi": "true", "tag": "pair/emptyname_schema", "names": ["x", "k"], "types": ["string", "string"], "rows": ["(None, 'k1')"]}
+{"ansi": "true", "tag": "pair/case_string", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "true", "tag": "width/narrow_hdr", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "true", "tag": "width/narrow_hdr_int", "names": ["x", "k"], "types": ["int", "string"], "rows": ["(7, 'abc')"]}
+{"ansi": "true", "tag": "width/wide_hdr", "names": ["x", "k", "z"], "types": ["string", "string", "string"], "rows": ["('7', 'abc', None)"]}
+{"ansi": "true", "tag": "width/narrow_off", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "true", "tag": "width/wide_off", "error": "AnalysisException: reader schema has 3 fields but source has 2 columns"}
+{"ansi": "true", "tag": "width/wide_off_int", "error": "AnalysisException: reader schema has 3 fields but source has 2 columns"}
+{"ansi": "true", "tag": "late/string", "error": "PySparkException: Arrow error: Parser error: Error while parsing value 'abc' as type 'Int64' for column 0 at line 1200. Row data: '[abc,k]'"}
+{"ansi": "true", "tag": "late/int", "error": "PySparkException: Arrow error: Parser error: Error while parsing value 'abc' as type 'Int64' for column 0 at line 1200. Row data: '[abc,k]'"}
+{"ansi": "true", "tag": "late/none", "error": "PySparkException: Arrow error: Parser error: Error while parsing value 'abc' as type 'Int64' for column 0 at line 1200. Row data: '[abc,k]'"}
+{"ansi": "true", "tag": "names/empty", "names": ["", "k"], "types": ["string", "string"], "rows": ["('7', 'k1')"]}
+{"ansi": "true", "tag": "names/null_token", "names": ["NA", "k"], "types": ["string", "string"], "rows": ["('007', None)"]}
+{"ansi": "true", "tag": "names/duplicate", "error": "AnalysisException: Error during planning: [AMBIGUOUS_REFERENCE] Reference `x` is ambiguous, could be: [`?table?`.`x`, `?table?`.`x`]. SQLSTATE: 42704"}
+{"ansi": "true", "tag": "names/untrimmed", "error": "AnalysisException: Schema error: No field named x. Valid fields are \"?table?\".\" x \", \"?table?\".\" k \", \"?table?\".\" x \", \"?table?\".\" k \"."}
+{"ansi": "true", "tag": "names/untrimmed_schema", "error": "AnalysisException: Schema error: No field named x. Valid fields are \"?table?\".\" x \", \"?table?\".\" k \", \"?table?\".\" x \", \"?table?\".\" k \"."}
+{"ansi": "true", "tag": "topo/file_url", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "true", "tag": "topo/file_url_schema", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "true", "tag": "topo/gzip", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', '1000.0')"]}
+{"ansi": "true", "tag": "topo/sep", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', '1000.0')"]}
+{"ansi": "true", "tag": "topo/bom", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', '1000.0')"]}
+{"ansi": "true", "tag": "topo/glob", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Int64 does not equal Float64"}
+{"ansi": "true", "tag": "topo/glob_schema", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Int64 does not equal Float64"}
+{"ansi": "true", "tag": "topo/two_schema", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Int64 does not equal Utf8"}
+{"ansi": "true", "tag": "topo/two_values", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Int64 does not equal Utf8"}
+{"ansi": "true", "tag": "empty_value/empty", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "true", "tag": "empty_value/e", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "true", "tag": "refuse/decimal_2_5", "error": "PySparkException: Arrow error: Invalid argument error: 7.00000 is too large to store in a Decimal128 of precision 2. Max is 0.00099"}
+{"ansi": "true", "tag": "refuse/decimal_5_m2", "error": "ParseException: unknown cast type 'decimal(5,-2)'"}
+{"ansi": "true", "tag": "refuse/char", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "true", "tag": "user_text_scan", "names": ["x", "k"], "types": ["bigint", "string"], "rows": ["(7, 'abc')"]}
+{"ansi": "true", "tag": "label/write_to/STRING", "names": ["a", "b", "c", "d"], "types": ["string", "string", "string", "string"], "rows": ["('7', '1.5', '1000.0', 'true')"]}
+{"ansi": "true", "tag": "label/insert/STRING", "names": ["a", "b", "c", "d"], "types": ["string", "string", "string", "string"], "rows": ["('7', '1.5', '1000.0', 'true')"]}
+{"ansi": "true", "tag": "label/write_to/INT", "names": ["a", "b", "c", "d"], "types": ["int", "int", "int", "int"], "rows": ["(7, 1, 1000, 1)"]}
+{"ansi": "true", "tag": "label/insert/INT", "names": ["a", "b", "c", "d"], "types": ["int", "int", "int", "int"], "rows": ["(7, 1, 1000, 1)"]}
+{"ansi": "true", "tag": "label/write_to/DECIMAL(10,2)", "names": ["a", "b", "c", "d"], "types": ["decimal(10,2)", "decimal(10,2)", "decimal(10,2)", "decimal(10,2)"], "rows": ["(Decimal('7.00'), Decimal('1.50'), Decimal('1000.00'), Decimal('1.00'))"]}
+{"ansi": "true", "tag": "label/insert/DECIMAL(10,2)", "names": ["a", "b", "c", "d"], "types": ["decimal(10,2)", "decimal(10,2)", "decimal(10,2)", "decimal(10,2)"], "rows": ["(Decimal('7.00'), Decimal('1.50'), Decimal('1000.00'), Decimal('1.00'))"]}
+{"ansi": "false", "tag": "card/default", "names": ["_c0", "_c1", "_c2", "_c3"], "types": ["string", "string", "string", "string"], "rows": ["('7', '1.5', '1000.0', 'true')"]}
+{"ansi": "false", "tag": "card/infer_false", "names": ["_c0", "_c1", "_c2", "_c3"], "types": ["string", "string", "string", "string"], "rows": ["('7', '1.5', '1000.0', 'true')"]}
+{"ansi": "false", "tag": "card/string", "names": ["a", "b", "c", "d"], "types": ["string", "string", "string", "string"], "rows": ["('7', '1.5', '1000.0', 'true')"]}
+{"ansi": "false", "tag": "card/load", "names": ["a", "b", "c", "d"], "types": ["string", "string", "string", "string"], "rows": ["('7', '1.5', '1000.0', 'true')"]}
+{"ansi": "false", "tag": "card/header_infer_true", "names": ["a", "b", "c", "d"], "types": ["string", "string", "string", "string"], "rows": ["('7', '1.5', '1000.0', 'true')"]}
+{"ansi": "false", "tag": "infer/string", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "false", "tag": "infer/int", "error": "PySparkException: Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}
+{"ansi": "false", "tag": "n1", "names": ["a", "b"], "types": ["int", "bigint"], "rows": ["(1, 7)", "(1000, 2)", "(3, 4)"]}
+{"ansi": "false", "tag": "misfit/int", "error": "PySparkException: Arrow error: Cast error: Cannot cast string 'abc' to value of Int32 type"}
+{"ansi": "false", "tag": "misfit/boolean", "error": "PySparkException: Arrow error: Cast error: Cannot cast value 'abc' to value of Boolean type"}
+{"ansi": "false", "tag": "misfit/double", "names": ["x", "k"], "types": ["double", "string"], "rows": ["(1000.0, 'k5')", "(2147483648.0, 'k2')", "(42.0, 'k3')", "(7.0, 'k4')", "(None, 'k1')"]}
+{"ansi": "false", "tag": "misfit/decimal", "error": "PySparkException: Arrow error: Cast error: Cannot cast string 'abc' to value of Decimal128(38, 10) type"}
+{"ansi": "false", "tag": "pair/swap_int", "names": ["x", "k"], "types": ["int", "string"], "rows": ["(7, 'abc')"]}
+{"ansi": "false", "tag": "pair/swap_string", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "false", "tag": "pair/part_int", "names": ["x", "k"], "types": ["int", "string"], "rows": ["(7, None)"]}
+{"ansi": "false", "tag": "pair/part_string", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', None)"]}
+{"ansi": "false", "tag": "pair/emptyname_schema", "names": ["x", "k"], "types": ["string", "string"], "rows": ["(None, 'k1')"]}
+{"ansi": "false", "tag": "pair/case_string", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "false", "tag": "width/narrow_hdr", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "false", "tag": "width/narrow_hdr_int", "names": ["x", "k"], "types": ["int", "string"], "rows": ["(7, 'abc')"]}
+{"ansi": "false", "tag": "width/wide_hdr", "names": ["x", "k", "z"], "types": ["string", "string", "string"], "rows": ["('7', 'abc', None)"]}
+{"ansi": "false", "tag": "width/narrow_off", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "false", "tag": "width/wide_off", "error": "AnalysisException: reader schema has 3 fields but source has 2 columns"}
+{"ansi": "false", "tag": "width/wide_off_int", "error": "AnalysisException: reader schema has 3 fields but source has 2 columns"}
+{"ansi": "false", "tag": "late/string", "error": "PySparkException: Arrow error: Parser error: Error while parsing value 'abc' as type 'Int64' for column 0 at line 1200. Row data: '[abc,k]'"}
+{"ansi": "false", "tag": "late/int", "error": "PySparkException: Arrow error: Parser error: Error while parsing value 'abc' as type 'Int64' for column 0 at line 1200. Row data: '[abc,k]'"}
+{"ansi": "false", "tag": "late/none", "error": "PySparkException: Arrow error: Parser error: Error while parsing value 'abc' as type 'Int64' for column 0 at line 1200. Row data: '[abc,k]'"}
+{"ansi": "false", "tag": "names/empty", "names": ["", "k"], "types": ["string", "string"], "rows": ["('7', 'k1')"]}
+{"ansi": "false", "tag": "names/null_token", "names": ["NA", "k"], "types": ["string", "string"], "rows": ["('007', None)"]}
+{"ansi": "false", "tag": "names/duplicate", "error": "AnalysisException: Error during planning: [AMBIGUOUS_REFERENCE] Reference `x` is ambiguous, could be: [`?table?`.`x`, `?table?`.`x`]. SQLSTATE: 42704"}
+{"ansi": "false", "tag": "names/untrimmed", "error": "AnalysisException: Schema error: No field named x. Valid fields are \"?table?\".\" x \", \"?table?\".\" k \", \"?table?\".\" x \", \"?table?\".\" k \"."}
+{"ansi": "false", "tag": "names/untrimmed_schema", "error": "AnalysisException: Schema error: No field named x. Valid fields are \"?table?\".\" x \", \"?table?\".\" k \", \"?table?\".\" x \", \"?table?\".\" k \"."}
+{"ansi": "false", "tag": "topo/file_url", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "false", "tag": "topo/file_url_schema", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "false", "tag": "topo/gzip", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', '1000.0')"]}
+{"ansi": "false", "tag": "topo/sep", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', '1000.0')"]}
+{"ansi": "false", "tag": "topo/bom", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', '1000.0')"]}
+{"ansi": "false", "tag": "topo/glob", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Int64 does not equal Float64"}
+{"ansi": "false", "tag": "topo/glob_schema", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Int64 does not equal Float64"}
+{"ansi": "false", "tag": "topo/two_schema", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Int64 does not equal Utf8"}
+{"ansi": "false", "tag": "topo/two_values", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Int64 does not equal Utf8"}
+{"ansi": "false", "tag": "empty_value/empty", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "false", "tag": "empty_value/e", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "false", "tag": "refuse/decimal_2_5", "error": "PySparkException: Arrow error: Invalid argument error: 7.00000 is too large to store in a Decimal128 of precision 2. Max is 0.00099"}
+{"ansi": "false", "tag": "refuse/decimal_5_m2", "error": "ParseException: unknown cast type 'decimal(5,-2)'"}
+{"ansi": "false", "tag": "refuse/char", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', 'abc')"]}
+{"ansi": "false", "tag": "user_text_scan", "names": ["x", "k"], "types": ["bigint", "string"], "rows": ["(7, 'abc')"]}
+{"ansi": "false", "tag": "label/write_to/STRING", "names": ["a", "b", "c", "d"], "types": ["string", "string", "string", "string"], "rows": ["('7', '1.5', '1000.0', 'true')"]}
+{"ansi": "false", "tag": "label/insert/STRING", "names": ["a", "b", "c", "d"], "types": ["string", "string", "string", "string"], "rows": ["('7', '1.5', '1000.0', 'true')"]}
+{"ansi": "false", "tag": "label/write_to/INT", "names": ["a", "b", "c", "d"], "types": ["int", "int", "int", "int"], "rows": ["(7, 1, 1000, 1)"]}
+{"ansi": "false", "tag": "label/insert/INT", "names": ["a", "b", "c", "d"], "types": ["int", "int", "int", "int"], "rows": ["(7, 1, 1000, 1)"]}
+{"ansi": "false", "tag": "label/write_to/DECIMAL(10,2)", "names": ["a", "b", "c", "d"], "types": ["decimal(10,2)", "decimal(10,2)", "decimal(10,2)", "decimal(10,2)"], "rows": ["(Decimal('7.00'), Decimal('1.50'), Decimal('1000.00'), Decimal('1.00'))"]}
+{"ansi": "false", "tag": "label/insert/DECIMAL(10,2)", "names": ["a", "b", "c", "d"], "types": ["decimal(10,2)", "decimal(10,2)", "decimal(10,2)", "decimal(10,2)"], "rows": ["(Decimal('7.00'), Decimal('1.50'), Decimal('1000.00'), Decimal('1.00'))"]}
