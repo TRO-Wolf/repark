@@ -6037,6 +6037,10 @@ still open is `isModifiable`.
   csv` (card CSV-SQL-PATH-DOOR-1); Unicode digits (card CSV-UNICODE-DIGITS-1); with files whose headers differ, the
   first listed file names the columns where Spark takes the largest file (values positional and equal); an S3 glob
   finds no files on both builds (loud).
+- **Release note (v1.5.7, owner 2026-11-21)** — "A CSV read whose schema holds the corrupt-record column (the field
+  named by `columnNameOfCorruptRecord`, `_corrupt_record` by default) is now refused before the read. Spark fills that
+  column with a malformed row's raw line, and RePark does not yet capture it (CSV-READ-MODES-AND-SHAPES-1). Earlier
+  releases refused most such reads, but answered one over a file with no malformed row."
 - **Pin** — `python/repark/tests/io/test_csv_string_field_text_1.py` (158 tests, both ANSI modes, fix round 1's
   and delta 2's cells each under an explicit `spark.sql.caseSensitive`, against Spark 4.1.2's recorded answers; red
   on main in 137, the 21 others are controls and no-move pins); `crates/repark-core/src/read_options.rs`

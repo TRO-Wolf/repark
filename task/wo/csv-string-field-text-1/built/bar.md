@@ -397,12 +397,14 @@ two more. One Spark cell family per caller, 36 shapes in both ANSI modes (72 cel
 - **C7.** The `is_sum` row: the owner accepted 1.056x, and the records now carry 1.123x wall. It is attributed by
   instructions and under 1.15x, but the owner may want to see the moved figure.
 
-## Proposed exceptions to "0 EQUAL lost" (for the owner's ruling)
+## The owner's exceptions to "0 EQUAL lost" (ruled 2026-11-21)
 
 - The `_corrupt_record` family: 6 cells, refused loudly before the read, where Spark and main answer. Proposed: accept the refusal, with a release-note line;
 - The `withColumns` key collision: 2 cells, moved from RAISE to WRONG, carded as WITHCOLUMNS-KEY-COLLISION-1 (proposed S2). The collision is on main too;
 - F7: 4 cells, carded as JAVA-CASE-WORD-CLASS-TABLE-1 (proposed S4).
 
-None of these is ruled yet; the owner rules on all three.
+**Ruled by the owner on 2026-11-21** ("You have my yes for whatever is needed"), as proposed: the refusal is
+accepted with a release-note line, WITHCOLUMNS-KEY-COLLISION-1 is S2 and not label-blocking, and JAVA-CASE-WORD-CLASS-TABLE-1
+is S4.
 
 Up: [map.md](map.md).
