@@ -9,7 +9,7 @@ as one dated line.
    `_corrupt_record`; matched exactly, as Spark's `StructType.getFieldIndex` does) is refused by name before the
    read, where Spark keeps that field out of positional pairing and fills it with a malformed row's raw line;
    capturing it belongs to this card (the wiring verifier's 10 cells, plus `corrupt/clean_rows`, where no row is
-   malformed and Spark answers NULL)."
+   malformed and Spark answers NULL). Widened in delta 2 to the family: any read schema holding the corrupt-record column over a file with no malformed row (6 cells: `corrupt/clean_rows` 2, `corrupt/default_clean_last` under both `caseSensitive` values 4)."
 2. **Long rows (verdict C1).** "Dated 2026-11-20: long rows (more fields than the header) raise
    `incorrect number of fields` on main and on the wiring head, beside short rows, where Spark drops the extra
    tokens."
@@ -23,5 +23,6 @@ as one dated line.
    `withColumns({"I": 5, "ı": 6})` over a column `I` answers `I` = 5 on Spark and `ı` = 6 on main. Delta 2's Java
    final sigma lets `withColumns({"ΑΣ Β": 5, "ασ β": 6})` reach the same path (RAISE to WRONG, 2 cells). The fix
    lives in the facade's `withColumns`." Proposed S2 (silent), off the label path; the owner rates it.
+5. **A new card:** JAVA-CASE-WORD-CLASS-TABLE-1. "Dated 2026-11-21 (the wiring unit's round 3): `java_case.rs`'s `WORD_CLASS_RUNS` is generated from `Character.getType`, where Zulu 17's word `BreakIterator` uses its own compiled break data. They disagree on U+E0001, U+E007F, U+110BD, U+110CD, U+13438, U+1BCA3, U+1D17A and the unassigned ranges U+18CD6–18CFF, U+2A6DE–2A6FF, U+2B735–2B73F, U+2B81E–2B81F, U+2CEA2–2CEAF and U+2FA1E–2FFFF. With a cased mark (U+0345) between such a code point and Σ, the final sigma differs from Java's, and CSV header dedup under `caseSensitive=false` differs from Spark's (4 cells lost against main, such as `ΑE0001ͅΣ,αE0001ͅς,k`). The fix: derive the table from `BreakIterator`'s behaviour." Proposed S4, off the label path; the owner rates it.
 
 Up: [map.md](map.md).

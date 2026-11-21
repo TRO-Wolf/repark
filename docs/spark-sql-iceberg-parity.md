@@ -6023,6 +6023,7 @@ still open is `isModifiable`.
   `emptyValue` is refused by name, and so is a read schema holding the field named by `columnNameOfCorruptRecord`
   (`_corrupt_record` by default; Spark fills it with a malformed row's text); `char`/`varchar`, a negative decimal
   scale and a scale over the precision are refused when the frame is planned, with Spark's texts.
+  Except a final sigma beside a tag character or an unassigned plane-2 code point with a cased mark between (JAVA-CASE-WORD-CLASS-TABLE-1, S4).
 - **spark** — Spark 4.1.2's `UnivocityParser` converts each field's text by the declared type, never through `CAST`
   and never under the ANSI flag; `enforceSchema=true` pairs a schema by position; with no schema every column is the
   file's text. *(oracle: step 0's recorded cells, `task/wo/csv-string-field-text-1/evidence/`, and the wiring unit's,

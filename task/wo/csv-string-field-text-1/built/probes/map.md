@@ -25,7 +25,7 @@
   test table's answers).
 - `JavaSweep.java` — Zulu 17's sigma forms for every code point in 22 contexts around a U+03A3; the same contexts
   through `string_lowered` gave 0 differences in 24,465,408 strings.
-- `JavaFuzz.java` — seeded random strings (1 to 16 code points) with Zulu 17's lowered output; three runs, 9,000,000
+- `JavaFuzz.java` — seeded random strings (1 to 9 code points from one alphabet) with Zulu 17's lowered output; three runs, 9,000,000
   strings, 0 differences against `string_lowered`.
 - `delta2_callers.py` — one Spark cell family per caller of `java_case`'s lowering (the CSV header rule, the
   `withColumns` duplicate check, the `fillna`/`dropna`/free-Column `drop` fold, and the `equalsIgnoreCase` fold's
