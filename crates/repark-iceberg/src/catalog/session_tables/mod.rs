@@ -89,9 +89,16 @@ impl TableState {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct LocalEpoch {
+    pub changed: u64,
+    pub refreshed: u64,
+}
+
 #[derive(Debug, Clone)]
 struct Entry {
     epoch: u64,
+    local: LocalEpoch,
     state: TableState,
 }
 
@@ -107,6 +114,14 @@ impl SessionTables {
         locked(&self.seen)
             .get(&(catalog.to_string(), ident.clone()))
             .map_or(0, |entry| entry.epoch)
+    }
+
+    #[must_use]
+    pub fn local_epoch(&self, catalog: &str, ident: &TableIdent) -> LocalEpoch {
+        locked(&self.seen)
+            .get(&(catalog.to_string(), ident.clone()))
+            .map(|entry| entry.local)
+            .unwrap_or_default()
     }
 
     #[must_use]
@@ -135,16 +150,25 @@ impl SessionTables {
     ) {
         let key = (catalog.to_string(), ident.clone());
         let mut seen = locked(&self.seen);
-        if let Some(entry) = seen.get(&key)
-            && (entry.epoch != before || (!refresh && entry.state.same_as(table.table())))
-        {
-            return;
-        }
+        let carried = match seen.get(&key) {
+            Some(entry)
+                if entry.epoch != before || (!refresh && entry.state.same_as(table.table())) =>
+            {
+                return;
+            }
+            Some(entry) if !refresh => Some(entry.local),
+            _ => None,
+        };
         let epoch = self.tick();
+        let local = carried.unwrap_or(LocalEpoch {
+            changed: epoch,
+            refreshed: if refresh { epoch } else { 0 },
+        });
         seen.insert(
             key,
             Entry {
                 epoch,
+                local,
                 state: TableState::Live(table.clone()),
             },
         );
@@ -152,7 +176,20 @@ impl SessionTables {
 
     fn record(&self, catalog: &str, ident: &TableIdent, state: TableState) {
         let epoch = self.tick();
-        locked(&self.seen).insert((catalog.to_string(), ident.clone()), Entry { epoch, state });
+        let key = (catalog.to_string(), ident.clone());
+        let mut seen = locked(&self.seen);
+        let refreshed = seen.get(&key).map_or(0, |entry| entry.local.refreshed);
+        seen.insert(
+            key,
+            Entry {
+                epoch,
+                local: LocalEpoch {
+                    changed: epoch,
+                    refreshed,
+                },
+                state,
+            },
+        );
     }
 
     fn forget(&self, catalog: &str, ident: &TableIdent) {

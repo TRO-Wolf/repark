@@ -17,7 +17,10 @@ Unit 2 (2026-11-21), a lazy cache table over a held frame: it keeps its fill (th
 another table, a property change and an added column, refills after an insert into its table and keeps the refill; a
 recreate refuses its refill with `TABLE_ID_MISMATCH` and a drop with `TABLE_OR_VIEW_NOT_FOUND`; an own-plan memo
 noted at registration keeps that binding after an insert while a fresh read refills, and a memo that first read the
-cache keeps that fill's binding after a second insert.
+cache keeps that fill's binding after a second insert. Delta 1 (F1): another writer is a second session over the same
+memory catalog; after its insert, a fresh SQL read answers the new rows and moves the epoch, and the cached frame keeps
+its fill; a same-session insert after that refills; `REFRESH TABLE` refills, also after the other writer's
+property-only change; and a fresh read of the unchanged table then moves nothing.
 
 ## Contents
 

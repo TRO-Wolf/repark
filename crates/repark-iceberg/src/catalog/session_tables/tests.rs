@@ -318,6 +318,7 @@ fn keyed_creation(name: &str, source: &Table, location: Option<String>) -> Table
 
 struct Recorded {
     epoch: u64,
+    local: LocalEpoch,
     location: Option<String>,
     tracked: usize,
 }
@@ -326,6 +327,7 @@ fn recorded(bed: &Bed) -> Recorded {
     let tables = tables(bed);
     Recorded {
         epoch: tables.epoch("c", &ident()),
+        local: tables.local_epoch("c", &ident()),
         location: location(tables.current("c", &ident())),
         tracked: tables.tracked(),
     }
@@ -334,6 +336,7 @@ fn recorded(bed: &Bed) -> Recorded {
 fn assert_unmoved(bed: &Bed, before: &Recorded) {
     let after = recorded(bed);
     assert_eq!(after.epoch, before.epoch);
+    assert_eq!(after.local, before.local);
     assert_eq!(after.location, before.location);
     assert_eq!(after.tracked, before.tracked);
 }
@@ -383,6 +386,38 @@ async fn a_plain_reload_keeps_the_epoch_and_a_refresh_moves_it() {
         table_epoch(&bed.context.copied_config(), "c", &ident()),
         Some(tables.epoch("c", &ident()))
     );
+}
+
+#[tokio::test]
+async fn a_load_of_another_writers_commit_moves_the_epoch_and_not_the_local_epoch() {
+    let bed = bed().await;
+    let tables = tables(&bed);
+    bed.session.load_table(&ident()).await.expect("load");
+    let first = tables.local_epoch("c", &ident());
+    assert_eq!(first.changed, tables.epoch("c", &ident()));
+    assert_eq!(first.refreshed, 0);
+    let other = set_property(&bed.guarded, "other").await;
+    let before = tables.epoch("c", &ident());
+    bed.session.load_table(&ident()).await.expect("fresh load");
+    assert!(tables.epoch("c", &ident()) > before);
+    assert_eq!(
+        location(tables.current("c", &ident())),
+        other.metadata_location().map(str::to_string)
+    );
+    assert_eq!(tables.local_epoch("c", &ident()), first);
+    let before = tables.epoch("c", &ident());
+    bed.session.load_table(&ident()).await.expect("reload");
+    assert_eq!(tables.epoch("c", &ident()), before);
+    assert_eq!(tables.local_epoch("c", &ident()), first);
+    refresh_load(&bed.session, &ident()).await.expect("refresh");
+    let refreshed = tables.local_epoch("c", &ident());
+    assert!(refreshed.changed > first.changed);
+    assert_eq!(refreshed.refreshed, refreshed.changed);
+    set_property(&bed.session, "own").await;
+    let committed = tables.local_epoch("c", &ident());
+    assert!(committed.changed > refreshed.changed);
+    assert_eq!(committed.refreshed, refreshed.refreshed);
+    assert_eq!(committed.changed, tables.epoch("c", &ident()));
 }
 
 #[tokio::test]

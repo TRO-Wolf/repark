@@ -581,3 +581,137 @@ async fn an_own_plan_memo_keeps_the_binding_its_cache_noted() {
     assert_eq!(under(&fresh, numbers(&cached)).await, vec![1, 2, 9]);
     assert_eq!(numbers(&cached).await, vec![1, 2, 8, 9]);
 }
+
+struct CacheRead {
+    rows: Vec<i32>,
+    buffer: usize,
+    _kept: Vec<datafusion::arrow::record_batch::RecordBatch>,
+}
+
+async fn read_cache(frame: &DataFrame) -> CacheRead {
+    let batches = frame
+        .clone()
+        .collect()
+        .await
+        .unwrap_or_else(|error| panic!("collect: {error}"));
+    let buffer = batches.first().map_or(0, |batch| {
+        batch.column(0).to_data().buffers()[0].as_ptr() as usize
+    });
+    let mut rows = Vec::new();
+    for batch in &batches {
+        let values = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap_or_else(|| panic!("int column"));
+        rows.extend((0..values.len()).map(|row| values.value(row)));
+    }
+    rows.sort_unstable();
+    CacheRead {
+        rows,
+        buffer,
+        _kept: batches,
+    }
+}
+
+async fn other_writer(bed: &Bed) -> ReparkSession {
+    let session = ReparkSession::builder()
+        .with_sql_dialect(Arc::new(SparkDialect))
+        .with_extension(Arc::new(SparkExtension))
+        .build()
+        .unwrap_or_else(|error| panic!("session: {error}"));
+    session
+        .register_iceberg_catalog(
+            "c",
+            repark_iceberg::catalog::EncryptionGuardCatalog::install(
+                Arc::clone(&bed.counted) as Arc<dyn Catalog>
+            ),
+        )
+        .await
+        .unwrap_or_else(|error| panic!("register: {error}"));
+    session
+}
+
+async fn commit_from(other: &ReparkSession, sql: &str) {
+    other
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("plan {sql}: {error}"))
+        .collect()
+        .await
+        .unwrap_or_else(|error| panic!("run {sql}: {error}"));
+}
+
+async fn fresh_read(bed: &Bed) -> Vec<i32> {
+    let frame = bed
+        .session
+        .sql("SELECT n FROM c.ns.t")
+        .await
+        .unwrap_or_else(|error| panic!("fresh read: {error}"));
+    numbers(&frame).await
+}
+
+async fn kept_over_another_writer(bed: &Bed, name: &str) -> (DataFrame, ReparkSession, CacheRead) {
+    let cached = cached(bed, name, None).await;
+    let first = read_cache(&cached).await;
+    assert_eq!(first.rows, vec![1, 2]);
+    let other = other_writer(bed).await;
+    commit_from(&other, "INSERT INTO c.ns.t VALUES (9, 'z')").await;
+    let before = epoch(bed);
+    assert_eq!(fresh_read(bed).await, vec![1, 2, 9]);
+    assert_ne!(epoch(bed), before);
+    let kept = read_cache(&cached).await;
+    assert_eq!((kept.rows, kept.buffer), (vec![1, 2], first.buffer));
+    (cached, other, first)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_cached_frame_keeps_its_fill_when_a_fresh_read_sees_another_writers_commit() {
+    let bed = bed().await;
+    let (cached, _other, first) = kept_over_another_writer(&bed, "__repark_cache_x1").await;
+    let again = read_cache(&cached).await;
+    assert_eq!((again.rows, again.buffer), (vec![1, 2], first.buffer));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_cached_frame_kept_over_another_writer_refills_after_a_same_session_commit() {
+    let bed = bed().await;
+    let (cached, _other, first) = kept_over_another_writer(&bed, "__repark_cache_x2").await;
+    bed.run("INSERT INTO c.ns.t VALUES (8, 'q')").await;
+    let refilled = read_cache(&cached).await;
+    assert_eq!(refilled.rows, vec![1, 2, 8, 9]);
+    assert_ne!(refilled.buffer, first.buffer);
+    let again = read_cache(&cached).await;
+    assert_eq!(again.buffer, refilled.buffer);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_cached_frame_kept_over_another_writer_refills_after_a_refresh() {
+    let bed = bed().await;
+    let (cached, other, first) = kept_over_another_writer(&bed, "__repark_cache_x3").await;
+    bed.run("REFRESH TABLE c.ns.t").await;
+    let refilled = read_cache(&cached).await;
+    assert_eq!(refilled.rows, vec![1, 2, 9]);
+    assert_ne!(refilled.buffer, first.buffer);
+    commit_from(&other, "ALTER TABLE c.ns.t SET TBLPROPERTIES ('k' = 'v')").await;
+    let before = epoch(&bed);
+    assert_eq!(fresh_read(&bed).await, vec![1, 2, 9]);
+    assert_ne!(epoch(&bed), before);
+    let kept = read_cache(&cached).await;
+    assert_eq!(kept.buffer, refilled.buffer);
+    bed.run("REFRESH TABLE c.ns.t").await;
+    let again = read_cache(&cached).await;
+    assert_eq!(again.rows, vec![1, 2, 9]);
+    assert_ne!(again.buffer, refilled.buffer);
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_fresh_read_of_an_unchanged_table_after_another_writer_moves_nothing() {
+    let bed = bed().await;
+    let (cached, _other, first) = kept_over_another_writer(&bed, "__repark_cache_x4").await;
+    let before = epoch(&bed);
+    assert_eq!(fresh_read(&bed).await, vec![1, 2, 9]);
+    assert_eq!(epoch(&bed), before);
+    let kept = read_cache(&cached).await;
+    assert_eq!((kept.rows, kept.buffer), (vec![1, 2], first.buffer));
+}

@@ -131,9 +131,12 @@ impl Dep {
         let Some(epoch) = self.epoch else {
             return false;
         };
-        let now = tables.epoch(&self.read.catalog, &self.read.ident);
-        if now == epoch {
+        let now = tables.local_epoch(&self.read.catalog, &self.read.ident);
+        if now.changed == epoch {
             return true;
+        }
+        if now.refreshed > epoch {
+            return false;
         }
         let Some(TableState::Live(current)) = tables.current(&self.read.catalog, &self.read.ident)
         else {
@@ -143,7 +146,7 @@ impl Dep {
             !same_state(seen.table(), current.table()) && same_data(seen.table(), current.table())
         });
         if kept {
-            self.epoch = Some(now);
+            self.epoch = Some(now.changed);
             self.seen = Some(current);
         }
         kept
@@ -500,7 +503,7 @@ impl Shared {
         reads
             .into_iter()
             .map(|read| {
-                let now = tables.epoch(&read.catalog, &read.ident);
+                let now = tables.local_epoch(&read.catalog, &read.ident).changed;
                 let current = live(tables.current(&read.catalog, &read.ident));
                 let seen = memo.held_table(&read.key).or_else(|| current.clone());
                 let valid = match (&seen, &current) {

@@ -13,7 +13,11 @@ so a held frame can be re-bound at execution as Spark 4.1.2 re-binds it (`V2Tabl
   - `SessionTables`, a session-config extension (`with_session_tables`, installed by the Spark door's
     `frame_settings::install`): `(catalog name, identifier) → (epoch, Live(HeldTable) | Dropped)`. The epoch is a session
     counter taken at each change, so entries are ordered by what the session observed, never by another writer's
-    `last-updated-ms` (Fable's Q2 change).
+    `last-updated-ms` (Fable's Q2 change). **Unit 2 delta 1 (F1):** each entry also carries a `LocalEpoch`
+    (`local_epoch`): `changed`, the tick of the last same-session commit, drop, create, rename or refresh, and
+    `refreshed`, the tick of the last refresh. A load that sees another writer's state moves the epoch and the state,
+    and carries the local epoch unchanged; a new entry starts with `changed` at its tick. The lazy cache reads it, so
+    a cached fill outlives another writer's commit as Spark's does, while held frames and fresh reads still see it.
   - `session_catalog_provider`, called at `ReparkSession::register_iceberg_catalog_with_policy` before
     `build_iceberg_catalog_provider`: it wraps the registered handle in `SessionTablesCatalog` when the extension is
     present and the handle is one `EncryptionGuardCatalog::install` returned, so the fork schema provider's own
@@ -46,7 +50,7 @@ so a held frame can be re-bound at execution as Spark 4.1.2 re-binds it (`V2Tabl
     `repark_iceberg::catalog::session_tables::table_epoch(config: &SessionConfig, catalog: &str, ident: &TableIdent)
     -> Option<u64>` (`None` when the session has no table state; `Some(0)` for a table it has not seen), and
     `SessionTables::epoch(&self, catalog: &str, ident: &TableIdent) -> u64`. It moves on every same-session commit, drop,
-    create, rename, refresh, and on a load that sees a new metadata location.
+    create, rename, refresh, and on a load that sees a new metadata location; the delta leaves it as it was.
   - `HeldTable` is the only table type the map, the bindings, the own-plan memo and `OneTableCatalog` hold. Its field is
     private to this module, and the module mints one only from what the decorator's guarded handle returned.
   - Memory: one `Table` (its metadata `Arc`, shared with the metadata cache) per table the session has loaded, and one
@@ -64,7 +68,8 @@ so a held frame can be re-bound at execution as Spark 4.1.2 re-binds it (`V2Tabl
   2. **A refused commit records nothing.** Every recording follows a successful inner call (`?` first). Tests, one per
      refusal the guard makes: `a_refused_snapshot_or_statistics_commit_records_nothing`,
      `a_refused_commit_on_a_handle_loaded_before_the_key_records_nothing`, `a_refused_file_write_records_nothing`,
-     `a_refused_staged_create_or_replace_publish_records_nothing`; each holds the epoch, the entry and the entry count.
+     `a_refused_staged_create_or_replace_publish_records_nothing`; each holds the epoch, the local epoch, the entry and
+     the entry count.
   3. **A map-served table behaves as a fresh guarded load.** The entry is what the guard returned, so a keyed one
      carries the guarded `FileIO`. Tests: `a_map_served_keyed_table_refuses_as_a_fresh_guarded_load_does` (the same
      refusal text from the map entry, from the shim and from a fresh load, on a data file and on a snapshot commit; the
@@ -72,7 +77,9 @@ so a held frame can be re-bound at execution as Spark 4.1.2 re-binds it (`V2Tabl
      The facade cells are the `enc_1` pairs of `python/repark/tests/iceberg/held_frame/`.
 - `tests.rs` — over a memory catalog wrapped in a load-counting catalog under the guard: a commit through the decorated
   handle moves the state and the epoch; a load older than a commit does not put the older table back (the race
-  guard); a plain reload keeps the epoch and a refresh load moves it; a drop records a drop marker; a provider resolved
+  guard); a plain reload keeps the epoch and a refresh load moves it; a load of another writer's commit (through the
+  guard's handle) moves the epoch and not the local epoch, a refresh moves both local ticks and an own commit only
+  `changed`; a drop records a drop marker; a provider resolved
   through the capturing schema carries its planning load; a provider built over the shim scans with no load on the
   counting catalog; and the ENC-1 tests above.
 

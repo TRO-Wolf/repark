@@ -42,8 +42,10 @@ sits at its line ceiling.
     when the table keeps its UUID, current snapshot and last snapshot-log entry (an `ALTER` of the schema or the
     properties, a branch): then the fill is kept and the dep moves to the new epoch. A `REFRESH` (a new epoch over
     the same state), a drop, a recreate and every data commit refill; a refill that the re-bind refuses keeps
-    nothing and raises its condition. Another writer's commit moves no epoch, so the fill stays (on Glue and S3
-    Tables a fresh read that sees it moves the epoch: Q2 (b)).
+    nothing and raises its condition. **Delta 1 (F1):** the dep reads the map's local epoch, which only the
+    session's own commits, drops, creates, renames and refreshes move, so another writer's commit keeps the fill also
+    when a fresh read on Glue or S3 Tables records it (Q2 (b) moves the epoch, not the local epoch), as Spark keeps
+    its fill until a same-session write or a refresh. A refresh since the fill always refills, whatever the state.
   - **Own-plan actions keep their first binding through the cache.** `cache()` notes the lineage's tables in the
     acting frame's memo at their current state (Spark fixes the frame's own plan there). A memo that holds a table
     whose data differs from what the cache would serve reads the lineage under that memo (the pass-through) and
