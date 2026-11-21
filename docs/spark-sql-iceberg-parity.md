@@ -6112,6 +6112,57 @@ still open is `isModifiable`.
   owner's delegation of 2026-11-19, not an owner ruling (seat (a) amended with G1 to G4, the held-frame family in the
   bar, the Q9 stop rule, Q11 disclosed); [work order](../task/wo/temp-view-frame-reader-parse-1/built/map.md).
 
+### TEMP-VIEW-CACHE-LAZY-PARSE-1 A1 — a lazy `cache()` fills at its first use, under the live settings — **FIXED 2026-11-20 on the DataFrame doors (branch `fix/temp-view-cache-lazy-a1`)**
+
+- **repark** — Before (main `0436fdf9`): a pending `cache()` of a JSON or CSV frame materialised under the creating
+  zone at a view's registration, at `explain`, at a write and at a `mergeInto` source. A child built after `cache()`
+  never read the parent's cache (object identity), and `writeTo` of a cached frame kept the frame's stamps. After:
+  `cache()` and `persist()` register a lazy cache table and bind the frame to it at once. The table fills at the
+  first execution of a plan that reads it (never at `scan`, so `explain` and `EXPLAIN` fill nothing), under a fresh
+  reader-parse memo, and the acting frame's memo adopts the fill's decisions. `unpersist` and `clearCache` release
+  it to a pass-through decided under the acting frame's memo. A frame acted on before `cache()` keeps its own
+  lineage for its own-plan actions. The V2 writer reads the lineage when the frame's settings differ from the live
+  ones.
+  **This changes answers and cost with no zone involved:** children, views and joins built after `cache()` read
+  the parent's cache. A selective child's first action fills the whole parent (and can now meet the parent's
+  `repark.cache.max_bytes` refusal); a second child reads the cache where it re-read the source.
+- **spark** — Spark 4.1.2 builds the cached plan at `cache()` (`CacheManager.cacheQuery`, `InMemoryRelation`) and
+  fills it at the first execution of any plan that matches, under the reader session's live conf
+  (`CachedRDDBuilder.buildBuffers`, `FileSourceScanExec.inputRDD`). `explain` and `storageLevel` do not fill;
+  `take(1)` fills the whole cache; `unpersist` and `clearCache` remove the entry; a Dataset whose own plan was built
+  before `cache()` keeps it. `DataFrameWriterV2` re-analyses the plan under the session's settings, so it reads the
+  cache only when they equal the frame's (all four verbs measured). *(cells: step 0's 2,642, Fable's 10, 160
+  `writeTo` cells, measured 2026-11-20; the call sites are from the 4.1.2 bytecode.)* *(oracle:
+  `python/repark/tests/session/temp_view_cache_lazy_parse_1_spark_oracle.json`, measured 2026-11-20.)*
+- **Still unlike Spark:** the cache-table doors (`CACHE LAZY TABLE` and `catalog.cacheTable` count at the call; SQL
+  over a view after `CACHE TABLE` skips the cache; `REFRESH TABLE` on a cached view keeps the fill; A2,
+  CACHE-HONESTY-1); a frame on a `udf`, `pandas_udf`, `mapInArrow` or `mapInPandas` frame still snapshots the
+  bridge when built, and a cached bridge frame still materialises at its action (seat B); a twin plan, a bare reader
+  cache read through a new frame and another session's frame share no cache (10 cells, F5's named residual, S3); a
+  held frame joined after a `SET` with no cache (20 cells, TEMP-VIEW-FRAME-CROSSJOIN-1); the cache table belongs to
+  the creating session, where Spark's `CacheManager` is shared across sessions (no zone effect on Parquet or
+  Iceberg); the budgets follow the conf read at the last action of a frame holding the cache, so a fill reached only
+  through SQL over a view uses the budgets of that moment; `EXPLAIN` shows a `LazyCacheExec` leaf (`pending`,
+  `filled`) where main showed the lineage, then a `MemTable` scan; `dropTempView` of a view over a cached frame keeps
+  the cache, where Spark uncaches it (A2).
+- **Pin** — `python/repark/tests/session/test_temp_view_cache_lazy_parse_1.py` (56 cells against Spark 4.1.2's
+  recorded answers, 24 red on main: Fable's five must-hold shapes, both `explain` cells, `take(1)` and `limit(0)`,
+  views by `spark.table` and SQL, `INSERT … SELECT` into Iceberg, the four `writeTo` verbs both ways, a first
+  own-plan action before `cache()`, a child before the fill, siblings, `clearCache` then a later zone, `unpersist`,
+  a sorted frame read in order; plus the budget, `repr` and deep-lineage subprocess pins); Rust `repark-core`
+  `session/temp_views/lazy_cache/tests.rs` (planning and `EXPLAIN` fill nothing; a refused fill keeps nothing; concurrent first
+  uses fill once; release; `LIMIT 1` fills the whole table; the session frees).
+- **Bar and cost** — [built/bar.md](../task/wo/temp-view-cache-lazy-parse-1/built/bar.md),
+  [built/cost.md](../task/wo/temp-view-cache-lazy-parse-1/built/cost.md).
+- **Rationale** — the owner's ruling of 2026-11-18 ("We better go with B to be safe"); the owner's "Let's go with
+  defaults across the board" (2026-11-20); Fable's guidance under that delegation, not an owner ruling (Q1 rule (a)
+  with two additions, the 188 and 128 bar split, Q6's verbs, §14's twelve items);
+  [work order](../task/wo/temp-view-cache-lazy-parse-1/built/map.md).
+- **Release note (v1.5.7, owner 2026-11-20)** — "A child of a cached DataFrame (for example `df.cache()`, then
+  `df.filter(...).count()`) now fills the whole cache on its first action, as Spark does. That first action can take
+  several times as long as before (about 5x on a 2M-row JSON read). Later actions on the cache, other children
+  included, read it (about 0.05x)."
+
 ### ICE-HELD-FRAME-SNAPSHOT-1 — a held Iceberg frame answers the table as of the action, as Spark re-binds it — **FIXED 2026-11-20 on the Spark door for unit 1a (branch `fix/ice-held-frame-snapshot-1a`); 1b, unit 2 and the path read open**
 
 - **repark** — Before (main `9a48932f`): a frame resolved from an Iceberg table, a frame derived from it, or a DataFrame

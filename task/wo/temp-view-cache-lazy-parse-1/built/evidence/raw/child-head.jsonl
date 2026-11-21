@@ -1,0 +1,10 @@
+{"tag": "c_child_own_unpersist", "got": ["U", "U", "T"]}
+{"tag": "c_child_count_unpersist", "got": ["T", "T"]}
+{"tag": "c_child_own_clear", "got": ["U", "U", "T"]}
+{"tag": "c_child_after_fill_unpersist", "got": ["U", "U", "L"]}
+{"tag": "c_recache_own", "got": ["U", "T", "U"]}
+{"tag": "c_explain_child", "got": ["T", "T"]}
+{"tag": "c_view_explain_sql", "got": ["T", "T"]}
+{"tag": "c_schema_only", "got": ["T", "T"]}
+{"tag": "c_limit_first", "got": ["T"]}
+{"tag": "c_take_first", "got": ["U", "U"]}

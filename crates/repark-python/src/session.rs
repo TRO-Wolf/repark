@@ -6,6 +6,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
+use datafusion::common::config::{ConfigExtension, ConfigOptions};
 use pyo3::prelude::*;
 use repark_core::{EngineRuntime, ReparkSession, ReparkSessionBuilder};
 use tokio::runtime::Runtime;
@@ -438,6 +439,78 @@ impl PyReparkSession {
         })
     }
 
+    #[allow(clippy::missing_errors_doc)]
+    #[pyo3(signature = (name, frame, budgets=(None, None)))]
+    pub fn register_lazy_cache_view(
+        &self,
+        py: Python<'_>,
+        name: &str,
+        frame: &PyDataFrame,
+        budgets: (Option<u64>, Option<u64>),
+    ) -> PyResult<()> {
+        fenced_span!("py.action", "PyReparkSession.register_lazy_cache_view", {
+            let depths = frame.depths();
+            let segment = frame_drive_segment_cached(&depths)?;
+            let held = crate::deep_stack::drive_segment_bytes(&depths);
+            let owner = repark_core::extension::reader_parse_memo();
+            let frame = frame.executable()?;
+            py.detach(|| {
+                let registered = self
+                    .session
+                    .register_lazy_cache_view(name, frame, budgets, held, owner);
+                block_on_grown_sized(&self.runtime, registered, segment)
+            })
+            .map_err(to_py_err)
+        })
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn release_lazy_cache(&self, py: Python<'_>, name: &str) -> PyResult<bool> {
+        fenced!("PyReparkSession.release_lazy_cache", {
+            py.detach(|| self.runtime.block_on(self.session.release_lazy_cache(name)))
+                .map_err(to_py_err)
+        })
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    #[pyo3(signature = (name, budgets=(None, None)))]
+    pub fn set_lazy_cache_budgets(
+        &self,
+        py: Python<'_>,
+        name: &str,
+        budgets: (Option<u64>, Option<u64>),
+    ) -> PyResult<bool> {
+        fenced!("PyReparkSession.set_lazy_cache_budgets", {
+            py.detach(|| {
+                self.runtime
+                    .block_on(self.session.set_lazy_cache_budgets(name, budgets))
+            })
+            .map_err(to_py_err)
+        })
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn lazy_cache_filled(&self, py: Python<'_>, name: &str) -> PyResult<Option<bool>> {
+        fenced!("PyReparkSession.lazy_cache_filled", {
+            py.detach(|| self.runtime.block_on(self.session.lazy_cache_filled(name)))
+                .map_err(to_py_err)
+        })
+    }
+
+    #[allow(clippy::missing_errors_doc)]
+    pub fn lazy_cache_settings_differ(&self, py: Python<'_>, name: &str) -> PyResult<bool> {
+        fenced!("PyReparkSession.lazy_cache_settings_differ", {
+            let lineage = py
+                .detach(|| {
+                    self.runtime
+                        .block_on(self.session.lazy_cache_lineage_options(name))
+                })
+                .map_err(to_py_err)?;
+            let live = Arc::clone(self.session.context().state_ref().read().config_options());
+            Ok(lineage.is_some_and(|lineage| !same_settings(&lineage, &live)))
+        })
+    }
+
     /// Register an Arrow IPC stream as a `MemTable` temp view.
     /// # Errors
     /// Returns `RuntimeError` if the IPC payload cannot be decoded or registration fails.
@@ -830,4 +903,25 @@ fn refuse_grammar_message(message: Option<String>) -> PyResult<()> {
             ),
         ))
     })
+}
+
+fn same_extension<T>(first: &ConfigOptions, second: &ConfigOptions) -> bool
+where
+    T: ConfigExtension + Clone + Default + PartialEq,
+{
+    let read = |options: &ConfigOptions| options.extensions.get::<T>().cloned().unwrap_or_default();
+    read(first) == read(second)
+}
+
+fn same_settings(first: &ConfigOptions, second: &ConfigOptions) -> bool {
+    same_extension::<repark_functions::ansi::SparkAnsiConfig>(first, second)
+        && same_extension::<repark_functions::session_time_zone::SessionTimeZoneConfig>(
+            first, second,
+        )
+        && same_extension::<repark_functions::decimal_legacy::SparkDecimalTruncateLegacy>(
+            first, second,
+        )
+        && same_extension::<repark_functions::timestamp_type::SparkTimestampTypeConfig>(
+            first, second,
+        )
 }
