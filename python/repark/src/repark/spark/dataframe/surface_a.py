@@ -403,6 +403,12 @@ def _parse_memo(frame: DataFrame) -> Any:
     return memo
 
 
+def _owned(frame: DataFrame, inner: Any) -> DataFrame:
+    child = frame._spawn(inner)
+    _PARSE_MEMOS[child] = _parse_memo(frame)
+    return child
+
+
 def _own_plan(frame: DataFrame, run: Callable[[DataFrame], Any]) -> Any:
     memo = _parse_memo(frame)
     previous = memo.enter()
@@ -410,6 +416,24 @@ def _own_plan(frame: DataFrame, run: Callable[[DataFrame], Any]) -> Any:
         return run(frame)
     finally:
         memo.leave(previous)
+
+
+def _explain_rows(
+    frame: DataFrame, plan: DataFrame, view: str, selected: str, keys: tuple[str | None, ...]
+) -> list[tuple[str, str]]:
+    from repark.spark.dataframe import surface_b
+
+    rows = [(row["plan_type"], row["plan"]) for row in surface_b.rows_without_fill(plan)]
+    if all(plan_type != "initial_logical_plan" for plan_type, _ in rows):
+        return rows
+    native = frame._session.sql_built(f"SELECT * FROM {view}")
+    try:
+        _own_plan(frame, lambda _: _native.input_files(native))
+    except AnalysisException as error:
+        if selected in ("simple", "formatted"):
+            raise
+        return [(key or "", f"{type(error).__name__}: {error}\n") for key in keys]
+    return rows
 
 
 def _local_rows(frame: DataFrame) -> Iterator[Row]:

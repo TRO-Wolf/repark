@@ -109,6 +109,10 @@ Crate-root test modules. `lib.rs` declares `#[cfg(test)] mod tests;`.
   why: `builders.rs` and `cache_wiring.rs` build the three catalogs and return them
   guarded; `provider.rs` (`NamespaceScopedCatalog`) and `append_fence.rs` (`AppendFence`)
   wrap a catalog that is already guarded and delegate every table call to it;
+  `session_tables/mod.rs` (`SessionTablesCatalog`, `OneTableCatalog`, ICE-HELD-FRAME-SNAPSHOT-1
+  unit 1a, owner 2026-11-20) on three conditions, each held by tests named in its map: they
+  wrap the guarded handle only, a refused commit records nothing, and a map-served table
+  behaves as a fresh guarded load;
   `output_spec.rs` builds a read-only table view; `iceberg_path.rs` builds a read-only
   `StaticTable`; `location.rs` builds the `FileIO` a staged create receives, and its three
   callers hand it to `begin_staged_create` or to the read-only path table.

@@ -35,6 +35,8 @@ use crate::view_ddl::read::{MAX_VIEW_EXPANSION_DEPTH, nested_depth_refusal};
 use crate::view_ddl::temp_settings::{TempViewSettings, plan_under_overlay, view_filter_pushdown};
 use crate::view_ddl::temp_view::replanning_scan;
 
+mod held_iceberg;
+
 pub(crate) const FRAME_SETTINGS_RULE: &str = "repark_frame_settings";
 pub(crate) const READER_PARSE_RULE: &str = "repark_reader_parse";
 const NODE_NAME: &str = "FrameSettings";
@@ -265,6 +267,7 @@ pub(crate) fn frame_view(
     reader: LiveOptions,
 ) -> Arc<dyn TableProvider> {
     let (state, plan) = frame.clone().into_parts();
+    let plan = held_iceberg::bound_for_view(name, plan);
     if replanning_scan(&plan) || scans_only(&plan) {
         return DataFrame::new(state, plan).into_view();
     }
@@ -317,7 +320,7 @@ fn writer_v2(name: &str) -> bool {
 
 pub(crate) fn install(config: SessionConfig) -> SessionConfig {
     with_frame_view_seat(
-        config,
+        repark_iceberg::catalog::session_tables::with_session_tables(config),
         FrameViewSeat::new(
             frame_view,
             Arc::new(FrameSettingsRule),
@@ -433,12 +436,16 @@ impl OptimizerRule for ReaderParseRule {
         plan: LogicalPlan,
         config: &dyn OptimizerConfig,
     ) -> Result<Transformed<LogicalPlan>> {
-        if !holds_parse(&plan)? {
-            return Ok(Transformed::no(plan));
-        }
-        let options = config.options();
         let memo = reader_parse_memo();
-        plan.transform_down_with_subqueries(|node| parse_decided(node, &options, memo.as_deref()))
+        let parsed = if holds_parse(&plan)? {
+            let options = config.options();
+            plan.transform_down_with_subqueries(|node| {
+                parse_decided(node, &options, memo.as_deref())
+            })?
+        } else {
+            Transformed::no(plan)
+        };
+        parsed.transform_data(|plan| held_iceberg::rebind(plan, memo.as_deref()))
     }
 }
 

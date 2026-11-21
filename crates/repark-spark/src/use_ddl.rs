@@ -598,6 +598,9 @@ pub(crate) async fn execute_refresh(
             catalog, namespace, table,
         ));
     }
+    repark_iceberg::catalog::session_tables::refresh_load(handle, &ident)
+        .await
+        .map_err(iceberg_err)?;
     crate::reregister_catalog_provider(ctx, handle.clone(), catalog).await?;
     use_empty_frame(ctx)
 }
