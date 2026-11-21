@@ -1,6 +1,6 @@
 # COLUMNS-LIST-ARG-1 — a Python list of columns is refused where PySpark accepts it
 
-**Rating: proposed; the owner rates it.** Proposed S2, off the label path.
+**Rating: S2 (the owner, 2026-11-21), off the label path:** one card over every method that takes a list of columns. Proposed S2, off the label path.
 
 **Date:** 2026-11-20. **Filed by:** the records clerk (`claude-haiku-5-5`), under Fable's guidance of 2026-11-20.
 **Source:** Fable's consult reply (2026-11-20), section 14, kept outside the repository; the step 0 is
