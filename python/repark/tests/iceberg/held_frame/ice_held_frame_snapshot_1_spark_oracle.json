@@ -32,9 +32,23 @@
    "ROWS",
    "INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION"
   ],
+  "dfview_filter_frame_recreate_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+  "dfview_frame_drop_column_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "dfview_frame_drop_column_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "dfview_frame_dropped_table_count": "ERROR TABLE_OR_VIEW_NOT_FOUND",
+  "dfview_frame_dropped_table_explain": "ERROR TABLE_OR_VIEW_NOT_FOUND",
+  "dfview_frame_insert_count": 3,
+  "dfview_frame_insert_explain": [
+   "PRINTED",
+   null
+  ],
+  "dfview_frame_recreate_collect": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+  "dfview_frame_recreate_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+  "dfview_frame_recreate_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
   "dfview_recreate": [
    "(5, 'r')"
   ],
+  "dfview_written_frame_recreate_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
   "drop_column_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
   "drop_column_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
   "drop_column_explain_extended": [
@@ -139,9 +153,23 @@
    "ROWS",
    "INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION"
   ],
+  "dfview_filter_frame_recreate_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+  "dfview_frame_drop_column_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "dfview_frame_drop_column_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "dfview_frame_dropped_table_count": "ERROR TABLE_OR_VIEW_NOT_FOUND",
+  "dfview_frame_dropped_table_explain": "ERROR TABLE_OR_VIEW_NOT_FOUND",
+  "dfview_frame_insert_count": 3,
+  "dfview_frame_insert_explain": [
+   "PRINTED",
+   null
+  ],
+  "dfview_frame_recreate_collect": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+  "dfview_frame_recreate_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+  "dfview_frame_recreate_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
   "dfview_recreate": [
    "(5, 'r')"
   ],
+  "dfview_written_frame_recreate_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
   "drop_column_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
   "drop_column_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
   "drop_column_explain_extended": [

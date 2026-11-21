@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -14,7 +15,7 @@ use iceberg::table::Table;
 use repark_core::extension::ReaderParseMemo;
 use repark_iceberg::catalog::session_tables::{
     BindMode, Binding, HeldTable, TableState, binding, conformed, rebound_clone, rebound_provider,
-    same_state,
+    referenced_clone, same_state,
 };
 
 const WRITER_VIEW: &str = "_repark_writer_";
@@ -46,35 +47,68 @@ pub(super) fn bound_for_view(name: &str, plan: LogicalPlan) -> LogicalPlan {
     let Some(mode) = view_mode(name) else {
         return plan;
     };
-    if !holds_bound(&plan) {
+    if !holds(&plan, |_| true) {
         return plan;
     }
-    let original = plan.clone();
-    plan.transform_up_with_subqueries(|node| {
-        Ok(match node {
-            LogicalPlan::TableScan(mut scan) => match source_as_provider(&scan.source)
-                .ok()
-                .and_then(|provider| rebound_clone(&provider, mode))
-            {
-                Some(clone) => {
-                    scan.source = provider_as_source(clone);
-                    Transformed::yes(LogicalPlan::TableScan(scan))
-                }
-                None => Transformed::no(LogicalPlan::TableScan(scan)),
-            },
-            other => Transformed::no(other),
-        })
-    })
-    .map_or(original, |rewritten| rewritten.data)
+    swapped(&plan, |provider| rebound_clone(provider, mode)).unwrap_or(plan)
 }
 
-fn holds_bound(plan: &LogicalPlan) -> bool {
+pub(super) fn referenced(plan: Cow<'_, LogicalPlan>) -> Cow<'_, LogicalPlan> {
+    if !holds(&plan, viewed) {
+        return plan;
+    }
+    swapped(&plan, referenced_clone).map_or(plan, Cow::Owned)
+}
+
+pub(super) fn frame_table(view: Arc<dyn TableProvider>) -> Arc<dyn TableProvider> {
+    let Some(plan) = view
+        .get_logical_plan()
+        .filter(|plan| holds(plan, viewed))
+        .map(Cow::into_owned)
+    else {
+        return view;
+    };
+    Arc::new(HeldView { plan, view })
+}
+
+fn viewed(bound: &Binding) -> bool {
+    bound.mode() == BindMode::View
+}
+
+fn swapped(
+    plan: &LogicalPlan,
+    swap: impl Fn(&Arc<dyn TableProvider>) -> Option<Arc<dyn TableProvider>>,
+) -> Option<LogicalPlan> {
+    plan.clone()
+        .transform_up_with_subqueries(|node| {
+            Ok(match node {
+                LogicalPlan::TableScan(mut scan) => {
+                    match source_as_provider(&scan.source)
+                        .ok()
+                        .and_then(|provider| swap(&provider))
+                    {
+                        Some(clone) => {
+                            scan.source = provider_as_source(clone);
+                            Transformed::yes(LogicalPlan::TableScan(scan))
+                        }
+                        None => Transformed::no(LogicalPlan::TableScan(scan)),
+                    }
+                }
+                other => Transformed::no(other),
+            })
+        })
+        .ok()
+        .filter(|rewritten| rewritten.transformed)
+        .map(|rewritten| rewritten.data)
+}
+
+fn holds(plan: &LogicalPlan, wanted: impl Fn(&Binding) -> bool) -> bool {
     let mut found = false;
     let walked = plan.apply_with_subqueries(|node| {
         if let LogicalPlan::TableScan(scan) = node
             && let Ok(provider) = source_as_provider(&scan.source)
         {
-            found = binding(&provider).is_some();
+            found = binding(&provider).is_some_and(|bound| wanted(&bound));
         }
         Ok(if found {
             TreeNodeRecursion::Stop
@@ -313,6 +347,44 @@ impl TableProvider for HeldIcebergScan {
             return Ok(plan);
         }
         Ok(conformed(plan, expected))
+    }
+}
+
+#[derive(Debug)]
+struct HeldView {
+    plan: LogicalPlan,
+    view: Arc<dyn TableProvider>,
+}
+
+#[async_trait]
+impl TableProvider for HeldView {
+    fn schema(&self) -> SchemaRef {
+        self.view.schema()
+    }
+
+    fn table_type(&self) -> TableType {
+        self.view.table_type()
+    }
+
+    fn get_logical_plan(&self) -> Option<Cow<'_, LogicalPlan>> {
+        Some(referenced(Cow::Borrowed(&self.plan)))
+    }
+
+    fn supports_filters_pushdown(
+        &self,
+        filters: &[&Expr],
+    ) -> Result<Vec<TableProviderFilterPushDown>> {
+        self.view.supports_filters_pushdown(filters)
+    }
+
+    async fn scan(
+        &self,
+        state: &dyn Session,
+        projection: Option<&Vec<usize>>,
+        filters: &[Expr],
+        limit: Option<usize>,
+    ) -> Result<Arc<dyn ExecutionPlan>> {
+        self.view.scan(state, projection, filters, limit).await
     }
 }
 

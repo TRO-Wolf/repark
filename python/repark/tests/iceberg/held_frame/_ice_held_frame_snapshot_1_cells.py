@@ -269,6 +269,80 @@ class Cells:
         found = self.s.sql("EXPLAIN SELECT * FROM " + view).collect()
         return ["ROWS", named(" ".join(str(value) for row in found for value in row))]
 
+    def dfview_frame(self, t: str, keep: str = "") -> Any:
+        view = "hv" + str(self.counter)
+        held = self.s.table(t)
+        (held.filter(keep) if keep else held).createOrReplaceTempView(view)
+        return view
+
+    def dfview_frame_recreate_count(self) -> Any:
+        t = self.make()
+        frame = self.s.sql("SELECT * FROM " + self.dfview_frame(t))
+        self.recreate(t)
+        return frame.count()
+
+    def dfview_frame_recreate_collect(self) -> Any:
+        t = self.make()
+        frame = self.s.sql("SELECT * FROM " + self.dfview_frame(t))
+        self.recreate(t)
+        return rows(frame)
+
+    def dfview_frame_recreate_explain(self) -> Any:
+        t = self.make()
+        frame = self.s.sql("SELECT * FROM " + self.dfview_frame(t))
+        self.recreate(t)
+        return explained(frame)
+
+    def dfview_frame_drop_column_count(self) -> Any:
+        t = self.make()
+        frame = self.s.sql("SELECT * FROM " + self.dfview_frame(t))
+        self.drop_column(t)
+        return frame.count()
+
+    def dfview_frame_drop_column_explain(self) -> Any:
+        t = self.make()
+        frame = self.s.sql("SELECT * FROM " + self.dfview_frame(t))
+        self.drop_column(t)
+        return explained(frame)
+
+    def dfview_frame_dropped_table_count(self) -> Any:
+        t = self.make()
+        frame = self.s.sql("SELECT * FROM " + self.dfview_frame(t))
+        self.run_sql("DROP TABLE " + t)
+        return frame.count()
+
+    def dfview_frame_dropped_table_explain(self) -> Any:
+        t = self.make()
+        frame = self.s.sql("SELECT * FROM " + self.dfview_frame(t))
+        self.run_sql("DROP TABLE " + t)
+        return explained(frame)
+
+    def dfview_frame_insert_count(self) -> Any:
+        t = self.make()
+        frame = self.s.sql("SELECT * FROM " + self.dfview_frame(t))
+        self.insert(t)
+        return frame.count()
+
+    def dfview_frame_insert_explain(self) -> Any:
+        t = self.make()
+        frame = self.s.sql("SELECT * FROM " + self.dfview_frame(t))
+        self.insert(t)
+        return explained(frame)
+
+    def dfview_written_frame_recreate_count(self) -> Any:
+        t = self.make()
+        view = self.dfview_frame(t)
+        self.insert(t)
+        frame = self.s.sql("SELECT * FROM " + view)
+        self.recreate(t)
+        return frame.count()
+
+    def dfview_filter_frame_recreate_count(self) -> Any:
+        t = self.make()
+        frame = self.s.sql("SELECT * FROM " + self.dfview_frame(t, "n > 0"))
+        self.recreate(t)
+        return frame.count()
+
     def run(self) -> dict[str, Any]:
         cells: dict[str, Callable[[], Any]] = {
             "insert_collect": self.insert_collect,
@@ -301,6 +375,17 @@ class Cells:
             "recreate_explain": self.recreate_explain,
             "dropped_table_explain": self.dropped_table_explain,
             "dfview_drop_column_sql_explain": self.dfview_drop_column_sql_explain,
+            "dfview_frame_recreate_count": self.dfview_frame_recreate_count,
+            "dfview_frame_recreate_collect": self.dfview_frame_recreate_collect,
+            "dfview_frame_recreate_explain": self.dfview_frame_recreate_explain,
+            "dfview_frame_drop_column_count": self.dfview_frame_drop_column_count,
+            "dfview_frame_drop_column_explain": self.dfview_frame_drop_column_explain,
+            "dfview_frame_dropped_table_count": self.dfview_frame_dropped_table_count,
+            "dfview_frame_dropped_table_explain": self.dfview_frame_dropped_table_explain,
+            "dfview_frame_insert_count": self.dfview_frame_insert_count,
+            "dfview_frame_insert_explain": self.dfview_frame_insert_explain,
+            "dfview_written_frame_recreate_count": self.dfview_written_frame_recreate_count,
+            "dfview_filter_frame_recreate_count": self.dfview_filter_frame_recreate_count,
         }
         found: dict[str, Any] = {}
         for key, body in cells.items():
