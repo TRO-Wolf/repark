@@ -28,12 +28,14 @@ import os
 import tempfile
 import uuid
 import warnings
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 from _acceptance import (
     ACCEPTANCE_NAMESPACE,
     GLUE_WAREHOUSE,
+    ICEBERG_TABLE_PROPERTIES,
     S3TABLES_CATALOG,
     SILVER_CATALOG,
     TEMP_VIEW,
@@ -53,6 +55,14 @@ from _acceptance import (
     run_object_stem,
     run_table_prefix,
     s3tables_catalog_config,
+)
+from _acceptance_held_frame import (
+    SPARK_ROWS,
+    HeldFrameCells,
+    cell_line,
+    cost_line,
+    session_writer,
+    spark_answer,
 )
 from _acceptance_replace import (
     assert_replace_twice_outcome,
@@ -603,3 +613,128 @@ def test_u12_s3_path_write_against_scratch_prefix() -> None:
         getattr(frame.limit(0).write.mode("overwrite"), format_name)(empty)
         got = getattr(spark.read, format_name)(f"{empty}/", **read_options).collect()
         assert len(got) == 0
+
+
+def _held_frame_glue_session(app: str) -> ReparkSession:
+    builder = ReparkSession.builder.appName(app)
+    for key, value in glue_catalog_config(SILVER_CATALOG, GLUE_WAREHOUSE).items():
+        builder = builder.config(key, value)
+    spark = builder.getOrCreate()
+    try:
+        spark.create_namespace(
+            SILVER_CATALOG,
+            ACCEPTANCE_NAMESPACE,
+            location=acceptance_namespace_location(GLUE_WAREHOUSE),
+        )
+    except RuntimeError as error:
+        if "exist" not in str(error).lower():
+            raise
+    assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
+    return spark
+
+
+def _held_frame_arn() -> str:
+    arn = os.environ.get("TABLE_BUCKET_ARN")
+    if not arn:
+        pytest.skip(
+            "S3 Tables acceptance needs TABLE_BUCKET_ARN (a us-east-2 table-bucket ARN); "
+            "absent → skip so the Glue bullet is unaffected"
+        )
+    return arn
+
+
+def _held_frame_s3tables_session(app: str, arn: str) -> ReparkSession:
+    builder = ReparkSession.builder.appName(app)
+    for key, value in s3tables_catalog_config(S3TABLES_CATALOG, arn).items():
+        builder = builder.config(key, value)
+    spark = builder.getOrCreate()
+    try:
+        spark.create_namespace(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE)
+    except RuntimeError as error:
+        if "exist" not in str(error).lower():
+            raise
+    return spark
+
+
+def _held_frame_cells(
+    spark: ReparkSession, catalog: str, writer: Callable[[str], None]
+) -> HeldFrameCells:
+    return HeldFrameCells(
+        spark, catalog, ACCEPTANCE_NAMESPACE, run_table_prefix(), ICEBERG_TABLE_PROPERTIES, writer
+    )
+
+
+def _assert_held_frame_rows(spark: ReparkSession, catalog: str, name: str) -> None:
+    got = _held_frame_cells(spark, catalog, session_writer(spark)).rows()
+    for label, found in got.items():
+        print(cell_line(name, label, found, SPARK_ROWS[label]), flush=True)
+    assert got == SPARK_ROWS, got
+
+
+def _assert_held_frame_external(spark: ReparkSession, catalog: str, name: str, label: str) -> None:
+    other = spark.newSession()
+    try:
+        got = _held_frame_cells(spark, catalog, session_writer(other)).external(label)
+    finally:
+        other.stop()
+    expected = spark_answer(label, got["idle_s"])
+    print(cell_line(name, label, got, expected), flush=True)
+    assert got["answer"] == expected, got
+
+
+def _print_held_frame_cost(spark: ReparkSession, catalog: str, name: str) -> None:
+    cells = _held_frame_cells(spark, catalog, session_writer(spark))
+    for row in (cells.cost_held_read(), cells.cost_held_filter_count()):
+        print(cost_line(name, row), flush=True)
+
+
+def test_held_frame_rows_against_glue() -> None:
+    assert_real_buckets_configured()
+    spark = _held_frame_glue_session("held-frame-rows-glue")
+    _assert_held_frame_rows(spark, SILVER_CATALOG, "glue")
+
+
+def test_held_frame_rows_against_s3tables() -> None:
+    arn = _held_frame_arn()
+    assert_real_buckets_configured()
+    spark = _held_frame_s3tables_session("held-frame-rows-s3tables", arn)
+    _assert_held_frame_rows(spark, S3TABLES_CATALOG, "s3tables")
+
+
+def test_held_frame_external_writer_against_glue() -> None:
+    assert_real_buckets_configured()
+    spark = _held_frame_glue_session("held-frame-external-glue")
+    _assert_held_frame_external(spark, SILVER_CATALOG, "glue", "control")
+
+
+def test_held_frame_external_writer_against_s3tables() -> None:
+    arn = _held_frame_arn()
+    assert_real_buckets_configured()
+    spark = _held_frame_s3tables_session("held-frame-external-s3tables", arn)
+    _assert_held_frame_external(spark, S3TABLES_CATALOG, "s3tables", "control")
+
+
+def test_held_frame_refresh_against_glue() -> None:
+    assert_real_buckets_configured()
+    spark = _held_frame_glue_session("held-frame-refresh-glue")
+    _assert_held_frame_external(spark, SILVER_CATALOG, "glue", "refresh")
+
+
+def test_held_frame_refresh_against_s3tables() -> None:
+    arn = _held_frame_arn()
+    assert_real_buckets_configured()
+    spark = _held_frame_s3tables_session("held-frame-refresh-s3tables", arn)
+    _assert_held_frame_external(spark, S3TABLES_CATALOG, "s3tables", "refresh")
+
+
+def test_held_frame_cost_against_glue() -> None:
+    assert_real_buckets_configured()
+    spark = _held_frame_glue_session("held-frame-cost-glue")
+    _print_held_frame_cost(spark, SILVER_CATALOG, "glue")
+
+
+def test_held_frame_cost_against_s3tables() -> None:
+    arn = _held_frame_arn()
+    assert_real_buckets_configured()
+    spark = _held_frame_s3tables_session("held-frame-cost-s3tables", arn)
+    _print_held_frame_cost(spark, S3TABLES_CATALOG, "s3tables")

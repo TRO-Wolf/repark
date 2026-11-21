@@ -27,6 +27,12 @@ stay pinned. The parent [../map.md](../map.md) is at its size ceiling, so the pi
   view's condition; `explain` after an insert prints a plan. 12 are red on main and 10 on the fix round 1 head. The 4
   refused-write cells read the held frame by `count` and by a child, since `collect` keeps its first binding.
   pins: ice-held-frame-snapshot-1/1a-delta-1.
+- `test_ice_held_frame_snapshot_1_live_twin.py` — the live Glue and S3 Tables cells' local twin (2026-11-21): the
+  helper `../../parity/_acceptance_held_frame.py` on a `type=hadoop` catalog in both ANSI modes. The `insert`, `delete`
+  and `copy` rows answer Spark's held and fresh answers; the external-writer and refresh cells are strict xfails
+  (ICE-CATALOG-SESSION-HADOOP-1: a second session cannot see the table, pinned by its refusal); the cache-interval
+  rule of Spark's pinned answers is pinned on the measured pauses; the cost rows print parseable lines.
+  pins: ice-held-frame-snapshot-1/live-aws.
 - `_ice_held_frame_snapshot_1_cells.py` — the cells, engine-agnostic, shared by the test and the recorder.
 - `_ice_held_frame_snapshot_1_enc_1_cells.py` — the ENC-1 cells (fix round 1), RePark only.
 - `_record_ice_held_frame_snapshot_1.py` — re-records the oracle on live PySpark 4.1.2 with Iceberg 1.11.0:
