@@ -221,12 +221,14 @@ pub(crate) async fn read_csv_path(
     let multiline = options
         .get("multiline")
         .is_some_and(|raw| parse_bool_option("multiLine", raw).ok() == Some(true));
-    let utf8_schema =
-        if csv_force_utf8_schema(options) || options.contains_key("utf8_columns") || multiline {
-            csv_utf8_schema_from_path(path, csv_options.has_header, csv_options.delimiter)?
-        } else {
-            None
-        };
+    let utf8_schema = if let Some(scan) = csv_text_scan(options)? {
+        let null_value = options.get("nullvalue").map(String::as_str);
+        Some(csv_text_scan_schema(context, &resolved, &csv_options, null_value, scan).await?)
+    } else if csv_force_utf8_schema(options) || options.contains_key("utf8_columns") || multiline {
+        csv_utf8_schema_from_path(path, csv_options.has_header, csv_options.delimiter)?
+    } else {
+        None
+    };
     if let Some(ref schema) = utf8_schema {
         csv_options = csv_options.schema(schema);
     }
@@ -247,6 +249,103 @@ pub(crate) async fn read_csv_path(
     };
     apply_secret_column_flag(flag, frame.schema().as_ref())?;
     Ok(frame)
+}
+
+pub(crate) const CSV_TEXT_SCAN_OPTION: &str = "text_scan";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CsvTextScan {
+    Positions,
+    Header { case_sensitive: bool },
+}
+
+pub(crate) fn csv_text_scan(options: &HashMap<String, String>) -> Result<Option<CsvTextScan>> {
+    let Some(raw) = options.get(CSV_TEXT_SCAN_OPTION) else {
+        return Ok(None);
+    };
+    match raw.as_str() {
+        "positions" => Ok(Some(CsvTextScan::Positions)),
+        "header" => Ok(Some(CsvTextScan::Header {
+            case_sensitive: false,
+        })),
+        "header_case_sensitive" => Ok(Some(CsvTextScan::Header {
+            case_sensitive: true,
+        })),
+        _ => Err(Error::Analysis(format!(
+            "reader option \"{CSV_TEXT_SCAN_OPTION}\" accepts only \"positions\", \"header\" or \
+             \"header_case_sensitive\"; got {:?}",
+            repark_common::redaction::mask_value_credentials(raw)
+        ))),
+    }
+}
+
+pub(crate) fn spark_safe_header(
+    names: &[&str],
+    null_value: Option<&str>,
+    case_sensitive: bool,
+) -> Vec<String> {
+    let key = |name: &str| {
+        if case_sensitive {
+            name.to_string()
+        } else {
+            repark_common::java_case::string_lowered(name)
+        }
+    };
+    let mut seen: HashMap<String, usize> = HashMap::new();
+    for name in names {
+        *seen.entry(key(name)).or_default() += 1;
+    }
+    names
+        .iter()
+        .enumerate()
+        .map(|(index, name)| {
+            if name.is_empty() || null_value == Some(*name) {
+                format!("_c{index}")
+            } else if seen.get(&key(name)).is_some_and(|count| *count > 1) {
+                format!("{name}{index}")
+            } else {
+                (*name).to_string()
+            }
+        })
+        .collect()
+}
+
+async fn csv_text_scan_schema(
+    context: &SessionContext,
+    path: &str,
+    csv_options: &CsvReadOptions<'_>,
+    null_value: Option<&str>,
+    scan: CsvTextScan,
+) -> Result<arrow::datatypes::Schema> {
+    use arrow::datatypes::{DataType, Field, Schema};
+    use datafusion::datasource::file_format::options::ReadOptions;
+    use datafusion::datasource::listing::ListingTableUrl;
+
+    let header_only = csv_options.clone().schema_infer_max_records(0);
+    let table_path = ListingTableUrl::parse(path).map_err(engine_err)?;
+    let scanned = header_only
+        .get_resolved_schema(&context.copied_config(), context.state(), table_path)
+        .await
+        .map_err(engine_err)?;
+    let names: Vec<&str> = scanned
+        .fields()
+        .iter()
+        .map(|field| field.name().as_str())
+        .collect();
+    let spark_names: Vec<String> = match scan {
+        CsvTextScan::Positions => (0..names.len()).map(|index| format!("_c{index}")).collect(),
+        CsvTextScan::Header { .. } if !csv_options.has_header => {
+            names.iter().map(ToString::to_string).collect()
+        }
+        CsvTextScan::Header { case_sensitive } => {
+            spark_safe_header(&names, null_value, case_sensitive)
+        }
+    };
+    let fields: Vec<Field> = spark_names
+        .into_iter()
+        .map(|name| Field::new(name, DataType::Utf8, true))
+        .collect();
+    Ok(Schema::new(fields))
 }
 
 pub(crate) fn csv_utf8_column_schema(
@@ -640,6 +739,146 @@ mod tests {
                 "{target}"
             );
         }
+    }
+
+    fn text_scan_rows(frame_batches: &[arrow::array::RecordBatch]) -> Vec<Vec<Option<String>>> {
+        use arrow::array::{Array, AsArray};
+        let mut rows = Vec::new();
+        for batch in frame_batches {
+            for row in 0..batch.num_rows() {
+                rows.push(
+                    batch
+                        .columns()
+                        .iter()
+                        .map(|column| {
+                            let text = column.as_string::<i32>();
+                            text.is_valid(row).then(|| text.value(row).to_string())
+                        })
+                        .collect(),
+                );
+            }
+        }
+        rows
+    }
+
+    async fn text_scan(
+        target: &str,
+        pairs: &[(&str, &str)],
+    ) -> (Vec<String>, Vec<Vec<Option<String>>>) {
+        let session = crate::ReparkSession::builder().build().unwrap();
+        let mut options = options_map(pairs);
+        options
+            .entry(CSV_TEXT_SCAN_OPTION.to_string())
+            .or_insert_with(|| "header".to_string());
+        let frame = session.read_csv(target, &options).await.unwrap();
+        let names = frame
+            .schema()
+            .fields()
+            .iter()
+            .map(|field| {
+                assert_eq!(field.data_type(), &arrow::datatypes::DataType::Utf8);
+                field.name().clone()
+            })
+            .collect();
+        (names, text_scan_rows(&frame.collect().await.unwrap()))
+    }
+
+    fn texts(row: &[&str]) -> Vec<Option<String>> {
+        row.iter()
+            .map(|text| (!text.is_empty()).then(|| (*text).to_string()))
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn a_text_scan_reads_every_field_as_the_file_text() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("data.csv");
+        std::fs::write(&path, "x,k\n007,1e3\nTRUE,1.50\n").unwrap();
+        let (names, rows) = text_scan(path.to_str().unwrap(), &[("header", "true")]).await;
+        assert_eq!(names, ["x", "k"]);
+        assert_eq!(rows, [texts(&["007", "1e3"]), texts(&["TRUE", "1.50"])]);
+    }
+
+    #[tokio::test]
+    async fn a_text_scan_names_an_empty_or_null_token_header_by_its_position() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("data.csv");
+        std::fs::write(&path, ",NA, k \n007,1.5,abc\n").unwrap();
+        let pairs = [("header", "true"), ("nullvalue", "NA")];
+        let (names, rows) = text_scan(path.to_str().unwrap(), &pairs).await;
+        assert_eq!(names, ["_c0", "_c1", " k "]);
+        assert_eq!(rows, [texts(&["007", "1.5", "abc"])]);
+        let (names, _) = text_scan(path.to_str().unwrap(), &[("header", "true")]).await;
+        assert_eq!(names, ["_c0", "NA", " k "]);
+        std::fs::write(&path, "x,X,k\n1,2,3\n").unwrap();
+        let (names, _) = text_scan(path.to_str().unwrap(), &[("header", "true")]).await;
+        assert_eq!(names, ["x0", "X1", "k"]);
+    }
+
+    #[test]
+    fn the_safe_header_folds_case_only_when_the_session_is_case_insensitive() {
+        let names = ["x", "X", "k", "\u{e4}", "\u{c4}"];
+        assert_eq!(
+            spark_safe_header(&names, None, false),
+            ["x0", "X1", "k", "\u{e4}3", "\u{c4}4"]
+        );
+        assert_eq!(spark_safe_header(&names, None, true), names);
+        assert_eq!(
+            spark_safe_header(&["a", "A", "a"], None, true),
+            ["a0", "A", "a2"]
+        );
+        assert_eq!(
+            spark_safe_header(&["", "NA", "na"], Some("NA"), false),
+            ["_c0", "_c1", "na2"]
+        );
+    }
+
+    #[test]
+    fn the_text_scan_option_refuses_a_value_outside_its_modes() {
+        let Err(error) = csv_text_scan(&options_map(&[("text_scan", "true")])) else {
+            panic!("a value outside the three modes must refuse");
+        };
+        assert!(error.to_string().contains("text_scan"), "{error}");
+        assert_eq!(csv_text_scan(&options_map(&[])).unwrap(), None);
+    }
+
+    #[tokio::test]
+    async fn a_text_scan_by_position_never_names_a_field_from_the_header() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("data.csv");
+        std::fs::write(&path, "_c1,,k\n1,2,3\n").unwrap();
+        let pairs = [("header", "true"), ("text_scan", "positions")];
+        let (names, rows) = text_scan(path.to_str().unwrap(), &pairs).await;
+        assert_eq!(names, ["_c0", "_c1", "_c2"]);
+        assert_eq!(rows, [texts(&["1", "2", "3"])]);
+        std::fs::write(&path, "x,X,k\n1,2,3\n").unwrap();
+        let pairs = [("header", "true"), ("text_scan", "header_case_sensitive")];
+        let (names, _) = text_scan(path.to_str().unwrap(), &pairs).await;
+        assert_eq!(names, ["x", "X", "k"]);
+    }
+
+    #[tokio::test]
+    async fn a_text_scan_reads_a_misfit_past_the_inference_window() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("late.csv");
+        let numbers: Vec<String> = (0..1200).map(|index| index.to_string()).collect();
+        let body = format!("n\n{}\nabc\n1.5\n", numbers.join("\n"));
+        std::fs::write(&path, body).unwrap();
+        let (_, rows) = text_scan(path.to_str().unwrap(), &[("header", "true")]).await;
+        assert_eq!(rows.len(), 1202);
+        assert_eq!(rows[1200..], [texts(&["abc"]), texts(&["1.5"])]);
+    }
+
+    #[tokio::test]
+    async fn a_text_scan_over_a_glob_reads_each_file_without_a_schema_merge() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("a.csv"), "x,k\n007,k1\n").unwrap();
+        std::fs::write(dir.path().join("b.csv"), "x,k\n1.50,k2\n").unwrap();
+        let glob = format!("{}/*.csv", dir.path().to_str().unwrap());
+        let (names, mut rows) = text_scan(&glob, &[("header", "true")]).await;
+        rows.sort();
+        assert_eq!(names, ["x", "k"]);
+        assert_eq!(rows, [texts(&["007", "k1"]), texts(&["1.50", "k2"])]);
     }
 
     #[tokio::test]

@@ -1,0 +1,43 @@
+== mine.py: Spark 4.1.2 (re-run), base 9a48932f, round-2 head 35bc6e3a (the verifier's run), head ef5abef1
+MOVED-NOT-EQUAL true hdr/auto_c1/cs_true {'base': 'WRONG', 'round2': 'BOTHERR', 'head': 'BOTHERR'}
+MOVED-NOT-EQUAL true hdr/auto_c1/cs_false {'base': 'WRONG', 'round2': 'BOTHERR', 'head': 'BOTHERR'}
+LOST true corrupt/default_clean_last/cs_true {'base': 'EQUAL', 'round2': 'RAISE', 'head': 'RAISE'}
+MOVED-NOT-EQUAL true corrupt/default_clean_last/cs_true {'base': 'EQUAL', 'round2': 'RAISE', 'head': 'RAISE'}
+LOST true corrupt/default_clean_last/cs_false {'base': 'EQUAL', 'round2': 'RAISE', 'head': 'RAISE'}
+MOVED-NOT-EQUAL true corrupt/default_clean_last/cs_false {'base': 'EQUAL', 'round2': 'RAISE', 'head': 'RAISE'}
+MOVED-NOT-EQUAL true opt/select_upper/cs_false {'base': 'WRONG', 'round2': 'BOTHERR', 'head': 'BOTHERR'}
+MOVED-NOT-EQUAL false hdr/auto_c1/cs_true {'base': 'WRONG', 'round2': 'BOTHERR', 'head': 'BOTHERR'}
+MOVED-NOT-EQUAL false hdr/auto_c1/cs_false {'base': 'WRONG', 'round2': 'BOTHERR', 'head': 'BOTHERR'}
+LOST false corrupt/default_clean_last/cs_true {'base': 'EQUAL', 'round2': 'RAISE', 'head': 'RAISE'}
+MOVED-NOT-EQUAL false corrupt/default_clean_last/cs_true {'base': 'EQUAL', 'round2': 'RAISE', 'head': 'RAISE'}
+LOST false corrupt/default_clean_last/cs_false {'base': 'EQUAL', 'round2': 'RAISE', 'head': 'RAISE'}
+MOVED-NOT-EQUAL false corrupt/default_clean_last/cs_false {'base': 'EQUAL', 'round2': 'RAISE', 'head': 'RAISE'}
+MOVED-NOT-EQUAL false opt/select_upper/cs_false {'base': 'WRONG', 'round2': 'BOTHERR', 'head': 'BOTHERR'}
+records 368
+base EQUAL 122 / WRONG 82 / RAISE 142 / BOTHERR 22 / MISSING 0
+round2 EQUAL 208 / WRONG 34 / RAISE 98 / BOTHERR 28 / MISSING 0
+head EQUAL 214 / WRONG 28 / RAISE 98 / BOTHERR 28 / MISSING 0
+== p2.py: Spark 4.1.2 (re-run), base 9a48932f, round-2 head 35bc6e3a (the verifier's run), head ef5abef1
+LOST true corrupt/clean_rows {'base': 'EQUAL', 'round2': 'RAISE', 'head': 'RAISE'}
+MOVED-NOT-EQUAL true corrupt/clean_rows {'base': 'EQUAL', 'round2': 'RAISE', 'head': 'RAISE'}
+LOST false corrupt/clean_rows {'base': 'EQUAL', 'round2': 'RAISE', 'head': 'RAISE'}
+MOVED-NOT-EQUAL false corrupt/clean_rows {'base': 'EQUAL', 'round2': 'RAISE', 'head': 'RAISE'}
+records 112
+base EQUAL 22 / WRONG 16 / RAISE 70 / BOTHERR 4 / MISSING 0
+round2 EQUAL 94 / WRONG 6 / RAISE 8 / BOTHERR 4 / MISSING 0
+head EQUAL 94 / WRONG 6 / RAISE 8 / BOTHERR 4 / MISSING 0
+== p1.py: Spark 4.1.2 (re-run), base 9a48932f, round-2 head 35bc6e3a (the verifier's run), head ef5abef1
+MOVED-NOT-EQUAL true names/c0_clash {'base': 'WRONG', 'round2': 'BOTHERR', 'head': 'BOTHERR'}
+MOVED-NOT-EQUAL true refuse/char {'base': 'WRONG', 'round2': 'BOTHERR', 'head': 'BOTHERR'}
+MOVED-NOT-EQUAL true refuse/varchar {'base': 'WRONG', 'round2': 'BOTHERR', 'head': 'BOTHERR'}
+MOVED-NOT-EQUAL true refuse/empty_value_e {'base': 'WRONG', 'round2': 'RAISE', 'head': 'RAISE'}
+MOVED-NOT-EQUAL true refuse/empty_value_e_schema {'base': 'WRONG', 'round2': 'RAISE', 'head': 'RAISE'}
+MOVED-NOT-EQUAL false names/c0_clash {'base': 'WRONG', 'round2': 'BOTHERR', 'head': 'BOTHERR'}
+MOVED-NOT-EQUAL false refuse/char {'base': 'WRONG', 'round2': 'BOTHERR', 'head': 'BOTHERR'}
+MOVED-NOT-EQUAL false refuse/varchar {'base': 'WRONG', 'round2': 'BOTHERR', 'head': 'BOTHERR'}
+MOVED-NOT-EQUAL false refuse/empty_value_e {'base': 'WRONG', 'round2': 'RAISE', 'head': 'RAISE'}
+MOVED-NOT-EQUAL false refuse/empty_value_e_schema {'base': 'WRONG', 'round2': 'RAISE', 'head': 'RAISE'}
+records 336
+base EQUAL 87 / WRONG 50 / RAISE 185 / BOTHERR 14 / MISSING 0
+round2 EQUAL 190 / WRONG 4 / RAISE 122 / BOTHERR 20 / MISSING 0
+head EQUAL 190 / WRONG 4 / RAISE 122 / BOTHERR 20 / MISSING 0

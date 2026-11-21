@@ -581,21 +581,89 @@ def _schema_fields(schema: Any) -> list[dict[str, Any]]:
     )
 
 
-def _session_timestamp_text_columns(schema: Any, frame: DataFrame) -> list[str]:
-    from repark.spark.types import TimestampNTZType, TimestampType
+def _csv_field_spec(data_type: Any) -> str:
+    from repark.errors import AnalysisException
+    from repark.spark.types import CharType, DecimalType, VarcharType, refuse_evaluated_collation
 
-    fields = [] if schema is None else _schema_fields(schema)
-    if not any(isinstance(field["dataType"], TimestampType) for field in fields):
-        return []
-    columns = list(frame.columns)
-    by_case = {name.casefold(): name for name in columns}
-    hits = [field["name"].casefold() in by_case for field in fields]
-    generic = all(col.lower().startswith("column") or col.startswith("_c") for col in columns)
-    pairs = list(zip(columns, fields, strict=False))
-    if all(hits) or (any(hits) and not generic):
-        pairs = [(by_case.get(field["name"].casefold()), field) for field in fields]
-    ntz = {name for name, field in pairs if isinstance(field["dataType"], TimestampNTZType)}
-    return [col for col, dtype in frame.dtypes if dtype == "timestamp_ntz" and col not in ntz]
+    if isinstance(data_type, (CharType, VarcharType)):
+        raise AnalysisException(
+            "[UNSUPPORTED_CHAR_OR_VARCHAR_AS_STRING] The char/varchar type can't be used in the "
+            "table schema. If you want Spark treat them as string type as same as Spark 3.0 and "
+            'earlier, please set "spark.sql.legacy.charVarcharAsString" to "true".'
+        )
+    if isinstance(data_type, DecimalType) and data_type.scale < 0:
+        raise AnalysisException(
+            f"[NEGATIVE_SCALE_DISALLOWED] Negative scale is not allowed: '{data_type.scale}'. "
+            'Set the config "spark.sql.legacy.allowNegativeScaleOfDecimal" to "true" to allow it.'
+        )
+    if isinstance(data_type, DecimalType) and data_type.scale > data_type.precision:
+        raise AnalysisException(
+            f"Decimal scale ({data_type.scale}) cannot be greater than precision "
+            f"({data_type.precision})."
+        )
+    refuse_evaluated_collation(data_type)
+    return data_type._engine_type()
+
+
+def _csv_text_frame(
+    frame: DataFrame, schema: Any, header: bool, null_token: str | None
+) -> DataFrame:
+    from repark.spark import functions
+    from repark.spark.column import Column
+
+    texts = [frame[index] for index in range(len(frame.columns))]
+    if null_token is not None:
+        texts = [
+            functions.when(text == functions.lit(null_token), functions.lit(None)).otherwise(text)
+            for text in texts
+        ]
+    if schema is None:
+        if header and null_token is None:
+            return frame
+        names = frame.columns if header else [f"_c{index}" for index in range(len(texts))]
+        return frame.select(*[text.alias(name) for text, name in zip(texts, names, strict=True)])
+    fields = _schema_fields(schema)
+    if not fields:
+        return frame
+    absent = functions.lit(None).cast("string")
+    selects = []
+    for index, field in enumerate(fields):
+        text = texts[index] if index < len(texts) else absent
+        spec = _csv_field_spec(field["dataType"])
+        if spec != "string":
+            text = Column(text._inner.csv_field(spec))
+        selects.append(text.alias(field["name"]))
+    return frame.select(*selects)
+
+
+def _csv_text_scan(session: Any, schema: Any, infer_schema: bool) -> str | None:
+    from repark import _native
+
+    if schema is not None:
+        return "positions"
+    if infer_schema:
+        return None
+    if _native.session_case_sensitive(session._ensure_alive()):
+        return "header_case_sensitive"
+    return "header"
+
+
+def _refuse_csv_corrupt_record_field(session: Any, schema: Any, options: dict[str, str]) -> None:
+    from repark.errors import AnalysisException
+
+    if schema is None:
+        return
+    named = [value for key, value in options.items() if key.lower() == "columnnameofcorruptrecord"]
+    if named:
+        corrupt = str(named[-1])
+    else:
+        corrupt = session.conf.get("spark.sql.columnNameOfCorruptRecord", "_corrupt_record")
+    if any(field["name"] == corrupt for field in _schema_fields(schema)):
+        raise AnalysisException(
+            f"reader schema field {mask_credentials(corrupt)!r} is the corrupt-record column "
+            "named by columnNameOfCorruptRecord, which repark does not fill with a malformed "
+            "CSV row's text yet; a CSV read schema holding it is refused"
+        )
 
 
 def _reject_csv_json_parse_options(options: dict[str, str], *, is_csv: bool) -> None:
@@ -622,6 +690,11 @@ def _reject_csv_json_parse_options(options: dict[str, str], *, is_csv: bool) -> 
             raise AnalysisException(
                 f"reader option encoding={mask_credentials(options[key])!r} "
                 "is not supported (only UTF-8)"
+            )
+        if is_csv and lowered == "emptyvalue" and str(options[key]) != "":
+            raise AnalysisException(
+                f"reader option {key!r} is not supported by repark yet "
+                "(repark reads a quoted empty field as NULL, never as the emptyValue text)"
             )
         if lowered in denylist:
             raise AnalysisException(

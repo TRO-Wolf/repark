@@ -19,5 +19,7 @@ critic's GAPS (268 cells re-measured, 0 disagreements): 5,156 more records, the 
 - [evidence/](evidence/map.md) — the probes and the raw cells.
 - [kernel/](kernel/map.md) — CSV-FIELD-KERNEL-1 (2026-11-20): the kernel unit's bar, cost and probes; the oracle
   gained 62 measured texts.
+- [built/](built/map.md) — CSV-STRING-FIELD-TEXT-1's wiring unit (2026-11-20): the text scan, the kernel per field by
+  position, the bar, the cost and the probes.
 
 Up: [../map.md](../map.md).

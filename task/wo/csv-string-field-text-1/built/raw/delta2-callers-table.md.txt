@@ -1,0 +1,74 @@
+| cell | ANSI | Spark | base | before | after |
+|---|---|---|---|---|---|
+| `csv_header/space_medial/cs_true` | true | ΑΣ Β, ασ β, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/space/cs_true` | true | ΑΣ Β, ας β, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/cjk/cs_true` | true | 中Σ, 中σ, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/word/cs_true` | true | ΟΔΟΣ, οδος, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/digit/cs_true` | true | ΑΣ1, ας1, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/hyphen/cs_true` | true | ΑΣ-Β, ας-β, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/mark/cs_true` | true | ΑΣ́Β, ας́β, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/dot/cs_true` | true | Α.Σ, α.σ, k : ('1', '2', '3') | RAISE | EQUAL | EQUAL |
+| `with_columns/distinct/cs_true` | true | ΑΣ Β, k, ασ β : (5, 1, 6); (5, 3, 6) | EQUAL | EQUAL | EQUAL |
+| `with_columns/repeat/cs_true` | true | ΑΣ Β, k, ας β : (5, 1, 6); (5, 3, 6) | EQUAL | EQUAL | EQUAL |
+| `with_columns/cjk/cs_true` | true | ΑΣ Β, k, 中Σ, 中σ : (2, 3, 5, 6); (None, 1, 5, 6) | EQUAL | EQUAL | EQUAL |
+| `fold_a/fillna_final/cs_true` | true | ERR [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function pa | BOTHERR | BOTHERR | BOTHERR |
+| `fold_a/fillna_medial/cs_true` | true | ERR [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function pa | BOTHERR | BOTHERR | BOTHERR |
+| `fold_a/dropna_final/cs_true` | true | ERR [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function pa | BOTHERR | BOTHERR | BOTHERR |
+| `fold_a/drop_column_final/cs_true` | true | ΑΣ Β, k : (2, 3); (None, 1) | EQUAL | EQUAL | EQUAL |
+| `fold_b/drop_name_final/cs_true` | true | ΑΣ Β, k : (2, 3); (None, 1) | EQUAL | EQUAL | EQUAL |
+| `fold_b/drop_duplicates_final/cs_true` | true | ERR Cannot resolve column name "ας β" among (ΑΣ Β, k). | BOTHERR | BOTHERR | BOTHERR |
+| `fold_b/map_struct_key/cs_true` | true | v : ('x',); ('x',) | EQUAL | EQUAL | EQUAL |
+| `csv_header/space_medial/cs_false` | true | ΑΣ Β, ασ β, k : ('1', '2', '3') | EQUAL | WRONG | EQUAL |
+| `csv_header/space/cs_false` | true | ΑΣ Β0, ας β1, k : ('1', '2', '3') | WRONG | WRONG | EQUAL |
+| `csv_header/cjk/cs_false` | true | 中Σ0, 中σ1, k : ('1', '2', '3') | WRONG | WRONG | EQUAL |
+| `csv_header/word/cs_false` | true | ΟΔΟΣ0, οδος1, k : ('1', '2', '3') | WRONG | EQUAL | EQUAL |
+| `csv_header/digit/cs_false` | true | ΑΣ10, ας11, k : ('1', '2', '3') | WRONG | EQUAL | EQUAL |
+| `csv_header/hyphen/cs_false` | true | ΑΣ-Β, ας-β, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/mark/cs_false` | true | ΑΣ́Β, ας́β, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/dot/cs_false` | true | Α.Σ, α.σ, k : ('1', '2', '3') | RAISE | EQUAL | EQUAL |
+| `with_columns/distinct/cs_false` | true | ΑΣ Β, k : (5, 1); (5, 3) | RAISE | RAISE | WRONG |
+| `with_columns/repeat/cs_false` | true | ERR [COLUMN_ALREADY_EXISTS] The column `ας β` already exists. Choose anoth | WRONG | WRONG | BOTHERR |
+| `with_columns/cjk/cs_false` | true | ERR [COLUMN_ALREADY_EXISTS] The column `中σ` already exists. Choose another | WRONG | WRONG | BOTHERR |
+| `fold_a/fillna_final/cs_false` | true | ΑΣ Β, k : (0, 1); (2, 3) | RAISE | RAISE | EQUAL |
+| `fold_a/fillna_medial/cs_false` | true | ERR [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function pa | WRONG | WRONG | BOTHERR |
+| `fold_a/dropna_final/cs_false` | true | ΑΣ Β, k : (2, 3) | RAISE | RAISE | EQUAL |
+| `fold_a/drop_column_final/cs_false` | true | k : (1,); (3,) | WRONG | WRONG | EQUAL |
+| `fold_b/drop_name_final/cs_false` | true | k : (1,); (3,) | EQUAL | EQUAL | EQUAL |
+| `fold_b/drop_duplicates_final/cs_false` | true | ΑΣ Β, k : (2, 3); (None, 1) | EQUAL | EQUAL | EQUAL |
+| `fold_b/map_struct_key/cs_false` | true | v : ('x',); ('x',) | EQUAL | EQUAL | EQUAL |
+| `csv_header/space_medial/cs_true` | false | ΑΣ Β, ασ β, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/space/cs_true` | false | ΑΣ Β, ας β, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/cjk/cs_true` | false | 中Σ, 中σ, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/word/cs_true` | false | ΟΔΟΣ, οδος, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/digit/cs_true` | false | ΑΣ1, ας1, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/hyphen/cs_true` | false | ΑΣ-Β, ας-β, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/mark/cs_true` | false | ΑΣ́Β, ας́β, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/dot/cs_true` | false | Α.Σ, α.σ, k : ('1', '2', '3') | RAISE | EQUAL | EQUAL |
+| `with_columns/distinct/cs_true` | false | ΑΣ Β, k, ασ β : (5, 1, 6); (5, 3, 6) | EQUAL | EQUAL | EQUAL |
+| `with_columns/repeat/cs_true` | false | ΑΣ Β, k, ας β : (5, 1, 6); (5, 3, 6) | EQUAL | EQUAL | EQUAL |
+| `with_columns/cjk/cs_true` | false | ΑΣ Β, k, 中Σ, 中σ : (2, 3, 5, 6); (None, 1, 5, 6) | EQUAL | EQUAL | EQUAL |
+| `fold_a/fillna_final/cs_true` | false | ERR [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function pa | BOTHERR | BOTHERR | BOTHERR |
+| `fold_a/fillna_medial/cs_true` | false | ERR [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function pa | BOTHERR | BOTHERR | BOTHERR |
+| `fold_a/dropna_final/cs_true` | false | ERR [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function pa | BOTHERR | BOTHERR | BOTHERR |
+| `fold_a/drop_column_final/cs_true` | false | ΑΣ Β, k : (2, 3); (None, 1) | EQUAL | EQUAL | EQUAL |
+| `fold_b/drop_name_final/cs_true` | false | ΑΣ Β, k : (2, 3); (None, 1) | EQUAL | EQUAL | EQUAL |
+| `fold_b/drop_duplicates_final/cs_true` | false | ERR Cannot resolve column name "ας β" among (ΑΣ Β, k). | BOTHERR | BOTHERR | BOTHERR |
+| `fold_b/map_struct_key/cs_true` | false | ERR [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve "map(struct(1 | BOTHERR | BOTHERR | BOTHERR |
+| `csv_header/space_medial/cs_false` | false | ΑΣ Β, ασ β, k : ('1', '2', '3') | EQUAL | WRONG | EQUAL |
+| `csv_header/space/cs_false` | false | ΑΣ Β0, ας β1, k : ('1', '2', '3') | WRONG | WRONG | EQUAL |
+| `csv_header/cjk/cs_false` | false | 中Σ0, 中σ1, k : ('1', '2', '3') | WRONG | WRONG | EQUAL |
+| `csv_header/word/cs_false` | false | ΟΔΟΣ0, οδος1, k : ('1', '2', '3') | WRONG | EQUAL | EQUAL |
+| `csv_header/digit/cs_false` | false | ΑΣ10, ας11, k : ('1', '2', '3') | WRONG | EQUAL | EQUAL |
+| `csv_header/hyphen/cs_false` | false | ΑΣ-Β, ας-β, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/mark/cs_false` | false | ΑΣ́Β, ας́β, k : ('1', '2', '3') | EQUAL | EQUAL | EQUAL |
+| `csv_header/dot/cs_false` | false | Α.Σ, α.σ, k : ('1', '2', '3') | RAISE | EQUAL | EQUAL |
+| `with_columns/distinct/cs_false` | false | ΑΣ Β, k : (5, 1); (5, 3) | RAISE | RAISE | WRONG |
+| `with_columns/repeat/cs_false` | false | ERR [COLUMN_ALREADY_EXISTS] The column `ας β` already exists. Choose anoth | WRONG | WRONG | BOTHERR |
+| `with_columns/cjk/cs_false` | false | ERR [COLUMN_ALREADY_EXISTS] The column `中σ` already exists. Choose another | WRONG | WRONG | BOTHERR |
+| `fold_a/fillna_final/cs_false` | false | ΑΣ Β, k : (0, 1); (2, 3) | RAISE | RAISE | EQUAL |
+| `fold_a/fillna_medial/cs_false` | false | ERR [UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function pa | WRONG | WRONG | BOTHERR |
+| `fold_a/dropna_final/cs_false` | false | ΑΣ Β, k : (2, 3) | RAISE | RAISE | EQUAL |
+| `fold_a/drop_column_final/cs_false` | false | k : (1,); (3,) | WRONG | WRONG | EQUAL |
+| `fold_b/drop_name_final/cs_false` | false | k : (1,); (3,) | EQUAL | EQUAL | EQUAL |
+| `fold_b/drop_duplicates_final/cs_false` | false | ΑΣ Β, k : (2, 3); (None, 1) | EQUAL | EQUAL | EQUAL |
+| `fold_b/map_struct_key/cs_false` | false | v : ('x',); ('x',) | EQUAL | EQUAL | EQUAL |

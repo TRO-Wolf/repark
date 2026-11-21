@@ -1,0 +1,72 @@
+{"ansi": "true", "tag": "csv_header/space_medial/cs_true", "names": ["ΑΣ Β", "ασ β", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "csv_header/space/cs_true", "names": ["ΑΣ Β", "ας β", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "csv_header/cjk/cs_true", "names": ["中Σ", "中σ", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "csv_header/word/cs_true", "names": ["ΟΔΟΣ", "οδος", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "csv_header/digit/cs_true", "names": ["ΑΣ1", "ας1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "csv_header/hyphen/cs_true", "names": ["ΑΣ-Β", "ας-β", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "csv_header/mark/cs_true", "names": ["ΑΣ́Β", "ας́β", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "csv_header/dot/cs_true", "names": ["Α.Σ", "α.σ", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "with_columns/distinct/cs_true", "names": ["ΑΣ Β", "k", "ασ β"], "types": ["int", "int", "int"], "rows": ["(5, 1, 6)", "(5, 3, 6)"]}
+{"ansi": "true", "tag": "with_columns/repeat/cs_true", "names": ["ΑΣ Β", "k", "ας β"], "types": ["int", "int", "int"], "rows": ["(5, 1, 6)", "(5, 3, 6)"]}
+{"ansi": "true", "tag": "with_columns/cjk/cs_true", "names": ["ΑΣ Β", "k", "中Σ", "中σ"], "types": ["int", "int", "int", "int"], "rows": ["(2, 3, 5, 6)", "(None, 1, 5, 6)"]}
+{"ansi": "true", "tag": "fold_a/fillna_final/cs_true", "error": "AnalysisException", "text": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ας β` cannot be resolved. Did you mean one of the following? [`ΑΣ Β`, `k`]. SQLSTATE: 42703"}
+{"ansi": "true", "tag": "fold_a/fillna_medial/cs_true", "error": "AnalysisException", "text": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ασ β` cannot be resolved. Did you mean one of the following? [`ΑΣ Β`, `k`]. SQLSTATE: 42703"}
+{"ansi": "true", "tag": "fold_a/dropna_final/cs_true", "error": "AnalysisException", "text": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ας β` cannot be resolved. Did you mean one of the following? [`ΑΣ Β`, `k`]. SQLSTATE: 42703"}
+{"ansi": "true", "tag": "fold_a/drop_column_final/cs_true", "names": ["ΑΣ Β", "k"], "types": ["int", "int"], "rows": ["(2, 3)", "(None, 1)"]}
+{"ansi": "true", "tag": "fold_b/drop_name_final/cs_true", "names": ["ΑΣ Β", "k"], "types": ["int", "int"], "rows": ["(2, 3)", "(None, 1)"]}
+{"ansi": "true", "tag": "fold_b/drop_duplicates_final/cs_true", "error": "AnalysisException", "text": "Cannot resolve column name \"ας β\" among (ΑΣ Β, k)."}
+{"ansi": "true", "tag": "fold_b/map_struct_key/cs_true", "names": ["v"], "types": ["string"], "rows": ["('x',)", "('x',)"]}
+{"ansi": "true", "tag": "csv_header/space_medial/cs_false", "names": ["ΑΣ Β0", "ασ β1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "csv_header/space/cs_false", "names": ["ΑΣ Β", "ας β", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "csv_header/cjk/cs_false", "names": ["中Σ", "中σ", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "csv_header/word/cs_false", "names": ["ΟΔΟΣ0", "οδος1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "csv_header/digit/cs_false", "names": ["ΑΣ10", "ας11", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "csv_header/hyphen/cs_false", "names": ["ΑΣ-Β", "ας-β", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "csv_header/mark/cs_false", "names": ["ΑΣ́Β", "ας́β", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "csv_header/dot/cs_false", "names": ["Α.Σ", "α.σ", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "with_columns/distinct/cs_false", "error": "AnalysisException", "text": "Error during planning: [COLUMN_ALREADY_EXISTS] The column `ασ β` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"}
+{"ansi": "true", "tag": "with_columns/repeat/cs_false", "names": ["ας β", "k"], "types": ["int", "int"], "rows": ["(6, 1)", "(6, 3)"]}
+{"ansi": "true", "tag": "with_columns/cjk/cs_false", "names": ["ΑΣ Β", "k", "中Σ", "中σ"], "types": ["int", "int", "int", "int"], "rows": ["(2, 3, 5, 6)", "(None, 1, 5, 6)"]}
+{"ansi": "true", "tag": "fold_a/fillna_final/cs_false", "error": "AnalysisException", "text": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ας β` cannot be resolved. Did you mean one of the following? [`ΑΣ Β`, `k`]. SQLSTATE: 42703"}
+{"ansi": "true", "tag": "fold_a/fillna_medial/cs_false", "names": ["ΑΣ Β", "k"], "types": ["int", "int"], "rows": ["(0, 1)", "(2, 3)"]}
+{"ansi": "true", "tag": "fold_a/dropna_final/cs_false", "error": "AnalysisException", "text": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ας β` cannot be resolved. Did you mean one of the following? [`ΑΣ Β`, `k`]. SQLSTATE: 42703"}
+{"ansi": "true", "tag": "fold_a/drop_column_final/cs_false", "names": ["ΑΣ Β", "k"], "types": ["int", "int"], "rows": ["(2, 3)", "(None, 1)"]}
+{"ansi": "true", "tag": "fold_b/drop_name_final/cs_false", "names": ["k"], "types": ["int"], "rows": ["(1,)", "(3,)"]}
+{"ansi": "true", "tag": "fold_b/drop_duplicates_final/cs_false", "names": ["ΑΣ Β", "k"], "types": ["int", "int"], "rows": ["(2, 3)", "(None, 1)"]}
+{"ansi": "true", "tag": "fold_b/map_struct_key/cs_false", "names": ["v"], "types": ["string"], "rows": ["('x',)", "('x',)"]}
+{"ansi": "false", "tag": "csv_header/space_medial/cs_true", "names": ["ΑΣ Β", "ασ β", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "csv_header/space/cs_true", "names": ["ΑΣ Β", "ας β", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "csv_header/cjk/cs_true", "names": ["中Σ", "中σ", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "csv_header/word/cs_true", "names": ["ΟΔΟΣ", "οδος", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "csv_header/digit/cs_true", "names": ["ΑΣ1", "ας1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "csv_header/hyphen/cs_true", "names": ["ΑΣ-Β", "ας-β", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "csv_header/mark/cs_true", "names": ["ΑΣ́Β", "ας́β", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "csv_header/dot/cs_true", "names": ["Α.Σ", "α.σ", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "with_columns/distinct/cs_true", "names": ["ΑΣ Β", "k", "ασ β"], "types": ["int", "int", "int"], "rows": ["(5, 1, 6)", "(5, 3, 6)"]}
+{"ansi": "false", "tag": "with_columns/repeat/cs_true", "names": ["ΑΣ Β", "k", "ας β"], "types": ["int", "int", "int"], "rows": ["(5, 1, 6)", "(5, 3, 6)"]}
+{"ansi": "false", "tag": "with_columns/cjk/cs_true", "names": ["ΑΣ Β", "k", "中Σ", "中σ"], "types": ["int", "int", "int", "int"], "rows": ["(2, 3, 5, 6)", "(None, 1, 5, 6)"]}
+{"ansi": "false", "tag": "fold_a/fillna_final/cs_true", "error": "AnalysisException", "text": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ας β` cannot be resolved. Did you mean one of the following? [`ΑΣ Β`, `k`]. SQLSTATE: 42703"}
+{"ansi": "false", "tag": "fold_a/fillna_medial/cs_true", "error": "AnalysisException", "text": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ασ β` cannot be resolved. Did you mean one of the following? [`ΑΣ Β`, `k`]. SQLSTATE: 42703"}
+{"ansi": "false", "tag": "fold_a/dropna_final/cs_true", "error": "AnalysisException", "text": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ας β` cannot be resolved. Did you mean one of the following? [`ΑΣ Β`, `k`]. SQLSTATE: 42703"}
+{"ansi": "false", "tag": "fold_a/drop_column_final/cs_true", "names": ["ΑΣ Β", "k"], "types": ["int", "int"], "rows": ["(2, 3)", "(None, 1)"]}
+{"ansi": "false", "tag": "fold_b/drop_name_final/cs_true", "names": ["ΑΣ Β", "k"], "types": ["int", "int"], "rows": ["(2, 3)", "(None, 1)"]}
+{"ansi": "false", "tag": "fold_b/drop_duplicates_final/cs_true", "error": "AnalysisException", "text": "Cannot resolve column name \"ας β\" among (ΑΣ Β, k)."}
+{"ansi": "false", "tag": "fold_b/map_struct_key/cs_true", "error": "AnalysisException", "text": "spark_map_subscript caused by Error during planning: [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve the map subscript due to data type mismatch: The second parameter requires the \"STRUCT<ΑΣ Β: INT>\" type, however the key has the type \"STRUCT<ας β: INT>\". SQLSTATE: 42K09"}
+{"ansi": "false", "tag": "csv_header/space_medial/cs_false", "names": ["ΑΣ Β0", "ασ β1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "csv_header/space/cs_false", "names": ["ΑΣ Β", "ας β", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "csv_header/cjk/cs_false", "names": ["中Σ", "中σ", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "csv_header/word/cs_false", "names": ["ΟΔΟΣ0", "οδος1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "csv_header/digit/cs_false", "names": ["ΑΣ10", "ας11", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "csv_header/hyphen/cs_false", "names": ["ΑΣ-Β", "ας-β", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "csv_header/mark/cs_false", "names": ["ΑΣ́Β", "ας́β", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "csv_header/dot/cs_false", "names": ["Α.Σ", "α.σ", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "with_columns/distinct/cs_false", "error": "AnalysisException", "text": "Error during planning: [COLUMN_ALREADY_EXISTS] The column `ασ β` already exists. Choose another name or rename the existing column. SQLSTATE: 42711"}
+{"ansi": "false", "tag": "with_columns/repeat/cs_false", "names": ["ας β", "k"], "types": ["int", "int"], "rows": ["(6, 1)", "(6, 3)"]}
+{"ansi": "false", "tag": "with_columns/cjk/cs_false", "names": ["ΑΣ Β", "k", "中Σ", "中σ"], "types": ["int", "int", "int", "int"], "rows": ["(2, 3, 5, 6)", "(None, 1, 5, 6)"]}
+{"ansi": "false", "tag": "fold_a/fillna_final/cs_false", "error": "AnalysisException", "text": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ας β` cannot be resolved. Did you mean one of the following? [`ΑΣ Β`, `k`]. SQLSTATE: 42703"}
+{"ansi": "false", "tag": "fold_a/fillna_medial/cs_false", "names": ["ΑΣ Β", "k"], "types": ["int", "int"], "rows": ["(0, 1)", "(2, 3)"]}
+{"ansi": "false", "tag": "fold_a/dropna_final/cs_false", "error": "AnalysisException", "text": "[UNRESOLVED_COLUMN.WITH_SUGGESTION] A column, variable, or function parameter with name `ας β` cannot be resolved. Did you mean one of the following? [`ΑΣ Β`, `k`]. SQLSTATE: 42703"}
+{"ansi": "false", "tag": "fold_a/drop_column_final/cs_false", "names": ["ΑΣ Β", "k"], "types": ["int", "int"], "rows": ["(2, 3)", "(None, 1)"]}
+{"ansi": "false", "tag": "fold_b/drop_name_final/cs_false", "names": ["k"], "types": ["int"], "rows": ["(1,)", "(3,)"]}
+{"ansi": "false", "tag": "fold_b/drop_duplicates_final/cs_false", "names": ["ΑΣ Β", "k"], "types": ["int", "int"], "rows": ["(2, 3)", "(None, 1)"]}
+{"ansi": "false", "tag": "fold_b/map_struct_key/cs_false", "names": ["v"], "types": ["string"], "rows": ["('x',)", "('x',)"]}

@@ -1,0 +1,50 @@
+{"ansi": "true", "tag": "names/case_dup", "caseSensitive": "false", "names": ["x0", "X1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "names/case_dup/sensitive", "caseSensitive": "true", "names": ["x", "X", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "names/case_dup/sensitive_select", "caseSensitive": "true", "names": ["x"], "types": ["string"], "rows": ["('1',)"]}
+{"ansi": "true", "tag": "names/case_dup/sensitive_schema", "caseSensitive": "true", "names": ["x", "X", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "names/unicode_case", "caseSensitive": "false", "names": ["\u00e40", "\u00c41", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "names/unicode_case/sensitive", "caseSensitive": "true", "names": ["\u00e4", "\u00c4", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "names/triple/sensitive_schema", "caseSensitive": "true", "names": ["p", "q", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "names/c0_clash/schema", "caseSensitive": "false", "names": ["p", "q"], "types": ["string", "string"], "rows": ["('1', '2')"]}
+{"ansi": "true", "tag": "names/c0_clash/schema/sensitive", "caseSensitive": "true", "names": ["p", "q"], "types": ["string", "string"], "rows": ["('1', '2')"]}
+{"ansi": "true", "tag": "names/c0_clash/schema3", "caseSensitive": "false", "names": ["p", "q", "k"], "types": ["int", "int", "int"], "rows": ["(1, 2, 3)"]}
+{"ansi": "true", "tag": "names/x0_clash/schema", "caseSensitive": "false", "names": ["p", "q", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "names/x0_clash/schema/sensitive", "caseSensitive": "true", "names": ["p", "q", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "corrupt/first", "caseSensitive": "false", "names": ["_corrupt_record", "a", "b"], "types": ["string", "int", "string"], "rows": ["('abc,y', None, 'y')", "(None, 1, 'x')", "(None, 3, 'z')"]}
+{"ansi": "true", "tag": "corrupt/middle", "caseSensitive": "false", "names": ["a", "_corrupt_record", "b"], "types": ["int", "string", "string"], "rows": ["(1, None, 'x')", "(3, None, 'z')", "(None, 'abc,y', 'y')"]}
+{"ansi": "true", "tag": "corrupt/last", "caseSensitive": "false", "names": ["a", "b", "_corrupt_record"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'y', 'abc,y')"]}
+{"ansi": "true", "tag": "corrupt/last_noheader", "caseSensitive": "false", "names": ["a", "b", "_corrupt_record"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'b', 'a,b')", "(None, 'y', 'abc,y')"]}
+{"ansi": "true", "tag": "corrupt/int_typed", "caseSensitive": "false", "error": "AnalysisException", "text": "[INVALID_CORRUPT_RECORD_TYPE] The column `_corrupt_record` for corrupt records must have the nullable STRING type, but got \"INT\". SQLSTATE: 42804"}
+{"ansi": "true", "tag": "corrupt/clean_rows", "caseSensitive": "false", "names": ["a", "b", "_corrupt_record"], "types": ["string", "string", "string"], "rows": ["('1', 'x', None)", "('3', 'z', None)", "('abc', 'y', None)"]}
+{"ansi": "true", "tag": "corrupt/option_default", "caseSensitive": "false", "names": ["a", "b", "_corrupt_record"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'y', 'abc,y')"]}
+{"ansi": "true", "tag": "corrupt/option_named", "caseSensitive": "false", "names": ["a", "b", "bad"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'y', 'abc,y')"]}
+{"ansi": "true", "tag": "corrupt/conf_named", "caseSensitive": "false", "names": ["a", "b", "bad"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'y', 'abc,y')"]}
+{"ansi": "true", "tag": "corrupt/conf_named_default_field", "caseSensitive": "false", "names": ["a", "b", "_corrupt_record"], "types": ["string", "string", "string"], "rows": ["('1', 'x', None)", "('3', 'z', None)", "('abc', 'y', None)"]}
+{"ansi": "true", "tag": "corrupt/other_case", "caseSensitive": "false", "names": ["a", "b", "_CORRUPT_RECORD"], "types": ["string", "string", "string"], "rows": ["('1', 'x', None)", "('3', 'z', None)", "('abc', 'y', None)"]}
+{"ansi": "true", "tag": "corrupt/other_case_int", "caseSensitive": "false", "names": ["a", "b", "_CORRUPT_RECORD"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'y', None)"]}
+{"ansi": "true", "tag": "corrupt/no_schema", "caseSensitive": "false", "names": ["a", "b"], "types": ["string", "string"], "rows": ["('1', 'x')", "('3', 'z')", "('abc', 'y')"]}
+{"ansi": "false", "tag": "names/case_dup", "caseSensitive": "false", "names": ["x0", "X1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "names/case_dup/sensitive", "caseSensitive": "true", "names": ["x", "X", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "names/case_dup/sensitive_select", "caseSensitive": "true", "names": ["x"], "types": ["string"], "rows": ["('1',)"]}
+{"ansi": "false", "tag": "names/case_dup/sensitive_schema", "caseSensitive": "true", "names": ["x", "X", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "names/unicode_case", "caseSensitive": "false", "names": ["\u00e40", "\u00c41", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "names/unicode_case/sensitive", "caseSensitive": "true", "names": ["\u00e4", "\u00c4", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "names/triple/sensitive_schema", "caseSensitive": "true", "names": ["p", "q", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "names/c0_clash/schema", "caseSensitive": "false", "names": ["p", "q"], "types": ["string", "string"], "rows": ["('1', '2')"]}
+{"ansi": "false", "tag": "names/c0_clash/schema/sensitive", "caseSensitive": "true", "names": ["p", "q"], "types": ["string", "string"], "rows": ["('1', '2')"]}
+{"ansi": "false", "tag": "names/c0_clash/schema3", "caseSensitive": "false", "names": ["p", "q", "k"], "types": ["int", "int", "int"], "rows": ["(1, 2, 3)"]}
+{"ansi": "false", "tag": "names/x0_clash/schema", "caseSensitive": "false", "names": ["p", "q", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "names/x0_clash/schema/sensitive", "caseSensitive": "true", "names": ["p", "q", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "false", "tag": "corrupt/first", "caseSensitive": "false", "names": ["_corrupt_record", "a", "b"], "types": ["string", "int", "string"], "rows": ["('abc,y', None, 'y')", "(None, 1, 'x')", "(None, 3, 'z')"]}
+{"ansi": "false", "tag": "corrupt/middle", "caseSensitive": "false", "names": ["a", "_corrupt_record", "b"], "types": ["int", "string", "string"], "rows": ["(1, None, 'x')", "(3, None, 'z')", "(None, 'abc,y', 'y')"]}
+{"ansi": "false", "tag": "corrupt/last", "caseSensitive": "false", "names": ["a", "b", "_corrupt_record"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'y', 'abc,y')"]}
+{"ansi": "false", "tag": "corrupt/last_noheader", "caseSensitive": "false", "names": ["a", "b", "_corrupt_record"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'b', 'a,b')", "(None, 'y', 'abc,y')"]}
+{"ansi": "false", "tag": "corrupt/int_typed", "caseSensitive": "false", "error": "AnalysisException", "text": "[INVALID_CORRUPT_RECORD_TYPE] The column `_corrupt_record` for corrupt records must have the nullable STRING type, but got \"INT\". SQLSTATE: 42804"}
+{"ansi": "false", "tag": "corrupt/clean_rows", "caseSensitive": "false", "names": ["a", "b", "_corrupt_record"], "types": ["string", "string", "string"], "rows": ["('1', 'x', None)", "('3', 'z', None)", "('abc', 'y', None)"]}
+{"ansi": "false", "tag": "corrupt/option_default", "caseSensitive": "false", "names": ["a", "b", "_corrupt_record"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'y', 'abc,y')"]}
+{"ansi": "false", "tag": "corrupt/option_named", "caseSensitive": "false", "names": ["a", "b", "bad"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'y', 'abc,y')"]}
+{"ansi": "false", "tag": "corrupt/conf_named", "caseSensitive": "false", "names": ["a", "b", "bad"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'y', 'abc,y')"]}
+{"ansi": "false", "tag": "corrupt/conf_named_default_field", "caseSensitive": "false", "names": ["a", "b", "_corrupt_record"], "types": ["string", "string", "string"], "rows": ["('1', 'x', None)", "('3', 'z', None)", "('abc', 'y', None)"]}
+{"ansi": "false", "tag": "corrupt/other_case", "caseSensitive": "false", "names": ["a", "b", "_CORRUPT_RECORD"], "types": ["string", "string", "string"], "rows": ["('1', 'x', None)", "('3', 'z', None)", "('abc', 'y', None)"]}
+{"ansi": "false", "tag": "corrupt/other_case_int", "caseSensitive": "false", "names": ["a", "b", "_CORRUPT_RECORD"], "types": ["int", "string", "string"], "rows": ["(1, 'x', None)", "(3, 'z', None)", "(None, 'y', None)"]}
+{"ansi": "false", "tag": "corrupt/no_schema", "caseSensitive": "false", "names": ["a", "b"], "types": ["string", "string"], "rows": ["('1', 'x')", "('3', 'z')", "('abc', 'y')"]}
