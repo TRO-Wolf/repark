@@ -57,6 +57,23 @@ decision (recording the live ones then). With no memo in scope it reads the live
   no scope means live; a scope restores the outer one on return, on unwind and through `enter`/`restore`, and
   another thread sees none.
 
+- `held_iceberg.rs` — ICE-HELD-FRAME-SNAPSHOT-1 unit 1a (2026-11-20): Spark's execution-time re-bind of a held
+  Iceberg scan (`V2TableRefreshUtil`), run inside the reader-parse rule after its parse decision, so once per
+  optimisation of every action. For each scan whose provider carries a binding (`session_tables::binding`, the
+  planning load captured at resolution) it decides the table once per `(catalog, identifier)` per plan: the open
+  own-plan memo's table if it holds one, else the session's current state, which it then records in the memo. The same
+  metadata location keeps the scan as it is; a dropped table raises `TABLE_OR_VIEW_NOT_FOUND`; another table UUID
+  raises `INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH` (not inside a view); a held column that is gone
+  or has another type or nullability, by name, raises `….COLUMNS_MISMATCH` (inside a view
+  `INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION`), and under a write (the command scope) an added column
+  does too. Otherwise the scan's source becomes `HeldIcebergScan`, the held schema over a provider built on the
+  decided table through a one-table shim (no catalog call), its projection mapped by name and its output conformed to
+  the held schema when only field metadata differs (a dropped and re-added column). `bound_for_view` gives a DataFrame
+  view's scans a clone of the provider bound in view mode, a `_repark_writer_` scratch view's in command mode, and
+  leaves other internal scratch views (`_repark_`, `__repark_`, `__rp_`) in query mode. The wrapper lives only in an
+  optimised plan.
+- [held_iceberg/](held_iceberg/map.md) — its unit tests (the zero-inner-load proof).
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

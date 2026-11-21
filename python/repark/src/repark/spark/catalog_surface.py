@@ -744,7 +744,7 @@ def refresh_table(catalog: Catalog, table_name: str) -> None:
         if entry is not None:
             entry[0].unpersist()
     _unpersist_identity_frames(session._alive_token, resolved)
-    session.refresh_catalog_provider(resolved.split(".")[0])
+    session._ensure_alive().sql_built(f"REFRESH TABLE {_sql_table_ref(resolved)}")
 
 
 def refresh_by_path(catalog: Catalog, path: str) -> None:

@@ -1,0 +1,216 @@
+{
+ "false": {
+  "add_column_collect": [
+   [
+    "n",
+    "c"
+   ],
+   [
+    "(1, 'a')",
+    "(2, 'b')",
+    "(9, 'z')"
+   ]
+  ],
+  "add_column_derived_copy": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "call_rollback": 2,
+  "checkpoint_after_collect": [
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   2
+  ],
+  "delete_copy_stored": [
+   "(2, 'b')"
+  ],
+  "delete_count": 1,
+  "delete_insert_into_stored": [
+   "(2, 'b')"
+  ],
+  "dfview_drop_column": "ERROR INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION",
+  "dfview_drop_column_sql_explain": [
+   "ROWS",
+   "INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION"
+  ],
+  "dfview_recreate": [
+   "(5, 'r')"
+  ],
+  "drop_column_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "drop_column_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "drop_column_explain_extended": [
+   "PRINTED",
+   "INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH"
+  ],
+  "drop_column_filter_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "dropped_table_count": "ERROR TABLE_OR_VIEW_NOT_FOUND",
+  "dropped_table_explain": "ERROR TABLE_OR_VIEW_NOT_FOUND",
+  "insert_collect": [
+   "(1, 'a')",
+   "(2, 'b')",
+   "(9, 'z')"
+  ],
+  "insert_explain": [
+   "PRINTED",
+   null
+  ],
+  "join_with_fresh": [
+   "(1, 'a')",
+   "(2, 'b')",
+   "(9, 'z')"
+  ],
+  "own_collect_then_count": [
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   3
+  ],
+  "own_collect_twice": [
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ]
+  ],
+  "own_explain_then_collect": [
+   "(1, 'a')",
+   "(2, 'b')"
+  ],
+  "readd_by_name": [
+   "(1, None)",
+   "(2, None)",
+   "(9, 'z')"
+  ],
+  "recreate_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+  "recreate_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+  "reorder_collect": [
+   "(1, 'a')",
+   "(2, 'b')",
+   "(9, 'z')"
+  ],
+  "self_append": [
+   "(1, 'a')",
+   "(1, 'a')",
+   "(2, 'b')",
+   "(2, 'b')",
+   "(9, 'z')",
+   "(9, 'z')"
+  ],
+  "truncate_count": 0,
+  "version_as_of_pinned": [
+   "(1, 'a')",
+   "(2, 'b')"
+  ],
+  "widen_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH"
+ },
+ "true": {
+  "add_column_collect": [
+   [
+    "n",
+    "c"
+   ],
+   [
+    "(1, 'a')",
+    "(2, 'b')",
+    "(9, 'z')"
+   ]
+  ],
+  "add_column_derived_copy": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "call_rollback": 2,
+  "checkpoint_after_collect": [
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   2
+  ],
+  "delete_copy_stored": [
+   "(2, 'b')"
+  ],
+  "delete_count": 1,
+  "delete_insert_into_stored": [
+   "(2, 'b')"
+  ],
+  "dfview_drop_column": "ERROR INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION",
+  "dfview_drop_column_sql_explain": [
+   "ROWS",
+   "INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION"
+  ],
+  "dfview_recreate": [
+   "(5, 'r')"
+  ],
+  "drop_column_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "drop_column_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "drop_column_explain_extended": [
+   "PRINTED",
+   "INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH"
+  ],
+  "drop_column_filter_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+  "dropped_table_count": "ERROR TABLE_OR_VIEW_NOT_FOUND",
+  "dropped_table_explain": "ERROR TABLE_OR_VIEW_NOT_FOUND",
+  "insert_collect": [
+   "(1, 'a')",
+   "(2, 'b')",
+   "(9, 'z')"
+  ],
+  "insert_explain": [
+   "PRINTED",
+   null
+  ],
+  "join_with_fresh": [
+   "(1, 'a')",
+   "(2, 'b')",
+   "(9, 'z')"
+  ],
+  "own_collect_then_count": [
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   3
+  ],
+  "own_collect_twice": [
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ]
+  ],
+  "own_explain_then_collect": [
+   "(1, 'a')",
+   "(2, 'b')"
+  ],
+  "readd_by_name": [
+   "(1, None)",
+   "(2, None)",
+   "(9, 'z')"
+  ],
+  "recreate_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+  "recreate_explain": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+  "reorder_collect": [
+   "(1, 'a')",
+   "(2, 'b')",
+   "(9, 'z')"
+  ],
+  "self_append": [
+   "(1, 'a')",
+   "(1, 'a')",
+   "(2, 'b')",
+   "(2, 'b')",
+   "(9, 'z')",
+   "(9, 'z')"
+  ],
+  "truncate_count": 0,
+  "version_as_of_pinned": [
+   "(1, 'a')",
+   "(2, 'b')"
+  ],
+  "widen_count": "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH"
+ }
+}
