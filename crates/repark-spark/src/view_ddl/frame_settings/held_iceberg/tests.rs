@@ -1,5 +1,8 @@
 use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::task::{Context, Poll};
 
 use datafusion::arrow::array::{Array, Int32Array};
 use datafusion::prelude::DataFrame;
@@ -368,4 +371,124 @@ async fn a_refused_write_moves_no_epoch_and_a_held_frame_answers_as_before() {
         assert_eq!(epoch(&bed), before, "{sql}");
         assert_eq!(numbers(&held).await, vec![1, 2], "{sql}");
     }
+}
+
+struct Under<F> {
+    memo: Arc<ReaderParseMemo>,
+    inner: Pin<Box<F>>,
+}
+
+impl<F: Future> Future for Under<F> {
+    type Output = F::Output;
+
+    fn poll(self: Pin<&mut Self>, context: &mut Context<'_>) -> Poll<F::Output> {
+        let this = self.get_mut();
+        let inner = this.inner.as_mut();
+        ReaderParseMemo::within(Some(Arc::clone(&this.memo)), || inner.poll(context))
+    }
+}
+
+fn under<F: Future>(memo: &Arc<ReaderParseMemo>, inner: F) -> Under<F> {
+    Under {
+        memo: Arc::clone(memo),
+        inner: Box::pin(inner),
+    }
+}
+
+async fn cached(bed: &Bed, name: &str, owner: Option<Arc<ReaderParseMemo>>) -> DataFrame {
+    let held = bed.held().await;
+    bed.session
+        .register_lazy_cache_view(name, held, (None, None), None, owner)
+        .await
+        .unwrap_or_else(|error| panic!("cache: {error}"));
+    bed.session
+        .sql(&format!("SELECT * FROM {name}"))
+        .await
+        .unwrap_or_else(|error| panic!("cached read: {error}"))
+}
+
+async fn served(frame: &DataFrame) -> (Vec<i32>, usize) {
+    let batches = frame
+        .clone()
+        .collect()
+        .await
+        .unwrap_or_else(|error| panic!("collect: {error}"));
+    let buffer = batches.first().map_or(0, |batch| {
+        batch.column(0).to_data().buffers()[0].as_ptr() as usize
+    });
+    let mut found = Vec::new();
+    for batch in &batches {
+        let values = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap_or_else(|| panic!("int column"));
+        found.extend((0..values.len()).map(|row| values.value(row)));
+    }
+    found.sort_unstable();
+    (found, buffer)
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_cached_frame_refills_after_a_same_session_commit_and_keeps_its_fill_otherwise() {
+    let bed = bed().await;
+    bed.run("CREATE TABLE c.ns.u (n INT) USING iceberg").await;
+    let cached = cached(&bed, "__repark_cache_h", None).await;
+    let (rows, first) = served(&cached).await;
+    assert_eq!(rows, vec![1, 2]);
+    for sql in [
+        "INSERT INTO c.ns.u VALUES (7)",
+        "ALTER TABLE c.ns.t SET TBLPROPERTIES ('k' = 'v')",
+        "ALTER TABLE c.ns.t ADD COLUMN d INT",
+    ] {
+        bed.run(sql).await;
+        assert_eq!(served(&cached).await, (vec![1, 2], first), "{sql}");
+    }
+    bed.run("INSERT INTO c.ns.t VALUES (9, 'z', 5)").await;
+    let (rows, refilled) = served(&cached).await;
+    assert_eq!(rows, vec![1, 2, 9]);
+    assert_ne!(refilled, first);
+    assert_eq!(served(&cached).await, (vec![1, 2, 9], refilled));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_cached_frame_over_a_recreated_or_dropped_table_refuses_at_its_refill() {
+    let bed = bed().await;
+    let cached = cached(&bed, "__repark_cache_r", None).await;
+    assert_eq!(numbers(&cached).await, vec![1, 2]);
+    bed.run("DROP TABLE c.ns.t").await;
+    bed.run("CREATE TABLE c.ns.t (n INT, c STRING) USING iceberg")
+        .await;
+    let text = cached
+        .clone()
+        .collect()
+        .await
+        .map_or_else(|error| error.to_string(), |_| String::new());
+    assert!(
+        text.contains("INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH"),
+        "{text}"
+    );
+    bed.run("DROP TABLE c.ns.t").await;
+    let text = cached
+        .clone()
+        .collect()
+        .await
+        .map_or_else(|error| error.to_string(), |_| String::new());
+    assert!(text.contains("TABLE_OR_VIEW_NOT_FOUND"), "{text}");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn an_own_plan_memo_keeps_the_binding_its_cache_noted() {
+    let bed = bed().await;
+    let memo = Arc::new(ReaderParseMemo::default());
+    let cached = cached(&bed, "__repark_cache_o", Some(Arc::clone(&memo))).await;
+    bed.run("INSERT INTO c.ns.t VALUES (9, 'z')").await;
+    assert_eq!(under(&memo, numbers(&cached)).await, vec![1, 2]);
+    assert_eq!(numbers(&cached).await, vec![1, 2, 9]);
+    assert_eq!(under(&memo, numbers(&cached)).await, vec![1, 2]);
+    let fresh = Arc::new(ReaderParseMemo::default());
+    assert_eq!(under(&fresh, numbers(&cached)).await, vec![1, 2, 9]);
+    bed.run("INSERT INTO c.ns.t VALUES (8, 'q')").await;
+    assert_eq!(under(&fresh, numbers(&cached)).await, vec![1, 2, 9]);
+    assert_eq!(numbers(&cached).await, vec![1, 2, 8, 9]);
 }

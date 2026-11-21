@@ -15,9 +15,11 @@ use arrow::datatypes::SchemaRef;
 use async_trait::async_trait;
 use datafusion::catalog::{Session, TableProvider};
 use datafusion::common::config::ConfigOptions;
+use datafusion::common::tree_node::TreeNodeRecursion;
 use datafusion::common::{DFSchema, Statistics};
 use datafusion::datasource::memory::MemorySourceConfig;
 use datafusion::datasource::source::DataSourceExec;
+use datafusion::datasource::source_as_provider;
 use datafusion::error::{DataFusionError, Result as FusionResult};
 use datafusion::execution::session_state::SessionState;
 use datafusion::execution::{SendableRecordBatchStream, TaskContext};
@@ -29,13 +31,17 @@ use datafusion::physical_plan::{
 };
 use datafusion::prelude::DataFrame;
 use futures::TryStreamExt;
+use iceberg::table::Table;
 use repark_common::{Error, Result};
+use repark_iceberg::catalog::session_tables::{
+    HeldTable, SessionTables, TableState, binding, same_state,
+};
 use tokio::sync::OnceCell;
 
 use super::super::ReparkSession;
 use crate::column_resolution::{on_grown_stack_with, run_on_grown_stack};
 use crate::engine_err;
-use crate::extension::{ReaderParseMemo, reader_parse_memo};
+use crate::extension::{ReaderParseMemo, TableRead, reader_parse_memo};
 use crate::temp_view::TempViewHome;
 
 const LIVE_READ_WAIT: Duration = Duration::from_secs(1);
@@ -114,9 +120,54 @@ fn within<F: Future>(memo: Option<Arc<ReaderParseMemo>>, future: F) -> Within<F>
     }
 }
 
+struct Dep {
+    read: TableRead,
+    epoch: Option<u64>,
+    seen: Option<HeldTable>,
+}
+
+impl Dep {
+    fn holds(&mut self, tables: &SessionTables) -> bool {
+        let Some(epoch) = self.epoch else {
+            return false;
+        };
+        let now = tables.epoch(&self.read.catalog, &self.read.ident);
+        if now == epoch {
+            return true;
+        }
+        let Some(TableState::Live(current)) = tables.current(&self.read.catalog, &self.read.ident)
+        else {
+            return false;
+        };
+        let kept = self.seen.as_ref().is_some_and(|seen| {
+            !same_state(seen.table(), current.table()) && same_data(seen.table(), current.table())
+        });
+        if kept {
+            self.epoch = Some(now);
+            self.seen = Some(current);
+        }
+        kept
+    }
+}
+
+fn same_data(seen: &Table, current: &Table) -> bool {
+    let (seen, current) = (seen.metadata(), current.metadata());
+    seen.uuid() == current.uuid()
+        && seen.current_snapshot_id() == current.current_snapshot_id()
+        && seen.history().last() == current.history().last()
+}
+
+fn live(state: Option<TableState>) -> Option<HeldTable> {
+    match state {
+        Some(TableState::Live(table)) => Some(table),
+        _ => None,
+    }
+}
+
 struct Fill {
     batches: Vec<RecordBatch>,
     memo: Arc<ReaderParseMemo>,
+    deps: Mutex<Vec<Dep>>,
 }
 
 enum Mode {
@@ -147,6 +198,8 @@ struct Shared {
     stacks: LazyStacks,
     owner: Option<Weak<ReaderParseMemo>>,
     mode: Mutex<Mode>,
+    tables: Option<Arc<SessionTables>>,
+    reads: Vec<TableRead>,
 }
 
 pub(crate) struct LazyCacheTable {
@@ -180,6 +233,8 @@ impl LazyCacheTable {
         });
         let analyzed = GrownPlan::new(analyzed.map_err(engine_err)?, stacks);
         let schema = stored_schema(&analyzed)?;
+        let tables = state.config().get_extension::<SessionTables>();
+        let reads = stacks.run(|| pinned_reads(&analyzed, owner.as_deref()));
         let order = declared_order(&state, &analyzed, &schema, stacks).await;
         let shared = session.context().state_ref();
         let weak = Arc::downgrade(&shared);
@@ -203,6 +258,8 @@ impl LazyCacheTable {
                     .filter(|memo| memo.is_settled())
                     .map(|memo| Arc::downgrade(&memo)),
                 mode: Mutex::new(Mode::Armed(Arc::new(OnceCell::new()))),
+                tables,
+                reads,
             }),
         })
     }
@@ -257,6 +314,36 @@ impl LazyCacheTable {
 pub(crate) fn lazy_cache_of(provider: &dyn TableProvider) -> Option<&LazyCacheTable> {
     let any: &dyn Any = provider;
     any.downcast_ref::<LazyCacheTable>()
+}
+
+fn pinned_reads(analyzed: &LogicalPlan, owner: Option<&ReaderParseMemo>) -> Vec<TableRead> {
+    let mut reads: Vec<TableRead> = Vec::new();
+    let walked = analyzed.apply_with_subqueries(|node| {
+        if let LogicalPlan::TableScan(scan) = node
+            && let Ok(provider) = source_as_provider(&scan.source)
+            && let Some(bound) = binding(&provider)
+        {
+            let key = bound.memo_key();
+            if let Some(owner) = owner {
+                owner.note_read(&key, bound.catalog(), bound.ident());
+                if let Some(table) = live(bound.current()) {
+                    owner.hold_table(&key, table);
+                }
+            }
+            if reads.iter().all(|read| read.key != key) {
+                reads.push(TableRead {
+                    key,
+                    catalog: bound.catalog().to_string(),
+                    ident: bound.ident().clone(),
+                });
+            }
+        }
+        Ok(TreeNodeRecursion::Continue)
+    });
+    if walked.is_err() {
+        reads.clear();
+    }
+    reads
 }
 
 fn stored_schema(analyzed: &LogicalPlan) -> Result<SchemaRef> {
@@ -331,17 +418,103 @@ impl Shared {
             Mode::Armed(cell) => Some(Arc::clone(cell)),
             Mode::Released => None,
         };
-        match cell {
-            Some(cell) if !self.owner_acts(acting) => {
-                if let Some(fill) = cell.get() {
-                    return Ok(Step::Serve(Arc::clone(fill)));
-                }
-                let memo = Arc::new(ReaderParseMemo::default());
-                let decided = self.decide(Some(Arc::clone(&memo)))?;
-                Ok(Step::Fill(cell, decided, memo))
-            }
-            _ => Ok(Step::Pass(self.decide(acting.cloned())?)),
+        let cell = match cell {
+            Some(cell) if !self.owner_acts(acting) => cell,
+            _ => return Ok(Step::Pass(self.decide(acting.cloned())?)),
+        };
+        let fill = cell.get().map(Arc::clone);
+        let filled = fill.is_some();
+        let fresh = fill.filter(|fill| self.fresh(fill));
+        let cell = match (filled, &fresh) {
+            (true, None) => match self.rearm(&cell) {
+                Some(cell) => cell,
+                None => return Ok(Step::Pass(self.decide(acting.cloned())?)),
+            },
+            _ => cell,
+        };
+        if acting.is_some_and(|memo| self.kept_apart(memo, fresh.as_deref())) {
+            return Ok(Step::Pass(self.decide(acting.cloned())?));
         }
+        if let Some(fill) = fresh {
+            return Ok(Step::Serve(fill));
+        }
+        let memo = Arc::new(ReaderParseMemo::default());
+        let decided = self.decide(Some(Arc::clone(&memo)))?;
+        Ok(Step::Fill(cell, decided, memo))
+    }
+
+    fn fresh(&self, fill: &Fill) -> bool {
+        let Some(tables) = self.tables.as_deref() else {
+            return true;
+        };
+        let mut deps = fill.deps.lock().unwrap_or_else(PoisonError::into_inner);
+        deps.iter_mut().all(|dep| dep.holds(tables))
+    }
+
+    fn rearm(&self, stale: &Arc<OnceCell<Arc<Fill>>>) -> Option<Arc<OnceCell<Arc<Fill>>>> {
+        let mut mode = self.mode.lock().unwrap_or_else(PoisonError::into_inner);
+        match &*mode {
+            Mode::Armed(cell) if !Arc::ptr_eq(cell, stale) => Some(Arc::clone(cell)),
+            Mode::Armed(_) => {
+                let cell = Arc::new(OnceCell::new());
+                *mode = Mode::Armed(Arc::clone(&cell));
+                Some(cell)
+            }
+            Mode::Released => None,
+        }
+    }
+
+    fn kept_apart(&self, acting: &ReaderParseMemo, fill: Option<&Fill>) -> bool {
+        let Some(tables) = self.tables.as_deref() else {
+            return false;
+        };
+        let deps = fill.map(|fill| fill.deps.lock().unwrap_or_else(PoisonError::into_inner));
+        let served = |read: &TableRead| match deps
+            .as_ref()
+            .and_then(|deps| deps.iter().find(|dep| dep.read.key == read.key))
+        {
+            Some(dep) => dep.seen.clone(),
+            None => live(tables.current(&read.catalog, &read.ident)),
+        };
+        let extra = deps
+            .as_ref()
+            .map(|deps| deps.iter().map(|dep| dep.read.clone()).collect::<Vec<_>>())
+            .unwrap_or_default();
+        self.reads.iter().chain(extra.iter()).any(|read| {
+            acting.held_table(&read.key).is_some_and(|held| {
+                served(read).is_none_or(|served| !same_data(held.table(), served.table()))
+            })
+        })
+    }
+
+    fn deps(&self, memo: &ReaderParseMemo) -> Vec<Dep> {
+        let Some(tables) = self.tables.as_deref() else {
+            return Vec::new();
+        };
+        let mut reads = self.reads.clone();
+        for read in memo.reads() {
+            if reads.iter().all(|known| known.key != read.key) {
+                reads.push(read);
+            }
+        }
+        reads
+            .into_iter()
+            .map(|read| {
+                let now = tables.epoch(&read.catalog, &read.ident);
+                let current = live(tables.current(&read.catalog, &read.ident));
+                let seen = memo.held_table(&read.key).or_else(|| current.clone());
+                let valid = match (&seen, &current) {
+                    (Some(seen), Some(current)) => same_data(seen.table(), current.table()),
+                    (None, None) => true,
+                    _ => false,
+                };
+                Dep {
+                    read,
+                    epoch: valid.then_some(now),
+                    seen: if valid { current } else { seen },
+                }
+            })
+            .collect()
     }
 
     fn decide(&self, memo: Option<Arc<ReaderParseMemo>>) -> FusionResult<Decided> {
@@ -440,11 +613,17 @@ impl Shared {
             Step::Fill(cell, decided, memo) => {
                 let budgets = *self.budgets.lock().unwrap_or_else(PoisonError::into_inner);
                 let filling = Box::pin(self.collect(decided, Some(Arc::clone(&memo)), budgets));
+                let shared = Arc::clone(&self);
                 let fill = cell
                     .get_or_try_init(|| async move {
-                        filling
-                            .await
-                            .map(|batches| Arc::new(Fill { batches, memo }))
+                        filling.await.map(|batches| {
+                            let deps = Mutex::new(shared.deps(&memo));
+                            Arc::new(Fill {
+                                batches,
+                                memo,
+                                deps,
+                            })
+                        })
                     })
                     .await?;
                 Arc::clone(fill)
