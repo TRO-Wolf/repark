@@ -27,6 +27,18 @@ stay pinned. The parent [../map.md](../map.md) is at its size ceiling, so the pi
   view's condition; `explain` after an insert prints a plan. 12 are red on main and 10 on the fix round 1 head. The 4
   refused-write cells read the held frame by `count` and by a child, since `collect` keeps its first binding.
   pins: ice-held-frame-snapshot-1/1a-delta-1.
+- `test_ice_held_frame_snapshot_1_cached.py` — unit 2 (2026-11-21): 68 cells (34 shapes in both ANSI modes) on a
+  cached Iceberg frame against the recorded Spark answers. A same-session write (`INSERT`, `DELETE`, `MERGE`,
+  `overwrite`, `insertInto`, `writeTo().append()`, two inserts) re-fills the cache for the next query, through a
+  child, a DataFrame view, a cached SQL-view frame, a nested cache and a cached join; `REFRESH TABLE` and
+  `refreshTable` re-fill it (a new `current_timestamp()`); a write to another table, a failed write, a property
+  change and a fresh read keep it. Own-plan actions keep the binding of `cache()` or of their first action. A
+  cached bare table keeps its fill after a dropped or renamed column; with new data after the change it re-binds
+  (`COLUMNS_MISMATCH`, `TABLE_ID_MISMATCH`, `TABLE_OR_VIEW_NOT_FOUND`, or the old columns over the new rows). 50 are
+  red on main `0cc65e9a`. pins: ice-held-frame-snapshot-1/unit-2.
+- `_ice_held_frame_snapshot_1_cached_cells.py` — unit 2's cells, engine-agnostic.
+- `_record_ice_held_frame_snapshot_1_cached.py` — re-records unit 2's oracle, as the recorder below does.
+- `ice_held_frame_snapshot_1_cached_spark_oracle.json` — unit 2's recorded Spark answers, keyed by ANSI mode.
 - `_ice_held_frame_snapshot_1_cells.py` — the cells, engine-agnostic, shared by the test and the recorder.
 - `_ice_held_frame_snapshot_1_enc_1_cells.py` — the ENC-1 cells (fix round 1), RePark only.
 - `_record_ice_held_frame_snapshot_1.py` — re-records the oracle on live PySpark 4.1.2 with Iceberg 1.11.0:
