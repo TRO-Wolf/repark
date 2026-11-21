@@ -35,5 +35,18 @@ sits at its line ceiling.
     are sorted to the declared order if the fill's plan did not deliver it. `LazyCacheExec` reports unknown
     statistics, so no count is answered from an empty template.
   - `cache_budget::buffer_set_of` counts a filled table's batches with the `MemTable` caches.
+  - **ICE-HELD-FRAME-SNAPSHOT-1 unit 2 (2026-11-21): the fill follows the session's commits.** A fill records, for
+    each Iceberg table its plan read (the lineage's bound scans at registration, and every scan the fill's memo
+    noted, nested views and nested caches included), the session table map's epoch and the table it read. A use
+    whose epoch has moved drops the fill and refills under the live state (Spark's same-session re-cache), except
+    when the table keeps its UUID, current snapshot and last snapshot-log entry (an `ALTER` of the schema or the
+    properties, a branch): then the fill is kept and the dep moves to the new epoch. A `REFRESH` (a new epoch over
+    the same state), a drop, a recreate and every data commit refill; a refill that the re-bind refuses keeps
+    nothing and raises its condition. Another writer's commit moves no epoch, so the fill stays (on Glue and S3
+    Tables a fresh read that sees it moves the epoch: Q2 (b)).
+  - **Own-plan actions keep their first binding through the cache.** `cache()` notes the lineage's tables in the
+    acting frame's memo at their current state (Spark fixes the frame's own plan there). A memo that holds a table
+    whose data differs from what the cache would serve reads the lineage under that memo (the pass-through) and
+    keeps nothing; one that holds none reads the cache, and `adopt` gives it the fill's tables.
 
 Up: [../map.md](../map.md).

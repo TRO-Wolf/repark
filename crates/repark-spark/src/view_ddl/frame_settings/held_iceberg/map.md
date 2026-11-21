@@ -10,6 +10,11 @@ DataFrame view's; an own-plan memo keeps its first binding; a recreated table re
 added column is read with the frame's columns and a dropped one refuses with `COLUMNS_MISMATCH`; a view name picks
 the binding mode; and (ENC-1 condition 2) on a keyed table, a refused `INSERT`, `INSERT OVERWRITE`, `DELETE`,
 `UPDATE` and `MERGE` each leave the session epoch where it was and the held frame answering its two rows.
+Unit 2 (2026-11-21), a lazy cache table over a held frame: it keeps its fill (the same buffer) across a write to
+another table, a property change and an added column, refills after an insert into its table and keeps the refill; a
+recreate refuses its refill with `TABLE_ID_MISMATCH` and a drop with `TABLE_OR_VIEW_NOT_FOUND`; an own-plan memo
+noted at registration keeps that binding after an insert while a fresh read refills, and a memo that first read the
+cache keeps that fill's binding after a second insert.
 
 ## Contents
 

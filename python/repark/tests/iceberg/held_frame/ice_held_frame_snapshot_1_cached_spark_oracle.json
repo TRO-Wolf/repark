@@ -1,0 +1,446 @@
+{
+ "false": {
+  "added_column_then_insert": [
+   2,
+   3,
+   [
+    "(1,)",
+    "(2,)",
+    "(9,)"
+   ],
+   true
+  ],
+  "cache_append": [
+   2,
+   3,
+   3
+  ],
+  "cache_count": [
+   2,
+   3,
+   3
+  ],
+  "cache_held": [
+   2,
+   3
+  ],
+  "cache_lazy": [
+   3,
+   3
+  ],
+  "cache_table": [
+   3,
+   3
+  ],
+  "cached_sql_view_frame": [
+   2,
+   3
+  ],
+  "child_collect_twice": [
+   2,
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   3
+  ],
+  "child_first_collect": [
+   2,
+   [
+    "(1, 'a')",
+    "(2, 'b')",
+    "(9, 'z')"
+   ]
+  ],
+  "child_of_cached": [
+   2,
+   2,
+   3
+  ],
+  "collect_then_cache": [
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   2,
+   3,
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ]
+  ],
+  "delete_refills": [
+   2,
+   1,
+   [
+    "(2, 'b')"
+   ]
+  ],
+  "dropped_column_keeps_the_fill": [
+   2,
+   2,
+   [
+    "(1,)",
+    "(2,)"
+   ],
+   true
+  ],
+  "dropped_column_then_insert": [
+   2,
+   "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+   "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+   true
+  ],
+  "dropped_table": [
+   2,
+   "ERROR TABLE_OR_VIEW_NOT_FOUND",
+   "ERROR TABLE_OR_VIEW_NOT_FOUND",
+   true
+  ],
+  "insert_into_refills": [
+   2,
+   3,
+   [
+    "(1, 'a')",
+    "(2, 'b')",
+    "(9, 'z')"
+   ]
+  ],
+  "join_other_table": [
+   2,
+   3
+  ],
+  "kept_after_a_failed_write": [
+   true,
+   2,
+   "ERROR UNRESOLVED_COLUMN.WITH_SUGGESTION"
+  ],
+  "kept_after_a_fresh_read": [
+   true,
+   2,
+   2
+  ],
+  "kept_after_a_property_change": [
+   true,
+   2,
+   null
+  ],
+  "kept_after_another_table_write": [
+   true,
+   2,
+   null
+  ],
+  "merge_refills": [
+   2,
+   3,
+   [
+    "(1, 'a')",
+    "(2, 'y')",
+    "(9, 'z')"
+   ]
+  ],
+  "nested_cache": [
+   2,
+   2,
+   3,
+   3
+  ],
+  "overwrite_refills": [
+   2,
+   1,
+   [
+    "(7, 'o')"
+   ]
+  ],
+  "own_collect_twice": [
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   3
+  ],
+  "own_count_collect": [
+   2,
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ]
+  ],
+  "own_insert_collect": [
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   3
+  ],
+  "recreated_table": [
+   2,
+   "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+   "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+   true
+  ],
+  "refilled_after_an_insert": [
+   false,
+   3,
+   null
+  ],
+  "refilled_after_refresh_api": [
+   false,
+   2,
+   null
+  ],
+  "refilled_after_refresh_table": [
+   false,
+   2,
+   null
+  ],
+  "renamed_column_keeps_the_fill": [
+   2,
+   2,
+   [
+    "(1,)",
+    "(2,)"
+   ],
+   true
+  ],
+  "two_inserts": [
+   2,
+   3,
+   4
+  ],
+  "view_of_cached": [
+   2,
+   3
+  ]
+ },
+ "true": {
+  "added_column_then_insert": [
+   2,
+   3,
+   [
+    "(1,)",
+    "(2,)",
+    "(9,)"
+   ],
+   true
+  ],
+  "cache_append": [
+   2,
+   3,
+   3
+  ],
+  "cache_count": [
+   2,
+   3,
+   3
+  ],
+  "cache_held": [
+   2,
+   3
+  ],
+  "cache_lazy": [
+   3,
+   3
+  ],
+  "cache_table": [
+   3,
+   3
+  ],
+  "cached_sql_view_frame": [
+   2,
+   3
+  ],
+  "child_collect_twice": [
+   2,
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   3
+  ],
+  "child_first_collect": [
+   2,
+   [
+    "(1, 'a')",
+    "(2, 'b')",
+    "(9, 'z')"
+   ]
+  ],
+  "child_of_cached": [
+   2,
+   2,
+   3
+  ],
+  "collect_then_cache": [
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   2,
+   3,
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ]
+  ],
+  "delete_refills": [
+   2,
+   1,
+   [
+    "(2, 'b')"
+   ]
+  ],
+  "dropped_column_keeps_the_fill": [
+   2,
+   2,
+   [
+    "(1,)",
+    "(2,)"
+   ],
+   true
+  ],
+  "dropped_column_then_insert": [
+   2,
+   "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+   "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH",
+   true
+  ],
+  "dropped_table": [
+   2,
+   "ERROR TABLE_OR_VIEW_NOT_FOUND",
+   "ERROR TABLE_OR_VIEW_NOT_FOUND",
+   true
+  ],
+  "insert_into_refills": [
+   2,
+   3,
+   [
+    "(1, 'a')",
+    "(2, 'b')",
+    "(9, 'z')"
+   ]
+  ],
+  "join_other_table": [
+   2,
+   3
+  ],
+  "kept_after_a_failed_write": [
+   true,
+   2,
+   "ERROR UNRESOLVED_COLUMN.WITH_SUGGESTION"
+  ],
+  "kept_after_a_fresh_read": [
+   true,
+   2,
+   2
+  ],
+  "kept_after_a_property_change": [
+   true,
+   2,
+   null
+  ],
+  "kept_after_another_table_write": [
+   true,
+   2,
+   null
+  ],
+  "merge_refills": [
+   2,
+   3,
+   [
+    "(1, 'a')",
+    "(2, 'y')",
+    "(9, 'z')"
+   ]
+  ],
+  "nested_cache": [
+   2,
+   2,
+   3,
+   3
+  ],
+  "overwrite_refills": [
+   2,
+   1,
+   [
+    "(7, 'o')"
+   ]
+  ],
+  "own_collect_twice": [
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   3
+  ],
+  "own_count_collect": [
+   2,
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ]
+  ],
+  "own_insert_collect": [
+   [
+    "(1, 'a')",
+    "(2, 'b')"
+   ],
+   3
+  ],
+  "recreated_table": [
+   2,
+   "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+   "ERROR INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH",
+   true
+  ],
+  "refilled_after_an_insert": [
+   false,
+   3,
+   null
+  ],
+  "refilled_after_refresh_api": [
+   false,
+   2,
+   null
+  ],
+  "refilled_after_refresh_table": [
+   false,
+   2,
+   null
+  ],
+  "renamed_column_keeps_the_fill": [
+   2,
+   2,
+   [
+    "(1,)",
+    "(2,)"
+   ],
+   true
+  ],
+  "two_inserts": [
+   2,
+   3,
+   4
+  ],
+  "view_of_cached": [
+   2,
+   3
+  ]
+ }
+}

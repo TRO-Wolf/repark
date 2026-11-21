@@ -21,6 +21,7 @@ only.
 - [evidence/](evidence/map.md) — probes, raw cells (gzipped where large), verdicts, cost samples, `javap` excerpts,
   provenance.
 - [built/](built/map.md) — **1a, built (2026-11-20):** the re-bind and the command scope; its bar, cost (pending)
-  and evidence.
+  and evidence. **Unit 2, built (2026-11-21):** the cached cells, a lazy cache that refills after a same-session
+  commit.
 
 Up: [../map.md](../map.md).
