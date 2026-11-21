@@ -126,13 +126,14 @@ Each line of `flat_matrix.jsonl` is one cell. Beyond the old fields:
 - `expected_answer`, `expected_state`, `expected_schema`, `expected_commits`: what the cell was graded against;
 - `*_error`, `*_error_class`, `*_status`, `*_probe_error` (the snapshot count probe), `*_files_error`;
 - `stage_create`: on the S3 Tables `createOrReplace` cells only: `exact_refusal`, `status`, `status_rule`,
-  `reference_state`, `readback_equal`, `declared`; `stage_create_reference_error` if Spark's reference failed.
+  `reference_state`, `readback_equal`, `declared` (both compare rows only; the schema check is in the label,
+  as `WRONG-WRITE`); `stage_create_reference_error` if Spark's reference failed.
 
 `ctas_failure.jsonl` keeps its shape; R1's summaries gain `nonnull_n`, and errors are masked.
 
 ## How it was proved without AWS
 
-- The controls pass on the head and fail 13 of 21 on main's classifier.
+- The controls pass on the head and fail 14 of 22 on main's classifier.
 - `test_flat_matrix_cells.py` replays the committed envelope labels and pins the derived rows.
 - `test_flat_matrix_local_smoke.py` (live tier) runs the live G6 module on both halves against a local Hadoop
   catalog for the 30 p15 cells, six more and three S3 Tables-kind cells (no missing observation, no file-count
