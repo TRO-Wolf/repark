@@ -10,6 +10,10 @@ rule of 2026-11-19 (C-012 a hard 1.05x; a short row over 1.05x a flag; nothing o
 - [cost.md](cost.md) — main's baseline and the head under the exclusive lock, and fix round 1's cause of the C-012
   miss.
 - [cards.md](cards.md) — fix round 1's residual card for the orchestrator to file.
+- [unit-2.md](unit-2.md) — **unit 2 (2026-11-21): the cached cells.** The state table on today's main, Spark's cache
+  invalidation surface (97 cells per mode), the design (a lazy cache fill bound to the session table map's epochs,
+  kept across a schema-only change), the three product files, the bar against 1a's and A1's, the mutation proof, the
+  cost and the gates, a card line and the C-009 question.
 - [evidence/](evidence/map.md) — the probes and the raw cells of this build.
 
 ## What 1a builds (seat A, Q9 (a), the command scope moved in)
