@@ -1,0 +1,68 @@
+| set / build | EQUAL | WRONG | RAISE | BOTHERR | NOSPARK |
+|---|---|---|---|---|---|
+| D/F/base | 264 | 216 | 0 | 0 | 0 |
+| D/F/head | 480 | 0 | 0 | 0 | 0 |
+| D/L/base | 320 | 216 | 148 | 0 | 0 |
+| D/L/head | 684 | 0 | 0 | 0 | 0 |
+| D/M/base | 0 | 0 | 956 | 420 | 0 |
+| D/M/head | 0 | 0 | 956 | 420 | 0 |
+| D/N/base | 264 | 216 | 76 | 0 | 0 |
+| D/N/head | 480 | 0 | 76 | 0 | 0 |
+| D/S/base | 1590 | 1068 | 1470 | 0 | 0 |
+| D/S/head | 4128 | 0 | 0 | 0 | 0 |
+| D/T/base | 288 | 192 | 0 | 0 | 0 |
+| D/T/head | 288 | 192 | 0 | 0 | 0 |
+| K/K/base | 49 | 18 | 21 | 0 | 0 |
+| K/K/head | 88 | 0 | 0 | 0 | 0 |
+| R/O/base | 644 | 379 | 1185 | 160 | 0 |
+| R/O/head | 1906 | 0 | 296 | 166 | 0 |
+| R/P/base | 0 | 10 | 6 | 0 | 0 |
+| R/P/head | 16 | 0 | 0 | 0 | 0 |
+| R/Q/base | 2 | 16 | 0 | 0 | 0 |
+| R/Q/head | 18 | 0 | 0 | 0 | 0 |
+| R/X/base | 1 | 5 | 3 | 0 | 0 |
+| R/X/head | 3 | 3 | 3 | 0 | 0 |
+| R/Z/base | 126 | 30 | 12 | 0 | 0 |
+| R/Z/head | 168 | 0 | 0 | 0 | 0 |
+
+| move (base -> head) | cells |
+|---|---|
+| D/F: EQUAL -> EQUAL | 264 |
+| D/F: WRONG -> EQUAL | 216 |
+| D/L: EQUAL -> EQUAL | 320 |
+| D/L: RAISE -> EQUAL | 148 |
+| D/L: WRONG -> EQUAL | 216 |
+| D/M: BOTHERR -> BOTHERR | 420 |
+| D/M: RAISE -> RAISE | 956 |
+| D/N: EQUAL -> EQUAL | 264 |
+| D/N: RAISE -> RAISE | 76 |
+| D/N: WRONG -> EQUAL | 216 |
+| D/S: EQUAL -> EQUAL | 1590 |
+| D/S: RAISE -> EQUAL | 1470 |
+| D/S: WRONG -> EQUAL | 1068 |
+| D/T: EQUAL -> EQUAL | 288 |
+| D/T: WRONG -> WRONG | 192 |
+| K/K: EQUAL -> EQUAL | 49 |
+| K/K: RAISE -> EQUAL | 21 |
+| K/K: WRONG -> EQUAL | 18 |
+| R/O: BOTHERR -> BOTHERR | 160 |
+| R/O: EQUAL -> EQUAL | 644 |
+| R/O: RAISE -> EQUAL | 889 |
+| R/O: RAISE -> RAISE | 296 |
+| R/O: WRONG -> BOTHERR | 6 |
+| R/O: WRONG -> EQUAL | 373 |
+| R/P: RAISE -> EQUAL | 6 |
+| R/P: WRONG -> EQUAL | 10 |
+| R/Q: EQUAL -> EQUAL | 2 |
+| R/Q: WRONG -> EQUAL | 16 |
+| R/X: EQUAL -> EQUAL | 1 |
+| R/X: RAISE -> EQUAL | 1 |
+| R/X: RAISE -> RAISE | 2 |
+| R/X: WRONG -> EQUAL | 1 |
+| R/X: WRONG -> RAISE | 1 |
+| R/X: WRONG -> WRONG | 3 |
+| R/Z: EQUAL -> EQUAL | 126 |
+| R/Z: RAISE -> EQUAL | 12 |
+| R/Z: WRONG -> EQUAL | 30 |
+
+EQUAL lost: 0

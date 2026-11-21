@@ -1,0 +1,15 @@
+{"ansi": "true", "tag": "empty/schema", "names": ["x", "k"], "types": ["int", "string"], "rows": []}
+{"ansi": "true", "tag": "empty/none", "names": [], "types": [], "rows": []}
+{"ansi": "true", "tag": "hdr/schema", "names": ["x", "k"], "types": ["int", "string"], "rows": []}
+{"ansi": "true", "tag": "hdr/none", "names": ["x", "k"], "types": ["string", "string"], "rows": []}
+{"ansi": "true", "tag": "dir_first_empty/schema", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('007', 'k1')"]}
+{"ansi": "true", "tag": "dir_first_empty/none", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('007', 'k1')"]}
+{"ansi": "true", "tag": "multiline/schema", "names": ["x", "k"], "types": ["string", "int"], "rows": ["('a\\nb', 7)"]}
+{"ansi": "true", "tag": "multiline/none", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('a\\nb', '007')"]}
+{"ansi": "true", "tag": "dup_case/none", "names": ["x0", "X1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "dup_exact/none", "names": ["x0", "x1", "k"], "types": ["string", "string", "string"], "rows": ["('1', '2', '3')"]}
+{"ansi": "true", "tag": "short_row/schema", "names": ["x", "k"], "types": ["int", "int"], "rows": ["(1, 2)", "(3, None)"]}
+{"ansi": "true", "tag": "void/schema", "error": "AnalysisException: [UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE] The CSV datasource doesn't support the column `x` of the type \"VOID\". SQLSTATE: 0A000"}
+{"ansi": "true", "tag": "array/schema", "error": "AnalysisException: [UNSUPPORTED_DATA_TYPE_FOR_DATASOURCE] The CSV datasource doesn't support the column `x` of the type \"ARRAY<INT>\". SQLSTATE: 0A000"}
+{"ansi": "true", "tag": "interval/schema", "names": ["x", "k"], "types": ["interval day to second", "string"], "rows": []}
+{"ansi": "true", "tag": "time/schema", "error": "AnalysisException: [UNSUPPORTED_TIME_TYPE] The data type TIME is not supported. SQLSTATE: 0A000"}

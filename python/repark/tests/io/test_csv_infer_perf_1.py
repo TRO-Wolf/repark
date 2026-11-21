@@ -725,8 +725,17 @@ def test_header_embedded_newline_raises_until_record_aware_scan(tmp_path: Path) 
     try:
         with pytest.raises(Exception, match="incorrect number of fields"):
             _read_inferred(session, path, multiline=True).to_arrow()
-        with pytest.raises(Exception, match="incorrect number of fields"):
-            _read_inferred(session, path, infer_schema=False, multiline=True).to_arrow()
+    finally:
+        session.stop()
+
+
+def test_header_embedded_newline_reads_spark_names_on_the_text_scan(tmp_path: Path) -> None:
+    path = _write_text(tmp_path / "hdr_nl.csv", 'id,"no\nte",v\n1,a,2\n')
+    session = _session()
+    try:
+        frame = _read_inferred(session, path, infer_schema=False, multiline=True)
+        assert frame.columns == ["id", "no\nte", "v"]
+        assert [tuple(row) for row in frame.collect()] == [("1", "a", "2")]
     finally:
         session.stop()
 

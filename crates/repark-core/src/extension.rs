@@ -16,6 +16,7 @@ use datafusion::logical_expr::planner::TypePlanner;
 use datafusion::logical_expr::{Expr, Extension, LogicalPlan, UserDefinedLogicalNodeCore};
 use datafusion::optimizer::{Analyzer, AnalyzerRule, OptimizerRule};
 use datafusion::prelude::{DataFrame, SessionConfig, SessionContext};
+use repark_iceberg::catalog::session_tables::HeldTable;
 
 use crate::session_time_zone::SessionTimeZone;
 
@@ -83,6 +84,7 @@ thread_local! {
 #[derive(Debug, Default)]
 pub struct ReaderParseMemo {
     decided: Mutex<Vec<(LiveOptions, Arc<ConfigOptions>)>>,
+    tables: Mutex<HashMap<String, HeldTable>>,
 }
 
 impl ReaderParseMemo {
@@ -95,6 +97,17 @@ impl ReaderParseMemo {
         let options = live.read()?;
         decided.push((live.clone(), Arc::clone(&options)));
         Some(options)
+    }
+
+    #[must_use]
+    pub fn held_table(&self, key: &str) -> Option<HeldTable> {
+        let tables = self.tables.lock().unwrap_or_else(PoisonError::into_inner);
+        tables.get(key).cloned()
+    }
+
+    pub fn hold_table(&self, key: &str, table: HeldTable) {
+        let mut tables = self.tables.lock().unwrap_or_else(PoisonError::into_inner);
+        tables.entry(key.to_string()).or_insert(table);
     }
 
     #[must_use]

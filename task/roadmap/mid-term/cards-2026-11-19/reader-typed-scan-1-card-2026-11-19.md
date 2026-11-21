@@ -18,4 +18,6 @@
 
 **Main:** raises in each case. D2's malformed timestamp and overflowing integer text raise where Spark's PERMISSIVE parser answers `NULL`; D9–D11 raise when the frame is made, where Spark answers.
 
+**Dated 2026-11-20: D2's CSV half folds into CSV-STRING-FIELD-TEXT-1** (Fable's Q7, under the owner's delegation). On that unit's branch `fix/csv-string-field-text-1` (not merged) a CSV field over malformed or overflowing text answers NULL, as Spark's `PERMISSIVE` parser does. D10, D11 and the JSON half stay on this card.
+
 Up: [map.md](map.md).

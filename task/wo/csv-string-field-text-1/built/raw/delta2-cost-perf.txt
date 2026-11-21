@@ -1,0 +1,180 @@
+## perf-base-is_count-1.txt
+7059324274,,instructions:u,871392517,100.00,3.17,insn per cycle
+2223523587,,cycles:u,871392517,100.00,,
+## perf-base-is_count-2.txt
+7059414277,,instructions:u,842657388,100.00,3.23,insn per cycle
+2187364697,,cycles:u,842657388,100.00,,
+## perf-base-is_count-3.txt
+7059141727,,instructions:u,843458636,100.00,3.17,insn per cycle
+2229737441,,cycles:u,843458636,100.00,,
+## perf-base-is_count-4.txt
+7059099843,,instructions:u,846084894,100.00,3.14,insn per cycle
+2249515796,,cycles:u,846084894,100.00,,
+## perf-base-is_count-5.txt
+7059284376,,instructions:u,851041798,100.00,3.17,insn per cycle
+2227563083,,cycles:u,851041798,100.00,,
+## perf-base-is_infer-1.txt
+39584133825,,instructions:u,4313935654,100.00,3.46,insn per cycle
+11437593385,,cycles:u,4313935654,100.00,,
+## perf-base-is_infer-2.txt
+39583858743,,instructions:u,4113857203,100.00,3.46,insn per cycle
+11442184426,,cycles:u,4113857203,100.00,,
+## perf-base-is_infer-3.txt
+39584205578,,instructions:u,4245962874,100.00,3.45,insn per cycle
+11478675123,,cycles:u,4245962874,100.00,,
+## perf-base-is_infer-4.txt
+39584222196,,instructions:u,4090366460,100.00,3.44,insn per cycle
+11512753718,,cycles:u,4090366460,100.00,,
+## perf-base-is_infer-5.txt
+39584108507,,instructions:u,4285886881,100.00,3.51,insn per cycle
+11290814744,,cycles:u,4285886881,100.00,,
+## perf-base-is_none-1.txt
+18534855742,,instructions:u,2017442377,100.00,3.26,insn per cycle
+5682168693,,cycles:u,2017442377,100.00,,
+## perf-base-is_none-2.txt
+18533550484,,instructions:u,1984558690,100.00,3.22,insn per cycle
+5757347984,,cycles:u,1984558690,100.00,,
+## perf-base-is_none-3.txt
+18533606843,,instructions:u,2049247633,100.00,3.12,insn per cycle
+5941380718,,cycles:u,2049247633,100.00,,
+## perf-base-is_none-4.txt
+18535853158,,instructions:u,2004470902,100.00,3.18,insn per cycle
+5836599250,,cycles:u,2004470902,100.00,,
+## perf-base-is_none-5.txt
+18536171175,,instructions:u,1966351154,100.00,3.22,insn per cycle
+5749624415,,cycles:u,1966351154,100.00,,
+## perf-base-is_sum-1.txt
+15008685232,,instructions:u,1651744038,100.00,3.30,insn per cycle
+4554903155,,cycles:u,1651744038,100.00,,
+## perf-base-is_sum-2.txt
+15009291366,,instructions:u,1564597917,100.00,3.25,insn per cycle
+4615041768,,cycles:u,1564597917,100.00,,
+## perf-base-is_sum-3.txt
+15009441107,,instructions:u,1635922100,100.00,3.18,insn per cycle
+4713756343,,cycles:u,1635922100,100.00,,
+## perf-base-is_sum-4.txt
+15009491087,,instructions:u,1595800112,100.00,3.27,insn per cycle
+4588670897,,cycles:u,1595800112,100.00,,
+## perf-base-is_sum-5.txt
+15009517985,,instructions:u,1587159356,100.00,3.32,insn per cycle
+4515804400,,cycles:u,1587159356,100.00,,
+## perf-base-k0_count-1.txt
+10293284849,,instructions:u,1289215660,100.00,3.13,insn per cycle
+3291902421,,cycles:u,1289215660,100.00,,
+## perf-base-k0_count-2.txt
+10293404649,,instructions:u,1331645834,100.00,3.23,insn per cycle
+3190501942,,cycles:u,1331645834,100.00,,
+## perf-base-k0_count-3.txt
+10293384530,,instructions:u,1278827578,100.00,3.17,insn per cycle
+3243976411,,cycles:u,1278827578,100.00,,
+## perf-base-k0_count-4.txt
+10293446557,,instructions:u,1283919268,100.00,3.24,insn per cycle
+3179265967,,cycles:u,1283919268,100.00,,
+## perf-base-k0_count-5.txt
+10293531270,,instructions:u,1314178740,100.00,3.17,insn per cycle
+3245075767,,cycles:u,1314178740,100.00,,
+## perf-base-k0_hour-1.txt
+40710677832,,instructions:u,4013579328,100.00,3.21,insn per cycle
+12699843102,,cycles:u,4013579328,100.00,,
+## perf-base-k0_hour-2.txt
+40712592212,,instructions:u,4242030419,100.00,3.07,insn per cycle
+13242632840,,cycles:u,4242030419,100.00,,
+## perf-base-k0_hour-3.txt
+40712027851,,instructions:u,4180854352,100.00,3.22,insn per cycle
+12643386011,,cycles:u,4180854352,100.00,,
+## perf-base-k0_hour-4.txt
+40710542792,,instructions:u,4171814069,100.00,3.20,insn per cycle
+12726286993,,cycles:u,4171814069,100.00,,
+## perf-base-k0_hour-5.txt
+40711714384,,instructions:u,4148741919,100.00,3.21,insn per cycle
+12692423770,,cycles:u,4148741919,100.00,,
+## perf-head-is_count-1.txt
+7043365002,,instructions:u,835516816,100.00,3.24,insn per cycle
+2171648107,,cycles:u,835516816,100.00,,
+## perf-head-is_count-2.txt
+7043458138,,instructions:u,872749253,100.00,3.08,insn per cycle
+2290024402,,cycles:u,872749253,100.00,,
+## perf-head-is_count-3.txt
+7043419334,,instructions:u,859479276,100.00,3.24,insn per cycle
+2172937766,,cycles:u,859479276,100.00,,
+## perf-head-is_count-4.txt
+7043441095,,instructions:u,863445681,100.00,3.21,insn per cycle
+2196951624,,cycles:u,863445681,100.00,,
+## perf-head-is_count-5.txt
+7043213610,,instructions:u,811761489,100.00,3.18,insn per cycle
+2216870907,,cycles:u,811761489,100.00,,
+## perf-head-is_infer-1.txt
+39583795432,,instructions:u,4273672681,100.00,3.47,insn per cycle
+11416484421,,cycles:u,4273672681,100.00,,
+## perf-head-is_infer-2.txt
+39585240917,,instructions:u,4299498025,100.00,3.44,insn per cycle
+11490787902,,cycles:u,4299498025,100.00,,
+## perf-head-is_infer-3.txt
+39585218932,,instructions:u,4278510166,100.00,3.45,insn per cycle
+11460280631,,cycles:u,4278510166,100.00,,
+## perf-head-is_infer-4.txt
+39584016672,,instructions:u,4073815343,100.00,3.43,insn per cycle
+11548539970,,cycles:u,4073815343,100.00,,
+## perf-head-is_infer-5.txt
+39584722453,,instructions:u,4421409071,100.00,3.48,insn per cycle
+11370941505,,cycles:u,4421409071,100.00,,
+## perf-head-is_none-1.txt
+12565690025,,instructions:u,1426822774,100.00,3.16,insn per cycle
+3980771502,,cycles:u,1426822774,100.00,,
+## perf-head-is_none-2.txt
+12565288417,,instructions:u,1426463447,100.00,3.12,insn per cycle
+4026208506,,cycles:u,1426463447,100.00,,
+## perf-head-is_none-3.txt
+12565583303,,instructions:u,1380388456,100.00,3.15,insn per cycle
+3987854743,,cycles:u,1380388456,100.00,,
+## perf-head-is_none-4.txt
+12565550774,,instructions:u,1484333242,100.00,3.17,insn per cycle
+3965973250,,cycles:u,1484333242,100.00,,
+## perf-head-is_none-5.txt
+12564972140,,instructions:u,1437854190,100.00,3.11,insn per cycle
+4034283991,,cycles:u,1437854190,100.00,,
+## perf-head-is_sum-1.txt
+16194524890,,instructions:u,1765236498,100.00,3.25,insn per cycle
+4979137641,,cycles:u,1765236498,100.00,,
+## perf-head-is_sum-2.txt
+16194633613,,instructions:u,1790447129,100.00,3.23,insn per cycle
+5007182568,,cycles:u,1790447129,100.00,,
+## perf-head-is_sum-3.txt
+16195932814,,instructions:u,1741627696,100.00,3.20,insn per cycle
+5057537060,,cycles:u,1741627696,100.00,,
+## perf-head-is_sum-4.txt
+16195194793,,instructions:u,1845444459,100.00,3.26,insn per cycle
+4963927373,,cycles:u,1845444459,100.00,,
+## perf-head-is_sum-5.txt
+16194023051,,instructions:u,1785101007,100.00,3.32,insn per cycle
+4871520742,,cycles:u,1785101007,100.00,,
+## perf-head-k0_count-1.txt
+10219108578,,instructions:u,1214329030,100.00,3.21,insn per cycle
+3183493368,,cycles:u,1214329030,100.00,,
+## perf-head-k0_count-2.txt
+10219271123,,instructions:u,1229937744,100.00,3.13,insn per cycle
+3264507519,,cycles:u,1229937744,100.00,,
+## perf-head-k0_count-3.txt
+10219361631,,instructions:u,1271028501,100.00,3.15,insn per cycle
+3240436364,,cycles:u,1271028501,100.00,,
+## perf-head-k0_count-4.txt
+10219130176,,instructions:u,1269051540,100.00,3.04,insn per cycle
+3363234520,,cycles:u,1269051540,100.00,,
+## perf-head-k0_count-5.txt
+10219039777,,instructions:u,1216089265,100.00,3.15,insn per cycle
+3246684859,,cycles:u,1216089265,100.00,,
+## perf-head-k0_hour-1.txt
+41912736709,,instructions:u,4089752881,100.00,3.15,insn per cycle
+13294713654,,cycles:u,4089752881,100.00,,
+## perf-head-k0_hour-2.txt
+41913454943,,instructions:u,4314527256,100.00,3.16,insn per cycle
+13265643837,,cycles:u,4314527256,100.00,,
+## perf-head-k0_hour-3.txt
+41913592592,,instructions:u,4284207594,100.00,3.11,insn per cycle
+13496339421,,cycles:u,4284207594,100.00,,
+## perf-head-k0_hour-4.txt
+41913495365,,instructions:u,4304645390,100.00,3.18,insn per cycle
+13162822657,,cycles:u,4304645390,100.00,,
+## perf-head-k0_hour-5.txt
+41913712523,,instructions:u,4583493105,100.00,3.17,insn per cycle
+13215427567,,cycles:u,4583493105,100.00,,

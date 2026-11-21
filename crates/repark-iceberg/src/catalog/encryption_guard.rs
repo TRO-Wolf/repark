@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock, Mutex, PoisonError, Weak};
 
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -43,8 +43,23 @@ const WRITE_METADATA_PATH: &str = "write.metadata.path";
 const COMMIT_FIELD_INDENT: &str = "    ";
 const UPDATE_ENTRY_INDENT: &str = "        ";
 
+static INSTALLED: LazyLock<Mutex<Vec<Weak<EncryptionGuardCatalog>>>> =
+    LazyLock::new(|| Mutex::new(Vec::new()));
+
 pub struct EncryptionGuardCatalog {
     inner: Arc<dyn Catalog>,
+}
+
+#[derive(Debug, Clone)]
+pub struct GuardedCatalog {
+    handle: Arc<dyn Catalog>,
+}
+
+impl GuardedCatalog {
+    #[must_use]
+    pub fn handle(&self) -> &Arc<dyn Catalog> {
+        &self.handle
+    }
 }
 
 impl std::fmt::Debug for EncryptionGuardCatalog {
@@ -56,7 +71,23 @@ impl std::fmt::Debug for EncryptionGuardCatalog {
 impl EncryptionGuardCatalog {
     #[must_use]
     pub fn install(inner: Arc<dyn Catalog>) -> Arc<dyn Catalog> {
-        Arc::new(Self { inner })
+        let guard = Arc::new(Self { inner });
+        let mut installed = INSTALLED.lock().unwrap_or_else(PoisonError::into_inner);
+        installed.retain(|held| held.strong_count() > 0);
+        installed.push(Arc::downgrade(&guard));
+        guard
+    }
+
+    #[must_use]
+    pub fn guarded(handle: &Arc<dyn Catalog>) -> Option<GuardedCatalog> {
+        let address = Arc::as_ptr(handle).cast::<()>();
+        let installed = INSTALLED.lock().unwrap_or_else(PoisonError::into_inner);
+        installed
+            .iter()
+            .any(|held| held.as_ptr().cast::<()>() == address)
+            .then(|| GuardedCatalog {
+                handle: Arc::clone(handle),
+            })
     }
 }
 

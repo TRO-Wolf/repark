@@ -20,5 +20,7 @@ only.
   snapshot or provider, with file:line, and what each seat must touch.
 - [evidence/](evidence/map.md) — probes, raw cells (gzipped where large), verdicts, cost samples, `javap` excerpts,
   provenance.
+- [built/](built/map.md) — **1a, built (2026-11-20):** the re-bind and the command scope; its bar, cost (pending)
+  and evidence.
 
 Up: [../map.md](../map.md).

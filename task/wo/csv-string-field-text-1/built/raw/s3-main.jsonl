@@ -1,0 +1,24 @@
+{"ansi": "true", "tag": "one/none", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', '1000.0')"]}
+{"ansi": "true", "tag": "one/string_double", "names": ["x", "k"], "types": ["string", "double"], "rows": ["('7', 1000.0)"]}
+{"ansi": "true", "tag": "one/int_string", "names": ["x", "k"], "types": ["int", "string"], "rows": ["(7, '1000.0')"]}
+{"ansi": "true", "tag": "prefix/none", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Float64 does not equal Int64"}
+{"ansi": "true", "tag": "prefix/decimal", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Float64 does not equal Int64"}
+{"ansi": "true", "tag": "glob/none", "error": "AnalysisException: Error during planning: No files found at s3://csvwire/multi/*.csv. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table."}
+{"ansi": "true", "tag": "glob/string", "error": "AnalysisException: Error during planning: No files found at s3://csvwire/multi/*.csv. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table."}
+{"ansi": "true", "tag": "two/schema", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Utf8 does not equal Int64"}
+{"ansi": "true", "tag": "two/values", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Utf8 does not equal Int64"}
+{"ansi": "true", "tag": "gzip/none", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', '1000.0')"]}
+{"ansi": "true", "tag": "late/int", "error": "PySparkException: Arrow error: Parser error: Error while parsing value 'abc' as type 'Int64' for column 0 at line 1200. Row data: '[abc,k]'"}
+{"ansi": "true", "tag": "late/string", "error": "PySparkException: Arrow error: Parser error: Error while parsing value 'abc' as type 'Int64' for column 0 at line 1200. Row data: '[abc,k]'"}
+{"ansi": "false", "tag": "one/none", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', '1000.0')"]}
+{"ansi": "false", "tag": "one/string_double", "names": ["x", "k"], "types": ["string", "double"], "rows": ["('7', 1000.0)"]}
+{"ansi": "false", "tag": "one/int_string", "names": ["x", "k"], "types": ["int", "string"], "rows": ["(7, '1000.0')"]}
+{"ansi": "false", "tag": "prefix/none", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Float64 does not equal Int64"}
+{"ansi": "false", "tag": "prefix/decimal", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Float64 does not equal Int64"}
+{"ansi": "false", "tag": "glob/none", "error": "AnalysisException: Error during planning: No files found at s3://csvwire/multi/*.csv. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table."}
+{"ansi": "false", "tag": "glob/string", "error": "AnalysisException: Error during planning: No files found at s3://csvwire/multi/*.csv. Cannot infer schema from an empty location; either add data files or declare an explicit schema for the table."}
+{"ansi": "false", "tag": "two/schema", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Utf8 does not equal Int64"}
+{"ansi": "false", "tag": "two/values", "error": "PySparkException: datafusion engine error: Arrow error: Schema error: Fail to merge schema field 'x' because the from data_type = Utf8 does not equal Int64"}
+{"ansi": "false", "tag": "gzip/none", "names": ["x", "k"], "types": ["string", "string"], "rows": ["('7', '1000.0')"]}
+{"ansi": "false", "tag": "late/int", "error": "PySparkException: Arrow error: Parser error: Error while parsing value 'abc' as type 'Int64' for column 0 at line 1200. Row data: '[abc,k]'"}
+{"ansi": "false", "tag": "late/string", "error": "PySparkException: Arrow error: Parser error: Error while parsing value 'abc' as type 'Int64' for column 0 at line 1200. Row data: '[abc,k]'"}

@@ -10,7 +10,7 @@ use datafusion::prelude::{DataFrame, SessionConfig, SessionContext};
 use iceberg::memory::MEMORY_CATALOG_METADATA_NAMING;
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_common::{Error, Result};
-use repark_iceberg::catalog::build_iceberg_catalog_provider;
+use repark_iceberg::catalog::session_tables::session_catalog_provider;
 
 use crate::backend::{ExecutionBackend, SingleNodeBackend};
 use crate::catalog_config::{self, CatalogKind, CatalogSpec};
@@ -469,7 +469,7 @@ impl ReparkSession {
         if already_registered {
             return Err(duplicate());
         }
-        let provider = build_iceberg_catalog_provider(catalog.clone())
+        let (catalog, provider) = session_catalog_provider(self.context(), name, catalog)
             .await
             .map_err(engine_err)?;
         let mut catalogs = RwLock::write(&self.catalogs).unwrap_or_else(PoisonError::into_inner);

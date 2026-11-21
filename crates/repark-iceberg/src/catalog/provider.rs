@@ -363,16 +363,19 @@ async fn unlisted_namespace_schema(
         .await
         .map_err(super::iceberg_to_datafusion)?
         .with_uuid_as_string(true);
-    iceberg.schema(namespace).ok_or_else(|| {
-        DataFusionError::Plan(format!(
-            "namespace `{namespace}` produced no DF schema provider for a deferred listing"
-        ))
-    })
+    iceberg
+        .schema(namespace)
+        .map(super::session_tables::capturing_schema)
+        .ok_or_else(|| {
+            DataFusionError::Plan(format!(
+                "namespace `{namespace}` produced no DF schema provider for a deferred listing"
+            ))
+        })
 }
 
 async fn present_fork_schema(schema: Arc<dyn SchemaProvider>) -> Result<Arc<dyn SchemaProvider>> {
     freeze_fork_name_directory(schema.as_ref()).await?;
-    Ok(schema)
+    Ok(super::session_tables::capturing_schema(schema))
 }
 
 /// Name used only to drive [`SchemaProvider::table`] through the fork's `ensure_tables_listed`.
