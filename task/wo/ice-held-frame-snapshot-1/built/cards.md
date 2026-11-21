@@ -28,6 +28,11 @@ Delta 2 (2026-11-20), from the Opus delta re-check's C5 and C6 and delta 2's sib
   DataFrame view) where Spark raises `COLUMNS_MISMATCH`: `ReplanningTempView` (`view_ddl/temp_view.rs`) re-plans the
   view's text at each scan, where Spark analyses it once, when the frame is built. Over a table it predates 1a (main
   reads the recreated table too); over a DataFrame view of a held frame main answers the old table.
+- **SQL-FRAME-EAGER-ANALYSIS-1 (S4, loud, predates this PR).** Spark analyses a `spark.sql(...)` frame when it is
+  built, and RePark at its first action. So a frame built over a view after an incompatible change raises at its
+  build on Spark, and at its action on RePark. `explain(True)` and `codegen` print the condition where Spark has
+  already raised. The delta-1 re-check's C2 and the delta-2 sibling table (2 cells per mode) measured it, unchanged
+  from main. Carded at the #1391 verifier's C-5.
 
 Two of round 0's open cells already have cards, so they are not carded again here:
 [STRING-CAST-LENIENT-1](../../../roadmap/mid-term/string-cast-lenient-1-card-2026-11-16.md) (`M|held_cast`) and

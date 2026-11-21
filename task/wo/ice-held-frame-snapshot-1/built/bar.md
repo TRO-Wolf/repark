@@ -308,7 +308,7 @@ read the recreated table where Spark raises `TABLE_ID_MISMATCH`, and after a dro
 `INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION` where Spark raises `COLUMNS_MISMATCH` (the re-check's C3).
 No optimizer rule failed, so delta 1's explain detection never ran.
 
-**The fix** (`session_tables/mod.rs`, `held_iceberg.rs` and two lines of `frame_settings.rs`, all among the 12 files):
+**The fix** (`session_tables/mod.rs`, `held_iceberg.rs` and three lines in two places of `frame_settings.rs`, all among the 12 files):
 when a view's plan is inlined into a frame (`FrameView::get_logical_plan`, and `HeldView`, which now wraps a scan-only
 view's `into_view` when its plan holds a view-mode binding), each view-mode scan becomes a clone bound in query mode to
 the table the session holds at that moment (`referenced_clone`): the view's own provider when the state is the view's,
