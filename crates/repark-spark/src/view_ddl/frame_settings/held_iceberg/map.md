@@ -12,7 +12,6 @@ the binding mode; a frame built over a DataFrame view refuses a later recreate b
 with `COLUMNS_MISMATCH`, also when a write came between the view and the frame, while a frame built after the change
 reads the view's error or the new table (delta 2, D1); the memo's kept table is the frame's own (delta 2, C-5); and
 (ENC-1 condition 2) on a keyed table, a refused `INSERT`, `INSERT OVERWRITE`, `DELETE`,
-the binding mode; and (ENC-1 condition 2) on a keyed table, a refused `INSERT`, `INSERT OVERWRITE`, `DELETE`,
 `UPDATE` and `MERGE` each leave the session epoch where it was and the held frame answering its two rows.
 
 ## Contents

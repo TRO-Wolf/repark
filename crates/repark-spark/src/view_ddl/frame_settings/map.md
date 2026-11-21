@@ -76,7 +76,6 @@ decision (recording the live ones then). With no memo in scope it reads the live
   view's `into_view` when the plan holds a view-mode binding): each view-mode scan becomes a query-mode clone
   (`session_tables::referenced_clone`), so a later recreate raises `TABLE_ID_MISMATCH` and a dropped column
   `COLUMNS_MISMATCH`, where the view's own re-bind skipped the identity check and named the view's error.
-  optimised plan.
 - [held_iceberg/](held_iceberg/map.md) — its unit tests (the zero-inner-load proof).
 
 ## Pointers
