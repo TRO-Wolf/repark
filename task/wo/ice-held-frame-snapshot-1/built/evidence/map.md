@@ -19,7 +19,10 @@ file is gzipped with `gzip -9n`.
      `raw/D-spark-ansi-*.jsonl.gz` files below, unzipped and renamed.
   3. `<bar>`: `N/ice-1a-out/bar/`, one sub-directory per label, each holding the `<group>-<ansi>.jsonl` files the bar
      runner writes (`cells.py` for `HW`, `WA`, `HA`, `P`, `S` and `X`; `rev.py` for `B`, `B2` and `M`; `decide.py` for
-     `D`). The labels are `main` (`9a48932f`), `head` (`58c7e307`) and `head-fix1` (this round's package). The bar
+     `D`). The labels are `main` (`9a48932f`), `head` (`58c7e307`) and `head-fix1` (fix round 1's package, `eced2285`).
+     Delta 1's re-run is `N/ice-1a-out/delta1-bar/head-delta1` (`afb78fb1`) and delta 2's is
+     `N/ice-1a-out/delta2-bar/head` (`2af7c2ae`); each of those directories links `main` and `head-fix1` back to
+     `N/ice-1a-out/bar/`, so `barcmp.py` takes it as `<bar>`. The bar
      probes other than `decide.py` are in that session directory, not here.
 - [raw/head-58c7e307-verdicts.jsonl.gz](raw/head-58c7e307-verdicts.jsonl.gz) — the head `58c7e307` verdicts: 1980 rows (both
   ANSI modes, D included), each with the key, Spark's answer, main's and the head's answers, both verdicts, the stored

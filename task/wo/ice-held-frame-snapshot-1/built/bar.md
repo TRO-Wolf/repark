@@ -221,7 +221,7 @@ error the frame's next action raises, the same exception with the same text. The
 | `explain("formatted")` | raises | prints the step listing | raises |
 | `explain(True)`, `explain(mode="extended")` | prints its sections, each holding the `AnalysisException` | prints nothing | prints both sections, each holding the error |
 | `explain("codegen")` | prints the `AnalysisException` | prints the codegen note only | prints the physical section holding the error, and the note |
-| `explain("cost")` | prints the `AnalysisException` | raises | raises (unchanged; a residual below) |
+| `explain("cost")` | prints the `AnalysisException` | raises | raises (unchanged; carded in [cards.md](cards.md), ICE-HELD-EXPLAIN-COST-1) |
 
 The conditions are Spark's in every cell: `INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH` after a dropped,
 renamed or retyped column, `...TABLE_ID_MISMATCH` after a recreate, and `TABLE_OR_VIEW_NOT_FOUND` after a drop. A
@@ -291,5 +291,81 @@ the file size, lib-py, map-size, map-sync and docs-links checks, `typos`, `ruff 
 comment gate against `a4d8857f` (0), `make rust-clippy`, `make rust-panic-ban`, `cargo test --locked -p` for
 repark-iceberg (1,081), repark-core (1,692) and repark-spark (3,262), `make py-test-facade FACADE_WORKERS=6`
 (41,156 passed), the package facade at `-n 6` (41,161 passed) and `make py-test` (1,133 passed).
+
+## Delta 2: a frame over a DataFrame view of a held frame (D1), and the records
+
+The Opus delta re-check failed `3ff72b1c` on D1 (class (a), S3); the Muse verifier passed it. Product commit
+`2af7c2ae`, pins `bed07bbe`, package `pkg-ice1a-2af7c2ae`. Spark 4.1.2 with Iceberg 1.11.0, main `9a48932f`, the delta-1
+package `afb78fb1` and this package, both ANSI modes; every answer below is the same in both modes. The probe is
+`N/ice-1a-out/delta2-mine/probes/d2sib.py` (its answers in `delta2-mine/mine/`, compared by `d2cmp.py`).
+
+**D1, the cause.** `held.createOrReplaceTempView("v")` gives the view's scans a clone of the provider bound in view
+mode (`bound_for_view`), and `spark.sql("SELECT * FROM v")` inlines the view's plan, those clones included, when the
+frame is built. The re-bind then ran at the frame's action in view mode, which skips the table-id check (a view
+re-resolves its table) and names the view's error. Spark analyses the frame when it is built: the view resolves its
+table then, and the frame's own relation is checked at its action as any frame's is. So after a recreate the frame
+read the recreated table where Spark raises `TABLE_ID_MISMATCH`, and after a dropped column it raised
+`INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION` where Spark raises `COLUMNS_MISMATCH` (the re-check's C3).
+No optimizer rule failed, so delta 1's explain detection never ran.
+
+**The fix** (`session_tables/mod.rs`, `held_iceberg.rs` and two lines of `frame_settings.rs`, all among the 12 files):
+when a view's plan is inlined into a frame (`FrameView::get_logical_plan`, and `HeldView`, which now wraps a scan-only
+view's `into_view` when its plan holds a view-mode binding), each view-mode scan becomes a clone bound in query mode to
+the table the session holds at that moment (`referenced_clone`): the view's own provider when the state is the view's,
+else one built on that table through the one-table shim when its schema is the view's. Otherwise the scan keeps its
+view-mode binding, as before. The frame's action then runs the same-state check (metadata path, table UUID,
+last-updated time) and the query-mode checks against the table the frame was built on. The stored plan holds no
+re-bound wrapper (`the_wrapper_never_reaches_a_stored_plan` holds).
+
+| frame built over the view, before the change | change | Spark | main | delta 1 | delta 2 |
+|---|---|---|---|---|---|
+| a DataFrame view of the held frame (D1); of its `filter`; or with an `INSERT` between the view and the frame | recreate | `TABLE_ID_MISMATCH` | the old rows | the new row `(5, 'r')` | **as Spark** |
+| the same three | dropped column | `COLUMNS_MISMATCH` | the old rows | the view's error (C3) | **as Spark** |
+| the same three | `DROP TABLE` | `TABLE_OR_VIEW_NOT_FOUND` | the old rows | as Spark | as Spark |
+| the same three | `INSERT` (control) | 3 rows (4 with the earlier insert) | 2 | as Spark | as Spark |
+| a frame built after the change (`dfview_recreate`'s shape) | each | recreate: the new row; dropped column and drop: raises at build | stale | as Spark, except the build-time raise (C2) | as delta 1 |
+| a SQL temp view over the table, `CREATE TEMP VIEW … AS SELECT * FROM t` | recreate, dropped column, drop | `TABLE_ID_MISMATCH`, `COLUMNS_MISMATCH`, `TABLE_OR_VIEW_NOT_FOUND` | the new row; `INCOMPATIBLE_VIEW_SCHEMA_CHANGE`; another analysis error | as main | as main |
+| a SQL temp view over the held frame's DataFrame view | recreate, dropped column, drop | the same | the old rows | the new row; the view's error; as Spark | as delta 1 |
+
+Each cell is `count`, `collect`, `explain()`, `explain(True)` and `explain("formatted")`: where Spark raises at
+`count`, it raises at `explain()` and `formatted` and prints the condition at `explain(True)`, and delta 2 does the same
+on the moved rows. 91 of 120 cells per mode equal Spark on delta 2, against 61 on delta 1 and 23 on main; exactly 30
+moved per mode (the first two rows, three shapes, five actions), all to Spark's answer, and none was lost. The 29 left
+are the two SQL temp view rows (27 cells, the re-check's C5 and their siblings) and the build-time raise of C2 (2).
+**The SQL temp view rows are not 1a's files**: `ReplanningTempView` (`view_ddl/temp_view.rs`) re-plans the view's text
+at each scan, where Spark analyses it once, when the frame is built. They are carded in [cards.md](cards.md) as
+SQL-TEMP-VIEW-FRAME-BIND-1 (silent after a recreate) and SQL-TEMP-VIEW-EXPLAIN-EMPTY-1 (the re-check's C5, `explain()`
+printing nothing).
+
+**The pins** (`test_ice_held_frame_snapshot_1.py`, both ANSI modes, Spark's recorded answers; the re-record added 11
+keys per mode and changed none): `dfview_frame_recreate_{count,collect,explain}`,
+`dfview_frame_drop_column_{count,explain}`, `dfview_frame_dropped_table_{count,explain}`,
+`dfview_frame_insert_{count,explain}` (controls), `dfview_written_frame_recreate_count` and
+`dfview_filter_frame_recreate_count`. On the delta-2 package: 95 passed (82 Spark cells, 13 ENC-1). On delta 1's: 14
+failed, exactly the 7 recreate and dropped-column shapes in both modes. On main's: 72 failed (the 52 of delta 1 and 20
+of the 22 new; `dfview_frame_insert_explain` prints a plan on main too). The Rust tests (`held_iceberg/tests.rs`):
+`a_frame_over_a_view_refuses_a_later_recreate_by_table_id` and
+`a_frame_over_a_view_built_after_a_write_checks_the_table_it_was_built_on`.
+
+**C-5 (Muse).** `an_own_plan_memo_keeps_the_first_binding` now also asserts that the memo holds the frame's first
+table (`same_state` with the binding) while the session's current table differs, so an `Unknown` decision cannot pass
+it.
+
+**The re-check's own cells** (`VO/probes/`, `VO/mycells.sh` and its `xextra`, `xmatrix` and `xdetect` probes, copied
+to `N/ice-1a-out/delta2-mine/` and run on this package; `VO` is the Opus delta re-check's directory, whose Spark and
+delta-1 answers they are compared with): `xextra` 40 of 40 Spark-comparable cells equal Spark (24 on delta 1), and
+exactly D1's and C3's 16 cells moved (`{recreate,dropc}|tview_pre|{simple,extended,formatted,count}`, both modes);
+`xmatrix` 392 of 516 and `xdetect` 186 of 276, as on delta 1, with no cell moved; the verifier's `vcells` 248 of 258,
+every answer equal to delta 1's (the 10 left are the named residuals above). #1373's own bar
+(`test_temp_view_frame_reader_parse_1.py`): 95 passed on this package.
+
+## Delta 2: the bar re-run
+
+`BAROUT=N/ice-1a-out/delta2-bar`, `run_v.sh head pkg-ice1a-2af7c2ae`, compared by the committed
+[barcmp.py](evidence/probes/barcmp.py): 1,730 EQUAL, 142 RAISE, 108 WRONG, 8 stored, and **0 EQUAL lost** from main
+(1,360 WRONG to EQUAL, 2 RAISE to EQUAL, 130 WRONG to RAISE). Unit 1a 750 of 750; gap 1b 98 EQUAL and 132 RAISE.
+**Against `verdicts-fix1.jsonl` and delta 1's verdicts no verdict moved**; 36 answers differ from each, and none once
+the generated `_repark_jl_` and `_repark_jr_` view names and the run's warehouse paths are normalised. The bar holds no
+frame built over a view before an incompatible change.
 
 Up: [map.md](map.md).
