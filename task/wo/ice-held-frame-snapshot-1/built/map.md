@@ -10,6 +10,9 @@ rule of 2026-11-19 (C-012 a hard 1.05x; a short row over 1.05x a flag; nothing o
 - [cost.md](cost.md) — main's baseline and the head under the exclusive lock, and fix round 1's cause of the C-012
   miss.
 - [cards.md](cards.md) — fix round 1's residual card for the orchestrator to file.
+- [live-aws.md](live-aws.md) — the held-frame cells for the live Glue and S3 Tables run (2026-11-21, tests only):
+  the cells and their live tests, Spark's measured answers and cache interval, main's local answers, the
+  local-only list and how to read the cost lines.
 - [evidence/](evidence/map.md) — the probes and the raw cells of this build.
 
 ## What 1a builds (seat A, Q9 (a), the command scope moved in)
