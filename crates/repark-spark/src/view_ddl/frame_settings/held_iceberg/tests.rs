@@ -228,6 +228,39 @@ fn held_scans(plan: &LogicalPlan) -> usize {
     found
 }
 
+fn bound_of(frame: &DataFrame) -> Binding {
+    let mut found = None;
+    frame
+        .logical_plan()
+        .apply_with_subqueries(|node| {
+            if let LogicalPlan::TableScan(scan) = node
+                && let Ok(provider) = source_as_provider(&scan.source)
+            {
+                found = found.take().or_else(|| binding(&provider));
+            }
+            Ok(TreeNodeRecursion::Continue)
+        })
+        .unwrap_or_else(|error| panic!("walk: {error}"));
+    found.unwrap_or_else(|| panic!("a bound scan"))
+}
+
+async fn viewed(bed: &Bed, held: &DataFrame) -> DataFrame {
+    bed.session
+        .create_or_replace_temp_view_from("v", held)
+        .unwrap_or_else(|error| panic!("view: {error}"));
+    bed.session
+        .sql("SELECT * FROM v")
+        .await
+        .unwrap_or_else(|error| panic!("view read: {error}"))
+}
+
+fn refusal(frame: &DataFrame) -> String {
+    frame
+        .clone()
+        .into_optimized_plan()
+        .map_or_else(|error| error.to_string(), |_| String::new())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn a_held_action_makes_no_catalog_load_with_or_without_a_write() {
     let bed = bed().await;
@@ -270,6 +303,7 @@ async fn the_wrapper_never_reaches_a_stored_plan() {
 async fn an_own_plan_memo_keeps_the_first_binding() {
     let bed = bed().await;
     let held = bed.held().await;
+    let bound = bound_of(&held);
     let memo = Arc::new(ReaderParseMemo::default());
     let first = memo.run(|| held.clone().into_optimized_plan());
     assert!(first.is_ok());
@@ -278,6 +312,11 @@ async fn an_own_plan_memo_keeps_the_first_binding() {
     bed.run("INSERT INTO c.ns.t VALUES (9, 'z')").await;
     let kept = memo.run(|| held.clone().into_optimized_plan());
     assert_eq!(kept.map(|plan| held_scans(&plan)).ok(), Some(0));
+    let pinned = memo.held_table(&bound.memo_key());
+    assert!(pinned.is_some_and(|table| same_state(table.table(), bound.table())));
+    assert!(
+        matches!(bound.current(), Some(TableState::Live(now)) if !same_state(now.table(), bound.table()))
+    );
     let fresh = held
         .clone()
         .into_optimized_plan()
@@ -314,6 +353,56 @@ async fn a_dropped_column_refuses_and_an_added_one_is_allowed() {
         .map_or_else(|error| error.to_string(), |_| String::new());
     assert!(
         text.contains("INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH"),
+        "{text}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_frame_over_a_view_refuses_a_later_recreate_by_table_id() {
+    let bed = bed().await;
+    let held = bed.held().await;
+    let frame = viewed(&bed, &held).await;
+    assert_eq!(bound_of(&frame).mode(), BindMode::Query);
+    bed.run("DROP TABLE c.ns.t").await;
+    bed.run("CREATE TABLE c.ns.t (n INT, c STRING) USING iceberg")
+        .await;
+    let text = refusal(&frame);
+    assert!(
+        text.contains("INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.TABLE_ID_MISMATCH"),
+        "{text}"
+    );
+    let after = bed
+        .session
+        .sql("SELECT * FROM v")
+        .await
+        .unwrap_or_else(|error| panic!("view read: {error}"));
+    assert_eq!(numbers(&after).await, Vec::<i32>::new());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_frame_over_a_view_built_after_a_write_checks_the_table_it_was_built_on() {
+    let bed = bed().await;
+    let held = bed.held().await;
+    bed.session
+        .create_or_replace_temp_view_from("v", &held)
+        .unwrap_or_else(|error| panic!("view: {error}"));
+    bed.run("INSERT INTO c.ns.t VALUES (9, 'z')").await;
+    let frame = bed
+        .session
+        .sql("SELECT * FROM v")
+        .await
+        .unwrap_or_else(|error| panic!("view read: {error}"));
+    assert_eq!(numbers(&frame).await, vec![1, 2, 9]);
+    assert_eq!(held_scans(frame.logical_plan()), 0);
+    bed.run("ALTER TABLE c.ns.t DROP COLUMN c").await;
+    let text = refusal(&frame);
+    assert!(
+        text.contains("INCOMPATIBLE_TABLE_CHANGE_AFTER_ANALYSIS.COLUMNS_MISMATCH"),
+        "{text}"
+    );
+    let text = refusal(&viewed(&bed, &held).await);
+    assert!(
+        text.contains("INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION"),
         "{text}"
     );
 }

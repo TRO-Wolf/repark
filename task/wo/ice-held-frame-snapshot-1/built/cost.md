@@ -91,4 +91,27 @@ calls `explain`; their movement from fix round 1's 10-round series (`held_write`
 1.190 to 1.041, `held_nowrite` 1.037 to 0.840) is the spread of the series at n=5, not the delta. The instruction
 counts of fix round 1 stand for the same native code.
 
+## Delta 2
+
+The delta-2 package `pkg-ice1a-2af7c2ae` against main, `N/ice-1a-out/cost/run_ts.sh` with `OUTC=N/ice-1a-out/delta2-cost`,
+`RUNS=5` and `C012_RUNS=5`, every sample under the exclusive lock (23:48 to 00:30 UTC, 30 C-012 replays, all exit 0):
+
+| case | base | head | base again | head / mean |
+|---|---|---|---|---|
+| `c012p6` (s) | 39.37 | 39.49 | 39.55 | **1.001** |
+| `c012rest` (s) | 42.87 | 42.98 | 42.81 | **1.003** |
+| `held_nowrite` (ms) | 10.59 | 9.34 | 10.70 | 0.877 |
+| `held_write` (ms) | 11.38 | 11.12 | 9.88 | 1.046 |
+| `fresh_write` (ms) | 13.19 | 11.31 | 13.75 | 0.840 |
+| `plan_100` (ms) | 0.50 | 0.50 | 0.54 | 0.962 |
+| `held_filter_count` (ms) | 13.20 | 13.69 | 11.10 | 1.127 (flag) |
+
+**C-012 passes at 1.001x and 1.003x.** **The flag, by instruction counts** (`instructions:u` over the whole process
+with 0 and with 40 actions after one insert, `fix1/probe/heldloop.py` copied to `N/ice-1a-out/delta2/instr/`, per
+action = the difference over 40): `held_filter_count` 216.4M against main's 214.8M (1.007x) and fix round 1's 216.2M
+(1.001x); `fresh_filter_count` 0.999x of main; `held_read` 1.004x of main and 1.000x of fix round 1. Delta 2 adds a
+plan walk where a view's plan is inlined, which these rows reach only through the facade's internal scratch views,
+whose scans are in query mode. The row's five samples spread from 10.4 to 14.8 ms on the base alone (head over the
+first base 1.037x), so the 1.127x is the spread at n=5, not the delta.
+
 Up: [map.md](map.md).
