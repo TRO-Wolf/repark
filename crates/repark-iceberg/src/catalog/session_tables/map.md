@@ -40,6 +40,7 @@ so a held frame can be re-bound at execution as Spark 4.1.2 re-binds it (`V2Tabl
     table the session holds then: the view's provider when the state is the view's, else one built on that table
     through the shim when its schema is the view's (otherwise the view's binding stays), as Spark analyses a frame over
     a view. `rebound_provider` builds the fork's public `IcebergTableProvider::try_new` over a one-table shim catalog that
+    mode. `rebound_provider` builds the fork's public `IcebergTableProvider::try_new` over a one-table shim catalog that
     serves only the decided table, polled once (it completes without I/O), so the re-bound scan makes no catalog call
     (Fable's Q9 carrier).
   - **The frozen epoch signature** (Q8, for TEMP-VIEW-CACHE-LAZY-PARSE-1 A1 and unit 2):

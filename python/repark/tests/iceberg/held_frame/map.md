@@ -10,6 +10,7 @@ stay pinned. The parent [../map.md](../map.md) is at its size ceiling, so the pi
 ## Contents
 
 - `test_ice_held_frame_snapshot_1.py` — 82 cells (41 shapes in both ANSI modes) against the recorded Spark answers:
+- `test_ice_held_frame_snapshot_1.py` — 60 cells (30 shapes in both ANSI modes) against the recorded Spark answers:
   re-bound reads, deleted rows stored by `writeTo().create()` and `insertInto`, the self-append, own-plan `collect`,
   `explain` and `localCheckpoint`, `TABLE_ID_MISMATCH`, `COLUMNS_MISMATCH` (a dropped or widened column, and an added
   one under a derived frame's write), a DataFrame view after a recreate and after a dropped column, a dropped and
