@@ -6,7 +6,8 @@ cargo locks held, on cores 48-57, one sample at a time, with the clock inside th
 - **The probe** is [evidence/probes/a1_cost.py](evidence/probes/a1_cost.py), on a 2M-row JSON file under Los Angeles.
 - **The ratio** is the head's median over the mean of main's and main again's medians. The table is
   [evidence/probes/a1_cost_table.py](evidence/probes/a1_cost_table.py)'s output.
-- **The sample count:** an interrupted round 5 left 11 samples of the first four cases, and 10 of the rest.
+- **The sample count:** an interrupted round 5 left 11 samples of `count_collect` and `collect_first`, 11, 11 and 10 of
+  `view_count` (main, head, main again), and 10 of the two child cases.
 
 | row | n | main ms | head ms | main again ms | ratio | head range | main range |
 |---|---|---|---|---|---|---|---|
@@ -84,14 +85,15 @@ placement would make them.
 
 **4. Not parallelism, not the kernel.**
 - **One CPU** (`taskset -c 48`, five rounds): the head's wall is 2,049 ms against main's 1,933 ms and later main's
-  1,942 ms, so 1.057x. That equals its cycle ratio (1.061x), and the spread within a build is under 0.3%.
+  1,942 ms, so 1.057x. That equals its cycle ratio (1.061x), and the spread within a build is under 0.7% (1.8% for
+  main with one outlier sample).
 - **Ten CPUs:**
   - the CPUs used per sample (CPU time over wall) are 5 to 9 for every build, with no difference between them;
-  - page faults are 140 to 550 per action, and differ between builds by under 50;
-  - the same build's wall swings by 15% to 40% from sample to sample, which is why the ten-round medians read 1.15x
+  - page faults are 109 to 751 per action, and the builds' medians differ by at most 63;
+  - the same build's wall swings by 15% to 65% from sample to sample, which is why the ten-round medians read 1.15x
     and 1.17x against a 1.07x cycle gap.
 
-**The attribution.** A1 adds no instructions to either row. The same unchanged timestamp-parsing code runs 6% to 7%
+**The attribution.** A1's instructions are within 0.05% of main's on both rows. The same unchanged timestamp-parsing code runs 6% to 7%
 slower in A1's binary, a code-layout effect of the build. Builds that do not touch the path show the same effect, up to
 10%. It cannot be fixed inside A1, because no A1 code causes it, and the next unrelated merge can move it either way. A
 build-level fix (function and loop alignment, or profile-guided optimisation of the release build) would be its own
