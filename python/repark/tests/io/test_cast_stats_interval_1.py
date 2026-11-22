@@ -66,6 +66,33 @@ _FULL_SPARK = {
 }
 _NUMBERS = {"n": pa.array([9, 10, 11], pa.int32()), "x": pa.array([-1, 0, 1], pa.int64())}
 _FOLDED = "11 as max(w), 9 as min(w)"
+_NAN_VALUES = [5.0, float("nan"), 10.0]
+_NAN_QUERIES = {
+    "int_eq": "SELECT id, CAST(d AS INT) c FROM cast_stats_nan WHERE CAST(d AS INT) = 0",
+    "bigint_le": "SELECT id FROM cast_stats_nan WHERE CAST(d AS BIGINT) <= 0",
+    "smallint_lt": "SELECT id FROM cast_stats_nan WHERE CAST(d AS SMALLINT) < 3",
+    "int_in": "SELECT id FROM cast_stats_nan WHERE CAST(d AS INT) IN (0, 100)",
+    "float_column": "SELECT id FROM cast_stats_nan WHERE CAST(f AS INT) = 0",
+    "count": "SELECT count(*) FROM cast_stats_nan WHERE CAST(d AS INT) = 0",
+}
+_NAN_CELLS = [*sorted(_NAN_QUERIES), "dataframe"]
+_NAN_SPARK_OFF = {
+    "int_eq": [[2, 0]],
+    "bigint_le": [[2]],
+    "smallint_lt": [[2]],
+    "int_in": [[2]],
+    "float_column": [[2]],
+    "count": [[1]],
+    "dataframe": [[2]],
+}
+_NAN_CONTROLS = {
+    "SELECT id FROM cast_stats_nan WHERE d > 100": [],
+    "SELECT id FROM cast_stats_nan WHERE CAST(f AS DOUBLE) > 7": [[2], [3]],
+}
+_NAN_TO_ZERO = (
+    "Spark's ANSI-off cast of NaN to an integer type answers 0; RePark refuses the NaN row "
+    "(a separate cast gap), and only the silent footer drop is fixed here"
+)
 
 
 def _ids_table(ids: list[str]) -> pa.Table:
@@ -94,6 +121,12 @@ def sources(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
         tables = [_full_table(rids, values) for rids, values in files]
         folders[name] = _write(root / name, tables, group)
     folders["numbers"] = _write(root / "numbers", [pa.table(_NUMBERS)], None)
+    nan = {
+        "id": pa.array([1, 2, 3], pa.int32()),
+        "d": pa.array(_NAN_VALUES, pa.float64()),
+        "f": pa.array(_NAN_VALUES, pa.float32()),
+    }
+    folders["nan"] = _write(root / "nan", [pa.table(nan)], 100)
     return folders
 
 
@@ -254,3 +287,40 @@ def test_native_door_reads_a_string_id_cast_to_int(native: Any, sources: dict[st
     assert _rows(pa.table(native.sql(text))) == [[100, 2]]
     between = "SELECT id FROM cast_stats_src WHERE CAST(id AS INT) BETWEEN 8 AND 30"
     assert _rows(pa.table(native.sql(between))) == _sorted([["011"], ["08"], ["10"], ["30"], ["9"]])
+
+
+def _nan_frame(spark: ReparkSession, folder: Path, query: str) -> DataFrame:
+    frame = spark.read.parquet(str(folder))
+    if query == "dataframe":
+        return frame.filter(functions.col("d").cast("int") == 0).select("id")
+    frame.createOrReplaceTempView("cast_stats_nan")
+    return spark.sql(_NAN_QUERIES[query])
+
+
+@pytest.mark.parametrize("ansi", _ANSI)
+@pytest.mark.parametrize("query", _NAN_CELLS)
+def test_a_float_cast_to_an_integer_reads_the_nan_row_its_footer_leaves_out(
+    spark: ReparkSession, sources: dict[str, Path], query: str, ansi: str
+) -> None:
+    spark.conf.set("spark.sql.ansi.enabled", ansi)
+    with pytest.raises(Exception, match="NaN"):
+        _nan_frame(spark, sources["nan"], query).toArrow()
+
+
+@pytest.mark.xfail(strict=True, reason=_NAN_TO_ZERO)
+@pytest.mark.parametrize("query", _NAN_CELLS)
+def test_an_ansi_off_float_cast_to_an_integer_answers_spark_rows(
+    spark: ReparkSession, sources: dict[str, Path], query: str
+) -> None:
+    spark.conf.set("spark.sql.ansi.enabled", "false")
+    assert _rows(_nan_frame(spark, sources["nan"], query).toArrow()) == _NAN_SPARK_OFF[query]
+
+
+@pytest.mark.parametrize("ansi", _ANSI)
+@pytest.mark.parametrize("text", sorted(_NAN_CONTROLS))
+def test_uncast_and_float_to_double_filters_over_the_nan_file_equal_spark(
+    spark: ReparkSession, sources: dict[str, Path], text: str, ansi: str
+) -> None:
+    spark.conf.set("spark.sql.ansi.enabled", ansi)
+    table = _spark_sql(spark, sources["nan"], "cast_stats_nan", text)
+    assert _rows(table) == _NAN_CONTROLS[text]

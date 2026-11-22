@@ -5481,20 +5481,32 @@ still open is `isModifiable`.
   `max`/`min` of the cast answered from the footer with wrong values: `7, 10` for `25, 3`; BIGINT to STRING
   `'11', '9'` for `'9', '10'`; BIGINT to BOOLEAN `true, true` for `true, false` (S1, silent). A BIGINT column whose
   statistics span `[i64::MIN, i64::MAX]` (one file, or two files that merge to it) failed every filter above it with
-  `Selectivity is out of limit: inf` (S2). After: the last optimizer rule wraps the operand of every cast outside
-  the order-keeping family in an identity UDF (`df_guards/cast_shield/stats_barrier.rs`), and the plain Parquet
-  format drops a 64-bit bound at its type's extreme (`spark_nullable/extreme_bounds.rs`). Order-keeping casts (INT
-  to BIGINT, DECIMAL to INT, DATE to TIMESTAMP_NTZ, text to text) keep their statistics and their footer-answered
-  `max`/`min`. Both ANSI modes; every door.
+  `Selectivity is out of limit: inf` (S2). Footer pruning through a FLOAT or DOUBLE cast to an integer type dropped
+  the NaN row the footer leaves out: one row group `5.0, NaN, 10.0`, `CAST(d AS INT) = 0` answered no row (S1,
+  silent). After: the last rule of the core optimizer list (the Spark extension's `DecimalInRanges` runs after it
+  and builds only numeric-to-numeric casts) wraps the operand of every cast outside the order-keeping family in an
+  identity UDF (`df_guards/cast_shield/stats_barrier.rs`), and the plain Parquet format drops a 64-bit bound at its
+  type's extreme (`spark_nullable/extreme_bounds.rs`; a `max`/`min` at that extreme now scans, same answer).
+  Order-keeping casts (INT to BIGINT, DECIMAL to INT, FLOAT to DOUBLE, DATE to TIMESTAMP_NTZ, text to text) keep
+  their statistics and their footer-answered `max`/`min`; a FLOAT or DOUBLE to an integer or DECIMAL is barred.
+  The NaN cells now refuse in both modes: under ANSI on as Spark does but as `PySparkException` (Arrow's "Can't
+  cast value NaN to type Int32") where Spark raises `[CAST_OVERFLOW]`; under ANSI off where Spark answers 0 (a
+  separate cast gap, strict xfail). Both ANSI modes; every door.
 - **spark** — Spark 4.1.2 answers every cell from the rows. *(oracle: measured live 2026-11-22, both ANSI modes.)*
-- **Pruning** — row-group, page and file pruning, a join's dynamic filter and a TopK filter refuse a string to
-  non-string cast (`PruningPredicate`), so a wrong but ordered cast range dropped no row on main; equal on both.
+- **Pruning** — for casts from and to text, row-group, page and file pruning, a join's dynamic filter and a TopK
+  filter refuse a string to non-string cast (`PruningPredicate`), so a wrong but ordered cast range dropped no row
+  on main. For a FLOAT or DOUBLE cast to an integer type, pruning on main dropped the NaN row (above): a second
+  silent path, closed by barring that cast. Uncast float pruning (`d > 100`) is unchanged and equals Spark.
+- **Caveat** — the order-keeping list holds only while RePark refuses overflowing narrowing integer casts under
+  ANSI off; Spark wraps them (`max` of `CAST(1 AS TINYINT)`, `CAST(300 AS TINYINT)` is 112), so those casts must
+  leave the list when that refusal is fixed.
 - **Residual** — literals at BIGINT's limits can still build a full range inside a plan; the two DataFusion
   faults are to be reported upstream. Iceberg scans carry no column bounds and were never affected.
 - **Pin** — `python/repark/tests/io/test_cast_stats_interval_1.py`;
   `crates/repark-core/src/session/df_guards/cast_shield/stats_barrier_tests.rs`;
   `crates/repark-core/src/spark_nullable/extreme_bounds_tests.rs`.
-- **Rationale** — two NEW S2 families from a workload measurement and one S1 found beside them; card
+- **Rationale** — two NEW S2 families from a workload measurement and two S1 found beside them (the NaN pruning
+  drop by the PR's verifier); card
   [CAST-STATS-INTERVAL-1](../task/roadmap/mid-term/cast-stats-interval-1-card-2026-11-22.md).
 
 ### SIGNED-ZERO-CONST-COMPARE-1 — two FLOAT/DOUBLE constant zeros compare as one value — **FIXED 2026-11-14 (branch `fix/signed-zero-const-compare-1`, merge pending)**

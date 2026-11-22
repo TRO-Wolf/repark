@@ -31,12 +31,14 @@ statistics barrier lives here too, beside the shield it shares `node_schema` and
   ids `'10'` and `'7'` became the INT range `[10, 7]` (a filter above it failed on `Interval::try_new`) and `max`/`min`
   of the cast answered from the footer (`7`, `10` for `25`, `3`). Behind the barrier the cast's bounds are unknown.
   `keeps_order` is DataFusion's own order family (`is_order_preserving_cast_family`: numeric or BOOLEAN to numeric,
-  the same type) plus text to text and binary to binary, narrowed on time: DATE to DATE, DATE to and from a zone-less
+  the same type), with a FLOAT or DOUBLE source kept only to a float target (delta 1, F1: the footer leaves NaN out
+  and a cast to an integer or DECIMAL maps it inside the range, so pruning through the cast dropped the NaN row),
+  plus text to text and binary to binary, narrowed on time: DATE to DATE, DATE to and from a zone-less
   TIMESTAMP, TIMESTAMP to TIMESTAMP with the zone kept or kept absent; dictionaries read as their values. Every other
   cast (STRING to anything else, anything to STRING, numeric to BOOLEAN, a zoned TIMESTAMP to DATE or to a zone-less
   one) is barred. A cast of a constant, a `TRY_CAST` (DataFusion carries no statistics through it) and an operand
   already behind the barrier are left alone; names are kept by `NamePreserver`, so the select list does not change.
-- [stats_barrier_tests.rs](stats_barrier_tests.rs) — the order table, the four inverted-range shapes (`max`/`min` direct
+- [stats_barrier_tests.rs](stats_barrier_tests.rs) — the order table (float to integer and DECIMAL barred, float to float kept), the four inverted-range shapes (`max`/`min` direct
   and through a projection, `BETWEEN` over a projection, the `row_number` dedup) on a core session, an INT to BIGINT
   cast whose `max`/`min` still fold from the footer (no `AggregateExec`, no barrier), and the names and idempotence.
 
