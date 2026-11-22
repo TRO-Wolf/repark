@@ -12,6 +12,7 @@ The pins of [../lazy_cache.rs](../lazy_cache.rs) (`#[cfg(test)] mod tests;`), th
   retries at the next use; two concurrent first uses serve one fill (one buffer); the retained total counts a filled
   table; a released table passes through (a row inserted into the source after the fill shows) and keeps nothing; a
   `LIMIT 1` read fills the whole table; the session's state frees with a filled table registered (the table holds
-  only a weak reader of it).
+  only a weak reader of it). The registration passes `CacheLevel::Query` (unit 2 delta 2); the levels are pinned in
+  `held_iceberg`.
 
 Up: [../map.md](../map.md).

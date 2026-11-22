@@ -13,9 +13,19 @@ with `COLUMNS_MISMATCH`, also when a write came between the view and the frame, 
 reads the view's error or the new table (delta 2, D1); the memo's kept table is the frame's own (delta 2, C-5); and
 (ENC-1 condition 2) on a keyed table, a refused `INSERT`, `INSERT OVERWRITE`, `DELETE`,
 `UPDATE` and `MERGE` each leave the session epoch where it was and the held frame answering its two rows.
+Unit 2 (2026-11-21), a lazy cache table over a held frame: it keeps its fill (the same buffer) across a write to
+another table, a property change and an added column, refills after an insert into its table and keeps the refill; a
+recreate refuses its refill with `TABLE_ID_MISMATCH` and a drop with `TABLE_OR_VIEW_NOT_FOUND`; an own-plan memo
+noted at registration keeps that binding after an insert while a fresh read refills, and a memo that first read the
+cache keeps that fill's binding after a second insert. Delta 1 (F1): another writer is a second session over the same
+memory catalog; after its insert, a fresh SQL read answers the new rows and moves the epoch, and the cached frame keeps
+its fill; a same-session insert after that refills; `REFRESH TABLE` refills, also after the other writer's
+property-only change; and a fresh read of the unchanged table then moves nothing. Delta 2 (2026-11-22): the unit 2
+cells run at both cache levels and delta 1's four at the table level; [tests/](tests/map.md) holds the level pins.
 
 ## Contents
 
 - `tests.rs` — the cells above.
+- [tests/](tests/map.md) — `levels.rs`, the cache-level pins.
 
 Up: [../map.md](../map.md).

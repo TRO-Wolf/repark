@@ -1951,7 +1951,7 @@ class DataFrame:
                 child._display_names = parent_columns
                 child._engine_names = child_native
         child._frame_qualifiers = _qualified_names._alias_frame_qualifiers(child, name)
-        return child
+        return cache_handle._aliased(self, child)
 
     def toArrow(  # noqa: N802 — PySpark method name
         self,

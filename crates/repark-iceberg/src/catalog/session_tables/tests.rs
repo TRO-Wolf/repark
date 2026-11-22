@@ -250,6 +250,30 @@ async fn snapshot_commit(catalog: &dyn Catalog, table: &Table) -> Result<Table> 
     tx.commit(catalog).await
 }
 
+async fn data_commit(catalog: &dyn Catalog, table: &Table) -> Table {
+    let file = iceberg::spec::DataFileBuilder::default()
+        .content(iceberg::spec::DataContentType::Data)
+        .file_path(format!(
+            "{}/data/f{}.parquet",
+            table.metadata().location(),
+            table.metadata().snapshots().count()
+        ))
+        .file_format(iceberg::spec::DataFileFormat::Parquet)
+        .file_size_in_bytes(100)
+        .record_count(1)
+        .partition_spec_id(table.metadata().default_partition_spec_id())
+        .partition(iceberg::spec::Struct::empty())
+        .build()
+        .expect("data file");
+    let tx = Transaction::new(table);
+    let tx = tx
+        .fast_append()
+        .add_data_files(vec![file])
+        .apply(tx)
+        .expect("apply");
+    tx.commit(catalog).await.expect("data commit")
+}
+
 async fn statistics_commit(catalog: &dyn Catalog, table: &Table) -> Result<Table> {
     let tx = Transaction::new(table);
     let tx = tx
@@ -318,6 +342,7 @@ fn keyed_creation(name: &str, source: &Table, location: Option<String>) -> Table
 
 struct Recorded {
     epoch: u64,
+    local: LocalEpoch,
     location: Option<String>,
     tracked: usize,
 }
@@ -326,6 +351,7 @@ fn recorded(bed: &Bed) -> Recorded {
     let tables = tables(bed);
     Recorded {
         epoch: tables.epoch("c", &ident()),
+        local: tables.local_epoch("c", &ident()),
         location: location(tables.current("c", &ident())),
         tracked: tables.tracked(),
     }
@@ -334,6 +360,7 @@ fn recorded(bed: &Bed) -> Recorded {
 fn assert_unmoved(bed: &Bed, before: &Recorded) {
     let after = recorded(bed);
     assert_eq!(after.epoch, before.epoch);
+    assert_eq!(after.local, before.local);
     assert_eq!(after.location, before.location);
     assert_eq!(after.tracked, before.tracked);
 }
@@ -383,6 +410,107 @@ async fn a_plain_reload_keeps_the_epoch_and_a_refresh_moves_it() {
         table_epoch(&bed.context.copied_config(), "c", &ident()),
         Some(tables.epoch("c", &ident()))
     );
+}
+
+#[tokio::test]
+async fn a_load_of_another_writers_commit_moves_the_epoch_and_not_the_local_epoch() {
+    let bed = bed().await;
+    let tables = tables(&bed);
+    bed.session.load_table(&ident()).await.expect("load");
+    let first = tables.local_epoch("c", &ident());
+    assert_eq!(first.changed, tables.epoch("c", &ident()));
+    assert_eq!(first.refreshed, 0);
+    let other = set_property(&bed.guarded, "other").await;
+    let before = tables.epoch("c", &ident());
+    bed.session.load_table(&ident()).await.expect("fresh load");
+    assert!(tables.epoch("c", &ident()) > before);
+    assert_eq!(
+        location(tables.current("c", &ident())),
+        other.metadata_location().map(str::to_string)
+    );
+    assert_eq!(tables.local_epoch("c", &ident()), first);
+    let before = tables.epoch("c", &ident());
+    bed.session.load_table(&ident()).await.expect("reload");
+    assert_eq!(tables.epoch("c", &ident()), before);
+    assert_eq!(tables.local_epoch("c", &ident()), first);
+    refresh_load(&bed.session, &ident()).await.expect("refresh");
+    let refreshed = tables.local_epoch("c", &ident());
+    assert!(refreshed.changed > first.changed);
+    assert_eq!(refreshed.refreshed, refreshed.changed);
+    set_property(&bed.session, "own").await;
+    let committed = tables.local_epoch("c", &ident());
+    assert!(committed.changed > refreshed.changed);
+    assert_eq!(committed.refreshed, refreshed.refreshed);
+    assert_eq!(committed.changed, tables.epoch("c", &ident()));
+}
+
+#[tokio::test]
+async fn a_same_session_metadata_commit_moves_changed_and_not_the_data_tick() {
+    let bed = bed().await;
+    let tables = tables(&bed);
+    let loaded = bed.session.load_table(&ident()).await.expect("load");
+    let first = tables.local_epoch("c", &ident());
+    assert_eq!(first.data, first.changed);
+    set_property(&bed.session, "own").await;
+    let metadata = tables.local_epoch("c", &ident());
+    assert!(metadata.changed > first.changed);
+    assert_eq!(metadata.data, first.data);
+    let current = served(&bed).table().clone();
+    data_commit(bed.session.as_ref(), &current).await;
+    let data = tables.local_epoch("c", &ident());
+    assert_eq!(data.data, data.changed);
+    assert!(data.data > metadata.changed);
+    assert_ne!(
+        loaded.metadata().current_snapshot_id(),
+        served(&bed).table().metadata().current_snapshot_id()
+    );
+}
+
+#[tokio::test]
+async fn a_metadata_commit_over_another_writers_data_keeps_the_data_tick() {
+    let bed = bed().await;
+    let tables = tables(&bed);
+    let loaded = bed.session.load_table(&ident()).await.expect("load");
+    let first = tables.local_epoch("c", &ident());
+    data_commit(bed.guarded.as_ref(), &loaded).await;
+    bed.session.load_table(&ident()).await.expect("fresh load");
+    assert_eq!(tables.local_epoch("c", &ident()), first);
+    set_property(&bed.session, "own").await;
+    let own = tables.local_epoch("c", &ident());
+    assert!(own.changed > first.changed);
+    assert_eq!((own.data, own.refreshed), (first.data, first.refreshed));
+    refresh_load(&bed.session, &ident()).await.expect("refresh");
+    let refreshed = tables.ticks("c", &ident());
+    assert_eq!(refreshed.local.data, refreshed.epoch);
+    assert_eq!(refreshed.local.refreshed, refreshed.epoch);
+    set_property(&bed.session, "after").await;
+    let carried = tables.local_epoch("c", &ident());
+    assert_eq!(
+        (carried.data, carried.refreshed),
+        (refreshed.local.data, refreshed.local.refreshed)
+    );
+}
+
+#[tokio::test]
+async fn a_refresh_that_loses_the_race_guard_still_moves_refreshed() {
+    let bed = bed().await;
+    let tables = tables(&bed);
+    let stale = HeldTable(bed.session.load_table(&ident()).await.expect("load"));
+    let before = tables.epoch("c", &ident());
+    let committed = set_property(&bed.session, "v1").await;
+    let raced = tables.epoch("c", &ident());
+    let local = tables.local_epoch("c", &ident());
+    tables.observe("c", &ident(), &stale, before, true);
+    assert_eq!(tables.epoch("c", &ident()), raced);
+    assert_eq!(
+        location(tables.current("c", &ident())),
+        committed.metadata_location().map(str::to_string)
+    );
+    let after = tables.local_epoch("c", &ident());
+    assert!(after.refreshed > local.changed);
+    assert_eq!(after.changed, after.refreshed);
+    tables.observe("c", &ident(), &stale, before, false);
+    assert_eq!(tables.local_epoch("c", &ident()), after);
 }
 
 #[tokio::test]

@@ -258,9 +258,11 @@ def _drop_stale_identity_frames(
     if not isinstance(identities, weakref.WeakKeyDictionary):
         return
     frame_tokens = token.get(_FRAME_TOKENS_KEY)
+    from repark.spark.dataframe.cache_handle import _held_by_table_fill
+
     current: Any = _UNSET
     for frame, identity in list(identities.items()):
-        if identity[0] != resolved or not frame.is_cached:
+        if identity[0] != resolved or not frame.is_cached or _held_by_table_fill(frame):
             continue
         baseline = None
         if isinstance(frame_tokens, weakref.WeakKeyDictionary):
@@ -364,6 +366,10 @@ def session_table(session: ReparkSession, table_name: str) -> DataFrame:
     _drop_stale_identity_frames(inner, token, resolved, kind)
     frame = DataFrame(inner.sql_built(f"SELECT * FROM {scan_ref}"), inner, token)
     _frame_identities(token)[frame] = (resolved, kind)
+    if kind == "table":
+        from repark.spark.dataframe.cache_handle import _note_table_level
+
+        _note_table_level(frame)
     return frame
 
 
@@ -546,6 +552,10 @@ def cache_table(
         inner,
         session._alive_token,
     )
+    if kind == "table":
+        from repark.spark.dataframe.cache_handle import _note_table_level
+
+        _note_table_level(frame)
     if storage_level is None:
         frame.cache()
     else:

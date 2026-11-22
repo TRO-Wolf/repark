@@ -42,7 +42,7 @@ mod path_write;
 pub mod read_postgres;
 mod session_catalog;
 pub(crate) mod spill;
-mod temp_views;
+pub(crate) mod temp_views;
 mod text_write_format;
 mod write_options;
 pub mod write_postgres;

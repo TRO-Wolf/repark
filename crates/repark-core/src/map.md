@@ -1027,14 +1027,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **TA-SINGLE-SERIES-PARALLEL-1 S2b (2026-10-04):** `built_with_debug_assertions` moved here
   unchanged from `lib.rs` (still re-exported at the crate root) so `lib.rs` stays under its
   `check_lib_rs.py` ceiling after `mod parallel_window;`.
-- `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3): **TEMP-VIEW-SESSION-SETTINGS-1 part 2 (2026-11-18):** `FrameViewSeat` (wrap, rules, handle) and `LiveOptions` (last read). READER-PARSE-1: `ReaderParse`, memo scope.
+- `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3): **TEMP-VIEW-SESSION-SETTINGS-1 part 2 (2026-11-18):** `FrameViewSeat` (wrap, rules, handle) and `LiveOptions` (last read). READER-PARSE-1: `ReaderParse`, memo scope. ICE-HELD-FRAME-SNAPSHOT-1 unit 2: `note_read` keeps table reads; `adopt` copies tables, reads.
   `SessionExtension` with three defaulted hooks (`configure` pre-assembly,
-  `configure_analyzer_rules` during context assembly, and `register` post-context) at v1's inline
-  registration positions; `NoopSessionExtension` is the
-  no-extension baseline. `configure` takes a `SessionBuildConf` — the raw conf map PLUS
-  the values `build()` already resolved from it (the session timezone, H-1a split B).
-  A door reads the resolved value, not the map again, which keeps
-  "resolved once, at construction" literally true.
+  `configure_analyzer_rules` during context assembly, `register` post-context) at v1's
+  registration positions; `NoopSessionExtension` is the no-extension baseline. `configure`
+  takes a `SessionBuildConf`: the raw conf map plus the values `build()` resolved from it (the
+  session timezone, H-1a split B), which a door reads instead of the map.
   **FNP-8 (2026-09-07):** the analyzer hook takes the core-owned guarded rule list and returns
   it unchanged by default. The Spark door uses it to insert one HOF preparation rule before the
   first default type-coercion pass.

@@ -68,7 +68,9 @@ decision (recording the live ones then). With no memo in scope it reads the live
   `INCOMPATIBLE_COLUMN_CHANGES_AFTER_VIEW_WITH_PLAN_CREATION`), and under a write (the command scope) an added column
   does too. Otherwise the scan's source becomes `HeldIcebergScan`, the held schema over a provider built on the
   decided table through a one-table shim (no catalog call), its projection mapped by name and its output conformed to
-  the held schema when only field metadata differs (a dropped and re-added column). `bound_for_view` gives a DataFrame
+  the held schema when only field metadata differs (a dropped and re-added column). Unit 2 (2026-11-21): under a memo
+  it notes each bound scan's `(catalog, identifier)` (`note_read`), so a lazy cache's fill knows every table it
+  read, inside nested views too. `bound_for_view` gives a DataFrame
   view's scans a clone of the provider bound in view mode, a `_repark_writer_` scratch view's in command mode, and
   leaves other internal scratch views (`_repark_`, `__repark_`, `__rp_`) in query mode. The wrapper lives only in an
   optimised plan. Delta 2 (D1): a frame built over such a view takes its table at its build, as Spark analyses it

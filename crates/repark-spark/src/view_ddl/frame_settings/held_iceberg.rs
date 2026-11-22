@@ -131,6 +131,9 @@ pub(super) fn rebind(
             && let Some(bound) = binding(&provider)
         {
             let key = bound.memo_key();
+            if let Some(memo) = memo {
+                memo.note_read(&key, bound.catalog(), bound.ident());
+            }
             let state = decided
                 .entry(key)
                 .or_insert_with_key(|key| decide(&bound, key, memo))
