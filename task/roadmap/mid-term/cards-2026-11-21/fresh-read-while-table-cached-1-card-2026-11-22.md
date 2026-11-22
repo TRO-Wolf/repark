@@ -1,13 +1,13 @@
 # FRESH-READ-WHILE-TABLE-CACHED-1 — with a table cached, Spark answers every session read from the cache; RePark's SQL reads see the committed state, so a job that mixes both is not repeatable
 
-**Rating: proposed S3, proposed as a kept divergence for ICE-HELD-FRAME-SNAPSHOT-1 unit 2 (adviser guidance, 2026-11-22); the owner has not ruled.**
+**Rating: S3, a kept divergence, ruled by the owner 2026-11-22 (proposed by adviser guidance the same day).**
 
 **Date:** 2026-11-22. **Filed by:** the records clerk (`claude-haiku-5-5`).
 **Source:** the Spark side is a measurement by a Fable agent on 2026-11-21: Spark 4.1.2 with Iceberg 1.11.0, `type=hadoop`, a second Spark process as the other writer. The RePark side is read from the base tree at `8357bcfb`, not measured. Tags: `[M]` measured, `[R]` read or reasoned, not run.
 
 **Status:** filed 2026-11-22; not dispatched.
 
-**Severity: S3 (proposed, kept divergence).** RePark is fresher than Spark `[R]`: both answer committed states, RePark a newer one. The cost is that a job mixing a cached table with fresh reads is not repeatable.
+**Severity: S3 (owner, 2026-11-22), kept divergence.** RePark is fresher than Spark `[R]`: both answer committed states, RePark a newer one. The cost is that a job mixing a cached table with fresh reads is not repeatable.
 
 ## Finding
 
@@ -25,7 +25,7 @@ Matching Spark needs either a load that serves other than it fetched (outside EN
 
 ## Ruling status
 
-Proposed as a kept divergence for ICE-HELD-FRAME-SNAPSHOT-1 unit 2 (adviser guidance, 2026-11-22). The owner has not ruled. This card does not record it in the kept-divergence list; that is the owner's ruling.
+Kept divergence, ruled by the owner 2026-11-22 (proposed by adviser guidance for ICE-HELD-FRAME-SNAPSHOT-1 unit 2 the same day). Matching Spark here would need a table load to serve a state other than the one it fetched, which ENC-1 forbids. This card is the record of the ruling; the label packet lists it with the other kept divergences.
 
 ## Scope
 
