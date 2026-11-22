@@ -7,7 +7,7 @@
 
 **Status:** filed 2026-11-22; not dispatched.
 
-**Severity: S3 (proposed, kept divergence).** RePark is fresher than Spark `[R]`: it does not return uncommitted data. The cost is that a job mixing a cached table with fresh reads is not repeatable.
+**Severity: S3 (proposed, kept divergence).** RePark is fresher than Spark `[R]`: both answer committed states, RePark a newer one. The cost is that a job mixing a cached table with fresh reads is not repeatable.
 
 ## Finding
 
@@ -17,7 +17,7 @@
 - **[R] RePark, readers of the registry.** `spark.table` reads it through `catalog_surface.session_table` (`catalog_surface.py:340-367`), whose only caller is `spark.table` (`python/repark/src/repark/spark/session/session_core.py:986`). When the registry entry's snapshot id still matches the one `DESCRIBE TABLE EXTENDED` reports (`_describe_extended_rows`, :136-147), `session_table` builds the new frame from the cached view. Otherwise it drops the entry and unpersists the frame. `is_cached` (:577), `uncache_table` (:561) and `refresh_table` (:731) also read the registry, and `clear_cache` clears it (`python/repark/src/repark/spark/catalog.py:229-258`).
 - **[R] RePark, SQL reads.** A `SELECT ... FROM t` does not go through `session_table` or the registry. So a fresh SQL read answers the other writer's committed state (3), not the cache (2).
 - **[open] RePark, `spark.table` after another writer's commit.** Whether it answers 2 or 3 depends on whether `DESCRIBE TABLE EXTENDED` in the session reports the new snapshot id. Not measured.
-- **[R] Consequence.** RePark is fresher than Spark: it does not return uncommitted data. A job that mixes a cached table with fresh reads is not repeatable, because the cached read and the fresh read can disagree when another writer commits between them.
+- **[R] Consequence.** RePark is fresher than Spark: both answer committed states, RePark a newer one. A job that mixes a cached table with fresh reads is not repeatable, because the cached read and the fresh read can disagree when another writer commits between them.
 
 ## Matching Spark
 

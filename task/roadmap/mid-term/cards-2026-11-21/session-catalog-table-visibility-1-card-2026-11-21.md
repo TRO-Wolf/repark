@@ -1,4 +1,4 @@
-# SESSION-CATALOG-TABLE-VISIBILITY-1 — a table one session created is not found by another session on the same catalog; the root is not diagnosed
+# SESSION-CATALOG-TABLE-VISIBILITY-1 — a table one session created is not found by another session on the same catalog (diagnosed 2026-11-22, not live)
 
 **Rating: proposed S2, to be confirmed by a diagnosis (the replay and the live run, 2026-11-21); the owner has not rated it.**
 
@@ -7,7 +7,7 @@
 
 **Status:** filed 2026-11-21; diagnosed 2026-11-22 (read and measured locally, not live); not dispatched.
 
-**Severity: S2 (proposed), to be confirmed by a diagnosis.** A session cannot see a table another session wrote, and the root is not diagnosed.
+**Severity: S2 (proposed), to be confirmed by a diagnosis.** A session cannot see a table another session wrote. The diagnosis below names the root; it is not confirmed live.
 
 ## Finding
 
@@ -21,7 +21,7 @@ The proposal is S2 pending a diagnosis. The sources give no impact measure beyon
 
 ## Scope
 
-Two observations, one card, root not diagnosed. The verdict says this should be checked before anyone relies on it. The first step is a diagnosis of cross-session catalog visibility on the Hadoop catalog and on the Glue and S3 Tables live runs.
+Two observations, one card. The diagnosis below finds two roots with one error text: the frozen table-name list (Glue and S3 Tables) and the per-session memory catalog (`type=hadoop`, card HADOOP-FACADE-FRESH-SESSION-1). The Glue and S3 Tables root is read and measured on a memory catalog, not confirmed live.
 
 ## Diagnosis (2026-11-22)
 
