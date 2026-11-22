@@ -551,4 +551,27 @@ the lockstep check is advisory. The change to `catalog_surface.py` is recorded i
   asserted live cell green on the baseline (run 44985182689) and red on the first acceptance run after the merge
   means revert that day.
 
+## 11. The live acceptance run after the merge (2026-11-22)
+
+#1394 merged as `7dd27ff5`. Run 45027067515 on that commit (dispatched 13:21Z) passed every leg, all 8 held-frame
+tests included, so the revert trigger did not fire. Glue and S3 Tables gave identical answers on both legs. Each
+group is held, fresh `SELECT count(*)`, new frame, held again; W after the other writer's insert, P after a
+same-session `SET TBLPROPERTIES`, R after `REFRESH TABLE`.
+
+| shape | Spark W / P / R | baseline RePark (`550789fd`) | RePark after #1394 |
+|---|---|---|---|
+| `bare` `spark.table(t).cache()` | 2222 / 2222 / 3333 | 2333 / 3333 / 3333 | 2332 / 2332 / 3333 |
+| `alias` | 2222 / 2222 / 3333 | 2332 / 2332 / 2332 | 2332 / 2332 / 3333 |
+| `cache_table` `CACHE TABLE t` | 2222 / 2222 / 3333 | 2333 / 3333 / 3333 | 2333 / 3333 / 3333 |
+| `sql_star` | 2222 / 3333 / 3333 | 2332 / 2332 / 2332 | 2333 / 3333 / 3333 |
+| `filter` | 2222 / 3333 / 3333 | 2332 / 2332 / 2332 | 2333 / 3333 / 3333 |
+| `agg` | 2222 / 3333 / 3333 | 2332 / 2332 / 2332 | 2333 / 3333 / 3333 |
+| `df_view` | 2222 / 3333 / 3333 | 2333 / 3333 / 3333 | 2333 / 3333 / 3333 |
+
+The held reads of `bare` and `alias` now keep their fill through the other writer's commit and the property commit
+and refill on `REFRESH TABLE`, as Spark does. The query-level shapes answer the session's latest read. The fresh read
+and new frame under a table-level cache (3 where Spark answers 2) and every `CACHE TABLE` read are
+FRESH-READ-WHILE-TABLE-CACHED-1, a kept divergence (owner, 2026-11-22). `df_view` is unchanged. The 27 reads
+`PENDING_1394` held (27 per catalog, 54 in all) were asserted on this run and passed: 0 pending, 0 failed.
+
 Up: [map.md](map.md).
