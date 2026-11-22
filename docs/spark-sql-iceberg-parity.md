@@ -5516,7 +5516,7 @@ still open is `isModifiable`.
   above it with `Selectivity is out of limit: inf` (S2). The two silent faults of the same seat (wrong `max`/`min`
   of the cast; a NaN row dropped by pruning through a float-to-integer cast) are CAST-STATS-SILENT-1, closed by the
   same barrier. After: the last rule of the core optimizer list (the Spark extension's `DecimalInRanges` runs after it
-  and builds only numeric-to-numeric casts) wraps the operand of every cast outside the order-keeping family in an
+  and builds no casts) wraps the operand of every cast outside the order-keeping family in an
   identity UDF (`df_guards/cast_shield/stats_barrier.rs`), and the plain Parquet format drops a 64-bit bound at its
   type's extreme (`spark_nullable/extreme_bounds.rs`; a `max`/`min` at that extreme now scans, same answer).
   Order-keeping casts (INT to BIGINT, DECIMAL to INT, FLOAT to DOUBLE, DATE to TIMESTAMP_NTZ, text to text) keep
@@ -5528,7 +5528,7 @@ still open is `isModifiable`.
   on main. For a FLOAT or DOUBLE cast to an integer type, pruning on main dropped the NaN row: a second silent
   path (CAST-STATS-SILENT-1 (b)), closed by barring that cast. Uncast float pruning (`d > 100`) is unchanged and equals Spark.
 - **Caveat** — the order-keeping list holds only while RePark refuses overflowing narrowing integer casts under
-  ANSI off; Spark wraps them (`max` of `CAST(1 AS TINYINT)`, `CAST(300 AS TINYINT)` is 112), so those casts must
+  ANSI off; Spark wraps them (`max` of `CAST(1 AS TINYINT)`, `CAST(300 AS TINYINT)` is 44), so those casts must
   leave the list when that refusal is fixed.
 - **Residual** — literals at BIGINT's limits can still build a full range inside a plan; the two DataFusion
   faults are to be reported upstream. Iceberg scans carry no column bounds and were never affected.

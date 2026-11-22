@@ -37,7 +37,7 @@ entry and the section below. One barrier closes all four.
 
 ## Measured (Spark 4.1.2; release packages of `c5370be6` and of the branch head)
 
-Synthetic Parquet, both ANSI modes (every cell answered the same in both). "error" is DataFusion's internal
+Synthetic Parquet, both ANSI modes (every RePark cell answered the same in both). "error" is DataFusion's internal
 assertion above.
 
 | Case | Spark 4.1.2 | `c5370be6` | head |
@@ -86,7 +86,7 @@ The pins hold the measured Spark answers: `python/repark/tests/io/test_cast_stat
 ## Fix
 
 - **The barrier.** `StatsBarrierRule` (`repark_stats_barrier`, the last rule of the core optimizer list; the Spark extension's
-  `DecimalInRanges` runs after it and builds only numeric-to-numeric casts,
+  `DecimalInRanges` runs after it and builds no casts,
   `crates/repark-core/src/session/df_guards/cast_shield/stats_barrier.rs`) wraps the operand of every `CAST` whose
   value order the cast does not keep in `__repark_stats_barrier__(x)`, an identity UDF. DataFusion then knows no
   bounds for the cast: no inverted range, no interval, no shortcut. The order-keeping family is DataFusion's own
@@ -102,7 +102,7 @@ The pins hold the measured Spark answers: `python/repark/tests/io/test_cast_stat
   lost, and a full range cannot form when files merge. The cost: a `max` or `min` over a column whose bound sits at
   its type's extreme no longer folds from the footer and scans instead (same answer).
 - **Caveat on the order-keeping list.** It holds only while RePark refuses overflowing narrowing integer casts
-  under ANSI off. Spark wraps them (`max` of `CAST(1 AS TINYINT)` and `CAST(300 AS TINYINT)` is 112), so a folded
+  under ANSI off. Spark wraps them (`max` of `CAST(1 AS TINYINT)` and `CAST(300 AS TINYINT)` is 44), so a folded
   `max` would be wrong; when that refusal is fixed, narrowing integer casts must leave the list.
 
 No answer that equalled Spark changed: the barrier is an identity, and the dropped bound was the type's own limit.
