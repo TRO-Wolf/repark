@@ -57,6 +57,22 @@ CODE_READ_ONLY = {
     ("bare", "after_props", "held"),
     ("bare", "after_props", "held_again"),
 }
+_HELD_AFTER_COMMIT = [(step, read) for step in live.STEPS[1:] for read in ("held", "held_again")]
+MAIN_BREAKS = {("alias", "after_refresh", read) for read in ("held", "held_again")} | {
+    (shape, *read)
+    for shape in ("bare", *live.QUERY_SHAPES)
+    for read in [("after_writer", "held_again"), *_HELD_AFTER_COMMIT]
+}
+_TABLE_LEVEL_HEAD = {
+    "after_writer": _HELD_TWO,
+    "after_props": _HELD_TWO,
+    "after_refresh": _ALL_THREE,
+}
+HEAD_PREDICTION = {
+    **dict.fromkeys(live.SHAPES, _DROPPED_AT_THE_NEW_FRAME),
+    "bare": _TABLE_LEVEL_HEAD,
+    "alias": _TABLE_LEVEL_HEAD,
+}
 
 
 class _UnseenWriter:
@@ -158,20 +174,21 @@ def test_spark_measured_answers_pass_both_legs_in_every_window(window: str, shap
     assert live.grade(shape, found, "repark", pending=frozenset())["failed"] == {}, (window, shape)
 
 
-@pytest.mark.parametrize("prediction", sorted(PREDICTIONS))
 @pytest.mark.parametrize("shape", live.SHAPES)
-def test_each_main_prediction_passes_the_repark_leg_with_the_pending_list(
-    prediction: str, shape: str
-) -> None:
-    found = _found(PREDICTIONS[prediction][shape])
-    assert live.grade(shape, found, "repark")["failed"] == {}, (prediction, shape)
+def test_the_head_prediction_passes_the_repark_leg_with_no_pending_read(shape: str) -> None:
+    found = _found(HEAD_PREDICTION[shape])
+    assert live.grade(shape, found, "repark")["failed"] == {}, shape
+    assert live.grade(shape, found, "repark")[live.PENDING] == {}, shape
 
 
-def test_the_pending_list_is_where_a_main_prediction_breaks_the_rule() -> None:
+def test_the_pending_list_is_empty_and_main_breaks_the_rule_where_it_was() -> None:
     adviser = _broken(ADVISER_PREDICTION)
     code_read = _broken(CODE_READ_PREDICTION)
-    assert adviser | code_read == live.PENDING_1394
+    assert not live.PENDING_1394
+    assert adviser | code_read == MAIN_BREAKS
+    assert len(MAIN_BREAKS) == 27
     assert (adviser | code_read) - adviser == CODE_READ_ONLY
+    assert _broken(HEAD_PREDICTION) == set()
 
 
 def test_a_reader_that_never_sees_the_writer_fails_on_both_legs() -> None:
@@ -222,9 +239,10 @@ def test_a_query_level_held_read_after_a_fresh_read_must_equal_it() -> None:
     found["after_writer"] = {"held": 2, "fresh": 3, "new": 2, "held_again": 2}
     failed = live.grade("sql_star", found, "repark", pending=frozenset())["failed"]
     assert set(failed) == {"after_writer.new", "after_writer.held_again"}, failed
-    pending = live.grade("sql_star", found, "repark")
+    pending = live.grade("sql_star", found, "repark", pending=frozenset(MAIN_BREAKS))
     assert set(pending["failed"]) == {"after_writer.new"}, pending
     assert pending[live.PENDING]["after_writer.held_again"] == 2, pending
+    assert set(live.grade("sql_star", found, "repark")["failed"]) == set(failed), failed
 
 
 def test_the_writer_client_reads_replies_and_scrubs_the_writer_log(

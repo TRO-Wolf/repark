@@ -59,9 +59,10 @@ mod update_fields;
 pub use repark_common::java_case::{fold_b_equal, string_lower_equal};
 pub use session::read_postgres::{PostgresRead, PostgresTarget, READ_POSTGRES_SOURCE};
 pub use session::{
-    DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSession as Session, ReparkSessionBuilder,
-    cast_shield_udf, frame_names, insert_struct_setop_after_coercion, resolve_bound_expr,
-    resolve_scoped_expr, resolve_subquery_plan, struct_walk, write_postgres, writer_layout,
+    CacheLevel, DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSession as Session,
+    ReparkSessionBuilder, cast_shield_udf, frame_names, insert_struct_setop_after_coercion,
+    resolve_bound_expr, resolve_scoped_expr, resolve_subquery_plan, struct_walk, write_postgres,
+    writer_layout,
 };
 
 // === Session timezone ===

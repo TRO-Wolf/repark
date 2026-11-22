@@ -39,7 +39,14 @@ async fn lazy(session: &ReparkSession, budgets: (Option<u64>, Option<u64>)) -> D
     source(session, "src", 64);
     let frame = lineage(session, "src").await;
     session
-        .register_lazy_cache_view("__repark_cache_t", frame, budgets, None, None)
+        .register_lazy_cache_view(
+            "__repark_cache_t",
+            frame,
+            budgets,
+            None,
+            None,
+            CacheLevel::Query,
+        )
         .await
         .expect("lazy cache registers");
     assert_eq!(filled(session, "__repark_cache_t").await, Some(false));

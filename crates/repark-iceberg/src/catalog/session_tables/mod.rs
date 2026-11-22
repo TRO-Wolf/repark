@@ -63,6 +63,14 @@ pub fn same_state(seen: &Table, table: &Table) -> bool {
         && seen.metadata().last_updated_ms() == table.metadata().last_updated_ms()
 }
 
+#[must_use]
+pub fn same_data(seen: &Table, current: &Table) -> bool {
+    let (seen, current) = (seen.metadata(), current.metadata());
+    seen.uuid() == current.uuid()
+        && seen.current_snapshot_id() == current.current_snapshot_id()
+        && seen.history().last() == current.history().last()
+}
+
 #[derive(Debug, Clone)]
 pub struct HeldTable(Table);
 
@@ -87,12 +95,26 @@ impl TableState {
             Self::Dropped => false,
         }
     }
+
+    fn same_data_as(&self, state: &TableState) -> bool {
+        match (self, state) {
+            (Self::Live(seen), Self::Live(table)) => same_data(seen.table(), table.table()),
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct LocalEpoch {
     pub changed: u64,
+    pub data: u64,
     pub refreshed: u64,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Ticks {
+    pub epoch: u64,
+    pub local: LocalEpoch,
 }
 
 #[derive(Debug, Clone)]
@@ -118,9 +140,17 @@ impl SessionTables {
 
     #[must_use]
     pub fn local_epoch(&self, catalog: &str, ident: &TableIdent) -> LocalEpoch {
+        self.ticks(catalog, ident).local
+    }
+
+    #[must_use]
+    pub fn ticks(&self, catalog: &str, ident: &TableIdent) -> Ticks {
         locked(&self.seen)
             .get(&(catalog.to_string(), ident.clone()))
-            .map(|entry| entry.local)
+            .map(|entry| Ticks {
+                epoch: entry.epoch,
+                local: entry.local,
+            })
             .unwrap_or_default()
     }
 
@@ -150,18 +180,26 @@ impl SessionTables {
     ) {
         let key = (catalog.to_string(), ident.clone());
         let mut seen = locked(&self.seen);
-        let carried = match seen.get(&key) {
-            Some(entry)
-                if entry.epoch != before || (!refresh && entry.state.same_as(table.table())) =>
-            {
+        let carried = match seen.get_mut(&key) {
+            Some(entry) if entry.epoch != before => {
+                if refresh {
+                    let tick = self.tick();
+                    entry.local = LocalEpoch {
+                        changed: tick,
+                        data: tick,
+                        refreshed: tick,
+                    };
+                }
                 return;
             }
+            Some(entry) if !refresh && entry.state.same_as(table.table()) => return,
             Some(entry) if !refresh => Some(entry.local),
             _ => None,
         };
         let epoch = self.tick();
         let local = carried.unwrap_or(LocalEpoch {
             changed: epoch,
+            data: epoch,
             refreshed: if refresh { epoch } else { 0 },
         });
         seen.insert(
@@ -178,15 +216,27 @@ impl SessionTables {
         let epoch = self.tick();
         let key = (catalog.to_string(), ident.clone());
         let mut seen = locked(&self.seen);
-        let refreshed = seen.get(&key).map_or(0, |entry| entry.local.refreshed);
+        let local = seen.get(&key).map_or(
+            LocalEpoch {
+                changed: epoch,
+                data: epoch,
+                refreshed: 0,
+            },
+            |entry| LocalEpoch {
+                changed: epoch,
+                data: if entry.state.same_data_as(&state) {
+                    entry.local.data
+                } else {
+                    epoch
+                },
+                refreshed: entry.local.refreshed,
+            },
+        );
         seen.insert(
             key,
             Entry {
                 epoch,
-                local: LocalEpoch {
-                    changed: epoch,
-                    refreshed,
-                },
+                local,
                 state,
             },
         );

@@ -31,10 +31,9 @@ use datafusion::physical_plan::{
 };
 use datafusion::prelude::DataFrame;
 use futures::TryStreamExt;
-use iceberg::table::Table;
 use repark_common::{Error, Result};
 use repark_iceberg::catalog::session_tables::{
-    HeldTable, SessionTables, TableState, binding, same_state,
+    HeldTable, SessionTables, TableState, Ticks, binding, same_data, same_state,
 };
 use tokio::sync::OnceCell;
 
@@ -50,6 +49,12 @@ const SEGMENT_BYTES: usize = 128 * 1024 * 1024;
 const NODE_NAME: &str = "LazyCacheExec";
 
 type LiveState = dyn Fn() -> Option<SessionState> + Send + Sync;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CacheLevel {
+    Table,
+    Query,
+}
 
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) struct LazyStacks {
@@ -122,21 +127,24 @@ fn within<F: Future>(memo: Option<Arc<ReaderParseMemo>>, future: F) -> Within<F>
 
 struct Dep {
     read: TableRead,
-    epoch: Option<u64>,
+    mark: Option<Ticks>,
     seen: Option<HeldTable>,
 }
 
 impl Dep {
-    fn holds(&mut self, tables: &SessionTables) -> bool {
-        let Some(epoch) = self.epoch else {
+    fn holds(&mut self, tables: &SessionTables, level: CacheLevel) -> bool {
+        let Some(mark) = self.mark else {
             return false;
         };
-        let now = tables.local_epoch(&self.read.catalog, &self.read.ident);
-        if now.changed == epoch {
-            return true;
+        let now = tables.ticks(&self.read.catalog, &self.read.ident);
+        if level == CacheLevel::Table {
+            return now.local.data == mark.local.data;
         }
-        if now.refreshed > epoch {
+        if now.local.refreshed != mark.local.refreshed {
             return false;
+        }
+        if now.epoch == mark.epoch {
+            return true;
         }
         let Some(TableState::Live(current)) = tables.current(&self.read.catalog, &self.read.ident)
         else {
@@ -146,18 +154,11 @@ impl Dep {
             !same_state(seen.table(), current.table()) && same_data(seen.table(), current.table())
         });
         if kept {
-            self.epoch = Some(now.changed);
+            self.mark = Some(now);
             self.seen = Some(current);
         }
         kept
     }
-}
-
-fn same_data(seen: &Table, current: &Table) -> bool {
-    let (seen, current) = (seen.metadata(), current.metadata());
-    seen.uuid() == current.uuid()
-        && seen.current_snapshot_id() == current.current_snapshot_id()
-        && seen.history().last() == current.history().last()
 }
 
 fn live(state: Option<TableState>) -> Option<HeldTable> {
@@ -203,6 +204,7 @@ struct Shared {
     mode: Mutex<Mode>,
     tables: Option<Arc<SessionTables>>,
     reads: Vec<TableRead>,
+    level: CacheLevel,
 }
 
 pub(crate) struct LazyCacheTable {
@@ -226,6 +228,7 @@ impl LazyCacheTable {
         budgets: (Option<u64>, Option<u64>),
         stacks: LazyStacks,
         owner: Option<Arc<ReaderParseMemo>>,
+        level: CacheLevel,
     ) -> Result<Self> {
         let (state, plan) = frame.into_parts();
         let options = Arc::clone(state.config_options());
@@ -263,6 +266,7 @@ impl LazyCacheTable {
                 mode: Mutex::new(Mode::Armed(Arc::new(OnceCell::new()))),
                 tables,
                 reads,
+                level,
             }),
         })
     }
@@ -451,7 +455,7 @@ impl Shared {
             return true;
         };
         let mut deps = fill.deps.lock().unwrap_or_else(PoisonError::into_inner);
-        deps.iter_mut().all(|dep| dep.holds(tables))
+        deps.iter_mut().all(|dep| dep.holds(tables, self.level))
     }
 
     fn rearm(&self, stale: &Arc<OnceCell<Arc<Fill>>>) -> Option<Arc<OnceCell<Arc<Fill>>>> {
@@ -503,7 +507,7 @@ impl Shared {
         reads
             .into_iter()
             .map(|read| {
-                let now = tables.local_epoch(&read.catalog, &read.ident).changed;
+                let now = tables.ticks(&read.catalog, &read.ident);
                 let current = live(tables.current(&read.catalog, &read.ident));
                 let seen = memo.held_table(&read.key).or_else(|| current.clone());
                 let valid = match (&seen, &current) {
@@ -513,7 +517,7 @@ impl Shared {
                 };
                 Dep {
                     read,
-                    epoch: valid.then_some(now),
+                    mark: valid.then_some(now),
                     seen: if valid { current } else { seen },
                 }
             })

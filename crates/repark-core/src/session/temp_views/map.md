@@ -46,6 +46,12 @@ sits at its line ceiling.
     session's own commits, drops, creates, renames and refreshes move, so another writer's commit keeps the fill also
     when a fresh read on Glue or S3 Tables records it (Q2 (b) moves the epoch, not the local epoch), as Spark keeps
     its fill until a same-session write or a refresh. A refresh since the fill always refills, whatever the state.
+    **Delta 2 (2026-11-22):** that rule holds only for a cache of the table itself, so the dep now splits by
+    `CacheLevel`, which the caller passes to `register_lazy_cache_view` (the facade: `Table` for `spark.table(t)`, its
+    aliases and `CACHE TABLE`, `Query` for everything else). `Table` keys on the map's `data` tick, so it keeps its
+    fill through another writer's commit and a same-session metadata-only commit, and refills on a refresh or an own
+    data commit. `Query` keys on the epoch and `refreshed`: it refills when a load has recorded new data and on
+    every refresh, so it answers what the session's latest read answers.
   - **Own-plan actions keep their first binding through the cache.** `cache()` notes the lineage's tables in the
     acting frame's memo at their current state (Spark fixes the frame's own plan there). A memo that holds a table
     whose data differs from what the cache would serve reads the lineage under that memo (the pass-through) and

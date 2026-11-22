@@ -18,6 +18,11 @@ so a held frame can be re-bound at execution as Spark 4.1.2 re-binds it (`V2Tabl
     `refreshed`, the tick of the last refresh. A load that sees another writer's state moves the epoch and the state,
     and carries the local epoch unchanged; a new entry starts with `changed` at its tick. The lazy cache reads it, so
     a cached fill outlives another writer's commit as Spark's does, while held frames and fresh reads still see it.
+    **Delta 2 (2026-11-22, the owner's cache-shape rule):** `LocalEpoch` also carries `data`, which `record` moves
+    only when the committed state's data (`same_data`: UUID, current snapshot, last snapshot-log entry; moved here
+    from the lazy cache) differs from the previous entry's, and every refresh moves; a metadata-only commit moves
+    `changed` and not `data`. `ticks` reads the epoch and the local epoch under one lock. A refresh whose load
+    returns on the race guard still moves `changed`, `data` and `refreshed` (G4), and leaves the state and the epoch.
   - `session_catalog_provider`, called at `ReparkSession::register_iceberg_catalog_with_policy` before
     `build_iceberg_catalog_provider`: it wraps the registered handle in `SessionTablesCatalog` when the extension is
     present and the handle is one `EncryptionGuardCatalog::install` returned, so the fork schema provider's own
@@ -79,7 +84,10 @@ so a held frame can be re-bound at execution as Spark 4.1.2 re-binds it (`V2Tabl
   handle moves the state and the epoch; a load older than a commit does not put the older table back (the race
   guard); a plain reload keeps the epoch and a refresh load moves it; a load of another writer's commit (through the
   guard's handle) moves the epoch and not the local epoch, a refresh moves both local ticks and an own commit only
-  `changed`; a drop records a drop marker; a provider resolved
+  `changed`; an own property commit moves `changed` and not `data`, an own data commit (one appended file) both;
+  after another writer's data commit and a fresh load, an own property commit keeps `data` and `refreshed`, and a
+  refresh then moves both, carried by the next commit (G5); a refresh that loses the race guard still moves
+  `refreshed` and keeps the state and the epoch (G4); a drop records a drop marker; a provider resolved
   through the capturing schema carries its planning load; a provider built over the shim scans with no load on the
   counting catalog; and the ENC-1 tests above.
 

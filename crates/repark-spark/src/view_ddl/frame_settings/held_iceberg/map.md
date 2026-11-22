@@ -20,10 +20,12 @@ noted at registration keeps that binding after an insert while a fresh read refi
 cache keeps that fill's binding after a second insert. Delta 1 (F1): another writer is a second session over the same
 memory catalog; after its insert, a fresh SQL read answers the new rows and moves the epoch, and the cached frame keeps
 its fill; a same-session insert after that refills; `REFRESH TABLE` refills, also after the other writer's
-property-only change; and a fresh read of the unchanged table then moves nothing.
+property-only change; and a fresh read of the unchanged table then moves nothing. Delta 2 (2026-11-22): the unit 2
+cells run at both cache levels and delta 1's four at the table level; [tests/](tests/map.md) holds the level pins.
 
 ## Contents
 
 - `tests.rs` — the cells above.
+- [tests/](tests/map.md) — `levels.rs`, the cache-level pins.
 
 Up: [../map.md](../map.md).
