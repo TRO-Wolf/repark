@@ -393,6 +393,32 @@ pub fn session_write_path(
     })
 }
 
+#[allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#[pyfunction]
+#[pyo3(signature = (session, path, mode, options, partition_by))]
+pub fn refuse_dynamic_path_overwrite(
+    session: PyRef<'_, PyReparkSession>,
+    path: &str,
+    mode: &str,
+    options: Vec<(String, String)>,
+    partition_by: Vec<String>,
+) -> PyResult<()> {
+    fenced_span!("py.write", "refuse_dynamic_path_overwrite", {
+        repark_core::partition_overwrite_mode::refuse_dynamic_plain_overwrite(
+            repark_core::partition_overwrite_mode::PlainPathWrite {
+                path,
+                overwrite: mode == "overwrite",
+                partitioned: !partition_by.is_empty(),
+            },
+            repark_core::partition_overwrite_mode_from_ctx(session.session.context()),
+            options
+                .iter()
+                .map(|(key, value)| (key.as_str(), value.as_str())),
+        )
+        .map_err(crate::to_py_err)
+    })
+}
+
 #[allow(clippy::missing_errors_doc)]
 #[pyfunction]
 #[pyo3(signature = (sql, keep_verbatim))]
@@ -462,6 +488,7 @@ pub fn register(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(write_door_of, module)?)?;
     module.add_function(wrap_pyfunction!(last_write_doors, module)?)?;
     module.add_function(wrap_pyfunction!(session_write_path, module)?)?;
+    module.add_function(wrap_pyfunction!(refuse_dynamic_path_overwrite, module)?)?;
     module.add_function(wrap_pyfunction!(built_sql_user_fragment, module)?)?;
     module.add_function(wrap_pyfunction!(session_text_write_copy_parts, module)?)?;
     Ok(())

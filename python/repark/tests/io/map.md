@@ -43,6 +43,7 @@ pins.
 - [test_r1_read_formats.py](test_r1_read_formats.py) — R1 — CSV/JSON read + write facade pins (Arrow path: value AND type).
 - [test_r2_read_formats2.py](test_r2_read_formats2.py) — R2 — writer option matrix / path modes / partitionBy honesty pins (Arrow path).
 - [test_s3_path_write_1.py](test_s3_path_write_1.py) — Moto pins for the 38 W-PATH-S3-* oracle cells in ``u12-spark.json``.
+- [test_plain_dynamic_overwrite_guard_1.py](test_plain_dynamic_overwrite_guard_1.py) — PLAIN-DYNAMIC-OVERWRITE-GUARD-1: effective DYNAMIC partitioned path overwrites refuse with the seed bytes intact or the target absent (four formats, both spellings, S3 dispatch spy); the STATIC, append, ignore, error and unpartitioned branches unchanged.
 - [test_session_sources.py](test_session_sources.py) — Declared source mounts: `sources()` lists them with redacted properties and `ping` resolves through the mount.
 - [test_source_url_redact_1_fn.py](test_source_url_redact_1_fn.py) — SOURCE-URL-REDACT-1: URL passwords are masked on the builder, `repark.toml` and `conf.set` doors.
 - [test_source_url_redact_2.py](test_source_url_redact_2.py) — SOURCE-URL-REDACT-2: config values and refusals never echo a credential (three shapes on every door).

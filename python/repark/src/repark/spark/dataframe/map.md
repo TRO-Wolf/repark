@@ -17,7 +17,7 @@ record is
 | plans | [plan_collapse.py](plan_collapse.py), [plan_introspect.py](plan_introspect.py), [frame_nodes.py](frame_nodes.py), [unemitted_ids.py](unemitted_ids.py), [repartition_ops.py](repartition_ops.py), [streaming_batch.py](streaming_batch.py), [polars_cells.py](polars_cells.py) | plan rewrites, introspection, frame nodes |
 | session | [eager.py](eager.py), [cache_handle.py](cache_handle.py) | eager materialization, cache-view ownership |
 | udf | [udf_bridge.py](udf_bridge.py), [udf_projection.py](udf_projection.py), [udf_schema.py](udf_schema.py), [udf_window_projection.py](udf_window_projection.py), [export_errors.py](export_errors.py) | UDF callbacks, projections, error mapping |
-| writers | [writer_readwriter.py](writer_readwriter.py), [writer_layout.py](writer_layout.py), [writer_save.py](writer_save.py), [writer_schema.py](writer_schema.py), [writer_text.py](writer_text.py), [writer_s3.py](writer_s3.py) | writers, layouts, text and S3 paths |
+| writers | [writer_readwriter.py](writer_readwriter.py), [writer_layout.py](writer_layout.py), [writer_save.py](writer_save.py), [writer_schema.py](writer_schema.py), [writer_text.py](writer_text.py), [writer_s3.py](writer_s3.py) | writers, layouts, text and S3 paths; both plain path writers call `writer_layout._refuse_dynamic_path_overwrite` first (PLAIN-DYNAMIC-OVERWRITE-GUARD-1) |
 | surface | [surface_a.py](surface_a.py), [surface_b.py](surface_b.py), [io_declared.py](io_declared.py) | extra surface, declared IO |
 
 Rules for new files: a new module joins the row of its area; a new area is a new row.

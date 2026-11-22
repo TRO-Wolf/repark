@@ -581,6 +581,17 @@ impl ReparkSession {
     ) -> Result<usize> {
         let format = WriteFormat::parse(format)?;
         let mode = SaveMode::parse(mode)?;
+        crate::partition_overwrite_mode::refuse_dynamic_plain_overwrite(
+            crate::partition_overwrite_mode::PlainPathWrite {
+                path: url,
+                overwrite: matches!(mode, SaveMode::Overwrite),
+                partitioned: !partition_by.is_empty(),
+            },
+            crate::partition_overwrite_mode_from_ctx(self.context()),
+            options
+                .iter()
+                .map(|(key, value)| (key.as_str(), value.as_str())),
+        )?;
         let (scheme, bucket, prefix_text) = parse_write_destination(url)?;
         let frame_columns: Vec<String> = frame
             .schema()
