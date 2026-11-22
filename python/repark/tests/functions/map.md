@@ -70,7 +70,7 @@ pins.
 - [test_functions_a.py](test_functions_a.py) — FN-A — ordering / null / math facade wrappers (value + Arrow type).
 - [test_functions_b.py](test_functions_b.py) — FN-B — string facade wrappers (value + Arrow type).
 - [test_functions_c.py](test_functions_c.py) — FN-C — aggregate aliases / shims (value + Arrow type).
-- [test_functions_d.py](test_functions_d.py) — FN-D — datetime facade wrappers (value + Arrow type).
+- [test_functions_d.py](test_functions_d.py) — FN-D — datetime facade wrappers (value + Arrow type); `unix_seconds` floors.
 - [test_functions_dates.py](test_functions_dates.py) — Facade tests for the ``Window`` / ``row_number`` surface and the 13 date functions.
 - [test_functions_e.py](test_functions_e.py) — FN-E — collections facade wrappers (value + Arrow type).
 - [test_functions_f.py](test_functions_f.py) — FN-F — try / session / bitwise facade wrappers (value + Arrow type).
@@ -85,7 +85,7 @@ pins.
 - [test_lrs4_door_domain.py](test_lrs4_door_domain.py) — LRS-4 — per-door divergence pins (C-012): SQL door and facade resolve different kernels.
 - [test_lrs6_regexp_divergences.py](test_lrs6_regexp_divergences.py) — LRS-6 — RE-2 divergence pins, measured but not closed (BACKLOG row).
 - [test_lrs7_unordered_window.py](test_lrs7_unordered_window.py) — LRS-7 — a window with no ORDER BY frames the whole partition, as Spark documents.
-- [test_map_column_panic_1.py](test_map_column_panic_1.py) — MAP-COLUMN-PANIC-1 — `map(<key>, <non-literal value>)` equals Spark 4.1.2 on `sql`, `selectExpr`, `expr`, a string `filter` and INSERT, UPDATE and MERGE, in rows, type and nullability; Spark's duplicate-key, NULL-key and odd-arity errors; two divergences pinned (no condition on runtime errors, DataFusion's odd-arity text through `expr`); [the oracle](map_column_panic_1_spark_oracle.json): live PySpark 4.1.2, 2026-10-20, `local[1]`, UTC, ANSI on, 33 cells over the three-row temp view.
+- [test_map_column_panic_1.py](test_map_column_panic_1.py) — MAP-COLUMN-PANIC-1 — `map(<key>, <non-literal value>)` equals Spark 4.1.2 on `sql`, `selectExpr`, `expr`, a string `filter` and INSERT, UPDATE and MERGE, in rows, type and nullability; Spark's duplicate-key, NULL-key and odd-arity errors; two divergences pinned (no condition on runtime errors, DataFusion's odd-arity text through `expr`); [the oracle](map_column_panic_1_spark_oracle.json): live PySpark 4.1.2, 2026-10-20, `local[1]`, UTC, ANSI on, 33 cells.
 - [test_map_column_panic_native_door_1.py](test_map_column_panic_native_door_1.py) — MAP-COLUMN-PANIC-NATIVE-DOOR-1 (2026-10-21) — the native door answers `map(<key>, <column>)`: 16 Spark cells equal Spark's rows; the repeated and NULL key cells raise Spark's `[DUPLICATED_MAP_KEY]` and `[NULL_MAP_KEY]` text; the literal control keeps its rows; reads `map_column_panic_1_spark_oracle.json`.
 - [test_map_struct_key_subscript_1.py](test_map_struct_key_subscript_1.py), [_2.py](test_map_struct_key_subscript_2.py), [_3.py](test_map_struct_key_subscript_3.py) and [_4.py](test_map_struct_key_subscript_4.py) — MAP-STRUCT-KEY-SUBSCRIPT-1 (rounds 2 to 4): `_1` cells match Spark 4.1.2 in both sessions (18); `_2` the `F.expr` select and list-family cells (13); `_3` the signed-zero, NaN and zone cells (18); `_4` the ANSI gate and the native default (5).
 - [test_sem1_extract_all_group_default.py](test_sem1_extract_all_group_default.py) — SEM-1 — the two-argument ``regexp_extract_all`` defaults to capture group 1, as Spark does.

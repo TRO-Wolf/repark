@@ -17,10 +17,7 @@ from repark.spark.functions import (
     dayofmonth,
     lit,
 )
-from repark.spark.functions import (
-    abs as abs_column,
-)
-from repark.spark.functions_expr import current_date, date_part, floor, sign, unix_timestamp
+from repark.spark.functions_expr import current_date, date_part, unix_timestamp
 
 # Epoch day 0 as a foldable DATE literal (Spark ``date_from_unix_date(0)``).
 _UNIX_EPOCH_DATE = datetime.date(1970, 1, 1)
@@ -59,15 +56,6 @@ def to_unix_timestamp(
     return unix_timestamp(timestamp, format)
 
 
-def _truncate_toward_zero(column: Column) -> Column:
-    """Integer part of ``column`` toward zero (Spark ``unix_*`` fractional truncate).
-
-    ``CAST(ts AS BIGINT)`` floors (``-1.5 → -2``). Spark ``unix_seconds`` /
-    ``unix_millis`` truncate toward zero (``-1.5 → -1``).
-    """
-    return (floor(abs_column(column)) * sign(column)).cast("long")
-
-
 def unix_date(col: Column | str) -> Column:
     """Days since 1970-01-01 (PySpark ``functions.unix_date``).
 
@@ -85,22 +73,13 @@ def unix_date(col: Column | str) -> Column:
 
 
 def unix_seconds(col: Column | str) -> Column:
-    """Seconds since 1970-01-01 UTC, truncating sub-seconds (PySpark ``unix_seconds``).
-
-    Hazard: ``CAST(ts AS BIGINT)`` floors. Spark ``unix_seconds`` truncates
-    toward zero, so negatives use ``floor(abs(seconds)) * sign(seconds)``.
-    """
-    seconds = _as_column_arg(col, as_lit=False).cast("double")
-    return _truncate_toward_zero(seconds)
+    """Seconds since 1970-01-01 UTC (PySpark ``unix_seconds``)."""
+    return _scalar("unix_seconds", _as_column_arg(col, as_lit=False))
 
 
 def unix_millis(col: Column | str) -> Column:
-    """Milliseconds since 1970-01-01 UTC, truncating micros (PySpark ``unix_millis``).
-
-    Same toward-zero rule as :func:`unix_seconds`.
-    """
-    millis = _as_column_arg(col, as_lit=False).cast("double") * lit(1000)
-    return _truncate_toward_zero(millis)
+    """Milliseconds since 1970-01-01 UTC (PySpark ``unix_millis``)."""
+    return _scalar("unix_millis", _as_column_arg(col, as_lit=False))
 
 
 def date_from_unix_date(n: Column | int | str) -> Column:

@@ -728,9 +728,9 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             }
             repark_functions::expr_fn::make_dt_interval(exprs.clone())
         }
-        "unix_micros" => {
+        "unix_micros" | "unix_seconds" | "unix_millis" => {
             need(1)?;
-            repark_functions::expr_fn::unix_micros(exprs[0].clone())
+            repark_functions::timestamp_cast::unix_floor::unix_epoch(name, exprs[0].clone())
         }
         "crc32" => {
             need(1)?;

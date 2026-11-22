@@ -120,7 +120,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `keep_verbatim` flag and canonicalizes with it, so `F.expr` parses like the session door (net-zero,
   stays 1012).
 - [`function_dispatch.rs`](function_dispatch.rs) owns scalar and aggregate function dispatch. Its
-  default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before refusing. **ROUND-DOUBLE-EXACT-1 (2026-11-14):** `F.round` and `Column.round` build `call_round`, not DataFusion's `expr_fn::round`. **SUM-DEC-I128WRAP-1 (2026-11-17):** `"sum"` returns `repark_functions::aggregate::sum_udaf()` (carries `pivot`, `call_function`).
+  default arm hands the name to [`function_dispatch/`](function_dispatch/map.md) before refusing. **ROUND-DOUBLE-EXACT-1 (2026-11-14):** `F.round` and `Column.round` build `call_round`, not DataFusion's `expr_fn::round`. **SUM-DEC-I128WRAP-1 (2026-11-17):** `"sum"` returns `repark_functions::aggregate::sum_udaf()` (carries `pivot`, `call_function`). **UNIX-TIMESTAMP-TRUNCATE-1:** `unix_seconds` / `unix_millis` share the `unix_micros` arm.
   **FNP-BITMAP-FACADE-1 (2026-09-15):** `unary_aggregate_udaf` gains the `bitmap_construct_agg` /
   `bitmap_or_agg` / `bitmap_and_agg` arms mapping to `repark_functions::bitmap_agg::{bitmap_construct_agg_udaf,
   bitmap_or_agg_udaf, bitmap_and_agg_udaf}` (the module is `pub` in `repark-functions` for the
@@ -154,8 +154,8 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   `create_map`, which lowers the facade's alternating key/value arguments to DataFusion's `map(keys,
   values)` — the shape the Spark door builds for `map(...)`, so the facade makes
   one engine call. The arms live here and not in `function_dispatch.rs` because that file was at 992
-  of its 1000-line ceiling; the cohesive `column/dispatch/` split the campaign charter names is
-  FNP-Z's, and the slate forbids doing it piecemeal inside a feature unit. LOG1P-1: `log1p` /
+  of its 1000-line ceiling; the cohesive `column/dispatch/` split is
+  FNP-Z's. LOG1P-1: `log1p` /
   `expm1` arms embed `repark_functions::expr_fn` kernels.
   **FNP-11A:** the fourteen temporal arms live in `dispatch_json.rs` beside the JSON
   arms (the parent file is at its 1000-line ceiling, so no arm lands there;
