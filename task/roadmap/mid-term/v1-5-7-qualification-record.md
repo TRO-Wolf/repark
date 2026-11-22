@@ -6,7 +6,7 @@
 
 | Item | Value |
 |---|---|
-| Base | `origin/main` `913fbd535518e281202d635428ba065f5343a5cf` (CAST-STATS-SILENT-1, PR #1405, merge commit `913fbd535`) |
+| Base | `origin/main` `913fbd535518e281202d635428ba065f5343a5cf` (CAST-STATS-SILENT-1, PR #1405), then `5caea2a51` (#1409, registry wording only) merged into the branch |
 | Release-prep branch | `release/v1.5.7` on the base: `066d1102d` (version and lock), then the notes, record, STATUS and map commit |
 | Version | 1.5.7 (`[workspace.package] version` in `Cargo.toml`) |
 | Previous tag | `v1.5.6` at `ae60c359` (PyPI 1.5.6) |
@@ -32,14 +32,14 @@ Runs read with `gh run list --branch main`, read only, at the time this record w
 
 | Head | Workflow | Run id | Conclusion |
 |---|---|---|---|
-| `913fbd53` (base) | CI | 45067315060 | in progress |
-| `913fbd53` | smoke | 45067315134 | in progress |
-| `913fbd53` | Cache warm | 45067315051 | in progress |
+| `913fbd53` (base) | CI | 45067315060 | success |
+| `913fbd53` | smoke | 45067315134 | success |
+| `913fbd53` | Cache warm | 45067315051 | success |
 | `913fbd53` | typos | 45067315104 | success |
 | `913fbd53` | wheels | 45067315153 | skipped (push to main) |
 | `809319dae` (PR #1408) | CI, smoke, Cache warm, typos | | success (all four); wheels skipped |
 
-The CI and smoke conclusions on `913fbd53` are not yet green. Re-read them before the squash-merge; a run cancelled at its time cap is not a pass.
+CI and smoke on `913fbd53` concluded success. `5caea2a51` changes one registry paragraph; its runs and the release PR's required checks are read again before the squash-merge.
 
 ## 5. Verifier verdicts for the three units
 
@@ -100,7 +100,7 @@ Exit codes are the real codes from the lane run on the tree that this record des
 
 ## 8. Release steps (owner and orchestrator)
 
-1. Let CI and smoke on `913fbd53` conclude success (section 4).
+1. CI and smoke on `913fbd53`: success (section 4); the release PR's required checks green.
 2. **Owner:** squash-merge the release PR on green required checks.
 3. **Orchestrator:** tree equality (runbook step 2.1): `git rev-parse release/v1.5.7^{tree}` must equal `gh api repos/TRO-Wolf/repark/commits/<squash-sha> --jq .commit.tree.sha`.
 4. **Orchestrator:** tag (runbook step 2.2): `git tag -a v1.5.7 -m "RePark v1.5.7" <squash-sha>`, then `git push origin v1.5.7`.
