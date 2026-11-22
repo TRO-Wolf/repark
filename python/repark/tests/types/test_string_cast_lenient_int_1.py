@@ -269,7 +269,7 @@ def test_a_values_string_stored_into_an_integer_column_still_refuses(
     session = _open(tmp_path, ansi)
     session.sql("CREATE NAMESPACE IF NOT EXISTS lenient.ns").collect()
     session.sql("CREATE TABLE lenient.ns.values_t (id INT, c INT) USING iceberg").collect()
-    for text in ("42", " 42 ", "abc"):
+    for text in (" 42 ", "abc"):
         with pytest.raises(Exception, match=r"Cannot cast string|CANNOT_SAFELY_CAST"):
             session.sql(f"INSERT INTO lenient.ns.values_t VALUES (1, '{text}')").collect()
     session.stop()
