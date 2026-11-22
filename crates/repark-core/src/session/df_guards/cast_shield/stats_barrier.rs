@@ -201,8 +201,10 @@ fn is_binary(data_type: &DataType) -> bool {
 
 fn temporal_keeps_order(source: &DataType, target: &DataType) -> bool {
     match (source, target) {
-        (DataType::Date32 | DataType::Date64, DataType::Date32 | DataType::Date64)
-        | (DataType::Date32 | DataType::Date64, DataType::Timestamp(_, None))
+        (
+            DataType::Date32 | DataType::Date64,
+            DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, None),
+        )
         | (DataType::Timestamp(_, None), DataType::Date32 | DataType::Date64) => true,
         (DataType::Timestamp(_, from), DataType::Timestamp(_, to)) => {
             from.is_some() == to.is_some()

@@ -11,6 +11,8 @@ use datafusion::parquet::file::properties::WriterProperties;
 use super::extreme_bounds::{has_type_extreme_bound, without_type_extreme_bounds};
 use crate::session::ReparkSession;
 
+type Layout<'a> = &'a [(&'a str, &'a [Option<i64>], usize)];
+
 fn column(min: ScalarValue, max: ScalarValue) -> ColumnStatistics {
     ColumnStatistics::new_unknown()
         .with_min_value(Precision::Exact(min))
@@ -130,7 +132,9 @@ async fn x_values(session: &ReparkSession, sql: &str) -> Vec<i64> {
             .downcast_ref::<Int64Array>()
             .expect("an int64 column");
         values.extend(
-            (0..column.len()).filter_map(|row| column.is_valid(row).then(|| column.value(row))),
+            (0..column.len())
+                .filter(|&row| column.is_valid(row))
+                .map(|row| column.value(row)),
         );
     }
     values.sort_unstable();
@@ -153,7 +157,7 @@ async fn external_table(session: &ReparkSession, dir: &Path) {
 #[tokio::test]
 async fn full_range_bigint_files_answer_range_and_equality_filters() {
     let full = [Some(0), Some(i64::MAX), Some(i64::MIN), Some(5), None];
-    let layouts: [&[(&str, &[Option<i64>], usize)]; 3] = [
+    let layouts: [Layout; 3] = [
         &[("part-0.parquet", &full, 8)],
         &[("part-0.parquet", &full, 2)],
         &[
