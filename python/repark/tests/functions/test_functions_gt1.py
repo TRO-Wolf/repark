@@ -699,7 +699,7 @@ def test_cast_invalid_utf8_string_is_fail_loud(spark: ReparkSession) -> None:
 
 def test_regexp_instr_bare_str_idx_is_fail_loud(spark: ReparkSession) -> None:
     """Bare-str idx is force-lit then CAST to INT — Spark CAST_INVALID_INPUT."""
-    with pytest.raises(PySparkException, match=r"Cannot cast string 'i'"):
+    with pytest.raises(PySparkException, match=r"\[CAST_INVALID_INPUT\] The value 'i'"):
         _table(
             spark.range(1).select(F.regexp_instr(F.lit("abcde"), F.lit("b(c)d"), "i").alias("x"))
         )

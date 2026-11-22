@@ -56,6 +56,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     rules.push(Arc::new(crate::analyzer::time_window::SparkSessionWindow));
     rules.push(Arc::new(crate::generator::GeneratorRewrite));
     rules.push(grouping_rule());
+    rules.push(Arc::new(crate::cast_map::SparkStringIntegralCast));
     rules
 }
 

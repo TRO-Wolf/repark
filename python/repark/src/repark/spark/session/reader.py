@@ -21,6 +21,7 @@ from repark.spark.session.reader_support import (
     _jdbc_bound_is_temporal,
     _parse_as_of_timestamp_option,
     _parse_snapshot_id_option,
+    _schema_cast,
 )
 from repark.spark.dataframe import io_declared as _io_declared
 
@@ -715,7 +716,9 @@ class DataFrameReader:
             if name_based:
                 for field in fields:
                     source_name = column_by_case[field["name"].casefold()]
-                    selects.append(F.col(source_name).cast(field["dataType"]).alias(field["name"]))
+                    selects.append(
+                        _schema_cast(F.col(source_name), field["dataType"]).alias(field["name"])
+                    )
             else:
                 generic_source = bool(columns) and all(
                     name.lower().startswith("column") or name.startswith("_c") for name in columns
@@ -727,7 +730,9 @@ class DataFrameReader:
                         if key in column_by_case:
                             source_name = column_by_case[key]
                             selects.append(
-                                F.col(source_name).cast(field["dataType"]).alias(field["name"])
+                                _schema_cast(F.col(source_name), field["dataType"]).alias(
+                                    field["name"]
+                                )
                             )
                         else:
                             selects.append(F.lit(None).cast(field["dataType"]).alias(field["name"]))
@@ -735,7 +740,7 @@ class DataFrameReader:
                     for index, field in enumerate(fields):
                         source_name = columns[index]
                         selects.append(
-                            F.col(source_name).cast(field["dataType"]).alias(field["name"])
+                            _schema_cast(F.col(source_name), field["dataType"]).alias(field["name"])
                         )
                 else:
                     from repark.errors import AnalysisException

@@ -20,8 +20,10 @@ use leaf::{Mode, atomic_castable, key_castable, leaf_cast};
 
 mod leaf;
 mod rewrite;
+mod string_integral;
 
 pub use rewrite::{map_cast_target, map_cast_token, rewrite_map_casts};
+pub use string_integral::{ARROW_CAST_OPERAND_NAME, SparkStringIntegralCast};
 
 pub use repark_common::udf_names::CAST_MAP_NAME;
 pub const EMPTY_MAP_CAST_NAME: &str = "__repark_empty_map_cast__";
@@ -44,6 +46,9 @@ pub fn empty_map_cast_udf() -> Arc<ScalarUDF> {
 pub fn register(ctx: &SessionContext) {
     ctx.register_udf(cast_map_udf().as_ref().clone());
     ctx.register_udf(empty_map_cast_udf().as_ref().clone());
+    for udf in string_integral::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
 }
 
 #[must_use]
