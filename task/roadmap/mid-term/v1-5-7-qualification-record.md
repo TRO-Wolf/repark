@@ -81,11 +81,11 @@ Exit codes are the real codes from the lane run on the tree that this record des
 | Owner ruling | `make check-owner-ruling` | 0 |
 | Spell check | `make spell-check` | 0 |
 | Comment ban, `913fbd53..HEAD` | the oc-worker comment-ban helper | 0 (hits=0) |
-| Docs compaction | `make check-docs-compaction` | see the final gate run below |
-| Docs links | `make check-docs-links` | see the final gate run below |
-| Map size | `make check-map-size` | see the final gate run below |
-| Map sync | `python3 scripts/sync_map_md.py --check` | see the final gate run below |
-| Docs pins | `pytest` on `test_v1_gate_docs.py` and `test_live_v3_docs.py` | see the final gate run below |
+| Docs compaction | `make check-docs-compaction` | 0 |
+| Docs links | `make check-docs-links` | 0 |
+| Map size | `make check-map-size` | 0 (758 maps clean) |
+| Map sync | `python3 scripts/sync_map_md.py --check` | 0 |
+| Docs pins | `pytest` on `test_v1_gate_docs.py` and `test_live_v3_docs.py` (`uv run`, as `make py-test`) | 0 (26 passed) |
 | Preflight | `make preflight` | not run: it builds the facade wheel and runs the facade suite, beyond this lane's limits; CI runs the suites on the release PR |
 | Rust tests, clippy, fmt | `make verify` | not run: a workspace build is beyond this lane's limits |
 | Security | `make audit` | not run in this lane |
