@@ -30,6 +30,7 @@ import uuid
 import warnings
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 from _acceptance import (
@@ -55,14 +56,19 @@ from _acceptance import (
     run_object_stem,
     run_table_prefix,
     s3tables_catalog_config,
+    s3tables_spark_catalog_config,
 )
 from _acceptance_held_frame import (
+    SHAPES,
     SPARK_ROWS,
     HeldFrameCells,
+    SparkProcessWriter,
     cell_line,
     cost_line,
-    session_writer,
-    spark_answer,
+    grade,
+    shape_line,
+    spark_conf,
+    spark_session,
 )
 from _acceptance_replace import (
     assert_replace_twice_outcome,
@@ -76,6 +82,8 @@ from _acceptance_v3 import (
     format_v3_refusal_record,
     run_v3_acceptance,
 )
+from _oracle_pins import ICEBERG_RUNTIME_VERSION, ICEBERG_SPARK_RUNTIME_GAV
+from _spark_python import resolve_live_spark_python
 from _sql_harden_cutover_golden import REPARK
 from _sql_harden_cutover_programs import _NAMESPACE, _PROGRAMS
 from _sql_harden_cutover_run import (
@@ -656,34 +664,62 @@ def _held_frame_s3tables_session(app: str, arn: str) -> ReparkSession:
     return spark
 
 
+_HELD_FRAME_JARS = {
+    "spark.jars.packages": (
+        f"{ICEBERG_SPARK_RUNTIME_GAV},org.apache.iceberg:iceberg-aws-bundle:{ICEBERG_RUNTIME_VERSION}"
+    )
+}
+
+
 def _held_frame_cells(
-    spark: ReparkSession, catalog: str, writer: Callable[[str], None]
+    session: Any,
+    catalog: str,
+    writer: Callable[[str, str], dict[str, Any]] | None = None,
 ) -> HeldFrameCells:
     return HeldFrameCells(
-        spark, catalog, ACCEPTANCE_NAMESPACE, run_table_prefix(), ICEBERG_TABLE_PROPERTIES, writer
+        session, catalog, ACCEPTANCE_NAMESPACE, run_table_prefix(), ICEBERG_TABLE_PROPERTIES, writer
     )
 
 
 def _assert_held_frame_rows(spark: ReparkSession, catalog: str, name: str) -> None:
-    got = _held_frame_cells(spark, catalog, session_writer(spark)).rows()
+    got = _held_frame_cells(spark, catalog).rows()
     for label, found in got.items():
         print(cell_line(name, label, found, SPARK_ROWS[label]), flush=True)
     assert got == SPARK_ROWS, got
 
 
-def _assert_held_frame_external(spark: ReparkSession, catalog: str, name: str, label: str) -> None:
-    other = spark.newSession()
-    try:
-        got = _held_frame_cells(spark, catalog, session_writer(other)).external(label)
-    finally:
-        other.stop()
-    expected = spark_answer(label, got["idle_s"])
-    print(cell_line(name, label, got, expected), flush=True)
-    assert got["answer"] == expected, got
+def _held_frame_writer(config: dict[str, str], name: str) -> SparkProcessWriter:
+    conf = spark_conf(config, f"held-frame-writer-{name}", _HELD_FRAME_JARS)
+    return SparkProcessWriter(resolve_live_spark_python(), conf)
+
+
+def _assert_held_frame_shapes(cells: HeldFrameCells, name: str, leg: str) -> None:
+    failed = {}
+    for shape in SHAPES:
+        found = cells.shape(shape)
+        graded = grade(shape, found, leg)
+        print(shape_line(name, leg, shape, found, graded), flush=True)
+        if graded["failed"]:
+            failed[shape] = graded["failed"]
+    assert not failed, failed
+
+
+def _assert_held_frame_shapes_on_repark(
+    spark: ReparkSession, catalog: str, name: str, writer_config: dict[str, str]
+) -> None:
+    with _held_frame_writer(writer_config, name) as writer:
+        _assert_held_frame_shapes(_held_frame_cells(spark, catalog, writer), name, "repark")
+
+
+def _assert_held_frame_shapes_on_spark(catalog: str, name: str, config: dict[str, str]) -> None:
+    pytest.importorskip("pyspark")
+    reader = spark_session(spark_conf(config, f"held-frame-reader-{name}", _HELD_FRAME_JARS))
+    with _held_frame_writer(config, name) as writer:
+        _assert_held_frame_shapes(_held_frame_cells(reader, catalog, writer), name, "spark")
 
 
 def _print_held_frame_cost(spark: ReparkSession, catalog: str, name: str) -> None:
-    cells = _held_frame_cells(spark, catalog, session_writer(spark))
+    cells = _held_frame_cells(spark, catalog)
     for row in (cells.cost_held_read(), cells.cost_held_filter_count()):
         print(cost_line(name, row), flush=True)
 
@@ -701,30 +737,19 @@ def test_held_frame_rows_against_s3tables() -> None:
     _assert_held_frame_rows(spark, S3TABLES_CATALOG, "s3tables")
 
 
-def test_held_frame_external_writer_against_glue() -> None:
+def test_held_frame_shapes_against_glue() -> None:
     assert_real_buckets_configured()
-    spark = _held_frame_glue_session("held-frame-external-glue")
-    _assert_held_frame_external(spark, SILVER_CATALOG, "glue", "control")
+    spark = _held_frame_glue_session("held-frame-shapes-glue")
+    config = glue_catalog_config(SILVER_CATALOG, GLUE_WAREHOUSE)
+    _assert_held_frame_shapes_on_repark(spark, SILVER_CATALOG, "glue", config)
 
 
-def test_held_frame_external_writer_against_s3tables() -> None:
+def test_held_frame_shapes_against_s3tables() -> None:
     arn = _held_frame_arn()
     assert_real_buckets_configured()
-    spark = _held_frame_s3tables_session("held-frame-external-s3tables", arn)
-    _assert_held_frame_external(spark, S3TABLES_CATALOG, "s3tables", "control")
-
-
-def test_held_frame_refresh_against_glue() -> None:
-    assert_real_buckets_configured()
-    spark = _held_frame_glue_session("held-frame-refresh-glue")
-    _assert_held_frame_external(spark, SILVER_CATALOG, "glue", "refresh")
-
-
-def test_held_frame_refresh_against_s3tables() -> None:
-    arn = _held_frame_arn()
-    assert_real_buckets_configured()
-    spark = _held_frame_s3tables_session("held-frame-refresh-s3tables", arn)
-    _assert_held_frame_external(spark, S3TABLES_CATALOG, "s3tables", "refresh")
+    spark = _held_frame_s3tables_session("held-frame-shapes-s3tables", arn)
+    config = s3tables_spark_catalog_config(S3TABLES_CATALOG, arn)
+    _assert_held_frame_shapes_on_repark(spark, S3TABLES_CATALOG, "s3tables", config)
 
 
 def test_held_frame_cost_against_glue() -> None:
@@ -738,3 +763,18 @@ def test_held_frame_cost_against_s3tables() -> None:
     assert_real_buckets_configured()
     spark = _held_frame_s3tables_session("held-frame-cost-s3tables", arn)
     _print_held_frame_cost(spark, S3TABLES_CATALOG, "s3tables")
+
+
+def test_held_frame_spark_shapes_against_glue() -> None:
+    assert_real_buckets_configured()
+    _held_frame_glue_session("held-frame-spark-shapes-glue")
+    config = glue_catalog_config(SILVER_CATALOG, GLUE_WAREHOUSE)
+    _assert_held_frame_shapes_on_spark(SILVER_CATALOG, "glue", config)
+
+
+def test_held_frame_spark_shapes_against_s3tables() -> None:
+    arn = _held_frame_arn()
+    assert_real_buckets_configured()
+    _held_frame_s3tables_session("held-frame-spark-shapes-s3tables", arn)
+    config = s3tables_spark_catalog_config(S3TABLES_CATALOG, arn)
+    _assert_held_frame_shapes_on_spark(S3TABLES_CATALOG, "s3tables", config)
