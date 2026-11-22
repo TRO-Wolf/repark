@@ -6009,7 +6009,9 @@ still open is `isModifiable`.
   timestamp cast that overflows raises Arrow's error; `F.to_unix_timestamp` refuses a `Column` pattern
   ([card](../task/roadmap/mid-term/unix-timestamp-truncate-1-card-2026-11-22.md), "Still unlike Spark").
 - **Pin** — `python/repark/tests/timestamps/test_unix_timestamp_truncate_1.py` (4,092 cells against
-  `unix_timestamp_truncate_1_spark_oracle.json`, the Parquet minute difference, the NTZ refusal text),
+  `unix_timestamp_truncate_1_spark_oracle.json`, the Parquet minute difference, plan item P04-07's
+  boundary vectors read cold, the NTZ refusal text), `zone_horizon_render_1_residue.json` (15 `wall_gap`
+  cells retired),
   `python/repark/tests/functions/test_functions_d.py`; Rust `repark-functions` `timestamp_cast::tests`
   and `timestamp_cast::unix_floor::tests`.
 - **Rationale** — the audit family `NEW-dates-4` (S1) with `UNIX-TIMESTAMP-STRING-TRIM-1` and

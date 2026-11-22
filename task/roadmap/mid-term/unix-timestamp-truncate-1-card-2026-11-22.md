@@ -62,8 +62,9 @@ The full table, the probe and the logs stay with the builder's scratch hand-back
 - `timestamp_cast/unix_floor.rs`: registered `unix_seconds` and `unix_millis` that floor every Arrow
   timestamp unit, replacing `datafusion-spark`'s truncating cast chains; a `TIMESTAMP_NTZ` argument
   refuses with Spark's `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`.
-- `functions_datetime.py`: `F.unix_seconds` and `F.unix_millis` build the engine function instead of a
-  `DOUBLE` composite.
+- `functions_datetime.py`, `function_dispatch.rs` and `functions_byname.py`: `F.unix_seconds` and
+  `F.unix_millis` build the engine function instead of a `DOUBLE` composite, and leave the facade-only
+  by-name list.
 
 `CAST(ts AS BIGINT)` already floored, as Spark does, and is unchanged.
 
@@ -75,7 +76,19 @@ The full table, the probe and the logs stay with the builder's scratch hand-back
   and ANSI mode, over the four doors and three zones; the whole-second, post-1970, `CAST AS BIGINT`,
   `unix_micros` and `unix_date` cells are the controls. The minute difference over seven spans is written
   to Parquet and read back in every zone and mode. `unix_seconds` / `unix_millis` of a `TIMESTAMP_NTZ`
-  column check Spark's refusal text on three doors.
+  column check Spark's refusal text on three doors. Plan item P04-07's boundary vectors (one microsecond
+  before the epoch, `23:59:59.4996`, one microsecond either side of a whole second, the epoch, one second,
+  `NULL`) are written to Parquet and read back cold, then answered through SQL, `F.*`, `F.expr` and the
+  `SSSSSS` pattern in three zones and both modes: at one microsecond before the epoch `unix_seconds` and
+  `unix_millis` are `-1` and `unix_timestamp` / `to_unix_timestamp` `0`, all `bigint`, and
+  `unix_millis(23:59:59.4996)` is `-501` (`-500` on `c5370be6`).
+- `python/repark/tests/timestamps/zone_horizon_render_1_residue.json`: the 15 `wall_gap` `unix_timestamp`
+  cells (New York, Sydney, Lord Howe; 2099 to 9999) now equal Spark and leave the residue, the gap cells of
+  [TRANSITION-DAY-ARITHMETIC-1](transition-day-arithmetic-1-card-2026-10-08.md).
+- A mutant that restores the floor in `unix_timestamp` alone (both seats) reds the `unix_timestamp`,
+  `to_unix_timestamp` and pattern groups over `TIMESTAMP`, `TIMESTAMP_NTZ` and text, the stored minute
+  difference and the UTC and Kolkata boundary vectors (46 tests); `unix_seconds` / `unix_millis`, the
+  one-argument `DATE` and text groups, the NTZ refusal and the controls stay green.
 - `python/repark/tests/functions/test_functions_d.py`: `unix_seconds` of `1969-12-31 23:59:58.5` is now
   `-2`, Spark's answer (the old pin held the truncation).
 - Rust: `timestamp_cast::tests::unix_timestamp_truncates_toward_zero_where_the_cast_floors` and
