@@ -13,16 +13,16 @@ rule of 2026-11-19 (C-012 a hard 1.05x; a short row over 1.05x a flag; nothing o
   invalidation surface (97 cells per mode), the design (a lazy cache fill bound to the session table map's epochs,
   kept across a schema-only change), the three product files, the bar against 1a's and A1's, the mutation proof, the
   cost and the gates, a card line and the C-009 question. **Delta 1 (§9):** the verifier's F1, a local epoch in the
-  session table map so a cached fill outlives another writer's commit, its Rust pins and gates.
+  session table map so a cached fill outlives another writer's commit, its Rust pins and gates. **Delta 2
+  (§10):** the owner's cache-shape rule: a data tick in the map, the dep split by `CacheLevel`, the facade's level mark
+  and the narrowed C-009 drop, the pins, the event table and `PENDING_1394` emptied.
 - [live-aws.md](live-aws.md) — the held-frame cells for the live Glue and S3 Tables run (2026-11-21, tests only):
   the cells and their live tests, Spark's measured answers and cache interval, main's local answers, the
-  local-only list and how to read the cost lines.
-- [cards.md](cards.md) — the residual cards of fix round 1 and delta 2, and unit 2 delta 1's F3, for the
-  orchestrator to file.
   local-only list and how to read the cost lines. LIVE-SECOND-WRITER-1 (2026-11-22): a second Spark process as the
   other writer, the seven cached shapes on a RePark and a Spark reader leg, the grading, main's predicted answers
   written before any live run, `PENDING_1394` and what stays open.
-- [cards.md](cards.md) — the residual cards of fix round 1 and delta 2 for the orchestrator to file.
+- [cards.md](cards.md) — the residual cards of fix round 1 and delta 2, and unit 2 delta 1's F3, for the
+  orchestrator to file.
 - [evidence/](evidence/map.md) — the probes and the raw cells of this build.
 
 ## What 1a builds (seat A, Q9 (a), the command scope moved in)

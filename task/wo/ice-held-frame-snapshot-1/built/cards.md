@@ -45,6 +45,11 @@ Unit 2 delta 1 (2026-11-21), from the #1394 verifier's F3 (class (c), pre-existi
   [QUALIFIER-LEAK-H-1](../../../roadmap/mid-term/qualifier-leak-h-1-card-2026-10-03.md), which covers
   `AMBIGUOUS_REFERENCE` only.
 
+Unit 2 delta 2 (2026-11-22) files no new card. What it leaves open is named in [unit-2.md](unit-2.md) §10: the
+open cell already has its card,
+[FRESH-READ-WHILE-TABLE-CACHED-1](../../../roadmap/mid-term/cards-2026-11-21/fresh-read-while-table-cached-1-card-2026-11-22.md),
+and the `cacheTable` `isCached` cell stays §8's C-009 question.
+
 Two of round 0's open cells already have cards, so they are not carded again here:
 [STRING-CAST-LENIENT-1](../../../roadmap/mid-term/string-cast-lenient-1-card-2026-11-16.md) (`M|held_cast`) and
 [LOCAL-CHECKPOINT-NEW-FRAME-1](../../../roadmap/mid-term/local-checkpoint-new-frame-1-card-2026-10-03.md)

@@ -107,7 +107,10 @@ takes from 1a's map; `session_tables/mod.rs`, `encryption_guard.rs`, every `impl
 record are untouched. **Delta 1 (§9) adds a fourth product file,** `crates/repark-iceberg/src/catalog/session_tables/mod.rs`:
 each entry records a local epoch, and the dep reads it in place of the epoch; it is on ENC-1's allowlist, so delta 1
 is ENC-1: yes. Tests: `held_iceberg/tests.rs` (3 Rust pins) and the new pin file
-`python/repark/tests/iceberg/held_frame/test_ice_held_frame_snapshot_1_cached.py`.
+`python/repark/tests/iceberg/held_frame/test_ice_held_frame_snapshot_1_cached.py`. **Delta 2 (§10)** adds the data
+tick to `session_tables/mod.rs`, the `CacheLevel` split to `lazy_cache.rs` (re-exported through `temp_views.rs`,
+`session.rs` and `lib.rs`), one keyword to `crates/repark-python/src/session.rs`, and the facade's level mark and
+narrowed C-009 drop (`catalog_surface.py`, `dataframe/cache_handle.py`, one line of `dataframe/core.py`).
 
 ## 5. The bar
 
@@ -247,7 +250,9 @@ The first run of docs-links (and the one `make py-test` pin that runs it) failed
   `false` (`test_cache_table_insert_serves_fresh_rows`, `..._insert_overwrite_...`, `..._writer_append_...`). Options:
   (a) keep C-009 as is (today's state, the pins hold); (b) skip the eviction for a frame whose cache is a lazy table,
   keep it for the eager fallback and for views, and re-pin the three `isCached` asserts to Spark's `true`. Default
-  (a) in this unit, since the brief holds the C-009 pins.
+  (a) in this unit, since the brief holds the C-009 pins. **Delta 2 (§10)** takes (b) for frames only, as the
+  owner's rule needs: a lazily held table-level frame is no longer evicted (`U|frame_cached_after_write` answers
+  Spark's `true`); the `cacheTable` entry and its three pins are unchanged, so `U|is_cached_after_write` stays.
 - **Glue and S3 Tables.** A fresh read that sees another writer's commit records it (1a's Q2 (b)) and moves the
   epoch; before delta 1 a cached frame then refilled where Spark keeps its fill until a refresh (F1). Delta 1 keeps the
   fill (§9, by Rust pins with a second session as the other writer). The AWS acceptance leg should still carry "cache
@@ -358,7 +363,185 @@ xfailed (as on `108d665c`); A1's and C-009's pin files 111 passed, and their sib
 
 **Left as it was (named, not measurable locally):** another writer's commit, a fresh read, then a same-session
 property-only `ALTER`: the dep compares the fill's data with the commit's, which carries the other writer's snapshot,
-so it refills where Spark keeps the fill. The same holds for a refill raced by another writer's commit observed during
+so it refills where Spark keeps the fill (closed for table-level caches by delta 2, §10; the re-check's G2). The same holds for a refill raced by another writer's commit observed during
 the fill (the dep starts stale).
+
+## 10. Delta 2 (2026-11-22): the fill follows what is cached
+
+By Claude Opus 5.5 (`claude-opus-5-5`), effort xhigh: one more targeted change after the review cap, which the owner
+adopted on 2026-11-22 together with both verifiers again, on the delta-1 re-check's G1, G2, G4 and G5 (G3 is the PR
+body, below) and the live baseline of main `550789fd` (run 44985182689, all 8 held-frame tests passed).
+
+**The rule** (measured by Fable on Spark 4.1.2 with Iceberg 1.11.0, a second Spark process as the other writer;
+LIVE-SECOND-WRITER-1 in [live-aws.md](live-aws.md)):
+
+- **A table-level cache** (`spark.table(t).cache()`, the same under `.alias(...)`, `CACHE TABLE t`) keeps its rows
+  until `REFRESH TABLE`, `spark.catalog.refreshTable` or a same-session data commit to the table. A same-session
+  metadata-only commit (`SET TBLPROPERTIES`, `ADD COLUMN`, `CREATE BRANCH` or `TAG`, a write to another branch) and
+  another writer's commit seen by a fresh read do not unpin it.
+- **A query-level cache** (anything else: `spark.sql("SELECT * FROM t")`, `select`, `filter`, `limit`, `orderBy`,
+  `distinct`, `groupBy().count()`, a DataFrame temp view read by name, a self-join) answers what the session's latest
+  read of the table answers. RePark makes no catalog call on a held action, so before any fresh read it may still
+  answer the old state.
+- Not in this delta: a fresh read or a new frame while the table itself is cached (Spark answers the cache, RePark
+  the committed state; [FRESH-READ-WHILE-TABLE-CACHED-1](../../../roadmap/mid-term/cards-2026-11-21/fresh-read-while-table-cached-1-card-2026-11-22.md)).
+  It is unchanged.
+
+So delta 1's premise (every fill holds until a same-session write or a refresh, G1) is right only for the table-level
+row, and delta 1 refilled a table-level fill after another writer's commit and a same-session metadata commit (G2).
+
+**The seat, in four parts.**
+
+1. **A data tick in the session table map** (`session_tables/mod.rs`). `LocalEpoch` gains `data`. `record` moves it
+   only when the committed state's data differs from the previous entry's (`same_data`: the UUID, the current
+   snapshot and the last snapshot-log entry, moved here from the lazy cache so both read one test); a refresh load
+   moves it; a plain load carries it, as it carries the rest of the local epoch. A metadata-only commit therefore
+   moves `changed` and not `data`, and so does one made over another writer's data, since the load that the commit
+   makes first has already recorded that data as the previous entry. `ticks` reads the epoch and the local epoch
+   under one lock. **G4:** a refresh whose load returns on the race guard now takes a tick and sets `changed`,
+   `data` and `refreshed` to it; the state and the epoch stay, so the guard still never puts an older table back.
+2. **The dep splits by level** (`lazy_cache.rs`). `register_lazy_cache_view` takes a `CacheLevel` and the fill's
+   deps record `Ticks`. `Table` holds while `data` is the fill's. `Query` refills when `refreshed` moved, holds while
+   the epoch is the fill's, and otherwise keeps the fill only when the recorded table keeps the fill's data (the
+   pre-delta-1 rule for derived frames). Ticks are compared for equality, not order, so the G4 tick (which the epoch
+   does not take) never makes a fill refill twice.
+3. **Provenance in the facade.** `spark.table(t)` and `spark.sql("SELECT * FROM t")` both build `SELECT * FROM <ref>`,
+   so the plan cannot tell them apart; the frame's history can. `session_table` marks a frame it builds over a table
+   (not a temp view), `catalog_surface.cache_table` (`cacheTable`, `CACHE [LAZY] TABLE`) marks its frame, and
+   `DataFrame.alias` passes the mark to its child (`cache_handle._aliased`, a one-line change in `core.py`, which
+   stays on its exact baseline). Every other transformation builds an unmarked frame. `_bind_lazy` passes the mark
+   to the native registration. That is Spark's test (the cached plan is the table relation, maybe under an alias)
+   read off how the frame was built.
+4. **C-009's snapshot-token drop** (`_drop_stale_identity_frames`) skips a frame that `_held_by_table_fill` finds:
+   marked, and its cache view a lazy cache table. That drop is what unpersisted a cached `spark.table(t)` at the next
+   `spark.table(t)` or `isCached` after another writer's commit (main's `bare` held-again 3). An eager cache (the
+   MemTable fallback) and a view still take the drop. The `cacheTable` entry check in `session_table` and
+   `isCached` is untouched, so what a fresh `spark.table(t)` answers while the table is cached does not change. This
+   is §8's C-009 option (b) for frames only; the three C-009 pins are on the `cacheTable` entry and still hold.
+
+**ENC-1, unchanged in kind.** No new table provider; what a load fetches, records as state, serves and refuses is
+unchanged; the map writes one more field per entry. A refused commit, refill or failed load moves no tick (every
+`record` follows the inner call's `?`, `observe` follows the load's `?`, deps are built only in the fill's `Ok` arm;
+the four refusal tests' `assert_unmoved` compare the whole `LocalEpoch`). Nothing outside the map sets a tick:
+`Entry`, `observe` and `record` stay private, and `Ticks` and `LocalEpoch` are `Copy` values.
+
+**The event table, re-traced.** "Table" and "query" are what a fill at that level does at its next use; main is
+`550789fd` (no #1394); `[M]` live baseline or local Spark, `[R]` read.
+
+| event | data tick | epoch | table-level fill | query-level fill | Spark | main | head |
+|---|---|---|---|---|---|---|---|
+| same-session data commit (`INSERT`, `DELETE`, `MERGE`, overwrite, `writeTo`) | ticks | ticks | refills | refills | re-caches both | keeps; a bare frame is unpersisted at the next `spark.table` | = Spark |
+| same-session metadata-only commit (`SET TBLPROPERTIES`, `ADD COLUMN`, `CREATE BRANCH`, a branch write) | — | ticks | keeps | keeps if the recorded data is the fill's | table keeps; query answers the fresh read | keeps | = Spark |
+| another writer commits, before any load | — | — | keeps | keeps | table 2; query 2 inside Iceberg's 30 s window, else 3 `[M]` | 2 | 2 (allowed: no catalog call) |
+| a load that sees another writer's state (fresh read, new frame, `DESCRIBE`) | — (carried) | ticks | keeps | refills | table 2; query what a fresh read answers `[M]` | 2; bare unpersisted at the next `spark.table` (3) | table 2, query 3 |
+| a load of an unchanged state | — | — | keeps | keeps | keeps | keeps | = |
+| `REFRESH TABLE`, `refreshTable` | ticks | ticks | refills | refills | re-caches (3) `[M]` | bare 3 (unpersisted); alias, query shapes 2 | 3 |
+| a refresh that loses the race guard (G4) | ticks | — | refills | refills | re-caches | keeps | = (was W on delta 1) |
+| another writer, a fresh read, a same-session metadata-only commit (G2) | — | ticks | keeps (2) | the fresh read's (3) | bare 2, derived 3 `[M]` | 2, 2 | = (delta 1: bare 3) |
+| create or register after a drop, a recreate | ticks | ticks | refill refuses `TABLE_ID_MISMATCH` | the same | the same | keeps | = (as before) |
+| drop | ticks | ticks | refill refuses `TABLE_OR_VIEW_NOT_FOUND` | the same | the same | keeps | = (as before) |
+| rename | source ticks (`Dropped`); destination forgotten | ticks | refill refuses or re-binds | the same | the same | keeps | = (as before) |
+| snapshot procedures (rollback, `set_current_snapshot`, cherry-pick, fast-forward) | ticks | ticks | refills | refills | re-caches | keeps | = (same-snapshot `set_current` stays (c)) |
+| `expire_snapshots` alone | — | ticks | keeps | keeps | re-caches (same rows) | keeps | W, as before ((c), F2) |
+| another writer drops and recreates, then a fresh read | — (carried) | ticks | keeps | refill refuses `TABLE_ID_MISMATCH` `[R]` | table keeps; query not measured | keeps | table =; query not measured |
+| a commit observed during a fill (residual 2) | — | — | refills once | refills once | — | keeps | unchanged ((c), S3) |
+| a later `spark.table(t)` or `isCached(t)` after the snapshot moved | — | — | stays cached | (not an identity frame) | stays cached (`is_cached` true) `[M]` | bare unpersisted | = Spark (eager caches keep the drop) |
+| a fresh read or new frame while the table is cached | — | — | — | — | 2 (the cache) `[M]` | 3 | 3 (open card, unchanged) |
+
+**The live shapes, predicted for the head** (each step: held, fresh, new, held again; `[R]`):
+
+| shape | after the writer | after the property commit | after `REFRESH TABLE` | the rule |
+|---|---|---|---|---|
+| `bare`, `alias` | 2, 3, 3, 2 | 2, 3, 3, 2 | 3, 3, 3, 3 | passes (fresh and new open) |
+| `cache_table` | 2, 3, 3, 3 | 3, 3, 3, 3 | 3, 3, 3, 3 | all open (as main) |
+| `sql_star`, `filter`, `agg`, `df_view` | 2, 3, 3, 3 | 3, 3, 3, 3 | 3, 3, 3, 3 | passes |
+
+**`PENDING_1394`:** 27 reads before, none after (below). The twin pins main's two predictions breaking the rule at
+exactly those 27 reads and the head's prediction passing with no exemption. Main's live answers are those 27 reads'
+own evidence (the baseline: `bare` and the query shapes held again 3 or 2 where the rule wants the fresh read or 2;
+`alias` held 2 after `REFRESH TABLE`).
+
+**The pins.** In Rust, the other writer is a second Spark-door session registered on the same memory catalog (its
+commits never reach the first session's map); each held cell fills `[1, 2]`, lets it insert `9`, reads the cache once
+before any fresh read (kept: no catalog call), then takes a fresh SQL read (`[1, 2, 9]`, the epoch moves). A read
+compared by buffer keeps its batches alive. The same test files ran on the head and, with only the test helper's
+level argument dropped (those trees have no `CacheLevel`), on `e0cb360d` (delta 1) and `108d665c` (before delta 1),
+every source touched so the shared target rebuilt them:
+
+| pin | `e0cb360d` | `108d665c` | head |
+|---|---|---|---|
+| `levels::a_table_level_fill_holds_over_another_writer_and_a_metadata_commit_until_a_refresh` (W kept, P kept, R refilled) | **fail**: `[1, 2, 9]` after `SET TBLPROPERTIES` (G2) | **fail**: `[1, 2, 9]` after the fresh read (F1) | pass |
+| `levels::a_table_level_fill_holds_over_each_metadata_only_commit_after_another_writer` (`SET TBLPROPERTIES`, `ADD COLUMN`, `CREATE BRANCH`) | **fail**: `[1, 2, 9]` (G2) | **fail**: `[1, 2, 9]` | pass |
+| `levels::a_query_level_fill_answers_the_latest_read_of_its_table` (W refilled, an unchanged read and P kept, R refilled, then a property commit keeps the refill: G5) | **fail**: `[1, 2]` after the fresh read (G1) | pass | pass |
+| `levels::the_level_and_not_the_plan_decides_after_another_writer` (the table, an alias, a filter, an aggregate, at both levels) | **fail**: `Query` kept | **fail**: `Table` refilled | pass |
+| `levels::both_levels_refill_after_a_same_session_data_commit_over_another_writer` (`[1, 2, 8, 9]`) | pass | pass | pass (a guard) |
+| delta 1's four, now at `Table` | pass | **fail** at the kept step (F1) | pass |
+| unit 2's three base cells, now at both levels | pass | pass | pass |
+| `session_tables::tests::a_refresh_that_loses_the_race_guard_still_moves_refreshed` (G4) | **fail**: `after.refreshed > local.changed` | not built (no local epoch) | pass |
+| `session_tables::tests::a_same_session_metadata_commit_moves_changed_and_not_the_data_tick`, `a_metadata_commit_over_another_writers_data_keeps_the_data_tick` (G2's sequence; G5: a commit carries `data` and `refreshed`) | not built (`data`, `ticks` are new) | not built | pass |
+
+Facade pins, `python/repark/tests/iceberg/held_frame/test_ice_held_frame_snapshot_1_cache_levels.py`, both ANSI modes:
+after a same-session insert and a later `spark.table(t)` (or `isCached(t)`), a cached `spark.table(t)` stays cached
+and answers 3, as Spark 4.1.2 does (measured locally, `S/u2-delta2/raw/samesession-spark-*.jsonl`:
+`[2, 3, true, 3, true]` and `[2, true, true, 3]`); a property commit and an alias are guards; each of ten shapes caches
+at Spark's level and passes it to the native registration; `cacheTable`, `CACHE TABLE` and `CACHE LAZY TABLE` cache at
+the table level; an eager cache keeps the snapshot-token drop. On the delta-1 package (`pkg-d1-7ebe4502`, its product
+equal to `e0cb360d`) 32 of the 36 fail: the two Spark cells answer `is_cached` false (`[2, 3, false, 3, false]`,
+`[2, false, false, 3]`), and the 28 level cells find no level (`_table_level` does not exist).
+
+**The one-tick mutant** (the table-level dep reads `changed` in place of `data`, in a scratch copy only): 18 of the 21
+`held_iceberg` tests pass; the three that fail are the ones that hold a table-level fill over a same-session
+metadata-only commit: the base cell's `Table` pass at `SET TBLPROPERTIES` (a new buffer), and the two
+`levels::a_table_level_fill_*` cells (`[1, 2, 9]`). So the data tick is what keeps that fill.
+
+**Nothing regressed.** On the head's package (`BUILT_FROM` `0b51d3fa`), the three probes (97 cells per mode) and the
+verifier's `vcells.py` (43 per mode), against the verifier's `raw` and `rawv` and delta 1's answers:
+
+| probe | cells (both modes) | answers that differ from delta 1 | EQUAL main / pre-delta head / delta 1 / delta 2 | EQUAL lost |
+|---|---|---|---|---|
+| u2cells | 140 | 2 (`U|frame_cached_after_write`, both modes: WRONG to EQUAL, `is_cached` true) | 44 / 124 / 124 / 126 | 0 |
+| u2ts | 14 | 0 | 4 / 8 / 8 / 8 | 0 |
+| u2alter | 40 | 0 | 22 / 22 / 22 / 22 | 0 |
+| vcells | 86 | 0 | 30 / 72 / 72 / 72 | 0 |
+
+**Gates** (head `0b51d3fa` for cargo and the package; the pin-file fix `997d2ead` is tests only):
+
+| gate | exit | count / note |
+|---|---|---|
+| `cargo test --locked -p repark-iceberg session_tables` | 0 | 17 passed |
+| `cargo test --locked -p repark-spark held_iceberg` | 0 | 21 passed |
+| `cargo test --locked -p repark-core temp_views` | 0 | 17 passed |
+| the same pins on `e0cb360d` / `108d665c` (helper shim only) | 101 / 101 | 4 held and 1 map fail / 7 held fail, as tabled |
+| the one-tick mutant | 101 | 3 of 21 fail, as tabled |
+| `make rust-clippy`, `make rust-panic-ban`, `cargo fmt --all --check` | 0 | |
+| held-frame directory (package) | 0 | 260 passed (after `997d2ead`; the first run's 36 failures were that file's module-scoped session, which the suite's autouse reset stops) |
+| A1's `test_temp_view_cache_lazy_parse_1.py` and C-009's `test_catalog_surface_1.py` | 0 | 111 passed |
+| A1's siblings `test_eager_budget_1.py`, `test_cache_persist.py` | 0 | 43 passed |
+| the three probes and `vcells.py`, both modes | 0 (8 runs) | 0 EQUAL lost, above |
+| the full facade `python/repark/tests/` at `-n 6`, from the repository root | 1 | 41,608 passed, 823 skipped, 180 xfailed, 40 failed: the 36 of the pin file before `997d2ead` (36 of 36 pass after it), and the 4 that start a child Python without `PYTHONPATH` by design (the 3 `test_cross_release_local` cells, `test_session_package_imports_without_a_cycle`), which fail the same way on the delta-1 package (delta 1's `facade-five-*.log`) |
+| `make check-docs-links check-python-conventions`, `sync_map_md.py --check`, `check_map_size.py` | 0 | |
+| `typos` 1.47.2, `ruff` 0.15.22 `check .` and `format --check .`, `check_docstring_presence.py`, `check_lib_py.py` | 0 | |
+| the comment gate against `5a3db151` | 0 | 0 hits |
+
+Two maps sit exactly at their size ceilings and were not touched: `python/repark/src/repark/spark/map.md` (its
+C-009 paragraph still reads true for the `cacheTable` entry) and `crates/repark-python/src/map.md` (one keyword);
+the lockstep check is advisory. The change to `catalog_surface.py` is recorded in the dataframe map's
+`cache_handle.py` row and here.
+
+**What stays open.**
+
+- FRESH-READ-WHILE-TABLE-CACHED-1 (a fresh read or new frame while the table is cached), unchanged; every
+  `cache_table` read on the RePark leg stays open.
+- `cacheTable` then a same-session write: `isCached` answers false where Spark answers true (`U|is_cached_after_write`,
+  the `cacheTable` entry path, which the brief keeps); C-009's three pins assert it.
+- `REFRESH TABLE` and `uncacheTable` unpersist a cached `spark.table(t)`, so its `is_cached` is false after a refresh
+  where Spark re-caches; the rows are equal (3). Not measured, predates this unit.
+- A query-level fill before any fresh read answers the fill (no catalog call; the rule allows it), and Spark's fresh
+  read inside Iceberg's 30 s catalog cache answers 2 where RePark's answers 3 (the rule allows it).
+- Residual 2 (a commit observed during a fill), `expire_snapshots` alone and a same-snapshot `set_current_snapshot`,
+  as before.
+- **The live proof comes after the merge**: the acceptance workflow runs on main only. The revert trigger: an
+  asserted live cell green on the baseline (run 44985182689) and red on the first acceptance run after the merge
+  means revert that day.
 
 Up: [map.md](map.md).
