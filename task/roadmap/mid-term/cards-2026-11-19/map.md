@@ -60,5 +60,6 @@ Ten cards filed from the 2026-11-18 window, under the owner's rulings recorded i
 - [JAVA-CASE-WORD-CLASS-TABLE-1](java-case-word-class-table-1-card-2026-11-21.md) (S4, the owner 2026-11-21) — **card:** the word-class table behind the final sigma is generated from `Character.getType`, where Zulu 17's word `BreakIterator` disagrees with it; CSV header dedup differs in 4 cells.
 - [WITHCOLUMNS-KEY-COLLISION-1](withcolumns-key-collision-1-card-2026-11-21.md) (S2, not label-blocking, the owner 2026-11-21) — **card:** `withColumns` with two keys matching one existing column under `caseSensitive=false` keeps the last key, where Spark keeps the first.
 - [SCALAR-SUBQUERY-NON-EQUI-1](scalar-subquery-non-equi-1-card-2026-11-20.md) (S3 proposed, pending one DML probe, Fable's section 14) — **card:** a correlated scalar subquery with a non-equality predicate fails in DataFusion's `scalar_subquery_to_join`, where Spark answers.
+- Next folder: [../cards-2026-11-21/](../cards-2026-11-21/map.md) — 14 cards from the 2026-11-21 replay of the outside gap-map audit; proposed ratings, none dispatched.
 
 Up: [../map.md](../map.md).

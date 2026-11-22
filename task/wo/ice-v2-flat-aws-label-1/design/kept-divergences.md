@@ -14,4 +14,11 @@ The owner's ruling of 2026-11-18 (about 20:05 UTC, decision I) says "The label t
 
 The label text names `PREPARE` as outside the label until the card refuses it. Unit 1's measurement and Fable's reply of 2026-11-19 (§6.3) show that RePark accepts `PREPARE` where Spark refuses it outright (`PARSE_SYNTAX_ERROR`), and ruling 2, item 8 refuses it on the Spark door as Spark does. The card is [SPARK-DOOR-PREPARE-1](../../../roadmap/mid-term/cards-2026-11-19/spark-door-prepare-1-card-2026-11-19.md), S3, not label-blocking.
 
+## The held path read (ICE-HELD-PATH-READ-1)
+
+- **Divergence:** a read by table location is a static provider, so a held frame does not see a same-session write.
+- **Condition class:** 27 cells per build and mode, of which 4 store old rows; silent, S2, not on the label-blocking list.
+- **Card:** [ICE-HELD-PATH-READ-1](../../../roadmap/mid-term/cards-2026-11-19/ice-held-path-read-1-card-2026-11-20.md), filed 2026-11-20, not dispatched.
+- **Ruling:** [rulings-2026-11-20-am.md](rulings-2026-11-20-am.md), Q4 (b): the label's kept-divergences file names this path read before the label is declared.
+
 Up: [map.md](map.md).
