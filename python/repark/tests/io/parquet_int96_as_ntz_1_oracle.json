@@ -1,0 +1,5013 @@
+{
+ "basis": "PySpark 4.1.2 local[1], iceberg-spark-runtime-4.1_2.13:1.11.0",
+ "controls": {
+  "ntz_column": "SELECT id, CAST(ntz AS STRING), typeof(ntz) FROM t ORDER BY id",
+  "pyarrow_adjusted": "SELECT id, CAST(ts AS STRING), typeof(ts) FROM pa_adj ORDER BY id",
+  "pyarrow_int96": "SELECT id, CAST(ts AS STRING), typeof(ts) FROM pa_int96 ORDER BY id",
+  "pyarrow_naive": "SELECT id, CAST(ts AS STRING), typeof(ts) FROM pa_naive ORDER BY id",
+  "self_join": "SELECT a.id, b.id FROM t a JOIN t b ON a.ts = b.ts ORDER BY 1",
+  "spark_micros": "SELECT id, CAST(ts AS STRING), typeof(ts) FROM mic ORDER BY id"
+ },
+ "iceberg_read": "SELECT id, CAST(ts AS STRING) FROM {table} ORDER BY id",
+ "iceberg_source": "SELECT id, ts FROM t",
+ "pins": {
+  "date_filter": "SELECT id FROM t WHERE CAST(ts AS DATE) = DATE'2025-01-14' ORDER BY id",
+  "group_by_date": "SELECT CAST(to_date(ts) AS STRING) d, count(*) FROM t GROUP BY 1 ORDER BY 1",
+  "hour": "SELECT id, hour(ts) FROM t ORDER BY id",
+  "join_micros": "SELECT a.id, b.id FROM t a JOIN mic b ON a.ts = b.ts ORDER BY 1",
+  "join_pyarrow_adjusted": "SELECT a.id, b.id FROM t a JOIN pa_adj b ON a.ts = b.ts ORDER BY 1",
+  "join_pyarrow_naive": "SELECT a.id, b.id FROM t a JOIN pa_naive b ON a.ts = b.ts ORDER BY 1",
+  "max_min": "SELECT CAST(max(ts) AS STRING), CAST(min(ts) AS STRING), count(ts) FROM t",
+  "mixed_directory": "SELECT id, CAST(ts AS STRING), typeof(ts) FROM mix ORDER BY id",
+  "nested_array": "SELECT id, CAST(a[1] AS STRING) FROM t ORDER BY id",
+  "nested_map": "SELECT id, CAST(m['k'] AS STRING) FROM t ORDER BY id",
+  "nested_struct": "SELECT id, CAST(s.t AS STRING) FROM t ORDER BY id",
+  "range_filter": "SELECT id FROM t WHERE ts >= TIMESTAMP'2025-01-15 00:00:00' AND ts < TIMESTAMP'2025-01-16 00:00:00' ORDER BY id",
+  "str": "SELECT id, CAST(ts AS STRING) FROM t ORDER BY id",
+  "to_date": "SELECT id, CAST(to_date(ts) AS STRING) FROM t ORDER BY id",
+  "ts_eq_ntz": "SELECT id, ts = ntz FROM t ORDER BY id",
+  "typeof": "SELECT typeof(ts), typeof(ntz), typeof(s), typeof(a), typeof(m) FROM t LIMIT 1",
+  "unix_timestamp": "SELECT id, unix_timestamp(ts) FROM t ORDER BY id"
+ },
+ "routes": [
+  "parquet",
+  "format",
+  "sqlpath",
+  "view"
+ ],
+ "truth": {
+  "false": {
+   "rows/date_filter/America/New_York": [
+    [
+     1
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ]
+   ],
+   "rows/date_filter/Asia/Kolkata": [],
+   "rows/date_filter/UTC": [
+    [
+     7
+    ]
+   ],
+   "rows/group_by_date/America/New_York": [
+    [
+     null,
+     1
+    ],
+    [
+     "1960-03-01",
+     1
+    ],
+    [
+     "2025-01-14",
+     3
+    ],
+    [
+     "2025-07-01",
+     1
+    ],
+    [
+     "2999-12-31",
+     1
+    ]
+   ],
+   "rows/group_by_date/Asia/Kolkata": [
+    [
+     null,
+     1
+    ],
+    [
+     "1960-03-01",
+     1
+    ],
+    [
+     "2025-01-15",
+     3
+    ],
+    [
+     "2025-07-01",
+     1
+    ],
+    [
+     "3000-01-01",
+     1
+    ]
+   ],
+   "rows/group_by_date/UTC": [
+    [
+     null,
+     1
+    ],
+    [
+     "1960-03-01",
+     1
+    ],
+    [
+     "2025-01-14",
+     1
+    ],
+    [
+     "2025-01-15",
+     2
+    ],
+    [
+     "2025-07-01",
+     1
+    ],
+    [
+     "2999-12-31",
+     1
+    ]
+   ],
+   "rows/hour/America/New_York": [
+    [
+     1,
+     20
+    ],
+    [
+     2,
+     8
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     0
+    ],
+    [
+     5,
+     17
+    ],
+    [
+     6,
+     22
+    ],
+    [
+     7,
+     15
+    ]
+   ],
+   "rows/hour/Asia/Kolkata": [
+    [
+     1,
+     6
+    ],
+    [
+     2,
+     17
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     11
+    ],
+    [
+     5,
+     3
+    ],
+    [
+     6,
+     8
+    ],
+    [
+     7,
+     1
+    ]
+   ],
+   "rows/hour/UTC": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     12
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     5
+    ],
+    [
+     5,
+     22
+    ],
+    [
+     6,
+     3
+    ],
+    [
+     7,
+     20
+    ]
+   ],
+   "rows/join_micros/America/New_York": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/join_micros/Asia/Kolkata": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/join_micros/UTC": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/join_pyarrow_adjusted/America/New_York": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/join_pyarrow_adjusted/Asia/Kolkata": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/join_pyarrow_adjusted/UTC": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/join_pyarrow_naive/America/New_York": [
+    [
+     1,
+     7
+    ]
+   ],
+   "rows/join_pyarrow_naive/Asia/Kolkata": [],
+   "rows/join_pyarrow_naive/UTC": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/max_min/America/New_York": [
+    [
+     "2999-12-31 17:00:00.123456",
+     "1960-03-01 00:30:00.25",
+     6
+    ]
+   ],
+   "rows/max_min/Asia/Kolkata": [
+    [
+     "3000-01-01 03:30:00.123456",
+     "1960-03-01 11:00:00.25",
+     6
+    ]
+   ],
+   "rows/max_min/UTC": [
+    [
+     "2999-12-31 22:00:00.123456",
+     "1960-03-01 05:30:00.25",
+     6
+    ]
+   ],
+   "rows/mixed_directory/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/mixed_directory/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00",
+     "timestamp"
+    ]
+   ],
+   "rows/mixed_directory/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/nested_array/America/New_York": [
+    [
+     1,
+     "2025-01-14 21:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 09:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 01:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 18:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-14 23:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 16:00:00"
+    ]
+   ],
+   "rows/nested_array/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 07:30:00"
+    ],
+    [
+     2,
+     "2025-07-01 18:30:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 12:00:00.25"
+    ],
+    [
+     5,
+     "3000-01-01 04:30:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 09:30:00"
+    ],
+    [
+     7,
+     "2025-01-15 02:30:00"
+    ]
+   ],
+   "rows/nested_array/UTC": [
+    [
+     1,
+     "2025-01-15 02:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 13:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 06:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 23:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 04:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 21:00:00"
+    ]
+   ],
+   "rows/nested_map/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00"
+    ]
+   ],
+   "rows/nested_map/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00"
+    ]
+   ],
+   "rows/nested_map/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00"
+    ]
+   ],
+   "rows/nested_struct/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00"
+    ]
+   ],
+   "rows/nested_struct/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00"
+    ]
+   ],
+   "rows/nested_struct/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00"
+    ]
+   ],
+   "rows/ntz_column/America/New_York": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     3,
+     null,
+     "timestamp_ntz"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp_ntz"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp_ntz"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "rows/ntz_column/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     3,
+     null,
+     "timestamp_ntz"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp_ntz"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp_ntz"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "rows/ntz_column/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     3,
+     null,
+     "timestamp_ntz"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp_ntz"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp_ntz"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "rows/pyarrow_adjusted/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_adjusted/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_adjusted/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_int96/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_int96/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_int96/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_naive/America/New_York": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     3,
+     null,
+     "timestamp_ntz"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp_ntz"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp_ntz"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "rows/pyarrow_naive/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     3,
+     null,
+     "timestamp_ntz"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp_ntz"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp_ntz"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "rows/pyarrow_naive/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     3,
+     null,
+     "timestamp_ntz"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp_ntz"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp_ntz"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "rows/range_filter/America/New_York": [],
+   "rows/range_filter/Asia/Kolkata": [
+    [
+     1
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ]
+   ],
+   "rows/range_filter/UTC": [
+    [
+     1
+    ],
+    [
+     6
+    ]
+   ],
+   "rows/self_join/America/New_York": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/self_join/Asia/Kolkata": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/self_join/UTC": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/spark_micros/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/spark_micros/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00",
+     "timestamp"
+    ]
+   ],
+   "rows/spark_micros/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/str/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00"
+    ]
+   ],
+   "rows/str/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00"
+    ]
+   ],
+   "rows/str/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00"
+    ]
+   ],
+   "rows/to_date/America/New_York": [
+    [
+     1,
+     "2025-01-14"
+    ],
+    [
+     2,
+     "2025-07-01"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01"
+    ],
+    [
+     5,
+     "2999-12-31"
+    ],
+    [
+     6,
+     "2025-01-14"
+    ],
+    [
+     7,
+     "2025-01-14"
+    ]
+   ],
+   "rows/to_date/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15"
+    ],
+    [
+     2,
+     "2025-07-01"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01"
+    ],
+    [
+     5,
+     "3000-01-01"
+    ],
+    [
+     6,
+     "2025-01-15"
+    ],
+    [
+     7,
+     "2025-01-15"
+    ]
+   ],
+   "rows/to_date/UTC": [
+    [
+     1,
+     "2025-01-15"
+    ],
+    [
+     2,
+     "2025-07-01"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01"
+    ],
+    [
+     5,
+     "2999-12-31"
+    ],
+    [
+     6,
+     "2025-01-15"
+    ],
+    [
+     7,
+     "2025-01-14"
+    ]
+   ],
+   "rows/ts_eq_ntz/America/New_York": [
+    [
+     1,
+     false
+    ],
+    [
+     2,
+     false
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     false
+    ],
+    [
+     5,
+     false
+    ],
+    [
+     6,
+     false
+    ],
+    [
+     7,
+     false
+    ]
+   ],
+   "rows/ts_eq_ntz/Asia/Kolkata": [
+    [
+     1,
+     false
+    ],
+    [
+     2,
+     false
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     false
+    ],
+    [
+     5,
+     false
+    ],
+    [
+     6,
+     false
+    ],
+    [
+     7,
+     false
+    ]
+   ],
+   "rows/ts_eq_ntz/UTC": [
+    [
+     1,
+     true
+    ],
+    [
+     2,
+     true
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     true
+    ],
+    [
+     5,
+     true
+    ],
+    [
+     6,
+     true
+    ],
+    [
+     7,
+     true
+    ]
+   ],
+   "rows/typeof/America/New_York": [
+    [
+     "timestamp",
+     "timestamp_ntz",
+     "struct<t:timestamp,k:int>",
+     "array<timestamp>",
+     "map<string,timestamp>"
+    ]
+   ],
+   "rows/typeof/Asia/Kolkata": [
+    [
+     "timestamp",
+     "timestamp_ntz",
+     "struct<t:timestamp,k:int>",
+     "array<timestamp>",
+     "map<string,timestamp>"
+    ]
+   ],
+   "rows/typeof/UTC": [
+    [
+     "timestamp",
+     "timestamp_ntz",
+     "struct<t:timestamp,k:int>",
+     "array<timestamp>",
+     "map<string,timestamp>"
+    ]
+   ],
+   "rows/unix_timestamp/America/New_York": [
+    [
+     1,
+     1736902800
+    ],
+    [
+     2,
+     1751371200
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     -310415399
+    ],
+    [
+     5,
+     32503672800
+    ],
+    [
+     6,
+     1736910000
+    ],
+    [
+     7,
+     1736884800
+    ]
+   ],
+   "rows/unix_timestamp/Asia/Kolkata": [
+    [
+     1,
+     1736902800
+    ],
+    [
+     2,
+     1751371200
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     -310415399
+    ],
+    [
+     5,
+     32503672800
+    ],
+    [
+     6,
+     1736910000
+    ],
+    [
+     7,
+     1736884800
+    ]
+   ],
+   "rows/unix_timestamp/UTC": [
+    [
+     1,
+     1736902800
+    ],
+    [
+     2,
+     1751371200
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     -310415399
+    ],
+    [
+     5,
+     32503672800
+    ],
+    [
+     6,
+     1736910000
+    ],
+    [
+     7,
+     1736884800
+    ]
+   ],
+   "schema/format/America/New_York": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/format/Asia/Kolkata": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/format/UTC": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/parquet/America/New_York": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/parquet/Asia/Kolkata": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/parquet/UTC": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/sqlpath/America/New_York": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/sqlpath/Asia/Kolkata": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/sqlpath/UTC": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/view/America/New_York": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/view/Asia/Kolkata": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/view/UTC": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "write_iceberg/America/New_York/America/New_York": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 00:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 17:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-14 22:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 15:00:00"
+     ]
+    ]
+   ],
+   "write_iceberg/America/New_York/Asia/Kolkata": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 06:30:00"
+     ],
+     [
+      2,
+      "2025-07-01 17:30:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 11:00:00.25"
+     ],
+     [
+      5,
+      "3000-01-01 03:30:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 08:30:00"
+     ],
+     [
+      7,
+      "2025-01-15 01:30:00"
+     ]
+    ]
+   ],
+   "write_iceberg/America/New_York/UTC": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 05:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 22:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 03:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 20:00:00"
+     ]
+    ]
+   ],
+   "write_iceberg/Asia/Kolkata/America/New_York": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 00:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 17:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-14 22:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 15:00:00"
+     ]
+    ]
+   ],
+   "write_iceberg/Asia/Kolkata/Asia/Kolkata": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 06:30:00"
+     ],
+     [
+      2,
+      "2025-07-01 17:30:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 11:00:00.25"
+     ],
+     [
+      5,
+      "3000-01-01 03:30:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 08:30:00"
+     ],
+     [
+      7,
+      "2025-01-15 01:30:00"
+     ]
+    ]
+   ],
+   "write_iceberg/Asia/Kolkata/UTC": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 05:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 22:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 03:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 20:00:00"
+     ]
+    ]
+   ],
+   "write_iceberg/UTC/America/New_York": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 00:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 17:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-14 22:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 15:00:00"
+     ]
+    ]
+   ],
+   "write_iceberg/UTC/Asia/Kolkata": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 06:30:00"
+     ],
+     [
+      2,
+      "2025-07-01 17:30:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 11:00:00.25"
+     ],
+     [
+      5,
+      "3000-01-01 03:30:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 08:30:00"
+     ],
+     [
+      7,
+      "2025-01-15 01:30:00"
+     ]
+    ]
+   ],
+   "write_iceberg/UTC/UTC": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 05:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 22:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 03:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 20:00:00"
+     ]
+    ]
+   ],
+   "write_parquet/America/New_York/America/New_York": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00",
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00",
+      "2025-07-01 08:00:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 00:30:00.25",
+      "1960-03-01 00:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 17:00:00.123456",
+      "2999-12-31 17:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-14 22:00:00",
+      "2025-01-14 22:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 15:00:00",
+      "2025-01-14 15:00:00"
+     ]
+    ]
+   ],
+   "write_parquet/America/New_York/Asia/Kolkata": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-15 06:30:00",
+      "2025-01-15 06:30:00"
+     ],
+     [
+      2,
+      "2025-07-01 17:30:00",
+      "2025-07-01 17:30:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 11:00:00.25",
+      "1960-03-01 11:00:00.25"
+     ],
+     [
+      5,
+      "3000-01-01 03:30:00.123456",
+      "3000-01-01 03:30:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 08:30:00",
+      "2025-01-15 08:30:00"
+     ],
+     [
+      7,
+      "2025-01-15 01:30:00",
+      "2025-01-15 01:30:00"
+     ]
+    ]
+   ],
+   "write_parquet/America/New_York/UTC": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00",
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00",
+      "2025-07-01 12:00:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 05:30:00.25",
+      "1960-03-01 05:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 22:00:00.123456",
+      "2999-12-31 22:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 03:00:00",
+      "2025-01-15 03:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 20:00:00",
+      "2025-01-14 20:00:00"
+     ]
+    ]
+   ],
+   "write_parquet/Asia/Kolkata/America/New_York": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00",
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00",
+      "2025-07-01 08:00:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 00:30:00.25",
+      "1960-03-01 00:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 17:00:00.123456",
+      "2999-12-31 17:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-14 22:00:00",
+      "2025-01-14 22:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 15:00:00",
+      "2025-01-14 15:00:00"
+     ]
+    ]
+   ],
+   "write_parquet/Asia/Kolkata/Asia/Kolkata": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-15 06:30:00",
+      "2025-01-15 06:30:00"
+     ],
+     [
+      2,
+      "2025-07-01 17:30:00",
+      "2025-07-01 17:30:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 11:00:00.25",
+      "1960-03-01 11:00:00.25"
+     ],
+     [
+      5,
+      "3000-01-01 03:30:00.123456",
+      "3000-01-01 03:30:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 08:30:00",
+      "2025-01-15 08:30:00"
+     ],
+     [
+      7,
+      "2025-01-15 01:30:00",
+      "2025-01-15 01:30:00"
+     ]
+    ]
+   ],
+   "write_parquet/Asia/Kolkata/UTC": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00",
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00",
+      "2025-07-01 12:00:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 05:30:00.25",
+      "1960-03-01 05:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 22:00:00.123456",
+      "2999-12-31 22:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 03:00:00",
+      "2025-01-15 03:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 20:00:00",
+      "2025-01-14 20:00:00"
+     ]
+    ]
+   ],
+   "write_parquet/UTC/America/New_York": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00",
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00",
+      "2025-07-01 08:00:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 00:30:00.25",
+      "1960-03-01 00:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 17:00:00.123456",
+      "2999-12-31 17:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-14 22:00:00",
+      "2025-01-14 22:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 15:00:00",
+      "2025-01-14 15:00:00"
+     ]
+    ]
+   ],
+   "write_parquet/UTC/Asia/Kolkata": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-15 06:30:00",
+      "2025-01-15 06:30:00"
+     ],
+     [
+      2,
+      "2025-07-01 17:30:00",
+      "2025-07-01 17:30:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 11:00:00.25",
+      "1960-03-01 11:00:00.25"
+     ],
+     [
+      5,
+      "3000-01-01 03:30:00.123456",
+      "3000-01-01 03:30:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 08:30:00",
+      "2025-01-15 08:30:00"
+     ],
+     [
+      7,
+      "2025-01-15 01:30:00",
+      "2025-01-15 01:30:00"
+     ]
+    ]
+   ],
+   "write_parquet/UTC/UTC": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00",
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00",
+      "2025-07-01 12:00:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 05:30:00.25",
+      "1960-03-01 05:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 22:00:00.123456",
+      "2999-12-31 22:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 03:00:00",
+      "2025-01-15 03:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 20:00:00",
+      "2025-01-14 20:00:00"
+     ]
+    ]
+   ]
+  },
+  "true": {
+   "rows/date_filter/America/New_York": [
+    [
+     1
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ]
+   ],
+   "rows/date_filter/Asia/Kolkata": [],
+   "rows/date_filter/UTC": [
+    [
+     7
+    ]
+   ],
+   "rows/group_by_date/America/New_York": [
+    [
+     null,
+     1
+    ],
+    [
+     "1960-03-01",
+     1
+    ],
+    [
+     "2025-01-14",
+     3
+    ],
+    [
+     "2025-07-01",
+     1
+    ],
+    [
+     "2999-12-31",
+     1
+    ]
+   ],
+   "rows/group_by_date/Asia/Kolkata": [
+    [
+     null,
+     1
+    ],
+    [
+     "1960-03-01",
+     1
+    ],
+    [
+     "2025-01-15",
+     3
+    ],
+    [
+     "2025-07-01",
+     1
+    ],
+    [
+     "3000-01-01",
+     1
+    ]
+   ],
+   "rows/group_by_date/UTC": [
+    [
+     null,
+     1
+    ],
+    [
+     "1960-03-01",
+     1
+    ],
+    [
+     "2025-01-14",
+     1
+    ],
+    [
+     "2025-01-15",
+     2
+    ],
+    [
+     "2025-07-01",
+     1
+    ],
+    [
+     "2999-12-31",
+     1
+    ]
+   ],
+   "rows/hour/America/New_York": [
+    [
+     1,
+     20
+    ],
+    [
+     2,
+     8
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     0
+    ],
+    [
+     5,
+     17
+    ],
+    [
+     6,
+     22
+    ],
+    [
+     7,
+     15
+    ]
+   ],
+   "rows/hour/Asia/Kolkata": [
+    [
+     1,
+     6
+    ],
+    [
+     2,
+     17
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     11
+    ],
+    [
+     5,
+     3
+    ],
+    [
+     6,
+     8
+    ],
+    [
+     7,
+     1
+    ]
+   ],
+   "rows/hour/UTC": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     12
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     5
+    ],
+    [
+     5,
+     22
+    ],
+    [
+     6,
+     3
+    ],
+    [
+     7,
+     20
+    ]
+   ],
+   "rows/join_micros/America/New_York": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/join_micros/Asia/Kolkata": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/join_micros/UTC": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/join_pyarrow_adjusted/America/New_York": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/join_pyarrow_adjusted/Asia/Kolkata": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/join_pyarrow_adjusted/UTC": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/join_pyarrow_naive/America/New_York": [
+    [
+     1,
+     7
+    ]
+   ],
+   "rows/join_pyarrow_naive/Asia/Kolkata": [],
+   "rows/join_pyarrow_naive/UTC": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/max_min/America/New_York": [
+    [
+     "2999-12-31 17:00:00.123456",
+     "1960-03-01 00:30:00.25",
+     6
+    ]
+   ],
+   "rows/max_min/Asia/Kolkata": [
+    [
+     "3000-01-01 03:30:00.123456",
+     "1960-03-01 11:00:00.25",
+     6
+    ]
+   ],
+   "rows/max_min/UTC": [
+    [
+     "2999-12-31 22:00:00.123456",
+     "1960-03-01 05:30:00.25",
+     6
+    ]
+   ],
+   "rows/mixed_directory/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/mixed_directory/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00",
+     "timestamp"
+    ]
+   ],
+   "rows/mixed_directory/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/nested_array/America/New_York": [
+    [
+     1,
+     "2025-01-14 21:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 09:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 01:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 18:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-14 23:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 16:00:00"
+    ]
+   ],
+   "rows/nested_array/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 07:30:00"
+    ],
+    [
+     2,
+     "2025-07-01 18:30:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 12:00:00.25"
+    ],
+    [
+     5,
+     "3000-01-01 04:30:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 09:30:00"
+    ],
+    [
+     7,
+     "2025-01-15 02:30:00"
+    ]
+   ],
+   "rows/nested_array/UTC": [
+    [
+     1,
+     "2025-01-15 02:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 13:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 06:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 23:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 04:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 21:00:00"
+    ]
+   ],
+   "rows/nested_map/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00"
+    ]
+   ],
+   "rows/nested_map/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00"
+    ]
+   ],
+   "rows/nested_map/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00"
+    ]
+   ],
+   "rows/nested_struct/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00"
+    ]
+   ],
+   "rows/nested_struct/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00"
+    ]
+   ],
+   "rows/nested_struct/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00"
+    ]
+   ],
+   "rows/ntz_column/America/New_York": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     3,
+     null,
+     "timestamp_ntz"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp_ntz"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp_ntz"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "rows/ntz_column/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     3,
+     null,
+     "timestamp_ntz"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp_ntz"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp_ntz"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "rows/ntz_column/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     3,
+     null,
+     "timestamp_ntz"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp_ntz"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp_ntz"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "rows/pyarrow_adjusted/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_adjusted/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_adjusted/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_int96/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_int96/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_int96/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_naive/America/New_York": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     3,
+     null,
+     "timestamp_ntz"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp_ntz"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp_ntz"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "rows/pyarrow_naive/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     3,
+     null,
+     "timestamp_ntz"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp_ntz"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp_ntz"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "rows/pyarrow_naive/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     3,
+     null,
+     "timestamp_ntz"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp_ntz"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp_ntz"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp_ntz"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp_ntz"
+    ]
+   ],
+   "rows/range_filter/America/New_York": [],
+   "rows/range_filter/Asia/Kolkata": [
+    [
+     1
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ]
+   ],
+   "rows/range_filter/UTC": [
+    [
+     1
+    ],
+    [
+     6
+    ]
+   ],
+   "rows/self_join/America/New_York": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/self_join/Asia/Kolkata": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/self_join/UTC": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     2
+    ],
+    [
+     4,
+     4
+    ],
+    [
+     5,
+     5
+    ],
+    [
+     6,
+     6
+    ],
+    [
+     7,
+     7
+    ]
+   ],
+   "rows/spark_micros/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/spark_micros/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00",
+     "timestamp"
+    ]
+   ],
+   "rows/spark_micros/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/str/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00"
+    ]
+   ],
+   "rows/str/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00"
+    ]
+   ],
+   "rows/str/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00"
+    ]
+   ],
+   "rows/to_date/America/New_York": [
+    [
+     1,
+     "2025-01-14"
+    ],
+    [
+     2,
+     "2025-07-01"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01"
+    ],
+    [
+     5,
+     "2999-12-31"
+    ],
+    [
+     6,
+     "2025-01-14"
+    ],
+    [
+     7,
+     "2025-01-14"
+    ]
+   ],
+   "rows/to_date/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15"
+    ],
+    [
+     2,
+     "2025-07-01"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01"
+    ],
+    [
+     5,
+     "3000-01-01"
+    ],
+    [
+     6,
+     "2025-01-15"
+    ],
+    [
+     7,
+     "2025-01-15"
+    ]
+   ],
+   "rows/to_date/UTC": [
+    [
+     1,
+     "2025-01-15"
+    ],
+    [
+     2,
+     "2025-07-01"
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     "1960-03-01"
+    ],
+    [
+     5,
+     "2999-12-31"
+    ],
+    [
+     6,
+     "2025-01-15"
+    ],
+    [
+     7,
+     "2025-01-14"
+    ]
+   ],
+   "rows/ts_eq_ntz/America/New_York": [
+    [
+     1,
+     false
+    ],
+    [
+     2,
+     false
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     false
+    ],
+    [
+     5,
+     false
+    ],
+    [
+     6,
+     false
+    ],
+    [
+     7,
+     false
+    ]
+   ],
+   "rows/ts_eq_ntz/Asia/Kolkata": [
+    [
+     1,
+     false
+    ],
+    [
+     2,
+     false
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     false
+    ],
+    [
+     5,
+     false
+    ],
+    [
+     6,
+     false
+    ],
+    [
+     7,
+     false
+    ]
+   ],
+   "rows/ts_eq_ntz/UTC": [
+    [
+     1,
+     true
+    ],
+    [
+     2,
+     true
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     true
+    ],
+    [
+     5,
+     true
+    ],
+    [
+     6,
+     true
+    ],
+    [
+     7,
+     true
+    ]
+   ],
+   "rows/typeof/America/New_York": [
+    [
+     "timestamp",
+     "timestamp_ntz",
+     "struct<t:timestamp,k:int>",
+     "array<timestamp>",
+     "map<string,timestamp>"
+    ]
+   ],
+   "rows/typeof/Asia/Kolkata": [
+    [
+     "timestamp",
+     "timestamp_ntz",
+     "struct<t:timestamp,k:int>",
+     "array<timestamp>",
+     "map<string,timestamp>"
+    ]
+   ],
+   "rows/typeof/UTC": [
+    [
+     "timestamp",
+     "timestamp_ntz",
+     "struct<t:timestamp,k:int>",
+     "array<timestamp>",
+     "map<string,timestamp>"
+    ]
+   ],
+   "rows/unix_timestamp/America/New_York": [
+    [
+     1,
+     1736902800
+    ],
+    [
+     2,
+     1751371200
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     -310415399
+    ],
+    [
+     5,
+     32503672800
+    ],
+    [
+     6,
+     1736910000
+    ],
+    [
+     7,
+     1736884800
+    ]
+   ],
+   "rows/unix_timestamp/Asia/Kolkata": [
+    [
+     1,
+     1736902800
+    ],
+    [
+     2,
+     1751371200
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     -310415399
+    ],
+    [
+     5,
+     32503672800
+    ],
+    [
+     6,
+     1736910000
+    ],
+    [
+     7,
+     1736884800
+    ]
+   ],
+   "rows/unix_timestamp/UTC": [
+    [
+     1,
+     1736902800
+    ],
+    [
+     2,
+     1751371200
+    ],
+    [
+     3,
+     null
+    ],
+    [
+     4,
+     -310415399
+    ],
+    [
+     5,
+     32503672800
+    ],
+    [
+     6,
+     1736910000
+    ],
+    [
+     7,
+     1736884800
+    ]
+   ],
+   "schema/format/America/New_York": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/format/Asia/Kolkata": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/format/UTC": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/parquet/America/New_York": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/parquet/Asia/Kolkata": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/parquet/UTC": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/sqlpath/America/New_York": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/sqlpath/Asia/Kolkata": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/sqlpath/UTC": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/view/America/New_York": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/view/Asia/Kolkata": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "schema/view/UTC": "struct<id:int,ts:timestamp,ntz:timestamp_ntz,s:struct<t:timestamp,k:int>,a:array<timestamp>,m:map<string,timestamp>>",
+   "write_iceberg/America/New_York/America/New_York": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 00:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 17:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-14 22:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 15:00:00"
+     ]
+    ]
+   ],
+   "write_iceberg/America/New_York/Asia/Kolkata": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 06:30:00"
+     ],
+     [
+      2,
+      "2025-07-01 17:30:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 11:00:00.25"
+     ],
+     [
+      5,
+      "3000-01-01 03:30:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 08:30:00"
+     ],
+     [
+      7,
+      "2025-01-15 01:30:00"
+     ]
+    ]
+   ],
+   "write_iceberg/America/New_York/UTC": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 05:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 22:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 03:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 20:00:00"
+     ]
+    ]
+   ],
+   "write_iceberg/Asia/Kolkata/America/New_York": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 00:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 17:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-14 22:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 15:00:00"
+     ]
+    ]
+   ],
+   "write_iceberg/Asia/Kolkata/Asia/Kolkata": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 06:30:00"
+     ],
+     [
+      2,
+      "2025-07-01 17:30:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 11:00:00.25"
+     ],
+     [
+      5,
+      "3000-01-01 03:30:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 08:30:00"
+     ],
+     [
+      7,
+      "2025-01-15 01:30:00"
+     ]
+    ]
+   ],
+   "write_iceberg/Asia/Kolkata/UTC": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 05:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 22:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 03:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 20:00:00"
+     ]
+    ]
+   ],
+   "write_iceberg/UTC/America/New_York": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 00:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 17:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-14 22:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 15:00:00"
+     ]
+    ]
+   ],
+   "write_iceberg/UTC/Asia/Kolkata": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 06:30:00"
+     ],
+     [
+      2,
+      "2025-07-01 17:30:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 11:00:00.25"
+     ],
+     [
+      5,
+      "3000-01-01 03:30:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 08:30:00"
+     ],
+     [
+      7,
+      "2025-01-15 01:30:00"
+     ]
+    ]
+   ],
+   "write_iceberg/UTC/UTC": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00"
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 05:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 22:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 03:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 20:00:00"
+     ]
+    ]
+   ],
+   "write_parquet/America/New_York/America/New_York": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00",
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00",
+      "2025-07-01 08:00:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 00:30:00.25",
+      "1960-03-01 00:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 17:00:00.123456",
+      "2999-12-31 17:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-14 22:00:00",
+      "2025-01-14 22:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 15:00:00",
+      "2025-01-14 15:00:00"
+     ]
+    ]
+   ],
+   "write_parquet/America/New_York/Asia/Kolkata": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-15 06:30:00",
+      "2025-01-15 06:30:00"
+     ],
+     [
+      2,
+      "2025-07-01 17:30:00",
+      "2025-07-01 17:30:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 11:00:00.25",
+      "1960-03-01 11:00:00.25"
+     ],
+     [
+      5,
+      "3000-01-01 03:30:00.123456",
+      "3000-01-01 03:30:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 08:30:00",
+      "2025-01-15 08:30:00"
+     ],
+     [
+      7,
+      "2025-01-15 01:30:00",
+      "2025-01-15 01:30:00"
+     ]
+    ]
+   ],
+   "write_parquet/America/New_York/UTC": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00",
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00",
+      "2025-07-01 12:00:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 05:30:00.25",
+      "1960-03-01 05:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 22:00:00.123456",
+      "2999-12-31 22:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 03:00:00",
+      "2025-01-15 03:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 20:00:00",
+      "2025-01-14 20:00:00"
+     ]
+    ]
+   ],
+   "write_parquet/Asia/Kolkata/America/New_York": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00",
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00",
+      "2025-07-01 08:00:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 00:30:00.25",
+      "1960-03-01 00:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 17:00:00.123456",
+      "2999-12-31 17:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-14 22:00:00",
+      "2025-01-14 22:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 15:00:00",
+      "2025-01-14 15:00:00"
+     ]
+    ]
+   ],
+   "write_parquet/Asia/Kolkata/Asia/Kolkata": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-15 06:30:00",
+      "2025-01-15 06:30:00"
+     ],
+     [
+      2,
+      "2025-07-01 17:30:00",
+      "2025-07-01 17:30:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 11:00:00.25",
+      "1960-03-01 11:00:00.25"
+     ],
+     [
+      5,
+      "3000-01-01 03:30:00.123456",
+      "3000-01-01 03:30:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 08:30:00",
+      "2025-01-15 08:30:00"
+     ],
+     [
+      7,
+      "2025-01-15 01:30:00",
+      "2025-01-15 01:30:00"
+     ]
+    ]
+   ],
+   "write_parquet/Asia/Kolkata/UTC": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00",
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00",
+      "2025-07-01 12:00:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 05:30:00.25",
+      "1960-03-01 05:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 22:00:00.123456",
+      "2999-12-31 22:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 03:00:00",
+      "2025-01-15 03:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 20:00:00",
+      "2025-01-14 20:00:00"
+     ]
+    ]
+   ],
+   "write_parquet/UTC/America/New_York": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00",
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00",
+      "2025-07-01 08:00:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 00:30:00.25",
+      "1960-03-01 00:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 17:00:00.123456",
+      "2999-12-31 17:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-14 22:00:00",
+      "2025-01-14 22:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 15:00:00",
+      "2025-01-14 15:00:00"
+     ]
+    ]
+   ],
+   "write_parquet/UTC/Asia/Kolkata": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-15 06:30:00",
+      "2025-01-15 06:30:00"
+     ],
+     [
+      2,
+      "2025-07-01 17:30:00",
+      "2025-07-01 17:30:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 11:00:00.25",
+      "1960-03-01 11:00:00.25"
+     ],
+     [
+      5,
+      "3000-01-01 03:30:00.123456",
+      "3000-01-01 03:30:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 08:30:00",
+      "2025-01-15 08:30:00"
+     ],
+     [
+      7,
+      "2025-01-15 01:30:00",
+      "2025-01-15 01:30:00"
+     ]
+    ]
+   ],
+   "write_parquet/UTC/UTC": [
+    "struct<id:int,ts:timestamp,s:struct<t:timestamp,k:int>>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00",
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00",
+      "2025-07-01 12:00:00"
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "1960-03-01 05:30:00.25",
+      "1960-03-01 05:30:00.25"
+     ],
+     [
+      5,
+      "2999-12-31 22:00:00.123456",
+      "2999-12-31 22:00:00.123456"
+     ],
+     [
+      6,
+      "2025-01-15 03:00:00",
+      "2025-01-15 03:00:00"
+     ],
+     [
+      7,
+      "2025-01-14 20:00:00",
+      "2025-01-14 20:00:00"
+     ]
+    ]
+   ]
+  }
+ },
+ "views": {
+  "mic": "spark_micros",
+  "mix": "spark_mixdir",
+  "pa_adj": "pyarrow_adjusted",
+  "pa_int96": "pyarrow_int96",
+  "pa_naive": "pyarrow_naive",
+  "t": "spark_int96"
+ },
+ "write_read": "SELECT id, CAST(ts AS STRING), CAST(s.t AS STRING) FROM w ORDER BY id",
+ "write_source": "SELECT id, ts, s FROM t",
+ "zones": [
+  "UTC",
+  "America/New_York",
+  "Asia/Kolkata"
+ ]
+}

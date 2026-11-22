@@ -33,6 +33,15 @@ type already means that extreme. Dropped per file, per file group and on the sca
 it), a full range cannot form when DataFusion merges files whose own ranges are not full
 ([card](../../../../task/roadmap/mid-term/cast-stats-interval-1-card-2026-11-22.md)).
 
+**PARQUET-INT96-AS-NTZ-1 (2026-11-22):** `with_int96_as_instants` sets DataFusion's `execution.parquet.coerce_int96`
+to `us` and `coerce_int96_tz` to `UTC` on every RePark session config (`../session/df_guards.rs`
+`context_with_df_54_1_rule_guards`, after the explicit `datafusion.*` keys, which it keeps), so an `INT96` leaf,
+top-level or nested, infers and decodes as `Timestamp(Microsecond, "UTC")`, Spark's `timestamp` shown in the
+session zone, on every plain Parquet route; it was `Timestamp(Nanosecond, None)`, read as `timestamp_ntz` holding
+the UTC wall time, and wrapped past 2262. `INT64` leaves keep their footer's `isAdjustedToUTC`. Arrow's statistics
+converter reads no `INT96` bounds, so the leaf is never pruned, as before
+([card](../../../../task/roadmap/mid-term/parquet-int96-as-ntz-1-card-2026-11-22.md)).
+
 ## Files
 
 - `extreme_bounds.rs` — `without_type_extreme_bounds`, `drop_type_extreme_bounds`, `has_type_extreme_bound`: a min at
@@ -49,5 +58,10 @@ it), a full range cannot form when DataFusion merges files whose own ranges are 
   every NaN back, `max` answers NaN and `min` the smallest number, on a
   constant and a spread file, one and two row groups. Removing the per-file demotion, the per-scan demotion or the
   factory registration, or the row-group check, each turns a pin red. The aggregate dynamic filter (NAN-MINMAX-1 N1): three files `[3,4]`, `[NULL,NULL | 1,2]` and `[5,6]` answer `max(d), min(d)` 6.0, 1.0 and `min(d), max(id)` 1.0, 8 in 10 of 10 runs (red with the default removed: `min` 3.0); the umbrella key at `true` is refused on four `SET` forms and at build, `false` is accepted, and the specific key turns the filter on at runtime and at build.
+
+- `int96_tests.rs` — a low-level `INT96` file (2025, year 2999 and 1960 instants, a NULL) beside an `INT64`
+  not-adjusted leaf: `read_parquet` and `CREATE EXTERNAL TABLE … STORED AS PARQUET` read `Timestamp(Microsecond,
+  "UTC")` with the exact microseconds, the `INT64` leaf stays zone-less; the config sets `us`/`UTC` and keeps
+  an explicit setting.
 
 Up: [../map.md](../map.md).
