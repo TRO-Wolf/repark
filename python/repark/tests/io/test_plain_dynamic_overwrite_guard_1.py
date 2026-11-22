@@ -4,6 +4,7 @@ import csv
 import hashlib
 import io
 import json
+from collections.abc import Callable
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -99,15 +100,24 @@ def _writer(
     return writer
 
 
-def _assert_refused_intact(writer: Any, fmt: str, route: str, base: Path) -> None:
+def _refusal(action: Callable[[], None], base: Path) -> Exception | None:
     before = _tree(base)
-    with pytest.raises(UnsupportedOperationException) as raised:
-        _write(writer, fmt, route, base / "t")
-    message = str(raised.value)
+    raised: Exception | None = None
+    try:
+        action()
+    except (AnalysisException, IllegalArgumentException, UnsupportedOperationException) as error:
+        raised = error
+    assert _tree(base) == before, f"the write changed the scratch tree (raised {raised!r})"
+    return raised
+
+
+def _assert_refused_intact(writer: Any, fmt: str, route: str, base: Path) -> None:
+    raised = _refusal(lambda: _write(writer, fmt, route, base / "t"), base)
+    assert isinstance(raised, UnsupportedOperationException), repr(raised)
+    message = str(raised)
     assert CARD in message
     assert SPARK_SAYS in message
     assert "refuses rather than overwrite every partition" in message
-    assert _tree(base) == before
 
 
 @pytest.mark.parametrize("ansi", [True, False])
@@ -194,11 +204,10 @@ def test_an_unparsable_option_refuses_a_partitioned_overwrite(
     spark: ReparkSession, tmp_path: Path, fmt: str, raw: str
 ) -> None:
     _seed(spark, fmt, tmp_path / "t")
-    before = _tree(tmp_path)
     writer = _writer(spark, fmt, ONE, options=(("partitionOverwriteMode", raw),))
-    with pytest.raises(IllegalArgumentException, match=CARD):
-        _write(writer, fmt, "shorthand", tmp_path / "t")
-    assert _tree(tmp_path) == before
+    raised = _refusal(lambda: _write(writer, fmt, "shorthand", tmp_path / "t"), tmp_path)
+    assert isinstance(raised, IllegalArgumentException), repr(raised)
+    assert CARD in str(raised)
 
 
 @pytest.mark.parametrize("ansi", [True, False])
@@ -211,11 +220,10 @@ def test_witness_setting_residual_partition_overwrite_mode(
     spark.sql("SELECT * FROM VALUES (0,10),(1,11) t(part,v)").write.partitionBy("part").parquet(
         target
     )
-    before = _tree(tmp_path)
     fresh = spark.sql("SELECT 1 AS part, 21 AS v").write.mode("overwrite").partitionBy("part")
-    with pytest.raises(UnsupportedOperationException, match=CARD):
-        fresh.parquet(target)
-    assert _tree(tmp_path) == before
+    raised = _refusal(lambda: fresh.parquet(target), tmp_path)
+    assert isinstance(raised, UnsupportedOperationException), repr(raised)
+    assert CARD in str(raised)
     assert sorted(
         (row["part"], row["v"]) for row in pq.read_table(target, partitioning="hive").to_pylist()
     ) == [(0, 10), (1, 11)]
@@ -241,10 +249,10 @@ def _partition_rows(target: Path) -> list[tuple[str, list[int]]]:
 def test_witness_review_settings_overwrite_dynamic(spark: ReparkSession, tmp_path: Path) -> None:
     spark.conf.set(KEY, "DYNAMIC")
     fresh = _witness_frames(spark, tmp_path / "t")
-    before = _tree(tmp_path)
-    with pytest.raises(UnsupportedOperationException, match=CARD):
-        fresh.write.mode("overwrite").partitionBy("part").parquet(str(tmp_path / "t"))
-    assert _tree(tmp_path) == before
+    writer = fresh.write.mode("overwrite").partitionBy("part")
+    raised = _refusal(lambda: writer.parquet(str(tmp_path / "t")), tmp_path)
+    assert isinstance(raised, UnsupportedOperationException), repr(raised)
+    assert CARD in str(raised)
 
 
 def test_witness_review_settings_overwrite_static(spark: ReparkSession, tmp_path: Path) -> None:

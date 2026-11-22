@@ -1427,6 +1427,41 @@ perfectly good read.
   refusal. ([card](../task/roadmap/mid-term/native-dataframe-write-silent-1-card-2026-11-13.md);
   [ruling](../task/wo/ice-v2-flat-aws-label-1/design/rulings-2026-11-13.md), item 5.)
 
+#### PLAIN-DYNAMIC-OVERWRITE-GUARD-1 — a dynamic partitioned path overwrite refuses (declared loud refusal; destructive in 1.5.6, refused on main, fix for v1.5.7)
+
+- **repark** — on every plain-file typed path write (Parquet, JSON, CSV and text; `.parquet(p)`
+  and the other shorthands, `format(x).save(p)`; local paths and `s3://`/`s3a://`, including
+  `ReparkSession::write_path`), a partitioned `mode("overwrite")` whose effective
+  `partitionOverwriteMode` is DYNAMIC refuses with `UnsupportedOperationException` before any
+  path lookup, source evaluation, staging or store operation:
+  `DataFrameWriter cannot overwrite the partitioned path <path> while <source> is DYNAMIC: Spark
+  would replace only the partitions the written rows hold and keep every other partition, and
+  RePark does not implement dynamic partition overwrite for path writes, so it refuses rather
+  than overwrite every partition; nothing was written. ... (PLAIN-DYNAMIC-OVERWRITE-GUARD-1)`.
+  The effective mode is decided once: the last case-insensitive `partitionOverwriteMode` writer
+  option, else one snapshot of `spark.sql.sources.partitionOverwriteMode` at the action (a
+  `conf.set` or SQL `SET` after the writer is built counts). An option value that is neither
+  STATIC nor DYNAMIC refuses the same write with `IllegalArgumentException`. Seed files stay
+  byte-identical and an absent target stays absent, including a DYNAMIC overwrite of an absent
+  target, which 1.5.6 wrote correctly.
+  - **What 1.5.6 did:** replaced the whole directory, so an empty input emptied it; on text the
+    writer option did the same. On Parquet, JSON and CSV the writer option already refused as
+    an unsupported option.
+  - **Unchanged:** STATIC overwrite, append, ignore, error, unpartitioned writes, a DYNAMIC conf
+    with a non-overwrite save mode, a STATIC writer option (still an unsupported option on
+    Parquet, JSON and CSV), and every Iceberg and catalog write (`overwritePartitions()` and
+    dynamic `INSERT OVERWRITE` already equal Spark).
+- **Apache Spark** — replaces only the partitions present in the written rows and keeps the rest;
+  an empty input changes nothing; the writer option overrides the session conf both ways; an
+  unknown option value fails the write. *(oracle: PySpark 4.1.2, 2026-11-22, 200 cells over the
+  four formats and both spellings, beside a release package of main `550789fd`.)*
+- **Pin** — `python/repark/tests/io/test_plain_dynamic_overwrite_guard_1.py`,
+  `crates/repark-core/src/session/tests/dynamic_overwrite_guard.rs` and the unit tests in
+  `crates/repark-core/src/partition_overwrite_mode.rs`.
+- **Rationale** — DECLARED refusal, owner ruling 2026-11-22 (D8 and D3 adopted): silent data
+  loss becomes a loud refusal now; the positive answer, dynamic partition overwrite for path
+  writes, stays open. ([card](../task/roadmap/mid-term/plain-dynamic-overwrite-guard-1-card-2026-11-22.md).)
+
 #### ICE-LOCAL-COMMIT-POINT-1 — on the local catalog the newest metadata file is the commit
 
 - **repark** — the local catalog keeps its table pointer in process memory. That is the
