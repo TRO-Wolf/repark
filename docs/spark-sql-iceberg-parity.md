@@ -5984,6 +5984,38 @@ still open is `isModifiable`.
   the EQUAL cells lost to N8); card
   [STRING-HOUR-MINUTE-SECOND-1](../task/roadmap/mid-term/cards-2026-11-19/string-hour-minute-second-1-card-2026-11-19.md).
 
+### UNIX-TIMESTAMP-TRUNCATE-1 — `unix_timestamp` truncates and `unix_seconds` / `unix_millis` floor, as Spark divides — **FIXED 2026-11-22 (branch `fix/unix-timestamp-truncate-1`, not merged)**
+
+- **repark** — Before (main `c5370be6`): `unix_timestamp` / `to_unix_timestamp` of a `TIMESTAMP` or
+  `TIMESTAMP_NTZ` (with or without a pattern) and of text parsed with a pattern floored the microseconds,
+  while `unix_seconds` / `unix_millis` truncated them (`datafusion-spark`'s cast chain on SQL and
+  `F.expr`; a `DOUBLE` composite on `F.unix_seconds` / `F.unix_millis`, which also rounded up after about
+  2242). A fractional instant before 1970 was one second (or millisecond) off, silently, on every door,
+  zone and mode; `(unix_timestamp(end) - unix_timestamp(start)) / 60` stored one minute off. The
+  one-argument `unix_timestamp(x)` ran its own parser: it skipped leading whitespace, accepted two inner
+  spaces, refused a daylight-saving gap wall, and refused a `DATE` at planning. After: `unix_timestamp`
+  divides with `/`, the one-argument form is the two-argument form with `yyyy-MM-dd HH:mm:ss`, and the
+  registered `unix_seconds` / `unix_millis` (`timestamp_cast/unix_floor.rs`) floor and refuse a
+  `TIMESTAMP_NTZ` with Spark's `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`; `F.unix_seconds` /
+  `F.unix_millis` build that function. `CAST(ts AS BIGINT)` already floored and is unchanged.
+- **Apache Spark** — `ToTimestamp.eval` divides by `downScaleFactor` with Java `/` for `DATE`,
+  `TIMESTAMP`, `TIMESTAMP_NTZ` and parsed text; `TimestampToLongBase` (`unix_seconds`, `unix_millis`) uses
+  `Math.floorDiv` and takes only `TIMESTAMP`; `unix_timestamp(x)` is `unix_timestamp(x, 'yyyy-MM-dd
+  HH:mm:ss')`. *(oracle: PySpark 4.1.2, 2026-11-22, 7,854 cells beside a release package of `c5370be6`,
+  three zones, both ANSI modes, four doors.)*
+- **Still unlike Spark:** a `TIMESTAMP_NTZ` literal near 1970-01-01 fails to plan and a year-1 one
+  refuses; `unix_micros` of a `TIMESTAMP_NTZ` answers; `unix_seconds` / `unix_millis` of a `STRING` or
+  `DATE` refuse with DataFusion's text; a pattern's `SSSSSS` refuses a shorter fraction; a narrowing
+  timestamp cast that overflows raises Arrow's error; `F.to_unix_timestamp` refuses a `Column` pattern
+  ([card](../task/roadmap/mid-term/unix-timestamp-truncate-1-card-2026-11-22.md), "Still unlike Spark").
+- **Pin** — `python/repark/tests/timestamps/test_unix_timestamp_truncate_1.py` (4,092 cells against
+  `unix_timestamp_truncate_1_spark_oracle.json`, the Parquet minute difference, the NTZ refusal text),
+  `python/repark/tests/functions/test_functions_d.py`; Rust `repark-functions` `timestamp_cast::tests`
+  and `timestamp_cast::unix_floor::tests`.
+- **Rationale** — the audit family `NEW-dates-4` (S1) with `UNIX-TIMESTAMP-STRING-TRIM-1` and
+  UNIX-SECONDS-PRE-EPOCH-1 absorbed;
+  [card](../task/roadmap/mid-term/unix-timestamp-truncate-1-card-2026-11-22.md).
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### CSV-SCHEMA-TIMESTAMP-ZONE-1 — a CSV schema's `TIMESTAMP` field parses under the session zone — **FIXED 2026-11-19 on the Spark door (branch `fix/csv-schema-timestamp-zone-1`, not merged)**
