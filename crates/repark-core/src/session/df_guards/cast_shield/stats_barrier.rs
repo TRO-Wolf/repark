@@ -174,10 +174,27 @@ pub(crate) fn keeps_order(source: &DataType, target: &DataType) -> bool {
     source == target
         || (source.is_numeric() || *source == DataType::Boolean)
             && target.is_numeric()
-            && (!source.is_floating() || target.is_floating())
+            && float_keeps_order(source, target)
         || is_text(source) && is_text(target)
         || is_binary(source) && is_binary(target)
         || temporal_keeps_order(source, target)
+}
+
+fn float_keeps_order(source: &DataType, target: &DataType) -> bool {
+    match (float_width(source), float_width(target)) {
+        (None, _) => true,
+        (Some(from), Some(to)) => from <= to,
+        (Some(_), None) => false,
+    }
+}
+
+fn float_width(data_type: &DataType) -> Option<u8> {
+    match data_type {
+        DataType::Float16 => Some(16),
+        DataType::Float32 => Some(32),
+        DataType::Float64 => Some(64),
+        _ => None,
+    }
 }
 
 fn value_type(data_type: &DataType) -> &DataType {
