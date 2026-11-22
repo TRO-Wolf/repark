@@ -39,6 +39,14 @@ RETRY_VIEW = "g5_retry_source"
 RETRY_JOIN_ROWS = 100_000
 EMPTY_READ = {"count": 0, "min": None, "max": None, "error": None}
 RECOVERED_READ = {"count": 3, "min": 2, "max": 4, "error": None}
+REFUSED_CELLS = frozenset({"C1", "C2", "C3", "C5"})
+ANSWERED_CELLS = frozenset({"C4", "C6"})
+ABSENT_CELLS = frozenset({"C1", "C2", "C3"})
+CONTROL_READS = {
+    "C4": {"count": 99, "min": 2, "max": 100, "error": None},
+    "C5": {"count": 3, "min": 1, "max": 3, "error": None},
+    "C6": {"count": 5, "min": 2, "max": 6, "error": None},
+}
 PARITY_DIR = Path(__file__).resolve().parent
 
 pytestmark = pytest.mark.skipif(
@@ -138,8 +146,8 @@ def child_main(kind: str, statements: list[str]) -> None:
         session.sql(statement).collect()
 
 
-def _table_names(kind: str, cell: str) -> tuple[str, str, str]:
-    catalog = _catalog_name(kind)
+def _table_names(kind: str, cell: str, catalog: str | None = None) -> tuple[str, str, str]:
+    catalog = catalog or _catalog_name(kind)
     prefix = run_table_prefix()
     return (
         f"{catalog}.{ACCEPTANCE_NAMESPACE}.{prefix}g5_src",
@@ -148,8 +156,8 @@ def _table_names(kind: str, cell: str) -> tuple[str, str, str]:
     )
 
 
-def _listed(spark: Any, kind: str, short: str) -> bool:
-    rows = spark.sql(f"SHOW TABLES IN {_catalog_name(kind)}.{ACCEPTANCE_NAMESPACE}").collect()
+def _listed(spark: Any, catalog: str, short: str) -> bool:
+    rows = spark.sql(f"SHOW TABLES IN {catalog}.{ACCEPTANCE_NAMESPACE}").collect()
     return short in {str(row["tableName"]) for row in rows}
 
 
@@ -162,7 +170,7 @@ def _read(spark: Any, table: str) -> dict[str, Any]:
             "count": None,
             "min": None,
             "max": None,
-            "error": f"{type(failure).__name__}: {failure}"[:500],
+            "error": _error(failure),
         }
 
 
@@ -194,14 +202,18 @@ def sessions(kind: str) -> Any:
     repark = _repark(kind, repark_config)
     spark = _spark_session_for_catalog(spark_config, f"ctas-failure-{kind}-spark")
     src = _table_names(kind, "src")[0]
-    repark.range(1, SOURCE_ROWS + 1).selectExpr(
-        "CAST(id AS BIGINT) AS id",
-        "CASE WHEN id IN (1, 99999) THEN 'q' ELSE '1' END AS s",
-    ).writeTo(src).createOrReplace()
+    seed_source(repark, src)
     try:
         yield repark, spark, src
     finally:
         repark.stop()
+
+
+def seed_source(repark: ReparkSession, src: str) -> None:
+    repark.range(1, SOURCE_ROWS + 1).selectExpr(
+        "CAST(id AS BIGINT) AS id",
+        "CASE WHEN id IN (1, 99999) THEN 'q' ELSE '1' END AS s",
+    ).writeTo(src).createOrReplace()
 
 
 def _run_kill(kind: str, *statements: str) -> int:
@@ -224,8 +236,15 @@ def _run_kill(kind: str, *statements: str) -> int:
 @pytest.mark.timeout(1800)
 @pytest.mark.parametrize("spec", CELLS, ids=lambda spec: spec.cell)
 def test_ctas_failure_cell(spec: CellSpec, kind: str, sessions: Any, records_path: Path) -> None:
+    failures = run_ctas_cell(spec, kind, _catalog_name(kind), sessions, records_path)
+    assert not failures, f"{spec.cell}: {failures}"
+
+
+def run_ctas_cell(
+    spec: CellSpec, kind: str, catalog: str, sessions: Any, records_path: Path
+) -> list[str]:
     repark, spark, src_fq = sessions
-    _, target_fq, target_short = _table_names(kind, spec.cell)
+    _, target_fq, target_short = _table_names(kind, spec.cell, catalog)
     statement = _statement(spec.cell, src_fq, target_fq)
     replace = spec.cell in {"C5", "C6"}
     if replace:
@@ -242,8 +261,8 @@ def test_ctas_failure_cell(spec: CellSpec, kind: str, sessions: Any, records_pat
             repark.sql(statement).collect()
         except Exception as failure:
             outcome = "REFUSED"
-            error = f"{type(failure).__name__}: {failure}"[:500]
-    listed = _listed(spark, kind, target_short)
+            error = _error(failure)
+    listed = _listed(spark, catalog, target_short)
     read = _read(spark, target_fq) if listed else None
     caveat = spec.kill and kind == "s3tables" and listed
     recovery = _recover(repark, spark, src_fq, target_fq) if caveat else None
@@ -261,21 +280,50 @@ def test_ctas_failure_cell(spec: CellSpec, kind: str, sessions: Any, records_pat
         recovery=recovery,
         leftover="not-measured",
     )
-    if spec.cell == "C5":
-        assert read is not None and read["error"] is None and read["count"] >= spec.control_rows, (
-            f"C5 blocks: the live table after a failed replace is unreadable or short: {read}"
-        )
-        return
+    return cell_failures(spec, kind, outcome, listed, read, return_code, recovery)
+
+
+def cell_failures(
+    spec: CellSpec,
+    kind: str,
+    outcome: str,
+    listed: bool,
+    read: dict[str, Any] | None,
+    return_code: int | None,
+    recovery: dict[str, Any] | None,
+) -> list[str]:
+    failures: list[str] = []
+    if spec.cell in REFUSED_CELLS and outcome != "REFUSED":
+        failures.append(f"the failing statement was not refused: {outcome}")
+    if spec.cell in ANSWERED_CELLS and outcome != "ANSWERED":
+        failures.append(f"the control statement did not answer: {outcome}")
+    if spec.cell in ABSENT_CELLS and listed:
+        failures.append(f"the failed create left a listed table: {read}")
+    if spec.cell in CONTROL_READS and (not listed or read != CONTROL_READS[spec.cell]):
+        failures.append(f"the control reads {read}, expected {CONTROL_READS[spec.cell]}")
     if spec.kill:
-        assert return_code == -signal.SIGKILL, f"K is vacuous: the child exited {return_code}"
-    if caveat:
-        assert read == EMPTY_READ, f"K blocks: the killed CTAS left a non-empty table: {read}"
-        assert recovery == RECOVERED_READ, f"K blocks: the replace did not recover: {recovery}"
-        return
-    if listed and spec.control_rows is None:
-        assert read is not None and read["error"] is None and read["count"] != 0, (
-            f"{spec.cell} blocks: listed table reads as empty or unreadable: {read}"
-        )
+        failures.extend(_kill_failures(kind, listed, read, return_code, recovery))
+    return failures
+
+
+def _kill_failures(
+    kind: str,
+    listed: bool,
+    read: dict[str, Any] | None,
+    return_code: int | None,
+    recovery: dict[str, Any] | None,
+) -> list[str]:
+    failures: list[str] = []
+    if return_code != -signal.SIGKILL:
+        failures.append(f"K is vacuous: the child exited {return_code}")
+    if kind == "glue" and listed:
+        failures.append(f"K on Glue left a listed table: {read}")
+    if kind == "s3tables" and listed:
+        if read != EMPTY_READ:
+            failures.append(f"K blocks: the killed CTAS left a non-empty table: {read}")
+        if recovery != RECOVERED_READ:
+            failures.append(f"K blocks: the replace did not recover: {recovery}")
+    return failures
 
 
 def _recover(repark: ReparkSession, spark: Any, src: str, target: str) -> dict[str, Any]:
@@ -304,7 +352,7 @@ def _count(session: Any, table: str) -> dict[str, Any]:
 
 def _listed_or_error(session: Any, kind: str, short: str) -> bool | str:
     try:
-        return _listed(session, kind, short)
+        return _listed(session, _catalog_name(kind), short)
     except Exception as failure:
         return _error(failure)
 
@@ -313,11 +361,12 @@ def _summary(spark: Any, table: str) -> dict[str, Any]:
     try:
         spark.catalog.refreshTable(table)
         row = spark.sql(
-            f"SELECT count(*), count(DISTINCT id), min(id), max(id), min(n), max(n) FROM {table}"
+            "SELECT count(*), count(DISTINCT id), min(id), max(id), min(n), max(n), count(n) "
+            f"FROM {table}"
         ).collect()[0]
     except Exception as failure:
         return {"error": _error(failure)}
-    names = ("count", "distinct_ids", "min_id", "max_id", "min_n", "max_n")
+    names = ("count", "distinct_ids", "min_id", "max_id", "min_n", "max_n", "nonnull_n")
     return {**{name: row[index] for index, name in enumerate(names)}, "error": None}
 
 
@@ -388,7 +437,7 @@ def test_silver_retry_after_killed_ctas(kind: str, sessions: Any, records_path: 
     )
     create = ctas_sql(target_fq, RETRY_VIEW)
     return_code = _run_kill(kind, view, create)
-    listed = _listed(spark, kind, target_short)
+    listed = _listed(spark, _catalog_name(kind), target_short)
     after_kill = _summary(spark, target_fq) if listed else None
     repark.sql(view).collect()
     steps: dict[str, dict[str, Any]] = {}
@@ -404,16 +453,7 @@ def test_silver_retry_after_killed_ctas(kind: str, sessions: Any, records_path: 
             "seconds": round(time.monotonic() - started, 1),
             "spark_read": _summary(spark, target_fq),
         }
-    expected = {
-        "count": SOURCE_ROWS,
-        "distinct_ids": SOURCE_ROWS,
-        "min_id": 1,
-        "max_id": SOURCE_ROWS,
-        "min_n": RETRY_JOIN_ROWS,
-        "max_n": RETRY_JOIN_ROWS,
-        "error": None,
-    }
-    final = steps["merge"]["spark_read"]
+    expected = retry_expected()
     _record(
         records_path,
         kind,
@@ -427,5 +467,37 @@ def test_silver_retry_after_killed_ctas(kind: str, sessions: Any, records_path: 
         retry=steps,
         expected=expected,
     )
-    assert return_code == -signal.SIGKILL, f"R1 is vacuous: the CTAS child exited {return_code}"
-    assert final == expected, f"R1: the silver retry did not converge: {final} != {expected}"
+    failures = retry_failures(kind, return_code, listed, steps)
+    assert not failures, f"R1: {failures}"
+
+
+def retry_expected() -> dict[str, Any]:
+    return {
+        "count": SOURCE_ROWS,
+        "distinct_ids": SOURCE_ROWS,
+        "min_id": 1,
+        "max_id": SOURCE_ROWS,
+        "min_n": RETRY_JOIN_ROWS,
+        "max_n": RETRY_JOIN_ROWS,
+        "nonnull_n": SOURCE_ROWS,
+        "error": None,
+    }
+
+
+def retry_failures(
+    kind: str, return_code: int | None, listed: bool, steps: dict[str, dict[str, Any]]
+) -> list[str]:
+    expected = retry_expected()
+    failures: list[str] = []
+    if return_code != -signal.SIGKILL:
+        failures.append(f"R1 is vacuous: the CTAS child exited {return_code}")
+    if kind == "glue" and listed:
+        failures.append("the killed silver CTAS left a listed table on Glue")
+    for step in ("ctas", "merge"):
+        if steps[step]["error"] is not None:
+            failures.append(f"the {step} retry raised: {steps[step]['error']}")
+    if kind == "glue" and steps["ctas"]["spark_read"] != expected:
+        failures.append(f"the Glue CTAS retry did not converge: {steps['ctas']['spark_read']}")
+    if steps["merge"]["spark_read"] != expected:
+        failures.append(f"the silver retry did not converge: {steps['merge']['spark_read']}")
+    return failures
