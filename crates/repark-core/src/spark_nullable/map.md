@@ -25,7 +25,22 @@ every non-float statistic are untouched. `read_parquet_nullable` builds its list
 `../session/df_guards.rs`), which the native `CREATE EXTERNAL TABLE … STORED AS PARQUET` uses. Evidence:
 `task/wo/nan-minmax-1/`.
 
+**CAST-STATS-INTERVAL-1 (2026-11-22):** the same seats drop a 64-bit bound that sits at its type's extreme.
+DataFusion 54.1.0 counts an interval's values as `distance + 1` in `u64` (`interval_arithmetic.rs` `cardinality`), so
+a BIGINT column whose statistics span `[i64::MIN, i64::MAX]` counts zero values and every filter above it failed with
+`Selectivity is out of limit: inf` (or `NaN`). Dropping the extreme bound loses nothing: an absent bound of a 64-bit
+type already means that extreme. Dropped per file, per file group and on the scan (also when a filter is pushed into
+it), a full range cannot form when DataFusion merges files whose own ranges are not full
+([card](../../../../task/roadmap/mid-term/cast-stats-interval-1-card-2026-11-22.md)).
+
 ## Files
+
+- `extreme_bounds.rs` — `without_type_extreme_bounds`, `drop_type_extreme_bounds`, `has_type_extreme_bound`: a min at
+  the type's minimum or a max at its maximum becomes `Precision::Absent` for BIGINT, UNSIGNED BIGINT, `Date64` and
+  every TIMESTAMP unit; every other bound, the row and null counts are kept.
+- `extreme_bounds_tests.rs` — the extreme table (a full range, a range one inside it, a full INT range kept, a
+  TIMESTAMP and an UNSIGNED bound), and `x > 0`, `x = 5`, a filter on another column, `max(x)` and `min(x)` over one
+  file, row groups, and two files `[MIN, -1]` and `[0, 5, MAX]` whose merged range is full.
 
 - `float_bounds_tests.rs` — the seat's pins: a constant file's float bounds turn inexact while every other statistic
   (row count, byte size, null counts, the integer and string columns) is unchanged; a spread file's bounds stay exact;

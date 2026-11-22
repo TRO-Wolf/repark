@@ -5472,6 +5472,85 @@ still open is `isModifiable`.
   Q3, Q4, Q10 ruled "defaults"); the second delta and the card's items (i) and (ii) ruled 2026-11-14 ("Go with
   defaults"); card [NAN-MINMAX-1](../task/roadmap/mid-term/nan-minmax-1-card-2026-11-13.md).
 
+### CAST-STATS-SILENT-1 — a cast that reorders values no longer answers `max`/`min` from the Parquet footer, and footer pruning no longer reads a NaN-less footer through a FLOAT or DOUBLE cast to an integer, DECIMAL or narrower float type — **FIXED 2026-11-22 (branch `fix/cast-stats-interval-1`, not merged)**
+
+- **repark** — Before (main `c5370be6`, and 1.5.6), S1, silent, both ANSI modes, plain Parquet. DataFusion 54.1.0
+  carried a column's footer min and max through every `CAST`:
+  - (a) `max`/`min` of a cast that reorders values answered from the footer without reading a row: ids `10, 3, 25,
+    7` cast to INT gave `7, 10` for `25, 3` (`05, 10, 6, 055`: `6, 5` for `55, 5`; two files: `9, 11` for `100, 2`);
+    BIGINT `9, 10, 11` cast to STRING `'11', '9'` for `'9', '10'`; BIGINT `-1, 0, 1` cast to BOOLEAN `true, true`
+    for `true, false`.
+  - (b) row-group pruning through a FLOAT or DOUBLE cast to an integer type: the footer leaves NaN out and the cast
+    maps NaN inside the range, so one row group of DOUBLE `5.0, NaN, 10.0` answered no row for `CAST(d AS INT) = 0`
+    (also BIGINT, SMALLINT, `IN`, `count(*)` 0, a FLOAT column, the DataFrame route), where Spark answers row 2
+    under ANSI off and refuses with `[CAST_OVERFLOW]` under ANSI on. The same drop through DOUBLE to FLOAT (delta 2,
+    found by the PR's re-check): `CAST(d AS FLOAT) > 100`, `>= 11`, `= CAST('NaN' AS FLOAT)` and
+    `CAST(CAST(d AS FLOAT) AS DOUBLE) > 100` answered no row where Spark answers row 2 in both modes (Spark does not
+    push a narrowing cast down); also over a dictionary-encoded column and a NULL-plus-NaN row group (footer
+    `[3.0, 3.0]`, Spark row 1).
+
+  After: the statistics barrier of CAST-STATS-INTERVAL-1 (`df_guards/cast_shield/stats_barrier.rs`) puts every
+  cast outside the order-keeping family behind an identity UDF. A FLOAT or DOUBLE source keeps its statistics only
+  to the same or a wider float type (FLOAT to DOUBLE); FLOAT or DOUBLE to an integer, DECIMAL or narrower float type
+  (DOUBLE to FLOAT) is barred, so neither the shortcut nor pruning reads the footer through those casts. (a) answers
+  Spark's values. (b) through an integer target reads the NaN row and refuses loudly in both modes
+  (`PySparkException`, Arrow's "Can't cast value NaN to type Int32"): under ANSI on as Spark refuses, with a
+  different class; under ANSI off where Spark answers 0 (a separate cast gap, strict xfail). (b) through DOUBLE to
+  FLOAT answers Spark's rows. Not changed, and not claimed: uncast float filters (`d > 100`) and FLOAT to DOUBLE
+  (`CAST(f AS DOUBLE) > 100`) still prune by the footer and skip a NaN row; they equal Spark only because Spark
+  pushes those filters down and its reader skips the NaN row too (with `spark.sql.parquet.filterPushdown=false`
+  Spark answers it). Order-keeping casts (INT to BIGINT still folds) are unchanged.
+- **spark** — Spark 4.1.2 reads the rows. *(oracle: measured live 2026-11-22, both ANSI modes.)*
+- **Workaround on 1.5.6** (measured on `c5370be6`) — for (a), `try_cast` in place of `CAST`, or
+  `datafusion.execution.collect_statistics` set to false; for (b) none measured (`collect_statistics` and
+  `datafusion.execution.parquet.pruning` set to false both still drop the row).
+- **Pin** — `python/repark/tests/io/test_cast_stats_interval_1.py`
+  (`test_max_and_min_of_a_string_id_cast_to_int_read_the_rows`,
+  `test_max_and_min_of_casts_that_reorder_values_read_the_rows`, the `max`/`min` SQL and native-door cells,
+  `test_a_float_cast_to_an_integer_reads_the_nan_row_its_footer_leaves_out`,
+  `test_a_double_cast_to_float_reads_the_nan_row_its_footer_leaves_out`, the controls
+  `test_uncast_and_widening_float_filters_follow_spark_pushdown`, the strict xfail
+  `test_an_ansi_off_float_cast_to_an_integer_answers_spark_rows`);
+  `crates/repark-core/src/session/df_guards/cast_shield/stats_barrier_tests.rs`.
+- **Rationale** — S1 (owner, 2026-11-22: "Go with your recommendations", its own id); (a) found while answering
+  which paths read the cast statistics, (b) by the PR's verifier and its DOUBLE to FLOAT case by the re-check. The loud S2s of the same seat are
+  CAST-STATS-INTERVAL-1; card [CAST-STATS-INTERVAL-1](../task/roadmap/mid-term/cast-stats-interval-1-card-2026-11-22.md)
+  (section CAST-STATS-SILENT-1).
+
+### CAST-STATS-INTERVAL-1 — a cast that reorders values no longer carries its column's Parquet statistics, and a full-range BIGINT bound no longer breaks filter selectivity — **FIXED 2026-11-22 (branch `fix/cast-stats-interval-1`, not merged)**
+
+- **repark** — Before (main `c5370be6`, and 1.5.6): DataFusion 54.1.0 carried a column's Parquet min and max through
+  every `CAST`. A STRING id cast to INT whose string min and max disagree with numeric order (`'10'` and `'7'`, a
+  leading zero `'04'`) got an inverted range, so a filter planned above the cast (a `row_number()` dedup's `rn = 1`,
+  `BETWEEN` on the cast, `=` or `IN` after the dedup) failed with an internal interval assertion (S2). A BIGINT
+  column whose statistics span `[i64::MIN, i64::MAX]` (one file, or two files that merge to it) failed every filter
+  above it with `Selectivity is out of limit: inf` (S2). The two silent faults of the same seat (wrong `max`/`min`
+  of the cast; a NaN row dropped by pruning through a float-to-integer cast) are CAST-STATS-SILENT-1, closed by the
+  same barrier. After: the last rule of the core optimizer list (the Spark extension's `DecimalInRanges` runs after it
+  and builds no casts) wraps the operand of every cast outside the order-keeping family in an
+  identity UDF (`df_guards/cast_shield/stats_barrier.rs`), and the plain Parquet format drops a 64-bit bound at its
+  type's extreme (`spark_nullable/extreme_bounds.rs`; a `max`/`min` at that extreme now scans, same answer).
+  Order-keeping casts (INT to BIGINT, DECIMAL to INT, FLOAT to DOUBLE, DATE to TIMESTAMP_NTZ, text to text) keep
+  their statistics and their footer-answered `max`/`min`; a FLOAT or DOUBLE to an integer, DECIMAL or narrower
+  float type is barred.
+  Both ANSI modes; every door.
+- **spark** — Spark 4.1.2 answers every cell from the rows. *(oracle: measured live 2026-11-22, both ANSI modes.)*
+- **Pruning** — for casts from and to text, row-group, page and file pruning, a join's dynamic filter and a TopK
+  filter refuse a string to non-string cast (`PruningPredicate`), so a wrong but ordered cast range dropped no row
+  on main. For a FLOAT or DOUBLE cast to an integer type, pruning on main dropped the NaN row: a second silent
+  path (CAST-STATS-SILENT-1 (b)), closed by barring that cast. Uncast float pruning (`d > 100`) is unchanged and equals Spark.
+- **Caveat** — the order-keeping list holds only while RePark refuses overflowing narrowing integer casts under
+  ANSI off; Spark wraps them (`max` of `CAST(1 AS TINYINT)`, `CAST(300 AS TINYINT)` is 44), so those casts must
+  leave the list when that refusal is fixed.
+- **Residual** — literals at BIGINT's limits can still build a full range inside a plan; the two DataFusion
+  faults are to be reported upstream. Iceberg scans carry no column bounds and were never affected.
+- **Pin** — `python/repark/tests/io/test_cast_stats_interval_1.py`;
+  `crates/repark-core/src/session/df_guards/cast_shield/stats_barrier_tests.rs`;
+  `crates/repark-core/src/spark_nullable/extreme_bounds_tests.rs`.
+- **Rationale** — two NEW S2 families from a workload measurement; the two S1 found beside them are
+  CAST-STATS-SILENT-1; card
+  [CAST-STATS-INTERVAL-1](../task/roadmap/mid-term/cast-stats-interval-1-card-2026-11-22.md).
+
 ### SIGNED-ZERO-CONST-COMPARE-1 — two FLOAT/DOUBLE constant zeros compare as one value — **FIXED 2026-11-14 (branch `fix/signed-zero-const-compare-1`, merge pending)**
 
 - **repark** — Before (main `d843d37e`): a comparison whose two operands are both constants folded at plan time

@@ -10,8 +10,10 @@ use datafusion::logical_expr::{
 };
 use datafusion::optimizer::{AnalyzerRule, ApplyOrder, OptimizerConfig, OptimizerRule};
 
+mod stats_barrier;
 mod udf;
 
+pub(crate) use stats_barrier::{StatsBarrierRule, stats_barrier_udf};
 pub use udf::cast_shield_udf;
 use udf::{cast_parts, cast_preimage, cast_shield_call, is_lossless, is_narrowing, shielded_cast};
 
@@ -300,6 +302,9 @@ fn range_term(operand: &Expr, lower: ScalarValue, upper: ScalarValue, negated: b
             .and(operand.clone().lt(lit(upper)))
     }
 }
+
+#[cfg(test)]
+mod stats_barrier_tests;
 
 #[cfg(test)]
 mod tests;

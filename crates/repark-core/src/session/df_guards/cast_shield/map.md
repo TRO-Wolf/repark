@@ -4,7 +4,9 @@
 
 CAST-LITERAL-UNWRAP-1 (2026-11-16), seat W: the identity UDF that hides a narrowing cast from DataFusion's
 unwrap, its `preimage`, and the unit tests. The rule that places it is [../cast_shield.rs](../cast_shield.rs).
-Design and rulings: `task/wo/cast-literal-unwrap-1/` (`sketch.md` §3).
+Design and rulings: `task/wo/cast-literal-unwrap-1/` (`sketch.md` §3). **CAST-STATS-INTERVAL-1 (2026-11-22):** the
+statistics barrier lives here too, beside the shield it shares `node_schema` and `reads_input` with
+([card](../../../../../../task/roadmap/mid-term/cast-stats-interval-1-card-2026-11-22.md)).
 
 ## Contents
 
@@ -22,5 +24,22 @@ Design and rulings: `task/wo/cast-literal-unwrap-1/` (`sketch.md` §3).
 - [tests.rs](tests.rs) — the `preimage` table (truncation, half away from zero both signs, declines), the
   narrowing and lossless predicates, answers on a core session, the select-list names and idempotence, the `IN`
   cap, and the four ruling-1 shapes red with the optimizer placement stripped and green with it.
+- [stats_barrier.rs](stats_barrier.rs) — `StatsBarrierRule` (`repark_stats_barrier`), the last optimizer rule, wraps the
+  operand of every `CAST` whose value order the cast does not keep in `__repark_stats_barrier__(x)`, an identity UDF
+  (same type, nullability and kernel). DataFusion 54.1.0 carries a column's statistics through a `CastExpr` by casting
+  its min and max (`projection.rs` `project_column_statistics_through_expr`, `cast.rs` `evaluate_bounds`), so STRING
+  ids `'10'` and `'7'` became the INT range `[10, 7]` (a filter above it failed on `Interval::try_new`) and `max`/`min`
+  of the cast answered from the footer (`7`, `10` for `25`, `3`). Behind the barrier the cast's bounds are unknown.
+  `keeps_order` is DataFusion's own order family (`is_order_preserving_cast_family`: numeric or BOOLEAN to numeric,
+  the same type), with a FLOAT or DOUBLE source kept only to the same or a wider float type (delta 1 and 2: the footer leaves NaN out
+  and a cast to an integer, a DECIMAL or a narrower float compares it inside the range, so pruning through the cast dropped the NaN row),
+  plus text to text and binary to binary, narrowed on time: DATE to DATE, DATE to and from a zone-less
+  TIMESTAMP, TIMESTAMP to TIMESTAMP with the zone kept or kept absent; dictionaries read as their values. Every other
+  cast (STRING to anything else, anything to STRING, numeric to BOOLEAN, a zoned TIMESTAMP to DATE or to a zone-less
+  one) is barred. A cast of a constant, a `TRY_CAST` (DataFusion carries no statistics through it) and an operand
+  already behind the barrier are left alone; names are kept by `NamePreserver`, so the select list does not change.
+- [stats_barrier_tests.rs](stats_barrier_tests.rs) — the order table (float to integer, DECIMAL and a narrower float barred, FLOAT to DOUBLE kept), the four inverted-range shapes (`max`/`min` direct
+  and through a projection, `BETWEEN` over a projection, the `row_number` dedup) on a core session, an INT to BIGINT
+  cast whose `max`/`min` still fold from the footer (no `AggregateExec`, no barrier), and the names and idempotence.
 
 Up: [../map.md](../map.md).
