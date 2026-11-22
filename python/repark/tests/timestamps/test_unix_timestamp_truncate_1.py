@@ -143,4 +143,4 @@ def test_the_epoch_boundary_vectors_read_cold_answer_as_spark(
         "to_unix_timestamp",
         "unix_micros",
     ):
-        assert expected[name]["type"] == ["bigint"]
+        assert got[name]["type"] == expected[name]["type"] == ["bigint"]

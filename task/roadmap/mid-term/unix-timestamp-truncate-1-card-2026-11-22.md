@@ -108,6 +108,8 @@ The full table, the probe and the logs stay with the builder's scratch hand-back
 - `CAST(ts AS INT | SMALLINT | TINYINT)` that overflows raises Arrow's cast error, where Spark answers
   `NULL` with ANSI off and `CAST_OVERFLOW` with ANSI on.
 - `F.to_unix_timestamp(col, F.lit(pattern))` raises `NOT_ITERABLE`; PySpark accepts a `Column` pattern.
+- `F.to_unix_timestamp(col, "pattern")` with a plain string answers as if the pattern were a literal; PySpark
+  reads a string `format` as a column name and refuses (`UNRESOLVED_COLUMN`). Same on `c5370be6`.
 - [UNIX-TIMESTAMP-NTZ-ZONE-1](cards-2026-11-19/unix-timestamp-ntz-zone-1-card-2026-11-19.md): a
   `TIMESTAMP_NTZ` column built by a cast answered its stored wall in every zone on `c5370be6`, equal to
   Spark apart from the rounding fixed here; that card's Iceberg-column step is not measured here.
