@@ -113,4 +113,6 @@ reaches them.
 `python/repark/tests/io/test_cast_stats_interval_1.py` (facade, both ANSI modes; the native door for the full range
 and the cast `max`/`min`), `crates/repark-core/src/session/df_guards/cast_shield/stats_barrier_tests.rs`,
 `crates/repark-core/src/spark_nullable/extreme_bounds_tests.rs`. With the barrier rule removed from the optimizer
-list, every cast pin goes red and the full-range pins stay green.
+list, every cast pin goes red (41, the 14 NaN pins among them) and the full-range pins and controls stay green (30);
+with only delta 1's float arm reverted, exactly the 14 NaN pins go red. On `c5370be6` 59 of 71 fail and the 7 strict
+xfails hold; on the head 71 pass.
