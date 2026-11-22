@@ -1443,9 +1443,10 @@ perfectly good read.
   `conf.set` or SQL `SET` after the writer is built counts). An option value that is neither
   STATIC nor DYNAMIC refuses the same write with `IllegalArgumentException`. Seed files stay
   byte-identical and an absent target stays absent. Every effective DYNAMIC partitioned
-  plain-path overwrite refuses, including the forms 1.5.6 already answered as Spark does: an
+  plain-path overwrite refuses, including the forms where 1.5.6 already gave Spark's rows: an
   absent target, an existing empty directory, and an input that covers every existing partition
-  (with or without a new one).
+  (with or without a new one). With an empty input into an empty directory, 1.5.6 also left a
+  root part file that Spark does not write.
   - **What 1.5.6 did:** replaced the whole directory, so an empty input emptied it; on text the
     writer option did the same. On Parquet, JSON and CSV the writer option already refused as
     an unsupported option (`AnalysisException`); those cells now refuse as

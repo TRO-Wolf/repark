@@ -67,9 +67,10 @@ partitioned overwrite with `IllegalArgumentException`, since Spark fails that wr
   registration.
 
 **Deliberate cost:** every effective DYNAMIC partitioned plain-path overwrite refuses, including the
-forms 1.5.6 already answered as Spark does, because the decision is taken before any path lookup and
+forms where 1.5.6 already gave Spark's rows, because the decision is taken before any path lookup and
 cannot tell them apart from the destructive ones. Measured on Spark 4.1.2, `550789fd` and `678e4acc`
-(Delta 1, 32 cells over the four formats and both spellings): on `550789fd` these give Spark's rows,
+(the absent target in the first round's 200 cells; the empty directory and the covering inputs in
+Delta 1's 32 cells; the four formats and both spellings): on `550789fd` these give Spark's rows,
 and on the head they refuse with the tree intact:
 
 - an absent target (one row or an empty input);
