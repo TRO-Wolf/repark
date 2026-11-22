@@ -101,6 +101,25 @@ STORED_PAIRS: tuple[tuple[str, str], ...] = (
     ("2025-01-15 12:00:00", "2025-01-15 12:59:59.5"),
     ("2025-01-15 12:00:00", "2025-01-15 13:00:00"),
 )
+EPOCH_VECTORS: tuple[str | None, ...] = (
+    "1969-12-31 23:59:59.999999",
+    "1969-12-31 23:59:59.4996",
+    "1969-12-31 23:59:58.999999",
+    "1969-12-31 23:59:59.000001",
+    "1969-12-31 23:59:59",
+    "1970-01-01 00:00:00",
+    "1970-01-01 00:00:00.000001",
+    "1970-01-01 00:00:00.999999",
+    "1970-01-01 00:00:01",
+    None,
+)
+EPOCH_FUNCTIONS: tuple[str, ...] = (
+    "unix_seconds",
+    "unix_millis",
+    "unix_timestamp",
+    "to_unix_timestamp",
+    "unix_micros",
+)
 _CONDITION = re.compile(r"\[([A-Z][A-Z0-9_]+(?:\.[A-Z0-9_]+)?)\]")
 
 
@@ -185,6 +204,46 @@ def stored_minutes(session: Any, functions: Any, path: str) -> list[Any]:
     return [row["minutes"] for row in read]
 
 
+def six_digit_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    whole, _, fraction = value.partition(".")
+    return whole + "." + fraction.ljust(6, "0")
+
+
+def epoch_vectors(session: Any, functions: Any, path: str) -> dict[str, dict[str, list[Any]]]:
+    rows = [(index, value, six_digit_text(value)) for index, value in enumerate(EPOCH_VECTORS)]
+    frame = session.createDataFrame(rows, "id int, s string, s6 string").select(
+        "id", "s6", functions.col("s").cast("timestamp").alias("ts")
+    )
+    frame.write.mode("overwrite").parquet(path)
+    cold = session.read.parquet(path)
+    cold.createOrReplaceTempView("unix_truncate_epoch")
+    vectors: dict[str, dict[str, list[Any]]] = {}
+    for name in EPOCH_FUNCTIONS:
+        sql = session.sql(
+            f"SELECT id, {name}(ts) AS r, typeof({name}(ts)) AS t"
+            " FROM unix_truncate_epoch ORDER BY id"
+        ).collect()
+        typed = cold.select("id", getattr(functions, name)(functions.col("ts")).alias("r"))
+        expr = cold.select("id", functions.expr(f"{name}(ts)").alias("r"))
+        vectors[name] = {
+            "sql": [row["r"] for row in sql],
+            "type": sorted({row["t"] for row in sql}),
+            "typed": [row["r"] for row in typed.orderBy("id").collect()],
+            "expr": [row["r"] for row in expr.orderBy("id").collect()],
+        }
+        if name in ("unix_timestamp", "to_unix_timestamp"):
+            pattern = session.sql(
+                f"SELECT id, {name}(s6, '{FRACTION_PATTERN}') AS r"
+                " FROM unix_truncate_epoch ORDER BY id"
+            ).collect()
+            vectors[name]["pattern"] = [row["r"] for row in pattern]
+    cast = session.sql("SELECT id, CAST(ts AS BIGINT) AS r FROM unix_truncate_epoch ORDER BY id")
+    vectors["cast_bigint"] = {"sql": [row["r"] for row in cast.collect()]}
+    return vectors
+
+
 def record(path: Path, scratch: Path) -> None:
     from pyspark.sql import SparkSession, functions
 
@@ -195,6 +254,7 @@ def record(path: Path, scratch: Path) -> None:
     )
     recorded: dict[str, Any] = {}
     stored: dict[str, Any] = {}
+    epochs: dict[str, Any] = {}
     for zone in ZONES:
         session.conf.set("spark.sql.session.timeZone", zone)
         for ansi in ANSI_MODES:
@@ -207,11 +267,13 @@ def record(path: Path, scratch: Path) -> None:
                 )
             target = scratch / f"stored-{zone.replace('/', '_')}-{ansi}"
             stored[f"{zone}|{ansi}"] = stored_minutes(session, functions, str(target))
+            epochs[f"{zone}|{ansi}"] = epoch_vectors(session, functions, str(target) + "-epoch")
     document = {
         "spark": session.version,
         "recorded": "2026-11-22",
         "cells": recorded,
         "stored_minutes": stored,
+        "epoch_vectors": epochs,
     }
     path.write_text(json.dumps(document, indent=1, sort_keys=True) + "\n", encoding="utf-8")
 

@@ -15,6 +15,7 @@ from _record_unix_timestamp_truncate_1 import (
     answer,
     cell_key,
     cells,
+    epoch_vectors,
     stored_minutes,
 )
 
@@ -114,3 +115,32 @@ def test_a_timestamp_ntz_column_refuses_with_sparks_text(
         assert got.get("error") == expected["error"], got
         assert f'Cannot resolve "{function}(ntz)" due to data type mismatch' in got["message"]
         assert 'however "ntz" has the type "TIMESTAMP_NTZ"' in got["message"]
+
+
+@pytest.mark.parametrize("zone", ZONES)
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+def test_the_epoch_boundary_vectors_read_cold_answer_as_spark(
+    session: ReparkSession, tmp_path: Path, zone: str, ansi: str
+) -> None:
+    _configure(session, zone, ansi)
+    expected = _ORACLE["epoch_vectors"][f"{zone}|{ansi}"]
+    got = epoch_vectors(session, spark_functions, str(tmp_path / "epoch"))
+    if zone == "UTC":
+        assert expected["unix_seconds"]["sql"][0] == expected["unix_millis"]["sql"][0] == -1
+        assert expected["unix_timestamp"]["sql"][0] == expected["to_unix_timestamp"]["sql"][0] == 0
+        assert expected["unix_millis"]["sql"][1] == -501
+    misses = [
+        f"{name} {seat}: spark {values} repark {got[name].get(seat)}"
+        for name, seats in expected.items()
+        for seat, values in seats.items()
+        if seat != "type" and got[name].get(seat) != values
+    ]
+    assert not misses, "\n".join(misses)
+    for name in (
+        "unix_seconds",
+        "unix_millis",
+        "unix_timestamp",
+        "to_unix_timestamp",
+        "unix_micros",
+    ):
+        assert expected[name]["type"] == ["bigint"]
