@@ -172,7 +172,9 @@ fn is_candidate_operand(operand: &Expr) -> bool {
 pub(crate) fn keeps_order(source: &DataType, target: &DataType) -> bool {
     let (source, target) = (value_type(source), value_type(target));
     source == target
-        || (source.is_numeric() || *source == DataType::Boolean) && target.is_numeric()
+        || (source.is_numeric() || *source == DataType::Boolean)
+            && target.is_numeric()
+            && (!source.is_floating() || target.is_floating())
         || is_text(source) && is_text(target)
         || is_binary(source) && is_binary(target)
         || temporal_keeps_order(source, target)
