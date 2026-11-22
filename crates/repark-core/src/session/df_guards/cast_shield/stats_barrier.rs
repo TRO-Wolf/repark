@@ -180,7 +180,7 @@ pub(crate) fn keeps_order(source: &DataType, target: &DataType) -> bool {
 
 fn value_type(data_type: &DataType) -> &DataType {
     match data_type {
-        DataType::Dictionary(_, value) => value_type(value),
+        DataType::Dictionary(_, value) => value.as_ref(),
         other => other,
     }
 }
