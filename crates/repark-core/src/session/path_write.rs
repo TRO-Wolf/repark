@@ -92,6 +92,28 @@ impl SaveMode {
     }
 }
 
+fn guarded_save_mode(
+    session: &ReparkSession,
+    url: &str,
+    mode: &str,
+    options: &HashMap<String, String>,
+    partition_by: &[String],
+) -> Result<SaveMode> {
+    let mode = SaveMode::parse(mode)?;
+    crate::partition_overwrite_mode::refuse_dynamic_plain_overwrite(
+        crate::partition_overwrite_mode::PlainPathWrite {
+            path: url,
+            overwrite: matches!(mode, SaveMode::Overwrite),
+            partitioned: !partition_by.is_empty(),
+        },
+        crate::partition_overwrite_mode_from_ctx(session.context()),
+        options
+            .iter()
+            .map(|(key, value)| (key.as_str(), value.as_str())),
+    )?;
+    Ok(mode)
+}
+
 fn is_simple_identifier(name: &str) -> bool {
     let mut chars = name.chars();
     match chars.next() {
@@ -580,7 +602,7 @@ impl ReparkSession {
         partition_by: &[String],
     ) -> Result<usize> {
         let format = WriteFormat::parse(format)?;
-        let mode = SaveMode::parse(mode)?;
+        let mode = guarded_save_mode(self, url, mode, options, partition_by)?;
         let (scheme, bucket, prefix_text) = parse_write_destination(url)?;
         let frame_columns: Vec<String> = frame
             .schema()

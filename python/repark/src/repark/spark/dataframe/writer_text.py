@@ -33,9 +33,11 @@ def write_text_path(writer: Any, path: str) -> None:
     from repark import _native
     from repark.errors import AnalysisException
     from repark.spark._integral import attach_error_condition
+    from repark.spark.dataframe.writer_layout import _refuse_dynamic_path_overwrite
     from repark.spark.dataframe.writer_s3 import is_s3_url
 
     writer._dataframe._ensure_alive()
+    _refuse_dynamic_path_overwrite(writer, path)
     if is_s3_url(path):
         raise AnalysisException(
             f"DataFrameWriter.text over {mask_url_userinfo(path)!r} is not supported yet "

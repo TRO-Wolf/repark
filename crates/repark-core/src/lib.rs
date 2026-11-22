@@ -28,7 +28,7 @@ mod orc_scan;
 mod orc_schema;
 mod parallel_window;
 mod partition_discovery;
-mod partition_overwrite_mode;
+pub mod partition_overwrite_mode;
 mod partition_timestamp;
 mod pool_refusals;
 mod pre_execute;

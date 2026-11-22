@@ -620,18 +620,16 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   zoned walls, and discovery types and values under New York.
   pins: io-text-1/Z-1
 - `partition_overwrite_mode.rs` — **ICE-DYN-OVERWRITE-1 (2026-09-17):** the
-  `spark.sql.sources.partitionOverwriteMode` session knob beside the timezone
-  and ANSI carriers: `PARTITION_OVERWRITE_MODE_KEY` (the one spelling),
-  `PartitionOverwriteMode` (`Static` default via derive / `Dynamic`), the case-insensitive
-  parse (unknown values refuse with Spark's
-  `[INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS]` class), the
-  `PartitionOverwriteModeConfig` live carrier (`repark.overwrite` prefix, unsettable),
-  plus the build-map installer and the `SessionContext` reader. **ICE-OVERWRITE-MODE-1
-  (2026-09-19):** re-exports `repark_iceberg::write::OverwriteIntent` as
-  `repark_core::OverwriteIntent`, so the binding (no `repark-iceberg` edge) names the typed
-  per-write intent.
-  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** the refusals here echo a rejected config value through
-  `mask_value_credentials`.
+  `spark.sql.sources.partitionOverwriteMode` knob: `PARTITION_OVERWRITE_MODE_KEY`,
+  `PartitionOverwriteMode` (`Static` default / `Dynamic`), a case-insensitive parse (unknown
+  values refuse as `[INVALID_CONF_VALUE.OUT_OF_RANGE_OF_OPTIONS]`), the unsettable
+  `PartitionOverwriteModeConfig` carrier (`repark.overwrite`), the installer and the reader.
+  **ICE-OVERWRITE-MODE-1 (2026-09-19):** re-exports `OverwriteIntent` for the binding.
+  **SOURCE-URL-REDACT-1 fold 1 (2026-10-06):** echoes pass `mask_value_credentials`.
+  **PLAIN-DYNAMIC-OVERWRITE-GUARD-1 (2026-11-22):** now `pub mod`; `refuse_dynamic_plain_overwrite`: on a
+  partitioned path overwrite the last case-insensitive `partitionOverwriteMode` option, else
+  the session snapshot, decides; DYNAMIC refuses (`NotImplemented`, the card), a bad option
+  `IllegalArgument`.
 - `text_partition.rs` — **IO-TEXT-1 round 3 (2026-09-15, U-1+U-2):** the one-scan
   `partitionBy` text writer (`write_text_partitioned`, exported at the crate root).
   One `execute_stream` pass routes each row to its leaf writer by rendered key

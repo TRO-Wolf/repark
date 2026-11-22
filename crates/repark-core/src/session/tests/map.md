@@ -273,16 +273,15 @@ Session test modules. `session.rs` declares `#[cfg(test)] mod tests;`.
 - `path_write.rs` — **S3-PATH-WRITE-1 round 1 (2026-09-28):** save-mode protocol
   pins on an in-memory store (no AWS): mode matrix, marker-last commit order,
   exists-any-object, overwrite delete-then-write, bucket-root refusal.
-  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the csv `dateFormat` refusal
-  leg moved to `temporal_write_options_are_honored_on_csv_path_write`: the
-  option now succeeds instead of refusing.
-  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 3 fold (2026-09-30):** the failed-write rollback pins: a
-  400k-row JSON write with zone letters on NTZ leaves the destination key set unchanged for
-  overwrite-into-empty, append (existing bytes also unchanged) and partitioned overwrite.
-  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 4 fold (2026-09-30):** the concurrent-writer pins: keys
-  PUT under the same prefix, a sibling prefix and an unrelated prefix while a 400k-row append fails
-  all survive with their bytes, and a failing append at the bucket root keeps a foreign prefix
-  intact while its own parts are gone.
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** the csv `dateFormat` leg moved to
+  `temporal_write_options_are_honored_on_csv_path_write` (the option now succeeds).
+  **TEXT-WRITE-TIMESTAMP-ZONE-1 re-verify 3 fold (2026-09-30):** rollback pins: a failing 400k-row
+  NTZ JSON write with zone letters keeps the key set for overwrite-into-empty, append (bytes too)
+  and partitioned overwrite. **Re-verify 4 fold (2026-09-30):** concurrent-writer pins: keys under
+  the same, a sibling and an unrelated prefix survive a failing 400k-row append with their bytes; a
+  failing root append keeps a foreign prefix, not its own parts.
+- `dynamic_overwrite_guard.rs` — **PLAIN-DYNAMIC-OVERWRITE-GUARD-1 (2026-11-22):** DYNAMIC refuses
+  a partitioned `write_path` overwrite, objects intact, before bucket lookup.
 - `text_write_format.rs` — **TEXT-WRITE-TIMESTAMP-ZONE-1 (2026-09-29):** compiler/validator/renderer
   pins against the Spark oracle: every error class per pattern kind, DST-gap and LMT-seconds default
   renders, the offset-letter matrix, and the SELECT builder (star fast path, wrapping, partition

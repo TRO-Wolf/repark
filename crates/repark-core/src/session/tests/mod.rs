@@ -14,6 +14,7 @@ mod conf_dump_redaction;
 mod conf_unread;
 mod df_guard;
 mod duplicate_names;
+mod dynamic_overwrite_guard;
 mod footer_cache_report;
 mod frame_lineage;
 mod hadoop_naming;

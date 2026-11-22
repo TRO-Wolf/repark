@@ -164,6 +164,16 @@ def store_writer_option(options: dict[str, str], key: object, value: object) -> 
     options[key_str] = str(value)
 
 
+def _refuse_dynamic_path_overwrite(writer: Any, path: str) -> None:
+    _native.refuse_dynamic_path_overwrite(
+        writer._dataframe._session,
+        str(path),
+        writer._mode,
+        list(writer._options.items()),
+        [str(column) for column in writer._partition_columns],
+    )
+
+
 def _raise_operation_not_support_bucketing(operation: str) -> NoReturn:
     """Raise Spark's ``_LEGACY_ERROR_TEMP_1312`` for a bucketed action."""
     _raise_analysis(
