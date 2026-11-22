@@ -92,13 +92,14 @@ impl SaveMode {
     }
 }
 
-fn refuse_dynamic_overwrite(
+fn guarded_save_mode(
     session: &ReparkSession,
     url: &str,
-    mode: &SaveMode,
+    mode: &str,
     options: &HashMap<String, String>,
     partition_by: &[String],
-) -> Result<()> {
+) -> Result<SaveMode> {
+    let mode = SaveMode::parse(mode)?;
     crate::partition_overwrite_mode::refuse_dynamic_plain_overwrite(
         crate::partition_overwrite_mode::PlainPathWrite {
             path: url,
@@ -109,7 +110,8 @@ fn refuse_dynamic_overwrite(
         options
             .iter()
             .map(|(key, value)| (key.as_str(), value.as_str())),
-    )
+    )?;
+    Ok(mode)
 }
 
 fn is_simple_identifier(name: &str) -> bool {
@@ -600,8 +602,7 @@ impl ReparkSession {
         partition_by: &[String],
     ) -> Result<usize> {
         let format = WriteFormat::parse(format)?;
-        let mode = SaveMode::parse(mode)?;
-        refuse_dynamic_overwrite(self, url, &mode, options, partition_by)?;
+        let mode = guarded_save_mode(self, url, mode, options, partition_by)?;
         let (scheme, bucket, prefix_text) = parse_write_destination(url)?;
         let frame_columns: Vec<String> = frame
             .schema()
