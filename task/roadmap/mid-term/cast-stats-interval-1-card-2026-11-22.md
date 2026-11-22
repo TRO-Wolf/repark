@@ -7,6 +7,10 @@ other paths read the same statistics (the fourth by the PR's verifier). **Severi
 errors) and **S1** (silent wrong `max`/`min`; silent rows dropped by footer pruning), all in released 1.5.6 and on
 main.
 
+**Ids (owner, 2026-11-22: "Go with your recommendations"):** CAST-STATS-INTERVAL-1 holds the two loud S2s (defects
+1 and 2); **CAST-STATS-SILENT-1** (S1) holds the two silent wrong answers (defects 3 and 4), with its own registry
+entry and the section below. One barrier closes all four.
+
 ## The defects
 
 1. **STATS-INTERVAL-ASSERT (S2).** DataFusion 54.1.0 carries a column's Parquet statistics through a `CAST` by
@@ -57,6 +61,27 @@ NaN: that is RePark's separate cast gap (NaN to an integer type under ANSI off),
 only removes the silent drop.
 
 The pins hold the measured Spark answers: `python/repark/tests/io/test_cast_stats_interval_1.py`.
+
+## CAST-STATS-SILENT-1 (S1, silent)
+
+- **(a) `max`/`min` from the footer** (defect 3). Witnesses: `max`/`min` of `CAST(id AS INT)` over `10, 3, 25, 7`
+  answered `7, 10` (Spark `25, 3`); over `05, 10, 6, 055` `6, 5` (`55, 5`); over two files of two row groups
+  `9, 11` (`100, 2`); BIGINT `9, 10, 11` to STRING `'11', '9'` (`'9', '10'`); BIGINT `-1, 0, 1` to BOOLEAN
+  `true, true` (`true, false`).
+- **(b) pruning through a float-to-integer cast** (defect 4). Witness: one row group of DOUBLE `5.0, NaN, 10.0`,
+  `CAST(d AS INT) = 0`, also BIGINT, SMALLINT, `IN`, `count(*)`, a FLOAT column and the DataFrame route: no row on
+  main; Spark answers row 2 (ANSI off) or `[CAST_OVERFLOW]` (ANSI on).
+- **Fix in this PR:** the barrier below; (b) needs delta 1's float arm (a FLOAT or DOUBLE source keeps order only
+  to a float target). (a) now equals Spark; (b) refuses loudly in both modes (the ANSI-off NaN-to-0 cast gap stays
+  its own finding).
+- **Workaround on 1.5.6** (measured on `c5370be6`): for (a), `try_cast` in place of `CAST` (`25, 3`), or
+  `datafusion.execution.collect_statistics` set to false; for (b) none (that key and
+  `datafusion.execution.parquet.pruning` set to false still drop the row).
+- **Pins:** `test_max_and_min_of_a_string_id_cast_to_int_read_the_rows`,
+  `test_max_and_min_of_casts_that_reorder_values_read_the_rows`, the `max`/`min` SQL and native-door cells,
+  `test_a_float_cast_to_an_integer_reads_the_nan_row_its_footer_leaves_out` (14) and the strict xfail
+  `test_an_ansi_off_float_cast_to_an_integer_answers_spark_rows` (7), in
+  `python/repark/tests/io/test_cast_stats_interval_1.py`; the order table in `stats_barrier_tests.rs`.
 
 ## Fix
 
