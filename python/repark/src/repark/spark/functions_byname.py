@@ -245,8 +245,6 @@ FACADE_ONLY_ROUTINE_NAMES: tuple[str, ...] = (
     "try_sum",
     "try_variant_get",
     "ucase",
-    "unix_millis",
-    "unix_seconds",
     "unwrap_udt",
     "user",
     "uuid",

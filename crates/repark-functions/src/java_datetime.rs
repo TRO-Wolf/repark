@@ -743,7 +743,7 @@ pub(crate) fn unix_seconds_with_format(
                     Some(naive) => {
                         match localize_or_gap(naive, zone, text, ansi, "try_to_timestamp")? {
                             Some(instant) => {
-                                builder.append_value(instant.div_euclid(1_000_000));
+                                builder.append_value(instant / 1_000_000);
                             }
                             None => builder.append_null(),
                         }
@@ -764,7 +764,7 @@ pub(crate) fn unix_seconds_with_format(
                     Some(naive) => {
                         match localize_or_gap(naive, zone, text, ansi, "try_to_timestamp")? {
                             Some(instant) => {
-                                builder.append_value(instant.div_euclid(1_000_000));
+                                builder.append_value(instant / 1_000_000);
                             }
                             None => builder.append_null(),
                         }

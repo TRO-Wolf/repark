@@ -565,13 +565,12 @@ scalars live under [`try_invert/`](try_invert/map.md).
   month arithmetic, zone conversion, add/diff, dateadd/datediff arity routes;
   scalar args and column casts hoist out of the row loops). Details in
   [`temporal_ctor/map.md`](temporal_ctor/map.md).
-- `lib.rs` — crate-root stays at **175** under `check_lib_rs` with `pub mod timestamp_type`.
+- `lib.rs` — crate-root under `check_lib_rs`.
   **FNP-BITMAP-FACADE-1 (2026-09-15):** `mod bitmap_agg;` flips to `pub mod bitmap_agg;`
   (same line count) so `repark-python`'s `unary_aggregate_udaf` can reach the three
   `bitmap_agg` UDAF constructors the way it reaches `aggregate`'s.
-- `lib.rs` — crate-root stays at **162** under `check_lib_rs` with `pub mod timestamp_type`
-  (D-8 one-time FNP-WIN-1 grant; step 4 moved the `analyzer_rules()` home to
-  `registration.rs`).
+- [`timestamp_cast/`](timestamp_cast/map.md) — UNIX-TIMESTAMP-TRUNCATE-1: floored `unix_seconds` /
+  `unix_millis`, registered from `registration.rs`.
 - `timestamp_type.rs` — **Q10:** Spark-door `spark.sql.timestampType` carrier
   (`SparkTimestampTypeConfig`, `PREFIX = repark.timestamp`, default
   **TIMESTAMP_LTZ**). Parsed from the builder map in `SparkExtension::configure`.
@@ -1089,11 +1088,11 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `arrow_grammar_to_timestamp_udf` keeps DataFusion's string parse for the `to_timestamp_ntz`
   path only.
   **WO NTZ-1 slice 2 (2026-09-27):** `rewrite_cast` retargets NTZ-target casts through
-  `timestamp_ntz_cast` before the existing arms (+3 lines).
+  `timestamp_ntz_cast` before the existing arms.
   **WO NTZ-STORE-DOORS-1 verifier fold (2026-09-29, VD-1):** `analyze` first runs
   `timestamp_ns_cast::widen_mixed_values_timestamps` with `rewrite_cast` as the cell
   rewrite, before NTZ-1's `retarget_dml_store_casts`. The DML retarget therefore sees a
-  mixed `VALUES` column already typed `TIMESTAMP` (+5 lines).
+  mixed `VALUES` column already typed `TIMESTAMP`.
   **WO NTZ-STORE-DOORS-1 third re-verify fold (2026-09-29, RD4-1):** the call also passes
   `timestamp_type.is_ntz()`, so the pass reads a `TIMESTAMP` literal by the session's
   default timestamp type.
@@ -1127,7 +1126,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `task/tz5-cast-seconds-ledger.md` §4, `task/v3-btz4-ledger.md`, `task/r4-tz8-ledger.md`.
   **DATE-FN-1 (2026-09-04):** registered `date` (Spark `CAST AS DATE`) and `unix_timestamp` (the `date` / `unix_timestamp` registrations in `expr_fn.rs` / `timestamp_cast.rs` carry no doc comments; this row is their contract)
   (alias `to_unix_timestamp`). Zero-arg `unix_timestamp()` is a scalar epoch so a
-  three-row input yields three identical BIGINT values.
+  three-row input yields three identical BIGINT values. UNIX-TIMESTAMP-TRUNCATE-1: `/` truncates; 1-arg = default pattern.
 - `java_datetime.rs` — **FNP-11B step 2 (2026-09-15):** the one shared Java-datetime-pattern
   parser (card D-1) behind `to_date` / `to_timestamp` / `unix_timestamp` with a format.
   Tokenizes `yyyy`/`yy`/`M`/`MM`/`MMM`/`MMMM`/`d`/`H`/`h`/`m`/`s`/`S`/quoted literals;

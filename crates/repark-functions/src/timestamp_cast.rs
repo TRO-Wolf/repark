@@ -6,7 +6,6 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use arrow::array::timezone::Tz;
-use chrono::NaiveDateTime;
 use datafusion::arrow::array::{
     Array, ArrayRef, AsArray, Date32Array, Float64Array, Int64Array, StringArray, StringBuilder,
 };
@@ -22,7 +21,8 @@ use crate::ansi::spark_ansi_enabled_from_options;
 use crate::datetime::invoke_local_dates;
 use crate::session_time_zone::session_time_zone_from_options;
 use repark_common::spark_timestamp_text::{TickUnit, wall_clock_from_ticks};
-use repark_common::zone_horizon::wall_to_unix_seconds;
+
+pub mod unix_floor;
 
 /// The embedded integer-target UDF: floored epoch seconds as `Int64`.
 #[must_use]
@@ -77,6 +77,12 @@ const fn ticks_per_second(unit: TimeUnit) -> i64 {
 /// Return Spark's floor-divided epoch seconds; positive divisors preserve `-0.5 s` as `-1`.
 const fn seconds_floor_from_ticks(ticks: i64, per_second: i64) -> i64 {
     ticks.div_euclid(per_second)
+}
+
+const UNIX_TIMESTAMP_DEFAULT_PATTERN: &str = "yyyy-MM-dd HH:mm:ss";
+
+const fn seconds_truncated_from_ticks(ticks: i64, per_second: i64) -> i64 {
+    ticks / per_second
 }
 
 /// The timestamp `TimeUnit` of the single argument, or a planning error naming what arrived.
@@ -560,13 +566,6 @@ fn malformed_date_cast(value: &str) -> DataFusionError {
     ))
 }
 
-fn malformed_timestamp_parse(value: &str) -> DataFusionError {
-    DataFusionError::Execution(format!(
-        "[CANNOT_PARSE_TIMESTAMP] Text '{value}' could not be parsed at index 0. Use \
-         `try_to_timestamp` to tolerate invalid input string and return NULL instead."
-    ))
-}
-
 fn all_null_date32(len: usize) -> ArrayRef {
     Arc::new(Date32Array::from(vec![None; len]))
 }
@@ -615,34 +614,8 @@ pub(crate) fn unix_seconds_from_timestamp(array: &dyn Array) -> Result<Int64Arra
     let per_second = ticks_per_second(unit);
     Ok(timestamp_ticks(array)?
         .iter()
-        .map(|ticks| ticks.map(|value| seconds_floor_from_ticks(value, per_second)))
+        .map(|ticks| ticks.map(|value| seconds_truncated_from_ticks(value, per_second)))
         .collect())
-}
-
-fn unix_seconds_from_string(array: &dyn Array, session_zone: Tz, ansi: bool) -> Result<Int64Array> {
-    let values = as_utf8_array(array)?;
-    let mut seconds = Int64Array::builder(values.len());
-    for row in 0..values.len() {
-        if values.is_null(row) {
-            seconds.append_null();
-            continue;
-        }
-        let text = values.value(row);
-        match NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M:%S") {
-            Ok(naive) => {
-                if let Some(placed) = wall_to_unix_seconds(&session_zone, &naive) {
-                    seconds.append_value(placed);
-                } else if ansi {
-                    return Err(malformed_timestamp_parse(text));
-                } else {
-                    seconds.append_null();
-                }
-            }
-            Err(_) if ansi => return Err(malformed_timestamp_parse(text)),
-            Err(_) => seconds.append_null(),
-        }
-    }
-    Ok(seconds.finish())
 }
 
 fn invoke_unix_timestamp(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -655,22 +628,22 @@ fn invoke_unix_timestamp(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
         return crate::java_datetime::unix_seconds_with_format(&arrays[0], &arrays[1], args);
     }
     let input = &arrays[0];
-    let ansi = spark_ansi_enabled_from_options(args.config_options.as_ref());
-    let seconds = match input.data_type() {
-        DataType::Timestamp(_, _) => unix_seconds_from_timestamp(input.as_ref())?,
-        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => {
-            let session_zone =
-                parse_session_zone(session_time_zone_from_options(args.config_options.as_ref()))?;
-            unix_seconds_from_string(input.as_ref(), session_zone, ansi)?
+    match input.data_type() {
+        DataType::Timestamp(_, _)
+        | DataType::Date32
+        | DataType::Date64
+        | DataType::Utf8
+        | DataType::LargeUtf8
+        | DataType::Utf8View
+        | DataType::Null => {
+            let formats = ScalarValue::Utf8(Some(UNIX_TIMESTAMP_DEFAULT_PATTERN.to_string()))
+                .to_array_of_size(input.len())?;
+            crate::java_datetime::unix_seconds_with_format(input, &formats, args)
         }
-        DataType::Null => Int64Array::from(vec![None; input.len()]),
-        other => {
-            return Err(DataFusionError::Plan(format!(
-                "'unix_timestamp' expects TIMESTAMP, STRING, or no arguments, got {other}"
-            )));
-        }
-    };
-    Ok(ColumnarValue::Array(Arc::new(seconds)))
+        other => Err(DataFusionError::Plan(format!(
+            "'unix_timestamp' expects TIMESTAMP, STRING, or no arguments, got {other}"
+        ))),
+    }
 }
 
 /// The timestamp unit and zone annotation of the single argument.
@@ -706,7 +679,7 @@ fn nullable_like_argument(args: &ReturnFieldArgs<'_>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::NaiveDate;
+    use chrono::{NaiveDate, NaiveDateTime};
     use repark_common::spark_timestamp_text::ticks_to_micros;
 
     /// Spark floors negative fractional epoch seconds: `-0.5 s → -1` and `-1.25 s → -2`.
@@ -926,6 +899,39 @@ mod tests {
             Date32Type::from_naive_date(NaiveDate::from_ymd_opt(2024, 6, 15).expect("date")),
             "NTZ wall date ignores the session zone"
         );
+    }
+
+    #[test]
+    fn unix_timestamp_truncates_toward_zero_where_the_cast_floors() {
+        use datafusion::arrow::array::TimestampMicrosecondArray;
+
+        let ticks = TimestampMicrosecondArray::from(vec![
+            Some(-500_000),
+            Some(-1),
+            Some(-302_486_399_750_000),
+            Some(-1_000_000),
+            Some(1_736_942_459_500_000),
+            None,
+        ])
+        .with_timezone("UTC");
+        let seconds = unix_seconds_from_timestamp(&ticks).expect("a timestamp input");
+        assert_eq!(
+            seconds.iter().collect::<Vec<_>>(),
+            vec![
+                Some(0),
+                Some(0),
+                Some(-302_486_399),
+                Some(-1),
+                Some(1_736_942_459),
+                None
+            ]
+        );
+        assert_eq!(seconds_floor_from_ticks(-500_000, 1_000_000), -1);
+        assert_eq!(
+            seconds_truncated_from_ticks(-1_500_000_000, 1_000_000_000),
+            -1
+        );
+        assert_eq!(seconds_truncated_from_ticks(i64::MIN, 1), i64::MIN);
     }
 
     #[test]
