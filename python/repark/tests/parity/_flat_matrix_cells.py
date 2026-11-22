@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -216,8 +216,15 @@ GROUP_NAMES: tuple[str, ...] = (
 )
 ALL_GROUPS = "all"
 
+DECLARED_STAGE_CREATE = "DECLARED-STAGE-CREATE"
 PASSING_LABELS: frozenset[str] = frozenset(
-    {"EQUAL", "BOTH-REFUSED", "REFUSED-WHERE-SPARK-ACCEPTED", "KNOWN-EMPTY-DML"}
+    {
+        "EQUAL",
+        "BOTH-REFUSED",
+        "REFUSED-WHERE-SPARK-ACCEPTED",
+        "KNOWN-EMPTY-DML",
+        DECLARED_STAGE_CREATE,
+    }
 )
 DML_SEATS: frozenset[str] = frozenset(
     {
@@ -520,3 +527,272 @@ def passes(label: str) -> bool:
 
 def record_line(**fields: Any) -> str:
     return json.dumps(fields, sort_keys=True, default=str)
+
+
+COLUMNS: tuple[str, ...] = ("id", "i", "l", "dec", "d", "s", "b", "dt", "ts", "ntz", "flag")
+CANONICAL_EXPRESSIONS: tuple[str, ...] = tuple(
+    f"CAST({name} AS STRING) AS {name}" for name in COLUMNS
+)
+NULL_TEXT = "\\N"
+SEED_CANONICAL_TEXT: tuple[str, ...] = (
+    "1|1|1|1.10|1.5|a|true|2026-01-01|2026-01-01 00:00:00|2026-01-01 00:00:00|f1",
+    "2|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|f2",
+    "3|\\N|\\N|\\N|NaN||\\N|\\N|\\N|\\N|f3",
+    "4|\\N|\\N|\\N|-0.0|a |false|\\N|\\N|\\N|f4",
+    "5|2147483647|9223372036854775807|99999999.99|Infinity|\\N|\\N|\\N|\\N|\\N|f5",
+    "6|-1|\\N|\\N|0.0|A|\\N|\\N|\\N|\\N|f6",
+    "7|\\N|\\N|\\N|\\N|é|\\N|1970-01-01|2026-03-08 02:30:00|2026-03-08 02:30:00|f7",
+    "8|1|1|1.10|1.5|a|true|2026-01-01|2026-01-01 00:00:00|2026-01-01 00:00:00|f8",
+)
+SEED_CANONICAL: tuple[tuple[str | None, ...], ...] = tuple(
+    tuple(None if value == NULL_TEXT else value for value in line.split("|"))
+    for line in SEED_CANONICAL_TEXT
+)
+DDL_TYPE_TEXT = "bigint int bigint decimal(10,2) double string boolean date timestamp"
+DDL_TYPES: tuple[str, ...] = (*DDL_TYPE_TEXT.split(), "timestamp_ntz", "string")
+DDL_SCHEMA: tuple[tuple[str, str, bool], ...] = tuple(
+    (name, kind, name != "id") for name, kind in zip(COLUMNS, DDL_TYPES, strict=True)
+)
+CTAS_SCHEMA: tuple[tuple[str, str, bool], ...] = tuple(
+    (name, kind, True) for name, kind in zip(COLUMNS, DDL_TYPES, strict=True)
+)
+UPDATED_FLAG = "z"
+ABSENT = "ABSENT"
+OBSERVATION_MISSING = "OBSERVATION-MISSING"
+STAGE_CREATE_ANSWERED = "STAGE-CREATE-ANSWERED"
+STAGE_CREATE_DOOR = "column-api"
+STAGE_CREATE_SEAT = "create-or-replace"
+STAGE_CREATE_CATALOG = "s3tables"
+STAGE_CREATE_MESSAGE = "Stage-create is currently not supported"
+STAGE_CREATE_ERROR_CLASS = "BadRequestException"
+STAGE_CREATE_STATUS_RULE = "class and message required; HTTP status recorded, not required"
+HTTP_STATUS = re.compile(
+    r"\b(?:HTTP|status(?: code)?|code)[\s:=\"']*([1-5][0-9][0-9])\b", re.IGNORECASE
+)
+
+
+@dataclass(frozen=True)
+class Observation:
+    outcome: str
+    answer: list[tuple[Any, ...]] | None = None
+    state: Any = None
+    schema: tuple[tuple[str, str, bool], ...] | None = None
+    commits: int | None = None
+    error: str | None = None
+    error_class: str | None = None
+    status: int | None = None
+    read_error: str | None = None
+    probe_error: str | None = None
+
+
+@dataclass(frozen=True)
+class Grade:
+    label: str
+    expected: Observation
+    truth: list[int] | None
+    oracle_truth: str | None
+    commits_graded: bool
+    missing: tuple[str, ...]
+    stage_create: dict[str, Any] | None = field(default=None)
+
+
+def sorted_rows(rows: Any) -> list[tuple[Any, ...]]:
+    return sorted((tuple(row) for row in rows), key=repr)
+
+
+def canonical_rows(rows: Any) -> list[tuple[str | None, ...]]:
+    return sorted_rows(
+        tuple(None if value is None else str(value) for value in row) for row in rows
+    )
+
+
+def http_status(text: str | None) -> int | None:
+    found = HTTP_STATUS.search(text or "")
+    return int(found.group(1)) if found else None
+
+
+def commits_graded(catalog: str) -> bool:
+    return catalog == "glue"
+
+
+def stage_create_status_holds(status: int | None) -> bool:
+    return True
+
+
+def is_stage_create_refusal(observation: Observation) -> bool:
+    return (
+        observation.outcome == "REFUSED"
+        and STAGE_CREATE_ERROR_CLASS in (observation.error_class or "")
+        and STAGE_CREATE_MESSAGE in (observation.error or "")
+        and stage_create_status_holds(observation.status)
+    )
+
+
+def is_stage_create_cell(cell: Cell) -> bool:
+    combo = cell.combo
+    return combo is not None and (combo.door, combo.seat) == (STAGE_CREATE_DOOR, STAGE_CREATE_SEAT)
+
+
+def state_for(seat: str, matched: list[int]) -> list[tuple[str | None, ...]]:
+    chosen = {int(value) for value in matched}
+    seed = list(SEED_CANONICAL)
+    if seat == READ_SEAT:
+        return sorted_rows(seed)
+    if seat in COPY_SEATS:
+        return sorted_rows(row for row in seed if int(str(row[0])) in chosen)
+    if seat == "delete":
+        return sorted_rows(row for row in seed if int(str(row[0])) not in chosen)
+    if seat in ROW_UPDATE_SEATS:
+        return sorted_rows(
+            (*row[:-1], UPDATED_FLAG) if int(str(row[0])) in chosen else row for row in seed
+        )
+    if seat == "overwrite":
+        return sorted_rows([row for row in seed if int(str(row[0])) not in chosen] + seed)
+    raise ValueError(f"no state rule for seat {seat!r}")
+
+
+def unchanged_state(combo: Combo) -> Any:
+    target = target_for(combo)
+    if target == "t":
+        return sorted_rows(SEED_CANONICAL)
+    return [] if target == "t2" else ABSENT
+
+
+def committed_schema(combo: Combo) -> tuple[tuple[str, str, bool], ...]:
+    return CTAS_SCHEMA if target_for(combo) == "t3" else DDL_SCHEMA
+
+
+def committed_observation(cell: Cell, entry: dict[str, Any]) -> Observation:
+    combo = cell.combo
+    if combo is None:
+        raise ValueError(f"cell {cell.cell_id!r} has no combination")
+    answered = entry["outcome"] == "ANSWERED"
+    error = entry.get("error") or {}
+    return Observation(
+        outcome=entry["outcome"],
+        answer=answer_rows(committed_ids(combo, entry)) if answered else None,
+        state=state_for(combo.seat, entry["ids"] or []) if answered else unchanged_state(combo),
+        schema=committed_schema(combo) if answered else None,
+        commits=committed_commits(combo, entry),
+        error=error.get("message"),
+        error_class=error.get("class"),
+    )
+
+
+def _with_truth(
+    cell: Cell, oracle: Observation
+) -> tuple[Observation, list[int] | None, str | None]:
+    ids = None if oracle.answer is None else [int(row[0]) for row in oracle.answer]
+    truth, oracle_truth = grade_against_truth(cell, oracle.outcome, ids)
+    if truth is None or cell.combo is None or cell.pid is None:
+        return oracle, None, None
+    state = state_for(cell.combo.seat, truth_match_ids(cell.pid))
+    graded = replace(oracle, answer=sorted_rows((value,) for value in truth), state=state)
+    return graded, truth, oracle_truth
+
+
+def _missing(
+    repark: Observation, oracle: Observation, *, live_oracle: bool, graded: bool
+) -> tuple[str, ...]:
+    missing: list[str] = []
+    acted = repark.outcome in ("ANSWERED", "REFUSED")
+    if acted and repark.state is None:
+        missing.append("repark-state")
+    if live_oracle and oracle.outcome == "ANSWERED" and oracle.state is None:
+        missing.append("oracle-state")
+    if graded and acted and repark.commits is None:
+        missing.append("repark-commits")
+    if graded and live_oracle and oracle.outcome == "ANSWERED" and oracle.commits is None:
+        missing.append("oracle-commits")
+    return tuple(missing)
+
+
+def _state_differs(repark: Observation, expected: Any, schema: Any) -> bool:
+    if repark.state is None or expected is None:
+        return False
+    if repark.state != expected:
+        return True
+    return (
+        schema is not None and repark.schema is not None and tuple(repark.schema) != tuple(schema)
+    )
+
+
+def _stage_create(
+    cell: Cell, catalog: str, repark: Observation, oracle: Observation, reference: Any
+) -> dict[str, Any] | None:
+    if not is_stage_create_cell(cell) or catalog != STAGE_CREATE_CATALOG:
+        return None
+    if cell.pid in TRUTH_PREDICATES and cell.pid is not None:
+        reference = state_for(STAGE_CREATE_SEAT, truth_match_ids(cell.pid))
+    exact = is_stage_create_refusal(oracle)
+    readback = repark.state is not None and reference is not None and repark.state == reference
+    return {
+        "exact_refusal": exact,
+        "status": oracle.status,
+        "status_rule": STAGE_CREATE_STATUS_RULE,
+        "reference_state": reference,
+        "readback_equal": readback,
+        "declared": exact and readback and repark.outcome == "ANSWERED",
+    }
+
+
+def grade_cell(
+    cell: Cell,
+    catalog: str,
+    repark: Observation,
+    oracle: Observation,
+    *,
+    live_oracle: bool,
+    reference_state: Any = None,
+) -> Grade:
+    combo = cell.combo
+    if combo is None:
+        raise ValueError(f"cell {cell.cell_id!r} has no combination")
+    graded_oracle, truth, oracle_truth = _with_truth(cell, oracle)
+    graded = commits_graded(catalog)
+    label = classify(
+        seat=combo.seat,
+        pid=cell.pid,
+        repark_outcome=repark.outcome,
+        spark_outcome=graded_oracle.outcome,
+        repark_answer=repark.answer,
+        spark_answer=graded_oracle.answer,
+        repark_commits=repark.commits if graded else None,
+        spark_commits=graded_oracle.commits if graded else None,
+        folded=cell.pid in FOLDED_PREDICATES,
+    )
+    labels = [] if label == "EQUAL" else label.split(", ")
+    missing = _missing(repark, graded_oracle, live_oracle=live_oracle, graded=graded)
+    stage = _stage_create(cell, catalog, repark, graded_oracle, reference_state)
+    expected_state: Any = None
+    expected_schema: Any = None
+    if repark.outcome == "REFUSED":
+        expected_state = unchanged_state(combo)
+        if graded and repark.commits:
+            labels.append("EXTRA-COMMIT")
+    elif graded_oracle.outcome == "ANSWERED":
+        expected_state, expected_schema = graded_oracle.state, graded_oracle.schema
+    elif stage is not None:
+        expected_state = stage["reference_state"]
+        expected_schema = committed_schema(combo)
+    if repark.outcome in ("ANSWERED", "REFUSED") and _state_differs(
+        repark, expected_state, expected_schema
+    ):
+        labels.append("WRONG-WRITE")
+    if missing:
+        labels.append(OBSERVATION_MISSING)
+    if stage is not None and graded_oracle.outcome == "ANSWERED":
+        labels.append(STAGE_CREATE_ANSWERED)
+    if stage is not None and stage["declared"] and labels == ["ACCEPTED-WHERE-SPARK-REFUSED"]:
+        labels = [DECLARED_STAGE_CREATE]
+    unique = list(dict.fromkeys(labels))
+    expected = replace(graded_oracle, state=expected_state, schema=expected_schema)
+    return Grade(
+        label=", ".join(unique) if unique else "EQUAL",
+        expected=expected,
+        truth=truth,
+        oracle_truth=oracle_truth,
+        commits_graded=graded,
+        missing=missing,
+        stage_create=stage,
+    )
