@@ -702,7 +702,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **S3-PATH-WRITE-1 round 2 (2026-09-28):** `read_parquet_nullable` resolves
   the S3 prefix once per call through `object_store_s3`, so the infer read and
   the relaxed-schema re-read share the directory spelling. **NAN-MINMAX-1 (2026-11-13):** the
-  float statistics seat: [spark_nullable/](spark_nullable/map.md).
+  statistics seat: [spark_nullable/](spark_nullable/map.md).
 - `column_resolution.rs` — **ICE-MIXED-CASE-1 (2026-09-17, Q-20b-2):** Spark-door
   case-insensitive column fold with normalization ON
   (`plan_statement_with_column_repair` / `sql_with_column_repair` fold the parsed

@@ -23,6 +23,8 @@ use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionContext};
 use object_store::{ObjectMeta, ObjectStore};
 
+mod extreme_bounds;
+
 const MAX_NESTED_TYPE_DEPTH: usize = 32;
 
 #[must_use]
@@ -163,7 +165,9 @@ impl FileFormat for FloatBoundsInexactFormat {
             .infer_stats(state, store, Arc::clone(&table_schema), object)
             .await?;
         let unbounded = unbounded_float_columns(state, store, &table_schema, object).await;
-        Ok(file_float_bounds_inexact(statistics, &unbounded))
+        Ok(extreme_bounds::without_type_extreme_bounds(
+            file_float_bounds_inexact(statistics, &unbounded),
+        ))
     }
 
     async fn infer_ordering(
@@ -190,8 +194,9 @@ impl FileFormat for FloatBoundsInexactFormat {
             .infer_stats_and_ordering(state, store, Arc::clone(&table_schema), object)
             .await?;
         let unbounded = unbounded_float_columns(state, store, &table_schema, object).await;
+        let statistics = file_float_bounds_inexact(meta.statistics, &unbounded);
         Ok(
-            FileMeta::new(file_float_bounds_inexact(meta.statistics, &unbounded))
+            FileMeta::new(extreme_bounds::without_type_extreme_bounds(statistics))
                 .with_ordering(meta.ordering),
         )
     }
@@ -230,12 +235,15 @@ fn scan_float_bounds_inexact(mut conf: FileScanConfig) -> FileScanConfig {
                 .column_statistics
                 .iter_mut()
                 .for_each(float_column_bounds_inexact);
+            extreme_bounds::drop_type_extreme_bounds(statistics);
         }
     }
-    if conf.file_source().filter().is_some() {
+    let statistics = conf.statistics();
+    if conf.file_source().filter().is_some() && !extreme_bounds::has_type_extreme_bound(&statistics)
+    {
         return conf;
     }
-    let statistics = float_bounds_inexact(conf.statistics());
+    let statistics = extreme_bounds::without_type_extreme_bounds(float_bounds_inexact(statistics));
     FileScanConfigBuilder::from(conf)
         .with_statistics(statistics)
         .build()
@@ -555,6 +563,9 @@ fn rebuild_map_entries(entries: &Field, key: &Field, value: &Field, kids: Vec<Fi
         .clone()
         .with_data_type(DataType::Struct(Fields::from(vec![key.clone(), relaxed])))
 }
+
+#[cfg(test)]
+mod extreme_bounds_tests;
 
 #[cfg(test)]
 mod float_bounds_tests;

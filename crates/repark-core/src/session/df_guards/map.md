@@ -11,7 +11,7 @@ wrapped optimizer rule) and declares this directory.
 - [struct_setop.rs](struct_setop.rs), [struct_walk.rs](struct_walk.rs) — **STRUCT-SETOP-REORDER-REFUSAL-1 (2026-11-08):** `struct_setop_names` refuses struct operands differing in field-name order or set, any depth. Delta #2 seats it after `type_coercion`, reading beneath stacked casts; the `RecursiveQuery` arm checks recursive-term types against the static term. **STRUCT-SETOP-TYPE-FAMILY-1 (2026-11-09):** all three arms call the shared `struct_walk` (peel encodings, recurse list kinds, refuse unpaired pairs). **STRUCT-COMPARE-BY-POSITION-1:** equal types never mismatch (F-1).
   **Delta 1 (2026-11-08):** `insert_struct_setop_after_coercion` reaches the crate root for Python's expression context. **Item #5:** refusals name `INTERSECT ALL` / `EXCEPT ALL` without `Distinct` left.
 - [signed_zero.rs](signed_zero.rs), [signed_zero/](signed_zero/map.md) — **SIGNED-ZERO-NORMALIZE-1 part A (2026-11-11):** seats 1 and 1b.
-- [cast_shield.rs](cast_shield.rs), [cast_shield/](cast_shield/map.md) — **CAST-LITERAL-UNWRAP-1 (2026-11-16):** the cast shield.
+- [cast_shield.rs](cast_shield.rs), [cast_shield/](cast_shield/map.md) — **CAST-LITERAL-UNWRAP-1 (2026-11-16):** the cast shield and `stats_barrier`.
 - `skipping_limit.rs` — **OFFSET-NESTED-SORT-1 (2026-10-08):** a guard for DataFusion 54.1.0's `EnforceSorting` rule (its sort pushdown,
   `datafusion-physical-optimizer` `enforce_sorting/sort_pushdown.rs`) treats a
   `GlobalLimitExec` as if it had no `skip`. Two wrong plans: (1) It reads the limit's
@@ -50,7 +50,7 @@ wrapped optimizer rule) and declares this directory.
   **Retire** at the DataFusion bump that fixes the pushdown: the two
   `stock_enforce_sorting_still_*` pins in `../tests/skipping_limit.rs` go red when stock
   DataFusion answers right; delete this file, its wiring line and those two pins then.
-  DataFusion 55.0.0 carries the same pushdown code (read in the registry copy, not run).
+  DataFusion 55.0.0 carries the same pushdown code (read, not run).
   At the same bump check whether `EnforceSorting` overrides `PhysicalOptimizerRule::optimize_with_context`: the physical planner calls that method and
   `SkipSafeEnforceSorting` does not forward it (the default calls the wrapper's own `optimize`),
   so a new version's override would drop silently. In 54.1.0 only `JoinSelection`
