@@ -14,6 +14,9 @@ pub fn register_udf_families(ctx: &SessionContext) {
     crate::temporal_ctor::register(ctx);
     crate::higher_order::register(ctx);
     crate::zone_seam::register(ctx);
+    for udf in crate::timestamp_cast::unix_floor::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
     ctx.register_udf(crate::zone_seam::zone_seam_udf(false).as_ref().clone());
     ctx.register_udf(
         crate::timestamp_ns_cast::narrow_timestamp_ns_udf()

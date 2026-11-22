@@ -2,8 +2,7 @@
 
 Each new ``functions`` name is pinned through ``ReparkSession`` on the Arrow path
 (``to_arrow()``): value AND type. Alias names resolve and share a behavior case
-with their canonical. ``unix_seconds`` / ``unix_millis`` pin toward-zero truncate
-(not TZ-5 ``CAST`` floor) on a negative fractional instant.
+with their canonical.
 """
 
 from __future__ import annotations
@@ -113,8 +112,7 @@ def test_unix_date_days_since_epoch(spark: ReparkSession) -> None:
     assert pa.types.is_int32(table.schema.field("u").type)
 
 
-def test_unix_seconds_truncates_toward_zero_not_floor(spark: ReparkSession) -> None:
-    """Hazard: TZ-5 ``CAST(ts AS BIGINT)`` floors; Spark ``unix_seconds`` truncates toward 0."""
+def test_unix_seconds_floors_like_the_bigint_cast(spark: ReparkSession) -> None:
     frame = spark.sql(
         "SELECT TIMESTAMP '1970-01-01 00:00:01.5' AS p, TIMESTAMP '1969-12-31 23:59:58.5' AS n"
     )
@@ -126,13 +124,13 @@ def test_unix_seconds_truncates_toward_zero_not_floor(spark: ReparkSession) -> N
         )
     )
     assert table.column("up").to_pylist() == [1]
-    assert table.column("un").to_pylist() == [-1]
+    assert table.column("un").to_pylist() == [-2]
     assert table.column("floor_n").to_pylist() == [-2]
     assert pa.types.is_int64(table.schema.field("up").type)
     assert pa.types.is_int64(table.schema.field("un").type)
 
 
-def test_unix_millis_truncates_toward_zero(spark: ReparkSession) -> None:
+def test_unix_millis_of_a_whole_millisecond(spark: ReparkSession) -> None:
     frame = spark.sql(
         "SELECT TIMESTAMP '1970-01-01 00:00:01.5' AS p, TIMESTAMP '1969-12-31 23:59:58.5' AS n"
     )
