@@ -5472,6 +5472,31 @@ still open is `isModifiable`.
   Q3, Q4, Q10 ruled "defaults"); the second delta and the card's items (i) and (ii) ruled 2026-11-14 ("Go with
   defaults"); card [NAN-MINMAX-1](../task/roadmap/mid-term/nan-minmax-1-card-2026-11-13.md).
 
+### CAST-STATS-INTERVAL-1 — a cast that reorders values no longer carries its column's Parquet statistics, and a full-range BIGINT bound no longer breaks filter selectivity — **FIXED 2026-11-22 (branch `fix/cast-stats-interval-1`, not merged)**
+
+- **repark** — Before (main `c5370be6`, and 1.5.6): DataFusion 54.1.0 carried a column's Parquet min and max through
+  every `CAST`. A STRING id cast to INT whose string min and max disagree with numeric order (`'10'` and `'7'`, a
+  leading zero `'04'`) got an inverted range, so a filter planned above the cast (a `row_number()` dedup's `rn = 1`,
+  `BETWEEN` on the cast, `=` or `IN` after the dedup) failed with an internal interval assertion (S2), and
+  `max`/`min` of the cast answered from the footer with wrong values: `7, 10` for `25, 3`; BIGINT to STRING
+  `'11', '9'` for `'9', '10'`; BIGINT to BOOLEAN `true, true` for `true, false` (S1, silent). A BIGINT column whose
+  statistics span `[i64::MIN, i64::MAX]` (one file, or two files that merge to it) failed every filter above it with
+  `Selectivity is out of limit: inf` (S2). After: the last optimizer rule wraps the operand of every cast outside
+  the order-keeping family in an identity UDF (`df_guards/cast_shield/stats_barrier.rs`), and the plain Parquet
+  format drops a 64-bit bound at its type's extreme (`spark_nullable/extreme_bounds.rs`). Order-keeping casts (INT
+  to BIGINT, DECIMAL to INT, DATE to TIMESTAMP_NTZ, text to text) keep their statistics and their footer-answered
+  `max`/`min`. Both ANSI modes; every door.
+- **spark** — Spark 4.1.2 answers every cell from the rows. *(oracle: measured live 2026-11-22, both ANSI modes.)*
+- **Pruning** — row-group, page and file pruning, a join's dynamic filter and a TopK filter refuse a string to
+  non-string cast (`PruningPredicate`), so a wrong but ordered cast range dropped no row on main; equal on both.
+- **Residual** — literals at BIGINT's limits can still build a full range inside a plan; the two DataFusion
+  faults are to be reported upstream. Iceberg scans carry no column bounds and were never affected.
+- **Pin** — `python/repark/tests/io/test_cast_stats_interval_1.py`;
+  `crates/repark-core/src/session/df_guards/cast_shield/stats_barrier_tests.rs`;
+  `crates/repark-core/src/spark_nullable/extreme_bounds_tests.rs`.
+- **Rationale** — two NEW S2 families from a workload measurement and one S1 found beside them; card
+  [CAST-STATS-INTERVAL-1](../task/roadmap/mid-term/cast-stats-interval-1-card-2026-11-22.md).
+
 ### SIGNED-ZERO-CONST-COMPARE-1 — two FLOAT/DOUBLE constant zeros compare as one value — **FIXED 2026-11-14 (branch `fix/signed-zero-const-compare-1`, merge pending)**
 
 - **repark** — Before (main `d843d37e`): a comparison whose two operands are both constants folded at plan time
