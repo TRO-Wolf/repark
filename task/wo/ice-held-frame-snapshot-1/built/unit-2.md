@@ -375,7 +375,8 @@ body, below) and the live baseline of main `550789fd` (run 44985182689, all 8 he
 **The rule** (measured by Fable on Spark 4.1.2 with Iceberg 1.11.0, a second Spark process as the other writer;
 LIVE-SECOND-WRITER-1 in [live-aws.md](live-aws.md)):
 
-- **A table-level cache** (`spark.table(t).cache()`, the same under `.alias(...)`, `CACHE TABLE t`) keeps its rows
+- **A table-level cache** (`spark.table(t).cache()`, `spark.read.table(t)`, `spark.read.format("iceberg").load(t)`
+  with no time-travel or incremental option, the same under `.alias(...)`, `CACHE TABLE t`) keeps its rows
   until `REFRESH TABLE`, `spark.catalog.refreshTable` or a same-session data commit to the table. A same-session
   metadata-only commit (`SET TBLPROPERTIES`, `ADD COLUMN`, `CREATE BRANCH` or `TAG`, a write to another branch) and
   another writer's commit seen by a fresh read do not unpin it.
@@ -407,7 +408,8 @@ row, and delta 1 refilled a table-level fill after another writer's commit and a
    does not take) never makes a fill refill twice.
 3. **Provenance in the facade.** `spark.table(t)` and `spark.sql("SELECT * FROM t")` both build `SELECT * FROM <ref>`,
    so the plan cannot tell them apart; the frame's history can. `session_table` marks a frame it builds over a table
-   (not a temp view), `catalog_surface.cache_table` (`cacheTable`, `CACHE [LAZY] TABLE`) marks its frame, and
+   (not a temp view), `catalog_surface.cache_table` (`cacheTable`, `CACHE [LAZY] TABLE`) marks its frame, the travel-free
+   `format("iceberg").load(t)` return in `session/reader.py` marks its frame (the Opus verifier's A1, 2026-11-22), and
    `DataFrame.alias` passes the mark to its child (`cache_handle._aliased`, a one-line change in `core.py`, which
    stays on its exact baseline). Every other transformation builds an unmarked frame. `_bind_lazy` passes the mark
    to the native registration. That is Spark's test (the cached plan is the table relation, maybe under an alias)
@@ -536,6 +538,11 @@ the lockstep check is advisory. The change to `catalog_surface.py` is recorded i
   the `cacheTable` entry path, which the brief keeps); C-009's three pins assert it.
 - `REFRESH TABLE` and `uncacheTable` unpersist a cached `spark.table(t)`, so its `is_cached` is false after a refresh
   where Spark re-caches; the rows are equal (3). Not measured, predates this unit.
+- `format("iceberg").load(t)` with a time-travel or incremental option builds an unmarked (query-level) frame;
+  Spark's level for those shapes is not measured.
+- A frame derived from a cached `spark.table(t)`, or a temp view of one, is query-level but reads the base's cache
+  view, so by trace it answers the base's pinned rows as Spark does; only a live run can measure it (the Opus
+  verifier's C1).
 - A query-level fill before any fresh read answers the fill (no catalog call; the rule allows it), and Spark's fresh
   read inside Iceberg's 30 s catalog cache answers 2 where RePark's answers 3 (the rule allows it).
 - Residual 2 (a commit observed during a fill), `expire_snapshots` alone and a same-snapshot `set_current_snapshot`,

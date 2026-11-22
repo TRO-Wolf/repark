@@ -481,7 +481,9 @@ class DataFrameReader:
                 )
             if travel is not None:
                 return self._session.read_iceberg_table(str(effective_path), **travel)
-            return self._session.read_iceberg_table(str(effective_path))
+            from repark.spark.dataframe.cache_handle import _note_table_level
+
+            return _note_table_level(self._session.read_iceberg_table(str(effective_path)))
         if fmt == "text":
             return _reader_text.load_text(self, effective_path)
         if fmt == "orc":

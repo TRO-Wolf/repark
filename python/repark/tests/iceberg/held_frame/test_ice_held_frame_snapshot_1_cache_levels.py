@@ -34,6 +34,8 @@ SHAPES: dict[str, tuple[Callable[[Any, str], Any], bool]] = {
     "read_table": (lambda s, t: s.read.table(t), True),
     "alias": (lambda s, t: s.table(t).alias("a"), True),
     "alias_twice": (lambda s, t: s.table(t).alias("a").alias("b"), True),
+    "format_load": (lambda s, t: s.read.format("iceberg").load(t), True),
+    "format_load_alias": (lambda s, t: s.read.format("iceberg").load(t).alias("a"), True),
     "sql_star": (lambda s, t: s.sql(f"SELECT * FROM {t}"), False),
     "select": (lambda s, t: s.table(t).select("n", "c"), False),
     "filter": (lambda s, t: s.table(t).filter("n > 0"), False),
