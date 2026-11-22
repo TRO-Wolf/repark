@@ -5,33 +5,35 @@
 > [docs/adr/](docs/adr/); the contract is [AGENTS.md](AGENTS.md) (with [CLAUDE.md](CLAUDE.md) and
 > [.agents/](.agents/map.md) as thin adapters). A current-state fact changes **here**; other files point here.
 
-_Last updated: 2026-11-09._
+_Last updated: 2026-11-22._
 
 ## Now
 
-As of 2026-11-13.
+As of 2026-11-22.
 
-- **Shipped:** v1.5.6 ([Release state](#release-state)).
-- **Open S1s with write reach on the shipped wheel:** struct comparisons pair fields by name, not position, so `DELETE`, `UPDATE` or `MERGE` on reordered structs act on wrong rows (fixed on main by #1292 and #1295); native-door DataFrame writes store nothing (main refuses them, #1331) ([Known correctness issues](#known-correctness-issues)). v1.5.7 is not tagged.
+- **Shipped:** v1.5.6 ([Release state](#release-state)). **Prepared:** v1.5.7 on its release branch, not tagged.
+- **S1s in the shipped 1.5.6 wheel, fixed on main for v1.5.7:** struct comparisons, native-door DataFrame writes, dynamic partitioned overwrites, casts over Parquet statistics, pre-1970 `unix_timestamp` ([Known correctness issues](#known-correctness-issues)).
 - **Labels:** format-v2 WITHDRAWN; format-v3 core HARDENED-NARROW; nanosecond columns and struct writes EXPERIMENTAL ([Iceberg maturity](#iceberg-maturity-2026-10-27)).
-- **In flight:** SIGNED-ZERO-NORMALIZE-1 (blocks v1.5.7): part A's scalar comparisons are on main as #1298 and part B's flat float keys as #1326; the nested-float write conditions are part 2, a later order. The `UPDATE … WHERE v IN (w)` residue is carded as SIGNED-ZERO-UPDATE-IN-LIST-1. C-116 and C-118 closed.
-- **Next:** rest of v1.5.7 ([blockers](#release-blockers)).
+- **In flight:** SIGNED-ZERO-NORMALIZE-1 part B part 2 (the nested-float write conditions), which blocks only the full v2 label (owner, 2026-11-17); parts A and B part 1 are on main as #1298 and #1326. The `UPDATE … WHERE v IN (w)` residue is carded as SIGNED-ZERO-UPDATE-IN-LIST-1. C-116 and C-118 closed.
+- **Next:** the v1.5.7 release steps ([blockers](#release-blockers)).
 
 ## Release state
+
+**v1.5.7 (prepared 2026-11-22, not tagged):** [notes](task/roadmap/mid-term/v1-5-7-release-notes-2026-11-22.md); lock delta: the eleven `repark-*` member lines; [record](task/roadmap/mid-term/v1-5-7-qualification-record.md).
 
 **v1.5.6 (2026-11-08):** the empty-DML guard (EMPTY-DML-SHARED-GUARD-1, #1277: a DELETE or UPDATE whose condition folds to no rows writes nothing and reports zero rows), and the rest of the cycle, listed in the [notes](task/roadmap/mid-term/v1-5-6-release-notes-2026-11-08.md). Tagged `v1.5.6` at `ae60c359`; on PyPI with five wheels. The v2 production label is not part of this release (ruling A, 2026-11-08); the v3 label moves to a later release. Qualification: [record](task/roadmap/mid-term/v1-5-6-qualification-record.md).
 
 **v1.5.5 (2026-10-13):** R-008 (every write door stores INSERT's instant into `timestamptz_ns`), the frame door (R-019), `current_date` in the session zone, the Postgres write core and routing, the merge module split. Matrix 705/132/5/0 (2026-10-13; also v1.5.1 to v1.5.4). Tagged `v1.5.5` at `7fb5f6b2` (re-tag, #1127). [Notes](task/roadmap/mid-term/v1-5-5-release-notes-2026-10-13.md). The re-tag also ships U-1, U-3, U-5, U-6, U-7 (reconciled 2026-10-22).
 
-**v1.5.4 (2026-10-10):** R-007, ENC-1, CROSS-JOIN-CONDITION-1, EMPTY-PROJECTION-COUNT-1, SQL-EPOCH-CONSTRUCTORS-1, `pyarrow>=25.0.1`. Tagged `v1.5.4` at `f4e424c1`. [Notes](task/roadmap/mid-term/v1-5-4-release-notes-2026-10-10.md).
+**v1.5.4 (2026-10-10):** R-007, ENC-1, the pyarrow floor. Tagged `v1.5.4` at `f4e424c1`. [Notes](task/roadmap/mid-term/v1-5-4-release-notes-2026-10-10.md).
 
-**v1.5.3 (2026-10-07):** credential redaction, ATTR-ID-1, TA slices, ANSI -0.0 division, GROWN-STACK-GATE-1. Tagged `v1.5.3` at `7a8fcf1a`. [Notes](task/roadmap/mid-term/v1-5-3-release-notes-2026-10-07.md).
+**v1.5.3 (2026-10-07):** credential redaction, ATTR-ID-1, TA slices. Tagged `v1.5.3` at `7a8fcf1a`. [Notes](task/roadmap/mid-term/v1-5-3-release-notes-2026-10-07.md).
 
-**v1.5.2 (2026-10-03):** TA-CHAIN-1, POLARS-IS-DUPLICATED-1, the write-door and cast fixes. [Notes](task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md).
+**v1.5.2 (2026-10-03):** TA-CHAIN-1, POLARS-IS-DUPLICATED-1. [Notes](task/roadmap/mid-term/v1-5-2-release-notes-2026-10-03.md).
 
-**v1.5.1 (2026-09-29):** S3 path writes (U12), CASESENS-1, the store-assignment fixes, INTDIV-1. Tagged `v1.5.1` at `db3a1f37`. [Notes](task/roadmap/mid-term/v1-5-1-release-notes-2026-09-29.md).
+**v1.5.1 (2026-09-29):** S3 path writes (U12), CASESENS-1, INTDIV-1. Tagged `v1.5.1` at `db3a1f37`. [Notes](task/roadmap/mid-term/v1-5-1-release-notes-2026-09-29.md).
 
-**v1.5.0 (2026-09-27) — the Spark–Iceberg parity minor.** The gate is met: zero non-EQUAL cells that Spark 4.1.2 answers on the 842-cell matrix, except dated owner carve-outs — **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** on the fresh-build rerun of 2026-09-27 (main `f7422565`). Carved out: C-1 structured streaming (now 1.7), C-2 nested namespaces (v1.6.0 card), C-4 the v3 variant type; C-3 and C-5 count EQUAL under dated harness rules. [Notes](task/roadmap/mid-term/v1-5-0-release-notes-draft-2026-09-27.md).
+**v1.5.0 (2026-09-27) — the Spark–Iceberg parity minor:** the gate is met on the 842-cell matrix, **705 EQUAL / 132 SPARK-CANNOT / 5 REFUSED-REGISTERED / 0 DIFFERENT** (fresh-build rerun, main `f7422565`), with dated owner carve-outs C-1 to C-5. [Notes](task/roadmap/mid-term/v1-5-0-release-notes-draft-2026-09-27.md).
 
 **v1.4.2 (2026-09-15):** DECIMAL-CACHE-1 (#632): decimal overflow past 38 digits types like PySpark 4.1.2 and materializes through the cache paths.
 
@@ -116,11 +118,12 @@ disposition yet**. A **divergence** (DECLARED or BACKLOG) moves its semantics to
 [registry](docs/spark-sql-iceberg-parity.md), keeping one line of state here. A known **defect with
 its fix scheduled** stays here until the fixing unit deletes the entry. Nothing is described twice.
 
-- **Struct comparison pairs fields by name (S1, write reach; fix for v1.5.7)** — STRUCT-COMPARE-BY-POSITION-1, [card](task/roadmap/mid-term/struct-compare-by-position-1-card-2026-11-09.md); measured on the 1.5.6 wheel 2026-11-09; workaround: [1.5.6 notes](task/roadmap/mid-term/v1-5-6-release-notes-2026-11-08.md#known-issues).
+- **Struct comparison pairs fields by name (S1, write reach; fixed in v1.5.7)** — STRUCT-COMPARE-BY-POSITION-1, [card](task/roadmap/mid-term/struct-compare-by-position-1-card-2026-11-09.md); measured on the 1.5.6 wheel 2026-11-09; workaround: [1.5.6 notes](task/roadmap/mid-term/v1-5-6-release-notes-2026-11-08.md#known-issues).
 - **Spark-written INT96 timestamps read as zone-less (S1; open)** — PARQUET-INT96-AS-NTZ-1, [card](task/roadmap/mid-term/parquet-int96-as-ntz-1-card-2026-11-22.md): values and dates shift outside a UTC session; in UTC only the type differs.
-- **Native-door DataFrame writes store nothing (S1; fixed for v1.5.7)** — NATIVE-DATAFRAME-WRITE-SILENT-1: a 1.5.6 `repark.sql(…)` frame write stores nothing, and a parquet, csv or json overwrite of an existing path deletes its rows; main refuses; [registry](docs/spark-sql-iceberg-parity.md) row (with card).
-- **Dynamic partitioned path overwrites delete untouched partitions (S1; refused on main, fix for v1.5.7)** — PLAIN-DYNAMIC-OVERWRITE-GUARD-1: on 1.5.6, `partitionOverwriteMode=dynamic` with a partitioned path overwrite replaces the whole directory, and an empty input empties it; main refuses every effective DYNAMIC partitioned path overwrite before any effect, including the forms where 1.5.6 gave Spark's rows (absent target, empty directory, input covering every partition); [registry](docs/spark-sql-iceberg-parity.md) row (with card). Workaround on 1.5.6: use an Iceberg table, or overwrite one partition's own directory path.
-- **Casts that reorder values give wrong max/min or drop rows on plain Parquet reads (S1; fixed on main, fix for v1.5.7)** — CAST-STATS-SILENT-1: `max`/`min` of a cast that reorders values (a STRING id to INT, BIGINT to STRING or BOOLEAN) answer from the Parquet footer, so ids `10, 3, 25, 7` give `7, 10` for `25, 3`. A FLOAT or DOUBLE cast to an integer type, or DOUBLE to FLOAT, prunes row groups by footer bounds that leave NaN out, so `CAST(d AS INT) = 0` and `CAST(d AS FLOAT) > 100` drop the NaN row. [registry](docs/spark-sql-iceberg-parity.md) row (with card). Workaround (measured on main `c5370be6`, the 1.5.6 line) for `max`/`min`: `try_cast` in place of `CAST`, or `datafusion.execution.collect_statistics` set to false; none measured for the NaN drop.
+- **Sorted DataFrame written in source order (S2; card, not dispatched)** — WRITE-ORDER-DROPPED-1, [card](task/roadmap/mid-term/write-order-dropped-1-card-2026-11-22.md).
+- **Native-door DataFrame writes store nothing (S1; fixed in v1.5.7)** — NATIVE-DATAFRAME-WRITE-SILENT-1: a 1.5.6 `repark.sql(…)` frame write stores nothing, and a parquet, csv or json overwrite of an existing path deletes its rows; main refuses; [registry](docs/spark-sql-iceberg-parity.md) row (with card).
+- **Dynamic partitioned path overwrites delete untouched partitions (S1; refused on main, fixed in v1.5.7)** — PLAIN-DYNAMIC-OVERWRITE-GUARD-1: on 1.5.6, `partitionOverwriteMode=dynamic` with a partitioned path overwrite replaces the whole directory, and an empty input empties it; main refuses every effective DYNAMIC partitioned path overwrite before any effect, including the forms where 1.5.6 gave Spark's rows (absent target, empty directory, input covering every partition); [registry](docs/spark-sql-iceberg-parity.md) row (with card). Workaround on 1.5.6: use an Iceberg table, or overwrite one partition's own directory path.
+- **Casts that reorder values give wrong max/min or drop rows on plain Parquet reads (S1; fixed in v1.5.7)** — CAST-STATS-SILENT-1: `max`/`min` of a cast that reorders values (a STRING id to INT, BIGINT to STRING or BOOLEAN) answer from the Parquet footer, so ids `10, 3, 25, 7` give `7, 10` for `25, 3`. A FLOAT or DOUBLE cast to an integer type, or DOUBLE to FLOAT, prunes row groups by footer bounds that leave NaN out, so `CAST(d AS INT) = 0` and `CAST(d AS FLOAT) > 100` drop the NaN row. [registry](docs/spark-sql-iceberg-parity.md) row (with card). Workaround (measured on main `c5370be6`, the 1.5.6 line) for `max`/`min`: `try_cast` in place of `CAST`, or `datafusion.execution.collect_statistics` set to false; none measured for the NaN drop.
 - **FNP-8 residuals** — **BACKLOG (2026-09-07)**: [FNP8-NULLABILITY and following rows](docs/spark-sql-iceberg-parity.md#fnp8-nullability--higher-order-result-metadata-retains-inherited-nullable-fields).
 - **Identifier case folding** — **DECLARED (2026-08-10)**: registry [ID-1](docs/spark-sql-iceberg-parity.md); revisiting it needs a new dated decision.
 - **The session-timezone family** — **TZ-8** partially FIXED (#100): only `last_day` / `date_add` over a TIMESTAMP (+ B-TZ-3) stay BACKLOG; TZ-4 in progress (residue: ANSI column-def `timestamp_ns`); F-V4-1 / F-V4-2 DECLARED, fork-routed; TIMESTAMP→INT nullability BACKLOG (G6-4). Registry TZ rows: [registry](docs/spark-sql-iceberg-parity.md).
@@ -153,7 +156,7 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**For v1.5.7** (owner, 11-08 to 11-13): SIGNED-ZERO-NORMALIZE-1 ([sketch](task/wo/signed-zero-normalize-1/sketch.md)) and NATIVE-DATAFRAME-WRITE-SILENT-1; done: #1283, #1290, #1292, #1295, #1304 (LISTVIEW-INNER-JOIN-KEY-1). **For the format-v2 label:**
+**For v1.5.7** (owner go, 2026-11-22: cut once #1405 and #1408 merged): none open on main. PLAIN-DYNAMIC-OVERWRITE-GUARD-1's card says it ships only on a separate publish approval, not yet recorded. Owner actions: the squash-merge, the tag, the `release` approval. **For the format-v2 label:**
 [Iceberg maturity](#iceberg-maturity-2026-10-27). Tag history: [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).
