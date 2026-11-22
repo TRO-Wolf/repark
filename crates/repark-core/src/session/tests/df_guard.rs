@@ -82,9 +82,10 @@ async fn bare_session_without_extension_scopes_leaf_projection_pushdown() {
     expected.insert(0, "repark_strip_attribute_ids".to_string());
     expected.push("signed_zero_keys".to_string());
     expected.push("repark_cast_shield".to_string());
+    expected.push("repark_stats_barrier".to_string());
     assert_eq!(
         installed, expected,
-        "the id strip first, then the DataFusion rule list plus repark's subquery, signed-zero and cast-shield rules"
+        "the id strip first, then the DataFusion rule list plus repark's subquery, signed-zero, cast-shield and stats-barrier rules"
     );
     let wrapped = state
         .optimizers()
