@@ -5525,7 +5525,8 @@ still open is `isModifiable`.
   `BETWEEN` on the cast, `=` or `IN` after the dedup) failed with an internal interval assertion (S2). A BIGINT
   column whose statistics span `[i64::MIN, i64::MAX]` (one file, or two files that merge to it) failed every filter
   above it with `Selectivity is out of limit: inf` (S2). The two silent faults of the same seat (wrong `max`/`min`
-  of the cast; a NaN row dropped by pruning through a float-to-integer cast) are CAST-STATS-SILENT-1, closed by the
+  of the cast; a NaN row dropped by pruning through a float-to-integer or DOUBLE to FLOAT
+  cast) are CAST-STATS-SILENT-1, closed by the
   same barrier. After: the last rule of the core optimizer list (the Spark extension's `DecimalInRanges` runs after it
   and builds no casts) wraps the operand of every cast outside the order-keeping family in an
   identity UDF (`df_guards/cast_shield/stats_barrier.rs`), and the plain Parquet format drops a 64-bit bound at its
@@ -5537,8 +5538,8 @@ still open is `isModifiable`.
 - **spark** — Spark 4.1.2 answers every cell from the rows. *(oracle: measured live 2026-11-22, both ANSI modes.)*
 - **Pruning** — for casts from and to text, row-group, page and file pruning, a join's dynamic filter and a TopK
   filter refuse a string to non-string cast (`PruningPredicate`), so a wrong but ordered cast range dropped no row
-  on main. For a FLOAT or DOUBLE cast to an integer type, pruning on main dropped the NaN row: a second silent
-  path (CAST-STATS-SILENT-1 (b)), closed by barring that cast. Uncast float pruning (`d > 100`) is unchanged and equals Spark.
+  on main. For a FLOAT or DOUBLE cast to an integer type, and for DOUBLE to FLOAT, pruning on main dropped the NaN row: a second silent
+  path (CAST-STATS-SILENT-1 (b)), closed by barring those casts. Uncast float pruning (`d > 100`) is unchanged and equals Spark.
 - **Caveat** — the order-keeping list holds only while RePark refuses overflowing narrowing integer casts under
   ANSI off; Spark wraps them (`max` of `CAST(1 AS TINYINT)`, `CAST(300 AS TINYINT)` is 44), so those casts must
   leave the list when that refusal is fixed.
