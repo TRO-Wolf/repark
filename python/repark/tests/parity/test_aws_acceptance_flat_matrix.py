@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import re
 from collections.abc import Iterator
-from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -16,29 +15,37 @@ from _acceptance import (
     assert_glue_scratch_namespace_location,
     assert_real_buckets_configured,
     glue_catalog_config,
+    mask_account_ids,
     run_table_prefix,
     s3tables_catalog_config,
     s3tables_spark_catalog_config,
 )
 from _flat_matrix_cells import (
+    ABSENT,
+    CANONICAL_EXPRESSIONS,
+    COLUMNS,
     FLOAT_SEED_T,
     FLOAT_SEED_U,
     FLOAT_SQL,
     FLOAT_WRITE_SHAPES,
-    FOLDED_PREDICATES,
     KNOWN_OPEN,
     PREDICATE_TEXT,
     SEED_ROWS,
+    STAGE_CREATE_CATALOG,
     Cell,
+    Observation,
+    canonical_rows,
     cells_for_group,
     classify,
-    committed_commits,
-    committed_ids,
+    committed_observation,
     expected_for,
-    grade_against_truth,
+    grade_cell,
+    http_status,
+    is_stage_create_cell,
     load_expected,
     passes,
     record_line,
+    sorted_rows,
     target_for,
     typed_predicate,
 )
@@ -73,13 +80,9 @@ def _params() -> list[Any]:
     return params
 
 
-@dataclass(frozen=True)
-class Observed:
-    outcome: str
-    answer: list[tuple[Any, ...]] | None
-    commits: int | None
-    error: str | None
-    probe_error: str | None = None
+ERROR_LIMIT = 4000
+CHAIN_LIMIT = 8
+SESSION_ZONE = "UTC"
 
 
 def _slug(text: str) -> str:
@@ -97,24 +100,72 @@ def _normal(value: Any) -> Any:
 
 
 def _rows(frame_rows: list[Any]) -> list[tuple[Any, ...]]:
-    return sorted((tuple(_normal(v) for v in row) for row in frame_rows), key=repr)
+    return sorted_rows(tuple(_normal(v) for v in row) for row in frame_rows)
 
 
-def _answer_ids(answer: list[tuple[Any, ...]] | None) -> list[int] | None:
-    if answer is None:
+def _error_text(failure: BaseException) -> str:
+    return mask_account_ids(f"{type(failure).__name__}: {failure}")[:ERROR_LIMIT]
+
+
+def _java_chain(failure: BaseException) -> list[tuple[str, str]]:
+    node = getattr(failure, "java_exception", None) or getattr(failure, "_origin", None)
+    chain: list[tuple[str, str]] = []
+    while node is not None and len(chain) < CHAIN_LIMIT:
+        try:
+            chain.append((str(node.getClass().getName()), str(node.getMessage())))
+            node = node.getCause()
+        except Exception:
+            break
+    return chain
+
+
+def _condition(failure: BaseException) -> str | None:
+    getter = getattr(failure, "getCondition", None)
+    if getter is None:
         return None
-    return [int(row[0]) for row in answer]
+    try:
+        value = getter()
+    except Exception:
+        return None
+    return None if value is None else str(value)
 
 
-def _against_truth(cell: Cell, oracle: Observed) -> tuple[Observed, list[int] | None, str | None]:
-    truth, oracle_truth = grade_against_truth(cell, oracle.outcome, _answer_ids(oracle.answer))
-    if truth is None:
-        return oracle, None, None
-    return replace(oracle, answer=_rows([(value,) for value in truth])), truth, oracle_truth
+def _failure_parts(failure: BaseException) -> tuple[str, str, str, int | None]:
+    chain = _java_chain(failure)
+    condition = _condition(failure)
+    names = [type(failure).__name__, *(name for name, _ in chain)]
+    if condition is not None:
+        names.append(f"[{condition}]")
+    text = " | ".join([*(f"{name}: {message}" for name, message in chain), _error_text(failure)])
+    error = mask_account_ids(text)[:ERROR_LIMIT]
+    outcome = "PANIC" if "panic" in type(failure).__name__.lower() else "REFUSED"
+    return outcome, error, " > ".join(names), http_status(error)
 
 
-def _commit_count(session: Any, table: str) -> int:
+def _snapshot_count(session: Any, table: str) -> int:
     return int(session.sql(f"SELECT count(*) FROM {table}.snapshots").collect()[0][0])
+
+
+def _probe(session: Any, table: str) -> tuple[int | None, str | None]:
+    try:
+        return _snapshot_count(session, table), None
+    except Exception as failure:
+        return None, _error_text(failure)
+
+
+def _spark_state(reader: Any, table: str) -> tuple[Any, Any, str | None]:
+    try:
+        if not reader.catalog.tableExists(table):
+            return ABSENT, None, None
+        reader.catalog.refreshTable(table)
+        frame = reader.table(table)
+        schema = tuple(
+            (item.name, item.dataType.simpleString(), bool(item.nullable))
+            for item in frame.schema.fields
+        )
+        return canonical_rows(frame.selectExpr(*CANONICAL_EXPRESSIONS).collect()), schema, None
+    except Exception as failure:
+        return None, None, _error_text(failure)
 
 
 def _create_matrix_table(session: Any, table: str, layout: str) -> None:
@@ -199,52 +250,61 @@ def _frame_run(
     raise ValueError(f"no DataFrame run for seat {seat!r}")
 
 
-def _observe_matrix(
+def _run_statement(
     session: Any, fns: Any, cell: Cell, names: dict[str, str], predicate: str
-) -> Observed:
+) -> Any:
+    combo = cell.combo
+    assert combo is not None and cell.pid is not None
+    if combo.door == "spark-sql":
+        return session.sql(_matrix_sql(combo.seat, names, predicate))
+    return _frame_run(session, fns, combo.seat, combo.door, names, predicate, cell.pid)
+
+
+def _observe_matrix(
+    session: Any, fns: Any, reader: Any, cell: Cell, names: dict[str, str], predicate: str
+) -> Observation:
     combo = cell.combo
     assert combo is not None
-    seat = combo.seat
-    target = target_for(combo)
-    before = None
-    error = None
-    probe_error = None
+    target = names[target_for(combo)]
+    before, probe_error = (0, None) if target_for(combo) == "t3" else _probe(session, target)
+    error = error_class = None
+    status = None
     try:
-        before = _commit_count(session, names[target])
-    except Exception as failure:
-        probe_error = f"{type(failure).__name__}: {failure}"[:500]
-    try:
-        if combo.door == "spark-sql":
-            result = session.sql(_matrix_sql(seat, names, predicate))
-        else:
-            result = _frame_run(session, fns, seat, combo.door, names, predicate, cell.pid)
+        result = _run_statement(session, fns, cell, names, predicate)
         answer = _rows(result.collect()) if combo.is_read else None
         outcome = "ANSWERED"
     except Exception as failure:
-        outcome = "PANIC" if "panic" in type(failure).__name__.lower() else "REFUSED"
-        error = f"{type(failure).__name__}: {failure}"[:500]
+        outcome, error, error_class, status = _failure_parts(failure)
         answer = None
     if not combo.is_read and outcome == "ANSWERED":
         answer = _rows(
-            [
-                (row[0],)
-                for row in session.sql(f"SELECT id FROM {names[target]} ORDER BY id").collect()
-            ]
+            [(row[0],) for row in session.sql(f"SELECT id FROM {target} ORDER BY id").collect()]
         )
+    state, schema, read_error = _spark_state(reader, target)
     commits = None
     if before is not None:
-        try:
-            commits = _commit_count(session, names[target]) - before
-        except Exception as failure:
-            probe_error = f"{type(failure).__name__}: {failure}"[:500]
-            commits = None
-    return Observed(outcome, answer, commits, error, probe_error)
+        after, after_error = (0, None) if state == ABSENT else _probe(session, target)
+        probe_error = probe_error or after_error
+        commits = None if after is None else after - before
+    return Observation(
+        outcome, answer, state, schema, commits, error, error_class, status, read_error, probe_error
+    )
 
 
-def _observe_float(session: Any, cell: Cell, names: dict[str, str]) -> Observed:
+def _stage_create_reference(spark: Any, fns: Any, pid: str) -> tuple[Any, str | None]:
+    values = ", ".join(SEED_ROWS)
+    try:
+        seed = spark.sql(f"SELECT * FROM VALUES {values} AS v({', '.join(COLUMNS)})")
+        rows = seed.filter(typed_predicate(fns, pid)).selectExpr(*CANONICAL_EXPRESSIONS).collect()
+    except Exception as failure:
+        return None, _error_text(failure)
+    return canonical_rows(rows), None
+
+
+def _observe_float(session: Any, cell: Cell, names: dict[str, str]) -> Observation:
     assert cell.shape is not None
     statement = FLOAT_SQL[cell.shape].format(t=names["t"], u=names["u"])
-    error = None
+    error = error_class = None
     try:
         result = session.sql(statement)
         if cell.shape in FLOAT_WRITE_SHAPES:
@@ -254,10 +314,9 @@ def _observe_float(session: Any, cell: Cell, names: dict[str, str]) -> Observed:
             answer = _rows(result.collect())
         outcome = "ANSWERED"
     except Exception as failure:
-        outcome = "PANIC" if "panic" in type(failure).__name__.lower() else "REFUSED"
-        error = f"{type(failure).__name__}: {failure}"[:500]
+        outcome, error, error_class, _ = _failure_parts(failure)
         answer = None
-    return Observed(outcome, answer, None, error)
+    return Observation(outcome, answer, error=error, error_class=error_class)
 
 
 def _names(cell: Cell, prefix: str) -> dict[str, str]:
@@ -299,6 +358,7 @@ def sessions() -> Any:
         config = s3tables_catalog_config(S3TABLES_CATALOG, arn)
         spark_config = s3tables_spark_catalog_config(S3TABLES_CATALOG, arn)
     builder = ReparkSession.builder.appName(f"flat-matrix-{CATALOG}")
+    builder = builder.config("spark.sql.session.timeZone", SESSION_ZONE)
     for key, value in config.items():
         builder = builder.config(key, value)
     repark = builder.getOrCreate()
@@ -321,16 +381,6 @@ def _record(path: Path, **fields: Any) -> None:
         handle.write(record_line(**fields) + "\n")
 
 
-def _describe(session: Any, table: str) -> list[list[str]]:
-    fields: list[list[str]] = []
-    for row in session.sql(f"DESCRIBE TABLE {table}").collect():
-        name, data_type = str(row[0]), str(row[1])
-        if not name or not data_type:
-            break
-        fields.append([name, data_type])
-    return fields
-
-
 def _file_counts(session: Any, table: str) -> dict[str, int]:
     counts = {"data": 0, "delete": 0}
     rows = session.sql(f"SELECT content, count(*) FROM {table}.files GROUP BY content").collect()
@@ -339,144 +389,134 @@ def _file_counts(session: Any, table: str) -> dict[str, int]:
     return counts
 
 
-def _shape_fields(
-    prefix: str, schema_session: Any, file_session: Any, table: str
-) -> dict[str, Any]:
-    fields: dict[str, Any] = {f"{prefix}_schema": None, f"{prefix}_files": None}
-    fields[f"{prefix}_schema_error"] = None
-    fields[f"{prefix}_files_error"] = None
+def _files(prefix: str, session: Any, table: str | None) -> dict[str, Any]:
+    fields: dict[str, Any] = {f"{prefix}_files": None, f"{prefix}_files_error": None}
+    if table is None:
+        return fields
     try:
-        fields[f"{prefix}_schema"] = _describe(schema_session, table)
+        fields[f"{prefix}_files"] = _file_counts(session, table)
     except Exception as failure:
-        fields[f"{prefix}_schema_error"] = f"{type(failure).__name__}: {failure}"[:500]
-    try:
-        fields[f"{prefix}_files"] = _file_counts(file_session, table)
-    except Exception as failure:
-        fields[f"{prefix}_files_error"] = f"{type(failure).__name__}: {failure}"[:500]
+        fields[f"{prefix}_files_error"] = _error_text(failure)
     return fields
 
 
-def _absent_shape(prefix: str) -> dict[str, Any]:
+def _side(prefix: str, observed: Observation) -> dict[str, Any]:
     return {
-        f"{prefix}_schema": None,
-        f"{prefix}_schema_error": None,
-        f"{prefix}_files": None,
-        f"{prefix}_files_error": None,
+        f"{prefix}_outcome": observed.outcome,
+        f"{prefix}_answer": repr(observed.answer),
+        f"{prefix}_state": observed.state,
+        f"{prefix}_schema": observed.schema,
+        f"{prefix}_commits": observed.commits,
+        f"{prefix}_error": observed.error,
+        f"{prefix}_error_class": observed.error_class,
+        f"{prefix}_status": observed.status,
+        f"{prefix}_read_error": observed.read_error,
+        f"{prefix}_probe_error": observed.probe_error,
     }
+
+
+def _float_cell(cell: Cell, catalog: str, repark: Any, spark: Any, names: dict[str, str]) -> Any:
+    float_type = cell.float_type or "DOUBLE"
+    mine_fq = {key: _fq(catalog, names[key]) for key in ("t", "u")}
+    oracle_fq = {"t": _fq(catalog, names["o"]), "u": _fq(catalog, names["uo"])}
+    for session, tables in ((repark, mine_fq), (spark, oracle_fq)):
+        for key in ("t", "u"):
+            seed = FLOAT_SEED_T if key == "t" else FLOAT_SEED_U
+            _create_float_table(session, tables[key], float_type, seed)
+    mine = _observe_float(repark, cell, mine_fq)
+    oracle = _observe_float(spark, cell, oracle_fq)
+    label = classify(
+        seat=cell.shape or "",
+        pid=None,
+        repark_outcome=mine.outcome,
+        spark_outcome=oracle.outcome,
+        repark_answer=mine.answer,
+        spark_answer=oracle.answer,
+    )
+    fields = {"expected_source": "live-spark-oracle", "label": label}
+    return label, mine, oracle, mine_fq["t"], oracle_fq["t"], fields
+
+
+def _matrix_cell(
+    cell: Cell, catalog_kind: str, catalog: str, repark: Any, spark: Any, names: dict[str, str]
+) -> Any:
+    combo = cell.combo
+    assert combo is not None and cell.pid is not None
+    predicate = PREDICATE_TEXT[cell.pid]
+    fq = {key: _fq(catalog, value) for key, value in names.items()}
+    _create_matrix_table(repark, fq["t"], combo.layout)
+    _create_matrix_table(repark, fq["t2"], combo.layout)
+    repark.sql(f"INSERT INTO {fq['t']} VALUES " + ", ".join(SEED_ROWS))
+    mine = _observe_matrix(repark, functions, spark, cell, fq, predicate)
+    entry = expected_for(cell, EXPECTED)
+    oracle_final = None
+    reference, reference_error = None, None
+    if entry is not None:
+        oracle = committed_observation(cell, entry)
+    else:
+        from pyspark.sql import functions as spark_functions
+
+        oracle_map = {"t": fq["o"], "t2": fq["o2"], "t3": fq["o3"]}
+        _create_matrix_table(spark, oracle_map["t"], combo.layout)
+        _create_matrix_table(spark, oracle_map["t2"], combo.layout)
+        spark.sql(f"INSERT INTO {oracle_map['t']} VALUES " + ", ".join(SEED_ROWS))
+        oracle = _observe_matrix(spark, spark_functions, spark, cell, oracle_map, predicate)
+        oracle_final = oracle_map[target_for(combo)]
+        if is_stage_create_cell(cell) and catalog_kind == STAGE_CREATE_CATALOG:
+            reference, reference_error = _stage_create_reference(spark, spark_functions, cell.pid)
+    grade = grade_cell(
+        cell, catalog_kind, mine, oracle, live_oracle=entry is None, reference_state=reference
+    )
+    fields = {
+        "expected_source": "committed-spark" if entry is not None else "live-spark-oracle",
+        "label": grade.label,
+        "commits_graded": grade.commits_graded,
+        "missing": list(grade.missing),
+        "truth_answer": grade.truth,
+        "oracle_truth": grade.oracle_truth,
+        "expected_answer": repr(grade.expected.answer),
+        "expected_state": grade.expected.state,
+        "expected_schema": grade.expected.schema,
+        "expected_commits": grade.expected.commits,
+        "stage_create": grade.stage_create,
+        "stage_create_reference_error": reference_error,
+    }
+    return grade.label, mine, oracle, fq[target_for(combo)], oracle_final, fields
+
+
+def run_cell(
+    cell: Cell,
+    catalog_kind: str,
+    catalog: str,
+    repark: Any,
+    spark: Any,
+    records_path: Path,
+    group: str,
+) -> str:
+    names = _names(cell, run_table_prefix())
+    if cell.is_float:
+        result = _float_cell(cell, catalog, repark, spark, names)
+    else:
+        result = _matrix_cell(cell, catalog_kind, catalog, repark, spark, names)
+    label, mine, oracle, repark_final, oracle_final, fields = result
+    _record(
+        records_path,
+        cell=cell.cell_id,
+        catalog=catalog_kind,
+        group=group,
+        known_open=KNOWN_OPEN.get(cell.cell_id),
+        **fields,
+        **_side("repark", mine),
+        **_side("oracle", oracle),
+        **_files("repark", spark, repark_final),
+        **_files("oracle", spark, oracle_final),
+    )
+    return label
 
 
 @pytest.mark.timeout(3600)
 @pytest.mark.parametrize("cell", _params())
 def test_flat_matrix_cell(cell: Cell, sessions: Any, records_path: Path) -> None:
     catalog, repark, spark = sessions
-    prefix = run_table_prefix()
-    names = _names(cell, prefix)
-    glue = CATALOG == "glue"
-    known = KNOWN_OPEN.get(cell.cell_id)
-    truth: list[int] | None = None
-    oracle_truth: str | None = None
-    if cell.is_float:
-        float_type = cell.float_type or "DOUBLE"
-        for key in ("t", "u"):
-            _create_float_table(
-                repark,
-                _fq(catalog, names[key]),
-                float_type,
-                FLOAT_SEED_T if key == "t" else FLOAT_SEED_U,
-            )
-        repark_names = {key: _fq(catalog, names[key]) for key in ("t", "u")}
-        mine = _observe_float(repark, cell, repark_names)
-        oracle_fq = {"t": _fq(catalog, names["o"]), "u": _fq(catalog, names["uo"])}
-        for key in ("t", "u"):
-            _create_float_table(
-                spark, oracle_fq[key], float_type, FLOAT_SEED_T if key == "t" else FLOAT_SEED_U
-            )
-        oracle = _observe_float(spark, cell, oracle_fq)
-        source = "live-spark-oracle"
-        label = classify(
-            seat=cell.shape or "",
-            pid=None,
-            repark_outcome=mine.outcome,
-            spark_outcome=oracle.outcome,
-            repark_answer=mine.answer,
-            spark_answer=oracle.answer,
-        )
-        seat_name = cell.shape
-        repark_final = repark_names["t"]
-        oracle_final: str | None = oracle_fq["t"]
-    else:
-        combo = cell.combo
-        assert combo is not None and cell.pid is not None
-        predicate = PREDICATE_TEXT[cell.pid]
-        fq_names = {key: _fq(catalog, value) for key, value in names.items()}
-        _create_matrix_table(repark, fq_names["t"], combo.layout)
-        _create_matrix_table(repark, fq_names["t2"], combo.layout)
-        repark.sql(f"INSERT INTO {fq_names['t']} VALUES " + ", ".join(SEED_ROWS))
-        mine = _observe_matrix(repark, functions, cell, fq_names, predicate)
-        expected_entry = expected_for(cell, EXPECTED)
-        oracle_final = None
-        if expected_entry is not None:
-            source = "committed-spark"
-            ids = committed_ids(combo, expected_entry)
-            expected_answer = _rows([(value,) for value in ids])
-            oracle = Observed(
-                expected_entry["outcome"],
-                expected_answer if expected_entry["outcome"] == "ANSWERED" else None,
-                committed_commits(combo, expected_entry) if glue else None,
-                None,
-            )
-        else:
-            source = "live-spark-oracle"
-            oracle_fq = {
-                key: _fq(catalog, value) for key, value in names.items() if key in {"o", "o2", "o3"}
-            }
-            oracle_map = {"t": oracle_fq["o"], "t2": oracle_fq["o2"], "t3": oracle_fq["o3"]}
-            _create_matrix_table(spark, oracle_map["t"], combo.layout)
-            _create_matrix_table(spark, oracle_map["t2"], combo.layout)
-            spark.sql(f"INSERT INTO {oracle_map['t']} VALUES " + ", ".join(SEED_ROWS))
-            from pyspark.sql import functions as spark_functions
-
-            oracle = _observe_matrix(spark, spark_functions, cell, oracle_map, predicate)
-            oracle_final = oracle_map[target_for(combo)]
-        seat_name = combo.seat
-        repark_final = fq_names[target_for(combo)]
-        graded, truth, oracle_truth = _against_truth(cell, oracle)
-        label = classify(
-            seat=seat_name,
-            pid=cell.pid,
-            repark_outcome=mine.outcome,
-            spark_outcome=graded.outcome,
-            repark_answer=mine.answer,
-            spark_answer=graded.answer,
-            repark_commits=mine.commits if glue else None,
-            spark_commits=graded.commits if glue else None,
-            folded=cell.pid in FOLDED_PREDICATES,
-        )
-    shape = _shape_fields("repark", repark, spark, repark_final)
-    if oracle_final is None:
-        shape.update(_absent_shape("oracle"))
-    else:
-        shape.update(_shape_fields("oracle", spark, spark, oracle_final))
-    _record(
-        records_path,
-        cell=cell.cell_id,
-        catalog=CATALOG,
-        group=GROUP,
-        expected_source=source,
-        known_open=known,
-        repark_outcome=mine.outcome,
-        repark_answer=repr(mine.answer),
-        repark_commits=mine.commits,
-        repark_error=mine.error,
-        repark_probe_error=mine.probe_error,
-        oracle_outcome=oracle.outcome,
-        oracle_answer=repr(oracle.answer),
-        oracle_commits=oracle.commits,
-        oracle_error=oracle.error,
-        oracle_probe_error=oracle.probe_error,
-        truth_answer=truth,
-        oracle_truth=oracle_truth,
-        label=label,
-        **shape,
-    )
+    label = run_cell(cell, CATALOG, catalog, repark, spark, records_path, GROUP)
     assert passes(label), f"{cell.cell_id}: label {label}"

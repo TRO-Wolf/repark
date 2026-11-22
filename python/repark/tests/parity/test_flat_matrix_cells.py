@@ -8,7 +8,9 @@ from typing import Any
 
 import pytest
 from _flat_matrix_cells import (
+    COLUMNS,
     COMBINATIONS,
+    DDL_SCHEMA,
     FLOAT_SEED_T,
     FLOAT_SEED_U,
     FOLDED_PREDICATES,
@@ -18,21 +20,30 @@ from _flat_matrix_cells import (
     ORACLE_AGREES_WITH_TRUTH,
     PREDICATES,
     PRUNED_WRONG,
+    ROW_UPDATE_SEATS,
+    SEED_CANONICAL,
+    SEED_IDS,
     TRUTH_PREDICATES,
     TYPED_BUILDERS,
     cells_for_group,
     class_a_key,
     classify,
+    commits_graded,
     committed_commits,
     committed_ids,
+    committed_observation,
     expected_for,
     float_cells,
     grade_against_truth,
+    http_status,
     load_expected,
     matrix_cells,
     oracle_truth_label,
     passes,
     seed_doubles,
+    stage_create_status_holds,
+    state_for,
+    target_for,
     truth_ids,
     truth_match_ids,
     typed_predicate,
@@ -569,3 +580,93 @@ def test_the_float_seeds_store_a_negative_zero_through_a_cast() -> None:
     for seed in (FLOAT_SEED_T, FLOAT_SEED_U):
         assert any(NEGATIVE_ZERO in row for row in seed)
         assert not any(", -0.0," in row for row in seed)
+
+
+def _spark_double_text(value: float | None) -> str | None:
+    if value is None:
+        return None
+    if math.isnan(value):
+        return "NaN"
+    if math.isinf(value):
+        return "Infinity" if value > 0 else "-Infinity"
+    return repr(value)
+
+
+def test_the_canonical_seed_agrees_with_the_sql_seed() -> None:
+    doubles = seed_doubles()
+    assert [row[0] for row in SEED_CANONICAL] == [str(n) for n in SEED_IDS]
+    assert [row[-1] for row in SEED_CANONICAL] == [f"f{n}" for n in SEED_IDS]
+    assert all(len(row) == len(COLUMNS) for row in SEED_CANONICAL)
+    assert [row[4] for row in SEED_CANONICAL] == [_spark_double_text(doubles[n]) for n in SEED_IDS]
+    assert [name for name, _, _ in DDL_SCHEMA] == list(COLUMNS)
+    assert [name for name, _, nullable in DDL_SCHEMA if not nullable] == ["id"]
+
+
+def test_derived_states_match_the_committed_spark_rows() -> None:
+    table = load_expected()
+    raw = _raw_cells("spark-*.jsonl")
+    checked = 0
+    for cell in matrix_cells():
+        entry = expected_for(cell, table)
+        if entry is None or cell.combo is None or entry["outcome"] != "ANSWERED":
+            continue
+        state = committed_observation(cell, entry).state
+        ids = [int(str(row[0])) for row in state]
+        if cell.combo.is_read:
+            assert ids == list(SEED_IDS), cell.cell_id
+        elif target_for(cell.combo) == "t":
+            assert ids == entry["after_ids"], cell.cell_id
+        else:
+            assert ids == sorted(entry["ids"]), cell.cell_id
+        if cell.combo.seat in ROW_UPDATE_SEATS:
+            key = class_a_key(cell)
+            assert key is not None
+            flags = {int(row[0]): row[-1] for row in raw[key]["rows_after"]}
+            assert {int(str(row[0])): row[-1] for row in state} == flags, cell.cell_id
+        checked += 1
+    assert checked >= 400
+
+
+def test_a_refused_committed_cell_expects_the_unchanged_target() -> None:
+    table = load_expected()
+    refused = [
+        cell
+        for cell in matrix_cells()
+        if (entry := expected_for(cell, table)) is not None and entry["outcome"] == "REFUSED"
+    ]
+    assert refused
+    for cell in refused:
+        entry = expected_for(cell, table)
+        assert entry is not None and cell.combo is not None
+        state = committed_observation(cell, entry).state
+        target = target_for(cell.combo)
+        expected = {"t": sorted(SEED_CANONICAL, key=repr), "t2": [], "t3": "ABSENT"}[target]
+        assert state == expected, cell.cell_id
+
+
+@pytest.mark.parametrize("cell", _p15_cells(), ids=lambda cell: cell.cell_id)
+def test_p15_state_rule_matches_the_truth_ids(cell: Any) -> None:
+    assert cell.combo is not None
+    state = state_for(cell.combo.seat, truth_match_ids("p15"))
+    ids = list(SEED_IDS) if cell.combo.is_read else truth_ids(cell)
+    assert sorted(int(str(row[0])) for row in state) == sorted(ids or [])
+    flagged = sorted(int(str(row[0])) for row in state if row[-1] == "z")
+    assert flagged == ([4, 6] if cell.combo.seat in ROW_UPDATE_SEATS else [])
+
+
+def test_http_status_needs_a_status_word() -> None:
+    assert http_status("HTTP 400 Bad Request") == 400
+    assert http_status('{"code": 400, "type": "BadRequestException"}') == 400
+    assert http_status("status code: 400") == 400
+    assert http_status("An error occurred while calling o47.sql") is None
+    assert http_status("wrote 400 rows") is None
+    assert http_status(None) is None
+
+
+def test_the_stage_create_status_rule_requires_no_status_today() -> None:
+    assert all(stage_create_status_holds(status) for status in (None, 400, 500))
+
+
+def test_commit_deltas_are_graded_on_glue_only() -> None:
+    assert commits_graded("glue")
+    assert not commits_graded("s3tables")
