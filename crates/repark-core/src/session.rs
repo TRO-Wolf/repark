@@ -42,7 +42,7 @@ mod path_write;
 pub mod read_postgres;
 mod session_catalog;
 pub(crate) mod spill;
-mod temp_views;
+pub(crate) mod temp_views;
 mod text_write_format;
 mod write_options;
 pub mod write_postgres;
@@ -62,7 +62,6 @@ pub use spill::REPARK_OWNED_DATAFUSION_PSEUDO_KEYS;
 pub(crate) use spill::{
     DEFAULT_MEMORY_LIMIT_BYTES, MIN_MEMORY_LIMIT_BYTES, default_memory_limit_bytes,
 };
-pub use temp_views::CacheLevel;
 
 /// The builder-config prefix that reaches DataFusion's own [`SessionConfig`] options.
 pub const DATAFUSION_CONFIG_PREFIX: &str = "datafusion.";

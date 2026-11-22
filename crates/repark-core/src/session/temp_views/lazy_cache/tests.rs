@@ -1,4 +1,5 @@
 use super::super::super::*;
+use crate::CacheLevel;
 use arrow::array::{Array, Int32Array, RecordBatch};
 use arrow::datatypes::{DataType, Field, Schema};
 use datafusion::datasource::MemTable;
