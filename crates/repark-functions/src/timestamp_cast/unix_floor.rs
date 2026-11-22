@@ -6,7 +6,7 @@ use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Int64Type};
 use datafusion::common::{DataFusionError, Result, ScalarValue};
 use datafusion::logical_expr::{
-    Coercion, ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl,
+    Coercion, ColumnarValue, Expr, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl,
     Signature, TypeSignatureClass, Volatility,
 };
 
@@ -25,6 +25,15 @@ pub fn unix_millis_udf() -> Arc<ScalarUDF> {
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
     vec![unix_seconds_udf(), unix_millis_udf()]
+}
+
+#[must_use]
+pub fn unix_epoch(name: &str, argument: Expr) -> Expr {
+    match name {
+        "unix_seconds" => unix_seconds_udf().call(vec![argument]),
+        "unix_millis" => unix_millis_udf().call(vec![argument]),
+        _ => crate::expr_fn::unix_micros(argument),
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -276,6 +285,18 @@ mod tests {
             literal.contains("the argument has the type \"TIMESTAMP_NTZ\""),
             "got {literal}"
         );
+    }
+
+    #[test]
+    fn the_facade_builder_names_each_epoch_function() {
+        let column = datafusion::prelude::col("ts");
+        for (name, built) in [
+            ("unix_seconds", "unix_seconds(ts)"),
+            ("unix_millis", "unix_millis(ts)"),
+            ("unix_micros", "unix_micros(ts)"),
+        ] {
+            assert_eq!(unix_epoch(name, column.clone()).to_string(), built);
+        }
     }
 
     #[test]

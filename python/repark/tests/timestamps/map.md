@@ -38,7 +38,7 @@ pins.
 - [test_store_ts_doors_2_fold6.py](test_store_ts_doors_2_fold6.py) — STORE-TS-DOORS-2 fold 6: nullary timestamp columns refuse on every door.
 - [test_store_ts_to_numeric_1.py](test_store_ts_to_numeric_1.py) — STORE-TS-TO-NUMERIC-1: storing a timestamp into a numeric column replays Spark.
 - [test_text_write_timestamp_zone_1.py](test_text_write_timestamp_zone_1.py) — TEXT-WRITE-TIMESTAMP-ZONE-1: CSV/JSON write TIMESTAMP as Spark; LMT read too.
-- [test_timestamp_cast_parity.py](test_timestamp_cast_parity.py) — ``CAST(TIMESTAMP AS <numeric>)`` (TZ-5) and ``CAST(TIMESTAMP AS STRING)`` (B-TZ-4) rows.
+- [test_timestamp_cast_parity.py](test_timestamp_cast_parity.py) — ``CAST(TIMESTAMP AS <numeric>)`` (TZ-5) and ``CAST(TIMESTAMP AS STRING)`` (B-TZ-4) rows. UNIX-TIMESTAMP-TRUNCATE-1: [test_unix_timestamp_truncate_1.py](test_unix_timestamp_truncate_1.py).
 - [test_timestamp_type.py](test_timestamp_type.py) — Q10 — ``spark.sql.timestampType`` LTZ default + NTZ opt-in.
 - [test_tz_asof_1.py](test_tz_asof_1.py) — WO TZ-ASOF-1: an expression named like its ORDER BY key plans.
 - [test_u9_types_1.py](test_u9_types_1.py) — WO U9-TYPES-1: TIMESTAMP_LTZ and MAP columns end to end, replayed against Spark 4.1.2; R-12 retired 2026-11-04.
@@ -198,13 +198,13 @@ that zone. The value comes from `to_arrow()` and the type name from the facade s
 the Spark record: EQUAL (same type and value, or both raise and RePark's text names Spark's error
 condition), DIFFERENT (another type or value, Spark raises and RePark answers, or both raise with
 another condition), REFUSED (Spark answers, RePark raises a deliberate refusal: the text says
-`refus`, `unsupported` or `not supported`), ERROR (Spark answers, RePark raises anything else,
-a caught Rust panic included). No cell is skipped or xfailed. The cells that are not EQUAL on
+`refus`, `unsupported` or `not supported`), ERROR (Spark answers, RePark raises anything else).
+ No cell is skipped or xfailed. The cells that are not EQUAL on
 main are the dated list `zone_oracle_1_main_difference.json`, each with its status and the
 measured RePark answer, recorded from the `ci`-profile build of main `754fb6e5`; the test
 asserts that the set of non-EQUAL cells is exactly that list, so a cell that leaves it (a fix)
 and a cell that joins it (a regression) both fail, and a listed cell must keep its status and
-its measured answer (an error cell keeps only the fact that it raises). To retire a listed cell,
+its measured answer. To retire a listed cell,
 fix the engine and re-record the list:
 
 ```
@@ -213,7 +213,7 @@ PYTHONPATH=python/repark-parity/src python python/repark/tests/timestamps/_recor
 
 The live cell (`REPARK_PARITY_LIVE=1`) runs the recorder as a subprocess with
 `--check --sample 20` in a fresh interpreter, so it owns a `local[1]` context whatever the shared
-SparkContext of the serial live suite is. The replay is 1,640 cells in about 4 s on the `ci` profile.
+SparkContext of the serial live suite is. The replay is 1,640 cells.
 
 ## Pointers
 
