@@ -242,8 +242,8 @@ and answers with one `ICE-HELD-WRITER {…}` line.
 ### The shapes
 
 There is one table per shape, per catalog, per leg: `<run prefix>held_<shape>_<8 hex>`, with
-`ICEBERG_TABLE_PROPERTIES`, seeded `(1, 'a'), (2, 'b')`. That makes 28 tables per run on top of the 9 above. None is
-dropped. The leg's cleanup removes them, and the cross-read step reads them first: 14 more per catalog in its walk.
+`ICEBERG_TABLE_PROPERTIES`, seeded `(1, 'a'), (2, 'b')`. That makes 14 tables per catalog (7 shapes, 2 legs). With the 7 the row and cost cells
+make, it is 21 per catalog and 42 per run; the removed control and refresh cells made none. None is dropped. The leg's cleanup removes them, and the cross-read step reads them first: 14 more per catalog in its walk.
 
 | shape | kind | held frame | new frame of the same shape |
 |---|---|---|---|
@@ -358,8 +358,8 @@ the writer's read-back was 3 in every cell.
 - `pending: #1394`, the 27 reads above, are recorded only until #1394 lands.
 - RePark's own answer is measured only live. Locally, `type=hadoop` cannot show another process's commit to RePark,
   so the twin covers RePark's run of the body and the grading, not RePark's answers.
-- Not measured before this run: Spark creating a table, `ALTER` and `REFRESH` on S3 Tables through the REST block. A
-  refusal fails that leg's cells at the step, and the record shows it through `condition()`.
+- Not measured before this run: Spark's `ALTER` and `REFRESH` on S3 Tables through the REST block (the flat-matrix and
+  CTAS-failure modules already run Spark creates there). A refusal fails that leg's cells at the step, and the record shows it through `condition()`.
 - Run time. A guess: about 4 to 6 minutes per RePark-leg test and 5 to 8 per Spark-leg test, inside the job's 90
   minutes and each test's 1,200 s. The cross-read walk also gains 28 tables.
 
