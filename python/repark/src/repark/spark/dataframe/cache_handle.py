@@ -14,6 +14,7 @@ from repark import _native
 from repark.spark.dataframe.eager import _resolve_cache_budgets
 
 _LOGGER = logging.getLogger(__name__)
+_TABLE_LEVEL_KEY = "cache_table_level_frames"
 
 
 def _drop_cache_view_registration(
@@ -119,6 +120,31 @@ def bind_registered_view(frame: Any, view_name: str, lineage: Any) -> None:
     _note_frame_cached(frame)
 
 
+def _note_table_level(frame: Any) -> Any:
+    frames = frame._alive_token.get(_TABLE_LEVEL_KEY)
+    if not isinstance(frames, weakref.WeakSet):
+        frames = weakref.WeakSet()
+        frame._alive_token[_TABLE_LEVEL_KEY] = frames
+    frames.add(frame)
+    return frame
+
+
+def _table_level(frame: Any) -> bool:
+    frames = frame._alive_token.get(_TABLE_LEVEL_KEY)
+    return isinstance(frames, weakref.WeakSet) and frame in frames
+
+
+def _aliased(parent: Any, child: Any) -> Any:
+    return _note_table_level(child) if _table_level(parent) else child
+
+
+def _held_by_table_fill(frame: Any) -> bool:
+    view = frame._cache_view
+    if view is None or not _table_level(frame):
+        return False
+    return frame._session.lazy_cache_filled(view) is not None
+
+
 def _materialize_now(frame: Any, view_name: str) -> None:
 
     lineage = frame._inner
@@ -137,13 +163,15 @@ def _bind_lazy(frame: Any) -> None:
 
     view_name = scratch_view_name(frame._session, _CACHE_VIEW_PREFIX)
     lineage = frame._inner
+    level = _table_level(frame)
     try:
         budgets = _resolve_cache_budgets(frame._alive_token)
     except Exception:
         budgets = (None, None)
     try:
         _own_plan(
-            frame, lambda _: frame._session.register_lazy_cache_view(view_name, lineage, budgets)
+            frame,
+            lambda _: frame._session.register_lazy_cache_view(view_name, lineage, budgets, level),
         )
     except Exception:
         _LOGGER.debug("lazy cache registration fell back to the action", exc_info=True)

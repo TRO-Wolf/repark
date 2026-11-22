@@ -33,14 +33,33 @@ stay pinned. The parent [../map.md](../map.md) is at its size ceiling, so the pi
   after a dropped column `count` and `explain()` raise `COLUMNS_MISMATCH`; after a drop `TABLE_OR_VIEW_NOT_FOUND`;
   after an insert `count` answers 3 and `explain` prints a plan. 20 are red on main and 14 on the delta 1 head.
   pins: ice-held-frame-snapshot-1/1a-delta-2.
+- `test_ice_held_frame_snapshot_1_cached.py` — unit 2 (2026-11-21): 68 cells (34 shapes in both ANSI modes) on a
+  cached Iceberg frame against the recorded Spark answers. A same-session write (`INSERT`, `DELETE`, `MERGE`,
+  `overwrite`, `insertInto`, `writeTo().append()`, two inserts) re-fills the cache for the next query, through a
+  child, a DataFrame view, a cached SQL-view frame, a nested cache and a cached join; `REFRESH TABLE` and
+  `refreshTable` re-fill it (a new `current_timestamp()`); a write to another table, a failed write, a property
+  change and a fresh read keep it. Own-plan actions keep the binding of `cache()` or of their first action. A
+  cached bare table keeps its fill after a dropped or renamed column; with new data after the change it re-binds
+  (`COLUMNS_MISMATCH`, `TABLE_ID_MISMATCH`, `TABLE_OR_VIEW_NOT_FOUND`, or the old columns over the new rows). 50 are
+  red on main `0cc65e9a`. pins: ice-held-frame-snapshot-1/unit-2.
+- `_ice_held_frame_snapshot_1_cached_cells.py` — unit 2's cells, engine-agnostic.
+- `_record_ice_held_frame_snapshot_1_cached.py` — re-records unit 2's oracle, as the recorder below does.
+- `ice_held_frame_snapshot_1_cached_spark_oracle.json` — unit 2's recorded Spark answers, keyed by ANSI mode.
 - `test_ice_held_frame_snapshot_1_live_twin.py` — the live Glue and S3 Tables cells' local twin (2026-11-21): the
   helper `../../parity/_acceptance_held_frame.py` on a `type=hadoop` catalog in both ANSI modes. The `insert`, `delete`
   and `copy` rows answer Spark's held and fresh answers; the cost rows print parseable lines.
   LIVE-SECOND-WRITER-1 (2026-11-22): the seven cached shapes run on the facade with a writer the reader cannot see
   (`type=hadoop` is in-process, so no other process's commit can reach it), every read answers 2, and the validity
   read fails the cell on both legs. The grading is pinned on Fable's measured Spark answers in three cache windows
-  (both legs pass), on main's two predictions (the RePark leg passes; `PENDING_1394` is exactly where a prediction
-  breaks the rule), and on refused writes, commits and steps. pins: ice-held-frame-snapshot-1/live-aws.
+  (both legs pass), on main's two predictions, and on refused writes, commits and steps.
+  pins: ice-held-frame-snapshot-1/live-aws. Unit 2 delta 2 (2026-11-22): `PENDING_1394` is empty; main's two
+  predictions break the rule at exactly the 27 reads it held, and the head's prediction passes with no exemption.
+- `test_ice_held_frame_snapshot_1_cache_levels.py` — unit 2 delta 2 (2026-11-22), both ANSI modes: after a
+  same-session insert or property commit, a later `spark.table(t)` or `isCached` leaves a cached `spark.table(t)` (or
+  its alias) cached, as Spark 4.1.2 does (measured: `is_cached` true, the count refilled); each shape caches at
+  Spark's level (`spark.table`, `read.table` and their aliases at the table level; SQL, `select`, `filter`, `groupBy`,
+  an alias of a filter and a DataFrame view at the query level), and the level reaches the native registration;
+  `cacheTable` and `CACHE [LAZY] TABLE` cache at the table level; an eager cache keeps the old snapshot-token drop.
 - `_held_frame_writer_double.py` — a stand-in for the other writer's process that speaks its line protocol with no
   JVM, so the twin pins the writer client's replies, its refusal and exit paths, and the log scrub.
 - `_ice_held_frame_snapshot_1_cells.py` — the cells, engine-agnostic, shared by the test and the recorder.

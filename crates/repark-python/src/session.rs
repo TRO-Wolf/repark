@@ -8,7 +8,7 @@ use std::sync::{
 
 use datafusion::common::config::{ConfigExtension, ConfigOptions};
 use pyo3::prelude::*;
-use repark_core::{EngineRuntime, ReparkSession, ReparkSessionBuilder};
+use repark_core::{CacheLevel, EngineRuntime, ReparkSession, ReparkSessionBuilder};
 use tokio::runtime::Runtime;
 
 use crate::UnsupportedOperationException;
@@ -440,24 +440,30 @@ impl PyReparkSession {
     }
 
     #[allow(clippy::missing_errors_doc)]
-    #[pyo3(signature = (name, frame, budgets=(None, None)))]
+    #[pyo3(signature = (name, frame, budgets=(None, None), table_level=false))]
     pub fn register_lazy_cache_view(
         &self,
         py: Python<'_>,
         name: &str,
         frame: &PyDataFrame,
         budgets: (Option<u64>, Option<u64>),
+        table_level: bool,
     ) -> PyResult<()> {
         fenced_span!("py.action", "PyReparkSession.register_lazy_cache_view", {
             let depths = frame.depths();
             let segment = frame_drive_segment_cached(&depths)?;
             let held = crate::deep_stack::drive_segment_bytes(&depths);
             let owner = repark_core::extension::reader_parse_memo();
+            let level = if table_level {
+                CacheLevel::Table
+            } else {
+                CacheLevel::Query
+            };
             let frame = frame.executable()?;
             py.detach(|| {
                 let registered = self
                     .session
-                    .register_lazy_cache_view(name, frame, budgets, held, owner);
+                    .register_lazy_cache_view(name, frame, budgets, held, owner, level);
                 block_on_grown_sized(&self.runtime, registered, segment)
             })
             .map_err(to_py_err)

@@ -31,5 +31,6 @@ file is gzipped with `gzip -9n`.
   with main's answer and verdict only.
 - [raw/D-spark-ansi-true.jsonl.gz](raw/D-spark-ansi-true.jsonl.gz) — Spark 4.1.2's answers for the 16 D cells, ANSI on.
 - [raw/D-spark-ansi-false.jsonl.gz](raw/D-spark-ansi-false.jsonl.gz) — the same 16 cells, ANSI off.
+- [unit-2/](unit-2/map.md) — unit 2's probes and its 616 recorded answers (Spark, main and the head, both modes).
 
 Up: [../map.md](../map.md).

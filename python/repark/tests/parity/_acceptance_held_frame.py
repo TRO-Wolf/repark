@@ -42,20 +42,7 @@ STEPS = ("after_writer", "after_props", "after_refresh")
 READS = ("held", "fresh", "new", "held_again")
 OPEN = "open: fresh-read-while-table-cached"
 PENDING = "pending: #1394"
-_HELD_AFTER_COMMIT = (
-    ("after_props", "held"),
-    ("after_props", "held_again"),
-    ("after_refresh", "held"),
-    ("after_refresh", "held_again"),
-)
-PENDING_1394: frozenset[tuple[str, str, str]] = frozenset(
-    {("alias", step, read) for step, read in _HELD_AFTER_COMMIT[2:]}
-    | {
-        (shape, step, read)
-        for shape in ("bare", *QUERY_SHAPES)
-        for step, read in (("after_writer", "held_again"), *_HELD_AFTER_COMMIT)
-    }
-)
+PENDING_1394: frozenset[tuple[str, str, str]] = frozenset()
 _PINNED_BEFORE_REFRESH = {"held": 2, "fresh": OPEN, "new": OPEN, "held_again": 2}
 _TABLE_RULE = {
     "after_writer": _PINNED_BEFORE_REFRESH,

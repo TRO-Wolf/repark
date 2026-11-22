@@ -16,6 +16,7 @@ use datafusion::logical_expr::planner::TypePlanner;
 use datafusion::logical_expr::{Expr, Extension, LogicalPlan, UserDefinedLogicalNodeCore};
 use datafusion::optimizer::{Analyzer, AnalyzerRule, OptimizerRule};
 use datafusion::prelude::{DataFrame, SessionConfig, SessionContext};
+use iceberg::TableIdent;
 use repark_iceberg::catalog::session_tables::HeldTable;
 
 use crate::session_time_zone::SessionTimeZone;
@@ -81,10 +82,18 @@ thread_local! {
     static READER_PARSE_MEMO: RefCell<Option<Arc<ReaderParseMemo>>> = const { RefCell::new(None) };
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TableRead {
+    pub key: String,
+    pub catalog: String,
+    pub ident: TableIdent,
+}
+
 #[derive(Debug, Default)]
 pub struct ReaderParseMemo {
     decided: Mutex<Vec<(LiveOptions, Arc<ConfigOptions>)>>,
     tables: Mutex<HashMap<String, HeldTable>>,
+    reads: Mutex<Vec<TableRead>>,
 }
 
 impl ReaderParseMemo {
@@ -108,6 +117,25 @@ impl ReaderParseMemo {
     pub fn hold_table(&self, key: &str, table: HeldTable) {
         let mut tables = self.tables.lock().unwrap_or_else(PoisonError::into_inner);
         tables.entry(key.to_string()).or_insert(table);
+    }
+
+    pub fn note_read(&self, key: &str, catalog: &str, ident: &TableIdent) {
+        let mut reads = self.reads.lock().unwrap_or_else(PoisonError::into_inner);
+        if reads.iter().all(|read| read.key != key) {
+            reads.push(TableRead {
+                key: key.to_string(),
+                catalog: catalog.to_string(),
+                ident: ident.clone(),
+            });
+        }
+    }
+
+    #[must_use]
+    pub fn reads(&self) -> Vec<TableRead> {
+        self.reads
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
     }
 
     #[must_use]
@@ -139,6 +167,9 @@ impl ReaderParseMemo {
     }
 
     pub fn adopt(&self, other: &Self) {
+        if std::ptr::eq(self, other) {
+            return;
+        }
         let theirs = other
             .decided
             .lock()
@@ -149,6 +180,18 @@ impl ReaderParseMemo {
             if !mine.iter().any(|(held, _)| held.same_source(&source)) {
                 mine.push((source, options));
             }
+        }
+        drop(mine);
+        let tables = other
+            .tables
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        for (key, table) in tables {
+            self.hold_table(&key, table);
+        }
+        for read in other.reads() {
+            self.note_read(&read.key, &read.catalog, &read.ident);
         }
     }
 }

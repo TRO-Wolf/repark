@@ -283,7 +283,7 @@ cannot pass. The twin shows this with a writer that the `type=hadoop` reader can
 
 "Open" is recorded under `open: fresh-read-while-table-cached` and is never asserted. The owner has not ruled whether
 RePark must match Spark's 2 there in #1394. Every read of `cache_table` on this leg is open (addendum 1). Any read in
-`PENDING_1394` is recorded under `pending: #1394` and is not asserted (addendum 2).
+`PENDING_1394` is recorded under `pending: #1394` and is not asserted (addendum 2); #1394 delta 2 empties it (below).
 
 **The Spark leg** (`grade(shape, found, "spark")`). It asserts only the window-independent rows of Fable's table: for
 `bare`, `alias` and `cache_table`, every read is 2 until `REFRESH TABLE` and 3 after it, fresh reads included; for the
@@ -322,7 +322,9 @@ has 27 entries: `bare` and the four query-level shapes, each with held again aft
 again after the property commit and after `REFRESH TABLE`; `alias`, with held and held again after `REFRESH TABLE`.
 B alone adds three: `bare`'s held again after the writer, and its held and held again after the commit. To promote
 the list once #1394 lands, empty it. The twin's Spark-window cells already show that Spark's answers pass with no
-exemption.
+exemption. **#1394 delta 2 (2026-11-22) empties it**: every one of the 27 reads is one the delta makes RePark answer
+by the rule ([unit-2.md](unit-2.md) §10), so after the merge they are live assertions. The twin now pins main's two
+predictions breaking the rule at exactly those 27 reads, and the head's predicted answers passing with no exemption.
 
 On main, the RePark leg therefore asserts the validity reads and these:
 
@@ -355,7 +357,8 @@ the writer's read-back was 3 in every cell.
 
 - `open: fresh-read-while-table-cached`. The owner has not ruled on it. The RePark leg records it, and the Spark leg
   asserts Spark's 2.
-- `pending: #1394`, the 27 reads above, are recorded only until #1394 lands.
+- `pending: #1394`: empty since #1394 delta 2; the 27 reads are asserted once it merges. The revert trigger is in
+  [unit-2.md](unit-2.md) §10.
 - RePark's own answer is measured only live. Locally, `type=hadoop` cannot show another process's commit to RePark,
   so the twin covers RePark's run of the body and the grading, not RePark's answers.
 - Not measured before this run: Spark's `ALTER` and `REFRESH` on S3 Tables through the REST block (the flat-matrix and

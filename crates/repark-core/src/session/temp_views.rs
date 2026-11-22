@@ -20,6 +20,7 @@ use crate::engine_err;
 
 mod lazy_cache;
 
+pub use lazy_cache::CacheLevel;
 pub(crate) use lazy_cache::lazy_cache_of;
 
 const LIVE_READ_WAIT: Duration = Duration::from_secs(1);
@@ -107,10 +108,11 @@ impl ReparkSession {
         budgets: (Option<u64>, Option<u64>),
         segment: Option<usize>,
         owner: Option<Arc<crate::extension::ReaderParseMemo>>,
+        level: CacheLevel,
     ) -> Result<()> {
         let stacks = lazy_cache::LazyStacks { segment };
         let table =
-            lazy_cache::LazyCacheTable::try_new(self, frame, budgets, stacks, owner).await?;
+            lazy_cache::LazyCacheTable::try_new(self, frame, budgets, stacks, owner, level).await?;
         self.replace_view(name, Arc::new(table))
     }
 
