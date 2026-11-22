@@ -42,7 +42,11 @@ fn order_keeping_casts_follow_the_value_order() {
         (DataType::Float16, DataType::Float32, true),
         (DataType::Float64, DataType::Float64, true),
         (DataType::Decimal128(10, 2), DataType::Float32, true),
-        (DataType::Decimal128(10, 2), DataType::Decimal128(10, 1), true),
+        (
+            DataType::Decimal128(10, 2),
+            DataType::Decimal128(10, 1),
+            true,
+        ),
         (DataType::Decimal128(10, 2), DataType::Float64, true),
         (DataType::Decimal128(10, 2), DataType::Int32, true),
         (DataType::Utf8, DataType::Utf8View, true),
