@@ -27,6 +27,12 @@ stay pinned. The parent [../map.md](../map.md) is at its size ceiling, so the pi
   view's condition; `explain` after an insert prints a plan. 12 are red on main and 10 on the fix round 1 head. The 4
   refused-write cells read the held frame by `count` and by a child, since `collect` keeps its first binding.
   pins: ice-held-frame-snapshot-1/1a-delta-1.
+  Delta 2 (2026-11-20, D1): 22 of the 82 Spark cells (11 shapes) pin a frame `spark.sql("SELECT * FROM <view>")` built
+  over a DataFrame view of a held frame before the change. After a recreate its `count`, `collect` and `explain()`
+  raise `TABLE_ID_MISMATCH`, also over a filtered frame's view and when a write came between the view and the frame;
+  after a dropped column `count` and `explain()` raise `COLUMNS_MISMATCH`; after a drop `TABLE_OR_VIEW_NOT_FOUND`;
+  after an insert `count` answers 3 and `explain` prints a plan. 20 are red on main and 14 on the delta 1 head.
+  pins: ice-held-frame-snapshot-1/1a-delta-2.
 - `test_ice_held_frame_snapshot_1_cached.py` — unit 2 (2026-11-21): 68 cells (34 shapes in both ANSI modes) on a
   cached Iceberg frame against the recorded Spark answers. A same-session write (`INSERT`, `DELETE`, `MERGE`,
   `overwrite`, `insertInto`, `writeTo().append()`, two inserts) re-fills the cache for the next query, through a
@@ -39,18 +45,6 @@ stay pinned. The parent [../map.md](../map.md) is at its size ceiling, so the pi
 - `_ice_held_frame_snapshot_1_cached_cells.py` — unit 2's cells, engine-agnostic.
 - `_record_ice_held_frame_snapshot_1_cached.py` — re-records unit 2's oracle, as the recorder below does.
 - `ice_held_frame_snapshot_1_cached_spark_oracle.json` — unit 2's recorded Spark answers, keyed by ANSI mode.
-- `test_ice_held_frame_snapshot_1_live_twin.py` — the live Glue and S3 Tables cells' local twin (2026-11-21): the
-  helper `../../parity/_acceptance_held_frame.py` on a `type=hadoop` catalog in both ANSI modes. The `insert`, `delete`
-  and `copy` rows answer Spark's held and fresh answers; the external-writer and refresh cells are strict xfails
-  (ICE-CATALOG-SESSION-HADOOP-1: a second session cannot see the table, pinned by its refusal); the cache-interval
-  rule of Spark's pinned answers is pinned on the measured pauses; the cost rows print parseable lines.
-  pins: ice-held-frame-snapshot-1/live-aws.
-  Delta 2 (2026-11-20, D1): 22 of the 82 Spark cells (11 shapes) pin a frame `spark.sql("SELECT * FROM <view>")` built
-  over a DataFrame view of a held frame before the change. After a recreate its `count`, `collect` and `explain()`
-  raise `TABLE_ID_MISMATCH`, also over a filtered frame's view and when a write came between the view and the frame;
-  after a dropped column `count` and `explain()` raise `COLUMNS_MISMATCH`; after a drop `TABLE_OR_VIEW_NOT_FOUND`;
-  after an insert `count` answers 3 and `explain` prints a plan. 20 are red on main and 14 on the delta 1 head.
-  pins: ice-held-frame-snapshot-1/1a-delta-2.
 - `test_ice_held_frame_snapshot_1_live_twin.py` — the live Glue and S3 Tables cells' local twin (2026-11-21): the
   helper `../../parity/_acceptance_held_frame.py` on a `type=hadoop` catalog in both ANSI modes. The `insert`, `delete`
   and `copy` rows answer Spark's held and fresh answers; the cost rows print parseable lines.
