@@ -11,7 +11,6 @@ from repark import ReparkSession
 from repark.spark import catalog_surface
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.dataframe import cache_handle
-from repark.spark.session import _reset_active_session_for_tests
 
 pytestmark = pytest.mark.xdist_group("ice_held_frame_snapshot_1_cache_levels")
 MODES = ["true", "false"]
@@ -110,15 +109,12 @@ CELLS = {
 }
 
 
-@pytest.fixture(scope="module", params=MODES)
-def spark(
-    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
-) -> Iterator[Any]:
-    session = _session(tmp_path_factory.mktemp("cache-levels-" + request.param), request.param)
+@pytest.fixture(params=MODES)
+def spark(request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[Any]:
+    session = _session(tmp_path, request.param)
     session.sql("CREATE NAMESPACE IF NOT EXISTS lc.db").collect()
     yield session
     session.stop()
-    _reset_active_session_for_tests()
 
 
 @pytest.mark.parametrize("cell", sorted(CELLS))
