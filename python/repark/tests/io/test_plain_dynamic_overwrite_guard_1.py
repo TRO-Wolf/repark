@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -25,6 +26,8 @@ SEED = [(1, "x", 10), (1, "y", 20), (2, "x", 30)]
 SEED_ROWS = [("a=1/b=x", "10"), ("a=1/b=y", "20"), ("a=2/b=x", "30")]
 ONE = [(1, "x", 40)]
 COMPOSITE = [(1, "x", 40), (3, "z", 50)]
+COVER = [(1, "x", 41), (1, "y", 42), (2, "x", 43)]
+SPELLINGS = ("partitionBy-list", "shorthand-keywords", "save-keywords", "option-path")
 KEYS = ["a", "b"]
 FORMATS = ("parquet", "json", "csv", "text")
 ROUTES = ("shorthand", "save")
@@ -393,4 +396,105 @@ def test_static_intent_over_a_dynamic_session_is_not_refused_by_the_guard(
         assert _tree(tmp_path) == before
         return
     _write(writer, fmt, route, tmp_path / "t")
+    assert _rows(fmt, tmp_path / "t") == [("a=1/b=x", "40")]
+
+
+def _spelled_write(frame: Any, fmt: str, spelling: str, target: Path) -> None:
+    path = str(target)
+    if spelling == "partitionBy-list":
+        getattr(frame.write.mode("overwrite").partitionBy(list(KEYS)), fmt)(path)
+    elif spelling == "shorthand-keywords":
+        getattr(frame.write, fmt)(path, mode="overwrite", partitionBy=list(KEYS))
+    elif spelling == "save-keywords":
+        frame.write.save(path, format=fmt, mode="overwrite", partitionBy=list(KEYS))
+    else:
+        writer = frame.write.format(fmt).mode("overwrite").partitionBy(*KEYS)
+        writer.option("path", path).save()
+
+
+@pytest.mark.parametrize(
+    "rows", [COVER, [*COVER, (3, "z", 44)]], ids=["covers-every-partition", "covers-plus-new"]
+)
+@pytest.mark.parametrize("route", ROUTES)
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_dynamic_overwrite_covering_every_partition_refuses_too(
+    spark: ReparkSession, tmp_path: Path, fmt: str, route: str, rows: list[tuple[Any, ...]]
+) -> None:
+    _seed(spark, fmt, tmp_path / "t")
+    spark.conf.set(KEY, "dynamic")
+    _assert_refused_intact(_writer(spark, fmt, rows), fmt, route, tmp_path)
+    assert _rows(fmt, tmp_path / "t") == SEED_ROWS
+
+
+@pytest.mark.parametrize("rows", [ONE, []], ids=["one-row", "empty"])
+@pytest.mark.parametrize("route", ROUTES)
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_dynamic_overwrite_of_an_empty_directory_refuses_too(
+    spark: ReparkSession, tmp_path: Path, fmt: str, route: str, rows: list[tuple[Any, ...]]
+) -> None:
+    (tmp_path / "t").mkdir()
+    spark.conf.set(KEY, "dynamic")
+    _assert_refused_intact(_writer(spark, fmt, rows), fmt, route, tmp_path)
+    assert list((tmp_path / "t").iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    ("fmt", "spelling"),
+    [
+        (fmt, spelling)
+        for fmt in FORMATS
+        for spelling in SPELLINGS
+        if not (fmt == "text" and spelling == "shorthand-keywords")
+    ],
+)
+def test_other_spellings_of_a_dynamic_partitioned_overwrite_refuse(
+    spark: ReparkSession, tmp_path: Path, fmt: str, spelling: str
+) -> None:
+    _seed(spark, fmt, tmp_path / "t")
+    spark.conf.set(KEY, "dynamic")
+    frame = _frame(spark, fmt, KEYS, ONE)
+    raised = _refusal(partial(_spelled_write, frame, fmt, spelling, tmp_path / "t"), tmp_path)
+    assert isinstance(raised, UnsupportedOperationException), repr(raised)
+    assert CARD in str(raised)
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_dynamic_set_at_session_build_refuses_and_unset_restores_static(
+    tmp_path: Path, fmt: str
+) -> None:
+    session = (
+        ReparkSession.builder.appName("pdog-builder-conf").config(KEY, "dynamic").getOrCreate()
+    )
+    try:
+        _seed(session, fmt, tmp_path / "t")
+        _assert_refused_intact(_writer(session, fmt, ONE), fmt, "shorthand", tmp_path)
+        session.conf.unset(KEY)
+        _write(_writer(session, fmt, ONE), fmt, "shorthand", tmp_path / "t")
+        assert _rows(fmt, tmp_path / "t") == [("a=1/b=x", "40")]
+    finally:
+        session.stop()
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_unset_after_a_dynamic_conf_set_restores_the_static_replace(
+    spark: ReparkSession, tmp_path: Path, fmt: str
+) -> None:
+    _seed(spark, fmt, tmp_path / "t")
+    spark.conf.set(KEY, "dynamic")
+    spark.conf.unset(KEY)
+    _write(_writer(spark, fmt, ONE), fmt, "shorthand", tmp_path / "t")
+    assert _rows(fmt, tmp_path / "t") == [("a=1/b=x", "40")]
+
+
+@pytest.mark.parametrize("fmt", FORMATS)
+def test_a_new_session_writes_under_its_own_mode(
+    spark: ReparkSession, tmp_path: Path, fmt: str
+) -> None:
+    child = spark.newSession()
+    _seed(child, fmt, tmp_path / "t")
+    child.conf.set(KEY, "dynamic")
+    _assert_refused_intact(_writer(child, fmt, ONE), fmt, "shorthand", tmp_path)
+    spark.conf.set(KEY, "dynamic")
+    child.conf.set(KEY, "static")
+    _write(_writer(child, fmt, ONE), fmt, "shorthand", tmp_path / "t")
     assert _rows(fmt, tmp_path / "t") == [("a=1/b=x", "40")]

@@ -42,8 +42,8 @@ hand-back, outside the repository.
 
 ## Fix
 
-**The seat:** `repark_core::refuse_dynamic_plain_overwrite` in
-`crates/repark-core/src/partition_overwrite_mode.rs`. It takes the write (path, whether the save
+**The seat:** `repark_core::partition_overwrite_mode::refuse_dynamic_plain_overwrite` in
+`crates/repark-core/src/partition_overwrite_mode.rs` (a `pub mod`; not re-exported at the crate root). It takes the write (path, whether the save
 mode is overwrite, whether it is partitioned), one snapshot of the session's
 `partitionOverwriteMode`, and the writer's options in request order. On a partitioned overwrite the
 last case-insensitive `partitionOverwriteMode` option wins, else the session snapshot. DYNAMIC
@@ -66,8 +66,21 @@ partitioned overwrite with `IllegalArgumentException`, since Spark fails that wr
 - `ReparkSession::write_path` (the S3 engine protocol), before the destination parse and the bucket
   registration.
 
-**Deliberate cost:** a DYNAMIC partitioned overwrite of an absent target now refuses too, where
-`550789fd` wrote Spark's rows; the decision is taken before any path lookup.
+**Deliberate cost:** every effective DYNAMIC partitioned plain-path overwrite refuses, including the
+forms 1.5.6 already answered as Spark does, because the decision is taken before any path lookup and
+cannot tell them apart from the destructive ones. Measured on Spark 4.1.2, `550789fd` and `678e4acc`
+(Delta 1, 32 cells over the four formats and both spellings): on `550789fd` these give Spark's rows,
+and on the head they refuse with the tree intact:
+
+- an absent target (one row or an empty input);
+- an existing empty directory (one row or an empty input);
+- an input that covers every existing partition, with or without a new partition.
+
+Where main already refused, the exception class changes, the files intact in each case: a DYNAMIC writer option on Parquet, JSON or CSV moves from `AnalysisException`
+("option … is not supported yet") to `UnsupportedOperationException`; an unparsable option on a
+partitioned Parquet, JSON or CSV overwrite moves from that `AnalysisException` to
+`IllegalArgumentException`; S3 text under DYNAMIC moves from the local-only `AnalysisException` to
+`UnsupportedOperationException`.
 
 ## Not changed
 
@@ -87,3 +100,6 @@ This unit proves fail-before-mutation only. The item's two rehearsals (`publicat
   answers; text honors it.
 - **Text with an unparsable option** on append or on an unpartitioned overwrite still proceeds, where
   Spark fails.
+- **Pre-existing, outside this unit (no fix here; measured by PR #1402's verifier):** `mode("Overwrite")`
+  and `mode("OVERWRITE")` refuse with `[INVALID_SAVE_MODE]` where Spark accepts any case; SQL
+  `CREATE TABLE … USING parquet … LOCATION p` silently creates an Iceberg table. Neither loses rows.
