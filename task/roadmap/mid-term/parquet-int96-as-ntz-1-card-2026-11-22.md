@@ -2,8 +2,8 @@
 
 **Date:** 2026-11-22. **Filed by:** the orchestrator (`claude-opus-5-5`), not dispatched. **Source:** an independent
 workload measurement against Spark 4.1.2 found a calendar date that moved in a New York session; re-measured here on
-main `c5370be6` (the released 1.5.6 wheel's source). **Severity:** S1 by the audit's rule (a silent wrong value);
-the owner's rating is pending.
+main `c5370be6` (the released 1.5.6 wheel's source). **Severity:** S1 (owner, 2026-11-22): silent, it changes
+which rows a date filter returns, and INT96 is Spark's default timestamp encoding.
 
 ## The defect
 
@@ -22,6 +22,8 @@ rendered value, and every date or field derived from it, differs, with no error.
 | America/New_York | `to_date(ts)` | `2025-01-14` | `2025-01-15` |
 | America/New_York | `CAST(ts AS STRING)` for `2025-07-01 12:00:00` UTC | `2025-07-01 08:00:00` | `2025-07-01 12:00:00` |
 | both | `unix_timestamp(ts)` | `1736902800` | equal |
+| America/New_York | `hour(ts)` (second measurement) | `20` | `1` |
+| America/New_York | rows where `CAST(ts AS DATE) = DATE'2025-01-14'` (second measurement) | 1 | 0 |
 
 The file's footer holds `required int96 ts`. The independent measurement also found that a file written by Spark
 with `TIMESTAMP_MICROS`, or by Polars or pyarrow as INT64 microseconds adjusted to UTC, reads the same on both
@@ -34,11 +36,13 @@ that reads such a file and writes the result stores the shifted dates and the ch
 
 ## Related
 
+- **Home: the Spark plan's item P01-05** (honor per-file INT96 timestamp conversion). The fix belongs there, not in
+  a new design: P01-05's design (not built) decodes INT96 leaves per file before filters and aggregation; reading
+  Spark's own INT96 as an instant is the base case it builds on.
 - Audit family NEW-settings-5 (S2): INT96 from writers other than Spark's own ignores
-  `spark.sql.parquet.int96TimestampConversion`. That is a second rule on the same leaves; the Spark plan's item
-  P01-05 (per-file INT96 conversion) is the natural home for both.
+  `spark.sql.parquet.int96TimestampConversion`, a second rule on the same leaves, also under P01-05.
 
-## Fix direction (not designed)
+## Fix direction (P01-05)
 
 Map INT96 leaves to Spark's `timestamp` at schema inference, decoding the stored instant, and keep NTZ for INT64
 leaves whose footer says they are not adjusted to UTC. Pins: a Spark-written INT96 file read in UTC,
