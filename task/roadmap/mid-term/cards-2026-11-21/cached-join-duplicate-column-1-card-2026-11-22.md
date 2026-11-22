@@ -1,13 +1,13 @@
 # CACHED-JOIN-DUPLICATE-COLUMN-1 — caching a join whose output has two columns of the same name fails on RePark, and the frame stays unusable for count and collect; Spark caches and reads it
 
-**Rating: proposed S2 (the visibility diagnosis, 2026-11-22); the owner has not rated it.**
+**Rating: S3, rated by the owner 2026-11-22 (the visibility diagnosis proposed S2).** The refusal is loud, not a wrong answer, and the owner's workload caches no Iceberg frames.
 
 **Date:** 2026-11-22. **Filed by:** the records clerk (`claude-haiku-5-5`).
 **Source:** observation (b) of the visibility diagnosis of 2026-11-22. Measured locally with no Iceberg, not live. The raw outputs (`selfjoin-repark.out`, `selfjoin-spark.out`, `dupjoin-repark.out`) and their probes (`probe_selfjoin.py`, `probe_dupjoin.py`) are kept outside the repository. Tags: `[M]` measured, `[R]` read or reasoned. Random cache ids are written `__repark_cache_<id>`.
 
 **Status:** filed 2026-11-22; not dispatched.
 
-**Severity: S2 (proposed).** Caching an ordinary join with an overlapping non-key column is a common shape. The refusal is loud, but count and collect on the cached frame stay refused.
+**Severity: S3 (owner, 2026-11-22; proposed S2).** Caching an ordinary join with an overlapping non-key column is a common shape. The refusal is loud, but count and collect on the cached frame stay refused.
 
 ## Finding
 

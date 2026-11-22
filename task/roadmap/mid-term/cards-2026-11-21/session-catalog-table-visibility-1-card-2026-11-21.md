@@ -1,13 +1,13 @@
 # SESSION-CATALOG-TABLE-VISIBILITY-1 — a table one session created is not found by another session on the same catalog (diagnosed 2026-11-22, not live)
 
-**Rating: proposed S2, to be confirmed by a diagnosis (the replay and the live run, 2026-11-21); the owner has not rated it.**
+**Rating: S2, rated by the owner 2026-11-22 (the replay and the live run proposed it 2026-11-21).**
 
 **Date:** 2026-11-21. **Filed by:** the records clerk (`claude-haiku-5-5`).
 **Source:** two observations, one card, no audit finding id. Observation 1 is the replay's incidental note (an Opus 5.5 agent, main `dac2af61`, 2026-11-21). Observation 2 is the live acceptance run `44955277129` on main `5a3db151` (2026-11-21).
 
 **Status:** filed 2026-11-21; diagnosed 2026-11-22 (read and measured locally, not live); not dispatched.
 
-**Severity: S2 (proposed), to be confirmed by a diagnosis.** A session cannot see a table another session wrote. The diagnosis below names the root; it is not confirmed live.
+**Severity: S2 (owner, 2026-11-22).** A session cannot see a table another session wrote. The diagnosis below names the root; it is not confirmed live.
 
 ## Finding
 
