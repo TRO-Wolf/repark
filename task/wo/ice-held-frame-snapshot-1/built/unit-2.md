@@ -84,10 +84,10 @@ A lazy cache table's fill is bound to the session table map (1a's `SessionTables
   reads the cache, and `adopt` now gives it the fill's tables and reads, so its later own-plan actions keep that
   binding.
 - **What moves no epoch** keeps the fill: another table's write, a failed or refused write (1a's ENC-1 condition 2),
-  a fresh read of an unchanged table, and another writer's commit on the local catalog. **On Glue and S3 Tables**
-  (read, not measured), a fresh read that sees another writer's commit records it (1a's Q2 (b)) and moves the epoch,
-  so the next use refills where Spark keeps the old fill until a refresh; the same divergence 1a's held frames have
-  there, for the AWS acceptance leg.
+  a fresh read of an unchanged table, and another writer's commit on the local catalog. **On Glue and S3 Tables** a
+  fresh read that sees another writer's commit records it (1a's Q2 (b)) and moves the epoch, so before delta 1 the
+  next use refilled where Spark keeps the old fill until a refresh (the #1394 verifier's F1, by code trace). Delta 1
+  (§9) has the dep read the map's local epoch, which that read does not move, so the fill stays.
 - **C-009 is unchanged.** Its token check still evicts a cached frame when a fresh read sees a new snapshot; the
   lazy refill makes the eviction unnecessary for lazy caches, but its pins assert `isCached` `false` after a write
   (R-6, R-7), where Spark answers `true`. A question, below.
@@ -104,7 +104,9 @@ Three product files, no fork file, none of ENC-1's list:
 
 Reading the epoch and the current state (`SessionTables::epoch`, `current`, `session_tables::binding`) is all unit 2
 takes from 1a's map; `session_tables/mod.rs`, `encryption_guard.rs`, every `impl Catalog for` and every commit
-record are untouched. Tests: `held_iceberg/tests.rs` (3 Rust pins) and the new pin file
+record are untouched. **Delta 1 (§9) adds a fourth product file,** `crates/repark-iceberg/src/catalog/session_tables/mod.rs`:
+each entry records a local epoch, and the dep reads it in place of the epoch; it is on ENC-1's allowlist, so delta 1
+is ENC-1: yes. Tests: `held_iceberg/tests.rs` (3 Rust pins) and the new pin file
 `python/repark/tests/iceberg/held_frame/test_ice_held_frame_snapshot_1_cached.py`.
 
 ## 5. The bar
@@ -133,8 +135,18 @@ the head, each against Spark's recorded cells): the 188 required cells (F1 158, 
 the 128 forecast join cells are EQUAL on both. Of 2,812 cells, **6 move WRONG to EQUAL** (`M|ice_stale` `append`,
 `ctable`, `sql`, both modes: A1's records gave them to this card) and **0 EQUAL are lost**.
 
+**Three more cells, outside the 97** (the #1394 verifier's F2, class (c); main answers the same or worse):
+`PR|set_current_same_ts` (`set_current_snapshot` to the current snapshot) and `X|expire_ts` (`expire_snapshots` with
+no other change), where Spark re-caches and only a cached `current_timestamp()` column shows it, while the head keeps
+its fill; and `RC|cache_twice` (a second `cache()` after a write), where Spark re-pins the frame's own `collect` to the
+new rows and the head's `count` is right but its own `collect` still gives the two old rows.
+
 **The pins** on the head package: the held-frame directory 141 passed (unit 2's 68, 1a's 60 Spark cells and its 13
 ENC-1 cells); on main the 68 new cells give 50 red, 18 green. The Rust pins: `held_iceberg::tests` 10 passed (3 new).
+**With main merged** (#1391 at `d5db1adf`, #1393 at `108d665c`), on the pre-delta package: the held-frame directory
+gives 186 passed and 4 xfailed at `108d665c`, which is the verifier's 163 at `d5db1adf` (141 and #1391's 22) and
+#1393's live twin (23 passed, and 4 xfailed on `type=hadoop`, ICE-CATALOG-SESSION-HADOOP-1); `held_iceberg::tests`
+gives 12 (#1391's 2 more). Delta 1's counts are in §9.
 catalog-surface-1's C-009 pins and A1's pin files pass in the facade run (§7).
 
 **The mutation proof** (`N/ice-u2-out/mutant.diff`, built in a scratch worktree of the head, never in the lane
@@ -145,6 +157,9 @@ re-bind and refresh cell); the 20 green are the kept-fill cells and the own-plan
 pass-through answers without the check. 1a's 73 pins pass on the mutant.
 
 ## 6. Cost
+
+Unit 2's cost record is this section: the tree has no `costtables.md`, and [cost.md](cost.md) is 1a's. Delta 1 took
+no cost sample (§9).
 
 Every sample ran under the measure lock's exclusive side, through its turnstile wrapper, on cores 48-57, base (main's package) against the head against base again; medians, and "head / mean" is
 the head over the mean of the two base runs. 1a's runner (`N/ice-1a-out/cost/run_ts.sh`, `BASE` set to main's
@@ -233,8 +248,117 @@ The first run of docs-links (and the one `make py-test` pin that runs it) failed
   (a) keep C-009 as is (today's state, the pins hold); (b) skip the eviction for a frame whose cache is a lazy table,
   keep it for the eager fallback and for views, and re-pin the three `isCached` asserts to Spark's `true`. Default
   (a) in this unit, since the brief holds the C-009 pins.
-- **Glue and S3 Tables (read, not measured).** A fresh read that sees another writer's commit records it (1a's Q2 (b))
-  and moves the epoch, so a cached frame refills where Spark keeps its fill until a refresh. The AWS acceptance leg
-  should carry "cache a frame; an external commit; a fresh read; the cached frame's `count`" (Spark: the old count).
+- **Glue and S3 Tables.** A fresh read that sees another writer's commit records it (1a's Q2 (b)) and moves the
+  epoch; before delta 1 a cached frame then refilled where Spark keeps its fill until a refresh (F1). Delta 1 keeps the
+  fill (§9, by Rust pins with a second session as the other writer). The AWS acceptance leg should still carry "cache
+  a frame; an external commit; a fresh read; the cached frame's `count`" (Spark: the old count).
+
+## 9. Delta 1 (2026-11-21): a cached fill holds across another writer's commit
+
+By Claude Opus 5.5 (`claude-opus-5-5`), effort xhigh: the review cap's one delta, on the #1394 Opus verifier's FAIL of
+`d5db1adf` for F1 alone (F2 to F4 are class (c), recorded in §3, §5, §6 and [cards.md](cards.md)).
+
+**F1 (class (a), S2, by code trace on the label's catalogs).** On Glue and S3 Tables a plain fresh read
+(`spark.table(t)` or any SQL read) that sees another writer's commit moves the session table map's epoch: `load_table`
+calls `observe` with `refresh=false`, and a state other than the recorded one ticks. The dep then saw a moved epoch
+over new data, and the cached frame refilled. The cell: `d = spark.table(t).filter("n > 0").cache(); d.count()`, then
+another writer's `INSERT`, then `spark.sql("SELECT count(*) FROM t")`, then `d.count()`:
+
+| engine | last `d.count()` | why |
+|---|---|---|
+| Spark 4.1.2 | 2 | `CacheManager` keeps the fill until a same-session write or a refresh (`T|ext_process_t`, `E|process_*`) |
+| main `dac2af61` | 2 | its lazy cache has no deps; C-009 evicts only the frame `session_table` returned |
+| `108d665c` | 3 | the fresh read moved the epoch, so the use refilled |
+| delta 1 | 2 | the fresh read moves the epoch and not the local epoch, so the fill holds |
+
+No local catalog shows a second writer (`type=hadoop` is a memory catalog per session), so the delta's answer is
+pinned in Rust with a second session over the same memory catalog as the other writer.
+
+**The seat: a local epoch in the session table map** (`crates/repark-iceberg/src/catalog/session_tables/mod.rs`), the
+brief's first shape. Each entry keeps `LocalEpoch { changed, refreshed }` beside its epoch, read through
+`SessionTables::local_epoch`:
+
+- `record` (every same-session commit, create, register, drop and rename) sets `changed` to its tick;
+- a refresh load (`REFRESH TABLE`, `catalog.refreshTable`) sets both to its tick;
+- a plain load that sees a new state moves the epoch and the state, as before, and carries the local epoch unchanged;
+  a new entry starts with `changed` at its tick and `refreshed` at 0.
+
+The dep (`lazy_cache.rs`) records `changed` at the fill. At a use: unchanged, the fill holds; `refreshed` past the
+dep's tick (a refresh since the fill), it refills whatever the state; otherwise #1394's rule (kept, and the dep moves,
+when the table keeps the fill's data; else a refill).
+
+Why this seat, and not the other:
+
+- The dep cannot tell why an epoch moved: a same-session commit and another writer's commit leave the same kind of
+  new state. Only the map knows the cause, at the moment it records. The second shape (the dep records why each tick
+  happened) needs that same cause from the map and a per-tick log as well, so it is the larger change.
+- The epoch stays as it was: the race guard compares it (a load that began before a newer state never puts its older
+  table back, another writer's included), the held frames read the state it orders, and its frozen signature
+  (`table_epoch`, `SessionTables::epoch`) and tests are unchanged.
+- `refreshed` is the one extra counter. With `changed` alone, a refresh after another writer's property-only change
+  would find new metadata over the fill's data and keep the fill, where Spark re-caches at every refresh (§2
+  point 2).
+
+**What it does not change:** what a load fetches, the state it records, and what the map serves or refuses; the epoch;
+held frames; an uncached fresh read, which still sees another writer's commit (the pins assert it); C-009.
+
+**What it adds to an uncached read:** nothing on a load of an unchanged state (every repeat read takes the same early
+return); on a load that sees a new state, the entry copies the 16-byte local epoch inside the lookup and insert it
+already made. No new lookup, lock, allocation or catalog call. A commit's `record` makes one more lookup under the lock
+it holds. No cost sample was taken.
+
+**ENC-1: yes, by the brief's rule**, since the map now writes a new field into each entry. Its three conditions
+(1a's map) still hold: the decorator wraps only the guarded handle; the local epoch moves only after a successful
+inner call, and the four refusal tests now also hold the local epoch; and no table is loaded, served or refused
+differently.
+
+**The pins.** Four in `held_iceberg/tests.rs`, over a second Spark-door session registered on the same memory catalog
+(another writer whose commits the first session's map never records), and one in `session_tables/tests.rs`. Each
+held-frame pin caches the frame, fills it (`[1, 2]`), lets the other writer insert `9`, takes a fresh SQL read (it
+answers `[1, 2, 9]` and moves the epoch: `observe` with `refresh=false` over a new state), and asserts the fill is kept
+(the same rows and buffer); then its own step. A read compared by buffer keeps its batches alive, so its address
+cannot be reused by a later fill. The same test file ran on all three trees:
+
+| pin | main `5a3db151` | `108d665c` | delta 1 |
+|---|---|---|---|
+| `a_cached_frame_keeps_its_fill_when_a_fresh_read_sees_another_writers_commit` | pass | **fail**: `[1, 2, 9]`, a refill | pass |
+| `a_cached_frame_kept_over_another_writer_refills_after_a_same_session_commit` (`[1, 2, 8, 9]`, a new buffer) | **fail**: `[1, 2]`, no refill | **fail** at the kept step | pass |
+| `a_cached_frame_kept_over_another_writer_refills_after_a_refresh` (`REFRESH TABLE` refills; the other writer's property-only change then keeps the refill, and a second refresh refills again) | **fail**: `[1, 2]`, no refill | **fail** at the kept step | pass |
+| `a_fresh_read_of_an_unchanged_table_after_another_writer_moves_nothing` (the epoch and the fill stay) | pass | **fail** at the kept step | pass |
+| `session_tables::tests::a_load_of_another_writers_commit_moves_the_epoch_and_not_the_local_epoch` | not run | does not build (`local_epoch` is new) | pass |
+
+Main keeps every fill, so it passes the two keep pins and fails the two refill pins; `108d665c` refills after the
+fresh read, so all four fail at the kept step; delta 1 passes all five. The map test drives the map directly: a commit
+through the guard's own handle, then a session load, moves the epoch and the state and not the local epoch; a reload
+moves nothing; a refresh sets both local ticks; an own commit moves only `changed`. The ENC-1 refusal tests'
+`assert_unmoved` now also holds the local epoch.
+
+**The one-counter mutant** (the dep's `refreshed` check deleted, in a scratch copy of the delta, never in the lane
+clone): 15 of the 16 `held_iceberg::tests` pass, and the refresh pin fails at its second refresh (the same buffer: the
+other writer's property-only change kept new metadata over the fill's data, so the refresh kept the fill). So the
+second counter is what makes every refresh refill.
+
+**The local cells are unchanged.** On the delta's package (`BUILT_FROM` `7ebe4502`) the builder's three probes (97
+cells per mode) and the verifier's `vcells.py` (43 per mode) answer exactly as the pre-delta head did in the verifier's
+run: 0 answers differ out of 194 and 86. Against Spark: main 35, the head 77 and delta 1 77 EQUAL per mode on the 97;
+main 15, the head 36 and delta 1 36 per mode on the 43; **0 EQUAL lost**. The held-frame directory 186 passed and 4
+xfailed (as on `108d665c`); A1's and C-009's pin files 111 passed, and their siblings 43.
+
+**Gates** (head `7ebe4502`, package `pkg-d1-7ebe4502`), each exit 0 unless noted:
+
+| gate | exit | count |
+|---|---|---|
+| `cargo test --locked -p repark-iceberg` | 0 | 1,082 |
+| `cargo test --locked -p repark-core` | 101, then 0 | 1,706; the first run's one failure, `microbatch::lifecycle_tests::two_sessions_on_one_sink_wait_for_the_scope`, was its time bound under the facade run's load, and the rerun passed |
+| `cargo test --locked -p repark-spark` | 0 | 3,271 |
+| `make rust-clippy`, `make rust-panic-ban`, `cargo fmt --check` | 0 | |
+| the facade `python/repark/tests/` at `-n 6` on the package | 1 | 41,487 passed, 5 failed: 4 start a child Python without `PYTHONPATH` by design (`test_session_package_imports_without_a_cycle` pops it, the 3 `test_cross_release_local` cells run `-I`), and `test_pg_acceptance` reads a repository-relative path (3 passed from the repository root); the same 5 fail the same way on the pre-delta package |
+| docs-links, python-conventions, map-sync, map-size, `typos`, `ruff check`, `ruff format --check` | 0 | |
+| the comment gate against `5a3db151` | 0 | 0 hits |
+
+**Left as it was (named, not measurable locally):** another writer's commit, a fresh read, then a same-session
+property-only `ALTER`: the dep compares the fill's data with the commit's, which carries the other writer's snapshot,
+so it refills where Spark keeps the fill. The same holds for a refill raced by another writer's commit observed during
+the fill (the dep starts stale).
 
 Up: [map.md](map.md).

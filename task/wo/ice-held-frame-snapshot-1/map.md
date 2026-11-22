@@ -22,6 +22,6 @@ only.
   provenance.
 - [built/](built/map.md) — **1a, built (2026-11-20):** the re-bind and the command scope; its bar, cost and
   evidence. **Unit 2, built (2026-11-21):** the cached cells, a lazy cache that refills after a same-session
-  commit.
+  commit and, from delta 1, keeps its fill across another writer's commit.
 
 Up: [../map.md](../map.md).

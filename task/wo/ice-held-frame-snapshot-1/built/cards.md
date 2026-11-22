@@ -34,6 +34,17 @@ Delta 2 (2026-11-20), from the Opus delta re-check's C5 and C6 and delta 2's sib
   already raised. The delta-1 re-check's C2 and the delta-2 sibling table (2 cells per mode) measured it, unchanged
   from main. Carded at the #1391 verifier's C-5.
 
+Unit 2 delta 1 (2026-11-21), from the #1394 verifier's F3 (class (c), pre-existing):
+
+- **JOIN-SCRATCH-NAME-SCHEMA-ERROR-1 (S3, loud, predates this PR).** A held join frame (`join_l`, `join_r`) read
+  after a column it uses is dropped or renamed (1a's bar: `B|join_l|alter_drop` and `alter_rename`, 14 each, and
+  `HW|join_l|*`, `HW|join_r|*`, 8; 36 answers across both ANSI modes) raises DataFusion's `Schema error: No field named
+  c. Valid fields are _repark_jr_<hex>.n.`, naming the generated `_repark_jl_` or `_repark_jr_` scratch view, where
+  Spark 4.1.2 raises `UNRESOLVED_USING_COLUMN_FOR_JOIN`. Main `dac2af61` prints the same text; the bar counts it EQUAL
+  by its raise-versus-raise rule. A sibling of
+  [QUALIFIER-LEAK-H-1](../../../roadmap/mid-term/qualifier-leak-h-1-card-2026-10-03.md), which covers
+  `AMBIGUOUS_REFERENCE` only.
+
 Two of round 0's open cells already have cards, so they are not carded again here:
 [STRING-CAST-LENIENT-1](../../../roadmap/mid-term/string-cast-lenient-1-card-2026-11-16.md) (`M|held_cast`) and
 [LOCAL-CHECKPOINT-NEW-FRAME-1](../../../roadmap/mid-term/local-checkpoint-new-frame-1-card-2026-10-03.md)
