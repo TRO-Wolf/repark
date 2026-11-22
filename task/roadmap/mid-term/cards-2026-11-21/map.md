@@ -1,0 +1,22 @@
+# map — task/roadmap/mid-term/cards-2026-11-21/
+
+Fourteen cards filed 2026-11-21 from the replay of the outside gap-map audit's new findings. An Opus 5.5 medium agent read and ran each finding on main `dac2af61`, against Spark 4.1.2 with the Iceberg 1.11.0 jar, Java 17, session zone UTC and ANSI on. Each card's rating is the replay's proposal; the owner has not rated any of them, and none is dispatched. The label path of every card is the owner's to decide. The replay's verdict is kept outside the repository.
+
+## Cards
+
+- [CASE-DISTINCT-ASSIGN-TWIN-WRITE-1](case-distinct-assign-twin-write-1-card-2026-11-21.md) (S1 proposed, not dispatched) — **card:** an assignment to one of two case-distinct columns (`score`, `Score`) also writes the other, in MERGE and in plain UPDATE, in both name directions (NEW-write-1, wider scope).
+- [CASE-SENSITIVE-STATIC-PARTITION-1](case-sensitive-static-partition-1-card-2026-11-21.md) (S1 proposed, not dispatched) — **card:** a static `PARTITION (P=1)` clause replaces the partition where Spark refuses it (NEW-write-2).
+- [SCHEMA-EVOLUTION-PROPERTY-IGNORED-1](schema-evolution-property-ignored-1-card-2026-11-21.md) (S2 proposed, not dispatched) — **card:** RePark ignores the table's schema-evolution-disabled property in the `UPDATE SET * / INSERT *` form (NEW-spark-2, re-worded).
+- [OUTPUT-SORT-ORDER-ID-VALIDATE-1](output-sort-order-id-validate-1-card-2026-11-21.md) (S3 proposed, not dispatched) — **card:** RePark commits a write with an unknown `output-sort-order-id` where Spark refuses it (NEW-spark-1).
+- [PRE-EPOCH-DAY-PARTITION-1](pre-epoch-day-partition-1-card-2026-11-21.md) (S1 proposed, not dispatched) — **card:** a pre-epoch `day` partition value differs from Spark's, and RePark's reader misses a range over its own file (NEW-fork-2).
+- [NS-BUCKET-PRE-EPOCH-1](ns-bucket-pre-epoch-1-card-2026-11-21.md) (S2 proposed, not dispatched) — **card:** the `timestamp_ns` bucket transform gives a wrong bucket below the epoch (NEW-fork-5).
+- [INITIAL-DEFAULT-FILTER-1](initial-default-filter-1-card-2026-11-21.md) (S3 against parity, S2 if the spec is the bar; proposed, not dispatched) — **card:** a filter on a column added with an initial default finds no row, on both engines; a spec gap, not a parity gap (NEW-fork-1).
+- [STRUCT-NESTED-INITIAL-DEFAULT-1](struct-nested-initial-default-1-card-2026-11-21.md) (S3 proposed, not dispatched) — **card:** a struct with a nested initial default reads NULL where the spec gives the struct; no Spark oracle (NEW-V3-1).
+- [REF-RETENTION-DROPPED-ON-APPEND-1](ref-retention-dropped-on-append-1-card-2026-11-21.md) (S2 proposed, not dispatched) — **card:** an append drops the main ref's retention values from the newest metadata file (NEW-fork-3).
+- [FLOAT-IDENTITY-PARTITION-CAST-1](float-identity-partition-cast-1-card-2026-11-21.md) (S3 proposed, not dispatched) — **card:** an identity partition on a double refuses 100.1, where Spark commits it (NEW-fork-7).
+- [BRANCH-CLOCK-SKEW-METADATA-1](branch-clock-skew-metadata-1-card-2026-11-21.md) (S2 proposed, read, not dispatched) — **card:** under clock skew, a metadata-only commit after a branch update can publish metadata that the next reader rejects; multi-writer (NEW-fork-6).
+- [GLUE-SHOW-TABLES-NON-ICEBERG-1](glue-show-tables-non-iceberg-1-card-2026-11-21.md) (S3 proposed, read, not dispatched) — **card:** SHOW TABLES lists non-Iceberg Glue tables in a mixed namespace (NEW-fork-4).
+- [ALL-VOID-SPEC-EQ-DELETE-SCOPE-1](all-void-spec-eq-delete-scope-1-card-2026-11-21.md) (S2 proposed, read, not dispatched) — **card:** an equality delete under an all-void spec never reaches a data file written under another spec (NEW-read-1).
+- [SESSION-CATALOG-TABLE-VISIBILITY-1](session-catalog-table-visibility-1-card-2026-11-21.md) (S2 proposed, to be confirmed by a diagnosis; not dispatched) — **card:** a table one session created is not found by another session on the same catalog; the root is not diagnosed (the replay's note and live run 44955277129).
+
+Up: [../map.md](../map.md).
