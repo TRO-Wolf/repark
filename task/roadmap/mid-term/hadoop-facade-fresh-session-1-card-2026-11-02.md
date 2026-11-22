@@ -21,4 +21,6 @@
 found` for tables another RePark process wrote there, while Spark finds them. Verifier 2 (C2) saw the same. Both
 verifiers, like the builder, reached the tables with `register_table`. Unchanged: still not ruled, not dispatched.
 
+**Append (2026-11-22):** the visibility diagnosis of 2026-11-22 (its observation (a), the hadoop half). On `type=hadoop`, a same-session `SET TBLPROPERTIES` after another process's commit raises `CatalogCommitConflicts`. The memory catalog's pointer still names version vN after the other process has written vN+1, so the commit's Hadoop-style file name collides, and the no-overwrite storage refuses it with `CatalogCommitConflicts` ("version file already exists"). The retry reloads from the same stale pointer and wedges. The existing pin is `stale_hadoop_pointer_stays_wedged_loud` (`crates/repark-iceberg/src/write/hadoop_stale_commit.rs:214`). The verdict folds this into this card (its P3) and names its root as ICE-CATALOG-SESSION-HADOOP-1. This is the verdict's code reading, with the existing pin as its evidence; not run. For Glue and S3 Tables the verdict reads the commit as Spark's: `load_table` starts from the live pointer, and a race is a version CAS with a retry (`[R]`, not run). It proposes no severity for them. Unchanged: still not ruled, not dispatched.
+
 Up: [map.md](map.md).

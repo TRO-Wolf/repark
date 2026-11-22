@@ -5,9 +5,11 @@
 flat-matrix runs `43203902018` and `43368025158`, and the parity entry S3T-CTAS-KILL-1 in
 [spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md).
 
-**Status:** filed 2026-11-13, not dispatched, unrated: a harness grading question, not a RePark wrong answer.
+**Status:** filed 2026-11-13, unrated: a harness grading question, not a RePark wrong answer.
 **Ruled 2026-11-13** (below): a declared Spark-side limitation on S3 Tables only, under two conditions. The harness
-change is queued, not built.
+change is built by the test-only unit G6-HARNESS-REPAIR-1 (2026-11-21,
+[record](../../wo/ice-v2-flat-aws-label-1/built/g6-harness.md)), not yet run live; whether condition 1 also
+needs a numeric HTTP 400 is open with the owner.
 
 ## Measured
 

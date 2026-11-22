@@ -51,6 +51,16 @@ stay pinned. The parent [../map.md](../map.md) is at its size ceiling, so the pi
   after a dropped column `count` and `explain()` raise `COLUMNS_MISMATCH`; after a drop `TABLE_OR_VIEW_NOT_FOUND`;
   after an insert `count` answers 3 and `explain` prints a plan. 20 are red on main and 14 on the delta 1 head.
   pins: ice-held-frame-snapshot-1/1a-delta-2.
+- `test_ice_held_frame_snapshot_1_live_twin.py` — the live Glue and S3 Tables cells' local twin (2026-11-21): the
+  helper `../../parity/_acceptance_held_frame.py` on a `type=hadoop` catalog in both ANSI modes. The `insert`, `delete`
+  and `copy` rows answer Spark's held and fresh answers; the cost rows print parseable lines.
+  LIVE-SECOND-WRITER-1 (2026-11-22): the seven cached shapes run on the facade with a writer the reader cannot see
+  (`type=hadoop` is in-process, so no other process's commit can reach it), every read answers 2, and the validity
+  read fails the cell on both legs. The grading is pinned on Fable's measured Spark answers in three cache windows
+  (both legs pass), on main's two predictions (the RePark leg passes; `PENDING_1394` is exactly where a prediction
+  breaks the rule), and on refused writes, commits and steps. pins: ice-held-frame-snapshot-1/live-aws.
+- `_held_frame_writer_double.py` — a stand-in for the other writer's process that speaks its line protocol with no
+  JVM, so the twin pins the writer client's replies, its refusal and exit paths, and the log scrub.
 - `_ice_held_frame_snapshot_1_cells.py` — the cells, engine-agnostic, shared by the test and the recorder.
 - `_ice_held_frame_snapshot_1_enc_1_cells.py` — the ENC-1 cells (fix round 1), RePark only.
 - `_record_ice_held_frame_snapshot_1.py` — re-records the oracle on live PySpark 4.1.2 with Iceberg 1.11.0:

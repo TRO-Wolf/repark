@@ -19,6 +19,10 @@ rule of 2026-11-19 (C-012 a hard 1.05x; a short row over 1.05x a flag; nothing o
   local-only list and how to read the cost lines.
 - [cards.md](cards.md) — the residual cards of fix round 1 and delta 2, and unit 2 delta 1's F3, for the
   orchestrator to file.
+  local-only list and how to read the cost lines. LIVE-SECOND-WRITER-1 (2026-11-22): a second Spark process as the
+  other writer, the seven cached shapes on a RePark and a Spark reader leg, the grading, main's predicted answers
+  written before any live run, `PENDING_1394` and what stays open.
+- [cards.md](cards.md) — the residual cards of fix round 1 and delta 2 for the orchestrator to file.
 - [evidence/](evidence/map.md) — the probes and the raw cells of this build.
 
 ## What 1a builds (seat A, Q9 (a), the command scope moved in)
