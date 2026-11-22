@@ -89,6 +89,19 @@ _NAN_CONTROLS = {
     "SELECT id FROM cast_stats_nan WHERE d > 100": [],
     "SELECT id FROM cast_stats_nan WHERE CAST(f AS DOUBLE) > 7": [[2], [3]],
 }
+_NARROWING_FLOAT = {
+    ("nan", "CAST(d AS FLOAT) > 100"): [[2]],
+    ("nan", "CAST(CAST(d AS FLOAT) AS DOUBLE) > 100"): [[2]],
+    ("nan", "CAST(d AS FLOAT) >= 11"): [[2]],
+    ("nan", "CAST(d AS FLOAT) = CAST('NaN' AS FLOAT)"): [[2]],
+    ("nan_dictionary", "CAST(d AS FLOAT) > 100"): [[2]],
+    ("nan_null", "CAST(d AS FLOAT) > 100"): [[1]],
+}
+_FLOAT_PUSHDOWN_CONTROLS = {
+    ("nan", "CAST(f AS DOUBLE) > 100"): [],
+    ("nan_dictionary", "d > 100"): [],
+    ("nan_null", "d > 100"): [],
+}
 _NAN_TO_ZERO = (
     "Spark's ANSI-off cast of NaN to an integer type answers 0; RePark refuses the NaN row "
     "(a separate cast gap), and only the silent footer drop is fixed here"
@@ -110,6 +123,20 @@ def _write(folder: Path, tables: list[pa.Table], row_group_size: int | None) -> 
     return folder
 
 
+def _write_dictionary(folder: Path) -> Path:
+    folder.mkdir(parents=True)
+    values = [5.0, float("nan"), 10.0, 5.0]
+    table = pa.table(
+        {
+            "id": pa.array([1, 2, 3, 4], pa.int32()),
+            "d": pa.array(values, pa.float64()),
+            "f": pa.array(values, pa.float32()),
+        }
+    )
+    pq.write_table(table, folder / "part-0.parquet", row_group_size=100, use_dictionary=True)
+    return folder
+
+
 @pytest.fixture(scope="module")
 def sources(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
     root = tmp_path_factory.mktemp("cast_stats")
@@ -127,6 +154,14 @@ def sources(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
         "f": pa.array(_NAN_VALUES, pa.float32()),
     }
     folders["nan"] = _write(root / "nan", [pa.table(nan)], 100)
+    folders["nan_dictionary"] = _write_dictionary(root / "nan_dictionary")
+    nan_null = [float("nan"), None, 3.0]
+    nulls = {
+        "id": pa.array([1, 2, 3], pa.int32()),
+        "d": pa.array(nan_null, pa.float64()),
+        "f": pa.array(nan_null, pa.float32()),
+    }
+    folders["nan_null"] = _write(root / "nan_null", [pa.table(nulls)], 100)
     return folders
 
 
@@ -324,3 +359,25 @@ def test_uncast_and_float_to_double_filters_over_the_nan_file_equal_spark(
     spark.conf.set("spark.sql.ansi.enabled", ansi)
     table = _spark_sql(spark, sources["nan"], "cast_stats_nan", text)
     assert _rows(table) == _NAN_CONTROLS[text]
+
+
+@pytest.mark.parametrize("ansi", _ANSI)
+@pytest.mark.parametrize(("source", "predicate"), sorted(_NARROWING_FLOAT))
+def test_a_double_cast_to_float_reads_the_nan_row_its_footer_leaves_out(
+    spark: ReparkSession, sources: dict[str, Path], source: str, predicate: str, ansi: str
+) -> None:
+    spark.conf.set("spark.sql.ansi.enabled", ansi)
+    text = f"SELECT id FROM cast_stats_float WHERE {predicate}"
+    table = _spark_sql(spark, sources[source], "cast_stats_float", text)
+    assert _rows(table) == _NARROWING_FLOAT[(source, predicate)]
+
+
+@pytest.mark.parametrize("ansi", _ANSI)
+@pytest.mark.parametrize(("source", "predicate"), sorted(_FLOAT_PUSHDOWN_CONTROLS))
+def test_uncast_and_widening_float_filters_follow_spark_pushdown(
+    spark: ReparkSession, sources: dict[str, Path], source: str, predicate: str, ansi: str
+) -> None:
+    spark.conf.set("spark.sql.ansi.enabled", ansi)
+    text = f"SELECT id FROM cast_stats_float WHERE {predicate}"
+    table = _spark_sql(spark, sources[source], "cast_stats_float", text)
+    assert _rows(table) == _FLOAT_PUSHDOWN_CONTROLS[(source, predicate)]

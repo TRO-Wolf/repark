@@ -5472,7 +5472,7 @@ still open is `isModifiable`.
   Q3, Q4, Q10 ruled "defaults"); the second delta and the card's items (i) and (ii) ruled 2026-11-14 ("Go with
   defaults"); card [NAN-MINMAX-1](../task/roadmap/mid-term/nan-minmax-1-card-2026-11-13.md).
 
-### CAST-STATS-SILENT-1 — a cast that reorders values no longer answers `max`/`min` from the Parquet footer, and footer pruning no longer drops a NaN row through a float-to-integer cast — **FIXED 2026-11-22 (branch `fix/cast-stats-interval-1`, not merged)**
+### CAST-STATS-SILENT-1 — a cast that reorders values no longer answers `max`/`min` from the Parquet footer, and footer pruning no longer reads a NaN-less footer through a FLOAT or DOUBLE cast to an integer, DECIMAL or narrower float type — **FIXED 2026-11-22 (branch `fix/cast-stats-interval-1`, not merged)**
 
 - **repark** — Before (main `c5370be6`, and 1.5.6), S1, silent, both ANSI modes, plain Parquet. DataFusion 54.1.0
   carried a column's footer min and max through every `CAST`:
@@ -5483,14 +5483,23 @@ still open is `isModifiable`.
   - (b) row-group pruning through a FLOAT or DOUBLE cast to an integer type: the footer leaves NaN out and the cast
     maps NaN inside the range, so one row group of DOUBLE `5.0, NaN, 10.0` answered no row for `CAST(d AS INT) = 0`
     (also BIGINT, SMALLINT, `IN`, `count(*)` 0, a FLOAT column, the DataFrame route), where Spark answers row 2
-    under ANSI off and refuses with `[CAST_OVERFLOW]` under ANSI on.
+    under ANSI off and refuses with `[CAST_OVERFLOW]` under ANSI on. The same drop through DOUBLE to FLOAT (delta 2,
+    found by the PR's re-check): `CAST(d AS FLOAT) > 100`, `>= 11`, `= CAST('NaN' AS FLOAT)` and
+    `CAST(CAST(d AS FLOAT) AS DOUBLE) > 100` answered no row where Spark answers row 2 in both modes (Spark does not
+    push a narrowing cast down); also over a dictionary-encoded column and a NULL-plus-NaN row group (footer
+    `[3.0, 3.0]`, Spark row 1).
 
   After: the statistics barrier of CAST-STATS-INTERVAL-1 (`df_guards/cast_shield/stats_barrier.rs`) puts every
-  cast outside the order-keeping family behind an identity UDF, with a FLOAT or DOUBLE source kept only to a float
-  target, so neither the shortcut nor pruning reads the footer through it. (a) answers Spark's values; (b) reads the
-  NaN row and refuses loudly in both modes (`PySparkException`, Arrow's "Can't cast value NaN to type Int32"):
-  under ANSI on as Spark refuses, with a different class; under ANSI off where Spark answers 0 (a separate cast
-  gap, strict xfail). Uncast float pruning and order-keeping casts (INT to BIGINT still folds) are unchanged.
+  cast outside the order-keeping family behind an identity UDF. A FLOAT or DOUBLE source keeps its statistics only
+  to the same or a wider float type (FLOAT to DOUBLE); FLOAT or DOUBLE to an integer, DECIMAL or narrower float type
+  (DOUBLE to FLOAT) is barred, so neither the shortcut nor pruning reads the footer through those casts. (a) answers
+  Spark's values. (b) through an integer target reads the NaN row and refuses loudly in both modes
+  (`PySparkException`, Arrow's "Can't cast value NaN to type Int32"): under ANSI on as Spark refuses, with a
+  different class; under ANSI off where Spark answers 0 (a separate cast gap, strict xfail). (b) through DOUBLE to
+  FLOAT answers Spark's rows. Not changed, and not claimed: uncast float filters (`d > 100`) and FLOAT to DOUBLE
+  (`CAST(f AS DOUBLE) > 100`) still prune by the footer and skip a NaN row; they equal Spark only because Spark
+  pushes those filters down and its reader skips the NaN row too (with `spark.sql.parquet.filterPushdown=false`
+  Spark answers it). Order-keeping casts (INT to BIGINT still folds) are unchanged.
 - **spark** — Spark 4.1.2 reads the rows. *(oracle: measured live 2026-11-22, both ANSI modes.)*
 - **Workaround on 1.5.6** (measured on `c5370be6`) — for (a), `try_cast` in place of `CAST`, or
   `datafusion.execution.collect_statistics` set to false; for (b) none measured (`collect_statistics` and
@@ -5498,11 +5507,13 @@ still open is `isModifiable`.
 - **Pin** — `python/repark/tests/io/test_cast_stats_interval_1.py`
   (`test_max_and_min_of_a_string_id_cast_to_int_read_the_rows`,
   `test_max_and_min_of_casts_that_reorder_values_read_the_rows`, the `max`/`min` SQL and native-door cells,
-  `test_a_float_cast_to_an_integer_reads_the_nan_row_its_footer_leaves_out`, the strict xfail
+  `test_a_float_cast_to_an_integer_reads_the_nan_row_its_footer_leaves_out`,
+  `test_a_double_cast_to_float_reads_the_nan_row_its_footer_leaves_out`, the controls
+  `test_uncast_and_widening_float_filters_follow_spark_pushdown`, the strict xfail
   `test_an_ansi_off_float_cast_to_an_integer_answers_spark_rows`);
   `crates/repark-core/src/session/df_guards/cast_shield/stats_barrier_tests.rs`.
 - **Rationale** — S1 (owner, 2026-11-22: "Go with your recommendations", its own id); (a) found while answering
-  which paths read the cast statistics, (b) by the PR's verifier. The loud S2s of the same seat are
+  which paths read the cast statistics, (b) by the PR's verifier and its DOUBLE to FLOAT case by the re-check. The loud S2s of the same seat are
   CAST-STATS-INTERVAL-1; card [CAST-STATS-INTERVAL-1](../task/roadmap/mid-term/cast-stats-interval-1-card-2026-11-22.md)
   (section CAST-STATS-SILENT-1).
 
@@ -5520,7 +5531,8 @@ still open is `isModifiable`.
   identity UDF (`df_guards/cast_shield/stats_barrier.rs`), and the plain Parquet format drops a 64-bit bound at its
   type's extreme (`spark_nullable/extreme_bounds.rs`; a `max`/`min` at that extreme now scans, same answer).
   Order-keeping casts (INT to BIGINT, DECIMAL to INT, FLOAT to DOUBLE, DATE to TIMESTAMP_NTZ, text to text) keep
-  their statistics and their footer-answered `max`/`min`; a FLOAT or DOUBLE to an integer or DECIMAL is barred.
+  their statistics and their footer-answered `max`/`min`; a FLOAT or DOUBLE to an integer, DECIMAL or narrower
+  float type is barred.
   Both ANSI modes; every door.
 - **spark** — Spark 4.1.2 answers every cell from the rows. *(oracle: measured live 2026-11-22, both ANSI modes.)*
 - **Pruning** — for casts from and to text, row-group, page and file pruning, a join's dynamic filter and a TopK

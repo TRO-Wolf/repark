@@ -33,7 +33,10 @@ entry and the section below. One barrier closes all four.
    FLOAT or DOUBLE to integer cast and prunes by the cast footer bounds. The footer leaves NaN out, and the cast
    maps NaN inside the range (Spark: 0 under ANSI off, `CAST_OVERFLOW` under ANSI on). One row group of DOUBLE
    `5.0, NaN, 10.0` (footer `[5.0, 10.0]`): `CAST(d AS INT) = 0` answered no row where Spark answers row 2 (ANSI
-   off) or refuses (ANSI on). No error, rows dropped.
+   off) or refuses (ANSI on). No error, rows dropped. The same through DOUBLE to FLOAT (delta 2, found by the PR's
+   re-check): `CAST(d AS FLOAT) > 100`, `>= 11`, `= CAST('NaN' AS FLOAT)` and `CAST(CAST(d AS FLOAT) AS DOUBLE) >
+   100` answered no row where Spark answers row 2 in both modes, because Spark does not push a narrowing cast down;
+   also over a dictionary-encoded column and a NULL-plus-NaN row group (footer `[3.0, 3.0]`, Spark row 1).
 
 ## Measured (Spark 4.1.2; release packages of `c5370be6` and of the branch head)
 
@@ -53,7 +56,12 @@ assertion above.
 | the same over two files `[MIN, -1]` and `[0, 5, MAX]` of row groups of two | rows 3, 4; 3; 3, 4 | error (`inf`) | equal |
 | `= 10`, `> 8`, `IN (10, 55)`, `BETWEEN 9 AND 60` over `05, 10, 6, 055` (range `[5, 6]`, wrong but ordered) | Spark's rows | equal | equal |
 | one row group DOUBLE `5.0, NaN, 10.0`: `CAST(d AS INT) = 0`, `CAST(d AS BIGINT) <= 0`, `CAST(d AS SMALLINT) < 3`, `CAST(d AS INT) IN (0, 100)`, `count(*)`, a FLOAT column, `filter(col("d").cast("int") == 0)` | ANSI off: row 2 (`count` 1); ANSI on: `ArithmeticException` `[CAST_OVERFLOW]` | **no row (`count` 0), both modes** | refuses, both modes: `PySparkException` "Arrow error: Cast error: Can't cast value NaN to type Int32" (Int64, Int16 alike) |
-| the same file: `d > 100`; `CAST(f AS DOUBLE) > 7` | none; rows 2, 3 | equal | equal |
+| the same file: `CAST(d AS FLOAT) > 100`, `>= 11`, `= CAST('NaN' AS FLOAT)`, `CAST(CAST(d AS FLOAT) AS DOUBLE) > 100`; dictionary-encoded; NULL-plus-NaN group | row 2 (row 1 for the NULL-plus-NaN group), both modes | **no row** | equal (delta 2) |
+| the same file: `d > 100`; `CAST(f AS DOUBLE) > 100`; `CAST(f AS DOUBLE) > 7` | none; none; rows 2, 3 | equal | equal |
+
+The first two of those last controls skip the NaN row on every engine: RePark prunes them by the footer, and Spark
+pushes them down and its reader skips the NaN row too (with `spark.sql.parquet.filterPushdown=false` Spark answers
+it). They are equal because both prune, not because the NaN is read; this unit leaves them as they are.
 
 Under ANSI on the head refuses as Spark does, with a different class: RePark raises `PySparkException` with Arrow's
 cast message and no `CAST_OVERFLOW` error class or SQLSTATE. Under ANSI off it refuses where Spark answers 0 for the
@@ -68,18 +76,23 @@ The pins hold the measured Spark answers: `python/repark/tests/io/test_cast_stat
   answered `7, 10` (Spark `25, 3`); over `05, 10, 6, 055` `6, 5` (`55, 5`); over two files of two row groups
   `9, 11` (`100, 2`); BIGINT `9, 10, 11` to STRING `'11', '9'` (`'9', '10'`); BIGINT `-1, 0, 1` to BOOLEAN
   `true, true` (`true, false`).
-- **(b) pruning through a float-to-integer cast** (defect 4). Witness: one row group of DOUBLE `5.0, NaN, 10.0`,
+- **(b) pruning through a float cast to an integer, DECIMAL or narrower float type** (defect 4). Witness: one row group of DOUBLE `5.0, NaN, 10.0`,
   `CAST(d AS INT) = 0`, also BIGINT, SMALLINT, `IN`, `count(*)`, a FLOAT column and the DataFrame route: no row on
-  main; Spark answers row 2 (ANSI off) or `[CAST_OVERFLOW]` (ANSI on).
-- **Fix in this PR:** the barrier below; (b) needs delta 1's float arm (a FLOAT or DOUBLE source keeps order only
-  to a float target). (a) now equals Spark; (b) refuses loudly in both modes (the ANSI-off NaN-to-0 cast gap stays
-  its own finding).
+  main; Spark answers row 2 (ANSI off) or `[CAST_OVERFLOW]` (ANSI on). DOUBLE to FLOAT: the four shapes above,
+  dictionary-encoded and NULL-plus-NaN, no row on main where Spark reads the NaN row in both modes.
+- **Fix in this PR:** the barrier below; (b) needs the float arm: a FLOAT or DOUBLE source keeps its statistics only
+  to the same or a wider float type (delta 1 barred integer and DECIMAL targets, delta 2 DOUBLE to FLOAT). (a) now
+  equals Spark; (b) through an integer type refuses loudly in both modes (the ANSI-off NaN-to-0 cast gap stays its
+  own finding); (b) through DOUBLE to FLOAT equals Spark. Uncast float filters and FLOAT to DOUBLE keep pruning by
+  the footer and skip a NaN row, as Spark's pushdown does; this unit claims nothing for them.
 - **Workaround on 1.5.6** (measured on `c5370be6`): for (a), `try_cast` in place of `CAST` (`25, 3`), or
   `datafusion.execution.collect_statistics` set to false; for (b) none (that key and
   `datafusion.execution.parquet.pruning` set to false still drop the row).
 - **Pins:** `test_max_and_min_of_a_string_id_cast_to_int_read_the_rows`,
   `test_max_and_min_of_casts_that_reorder_values_read_the_rows`, the `max`/`min` SQL and native-door cells,
-  `test_a_float_cast_to_an_integer_reads_the_nan_row_its_footer_leaves_out` (14) and the strict xfail
+  `test_a_float_cast_to_an_integer_reads_the_nan_row_its_footer_leaves_out` (14),
+  `test_a_double_cast_to_float_reads_the_nan_row_its_footer_leaves_out` (12), the controls
+  `test_uncast_and_widening_float_filters_follow_spark_pushdown` (6) and the strict xfail
   `test_an_ansi_off_float_cast_to_an_integer_answers_spark_rows` (7), in
   `python/repark/tests/io/test_cast_stats_interval_1.py`; the order table in `stats_barrier_tests.rs`.
 
@@ -91,8 +104,8 @@ The pins hold the measured Spark answers: `python/repark/tests/io/test_cast_stat
   value order the cast does not keep in `__repark_stats_barrier__(x)`, an identity UDF. DataFusion then knows no
   bounds for the cast: no inverted range, no interval, no shortcut. The order-keeping family is DataFusion's own
   (`is_order_preserving_cast_family`: numeric or BOOLEAN to numeric, the same type), narrowed so that a FLOAT or
-  DOUBLE source keeps order only to a FLOAT or DOUBLE target (delta 1: a float to an integer or DECIMAL is barred,
-  so pruning no longer reads its footer), plus text to text and binary to
+  DOUBLE source keeps order only to the same or a wider float type (delta 1 barred a float to an integer or DECIMAL,
+  delta 2 DOUBLE to FLOAT, so pruning no longer reads the footer through them), plus text to text and binary to
   binary, narrowed on time to DATE and zone-less TIMESTAMP conversions and TIMESTAMP to TIMESTAMP with the zone
   kept or kept absent. Those casts keep their statistics. A `TRY_CAST` is left alone (DataFusion carries nothing
   through it), as is a cast of a constant. Names are kept.
@@ -114,8 +127,9 @@ No answer that equalled Spark changed: the barrier is an identity, and the dropp
   through DataFusion's `PruningPredicate`, which refuses a cast between a string and a non-string type
   (`datafusion-pruning` `pruning_predicate.rs`, `verify_support_type_for_prune`), so a STRING id cast to INT never
   prunes. **For a FLOAT or DOUBLE cast to an integer type, yes: on main pruning dropped the NaN row of a file whose
-  footer leaves NaN out (family 4 above), a second silent path.** Delta 1 bars that cast, so the footer is no longer
-  read through it; uncast float pruning (`d > 100`) is left alone and equals Spark, which prunes it too. Measured: a wrong but ordered range (`[5, 6]` while 10 and 55 are present) drops no row under `=`, `>`,
+  footer leaves NaN out (family 4 above), a second silent path; DOUBLE to FLOAT did the same.** Delta 1 and 2 bar
+  those casts, so the footer is no longer read through them. Uncast float pruning (`d > 100`) and FLOAT to DOUBLE are
+  left alone: they still skip a NaN row, and equal Spark only because Spark's pushdown skips it too. Measured: a wrong but ordered range (`[5, 6]` while 10 and 55 are present) drops no row under `=`, `>`,
   `IN` and `BETWEEN` on main and head. An INT to BOOLEAN cast is not refused there; over row groups
   `[-1, 0, 1]` and `[5, 6, 7]`, `CAST(x AS BOOLEAN) = false` and `NOT CAST(x AS BOOLEAN)` keep the 0 row on both.
 - **A join's dynamic filter and a sort's TopK filter:** runtime predicates over the key expression, pruned by the
@@ -138,6 +152,7 @@ reaches them.
 `python/repark/tests/io/test_cast_stats_interval_1.py` (facade, both ANSI modes; the native door for the full range
 and the cast `max`/`min`), `crates/repark-core/src/session/df_guards/cast_shield/stats_barrier_tests.rs`,
 `crates/repark-core/src/spark_nullable/extreme_bounds_tests.rs`. With the barrier rule removed from the optimizer
-list, every cast pin goes red (41, the 14 NaN pins among them) and the full-range pins and controls stay green (30);
-with only delta 1's float arm reverted, exactly the 14 NaN pins go red. On `c5370be6` 59 of 71 fail and the 7 strict
-xfails hold; on the head 71 pass.
+list, every cast pin goes red (53, the 26 NaN pins among them) and the full-range pins and controls stay green
+(36); with the whole float arm reverted, exactly the 26 NaN pins (14 integer, 12 DOUBLE to FLOAT) go red; with only
+delta 2's narrowing reverted, exactly the 12 DOUBLE to FLOAT pins go red. On `c5370be6` 71 of 89 fail and the 7
+strict xfails hold; on the head 89 pass.
