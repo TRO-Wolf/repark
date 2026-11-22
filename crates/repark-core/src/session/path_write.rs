@@ -92,6 +92,26 @@ impl SaveMode {
     }
 }
 
+fn refuse_dynamic_overwrite(
+    session: &ReparkSession,
+    url: &str,
+    mode: &SaveMode,
+    options: &HashMap<String, String>,
+    partition_by: &[String],
+) -> Result<()> {
+    crate::partition_overwrite_mode::refuse_dynamic_plain_overwrite(
+        crate::partition_overwrite_mode::PlainPathWrite {
+            path: url,
+            overwrite: matches!(mode, SaveMode::Overwrite),
+            partitioned: !partition_by.is_empty(),
+        },
+        crate::partition_overwrite_mode_from_ctx(session.context()),
+        options
+            .iter()
+            .map(|(key, value)| (key.as_str(), value.as_str())),
+    )
+}
+
 fn is_simple_identifier(name: &str) -> bool {
     let mut chars = name.chars();
     match chars.next() {
@@ -581,17 +601,7 @@ impl ReparkSession {
     ) -> Result<usize> {
         let format = WriteFormat::parse(format)?;
         let mode = SaveMode::parse(mode)?;
-        crate::partition_overwrite_mode::refuse_dynamic_plain_overwrite(
-            crate::partition_overwrite_mode::PlainPathWrite {
-                path: url,
-                overwrite: matches!(mode, SaveMode::Overwrite),
-                partitioned: !partition_by.is_empty(),
-            },
-            crate::partition_overwrite_mode_from_ctx(self.context()),
-            options
-                .iter()
-                .map(|(key, value)| (key.as_str(), value.as_str())),
-        )?;
+        refuse_dynamic_overwrite(self, url, &mode, options, partition_by)?;
         let (scheme, bucket, prefix_text) = parse_write_destination(url)?;
         let frame_columns: Vec<String> = frame
             .schema()
