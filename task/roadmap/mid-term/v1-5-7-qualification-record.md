@@ -94,17 +94,16 @@ Exit codes are the real codes from the lane run on the tree that this record des
 
 - Known correctness issues on main, carried (STATUS.md, "Known correctness issues"): PARQUET-INT96-AS-NTZ-1 (S1, open), WRITE-ORDER-DROPPED-1 (S2, card, not dispatched; added to the STATUS list by this change), and the BACKLOG and DECLARED rows the notes list.
 - ICE-HELD-FRAME-SNAPSHOT-1: unit 1b is not built, per its card (2026-11-20); the card's live cells are in #1393.
-- PLAIN-DYNAMIC-OVERWRITE-GUARD-1: its card says it ships in v1.5.7 only on a separate publish approval. The owner's 2026-11-22 go on the brief names the cut, #1405 and #1408; whether it covers #1402 is an open question for the owner.
-- UNIX-TIMESTAMP-TRUNCATE-1 F1: the `F.expr` NTZ-cast typing has no card in the tree. Filing one is an open question.
-- The v1.5.6 notes' known issues that are not on the STATUS list (the empty-snapshot residue of a facade `DELETE` on a required column, and the `UPDATE` with `1 / 0` on a no-op format-v2 merge-on-read) are not carried by this release notes file. Whether they stay open is an open question for the owner.
+- PLAIN-DYNAMIC-OVERWRITE-GUARD-1: the owner's ruling D8 (2026-11-22) ships it in v1.5.7 on a release approval; the owner's go to cut v1.5.7 (2026-11-22) and the `release` environment approval are that approval.
+- UNIX-TIMESTAMP-TRUNCATE-1 verifier F1: `F.expr` types `CAST(x AS TIMESTAMP_NTZ)` as `timestamp`, the same on main and head; it is an existing family of the Spark-door audit (NEW-dates-1), outside this release's units.
+- The v1.5.6 notes' known issues that are not on the STATUS list (the empty-snapshot residue of a facade `DELETE` on a required column, and the `UPDATE` with `1 / 0` on a no-op format-v2 merge-on-read) had no fix after 1.5.6 and are carried in the v1.5.7 notes' known issues, with the Avro and ORC maintenance residue (AUD-013) and REPARK-SQL-UPDATE-SUBQUERY-WHERE-1.
 
-## 8. Owner actions before the tag
+## 8. Release steps (owner and orchestrator)
 
-1. Confirm the open question on PLAIN-DYNAMIC-OVERWRITE-GUARD-1's publish approval (section 7).
-2. Let CI and smoke on `913fbd53` conclude success (section 4).
-3. Squash-merge the release PR on green required checks.
-4. Tree equality (runbook step 2.1): `git rev-parse release/v1.5.7^{tree}` must equal `gh api repos/TRO-Wolf/repark/commits/<squash-sha> --jq .commit.tree.sha`.
-5. Tag (runbook step 2.2): `git tag -a v1.5.7 -m "RePark v1.5.7" <squash-sha>`, then `git push origin v1.5.7`.
-6. Approve the `release` deployment when `release.yml` pauses.
-7. Registry check (runbook step 4.1): `https://pypi.org/pypi/repark/json` reports 1.5.7, and the wheel filename is `repark-1.5.7-cp312-abi3-manylinux...`.
-8. Close-out: run the compact-context-docs ritual so STATUS.md and the release-state documents show the shipped tag.
+1. Let CI and smoke on `913fbd53` conclude success (section 4).
+2. **Owner:** squash-merge the release PR on green required checks.
+3. **Orchestrator:** tree equality (runbook step 2.1): `git rev-parse release/v1.5.7^{tree}` must equal `gh api repos/TRO-Wolf/repark/commits/<squash-sha> --jq .commit.tree.sha`.
+4. **Orchestrator:** tag (runbook step 2.2): `git tag -a v1.5.7 -m "RePark v1.5.7" <squash-sha>`, then `git push origin v1.5.7`.
+5. **Owner:** approve the `release` deployment when `release.yml` pauses.
+6. Registry check (runbook step 4.1): `https://pypi.org/pypi/repark/json` reports 1.5.7, and the wheel filename is `repark-1.5.7-cp312-abi3-manylinux...`.
+7. Close-out: run the compact-context-docs ritual so STATUS.md and the release-state documents show the shipped tag.

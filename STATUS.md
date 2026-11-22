@@ -156,7 +156,7 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**For v1.5.7** (owner go, 2026-11-22: cut once #1405 and #1408 merged): none open on main. PLAIN-DYNAMIC-OVERWRITE-GUARD-1's card says it ships only on a separate publish approval, not yet recorded. Owner actions: the squash-merge, the tag, the `release` approval. **For the format-v2 label:**
+**For v1.5.7** (owner go, 2026-11-22: cut once #1405 and #1408 merged): none open on main. PLAIN-DYNAMIC-OVERWRITE-GUARD-1 ships with it (owner D8: on the release approval). Owner actions: the squash-merge and the `release` approval. **For the format-v2 label:**
 [Iceberg maturity](#iceberg-maturity-2026-10-27). Tag history: [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).
