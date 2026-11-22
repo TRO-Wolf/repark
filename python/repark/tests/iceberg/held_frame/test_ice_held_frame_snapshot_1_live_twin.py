@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
-import re
+import json
+import sys
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -18,29 +19,53 @@ SPEC = importlib.util.spec_from_file_location("_acceptance_held_frame_twin", HEL
 assert SPEC is not None and SPEC.loader is not None
 live = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(live)
+DOUBLE = Path(__file__).with_name("_held_frame_writer_double.py")
 MODES = ["true", "false"]
-HADOOP_ALIAS = (
-    "ICE-CATALOG-SESSION-HADOOP-1: type=hadoop is the in-process memory catalog, so a second "
-    "session cannot see the table and no external commit reaches the reader (domain table "
-    "section 6); the cell runs live on Glue and S3 Tables"
-)
-NOT_FOUND = re.compile(
-    r"ERROR AnalysisException: Error during planning: table 'lc\.db\.held_(control|refresh)_\w{8}'"
-    r" not found"
-)
-SPARK_PAUSED = [
-    ("refresh", [0.132, 0.0], [2, 2, 3, 3]),
-    ("refresh", [17.891, 0.0], [2, 2, 3, 3]),
-    ("refresh", [35.11, 0.0], [3, 3, 3, 3]),
-    ("refresh", [0.124, 35.0], [2, 3, 3, 3]),
-    ("refresh", [20.117, 20.0], [2, 2, 3, 3]),
-    ("control", [0.0, 0.146, 0.0, 0.0], [2, 2, live.SEED, 2, 4, 4, 4, 4]),
-    ("control", [0.0, 17.958, 0.0, 0.0], [2, 2, live.SEED, 2, 4, 4, 4, 4]),
-    ("control", [0.0, 35.103, 0.0, 0.0], [2, 3, live.GROWN, 3, 4, 4, 4, 4]),
-    ("control", [0.0, 0.118, 35.0, 0.0], [2, 2, live.GROWN, 3, 4, 4, 4, 4]),
-    ("control", [0.0, 0.115, 0.0, 35.0], [2, 2, live.SEED, 3, 4, 4, 4, 4]),
-    ("control", [0.0, 20.123, 20.0, 0.0], [2, 2, live.SEED, 2, 4, 4, 4, 4]),
-]
+LEGS = ("repark", "spark")
+PINNED = (2, 2, 3)
+FABLE_SPARK: dict[str, dict[str, tuple[int, int, int]]] = {
+    "cache_off": {
+        **dict.fromkeys(live.TABLE_SHAPES, PINNED),
+        **dict.fromkeys(live.QUERY_SHAPES, (3, 3, 3)),
+    },
+    "inside_30_s": {
+        **dict.fromkeys(live.TABLE_SHAPES, PINNED),
+        **dict.fromkeys(live.QUERY_SHAPES, (2, 3, 3)),
+    },
+    "after_35_s": {
+        **dict.fromkeys(live.TABLE_SHAPES, PINNED),
+        **dict.fromkeys(live.QUERY_SHAPES, (3, 3, 3)),
+    },
+}
+_HELD_TWO = {"held": 2, "fresh": 3, "new": 3, "held_again": 2}
+_UNPERSISTED = {"held": 2, "fresh": 3, "new": 3, "held_again": 3}
+_ALL_THREE = dict.fromkeys(live.READS, 3)
+_DROPPED_AT_THE_NEW_FRAME = {
+    "after_writer": _UNPERSISTED,
+    "after_props": _ALL_THREE,
+    "after_refresh": _ALL_THREE,
+}
+ADVISER_PREDICTION = {shape: dict.fromkeys(live.STEPS, _HELD_TWO) for shape in live.SHAPES}
+CODE_READ_PREDICTION = {
+    **ADVISER_PREDICTION,
+    "bare": _DROPPED_AT_THE_NEW_FRAME,
+    "df_view": _DROPPED_AT_THE_NEW_FRAME,
+}
+PREDICTIONS = {"adviser": ADVISER_PREDICTION, "code_read": CODE_READ_PREDICTION}
+CODE_READ_ONLY = {
+    ("bare", "after_writer", "held_again"),
+    ("bare", "after_props", "held"),
+    ("bare", "after_props", "held_again"),
+}
+
+
+class _UnseenWriter:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str]] = []
+
+    def __call__(self, table: str, values: str) -> dict[str, Any]:
+        self.calls.append((table, values))
+        return {"count": 3}
 
 
 def _session(root: Path, ansi: str) -> ReparkSession:
@@ -55,21 +80,37 @@ def _session(root: Path, ansi: str) -> ReparkSession:
     )
 
 
+def _found(steps: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    return {"before": 2, "writer": {"count": 3}, "set_props": None, "refresh": None, **steps}
+
+
+def _measured(after: tuple[int, int, int]) -> dict[str, Any]:
+    reads = zip(live.STEPS, after, strict=True)
+    return _found({step: dict.fromkeys(live.READS, value) for step, value in reads})
+
+
+def _broken(prediction: dict[str, dict[str, dict[str, int]]]) -> set[tuple[str, ...]]:
+    broken: set[tuple[str, ...]] = set()
+    for shape in live.SHAPES:
+        found = _found(prediction[shape])
+        failed = live.grade(shape, found, "repark", pending=frozenset())["failed"]
+        broken |= {(shape, *name.split(".")) for name in failed}
+    return broken
+
+
 @pytest.fixture(scope="module")
 def measured(tmp_path_factory: pytest.TempPathFactory) -> Iterator[dict[str, Any]]:
     found: dict[str, Any] = {}
     for ansi in MODES:
         session = _session(tmp_path_factory.mktemp(f"live-twin-{ansi}"), ansi)
         session.sql("CREATE NAMESPACE IF NOT EXISTS lc.db").collect()
-        other = session.newSession()
-        cells = live.HeldFrameCells(
-            session, "lc", "db", "", ICEBERG_TABLE_PROPERTIES, live.session_writer(other)
-        )
+        writer = _UnseenWriter()
+        cells = live.HeldFrameCells(session, "lc", "db", "", ICEBERG_TABLE_PROPERTIES, writer)
         found[ansi] = {"rows": cells.rows()}
-        found[ansi].update({label: cells.external(label) for label in live.SPARK_EXTERNAL})
+        found[ansi]["shapes"] = {shape: cells.shape(shape) for shape in live.SHAPES}
+        found[ansi]["writes"] = writer.calls
         if ansi == MODES[0]:
             found["cost"] = [cells.cost_held_read(), cells.cost_held_filter_count()]
-        other.stop()
         session.stop()
         _reset_active_session_for_tests()
     yield found
@@ -84,36 +125,127 @@ def test_a_held_frame_answers_as_spark_after_a_same_session_write(
     assert found == live.SPARK_ROWS[label], (ansi, label, found)
 
 
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=HADOOP_ALIAS)
 @pytest.mark.parametrize("ansi", MODES)
-@pytest.mark.parametrize("label", sorted(live.SPARK_EXTERNAL))
-def test_a_held_frame_answers_as_spark_after_an_external_commit(
-    measured: dict[str, Any], ansi: str, label: str
+@pytest.mark.parametrize("shape", live.SHAPES)
+def test_every_shape_runs_on_repark_and_a_writer_it_cannot_see_fails_the_validity_read(
+    measured: dict[str, Any], ansi: str, shape: str
 ) -> None:
-    found = measured[ansi][label]
-    assert found["answer"] == live.spark_answer(label, found["idle_s"]), (ansi, label, found)
+    found = measured[ansi]["shapes"][shape]
+    reads = [found[step][read] for step in live.STEPS for read in live.READS]
+    assert reads == [2] * len(reads), (ansi, shape, found)
+    assert found["before"] == 2 and found["writer"] == {"count": 3}, (ansi, shape, found)
+    assert found["set_props"] is None and found["refresh"] is None, (ansi, shape, found)
+    assert "error" not in found and len(found["idle_s"]) == len(reads), (ansi, shape, found)
+    for leg in LEGS:
+        graded = live.grade(shape, found, leg)
+        assert "validity.fresh_after_refresh" in graded["failed"], (ansi, shape, leg, graded)
+        line = live.shape_line("local", leg, shape, found, graded)
+        assert json.loads(line.split(" ", 4)[4])["answer"] == found, line
 
 
-@pytest.mark.parametrize("ansi", MODES)
-@pytest.mark.parametrize(("label", "before"), [("control", [2]), ("refresh", [])])
-def test_the_local_catalog_refuses_the_second_writer_by_name(
-    measured: dict[str, Any], ansi: str, label: str, before: list[Any]
+def test_the_other_writer_inserts_one_row_into_each_shape_table(measured: dict[str, Any]) -> None:
+    for ansi in MODES:
+        writes = measured[ansi]["writes"]
+        assert [values for _, values in writes] == [live.EXTERNAL_ROW] * len(live.SHAPES), writes
+        assert len({table for table, _ in writes}) == len(live.SHAPES), writes
+
+
+@pytest.mark.parametrize("window", sorted(FABLE_SPARK))
+@pytest.mark.parametrize("shape", live.SHAPES)
+def test_spark_measured_answers_pass_both_legs_in_every_window(window: str, shape: str) -> None:
+    found = _measured(FABLE_SPARK[window][shape])
+    assert live.grade(shape, found, "spark")["failed"] == {}, (window, shape)
+    assert live.grade(shape, found, "repark", pending=frozenset())["failed"] == {}, (window, shape)
+
+
+@pytest.mark.parametrize("prediction", sorted(PREDICTIONS))
+@pytest.mark.parametrize("shape", live.SHAPES)
+def test_each_main_prediction_passes_the_repark_leg_with_the_pending_list(
+    prediction: str, shape: str
 ) -> None:
-    found = measured[ansi][label]["answer"]
-    assert found[:-1] == before, (ansi, label, found)
-    assert NOT_FOUND.fullmatch(found[-1]), (ansi, label, found)
+    found = _found(PREDICTIONS[prediction][shape])
+    assert live.grade(shape, found, "repark")["failed"] == {}, (prediction, shape)
 
 
-@pytest.mark.parametrize(("label", "idle_s", "spark"), SPARK_PAUSED)
-def test_the_pinned_spark_answer_follows_the_measured_cache_interval(
-    label: str, idle_s: list[float], spark: list[Any]
+def test_the_pending_list_is_where_a_main_prediction_breaks_the_rule() -> None:
+    adviser = _broken(ADVISER_PREDICTION)
+    code_read = _broken(CODE_READ_PREDICTION)
+    assert adviser | code_read == live.PENDING_1394
+    assert (adviser | code_read) - adviser == CODE_READ_ONLY
+
+
+def test_a_reader_that_never_sees_the_writer_fails_on_both_legs() -> None:
+    for shape in live.SHAPES:
+        for leg in LEGS:
+            failed = live.grade(shape, _measured((2, 2, 2)), leg)["failed"]
+            assert "validity.fresh_after_refresh" in failed, (shape, leg, failed)
+
+
+@pytest.mark.parametrize(
+    ("field", "refused"),
+    [
+        ("writer", {"error": "ERROR TABLE_OR_VIEW_NOT_FOUND"}),
+        ("set_props", "ERROR CatalogCommitConflicts"),
+        ("refresh", "ERROR TABLE_OR_VIEW_NOT_FOUND"),
+        ("error", "ERROR AnalysisException: cache"),
+    ],
+)
+def test_a_refused_write_commit_or_step_fails_the_cell(field: str, refused: Any) -> None:
+    for shape in live.SHAPES:
+        for leg in LEGS:
+            found = {**_measured(PINNED), field: refused}
+            assert field in live.grade(shape, found, leg)["failed"], (shape, leg)
+
+
+def test_the_cache_table_reads_are_open_on_the_repark_leg_and_pinned_on_the_spark_leg() -> None:
+    found = _measured((3, 3, 3))
+    repark = live.grade("cache_table", found, "repark")
+    assert repark["failed"] == {} and len(repark[live.OPEN]) == len(live.STEPS) * len(live.READS)
+    spark = live.grade("cache_table", found, "spark")
+    before_refresh = {f"{step}.{read}" for step in live.STEPS[:2] for read in live.READS}
+    assert set(spark["failed"]) == before_refresh
+
+
+def test_a_table_level_fresh_read_is_open_on_the_repark_leg_and_asserted_on_the_spark_leg() -> None:
+    found = _measured(PINNED)
+    found["after_writer"] = {**found["after_writer"], "fresh": 3, "new": 3}
+    for shape in ("bare", "alias"):
+        repark = live.grade(shape, found, "repark")
+        assert repark["failed"] == {}, repark
+        assert repark[live.OPEN]["after_writer.fresh"] == 3, repark
+        spark = live.grade(shape, found, "spark")
+        assert set(spark["failed"]) == {"after_writer.fresh", "after_writer.new"}, spark
+
+
+def test_a_query_level_held_read_after_a_fresh_read_must_equal_it() -> None:
+    found = _measured((2, 3, 3))
+    found["after_writer"] = {"held": 2, "fresh": 3, "new": 2, "held_again": 2}
+    failed = live.grade("sql_star", found, "repark", pending=frozenset())["failed"]
+    assert set(failed) == {"after_writer.new", "after_writer.held_again"}, failed
+    pending = live.grade("sql_star", found, "repark")
+    assert set(pending["failed"]) == {"after_writer.new"}, pending
+    assert pending[live.PENDING]["after_writer.held_again"] == 2, pending
+
+
+def test_the_writer_client_reads_replies_and_scrubs_the_writer_log(
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    assert live.spark_answer(label, idle_s) == spark
+    with live.SparkProcessWriter(sys.executable, {}, DOUBLE, 60.0, 60.0) as writer:
+        wrote = writer("lc.db.t", live.EXTERNAL_ROW)
+        refused = writer("lc.db.t", "refuse")
+    assert wrote == {"count": 3}
+    assert refused == {"error": "ERROR TABLE_OR_VIEW_NOT_FOUND"}
+    log = capsys.readouterr().out
+    assert f"{live.WRITER_LOG_TAG} starting under <ARN> for <ACCOUNT>" in log, log
+    assert "0" * 12 not in log and ":".join(["arn", "aws", "glue"]) not in log, log
 
 
-def test_with_no_idle_gap_the_pinned_spark_answer_is_the_cached_one() -> None:
-    for label, known in live.SPARK_EXTERNAL.items():
-        assert live.spark_answer(label, [0.0] * 4) == known["stale"], label
+def test_the_writer_client_raises_when_the_writer_process_exits() -> None:
+    with (
+        live.SparkProcessWriter(sys.executable, {}, DOUBLE, 60.0, 60.0) as writer,
+        pytest.raises(RuntimeError, match="exited with 4"),
+    ):
+        writer("lc.db.t", "exit")
 
 
 def test_each_cost_row_prints_one_parseable_line(measured: dict[str, Any]) -> None:

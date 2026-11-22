@@ -50,7 +50,7 @@ pins.
 - [_acceptance_commit_resolver.py](_acceptance_commit_resolver.py) — ICE-INTEGRITY-PINS-1 (2026-10-22): leg U's resolver rules: the stable snapshot-id read (two reads 2 s apart agree within 60 s, else `UnresolvedError`), the attempted snapshot from the held metadata file, and the missing status-check properties.
 - [_acceptance_cross_read.py](_acceptance_cross_read.py) — Spark reads RePark-written tables and answers row-equal. CROSS-READ-GATE-CLASS-1 (2026-10-29): the gate expects SPARK-CANNOT-READ only for the recorded unsupported-type condition (the recorded prefix plus timestamp_ns or timestamptz_ns) on a nanosecond table; every other Spark failure is rejected at any precision.
 - [_acceptance_replace.py](_acceptance_replace.py) — CREATE OR REPLACE TABLE … AS twice leg body for the real-AWS acceptance harness.
-- [_acceptance_held_frame.py](_acceptance_held_frame.py) — ICE-HELD-FRAME-SNAPSHOT-1 (2026-11-21): the held-frame live cells' body, with Spark's answers; local twin in `../iceberg/held_frame/`.
+- [_acceptance_held_frame.py](_acceptance_held_frame.py) — ICE-HELD-FRAME-SNAPSHOT-1 (2026-11-21): the held-frame live cells' body and grading; `_acceptance_held_frame_writer.py` is the other writer's Spark process; twin in `../iceberg/held_frame/`.
 - [_acceptance_v3.py](_acceptance_v3.py) — Format-version-3 leg body for the real-AWS acceptance harness (LIVE-v3).
 
 ## ICE-INTEGRITY-PINS-1 pins U and X (2026-10-22)
