@@ -109,6 +109,43 @@ OBSERVED: dict[str, str] = {
         "'2025-03-08 12:00:00', TIMESTAMP '2025-03-10 12:00:00', INTERVAL 1 DAY)) AS t) AS g"
     ),
 }
+_COL_SOURCE = "(SELECT tag AS col, m FROM {t}) AS s"
+NAMED: dict[str, str] = {
+    "r1-posexplode-case": "SELECT id, posexplode(CASE WHEN id = 1 THEN arr ELSE NULL END) FROM {t}",
+    "r1-posexplode-outer-case": (
+        "SELECT id, posexplode_outer(CASE WHEN id = 2 THEN CAST(NULL AS ARRAY<INT>) ELSE arr END) "
+        "FROM {t}"
+    ),
+    "r1-posexplode-filter": "SELECT id, posexplode(filter(arr, x -> x > 1)) FROM {t}",
+    "r1-posexplode-transform": "SELECT id, posexplode(transform(arr, x -> x + 1)) FROM {t}",
+    "r1-posexplode-map-case": "SELECT id, posexplode(CASE WHEN id = 1 THEN m END) FROM {t}",
+    "r1-inline-case": (
+        "SELECT id, inline(CASE WHEN id = 1 THEN array(named_struct('a', id, 'b', tag)) "
+        "ELSE NULL END) FROM {t}"
+    ),
+    "r1-inline-outer-case": (
+        "SELECT id, inline_outer(CASE WHEN id = 1 THEN array(named_struct('a', id, 'b', tag)) "
+        "ELSE NULL END) FROM {t}"
+    ),
+    "r1-inline-transform": (
+        "SELECT inline(transform(array(1, 2), x -> named_struct('a', x, 'b', 'ok')))"
+    ),
+    "r1-json-tuple-case": (
+        'SELECT id, json_tuple(CASE WHEN id = 1 THEN \'{{"a":1,"b":"x"}}\' ELSE NULL END, '
+        "'a', 'b') FROM {t}"
+    ),
+    "r1-explode-case-alias": (
+        "SELECT explode(CASE WHEN id = 1 THEN arr END) AS `explode(custom)` FROM {t}"
+    ),
+    "r1-posexplode-call-alias": "SELECT posexplode(arr) AS `posexplode(arr)` FROM {t}",
+    "r2-col-explode-map": "SELECT col, explode(m) FROM " + _COL_SOURCE,
+    "r2-col-explode-outer-map": "SELECT col, explode_outer(m) FROM " + _COL_SOURCE,
+    "r2-explode-map-col-after": "SELECT explode(m), col FROM " + _COL_SOURCE,
+    "r2-qualified-col-explode-map": "SELECT s.col, explode(s.m) FROM " + _COL_SOURCE,
+    "r2-alias-col-explode-map": "SELECT tag AS col, explode(m) FROM {t}",
+    "r4-array-repeat-explode-outer": "SELECT explode_outer(array_repeat(sequence(1, 2), 0)) AS a",
+    "r4-array-repeat-alone": "SELECT array_repeat(array(1, 2), 2) AS a",
+}
 WRITES: dict[str, tuple[str | None, str]] = {
     "ctas": (None, f"CREATE TABLE {{t}} AS SELECT id, explode(arr) AS x FROM {VIEW}"),
     "ctas-unaliased": (None, f"CREATE TABLE {{t}} AS SELECT explode(arr) FROM {VIEW}"),
@@ -263,6 +300,30 @@ def typed_frames(session: Any, functions: Any) -> dict[str, Callable[[], Any]]:
     }
 
 
+def frame_ops(session: Any, functions: Any, table: str) -> dict[str, Callable[[], Any]]:
+    def bare(item: str) -> Any:
+        return session.table(table).select("id", functions.expr(item))
+
+    def self_join() -> Any:
+        side = session.table(table).where("id = 1").select("id", functions.expr("explode(arr)"))
+        return (
+            side.alias("a")
+            .join(side.alias("b"), functions.col("a.id") == functions.col("b.id"))
+            .select(functions.col("a.col").alias("c1"), functions.col("b.col").alias("c2"))
+        )
+
+    return {
+        "r3-select-col": lambda: bare("explode(arr)").select("id", "col"),
+        "r3-with-column": lambda: bare("explode(arr)").withColumn("y", functions.col("col") + 1),
+        "r3-self-join": self_join,
+        "r3-outer-select-col": lambda: bare("explode_outer(arr)").select("col", "id"),
+        "r3-case-select-col": lambda: bare("explode(CASE WHEN id = 1 THEN arr END)").select("col"),
+        "r3-group-col": lambda: (
+            session.table(table).select(functions.expr("explode(arr)")).groupBy("col").count()
+        ),
+    }
+
+
 def seed(session: Any, catalog: str, zone: str, ansi: str) -> str:
     frame = session.createDataFrame(list(FRAME_ROWS), FRAME_SCHEMA)
     frame.createOrReplaceTempView(VIEW)
@@ -294,6 +355,10 @@ def seat_answers(session: Any, functions: Any, table: str) -> dict[str, dict[str
         answers[f"{name}|sql"] = guarded(lambda text=text: session.sql(text))
     for name, build in typed_frames(session, functions).items():
         answers[f"{name}|typed"] = guarded(build)
+    for name, text in NAMED.items():
+        answers[f"{name}|named"] = guarded(lambda text=text: session.sql(text.format(t=table)))
+    for name, build in frame_ops(session, functions, table).items():
+        answers[f"{name}|frame"] = guarded(build)
     answers["inline-alias|expr"] = guarded(
         lambda: session.range(1).select(functions.expr("explode(array(1, 2)) AS x"))
     )

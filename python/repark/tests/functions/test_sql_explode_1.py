@@ -11,6 +11,7 @@ from _record_sql_explode_1 import (
     CELLS,
     EXPR_SOURCES,
     FIXTURE,
+    NAMED,
     WRITES,
     ZONES,
     mode_key,
@@ -275,3 +276,62 @@ def test_explicit_generator_prefix_aliases_are_kept_or_refused_as_spark(
     assert "error" in got["posexplode-alias-custom|sql"]
     assert "error" in expected["map-alias-col|sql"]
     assert "error" in got["map-alias-col|sql"]
+
+
+def _shape(cell: dict[str, Any]) -> dict[str, Any]:
+    if "error" in cell:
+        return {"error": True}
+    rows = sorted(cell["rows"], key=json.dumps)
+    return {"columns": cell["columns"], "types": [f[:2] for f in cell["schema"]], "rows": rows}
+
+
+def _shape_misses(
+    measured: dict[str, dict[str, Any]], zone: str, ansi: str, keys: list[str]
+) -> list[str]:
+    expected = _ORACLE["modes"][mode_key(zone, ansi)]
+    got = measured[mode_key(zone, ansi)]
+    return [
+        f"{key}: spark {expected[key]} repark {got[key]}"
+        for key in keys
+        if _shape(got[key]) != _shape(expected[key])
+    ]
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("zone", ZONES)
+def test_a_coerced_generator_argument_keeps_spark_names_and_aliases(
+    measured: dict[str, dict[str, Any]], zone: str, ansi: str
+) -> None:
+    keys = [f"{name}|named" for name in NAMED if name.startswith("r1-")]
+    assert not _shape_misses(measured, zone, ansi, keys)
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("zone", ZONES)
+def test_a_map_explode_beside_a_col_sibling_answers_key_value(
+    measured: dict[str, dict[str, Any]], zone: str, ansi: str
+) -> None:
+    keys = [f"{name}|named" for name in NAMED if name.startswith("r2-")]
+    assert not _shape_misses(measured, zone, ansi, keys)
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("zone", ZONES)
+def test_frame_operations_over_an_unaliased_f_expr_explode_answer_as_spark(
+    measured: dict[str, dict[str, Any]], zone: str, ansi: str
+) -> None:
+    keys = [key for key in _ORACLE["modes"][mode_key(zone, ansi)] if key.endswith("|frame")]
+    assert len(keys) == 6
+    assert not _shape_misses(measured, zone, ansi, keys)
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("zone", ZONES)
+def test_array_repeat_over_an_array_still_fails_with_or_without_a_generator(
+    measured: dict[str, dict[str, Any]], zone: str, ansi: str
+) -> None:
+    expected = _ORACLE["modes"][mode_key(zone, ansi)]
+    got = measured[mode_key(zone, ansi)]
+    for name in ("r4-array-repeat-explode-outer", "r4-array-repeat-alone"):
+        assert "error" not in expected[f"{name}|named"]
+        assert "ListArray expected data type" in got[f"{name}|named"]["message"]

@@ -2188,6 +2188,875 @@
      ]
     ]
    },
+   "r1-explode-case-alias|named": {
+    "columns": [
+     "explode(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-inline-case|named": {
+    "columns": [
+     "id",
+     "a",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "a",
+      "int",
+      true
+     ],
+     [
+      "b",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r1-inline-outer-case|named": {
+    "columns": [
+     "id",
+     "a",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "a",
+      "int",
+      true
+     ],
+     [
+      "b",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r1-inline-transform|named": {
+    "columns": [
+     "a",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      "ok"
+     ],
+     [
+      2,
+      "ok"
+     ]
+    ],
+    "schema": [
+     [
+      "a",
+      "int",
+      false
+     ],
+     [
+      "b",
+      "string",
+      false
+     ]
+    ]
+   },
+   "r1-json-tuple-case|named": {
+    "columns": [
+     "id",
+     "c0",
+     "c1"
+    ],
+    "rows": [
+     [
+      1,
+      "1",
+      "x"
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "c0",
+      "string",
+      true
+     ],
+     [
+      "c1",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-call-alias|named": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
+   "r1-posexplode-case|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-filter|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      2
+     ],
+     [
+      4,
+      0,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-map-case|named": {
+    "columns": [
+     "id",
+     "pos",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      "k1",
+      1
+     ],
+     [
+      1,
+      1,
+      "k2",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-outer-case|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-transform|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      2
+     ],
+     [
+      1,
+      1,
+      3
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-alias-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-col-explode-outer-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "b",
+      null,
+      null
+     ],
+     [
+      "c",
+      null,
+      null
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-explode-map-col-after|named": {
+    "columns": [
+     "key",
+     "value",
+     "col"
+    ],
+    "rows": [
+     [
+      "k1",
+      1,
+      "a"
+     ],
+     [
+      "k2",
+      2,
+      "a"
+     ],
+     [
+      "k3",
+      null,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r2-qualified-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-case-select-col|frame": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-group-col|frame": {
+    "columns": [
+     "col",
+     "count"
+    ],
+    "rows": [
+     [
+      null,
+      1
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      5,
+      1
+     ],
+     [
+      2,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "count",
+      "bigint",
+      false
+     ]
+    ]
+   },
+   "r3-outer-select-col|frame": {
+    "columns": [
+     "col",
+     "id"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      1
+     ],
+     [
+      null,
+      2
+     ],
+     [
+      null,
+      3
+     ],
+     [
+      null,
+      4
+     ],
+     [
+      5,
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "id",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-select-col|frame": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-self-join|frame": {
+    "columns": [
+     "c1",
+     "c2"
+    ],
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      2,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "c1",
+      "int",
+      true
+     ],
+     [
+      "c2",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-with-column|frame": {
+    "columns": [
+     "id",
+     "col",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      1,
+      2,
+      3
+     ],
+     [
+      4,
+      null,
+      null
+     ],
+     [
+      4,
+      5,
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r4-array-repeat-alone|named": {
+    "columns": [
+     "a"
+    ],
+    "rows": [
+     [
+      [
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        2
+       ]
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "a",
+      "array<array<int>>",
+      false
+     ]
+    ]
+   },
+   "r4-array-repeat-explode-outer|named": {
+    "columns": [
+     "a"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "a",
+      "array<int>",
+      true
+     ]
+    ]
+   },
    "seq-date-outer|expr": {
     "columns": [
      "d"
@@ -6936,6 +7805,875 @@
      [
       "y",
       "int",
+      true
+     ]
+    ]
+   },
+   "r1-explode-case-alias|named": {
+    "columns": [
+     "explode(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-inline-case|named": {
+    "columns": [
+     "id",
+     "a",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "a",
+      "int",
+      true
+     ],
+     [
+      "b",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r1-inline-outer-case|named": {
+    "columns": [
+     "id",
+     "a",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "a",
+      "int",
+      true
+     ],
+     [
+      "b",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r1-inline-transform|named": {
+    "columns": [
+     "a",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      "ok"
+     ],
+     [
+      2,
+      "ok"
+     ]
+    ],
+    "schema": [
+     [
+      "a",
+      "int",
+      false
+     ],
+     [
+      "b",
+      "string",
+      false
+     ]
+    ]
+   },
+   "r1-json-tuple-case|named": {
+    "columns": [
+     "id",
+     "c0",
+     "c1"
+    ],
+    "rows": [
+     [
+      1,
+      "1",
+      "x"
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "c0",
+      "string",
+      true
+     ],
+     [
+      "c1",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-call-alias|named": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
+   "r1-posexplode-case|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-filter|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      2
+     ],
+     [
+      4,
+      0,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-map-case|named": {
+    "columns": [
+     "id",
+     "pos",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      "k1",
+      1
+     ],
+     [
+      1,
+      1,
+      "k2",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-outer-case|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-transform|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      2
+     ],
+     [
+      1,
+      1,
+      3
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-alias-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-col-explode-outer-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "b",
+      null,
+      null
+     ],
+     [
+      "c",
+      null,
+      null
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-explode-map-col-after|named": {
+    "columns": [
+     "key",
+     "value",
+     "col"
+    ],
+    "rows": [
+     [
+      "k1",
+      1,
+      "a"
+     ],
+     [
+      "k2",
+      2,
+      "a"
+     ],
+     [
+      "k3",
+      null,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r2-qualified-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-case-select-col|frame": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-group-col|frame": {
+    "columns": [
+     "col",
+     "count"
+    ],
+    "rows": [
+     [
+      null,
+      1
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      5,
+      1
+     ],
+     [
+      2,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "count",
+      "bigint",
+      false
+     ]
+    ]
+   },
+   "r3-outer-select-col|frame": {
+    "columns": [
+     "col",
+     "id"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      1
+     ],
+     [
+      null,
+      2
+     ],
+     [
+      null,
+      3
+     ],
+     [
+      null,
+      4
+     ],
+     [
+      5,
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "id",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-select-col|frame": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-self-join|frame": {
+    "columns": [
+     "c1",
+     "c2"
+    ],
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      2,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "c1",
+      "int",
+      true
+     ],
+     [
+      "c2",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-with-column|frame": {
+    "columns": [
+     "id",
+     "col",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      1,
+      2,
+      3
+     ],
+     [
+      4,
+      null,
+      null
+     ],
+     [
+      4,
+      5,
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r4-array-repeat-alone|named": {
+    "columns": [
+     "a"
+    ],
+    "rows": [
+     [
+      [
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        2
+       ]
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "a",
+      "array<array<int>>",
+      false
+     ]
+    ]
+   },
+   "r4-array-repeat-explode-outer|named": {
+    "columns": [
+     "a"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "a",
+      "array<int>",
       true
      ]
     ]
@@ -11692,6 +13430,875 @@
      ]
     ]
    },
+   "r1-explode-case-alias|named": {
+    "columns": [
+     "explode(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-inline-case|named": {
+    "columns": [
+     "id",
+     "a",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "a",
+      "int",
+      true
+     ],
+     [
+      "b",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r1-inline-outer-case|named": {
+    "columns": [
+     "id",
+     "a",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "a",
+      "int",
+      true
+     ],
+     [
+      "b",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r1-inline-transform|named": {
+    "columns": [
+     "a",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      "ok"
+     ],
+     [
+      2,
+      "ok"
+     ]
+    ],
+    "schema": [
+     [
+      "a",
+      "int",
+      false
+     ],
+     [
+      "b",
+      "string",
+      false
+     ]
+    ]
+   },
+   "r1-json-tuple-case|named": {
+    "columns": [
+     "id",
+     "c0",
+     "c1"
+    ],
+    "rows": [
+     [
+      1,
+      "1",
+      "x"
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "c0",
+      "string",
+      true
+     ],
+     [
+      "c1",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-call-alias|named": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
+   "r1-posexplode-case|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-filter|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      2
+     ],
+     [
+      4,
+      0,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-map-case|named": {
+    "columns": [
+     "id",
+     "pos",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      "k1",
+      1
+     ],
+     [
+      1,
+      1,
+      "k2",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-outer-case|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-transform|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      2
+     ],
+     [
+      1,
+      1,
+      3
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-alias-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-col-explode-outer-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "b",
+      null,
+      null
+     ],
+     [
+      "c",
+      null,
+      null
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-explode-map-col-after|named": {
+    "columns": [
+     "key",
+     "value",
+     "col"
+    ],
+    "rows": [
+     [
+      "k1",
+      1,
+      "a"
+     ],
+     [
+      "k2",
+      2,
+      "a"
+     ],
+     [
+      "k3",
+      null,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r2-qualified-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-case-select-col|frame": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-group-col|frame": {
+    "columns": [
+     "col",
+     "count"
+    ],
+    "rows": [
+     [
+      null,
+      1
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      5,
+      1
+     ],
+     [
+      2,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "count",
+      "bigint",
+      false
+     ]
+    ]
+   },
+   "r3-outer-select-col|frame": {
+    "columns": [
+     "col",
+     "id"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      1
+     ],
+     [
+      null,
+      2
+     ],
+     [
+      null,
+      3
+     ],
+     [
+      null,
+      4
+     ],
+     [
+      5,
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "id",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-select-col|frame": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-self-join|frame": {
+    "columns": [
+     "c1",
+     "c2"
+    ],
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      2,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "c1",
+      "int",
+      true
+     ],
+     [
+      "c2",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-with-column|frame": {
+    "columns": [
+     "id",
+     "col",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      1,
+      2,
+      3
+     ],
+     [
+      4,
+      null,
+      null
+     ],
+     [
+      4,
+      5,
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r4-array-repeat-alone|named": {
+    "columns": [
+     "a"
+    ],
+    "rows": [
+     [
+      [
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        2
+       ]
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "a",
+      "array<array<int>>",
+      false
+     ]
+    ]
+   },
+   "r4-array-repeat-explode-outer|named": {
+    "columns": [
+     "a"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "a",
+      "array<int>",
+      true
+     ]
+    ]
+   },
    "seq-date-outer|expr": {
     "columns": [
      "d"
@@ -16440,6 +19047,875 @@
      [
       "y",
       "int",
+      true
+     ]
+    ]
+   },
+   "r1-explode-case-alias|named": {
+    "columns": [
+     "explode(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-inline-case|named": {
+    "columns": [
+     "id",
+     "a",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "a",
+      "int",
+      true
+     ],
+     [
+      "b",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r1-inline-outer-case|named": {
+    "columns": [
+     "id",
+     "a",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "a",
+      "int",
+      true
+     ],
+     [
+      "b",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r1-inline-transform|named": {
+    "columns": [
+     "a",
+     "b"
+    ],
+    "rows": [
+     [
+      1,
+      "ok"
+     ],
+     [
+      2,
+      "ok"
+     ]
+    ],
+    "schema": [
+     [
+      "a",
+      "int",
+      false
+     ],
+     [
+      "b",
+      "string",
+      false
+     ]
+    ]
+   },
+   "r1-json-tuple-case|named": {
+    "columns": [
+     "id",
+     "c0",
+     "c1"
+    ],
+    "rows": [
+     [
+      1,
+      "1",
+      "x"
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "c0",
+      "string",
+      true
+     ],
+     [
+      "c1",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-call-alias|named": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
+   "r1-posexplode-case|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-filter|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      2
+     ],
+     [
+      4,
+      0,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-map-case|named": {
+    "columns": [
+     "id",
+     "pos",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      "k1",
+      1
+     ],
+     [
+      1,
+      1,
+      "k2",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-outer-case|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      1
+     ],
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r1-posexplode-transform|named": {
+    "columns": [
+     "id",
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      0,
+      2
+     ],
+     [
+      1,
+      1,
+      3
+     ],
+     [
+      4,
+      0,
+      null
+     ],
+     [
+      4,
+      1,
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-alias-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-col-explode-outer-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "b",
+      null,
+      null
+     ],
+     [
+      "c",
+      null,
+      null
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r2-explode-map-col-after|named": {
+    "columns": [
+     "key",
+     "value",
+     "col"
+    ],
+    "rows": [
+     [
+      "k1",
+      1,
+      "a"
+     ],
+     [
+      "k2",
+      2,
+      "a"
+     ],
+     [
+      "k3",
+      null,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
+   "r2-qualified-col-explode-map|named": {
+    "columns": [
+     "col",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      "k1",
+      1
+     ],
+     [
+      "a",
+      "k2",
+      2
+     ],
+     [
+      "d",
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "string",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-case-select-col|frame": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-group-col|frame": {
+    "columns": [
+     "col",
+     "count"
+    ],
+    "rows": [
+     [
+      null,
+      1
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      5,
+      1
+     ],
+     [
+      2,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "count",
+      "bigint",
+      false
+     ]
+    ]
+   },
+   "r3-outer-select-col|frame": {
+    "columns": [
+     "col",
+     "id"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      1
+     ],
+     [
+      null,
+      2
+     ],
+     [
+      null,
+      3
+     ],
+     [
+      null,
+      4
+     ],
+     [
+      5,
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "id",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-select-col|frame": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-self-join|frame": {
+    "columns": [
+     "c1",
+     "c2"
+    ],
+    "rows": [
+     [
+      1,
+      2
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      2,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "c1",
+      "int",
+      true
+     ],
+     [
+      "c2",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r3-with-column|frame": {
+    "columns": [
+     "id",
+     "col",
+     "y"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      2
+     ],
+     [
+      1,
+      2,
+      3
+     ],
+     [
+      4,
+      null,
+      null
+     ],
+     [
+      4,
+      5,
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "r4-array-repeat-alone|named": {
+    "columns": [
+     "a"
+    ],
+    "rows": [
+     [
+      [
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        2
+       ]
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "a",
+      "array<array<int>>",
+      false
+     ]
+    ]
+   },
+   "r4-array-repeat-explode-outer|named": {
+    "columns": [
+     "a"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "a",
+      "array<int>",
       true
      ]
     ]
