@@ -16,7 +16,7 @@ Tests for SQL-SETOP-ALL-MULTISET-1's multiset rewrite and `MINUS ALL` spelling (
   `SqlDialect`, plain and behind the local-fs guard, Generic and Databricks parsers: Spark's rows
   for the ALL forms, Generic refuses `MINUS ALL`, NULL keys, an empty side and a scalar count, the
   controls unchanged); `an_insert_or_ctas_of_a_multiset_stores_the_spark_rows`; Delta 2 pins
-  `non_operator_minus_all_identifiers_and_unparseable_sql_stay_untouched`,
+  `non_operator_minus_all_identifiers_and_unparsable_sql_stay_untouched`,
   `databricks_session_answers_minus_all_identifiers_and_mixed_operator`,
   `untyped_null_left_operand_matches_distinct_twin_schema_and_multiset_rows`,
   `lossless_round_trip_classifier_allows_exact_widenings_and_refuses_lossy_pairs`, and

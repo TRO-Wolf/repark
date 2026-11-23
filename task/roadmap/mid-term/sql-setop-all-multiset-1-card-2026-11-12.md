@@ -9,7 +9,7 @@ evidence in [`task/wo/sql-setop-all-multiset-1/`](../../wo/sql-setop-all-multise
 ruling 2026-11-23): `MINUS ALL` answers on the Spark door only; the native door refuses it as it refuses
 `MINUS`, and guard pins hold a null-safe semi or anti join written as a join to its left multiplicity.
 Delta 2 (2026-11-23): `MINUS ALL` respelling uses `sqlparser`'s Databricks parse so identifiers, aliases,
-table names and unparseable queries stay untouched; `F.expr` belongs to `pyspark.sql.functions` and uses
+table names and unparsable queries stay untouched; `F.expr` belongs to `pyspark.sql.functions` and uses
 Spark grammar even on native frames (declared boundary); untyped `NULL` left operands answer with the
 distinct twin's `Null` (`void`) schema; ALL forms check both sides and nested struct/list fields for MAP
 columns (`[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE]`, distinct forms unchanged); non-lossless

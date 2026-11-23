@@ -101,7 +101,7 @@ Skew, 1M rows over 10 keys (100,000 copies/key) vs 600,000 rows, warm median of 
 
 ## Delta 2 (verifier findings F-1 through F-5, B-1 through B-5, C-1)
 
-- **F-1 (parser-verified `MINUS ALL`):** `minus_all_spans` verifies `SetExpr::SetOperation { op: Minus, set_quantifier: All }` with `sqlparser` (`DatabricksDialect`), preserving comments and spacing while leaving identifiers (`minus` column/table/CTE, `all` alias, string literals, quoted `` `minus` ``) and unparseable queries untouched across statements, stored view bodies, and `filter` strings.
+- **F-1 (parser-verified `MINUS ALL`):** `minus_all_spans` verifies `SetExpr::SetOperation { op: Minus, set_quantifier: All }` with `sqlparser` (`DatabricksDialect`), preserving comments and spacing while leaving identifiers (`minus` column/table/CTE, `all` alias, string literals, quoted `` `minus` ``) and unparsable queries untouched across statements, stored view bodies, and `filter` strings.
 - **F-2 (untyped `NULL` left column):** `rewrite_multiset` emits `lit(ScalarValue::Null)` when the output field is `DataType::Null`, matching RePark's distinct twin schema (`void` on Spark door, `null` on native door; Spark widens to the right column's type).
 - **F-3 (`MAP` on either side and nested):** `map_ordering.rs` inspects both `join.left` and `join.right` and recursively walks `Struct` and `List*` fields for `DataType::Map` on multiset set operations, refusing with `[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE]`; distinct forms keep main's answers.
 - **F-4 (`F.expr` boundary):** no code change; `F.expr` belongs to `pyspark.sql.functions` and is Spark grammar even when passed to a native frame. Pinned and recorded in the card, parity doc, and `crates/repark-python/src/column/map.md`.

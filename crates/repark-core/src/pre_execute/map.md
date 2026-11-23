@@ -39,7 +39,7 @@ the multiset set-operation rewrite and the `MINUS ALL` spelling.
   and joins written as joins do not match. `minus_all_as_except_all` (re-exported at the crate root)
   uses `sqlparser` (`DatabricksDialect`) to respell only `SetExpr::SetOperation { Minus, All }`
   positions as `EXCEPT` (preserving comments and spacing, leaving identifiers, aliases, literals and
-  unparseable SQL untouched), on the Spark door only (the Databricks parser); the native door refuses
+  unparsable SQL untouched), on the Spark door only (the Databricks parser); the native door refuses
   `MINUS ALL` as it refuses `MINUS` (owner ruling: Trino, then DuckDB, then refuse). It runs at the
   first line of `ReparkSession::sql_with_write_options_inner`, on `filter` strings in the frame's
   parser, on stored view bodies in the session's parser, and on `F.expr` (Spark grammar). The distinct

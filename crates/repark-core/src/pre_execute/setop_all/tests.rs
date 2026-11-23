@@ -349,7 +349,7 @@ async fn an_insert_or_ctas_of_a_multiset_stores_the_spark_rows() {
 }
 
 #[test]
-fn non_operator_minus_all_identifiers_and_unparseable_sql_stay_untouched() {
+fn non_operator_minus_all_identifiers_and_unparsable_sql_stay_untouched() {
     let unchanged = [
         "SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) t",
         "SELECT t.minus all FROM (SELECT 1 AS minus, 2 AS except) t",

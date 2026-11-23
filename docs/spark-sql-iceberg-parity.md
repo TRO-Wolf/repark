@@ -2606,7 +2606,7 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
   output carries the normalised key (`0.0`, the canonical NaN), as Spark's does. `MINUS ALL` is
   spelled `EXCEPT ALL` on the Spark door only, using `sqlparser`'s Databricks parse so only true set
   operators (including comments and odd spacing) respell while identifiers, aliases, table names,
-  literals and unparseable SQL stay untouched: at the statement seat, in `filter` strings and stored
+  literals and unparsable SQL stay untouched: at the statement seat, in `filter` strings and stored
   view bodies of a Spark-door session, and in `F.expr` (which belongs to `pyspark.sql.functions`,
   built before any frame or door, so it uses Spark grammar even on native frames); the distinct
   `MINUS` still refuses (SQL-MINUS-REFUSE-1). On the native door `MINUS ALL` refuses as `MINUS` does
