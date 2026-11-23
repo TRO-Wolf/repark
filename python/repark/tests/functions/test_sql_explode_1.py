@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -70,10 +70,15 @@ class _ColdReader:
         self.writer = writer
         self.reader: ReparkSession | None = None
 
-    def open(self) -> ReparkSession:
+    def open(self) -> Callable[[str], Any]:
         self.writer.stop()
         self.reader = _session(self.root, self.zone, self.ansi)
-        return self.reader
+        return self.read
+
+    def read(self, table: str) -> Any:
+        assert self.reader is not None
+        leaf = table.rsplit(".", 1)[1]
+        return self.reader.read.format("iceberg").load(str(self.root / "wh" / "ns" / leaf))
 
     def close(self) -> None:
         if self.reader is not None:
@@ -84,12 +89,22 @@ def _literal(key: str) -> bool:
     return CELLS.get(key.split("|")[0], ("table", ()))[0] == "none"
 
 
+def _literal_constructor(key: str) -> bool:
+    items = CELLS[key.split("|")[0]][1]
+    return any(item.lower().startswith(("explode(array(", "explode(map(")) for item in items)
+
+
 def _normal(cell: dict[str, Any], literal: bool) -> dict[str, Any]:
     if "error" in cell:
         return {"error": True}
     rows = cell["rows"] if literal else sorted(cell["rows"], key=json.dumps)
-    schema = [field[:2] if literal else field for field in cell["schema"]]
+    schema = [field[:2] if literal or field[0] == "dom" else field for field in cell["schema"]]
     return {"columns": cell["columns"], "schema": schema, "rows": rows}
+
+
+def _fexpr_residual(name: str) -> bool:
+    source, items = CELLS[name]
+    return source == "none" or any(" AS " not in item and "explode" in item for item in items)
 
 
 def _scoped_keys(seat: str) -> list[str]:
@@ -98,7 +113,8 @@ def _scoped_keys(seat: str) -> list[str]:
     return [
         f"{name}|{seat}"
         for name, (source, _items) in CELLS.items()
-        if seat == "sql" or source in EXPR_SOURCES
+        if seat == "sql"
+        or (source in EXPR_SOURCES and not (seat == "expr" and _fexpr_residual(name)))
     ]
 
 
@@ -126,16 +142,61 @@ def test_explode_in_a_select_list_answers_as_spark(
     assert not misses, "\n".join(misses)
 
 
+@pytest.mark.parametrize("seat", _SEATS)
 @pytest.mark.parametrize("ansi", ANSI_MODES)
 @pytest.mark.parametrize("zone", ZONES)
-def test_a_literal_array_keeps_the_element_nullability_it_already_had(
+def test_a_literal_cell_has_spark_nullability_but_for_array_and_map_literals(
+    measured: dict[str, dict[str, Any]], zone: str, ansi: str, seat: str
+) -> None:
+    expected = _ORACLE["modes"][mode_key(zone, ansi)]
+    got = measured[mode_key(zone, ansi)]
+    misses = []
+    for key in _scoped_keys(seat):
+        if not _literal(key) or "error" in got[key] or "error" in expected[key]:
+            continue
+        for want, have in zip(expected[key]["schema"], got[key]["schema"], strict=True):
+            residual = _literal_constructor(key) and want[:2] == have[:2] and have[2] > want[2]
+            if want != have and not residual:
+                misses.append(f"{key}: spark {want} repark {have}")
+    assert not misses, "\n".join(misses)
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("zone", ZONES)
+def test_an_array_literal_element_stays_nullable_as_the_typed_explode_has_it(
     measured: dict[str, dict[str, Any]], zone: str, ansi: str
 ) -> None:
+    expected = _ORACLE["modes"][mode_key(zone, ansi)]
     got = measured[mode_key(zone, ansi)]
-    for name in ("bare", "seq-leap", "map"):
-        sql = got[f"{name}|sql"]
-        assert all(field[2] for field in sql["schema"]), sql
-        assert (
-            sql["schema"] == got[f"{name}|select-expr"]["schema"] == got[f"{name}|expr"]["schema"]
-        )
-    assert got["bare|sql"]["schema"] == got["bare|typed"]["schema"]
+    assert (
+        expected["bare|sql"]["schema"]
+        == expected["bare|typed"]["schema"]
+        == [["col", "int", False]]
+    )
+    assert got["bare|sql"]["schema"] == got["bare|typed"]["schema"] == [["col", "int", True]]
+    assert (
+        got["seq-leap|sql"]["schema"]
+        == expected["seq-leap|sql"]["schema"]
+        == [["d", "date", False]]
+    )
+
+
+@pytest.mark.parametrize("zone", ZONES)
+def test_f_expr_over_a_range_frame_and_an_unaliased_f_expr_stay_as_recorded(
+    measured: dict[str, dict[str, Any]], zone: str
+) -> None:
+    got = measured[mode_key(zone, "true")]
+    assert "__repark_gen_col" in got["bare|expr"]["message"]
+    assert got["view-bare|expr"]["columns"] == ["id", "explode(arr)"]
+    assert got["view-bare|expr"]["schema"][1][0] == "col"
+    assert got["view-bare|expr"]["rows"] == got["view-bare|sql"]["rows"]
+
+
+@pytest.mark.parametrize("zone", ZONES)
+def test_dayofmonth_over_an_exploded_date_is_nullable_where_spark_says_not(
+    measured: dict[str, dict[str, Any]], zone: str
+) -> None:
+    expected = _ORACLE["modes"][mode_key(zone, "true")]["projected-dates|sql"]["schema"]
+    got = measured[mode_key(zone, "true")]["projected-dates|sql"]["schema"]
+    assert expected == [["d", "date", False], ["dom", "int", False]]
+    assert got == [["d", "date", False], ["dom", "int", True]]

@@ -245,7 +245,7 @@ def native_answers(run: Callable[[str], Any]) -> dict[str, dict[str, Any]]:
 
 
 def write_answers(
-    session: Any, catalog: str, zone: str, ansi: str, reopen: Callable[[], Any]
+    session: Any, catalog: str, zone: str, ansi: str, cold: Callable[[], Callable[[str], Any]]
 ) -> dict[str, dict[str, Any]]:
     written: dict[str, str] = {}
     answers: dict[str, dict[str, Any]] = {}
@@ -259,10 +259,14 @@ def write_answers(
             written[name] = table
         except Exception as error:
             answers[f"{name}|write"] = outcome(error)
-    reader = reopen()
+    read_back = cold()
     for name, table in written.items():
-        answers[f"{name}|write"] = guarded(lambda table=table: reader.sql(f"SELECT * FROM {table}"))
+        answers[f"{name}|write"] = guarded(lambda table=table: read_back(table))
     return answers
+
+
+def spark_read(session: Any) -> Callable[[str], Any]:
+    return lambda table: session.sql(f"SELECT * FROM {table}")
 
 
 def record(path: Path, warehouse: Path, iceberg_jar: str) -> None:
@@ -291,7 +295,7 @@ def record(path: Path, warehouse: Path, iceberg_jar: str) -> None:
             session.conf.set("spark.sql.ansi.enabled", ansi)
             table = seed(session, catalog, zone, ansi)
             answers = seat_answers(session, functions, table)
-            answers.update(write_answers(session, catalog, zone, ansi, lambda: session))
+            answers.update(write_answers(session, catalog, zone, ansi, lambda: spark_read(session)))
             modes[mode_key(zone, ansi)] = answers
     document = {"spark": session.version, "recorded": "2026-11-23", "modes": modes}
     path.write_text(json.dumps(document, indent=1, sort_keys=True) + "\n", encoding="utf-8")
