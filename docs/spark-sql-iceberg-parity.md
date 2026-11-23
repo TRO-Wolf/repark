@@ -9332,10 +9332,15 @@ the pin rather than obeying it.
   ANSI off (NULL for the bad texts) and the trimmed numbers with ANSI on.
   After: the analyzer rule `spark_string_integral_cast` (`crates/repark-functions/src/cast_map/string_integral.rs`)
   runs such a cast through the map-cast leaf parser: Spark's trim, the strict parse and `[CAST_INVALID_INPUT]` with
-  ANSI on, the legacy parse and NULL with ANSI off, the mode read at invoke. Every measured cell answers Spark's
-  value, type and nullability, or Spark's class, SQLSTATE and message (a NUL renders as `\u0000`); the writes store
-  Spark's rows, read back cold. Not changed: `TRY_CAST` (its whitespace cells stay NULL, STRING-CAST-SILENT-1); the
-  column names RePark already gave (`F.expr` and SQL-over-a-view names differ from Spark's `s` on main too); a cast
+  ANSI on, the legacy parse and NULL with ANSI off, the mode read at invoke; it runs just before `TypeCoercion`, and
+  `spark_coercion_cast_mark`, last, keeps the casts coercion inserts on Arrow's parse. Every measured cell of a cast
+  the user wrote answers Spark's value, type and nullability, or Spark's class, SQLSTATE and message (a NUL renders as
+  `\u0000`); the writes (`INSERT ... SELECT CAST`, `MERGE ... UPDATE SET`, `writeTo().append()`, and since verifier
+  round 2 `UPDATE ... SET c = CAST(...)`, which round 1 had held back with the INSERT store projections) store
+  Spark's rows, read back cold. Names: `SELECT CAST('42' AS INT)` and its `selectExpr` were named
+  `__repark_decimal_cast_nullable__(42)` on main and are `'42'` here, where Spark names it `CAST(42 AS INT)`;
+  `F.expr` nullability moved from False to True, as Spark's; `F.expr` and SQL-over-a-view names still differ from
+  Spark's `s`, as on main. Not changed: `TRY_CAST` (its whitespace cells stay NULL, STRING-CAST-SILENT-1); a cast
   inside a `VALUES` node (`INSERT ... VALUES` places its store-assignment cast there; main and this branch store
   `INSERT INTO t VALUES (1, '42')` into an INT column as 42, where Spark refuses
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` in both modes); the JSON reader's user-schema integer casts and

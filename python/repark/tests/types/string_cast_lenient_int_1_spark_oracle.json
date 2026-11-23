@@ -26335,6 +26335,168 @@
    "sqlstate": "22018"
   }
  },
+ "dml": {
+  "delete_where|false": {
+   "refused": false,
+   "rows": [
+    [
+     2,
+     0
+    ]
+   ]
+  },
+  "delete_where|true": {
+   "error": "CAST_INVALID_INPUT",
+   "refused": true,
+   "rows": [
+    [
+     1,
+     0
+    ],
+    [
+     2,
+     0
+    ]
+   ],
+   "sqlstate": "22018"
+  },
+  "update_bigint|false": {
+   "refused": false,
+   "rows": [
+    [
+     1,
+     42
+    ],
+    [
+     2,
+     null
+    ]
+   ]
+  },
+  "update_bigint|true": {
+   "error": "CAST_INVALID_INPUT",
+   "refused": true,
+   "rows": [
+    [
+     1,
+     0
+    ],
+    [
+     2,
+     0
+    ]
+   ],
+   "sqlstate": "22018"
+  },
+  "update_case|false": {
+   "refused": false,
+   "rows": [
+    [
+     1,
+     42
+    ],
+    [
+     2,
+     0
+    ]
+   ]
+  },
+  "update_case|true": {
+   "refused": false,
+   "rows": [
+    [
+     1,
+     42
+    ],
+    [
+     2,
+     0
+    ]
+   ]
+  },
+  "update_cast|false": {
+   "refused": false,
+   "rows": [
+    [
+     1,
+     42
+    ],
+    [
+     2,
+     null
+    ]
+   ]
+  },
+  "update_cast|true": {
+   "error": "CAST_INVALID_INPUT",
+   "refused": true,
+   "rows": [
+    [
+     1,
+     0
+    ],
+    [
+     2,
+     0
+    ]
+   ],
+   "sqlstate": "22018"
+  },
+  "update_literal|false": {
+   "refused": false,
+   "rows": [
+    [
+     1,
+     7
+    ],
+    [
+     2,
+     7
+    ]
+   ]
+  },
+  "update_literal|true": {
+   "refused": false,
+   "rows": [
+    [
+     1,
+     7
+    ],
+    [
+     2,
+     7
+    ]
+   ]
+  },
+  "update_where|false": {
+   "refused": false,
+   "rows": [
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     0
+    ]
+   ]
+  },
+  "update_where|true": {
+   "error": "CAST_INVALID_INPUT",
+   "refused": true,
+   "rows": [
+    [
+     1,
+     0
+    ],
+    [
+     2,
+     0
+    ]
+   ],
+   "sqlstate": "22018"
+  }
+ },
  "hundred": {
   "dataframe|bigint|false|\" 57 \"": {
    "values": [

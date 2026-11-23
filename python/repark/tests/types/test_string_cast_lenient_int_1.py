@@ -11,6 +11,7 @@ import pytest
 from _record_string_cast_lenient_int_1 import (
     ANSI_MODES,
     COERCION_FIXTURE,
+    DML_SHAPES,
     FIXTURE,
     HUNDRED_BAD,
     HUNDRED_SEATS,
@@ -22,6 +23,7 @@ from _record_string_cast_lenient_int_1 import (
     coercion_cells,
     comparison,
     comparisons,
+    dml_cell,
     hundred,
     implicit_cell,
     implicit_cells,
@@ -82,7 +84,7 @@ def _miss(seat: str, expected: dict[str, Any], got: dict[str, Any]) -> bool:
 def _cold_rows(warehouse: Path, table: str) -> list[list[Any]]:
     cold = _open(warehouse, "true")
     folder = warehouse / "lenient" / "ns" / table.rsplit(".", 1)[1]
-    frame = cold.read.format("iceberg").load(str(folder)).orderBy("id")
+    frame = cold.read.format("iceberg").load(str(folder)).select("id", "c").orderBy("id")
     rows = [[row[0], row[1]] for row in frame.collect()]
     cold.stop()
     return rows
@@ -309,4 +311,25 @@ def test_a_cast_the_coercion_inserts_keeps_mains_answer_or_spark(session: Repark
             misses.append(f"{key}: spark {cell['spark']} main {cell['main']} repark {got}")
         elif "error" not in got and "error" in cell["main"] and not _same(cell["spark"], got):
             misses.append(f"{key}: silent where main refused: spark {cell['spark']} repark {got}")
+    assert not misses, "\n".join(misses)
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+def test_update_and_delete_over_a_user_cast_answer_as_spark_read_back_cold(
+    tmp_path: Path, ansi: str
+) -> None:
+    session = _open(tmp_path, ansi)
+    session.sql("CREATE NAMESPACE IF NOT EXISTS lenient.ns").collect()
+    done = []
+    for slot, name in enumerate(DML_SHAPES):
+        got, table = dml_cell(session, "lenient", name, ansi, slot)
+        done.append((name, got, table))
+    session.stop()
+    misses = []
+    for name, got, table in done:
+        expected = _ORACLE["dml"][f"{name}|{ansi}"]
+        miss = _write_miss(expected, got, _cold_rows(tmp_path, table))
+        if miss:
+            misses.append(f"{name}: {miss}")
+    _reset_active_session_for_tests()
     assert not misses, "\n".join(misses)

@@ -423,6 +423,29 @@ def coercion_cells(session: Any, functions: Any) -> dict[str, dict[str, Any]]:
     return cells
 
 
+DML_SHAPES: dict[str, str] = {
+    "update_cast": "UPDATE {t} SET c = CAST(s AS INT)",
+    "update_literal": "UPDATE {t} SET c = CAST(' 7 ' AS INT)",
+    "update_case": "UPDATE {t} SET c = CASE WHEN id = 1 THEN CAST(s AS INT) ELSE 0 END",
+    "update_bigint": "UPDATE {t} SET c = CAST(s AS BIGINT)",
+    "update_where": "UPDATE {t} SET c = 1 WHERE CAST(s AS INT) = 42",
+    "delete_where": "DELETE FROM {t} WHERE CAST(s AS INT) = 42",
+}
+
+
+def dml_cell(
+    session: Any, catalog: str, name: str, ansi: str, slot: int
+) -> tuple[dict[str, Any], str]:
+    table = f"{catalog}.ns.dml_{name}_{ansi}_{slot}"
+    session.sql(f"CREATE TABLE {table} (id INT, s STRING, c INT) USING iceberg").collect()
+    session.sql(f"INSERT INTO {table} VALUES (1, ' 42 ', 0), (2, 'abc', 0)").collect()
+    try:
+        session.sql(DML_SHAPES[name].format(t=table)).collect()
+    except Exception as error:
+        return {"refused": True, **outcome(error)}, table
+    return {"refused": False}, table
+
+
 def record_writes(session: Any, functions: Any, catalog: str) -> dict[str, Any]:
     writes: dict[str, Any] = {}
     slot = 0
