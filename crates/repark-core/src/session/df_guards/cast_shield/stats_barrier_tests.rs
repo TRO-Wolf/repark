@@ -29,7 +29,7 @@ fn order_keeping_casts_follow_the_value_order() {
             false,
         ),
         (DataType::Int32, DataType::Int64, true),
-        (DataType::Int64, DataType::Int32, true),
+        (DataType::Int64, DataType::Int32, false),
         (DataType::Boolean, DataType::Int32, true),
         (DataType::Int32, DataType::Float64, true),
         (DataType::Float64, DataType::Int32, false),
@@ -70,6 +70,59 @@ fn order_keeping_casts_follow_the_value_order() {
             DataType::Timestamp(TimeUnit::Microsecond, utc),
             true,
         ),
+    ];
+    for (source, target, expected) in cases {
+        assert_eq!(
+            keeps_order(&source, &target),
+            expected,
+            "{source} -> {target}"
+        );
+    }
+}
+
+#[test]
+fn narrowing_numeric_casts_are_barred_and_lossless_widenings_stay_ordered() {
+    let cases = [
+        (DataType::Int64, DataType::Int16, false),
+        (DataType::Int64, DataType::Int8, false),
+        (DataType::Int32, DataType::Int16, false),
+        (DataType::Int32, DataType::Int8, false),
+        (DataType::Int16, DataType::Int8, false),
+        (DataType::Int8, DataType::Int16, true),
+        (DataType::Int16, DataType::Int32, true),
+        (DataType::UInt8, DataType::Int8, false),
+        (DataType::UInt8, DataType::Int16, true),
+        (DataType::Int8, DataType::UInt8, false),
+        (DataType::Decimal128(38, -2), DataType::Float32, false),
+        (DataType::Decimal128(38, -2), DataType::Float64, true),
+        (
+            DataType::Decimal128(10, 2),
+            DataType::Decimal128(3, 2),
+            false,
+        ),
+        (
+            DataType::Decimal128(10, 3),
+            DataType::Decimal128(3, 2),
+            false,
+        ),
+        (
+            DataType::Decimal128(4, 3),
+            DataType::Decimal128(3, 2),
+            false,
+        ),
+        (DataType::Decimal128(4, 2), DataType::Decimal128(5, 3), true),
+        (DataType::Decimal128(10, 2), DataType::Int16, false),
+        (DataType::Decimal128(10, 2), DataType::Int8, false),
+        (DataType::Decimal128(38, 0), DataType::Int32, false),
+        (DataType::Decimal128(38, 0), DataType::Int64, false),
+        (DataType::Decimal128(18, 0), DataType::Int64, true),
+        (DataType::Decimal128(19, 0), DataType::Int64, false),
+        (DataType::Decimal128(2, 0), DataType::Int8, true),
+        (DataType::Decimal128(3, 0), DataType::Int8, false),
+        (DataType::Int32, DataType::Decimal128(10, 0), true),
+        (DataType::Int32, DataType::Decimal128(10, 2), false),
+        (DataType::Int64, DataType::Decimal128(20, 0), true),
+        (DataType::Int64, DataType::Decimal128(18, 0), false),
     ];
     for (source, target, expected) in cases {
         assert_eq!(
@@ -223,4 +276,56 @@ async fn the_barrier_keeps_the_select_list_names_and_is_idempotent() {
     let text = optimized.display_indent().to_string();
     assert_eq!(text.matches(STATS_BARRIER_NAME).count(), 2, "{text}");
     assert!(!barrier_plan(optimized).expect("re-run").transformed);
+}
+
+#[tokio::test]
+async fn a_narrowing_cast_blocks_footer_folding_and_pruning_across_row_groups() {
+    let dir = tempfile::tempdir().expect("a temp dir");
+    let schema = Arc::new(Schema::new(vec![Field::new("b", DataType::Int64, true)]));
+    let file = std::fs::File::create(dir.path().join("multi.parquet")).expect("create the file");
+    let mut writer = ArrowWriter::try_new(file, Arc::clone(&schema), None).expect("open writer");
+    for values in [vec![1i64, 2i64], vec![100i64, 300i64]] {
+        let batch = RecordBatch::try_new(
+            Arc::clone(&schema),
+            vec![Arc::new(Int64Array::from(values))],
+        )
+        .expect("batch");
+        writer.write(&batch).expect("write batch");
+        writer.flush().expect("flush row group");
+    }
+    writer.close().expect("close writer");
+    let session = ReparkSession::new().expect("a session");
+    let location = format!("{}/", dir.path().to_str().expect("a utf-8 path"));
+    session
+        .sql(&format!(
+            "CREATE EXTERNAL TABLE multi STORED AS PARQUET LOCATION '{location}'"
+        ))
+        .await
+        .expect("plan")
+        .collect()
+        .await
+        .expect("create");
+    for sql in [
+        "SELECT min(CAST(b AS TINYINT)) FROM multi",
+        "SELECT max(CAST(b AS TINYINT)) FROM multi",
+        "SELECT min(k), max(k) FROM (SELECT CAST(b AS TINYINT) AS k FROM multi)",
+        "SELECT b FROM multi WHERE CAST(b AS TINYINT) = 1",
+    ] {
+        let plan = session
+            .sql(&format!("EXPLAIN {sql}"))
+            .await
+            .expect("explain")
+            .collect()
+            .await
+            .expect("explain rows");
+        let text = datafusion::arrow::util::pretty::pretty_format_batches(&plan)
+            .expect("render")
+            .to_string();
+        assert!(text.contains(STATS_BARRIER_NAME), "{sql}\n{text}");
+        let result = session.sql(sql).await.expect("plan query").collect().await;
+        assert!(
+            result.is_err(),
+            "{sql} should scan overflowing row group instead of folding footer"
+        );
+    }
 }

@@ -1,15 +1,18 @@
 use std::sync::Arc;
 
 use datafusion::arrow::array::{
-    Array, ArrayRef, AsArray, BooleanArray, Int64Array, PrimitiveArray, StringArray,
+    Array, ArrayRef, AsArray, BooleanArray, Decimal128Array, Int64Array, PrimitiveArray,
+    StringArray, new_null_array,
 };
 use datafusion::arrow::compute::{CastOptions, cast_with_options};
 use datafusion::arrow::datatypes::{
-    ArrowPrimitiveType, DataType, Float64Type, Int8Type, Int16Type, Int32Type, Int64Type,
+    ArrowPrimitiveType, DataType, Decimal128Type, Float32Type, Float64Type, Int8Type, Int16Type,
+    Int32Type, Int64Type, i256,
 };
 use datafusion::common::{DataFusionError, Result};
 
 use super::spark_sql_name;
+use crate::java_double::{java_double_text, java_float_text};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum Mode {
@@ -359,7 +362,156 @@ fn string_via_arrow(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<
     Ok(cast)
 }
 
+fn format_decimal(unscaled: i128, scale: i8) -> String {
+    if scale == 0 {
+        return unscaled.to_string();
+    }
+    if scale < 0 {
+        if unscaled == 0 {
+            return "0".to_owned();
+        }
+        let zeros = "0".repeat(usize::from(scale.unsigned_abs()));
+        return format!("{unscaled}{zeros}");
+    }
+    let digits = unscaled.unsigned_abs().to_string();
+    let width = usize::from(scale.unsigned_abs());
+    let body = if digits.len() > width {
+        let split = digits.len() - width;
+        format!("{}.{}", &digits[..split], &digits[split..])
+    } else {
+        format!("0.{digits:0>width$}")
+    };
+    if unscaled < 0 {
+        format!("-{body}")
+    } else {
+        body
+    }
+}
+
+fn decimal_overflow(
+    unscaled: i128,
+    from_scale: i8,
+    to_precision: u8,
+    to_scale: i8,
+) -> DataFusionError {
+    DataFusionError::Execution(format!(
+        "[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]  {} cannot be represented as \
+         Decimal({to_precision}, {to_scale}). If necessary set \"spark.sql.ansi.enabled\" to \
+         \"false\" to bypass this error, and return NULL instead. SQLSTATE: 22003",
+        format_decimal(unscaled, from_scale)
+    ))
+}
+
+fn try_map_primitive<S, O, F>(source: &PrimitiveArray<S>, mut map: F) -> Result<PrimitiveArray<O>>
+where
+    S: ArrowPrimitiveType,
+    O: ArrowPrimitiveType,
+    F: FnMut(S::Native) -> Result<O::Native>,
+{
+    let mut out = Vec::with_capacity(source.len());
+    if let Some(nulls) = source.nulls() {
+        for (index, &value) in source.values().iter().enumerate() {
+            if nulls.is_valid(index) {
+                out.push(map(value)?);
+            } else {
+                out.push(O::default_value());
+            }
+        }
+        Ok(PrimitiveArray::<O>::new(out.into(), Some(nulls.clone())))
+    } else {
+        for &value in source.values() {
+            out.push(map(value)?);
+        }
+        Ok(PrimitiveArray::<O>::new(out.into(), None))
+    }
+}
+
+fn narrow_signed_array<S, O>(
+    source: &PrimitiveArray<S>,
+    from_type: &DataType,
+    target: &DataType,
+    mode: Mode,
+    wrap: fn(S::Native) -> O::Native,
+) -> Result<ArrayRef>
+where
+    S: ArrowPrimitiveType,
+    S::Native: Into<i64>,
+    O: ArrowPrimitiveType,
+    O::Native: TryFrom<S::Native>,
+{
+    match mode {
+        Mode::Legacy => Ok(Arc::new(source.unary::<_, O>(wrap))),
+        Mode::Try => {
+            Ok(Arc::new(source.unary_opt::<_, O>(|value| {
+                O::Native::try_from(value).ok()
+            })))
+        }
+        Mode::Ansi => Ok(Arc::new(try_map_primitive::<S, O, _>(source, |value| {
+            O::Native::try_from(value).map_err(|_| {
+                cast_overflow(
+                    &integral_literal(value.into(), from_type),
+                    from_type,
+                    target,
+                )
+            })
+        })?)),
+    }
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn signed_to_signed(source: &ArrayRef, target: &DataType, mode: Mode) -> Option<Result<ArrayRef>> {
+    let from = source.data_type();
+    match (from, target) {
+        (DataType::Int64, DataType::Int32) => Some(narrow_signed_array::<Int64Type, Int32Type>(
+            source.as_primitive::<Int64Type>(),
+            from,
+            target,
+            mode,
+            |value| value as i32,
+        )),
+        (DataType::Int64, DataType::Int16) => Some(narrow_signed_array::<Int64Type, Int16Type>(
+            source.as_primitive::<Int64Type>(),
+            from,
+            target,
+            mode,
+            |value| value as i16,
+        )),
+        (DataType::Int64, DataType::Int8) => Some(narrow_signed_array::<Int64Type, Int8Type>(
+            source.as_primitive::<Int64Type>(),
+            from,
+            target,
+            mode,
+            |value| value as i8,
+        )),
+        (DataType::Int32, DataType::Int16) => Some(narrow_signed_array::<Int32Type, Int16Type>(
+            source.as_primitive::<Int32Type>(),
+            from,
+            target,
+            mode,
+            |value| value as i16,
+        )),
+        (DataType::Int32, DataType::Int8) => Some(narrow_signed_array::<Int32Type, Int8Type>(
+            source.as_primitive::<Int32Type>(),
+            from,
+            target,
+            mode,
+            |value| value as i8,
+        )),
+        (DataType::Int16, DataType::Int8) => Some(narrow_signed_array::<Int16Type, Int8Type>(
+            source.as_primitive::<Int16Type>(),
+            from,
+            target,
+            mode,
+            |value| value as i8,
+        )),
+        _ => None,
+    }
+}
+
 fn integral_to_integral(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayRef> {
+    if let Some(fast) = signed_to_signed(source, target, mode) {
+        return fast;
+    }
     let wide = cast_with_options(source.as_ref(), &DataType::Int64, &CastOptions::default())?;
     let (low, high) = integral_range(target);
     let mut out = Vec::with_capacity(wide.len());
@@ -383,51 +535,363 @@ fn integral_to_integral(source: &ArrayRef, target: &DataType, mode: Mode) -> Res
     build_integral(out, target)
 }
 
-#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
-fn fractional_to_integral(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayRef> {
-    let wide = cast_with_options(source.as_ref(), &DataType::Float64, &CastOptions::default())?;
-    let (low, high) = integral_range(target);
-    let suffix = if source.data_type() == &DataType::Float64 {
-        "D"
-    } else {
-        "F"
+#[allow(clippy::cast_possible_truncation)]
+fn truncate_decimal_to_i128(unscaled: i128, scale: i8) -> (Option<i128>, i64) {
+    if scale == 0 {
+        return (Some(unscaled), unscaled as i64);
+    }
+    if scale > 0 {
+        let drop = u32::from(scale.unsigned_abs());
+        if drop > 38 {
+            return (Some(0), 0);
+        }
+        let whole = unscaled / 10i128.pow(drop);
+        return (Some(whole), whole as i64);
+    }
+    let shift = u32::from(scale.unsigned_abs());
+    let Some(factor) = i256::from_i128(10).checked_pow(shift) else {
+        return (None, 0);
     };
-    let mut out = Vec::with_capacity(wide.len());
-    for value in wide.as_primitive::<Float64Type>() {
-        out.push(match value {
-            None => None,
-            Some(inner) => {
-                let truncated = inner.trunc();
-                let in_range = truncated.is_finite()
-                    && truncated >= low as f64
-                    && truncated <= high as f64
-                    && !(high == i64::MAX && truncated >= 9_223_372_036_854_775_807.0);
-                if in_range {
-                    Some(truncated as i64)
+    let Some(wide) = i256::from_i128(unscaled).checked_mul(factor) else {
+        return (None, 0);
+    };
+    let bytes = wide.to_le_bytes();
+    let low = i64::from_le_bytes([
+        bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+    ]);
+    (wide.to_i128(), low)
+}
+
+fn decimal_array_to_signed<O>(
+    source: &Decimal128Array,
+    from_type: &DataType,
+    scale: i8,
+    target: &DataType,
+    mode: Mode,
+    wrap: fn(i64) -> O::Native,
+) -> Result<ArrayRef>
+where
+    O: ArrowPrimitiveType,
+    O::Native: TryFrom<i128>,
+{
+    match mode {
+        Mode::Legacy => Ok(Arc::new(source.unary::<_, O>(|unscaled| {
+            wrap(truncate_decimal_to_i128(unscaled, scale).1)
+        }))),
+        Mode::Try => Ok(Arc::new(source.unary_opt::<_, O>(|unscaled| {
+            truncate_decimal_to_i128(unscaled, scale)
+                .0
+                .and_then(|whole| O::Native::try_from(whole).ok())
+        }))),
+        Mode::Ansi => Ok(Arc::new(try_map_primitive::<Decimal128Type, O, _>(
+            source,
+            |unscaled| {
+                truncate_decimal_to_i128(unscaled, scale)
+                    .0
+                    .and_then(|whole| O::Native::try_from(whole).ok())
+                    .ok_or_else(|| {
+                        cast_overflow(
+                            &format!("{}BD", format_decimal(unscaled, scale)),
+                            from_type,
+                            target,
+                        )
+                    })
+            },
+        )?)),
+    }
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn decimal_to_integral(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayRef> {
+    let from = source.data_type();
+    let DataType::Decimal128(_, scale) = from else {
+        let options = CastOptions {
+            safe: mode.nulls_on_failure(),
+            ..CastOptions::default()
+        };
+        return Ok(cast_with_options(source.as_ref(), target, &options)?);
+    };
+    let scale = *scale;
+    let decimals = source.as_primitive::<Decimal128Type>();
+    match target {
+        DataType::Int8 => {
+            decimal_array_to_signed::<Int8Type>(decimals, from, scale, target, mode, |low| {
+                low as i8
+            })
+        }
+        DataType::Int16 => {
+            decimal_array_to_signed::<Int16Type>(decimals, from, scale, target, mode, |low| {
+                low as i16
+            })
+        }
+        DataType::Int32 => {
+            decimal_array_to_signed::<Int32Type>(decimals, from, scale, target, mode, |low| {
+                low as i32
+            })
+        }
+        DataType::Int64 => {
+            decimal_array_to_signed::<Int64Type>(decimals, from, scale, target, mode, |low| low)
+        }
+        other => Err(DataFusionError::Internal(format!(
+            "expected a signed integral target, got {other}"
+        ))),
+    }
+}
+
+fn rescale_decimal(unscaled: i128, from_scale: i8, to_precision: u8, to_scale: i8) -> Option<i128> {
+    let limit = 10u128.checked_pow(u32::from(to_precision))?;
+    let delta = i32::from(to_scale) - i32::from(from_scale);
+    let rescaled = match delta.cmp(&0) {
+        std::cmp::Ordering::Equal => Some(unscaled),
+        std::cmp::Ordering::Greater => {
+            if unscaled == 0 {
+                Some(0)
+            } else {
+                let step = u32::try_from(delta).ok()?;
+                if step > 38 {
+                    None
                 } else {
-                    match mode {
-                        Mode::Ansi => {
-                            return Err(cast_overflow(
-                                &format!("{inner:?}{suffix}"),
-                                source.data_type(),
-                                target,
-                            ));
-                        }
-                        Mode::Legacy if integral_bits(target) >= 32 => {
-                            Some(if integral_bits(target) == 32 {
-                                i64::from(inner as i32)
-                            } else {
-                                inner as i64
-                            })
-                        }
-                        Mode::Legacy => Some(wrap_integral(i64::from(inner as i32), target)),
-                        Mode::Try => None,
-                    }
+                    10i128
+                        .checked_pow(step)
+                        .and_then(|factor| unscaled.checked_mul(factor))
                 }
             }
-        });
+        }
+        std::cmp::Ordering::Less => {
+            let drop = u32::try_from(-delta).ok()?;
+            if drop > 38 {
+                Some(0)
+            } else {
+                let factor = 10i128.checked_pow(drop)?;
+                let half = (factor / 2).unsigned_abs();
+                let quotient = unscaled / factor;
+                let remainder = unscaled % factor;
+                if remainder.unsigned_abs() >= half {
+                    quotient.checked_add(if unscaled >= 0 { 1 } else { -1 })
+                } else {
+                    Some(quotient)
+                }
+            }
+        }
+    };
+    rescaled.filter(|value| value.unsigned_abs() < limit)
+}
+
+fn decimal_to_decimal(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayRef> {
+    let (&DataType::Decimal128(_, from_scale), &DataType::Decimal128(to_precision, to_scale)) =
+        (source.data_type(), target)
+    else {
+        let options = CastOptions {
+            safe: mode.nulls_on_failure(),
+            ..CastOptions::default()
+        };
+        return Ok(cast_with_options(source.as_ref(), target, &options)?);
+    };
+    let decimals = source.as_primitive::<Decimal128Type>();
+    let out: Decimal128Array = match mode {
+        Mode::Legacy | Mode::Try => decimals
+            .unary_opt(|unscaled| rescale_decimal(unscaled, from_scale, to_precision, to_scale)),
+        Mode::Ansi => {
+            try_map_primitive::<Decimal128Type, Decimal128Type, _>(decimals, |unscaled| {
+                rescale_decimal(unscaled, from_scale, to_precision, to_scale)
+                    .ok_or_else(|| decimal_overflow(unscaled, from_scale, to_precision, to_scale))
+            })?
+        }
+    };
+    Ok(Arc::new(
+        out.with_precision_and_scale(to_precision, to_scale)?,
+    ))
+}
+
+fn float32_literal(value: f32) -> String {
+    java_float_text(value)
+}
+
+fn float64_literal(value: f64) -> String {
+    if value.is_finite() {
+        format!("{}D", java_double_text(value))
+    } else {
+        java_double_text(value)
     }
-    build_integral(out, target)
+}
+
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+fn float_array_to_signed<F, O>(
+    source: &PrimitiveArray<F>,
+    from_type: &DataType,
+    target: &DataType,
+    mode: Mode,
+    format_value: fn(F::Native) -> String,
+    legacy: fn(f64) -> O::Native,
+    checked: fn(f64) -> Option<O::Native>,
+) -> Result<ArrayRef>
+where
+    F: ArrowPrimitiveType,
+    F::Native: Into<f64>,
+    O: ArrowPrimitiveType,
+{
+    match mode {
+        Mode::Legacy => Ok(Arc::new(source.unary::<_, O>(|value| legacy(value.into())))),
+        Mode::Try => Ok(Arc::new(
+            source.unary_opt::<_, O>(|value| checked(value.into())),
+        )),
+        Mode::Ansi => Ok(Arc::new(try_map_primitive::<F, O, _>(source, |value| {
+            checked(value.into())
+                .ok_or_else(|| cast_overflow(&format_value(value), from_type, target))
+        })?)),
+    }
+}
+
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+fn float_checked_i8(value: f64) -> Option<i8> {
+    let truncated = value.trunc();
+    (truncated.is_finite() && truncated >= f64::from(i8::MIN) && truncated <= f64::from(i8::MAX))
+        .then_some(truncated as i8)
+}
+
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+fn float_checked_i16(value: f64) -> Option<i16> {
+    let truncated = value.trunc();
+    (truncated.is_finite() && truncated >= f64::from(i16::MIN) && truncated <= f64::from(i16::MAX))
+        .then_some(truncated as i16)
+}
+
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+fn float_checked_i32(value: f64) -> Option<i32> {
+    let truncated = value.trunc();
+    (truncated.is_finite() && truncated >= f64::from(i32::MIN) && truncated <= f64::from(i32::MAX))
+        .then_some(truncated as i32)
+}
+
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+fn float_checked_i64(value: f64) -> Option<i64> {
+    let truncated = value.trunc();
+    (truncated.is_finite() && truncated >= i64::MIN as f64 && truncated <= i64::MAX as f64)
+        .then_some(truncated as i64)
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn float_dispatch<F>(
+    source: &PrimitiveArray<F>,
+    from_type: &DataType,
+    target: &DataType,
+    mode: Mode,
+    format_value: fn(F::Native) -> String,
+) -> Result<ArrayRef>
+where
+    F: ArrowPrimitiveType,
+    F::Native: Into<f64>,
+{
+    match target {
+        DataType::Int8 => float_array_to_signed::<F, Int8Type>(
+            source,
+            from_type,
+            target,
+            mode,
+            format_value,
+            |value| (value as i32) as i8,
+            float_checked_i8,
+        ),
+        DataType::Int16 => float_array_to_signed::<F, Int16Type>(
+            source,
+            from_type,
+            target,
+            mode,
+            format_value,
+            |value| (value as i32) as i16,
+            float_checked_i16,
+        ),
+        DataType::Int32 => float_array_to_signed::<F, Int32Type>(
+            source,
+            from_type,
+            target,
+            mode,
+            format_value,
+            |value| value as i32,
+            float_checked_i32,
+        ),
+        DataType::Int64 => float_array_to_signed::<F, Int64Type>(
+            source,
+            from_type,
+            target,
+            mode,
+            format_value,
+            |value| value as i64,
+            float_checked_i64,
+        ),
+        other => Err(DataFusionError::Internal(format!(
+            "expected a signed integral target, got {other}"
+        ))),
+    }
+}
+
+fn fractional_to_integral(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayRef> {
+    let from = source.data_type();
+    match from {
+        DataType::Float32 => float_dispatch::<Float32Type>(
+            source.as_primitive::<Float32Type>(),
+            from,
+            target,
+            mode,
+            float32_literal,
+        ),
+        DataType::Float64 => float_dispatch::<Float64Type>(
+            source.as_primitive::<Float64Type>(),
+            from,
+            target,
+            mode,
+            float64_literal,
+        ),
+        _ => {
+            let wide =
+                cast_with_options(source.as_ref(), &DataType::Float64, &CastOptions::default())?;
+            float_dispatch::<Float64Type>(
+                wide.as_primitive::<Float64Type>(),
+                from,
+                target,
+                mode,
+                float64_literal,
+            )
+        }
+    }
+}
+
+pub(super) fn narrow_numeric(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayRef> {
+    if source.data_type() == &DataType::Null {
+        return Ok(new_null_array(target, source.len()));
+    }
+    let decoded;
+    let source = if let DataType::Dictionary(_, value) = source.data_type() {
+        decoded = cast_with_options(source.as_ref(), value.as_ref(), &CastOptions::default())?;
+        &decoded
+    } else {
+        source
+    };
+    let from = source.data_type();
+    if from == target {
+        return Ok(Arc::clone(source));
+    }
+    let signed_target = matches!(
+        target,
+        DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64
+    );
+    if is_integral(from) && signed_target {
+        return integral_to_integral(source, target, mode);
+    }
+    if is_decimal(from) && signed_target {
+        return decimal_to_integral(source, target, mode);
+    }
+    if is_fractional(from) && signed_target {
+        return fractional_to_integral(source, target, mode);
+    }
+    if is_decimal(from) && is_decimal(target) {
+        return decimal_to_decimal(source, target, mode);
+    }
+    let options = CastOptions {
+        safe: mode.nulls_on_failure(),
+        ..CastOptions::default()
+    };
+    Ok(cast_with_options(source.as_ref(), target, &options)?)
 }
 
 pub(super) fn leaf_cast(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayRef> {
@@ -451,8 +915,14 @@ pub(super) fn leaf_cast(source: &ArrayRef, target: &DataType, mode: Mode) -> Res
     if is_integral(from) && signed_target {
         return integral_to_integral(source, target, mode);
     }
+    if is_decimal(from) && signed_target {
+        return decimal_to_integral(source, target, mode);
+    }
     if is_fractional(from) && signed_target {
         return fractional_to_integral(source, target, mode);
+    }
+    if is_decimal(from) && is_decimal(target) {
+        return decimal_to_decimal(source, target, mode);
     }
     let options = CastOptions {
         safe: mode.nulls_on_failure(),

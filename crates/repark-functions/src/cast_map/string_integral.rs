@@ -14,17 +14,25 @@ use datafusion::logical_expr::{
 };
 use datafusion::optimizer::AnalyzerRule;
 
-use super::leaf::{Mode, string_to_integral};
+use super::leaf::{Mode, narrow_numeric, string_to_integral};
 use crate::ansi::spark_ansi_enabled_from_options;
+use crate::java_double::SUFFIX_LITERAL_NAME;
 use crate::spark_string_timestamp::is_string_type;
 
 pub const ARROW_CAST_OPERAND_NAME: &str = "__repark_arrow_cast_operand__";
+pub const NARROW_DECIMAL_PREFIX: &str = "__repark_narrow_to_decimal_";
 
 const TARGETS: [(DataType, &str); 4] = [
     (DataType::Int8, "__repark_string_to_tinyint__"),
     (DataType::Int16, "__repark_string_to_smallint__"),
     (DataType::Int32, "__repark_string_to_int__"),
     (DataType::Int64, "__repark_string_to_bigint__"),
+];
+const NARROW_TARGETS: [(DataType, &str); 4] = [
+    (DataType::Int8, "__repark_narrow_to_tinyint__"),
+    (DataType::Int16, "__repark_narrow_to_smallint__"),
+    (DataType::Int32, "__repark_narrow_to_int__"),
+    (DataType::Int64, "__repark_narrow_to_bigint__"),
 ];
 static STRING_INTEGRAL: LazyLock<[Arc<ScalarUDF>; 4]> = LazyLock::new(|| {
     TARGETS.map(|(target, name)| {
@@ -40,6 +48,20 @@ static STRING_INTEGRAL_KEYS: LazyLock<[Arc<ScalarUDF>; 4]> = LazyLock::new(|| {
         )))
     })
 });
+static NARROW_INTEGRAL: LazyLock<[Arc<ScalarUDF>; 4]> = LazyLock::new(|| {
+    NARROW_TARGETS.map(|(target, name)| {
+        Arc::new(ScalarUDF::from(SparkNarrowIntegral::new(
+            target, name, true,
+        )))
+    })
+});
+static NARROW_INTEGRAL_KEYS: LazyLock<[Arc<ScalarUDF>; 4]> = LazyLock::new(|| {
+    NARROW_TARGETS.map(|(target, name)| {
+        Arc::new(ScalarUDF::from(SparkNarrowIntegral::new(
+            target, name, false,
+        )))
+    })
+});
 static ARROW_CAST_OPERAND: LazyLock<Arc<ScalarUDF>> =
     LazyLock::new(|| Arc::new(ScalarUDF::from(ArrowCastOperand::new())));
 
@@ -47,6 +69,7 @@ static ARROW_CAST_OPERAND: LazyLock<Arc<ScalarUDF>> =
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
     STRING_INTEGRAL
         .iter()
+        .chain(NARROW_INTEGRAL.iter())
         .chain(std::iter::once(&*ARROW_CAST_OPERAND))
         .map(Arc::clone)
         .collect()
@@ -66,20 +89,174 @@ pub fn string_integral_cast_parts(expr: &Expr) -> Option<(&Expr, DataType)> {
     Some((operand, target.clone()))
 }
 
-fn string_integral_udf(target: &DataType, named: bool) -> Option<Arc<ScalarUDF>> {
-    let index = match target {
-        DataType::Int8 => 0,
-        DataType::Int16 => 1,
-        DataType::Int32 => 2,
-        DataType::Int64 => 3,
-        _ => return None,
+#[must_use]
+pub fn narrow_cast_parts(expr: &Expr) -> Option<(&Expr, DataType)> {
+    let Expr::ScalarFunction(function) = expr else {
+        return None;
     };
+    let [operand] = function.args.as_slice() else {
+        return None;
+    };
+    if let Some((target, _)) = NARROW_TARGETS
+        .iter()
+        .find(|(_, name)| *name == function.func.name())
+    {
+        return Some((operand, target.clone()));
+    }
+    if function.func.name().starts_with(NARROW_DECIMAL_PREFIX) {
+        return function
+            .func
+            .return_type(&[])
+            .ok()
+            .map(|target| (operand, target));
+    }
+    None
+}
+
+fn target_index(target: &DataType) -> Option<usize> {
+    match target {
+        DataType::Int8 => Some(0),
+        DataType::Int16 => Some(1),
+        DataType::Int32 => Some(2),
+        DataType::Int64 => Some(3),
+        _ => None,
+    }
+}
+
+fn string_integral_udf(target: &DataType, named: bool) -> Option<Arc<ScalarUDF>> {
+    let index = target_index(target)?;
     let family = if named {
         &STRING_INTEGRAL
     } else {
         &STRING_INTEGRAL_KEYS
     };
     family.get(index).map(Arc::clone)
+}
+
+fn narrow_integral_udf(target: &DataType, named: bool) -> Option<Arc<ScalarUDF>> {
+    let index = target_index(target)?;
+    let family = if named {
+        &NARROW_INTEGRAL
+    } else {
+        &NARROW_INTEGRAL_KEYS
+    };
+    family.get(index).map(Arc::clone)
+}
+
+fn plain_type(data_type: &DataType) -> &DataType {
+    match data_type {
+        DataType::Dictionary(_, value) => plain_type(value),
+        other => other,
+    }
+}
+
+fn is_narrowing_signed_integer(source: &DataType, target: &DataType) -> bool {
+    matches!(
+        (source, target),
+        (
+            DataType::Int64,
+            DataType::Int32 | DataType::Int16 | DataType::Int8
+        ) | (DataType::Int32, DataType::Int16 | DataType::Int8)
+            | (DataType::Int16, DataType::Int8)
+    )
+}
+
+fn is_in_range_int_literal(operand: &Expr, target: &DataType) -> bool {
+    let Expr::Literal(scalar, _) = operand else {
+        return false;
+    };
+    let value = match scalar {
+        ScalarValue::Int16(Some(inner)) => i64::from(*inner),
+        ScalarValue::Int32(Some(inner)) => i64::from(*inner),
+        ScalarValue::Int64(Some(inner)) => *inner,
+        _ => return false,
+    };
+    match target {
+        DataType::Int8 => i8::try_from(value).is_ok(),
+        DataType::Int16 => i16::try_from(value).is_ok(),
+        DataType::Int32 => i32::try_from(value).is_ok(),
+        _ => false,
+    }
+}
+
+fn decimal_integer_overflows(precision: u8, scale: i8, target: &DataType) -> bool {
+    let max = match target {
+        DataType::Int8 => i128::from(i8::MAX),
+        DataType::Int16 => i128::from(i16::MAX),
+        DataType::Int32 => i128::from(i32::MAX),
+        DataType::Int64 => i128::from(i64::MAX),
+        _ => return false,
+    };
+    let integer_digits = i32::from(precision) - i32::from(scale);
+    if integer_digits <= 0 {
+        return false;
+    }
+    let Some(exponent) = u32::try_from(integer_digits).ok() else {
+        return true;
+    };
+    10i128
+        .checked_pow(exponent)
+        .and_then(|power| power.checked_sub(1))
+        .is_none_or(|top| top > max)
+}
+
+fn decimal_to_decimal_overflows(
+    from_precision: u8,
+    from_scale: i8,
+    to_precision: u8,
+    to_scale: i8,
+) -> bool {
+    let from_integer = i32::from(from_precision) - i32::from(from_scale);
+    let to_integer = i32::from(to_precision) - i32::from(to_scale);
+    if to_scale < from_scale {
+        to_integer <= from_integer
+    } else {
+        to_integer < from_integer
+    }
+}
+
+fn is_suffix_literal(expr: &Expr) -> bool {
+    matches!(expr, Expr::ScalarFunction(function) if function.func.name() == SUFFIX_LITERAL_NAME)
+}
+
+fn cast_udf_for(
+    operand: &Expr,
+    source: &DataType,
+    target: &DataType,
+    named: bool,
+) -> Option<Arc<ScalarUDF>> {
+    if is_arrow_cast_operand(operand) || is_suffix_literal(operand) {
+        return None;
+    }
+    if is_string_type(source) {
+        return string_integral_udf(target, named);
+    }
+    let plain = plain_type(source);
+    if is_narrowing_signed_integer(plain, target) {
+        if is_in_range_int_literal(operand, target) {
+            return None;
+        }
+        return narrow_integral_udf(target, named);
+    }
+    if let DataType::Decimal128(precision, scale) = plain {
+        if decimal_integer_overflows(*precision, *scale, target) {
+            return narrow_integral_udf(target, named);
+        }
+        if let DataType::Decimal128(to_precision, to_scale) = target
+            && decimal_to_decimal_overflows(*precision, *scale, *to_precision, *to_scale)
+        {
+            return Some(Arc::new(ScalarUDF::from(SparkNarrowDecimal::new(
+                *to_precision,
+                *to_scale,
+                named,
+            ))));
+        }
+        return None;
+    }
+    if matches!(plain, DataType::Float32 | DataType::Float64) {
+        return narrow_integral_udf(target, named);
+    }
+    None
 }
 
 #[derive(Debug, Default)]
@@ -160,12 +337,9 @@ fn mark_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let Expr::Cast(cast) = expr else {
         return Transformed::no(expr);
     };
-    let wants_mark = string_integral_udf(cast.field.data_type(), true).is_some()
-        && !is_arrow_cast_operand(&cast.expr)
-        && cast
-            .expr
-            .get_type(schema)
-            .is_ok_and(|source| is_string_type(&source));
+    let wants_mark = cast.expr.get_type(schema).is_ok_and(|source| {
+        cast_udf_for(&cast.expr, &source, cast.field.data_type(), true).is_some()
+    });
     if !wants_mark {
         return Transformed::no(Expr::Cast(cast));
     }
@@ -235,18 +409,12 @@ fn rewrite_cast(expr: Expr, schema: &DFSchema, named: bool) -> Transformed<Expr>
     let Expr::Cast(cast) = &expr else {
         return Transformed::no(expr);
     };
-    let Some(udf) = string_integral_udf(cast.field.data_type(), named) else {
-        return Transformed::no(expr);
-    };
-    if is_arrow_cast_operand(&cast.expr) {
-        return Transformed::no(expr);
-    }
     let Ok(source) = cast.expr.get_type(schema) else {
         return Transformed::no(expr);
     };
-    if !is_string_type(&source) {
+    let Some(udf) = cast_udf_for(&cast.expr, &source, cast.field.data_type(), named) else {
         return Transformed::no(expr);
-    }
+    };
     Transformed::yes(Expr::ScalarFunction(ScalarFunction::new_udf(
         udf,
         vec![*cast.expr.clone()],
@@ -380,5 +548,157 @@ impl ScalarUDFImpl for ArrowCastOperand {
             return exec_err!("'{ARROW_CAST_OPERAND_NAME}' takes one argument");
         };
         Ok(value.clone())
+    }
+}
+
+fn invoke_narrow(
+    name: &str,
+    target: &DataType,
+    args: &ScalarFunctionArgs,
+) -> Result<ColumnarValue> {
+    let mode = if spark_ansi_enabled_from_options(&args.config_options) {
+        Mode::Ansi
+    } else {
+        Mode::Legacy
+    };
+    let [value] = args.args.as_slice() else {
+        return exec_err!("'{name}' takes one argument");
+    };
+    match value {
+        ColumnarValue::Array(source) => {
+            Ok(ColumnarValue::Array(narrow_numeric(source, target, mode)?))
+        }
+        ColumnarValue::Scalar(scalar) => {
+            let converted = narrow_numeric(&scalar.to_array_of_size(1)?, target, mode)?;
+            Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
+                &converted, 0,
+            )?))
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+struct SparkNarrowIntegral {
+    target: DataType,
+    name: &'static str,
+    named: bool,
+    signature: Signature,
+}
+
+impl SparkNarrowIntegral {
+    fn new(target: DataType, name: &'static str, named: bool) -> Self {
+        Self {
+            target,
+            name,
+            named,
+            signature: Signature::any(1, Volatility::Immutable),
+        }
+    }
+}
+
+impl ScalarUDFImpl for SparkNarrowIntegral {
+    fn name(&self) -> &str {
+        self.name
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
+
+    fn schema_name(&self, args: &[Expr]) -> Result<String> {
+        let [value] = args else {
+            return plan_err!("'{}' takes one argument", self.name);
+        };
+        if self.named {
+            return Ok(value.schema_name().to_string());
+        }
+        Ok(format!("{}({})", self.name, value.schema_name()))
+    }
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(self.target.clone())
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        let [source] = args.arg_fields else {
+            return plan_err!("'{}' takes one argument", self.name);
+        };
+        let nullable = match plain_type(source.data_type()) {
+            DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64 => {
+                source.is_nullable()
+            }
+            _ => true,
+        };
+        Ok(Arc::new(Field::new(
+            self.name,
+            self.target.clone(),
+            nullable,
+        )))
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        invoke_narrow(self.name, &self.target, &args)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+struct SparkNarrowDecimal {
+    target: DataType,
+    name: String,
+    named: bool,
+    signature: Signature,
+}
+
+impl SparkNarrowDecimal {
+    fn new(precision: u8, scale: i8, named: bool) -> Self {
+        let name = if scale < 0 {
+            format!(
+                "{NARROW_DECIMAL_PREFIX}{precision}_m{}__",
+                scale.unsigned_abs()
+            )
+        } else {
+            format!("{NARROW_DECIMAL_PREFIX}{precision}_{scale}__")
+        };
+        Self {
+            target: DataType::Decimal128(precision, scale),
+            name,
+            named,
+            signature: Signature::any(1, Volatility::Immutable),
+        }
+    }
+}
+
+impl ScalarUDFImpl for SparkNarrowDecimal {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn signature(&self) -> &Signature {
+        &self.signature
+    }
+
+    fn schema_name(&self, args: &[Expr]) -> Result<String> {
+        let [value] = args else {
+            return plan_err!("'{}' takes one argument", self.name);
+        };
+        if self.named {
+            return Ok(value.schema_name().to_string());
+        }
+        Ok(format!("{}({})", self.name, value.schema_name()))
+    }
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(self.target.clone())
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        if args.arg_fields.len() != 1 {
+            return plan_err!("'{}' takes one argument", self.name);
+        }
+        Ok(Arc::new(Field::new(&self.name, self.target.clone(), true)))
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        invoke_narrow(&self.name, &self.target, &args)
     }
 }
