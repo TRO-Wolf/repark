@@ -93,7 +93,7 @@ pub(crate) async fn refuse_cast_then_fold_nested(
         folded.assignments = assignments;
         changed = true;
     }
-    if wrap_explicit_update_casts(&mut folded.assignments) {
+    if has_spark_cast_seam(ctx) && wrap_explicit_update_casts(&mut folded.assignments) {
         changed = true;
     }
     if !changed {
@@ -103,6 +103,24 @@ pub(crate) async fn refuse_cast_then_fold_nested(
     Ok(Some(repark_iceberg::write::sql_text::render_for_reparse(
         &mut rendered,
     )))
+}
+
+fn has_spark_cast_seam(ctx: &SessionContext) -> bool {
+    let state = ctx.state();
+    if !state
+        .scalar_functions()
+        .contains_key(repark_functions::cast_map::ARROW_CAST_OPERAND_NAME)
+    {
+        return false;
+    }
+    let rules = &state.analyzer().rules;
+    let has_rewrite = rules
+        .iter()
+        .any(|rule| rule.name() == "spark_string_integral_cast");
+    let has_mark = rules
+        .iter()
+        .any(|rule| rule.name() == "spark_coercion_cast_mark");
+    has_rewrite && has_mark
 }
 
 fn is_spark_cast_target(data_type: &SqlDataType) -> bool {
