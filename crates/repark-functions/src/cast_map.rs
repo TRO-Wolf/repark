@@ -23,7 +23,9 @@ mod rewrite;
 mod string_integral;
 
 pub use rewrite::{map_cast_target, map_cast_token, rewrite_map_casts};
-pub use string_integral::{ARROW_CAST_OPERAND_NAME, SparkStringIntegralCast};
+pub use string_integral::{
+    ARROW_CAST_OPERAND_NAME, SparkStringIntegralCast, string_integral_cast_parts,
+};
 
 pub use repark_common::udf_names::CAST_MAP_NAME;
 pub const EMPTY_MAP_CAST_NAME: &str = "__repark_empty_map_cast__";

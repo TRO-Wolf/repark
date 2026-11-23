@@ -52,6 +52,20 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         .collect()
 }
 
+#[must_use]
+pub fn string_integral_cast_parts(expr: &Expr) -> Option<(&Expr, DataType)> {
+    let Expr::ScalarFunction(function) = expr else {
+        return None;
+    };
+    let (target, _) = TARGETS
+        .iter()
+        .find(|(_, name)| *name == function.func.name())?;
+    let [operand] = function.args.as_slice() else {
+        return None;
+    };
+    Some((operand, target.clone()))
+}
+
 fn string_integral_udf(target: &DataType, named: bool) -> Option<Arc<ScalarUDF>> {
     let index = match target {
         DataType::Int8 => 0,
