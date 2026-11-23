@@ -18,7 +18,9 @@ already resolve there through `GeneratorRewrite` (FNP-GEN-1); `explode` was neve
 
 ## Measured
 
-See [the domain table](#domain-table) below and the oracle
+Literals (empty, NULL, NULL elements, nested, beside other columns, the `sequence` form over a leap day, a year end,
+the New York daylight-saving changes, pre-1970 and the ISO week-53 years), a temp view, an Iceberg table, a CTE, a
+subquery, a projection over a generator subquery, maps, and the write statements read cold; the oracle is
 [`sql_explode_1_spark_oracle.json`](../../../../python/repark/tests/functions/sql_explode_1_spark_oracle.json)
 (PySpark 4.1.2 with `iceberg-spark-runtime-4.1_2.13:1.11.0`, a local Hadoop catalog, session zones `UTC` and
 `America/New_York`, ANSI on and off). Spark answers every cell the same in the four modes.
