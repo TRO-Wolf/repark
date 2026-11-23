@@ -46,7 +46,7 @@ the module's tests.
   operand of every STRING-to-integer cast still present, the ones coercion inserted (`coalesce(s, 0)`, `s = 5`,
   `s + 1`, a join key), in the identity `__repark_arrow_cast_operand__`, so they keep Arrow's parse and a later
   analysis of the same plan (the `F.expr` context, `INSERT` over an analyzed frame) leaves them alone. Both skip a
-  `Values` node and the projection directly under a DML node (the store-assignment casts the gates judge). In a
+  `Values` node and an INSERT's store-assignment projection (the casts `InsertStoreAssignment` judges; an UPDATE's SET projection is rewritten). In a
   projection, aggregate or window the UDF's schema name is the child's; elsewhere it is the call, so a join key
   stays distinct from its column. A projection's schema is widened in place (nullable, as Spark's cast is).
   `string_integral_cast_parts` lets the empty `INSERT OVERWRITE` guard judge the UDF as the cast. `TRY_CAST` is
