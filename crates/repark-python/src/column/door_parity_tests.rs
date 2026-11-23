@@ -50,12 +50,6 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
         "DF-core array_repeat vs spark array_repeat on negative counts",
     ),
     (
-        "date_part",
-        FacadeShape::Kernel(2),
-        "DF-core date_part vs spark date_part field-name set",
-    ),
-    ("datepart", FacadeShape::Kernel(2), "alias of date_part"),
-    (
         "array",
         FacadeShape::Kernel(1),
         "facade builds `make_array`, the door resolves the `array` alias; values agree, only the \
@@ -104,6 +98,8 @@ const SCALAR_NAMES: &[(&str, usize)] = &[
     ("map_from_arrays", 2),
     ("datediff", 2),
     ("date_diff", 2),
+    ("date_part", 2),
+    ("datepart", 2),
     ("from_utc_timestamp", 2),
     ("to_utc_timestamp", 2),
     ("to_date", 1),
@@ -279,11 +275,12 @@ fn facade_avg_is_the_repark_retracting_kernel_not_datafusion_core() {
 fn expected_divergences_are_all_still_real() {
     assert_eq!(
         EXPECTED_DIVERGENCES.len(),
-        14,
+        12,
         "DOOR-CONVERGE-1 closed abs/ascii/base64/unbase64/length/character_length/size/\
          array_contains — both doors now resolve the same kernel; ratchet 22 → 14. \
          DOOR-CONVERGE-2 adds generate_series (facade sequence-alias vs door native) → 15. \
-         ROUND-DOUBLE-EXACT-1 closes round (both doors build the exact round) → 14"
+         ROUND-DOUBLE-EXACT-1 closes round (both doors build the exact round) → 14. \
+         DATE-PART-SESSION-ZONE-1 closes date_part/datepart → 12"
     );
     let ctx = registered_session();
     let mut already_fixed = Vec::new();

@@ -5199,8 +5199,8 @@ still open is `isModifiable`.
   Spark's answer; no 2099 cell changed.
   Residues (open, not parity; each pinned as a still-differing cell by the residue file):
   `from_utc_timestamp` and `to_utc_timestamp` are `datafusion-spark` kernels and still read
-  standard time after 2099 (ledger C-012, open). The built-in `extract` / `date_part` never
-  read the session zone, at any year (`extract(HOUR FROM …)` answers the UTC hour).
+  standard time after 2099 (ledger C-012, open). The built-in `extract` / `date_part`
+  session-zone residue was closed 2026-11-23 by `DATE-PART-SESSION-ZONE-1` (next row).
   `make_timestamp`, the `TIMESTAMP_NTZ` literal and `convert_timezone` over one stop at the
   nanosecond range (2262). On a transition day `months_between` reads the wall clock where
   Spark reads elapsed seconds, and `unix_timestamp` of a wall clock inside a gap refuses
@@ -5228,6 +5228,42 @@ still open is `isModifiable`.
   `…/time_travel/tests.rs::a_snapshot_bound_after_2099_reads_the_final_rule_in_both_directions`.
 - **Rationale** — FIXED 2026-10-08 (card ZONE-HORIZON-RENDER-1, the C-2d fold 1 re-verify's S2
   finding). A silent wrong wall clock over a right instant. pins: zone-horizon-render-1/C-015
+
+### DATE-PART-SESSION-ZONE-1 — `date_part`, `datepart`, and `extract` read calendar fields in the session zone — **FIXED 2026-11-23 (branch `fix/date-part-session-zone-1`, merge pending)**
+
+- **repark** — Before (main `7938a592`): `date_part` and `datepart` resolved to `datafusion-spark`'s
+  `SparkDatePart`, which simplified to stock `datafusion_functions::datetime::date_part()` (UTC ticks
+  plus a UTC `year` preimage); SQL `EXTRACT(<field> FROM ts)` bypassed `date_part` registration via
+  `DatetimeFunctionPlanner` (UTC ticks, 0-based `DOW`, and unsupported `DAYOFWEEK`); typed facade
+  `F.date_part` / `F.datepart` / `F.extract` embedded stock DataFusion `date_part`; and bare `NULL`
+  raised `Hour does not support: Null`. After: `crates/repark-functions/src/datetime/spark_date_part.rs`
+  registers `SparkDatePart` (`date_part` / `datepart`, no `preimage`) and `SparkExtractDatePart`
+  (rewriting stock `date_part` over `Timestamp`, `Date32`, `Date64`, `Null`, or `Dictionary` thereof
+  before `TypeCoercion`), delegating calendar extraction to `session_wall::extract_calendar_part`
+  (shared with `year`…`second`, covering 1200–2099 via Arrow and outside 1200–2099 via `zone_horizon`).
+  `crates/repark-python/src/column/function_dispatch.rs` dispatches `date_part` / `datepart` to
+  `repark_functions::datetime::date_part_udf()` (`EXPECTED_DIVERGENCES` ratchets 14→12). `TIMESTAMP_NTZ`,
+  `DATE`, `EXTRACT` on `Utf8`/`Interval`/`Duration`/`Time`, standalone `year(ts)`/`hour(ts)`, and the
+  native `repark.sql()` door are unchanged. Open sibling cards kept untouched: `EXTRACT-SECOND-DECIMAL-1`
+  (`second` stays `Int32`), `SQL-DATE-PART-STRING-1` (string second arg), and `EXTRACT-HOUR-DST-GAP-1`
+  (gap literal `TIMESTAMP '2024-03-10 02:30:00'` in New York now answers `3`, matching Spark).
+- **Apache Spark** — 150 multi-column oracle cells in
+  `python/repark/tests/timestamps/date_part_session_zone_1_spark_oracle.json` (live PySpark 4.1.2 +
+  Iceberg 1.11.0, 2026-11-23, recorder `python/repark/tests/timestamps/_record_date_part_session_zone_1.py`):
+  18 timestamp rows (00:00, 19:00–23:59 NY, DST spring-forward/fall-back, leap day, 1880 LMT, pre-1970,
+  post-2038, post-2099, Kolkata half-hour rollover, ISO week boundary, NULL) × 3 zones (`UTC`,
+  `America/New_York`, `Asia/Kolkata`) × 2 ANSI modes × all query seats (SQL over multi-row-group Parquet
+  and multi-file Iceberg, `selectExpr`, `F.expr`, typed `F.date_part`/`F.datepart`/`F.extract`, temp view,
+  literals), `WHERE` pushdown/filters, `GROUP BY`, `JOIN`, cold CTAS / `INSERT … SELECT` read-back, and
+  `TIMESTAMP_NTZ` / `DATE` / standalone function controls.
+- **Pin** — `python/repark/tests/timestamps/test_date_part_session_zone_1.py` (150 oracle cells + Arrow
+  `Int32` types, NULL/invalid-field checks, native `repark.sql()` control; 105 failed on main `7938a592`,
+  all green on head); `python/repark/tests/timestamps/test_zone_horizon_render_1.py` (`_ZONE_BLIND`
+  residue retired); `crates/repark-functions/src/tests/spark_date_part.rs`;
+  `crates/repark-spark/tests/session_timezone.rs::date_part_datepart_and_extract_read_the_session_zone_on_the_spark_door`;
+  `crates/repark-python/src/column/door_parity_tests.rs`.
+- **Rationale** — FIXED 2026-11-23 (card DATE-PART-SESSION-ZONE-1, S1 label-blocking, ruled 2026-11-16).
+  A late-evening instant in a non-UTC session silently returned the next day's calendar fields.
 
 ### SIGNED-ZERO-KEYS-1 — flat FLOAT and DOUBLE keys treat both zeros and every NaN as one value — **FIXED 2026-11-12 (SIGNED-ZERO-NORMALIZE-1 part B part 1, branch `fix/signed-zero-normalize-1-part-b`, merge pending)**
 

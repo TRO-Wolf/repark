@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::Arc;
 
 use arrow::array::temporal_conversions::{
@@ -6,16 +7,84 @@ use arrow::array::temporal_conversions::{
 };
 use arrow::array::timezone::Tz;
 use arrow::array::{ArrayRef, AsArray, Int32Array};
-use arrow::compute::DatePart;
+use arrow::compute::{DatePart, cast, date_part};
 use arrow::datatypes::{
-    ArrowTimestampType, DataType, TimeUnit, TimestampMicrosecondType, TimestampMillisecondType,
-    TimestampNanosecondType, TimestampSecondType,
+    ArrowTimestampType, DataType, Int32Type, TimeUnit, TimestampMicrosecondType,
+    TimestampMillisecondType, TimestampNanosecondType, TimestampSecondType,
 };
 use chrono::{
     DateTime, Datelike, FixedOffset, MappedLocalTime, NaiveDateTime, TimeDelta, Timelike,
 };
+use datafusion::common::config::ConfigOptions;
 use datafusion::error::{DataFusionError, Result};
 use repark_common::zone_horizon::{self, offsets_at_wall, wall_at_instant, zoned_at_instant};
+
+use crate::session_time_zone::session_time_zone_from_options;
+
+pub(crate) fn extraction_time_zone(options: &ConfigOptions) -> Result<Tz> {
+    let zone = session_time_zone_from_options(options);
+    Tz::from_str(zone).map_err(|error| {
+        DataFusionError::Execution(format!(
+            "session timezone {zone:?} could not be resolved at query time ({error})"
+        ))
+    })
+}
+
+pub(crate) fn is_instant(arg: &DataType) -> bool {
+    matches!(arg, DataType::Timestamp(_, Some(_)))
+}
+
+pub(crate) fn unpack_dictionary(array: &ArrayRef) -> Result<ArrayRef> {
+    match array.data_type() {
+        DataType::Dictionary(_, value_type) => Ok(cast(array.as_ref(), value_type.as_ref())?),
+        _ => Ok(Arc::clone(array)),
+    }
+}
+
+pub(crate) fn resolve_instant_in_zone(array: &ArrayRef, zone: &str) -> Result<ArrayRef> {
+    let DataType::Timestamp(unit, Some(current)) = array.data_type() else {
+        return Ok(Arc::clone(array));
+    };
+    if current.as_ref() == zone {
+        return Ok(Arc::clone(array));
+    }
+    Ok(cast(
+        array.as_ref(),
+        &DataType::Timestamp(*unit, Some(zone.into())),
+    )?)
+}
+
+pub(crate) fn extract_calendar_part(
+    array: &ArrayRef,
+    options: &ConfigOptions,
+    part: DatePart,
+    shift: i32,
+) -> Result<ArrayRef> {
+    let unpacked = unpack_dictionary(array)?;
+    if matches!(unpacked.data_type(), DataType::Null) {
+        return Ok(Arc::new(Int32Array::new_null(unpacked.len())));
+    }
+    if is_instant(unpacked.data_type()) && !within_the_tables(&unpacked) {
+        let zone = extraction_time_zone(options)?;
+        return instant_part(&unpacked, zone, part, shift);
+    }
+    let zone = session_time_zone_from_options(options);
+    let resolved = resolve_instant_in_zone(&unpacked, zone)?;
+    let extracted = date_part(resolved.as_ref(), part)?;
+    let extracted = if extracted.data_type() == &DataType::Int32 {
+        extracted
+    } else {
+        cast(extracted.as_ref(), &DataType::Int32)?
+    };
+    if shift == 0 {
+        Ok(extracted)
+    } else {
+        let shifted = extracted
+            .as_primitive::<Int32Type>()
+            .unary::<_, Int32Type>(|value| value + shift);
+        Ok(Arc::new(shifted))
+    }
+}
 
 pub(crate) fn datetime_from_micros(micros: i64) -> Option<NaiveDateTime> {
     DateTime::from_timestamp_micros(micros).map(|instant| instant.naive_utc())

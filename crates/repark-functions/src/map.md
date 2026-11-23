@@ -1361,16 +1361,13 @@ scalars live under [`try_invert/`](try_invert/map.md).
   swaps in. **E1 octo C2:** `SparkGetItem` / `spark_get_item_udf` (`__repark_get_item__`) —
   polymorphic array 0-based or map-by-key for facade `Column.__getitem__` Column/other keys
   (never fail-open to parent container).
-- `datetime.rs` — Spark calendar date shim. `DatePartUdf` (generic `date_part`-backed extractor with
-  a Spark indexing offset) covers `year`/`month`/`dayofmonth`/`day`/`dayofyear`/`quarter`/`weekofyear`/
-  `yearofweek`/`dayofweek`/`weekday`; `MakeDate` builds `Date32` from three `Int64` columns. WG2 added
-  the calendar-math shims: `AddMonths` (Spark end-of-month-preserving `add_months`), `TruncDate`
-  (`trunc(date, fmt)` → `Date32`; invalid fmt → NULL, so `'Q'` is NULL not `QUARTER`), `DateTrunc`
-  (`date_trunc(fmt, ts)` → µs `Timestamp`, format-first arg order, overrides DataFusion's native
-  `date_trunc`), `DateFormat` (Java-pattern → `Utf8`; `format_java_pattern` handles quoted literals +
-  `y M L d D q Q E H m s` — unsupported letters raise). TYPES-1 round 4 (2026-09-05): `yyyy`
-  renders Java's leading `+` past 4 digits. Each exposed via a named
-  `*_udf()` constructor.
+- `datetime.rs` — Spark calendar date shim. `DatePartUdf` covers `year`…`weekday`; `date_part_udf`
+  and `extract_date_part_rule` live in `datetime/spark_date_part.rs` (DATE-PART-SESSION-ZONE-1,
+  2026-11-23) and share `session_wall::extract_calendar_part`. `MakeDate` builds `Date32` from three `Int64` columns. WG2 added calendar-math shims: `AddMonths`
+  (end-of-month-preserving), `TruncDate` (`trunc(date, fmt)` → `Date32`; invalid fmt → NULL),
+  `DateTrunc` (`date_trunc(fmt, ts)` → µs `Timestamp`, format-first), `DateFormat` (Java pattern →
+  `Utf8`, `y M L d D q Q E H m s`). TYPES-1 (2026-09-05): `yyyy` adds `+` past 4 digits. Each
+  exposed via `*_udf()`.
   Inputs are coerced by `coerce_date_arg` / `coerce_to_date32` / `coerce_to_timestamp_micros`
   (`user_defined` signature): date / timestamp (any unit+zone) / string — matching Spark. Tests run
   the UDFs through a real `SessionContext` against ISO-8601 / Spark goldens.

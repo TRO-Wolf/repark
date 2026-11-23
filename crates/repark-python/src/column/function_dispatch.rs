@@ -552,7 +552,7 @@ fn call_scalar_expr_inner(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "date_part" | "datepart" => {
             need(2)?;
-            expr_fn::date_part(exprs[0].clone(), exprs[1].clone())
+            repark_functions::datetime::date_part_udf().call(exprs.clone())
         }
         "to_timestamp_seconds" => {
             need(1)?;

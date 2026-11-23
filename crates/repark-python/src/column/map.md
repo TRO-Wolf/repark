@@ -288,8 +288,7 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   keeps it as a `sequence` alias on `SparkSequence` while the SQL door keeps DataFusion's
   native spelling for its table-function callers — C-003's reroute exposed the split,
   overwriting the door would break `FROM generate_series` users.
-  **ABS-EXPR-1 (2026-09-13):** `EXPECTED_DIVERGENCES` gains `abs` (`SparkAbs` wraps on integer-min), pinned by `test_abs_door_parity_integer_min`. Table 21 → 22.
-  **TYPES-1 (2026-09-05):** `from_unixtime` left EXPECTED_DIVERGENCES (ratchet 22 → 21).
+  **ABS-EXPR-1:** +`abs` (21→22). **TYPES-1:** −`from_unixtime` (22→21). **DATE-PART-SESSION-ZONE-1 (2026-11-23):** `date_part`/`datepart` → `datetime::date_part_udf` (14→12).
   **CASESENS-1 S3 (2026-09-27):** `column_keeps_the_written_spelling` pins
   `written_column` (`ID` bare, `t.ID` qualified, `` `a.b` `` dotted).
   **CASESENS-1 final fold (2026-09-28):** `exact_predicate_refuses_a_case_only_match` pins
