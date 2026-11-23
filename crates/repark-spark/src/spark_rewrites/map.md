@@ -42,14 +42,15 @@ path stay in `spark_literals.rs`.
   file).
 - `extract_field.rs` — **EXTRACT-FIELD-ALIASES-1 (2026-11-23):**
   `plan_extract_field_regions` rewrites `extract(<field> FROM` into `date_part('<field>',`
-  for the Spark spellings the stock parser refuses or the stock `extract` planner misreads
-  (`YEAROFWEEK`, `DAYOFWEEK`, `DAYOFWEEK_ISO`, `DOW`, `DOW_ISO`, `H`, `HR`, `HRS`, `Y`, `YR`,
-  `YRS`, `QTR`, `MON`, `MONS`, `W`, `D`, `M`, `MIN`, `MINS`, `S`, `SEC`, `SECS`), so they plan
-  through the session `date_part` (Spark's field mapping). `spark_literals.rs`
+  for the Spark spellings (`DATE_PART_SPELLINGS`) the stock parser refuses or misreads,
+  so they plan through the session `date_part` (Spark's field mapping). `spark_literals.rs`
   `canonicalize_verbatim` runs it on every Spark-door statement and `F.expr` fragment that
   holds the word `extract`; region-splicing passes (`struct_field.rs`, `create_options.rs`,
   and the `INSERT PARTITION` swap) preserve its regions. The other fields, unknown fields
   and quoted words stay as written (unit pins in the file).
+- `bare_explode.rs` — **SQL-EXPLODE-1 delta 2 (2026-11-23):** a bare `explode` / `explode_outer`
+  select item beside an item named `col` becomes `__repark_gen_alias(explode(...))`, so its plan
+  name cannot collide and a map still answers `key, value` (unit pins in the file).
 - `create_options.rs` — **D-5 (2026-09-21):** the `OPTIONS` → `TBLPROPERTIES`
   seam. Recognizes `CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name [(cols)]
   USING iceberg` and rewrites its single well-formed `OPTIONS (k=v, …)` clause

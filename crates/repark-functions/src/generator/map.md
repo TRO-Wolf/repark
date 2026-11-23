@@ -8,10 +8,10 @@ plan schema so outer references, `ORDER BY col`, and unaliased `INSERT` resolve
 before `GeneratorRewrite` runs) and the `GeneratorRewrite` analyzer rule that
 expands a single generator call in a `Projection` into list `Unnest` plans on
 both doors. Outer guards widen non-nullable list element fields to nullable and
-build the one-NULL-element list with `ListArray::try_new`; explicit aliases
-starting with a generator name are kept; `is_bare_generator_expr` and
-`is_bare_explode_expr` identify unaliased top-level generator calls for the
-Python facade and attribute-id stamping.
+build the one-NULL-element list with `ListArray::try_new`. `GeneratorAliasMark`
+(first analyzer rule; `mark_generator_aliases` before attribute-id stamping) turns
+explicit aliases into `__repark_gen_alias`, so the rewrite names bare outputs by
+type and moves a one-output stamp's metadata; `is_bare_generator_expr` feeds the facade.
 
 ## Contents
 
@@ -22,12 +22,12 @@ Python facade and attribute-id stamping.
   FNP-GEN-1 remediation round 1 so the parent keeps the file-size ceiling): the
   array/map/struct answer pins, the select-position pin, the one-generator /
   alias-arity / aggregate-input / `stack` / `__repark_arr_*` sibling refusals, the
-  name-restored `Expr::Alias` pin, and the NULL-struct-element regression pin over a
+  call-spelled alias refusal pin, and the NULL-struct-element regression pin over a
   non-nullable-field `StructArray` with a NULL parent slot. **SQL-EXPLODE-1 (2026-11-23):**
   the `explode` / `explode_outer` pins (array `col`, alias, NULL and empty rows, map
   `key` / `value`, scalar and nested refusals, non-nullable-element outer lists,
-  unaliased subquery / `ORDER BY col` resolution, explicit `explode(...)` aliases, and
-  `spark_nonnull`-wrapped restored aliases).
+  unaliased subquery / `ORDER BY col` resolution, explicit `explode(...)` aliases; delta 2:
+  coerced arguments, carried stamps, the zero-name marker, the `array_repeat` seat).
 - `json_tuple.rs` — **FNP-GEN-1 step 2 (2026-09-16, run 18a):** the `json_tuple`
   expansion (moved out of `generator.rs` so the parent keeps the file-size ceiling):
   string-type checks with `[DATATYPE_MISMATCH.NON_STRING_TYPE]`, the

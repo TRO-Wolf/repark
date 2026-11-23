@@ -596,6 +596,10 @@ pub(crate) fn splice_inners(
     out
 }
 
+pub(crate) fn sql_may_have_extract_or_explode(sql: &str) -> bool {
+    extract_field::sql_may_have_extract(sql) || bare_explode::sql_may_have_explode(sql)
+}
+
 pub(crate) fn skip_whitespace(tokens: &[TokenWithSpan], mut index: usize) -> usize {
     while matches!(
         tokens.get(index).map(|with_span| &with_span.token),
@@ -755,6 +759,7 @@ fn starts_insert_source(token: Option<&Token>) -> bool {
         )
 }
 
+pub(crate) mod bare_explode;
 pub(crate) mod create_options;
 pub(crate) mod extract_field;
 pub(crate) mod struct_field;

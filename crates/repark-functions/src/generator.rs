@@ -5,12 +5,13 @@ use datafusion::arrow::array::{ListArray, new_null_array};
 use datafusion::arrow::buffer::OffsetBuffer;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::config::ConfigOptions;
+use datafusion::common::metadata::FieldMetadata;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
 use datafusion::common::{
     Column, DFSchema, Result, ScalarValue, TableReference, UnnestOptions, exec_err, plan_err,
 };
 use datafusion::functions_nested::expr_fn as nested_fn;
-use datafusion::logical_expr::expr::{Cast, ScalarFunction};
+use datafusion::logical_expr::expr::{Alias, Cast, ScalarFunction};
 use datafusion::logical_expr::expr_fn::when;
 use datafusion::logical_expr::{
     ColumnarValue, Expr, ExprSchemable, LogicalPlan, LogicalPlanBuilder, Projection,
@@ -27,7 +28,7 @@ use udfs::GeneratorOrdinality;
 #[cfg(test)]
 use udfs::ordinality;
 
-pub(crate) const GENERATOR_ALIAS_UDF: &str = "__repark_gen_alias";
+pub const GENERATOR_ALIAS_UDF: &str = "__repark_gen_alias";
 
 pub(crate) const GENERATOR_FIELD: &str = "__repark_gen_out";
 const GENERATOR_POS_FIELD: &str = "__repark_gen_pos";
@@ -200,7 +201,13 @@ fn generator_kind(name: &str) -> Option<GeneratorKind> {
     }
 }
 
-type GeneratorSite = (GeneratorKind, Vec<Expr>, Option<Vec<String>>);
+#[derive(Debug)]
+struct GeneratorSite {
+    kind: GeneratorKind,
+    args: Vec<Expr>,
+    names: Option<Vec<String>>,
+    metadata: Option<FieldMetadata>,
+}
 
 #[derive(Debug)]
 pub(crate) struct OutputSpec {
@@ -211,6 +218,87 @@ pub(crate) struct OutputSpec {
 
 #[derive(Debug, Default)]
 pub struct GeneratorRewrite;
+
+#[derive(Debug, Default)]
+pub struct GeneratorAliasMark;
+
+impl AnalyzerRule for GeneratorAliasMark {
+    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
+        plan.transform_up_with_subqueries(mark_plan).data()
+    }
+
+    fn name(&self) -> &'static str {
+        "generator_alias_mark"
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn mark_generator_aliases(plan: LogicalPlan) -> Result<LogicalPlan> {
+    mark_plan(plan).data()
+}
+
+fn is_carried_name(alias: &Alias) -> bool {
+    alias.metadata.is_some() && alias.name == alias.expr.schema_name().to_string()
+}
+
+fn is_user_generator_alias(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::Alias(alias)
+            if matches!(alias.expr.as_ref(), Expr::ScalarFunction(function) if is_generator_call(function))
+                && !is_carried_name(alias)
+    )
+}
+
+fn mark_expr(expr: Expr) -> Expr {
+    let Expr::Alias(alias) = expr else {
+        return expr;
+    };
+    let Alias {
+        expr: inner,
+        relation,
+        name,
+        metadata,
+    } = alias;
+    let marked = Expr::ScalarFunction(ScalarFunction::new_udf(
+        generator_udf(GENERATOR_ALIAS_UDF),
+        vec![*inner, lit(name.clone())],
+    ));
+    Expr::Alias(Alias {
+        expr: Box::new(marked),
+        relation,
+        name,
+        metadata,
+    })
+}
+
+fn mark_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+    let LogicalPlan::Projection(projection) = plan else {
+        return Ok(Transformed::no(plan));
+    };
+    if !projection.expr.iter().any(is_user_generator_alias) {
+        return Ok(Transformed::no(LogicalPlan::Projection(projection)));
+    }
+    let Projection {
+        expr,
+        input,
+        schema,
+        ..
+    } = projection;
+    let marked = expr
+        .into_iter()
+        .map(|expr| {
+            if is_user_generator_alias(&expr) {
+                mark_expr(expr)
+            } else {
+                expr
+            }
+        })
+        .collect();
+    Ok(Transformed::yes(LogicalPlan::Projection(
+        Projection::try_new_with_schema(marked, input, schema)?,
+    )))
+}
 
 impl AnalyzerRule for GeneratorRewrite {
     fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
@@ -232,15 +320,6 @@ pub fn is_bare_generator_expr(expr: &Expr) -> bool {
         expr,
         Expr::ScalarFunction(function)
             if is_generator_call(function) || function.func.name() == GENERATOR_ALIAS_UDF
-    )
-}
-
-#[must_use]
-pub fn is_bare_explode_expr(expr: &Expr) -> bool {
-    matches!(
-        expr,
-        Expr::ScalarFunction(function)
-            if matches!(function.func.name(), "explode" | "explode_outer")
     )
 }
 
@@ -275,95 +354,18 @@ fn is_explode_temp_name(name: &str) -> bool {
         .is_some_and(|tail| tail.len() == 32 && tail.bytes().all(|byte| byte.is_ascii_hexdigit()))
 }
 
-fn unqualified_call_name(function: &ScalarFunction) -> String {
-    let args: Vec<String> = function
-        .args
-        .iter()
-        .map(|arg| match arg {
-            Expr::Column(column) => column.name.clone(),
-            other => other.schema_name().to_string(),
-        })
-        .collect();
-    format!("{}({})", function.func.name(), args.join(","))
-}
-
-fn restored_first_arg_matches(arg: &Expr, body: &str) -> bool {
-    match arg {
-        Expr::ScalarFunction(function)
-            if matches!(
-                function.func.name(),
-                crate::decimal_cast::SPARK_NONNULL_NAME
-                    | crate::decimal_cast::DECIMAL_CAST_NULLABLE_NAME
-            ) =>
-        {
-            function
-                .args
-                .first()
-                .is_some_and(|inner| restored_first_arg_matches(inner, body))
-        }
-        Expr::Column(column) => {
-            body == column.name
-                || body.ends_with(&format!(".{}", column.name))
-                || body.starts_with(&format!("{},", column.name))
-                || body.contains(&format!(".{},", column.name))
-        }
-        Expr::ScalarFunction(function) => {
-            let callee = function.func.name();
-            body.starts_with(&format!("{callee}("))
-                || (callee == "map" && body.starts_with("create_map("))
-                || (callee == "make_array" && body.starts_with("array("))
-        }
-        Expr::Cast(_) | Expr::TryCast(_) => {
-            body.starts_with("CAST(") || body.starts_with("TRY_CAST(")
-        }
-        Expr::Literal(_, _) => body.starts_with("Utf8(") || body.starts_with("NULL"),
-        _ => false,
-    }
-}
-
-fn is_restored_generator_alias(inner: &Expr, alias_name: &str) -> bool {
-    let Expr::ScalarFunction(function) = inner else {
-        return false;
-    };
-    let name = function.func.name();
-    if matches!(name, "explode" | "explode_outer") {
-        return false;
-    }
-    if name == GENERATOR_ALIAS_UDF {
-        return alias_name.starts_with(&format!("{GENERATOR_ALIAS_UDF}("));
-    }
-    if alias_name == inner.schema_name().to_string()
-        || alias_name == unqualified_call_name(function)
-    {
-        return true;
-    }
-    let Some(tail) = alias_name.strip_prefix(&format!("{name}(")) else {
-        return false;
-    };
-    let Some(body) = tail.strip_suffix(')') else {
-        return false;
-    };
-    function
-        .args
-        .first()
-        .is_some_and(|first| restored_first_arg_matches(first, body))
-}
-
 fn peel_generator(expr: &Expr) -> Result<Option<GeneratorSite>> {
     match expr {
         Expr::Alias(alias) => {
-            let Some((kind, arg, inner_names)) = peel_generator(alias.expr.as_ref())? else {
+            let Some(mut site) = peel_generator(alias.expr.as_ref())? else {
                 return Ok(None);
             };
-            if is_restored_generator_alias(alias.expr.as_ref(), &alias.name) {
-                return Ok(Some((kind, arg, inner_names)));
+            if let Some(metadata) = &alias.metadata {
+                let mut carried = site.metadata.take().unwrap_or_default();
+                carried.extend(metadata.clone());
+                site.metadata = Some(carried);
             }
-            if inner_names.is_some() {
-                return plan_err!(
-                    "[UNSUPPORTED_GENERATOR] a generator output does not support nested aliasing"
-                );
-            }
-            Ok(Some((kind, arg, Some(vec![alias.name.clone()]))))
+            Ok(Some(site))
         }
         Expr::ScalarFunction(function) if function.func.name() == GENERATOR_ALIAS_UDF => {
             let Some(inner) = function.args.first() else {
@@ -387,10 +389,18 @@ fn peel_generator(expr: &Expr) -> Result<Option<GeneratorSite>> {
                     }
                 }
             }
-            let Some((kind, arg, _)) = peel_generator(inner)? else {
+            let Some(mut site) = peel_generator(inner)? else {
                 return plan_err!("'{GENERATOR_ALIAS_UDF}' wraps a non-generator expression");
             };
-            Ok(Some((kind, arg, Some(names))))
+            if site.names.is_some() && !names.is_empty() {
+                return plan_err!(
+                    "[UNSUPPORTED_GENERATOR] a generator output does not support nested aliasing"
+                );
+            }
+            if !names.is_empty() {
+                site.names = Some(names);
+            }
+            Ok(Some(site))
         }
         Expr::ScalarFunction(function) => {
             let Some(kind) = generator_kind(function.func.name()) else {
@@ -400,7 +410,12 @@ fn peel_generator(expr: &Expr) -> Result<Option<GeneratorSite>> {
                 if function.args.len() < 2 {
                     return Err(crate::json::tuple::wrong_num_args(function.args.len()));
                 }
-                return Ok(Some((kind, function.args.clone(), None)));
+                return Ok(Some(GeneratorSite {
+                    kind,
+                    args: function.args.clone(),
+                    names: None,
+                    metadata: None,
+                }));
             }
             if function.args.len() != 1 {
                 return plan_err!(
@@ -409,7 +424,12 @@ fn peel_generator(expr: &Expr) -> Result<Option<GeneratorSite>> {
                     function.args.len()
                 );
             }
-            Ok(Some((kind, vec![function.args[0].clone()], None)))
+            Ok(Some(GeneratorSite {
+                kind,
+                args: vec![function.args[0].clone()],
+                names: None,
+                metadata: None,
+            }))
         }
         _ => Ok(None),
     }
@@ -438,9 +458,15 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
             }
         }
     }
-    let Some((site_index, (kind, args, alias_names))) = site else {
+    let Some((site_index, site)) = site else {
         return Ok(Transformed::no(plan));
     };
+    let GeneratorSite {
+        kind,
+        args,
+        names: alias_names,
+        metadata,
+    } = site;
     if args.iter().any(contains_generator) {
         return plan_err!(
             "[UNSUPPORTED_GENERATOR] The generator argument cannot contain another generator"
@@ -506,6 +532,7 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         kind,
         &args,
         alias_names.as_deref(),
+        metadata.as_ref(),
     )?))
 }
 
@@ -666,6 +693,7 @@ fn rewrite_projection(
     kind: GeneratorKind,
     args: &[Expr],
     alias_names: Option<&[String]>,
+    metadata: Option<&FieldMetadata>,
 ) -> Result<LogicalPlan> {
     let Some(arg) = args.first() else {
         return plan_err!("generator rewrite lost the generator argument");
@@ -728,14 +756,15 @@ fn rewrite_projection(
             spec.name.clone_from(name);
         }
     }
+    let carried = metadata.filter(|_| outputs.len() == 1);
     build_expansion(
         projection,
         site_index,
         &input_schema,
         &lists,
         &outputs,
-        outer,
-        flatten_struct,
+        (outer, flatten_struct),
+        carried,
     )
 }
 
@@ -777,8 +806,8 @@ fn build_expansion(
     input_schema: &Arc<DFSchema>,
     lists: &[(&'static str, Expr)],
     outputs: &[OutputSpec],
-    outer: bool,
-    flatten_struct: bool,
+    (outer, flatten_struct): (bool, bool),
+    carried: Option<&FieldMetadata>,
 ) -> Result<LogicalPlan> {
     let mut inner_exprs: Vec<Expr> = Vec::with_capacity(projection.expr.len() - 1 + lists.len());
     for (index, expr) in projection.expr.iter().enumerate() {
@@ -825,7 +854,7 @@ fn build_expansion(
                         vec![expr],
                     ));
                 }
-                final_exprs.push(expr.alias(spec.name.clone()));
+                final_exprs.push(expr.alias_with_metadata(spec.name.clone(), carried.cloned()));
             }
             continue;
         }

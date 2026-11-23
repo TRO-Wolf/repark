@@ -37,8 +37,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   (single-generator `Projection` → inner projection → `Unnest` → final projection).
   `explode` / `explode_outer` placeholders expose `col` in the plan schema so outer
   subqueries, `ORDER BY col`, and unaliased `INSERT` resolve; outer guards widen
-  non-nullable list elements to nullable (`ListArray::try_new`); explicit aliases
-  starting with a generator name are kept. Helper UDFs (`__repark_gen_ordinality`,
+  non-nullable list elements to nullable (`ListArray::try_new`); `GeneratorAliasMark`
+  (first analyzer rule) turns explicit aliases into `__repark_gen_alias`. Helper UDFs (`__repark_gen_ordinality`,
   `__repark_gen_field`) live in [`generator/udfs.rs`](generator/udfs.rs), `json_tuple`
   in [`generator/json_tuple.rs`](generator/json_tuple.rs), tests in
   [`generator/tests.rs`](generator/tests.rs) (details: [`generator/map.md`](generator/map.md)).

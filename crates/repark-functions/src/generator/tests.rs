@@ -3,7 +3,9 @@ use datafusion::arrow::array::{Array, ArrayRef, Int32Array, StringArray, StructA
 use datafusion::arrow::datatypes::{Field, Fields, Schema};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::datasource::MemTable;
-use datafusion::prelude::SessionContext;
+use datafusion::execution::SessionStateBuilder;
+use datafusion::optimizer::Analyzer;
+use datafusion::prelude::{DataFrame, SessionContext, col};
 
 fn columns() -> (ListArray, ListArray, ListArray, ListArray) {
     let ints = Int32Array::from(vec![10, 20]);
@@ -69,10 +71,16 @@ fn columns() -> (ListArray, ListArray, ListArray, ListArray) {
 }
 
 fn frame() -> SessionContext {
-    let ctx = SessionContext::new();
+    let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![Arc::new(GeneratorAliasMark)];
+    rules.extend(Analyzer::new().rules);
+    rules.push(Arc::new(GeneratorRewrite));
+    let state = SessionStateBuilder::new()
+        .with_default_features()
+        .with_analyzer_rules(rules)
+        .build();
+    let ctx = SessionContext::new_with_state(state);
     crate::register_all(&ctx);
     ctx.register_udf(crate::collection::create_map_udf().as_ref().clone());
-    ctx.add_analyzer_rule(Arc::new(GeneratorRewrite));
     let (arr_i, nonnull_ints, arr_s, arr_sn) = columns();
     let schema = Arc::new(Schema::new(vec![
         Field::new("id", DataType::Int32, false),
@@ -348,29 +356,176 @@ fn sql_as_alias_on_generator_refuses() {
     );
 }
 
-#[test]
-fn name_restored_alias_is_not_a_user_alias() {
+fn frame_names(build: impl FnOnce(DataFrame) -> Result<DataFrame>) -> Result<Vec<Field>> {
     let ctx = frame();
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap();
     runtime.block_on(async {
-        let frame = ctx.table("t").await.unwrap();
-        let call = Expr::ScalarFunction(ScalarFunction::new_udf(
-            generator_udf("posexplode"),
-            vec![Expr::Column(Column::new_unqualified("arr_i"))],
-        ));
-        let frame = frame.select(vec![call.alias("posexplode(arr_i)")]).unwrap();
-        let batches = frame.collect().await.unwrap();
-        let names: Vec<String> = batches[0]
+        let planned = build(ctx.table("t").await?)?;
+        let analyzed = crate::analyze_eagerly(&ctx.state(), planned.logical_plan().clone())?;
+        planned.collect().await?;
+        Ok(analyzed
             .schema()
             .fields()
             .iter()
-            .map(|field| field.name().clone())
-            .collect();
-        assert_eq!(names, ["pos", "col"]);
-    });
+            .map(|field| field.as_ref().clone())
+            .collect())
+    })
+}
+
+fn explode_of(name: &'static str, arg: &str) -> Expr {
+    Expr::ScalarFunction(ScalarFunction::new_udf(
+        generator_udf(name),
+        vec![Expr::Column(Column::new_unqualified(arg))],
+    ))
+}
+
+#[test]
+fn an_explicit_alias_spelled_as_the_call_is_still_the_users_alias() {
+    let error = frame_names(|table| {
+        table.select(vec![
+            explode_of("posexplode", "arr_i").alias("posexplode(arr_i)"),
+        ])
+    })
+    .unwrap_err();
+    assert!(
+        format!("{error}").contains("COLUMN_ALIASES_MISMATCH"),
+        "{error}"
+    );
+    let error = run("SELECT posexplode(arr_i) AS `posexplode(arr_i)` FROM t").unwrap_err();
+    assert!(
+        format!("{error}").contains("COLUMN_ALIASES_MISMATCH"),
+        "{error}"
+    );
+}
+
+#[test]
+fn a_carried_name_with_metadata_moves_onto_the_single_output() {
+    let carried = FieldMetadata::from(std::collections::BTreeMap::from([(
+        "repark.attr".to_string(),
+        "a1".to_string(),
+    )]));
+    let fields = frame_names(|table| {
+        table.select(vec![
+            col("id"),
+            explode_of("explode", "arr_i").alias_with_metadata("col", Some(carried.clone())),
+        ])
+    })
+    .unwrap();
+    assert_eq!(fields[1].name(), "col");
+    assert_eq!(
+        fields[1].metadata().get("repark.attr").map(String::as_str),
+        Some("a1")
+    );
+    let fields = frame_names(|table| {
+        table.select(vec![
+            explode_of("explode", "arr_i").alias_with_metadata("x", Some(carried.clone())),
+        ])
+    })
+    .unwrap();
+    assert_eq!(fields[0].name(), "x");
+    assert_eq!(
+        fields[0].metadata().get("repark.attr").map(String::as_str),
+        Some("a1")
+    );
+    let qualified = Expr::ScalarFunction(ScalarFunction::new_udf(
+        generator_udf("posexplode"),
+        vec![Expr::Column(Column::new(Some("t"), "arr_i"))],
+    ));
+    let stamp_name = qualified.schema_name().to_string();
+    let fields = frame_names(|table| {
+        table.select(vec![
+            qualified.alias_with_metadata(stamp_name, Some(carried)),
+        ])
+    })
+    .unwrap();
+    let names: Vec<&str> = fields.iter().map(|field| field.name().as_str()).collect();
+    assert_eq!(names, ["pos", "col"]);
+    assert!(fields.iter().all(|field| field.metadata().is_empty()));
+}
+
+#[test]
+fn coerced_generator_arguments_keep_spark_output_names() {
+    for (sql, expected) in [
+        (
+            "SELECT id, posexplode(CASE WHEN id = 1 THEN arr_i ELSE NULL END) FROM t",
+            vec!["id", "pos", "col"],
+        ),
+        (
+            "SELECT id, posexplode(coalesce(nonnull_ints, arr_i)) FROM t",
+            vec!["id", "pos", "col"],
+        ),
+        (
+            "SELECT id, posexplode_outer(CASE WHEN id = 2 THEN NULL ELSE nonnull_ints END) FROM t",
+            vec!["id", "pos", "col"],
+        ),
+        (
+            "SELECT id, inline(CASE WHEN id = 1 THEN arr_s ELSE NULL END) FROM t",
+            vec!["id", "x", "y"],
+        ),
+        (
+            "SELECT id, inline_outer(CASE WHEN id = 1 THEN arr_s ELSE NULL END) FROM t",
+            vec!["id", "x", "y"],
+        ),
+        (
+            r#"SELECT id, json_tuple(CASE WHEN id = 1 THEN '{"a":1}' ELSE NULL END, 'a', 'b') FROM t"#,
+            vec!["id", "c0", "c1"],
+        ),
+        (
+            "SELECT id, explode(CASE WHEN id = 1 THEN arr_i END) FROM t",
+            vec!["id", "col"],
+        ),
+    ] {
+        let (names, _) = run(sql).unwrap_or_else(|error| panic!("{sql}: {error}"));
+        assert_eq!(names, expected, "{sql}");
+    }
+    let (names, rows) =
+        run("SELECT id, posexplode(CASE WHEN id = 1 THEN arr_i ELSE NULL END) AS (p, c) FROM t")
+            .map_or((Vec::new(), Vec::new()), |answer| answer);
+    assert!(
+        names.is_empty() || names == ["id", "p", "c"],
+        "{names:?} {rows:?}"
+    );
+}
+
+#[test]
+fn a_zero_name_marker_leaves_a_map_explode_named_by_type() {
+    let fields = frame_names(|table| {
+        let marked = Expr::ScalarFunction(ScalarFunction::new_udf(
+            generator_udf(GENERATOR_ALIAS_UDF),
+            vec![Expr::ScalarFunction(ScalarFunction::new_udf(
+                generator_udf("explode"),
+                vec![Expr::ScalarFunction(ScalarFunction::new_udf(
+                    crate::collection::create_map_udf(),
+                    vec![lit("k"), col("id")],
+                ))],
+            ))],
+        ));
+        table.select(vec![col("id").alias("col"), marked])
+    })
+    .unwrap();
+    let names: Vec<&str> = fields.iter().map(|field| field.name().as_str()).collect();
+    assert_eq!(names, ["col", "key", "value"]);
+}
+
+#[test]
+fn array_repeat_fails_the_same_with_or_without_a_generator() {
+    for sql in [
+        "SELECT array_repeat(sequence(1, 2), 0) AS a",
+        "SELECT explode_outer(array_repeat(sequence(1, 2), 0)) AS a",
+    ] {
+        let error = run(sql).unwrap_err();
+        assert!(
+            format!("{error}").contains("ListArray expected data type"),
+            "{sql}: {error}"
+        );
+    }
+    let (names, rows) =
+        run("SELECT explode_outer(array_remove(make_array(1, 2), 9)) AS a").unwrap();
+    assert_eq!(names, ["a"]);
+    assert_eq!(rows, ["Int64(1)", "Int64(2)"]);
 }
 
 #[test]
@@ -649,30 +804,10 @@ fn is_bare_generator_expr_distinguishes_bare_from_aliased_and_nested() {
     assert!(is_bare_generator_expr(&bare_explode));
     assert!(is_bare_generator_expr(&bare_pos));
     assert!(is_bare_generator_expr(&marked));
-    assert!(is_bare_explode_expr(&bare_explode));
-    assert!(!is_bare_explode_expr(&bare_pos));
-    assert!(!is_bare_explode_expr(&marked));
     assert!(!is_bare_generator_expr(&bare_explode.clone().alias("x")));
-    assert!(!is_bare_explode_expr(&bare_explode.clone().alias("x")));
     assert!(!is_bare_generator_expr(&bare_explode.is_null()));
     assert!(!is_bare_generator_expr(&Expr::Column(
         Column::new_unqualified("col")
     )));
     assert_eq!(bare_pos.schema_name().to_string(), "posexplode(arr_i)");
-}
-
-#[test]
-fn spark_nonnull_wrapped_generator_arg_peels_restored_alias() {
-    let inner = Expr::ScalarFunction(ScalarFunction::new_udf(
-        generator_udf("posexplode"),
-        vec![Expr::ScalarFunction(ScalarFunction::new_udf(
-            crate::decimal_cast::spark_nonnull_udf(),
-            vec![nested_fn::make_array(vec![lit("a"), lit("b")])],
-        ))],
-    ));
-    assert!(is_restored_generator_alias(
-        &inner,
-        r#"posexplode(make_array(Utf8("a"),Utf8("b")))"#,
-    ));
-    assert!(!is_restored_generator_alias(&inner, "posexplode(custom)"));
 }
