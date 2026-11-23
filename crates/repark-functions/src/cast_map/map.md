@@ -41,9 +41,10 @@ the module's tests.
   `__repark_string_to_{tinyint,smallint,int,bigint}__(x)`, which runs `leaf.rs`'s `string_to_integral`: Spark's
   `UTF8String.toInt`/`toLong` trim (bytes <= U+0020 and U+007F), ANSI on strict (`CAST_INVALID_INPUT` for
   malformed, fraction and out-of-range text alike, as Spark's `toIntExact` does), ANSI off legacy (a fraction
-  truncates, `.`/`+.`/`-.` answer 0, anything else NULL), the mode read from the session at invoke. The rule restores
-  each top-level name; the UDF's own schema name is its call, so a join key stays distinct from its column (on main
-  the statistics barrier inside the cast does that). A projection's schema is widened in place (nullable, as
+  truncates, `.`/`+.`/`-.` answer 0, anything else NULL), the mode read from the session at invoke. In a projection,
+  aggregate or window the UDF's schema name is the child's (as DataFusion's `Cast` shows it, so `selectExpr` names
+  stay); in a join, filter or any other node it is the call, so a join key stays distinct from its column (on main
+  the statistics barrier inside the cast did that). A projection's schema is widened in place (nullable, as
   Spark's cast is) rather than rebuilt, so names a later rule set without checks survive.
   `TRY_CAST` is not touched (STRING-CAST-SILENT-1 owns its whitespace cells). Two guards keep other paths as they
   were: an `IN` list is left alone (Spark compares it as text with ANSI off), a cast planned inside a `Values` node is left alone (`INSERT ... VALUES` puts its store-assignment cast
