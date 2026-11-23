@@ -866,10 +866,10 @@ def load_smart_csv(
         else:
             cast_type = rung_to_sql_cast(resolution)
             # Empty string → NULL before cast so int/bool casts do not fail on "".
-            expressions.append(
-                f"CAST(CASE WHEN CAST({quoted} AS VARCHAR) = '' THEN NULL "
-                f"ELSE {quoted} END AS {cast_type}) AS {quoted}"
-            )
+            cleaned = f"CASE WHEN CAST({quoted} AS VARCHAR) = '' THEN NULL ELSE {quoted} END"
+            if resolution.rung in ("int32", "int64"):
+                cleaned = f"__repark_arrow_cast_operand__({cleaned})"
+            expressions.append(f"CAST({cleaned} AS {cast_type}) AS {quoted}")
     frame = frame.selectExpr(*expressions)
 
     return frame, report

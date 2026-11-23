@@ -174,10 +174,11 @@ pub(super) fn cast_invalid_input(
     target: &DataType,
 ) -> DataFusionError {
     DataFusionError::Execution(format!(
-        "[CAST_INVALID_INPUT] The value '{value}' of the type \"{}\" cannot be cast to \"{}\" \
+        "[CAST_INVALID_INPUT] The value '{}' of the type \"{}\" cannot be cast to \"{}\" \
          because it is malformed. Correct the value as per the syntax, or change its target \
          type. Use `try_cast` to tolerate malformed input and return NULL instead. SQLSTATE: \
          22018",
+        value.replace('\0', "\\u0000"),
         spark_sql_name(source),
         spark_sql_name(target)
     ))
@@ -214,12 +215,14 @@ fn parse_strict_integer(text: &str) -> Option<i64> {
 }
 
 fn parse_legacy_integer(text: &str) -> Option<i64> {
-    let (whole, fraction) = text.split_once('.').unwrap_or((text, ""));
+    let Some((whole, fraction)) = text.split_once('.') else {
+        return parse_strict_integer(text);
+    };
     if !fraction.bytes().all(|byte| byte.is_ascii_digit()) {
         return None;
     }
-    if whole.is_empty() || whole == "+" || whole == "-" {
-        return (!fraction.is_empty()).then_some(0);
+    if matches!(whole, "" | "+" | "-") {
+        return Some(0);
     }
     parse_strict_integer(whole)
 }
@@ -291,7 +294,11 @@ fn strings(source: &ArrayRef) -> Result<Vec<Option<&str>>> {
     })
 }
 
-fn string_to_integral(source: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayRef> {
+pub(super) fn string_to_integral(
+    source: &ArrayRef,
+    target: &DataType,
+    mode: Mode,
+) -> Result<ArrayRef> {
     let (low, high) = integral_range(target);
     let mut out = Vec::with_capacity(source.len());
     for text in strings(source)? {

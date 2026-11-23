@@ -535,7 +535,7 @@ def test_columns_and_schema_resolve_without_executing(spark: ReparkSession) -> N
     df = spark.sql("SELECT CAST(a AS INT) AS n FROM (VALUES ('abc')) AS t(a)")
     assert df.columns == ["n"]
     assert df.schema.names == ["n"]
-    with pytest.raises(RuntimeError, match="Cast error"):
+    with pytest.raises(RuntimeError, match=r"\[CAST_INVALID_INPUT\]"):
         df.collect()
 
 

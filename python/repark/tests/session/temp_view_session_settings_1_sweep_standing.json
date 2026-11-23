@@ -51,22 +51,6 @@
    "answer": "",
    "class": "frame"
   },
-  "sweep/ansi/str_cast_where/off>on/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_cast_where/off>on/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_cast_where/on>off/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_cast_where/on>off/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
   "sweep/ansi/str_eq_int/off>on/read_off": {
    "answer": "",
    "class": "frame"
@@ -194,22 +178,6 @@
    "class": "frame"
   },
   "sweep/ansi/lit_plus/on>off/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_cast_where/off>on/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_cast_where/off>on/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_cast_where/on>off/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_cast_where/on>off/read_on": {
    "answer": "",
    "class": "frame"
   },
