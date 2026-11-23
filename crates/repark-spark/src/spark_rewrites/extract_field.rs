@@ -34,7 +34,7 @@ pub(crate) fn sql_may_have_extract(sql: &str) -> bool {
         .any(|window| window.eq_ignore_ascii_case(b"extract"))
 }
 
-fn bare_word<'a>(tokens: &'a [TokenWithSpan], index: usize) -> Option<&'a str> {
+fn bare_word(tokens: &[TokenWithSpan], index: usize) -> Option<&str> {
     match tokens.get(index).map(|with_span| &with_span.token) {
         Some(Token::Word(word)) if word.quote_style.is_none() => Some(word.value.as_str()),
         _ => None,
@@ -81,9 +81,10 @@ mod tests {
     use datafusion::sql::sqlparser::tokenizer::Tokenizer;
 
     use super::*;
+    use crate::spark_literals as literals;
 
     fn rewritten(sql: &str) -> String {
-        let canonical = crate::spark_literals::canonicalize_verbatim(sql, false).unwrap();
+        let canonical = literals::canonicalize_verbatim(sql, false).unwrap();
         canonical.into_owned()
     }
 
