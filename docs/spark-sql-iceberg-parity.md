@@ -9337,9 +9337,11 @@ the pin rather than obeying it.
   `INSERT INTO t VALUES (1, '42')` into an INT column as 42, where Spark refuses
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` in both modes); the JSON reader's user-schema integer casts and
   `smartCsv`'s integer rungs, which keep Arrow's parse through the identity `__repark_arrow_cast_operand__`; the CSV
-  reader's schema path (its own field parser); the native door. Padded-text comparisons that reach this cast
-  (`CAST(n AS INT) = ' 1 '`, `IN (' 2', '3 ')`, `= '1.25'` with ANSI off) now answer Spark's rows; with ANSI on
-  Spark raises naming BIGINT where RePark names the column's type. The map-cast leaf answers 0 for `.`, `+.` and
+  reader's schema path (its own field parser); the native door; an `IN` list (Spark compares
+  `CAST(n AS INT) IN (' 2', '3 ')` as text with ANSI off, no row, and as numbers with ANSI on, rows 2 and 3; RePark
+  still refuses with Arrow's error in both modes). Comparisons that reach this cast (`CAST(n AS INT) = ' 1 '`,
+  `= '1.25'` and `< 'abc'` with ANSI off) now answer Spark's rows; with ANSI on both refuse with
+  `[CAST_INVALID_INPUT]` (Spark names BIGINT, RePark the column's type). The map-cast leaf answers 0 for `.`, `+.` and
   `-.` with ANSI off, as Spark does (it answered NULL).
 - **Apache Spark** — Spark 4.1.2 (`UTF8String.toInt`/`toLong`): trims bytes <= U+0020 and U+007F, `toIntExact`
   with ANSI on, the decimal-tolerant parse with ANSI off. *(oracle: measured live 2026-11-22 with

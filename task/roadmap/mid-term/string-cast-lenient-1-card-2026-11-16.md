@@ -86,6 +86,9 @@ SQLSTATE 22018):**
   as 42, where Spark refuses `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` in both modes (silent, the
   store-assignment family of STRING-CAST-SILENT-1); padded and malformed texts there still refuse.
 - The native door (`repark.sql()`) keeps DataFusion's cast.
+- An `IN` list keeps Arrow's parse and still refuses `CAST(n AS INT) IN (' 2', '3 ')` in both modes: Spark
+  compares that list as text with ANSI off (no row) and as numbers with ANSI on (rows 2 and 3). Plain comparisons
+  that reach the cast (`= ' 1 '`, `= '1.25'`, `< 'abc'`) answer Spark's rows with ANSI off.
 - DECIMAL, BOOLEAN, DATE and NTZ targets, and the comparison cells of the 2026-11-16 append beyond those that
   reach this cast, remain for the later slices.
 

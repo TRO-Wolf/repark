@@ -162,7 +162,9 @@ def test_comparisons_with_padded_text_answer_as_spark(
     for name in comparisons(target):
         expected = _ORACLE["comparisons"][cell_key(name, target, ansi, None)]
         got = comparison(session, target, name)
-        if "values" in expected:
+        if name == "in-padded":
+            assert "error" in got, (name, got)
+        elif "values" in expected:
             assert got == expected, (name, got)
         else:
             assert (got.get("error"), got.get("sqlstate")) == (

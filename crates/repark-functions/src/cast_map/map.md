@@ -44,7 +44,7 @@ the module's tests.
   truncates, `.`/`+.`/`-.` answer 0, anything else NULL), the mode read from the session at invoke. The UDF keeps
   the child's schema name (DataFusion's `Cast` shows only its child) and answers nullable, as Spark's cast does.
   `TRY_CAST` is not touched (STRING-CAST-SILENT-1 owns its whitespace cells). Two guards keep other paths as they
-  were: a cast planned inside a `Values` node is left alone (`INSERT ... VALUES` puts its store-assignment cast
+  were: an `IN` list is left alone (Spark compares it as text with ANSI off), a cast planned inside a `Values` node is left alone (`INSERT ... VALUES` puts its store-assignment cast
   there, where Spark refuses the store), and a cast whose operand is `__repark_arrow_cast_operand__(x)` (an
   identity) keeps Arrow's parse; the JSON reader's user-schema casts and `smartCsv`'s integer rungs use it, so the
   readers stay as they were (a later slice). pins: `python/repark/tests/types/test_string_cast_lenient_int_1.py`
