@@ -18730,15 +18730,17 @@ field NAME.
   (`sequence`, `split`) to nullable (`ListArray::try_new`) and keeps one NULL row for a NULL or empty input, and
   the projection keeps sibling columns in place. Over an array the placeholder types as the element and exposes
   `col` in the plan schema, so aliased and unaliased outer subqueries (`SELECT *`, `SELECT col`, `WHERE`,
-  `GROUP BY`), `ORDER BY col`, `CTAS`, `INSERT INTO`, and `INSERT OVERWRITE` plan and answer as Spark.
+  `GROUP BY`), `ORDER BY col`, `CTAS`, `INSERT INTO`, and `INSERT OVERWRITE` plan and answer as Spark. Explicit
+  aliases are marked before `type_coercion` (`GeneratorAliasMark`), so coerced arguments keep `pos, col` / struct
+  fields / `c0…`, stamps survive `F.expr` frame operations, and a map beside a `col` item answers `key, value`.
 - **Apache Spark** — `Explode` / `ExplodeOuter` (`col`, or `key` / `value`); the sequence form over a leap day, a
   year end, the daylight-saving changes and the ISO week-53 years answers one row per day. *(oracle: PySpark 4.1.2
   with `iceberg-spark-runtime-4.1_2.13:1.11.0`, 2026-11-23, zones `UTC` and `America/New_York`, ANSI on and off;
   the write cells read back cold.)*
 - **Still unlike Spark:** see the card's "Still unlike Spark" (`LATERAL VIEW`, the multi-alias `AS (k, v)`, two
   generators in one select list, multi-column `MAP` / `posexplode` outer subqueries, an `array(...)` literal's
-  element nullability, `F.expr` over a `range` frame and `DataFrame.columns` on unaliased map `F.expr`, the native
-  `repark.sql` door).
+  element nullability, `F.expr` over a `range` frame and `DataFrame.columns` on unaliased map `F.expr`, an array
+  `explode` or a `*` beside a `col` item, `array_repeat` over an array, the native `repark.sql` door).
 - **Pin** — `python/repark/tests/functions/test_sql_explode_1.py` over `sql_explode_1_spark_oracle.json`; Rust
   `repark-functions` `generator::tests::explode_*`.
 - **Rationale** — [card](../task/roadmap/mid-term/cards-2026-11-23/sql-explode-1-card-2026-11-23.md).

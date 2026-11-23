@@ -38,9 +38,15 @@ nullable and build the one-NULL-element list with `ListArray::try_new` (fixing `
 nullable for the outer spelling) and exposes `col` as its plan `schema_name`, so unaliased outer subqueries
 (`SELECT *`, `SELECT col`, `WHERE col`, `GROUP BY col`), `ORDER BY col`, `CREATE TABLE … AS SELECT`,
 `INSERT INTO … SELECT`, and `INSERT OVERWRITE … SELECT` resolve against `col` before `GeneratorRewrite` runs.
-Explicit user aliases on `explode` / `explode_outer` (including names starting with `explode(` / `explode_outer(`)
-are kept, and a single alias like ``AS `posexplode(custom)` `` refuses `[COLUMN_ALIASES_MISMATCH]` rather than
-being dropped. `PyColumn::is_bare_generator` and `_rewrap_rebound_column` keep `_GeneratorColumn` and unaliased
+Delta 2: `GeneratorAliasMark`, the first analyzer rule on the Spark door (before `type_coercion`), turns every
+explicit alias on a generator call into the `__repark_gen_alias` marker, so `GeneratorRewrite` takes user names only
+from the marker and names bare outputs from the argument type; coercion's restored names (a `CASE`, `filter`,
+`transform`, `coalesce` argument) no longer read as aliases, and an alias spelled as the call
+(``AS `posexplode(arr)` ``) refuses as Spark does. A lineage stamp (an alias carrying `repark.attr`) moves onto a
+one-output generator's output, and `stamp_attribute_ids` marks before it stamps, so `.select("col")`,
+`.withColumn`, `groupBy("col")` and a self-join after `F.expr("explode(arr)")` answer as Spark. A bare `explode`
+beside a select item named `col` gets a plan name that cannot collide (`spark_rewrites/bare_explode.rs`), so a map
+there answers `key`, `value`. `PyColumn::is_bare_generator` and `_rewrap_rebound_column` keep `_GeneratorColumn` and unaliased
 bare generator `F.expr` calls unaliased (`_projection_name=None`), so the Spark door, `selectExpr`, the write
 statements, and `F.expr` over a table or view (both aliased and unaliased) all answer as Spark. The typed path is
 unchanged.
@@ -57,9 +63,9 @@ path; the stored `SMALLINT` is an Iceberg `int`, as in Spark).
 
 `python/repark/tests/functions/test_sql_explode_1.py` over the oracle, driven by the recorder
 `_record_sql_explode_1.py` (with `test_extract_field_aliases_1.py`: 94 items total, all green on the head and red
-on main, on the pre-delta PR head, and on both mutants); Rust `repark-functions` `generator::tests` (32 tests,
-including non-nullable-element outer lists, unaliased subquery / `ORDER BY col`, explicit `explode(…)` aliases,
-and `is_bare_generator_expr`).
+on main, on the pre-delta PR head, and on both mutants; delta 2 adds 16: coerced arguments, `col` siblings, frame
+operations, and the `array_repeat` record, the first 12 red on the delta-1 head); Rust `repark-functions`
+`generator::tests` (35 tests), `repark-spark` `spark_rewrites::bare_explode::tests` and the extension seat pin.
 
 ## Still unlike Spark (out of this unit's seat)
 
@@ -75,6 +81,14 @@ and `is_bare_generator_expr`).
   before `GeneratorRewrite`, so an outer query cannot read `key` / `value` of a map explode or `pos` / `col` of a
   `posexplode` inside a subquery. Spark's `AS (k, v)` multi-alias refuses (FNP9-GENERATORS-1); one alias on a map
   or `posexplode` raises `COLUMN_ALIASES_MISMATCH` (Spark `UDTF_ALIAS_NUMBER_MISMATCH`).
+- Open on this head (delta 2): `F.expr("posexplode(arr)")`, `F.expr("inline(a_struct)")` and `F.expr("explode(m)")`
+  selected bare in a DataFrame refuse `[COLUMN_ALIASES_MISMATCH]`; on `442887339` they answered Spark's rows under
+  placeholder column names. `Column.for_select` aliases them to their display name before the mark pass runs.
+- `array_repeat` over an array argument fails in its own kernel (`ListArray expected data type … 'element'`) on
+  main and on the head, with or without a generator, so `explode_outer(array_repeat(sequence(1, 2), 0))` fails
+  (the seat is `array_repeat`, not the generator).
+- `SELECT col, explode(arr)` beside a `col` column refuses (two `col` fields); Spark answers both. A `*` that holds
+  a `col` column beside a bare map `explode` refuses too (the rewrite sees only named siblings).
 - `LATERAL VIEW [OUTER] explode(...)` refuses (`LATERAL VIEWS` not implemented, BL-19-LATERAL-1).
 - Two generators in one select list refuse; Spark 4.1.2 answers them.
 - `explode(...) + 1` and `explode(explode(...))` refuse as `UNSUPPORTED_GENERATOR`, Spark's class with its
