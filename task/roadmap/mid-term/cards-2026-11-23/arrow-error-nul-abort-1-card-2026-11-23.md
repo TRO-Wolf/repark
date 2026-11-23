@@ -1,7 +1,7 @@
 # Card ARROW-ERROR-NUL-ABORT-1: a cast error over text holding a NUL byte aborts the Python process
 
 **Date:** 2026-11-23. **Filed by:** the orchestrator (`claude-opus-5-5`), from the STRING-CAST-LENIENT-1 INT-slice
-builder's report (PR #1413) and a re-measurement here. **Severity:** S2 proposed (owner to rate): loud, but the
+builder's report (PR #1413) and a re-measurement here. **Severity:** S2 (owner, 2026-11-23): loud, but the
 whole interpreter dies, so a scheduler task loses every result and its cleanup. **Status:** filed, not dispatched.
 
 ## Measured
