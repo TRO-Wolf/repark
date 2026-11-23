@@ -11,7 +11,7 @@ both doors. Outer guards widen non-nullable list element fields to nullable and
 build the one-NULL-element list with `ListArray::try_new`. `GeneratorAliasMark`
 (first Spark-door rule; `mark_generator_aliases` before attribute-id stamping) turns
 explicit aliases into `__repark_gen_alias`, so the rewrite names bare outputs by
-type and moves a one-output stamp's metadata; `is_bare_generator_expr` feeds the facade.
+type; bare frame calls are held in `__repark_gen_bare`; `is_bare_generator_expr` feeds the facade.
 
 ## Contents
 

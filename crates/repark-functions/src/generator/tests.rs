@@ -401,22 +401,29 @@ fn an_explicit_alias_spelled_as_the_call_is_still_the_users_alias() {
     );
 }
 
+fn held(call: Expr) -> Expr {
+    Expr::ScalarFunction(ScalarFunction::new_udf(
+        generator_udf(GENERATOR_BARE_UDF),
+        vec![call],
+    ))
+}
+
 #[test]
-fn a_carried_name_with_metadata_moves_onto_the_single_output() {
+fn a_stamp_on_a_held_generator_is_never_read_as_a_users_alias() {
     let carried = FieldMetadata::from(std::collections::BTreeMap::from([(
-        "repark.attr".to_string(),
+        "lineage".to_string(),
         "a1".to_string(),
     )]));
     let fields = frame_names(|table| {
         table.select(vec![
             col("id"),
-            explode_of("explode", "arr_i").alias_with_metadata("col", Some(carried.clone())),
+            held(explode_of("explode", "arr_i")).alias_with_metadata("col", Some(carried.clone())),
         ])
     })
     .unwrap();
     assert_eq!(fields[1].name(), "col");
     assert_eq!(
-        fields[1].metadata().get("repark.attr").map(String::as_str),
+        fields[1].metadata().get("lineage").map(String::as_str),
         Some("a1")
     );
     let fields = frame_names(|table| {
@@ -429,23 +436,24 @@ fn a_carried_name_with_metadata_moves_onto_the_single_output() {
     .unwrap();
     assert_eq!(fields[0].name(), "x");
     assert_eq!(
-        fields[0].metadata().get("repark.attr").map(String::as_str),
+        fields[0].metadata().get("lineage").map(String::as_str),
         Some("a1")
     );
-    let qualified = Expr::ScalarFunction(ScalarFunction::new_udf(
-        generator_udf("posexplode"),
-        vec![Expr::Column(Column::new(Some("t"), "arr_i"))],
-    ));
-    let stamp_name = qualified.schema_name().to_string();
-    let fields = frame_names(|table| {
-        table.select(vec![
-            qualified.alias_with_metadata(stamp_name, Some(carried)),
-        ])
-    })
-    .unwrap();
-    let names: Vec<&str> = fields.iter().map(|field| field.name().as_str()).collect();
-    assert_eq!(names, ["pos", "col"]);
-    assert!(fields.iter().all(|field| field.metadata().is_empty()));
+    for metadata in [Some(carried.clone()), None] {
+        let fields = frame_names(|table| {
+            table.select(vec![
+                held(explode_of("posexplode", "arr_i"))
+                    .alias_with_metadata("posexplode(arr_i)", metadata.clone()),
+            ])
+        })
+        .unwrap();
+        let names: Vec<&str> = fields.iter().map(|field| field.name().as_str()).collect();
+        assert_eq!(names, ["pos", "col"]);
+        assert!(fields.iter().all(|field| field.metadata().is_empty()));
+    }
+    let held_pos = held(explode_of("posexplode", "arr_i"));
+    assert_eq!(held_pos.schema_name().to_string(), "posexplode(arr_i)");
+    assert!(is_bare_generator_expr(&held_pos));
 }
 
 #[test]

@@ -553,7 +553,7 @@ types, scalar/aggregate/UDF functions, and table/storage helpers. The package's
   (`_expand_qualified_star`, unknown qualifiers fall through to the engine), and the qualified sort
   bind (`_resolve_sort_qualified_name`, ambiguous twins and multi-hit binds under a join raise
   unresolved as Spark does in sort). **SQL-EXPLODE-1 (2026-11-23):** `_rewrap_rebound_column`
-  keeps `_GeneratorColumn` and unaliased bare generator `F.expr` calls bare (`_projection_name=None`).
+  keeps `_GeneratorColumn` and bare generator `F.expr` calls bare; so does `Column.for_select`.
   **ATTR-ID-1 PERF-1 (2026-10-03):** `_frame_id_snapshot` caches stamped ids and engine names in
   `_ID_SNAPSHOTS` (keyed by frame and handle identity); `_stamped_frame_id_snapshot` adds
   stamp-on-missing. `_frame_engine_names` caches names alone for `columns` without calling `_plan()`.

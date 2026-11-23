@@ -29,6 +29,7 @@ use udfs::GeneratorOrdinality;
 use udfs::ordinality;
 
 pub const GENERATOR_ALIAS_UDF: &str = "__repark_gen_alias";
+const GENERATOR_BARE_UDF: &str = "__repark_gen_bare";
 
 pub(crate) const GENERATOR_FIELD: &str = "__repark_gen_out";
 const GENERATOR_POS_FIELD: &str = "__repark_gen_pos";
@@ -103,6 +104,11 @@ impl ScalarUDFImpl for GeneratorPlaceholder {
         args: datafusion::logical_expr::ReturnFieldArgs,
     ) -> Result<FieldRef> {
         let first = args.arg_fields.first();
+        if self.name == GENERATOR_BARE_UDF
+            && let Some(inner) = first
+        {
+            return Ok(Arc::clone(inner));
+        }
         if self.explodes_one_column()
             && let Some(item) = first.and_then(|field| list_element(field.data_type()))
         {
@@ -120,6 +126,11 @@ impl ScalarUDFImpl for GeneratorPlaceholder {
     fn schema_name(&self, args: &[Expr]) -> Result<String> {
         if self.explodes_one_column() {
             return Ok("col".to_string());
+        }
+        if self.name == GENERATOR_BARE_UDF
+            && let Some(inner) = args.first()
+        {
+            return Ok(inner.schema_name().to_string());
         }
         let formatted: Vec<String> = args
             .iter()
@@ -156,6 +167,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         generator_udf("inline_outer"),
         generator_udf("json_tuple"),
         generator_udf(GENERATOR_ALIAS_UDF),
+        generator_udf(GENERATOR_BARE_UDF),
     ]
 }
 
@@ -242,25 +254,43 @@ pub fn with_alias_mark_first(
 
 #[allow(clippy::missing_errors_doc)]
 pub fn mark_generator_aliases(plan: LogicalPlan) -> Result<LogicalPlan> {
-    mark_plan(plan).data()
+    let projection = match mark_plan(plan).data()? {
+        LogicalPlan::Projection(projection) => projection,
+        other => return Ok(other),
+    };
+    if !projection.expr.iter().any(is_generator_expr) {
+        return Ok(LogicalPlan::Projection(projection));
+    }
+    let Projection {
+        expr,
+        input,
+        schema,
+        ..
+    } = projection;
+    let held = expr
+        .into_iter()
+        .map(|expr| {
+            if is_generator_expr(&expr) {
+                Expr::ScalarFunction(ScalarFunction::new_udf(
+                    generator_udf(GENERATOR_BARE_UDF),
+                    vec![expr],
+                ))
+            } else {
+                expr
+            }
+        })
+        .collect();
+    Ok(LogicalPlan::Projection(Projection::try_new_with_schema(
+        held, input, schema,
+    )?))
 }
 
-const ATTRIBUTE_STAMP_KEY: &str = "repark.attr";
-
-fn is_carried_name(alias: &Alias) -> bool {
-    alias
-        .metadata
-        .as_ref()
-        .is_some_and(|metadata| metadata.inner().contains_key(ATTRIBUTE_STAMP_KEY))
+fn is_generator_expr(expr: &Expr) -> bool {
+    matches!(expr, Expr::ScalarFunction(function) if is_generator_call(function))
 }
 
 fn is_user_generator_alias(expr: &Expr) -> bool {
-    matches!(
-        expr,
-        Expr::Alias(alias)
-            if matches!(alias.expr.as_ref(), Expr::ScalarFunction(function) if is_generator_call(function))
-                && !is_carried_name(alias)
-    )
+    matches!(expr, Expr::Alias(alias) if is_generator_expr(alias.expr.as_ref()))
 }
 
 fn mark_expr(expr: Expr) -> Expr {
@@ -332,8 +362,12 @@ pub fn is_bare_generator_expr(expr: &Expr) -> bool {
     matches!(
         expr,
         Expr::ScalarFunction(function)
-            if is_generator_call(function) || function.func.name() == GENERATOR_ALIAS_UDF
+            if is_generator_call(function) || is_marker_name(function.func.name())
     )
+}
+
+fn is_marker_name(name: &str) -> bool {
+    name == GENERATOR_ALIAS_UDF || name == GENERATOR_BARE_UDF
 }
 
 fn contains_generator(expr: &Expr) -> bool {
@@ -341,7 +375,7 @@ fn contains_generator(expr: &Expr) -> bool {
         Ok(matches!(
             node,
             Expr::ScalarFunction(function)
-                if is_generator_call(function) || function.func.name() == GENERATOR_ALIAS_UDF
+                if is_generator_call(function) || is_marker_name(function.func.name())
         ))
     })
     .unwrap_or(false)
@@ -379,6 +413,12 @@ fn peel_generator(expr: &Expr) -> Result<Option<GeneratorSite>> {
                 site.metadata = Some(carried);
             }
             Ok(Some(site))
+        }
+        Expr::ScalarFunction(function) if function.func.name() == GENERATOR_BARE_UDF => {
+            let Some(inner) = function.args.first() else {
+                return plan_err!("'{GENERATOR_BARE_UDF}' requires a generator call");
+            };
+            peel_generator(inner)
         }
         Expr::ScalarFunction(function) if function.func.name() == GENERATOR_ALIAS_UDF => {
             let Some(inner) = function.args.first() else {
