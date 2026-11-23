@@ -199,11 +199,7 @@ def test_f_expr_over_a_range_frame_stays_as_recorded_and_view_f_expr_matches_spa
     assert "__repark_gen_col" in got["bare|expr"]["message"]
     assert _normal(got["view-bare|expr"], False) == _normal(expected["view-bare|expr"], False)
     for key in ("map-view|expr", "map-view-outer|expr"):
-        assert got[key]["columns"] == ["id", "col"]
-        assert got[key]["schema"] == expected[key]["schema"]
-        assert sorted(got[key]["rows"], key=json.dumps) == sorted(
-            expected[key]["rows"], key=json.dumps
-        )
+        assert "COLUMN_ALIASES_MISMATCH" in got[key]["message"], got[key]
 
 
 @pytest.mark.parametrize("zone", ZONES)

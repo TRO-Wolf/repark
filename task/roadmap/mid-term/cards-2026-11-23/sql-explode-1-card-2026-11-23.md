@@ -83,7 +83,7 @@ operations, and the `array_repeat` record, the first 12 red on the delta-1 head)
   or `posexplode` raises `COLUMN_ALIASES_MISMATCH` (Spark `UDTF_ALIAS_NUMBER_MISMATCH`).
 - Open on this head (delta 2): `F.expr("posexplode(arr)")`, `F.expr("inline(a_struct)")` and `F.expr("explode(m)")`
   selected bare in a DataFrame refuse `[COLUMN_ALIASES_MISMATCH]`; on `442887339` they answered Spark's rows under
-  placeholder column names. `Column.for_select` aliases them to their display name before the mark pass runs.
+  placeholder column names; main refuses the map forms. The seat is open: skipping `Column.for_select`'s alias alone did not change it.
 - `array_repeat` over an array argument fails in its own kernel (`ListArray expected data type … 'element'`) on
   main and on the head, with or without a generator, so `explode_outer(array_repeat(sequence(1, 2), 0))` fails
   (the seat is `array_repeat`, not the generator).
