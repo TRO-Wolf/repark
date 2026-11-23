@@ -9351,7 +9351,7 @@ the pin rather than obeying it.
   hundred-row frame, the comparisons, the three writes read back cold, the uncast-write refusals, the NUL
   subprocess, the `VALUES` and JSON-reader guards); `crates/repark-functions/src/cast_map/tests.rs`
   (`string_integral_cast_*`, `arrow_cast_operand_keeps_arrow_parsing`,
-  `a_cast_planned_inside_values_keeps_arrow_parsing`).
+  `a_cast_planned_inside_values_keeps_arrow_parsing`, `an_outer_projection_sees_the_nullable_cast_with_ansi_off`).
 - **Rationale** — the INT-family slice of S2 card
   [STRING-CAST-LENIENT-1](../task/roadmap/mid-term/string-cast-lenient-1-card-2026-11-16.md); it also closes the
   INT-family half of SET-ANSI-RUNTIME-3.

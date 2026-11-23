@@ -4,7 +4,7 @@ use datafusion::arrow::array::ArrayRef;
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::config::ConfigOptions;
-use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
+use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, Result, ScalarValue, exec_err, plan_err};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
@@ -76,7 +76,7 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten = expr.transform_up(|node| Ok(rewrite_cast(node, &schema)))?;
+        let rewritten = expr.transform_down(|node| Ok(rewrite_node(node, &schema)))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed.map_data(LogicalPlan::recompute_schema)
@@ -84,6 +84,13 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
 
 fn is_arrow_cast_operand(expr: &Expr) -> bool {
     matches!(expr, Expr::ScalarFunction(function) if function.func.name() == ARROW_CAST_OPERAND_NAME)
+}
+
+fn rewrite_node(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+    if matches!(expr, Expr::InList(_)) {
+        return Transformed::new(expr, false, TreeNodeRecursion::Jump);
+    }
+    rewrite_cast(expr, schema)
 }
 
 fn rewrite_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
@@ -169,11 +176,9 @@ impl ScalarUDFImpl for SparkStringIntegral {
             return exec_err!("'{}' takes one argument", self.name);
         };
         match value {
-            ColumnarValue::Array(texts) => Ok(ColumnarValue::Array(parse(
-                texts,
-                &self.target,
-                mode,
-            )?)),
+            ColumnarValue::Array(texts) => {
+                Ok(ColumnarValue::Array(parse(texts, &self.target, mode)?))
+            }
             ColumnarValue::Scalar(scalar) => {
                 let parsed = parse(&scalar.to_array_of_size(1)?, &self.target, mode)?;
                 Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(

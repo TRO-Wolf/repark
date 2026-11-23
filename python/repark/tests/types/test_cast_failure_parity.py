@@ -306,7 +306,7 @@ ROWS: list[CastRow] = [
         cast_column="v",
         cast_type="int",
         spark_error_needle="CAST_INVALID_INPUT",
-        repark_error_needle="Cast error",
+        repark_error_needle="CAST_INVALID_INPUT",
         note=(
             "CP-11 DataFrame-API twin of malformed_string_to_int: Column.cast('int') on 'abc' "
             "raises on both engines under ANSI ON (same class as the SQL door). Pins the DF "

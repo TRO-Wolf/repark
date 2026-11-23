@@ -478,3 +478,19 @@ async fn an_outer_projection_sees_the_nullable_cast_with_ansi_off() {
     let batches = ctx.sql(sql).await.unwrap().collect().await.unwrap();
     assert_eq!(batches.iter().map(RecordBatch::num_rows).sum::<usize>(), 1);
 }
+
+#[tokio::test]
+async fn an_in_list_keeps_arrow_parsing() {
+    let sql = "SELECT n FROM (VALUES (1), (2)) AS t(n) WHERE CAST(n AS INT) IN (' 2', '3 ')";
+    for ansi in [true, false] {
+        let error = integral_context(ansi)
+            .sql(sql)
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("Cannot cast string ' 2'"), "{error}");
+    }
+}

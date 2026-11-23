@@ -717,7 +717,7 @@ class DataFrameReader:
                 for field in fields:
                     source_name = column_by_case[field["name"].casefold()]
                     selects.append(
-                        _schema_cast(F.col(source_name), field["dataType"]).alias(field["name"])
+                        _schema_cast(source_name, field["dataType"]).alias(field["name"])
                     )
             else:
                 generic_source = bool(columns) and all(
@@ -730,9 +730,7 @@ class DataFrameReader:
                         if key in column_by_case:
                             source_name = column_by_case[key]
                             selects.append(
-                                _schema_cast(F.col(source_name), field["dataType"]).alias(
-                                    field["name"]
-                                )
+                                _schema_cast(source_name, field["dataType"]).alias(field["name"])
                             )
                         else:
                             selects.append(F.lit(None).cast(field["dataType"]).alias(field["name"]))
@@ -740,7 +738,7 @@ class DataFrameReader:
                     for index, field in enumerate(fields):
                         source_name = columns[index]
                         selects.append(
-                            _schema_cast(F.col(source_name), field["dataType"]).alias(field["name"])
+                            _schema_cast(source_name, field["dataType"]).alias(field["name"])
                         )
                 else:
                     from repark.errors import AnalysisException
