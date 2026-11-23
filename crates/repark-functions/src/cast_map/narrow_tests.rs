@@ -421,3 +421,64 @@ async fn narrow_cast_respects_arrow_operand_values_outer_null_join_and_parts() {
     let (_, dec_target) = narrow_cast_parts(&projection.expr[1].clone().unalias()).unwrap();
     assert_eq!(dec_target, DataType::Decimal128(3, 2));
 }
+
+#[tokio::test]
+async fn update_projection_keeps_top_level_store_cast_and_rewrites_marked_user_cast() {
+    use datafusion::logical_expr::dml::DmlStatement;
+    use datafusion::logical_expr::{LogicalPlan, Projection, WriteOp, cast, col, lit};
+    use datafusion::optimizer::AnalyzerRule;
+
+    let ctx = narrow_context(false);
+    let target_schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("a", DataType::Int64, true),
+        Field::new("b", DataType::Int32, true),
+    ]));
+    let batch = RecordBatch::try_new(
+        Arc::clone(&target_schema),
+        vec![
+            Arc::new(Int64Array::from(vec![1i64])),
+            Arc::new(Int64Array::from(vec![0i64])),
+            Arc::new(Int32Array::from(vec![0i32])),
+        ],
+    )
+    .unwrap();
+    let table: Arc<dyn datafusion::datasource::TableProvider> =
+        Arc::new(MemTable::try_new(Arc::clone(&target_schema), vec![vec![batch]]).unwrap());
+    ctx.register_table("u", Arc::clone(&table)).unwrap();
+    let scan = ctx.table("u").await.unwrap().into_unoptimized_plan();
+    let operand_udf = ctx
+        .state()
+        .scalar_functions()
+        .get(ARROW_CAST_OPERAND_NAME)
+        .unwrap()
+        .clone();
+    let exprs = vec![
+        col("u.id").alias("id"),
+        cast(lit(1e19f64), DataType::Int64).alias("a"),
+        operand_udf
+            .call(vec![cast(lit(4_294_967_297i64), DataType::Int32)])
+            .alias("b"),
+    ];
+    let projection = LogicalPlan::Projection(Projection::try_new(exprs, Arc::new(scan)).unwrap());
+    let target = datafusion::datasource::provider_as_source(table);
+    let dml = LogicalPlan::Dml(DmlStatement::new(
+        datafusion::common::TableReference::bare("u"),
+        target,
+        WriteOp::Update,
+        Arc::new(projection),
+    ));
+    let analyzed = crate::cast_map::SparkStringIntegralCast
+        .analyze(dml, ctx.state().config_options())
+        .unwrap();
+    let shown = analyzed.display_indent().to_string();
+    assert!(
+        shown.contains("CAST(Float64(10000000000000000000) AS Int64)"),
+        "{shown}"
+    );
+    assert!(
+        shown.contains("__repark_narrow_to_int__(Int64(4294967297))"),
+        "{shown}"
+    );
+    assert!(!shown.contains("__repark_narrow_to_bigint__"), "{shown}");
+}

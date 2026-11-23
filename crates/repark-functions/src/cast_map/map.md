@@ -55,7 +55,9 @@ the module's tests.
   `preimage` pushdown, and reader schema casts keep their paths. `SparkCoercionCastMark` (`spark_coercion_cast_mark`,
   last in `analyzer_rules()`) marks any remaining cast matching `cast_udf_for` (coercion-inserted casts) with
   `__repark_arrow_cast_operand__` so re-analysis leaves them alone. Both skip `Values` and an INSERT's store-assignment
-  projection (protecting uncast store assignment). Nullability preserves child nullability for integer->integer and
+  projection, and on an UPDATE's `Dml(WriteOp::Update)` projection skip only a top-level `Expr::Cast` (the store-assignment
+  cast DataFusion's `update_to_plan` inserts) while still rewriting nested casts and user-written top-level casts wrapped
+  in `__repark_arrow_cast_operand__` by `repark-spark/src/update_cast.rs`. Nullability preserves child nullability for integer->integer and
   widens to nullable for string/decimal/float sources and decimal targets. `narrow_cast_parts` joins
   `string_integral_cast_parts` for the empty `INSERT OVERWRITE` guard.
   pins: `python/repark/tests/types/test_string_cast_lenient_int_1.py`,

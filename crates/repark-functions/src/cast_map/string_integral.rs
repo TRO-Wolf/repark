@@ -6,7 +6,7 @@ use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode, TreeNodeRecursion};
 use datafusion::common::{DFSchema, Result, ScalarValue, exec_err, plan_err};
-use datafusion::logical_expr::expr::ScalarFunction;
+use datafusion::logical_expr::expr::{Alias, ScalarFunction};
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
     Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, Projection, ReturnFieldArgs,
@@ -300,18 +300,27 @@ pub fn insert_string_integral_before_coercion(
     Ok(rules)
 }
 
-fn store_projections(plan: &LogicalPlan) -> Result<Vec<Vec<Expr>>> {
-    let mut stores = Vec::new();
+struct DmlProjections {
+    inserts: Vec<Vec<Expr>>,
+    updates: Vec<Vec<Expr>>,
+}
+
+fn store_projections(plan: &LogicalPlan) -> Result<DmlProjections> {
+    let mut inserts = Vec::new();
+    let mut updates = Vec::new();
     plan.apply_with_subqueries(|node| {
         if let LogicalPlan::Dml(dml) = node
-            && matches!(dml.op, WriteOp::Insert(_))
             && let LogicalPlan::Projection(projection) = dml.input.as_ref()
         {
-            stores.push(projection.expr.clone());
+            match dml.op {
+                WriteOp::Insert(_) => inserts.push(projection.expr.clone()),
+                WriteOp::Update => updates.push(projection.expr.clone()),
+                _ => {}
+            }
         }
         Ok(TreeNodeRecursion::Continue)
     })?;
-    Ok(stores)
+    Ok(DmlProjections { inserts, updates })
 }
 
 fn held(plan: &LogicalPlan, stores: &[Vec<Expr>]) -> bool {
@@ -322,15 +331,63 @@ fn held(plan: &LogicalPlan, stores: &[Vec<Expr>]) -> bool {
     }
 }
 
-fn mark_plan(plan: LogicalPlan, stores: &[Vec<Expr>]) -> Result<Transformed<LogicalPlan>> {
-    if held(&plan, stores) {
+fn is_update_projection(plan: &LogicalPlan, updates: &[Vec<Expr>]) -> bool {
+    matches!(plan, LogicalPlan::Projection(projection) if updates.contains(&projection.expr))
+}
+
+fn peel_aliases(
+    mut expr: Expr,
+) -> (
+    Expr,
+    Vec<(Option<datafusion::common::TableReference>, String)>,
+) {
+    let mut frames = Vec::new();
+    while let Expr::Alias(alias) = expr {
+        frames.push((alias.relation, alias.name));
+        expr = *alias.expr;
+    }
+    (expr, frames)
+}
+
+fn wrap_aliases(
+    mut expr: Expr,
+    frames: Vec<(Option<datafusion::common::TableReference>, String)>,
+) -> Expr {
+    for (relation, name) in frames.into_iter().rev() {
+        expr = Expr::Alias(Alias::new(expr, relation, name));
+    }
+    expr
+}
+
+fn mark_plan(plan: LogicalPlan, stores: &DmlProjections) -> Result<Transformed<LogicalPlan>> {
+    if held(&plan, &stores.inserts) {
         return Ok(Transformed::no(plan));
     }
+    let update_store = is_update_projection(&plan, &stores.updates);
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
     }
-    plan.map_expressions(|expr| expr.transform_up(|node| Ok(mark_cast(node, &schema))))
+    plan.map_expressions(|expr| {
+        if update_store {
+            let (inner, frames) = peel_aliases(expr);
+            if let Expr::Cast(cast) = inner {
+                let Cast {
+                    expr: operand,
+                    field,
+                } = cast;
+                let marked = (*operand).transform_up(|node| Ok(mark_cast(node, &schema)))?;
+                return Ok(marked.update_data(|child| {
+                    wrap_aliases(
+                        Expr::Cast(Cast::new_from_field(Box::new(child), field)),
+                        frames,
+                    )
+                }));
+            }
+            return wrap_aliases(inner, frames).transform_up(|node| Ok(mark_cast(node, &schema)));
+        }
+        expr.transform_up(|node| Ok(mark_cast(node, &schema)))
+    })
 }
 
 fn mark_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
@@ -351,10 +408,11 @@ fn mark_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     Transformed::yes(Expr::Cast(Cast::new_from_field(Box::new(marked), field)))
 }
 
-fn rewrite_plan(plan: LogicalPlan, stores: &[Vec<Expr>]) -> Result<Transformed<LogicalPlan>> {
-    if held(&plan, stores) {
+fn rewrite_plan(plan: LogicalPlan, stores: &DmlProjections) -> Result<Transformed<LogicalPlan>> {
+    if held(&plan, &stores.inserts) {
         return Ok(Transformed::no(plan));
     }
+    let update_store = is_update_projection(&plan, &stores.updates);
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -366,7 +424,28 @@ fn rewrite_plan(plan: LogicalPlan, stores: &[Vec<Expr>]) -> Result<Transformed<L
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten = expr.transform_down(|node| Ok(rewrite_node(node, &schema, named)))?;
+        let rewritten = if update_store {
+            let (inner, frames) = peel_aliases(expr);
+            if let Expr::Cast(cast) = inner {
+                let Cast {
+                    expr: operand,
+                    field,
+                } = cast;
+                let inner_rewritten =
+                    (*operand).transform_down(|node| Ok(rewrite_node(node, &schema, named)))?;
+                inner_rewritten.update_data(|child| {
+                    wrap_aliases(
+                        Expr::Cast(Cast::new_from_field(Box::new(child), field)),
+                        frames,
+                    )
+                })
+            } else {
+                wrap_aliases(inner, frames)
+                    .transform_down(|node| Ok(rewrite_node(node, &schema, named)))?
+            }
+        } else {
+            expr.transform_down(|node| Ok(rewrite_node(node, &schema, named)))?
+        };
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     let changed = transformed.transformed;

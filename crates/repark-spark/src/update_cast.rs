@@ -2,7 +2,9 @@ use datafusion::arrow::datatypes::{DataType as ArrowDataType, Schema as ArrowSch
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    AssignmentTarget, Expr, ObjectName, Statement, TableFactor, UnaryOperator, Update, Value,
+    Assignment, AssignmentTarget, CastKind, DataType as SqlDataType, Expr, Function, FunctionArg,
+    FunctionArgExpr, FunctionArgumentList, FunctionArguments, Ident, ObjectName, Statement,
+    TableFactor, UnaryOperator, Update, Value,
 };
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
@@ -49,50 +51,141 @@ pub(crate) async fn refuse_cast_then_fold_nested(
     catalogs: &CatalogRegistry,
     update: &Update,
 ) -> Result<Option<String>> {
-    let Some(object_name) = crate::object_name_from_table_with_joins(&update.table) else {
-        return Ok(None);
-    };
-    let Some(target) = load_update_target(ctx, catalogs, update).await else {
-        return Ok(None);
-    };
-    let alias = match &update.table.relation {
-        TableFactor::Table {
-            alias: Some(alias), ..
-        } => Some(alias.name.value.clone()),
-        _ => None,
-    };
-    let written = crate::name_parts(object_name);
-    let qualifiers = alias.clone().map_or_else(
-        || nested_assign::name_suffixes(&written),
-        |alias| vec![vec![alias]],
-    );
-    let scope = AssignmentScope {
-        value_qualifiers: qualifiers.clone(),
-        qualifiers,
-        sql_qualifier: alias.unwrap_or_else(|| written.join(".")),
-        column_prefix: None,
-        probe_from: update.table.to_string(),
-        case_sensitive: !crate::spark_door_case_insensitive(ctx.state().config().options()),
-    };
-    if !nested_assign::repeats_a_column(&target.arrow_schema, &scope, &update.assignments) {
-        refuse_incompatible_update_cast(ctx, &target, object_name, update).await?;
-    }
-    let Some(assignments) = nested_assign::fold_nested_assignments(
-        ctx,
-        &target.arrow_schema,
-        &scope,
-        &update.assignments,
-    )
-    .await?
-    else {
-        return Ok(None);
+    let folded_assignments = if let Some(object_name) =
+        crate::object_name_from_table_with_joins(&update.table)
+        && let Some(target) = load_update_target(ctx, catalogs, update).await
+    {
+        let alias = match &update.table.relation {
+            TableFactor::Table {
+                alias: Some(alias), ..
+            } => Some(alias.name.value.clone()),
+            _ => None,
+        };
+        let written = crate::name_parts(object_name);
+        let qualifiers = alias.clone().map_or_else(
+            || nested_assign::name_suffixes(&written),
+            |alias| vec![vec![alias]],
+        );
+        let scope = AssignmentScope {
+            value_qualifiers: qualifiers.clone(),
+            qualifiers,
+            sql_qualifier: alias.unwrap_or_else(|| written.join(".")),
+            column_prefix: None,
+            probe_from: update.table.to_string(),
+            case_sensitive: !crate::spark_door_case_insensitive(ctx.state().config().options()),
+        };
+        if !nested_assign::repeats_a_column(&target.arrow_schema, &scope, &update.assignments) {
+            refuse_incompatible_update_cast(ctx, &target, object_name, update).await?;
+        }
+        nested_assign::fold_nested_assignments(
+            ctx,
+            &target.arrow_schema,
+            &scope,
+            &update.assignments,
+        )
+        .await?
+    } else {
+        None
     };
     let mut folded = update.clone();
-    folded.assignments = assignments;
+    let mut changed = false;
+    if let Some(assignments) = folded_assignments {
+        folded.assignments = assignments;
+        changed = true;
+    }
+    if wrap_explicit_update_casts(&mut folded.assignments) {
+        changed = true;
+    }
+    if !changed {
+        return Ok(None);
+    }
     let mut rendered = Statement::Update(folded);
     Ok(Some(repark_iceberg::write::sql_text::render_for_reparse(
         &mut rendered,
     )))
+}
+
+fn is_spark_cast_target(data_type: &SqlDataType) -> bool {
+    match data_type {
+        SqlDataType::TinyInt(_)
+        | SqlDataType::SmallInt(_)
+        | SqlDataType::Int2(_)
+        | SqlDataType::Int16
+        | SqlDataType::Int(_)
+        | SqlDataType::Int4(_)
+        | SqlDataType::Integer(_)
+        | SqlDataType::Int32
+        | SqlDataType::BigInt(_)
+        | SqlDataType::Int8(_)
+        | SqlDataType::Int64
+        | SqlDataType::Signed
+        | SqlDataType::SignedInteger
+        | SqlDataType::Decimal(_)
+        | SqlDataType::Dec(_)
+        | SqlDataType::Numeric(_)
+        | SqlDataType::BigDecimal(_)
+        | SqlDataType::BigNumeric(_) => true,
+        SqlDataType::Custom(name, _) => matches!(
+            name.to_string().to_ascii_lowercase().as_str(),
+            "byte"
+                | "short"
+                | "long"
+                | "tinyint"
+                | "smallint"
+                | "int"
+                | "integer"
+                | "bigint"
+                | "decimal"
+                | "dec"
+                | "numeric"
+        ),
+        _ => false,
+    }
+}
+
+fn arrow_cast_operand_call(inner: Expr) -> Expr {
+    Expr::Function(Function {
+        name: ObjectName::from(vec![Ident::new(
+            repark_functions::cast_map::ARROW_CAST_OPERAND_NAME,
+        )]),
+        uses_odbc_syntax: false,
+        parameters: FunctionArguments::None,
+        args: FunctionArguments::List(FunctionArgumentList {
+            duplicate_treatment: None,
+            args: vec![FunctionArg::Unnamed(FunctionArgExpr::Expr(inner))],
+            clauses: Vec::new(),
+        }),
+        filter: None,
+        null_treatment: None,
+        over: None,
+        within_group: Vec::new(),
+    })
+}
+
+fn wrap_explicit_update_casts(assignments: &mut [Assignment]) -> bool {
+    let mut changed = false;
+    for assignment in assignments {
+        let mut peeled = &assignment.value;
+        while let Expr::Nested(inner) = peeled {
+            peeled = inner;
+        }
+        if matches!(
+            peeled,
+            Expr::Cast {
+                kind: CastKind::Cast | CastKind::DoubleColon,
+                data_type,
+                ..
+            } if is_spark_cast_target(data_type)
+        ) {
+            let inner = std::mem::replace(
+                &mut assignment.value,
+                Expr::Value(Value::Null.with_empty_span()),
+            );
+            assignment.value = arrow_cast_operand_call(inner);
+            changed = true;
+        }
+    }
+    changed
 }
 
 fn integer_literal_source_type(value: &Expr) -> Option<ArrowDataType> {
