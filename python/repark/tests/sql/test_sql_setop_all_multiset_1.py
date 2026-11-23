@@ -768,7 +768,8 @@ def test_r1_minus_all_runs_after_spark_normalizers_across_seats(tmp_path: Path, 
         snaps = [
             row[0]
             for row in session.sql(
-                "SELECT snapshot_id FROM ice.ns.base_t.snapshots ORDER BY committed_at"
+                "SELECT snapshot_id FROM ice.ns.base_t.snapshots "
+                "ORDER BY parent_id NULLS FIRST, committed_at"
             ).collect()
         ]
         snap1, snap2 = snaps[0], snaps[-1]

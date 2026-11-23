@@ -56,7 +56,7 @@ async fn dialect_surfaces_router_refusals() {
     assert!(error.contains("TABLE_OR_VIEW_NOT_FOUND"), "{error}");
 }
 
-async fn collect_strings(session: &ReparkSession, sql: &str) -> Vec<String> {
+async fn collect_strings_in_order(session: &ReparkSession, sql: &str) -> Vec<String> {
     let batches = session
         .sql(sql)
         .await
@@ -77,6 +77,11 @@ async fn collect_strings(session: &ReparkSession, sql: &str) -> Vec<String> {
             rows.push(cells.join("|"));
         }
     }
+    rows
+}
+
+async fn collect_strings(session: &ReparkSession, sql: &str) -> Vec<String> {
+    let mut rows = collect_strings_in_order(session, sql).await;
     rows.sort();
     rows
 }
@@ -117,9 +122,10 @@ async fn spark_dialect_respells_minus_all_after_spark_normalizers() {
     ] {
         session.sql(stmt).await.unwrap().collect().await.unwrap();
     }
-    let snapshots = collect_strings(
+    let snapshots = collect_strings_in_order(
         &session,
-        "SELECT snapshot_id FROM ice.ns.`base_t`.snapshots ORDER BY committed_at",
+        "SELECT snapshot_id FROM ice.ns.`base_t`.snapshots \
+         ORDER BY parent_id NULLS FIRST, committed_at",
     )
     .await;
     let first_snapshot = &snapshots[0];
