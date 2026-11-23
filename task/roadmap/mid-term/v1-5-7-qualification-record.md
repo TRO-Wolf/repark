@@ -1,6 +1,6 @@
 # v1.5.7 qualification record (Master Plan Step 1.4)
 
-**Status:** prepared 2026-11-22 on branch `release/v1.5.7` by the release-prep clerk (`claude-haiku-5-5`). This record tags nothing, publishes nothing and triggers no workflow. The owner's 2026-11-22 go covers the cut. The squash-merge, the tag and the `release` deployment approval are owner actions and are not delegated here (section 8).
+**Status:** prepared 2026-11-22 on branch `release/v1.5.7` by the release-prep clerk (`claude-haiku-5-5`). This record tags nothing, publishes nothing and triggers no workflow. The owner's 2026-11-22 go covers the cut. The squash-merge, the tag and the `release` deployment approval are owner actions and are not delegated here (section 8). **Shipped 2026-11-22:** the release PR squash-merged as #1410 at `450a0dfe`, its tree equal to the reviewed head's; annotated tag `v1.5.7` (tag object `90be1468`); `release.yml` run 45082888151 built five wheels and published after the owner's `release` approval; PyPI reports 1.5.7 with the `cp312-abi3` wheels for manylinux x86_64 and aarch64, macOS x86_64 and arm64, and Windows x86_64.
 
 ## 1. Source revision
 
