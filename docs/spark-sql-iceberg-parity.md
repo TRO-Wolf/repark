@@ -6126,7 +6126,7 @@ still open is `isModifiable`.
   a write stores `INT64 TIMESTAMP(MICROS,true)` where Spark writes `INT96` (both read the same instants back);
   `spark.sql.parquet.int96TimestampConversion=true` is stored and ignored (audit family NEW-settings-5, plan item
   P01-05); among files from writers other than Spark, a leaf whose embedded Arrow schema names a timestamp keeps that hint's own unit and zone (`ns`/UTC reads
-  `Timestamp(ns, "UTC")`, `us`/New York `Timestamp(µs, "America/New_York")`), and a zone-less hint reads NTZ, where Spark reads an instant at
+  `Timestamp(ns, "UTC")`, `us`/New York `Timestamp(µs, "America/New_York")`), and a zone-less `us`, `ms` or `s` hint reads NTZ (a zone-less `ns` hint, or one naming a non-timestamp type, reads `Timestamp(µs, "UTC")`), where Spark reads an instant at
   microseconds, and a path append onto any `ARROW:schema`-hinted `INT96` file refuses; a
   `LEGACY`-rebased (Spark 2.x) file is not rebased (`1500-06-01` reads `1500-06-11`); an Iceberg table whose data
   file holds `INT96` (`add_files`) reads NULL timestamps

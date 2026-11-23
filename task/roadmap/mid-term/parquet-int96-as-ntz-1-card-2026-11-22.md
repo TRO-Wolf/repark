@@ -180,7 +180,7 @@ session option, so it stays with P01-05.
   R3-F1: a read-then-append onto an `ns`/UTC- or `s`-hinted file passed delta 3's check and wrote a file Spark then
   refused. Delta 3's decoder is gone; the `fixed_size_list` leaf count stays.
 - **Reader, corrected (R3-F2):** a leaf whose embedded Arrow schema names a timestamp keeps that hint's own unit and zone (`ns`/UTC reads
-  `Timestamp(ns, "UTC")`, `us`/New York `Timestamp(µs, "America/New_York")`), and a zone-less hint reads NTZ. Earlier records said a zoned hint reads as `Timestamp(Microsecond, "UTC")`.
+  `Timestamp(ns, "UTC")`, `us`/New York `Timestamp(µs, "America/New_York")`), and a zone-less `us`, `ms` or `s` hint reads NTZ (a zone-less `ns` hint, or one naming a non-timestamp type, reads `Timestamp(µs, "UTC")`). Earlier records said a zoned hint reads as `Timestamp(Microsecond, "UTC")`.
 - **Unreadable footer (R3-F3):** a malformed `ARROW:schema` made `ParquetFile` raise a raw `ArrowInvalid`; the check
   now raises its `AnalysisException` and leaves the directory unchanged.
 - **Pins:** the zone-less-hint cases (a `TIMESTAMP` literal, a read-then-append, a `TIMESTAMP_NTZ` literal), a
