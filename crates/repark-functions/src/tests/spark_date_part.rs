@@ -249,7 +249,7 @@ async fn all_spark_field_aliases_resolve_in_session_zone() {
 }
 
 #[tokio::test]
-async fn half_hour_dst_lmt_leap_pre_1970_post_2038_and_post_2099_zones() {
+async fn kolkata_half_hour_zone_shifts_date_and_minute() {
     let kolkata = spark_context(KOLKATA, true);
     register_timestamps(
         &kolkata,
@@ -277,7 +277,10 @@ async fn half_hour_dst_lmt_leap_pre_1970_post_2038_and_post_2099_zones() {
         run_int32_col(&kolkata, "SELECT extract(YEAR FROM ts) FROM t ORDER BY id").await,
         vec![Some(2024), Some(1970)]
     );
+}
 
+#[tokio::test]
+async fn new_york_dst_lmt_leap_post_2038_and_post_2099_zones() {
     let ny = spark_context(NEW_YORK, true);
     register_timestamps(
         &ny,
