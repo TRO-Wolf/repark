@@ -514,7 +514,8 @@ async fn a_projection_built_without_name_checks_keeps_its_names() {
         .map(|(qualifier, field)| (qualifier.cloned(), Arc::clone(field)))
         .collect();
     fields.push((None, Arc::new(Field::new("n", DataType::Int32, true))));
-    let schema = Arc::new(DFSchema::new_with_metadata(fields, Default::default()).unwrap());
+    let metadata = std::collections::HashMap::new();
+    let schema = Arc::new(DFSchema::new_with_metadata(fields, metadata).unwrap());
     let plan =
         LogicalPlan::Projection(Projection::try_new_with_schema(exprs, input, schema).unwrap());
     let analyzed = SparkStringIntegralCast
