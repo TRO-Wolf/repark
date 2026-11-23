@@ -950,6 +950,7 @@ fn starts_insert_source(token: Option<&Token>) -> bool {
 }
 
 pub(crate) mod create_options;
+pub(crate) mod extract_field;
 pub(crate) mod timestamp_ltz_literal;
 pub(crate) mod timestamp_ntz_literal;
 

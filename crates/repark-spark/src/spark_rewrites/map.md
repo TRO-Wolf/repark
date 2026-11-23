@@ -36,6 +36,15 @@ path stay in `spark_literals.rs`.
   string refuses Spark's `INVALID_TYPED_LITERAL` with the `== SQL` window at plan time.
   A cast target, a quoted name and a bare identifier stay untouched (unit pins in the
   file).
+- `extract_field.rs` — **EXTRACT-FIELD-ALIASES-1 (2026-11-23):**
+  `plan_extract_field_regions` rewrites `extract(<field> FROM` into `date_part('<field>',`
+  for the Spark spellings the stock parser refuses or the stock `extract` planner misreads
+  (`YEAROFWEEK`, `DAYOFWEEK`, `DAYOFWEEK_ISO`, `DOW`, `DOW_ISO`, `H`, `HR`, `HRS`, `Y`, `YR`,
+  `YRS`, `QTR`, `MON`, `MONS`, `W`, `D`, `M`, `MIN`, `MINS`, `S`, `SEC`, `SECS`), so they plan
+  through the session `date_part` (Spark's field mapping). `spark_literals.rs`
+  `canonicalize_verbatim` runs it on every Spark-door statement and `F.expr` fragment that
+  holds the word `extract`. The other fields, unknown fields and quoted words stay as written
+  (unit pins in the file).
 - `create_options.rs` — **D-5 (2026-09-21):** the `OPTIONS` → `TBLPROPERTIES`
   seam. Recognizes `CREATE [OR REPLACE] TABLE [IF NOT EXISTS] name [(cols)]
   USING iceberg` and rewrites its single well-formed `OPTIONS (k=v, …)` clause
