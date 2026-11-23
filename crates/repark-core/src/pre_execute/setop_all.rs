@@ -13,7 +13,7 @@ use datafusion::logical_expr::{
 };
 use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::SessionContext;
-use datafusion::sql::sqlparser::dialect::{Dialect, GenericDialect, dialect_from_str};
+use datafusion::sql::sqlparser::dialect::{DatabricksDialect, Dialect};
 use datafusion::sql::sqlparser::tokenizer::{Location, Token, Tokenizer};
 
 const RULE_NAME: &str = "setop_all_multiset";
@@ -317,11 +317,10 @@ pub(crate) fn minus_all_with<'a>(dialect: &dyn Dialect, sql: &'a str) -> Cow<'a,
 
 #[must_use]
 pub fn minus_all_as_except_all(parser: ParserDialect, sql: &str) -> Cow<'_, str> {
-    if !may_name_minus_all(sql) {
+    if !matches!(parser, ParserDialect::Databricks) || !may_name_minus_all(sql) {
         return Cow::Borrowed(sql);
     }
-    let dialect = dialect_from_str(parser).unwrap_or_else(|| Box::new(GenericDialect {}));
-    minus_all_with(dialect.as_ref(), sql)
+    minus_all_with(&DatabricksDialect {}, sql)
 }
 
 pub(crate) fn minus_all_in_session_sql<'a>(ctx: &SessionContext, sql: &'a str) -> Cow<'a, str> {

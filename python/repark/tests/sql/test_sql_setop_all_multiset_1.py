@@ -13,6 +13,8 @@ from _setop_all_multiset_1_cells import (
     EDGE_CELLS,
     ERROR_CELLS,
     FIXTURE,
+    GUARD_JOINS,
+    GUARD_KINDS,
     OPS,
     SHAPES,
     SPELLINGS,
@@ -34,6 +36,8 @@ NATIVE_GAPS = {
     "shape|ctas": "NATIVE-CTAS-ICEBERG-REFUSE-1",
     "shape|merge": "NATIVE-NO-MERGE",
 }
+NATIVE_MINUS_SPELLINGS = {index for index, text in enumerate(SPELLINGS) if "minus" in text.lower()}
+NATIVE_MINUS_TEXT = "MINUS ALL not implemented"
 ERROR_STATES = {"column-count": "42826", "column-type": "42825"}
 ERROR_CONDITIONS = {
     "column-count": "NUM_COLUMNS_MISMATCH",
@@ -90,6 +94,16 @@ def spark_cell(ansi: str, key: str) -> dict[str, Any]:
     return ORACLE["cells"]["true" if ansi == "native" else ansi][key]
 
 
+def native_minus(mode: str, op: str) -> bool:
+    return mode == "native" and op == "MINUS ALL"
+
+
+def assert_native_minus_refused(cell: dict[str, Any]) -> None:
+    assert cell["kind"] == "error", cell
+    assert cell["class"] == "UnsupportedOperationException", cell
+    assert NATIVE_MINUS_TEXT in cell["text"], cell
+
+
 def rows_only(cell: dict[str, Any]) -> dict[str, Any]:
     return {"kind": cell["kind"], "rows": cell.get("rows")}
 
@@ -125,6 +139,9 @@ def test_every_type_answers_the_spark_multiset(
 ) -> None:
     key = f"type|{cell}|{op}|{direction}"
     got = measured[mode][key]
+    if native_minus(mode, op):
+        assert_native_minus_refused(got)
+        return
     expected = spark_cell(mode, key)
     assert rows_only(got) == rows_only(expected), got
     if mode != "native":
@@ -138,6 +155,9 @@ def test_empty_sides_and_duplicate_only_sides_answer_the_spark_multiset(
     measured: dict[str, Any], mode: str, op: str, cell: str
 ) -> None:
     key = f"edge|{cell}|{op}|lr"
+    if native_minus(mode, op):
+        assert_native_minus_refused(measured[mode][key])
+        return
     assert rows_only(measured[mode][key]) == rows_only(spark_cell(mode, key))
 
 
@@ -170,6 +190,16 @@ def test_every_shape_answers_the_spark_rows(
     if mode == "native" and f"shape|{shape}" in NATIVE_GAPS:
         assert "SQL-SETOP-ALL" not in json.dumps(got), got
         return
+    if native_minus(mode, op):
+        if shape in WRITE_SHAPES:
+            assert_native_minus_refused(got["statement"])
+            assert got["hot"]["rows"] == [], got
+            assert got["cold"]["rows"] == [], got
+        elif shape == "temp-view":
+            assert got["create"] == "error", got
+        else:
+            assert_native_minus_refused(got)
+        return
     if shape == "explain":
         assert got == {"kind": "rows"}, got
         return
@@ -187,6 +217,9 @@ def test_every_spelling_answers_the_spark_rows(
     measured: dict[str, Any], mode: str, index: int
 ) -> None:
     key = f"spelling|{index}"
+    if mode == "native" and index in NATIVE_MINUS_SPELLINGS:
+        assert_native_minus_refused(measured[mode][key])
+        return
     assert rows_only(measured[mode][key]) == rows_only(spark_cell(mode, key))
 
 
@@ -245,3 +278,17 @@ def test_a_stored_view_body_naming_the_operators_answers_at_read(tmp_path: Path)
     session.stop()
     _reset_active_session_for_tests()
     assert answers == {"vi": ([1, 2], [1, 2, 2]), "vm": ([1, 2], [1, 1, 4])}
+
+
+@pytest.mark.parametrize("mode", mode_ids(ANSI_MODES))
+@pytest.mark.parametrize("kind", GUARD_KINDS)
+@pytest.mark.parametrize("seat", ["sql", "df"])
+@pytest.mark.parametrize("join", list(GUARD_JOINS))
+def test_a_null_safe_semi_or_anti_join_keeps_the_left_multiplicity_and_types(
+    measured: dict[str, Any], mode: str, kind: str, seat: str, join: str
+) -> None:
+    key = f"guard|{seat}|{join}|{kind}"
+    got = measured[mode][key]
+    expected = spark_cell(mode, key)
+    assert rows_only(got) == rows_only(expected), got
+    assert got["type"] == expected["type"], got

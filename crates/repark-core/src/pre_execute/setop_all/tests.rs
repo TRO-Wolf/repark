@@ -13,9 +13,12 @@ use datafusion::optimizer::{Analyzer, AnalyzerRule};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::dialect::{DatabricksDialect, Dialect, GenericDialect};
 
-use super::{MultisetSetOperations, insert_multiset_set_operations, minus_all_with};
+use super::{
+    MultisetSetOperations, insert_multiset_set_operations, minus_all_as_except_all, minus_all_with,
+};
 use crate::ReparkSession;
 use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
+use datafusion::config::Dialect as ParserDialect;
 
 const LEFT: &str = "SELECT a FROM (VALUES (1), (1), (1), (2), (2), (4)) AS l(a)";
 const RIGHT: &str = "SELECT a FROM (VALUES (1), (2), (2), (3)) AS r(a)";
@@ -95,6 +98,15 @@ fn text_that_only_mentions_minus_all_is_unchanged() {
         minus_all_with(&GenericDialect {}, "SELECT 1 AS \"MINUS\" FROM \"ALL\""),
         Cow::Borrowed(_)
     ));
+    let spark = "SELECT a FROM l MINUS ALL SELECT a FROM r";
+    assert!(matches!(
+        minus_all_as_except_all(ParserDialect::Generic, spark),
+        Cow::Borrowed(_)
+    ));
+    assert_eq!(
+        minus_all_as_except_all(ParserDialect::Databricks, spark),
+        "SELECT a FROM l EXCEPT ALL SELECT a FROM r"
+    );
 }
 
 #[test]
@@ -250,12 +262,11 @@ async fn every_door_answers_the_spark_multiset_and_hands_minus_all_on_as_except_
     for (parser, guarded) in [("generic", false), ("generic", true), ("databricks", false)] {
         let recording = Arc::new(Recording::default());
         let session = session(&recording, parser, guarded);
+        let spark_door = parser == "databricks";
         let cells = [
             ("INTERSECT ALL", strings(&["1", "2", "2"])),
             ("intersect all", strings(&["1", "2", "2"])),
             ("EXCEPT ALL", strings(&["1", "1", "4"])),
-            ("MINUS ALL", strings(&["1", "1", "4"])),
-            ("MiNuS /* gap */ aLl", strings(&["1", "1", "4"])),
             ("INTERSECT", strings(&["1", "2"])),
             ("EXCEPT", strings(&["4"])),
             ("UNION", strings(&["1", "2", "3", "4"])),
@@ -264,10 +275,31 @@ async fn every_door_answers_the_spark_multiset_and_hands_minus_all_on_as_except_
             let sql = format!("SELECT a FROM ({LEFT} {op} {RIGHT}) x");
             assert_eq!(rows_of(&session, &sql).await, expected, "{parser} {op}");
         }
+        for op in ["MINUS ALL", "MiNuS /* gap */ aLl"] {
+            let sql = format!("SELECT a FROM ({LEFT} {op} {RIGHT}) x");
+            if spark_door {
+                assert_eq!(
+                    rows_of(&session, &sql).await,
+                    strings(&["1", "1", "4"]),
+                    "{op}"
+                );
+            } else {
+                let error = session.sql(&sql).await.unwrap_err().to_string();
+                assert!(
+                    error.contains("MINUS ALL not implemented"),
+                    "{parser} {op}: {error}"
+                );
+            }
+        }
         let seen = recording.queries.lock().unwrap().clone();
         assert_eq!(seen.len(), 8, "{parser}");
-        assert!(seen[3].contains(" EXCEPT ALL "), "{}", seen[3]);
-        assert!(seen[4].contains(" EXCEPT /* gap */ aLl "), "{}", seen[4]);
+        let minus = if spark_door { " EXCEPT " } else { " MINUS " };
+        assert!(seen[6].contains(&format!("{minus}ALL ")), "{}", seen[6]);
+        assert!(
+            seen[7].contains(&format!("{minus}/* gap */ aLl ")),
+            "{}",
+            seen[7]
+        );
         let reversed = format!("SELECT a FROM ({RIGHT} EXCEPT ALL {LEFT}) x");
         assert_eq!(rows_of(&session, &reversed).await, strings(&["3"]));
         let nulls = "SELECT a, b FROM (VALUES (1, NULL), (1, NULL), (NULL, 'x'), (NULL, 'x'), \
@@ -303,7 +335,7 @@ async fn an_insert_or_ctas_of_a_multiset_stores_the_spark_rows() {
         rows_of(&session, "SELECT a FROM t").await,
         strings(&["1", "2", "2"])
     );
-    let ctas = format!("CREATE TABLE c AS {LEFT} MINUS ALL {RIGHT}");
+    let ctas = format!("CREATE TABLE c AS {LEFT} EXCEPT ALL {RIGHT}");
     session.sql(&ctas).await.unwrap().collect().await.unwrap();
     assert_eq!(
         rows_of(&session, "SELECT a FROM c").await,

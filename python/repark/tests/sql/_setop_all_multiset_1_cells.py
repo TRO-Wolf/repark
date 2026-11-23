@@ -354,6 +354,54 @@ def dataframe_cell(door: Door, cell: str, method: str) -> dict[str, Any]:
     return {"kind": "rows", "rows": rows_of(door.collect(frame)), "type": door.type_of(frame)}
 
 
+GUARD_SIDES = {
+    "g1l": scalar("INT", ["1", "1", "2", None, None]),
+    "g1r": scalar("INT", ["1", "1", None, "3"]),
+    "g2l": [row3(1, "x", "0.0")] * 2 + [row3(2, "y", "0.0")] + [row3(None, None, "0.0")] * 2,
+    "g2r": [row3(1, "x", "0.0")] * 2 + [row3(None, None, "0.0"), row3(3, "z", "0.0")],
+    "gdl": scalar("DECIMAL(10,2)", ["1.10", "1.10", "2.00", None]),
+    "gdr": [f"CAST({item} AS DOUBLE) AS x" for item in ("1.1", "1.1", "NULL")],
+}
+GUARD_JOINS = {
+    "one": ("g1l", "g1r", (("a", "a"),)),
+    "two": ("g2l", "g2r", (("a", "a"), ("b", "b"))),
+    "decimal": ("gdl", "gdr", (("a", "x"),)),
+}
+GUARD_KINDS = ("semi", "anti")
+
+
+def guard_frame(door: Door, left: str, right: str, keys: Any, kind: str) -> dict[str, Any]:
+    lf = door.session.sql(f"SELECT * FROM {left}")
+    rf = door.session.sql(f"SELECT * FROM {right}")
+    condition = None
+    for lk, rk in keys:
+        term = lf[lk].eqNullSafe(rf[rk])
+        condition = term if condition is None else condition & term
+    joined = lf.join(rf, condition, f"left_{kind}")
+    return {"kind": "rows", "rows": rows_of(door.collect(joined)), "type": door.type_of(joined)}
+
+
+def guard_cells(door: Door) -> dict[str, dict[str, Any]]:
+    for name, rows in GUARD_SIDES.items():
+        sql = side(rows)
+        if name == "g2l" or name == "g2r":
+            sql = f"SELECT a, b FROM ({sql}) AS s"
+        door.run(f"CREATE OR REPLACE TEMPORARY VIEW {name} AS {sql}")
+    cells: dict[str, dict[str, Any]] = {}
+    for name, (left, right, keys) in GUARD_JOINS.items():
+        for kind in GUARD_KINDS:
+            on = " AND ".join(f"{left}.{lk} <=> {right}.{rk}" for lk, rk in keys)
+            sql = f"SELECT * FROM {left} LEFT {kind.upper()} JOIN {right} ON {on}"
+            cells[f"guard|sql|{name}|{kind}"] = attempt(lambda sql=sql: door.answer(sql))
+
+            cells[f"guard|df|{name}|{kind}"] = attempt(
+                lambda left=left, right=right, keys=keys, kind=kind: guard_frame(
+                    door, left, right, keys, kind
+                )
+            )
+    return cells
+
+
 def measure(door: Door, ansi: str) -> dict[str, dict[str, Any]]:
     prefix = "n" if door.is_native() else ("a" if ansi == "true" else "b")
     door.seed(prefix)
@@ -379,6 +427,7 @@ def measure(door: Door, ansi: str) -> dict[str, dict[str, Any]]:
         sql = f"SELECT a FROM l {op} SELECT a FROM r"
         cells[f"control|{op}"] = attempt(lambda sql=sql: door.answer(sql))
     if not door.is_native():
+        cells.update(guard_cells(door))
         for op in OPS:
             for name, result in fragment_cells(door, op).items():
                 cells[f"fragment|{name}|{op}"] = result

@@ -5,7 +5,9 @@ SQL-SETOP-ALL-REFUSE-1 · **Severity:** S2 · **Source:** owner ruling of the sa
 with the defaults" (signed-zero part B, Q2): refuse now, fix under this card. **Status:** FIXED
 2026-11-23 on branch `fix/sql-setop-all-multiset-1` (merge pending), under the owner ruling of 2026-11-22
 (replace the refusal with Spark's multiset answer): candidate B, Spark's own rewrite, as an analyzer rule;
-evidence in [`task/wo/sql-setop-all-multiset-1/`](../../wo/sql-setop-all-multiset-1/map.md).
+evidence in [`task/wo/sql-setop-all-multiset-1/`](../../wo/sql-setop-all-multiset-1/map.md). Delta 1 (owner
+ruling 2026-11-23): `MINUS ALL` answers on the Spark door only; the native door refuses it as it refuses
+`MINUS`, and guard pins hold a null-safe semi or anti join written as a join to its left multiplicity.
 
 ## Why
 

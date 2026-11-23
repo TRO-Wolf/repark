@@ -2603,8 +2603,14 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
   per-side counts aggregated by every column, a filter, and each kept row replicated by its count.
   The keys group as set-operation keys do: NULLs equal, both zeros and every NaN one key, and the
   output carries the normalised key (`0.0`, the canonical NaN), as Spark's does. `MINUS ALL` is
-  spelled `EXCEPT ALL` at the statement seat, the fragment seats and the view-body seat; the
-  distinct `MINUS` still refuses (SQL-MINUS-REFUSE-1). On the Spark door a DECIMAL beside a
+  spelled `EXCEPT ALL` on the Spark door only: at the statement seat, in `filter` strings and
+  stored view bodies of a Spark-door session, and in `F.expr`; the distinct `MINUS` still
+  refuses (SQL-MINUS-REFUSE-1). On the native door `MINUS ALL` refuses as `MINUS` does there
+  (`UnsupportedOperationException: This feature is not implemented: MINUS ALL not implemented`,
+  nothing written), under the owner ruling that the native door follows Trino, then DuckDB,
+  then refuses, and neither accepts `MINUS`. A null-safe `LEFT SEMI` / `LEFT ANTI JOIN` written
+  as a join, in SQL or as a DataFrame `eqNullSafe` join over every column, keeps its left
+  multiplicity and types (guard pins, equal to Spark on main and head alike). On the Spark door a DECIMAL beside a
   DOUBLE widens to `double` in the ALL forms as in the distinct ones. Every cell of the domain
   table answers Spark's rows on both doors, both ANSI modes: INT, BIGINT, DECIMAL, DOUBLE and
   FLOAT (both zeros, NaN), STRING, DATE, TIMESTAMP, NULL, struct and three-column cells both ways

@@ -1239,7 +1239,7 @@
     "kind": "error",
     "sqlstate": "42826",
     "state": "42826",
-    "text": "[NUM_COLUMNS_MISMATCH] EXCEPT ALL can only be performed on inputs with the same number of columns, but the first input has 2 columns and the second input has 1 columns. SQLSTATE: 42826; line 1 pos 0; 'Except All true :- Project [a#9693, b#9694] : +- SubqueryAlias sl : +- Project [cast(1 as int) AS a#9693, cast(2 as int) AS b#9694] : +- OneRowRelation +- Project [a#9695] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9695] +- OneRowRelation"
+    "text": "[NUM_COLUMNS_MISMATCH] EXCEPT ALL can only be performed on inputs with the same number of columns, but the first input has 2 columns and the second input has 1 columns. SQLSTATE: 42826; line 1 pos 0; 'Except All true :- Project [a#9988, b#9989] : +- SubqueryAlias sl : +- Project [cast(1 as int) AS a#9988, cast(2 as int) AS b#9989] : +- OneRowRelation +- Project [a#9990] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9990] +- OneRowRelation"
    },
    "error|column-count|INTERSECT ALL": {
     "bracket": "NUM_COLUMNS_MISMATCH",
@@ -1248,7 +1248,7 @@
     "kind": "error",
     "sqlstate": "42826",
     "state": "42826",
-    "text": "[NUM_COLUMNS_MISMATCH] INTERSECT ALL can only be performed on inputs with the same number of columns, but the first input has 2 columns and the second input has 1 columns. SQLSTATE: 42826; line 1 pos 0; 'Intersect All true :- Project [a#9690, b#9691] : +- SubqueryAlias sl : +- Project [cast(1 as int) AS a#9690, cast(2 as int) AS b#9691] : +- OneRowRelation +- Project [a#9692] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9692] +- OneRowRelation"
+    "text": "[NUM_COLUMNS_MISMATCH] INTERSECT ALL can only be performed on inputs with the same number of columns, but the first input has 2 columns and the second input has 1 columns. SQLSTATE: 42826; line 1 pos 0; 'Intersect All true :- Project [a#9985, b#9986] : +- SubqueryAlias sl : +- Project [cast(1 as int) AS a#9985, cast(2 as int) AS b#9986] : +- OneRowRelation +- Project [a#9987] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9987] +- OneRowRelation"
    },
    "error|column-count|MINUS ALL": {
     "bracket": "NUM_COLUMNS_MISMATCH",
@@ -1257,7 +1257,7 @@
     "kind": "error",
     "sqlstate": "42826",
     "state": "42826",
-    "text": "[NUM_COLUMNS_MISMATCH] EXCEPT ALL can only be performed on inputs with the same number of columns, but the first input has 2 columns and the second input has 1 columns. SQLSTATE: 42826; line 1 pos 0; 'Except All true :- Project [a#9696, b#9697] : +- SubqueryAlias sl : +- Project [cast(1 as int) AS a#9696, cast(2 as int) AS b#9697] : +- OneRowRelation +- Project [a#9698] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9698] +- OneRowRelation"
+    "text": "[NUM_COLUMNS_MISMATCH] EXCEPT ALL can only be performed on inputs with the same number of columns, but the first input has 2 columns and the second input has 1 columns. SQLSTATE: 42826; line 1 pos 0; 'Except All true :- Project [a#9991, b#9992] : +- SubqueryAlias sl : +- Project [cast(1 as int) AS a#9991, cast(2 as int) AS b#9992] : +- OneRowRelation +- Project [a#9993] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9993] +- OneRowRelation"
    },
    "error|column-type|EXCEPT ALL": {
     "bracket": "INCOMPATIBLE_COLUMN_TYPE",
@@ -1266,7 +1266,7 @@
     "kind": "error",
     "sqlstate": "42825",
     "state": "42825",
-    "text": "[INCOMPATIBLE_COLUMN_TYPE] EXCEPT ALL can only be performed on tables with compatible column types. The first column of the second table is \"INT\" type which is not compatible with \"ARRAY<INT>\" at the same column of the first table.. SQLSTATE: 42825; line 1 pos 0; 'Except All true :- Project [a#9701] : +- SubqueryAlias sl : +- Project [array(cast(1 as int)) AS a#9701] : +- OneRowRelation +- Project [a#9702] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9702] +- OneRowRelation"
+    "text": "[INCOMPATIBLE_COLUMN_TYPE] EXCEPT ALL can only be performed on tables with compatible column types. The first column of the second table is \"INT\" type which is not compatible with \"ARRAY<INT>\" at the same column of the first table.. SQLSTATE: 42825; line 1 pos 0; 'Except All true :- Project [a#9996] : +- SubqueryAlias sl : +- Project [array(cast(1 as int)) AS a#9996] : +- OneRowRelation +- Project [a#9997] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9997] +- OneRowRelation"
    },
    "error|column-type|INTERSECT ALL": {
     "bracket": "INCOMPATIBLE_COLUMN_TYPE",
@@ -1275,7 +1275,7 @@
     "kind": "error",
     "sqlstate": "42825",
     "state": "42825",
-    "text": "[INCOMPATIBLE_COLUMN_TYPE] INTERSECT ALL can only be performed on tables with compatible column types. The first column of the second table is \"INT\" type which is not compatible with \"ARRAY<INT>\" at the same column of the first table.. SQLSTATE: 42825; line 1 pos 0; 'Intersect All true :- Project [a#9699] : +- SubqueryAlias sl : +- Project [array(cast(1 as int)) AS a#9699] : +- OneRowRelation +- Project [a#9700] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9700] +- OneRowRelation"
+    "text": "[INCOMPATIBLE_COLUMN_TYPE] INTERSECT ALL can only be performed on tables with compatible column types. The first column of the second table is \"INT\" type which is not compatible with \"ARRAY<INT>\" at the same column of the first table.. SQLSTATE: 42825; line 1 pos 0; 'Intersect All true :- Project [a#9994] : +- SubqueryAlias sl : +- Project [array(cast(1 as int)) AS a#9994] : +- OneRowRelation +- Project [a#9995] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9995] +- OneRowRelation"
    },
    "error|column-type|MINUS ALL": {
     "bracket": "INCOMPATIBLE_COLUMN_TYPE",
@@ -1284,7 +1284,7 @@
     "kind": "error",
     "sqlstate": "42825",
     "state": "42825",
-    "text": "[INCOMPATIBLE_COLUMN_TYPE] EXCEPT ALL can only be performed on tables with compatible column types. The first column of the second table is \"INT\" type which is not compatible with \"ARRAY<INT>\" at the same column of the first table.. SQLSTATE: 42825; line 1 pos 0; 'Except All true :- Project [a#9703] : +- SubqueryAlias sl : +- Project [array(cast(1 as int)) AS a#9703] : +- OneRowRelation +- Project [a#9704] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9704] +- OneRowRelation"
+    "text": "[INCOMPATIBLE_COLUMN_TYPE] EXCEPT ALL can only be performed on tables with compatible column types. The first column of the second table is \"INT\" type which is not compatible with \"ARRAY<INT>\" at the same column of the first table.. SQLSTATE: 42825; line 1 pos 0; 'Except All true :- Project [a#9998] : +- SubqueryAlias sl : +- Project [array(cast(1 as int)) AS a#9998] : +- OneRowRelation +- Project [a#9999] +- SubqueryAlias sr +- Project [cast(1 as int) AS a#9999] +- OneRowRelation"
    },
    "fragment|fexpr-filter-col|EXCEPT ALL": {
     "kind": "rows",
@@ -1420,6 +1420,172 @@
       3
      ]
     ]
+   },
+   "guard|df|decimal|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d2"
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|df|decimal|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|df|one|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|df|one|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|df|two|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2,
+      "y"
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
+   },
+   "guard|df|two|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "x"
+     ],
+     [
+      1,
+      "x"
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
+   },
+   "guard|sql|decimal|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d2"
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|sql|decimal|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|sql|one|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|sql|one|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|sql|two|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2,
+      "y"
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
+   },
+   "guard|sql|two|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "x"
+     ],
+     [
+      1,
+      "x"
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
    },
    "shape|ctas|EXCEPT ALL": {
     "cold": {
@@ -4916,6 +5082,172 @@
       3
      ]
     ]
+   },
+   "guard|df|decimal|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d2"
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|df|decimal|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|df|one|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|df|one|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|df|two|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2,
+      "y"
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
+   },
+   "guard|df|two|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "x"
+     ],
+     [
+      1,
+      "x"
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
+   },
+   "guard|sql|decimal|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d2"
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|sql|decimal|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      "d1.1"
+     ],
+     [
+      "d1.1"
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:decimal(10,2)>"
+   },
+   "guard|sql|one|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|sql|one|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1
+     ],
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      null
+     ]
+    ],
+    "type": "struct<a:int>"
+   },
+   "guard|sql|two|anti": {
+    "kind": "rows",
+    "rows": [
+     [
+      2,
+      "y"
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
+   },
+   "guard|sql|two|semi": {
+    "kind": "rows",
+    "rows": [
+     [
+      1,
+      "x"
+     ],
+     [
+      1,
+      "x"
+     ],
+     [
+      null,
+      null
+     ],
+     [
+      null,
+      null
+     ]
+    ],
+    "type": "struct<a:int,b:string>"
    },
    "shape|ctas|EXCEPT ALL": {
     "cold": {

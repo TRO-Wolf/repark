@@ -112,13 +112,22 @@ pub(crate) fn bound_projection(
     Ok((bound, depth))
 }
 
+fn frame_parser_dialect(frame: &PyDataFrame) -> datafusion::config::Dialect {
+    frame
+        .inner()
+        .task_ctx()
+        .session_config()
+        .options()
+        .sql_parser
+        .dialect
+}
+
 pub(crate) fn filter_frame_with_sql(
     frame: &PyDataFrame,
     predicate: &str,
 ) -> PyResult<(DataFrame, usize, bool)> {
     repark_spark::refuse_sql_fragment(predicate).map_err(datafusion_to_py_err)?;
-    let predicate =
-        &*repark_core::minus_all_as_except_all(datafusion::config::Dialect::Databricks, predicate);
+    let predicate = &*repark_core::minus_all_as_except_all(frame_parser_dialect(frame), predicate);
     let parsed = match frame.rule() {
         NameRule::Exact => parse_canonical_predicate_exact(frame, predicate),
         NameRule::IgnoreCase => parse_canonical_predicate(frame, predicate),

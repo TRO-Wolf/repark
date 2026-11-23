@@ -29,14 +29,16 @@ the multiset set-operation rewrite and the `MINUS ALL` spelling.
   with null-safe keys on every column and no left `DISTINCT`; the rule finds that shape
   (`multiset_join`, the signature `struct_setop.rs` and `decimal_float_widen.rs` read) and replaces it
   with Spark's own rewrite: each side projected to its coerced keys and a count tag, a `UNION ALL`, an
-  aggregate of the per-side counts, a filter (both counts at least one, or left minus right above
-  zero), `range(0, kept)` and an `Unnest`, under a projection that keeps the join's schema. The
+  aggregate of the per-side counts, and `range(0, copies)` (the smaller count, or left minus right
+  floored at zero) under an `Unnest`, with no filter, under a projection that keeps the join's
+  schema; `range` builds one list of `copies` per key, so allocation is O(max copies per key). The
   distinct forms and joins written as joins do not match. `minus_all_as_except_all` (re-exported at
-  the crate root) tokenizes the text and spells an unquoted `MINUS` followed by an unquoted `ALL` as
-  `EXCEPT` (DataFusion plans no `MINUS`); `minus_all_in_session_sql` runs it at the first line of
-  `ReparkSession::sql_with_write_options_inner` in the session's parser dialect, and the Spark door
-  runs it on SQL fragments and stored view bodies. The distinct `MINUS` is untouched
-  (SQL-MINUS-REFUSE-1).
+  the crate root) spells an unquoted `MINUS` followed by an unquoted `ALL` as `EXCEPT`, on the Spark
+  door only (the Databricks parser); the native door refuses `MINUS ALL` as it refuses `MINUS`
+  (owner ruling: Trino, then DuckDB, then refuse). It runs at the first line of
+  `ReparkSession::sql_with_write_options_inner`, on `filter` strings in the frame's parser, on stored
+  view bodies in the session's parser, and on `F.expr` (Spark grammar). The distinct `MINUS` is
+  untouched (SQL-MINUS-REFUSE-1).
 - [setop_all/](setop_all/map.md) — its tests.
 
 ## Pointers
