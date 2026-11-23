@@ -40,7 +40,7 @@ const FAIL_ROWS: [FailRow; 6] = [
         partition: false,
         target_size: false,
         options_path: false,
-        failure_mark: "simplify_expressions",
+        failure_mark: "CAST_INVALID_INPUT",
     },
     FailRow {
         row: "F2",
