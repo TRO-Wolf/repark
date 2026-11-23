@@ -6108,12 +6108,13 @@ still open is `isModifiable`.
   or lost rows (off); a directory of `INT96` and `INT64` files was refused; `write.parquet` stored `INT64
   TIMESTAMP(NANOS,false)`, which Spark refuses, and an Iceberg CTAS was refused (`timestamp_ns`). After:
   `spark_nullable::with_int96_as_instants` sets `datafusion.execution.parquet.coerce_int96 = us` and
-  `coerce_int96_tz = UTC` on every session unless a `datafusion.*` key set them, so an `INT96` leaf without an embedded Arrow schema, or whose embedded Arrow schema names a zone, infers
+  `coerce_int96_tz = UTC` on every session unless a `datafusion.*` key set them, so an `INT96` leaf without an embedded Arrow schema (every Spark-written file) infers
   and decodes as `Timestamp(Microsecond, "UTC")`, Spark's `timestamp`. `INT64` leaves keep their footer's
   `isAdjustedToUTC`; `INT96` carries no statistics Arrow reads, so pruning is unchanged; Iceberg scans do not use
-  the option. A path `write.mode("append")` onto an `INT96` directory compares each `INT96` leaf as the session reads it
-  (the embedded Arrow schema's zone-less or zoned type where it has one, else `timestamp[us, tz=UTC]`) and keeps every
-  other part of the destination's layout (`writer_layout._session_parquet_schema`);
+  the option. A path `write.mode("append")` onto an `INT96` directory compares an `INT96` leaf of a file without an
+  `ARROW:schema` hint as `timestamp[us, tz=UTC]` and keeps every other part of the destination's layout
+  (`writer_layout._session_parquet_schema`); a file with a hint compares exactly as on main (pyarrow's physical
+  read), so such an append refuses cleanly, and an unreadable footer refuses with `AnalysisException`;
   an `INT96` leaf under a map refuses the append, as on main. SQL `RESET` of the key returns it to DataFusion's unset
   value (`ns`, NTZ) for the session, while `conf.unset` leaves the live value; an explicit `ns` wraps values past
   2262 and `""` fails at the next read.
@@ -6124,7 +6125,9 @@ still open is `isModifiable`.
 - **Still unlike Spark:** SQL over ``parquet.`<path>` `` is not a RePark route (table not found, before and after);
   a write stores `INT64 TIMESTAMP(MICROS,true)` where Spark writes `INT96` (both read the same instants back);
   `spark.sql.parquet.int96TimestampConversion=true` is stored and ignored (audit family NEW-settings-5, plan item
-  P01-05); an `INT96` leaf under a zone-less embedded Arrow schema (pyarrow or pandas) reads `timestamp_ntz`; a
+  P01-05); among files from writers other than Spark, a leaf whose embedded Arrow schema names a timestamp keeps that hint's own unit and zone (`ns`/UTC reads
+  `Timestamp(ns, "UTC")`, `us`/New York `Timestamp(µs, "America/New_York")`), and a zone-less hint reads NTZ, where Spark reads an instant at
+  microseconds, and a path append onto any `ARROW:schema`-hinted `INT96` file refuses; a
   `LEGACY`-rebased (Spark 2.x) file is not rebased (`1500-06-01` reads `1500-06-11`); an Iceberg table whose data
   file holds `INT96` (`add_files`) reads NULL timestamps
   ([ICEBERG-INT96-NULL-1](../task/roadmap/mid-term/iceberg-int96-null-1-card-2026-11-22.md)); all as on main

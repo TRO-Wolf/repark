@@ -153,46 +153,58 @@ def measure_appends(spark: Any, root: Path, mode: str, found: dict[str, Any]) ->
 
 
 LATER = "TIMESTAMP'2025-01-16 00:00:00'"
-LAYOUTS: dict[str, tuple[str, str, str, list[int]]] = {
-    "naive_hint_utc_literal": (
-        "pyarrow_int96_naive",
-        f"SELECT 9 AS id, {LATER} AS ts",
-        "refuse",
-        list(range(1, 8)),
-    ),
-    "naive_hint_read_then_append": (
-        "pyarrow_int96_naive",
-        "",
-        "append",
-        sorted(list(range(1, 8)) * 2),
-    ),
+SEVEN = list(range(1, 8))
+LAYOUTS: dict[str, tuple[str, str, str, list[int] | None]] = {
+    "naive_hint_utc_literal": ("naive", f"SELECT 9 AS id, {LATER} AS ts", "refuse", SEVEN),
+    "naive_hint_read_then_append": ("naive", "", "refuse", SEVEN),
     "naive_hint_ntz_literal": (
-        "pyarrow_int96_naive",
+        "naive",
         "SELECT 9 AS id, TIMESTAMP_NTZ'2025-01-16 00:00:00' AS ts",
-        "append",
-        [*range(1, 8), 9],
+        "refuse",
+        SEVEN,
     ),
-    "fixed_size_list_read_then_append": ("", "", "append", [1, 1, 2, 2]),
+    "ns_utc_hint_read_then_append": ("ns_utc", "", "refuse", [1, 2]),
+    "s_hint_read_then_append": ("s", "", "refuse", [1, 2]),
+    "malformed_hint_literal": ("malformed", f"SELECT 9 AS id, {LATER} AS ts", "refuse", None),
+    "fixed_size_list_read_then_append": ("fixed_size_list", "", "append", [1, 1, 2, 2]),
 }
+STAMPS = [1_736_902_800_000_000_000, 1_751_371_200_000_000_000]
 
 
-def fixed_size_list_seed(root: Path) -> Path:
+def layout_table(kind: str) -> Any:
     import pyarrow as pa
+
+    ids = pa.array([1, 2], pa.int32())
+    if kind == "fixed_size_list":
+        pair = pa.struct([("a", pa.int32()), ("b", pa.int32())])
+        pairs = pa.array([[{"a": 1, "b": 2}, {"a": 3, "b": 4}]] * 2, pa.list_(pair, 2))
+        return pa.table({"id": ids, "f": pairs, "ts": pa.array(STAMPS, pa.timestamp("ns"))})
+    if kind == "ns_utc":
+        return pa.table({"id": ids, "ts": pa.array(STAMPS, pa.timestamp("ns", tz="UTC"))})
+    if kind == "s":
+        seconds = [stamp // 1_000_000_000 for stamp in STAMPS]
+        return pa.table({"id": ids, "ts": pa.array(seconds, pa.timestamp("s"))})
+    return pa.table({"id": ids, "ts": pa.array(STAMPS, pa.timestamp("ns"))})
+
+
+def layout_seed(root: Path, kind: str) -> Path:
     import pyarrow.parquet as pq
 
-    seed = root / "fixed_size_list_seed"
+    if kind == "naive":
+        return FIXTURES / "pyarrow_int96_naive"
+    seed = root / f"layout_seed_{kind}"
     seed.mkdir(parents=True, exist_ok=True)
-    pair = pa.struct([("a", pa.int32()), ("b", pa.int32())])
-    table = pa.table(
-        {
-            "id": pa.array([1, 2], pa.int32()),
-            "f": pa.array([[{"a": 1, "b": 2}, {"a": 3, "b": 4}]] * 2, pa.list_(pair, 2)),
-            "ts": pa.array(
-                [1_736_902_800_000_000_000, 1_751_371_200_000_000_000], pa.timestamp("ns")
-            ),
-        }
+    table = layout_table(kind)
+    writer = pq.ParquetWriter(
+        str(seed / "part-00000.parquet"),
+        table.schema,
+        use_deprecated_int96_timestamps=True,
+        store_schema=kind in ("ns_utc", "s"),
     )
-    pq.write_table(table, str(seed / "part-00000.parquet"), use_deprecated_int96_timestamps=True)
+    writer.write_table(table)
+    if kind == "malformed":
+        writer.add_key_value_metadata({b"ARROW:schema": b"!!!not-base64###"})
+    writer.close()
     return seed
 
 
@@ -203,19 +215,21 @@ def layout_ids(spark: Any, out: Path) -> list[Any]:
 
 def layout_append(spark: Any, seed: Path, out: Path, query: str) -> list[Any]:
     shutil.copytree(seed, out)
+    before = sorted(item.name for item in out.iterdir())
     source = spark.sql(query) if query else spark.read.parquet(str(seed))
     outcome = attempt(lambda: source.write.mode("append").parquet(str(out)))
-    return [outcome, attempt(lambda: layout_ids(spark, out))]
+    after = sorted(item.name for item in out.iterdir())
+    return [outcome, attempt(lambda: layout_ids(spark, out)), before == after]
 
 
 def measure_layouts(spark: Any, root: Path, mode: str, found: dict[str, Any]) -> None:
-    fixed = fixed_size_list_seed(root)
     for zone in ORACLE["append_zones"]:
         spark.conf.set("spark.sql.session.timeZone", zone)
-        for name, (dst, query, _, _) in LAYOUTS.items():
-            seed = FIXTURES / dst if dst else fixed
+        for name, (kind, query, _, _) in LAYOUTS.items():
             out = root / f"layout_{name}_{zone_tag(zone)}_{mode}"
-            found[f"layout/{name}/{zone}"] = layout_append(spark, seed, out, query)
+            found[f"layout/{name}/{zone}"] = layout_append(
+                spark, layout_seed(root, kind), out, query
+            )
 
 
 @pytest.fixture(scope="module", params=["true", "false"])
@@ -333,9 +347,11 @@ def test_an_int96_append_follows_the_arrow_hint_and_every_list_layout(
     _, found = measured
     _, _, expected, ids = LAYOUTS[case]
     for zone in ORACLE["append_zones"]:
-        outcome, back = found[f"layout/{case}/{zone}"]
+        outcome, back, unchanged = found[f"layout/{case}/{zone}"]
         if expected == "refuse":
-            assert outcome == "ERR AnalysisException", zone
+            assert outcome == "ERR AnalysisException", (zone, outcome)
+            assert unchanged, zone
         else:
             assert outcome is None, (zone, outcome)
-        assert back == ids, zone
+        if ids is not None:
+            assert back == ids, zone

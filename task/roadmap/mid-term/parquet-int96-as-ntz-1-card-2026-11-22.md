@@ -75,7 +75,7 @@ pruned, on main or after the fix.
 `spark_nullable::with_int96_as_instants` sets DataFusion 54.1's `datafusion.execution.parquet.coerce_int96` to `us`
 and `coerce_int96_tz` to `UTC` on every RePark session config (`session/df_guards.rs`
 `context_with_df_54_1_rule_guards`), after the explicit `datafusion.*` keys, which keep their values. DataFusion
-then infers and decodes an `INT96` leaf without an embedded Arrow schema, or whose embedded Arrow schema names a zone, nested ones included, as `Timestamp(Microsecond, "UTC")`, Spark's
+then infers and decodes an `INT96` leaf without an embedded Arrow schema (every Spark-written file) nested ones included, as `Timestamp(Microsecond, "UTC")`, Spark's
 `timestamp`, at schema inference and in the opener, on `read.parquet`, `format("parquet").load`, temp views over
 them, and `CREATE EXTERNAL TABLE … STORED AS PARQUET`. Microseconds match Spark's precision and reach past 2262.
 `INT64` leaves keep their footer's `isAdjustedToUTC`. Iceberg scans read through iceberg-rust's own reader and do not
@@ -170,6 +170,23 @@ session option, so it stays with P01-05.
   zone-less-hint file refuses and the directory still reads; a read-then-append and a `TIMESTAMP_NTZ` literal onto it
   append and read back; a read-then-append onto a pyarrow file with a `fixed_size_list<struct>` before the `INT96`
   column appends and reads back. All eight red on `3c6b9c41`, green after.
+
+## Delta round 4 (2026-11-23, the Opus re-check of round 3; orchestrator ruling)
+
+- **Ruling: the append check no longer follows a hinted file's own rules.** This unit's scope is Spark's own
+  `INT96`. An `INT96` leaf of a file without an `ARROW:schema` hint (every Spark-written file, pyarrow with
+  `store_schema=False`) compares as `timestamp[us, tz=UTC]`; a file with a hint compares exactly as on main
+  (pyarrow's physical read, no hint decoding), so every hinted append refuses cleanly, as main's did. This closes
+  R3-F1: a read-then-append onto an `ns`/UTC- or `s`-hinted file passed delta 3's check and wrote a file Spark then
+  refused. Delta 3's decoder is gone; the `fixed_size_list` leaf count stays.
+- **Reader, corrected (R3-F2):** a leaf whose embedded Arrow schema names a timestamp keeps that hint's own unit and zone (`ns`/UTC reads
+  `Timestamp(ns, "UTC")`, `us`/New York `Timestamp(µs, "America/New_York")`), and a zone-less hint reads NTZ. Earlier records said a zoned hint reads as `Timestamp(Microsecond, "UTC")`.
+- **Unreadable footer (R3-F3):** a malformed `ARROW:schema` made `ParquetFile` raise a raw `ArrowInvalid`; the check
+  now raises its `AnalysisException` and leaves the directory unchanged.
+- **Pins:** the zone-less-hint cases (a `TIMESTAMP` literal, a read-then-append, a `TIMESTAMP_NTZ` literal), a
+  read-then-append onto an `ns`/UTC-hinted and an `s`-hinted file, and a malformed hint all refuse with the
+  directory unchanged and readable; Spark reads the untouched `ns`/UTC and `s` directories as instants. A
+  `fixed_size_list<struct>` file without a hint appends and reads back. UTC and New York, both modes.
 
 ## Fix direction (P01-05, as filed)
 

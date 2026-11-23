@@ -61,23 +61,6 @@ def _leaf_count(data_type: Any, depth: int) -> int:
     return 1
 
 
-def _hint_child(hint: Any, index: int, size: int) -> Any:
-    import pyarrow as pa
-
-    if hint is not None and pa.types.is_struct(hint) and hint.num_fields == size:
-        return hint.field(index).type
-    return None
-
-
-def _int96_leaf(data_type: Any, hint: Any) -> Any:
-    import pyarrow as pa
-
-    stored = hint if hint is not None and pa.types.is_timestamp(hint) else data_type
-    if pa.types.is_timestamp(stored) and stored.unit == "ns" and stored.tz is None:
-        return pa.timestamp("us", tz="UTC")
-    return stored
-
-
 def _rebuild_list(data_type: Any, element: Any) -> Any:
     import pyarrow as pa
 
@@ -86,7 +69,7 @@ def _rebuild_list(data_type: Any, element: Any) -> Any:
     return pa.list_(element) if pa.types.is_list(data_type) else pa.large_list(element)
 
 
-def _int96_as_instant(data_type: Any, hint: Any, int96: list[bool], start: int, depth: int) -> Any:
+def _int96_as_instant(data_type: Any, int96: list[bool], start: int, depth: int) -> Any:
     import pyarrow as pa
 
     if depth > _MAX_INT96_DEPTH or pa.types.is_map(data_type):
@@ -94,57 +77,44 @@ def _int96_as_instant(data_type: Any, hint: Any, int96: list[bool], start: int, 
     if pa.types.is_struct(data_type):
         fields = []
         offset = start
-        for index, child in enumerate(data_type):
-            inner = _hint_child(hint, index, data_type.num_fields)
-            fields.append(
-                child.with_type(_int96_as_instant(child.type, inner, int96, offset, depth + 1))
-            )
+        for child in data_type:
+            fields.append(child.with_type(_int96_as_instant(child.type, int96, offset, depth + 1)))
             offset += _leaf_count(child.type, depth + 1)
         return pa.struct(fields)
     if _is_any_list(data_type):
-        inner = hint.value_type if hint is not None and _is_any_list(hint) else None
         element = data_type.value_field
-        element = element.with_type(_int96_as_instant(element.type, inner, int96, start, depth + 1))
+        element = element.with_type(_int96_as_instant(element.type, int96, start, depth + 1))
         return _rebuild_list(data_type, element)
-    if int96[start]:
-        return _int96_leaf(data_type, hint)
+    if (
+        int96[start]
+        and pa.types.is_timestamp(data_type)
+        and data_type.unit == "ns"
+        and data_type.tz is None
+    ):
+        return pa.timestamp("us", tz="UTC")
     return data_type
-
-
-def _arrow_hint(parquet: Any) -> Any:
-    import base64
-
-    import pyarrow as pa
-
-    stored = (parquet.metadata.metadata or {}).get(b"ARROW:schema")
-    if stored is None:
-        return None
-    try:
-        return pa.ipc.read_schema(pa.py_buffer(base64.b64decode(stored)))
-    except (ValueError, pa.ArrowException):
-        return None
 
 
 def _session_parquet_schema(part_file: Path) -> Any:
     import pyarrow as pa
     import pyarrow.parquet as pa_pq
 
-    parquet = pa_pq.ParquetFile(part_file)
-    schema = parquet.schema_arrow
+    try:
+        parquet = pa_pq.ParquetFile(part_file)
+        schema = pa_pq.read_schema(part_file)
+    except (OSError, pa.ArrowException) as error:
+        raise AnalysisException(
+            f"cannot append to path parquet: the footer of {part_file.name} cannot be read "
+            f"({type(error).__name__}); path mode('append') leaves the directory unchanged"
+        ) from None
     leaves = parquet.schema
     int96 = [leaves.column(index).physical_type == "INT96" for index in range(len(leaves))]
-    if not any(int96):
+    if not any(int96) or b"ARROW:schema" in (parquet.metadata.metadata or {}):
         return schema
-    hint = _arrow_hint(parquet)
-    hint_types = (
-        [field.type for field in hint]
-        if hint is not None and len(hint) == len(schema)
-        else [None] * len(schema)
-    )
     fields = []
     offset = 0
-    for field, hinted in zip(schema, hint_types, strict=True):
-        fields.append(field.with_type(_int96_as_instant(field.type, hinted, int96, offset, 0)))
+    for field in schema:
+        fields.append(field.with_type(_int96_as_instant(field.type, int96, offset, 0)))
         offset += _leaf_count(field.type, 0)
     return pa.schema(fields, metadata=schema.metadata)
 
