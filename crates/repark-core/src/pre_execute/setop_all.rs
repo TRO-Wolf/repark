@@ -81,6 +81,11 @@ fn holds_multiset_join(plan: &LogicalPlan) -> Result<bool> {
     Ok(found)
 }
 
+#[must_use]
+pub fn is_multiset_set_operation(join: &Join) -> bool {
+    multiset_join(join).is_some()
+}
+
 pub(crate) fn multiset_join(join: &Join) -> Option<Multiset> {
     let kind = match join.join_type {
         JoinType::LeftSemi => Multiset::Intersect,
@@ -176,14 +181,10 @@ fn rewrite_multiset(join: &Join, kind: Multiset) -> Result<LogicalPlan> {
         .map(|index| col(format!("{KEY_PREFIX}{index}")))
         .collect::<Vec<_>>();
     let counted = LogicalPlanBuilder::from(left).union(right)?;
-    let (counts, kept, copies) = match kind {
+    let (counts, copies) = match kind {
         Multiset::Intersect => {
             let left_count = col(LEFT_COUNT);
             let right_count = col(RIGHT_COUNT);
-            let both = left_count
-                .clone()
-                .gt_eq(lit(1_i64))
-                .and(right_count.clone().gt_eq(lit(1_i64)));
             let fewer = when(left_count.clone().lt(right_count.clone()), left_count)
                 .otherwise(right_count)?;
             (
@@ -191,21 +192,18 @@ fn rewrite_multiset(join: &Join, kind: Multiset) -> Result<LogicalPlan> {
                     sum(col(LEFT_COUNT)).alias(LEFT_COUNT),
                     sum(col(RIGHT_COUNT)).alias(RIGHT_COUNT),
                 ],
-                both,
                 fewer,
             )
         }
         Multiset::Except => (
             vec![sum(col(LEFT_COUNT)).alias(LEFT_COUNT)],
-            col(LEFT_COUNT).gt(lit(0_i64)),
-            col(LEFT_COUNT),
+            when(col(LEFT_COUNT).gt(lit(0_i64)), col(LEFT_COUNT)).otherwise(lit(0_i64))?,
         ),
     };
     let mut replicated = groups.clone();
     replicated.push(range(lit(0_i64), copies, lit(1_i64)).alias(COPIES));
     let unnested = counted
         .aggregate(groups, counts)?
-        .filter(kept)?
         .project(replicated)?
         .unnest_column(COPIES)?
         .build()?;

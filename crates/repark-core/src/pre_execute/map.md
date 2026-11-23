@@ -4,7 +4,7 @@
 
 File-backed tests for the shared pre-execute belt (`../pre_execute.rs`): the ONE choke point
 every door's planned statement passes through before it executes (Z-2 / Z-3); and `setop_all.rs`,
-the statement-text refusal that runs before any door plans.
+the multiset set-operation rewrite and the `MINUS ALL` spelling.
 
 ## Contents
 
@@ -22,23 +22,21 @@ the statement-text refusal that runs before any door plans.
   `guard_passes_an_update_whose_set_value_has_no_scalar_subquery` holds it silent for a
   literal, an expression of the column, a subquery in the `WHERE` only, and `arrow_cast` of
   the column. The walk is `Expr::contains_scalar_subquery` over the whole assigned expression.
-- `setop_all.rs` — **SQL-SETOP-ALL-REFUSE-1 (2026-11-12, owner ruling, signed-zero part B Q2):**
-  the statement-level refusal of SQL `INTERSECT ALL`, `EXCEPT ALL` and `MINUS ALL`, which DataFusion
-  answers with the wrong multiset (left-semi and left-anti joins without the left `DISTINCT`).
-  `multiset_set_operation` tokenizes the text in a sqlparser dialect and finds an unquoted
-  `INTERSECT`, `EXCEPT` or `MINUS` word followed by an unquoted `ALL`, whitespace and comments
-  between; string literals, comments and quoted identifiers never match, and a text that does not
-  tokenize is left to the door's parser. A byte pre-check skips the tokenizer unless the text holds
-  `all` and an operator word. `refuse_in_session_sql` is the seat both SQL doors pass: the first
-  line of `ReparkSession::sql_with_write_options_inner` (`../session/write_options.rs`), before the
-  session's `SqlDialect`, in the session's `sql_parser.dialect` (Databricks on the Spark door,
-  Generic on `repark.sql()`), so nothing is planned or written; it answers
-  `Error::NotImplemented` (`UnsupportedOperationException`). `refuse_multiset_set_operation`
-  (re-exported at the crate root) is the same check as an `UnsupportedMarker` DataFusion error,
-  which `engine_err` maps to the same text; the Spark door calls it for SQL fragments
-  (`refuse_sql_fragment`) and stored view bodies (`view_ddl/read.rs`). The text names the
-  operator, the distinct form (`EXCEPT` for `MINUS ALL`), the `row_number()` workaround and the card
-  SQL-SETOP-ALL-MULTISET-1, in the DataFrame `intersectAll` refusal's words.
+- `setop_all.rs` — **SQL-SETOP-ALL-MULTISET-1 (2026-11-23, owner ruling 2026-11-22; it retires
+  SQL-SETOP-ALL-REFUSE-1):** `MultisetSetOperations` (`setop_all_multiset`), the analyzer rule
+  `insert_multiset_set_operations` seats right after `struct_setop_names` (every core session and the
+  `F.expr` context). DataFusion plans `INTERSECT ALL` / `EXCEPT ALL` as a left-semi / left-anti join
+  with null-safe keys on every column and no left `DISTINCT`; the rule finds that shape
+  (`multiset_join`, the signature `struct_setop.rs` and `decimal_float_widen.rs` read) and replaces it
+  with Spark's own rewrite: each side projected to its coerced keys and a count tag, a `UNION ALL`, an
+  aggregate of the per-side counts, a filter (both counts at least one, or left minus right above
+  zero), `range(0, kept)` and an `Unnest`, under a projection that keeps the join's schema. The
+  distinct forms and joins written as joins do not match. `minus_all_as_except_all` (re-exported at
+  the crate root) tokenizes the text and spells an unquoted `MINUS` followed by an unquoted `ALL` as
+  `EXCEPT` (DataFusion plans no `MINUS`); `minus_all_in_session_sql` runs it at the first line of
+  `ReparkSession::sql_with_write_options_inner` in the session's parser dialect, and the Spark door
+  runs it on SQL fragments and stored view bodies. The distinct `MINUS` is untouched
+  (SQL-MINUS-REFUSE-1).
 - [setop_all/](setop_all/map.md) — its tests.
 
 ## Pointers

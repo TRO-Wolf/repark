@@ -32,6 +32,7 @@ ORACLE: dict[str, Any] = json.loads(FIXTURE.read_text(encoding="utf-8"))
 NATIVE_GAPS = {
     "shape|persistent-view": "NATIVE-VIEW-ICEBERG",
     "shape|ctas": "NATIVE-CTAS-ICEBERG-REFUSE-1",
+    "shape|merge": "NATIVE-NO-MERGE",
 }
 ERROR_STATES = {"column-count": "42826", "column-type": "42825"}
 ERROR_CONDITIONS = {

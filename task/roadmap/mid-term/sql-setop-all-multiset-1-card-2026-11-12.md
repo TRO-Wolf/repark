@@ -2,8 +2,10 @@
 
 **Date:** 2026-11-12 · **Filed by:** Claude Opus 5.5 (`claude-opus-5-5`), the second builder of
 SQL-SETOP-ALL-REFUSE-1 · **Severity:** S2 · **Source:** owner ruling of the same day, verbatim "Go
-with the defaults" (signed-zero part B, Q2): refuse now, fix under this card. **Status:** filed, not
-dispatched.
+with the defaults" (signed-zero part B, Q2): refuse now, fix under this card. **Status:** FIXED
+2026-11-23 on branch `fix/sql-setop-all-multiset-1` (merge pending), under the owner ruling of 2026-11-22
+(replace the refusal with Spark's multiset answer): candidate B, Spark's own rewrite, as an analyzer rule;
+evidence in [`task/wo/sql-setop-all-multiset-1/`](../../wo/sql-setop-all-multiset-1/map.md).
 
 ## Why
 

@@ -22,7 +22,12 @@ pub(crate) fn refuse_map_ordering(plan: LogicalPlan) -> Result<LogicalPlan> {
 
 fn refuse_in_node(node: &LogicalPlan) -> Result<()> {
     let schema = input_schema(node);
-    if let LogicalPlan::Distinct(Distinct::All(input)) = node
+    let set_input = match node {
+        LogicalPlan::Distinct(Distinct::All(input)) => Some(input),
+        LogicalPlan::Join(join) if repark_core::is_multiset_set_operation(join) => Some(&join.left),
+        _ => None,
+    };
+    if let Some(input) = set_input
         && let Some(field) = input
             .schema()
             .fields()

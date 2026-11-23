@@ -2,22 +2,20 @@
 
 ## Purpose
 
-Tests for SQL-SETOP-ALL-REFUSE-1's statement refusal (`../setop_all.rs`).
+Tests for SQL-SETOP-ALL-MULTISET-1's multiset rewrite and `MINUS ALL` spelling (`../setop_all.rs`).
 
 ## Contents
 
-- `tests.rs` — `every_shape_and_spelling_of_a_multiset_operation_is_found_in_both_parser_dialects`
-  (eleven shapes, from top level to `MERGE USING` and `EXPLAIN`, times ten spellings, Generic and
-  Databricks); `controls_and_text_that_only_mentions_the_words_are_not_found` (the seven controls
-  in every shape, string literals, comments, quoted identifiers, `all_rows`, `= ALL (…)`,
-  `ORDER BY ALL`, an untokenizable text);
-  `the_refusal_names_the_operator_the_distinct_form_the_workaround_and_the_card` (the three texts,
-  and `engine_err` maps the DataFusion form to the same `NotImplemented` text);
-  `the_session_seat_refuses_before_the_door_and_lets_the_controls_through` (a counting
-  `SqlDialect`, plain and behind the local-fs guard, Generic and Databricks parsers: a refused
-  statement never reaches the dialect, the controls do and answer their counts);
-  `a_refused_insert_or_ctas_writes_nothing` (a `MemTable` keeps zero rows, the CTAS table does not
-  exist, the `EXCEPT` control inserts one row).
+- `tests.rs` — `every_shape_and_spelling_of_minus_all_becomes_except_all_in_both_parser_dialects`
+  (twelve shapes with non-ASCII text before the operator, six spellings, Generic and Databricks);
+  `text_that_only_mentions_minus_all_is_unchanged` (string literals, comments, quoted identifiers,
+  the distinct `MINUS`, `= ALL (…)`, an untokenizable text); `the_rule_sits_right_after_the_struct_set_operation_rule`;
+  `the_rewrite_keeps_the_join_schema_and_a_second_pass_is_the_identity` (top level, scalar and `IN`
+  subqueries: no semi or anti join is left, an `Unnest` is); `the_distinct_forms_and_a_semi_join_written_as_a_join_are_untouched`;
+  `every_door_answers_the_spark_multiset_and_hands_minus_all_on_as_except_all` (a recording
+  `SqlDialect`, plain and behind the local-fs guard, Generic and Databricks parsers: Spark's rows
+  for the ALL forms, NULL keys, an empty side and a scalar count, the controls unchanged);
+  `an_insert_or_ctas_of_a_multiset_stores_the_spark_rows` (a `MemTable` and a CTAS table).
 
 ## Pointers
 

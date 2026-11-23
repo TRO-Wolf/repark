@@ -49,7 +49,9 @@ here and is re-exported in one line.
   and marker collisions (C-009), the compound-key clash bail (C-010), the
   display-name output binding plus qualified-key column binding (C-011), and
   the DISTINCT-without-bound-keys bail (C-012).
-- `map_ordering.rs` — **WO U9-TYPES-1 r3 (2026-09-25):** `refuse_map_ordering` walks the
+- `map_ordering.rs` — **SQL-SETOP-ALL-MULTISET-1 (2026-11-23):** the `INTERSECT ALL` / `EXCEPT ALL` join
+  (`repark_core::is_multiset_set_operation`) refuses a MAP column as the distinct forms do.
+  **WO U9-TYPES-1 r3 (2026-09-25):** `refuse_map_ordering` walks the
   planned statement in `../spark_ast.rs`'s passthrough (SELECT, and the UPDATE / DELETE that land
   there) and refuses a map operand of `=`, `<>`, `<`, `<=`, `>`, `>=`, `<=>`, `IN` and
   `ORDER BY` with Spark's `DATATYPE_MISMATCH.INVALID_ORDERING_TYPE` text, and `SELECT
