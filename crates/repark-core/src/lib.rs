@@ -72,8 +72,8 @@ pub use session_time_zone::{
 
 pub use backend::{ExecutionBackend, SingleNodeBackend};
 pub use dialect::{DataFusionDialect, EngineContext, SqlDialect, TempViewSession};
-pub use idents::{spark_numeric_literal, spark_target_grammar_message};
 pub use extension::{SessionBuildConf, SessionExtension};
+pub use idents::{spark_numeric_literal, spark_target_grammar_message};
 pub use pre_execute::{
     PreExecute, insert_multiset_set_operations, is_multiset_set_operation, minus_all_as_except_all,
 };
