@@ -176,13 +176,6 @@ impl ScalarUDFImpl for SparkStringIntegral {
         &self.signature
     }
 
-    fn schema_name(&self, args: &[Expr]) -> Result<String> {
-        let [value] = args else {
-            return plan_err!("'{}' takes one argument", self.name);
-        };
-        Ok(value.schema_name().to_string())
-    }
-
     fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
         Ok(self.target.clone())
     }

@@ -534,3 +534,13 @@ async fn a_projection_built_without_name_checks_keeps_its_names() {
             .contains("__repark_string_to_int__")
     );
 }
+
+#[tokio::test]
+async fn a_join_on_a_string_key_against_an_integer_key_plans_and_trims() {
+    let ctx = integral_context(false);
+    let sql = "SELECT l.id FROM (VALUES (1), (2)) AS l(id) \
+               FULL JOIN (VALUES (' 2'), ('3')) AS r(id) ON l.id = r.id";
+    let batches = ctx.sql(sql).await.unwrap().collect().await.unwrap();
+    let rows: usize = batches.iter().map(RecordBatch::num_rows).sum();
+    assert_eq!(rows, 3);
+}
