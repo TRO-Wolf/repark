@@ -20,14 +20,21 @@ use crate::spark_string_timestamp::is_string_type;
 
 pub const ARROW_CAST_OPERAND_NAME: &str = "__repark_arrow_cast_operand__";
 
+const TARGETS: [(DataType, &str); 4] = [
+    (DataType::Int8, "__repark_string_to_tinyint__"),
+    (DataType::Int16, "__repark_string_to_smallint__"),
+    (DataType::Int32, "__repark_string_to_int__"),
+    (DataType::Int64, "__repark_string_to_bigint__"),
+];
 static STRING_INTEGRAL: LazyLock<[Arc<ScalarUDF>; 4]> = LazyLock::new(|| {
-    [
-        (DataType::Int8, "__repark_string_to_tinyint__"),
-        (DataType::Int16, "__repark_string_to_smallint__"),
-        (DataType::Int32, "__repark_string_to_int__"),
-        (DataType::Int64, "__repark_string_to_bigint__"),
-    ]
-    .map(|(target, name)| Arc::new(ScalarUDF::from(SparkStringIntegral::new(target, name))))
+    TARGETS.map(|(target, name)| {
+        Arc::new(ScalarUDF::from(SparkStringIntegral::new(target, name, true)))
+    })
+});
+static STRING_INTEGRAL_KEYS: LazyLock<[Arc<ScalarUDF>; 4]> = LazyLock::new(|| {
+    TARGETS.map(|(target, name)| {
+        Arc::new(ScalarUDF::from(SparkStringIntegral::new(target, name, false)))
+    })
 });
 static ARROW_CAST_OPERAND: LazyLock<Arc<ScalarUDF>> =
     LazyLock::new(|| Arc::new(ScalarUDF::from(ArrowCastOperand::new())));
@@ -41,7 +48,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
         .collect()
 }
 
-fn string_integral_udf(target: &DataType) -> Option<Arc<ScalarUDF>> {
+fn string_integral_udf(target: &DataType, named: bool) -> Option<Arc<ScalarUDF>> {
     let index = match target {
         DataType::Int8 => 0,
         DataType::Int16 => 1,
@@ -49,7 +56,12 @@ fn string_integral_udf(target: &DataType) -> Option<Arc<ScalarUDF>> {
         DataType::Int64 => 3,
         _ => return None,
     };
-    STRING_INTEGRAL.get(index).map(Arc::clone)
+    let family = if named {
+        &STRING_INTEGRAL
+    } else {
+        &STRING_INTEGRAL_KEYS
+    };
+    family.get(index).map(Arc::clone)
 }
 
 #[derive(Debug, Default)]
@@ -73,10 +85,14 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     for input in plan.inputs() {
         schema.merge(input.schema());
     }
+    let named = matches!(
+        plan,
+        LogicalPlan::Projection(_) | LogicalPlan::Aggregate(_) | LogicalPlan::Window(_)
+    );
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten = expr.transform_down(|node| Ok(rewrite_node(node, &schema)))?;
+        let rewritten = expr.transform_down(|node| Ok(rewrite_node(node, &schema, named)))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     let changed = transformed.transformed;
@@ -111,18 +127,18 @@ fn is_arrow_cast_operand(expr: &Expr) -> bool {
     matches!(expr, Expr::ScalarFunction(function) if function.func.name() == ARROW_CAST_OPERAND_NAME)
 }
 
-fn rewrite_node(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+fn rewrite_node(expr: Expr, schema: &DFSchema, named: bool) -> Transformed<Expr> {
     if matches!(expr, Expr::InList(_)) {
         return Transformed::new(expr, false, TreeNodeRecursion::Jump);
     }
-    rewrite_cast(expr, schema)
+    rewrite_cast(expr, schema, named)
 }
 
-fn rewrite_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+fn rewrite_cast(expr: Expr, schema: &DFSchema, named: bool) -> Transformed<Expr> {
     let Expr::Cast(cast) = &expr else {
         return Transformed::no(expr);
     };
-    let Some(udf) = string_integral_udf(cast.field.data_type()) else {
+    let Some(udf) = string_integral_udf(cast.field.data_type(), named) else {
         return Transformed::no(expr);
     };
     if is_arrow_cast_operand(&cast.expr) {
@@ -154,14 +170,16 @@ fn parse(texts: &ArrayRef, target: &DataType, mode: Mode) -> Result<ArrayRef> {
 struct SparkStringIntegral {
     target: DataType,
     name: &'static str,
+    named: bool,
     signature: Signature,
 }
 
 impl SparkStringIntegral {
-    fn new(target: DataType, name: &'static str) -> Self {
+    fn new(target: DataType, name: &'static str, named: bool) -> Self {
         Self {
             target,
             name,
+            named,
             signature: Signature::any(1, Volatility::Immutable),
         }
     }
@@ -174,6 +192,16 @@ impl ScalarUDFImpl for SparkStringIntegral {
 
     fn signature(&self) -> &Signature {
         &self.signature
+    }
+
+    fn schema_name(&self, args: &[Expr]) -> Result<String> {
+        let [value] = args else {
+            return plan_err!("'{}' takes one argument", self.name);
+        };
+        if self.named {
+            return Ok(value.schema_name().to_string());
+        }
+        Ok(format!("{}({})", self.name, value.schema_name()))
     }
 
     fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {

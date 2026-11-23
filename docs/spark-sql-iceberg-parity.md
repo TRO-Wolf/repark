@@ -9353,7 +9353,15 @@ the pin rather than obeying it.
   hundred-row frame, the comparisons, the three writes read back cold, the uncast-write refusals, the NUL
   subprocess, the `VALUES` and JSON-reader guards); `crates/repark-functions/src/cast_map/tests.rs`
   (`string_integral_cast_*`, `arrow_cast_operand_keeps_arrow_parsing`,
-  `a_cast_planned_inside_values_keeps_arrow_parsing`, `an_outer_projection_sees_the_nullable_cast_with_ansi_off`).
+  `a_cast_planned_inside_values_keeps_arrow_parsing`, `an_outer_projection_sees_the_nullable_cast_with_ansi_off`,
+  `an_in_list_keeps_arrow_parsing`, `a_projection_built_without_name_checks_keeps_its_names`,
+  `a_join_on_a_string_key_against_an_integer_key_plans_and_trims`). Moved to Spark's measured answer (Spark 4.1.2,
+  2026-11-22): the temp-view standing gaps of TEMP-VIEW-SESSION-SETTINGS-1/2 (the string-to-integer cells now
+  equal their fixture in both directions of the captured ANSI mode; `filter/numcast/on_off` keeps its gap, now
+  `[CAST_INVALID_INPUT]`, because the view body casts the text of a row the kept-above reader filter drops in
+  Spark), the zone-oracle difference list (ten `cast_bigint` cells now equal its fixture), the failing-CTAS cleanup
+  F1 mark (`CAST('q' AS INT)` still fails on both engines with ANSI on), and the `Cast error` texts pinned by
+  `test_errors.py`, `test_session.py` and `test_perf_describe_1.py`.
 - **Rationale** — the INT-family slice of S2 card
   [STRING-CAST-LENIENT-1](../task/roadmap/mid-term/string-cast-lenient-1-card-2026-11-16.md); it also closes the
   INT-family half of SET-ANSI-RUNTIME-3.
