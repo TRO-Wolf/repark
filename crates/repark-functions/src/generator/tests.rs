@@ -660,3 +660,19 @@ fn is_bare_generator_expr_distinguishes_bare_from_aliased_and_nested() {
     )));
     assert_eq!(bare_pos.schema_name().to_string(), "posexplode(arr_i)");
 }
+
+#[test]
+fn spark_nonnull_wrapped_generator_arg_peels_restored_alias() {
+    let inner = Expr::ScalarFunction(ScalarFunction::new_udf(
+        generator_udf("posexplode"),
+        vec![Expr::ScalarFunction(ScalarFunction::new_udf(
+            crate::decimal_cast::spark_nonnull_udf(),
+            vec![nested_fn::make_array(vec![lit("a"), lit("b")])],
+        ))],
+    ));
+    assert!(is_restored_generator_alias(
+        &inner,
+        r#"posexplode(make_array(Utf8("a"),Utf8("b")))"#,
+    ));
+    assert!(!is_restored_generator_alias(&inner, "posexplode(custom)"));
+}

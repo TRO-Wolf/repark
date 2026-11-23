@@ -289,6 +289,18 @@ fn unqualified_call_name(function: &ScalarFunction) -> String {
 
 fn restored_first_arg_matches(arg: &Expr, body: &str) -> bool {
     match arg {
+        Expr::ScalarFunction(function)
+            if matches!(
+                function.func.name(),
+                crate::decimal_cast::SPARK_NONNULL_NAME
+                    | crate::decimal_cast::DECIMAL_CAST_NULLABLE_NAME
+            ) =>
+        {
+            function
+                .args
+                .first()
+                .is_some_and(|inner| restored_first_arg_matches(inner, body))
+        }
         Expr::Column(column) => {
             body == column.name
                 || body.ends_with(&format!(".{}", column.name))

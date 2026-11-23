@@ -57,7 +57,7 @@ path; the stored `SMALLINT` is an Iceberg `int`, as in Spark).
 
 `python/repark/tests/functions/test_sql_explode_1.py` over the oracle, driven by the recorder
 `_record_sql_explode_1.py` (with `test_extract_field_aliases_1.py`: 94 items total, all green on the head and red
-on main, on the pre-delta PR head, and on both mutants); Rust `repark-functions` `generator::tests` (31 tests,
+on main, on the pre-delta PR head, and on both mutants); Rust `repark-functions` `generator::tests` (32 tests,
 including non-nullable-element outer lists, unaliased subquery / `ORDER BY col`, explicit `explode(…)` aliases,
 and `is_bare_generator_expr`).
 

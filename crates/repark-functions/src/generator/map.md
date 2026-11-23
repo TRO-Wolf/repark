@@ -26,7 +26,8 @@ Python facade and attribute-id stamping.
   non-nullable-field `StructArray` with a NULL parent slot. **SQL-EXPLODE-1 (2026-11-23):**
   the `explode` / `explode_outer` pins (array `col`, alias, NULL and empty rows, map
   `key` / `value`, scalar and nested refusals, non-nullable-element outer lists,
-  unaliased subquery / `ORDER BY col` resolution, and explicit `explode(...)` aliases).
+  unaliased subquery / `ORDER BY col` resolution, explicit `explode(...)` aliases, and
+  `spark_nonnull`-wrapped restored aliases).
 - `json_tuple.rs` — **FNP-GEN-1 step 2 (2026-09-16, run 18a):** the `json_tuple`
   expansion (moved out of `generator.rs` so the parent keeps the file-size ceiling):
   string-type checks with `[DATATYPE_MISMATCH.NON_STRING_TYPE]`, the
