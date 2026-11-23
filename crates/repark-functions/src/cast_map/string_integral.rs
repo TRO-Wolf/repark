@@ -219,23 +219,23 @@ impl ScalarUDFImpl for ArrowCastOperand {
     }
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        match arg_types {
-            [value] => Ok(value.clone()),
-            _ => plan_err!("'{ARROW_CAST_OPERAND_NAME}' takes one argument"),
-        }
+        let [value] = arg_types else {
+            return plan_err!("'{ARROW_CAST_OPERAND_NAME}' takes one argument");
+        };
+        Ok(value.clone())
     }
 
     fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
-        match args.arg_fields {
-            [value] => Ok(Arc::clone(value)),
-            _ => plan_err!("'{ARROW_CAST_OPERAND_NAME}' takes one argument"),
-        }
+        let [value] = args.arg_fields else {
+            return plan_err!("'{ARROW_CAST_OPERAND_NAME}' takes one argument");
+        };
+        Ok(Arc::clone(value))
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        match args.args.as_slice() {
-            [value] => Ok(value.clone()),
-            _ => exec_err!("'{ARROW_CAST_OPERAND_NAME}' takes one argument"),
-        }
+        let [value] = args.args.as_slice() else {
+            return exec_err!("'{ARROW_CAST_OPERAND_NAME}' takes one argument");
+        };
+        Ok(value.clone())
     }
 }
