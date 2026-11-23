@@ -35,22 +35,22 @@ the module's tests.
   token (`MAP<STRING, BIGINT>`), rendered from the parsed type, never from the input.
   **WO NTZ-1 slice 1 (2026-09-26):** it also answers `TIMESTAMP_NTZ` for
   `timestamp_ntz`. pins: cast-map-spell-1/C-004, C-005; ntz-1/C-003
-- `string_integral.rs` — **STRING-CAST-LENIENT-1, INT slice (2026-11-22):** the Spark door's scalar `CAST` of a
-  STRING (or a dictionary of strings) to TINYINT, SMALLINT, INT or BIGINT. `SparkStringIntegralCast`
-  (`spark_string_integral_cast`, the last rule of `analyzer_rules()`) replaces each such `Expr::Cast` with
-  `__repark_string_to_{tinyint,smallint,int,bigint}__(x)`, which runs `leaf.rs`'s `string_to_integral`: Spark's
-  `UTF8String.toInt`/`toLong` trim (bytes <= U+0020 and U+007F), ANSI on strict (`CAST_INVALID_INPUT` for
-  malformed, fraction and out-of-range text alike, as Spark's `toIntExact` does), ANSI off legacy (a fraction
-  truncates, `.`/`+.`/`-.` answer 0, anything else NULL), the mode read from the session at invoke. In a projection,
-  aggregate or window the UDF's schema name is the child's (as DataFusion's `Cast` shows it, so `selectExpr` names
-  stay); in a join, filter or any other node it is the call, so a join key stays distinct from its column (on main
-  the statistics barrier inside the cast did that). A projection's schema is widened in place (nullable, as
-  Spark's cast is) rather than rebuilt, so names a later rule set without checks survive.
-  `TRY_CAST` is not touched (STRING-CAST-SILENT-1 owns its whitespace cells). Two guards keep other paths as they
-  were: an `IN` list is left alone (Spark compares it as text with ANSI off), a cast planned inside a `Values` node is left alone (`INSERT ... VALUES` puts its store-assignment cast
-  there, where Spark refuses the store), and a cast whose operand is `__repark_arrow_cast_operand__(x)` (an
-  identity) keeps Arrow's parse; the JSON reader's user-schema casts and `smartCsv`'s integer rungs use it, so the
-  readers stay as they were (a later slice). pins: `python/repark/tests/types/test_string_cast_lenient_int_1.py`
+- `string_integral.rs` — **STRING-CAST-LENIENT-1, INT slice (2026-11-22):** the Spark door's scalar `CAST` a user
+  writes from a STRING (or a dictionary of strings) to TINYINT, SMALLINT, INT or BIGINT. Two rules.
+  `SparkStringIntegralCast` (`spark_string_integral_cast`) runs just before the first `TypeCoercion`
+  (`insert_string_integral_before_coercion`, called by the Spark extension and the `F.expr` context), so every such
+  `Expr::Cast` it sees was written in SQL, `.cast`, `F.expr` or `selectExpr` (or built by the facade); it becomes
+  `__repark_string_to_{tinyint,smallint,int,bigint}__(x)`, which runs `leaf.rs`'s `string_to_integral` with
+  Spark's trim, ANSI on strict (`CAST_INVALID_INPUT`), ANSI off legacy (fraction truncates, NULL otherwise), the
+  mode read at invoke. `SparkCoercionCastMark` (`spark_coercion_cast_mark`, last in `analyzer_rules()`) wraps the
+  operand of every STRING-to-integer cast still present, the ones coercion inserted (`coalesce(s, 0)`, `s = 5`,
+  `s + 1`, a join key), in the identity `__repark_arrow_cast_operand__`, so they keep Arrow's parse and a later
+  analysis of the same plan (the `F.expr` context, `INSERT` over an analyzed frame) leaves them alone. Both skip a
+  `Values` node and the projection directly under a DML node (the store-assignment casts the gates judge). In a
+  projection, aggregate or window the UDF's schema name is the child's; elsewhere it is the call, so a join key
+  stays distinct from its column. A projection's schema is widened in place (nullable, as Spark's cast is).
+  `string_integral_cast_parts` lets the empty `INSERT OVERWRITE` guard judge the UDF as the cast. `TRY_CAST` is
+  not touched. pins: `python/repark/tests/types/test_string_cast_lenient_int_1.py`
 - `tests.rs` — the module's `#[cfg(test)]` suite: target parsing across case, spacing and
   nesting; malformed and map-free targets rejected; statements without a map cast untouched
   (string literals and comments included); the splice keeps surrounding text, nested and

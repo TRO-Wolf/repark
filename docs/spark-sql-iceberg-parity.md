@@ -9293,7 +9293,10 @@ the pin rather than obeying it.
 - **repark** — with ANSI off (at build AND at runtime alike), only these follow the flag:
   `1/0` and `1%0` answer NULL, `2147483647 + 1` wraps, `CAST('x' AS DOUBLE)` and
   `CAST('x' AS FLOAT)` answer NULL, and since STRING-CAST-LENIENT-INT-1 (2026-11-22, not merged) a STRING
-  cast to TINYINT, SMALLINT, INT or BIGINT (`CAST('x' AS INT)` NULL, `CAST('1.5' AS INT)` 1).
+  cast to TINYINT, SMALLINT, INT or BIGINT (`CAST('x' AS INT)` NULL, `CAST('1.5' AS INT)` 1). A frame or view keeps
+  one mode for its whole plan: a persistent view, a cast built under one mode over a frame built under the other,
+  and a `union` or `crossJoin` of frames from different modes answer under the plan root's mode, where Spark binds
+  each part to the mode it was built under; division does the same on main (verifier round 1 of #1413, F3).
   Every other failing cast raises the `simplify_expressions` Arrow cast error: `CAST('x' AS
   DATE / TIMESTAMP / BOOLEAN / DECIMAL)`, `CAST('2024-13-45' AS DATE)`, `CAST('abc' AS DECIMAL(10,2))`,
   `CAST(128 AS TINYINT)`, `CAST(2147483648 AS INT)` — literal, subquery-folded, and real-column
@@ -9337,11 +9340,15 @@ the pin rather than obeying it.
   `INSERT INTO t VALUES (1, '42')` into an INT column as 42, where Spark refuses
   `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` in both modes); the JSON reader's user-schema integer casts and
   `smartCsv`'s integer rungs, which keep Arrow's parse through the identity `__repark_arrow_cast_operand__`; the CSV
-  reader's schema path (its own field parser); the native door; an `IN` list (Spark compares
-  `CAST(n AS INT) IN (' 2', '3 ')` as text with ANSI off, no row, and as numbers with ANSI on, rows 2 and 3; RePark
-  still refuses with Arrow's error in both modes). Comparisons that reach this cast (`CAST(n AS INT) = ' 1 '`,
-  `= '1.25'` and `< 'abc'` with ANSI off) now answer Spark's rows; with ANSI on both refuse with
-  `[CAST_INVALID_INPUT]` (Spark names BIGINT, RePark the column's type). The map-cast leaf answers 0 for `.`, `+.` and
+  reader's schema path (its own field parser); the native door; and every cast DataFusion's
+  type coercion inserts (a STRING against an integer in `=`, `<`, `BETWEEN`, `IN`, `+ - * /`, `coalesce`, `nvl`,
+  `if`, `nullif`, `CASE`, `greatest`, `least`, `array`, `map`, `UNION`, a join key, an INT parameter, or a STRING
+  literal compared with an integer column): the rule rewrites only the casts present before coercion, and marks
+  the rest so they keep Arrow's parse, main's answer, where Spark's own coercion often keeps STRING (verifier
+  round 1 of #1413, F1; `string_cast_lenient_int_1_coercion_oracle.json`). A user's cast on the left of an `IN`
+  list trims as Spark does (`.cast('int').isin(5, 1, 7)` keeps `' 5 '`). `__repark_arrow_cast_operand__` and
+  `__repark_string_to_*__` resolve from SQL and `F.expr`, where Spark raises `UNRESOLVED_ROUTINE` (as
+  `__repark_stats_barrier__` does on main). The map-cast leaf answers 0 for `.`, `+.` and
   `-.` with ANSI off, as Spark does (it answered NULL).
 - **Apache Spark** — Spark 4.1.2 (`UTF8String.toInt`/`toLong`): trims bytes <= U+0020 and U+007F, `toIntExact`
   with ANSI on, the decimal-tolerant parse with ANSI off. *(oracle: measured live 2026-11-22 with

@@ -332,6 +332,97 @@ def comparison(session: Any, target: str, name: str) -> dict[str, Any]:
         return outcome(error)
 
 
+COERCION_FIXTURE = (
+    Path(__file__).resolve().parent / "string_cast_lenient_int_1_coercion_oracle.json"
+)
+COERCION_TEXTS: tuple[str | None, ...] = ("7", " 5 ", "1.5", "abc", None)
+COERCION_SQL: dict[str, str] = {
+    "eq": "s = 5",
+    "lt": "s < 5",
+    "between": "s BETWEEN 1 AND 6",
+    "in": "s IN (5, 7)",
+    "plus": "s + 1",
+    "minus": "s - 1",
+    "times": "s * 2",
+    "div": "s / 2",
+    "coalesce": "coalesce(s, 0)",
+    "nvl": "nvl(s, 0)",
+    "if": "if(true, s, 0)",
+    "nullif": "nullif(s, 5)",
+    "case": "CASE WHEN true THEN s ELSE 0 END",
+    "greatest": "greatest(s, 0)",
+    "least": "least(s, 0)",
+    "array": "array(s, 0)",
+    "map": "map('a', s, 'b', 0)",
+    "substr_param": "substr('abcdef', s)",
+    "repeat_param": "repeat('x', s)",
+    "substr_lit": "substr(s, '2')",
+    "repeat_lit": "repeat(s, '3')",
+    "user_cast_in": "CAST(s AS INT) IN (5, 1, 7)",
+}
+COERCION_FRAMES: tuple[str, ...] = ("eq", "plus", "isin", "coalesce", "greatest", "cast_isin")
+COERCION_TABLES: dict[str, str] = {
+    "union": "SELECT s AS r FROM coerce_cells UNION ALL SELECT 0 AS r",
+    "join": "SELECT count(*) AS r FROM coerce_cells c JOIN (SELECT 5 AS k) u ON c.s = u.k",
+    "count_coalesce": "SELECT count(*) AS r FROM coerce_cells WHERE coalesce(s, 0) = 0",
+}
+
+
+def plain(value: Any) -> Any:
+    if isinstance(value, (list, tuple)):
+        return [plain(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): plain(item) for key, item in value.items()}
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    return repr(value)
+
+
+def coercion_frame(functions: Any, frame: Any, name: str) -> Any:
+    column = functions.col("s")
+    shapes = {
+        "eq": lambda: column == 5,
+        "plus": lambda: column + 1,
+        "isin": lambda: column.isin(5, 7),
+        "coalesce": lambda: functions.coalesce(column, functions.lit(0)),
+        "greatest": lambda: functions.greatest(column, functions.lit(0)),
+        "cast_isin": lambda: column.cast("int").isin(5, 1, 7),
+    }
+    return frame.select(shapes[name]().alias("r"))
+
+
+def coercion_answer(thunk: Any) -> dict[str, Any]:
+    try:
+        frame = thunk()
+        kind = frame.schema.fields[0].dataType.simpleString()
+        return {"value": plain(frame.collect()[0][0]), "type": kind}
+    except Exception as error:
+        found = _CONDITION.search(str(error))
+        return {"error": found.group(1) if found else "NONE"}
+
+
+def coercion_cells(session: Any, functions: Any) -> dict[str, dict[str, Any]]:
+    cells: dict[str, dict[str, Any]] = {}
+    for ansi in ANSI_MODES:
+        session.conf.set("spark.sql.ansi.enabled", ansi)
+        for text in COERCION_TEXTS:
+            frame = session.createDataFrame([(text,)], "s string")
+            frame.createOrReplaceTempView("coerce_cells")
+            tail = "|" + ansi + "|" + json.dumps(text)
+            for name, sql in COERCION_SQL.items():
+                query = f"SELECT {sql} AS r FROM coerce_cells"
+                cells["sql|" + name + tail] = coercion_answer(lambda q=query: session.sql(q))
+            for name, query in COERCION_TABLES.items():
+                cells["sql|" + name + tail] = coercion_answer(
+                    lambda q=query: session.sql(q).orderBy("r")
+                )
+            for name in COERCION_FRAMES:
+                cells["df|" + name + tail] = coercion_answer(
+                    lambda n=name, f=frame: coercion_frame(functions, f, n)
+                )
+    return cells
+
+
 def record_writes(session: Any, functions: Any, catalog: str) -> dict[str, Any]:
     writes: dict[str, Any] = {}
     slot = 0

@@ -558,8 +558,10 @@ async fn a_join_on_a_string_key_against_an_integer_key_plans_and_trims() {
 #[tokio::test]
 async fn a_cast_the_coercion_inserts_keeps_arrow_parsing() {
     for (sql, text) in [
-        ("SELECT coalesce(s, 0) FROM (VALUES ('abc')) AS t(s)", "'abc'"),
-        ("SELECT s + 1 FROM (VALUES (' 2')) AS t(s)", "' 2'"),
+        (
+            "SELECT coalesce(s, 0) FROM (VALUES ('abc')) AS t(s)",
+            "'abc'",
+        ),
         (
             "SELECT l.id FROM (VALUES (1)) AS l(id) JOIN (VALUES (' 1')) AS r(id) ON l.id = r.id",
             "' 1'",
@@ -573,14 +575,18 @@ async fn a_cast_the_coercion_inserts_keeps_arrow_parsing() {
             .await
             .unwrap_err()
             .to_string();
-        assert!(error.contains(&format!("Cannot cast string {text}")), "{sql}: {error}");
+        assert!(
+            error.contains(&format!("Cannot cast string {text}")),
+            "{sql}: {error}"
+        );
     }
 }
 
 #[tokio::test]
 async fn a_user_cast_on_the_left_of_an_in_list_trims() {
     let ctx = integral_context(false);
-    let sql = "SELECT s FROM (VALUES (' 5 '), ('abc'), ('2')) AS t(s) WHERE CAST(s AS INT) IN (5, 1)";
+    let sql =
+        "SELECT s FROM (VALUES (' 5 '), ('abc'), ('2')) AS t(s) WHERE CAST(s AS INT) IN (5, 1)";
     let batches = ctx.sql(sql).await.unwrap().collect().await.unwrap();
     assert_eq!(batches.iter().map(RecordBatch::num_rows).sum::<usize>(), 1);
 }
@@ -604,5 +610,10 @@ async fn a_second_analysis_leaves_the_marked_coercion_cast() {
         .execute_and_check(once.clone(), ctx.state().config_options(), |_, _| {})
         .unwrap();
     assert_eq!(once, twice);
-    assert!(!twice.display_indent().to_string().contains("__repark_string_to_"));
+    assert!(
+        !twice
+            .display_indent()
+            .to_string()
+            .contains("__repark_string_to_")
+    );
 }

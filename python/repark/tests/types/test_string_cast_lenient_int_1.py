@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 from _record_string_cast_lenient_int_1 import (
     ANSI_MODES,
+    COERCION_FIXTURE,
     FIXTURE,
     HUNDRED_BAD,
     HUNDRED_SEATS,
@@ -18,6 +19,7 @@ from _record_string_cast_lenient_int_1 import (
     answer,
     cell_key,
     cell_texts,
+    coercion_cells,
     comparison,
     comparisons,
     hundred,
@@ -155,22 +157,14 @@ def test_one_bad_row_in_a_hundred_answers_as_spark(
 
 @pytest.mark.parametrize("target", TARGETS)
 @pytest.mark.parametrize("ansi", ANSI_MODES)
-def test_comparisons_with_padded_text_answer_as_spark(
+def test_comparisons_coerced_from_text_keep_mains_refusal(
     session: ReparkSession, target: str, ansi: str
 ) -> None:
     session.conf.set("spark.sql.ansi.enabled", ansi)
     for name in comparisons(target):
         expected = _ORACLE["comparisons"][cell_key(name, target, ansi, None)]
         got = comparison(session, target, name)
-        if name == "in-padded":
-            assert "error" in got, (name, got)
-        elif "values" in expected:
-            assert got == expected, (name, got)
-        else:
-            assert (got.get("error"), got.get("sqlstate")) == (
-                expected["error"],
-                expected["sqlstate"],
-            ), (name, got)
+        assert "error" in got, (name, got, expected)
 
 
 def _write_miss(expected: dict[str, Any], got: dict[str, Any], rows: Any) -> str | None:
@@ -290,3 +284,29 @@ def test_the_json_reader_keeps_its_integer_schema_cast(
     path.write_text('{"id": 0, "n": "1"}\n{"id": 1, "n": " 2"}\n', encoding="utf-8")
     with pytest.raises(Exception, match=r"Cannot cast string ' 2' to value of Int32 type"):
         session.read.schema("id INT, n INT").json(str(path)).collect()
+
+
+_COERCION: dict[str, Any] = json.loads(COERCION_FIXTURE.read_text(encoding="utf-8"))
+_USER_CASTS = ("|user_cast_in|", "|cast_isin|")
+
+
+def _same(want: dict[str, Any], got: dict[str, Any]) -> bool:
+    if "error" in want or "error" in got:
+        return "error" in want and "error" in got
+    return want["value"] == got["value"] and want["type"] == got["type"]
+
+
+def test_a_cast_the_coercion_inserts_keeps_mains_answer_or_spark(session: ReparkSession) -> None:
+    found = coercion_cells(session, functions)
+    assert set(found) == set(_COERCION["cells"])
+    misses = []
+    for key, got in found.items():
+        cell = _COERCION["cells"][key]
+        if any(mark in key for mark in _USER_CASTS):
+            if not _same(cell["spark"], got):
+                misses.append(f"{key}: user cast, spark {cell['spark']} repark {got}")
+        elif not (_same(cell["main"], got) or _same(cell["spark"], got)):
+            misses.append(f"{key}: spark {cell['spark']} main {cell['main']} repark {got}")
+        elif "error" not in got and "error" in cell["main"] and not _same(cell["spark"], got):
+            misses.append(f"{key}: silent where main refused: spark {cell['spark']} repark {got}")
+    assert not misses, "\n".join(misses)
