@@ -162,4 +162,33 @@ edge, shape, spelling, fragment and DataFrame cells of `test_sql_setop_all_multi
 and EX-DF-7 pins and `test_df_easy.py::test_set_ops_and_cross_join`. The Rust seat tests
 (`setop_all/tests.rs`) fail without the rule in the same way.
 
+## Delta 1 (owner ruling 2026-11-23: the native door follows Trino, then DuckDB, then refuses)
+
+`MINUS ALL` is spelled `EXCEPT ALL` only under the Databricks parser. The seats: the statement seat
+(the session's parser), `filter` strings (the frame's session parser, so a `repark.sql()` frame
+refuses), stored view bodies (the reading session's parser), and `F.expr` (always the Spark grammar).
+
+| native `repark.sql()` | main `e80e6bc8` | head2 `0add094c` | head3 `1b1a00b3` |
+|---|---|---|---|
+| `MINUS` (top, `INSERT`, CTAS) | `UnsupportedOperationException: MINUS not implemented`, nothing written | same | same |
+| `MINUS ALL` (four spellings) | `UnsupportedOperationException`, the SQL-SETOP-ALL-REFUSE-1 text, nothing written | answers `1, 1, 4`, `INSERT` stores it | `UnsupportedOperationException: This feature is not implemented: MINUS ALL not implemented`, nothing written |
+
+Guard pins, Spark 4.1.2 (ANSI on and off answer alike), equal on main and head3 in both modes; they are
+not red on main. Left `{1, 1, 2, NULL, NULL}`, right `{1, 1, NULL, 3}`; the two-column frames pair `b`
+with `a`; the DECIMAL(10,2) left `{1.10, 1.10, 2.00, NULL}` against a DOUBLE right `{1.1, 1.1, NULL}`:
+
+| join (SQL `<=>` and DataFrame `eqNullSafe`) | semi | anti | type |
+|---|---|---|---|
+| one column | `1, 1, NULL, NULL` | `2` | `a:int` |
+| two columns, keys cover every column | `(1,x), (1,x), (NULL,NULL), (NULL,NULL)` | `(2,y)` | `a:int,b:string` |
+| DECIMAL left, DOUBLE right | `1.10, 1.10, NULL` | `2.00` | `a:decimal(10,2)` |
+
+Skew, 1M rows over 10 keys (100,000 copies a key) against 600,000 rows over the same keys, warm median of
+three `SELECT count(*)` runs: head3 `INTERSECT ALL` 0.016 s (600,000 rows), `EXCEPT ALL` 0.015 s (400,000),
+distinct `INTERSECT` 0.021 s, `EXCEPT` 0.019 s; Spark 4.1.2 0.380 s, 0.227 s, 0.516 s, 0.463 s. Each key's
+`range` list holds up to 100,000 entries.
+
+Pins on the six files: head3 1424 passed; head2 43 failed, every one a native `MINUS ALL` cell that answers
+where the ruling refuses; main 650 failed, none a guard pin.
+
 Up: [../map.md](../map.md).
