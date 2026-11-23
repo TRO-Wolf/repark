@@ -50,7 +50,9 @@ here and is re-exported in one line.
   display-name output binding plus qualified-key column binding (C-011), and
   the DISTINCT-without-bound-keys bail (C-012).
 - `map_ordering.rs` — **SQL-SETOP-ALL-MULTISET-1 (2026-11-23):** the `INTERSECT ALL` / `EXCEPT ALL` join
-  (`repark_core::is_multiset_set_operation`) refuses a MAP column as the distinct forms do.
+  (`repark_core::is_multiset_set_operation`) checks both sides and walks nested struct/list fields
+  (`holds_map`), refusing with `[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE]`; distinct forms keep
+  main's top-level left check.
   **WO U9-TYPES-1 r3 (2026-09-25):** `refuse_map_ordering` walks the
   planned statement in `../spark_ast.rs`'s passthrough (SELECT, and the UPDATE / DELETE that land
   there) and refuses a map operand of `=`, `<>`, `<`, `<=`, `>`, `>=`, `<=>`, `IN` and

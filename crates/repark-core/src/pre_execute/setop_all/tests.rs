@@ -4,6 +4,7 @@ use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
 use datafusion::arrow::array::{Array, Int64Array};
+use datafusion::arrow::datatypes::{DataType, Field, TimeUnit};
 use datafusion::arrow::util::display::array_value_to_string;
 use datafusion::common::tree_node::TreeNodeRecursion;
 use datafusion::config::ConfigOptions;
@@ -14,7 +15,8 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::dialect::{DatabricksDialect, Dialect, GenericDialect};
 
 use super::{
-    MultisetSetOperations, insert_multiset_set_operations, minus_all_as_except_all, minus_all_with,
+    MultisetSetOperations, insert_multiset_set_operations, is_lossless_round_trip,
+    minus_all_as_except_all, minus_all_with,
 };
 use crate::ReparkSession;
 use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
@@ -231,7 +233,7 @@ async fn rows_of(session: &ReparkSession, sql: &str) -> Vec<String> {
                 .columns()
                 .iter()
                 .map(|column| {
-                    if column.is_null(row) {
+                    if column.is_null(row) || column.data_type() == &DataType::Null {
                         "NULL".to_string()
                     } else {
                         array_value_to_string(column, row).unwrap()
@@ -258,7 +260,7 @@ fn strings(rows: &[&str]) -> Vec<String> {
 }
 
 #[tokio::test]
-async fn every_door_answers_the_spark_multiset_and_hands_minus_all_on_as_except_all() {
+async fn every_door_answers_the_spark_multiset_and_only_spark_respells_minus_all() {
     for (parser, guarded) in [("generic", false), ("generic", true), ("databricks", false)] {
         let recording = Arc::new(Recording::default());
         let session = session(&recording, parser, guarded);
@@ -344,4 +346,274 @@ async fn an_insert_or_ctas_of_a_multiset_stores_the_spark_rows() {
         rows_of(&session, "SELECT a FROM c").await,
         strings(&["1", "1", "4"])
     );
+}
+
+#[test]
+fn non_operator_minus_all_identifiers_and_unparseable_sql_stay_untouched() {
+    let unchanged = [
+        "SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) t",
+        "SELECT t.minus all FROM (SELECT 1 AS minus, 2 AS except) t",
+        "SELECT minus /* c */ all FROM (SELECT 1 AS minus, 2 AS except) t",
+        "SELECT minus all FROM (SELECT 1 AS minus) t",
+        "WITH minus AS (SELECT 1 AS a) SELECT a FROM minus all",
+        "WITH minus AS (SELECT 1 AS a), except AS (SELECT 2 AS a) SELECT a FROM minus all",
+        "WITH minus AS (SELECT 1 AS a), except AS (SELECT 2 AS a) SELECT `all`.a FROM minus all",
+        "SELECT `minus` all FROM (SELECT 1 AS minus, 2 AS except) t",
+        "SELECT 'minus all' AS s",
+        "CREATE VIEW ice.ns.v AS SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) t",
+        "CREATE TABLE ice.ns.c USING iceberg AS SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) t",
+        "a IN (SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) t)",
+        "a IN (WITH minus AS (SELECT 1 AS a), except AS (SELECT 2 AS a) SELECT a FROM minus all)",
+        "SELECT 1 FROM WHERE MINUS ALL",
+        "SELECT 1 MINUS ALL FROM",
+        "CREATE OR REPLACE TEMPORARY VIEW v AS SELECT 1 FROM WHERE MINUS ALL",
+    ];
+    let dialect = DatabricksDialect {};
+    for sql in unchanged {
+        assert!(
+            matches!(minus_all_with(&dialect, sql), Cow::Borrowed(_)),
+            "{sql}"
+        );
+    }
+    let mixed = "SELECT minus all FROM (SELECT 1 AS minus, 2 AS except UNION ALL SELECT 1, 2) t \
+                 MINUS /* gap */ ALL SELECT 1 AS all";
+    assert_eq!(
+        minus_all_with(&dialect, mixed),
+        "SELECT minus all FROM (SELECT 1 AS minus, 2 AS except UNION ALL SELECT 1, 2) t \
+         EXCEPT /* gap */ ALL SELECT 1 AS all"
+    );
+    let expr = "a IN (SELECT 1 AS a UNION ALL SELECT 1 MINUS /* gap */ ALL SELECT 1 AS a)";
+    assert_eq!(
+        minus_all_with(&dialect, expr),
+        "a IN (SELECT 1 AS a UNION ALL SELECT 1 EXCEPT /* gap */ ALL SELECT 1 AS a)"
+    );
+    let replace =
+        "REPLACE TABLE ice.ns.c USING iceberg AS SELECT 1 AS a MINUS\n\tALL SELECT 1 AS a";
+    assert_eq!(
+        minus_all_with(&dialect, replace),
+        "REPLACE TABLE ice.ns.c USING iceberg AS SELECT 1 AS a EXCEPT\n\tALL SELECT 1 AS a"
+    );
+    let cr_only = "SELECT 1 AS a UNION ALL SELECT 1\rMINUS\rALL\rSELECT 1 AS a";
+    assert_eq!(
+        minus_all_with(&dialect, cr_only),
+        "SELECT 1 AS a UNION ALL SELECT 1\rEXCEPT\rALL\rSELECT 1 AS a"
+    );
+}
+
+#[tokio::test]
+async fn databricks_session_answers_minus_all_identifiers_and_mixed_operator() {
+    let recording = Arc::new(Recording::default());
+    let session = session(&recording, "databricks", false);
+    for (sql, expected) in [
+        (
+            "SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) t",
+            strings(&["1"]),
+        ),
+        (
+            "SELECT t.minus all FROM (SELECT 1 AS minus, 2 AS except) t",
+            strings(&["1"]),
+        ),
+        (
+            "SELECT minus /* c */ all FROM (SELECT 1 AS minus, 2 AS except) t",
+            strings(&["1"]),
+        ),
+        (
+            "WITH minus AS (SELECT 1 AS a), except AS (SELECT 2 AS a) SELECT a FROM minus all",
+            strings(&["1"]),
+        ),
+        (
+            "WITH minus AS (SELECT 1 AS a), except AS (SELECT 2 AS a) SELECT `all`.a FROM minus all",
+            strings(&["1"]),
+        ),
+        (
+            "SELECT `minus` all FROM (SELECT 1 AS minus, 2 AS except) t",
+            strings(&["1"]),
+        ),
+        (
+            "SELECT minus all FROM (SELECT 1 AS minus, 2 AS except UNION ALL SELECT 1, 2) t \
+             MINUS /* gap */ ALL SELECT 1 AS all",
+            strings(&["1"]),
+        ),
+    ] {
+        assert_eq!(rows_of(&session, sql).await, expected, "{sql}");
+    }
+}
+
+#[tokio::test]
+async fn untyped_null_left_operand_matches_distinct_twin_schema_and_multiset_rows() {
+    let recording = Arc::new(Recording::default());
+    let session = session(&recording, "databricks", false);
+    for rhs in [
+        "SELECT CAST(1 AS INT) AS a",
+        "SELECT CAST('x' AS VARCHAR) AS a",
+        "SELECT CAST('2024-01-01' AS DATE) AS a",
+        "SELECT CAST(1.5 AS DOUBLE) AS a",
+        "SELECT make_array(1, 2) AS a",
+    ] {
+        let distinct_i = session
+            .sql(&format!("SELECT NULL AS a INTERSECT {rhs}"))
+            .await
+            .unwrap();
+        let all_i = session
+            .sql(&format!("SELECT NULL AS a INTERSECT ALL {rhs}"))
+            .await
+            .unwrap();
+        assert_eq!(
+            all_i.schema().field(0).data_type(),
+            &DataType::Null,
+            "{rhs}"
+        );
+        assert_eq!(
+            all_i.schema().field(0).data_type(),
+            distinct_i.schema().field(0).data_type(),
+            "{rhs}"
+        );
+        assert_eq!(
+            rows_of(&session, &format!("SELECT NULL AS a INTERSECT ALL {rhs}")).await,
+            Vec::<String>::new(),
+            "{rhs}"
+        );
+        let distinct_e = session
+            .sql(&format!("SELECT NULL AS a EXCEPT {rhs}"))
+            .await
+            .unwrap();
+        let all_e = session
+            .sql(&format!("SELECT NULL AS a EXCEPT ALL {rhs}"))
+            .await
+            .unwrap();
+        assert_eq!(
+            all_e.schema().field(0).data_type(),
+            distinct_e.schema().field(0).data_type(),
+            "{rhs}"
+        );
+        assert_eq!(
+            rows_of(&session, &format!("SELECT NULL AS a EXCEPT ALL {rhs}")).await,
+            strings(&["NULL"]),
+            "{rhs}"
+        );
+    }
+    let multi = "(SELECT CAST(1 AS INT) AS a, NULL AS b UNION ALL SELECT 1, NULL) \
+                 INTERSECT ALL (SELECT CAST(1 AS INT) AS a, CAST(NULL AS VARCHAR) AS b)";
+    assert_eq!(rows_of(&session, multi).await, strings(&["1|NULL"]));
+    let dup_null = "(SELECT NULL AS a UNION ALL SELECT NULL) EXCEPT ALL \
+                    (SELECT CAST('x' AS VARCHAR) AS a UNION ALL SELECT CAST(NULL AS VARCHAR))";
+    assert_eq!(rows_of(&session, dup_null).await, strings(&["NULL"]));
+}
+
+#[test]
+fn lossless_round_trip_classifier_allows_exact_widenings_and_refuses_lossy_pairs() {
+    let lossless = [
+        (DataType::Int32, DataType::Int64),
+        (DataType::Int8, DataType::Int32),
+        (DataType::Int16, DataType::Int64),
+        (DataType::Float32, DataType::Float64),
+        (DataType::Int32, DataType::Float64),
+        (DataType::Decimal128(5, 2), DataType::Decimal128(10, 4)),
+        (DataType::Int32, DataType::Decimal128(12, 2)),
+        (DataType::Int64, DataType::Decimal128(22, 2)),
+        (DataType::Utf8View, DataType::Utf8),
+    ];
+    for (out_type, key_type) in lossless {
+        assert!(
+            is_lossless_round_trip(&out_type, &key_type),
+            "{out_type} -> {key_type}"
+        );
+    }
+    let struct_str = DataType::Struct(vec![Arc::new(Field::new("x", DataType::Utf8, true))].into());
+    let struct_int =
+        DataType::Struct(vec![Arc::new(Field::new("x", DataType::Int32, true))].into());
+    let list_str = DataType::List(Arc::new(Field::new("item", DataType::Utf8, true)));
+    let list_int = DataType::List(Arc::new(Field::new("item", DataType::Int32, true)));
+    let lossy = [
+        (DataType::Utf8, DataType::Int32),
+        (DataType::Utf8, DataType::Int64),
+        (DataType::Utf8, DataType::Float32),
+        (DataType::Utf8, DataType::Float64),
+        (DataType::Utf8, DataType::Decimal128(10, 2)),
+        (DataType::Utf8, DataType::Date32),
+        (
+            DataType::Utf8,
+            DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+        ),
+        (DataType::Int32, DataType::Float32),
+        (DataType::Int64, DataType::Float64),
+        (DataType::Int64, DataType::Float32),
+        (DataType::Decimal128(38, 10), DataType::Decimal128(38, 2)),
+        (DataType::Int64, DataType::Decimal128(18, 2)),
+        (
+            DataType::Date32,
+            DataType::Timestamp(TimeUnit::Nanosecond, None),
+        ),
+        (
+            DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+            DataType::Timestamp(TimeUnit::Nanosecond, Some("UTC".into())),
+        ),
+        (struct_str, struct_int),
+        (list_str, list_int),
+    ];
+    for (out_type, key_type) in lossy {
+        assert!(
+            !is_lossless_round_trip(&out_type, &key_type),
+            "{out_type} -> {key_type}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn lossy_mixed_type_multiset_refuses_before_write_while_exact_widenings_answer() {
+    let recording = Arc::new(Recording::default());
+    let session = session(&recording, "databricks", false);
+    session
+        .sql("CREATE TABLE out_str (a VARCHAR)")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    for sql in [
+        "(SELECT '01' AS a UNION ALL SELECT '01') EXCEPT ALL SELECT CAST(1 AS INT) AS a",
+        "(SELECT '01' AS a UNION ALL SELECT '01') INTERSECT ALL SELECT CAST(1 AS INT) AS a",
+        "(SELECT '1.00' AS a UNION ALL SELECT '1.00') EXCEPT ALL SELECT CAST(1.0 AS DOUBLE) AS a",
+        "(SELECT '2024-01-01' AS a UNION ALL SELECT '2024-01-01') EXCEPT ALL \
+         SELECT CAST('2024-01-01' AS DATE) AS a",
+        "(SELECT CAST(9007199254740993 AS BIGINT) AS a UNION ALL SELECT 9007199254740993) \
+         EXCEPT ALL SELECT CAST(9007199254740992.0 AS DOUBLE) AS a",
+        "(SELECT CAST(16777217 AS INT) AS a UNION ALL SELECT 16777217) \
+         EXCEPT ALL SELECT CAST(16777216.0 AS FLOAT) AS a",
+        "INSERT INTO out_str (SELECT '01' AS a UNION ALL SELECT '01') \
+         EXCEPT ALL SELECT CAST(1 AS INT) AS a",
+    ] {
+        let error = match session.sql(sql).await {
+            Ok(frame) => frame
+                .collect()
+                .await
+                .map_err(crate::engine_err)
+                .unwrap_err(),
+            Err(error) => error,
+        };
+        assert_eq!(
+            error.exception_class(),
+            repark_common::ErrorClass::Analysis,
+            "{sql}: {error}"
+        );
+        assert!(
+            error.to_string().contains("SETOP-MIXED-TYPE-COERCION-1"),
+            "{sql}: {error}"
+        );
+    }
+    assert!(rows_of(&session, "SELECT a FROM out_str").await.is_empty());
+    for (sql, expected) in [
+        (
+            "(SELECT CAST(1 AS INT) AS a UNION ALL SELECT 1) EXCEPT ALL \
+             (SELECT CAST(1 AS BIGINT) AS a UNION ALL SELECT CAST(5000000000 AS BIGINT))",
+            strings(&["1"]),
+        ),
+        (
+            "(SELECT CAST(1.5 AS FLOAT) AS a UNION ALL SELECT CAST(1.5 AS FLOAT)) EXCEPT ALL \
+             SELECT CAST(1.5 AS DOUBLE) AS a",
+            strings(&["1.5"]),
+        ),
+    ] {
+        assert_eq!(rows_of(&session, sql).await, expected, "{sql}");
+    }
 }

@@ -2600,31 +2600,46 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
   on `l = {1, 1, 1, 2, 2, 4}`, `r = {1, 2, 2, 3}`), and DataFusion plans no `MINUS`. After: an
   analyzer rule right after `struct_setop_names` replaces that join with Spark's own rewrite
   (`RewriteIntersectAll` / `RewriteExceptAll`): both sides tagged and joined by `UNION ALL`, the
-  per-side counts aggregated by every column, a filter, and each kept row replicated by its count.
+  per-side counts aggregated by every column, and each kept row replicated by `range(0, copies)`
+  under `Unnest` with no filter.
   The keys group as set-operation keys do: NULLs equal, both zeros and every NaN one key, and the
   output carries the normalised key (`0.0`, the canonical NaN), as Spark's does. `MINUS ALL` is
-  spelled `EXCEPT ALL` on the Spark door only: at the statement seat, in `filter` strings and
-  stored view bodies of a Spark-door session, and in `F.expr`; the distinct `MINUS` still
-  refuses (SQL-MINUS-REFUSE-1). On the native door `MINUS ALL` refuses as `MINUS` does there
-  (`UnsupportedOperationException: This feature is not implemented: MINUS ALL not implemented`,
-  nothing written), under the owner ruling that the native door follows Trino, then DuckDB,
-  then refuses, and neither accepts `MINUS`. A null-safe `LEFT SEMI` / `LEFT ANTI JOIN` written
-  as a join, in SQL or as a DataFrame `eqNullSafe` join over every column, keeps its left
-  multiplicity and types (guard pins, equal to Spark on main and head alike). On the Spark door a DECIMAL beside a
-  DOUBLE widens to `double` in the ALL forms as in the distinct ones. Every cell of the domain
-  table answers Spark's rows on both doors, both ANSI modes: INT, BIGINT, DECIMAL, DOUBLE and
-  FLOAT (both zeros, NaN), STRING, DATE, TIMESTAMP, NULL, struct and three-column cells both ways
-  round; empty and duplicate-only sides; top level, CTE, scalar and `IN` subqueries, temporary and
-  persistent views, Iceberg sources, `INSERT`, CTAS and `MERGE USING` (read back cold), nested in
-  `UNION ALL`, `EXPLAIN`; nine spellings; the fragments, a stored view body and the DataFrame
-  `intersectAll`, `exceptAll`, `intersect_all`, `except_all`. The distinct and `UNION` forms keep
-  their answers. Evidence: `task/wo/sql-setop-all-multiset-1/`.
+  spelled `EXCEPT ALL` on the Spark door only, using `sqlparser`'s Databricks parse so only true set
+  operators (including comments and odd spacing) respell while identifiers, aliases, table names,
+  literals and unparseable SQL stay untouched: at the statement seat, in `filter` strings and stored
+  view bodies of a Spark-door session, and in `F.expr` (which belongs to `pyspark.sql.functions`,
+  built before any frame or door, so it uses Spark grammar even on native frames); the distinct
+  `MINUS` still refuses (SQL-MINUS-REFUSE-1). On the native door `MINUS ALL` refuses as `MINUS` does
+  there (`UnsupportedOperationException: This feature is not implemented: MINUS ALL not
+  implemented`, nothing written), under the owner ruling that the native door follows Trino, then
+  DuckDB, then refuses, and neither accepts `MINUS`. A null-safe `LEFT SEMI` / `LEFT ANTI JOIN`
+  written as a join, in SQL or as a DataFrame `eqNullSafe` join over every column, keeps its left
+  multiplicity and types (guard pins, equal to Spark on main and head alike). On the Spark door a
+  DECIMAL beside a DOUBLE widens to `double` in the ALL forms as in the distinct ones. An untyped
+  `NULL` left column against a typed right column answers with the distinct twin's `void` (`Null`)
+  schema (Spark widens to the right side's type). Every cell of the domain table answers Spark's
+  rows on the Spark door in both ANSI modes (all nine spellings, fragments, stored view bodies, and
+  DataFrame `intersectAll`, `exceptAll`, `intersect_all`, `except_all`), and every `INTERSECT ALL`
+  and `EXCEPT ALL` cell answers on the native door while native `MINUS ALL` refuses: INT, BIGINT,
+  DECIMAL, DOUBLE and FLOAT (both zeros, NaN), STRING, DATE, TIMESTAMP, NULL, struct and
+  three-column cells both ways round; empty and duplicate-only sides; top level, CTE, scalar and
+  `IN` subqueries, temporary and persistent views, Iceberg sources, `INSERT`, CTAS and `MERGE USING`
+  (read back cold), nested in `UNION ALL`, `EXPLAIN`. The distinct and `UNION` forms keep their
+  answers. Evidence: `task/wo/sql-setop-all-multiset-1/`.
 - **Residue** — a column count or type mismatch raises `AnalysisException`, Spark's class, with
   DataFusion's planner text and no condition or SQLSTATE, as the distinct `INTERSECT` / `EXCEPT`
   and `UNION` already do; Spark raises `[NUM_COLUMNS_MISMATCH]` (`42826`) and
-  `[INCOMPATIBLE_COLUMN_TYPE]` (`42825`). A set operation over a MAP column refuses on both
-  engines, with different texts. The native door's persistent-view and CTAS shapes keep their own
-  refusals (NATIVE-CTAS-ICEBERG-REFUSE-1).
+  `[INCOMPATIBLE_COLUMN_TYPE]` (`42825`). On the Spark door an ALL set operation over a MAP column
+  (either side, top-level or nested inside a struct or list) refuses with Spark's
+  `[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE]` (`SQLSTATE: 0A000`), while distinct forms keep
+  main's top-level left refusal. When a multiset key's cast back from DataFusion's coerced key type
+  to the left output type is not lossless (such as `STRING` left against numeric, `DATE` or
+  `TIMESTAMP`, lossy `INT`/`BIGINT` against `FLOAT`/`DOUBLE`, `DATE`/`TIMESTAMP` narrowing, or
+  nested containers), `setop_all_multiset` refuses during analysis before any write with
+  `AnalysisException` naming `SETOP-MIXED-TYPE-COERCION-1` (lossless widenings such as `INT`/`BIGINT`,
+  `FLOAT`/`DOUBLE` and Spark-door `DECIMAL`/`DOUBLE` keep answering). The native door's persistent
+  view, CTAS into Iceberg (`NATIVE-CTAS-ICEBERG-REFUSE-1`) and `MERGE` shapes keep their own
+  refusals.
 - **Apache Spark** — `INTERSECT ALL` keeps each row at the smaller of the two sides'
   multiplicities (`1, 2, 2`); `EXCEPT ALL` and its synonym `MINUS ALL` subtract the right side's
   count (`1, 1, 4`). *(oracle: recorded PySpark 4.1.2 with Iceberg 1.11.0, 2026-11-23,

@@ -5,6 +5,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::SessionState;
 use datafusion::logical_expr::expr::{InList, ScalarFunction};
 use datafusion::logical_expr::{BinaryExpr, Distinct, Expr, ExprSchemable, LogicalPlan, Operator};
+use repark_core::struct_walk::{list_element, peel_encoding};
 use repark_functions::cast_map::spark_sql_name;
 
 #[allow(clippy::missing_errors_doc)]
@@ -20,27 +21,49 @@ pub(crate) fn refuse_map_ordering(plan: LogicalPlan) -> Result<LogicalPlan> {
     Ok(plan)
 }
 
+fn set_operation_map_refusal(column: &str, data_type: &DataType) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE] The feature is not supported: \
+         Cannot have MAP type columns in DataFrame which calls set operations (INTERSECT, \
+         EXCEPT, etc.), but the type of column `{column}` is \"{}\". SQLSTATE: 0A000",
+        spark_sql_name(data_type)
+    ))
+}
+
 fn refuse_in_node(node: &LogicalPlan) -> Result<()> {
     let schema = input_schema(node);
-    let set_input = match node {
-        LogicalPlan::Distinct(Distinct::All(input)) => Some(input),
-        LogicalPlan::Join(join) if repark_core::is_multiset_set_operation(join) => Some(&join.left),
-        _ => None,
-    };
-    if let Some(input) = set_input
+    if let LogicalPlan::Distinct(Distinct::All(input)) = node
         && let Some(field) = input
             .schema()
             .fields()
             .iter()
             .find(|field| is_map(field.data_type()))
     {
-        return Err(DataFusionError::Plan(format!(
-            "[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE] The feature is not supported: \
-             Cannot have MAP type columns in DataFrame which calls set operations (INTERSECT, \
-             EXCEPT, etc.), but the type of column `{}` is \"{}\". SQLSTATE: 0A000",
-            field.name(),
-            spark_sql_name(field.data_type())
-        )));
+        return Err(set_operation_map_refusal(field.name(), field.data_type()));
+    }
+    if let LogicalPlan::Join(join) = node
+        && repark_core::is_multiset_set_operation(join)
+    {
+        for (left_field, right_field) in join
+            .left
+            .schema()
+            .fields()
+            .iter()
+            .zip(join.right.schema().fields().iter())
+        {
+            if holds_map(left_field.data_type()) {
+                return Err(set_operation_map_refusal(
+                    left_field.name(),
+                    left_field.data_type(),
+                ));
+            }
+            if holds_map(right_field.data_type()) {
+                return Err(set_operation_map_refusal(
+                    left_field.name(),
+                    right_field.data_type(),
+                ));
+            }
+        }
     }
     if let LogicalPlan::Sort(sort) = node {
         for order in &sort.expr {
@@ -127,6 +150,14 @@ pub(crate) fn input_schema(node: &LogicalPlan) -> DFSchema {
 
 fn is_map(data_type: &DataType) -> bool {
     matches!(data_type, DataType::Map(_, _))
+}
+
+fn holds_map(data_type: &DataType) -> bool {
+    match peel_encoding(data_type) {
+        DataType::Map(_, _) => true,
+        DataType::Struct(fields) => fields.iter().any(|field| holds_map(field.data_type())),
+        peeled => list_element(peeled).is_some_and(|element| holds_map(element.data_type())),
+    }
 }
 
 fn map_type_of(expr: &Expr, schema: &DFSchema) -> Option<DataType> {

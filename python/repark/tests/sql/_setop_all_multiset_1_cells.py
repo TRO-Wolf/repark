@@ -291,7 +291,11 @@ def shape_cell(door: Door, shape: str, op: str, slot: str, prefix: str) -> dict[
                 "run": door.run(f"CREATE OR REPLACE {door.temp_view()} {name} AS {q}"),
             }
         )
-        return {**attempt(lambda: door.answer(f"SELECT a FROM {name}")), "create": created["kind"]}
+        return {
+            **attempt(lambda: door.answer(f"SELECT a FROM {name}")),
+            "create": created["kind"],
+            "create_result": created,
+        }
     if shape == "persistent-view":
         name = door.persistent_view(f"vp_{slot}")
         created = attempt(
@@ -415,6 +419,8 @@ def measure(door: Door, ansi: str) -> dict[str, dict[str, Any]]:
                 backward = operation(side(right_rows), op, side(left_rows))
                 cells[f"{group}|{cell}|{op}|rl"] = attempt(lambda sql=backward: door.answer(sql))
     for cell, (left, right) in ERROR_CELLS.items():
+        if door.is_native() and cell == "column-type":
+            left = "SELECT make_array(CAST(1 AS INT)) AS a"
         for op in OPS:
             sql = operation(left, op, right)
             cells[f"error|{cell}|{op}"] = attempt(lambda sql=sql: door.answer(sql))

@@ -31,14 +31,19 @@ the multiset set-operation rewrite and the `MINUS ALL` spelling.
   with Spark's own rewrite: each side projected to its coerced keys and a count tag, a `UNION ALL`, an
   aggregate of the per-side counts, and `range(0, copies)` (the smaller count, or left minus right
   floored at zero) under an `Unnest`, with no filter, under a projection that keeps the join's
-  schema; `range` builds one list of `copies` per key, so allocation is O(max copies per key). The
-  distinct forms and joins written as joins do not match. `minus_all_as_except_all` (re-exported at
-  the crate root) spells an unquoted `MINUS` followed by an unquoted `ALL` as `EXCEPT`, on the Spark
-  door only (the Databricks parser); the native door refuses `MINUS ALL` as it refuses `MINUS`
-  (owner ruling: Trino, then DuckDB, then refuse). It runs at the first line of
-  `ReparkSession::sql_with_write_options_inner`, on `filter` strings in the frame's parser, on stored
-  view bodies in the session's parser, and on `F.expr` (Spark grammar). The distinct `MINUS` is
-  untouched (SQL-MINUS-REFUSE-1).
+  schema; `range` builds one list of `copies` per key, so allocation is O(max copies per key).
+  Delta 2: a top-level `DataType::Null` output column emits `lit(ScalarValue::Null)` (matching the
+  distinct twin's `Null` schema instead of failing to cast back); any non-lossless cast back from
+  coerced key type to output type (`is_lossless_round_trip`) refuses loudly during analysis with
+  `DataFusionError::Plan` naming `SETOP-MIXED-TYPE-COERCION-1` (before any write). The distinct forms
+  and joins written as joins do not match. `minus_all_as_except_all` (re-exported at the crate root)
+  uses `sqlparser` (`DatabricksDialect`) to respell only `SetExpr::SetOperation { Minus, All }`
+  positions as `EXCEPT` (preserving comments and spacing, leaving identifiers, aliases, literals and
+  unparseable SQL untouched), on the Spark door only (the Databricks parser); the native door refuses
+  `MINUS ALL` as it refuses `MINUS` (owner ruling: Trino, then DuckDB, then refuse). It runs at the
+  first line of `ReparkSession::sql_with_write_options_inner`, on `filter` strings in the frame's
+  parser, on stored view bodies in the session's parser, and on `F.expr` (Spark grammar). The distinct
+  `MINUS` is untouched (SQL-MINUS-REFUSE-1).
 - [setop_all/](setop_all/map.md) — its tests.
 
 ## Pointers
