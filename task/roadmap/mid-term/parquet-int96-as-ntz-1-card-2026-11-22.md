@@ -156,6 +156,21 @@ session option, so it stays with P01-05.
   (UTC and New York, both ANSI modes; a refusal must leave the directory reading cold as Spark's rows); fixture
   `spark_int96_dotted/`.
 
+## Delta round 3 (2026-11-22, the second re-check)
+
+- **Append, embedded Arrow hint (fixed):** delta 2 read the destination through `ParquetFile.schema_arrow`, which
+  does not apply a zone-less `ARROW:schema` hint to an `INT96` leaf, and turned it into `timestamp[us, tz=UTC]`. A
+  `TIMESTAMP` literal then appended a UTC file beside the zone-less one and RePark could not read the directory back,
+  while a read-then-append or a `TIMESTAMP_NTZ` append refused. The helper now decodes the file's `ARROW:schema` hint
+  and applies the session reader's rule per `INT96` leaf: the hint's timestamp type where there is one, and
+  `timestamp[us, tz=UTC]` for a hint or a physical type of `timestamp[ns]` with no zone (DataFusion's coercion).
+- **Append, fixed-size lists (fixed):** `fixed_size_list` counts and rebuilds beside `list` and `large_list`, so a
+  `fixed_size_list<struct<…>>` column before an `INT96` column no longer shifts the leaf offset.
+- **Pins added:** four `layout/<case>/<zone>` cases (UTC and New York, both modes): a `TIMESTAMP` literal onto the
+  zone-less-hint file refuses and the directory still reads; a read-then-append and a `TIMESTAMP_NTZ` literal onto it
+  append and read back; a read-then-append onto a pyarrow file with a `fixed_size_list<struct>` before the `INT96`
+  column appends and reads back. All eight red on `3c6b9c41`, green after.
+
 ## Fix direction (P01-05, as filed)
 
 Map INT96 leaves to Spark's `timestamp` at schema inference, decoding the stored instant, and keep NTZ for INT64

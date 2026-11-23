@@ -6111,8 +6111,9 @@ still open is `isModifiable`.
   `coerce_int96_tz = UTC` on every session unless a `datafusion.*` key set them, so an `INT96` leaf without an embedded Arrow schema, or whose embedded Arrow schema names a zone, infers
   and decodes as `Timestamp(Microsecond, "UTC")`, Spark's `timestamp`. `INT64` leaves keep their footer's
   `isAdjustedToUTC`; `INT96` carries no statistics Arrow reads, so pruning is unchanged; Iceberg scans do not use
-  the option. A path `write.mode("append")` onto an `INT96` directory compares its `INT96` leaves as
-  `timestamp[us, tz=UTC]` and keeps every other part of the destination's layout (`writer_layout._session_parquet_schema`);
+  the option. A path `write.mode("append")` onto an `INT96` directory compares each `INT96` leaf as the session reads it
+  (the embedded Arrow schema's zone-less or zoned type where it has one, else `timestamp[us, tz=UTC]`) and keeps every
+  other part of the destination's layout (`writer_layout._session_parquet_schema`);
   an `INT96` leaf under a map refuses the append, as on main. SQL `RESET` of the key returns it to DataFusion's unset
   value (`ns`, NTZ) for the session, while `conf.unset` leaves the live value; an explicit `ns` wraps values past
   2262 and `""` fails at the next read.

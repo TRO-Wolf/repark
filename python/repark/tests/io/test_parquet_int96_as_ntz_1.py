@@ -152,6 +152,72 @@ def measure_appends(spark: Any, root: Path, mode: str, found: dict[str, Any]) ->
             )
 
 
+LATER = "TIMESTAMP'2025-01-16 00:00:00'"
+LAYOUTS: dict[str, tuple[str, str, str, list[int]]] = {
+    "naive_hint_utc_literal": (
+        "pyarrow_int96_naive",
+        f"SELECT 9 AS id, {LATER} AS ts",
+        "refuse",
+        list(range(1, 8)),
+    ),
+    "naive_hint_read_then_append": (
+        "pyarrow_int96_naive",
+        "",
+        "append",
+        sorted(list(range(1, 8)) * 2),
+    ),
+    "naive_hint_ntz_literal": (
+        "pyarrow_int96_naive",
+        "SELECT 9 AS id, TIMESTAMP_NTZ'2025-01-16 00:00:00' AS ts",
+        "append",
+        [*range(1, 8), 9],
+    ),
+    "fixed_size_list_read_then_append": ("", "", "append", [1, 1, 2, 2]),
+}
+
+
+def fixed_size_list_seed(root: Path) -> Path:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    seed = root / "fixed_size_list_seed"
+    seed.mkdir(parents=True, exist_ok=True)
+    pair = pa.struct([("a", pa.int32()), ("b", pa.int32())])
+    table = pa.table(
+        {
+            "id": pa.array([1, 2], pa.int32()),
+            "f": pa.array([[{"a": 1, "b": 2}, {"a": 3, "b": 4}]] * 2, pa.list_(pair, 2)),
+            "ts": pa.array(
+                [1_736_902_800_000_000_000, 1_751_371_200_000_000_000], pa.timestamp("ns")
+            ),
+        }
+    )
+    pq.write_table(table, str(seed / "part-00000.parquet"), use_deprecated_int96_timestamps=True)
+    return seed
+
+
+def layout_ids(spark: Any, out: Path) -> list[Any]:
+    frame = spark.read.parquet(str(out))
+    return sorted(row[0] for row in frame.select("id").collect())
+
+
+def layout_append(spark: Any, seed: Path, out: Path, query: str) -> list[Any]:
+    shutil.copytree(seed, out)
+    source = spark.sql(query) if query else spark.read.parquet(str(seed))
+    outcome = attempt(lambda: source.write.mode("append").parquet(str(out)))
+    return [outcome, attempt(lambda: layout_ids(spark, out))]
+
+
+def measure_layouts(spark: Any, root: Path, mode: str, found: dict[str, Any]) -> None:
+    fixed = fixed_size_list_seed(root)
+    for zone in ORACLE["append_zones"]:
+        spark.conf.set("spark.sql.session.timeZone", zone)
+        for name, (dst, query, _, _) in LAYOUTS.items():
+            seed = FIXTURES / dst if dst else fixed
+            out = root / f"layout_{name}_{zone_tag(zone)}_{mode}"
+            found[f"layout/{name}/{zone}"] = layout_append(spark, seed, out, query)
+
+
 @pytest.fixture(scope="module", params=["true", "false"])
 def measured(
     request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
@@ -173,6 +239,7 @@ def measured(
         measure_reads(session, zone, found)
     measure_writes(session, root, mode, found)
     measure_appends(session, root, mode, found)
+    measure_layouts(session, root, mode, found)
     session.stop()
     _reset_active_session_for_tests()
     yield mode, found
@@ -257,3 +324,18 @@ def test_a_recorded_gap_keeps_its_card_and_its_spark_answer(gap: str) -> None:
         assert [row[0] for row in spark_rows] == [row[0] for row in record["repark"]]
         assert all(row[1] is not None for row in spark_rows)
         assert all(row[1] is None for row in record["repark"])
+
+
+@pytest.mark.parametrize("case", sorted(LAYOUTS))
+def test_an_int96_append_follows_the_arrow_hint_and_every_list_layout(
+    measured: tuple[str, dict[str, Any]], case: str
+) -> None:
+    _, found = measured
+    _, _, expected, ids = LAYOUTS[case]
+    for zone in ORACLE["append_zones"]:
+        outcome, back = found[f"layout/{case}/{zone}"]
+        if expected == "refuse":
+            assert outcome == "ERR AnalysisException", zone
+        else:
+            assert outcome is None, (zone, outcome)
+        assert back == ids, zone
