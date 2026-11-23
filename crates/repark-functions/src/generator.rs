@@ -245,8 +245,13 @@ pub fn mark_generator_aliases(plan: LogicalPlan) -> Result<LogicalPlan> {
     mark_plan(plan).data()
 }
 
+const ATTRIBUTE_STAMP_KEY: &str = "repark.attr";
+
 fn is_carried_name(alias: &Alias) -> bool {
-    alias.metadata.is_some() && alias.name == alias.expr.schema_name().to_string()
+    alias
+        .metadata
+        .as_ref()
+        .is_some_and(|metadata| metadata.inner().contains_key(ATTRIBUTE_STAMP_KEY))
 }
 
 fn is_user_generator_alias(expr: &Expr) -> bool {

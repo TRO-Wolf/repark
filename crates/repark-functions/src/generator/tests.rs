@@ -420,9 +420,11 @@ fn a_carried_name_with_metadata_moves_onto_the_single_output() {
         Some("a1")
     );
     let fields = frame_names(|table| {
-        table.select(vec![
-            explode_of("explode", "arr_i").alias_with_metadata("x", Some(carried.clone())),
-        ])
+        let marked = match mark_expr(explode_of("explode", "arr_i").alias("x")) {
+            Expr::Alias(alias) => Expr::Alias(alias.with_metadata(Some(carried.clone()))),
+            other => other,
+        };
+        table.select(vec![marked])
     })
     .unwrap();
     assert_eq!(fields[0].name(), "x");
