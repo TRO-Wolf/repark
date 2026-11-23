@@ -2624,6 +2624,7 @@ class DataFrame:
     def intersectAll(  # noqa: N802 — PySpark method name
         self, other: DataFrame
     ) -> DataFrame:
+        """Multiset intersect (PySpark ``intersectAll``)."""
         return self._sql_binary_set_op(other, "INTERSECT ALL")
 
     intersect_all = intersectAll
@@ -2631,6 +2632,7 @@ class DataFrame:
     def exceptAll(  # noqa: N802 — PySpark method name
         self, other: DataFrame
     ) -> DataFrame:
+        """Multiset except (PySpark ``exceptAll``)."""
         return self._sql_binary_set_op(other, "EXCEPT ALL")
 
     except_all = exceptAll
