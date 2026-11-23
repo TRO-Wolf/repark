@@ -167,6 +167,7 @@ pub(super) fn context_with_df_54_1_rule_guards(
     extension: &Arc<dyn SessionExtension>,
     dialect: &Arc<dyn SqlDialect>,
 ) -> DataFusionResult<SessionContext> {
+    let config = crate::spark_nullable::with_int96_as_instants(config);
     let analyzer_rules =
         extension.configure_analyzer_rules(analyzer_rules_with_df_54_1_rule_guards()?)?;
     let mut analyzer_rules = dialect.configure_analyzer_rules(analyzer_rules)?;
