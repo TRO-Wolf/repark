@@ -10,7 +10,7 @@ use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
     Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, Projection, ReturnFieldArgs,
-    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
+    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility, WriteOp,
 };
 use datafusion::optimizer::AnalyzerRule;
 
@@ -127,6 +127,7 @@ fn store_projections(plan: &LogicalPlan) -> Result<Vec<Vec<Expr>>> {
     let mut stores = Vec::new();
     plan.apply_with_subqueries(|node| {
         if let LogicalPlan::Dml(dml) = node
+            && matches!(dml.op, WriteOp::Insert(_))
             && let LogicalPlan::Projection(projection) = dml.input.as_ref()
         {
             stores.push(projection.expr.clone());
