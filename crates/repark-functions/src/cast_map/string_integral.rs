@@ -79,9 +79,6 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         let rewritten = expr.transform_up(|node| Ok(rewrite_cast(node, &schema)))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
-    if !transformed.transformed {
-        return Ok(transformed);
-    }
     transformed.map_data(LogicalPlan::recompute_schema)
 }
 

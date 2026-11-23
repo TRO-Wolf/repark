@@ -470,3 +470,11 @@ async fn a_cast_planned_inside_values_keeps_arrow_parsing() {
         assert!(error.contains("Cannot cast string ' 4'"), "{error}");
     }
 }
+
+#[tokio::test]
+async fn an_outer_projection_sees_the_nullable_cast_with_ansi_off() {
+    let ctx = integral_context(false);
+    let sql = "SELECT r FROM (SELECT CAST(a AS INT) AS r FROM (VALUES ('abc')) AS t(a)) AS u WHERE r IS NULL";
+    let batches = ctx.sql(sql).await.unwrap().collect().await.unwrap();
+    assert_eq!(batches.iter().map(RecordBatch::num_rows).sum::<usize>(), 1);
+}
