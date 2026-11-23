@@ -11,15 +11,15 @@ _Last updated: 2026-11-22._
 
 As of 2026-11-22.
 
-- **Shipped:** v1.5.6 ([Release state](#release-state)). **Prepared:** v1.5.7 on its release branch, not tagged.
-- **S1s in the shipped 1.5.6 wheel, fixed on main for v1.5.7:** struct comparisons, native-door DataFrame writes, dynamic partitioned overwrites, casts over Parquet statistics, pre-1970 `unix_timestamp` ([Known correctness issues](#known-correctness-issues)).
+- **Shipped:** v1.5.7 ([Release state](#release-state)).
+- **S1s in the 1.5.6 wheel, fixed in v1.5.7:** struct comparisons, native-door DataFrame writes, dynamic partitioned overwrites, casts over Parquet statistics, pre-1970 `unix_timestamp` ([Known correctness issues](#known-correctness-issues)).
 - **Labels:** format-v2 WITHDRAWN; format-v3 core HARDENED-NARROW; nanosecond columns and struct writes EXPERIMENTAL ([Iceberg maturity](#iceberg-maturity-2026-10-27)).
 - **In flight:** SIGNED-ZERO-NORMALIZE-1 part B part 2 (the nested-float write conditions), which blocks only the full v2 label (owner, 2026-11-17); parts A and B part 1 are on main as #1298 and #1326. The `UPDATE … WHERE v IN (w)` residue is carded as SIGNED-ZERO-UPDATE-IN-LIST-1. C-116 and C-118 closed.
-- **Next:** the v1.5.7 release steps ([blockers](#release-blockers)).
+- **Next:** the fixes for v1.5.8 ([Known correctness issues](#known-correctness-issues)).
 
 ## Release state
 
-**v1.5.7 (prepared 2026-11-22, not tagged):** [notes](task/roadmap/mid-term/v1-5-7-release-notes-2026-11-22.md); lock delta: the eleven `repark-*` member lines; [record](task/roadmap/mid-term/v1-5-7-qualification-record.md).
+**v1.5.7 (2026-11-22):** the data-safety fixes for 1.5.6, listed in the [notes](task/roadmap/mid-term/v1-5-7-release-notes-2026-11-22.md). Tagged `v1.5.7` at `450a0dfe`; on PyPI with five wheels. Qualification: [record](task/roadmap/mid-term/v1-5-7-qualification-record.md).
 
 **v1.5.6 (2026-11-08):** the empty-DML guard (EMPTY-DML-SHARED-GUARD-1, #1277: a DELETE or UPDATE whose condition folds to no rows writes nothing and reports zero rows), and the rest of the cycle, listed in the [notes](task/roadmap/mid-term/v1-5-6-release-notes-2026-11-08.md). Tagged `v1.5.6` at `ae60c359`; on PyPI with five wheels. The v2 production label is not part of this release (ruling A, 2026-11-08); the v3 label moves to a later release. Qualification: [record](task/roadmap/mid-term/v1-5-6-qualification-record.md).
 
@@ -156,7 +156,7 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**For v1.5.7** (owner go, 2026-11-22: cut once #1405 and #1408 merged): none open on main. PLAIN-DYNAMIC-OVERWRITE-GUARD-1 ships with it (owner D8: on the release approval). Owner actions: the squash-merge and the `release` approval. **For the format-v2 label:**
+**For v1.5.8:** none set; v1.5.7 shipped 2026-11-22. **For the format-v2 label:**
 [Iceberg maturity](#iceberg-maturity-2026-10-27). Tag history: [Release state](#release-state).
 Future tags follow [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace;
 wheel-only; crates.io publishing structurally deferred).
