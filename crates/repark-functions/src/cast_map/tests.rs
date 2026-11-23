@@ -515,7 +515,8 @@ async fn a_projection_built_without_name_checks_keeps_its_names() {
         .collect();
     fields.push((None, Arc::new(Field::new("n", DataType::Int32, true))));
     let schema = Arc::new(DFSchema::new_with_metadata(fields, Default::default()).unwrap());
-    let plan = LogicalPlan::Projection(Projection::try_new_with_schema(exprs, input, schema).unwrap());
+    let plan =
+        LogicalPlan::Projection(Projection::try_new_with_schema(exprs, input, schema).unwrap());
     let analyzed = SparkStringIntegralCast
         .analyze(plan, ctx.state().config_options())
         .unwrap();
@@ -526,5 +527,10 @@ async fn a_projection_built_without_name_checks_keeps_its_names() {
         .map(|field| field.name().clone())
         .collect();
     assert_eq!(names, ["s", "n"].map(String::from));
-    assert!(analyzed.display_indent().to_string().contains("__repark_string_to_int__"));
+    assert!(
+        analyzed
+            .display_indent()
+            .to_string()
+            .contains("__repark_string_to_int__")
+    );
 }

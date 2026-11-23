@@ -6,54 +6,14 @@
   "generator_sha256": "72bef6e69102fd6932b0cfffb0acc5b9434830ecc03149afbe69e8e788749a17",
   "cells": 1640,
   "counts": {
-   "EQUAL": 1540,
-   "DIFFERENT": 90,
+   "EQUAL": 1550,
+   "DIFFERENT": 80,
    "REFUSED": 10,
    "ERROR": 0
   },
   "recorder": "python/repark/tests/timestamps/_record_zone_oracle_1.py --main"
  },
  "cells": {
-  "bare.str.cast_bigint.utc": {
-   "status": "DIFFERENT",
-   "error": "PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast string '2026-01-02 03:04:05.123456' to value of Int64 type"
-  },
-  "bare.str.cast_bigint.new_york": {
-   "status": "DIFFERENT",
-   "error": "PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast string '2026-01-02 03:04:05.123456' to value of Int64 type"
-  },
-  "bare.str.cast_bigint.kolkata": {
-   "status": "DIFFERENT",
-   "error": "PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast string '2026-01-02 03:04:05.123456' to value of Int64 type"
-  },
-  "bare.str.cast_bigint.p0530": {
-   "status": "DIFFERENT",
-   "error": "PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast string '2026-01-02 03:04:05.123456' to value of Int64 type"
-  },
-  "bare.str.cast_bigint.etc_utc": {
-   "status": "DIFFERENT",
-   "error": "PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast string '2026-01-02 03:04:05.123456' to value of Int64 type"
-  },
-  "bare.col_str.cast_bigint.utc": {
-   "status": "DIFFERENT",
-   "error": "PySparkException: Arrow error: Cast error: Cannot cast string '2026-01-02 03:04:05.123456' to value of Int64 type"
-  },
-  "bare.col_str.cast_bigint.new_york": {
-   "status": "DIFFERENT",
-   "error": "PySparkException: Arrow error: Cast error: Cannot cast string '2026-01-02 03:04:05.123456' to value of Int64 type"
-  },
-  "bare.col_str.cast_bigint.kolkata": {
-   "status": "DIFFERENT",
-   "error": "PySparkException: Arrow error: Cast error: Cannot cast string '2026-01-02 03:04:05.123456' to value of Int64 type"
-  },
-  "bare.col_str.cast_bigint.p0530": {
-   "status": "DIFFERENT",
-   "error": "PySparkException: Arrow error: Cast error: Cannot cast string '2026-01-02 03:04:05.123456' to value of Int64 type"
-  },
-  "bare.col_str.cast_bigint.etc_utc": {
-   "status": "DIFFERENT",
-   "error": "PySparkException: Arrow error: Cast error: Cannot cast string '2026-01-02 03:04:05.123456' to value of Int64 type"
-  },
   "bare.wall.unix_micros.utc": {
    "status": "DIFFERENT",
    "type": "bigint",

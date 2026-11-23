@@ -162,7 +162,7 @@ def test_sql_execution_error_raises_base_exception(spark: ReparkSession) -> None
     with pytest.raises(PySparkException) as raised:
         df.collect()
     assert not isinstance(raised.value, (AnalysisException, ParseException))
-    assert "Cast error" in str(raised.value)
+    assert "[CAST_INVALID_INPUT]" in str(raised.value)
 
 
 # Entry point: F.expr
