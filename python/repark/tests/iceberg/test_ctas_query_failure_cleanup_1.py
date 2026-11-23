@@ -33,7 +33,7 @@ FAIL_QUERIES = {
     "F3": "SELECT id, 10 / (5 - id) AS q FROM range(1, 6)",
     "F6": "SELECT id, 10 / (199999 - id) AS q FROM range(0, 200000)",
 }
-FAIL_MARKS = {"F1": "simplify_expressions", "F3": "DIVIDE_BY_ZERO", "F6": "DIVIDE_BY_ZERO"}
+FAIL_MARKS = {"F1": "CAST_INVALID_INPUT", "F3": "DIVIDE_BY_ZERO", "F6": "DIVIDE_BY_ZERO"}
 CREATE_SPELLINGS = ("sql", "cor", "wcreate", "wcor", "savedef", "saveapp", "saveovr")
 REPLACE_SPELLINGS = ("cor", "sqlreplace", "wcor", "wreplace", "saveovr")
 KINDS = ("hadoop", "memory")

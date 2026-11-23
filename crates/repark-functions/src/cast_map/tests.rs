@@ -348,3 +348,272 @@ async fn try_cast_key_overflow_refuses_loudly() {
         assert!(error.contains("a map key cast produced NULL"), "{error}");
     }
 }
+
+fn integral_context(ansi: bool) -> SessionContext {
+    let mut rules =
+        insert_string_integral_before_coercion(datafusion::optimizer::Analyzer::new().rules)
+            .unwrap();
+    rules.push(Arc::new(SparkCoercionCastMark));
+    let state = datafusion::execution::SessionStateBuilder::new()
+        .with_config(with_spark_ansi_config(SessionConfig::new(), ansi))
+        .with_default_features()
+        .with_analyzer_rules(rules)
+        .build();
+    let ctx = SessionContext::new_with_state(state);
+    register(&ctx);
+    ctx
+}
+
+async fn integral(ansi: bool, text: &str, target: &str) -> Result<String> {
+    let sql = format!("SELECT CAST(s AS {target}) AS r FROM (VALUES ('{text}')) AS t(s)");
+    let batches = integral_context(ansi).sql(&sql).await?.collect().await?;
+    Ok(first_cell(&batches))
+}
+
+#[tokio::test]
+async fn string_integral_cast_trims_both_modes_and_nulls_only_with_ansi_off() {
+    for ansi in [true, false] {
+        for (text, target, expected) in [
+            (" 42 ", "INT", "42"),
+            ("\t7\n", "TINYINT", "7"),
+            ("\u{0}3\u{7f}", "SMALLINT", "3"),
+            ("+5", "BIGINT", "5"),
+            ("-0", "INT", "0"),
+            ("-128", "TINYINT", "-128"),
+            (" 9223372036854775807", "BIGINT", "9223372036854775807"),
+        ] {
+            assert_eq!(
+                integral(ansi, text, target).await.unwrap(),
+                expected,
+                "{text:?} {target} ansi={ansi}"
+            );
+        }
+    }
+    for (text, target, expected) in [
+        ("1.9", "INT", "1"),
+        ("-1.9", "INT", "-1"),
+        (".", "INT", "0"),
+        ("-.", "INT", "0"),
+        ("abc", "INT", ""),
+        ("", "BIGINT", ""),
+        ("1e3", "INT", ""),
+        ("128", "TINYINT", ""),
+        ("\u{a0}3", "INT", ""),
+        ("1..2", "SMALLINT", ""),
+    ] {
+        assert_eq!(
+            integral(false, text, target).await.unwrap(),
+            expected,
+            "{text:?} {target}"
+        );
+    }
+    for (text, target, spark) in [
+        ("1.0", "INT", "INT"),
+        ("128", "TINYINT", "TINYINT"),
+        ("", "BIGINT", "BIGINT"),
+        ("4 2", "SMALLINT", "SMALLINT"),
+    ] {
+        let error = integral(true, text, target).await.unwrap_err().to_string();
+        assert!(
+            error.contains(&format!(
+                "[CAST_INVALID_INPUT] The value '{text}' of the type \"STRING\" cannot be cast to \"{spark}\" because it is malformed."
+            )),
+            "{error}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn string_integral_cast_keeps_the_name_type_and_leaves_other_casts() {
+    let ctx = integral_context(false);
+    let frame = ctx
+        .sql("SELECT CAST(s AS INT), TRY_CAST(s AS INT) AS r, CAST(s AS VARCHAR) AS d FROM (VALUES (' 4')) AS t(s)")
+        .await
+        .unwrap();
+    let plan = ctx.state().optimize(frame.logical_plan()).unwrap();
+    let names: Vec<String> = plan
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    assert_eq!(names, ["t.s", "r", "d"].map(String::from));
+    assert_eq!(plan.schema().field(0).data_type(), &DataType::Int32);
+    let shown = plan.display_indent().to_string();
+    assert!(shown.contains("__repark_string_to_int__(t.s)"), "{shown}");
+    assert!(shown.contains("TRY_CAST(t.s AS Int32)"), "{shown}");
+    let batches = frame.collect().await.unwrap();
+    assert_eq!(first_cell(&batches), "4");
+    assert!(batches[0].column(1).is_null(0));
+}
+
+#[tokio::test]
+async fn arrow_cast_operand_keeps_arrow_parsing() {
+    let sql = format!(
+        "SELECT CAST({ARROW_CAST_OPERAND_NAME}(s) AS INT) AS r FROM (VALUES (' 4')) AS t(s)"
+    );
+    for ansi in [true, false] {
+        let error = integral_context(ansi)
+            .sql(&sql)
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("Cannot cast string ' 4'"), "{error}");
+    }
+}
+
+#[tokio::test]
+async fn a_cast_planned_inside_values_keeps_arrow_parsing() {
+    for ansi in [true, false] {
+        let error = integral_context(ansi)
+            .sql("SELECT * FROM (VALUES (CAST(' 4' AS INT))) AS t(r)")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("Cannot cast string ' 4'"), "{error}");
+    }
+}
+
+#[tokio::test]
+async fn an_outer_projection_sees_the_nullable_cast_with_ansi_off() {
+    let ctx = integral_context(false);
+    let sql = "SELECT r FROM (SELECT CAST(a AS INT) AS r FROM (VALUES ('abc')) AS t(a)) AS u WHERE r IS NULL";
+    let batches = ctx.sql(sql).await.unwrap().collect().await.unwrap();
+    assert_eq!(batches.iter().map(RecordBatch::num_rows).sum::<usize>(), 1);
+}
+
+#[tokio::test]
+async fn an_in_list_keeps_arrow_parsing() {
+    let sql = "SELECT n FROM (VALUES (1), (2)) AS t(n) WHERE CAST(n AS INT) IN (' 2', '3 ')";
+    for ansi in [true, false] {
+        let error = integral_context(ansi)
+            .sql(sql)
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("Cannot cast string ' 2'"), "{error}");
+    }
+}
+
+#[tokio::test]
+async fn a_projection_built_without_name_checks_keeps_its_names() {
+    use datafusion::common::DFSchema;
+    use datafusion::logical_expr::{LogicalPlan, Projection, cast, col};
+    use datafusion::optimizer::AnalyzerRule;
+    let ctx = integral_context(false);
+    let source = ctx
+        .sql("SELECT s FROM (VALUES (' 4')) AS t(s)")
+        .await
+        .unwrap()
+        .into_unoptimized_plan();
+    let exprs = vec![col("t.s"), cast(col("t.s"), DataType::Int32)];
+    let input = Arc::new(source);
+    let mut fields: Vec<_> = input
+        .schema()
+        .iter()
+        .map(|(qualifier, field)| (qualifier.cloned(), Arc::clone(field)))
+        .collect();
+    fields.push((None, Arc::new(Field::new("n", DataType::Int32, true))));
+    let metadata = std::collections::HashMap::new();
+    let schema = Arc::new(DFSchema::new_with_metadata(fields, metadata).unwrap());
+    let plan =
+        LogicalPlan::Projection(Projection::try_new_with_schema(exprs, input, schema).unwrap());
+    let analyzed = SparkStringIntegralCast
+        .analyze(plan, ctx.state().config_options())
+        .unwrap();
+    let names: Vec<String> = analyzed
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    assert_eq!(names, ["s", "n"].map(String::from));
+    assert!(
+        analyzed
+            .display_indent()
+            .to_string()
+            .contains("__repark_string_to_int__")
+    );
+}
+
+#[tokio::test]
+async fn a_join_on_a_string_key_against_an_integer_key_plans_and_trims() {
+    let ctx = integral_context(false);
+    let sql = "SELECT l.id FROM (VALUES (1), (2)) AS l(id) \
+               FULL JOIN (VALUES (' 2'), ('3')) AS r(id) ON l.id = CAST(r.id AS BIGINT)";
+    let batches = ctx.sql(sql).await.unwrap().collect().await.unwrap();
+    let rows: usize = batches.iter().map(RecordBatch::num_rows).sum();
+    assert_eq!(rows, 3);
+}
+
+#[tokio::test]
+async fn a_cast_the_coercion_inserts_keeps_arrow_parsing() {
+    for (sql, text) in [
+        (
+            "SELECT coalesce(s, 0) FROM (VALUES ('abc')) AS t(s)",
+            "'abc'",
+        ),
+        (
+            "SELECT l.id FROM (VALUES (1)) AS l(id) JOIN (VALUES (' 1')) AS r(id) ON l.id = r.id",
+            "' 1'",
+        ),
+    ] {
+        let error = integral_context(false)
+            .sql(sql)
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error.contains(&format!("Cannot cast string {text}")),
+            "{sql}: {error}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn a_user_cast_on_the_left_of_an_in_list_trims() {
+    let ctx = integral_context(false);
+    let sql =
+        "SELECT s FROM (VALUES (' 5 '), ('abc'), ('2')) AS t(s) WHERE CAST(s AS INT) IN (5, 1)";
+    let batches = ctx.sql(sql).await.unwrap().collect().await.unwrap();
+    assert_eq!(batches.iter().map(RecordBatch::num_rows).sum::<usize>(), 1);
+}
+
+#[tokio::test]
+async fn a_second_analysis_leaves_the_marked_coercion_cast() {
+    let ctx = integral_context(false);
+    let frame = ctx
+        .sql("SELECT coalesce(s, 0) AS c FROM (VALUES ('7')) AS t(s)")
+        .await
+        .unwrap();
+    let once = ctx.state().analyzer().execute_and_check(
+        frame.logical_plan().clone(),
+        ctx.state().config_options(),
+        |_, _| {},
+    );
+    let once = once.unwrap();
+    let twice = ctx
+        .state()
+        .analyzer()
+        .execute_and_check(once.clone(), ctx.state().config_options(), |_, _| {})
+        .unwrap();
+    assert_eq!(once, twice);
+    assert!(
+        !twice
+            .display_indent()
+            .to_string()
+            .contains("__repark_string_to_")
+    );
+}

@@ -551,6 +551,19 @@ def _cast_inferred_naive_timestamps(frame: DataFrame) -> DataFrame:
     return frame.select(*selects)
 
 
+ARROW_CAST_OPERAND = "__repark_arrow_cast_operand__"
+
+
+def _schema_cast(name: str, data_type: Any) -> Any:
+    from repark.spark import functions
+    from repark.spark.types import ByteType, IntegerType, LongType, ShortType
+
+    if isinstance(data_type, (ByteType, ShortType, IntegerType, LongType)):
+        quoted = "`" + name.replace("`", "``") + "`"
+        return functions.expr(f"{ARROW_CAST_OPERAND}({quoted})").cast(data_type)
+    return functions.col(name).cast(data_type)
+
+
 def _schema_fields(schema: Any) -> list[dict[str, Any]]:
     """Normalize StructType / DDL / field-list into ``[{name, dataType}, …]`` for reader casts."""
 

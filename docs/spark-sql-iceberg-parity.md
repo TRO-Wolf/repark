@@ -9333,10 +9333,13 @@ the pin rather than obeying it.
 
 - **repark** — with ANSI off (at build AND at runtime alike), only these follow the flag:
   `1/0` and `1%0` answer NULL, `2147483647 + 1` wraps, `CAST('x' AS DOUBLE)` and
-  `CAST('x' AS FLOAT)` answer NULL.
+  `CAST('x' AS FLOAT)` answer NULL, and since STRING-CAST-LENIENT-INT-1 (2026-11-22, not merged) a STRING
+  cast to TINYINT, SMALLINT, INT or BIGINT (`CAST('x' AS INT)` NULL, `CAST('1.5' AS INT)` 1). A frame or view keeps
+  one mode for its whole plan: a persistent view, a cast built under one mode over a frame built under the other,
+  and a `union` or `crossJoin` of frames from different modes answer under the plan root's mode, where Spark binds
+  each part to the mode it was built under; division does the same on main (verifier round 1 of #1413, F3).
   Every other failing cast raises the `simplify_expressions` Arrow cast error: `CAST('x' AS
-  INT / BIGINT / SMALLINT / DATE / TIMESTAMP / BOOLEAN / DECIMAL)`, `CAST('' AS INT)`,
-  `CAST('1.5' AS INT)`, `CAST('2024-13-45' AS DATE)`, `CAST('abc' AS DECIMAL(10,2))`,
+  DATE / TIMESTAMP / BOOLEAN / DECIMAL)`, `CAST('2024-13-45' AS DATE)`, `CAST('abc' AS DECIMAL(10,2))`,
   `CAST(128 AS TINYINT)`, `CAST(2147483648 AS INT)` — literal, subquery-folded, and real-column
   shapes alike. The cast-failure path never reads the ANSI flag.
 - **Apache Spark** — answers NULL for all of the above with ANSI off. *(oracle: measured —
@@ -9352,6 +9355,69 @@ the pin rather than obeying it.
   proof fresh queries read the runtime flag. C-001 stays PROVEN: its proposition covers
   division, the F-API division leg, and the stale-frame binding — all pinned green; no clause
   ever promised cast breadth.
+
+### STRING-CAST-LENIENT-INT-1 — a STRING cast to TINYINT, SMALLINT, INT or BIGINT trims Spark whitespace and answers NULL with ANSI off — **FIXED 2026-11-22 (branch `fix/string-cast-lenient-int-1`, not merged)**
+
+- **repark** — Before (main `5caea2a5`, and 1.5.6), S2, loud, both ANSI modes, on the Spark door's SQL literal,
+  `VALUES`, column, DataFrame `.cast`, `F.expr` and `selectExpr` seats and the write statements over them: the cast
+  ran Arrow's parser. A whitespace-padded integer (`' 42 '`, `'\t7\n'`, a leading or trailing tab, newline,
+  carriage return, vertical tab, form feed, U+001F or DEL) refused with `Cast error: Cannot cast string ' 42 ' to
+  value of Int32 type` (on a literal, `simplify_expressions` failed) where Spark trims and answers the number. With
+  ANSI off every malformed, fraction, exponent, special, empty, blank, Unicode-space or out-of-range text aborted
+  the whole query where Spark answers NULL for the row, or the truncated integer for a fraction (`'1.9'` 1, `'.5'`,
+  `'.'`, `'+.'` and `'-.'` 0). With ANSI on the refusal was Arrow's message, not Spark's `[CAST_INVALID_INPUT]`
+  (SQLSTATE 22018, which Spark raises for an out-of-range text too). A NUL in the text (`'\x003'`) aborted the
+  process in both modes: the Arrow error carried the NUL into Arrow's FFI stream, which panicked in a
+  non-unwinding function. `INSERT ... SELECT CAST(s AS T)`, `MERGE ... UPDATE SET c = CAST(u.s AS T)` and
+  `writeTo(...).append()` of a cast frame into an Iceberg table refused whole, where Spark stores every row with
+  ANSI off (NULL for the bad texts) and the trimmed numbers with ANSI on.
+  After: the analyzer rule `spark_string_integral_cast` (`crates/repark-functions/src/cast_map/string_integral.rs`)
+  runs such a cast through the map-cast leaf parser: Spark's trim, the strict parse and `[CAST_INVALID_INPUT]` with
+  ANSI on, the legacy parse and NULL with ANSI off, the mode read at invoke; it runs just before `TypeCoercion`, and
+  `spark_coercion_cast_mark`, last, keeps the casts coercion inserts on Arrow's parse. Every measured cell of a cast
+  the user wrote answers Spark's value, type and nullability, or Spark's class, SQLSTATE and message (a NUL renders as
+  `\u0000`); the writes (`INSERT ... SELECT CAST`, `MERGE ... UPDATE SET`, `writeTo().append()`, and since verifier
+  round 2 `UPDATE ... SET c = CAST(...)`, which round 1 had held back with the INSERT store projections) store
+  Spark's rows, read back cold. Names: `SELECT CAST('42' AS INT)` and its `selectExpr` were named
+  `__repark_decimal_cast_nullable__(42)` on main and are `'42'` here, where Spark names it `CAST(42 AS INT)`;
+  `F.expr` nullability moved from False to True, as Spark's; `F.expr` and SQL-over-a-view names still differ from
+  Spark's `s`, as on main. Not changed: `TRY_CAST` (its whitespace cells stay NULL, STRING-CAST-SILENT-1); a cast
+  inside a `VALUES` node (`INSERT ... VALUES` places its store-assignment cast there; main and this branch store
+  `INSERT INTO t VALUES (1, '42')` into an INT column as 42, where Spark refuses
+  `[INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST]` in both modes); the JSON reader's user-schema integer casts and
+  `smartCsv`'s integer rungs, which keep Arrow's parse through the identity `__repark_arrow_cast_operand__`; the CSV
+  reader's schema path (its own field parser); the native door; and every cast DataFusion's
+  type coercion inserts (a STRING against an integer in `=`, `<`, `BETWEEN`, `IN`, `+ - * /`, `coalesce`, `nvl`,
+  `if`, `nullif`, `CASE`, `greatest`, `least`, `array`, `map`, `UNION`, a join key, an INT parameter, or a STRING
+  literal compared with an integer column): the rule rewrites only the casts present before coercion, and marks
+  the rest so they keep Arrow's parse, main's answer, where Spark's own coercion often keeps STRING (verifier
+  round 1 of #1413, F1; `string_cast_lenient_int_1_coercion_oracle.json`). A user's cast on the left of an `IN`
+  list trims as Spark does (`.cast('int').isin(5, 1, 7)` keeps `' 5 '`). `__repark_arrow_cast_operand__` and
+  `__repark_string_to_*__` resolve from SQL and `F.expr`, where Spark raises `UNRESOLVED_ROUTINE` (as
+  `__repark_stats_barrier__` does on main). The map-cast leaf answers 0 for `.`, `+.` and
+  `-.` with ANSI off, as Spark does (it answered NULL).
+- **Apache Spark** — Spark 4.1.2 (`UTF8String.toInt`/`toLong`): trims bytes <= U+0020 and U+007F, `toIntExact`
+  with ANSI on, the decimal-tolerant parse with ANSI off. *(oracle: measured live 2026-11-22 with
+  iceberg-spark-runtime 1.11.0, both ANSI modes; fixture
+  `python/repark/tests/types/string_cast_lenient_int_1_spark_oracle.json`.)*
+- **Workaround on 1.5.6** — `trim()` the text before the cast for the padded cells; none for the ANSI-off NULLs
+  (`try_cast` answers NULL for padded texts too).
+- **Pin** — `python/repark/tests/types/test_string_cast_lenient_int_1.py` (the 48 seat groups, `TRY_CAST`, the
+  hundred-row frame, the comparisons, the three writes read back cold, the uncast-write refusals, the NUL
+  subprocess, the `VALUES` and JSON-reader guards); `crates/repark-functions/src/cast_map/tests.rs`
+  (`string_integral_cast_*`, `arrow_cast_operand_keeps_arrow_parsing`,
+  `a_cast_planned_inside_values_keeps_arrow_parsing`, `an_outer_projection_sees_the_nullable_cast_with_ansi_off`,
+  `an_in_list_keeps_arrow_parsing`, `a_projection_built_without_name_checks_keeps_its_names`,
+  `a_join_on_a_string_key_against_an_integer_key_plans_and_trims`). Moved to Spark's measured answer (Spark 4.1.2,
+  2026-11-22): the temp-view standing gaps of TEMP-VIEW-SESSION-SETTINGS-1/2 (the string-to-integer cells now
+  equal their fixture in both directions of the captured ANSI mode; `filter/numcast/on_off` keeps its gap, now
+  `[CAST_INVALID_INPUT]`, because the view body casts the text of a row the kept-above reader filter drops in
+  Spark), the zone-oracle difference list (ten `cast_bigint` cells now equal its fixture), the failing-CTAS cleanup
+  F1 mark (`CAST('q' AS INT)` still fails on both engines with ANSI on), and the `Cast error` texts pinned by
+  `test_errors.py`, `test_session.py` and `test_perf_describe_1.py`.
+- **Rationale** — the INT-family slice of S2 card
+  [STRING-CAST-LENIENT-1](../task/roadmap/mid-term/string-cast-lenient-1-card-2026-11-16.md); it also closes the
+  INT-family half of SET-ANSI-RUNTIME-3.
 
 ### SET-ANSI-RUNTIME-4 — sub-minute fixed offsets: Spark accepts, RePark refuses
 

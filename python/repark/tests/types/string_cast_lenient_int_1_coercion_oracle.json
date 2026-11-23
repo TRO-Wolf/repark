@@ -1,0 +1,2893 @@
+{
+ "cells": {
+  "df|cast_isin|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "df|cast_isin|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "df|cast_isin|false|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": true
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "df|cast_isin|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "df|cast_isin|false|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "df|cast_isin|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "df|cast_isin|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "df|cast_isin|true|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": true
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "df|cast_isin|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "df|cast_isin|true|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "df|coalesce|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": " 5 "
+   }
+  },
+  "df|coalesce|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "1.5"
+   }
+  },
+  "df|coalesce|false|\"7\"": {
+   "main": {
+    "type": "int",
+    "value": 7
+   },
+   "spark": {
+    "type": "string",
+    "value": "7"
+   }
+  },
+  "df|coalesce|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "abc"
+   }
+  },
+  "df|coalesce|false|null": {
+   "main": {
+    "type": "int",
+    "value": 0
+   },
+   "spark": {
+    "type": "string",
+    "value": "0"
+   }
+  },
+  "df|coalesce|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 5
+   }
+  },
+  "df|coalesce|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "df|coalesce|true|\"7\"": {
+   "main": {
+    "type": "int",
+    "value": 7
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 7
+   }
+  },
+  "df|coalesce|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "df|coalesce|true|null": {
+   "main": {
+    "type": "int",
+    "value": 0
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "df|eq|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "df|eq|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "df|eq|false|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": false
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "df|eq|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "df|eq|false|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "df|eq|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "df|eq|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "df|eq|true|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": false
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "df|eq|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "df|eq|true|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "df|greatest|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "df|greatest|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "df|greatest|false|\"7\"": {
+   "main": {
+    "type": "int",
+    "value": 7
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "df|greatest|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "df|greatest|false|null": {
+   "main": {
+    "type": "int",
+    "value": 0
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "df|greatest|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "df|greatest|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "df|greatest|true|\"7\"": {
+   "main": {
+    "type": "int",
+    "value": 7
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "df|greatest|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "df|greatest|true|null": {
+   "main": {
+    "type": "int",
+    "value": 0
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "df|isin|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "df|isin|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "df|isin|false|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": true
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "df|isin|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "df|isin|false|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "df|isin|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "df|isin|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "df|isin|true|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": true
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "df|isin|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "df|isin|true|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "df|plus|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 6.0
+   }
+  },
+  "df|plus|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 2.5
+   }
+  },
+  "df|plus|false|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 8.0
+   }
+  },
+  "df|plus|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": null
+   }
+  },
+  "df|plus|false|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": null
+   }
+  },
+  "df|plus|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 6
+   }
+  },
+  "df|plus|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "df|plus|true|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 8
+   }
+  },
+  "df|plus|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "df|plus|true|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": null
+   }
+  },
+  "sql|array|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "array<string>",
+    "value": [
+     " 5 ",
+     "0"
+    ]
+   }
+  },
+  "sql|array|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "array<string>",
+    "value": [
+     "1.5",
+     "0"
+    ]
+   }
+  },
+  "sql|array|false|\"7\"": {
+   "main": {
+    "type": "array<int>",
+    "value": [
+     7,
+     0
+    ]
+   },
+   "spark": {
+    "type": "array<string>",
+    "value": [
+     "7",
+     "0"
+    ]
+   }
+  },
+  "sql|array|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "array<string>",
+    "value": [
+     "abc",
+     "0"
+    ]
+   }
+  },
+  "sql|array|false|null": {
+   "main": {
+    "type": "array<int>",
+    "value": [
+     null,
+     0
+    ]
+   },
+   "spark": {
+    "type": "array<string>",
+    "value": [
+     null,
+     "0"
+    ]
+   }
+  },
+  "sql|array|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "array<bigint>",
+    "value": [
+     5,
+     0
+    ]
+   }
+  },
+  "sql|array|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|array|true|\"7\"": {
+   "main": {
+    "type": "array<int>",
+    "value": [
+     7,
+     0
+    ]
+   },
+   "spark": {
+    "type": "array<bigint>",
+    "value": [
+     7,
+     0
+    ]
+   }
+  },
+  "sql|array|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|array|true|null": {
+   "main": {
+    "type": "array<int>",
+    "value": [
+     null,
+     0
+    ]
+   },
+   "spark": {
+    "type": "array<bigint>",
+    "value": [
+     null,
+     0
+    ]
+   }
+  },
+  "sql|between|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "sql|between|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "sql|between|false|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": false
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "sql|between|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "sql|between|false|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "sql|between|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "sql|between|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|between|true|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": false
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "sql|between|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|between|true|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "sql|case|false|\" 5 \"": {
+   "main": {
+    "type": "string",
+    "value": " 5 "
+   },
+   "spark": {
+    "type": "string",
+    "value": " 5 "
+   }
+  },
+  "sql|case|false|\"1.5\"": {
+   "main": {
+    "type": "string",
+    "value": "1.5"
+   },
+   "spark": {
+    "type": "string",
+    "value": "1.5"
+   }
+  },
+  "sql|case|false|\"7\"": {
+   "main": {
+    "type": "string",
+    "value": "7"
+   },
+   "spark": {
+    "type": "string",
+    "value": "7"
+   }
+  },
+  "sql|case|false|\"abc\"": {
+   "main": {
+    "type": "string",
+    "value": "abc"
+   },
+   "spark": {
+    "type": "string",
+    "value": "abc"
+   }
+  },
+  "sql|case|false|null": {
+   "main": {
+    "type": "string",
+    "value": null
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|case|true|\" 5 \"": {
+   "main": {
+    "type": "string",
+    "value": " 5 "
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 5
+   }
+  },
+  "sql|case|true|\"1.5\"": {
+   "main": {
+    "type": "string",
+    "value": "1.5"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|case|true|\"7\"": {
+   "main": {
+    "type": "string",
+    "value": "7"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 7
+   }
+  },
+  "sql|case|true|\"abc\"": {
+   "main": {
+    "type": "string",
+    "value": "abc"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|case|true|null": {
+   "main": {
+    "type": "string",
+    "value": null
+   },
+   "spark": {
+    "type": "bigint",
+    "value": null
+   }
+  },
+  "sql|coalesce|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": " 5 "
+   }
+  },
+  "sql|coalesce|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "1.5"
+   }
+  },
+  "sql|coalesce|false|\"7\"": {
+   "main": {
+    "type": "int",
+    "value": 7
+   },
+   "spark": {
+    "type": "string",
+    "value": "7"
+   }
+  },
+  "sql|coalesce|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "abc"
+   }
+  },
+  "sql|coalesce|false|null": {
+   "main": {
+    "type": "int",
+    "value": 0
+   },
+   "spark": {
+    "type": "string",
+    "value": "0"
+   }
+  },
+  "sql|coalesce|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 5
+   }
+  },
+  "sql|coalesce|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|coalesce|true|\"7\"": {
+   "main": {
+    "type": "int",
+    "value": 7
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 7
+   }
+  },
+  "sql|coalesce|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|coalesce|true|null": {
+   "main": {
+    "type": "int",
+    "value": 0
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|count_coalesce|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|count_coalesce|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|count_coalesce|false|\"7\"": {
+   "main": {
+    "type": "bigint",
+    "value": 0
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|count_coalesce|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|count_coalesce|false|null": {
+   "main": {
+    "type": "bigint",
+    "value": 1
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 1
+   }
+  },
+  "sql|count_coalesce|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|count_coalesce|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|count_coalesce|true|\"7\"": {
+   "main": {
+    "type": "bigint",
+    "value": 0
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|count_coalesce|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|count_coalesce|true|null": {
+   "main": {
+    "type": "bigint",
+    "value": 1
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 1
+   }
+  },
+  "sql|div|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 2.5
+   }
+  },
+  "sql|div|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 0.75
+   }
+  },
+  "sql|div|false|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 3.5
+   }
+  },
+  "sql|div|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": null
+   }
+  },
+  "sql|div|false|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": null
+   }
+  },
+  "sql|div|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 2.5
+   }
+  },
+  "sql|div|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|div|true|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 3.5
+   }
+  },
+  "sql|div|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|div|true|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": null
+   }
+  },
+  "sql|eq|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "sql|eq|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "sql|eq|false|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": false
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "sql|eq|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "sql|eq|false|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "sql|eq|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "sql|eq|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|eq|true|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": false
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "sql|eq|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|eq|true|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "sql|greatest|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|greatest|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|greatest|false|\"7\"": {
+   "main": {
+    "type": "int",
+    "value": 7
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|greatest|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|greatest|false|null": {
+   "main": {
+    "type": "int",
+    "value": 0
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|greatest|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|greatest|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|greatest|true|\"7\"": {
+   "main": {
+    "type": "int",
+    "value": 7
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|greatest|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|greatest|true|null": {
+   "main": {
+    "type": "int",
+    "value": 0
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|if|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": " 5 "
+   }
+  },
+  "sql|if|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "1.5"
+   }
+  },
+  "sql|if|false|\"7\"": {
+   "main": {
+    "type": "int",
+    "value": 7
+   },
+   "spark": {
+    "type": "string",
+    "value": "7"
+   }
+  },
+  "sql|if|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "abc"
+   }
+  },
+  "sql|if|false|null": {
+   "main": {
+    "type": "int",
+    "value": null
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|if|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 5
+   }
+  },
+  "sql|if|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|if|true|\"7\"": {
+   "main": {
+    "type": "int",
+    "value": 7
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 7
+   }
+  },
+  "sql|if|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|if|true|null": {
+   "main": {
+    "type": "int",
+    "value": null
+   },
+   "spark": {
+    "type": "bigint",
+    "value": null
+   }
+  },
+  "sql|in|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "sql|in|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "sql|in|false|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": true
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "sql|in|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "sql|in|false|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "sql|in|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "sql|in|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|in|true|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": true
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "sql|in|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|in|true|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "sql|join|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 1
+   }
+  },
+  "sql|join|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|join|false|\"7\"": {
+   "main": {
+    "type": "bigint",
+    "value": 0
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|join|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|join|false|null": {
+   "main": {
+    "type": "bigint",
+    "value": 0
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|join|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 1
+   }
+  },
+  "sql|join|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|join|true|\"7\"": {
+   "main": {
+    "type": "bigint",
+    "value": 0
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|join|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|join|true|null": {
+   "main": {
+    "type": "bigint",
+    "value": 0
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|least|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|least|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|least|false|\"7\"": {
+   "main": {
+    "type": "int",
+    "value": 0
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|least|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|least|false|null": {
+   "main": {
+    "type": "int",
+    "value": 0
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|least|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|least|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|least|true|\"7\"": {
+   "main": {
+    "type": "int",
+    "value": 0
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|least|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|least|true|null": {
+   "main": {
+    "type": "int",
+    "value": 0
+   },
+   "spark": {
+    "error": "DATATYPE_MISMATCH.DATA_DIFF_TYPES"
+   }
+  },
+  "sql|lt|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "sql|lt|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "sql|lt|false|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": false
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "sql|lt|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "sql|lt|false|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "sql|lt|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "sql|lt|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|lt|true|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": false
+   },
+   "spark": {
+    "type": "boolean",
+    "value": false
+   }
+  },
+  "sql|lt|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|lt|true|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "sql|map|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "map<string,string>",
+    "value": {
+     "a": " 5 ",
+     "b": "0"
+    }
+   }
+  },
+  "sql|map|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "map<string,string>",
+    "value": {
+     "a": "1.5",
+     "b": "0"
+    }
+   }
+  },
+  "sql|map|false|\"7\"": {
+   "main": {
+    "type": "map<string,int>",
+    "value": {
+     "a": 7,
+     "b": 0
+    }
+   },
+   "spark": {
+    "type": "map<string,string>",
+    "value": {
+     "a": "7",
+     "b": "0"
+    }
+   }
+  },
+  "sql|map|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "map<string,string>",
+    "value": {
+     "a": "abc",
+     "b": "0"
+    }
+   }
+  },
+  "sql|map|false|null": {
+   "main": {
+    "type": "map<string,int>",
+    "value": {
+     "a": null,
+     "b": 0
+    }
+   },
+   "spark": {
+    "type": "map<string,string>",
+    "value": {
+     "a": null,
+     "b": "0"
+    }
+   }
+  },
+  "sql|map|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "map<string,bigint>",
+    "value": {
+     "a": 5,
+     "b": 0
+    }
+   }
+  },
+  "sql|map|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|map|true|\"7\"": {
+   "main": {
+    "type": "map<string,int>",
+    "value": {
+     "a": 7,
+     "b": 0
+    }
+   },
+   "spark": {
+    "type": "map<string,bigint>",
+    "value": {
+     "a": 7,
+     "b": 0
+    }
+   }
+  },
+  "sql|map|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|map|true|null": {
+   "main": {
+    "type": "map<string,int>",
+    "value": {
+     "a": null,
+     "b": 0
+    }
+   },
+   "spark": {
+    "type": "map<string,bigint>",
+    "value": {
+     "a": null,
+     "b": 0
+    }
+   }
+  },
+  "sql|minus|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 4.0
+   }
+  },
+  "sql|minus|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 0.5
+   }
+  },
+  "sql|minus|false|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 6.0
+   }
+  },
+  "sql|minus|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": null
+   }
+  },
+  "sql|minus|false|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": null
+   }
+  },
+  "sql|minus|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 4
+   }
+  },
+  "sql|minus|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|minus|true|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 6
+   }
+  },
+  "sql|minus|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|minus|true|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": null
+   }
+  },
+  "sql|nullif|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|nullif|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "1.5"
+   }
+  },
+  "sql|nullif|false|\"7\"": {
+   "main": {
+    "type": "int",
+    "value": 7
+   },
+   "spark": {
+    "type": "string",
+    "value": "7"
+   }
+  },
+  "sql|nullif|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "abc"
+   }
+  },
+  "sql|nullif|false|null": {
+   "main": {
+    "type": "int",
+    "value": null
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|nullif|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|nullif|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|nullif|true|\"7\"": {
+   "main": {
+    "type": "int",
+    "value": 7
+   },
+   "spark": {
+    "type": "string",
+    "value": "7"
+   }
+  },
+  "sql|nullif|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|nullif|true|null": {
+   "main": {
+    "type": "int",
+    "value": null
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|nvl|false|\" 5 \"": {
+   "main": {
+    "type": "string",
+    "value": " 5 "
+   },
+   "spark": {
+    "type": "string",
+    "value": " 5 "
+   }
+  },
+  "sql|nvl|false|\"1.5\"": {
+   "main": {
+    "type": "string",
+    "value": "1.5"
+   },
+   "spark": {
+    "type": "string",
+    "value": "1.5"
+   }
+  },
+  "sql|nvl|false|\"7\"": {
+   "main": {
+    "type": "string",
+    "value": "7"
+   },
+   "spark": {
+    "type": "string",
+    "value": "7"
+   }
+  },
+  "sql|nvl|false|\"abc\"": {
+   "main": {
+    "type": "string",
+    "value": "abc"
+   },
+   "spark": {
+    "type": "string",
+    "value": "abc"
+   }
+  },
+  "sql|nvl|false|null": {
+   "main": {
+    "type": "string",
+    "value": "0"
+   },
+   "spark": {
+    "type": "string",
+    "value": "0"
+   }
+  },
+  "sql|nvl|true|\" 5 \"": {
+   "main": {
+    "type": "string",
+    "value": " 5 "
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 5
+   }
+  },
+  "sql|nvl|true|\"1.5\"": {
+   "main": {
+    "type": "string",
+    "value": "1.5"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|nvl|true|\"7\"": {
+   "main": {
+    "type": "string",
+    "value": "7"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 7
+   }
+  },
+  "sql|nvl|true|\"abc\"": {
+   "main": {
+    "type": "string",
+    "value": "abc"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|nvl|true|null": {
+   "main": {
+    "type": "string",
+    "value": "0"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|plus|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 6.0
+   }
+  },
+  "sql|plus|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 2.5
+   }
+  },
+  "sql|plus|false|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 8.0
+   }
+  },
+  "sql|plus|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": null
+   }
+  },
+  "sql|plus|false|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": null
+   }
+  },
+  "sql|plus|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 6
+   }
+  },
+  "sql|plus|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|plus|true|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 8
+   }
+  },
+  "sql|plus|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|plus|true|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": null
+   }
+  },
+  "sql|repeat_lit|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": " 5  5  5 "
+   }
+  },
+  "sql|repeat_lit|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "1.51.51.5"
+   }
+  },
+  "sql|repeat_lit|false|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "777"
+   }
+  },
+  "sql|repeat_lit|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "abcabcabc"
+   }
+  },
+  "sql|repeat_lit|false|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|repeat_lit|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": " 5  5  5 "
+   }
+  },
+  "sql|repeat_lit|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "1.51.51.5"
+   }
+  },
+  "sql|repeat_lit|true|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "777"
+   }
+  },
+  "sql|repeat_lit|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "abcabcabc"
+   }
+  },
+  "sql|repeat_lit|true|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|repeat_param|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "xxxxx"
+   }
+  },
+  "sql|repeat_param|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "x"
+   }
+  },
+  "sql|repeat_param|false|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "xxxxxxx"
+   }
+  },
+  "sql|repeat_param|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|repeat_param|false|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|repeat_param|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "xxxxx"
+   }
+  },
+  "sql|repeat_param|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|repeat_param|true|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "xxxxxxx"
+   }
+  },
+  "sql|repeat_param|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|repeat_param|true|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|substr_lit|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "5 "
+   }
+  },
+  "sql|substr_lit|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": ".5"
+   }
+  },
+  "sql|substr_lit|false|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": ""
+   }
+  },
+  "sql|substr_lit|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "bc"
+   }
+  },
+  "sql|substr_lit|false|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|substr_lit|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "5 "
+   }
+  },
+  "sql|substr_lit|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": ".5"
+   }
+  },
+  "sql|substr_lit|true|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": ""
+   }
+  },
+  "sql|substr_lit|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "bc"
+   }
+  },
+  "sql|substr_lit|true|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|substr_param|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "ef"
+   }
+  },
+  "sql|substr_param|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "abcdef"
+   }
+  },
+  "sql|substr_param|false|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": ""
+   }
+  },
+  "sql|substr_param|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|substr_param|false|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|substr_param|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": "ef"
+   }
+  },
+  "sql|substr_param|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|substr_param|true|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": ""
+   }
+  },
+  "sql|substr_param|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|substr_param|true|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|times|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 10.0
+   }
+  },
+  "sql|times|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 3.0
+   }
+  },
+  "sql|times|false|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": 14.0
+   }
+  },
+  "sql|times|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": null
+   }
+  },
+  "sql|times|false|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "double",
+    "value": null
+   }
+  },
+  "sql|times|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 10
+   }
+  },
+  "sql|times|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|times|true|\"7\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 14
+   }
+  },
+  "sql|times|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|times|true|null": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": null
+   }
+  },
+  "sql|union|false|\" 5 \"": {
+   "main": {
+    "type": "string",
+    "value": " 5 "
+   },
+   "spark": {
+    "type": "string",
+    "value": " 5 "
+   }
+  },
+  "sql|union|false|\"1.5\"": {
+   "main": {
+    "type": "string",
+    "value": "0"
+   },
+   "spark": {
+    "type": "string",
+    "value": "0"
+   }
+  },
+  "sql|union|false|\"7\"": {
+   "main": {
+    "type": "string",
+    "value": "0"
+   },
+   "spark": {
+    "type": "string",
+    "value": "0"
+   }
+  },
+  "sql|union|false|\"abc\"": {
+   "main": {
+    "type": "string",
+    "value": "0"
+   },
+   "spark": {
+    "type": "string",
+    "value": "0"
+   }
+  },
+  "sql|union|false|null": {
+   "main": {
+    "type": "string",
+    "value": null
+   },
+   "spark": {
+    "type": "string",
+    "value": null
+   }
+  },
+  "sql|union|true|\" 5 \"": {
+   "main": {
+    "type": "string",
+    "value": " 5 "
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|union|true|\"1.5\"": {
+   "main": {
+    "type": "string",
+    "value": "0"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|union|true|\"7\"": {
+   "main": {
+    "type": "string",
+    "value": "0"
+   },
+   "spark": {
+    "type": "bigint",
+    "value": 0
+   }
+  },
+  "sql|union|true|\"abc\"": {
+   "main": {
+    "type": "string",
+    "value": "0"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|union|true|null": {
+   "main": {
+    "type": "string",
+    "value": null
+   },
+   "spark": {
+    "type": "bigint",
+    "value": null
+   }
+  },
+  "sql|user_cast_in|false|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "sql|user_cast_in|false|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "sql|user_cast_in|false|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": true
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "sql|user_cast_in|false|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "sql|user_cast_in|false|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  },
+  "sql|user_cast_in|true|\" 5 \"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "sql|user_cast_in|true|\"1.5\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|user_cast_in|true|\"7\"": {
+   "main": {
+    "type": "boolean",
+    "value": true
+   },
+   "spark": {
+    "type": "boolean",
+    "value": true
+   }
+  },
+  "sql|user_cast_in|true|\"abc\"": {
+   "main": {
+    "error": "NONE"
+   },
+   "spark": {
+    "error": "CAST_INVALID_INPUT"
+   }
+  },
+  "sql|user_cast_in|true|null": {
+   "main": {
+    "type": "boolean",
+    "value": null
+   },
+   "spark": {
+    "type": "boolean",
+    "value": null
+   }
+  }
+ },
+ "main": "5caea2a5",
+ "recorded": "2026-11-22",
+ "spark": "4.1.2"
+}

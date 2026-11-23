@@ -100,14 +100,14 @@ def test_describe_runs_nothing_until_an_action(
     described = bad.describe("n")
     assert materialized == []
     assert described.columns == ["summary", "n"]
-    with pytest.raises(PySparkException, match="Cannot cast"):
+    with pytest.raises(PySparkException, match=r"\[CAST_INVALID_INPUT\]"):
         described.collect()
     assert materialized != []
     monkeypatch.undo()
     materialized.clear()
     summarized = bad.summary("count", "max")
     assert materialized == []
-    with pytest.raises(PySparkException, match="Cannot cast"):
+    with pytest.raises(PySparkException, match=r"\[CAST_INVALID_INPUT\]"):
         summarized.collect()
 
 

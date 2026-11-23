@@ -207,11 +207,11 @@ ROWS: list[CastRow] = [
         family="malformed_string_numeric",
         sql="SELECT CAST(a AS INT) AS n FROM (VALUES ('abc')) AS t(a)",
         spark_error_needle="CAST_INVALID_INPUT",
-        repark_error_needle="Cast error",
+        repark_error_needle="CAST_INVALID_INPUT",
         note=(
-            "ANSI ON equality: malformed string→INT raises on BOTH engines. Spark surface is "
-            "CAST_INVALID_INPUT / NumberFormatException; repark surfaces Arrow Cast error via "
-            f"PySparkException. Under non-ANSI Spark this used to be NULL (BL-1). {FIX_G6}."
+            "ANSI ON equality: malformed string→INT raises on BOTH engines with "
+            "CAST_INVALID_INPUT (STRING-CAST-LENIENT-1). Under non-ANSI both answer NULL. "
+            f"{FIX_G6}."
         ),
     ),
     CastRow(
@@ -306,7 +306,7 @@ ROWS: list[CastRow] = [
         cast_column="v",
         cast_type="int",
         spark_error_needle="CAST_INVALID_INPUT",
-        repark_error_needle="Cast error",
+        repark_error_needle="CAST_INVALID_INPUT",
         note=(
             "CP-11 DataFrame-API twin of malformed_string_to_int: Column.cast('int') on 'abc' "
             "raises on both engines under ANSI ON (same class as the SQL door). Pins the DF "

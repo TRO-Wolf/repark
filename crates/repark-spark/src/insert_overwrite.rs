@@ -825,6 +825,16 @@ pub(crate) fn expr_has_unsafe_cast(expr: &DataFusionExpr, schema: &DFSchema) -> 
                     return Ok(TreeNodeRecursion::Stop);
                 }
             }
+            DataFusionExpr::ScalarFunction(_) => {
+                if let Some((operand, target)) =
+                    repark_functions::cast_map::string_integral_cast_parts(node)
+                    && let Ok(from_type) = operand.get_type(schema)
+                    && assignment_types::cast_may_fail_at_runtime(&from_type, &target)
+                {
+                    found = true;
+                    return Ok(TreeNodeRecursion::Stop);
+                }
+            }
             DataFusionExpr::ScalarSubquery(subquery)
             | DataFusionExpr::Exists(Exists { subquery, .. })
             | DataFusionExpr::InSubquery(InSubquery { subquery, .. })
