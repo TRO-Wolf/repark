@@ -42,8 +42,9 @@ Delta 2: `GeneratorAliasMark`, the first analyzer rule on the Spark door (before
 explicit alias on a generator call into the `__repark_gen_alias` marker, so `GeneratorRewrite` takes user names only
 from the marker and names bare outputs from the argument type; coercion's restored names (a `CASE`, `filter`,
 `transform`, `coalesce` argument) no longer read as aliases, and an alias spelled as the call
-(``AS `posexplode(arr)` ``) refuses as Spark does. A lineage stamp (an alias carrying `repark.attr`) moves onto a
-one-output generator's output, and `stamp_attribute_ids` marks before it stamps, so `.select("col")`,
+(``AS `posexplode(arr)` ``) refuses as Spark does. `stamp_attribute_ids` marks before it stamps: a frame alias
+becomes the marker and a bare call is held in `__repark_gen_bare` (its own plan name), so a stamp, stripped or not,
+never reads as a user alias and moves onto a one-output generator's output; `.select("col")`,
 `.withColumn`, `groupBy("col")` and a self-join after `F.expr("explode(arr)")` answer as Spark. A bare `explode`
 beside a select item named `col` gets a plan name that cannot collide (`spark_rewrites/bare_explode.rs`), so a map
 there answers `key`, `value`. `PyColumn::is_bare_generator` and `_rewrap_rebound_column` keep `_GeneratorColumn` and unaliased
@@ -81,9 +82,8 @@ operations, and the `array_repeat` record, the first 12 red on the delta-1 head)
   before `GeneratorRewrite`, so an outer query cannot read `key` / `value` of a map explode or `pos` / `col` of a
   `posexplode` inside a subquery. Spark's `AS (k, v)` multi-alias refuses (FNP9-GENERATORS-1); one alias on a map
   or `posexplode` raises `COLUMN_ALIASES_MISMATCH` (Spark `UDTF_ALIAS_NUMBER_MISMATCH`).
-- Open on this head (delta 2): `F.expr("posexplode(arr)")`, `F.expr("inline(a_struct)")` and `F.expr("explode(m)")`
-  selected bare in a DataFrame refuse `[COLUMN_ALIASES_MISMATCH]`; on `442887339` they answered Spark's rows under
-  placeholder column names; main refuses the map forms. The seat is open: skipping `Column.for_select`'s alias alone did not change it.
+- `F.expr("posexplode(arr)")`, `F.expr("inline(a_struct)")` and `F.expr("explode(m)")` selected bare in a DataFrame
+  answer Spark's rows under the placeholder column name (`DataFrame.columns`), as on `442887339`.
 - `array_repeat` over an array argument fails in its own kernel (`ListArray expected data type … 'element'`) on
   main and on the head, with or without a generator, so `explode_outer(array_repeat(sequence(1, 2), 0))` fails
   (the seat is `array_repeat`, not the generator).
