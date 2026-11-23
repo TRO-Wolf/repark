@@ -51,25 +51,41 @@ static STRING_INTEGRAL_KEYS: LazyLock<[Arc<ScalarUDF>; 4]> = LazyLock::new(|| {
 static NARROW_INTEGRAL: LazyLock<[Arc<ScalarUDF>; 4]> = LazyLock::new(|| {
     NARROW_TARGETS.map(|(target, name)| {
         Arc::new(ScalarUDF::from(SparkNarrowIntegral::new(
-            target, name, true,
+            target, name, true, false,
+        )))
+    })
+});
+static NARROW_INTEGRAL_NULLABLE: LazyLock<[Arc<ScalarUDF>; 4]> = LazyLock::new(|| {
+    NARROW_TARGETS.map(|(target, name)| {
+        Arc::new(ScalarUDF::from(SparkNarrowIntegral::new(
+            target, name, true, true,
         )))
     })
 });
 static NARROW_INTEGRAL_KEYS: LazyLock<[Arc<ScalarUDF>; 4]> = LazyLock::new(|| {
     NARROW_TARGETS.map(|(target, name)| {
         Arc::new(ScalarUDF::from(SparkNarrowIntegral::new(
-            target, name, false,
+            target, name, false, false,
+        )))
+    })
+});
+static NARROW_INTEGRAL_KEYS_NULLABLE: LazyLock<[Arc<ScalarUDF>; 4]> = LazyLock::new(|| {
+    NARROW_TARGETS.map(|(target, name)| {
+        Arc::new(ScalarUDF::from(SparkNarrowIntegral::new(
+            target, name, false, true,
         )))
     })
 });
 static ARROW_CAST_OPERAND: LazyLock<Arc<ScalarUDF>> =
-    LazyLock::new(|| Arc::new(ScalarUDF::from(ArrowCastOperand::new())));
+    LazyLock::new(|| Arc::new(ScalarUDF::from(ArrowCastOperand::new(false))));
+static ARROW_CAST_OPERAND_NULLABLE: LazyLock<Arc<ScalarUDF>> =
+    LazyLock::new(|| Arc::new(ScalarUDF::from(ArrowCastOperand::new(true))));
 
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
     STRING_INTEGRAL
         .iter()
-        .chain(NARROW_INTEGRAL.iter())
+        .chain(NARROW_INTEGRAL_NULLABLE.iter())
         .chain(std::iter::once(&*ARROW_CAST_OPERAND))
         .map(Arc::clone)
         .collect()
@@ -133,14 +149,41 @@ fn string_integral_udf(target: &DataType, named: bool) -> Option<Arc<ScalarUDF>>
     family.get(index).map(Arc::clone)
 }
 
-fn narrow_integral_udf(target: &DataType, named: bool) -> Option<Arc<ScalarUDF>> {
+fn narrow_integral_udf(
+    target: &DataType,
+    named: bool,
+    force_nullable: bool,
+) -> Option<Arc<ScalarUDF>> {
     let index = target_index(target)?;
-    let family = if named {
-        &NARROW_INTEGRAL
-    } else {
-        &NARROW_INTEGRAL_KEYS
+    let family = match (named, force_nullable) {
+        (true, false) => &NARROW_INTEGRAL,
+        (true, true) => &NARROW_INTEGRAL_NULLABLE,
+        (false, false) => &NARROW_INTEGRAL_KEYS,
+        (false, true) => &NARROW_INTEGRAL_KEYS_NULLABLE,
     };
     family.get(index).map(Arc::clone)
+}
+
+fn arrow_cast_operand_udf(force_nullable: bool) -> Arc<ScalarUDF> {
+    if force_nullable {
+        Arc::clone(&ARROW_CAST_OPERAND_NULLABLE)
+    } else {
+        Arc::clone(&ARROW_CAST_OPERAND)
+    }
+}
+
+fn logical_operand_nullable(operand: &Expr, schema: &DFSchema) -> bool {
+    match operand {
+        Expr::ScalarSubquery(_) => true,
+        Expr::Alias(alias) => logical_operand_nullable(&alias.expr, schema),
+        Expr::Negative(inner) => logical_operand_nullable(inner, schema),
+        Expr::Cast(cast) => logical_operand_nullable(&cast.expr, schema),
+        Expr::BinaryExpr(binary) => {
+            logical_operand_nullable(&binary.left, schema)
+                || logical_operand_nullable(&binary.right, schema)
+        }
+        _ => operand.nullable(schema).unwrap_or(true),
+    }
 }
 
 fn plain_type(data_type: &DataType) -> &DataType {
@@ -215,8 +258,18 @@ fn decimal_to_decimal_overflows(
     }
 }
 
-fn is_suffix_literal(expr: &Expr) -> bool {
-    matches!(expr, Expr::ScalarFunction(function) if function.func.name() == SUFFIX_LITERAL_NAME)
+fn is_synthetic_suffix_literal(expr: &Expr) -> bool {
+    let Expr::ScalarFunction(function) = expr else {
+        return false;
+    };
+    if function.func.name() != SUFFIX_LITERAL_NAME {
+        return false;
+    }
+    match function.args.as_slice() {
+        [Expr::Literal(_, _)] => true,
+        [Expr::Negative(inner)] => matches!(inner.as_ref(), Expr::Literal(_, _)),
+        _ => false,
+    }
 }
 
 fn cast_udf_for(
@@ -224,8 +277,9 @@ fn cast_udf_for(
     source: &DataType,
     target: &DataType,
     named: bool,
+    force_nullable: bool,
 ) -> Option<Arc<ScalarUDF>> {
-    if is_arrow_cast_operand(operand) || is_suffix_literal(operand) {
+    if is_arrow_cast_operand(operand) || is_synthetic_suffix_literal(operand) {
         return None;
     }
     if is_string_type(source) {
@@ -236,11 +290,11 @@ fn cast_udf_for(
         if is_in_range_int_literal(operand, target) {
             return None;
         }
-        return narrow_integral_udf(target, named);
+        return narrow_integral_udf(target, named, force_nullable);
     }
     if let DataType::Decimal128(precision, scale) = plain {
         if decimal_integer_overflows(*precision, *scale, target) {
-            return narrow_integral_udf(target, named);
+            return narrow_integral_udf(target, named, true);
         }
         if let DataType::Decimal128(to_precision, to_scale) = target
             && decimal_to_decimal_overflows(*precision, *scale, *to_precision, *to_scale)
@@ -254,7 +308,7 @@ fn cast_udf_for(
         return None;
     }
     if matches!(plain, DataType::Float32 | DataType::Float64) {
-        return narrow_integral_udf(target, named);
+        return narrow_integral_udf(target, named, true);
     }
     None
 }
@@ -395,14 +449,15 @@ fn mark_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
         return Transformed::no(expr);
     };
     let wants_mark = cast.expr.get_type(schema).is_ok_and(|source| {
-        cast_udf_for(&cast.expr, &source, cast.field.data_type(), true).is_some()
+        cast_udf_for(&cast.expr, &source, cast.field.data_type(), true, true).is_some()
     });
     if !wants_mark {
         return Transformed::no(Expr::Cast(cast));
     }
+    let force_nullable = logical_operand_nullable(&cast.expr, schema);
     let Cast { expr, field } = cast;
     let marked = Expr::ScalarFunction(ScalarFunction::new_udf(
-        Arc::clone(&ARROW_CAST_OPERAND),
+        arrow_cast_operand_udf(force_nullable),
         vec![*expr],
     ));
     Transformed::yes(Expr::Cast(Cast::new_from_field(Box::new(marked), field)))
@@ -432,7 +487,7 @@ fn rewrite_plan(plan: LogicalPlan, stores: &DmlProjections) -> Result<Transforme
                     field,
                 } = cast;
                 let inner_rewritten =
-                    (*operand).transform_down(|node| Ok(rewrite_node(node, &schema, named)))?;
+                    (*operand).transform_up(|node| Ok(rewrite_node(node, &schema, named)))?;
                 inner_rewritten.update_data(|child| {
                     wrap_aliases(
                         Expr::Cast(Cast::new_from_field(Box::new(child), field)),
@@ -441,10 +496,10 @@ fn rewrite_plan(plan: LogicalPlan, stores: &DmlProjections) -> Result<Transforme
                 })
             } else {
                 wrap_aliases(inner, frames)
-                    .transform_down(|node| Ok(rewrite_node(node, &schema, named)))?
+                    .transform_up(|node| Ok(rewrite_node(node, &schema, named)))?
             }
         } else {
-            expr.transform_down(|node| Ok(rewrite_node(node, &schema, named)))?
+            expr.transform_up(|node| Ok(rewrite_node(node, &schema, named)))?
         };
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
@@ -481,6 +536,17 @@ fn is_arrow_cast_operand(expr: &Expr) -> bool {
 }
 
 fn rewrite_node(expr: Expr, schema: &DFSchema, named: bool) -> Transformed<Expr> {
+    if let Expr::ScalarFunction(mut function) = expr {
+        if function.func.name() == ARROW_CAST_OPERAND_NAME
+            && let [arg] = function.args.as_slice()
+            && logical_operand_nullable(arg, schema)
+            && function.func.as_ref() != ARROW_CAST_OPERAND_NULLABLE.as_ref()
+        {
+            function.func = Arc::clone(&ARROW_CAST_OPERAND_NULLABLE);
+            return Transformed::yes(Expr::ScalarFunction(function));
+        }
+        return Transformed::no(Expr::ScalarFunction(function));
+    }
     rewrite_cast(expr, schema, named)
 }
 
@@ -491,7 +557,14 @@ fn rewrite_cast(expr: Expr, schema: &DFSchema, named: bool) -> Transformed<Expr>
     let Ok(source) = cast.expr.get_type(schema) else {
         return Transformed::no(expr);
     };
-    let Some(udf) = cast_udf_for(&cast.expr, &source, cast.field.data_type(), named) else {
+    let force_nullable = logical_operand_nullable(&cast.expr, schema);
+    let Some(udf) = cast_udf_for(
+        &cast.expr,
+        &source,
+        cast.field.data_type(),
+        named,
+        force_nullable,
+    ) else {
         return Transformed::no(expr);
     };
     Transformed::yes(Expr::ScalarFunction(ScalarFunction::new_udf(
@@ -581,12 +654,14 @@ impl ScalarUDFImpl for SparkStringIntegral {
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct ArrowCastOperand {
+    force_nullable: bool,
     signature: Signature,
 }
 
 impl ArrowCastOperand {
-    fn new() -> Self {
+    fn new(force_nullable: bool) -> Self {
         Self {
+            force_nullable,
             signature: Signature::any(1, Volatility::Immutable),
         }
     }
@@ -619,6 +694,9 @@ impl ScalarUDFImpl for ArrowCastOperand {
         let [value] = args.arg_fields else {
             return plan_err!("'{ARROW_CAST_OPERAND_NAME}' takes one argument");
         };
+        if self.force_nullable && !value.is_nullable() {
+            return Ok(Arc::new(value.as_ref().clone().with_nullable(true)));
+        }
         Ok(Arc::clone(value))
     }
 
@@ -661,15 +739,17 @@ struct SparkNarrowIntegral {
     target: DataType,
     name: &'static str,
     named: bool,
+    force_nullable: bool,
     signature: Signature,
 }
 
 impl SparkNarrowIntegral {
-    fn new(target: DataType, name: &'static str, named: bool) -> Self {
+    fn new(target: DataType, name: &'static str, named: bool, force_nullable: bool) -> Self {
         Self {
             target,
             name,
             named,
+            force_nullable,
             signature: Signature::any(1, Volatility::Immutable),
         }
     }
@@ -702,12 +782,13 @@ impl ScalarUDFImpl for SparkNarrowIntegral {
         let [source] = args.arg_fields else {
             return plan_err!("'{}' takes one argument", self.name);
         };
-        let nullable = match plain_type(source.data_type()) {
-            DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64 => {
-                source.is_nullable()
-            }
-            _ => true,
-        };
+        let nullable = self.force_nullable
+            || match plain_type(source.data_type()) {
+                DataType::Int8 | DataType::Int16 | DataType::Int32 | DataType::Int64 => {
+                    source.is_nullable()
+                }
+                _ => true,
+            };
         Ok(Arc::new(Field::new(
             self.name,
             self.target.clone(),

@@ -9436,20 +9436,27 @@ the pin rather than obeying it.
     rendering (`S`/`L`/`BD` suffixes, FLOAT without `F`, DOUBLE with `D` for finite values only, `2^63` accepted as
     `9223372036854775807` for BIGINT); decimal targets raise `[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]`
     (`SQLSTATE: 22003`).
-  - **Seats:** SQL `CAST` (literal, column, view body), `.cast`, `F.expr`, `selectExpr`, subquery/key seats
-    (`GROUP BY`, `JOIN ON`, `UNION`/`INTERSECT`), and cold-read Iceberg writes (CTAS, `INSERT INTO`, `INSERT OVERWRITE`
-    with `expr_has_unsafe_cast` recognizing `narrow_cast_parts`, `UPDATE ... SET`, `MERGE ... SET`, `writeTo().append()`).
-    Top-level user `CAST`s in `UPDATE ... SET` are marked by `crates/repark-spark/src/update_cast.rs` so uncast
-    `update_to_plan` store casts remain on `StoreOverflowCast` (`CAST_OVERFLOW_IN_TABLE_INSERT`).
+  - **Seats:** SQL `CAST` (literal including unary-plus suffixed literals like `+4294967297L` / `+128S`, column, view
+    body), `.cast`, `F.expr`, `selectExpr`, subquery/key seats (`GROUP BY`, `JOIN ON`, `UNION`/`INTERSECT`), and
+    cold-read Iceberg writes (CTAS, `INSERT INTO ... SELECT`, `INSERT OVERWRITE` with `expr_has_unsafe_cast` recognizing
+    `narrow_cast_parts`, `UPDATE ... SET`, `MERGE ... SET`, `writeTo().append()`). Top-level user `CAST`s in
+    `UPDATE ... SET` are marked by `crates/repark-spark/src/update_cast.rs` (only when the session installs the Spark
+    cast seam) so uncast `update_to_plan` store casts remain on `StoreOverflowCast` (`CAST_OVERFLOW_IN_TABLE_INSERT`).
+    Integer-to-integer narrowing casts preserve logical operand nullability (computed at rewrite time so nullable
+    operands such as `TRY_CAST`, `-TRY_CAST`, `CASE` without `ELSE`, `NULLIF`, outer-join columns, and scalar
+    subqueries never narrow at the physical layer).
   - **Statistics barrier (`CAST-STATS-SILENT-1`):** `crates/repark-core/src/session/df_guards/cast_shield/stats_barrier.rs`
     (`keeps_order`) bars every numeric cast that can wrap or overflow to NULL unless provably non-overflowing, preventing
     silent footer `min`/`max` folding and row-group pruning across Parquet row groups. Non-overflowing casts
     (`DECIMAL(10,2) -> INT`, `DECIMAL(10,2) -> DECIMAL(10,1)`) stay `Expr::Cast` so `CastShieldRule` + `preimage` keep
     range pushdown.
-  - **Out of scope (kept as on main):** uncast store assignment (`INSERT`, `UPDATE`), reader schema casts (`DecimalType`
-    added beside integer types in `reader_support._schema_cast`), `TRY_CAST` (stays `Expr::TryCast`; note Spark 4.1.2
-    answers `9223372036854775807` for `TRY_CAST(9223372036854775808.0 AS BIGINT)` while Arrow answers `NULL`), native
-    `repark.sql()`, `FLOAT`/`DOUBLE -> DECIMAL` (`CAST-FLOAT-DECIMAL-OVERFLOW-NULL-1`), and `INT`/`BIGINT -> DECIMAL`.
+  - **Out of scope / excluded (kept as on main):** explicit user `CAST` inside SQL `VALUES` / `INSERT ... VALUES`
+    (inherited from PR #1413's `LogicalPlan::Values` guard; tracked by
+    [VALUES-EXPLICIT-CAST-1](../task/roadmap/mid-term/cards-2026-11-23/values-explicit-cast-1-card-2026-11-23.md)),
+    uncast store assignment (`INSERT`, `UPDATE`), reader schema casts (`DecimalType` added beside integer types in
+    `reader_support._schema_cast`), `TRY_CAST` (stays `Expr::TryCast`; note Spark 4.1.2 answers `9223372036854775807`
+    for `TRY_CAST(9223372036854775808.0 AS BIGINT)` while Arrow answers `NULL`), native `repark.sql()`,
+    `FLOAT`/`DOUBLE -> DECIMAL` (`CAST-FLOAT-DECIMAL-OVERFLOW-NULL-1`), and `INT`/`BIGINT -> DECIMAL`.
 - **Apache Spark** — Spark 4.1.2 with `iceberg-spark-runtime-4.1_2.13-1.11.0`, measured live 2026-11-23 in both ANSI
   modes; fixture `python/repark/tests/types/ansi_off_narrowing_overflow_1_spark_oracle.json`.
 - **Pin** — `python/repark/tests/types/test_ansi_off_narrowing_overflow_1.py` (all 21 kinds × 6 user seats + `TRY_CAST`,

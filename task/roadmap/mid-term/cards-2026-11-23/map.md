@@ -9,5 +9,8 @@ of PRs #1411 and #1413. Each severity is proposed; the owner rates it. None is d
   `read.parquet` of a `key=value/` directory drops the partition columns, so a read-then-write copy loses them.
 - [ARROW-ERROR-NUL-ABORT-1](arrow-error-nul-abort-1-card-2026-11-23.md) (S2 proposed) — **card:** a cast error over
   text holding a NUL byte aborts the Python process.
+- [VALUES-EXPLICIT-CAST-1](values-explicit-cast-1-card-2026-11-23.md) (S2 proposed) — **card:** explicit user `CAST`
+  inside SQL `VALUES` and `INSERT ... VALUES` refuses with Arrow's error for both string-to-integer and narrowing numeric
+  casts where Spark returns rows (ANSI off) or raises `INVALID_INLINE_TABLE.FAILED_SQL_EXPRESSION_EVALUATION` (ANSI on).
 
 Up: [../map.md](../map.md).

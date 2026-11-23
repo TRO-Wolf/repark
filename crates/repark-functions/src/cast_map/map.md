@@ -26,7 +26,8 @@ the module's tests.
   (a NUL in an error crossing Arrow's FFI stream aborted the process).
   **ANSI-OFF-NARROWING-OVERFLOW-1 (2026-11-23):** adds `narrow_numeric` (also used by `leaf_cast`): fast primitive
   `signed_to_signed` (`unary` wrap in legacy, `try_map_primitive` `CAST_OVERFLOW` in ANSI), `decimal_to_integral`
-  (truncate toward zero + low-bit wrap in legacy, `CAST_OVERFLOW` with `BD` suffix in ANSI), `decimal_to_decimal`
+  (truncate toward zero + low-bit wrap in legacy, `CAST_OVERFLOW` with `BD` suffix in ANSI, `unscaled == 0` short-circuit
+  before `checked_pow`), `decimal_to_decimal`
   (HALF_UP rescale, NULL on overflow in legacy, `NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION` in ANSI), and exact
   Spark 4.1.2 `fractional_to_integral` (`java_float_text` without `F`, `java_double_text` with `D` for finite only,
   JVM saturate-to-i32-then-wrap for TINYINT/SMALLINT/INT and saturate-to-i64 for BIGINT, `2^63` accepted as `i64::MAX`
@@ -50,23 +51,29 @@ the module's tests.
   (`insert_string_integral_before_coercion`, called by the Spark extension and the `F.expr` context), rewriting user
   casts to `__repark_string_to_{tinyint,smallint,int,bigint}__`, `__repark_narrow_to_{tinyint,smallint,int,bigint}__`,
   or `__repark_narrow_to_decimal_<p>_<s>__`, reading `spark.sql.ansi.enabled` at invoke. In-range integer literals,
-  `__repark_suffix_literal__` operands, non-overflowing DECIMAL casts (`DECIMAL(10,2)->INT`, `DECIMAL(10,2)->DECIMAL(10,1)`),
+  synthetic `__repark_suffix_literal__` literal wrappers (`Literal` / `-Literal` only; unary-plus suffixed integer
+  literals wrapping `CAST(...)` are rewritten), non-overflowing DECIMAL casts (`DECIMAL(10,2)->INT`, `DECIMAL(10,2)->DECIMAL(10,1)`),
   `__repark_arrow_cast_operand__`, and `TRY_CAST` are left untouched so `FoldSparkNumericCasts`, `CastShieldRule` +
   `preimage` pushdown, and reader schema casts keep their paths. `SparkCoercionCastMark` (`spark_coercion_cast_mark`,
   last in `analyzer_rules()`) marks any remaining cast matching `cast_udf_for` (coercion-inserted casts) with
   `__repark_arrow_cast_operand__` so re-analysis leaves them alone. Both skip `Values` and an INSERT's store-assignment
   projection, and on an UPDATE's `Dml(WriteOp::Update)` projection skip only a top-level `Expr::Cast` (the store-assignment
   cast DataFusion's `update_to_plan` inserts) while still rewriting nested casts and user-written top-level casts wrapped
-  in `__repark_arrow_cast_operand__` by `repark-spark/src/update_cast.rs`. Nullability preserves child nullability for integer->integer and
-  widens to nullable for string/decimal/float sources and decimal targets. `narrow_cast_parts` joins
-  `string_integral_cast_parts` for the empty `INSERT OVERWRITE` guard.
+  in `__repark_arrow_cast_operand__` by `repark-spark/src/update_cast.rs`. Nullability is decided from the logical operand
+  at rewrite time (`logical_operand_nullable`) and combined with physical field nullability (`force_nullable ||
+  source.is_nullable()`) on both `SparkNarrowIntegral` and `ArrowCastOperand`, so integer->integer casts preserve logical
+  child nullability and never narrow it at the physical layer (working around DataFusion 54.1's `TryCastExpr` /
+  `NegativeExpr::return_field` bug); `SparkStringIntegral` and `SparkNarrowDecimal` unconditionally return nullable.
+  `narrow_cast_parts` joins `string_integral_cast_parts` for the empty `INSERT OVERWRITE` guard.
   pins: `python/repark/tests/types/test_string_cast_lenient_int_1.py`,
   `python/repark/tests/types/test_ansi_off_narrowing_overflow_1.py`
 - `narrow_tests.rs` — **ANSI-OFF-NARROWING-OVERFLOW-1 (2026-11-23):** Rust unit pins for the narrowing numeric kernel
-  and analyzer seam (integer wrap + ANSI `CAST_OVERFLOW`, decimal-to-integer truncation/wrap/overflow, decimal-to-decimal
-  HALF_UP/NULL/`NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION`, float/double JVM saturation + `2^63` + `NaN` + `±Inf` + `-0.0`,
-  nullability per source kind, dictionary inputs, `TRY_CAST` untouched, `ARROW_CAST_OPERAND` bypass, `Values` guard,
-  non-overflowing decimal and in-range literal bypass, subquery outer `IS NULL`, join key distinct names, coercion idempotence).
+  and analyzer seam (integer wrap + ANSI `CAST_OVERFLOW`, decimal-to-integer truncation/wrap/overflow + zero extreme
+  negative scale, decimal-to-decimal HALF_UP/NULL/`NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION`, float/double JVM
+  saturation + `2^63` + `NaN` + `±Inf` + `-0.0`, nullability per source kind + logical nullable operands over `NOT NULL`
+  columns, dictionary inputs, `TRY_CAST` untouched, `ARROW_CAST_OPERAND` bypass, synthetic vs cast `SUFFIX_LITERAL`,
+  `Values` guard, non-overflowing decimal and in-range literal bypass, subquery outer `IS NULL`, join key distinct
+  names, coercion idempotence).
 - `tests.rs` — the module's `#[cfg(test)]` suite: target parsing across case, spacing and
   nesting; malformed and map-free targets rejected; statements without a map cast untouched
   (string literals and comments included); the splice keeps surrounding text, nested and

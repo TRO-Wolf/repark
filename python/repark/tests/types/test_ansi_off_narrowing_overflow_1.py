@@ -353,3 +353,272 @@ def test_out_of_scope_store_assignment_reader_schema_and_native_door_stay_unchan
         pa.table(native.sql("SELECT min(CAST(b AS TINYINT)) FROM multi"))
     with pytest.raises(Exception, match=r"Can't cast value 4294967297"):
         pa.table(native.sql("SELECT CAST(CAST(4294967297 AS BIGINT) AS INT)"))
+
+
+def _assert_frame_rows_and_nullability(
+    frame: Any,
+    expected_rows: list[list[Any]],
+    expected_types: list[str],
+    expected_nullability: list[bool],
+) -> None:
+    rows = [list(row) for row in frame.collect()]
+    types = [field.dataType.simpleString() for field in frame.schema.fields]
+    nullability = [bool(field.nullable) for field in frame.schema.fields]
+    assert rows == expected_rows
+    assert types == expected_types
+    assert nullability == expected_nullability
+
+
+def test_nullable_operands_over_not_null_inputs_never_narrow_nullability(tmp_path: Path) -> None:
+    session = _open(tmp_path / "a1_wh", "false")
+    try:
+        session.sql("CREATE NAMESPACE narrow.a1").collect()
+        session.sql(
+            "CREATE TABLE narrow.a1.nn "
+            "(id INT NOT NULL, b BIGINT NOT NULL, s STRING NOT NULL) USING iceberg"
+        ).collect()
+        session.sql(
+            "INSERT INTO narrow.a1.nn VALUES (1, 4294967297L, 'abc'), (2, 1L, '7')"
+        ).collect()
+        session.sql(
+            "CREATE TABLE narrow.a1.rr (id INT NOT NULL, rb BIGINT NOT NULL) USING iceberg"
+        ).collect()
+        session.sql("INSERT INTO narrow.a1.rr VALUES (2, 10L)").collect()
+        session.sql(
+            "CREATE TABLE narrow.a1.upd "
+            "(id INT NOT NULL, b BIGINT NOT NULL, big BIGINT, sm SMALLINT) USING iceberg"
+        ).collect()
+        session.sql(
+            "INSERT INTO narrow.a1.upd VALUES "
+            "(1, 4294967297L, 0L, CAST(0 AS SMALLINT)), (2, 1L, 0L, CAST(0 AS SMALLINT))"
+        ).collect()
+
+        for ansi in ANSI_MODES:
+            session.conf.set("spark.sql.ansi.enabled", ansi)
+            _assert_frame_rows_and_nullability(
+                session.sql(
+                    "SELECT CAST(TRY_CAST(b AS INT) AS SMALLINT) AS r "
+                    "FROM (SELECT CAST(4294967297 AS BIGINT) AS b) t"
+                ),
+                [[None]],
+                ["smallint"],
+                [True],
+            )
+            _assert_frame_rows_and_nullability(
+                session.sql(
+                    "SELECT id, CAST(TRY_CAST(b AS INT) AS SMALLINT) AS r "
+                    "FROM narrow.a1.nn ORDER BY id"
+                ),
+                [[1, None], [2, 1]],
+                ["int", "smallint"],
+                [False, True],
+            )
+            _assert_frame_rows_and_nullability(
+                session.sql(
+                    "SELECT id, CAST(TRY_CAST(s AS INT) AS SMALLINT) AS r "
+                    "FROM narrow.a1.nn ORDER BY id"
+                ),
+                [[1, None], [2, 7]],
+                ["int", "smallint"],
+                [False, True],
+            )
+            _assert_frame_rows_and_nullability(
+                session.sql(
+                    "SELECT id, CAST(TRY_CAST(s AS BIGINT) AS INT) AS r "
+                    "FROM narrow.a1.nn ORDER BY id"
+                ),
+                [[1, None], [2, 7]],
+                ["int", "int"],
+                [False, True],
+            )
+            _assert_frame_rows_and_nullability(
+                session.table("narrow.a1.nn")
+                .select(
+                    "id",
+                    functions.col("b").try_cast("int").cast("smallint").alias("r"),
+                )
+                .orderBy("id"),
+                [[1, None], [2, 1]],
+                ["int", "smallint"],
+                [False, True],
+            )
+            _assert_frame_rows_and_nullability(
+                session.table("narrow.a1.nn")
+                .select(
+                    "id",
+                    functions.expr("CAST(TRY_CAST(b AS INT) AS SMALLINT)").alias("r"),
+                )
+                .orderBy("id"),
+                [[1, None], [2, 1]],
+                ["int", "smallint"],
+                [False, True],
+            )
+            _assert_frame_rows_and_nullability(
+                session.sql(
+                    "SELECT id, CAST(-TRY_CAST(b AS INT) AS SMALLINT) AS r "
+                    "FROM narrow.a1.nn ORDER BY id"
+                ),
+                [[1, None], [2, -1]],
+                ["int", "smallint"],
+                [False, True],
+            )
+            group_frame = session.sql(
+                "SELECT CAST(TRY_CAST(b AS INT) AS SMALLINT) AS k, count(*) AS cnt "
+                "FROM narrow.a1.nn GROUP BY CAST(TRY_CAST(b AS INT) AS SMALLINT)"
+            )
+            group_rows = sorted(
+                [(row[0], row[1]) for row in group_frame.collect()],
+                key=lambda item: (item[0] is not None, item[0] or 0),
+            )
+            assert group_rows == [(None, 1), (1, 1)]
+            assert [bool(field.nullable) for field in group_frame.schema.fields] == [True, False]
+
+            session.sql(
+                f"CREATE TABLE narrow.a1.ctas_{ansi} USING iceberg AS "
+                "SELECT id, CAST(TRY_CAST(b AS INT) AS SMALLINT) AS r FROM narrow.a1.nn"
+            ).collect()
+            _assert_frame_rows_and_nullability(
+                session.sql(f"SELECT id, r FROM narrow.a1.ctas_{ansi} ORDER BY id"),
+                [[1, None], [2, 1]],
+                ["int", "smallint"],
+                [False, True],
+            )
+            _assert_frame_rows_and_nullability(
+                session.sql(
+                    "SELECT id, CAST(CASE WHEN id = 2 THEN b END AS INT) AS r "
+                    "FROM narrow.a1.nn ORDER BY id"
+                ),
+                [[1, None], [2, 1]],
+                ["int", "int"],
+                [False, True],
+            )
+            _assert_frame_rows_and_nullability(
+                session.sql(
+                    "SELECT id, CAST(NULLIF(b, 4294967297L) AS INT) AS r "
+                    "FROM narrow.a1.nn ORDER BY id"
+                ),
+                [[1, None], [2, 1]],
+                ["int", "int"],
+                [False, True],
+            )
+            _assert_frame_rows_and_nullability(
+                session.sql(
+                    "SELECT l.id, CAST(r.rb AS INT) AS r "
+                    "FROM narrow.a1.nn l LEFT JOIN narrow.a1.rr r ON l.id = r.id ORDER BY l.id"
+                ),
+                [[1, None], [2, 10]],
+                ["int", "int"],
+                [False, True],
+            )
+            _assert_frame_rows_and_nullability(
+                session.sql(
+                    "SELECT id, CAST((SELECT rb FROM narrow.a1.rr WHERE id = 999) AS INT) AS r "
+                    "FROM narrow.a1.nn ORDER BY id"
+                ),
+                [[1, None], [2, None]],
+                ["int", "int"],
+                [False, True],
+            )
+            _assert_frame_rows_and_nullability(
+                session.sql(
+                    "SELECT id, CAST(TRY_CAST(b AS DECIMAL(10,2)) AS DECIMAL(3,2)) AS r "
+                    "FROM narrow.a1.nn ORDER BY id"
+                ),
+                [[1, None], [2, Decimal("1.00")]],
+                ["int", "decimal(3,2)"],
+                [False, True],
+            )
+            if ansi == "false":
+                _assert_frame_rows_and_nullability(
+                    session.sql(
+                        "SELECT id, CAST(TRY_CAST(s AS STRING) AS INT) AS r "
+                        "FROM narrow.a1.nn ORDER BY id"
+                    ),
+                    [[1, None], [2, 7]],
+                    ["int", "int"],
+                    [False, True],
+                )
+            session.sql(
+                "UPDATE narrow.a1.upd SET big = CAST(TRY_CAST(b AS INT) AS BIGINT), "
+                "sm = CAST(TRY_CAST(b AS INT) AS SMALLINT)"
+            ).collect()
+            assert [
+                list(row)
+                for row in session.sql(
+                    "SELECT id, big, sm FROM narrow.a1.upd ORDER BY id"
+                ).collect()
+            ] == [[1, None, None], [2, 1, 1]]
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+
+    native = PyReparkSession.native()
+    for sql in (
+        "SELECT CAST(TRY_CAST(b AS INT) AS SMALLINT) AS r "
+        "FROM (SELECT CAST(4294967297 AS BIGINT) AS b) t",
+        "SELECT CAST(-TRY_CAST(b AS INT) AS SMALLINT) AS r "
+        "FROM (SELECT CAST(4294967297 AS BIGINT) AS b) t",
+    ):
+        table = pa.table(native.sql(sql))
+        assert table.to_pydict() == {"r": [None]}
+        assert table.schema.field(0).nullable is True
+
+
+def test_unary_plus_suffixed_literals_narrow_as_spark(tmp_path: Path) -> None:
+    session = _open(tmp_path / "a2_wh", "false")
+    try:
+        legacy_cases: list[tuple[str, list[list[Any]], str, bool]] = [
+            ("SELECT CAST(+4294967297L AS INT) AS r", [[1]], "int", False),
+            ("SELECT CAST((+4294967297L) AS INT) AS r", [[1]], "int", False),
+            ("SELECT CAST(+128S AS TINYINT) AS r", [[-128]], "tinyint", False),
+            (
+                "SELECT CAST(+10.00BD AS DECIMAL(3,2)) AS r",
+                [[None]],
+                "decimal(3,2)",
+                True,
+            ),
+            ("SELECT CAST(+128.00BD AS TINYINT) AS r", [[-128]], "tinyint", True),
+            ("SELECT CAST(+1e10F AS TINYINT) AS r", [[-1]], "tinyint", True),
+            (
+                "SELECT CAST(+9007199254740992.0D AS INT) AS r",
+                [[2147483647]],
+                "int",
+                True,
+            ),
+        ]
+        for sql, expected_rows, expected_type, expected_null in legacy_cases:
+            _assert_frame_rows_and_nullability(
+                session.sql(sql),
+                expected_rows,
+                [expected_type],
+                [expected_null],
+            )
+
+        session.conf.set("spark.sql.ansi.enabled", "true")
+        ansi_cases: list[tuple[str, str, str]] = [
+            ("SELECT CAST(+4294967297L AS INT) AS r", "[CAST_OVERFLOW]", "4294967297L"),
+            ("SELECT CAST((+4294967297L) AS INT) AS r", "[CAST_OVERFLOW]", "4294967297L"),
+            ("SELECT CAST(+128S AS TINYINT) AS r", "[CAST_OVERFLOW]", "128S"),
+            (
+                "SELECT CAST(+10.00BD AS DECIMAL(3,2)) AS r",
+                "[NUMERIC_VALUE_OUT_OF_RANGE.WITH_SUGGESTION]",
+                "10.00",
+            ),
+            ("SELECT CAST(+128.00BD AS TINYINT) AS r", "[CAST_OVERFLOW]", "128.00BD"),
+            ("SELECT CAST(+1e10F AS TINYINT) AS r", "[CAST_OVERFLOW]", "1.0E10"),
+            (
+                "SELECT CAST(+9007199254740992.0D AS INT) AS r",
+                "[CAST_OVERFLOW]",
+                "9.007199254740992E15D",
+            ),
+        ]
+        for sql, condition, value_text in ansi_cases:
+            with pytest.raises(Exception) as exc_info:
+                session.sql(sql).collect()
+            text = str(exc_info.value)
+            assert condition in text, f"{sql}: {text}"
+            assert value_text in text, f"{sql}: {text}"
+            assert "SQLSTATE: 22003" in text, f"{sql}: {text}"
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()

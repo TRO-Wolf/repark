@@ -11,7 +11,9 @@ bars every narrowing numeric cast that can wrap or overflow to NULL so Parquet f
 silently wrong. Pinned by `python/repark/tests/types/test_ansi_off_narrowing_overflow_1.py` (oracle
 `ansi_off_narrowing_overflow_1_spark_oracle.json`), `crates/repark-functions/src/cast_map/narrow_tests.rs`, and
 `crates/repark-core/src/session/df_guards/cast_shield/stats_barrier_tests.rs`. Uncast store assignment, reader schema
-casts, `TRY_CAST`, and the native `repark.sql` door keep main's policy.
+casts, `TRY_CAST`, the native `repark.sql` door, and explicit `CAST` inside SQL `VALUES` / `INSERT ... VALUES`
+([VALUES-EXPLICIT-CAST-1](cards-2026-11-23/values-explicit-cast-1-card-2026-11-23.md), inherited from PR #1413's
+`LogicalPlan::Values` guard) keep main's policy.
 
 **Severity: S2.** A refusal, never a wrong answer, on an ordinary cast with ANSI off. It blocks no label.
 

@@ -482,3 +482,228 @@ async fn update_projection_keeps_top_level_store_cast_and_rewrites_marked_user_c
     );
     assert!(!shown.contains("__repark_narrow_to_bigint__"), "{shown}");
 }
+
+#[tokio::test]
+async fn nullable_operands_over_not_null_columns_keep_nullable_output() {
+    for ansi in [false, true] {
+        let ctx = narrow_context(ansi);
+        let left_schema = Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int32, false),
+            Field::new("b", DataType::Int64, false),
+            Field::new("s", DataType::Utf8, false),
+        ]));
+        let left_batch = RecordBatch::try_new(
+            Arc::clone(&left_schema),
+            vec![
+                Arc::new(Int32Array::from(vec![1i32, 2])),
+                Arc::new(Int64Array::from(vec![4_294_967_297i64, 1])),
+                Arc::new(datafusion::arrow::array::StringArray::from(vec![
+                    "abc", "7",
+                ])),
+            ],
+        )
+        .unwrap();
+        ctx.register_table(
+            "nn",
+            Arc::new(MemTable::try_new(left_schema, vec![vec![left_batch]]).unwrap()),
+        )
+        .unwrap();
+        let right_schema = Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int32, false),
+            Field::new("rb", DataType::Int64, false),
+        ]));
+        let right_batch = RecordBatch::try_new(
+            Arc::clone(&right_schema),
+            vec![
+                Arc::new(Int32Array::from(vec![2i32])),
+                Arc::new(Int64Array::from(vec![10i64])),
+            ],
+        )
+        .unwrap();
+        ctx.register_table(
+            "rr",
+            Arc::new(MemTable::try_new(right_schema, vec![vec![right_batch]]).unwrap()),
+        )
+        .unwrap();
+
+        let queries = [
+            (
+                "SELECT CAST(TRY_CAST(b AS INT) AS SMALLINT) AS r FROM nn ORDER BY id",
+                vec![None, Some(1i64)],
+            ),
+            (
+                "SELECT CAST(-TRY_CAST(b AS INT) AS SMALLINT) AS r FROM nn ORDER BY id",
+                vec![None, Some(-1i64)],
+            ),
+            (
+                "SELECT CAST(TRY_CAST(s AS INT) AS SMALLINT) AS r FROM nn ORDER BY id",
+                vec![None, Some(7i64)],
+            ),
+            (
+                "SELECT CAST(CASE WHEN id = 2 THEN b END AS INT) AS r FROM nn ORDER BY id",
+                vec![None, Some(1i64)],
+            ),
+            (
+                "SELECT CAST(NULLIF(b, 4294967297) AS INT) AS r FROM nn ORDER BY id",
+                vec![None, Some(1i64)],
+            ),
+            (
+                "SELECT CAST(rr.rb AS INT) AS r FROM nn LEFT JOIN rr ON nn.id = rr.id ORDER BY nn.id",
+                vec![None, Some(10i64)],
+            ),
+            (
+                "SELECT CAST((SELECT rb FROM rr WHERE id = 999) AS INT) AS r FROM nn ORDER BY id",
+                vec![None, None],
+            ),
+            (
+                "SELECT CAST(__repark_arrow_cast_operand__(TRY_CAST(b AS INT)) AS SMALLINT) AS r FROM nn ORDER BY id",
+                vec![None, Some(1i64)],
+            ),
+            (
+                "SELECT CAST(TRY_CAST(b AS INT) AS SMALLINT) AS r FROM (SELECT CAST(4294967297 AS BIGINT) AS b) t",
+                vec![None],
+            ),
+        ];
+
+        for (sql, expected) in queries {
+            let df = ctx.sql(sql).await.unwrap();
+            let optimized = ctx.state().optimize(df.logical_plan()).unwrap();
+            assert!(
+                optimized.schema().field(0).is_nullable(),
+                "ansi={ansi} {sql}"
+            );
+            let batches = df.collect().await.unwrap();
+            let mut got = Vec::new();
+            for batch in &batches {
+                assert!(batch.schema().field(0).is_nullable(), "ansi={ansi} {sql}");
+                let column = batch.column(0);
+                for row in 0..column.len() {
+                    if column.is_null(row) {
+                        got.push(None);
+                    } else {
+                        let parsed = array_value_to_string(column.as_ref(), row)
+                            .unwrap()
+                            .parse::<i64>()
+                            .unwrap();
+                        got.push(Some(parsed));
+                    }
+                }
+            }
+            assert_eq!(got, expected, "ansi={ansi} {sql}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn suffix_literal_skips_synthetic_literal_only_and_rewrites_cast_operand() {
+    use datafusion::logical_expr::{
+        ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
+        Volatility,
+    };
+
+    #[derive(Debug, PartialEq, Eq, Hash)]
+    struct StubSuffix {
+        signature: Signature,
+    }
+
+    impl ScalarUDFImpl for StubSuffix {
+        fn name(&self) -> &str {
+            crate::java_double::SUFFIX_LITERAL_NAME
+        }
+
+        fn signature(&self) -> &Signature {
+            &self.signature
+        }
+
+        fn return_type(&self, arg_types: &[DataType]) -> datafusion::common::Result<DataType> {
+            Ok(arg_types[0].clone())
+        }
+
+        fn return_field_from_args(
+            &self,
+            args: ReturnFieldArgs<'_>,
+        ) -> datafusion::common::Result<datafusion::arrow::datatypes::FieldRef> {
+            Ok(Arc::clone(&args.arg_fields[0]))
+        }
+
+        fn invoke_with_args(
+            &self,
+            args: ScalarFunctionArgs,
+        ) -> datafusion::common::Result<ColumnarValue> {
+            Ok(args.args[0].clone())
+        }
+    }
+
+    let ctx = narrow_context(false);
+    ctx.register_udf(ScalarUDF::from(StubSuffix {
+        signature: Signature::any(1, Volatility::Immutable),
+    }));
+    let wrapped_cast = format!(
+        "SELECT CAST({}(CAST(4294967297 AS BIGINT)) AS INT) AS r",
+        crate::java_double::SUFFIX_LITERAL_NAME
+    );
+    let df = ctx.sql(&wrapped_cast).await.unwrap();
+    let analyzed = ctx
+        .state()
+        .analyzer()
+        .execute_and_check(
+            df.logical_plan().clone(),
+            ctx.state().config_options(),
+            |_, _| {},
+        )
+        .unwrap();
+    let plan = analyzed.display_indent().to_string();
+    assert!(plan.contains("__repark_narrow_to_int__"), "{plan}");
+    assert_eq!(first_cell(&df.collect().await.unwrap()), "1");
+
+    let synthetic_dec = format!(
+        "SELECT CAST({}(CAST(1.5 AS DECIMAL(4,2))) AS DECIMAL(3,1)) AS r",
+        crate::java_double::SUFFIX_LITERAL_NAME
+    );
+    let df_dec = ctx.sql(&synthetic_dec).await.unwrap();
+    let analyzed_dec = ctx
+        .state()
+        .analyzer()
+        .execute_and_check(
+            df_dec.logical_plan().clone(),
+            ctx.state().config_options(),
+            |_, _| {},
+        )
+        .unwrap();
+    let plan_dec = analyzed_dec.display_indent().to_string();
+    assert!(
+        plan_dec.contains("__repark_narrow_to_decimal_3_1__"),
+        "{plan_dec}"
+    );
+
+    let synthetic_lit = format!(
+        "SELECT CAST({}(10.00) AS DECIMAL(4,2)) AS r",
+        crate::java_double::SUFFIX_LITERAL_NAME
+    );
+    let df_lit = ctx.sql(&synthetic_lit).await.unwrap();
+    let analyzed_lit = ctx
+        .state()
+        .analyzer()
+        .execute_and_check(
+            df_lit.logical_plan().clone(),
+            ctx.state().config_options(),
+            |_, _| {},
+        )
+        .unwrap();
+    let plan_lit = analyzed_lit.display_indent().to_string();
+    assert!(!plan_lit.contains("__repark_narrow_to_"), "{plan_lit}");
+}
+
+#[test]
+fn zero_decimal_with_extreme_negative_scale_narrows_to_zero() {
+    let array: ArrayRef = Arc::new(
+        Decimal128Array::from(vec![Some(0i128)])
+            .with_precision_and_scale(38, -80)
+            .unwrap(),
+    );
+    for mode in [Mode::Legacy, Mode::Ansi] {
+        let out = narrow_numeric(&array, &DataType::Int32, mode).unwrap();
+        let ints = out.as_any().downcast_ref::<Int32Array>().unwrap();
+        assert_eq!(ints.value(0), 0);
+    }
+}

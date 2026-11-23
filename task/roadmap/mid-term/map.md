@@ -784,4 +784,4 @@ Evaluated intakes awaiting an owner charter. A document here names a unit list a
 - [EXPLAIN-TABLE-RESOLVE-1](explain-table-resolve-1-card-2026-11-16.md) (S3) — **card (2026-11-16):** a table is not found.
 - [PARQUET-APPEND-STRING-VIEW-1](parquet-append-string-view-1-card-2026-11-16.md) (S3) — **card (2026-11-16):** second append refuses.
 - [TEMP-VIEW-OVER-CDF-VIEW-1](temp-view-over-cdf-view-1-card-2026-11-16.md) (S2) and [VALUES-INLINE-REFUSALS-1](values-inline-refusals-1-card-2026-11-16.md) (S3) — **cards (2026-11-16):** view chain refuses; VALUES answers where Spark refuses.
-- [cards-2026-11-23/](cards-2026-11-23/map.md) — **cards (2026-11-23, severities proposed, not dispatched):** PARQUET-PARTITION-DISCOVERY-1 (S1: `read.parquet` drops partition columns), ARROW-ERROR-NUL-ABORT-1 (S2: a NUL in a cast error aborts the process).
+- [cards-2026-11-23/](cards-2026-11-23/map.md) — **cards (2026-11-23, proposed):** PARQUET-PARTITION-DISCOVERY-1 (S1), ARROW-ERROR-NUL-ABORT-1 (S2), VALUES-EXPLICIT-CAST-1 (S2).

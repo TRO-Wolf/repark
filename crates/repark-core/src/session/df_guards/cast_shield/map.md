@@ -44,10 +44,13 @@ statistics barrier lives here too, beside the shield it shares `node_schema` and
   cast (STRING to anything else, anything to STRING, numeric to BOOLEAN, a zoned TIMESTAMP to DATE or to a zone-less
   one) is barred. A cast of a constant, a `TRY_CAST` (DataFusion carries no statistics through it) and an operand
   already behind the barrier are left alone; names are kept by `NamePreserver`, so the select list does not change.
+  `barrier_cast` computes logical operand nullability at rewrite time (`force_nullable`) and combines it with physical
+  field nullability so `StatsBarrier` never narrows nullability for `TRY_CAST` / `-TRY_CAST` operands over `NOT NULL`
+  inputs.
 - [stats_barrier_tests.rs](stats_barrier_tests.rs) — the order table (narrowing integer, decimal, and float casts
   barred; lossless widenings kept), the four inverted-range shapes (`max`/`min` direct and through a projection,
   `BETWEEN` over a projection, the `row_number` dedup) on a core session, an INT to BIGINT cast whose `max`/`min` still
   fold from the footer (no `AggregateExec`, no barrier), the multi-row-group Parquet narrowing barrier pin (`min`/`max`/`=`
-  over `[1, 2]` and `[100, 300]`), and the names and idempotence.
+  over `[1, 2]` and `[100, 300]`), `TRY_CAST` / `-TRY_CAST` logical nullability preservation, and the names and idempotence.
 
 Up: [../map.md](../map.md).

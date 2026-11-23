@@ -537,6 +537,9 @@ fn integral_to_integral(source: &ArrayRef, target: &DataType, mode: Mode) -> Res
 
 #[allow(clippy::cast_possible_truncation)]
 fn truncate_decimal_to_i128(unscaled: i128, scale: i8) -> (Option<i128>, i64) {
+    if unscaled == 0 {
+        return (Some(0), 0);
+    }
     if scale == 0 {
         return (Some(unscaled), unscaled as i64);
     }

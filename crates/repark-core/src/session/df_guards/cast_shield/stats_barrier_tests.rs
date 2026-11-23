@@ -329,3 +329,23 @@ async fn a_narrowing_cast_blocks_footer_folding_and_pruning_across_row_groups() 
         );
     }
 }
+
+#[tokio::test]
+async fn barrier_preserves_logical_nullability_for_try_cast_over_not_null_input() {
+    let session = ReparkSession::builder().build().expect("session");
+    for sql in [
+        "SELECT CAST(TRY_CAST(b AS INT) AS SMALLINT) AS r FROM (SELECT CAST(4294967297 AS BIGINT) AS b) t",
+        "SELECT CAST(-TRY_CAST(b AS INT) AS SMALLINT) AS r FROM (SELECT CAST(4294967297 AS BIGINT) AS b) t",
+    ] {
+        let batches = session
+            .sql(sql)
+            .await
+            .expect("plan")
+            .collect()
+            .await
+            .expect("collect");
+        assert_eq!(batches.len(), 1);
+        assert!(batches[0].schema().field(0).is_nullable(), "{sql}");
+        assert!(batches[0].column(0).is_null(0), "{sql}");
+    }
+}

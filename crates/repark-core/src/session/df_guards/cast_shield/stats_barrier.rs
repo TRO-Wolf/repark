@@ -18,17 +18,26 @@ const RULE_NAME: &str = "repark_stats_barrier";
 
 static STATS_BARRIER: LazyLock<Arc<ScalarUDF>> = LazyLock::new(|| {
     Arc::new(ScalarUDF::from(StatsBarrier {
+        force_nullable: false,
+        signature: Signature::any(1, Volatility::Immutable),
+    }))
+});
+
+static STATS_BARRIER_NULLABLE: LazyLock<Arc<ScalarUDF>> = LazyLock::new(|| {
+    Arc::new(ScalarUDF::from(StatsBarrier {
+        force_nullable: true,
         signature: Signature::any(1, Volatility::Immutable),
     }))
 });
 
 #[must_use]
 pub(crate) fn stats_barrier_udf() -> Arc<ScalarUDF> {
-    Arc::clone(&STATS_BARRIER)
+    Arc::clone(&STATS_BARRIER_NULLABLE)
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct StatsBarrier {
+    force_nullable: bool,
     signature: Signature,
 }
 
@@ -52,7 +61,14 @@ impl ScalarUDFImpl for StatsBarrier {
         let [field] = args.arg_fields else {
             return plan_err!("{STATS_BARRIER_NAME} takes one argument");
         };
-        Ok(Arc::new(field.as_ref().clone().with_name(self.name())))
+        let nullable = self.force_nullable || field.is_nullable();
+        Ok(Arc::new(
+            field
+                .as_ref()
+                .clone()
+                .with_name(self.name())
+                .with_nullable(nullable),
+        ))
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -144,15 +160,36 @@ fn barrier_node(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     }
 }
 
+fn logical_operand_nullable(operand: &Expr, schema: &DFSchema) -> bool {
+    match operand {
+        Expr::ScalarSubquery(_) => true,
+        Expr::Alias(alias) => logical_operand_nullable(&alias.expr, schema),
+        Expr::Negative(inner) => logical_operand_nullable(inner, schema),
+        Expr::Cast(cast) => logical_operand_nullable(&cast.expr, schema),
+        Expr::BinaryExpr(binary) => {
+            logical_operand_nullable(&binary.left, schema)
+                || logical_operand_nullable(&binary.right, schema)
+        }
+        _ => operand.nullable(schema).unwrap_or(true),
+    }
+}
+
 fn barrier_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     match expr {
         Expr::Cast(Cast {
             expr: operand,
             field,
-        }) if needs_barrier(&operand, &field, schema) => Transformed::yes(Expr::Cast(Cast {
-            expr: Box::new(stats_barrier_udf().call(vec![*operand])),
-            field,
-        })),
+        }) if needs_barrier(&operand, &field, schema) => {
+            let barrier = if logical_operand_nullable(&operand, schema) {
+                Arc::clone(&STATS_BARRIER_NULLABLE)
+            } else {
+                Arc::clone(&STATS_BARRIER)
+            };
+            Transformed::yes(Expr::Cast(Cast {
+                expr: Box::new(barrier.call(vec![*operand])),
+                field,
+            }))
+        }
         other => Transformed::no(other),
     }
 }
