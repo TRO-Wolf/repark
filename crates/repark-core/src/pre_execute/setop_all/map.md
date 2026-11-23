@@ -19,8 +19,10 @@ Tests for SQL-SETOP-ALL-MULTISET-1's multiset rewrite and `MINUS ALL` spelling (
   `non_operator_minus_all_identifiers_and_unparsable_sql_stay_untouched`,
   `databricks_session_answers_minus_all_identifiers_and_mixed_operator`,
   `untyped_null_left_operand_matches_distinct_twin_schema_and_multiset_rows`,
-  `lossless_round_trip_classifier_allows_exact_widenings_and_refuses_lossy_pairs`, and
-  `lossy_mixed_type_multiset_refuses_before_write_while_exact_widenings_answer`.
+  `lossless_round_trip_classifier_allows_exact_widenings_and_refuses_lossy_pairs`,
+  `lossy_mixed_type_multiset_refuses_before_write_while_exact_widenings_answer`, and Delta 3 pins
+  `ddl_dml_fallback_respells_values_and_parenthesized_insert_by_name` and
+  `dialect_owning_minus_all_receives_raw_sql_even_under_local_fs_guard`.
 
 ## Pointers
 

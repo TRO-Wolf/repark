@@ -2604,11 +2604,14 @@ Unit ICE-RESOURCE-BOUND-1 (U-11), dated 2026-10-26, owner rulings Q1 to Q5 of th
   under `Unnest` with no filter.
   The keys group as set-operation keys do: NULLs equal, both zeros and every NaN one key, and the
   output carries the normalised key (`0.0`, the canonical NaN), as Spark's does. `MINUS ALL` is
-  spelled `EXCEPT ALL` on the Spark door only, using `sqlparser`'s Databricks parse so only true set
-  operators (including comments and odd spacing) respell while identifiers, aliases, table names,
-  literals and unparsable SQL stay untouched: at the statement seat, in `filter` strings and stored
-  view bodies of a Spark-door session, and in `F.expr` (which belongs to `pyspark.sql.functions`,
-  built before any frame or door, so it uses Spark grammar even on native frames); the distinct
+  spelled `EXCEPT ALL` on the Spark door only, using `sqlparser`'s Databricks parse after Spark
+  pre-parse normalizers (`canonicalize_verbatim`, `time_travel`, `rewrite_sql_for_execute`,
+  `strip_schema_evolution`) so only true set operators (including comments, odd spacing, `VALUES`
+  CTAS, `BY NAME (...)`, raw strings, scientific decimals, and `FOR VERSION AS OF`) respell while
+  identifiers, aliases, table names, literals and unparsable SQL stay untouched: at the statement
+  seat, in `filter` strings and stored/temp view bodies of a Spark-door session, and in `F.expr`
+  (which belongs to `pyspark.sql.functions`, built before any frame or door, so it uses Spark grammar
+  even on native frames); the distinct
   `MINUS` still refuses (SQL-MINUS-REFUSE-1). On the native door `MINUS ALL` refuses as `MINUS` does
   there (`UnsupportedOperationException: This feature is not implemented: MINUS ALL not
   implemented`, nothing written), under the owner ruling that the native door follows Trino, then

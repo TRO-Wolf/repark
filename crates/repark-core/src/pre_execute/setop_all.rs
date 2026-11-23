@@ -656,7 +656,6 @@ fn resolve_ddl_dml_fallback(
     let mut resolved = vec![false; candidates.len()];
     let mut accepted = Vec::new();
     let mut depth = 0usize;
-    let mut prev_as = false;
     for (index, token) in tokens[..end].iter().enumerate() {
         if matches!(token.token, Token::Whitespace(_)) {
             continue;
@@ -667,8 +666,10 @@ fn resolve_ddl_dml_fallback(
                 Token::Word(word) if word.quote_style.is_none() => {
                     word.value.eq_ignore_ascii_case("SELECT")
                         || word.value.eq_ignore_ascii_case("WITH")
+                        || word.value.eq_ignore_ascii_case("VALUES")
+                        || word.value.eq_ignore_ascii_case("TABLE")
                 }
-                Token::LParen => prev_as,
+                Token::LParen => true,
                 _ => false,
             };
         if starts_suffix {
@@ -695,10 +696,6 @@ fn resolve_ddl_dml_fallback(
                 break;
             }
         }
-        prev_as = matches!(
-            &token.token,
-            Token::Word(word) if word.quote_style.is_none() && word.value.eq_ignore_ascii_case("AS")
-        );
         match token.token {
             Token::LParen => depth += 1,
             Token::RParen => depth = depth.saturating_sub(1),

@@ -105,8 +105,11 @@ impl ReparkSession {
         source_by_name: bool,
         verbatim_override: Option<bool>,
     ) -> Result<DataFrame> {
-        let rewritten =
-            crate::pre_execute::setop_all::minus_all_in_session_sql(self.context(), query);
+        let rewritten = if dialect.owns_minus_all_rewrite() {
+            std::borrow::Cow::Borrowed(query)
+        } else {
+            crate::pre_execute::setop_all::minus_all_in_session_sql(self.context(), query)
+        };
         let query = rewritten.as_ref();
         if let Some(frame) = super::spill::maybe_apply_runtime_set(self.context(), query)? {
             return Ok(frame);

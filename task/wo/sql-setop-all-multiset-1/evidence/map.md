@@ -70,7 +70,7 @@ Projection: the join's schema (casts back to the left types where coercion widen
 
 ## Red and green
 
-Six setop pin files (`test_sql_setop_all_multiset_1.py`, `test_struct_set_ops.py`, `test_values_mixed_types.py`, `test_examples_dataframe_a.py`, `test_examples_dataframe_b.py`, `test_df_easy.py`), `pytest -n 4`:
+Six setop pin files (`test_sql_setop_all_multiset_1.py`, `test_struct_setop_reorder_refusal_1.py`, `test_decimal_double_coercion_2.py`, `test_examples_dataframe_a.py`, `test_examples_dataframe_b.py`, `test_df_easy.py`), `pytest -n 4`:
 
 - `head4` (`2ce51f04`): **1433 passed, 0 failed** (0 guard failures).
 - `head3` (`1b1a00b3`): **9 failed, 1424 passed** (all 9 are Delta-2 finding pins; 0 guard failures).

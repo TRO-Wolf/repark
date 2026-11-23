@@ -617,3 +617,99 @@ async fn lossy_mixed_type_multiset_refuses_before_write_while_exact_widenings_an
         assert_eq!(rows_of(&session, sql).await, expected, "{sql}");
     }
 }
+
+#[derive(Default)]
+struct OwningRecording {
+    queries: Mutex<Vec<String>>,
+}
+
+#[async_trait(?Send)]
+impl SqlDialect for OwningRecording {
+    async fn execute(&self, cx: EngineContext<'_>, query: &str) -> DfResult<DataFrame> {
+        self.queries.lock().unwrap().push(query.to_string());
+        DataFusionDialect.execute(cx, "SELECT 1 AS a").await
+    }
+
+    fn owns_minus_all_rewrite(&self) -> bool {
+        true
+    }
+}
+
+#[test]
+fn ddl_dml_fallback_respells_values_and_parenthesized_insert_by_name() {
+    let dialect = DatabricksDialect {};
+    let cases = [
+        (
+            "CREATE TABLE ice.ns.t USING iceberg AS VALUES (1), (1), (4) MINUS ALL VALUES (1)",
+            "CREATE TABLE ice.ns.t USING iceberg AS VALUES (1), (1), (4) EXCEPT ALL VALUES (1)",
+        ),
+        (
+            "CREATE OR REPLACE TABLE ice.ns.t USING iceberg AS VALUES (1), (1), (4) \
+             MINUS ALL VALUES (1)",
+            "CREATE OR REPLACE TABLE ice.ns.t USING iceberg AS VALUES (1), (1), (4) \
+             EXCEPT ALL VALUES (1)",
+        ),
+        (
+            "REPLACE TABLE ice.ns.t USING iceberg AS VALUES (1), (1), (4) MINUS ALL VALUES (1)",
+            "REPLACE TABLE ice.ns.t USING iceberg AS VALUES (1), (1), (4) EXCEPT ALL VALUES (1)",
+        ),
+        (
+            "CREATE TABLE ice.ns.t USING iceberg TBLPROPERTIES ('comment' = 'SELECT WITH') \
+             AS VALUES (1), (1), (4) MINUS ALL VALUES (1)",
+            "CREATE TABLE ice.ns.t USING iceberg TBLPROPERTIES ('comment' = 'SELECT WITH') \
+             AS VALUES (1), (1), (4) EXCEPT ALL VALUES (1)",
+        ),
+        (
+            "INSERT INTO ice.ns.t BY NAME (SELECT 1 AS a UNION ALL SELECT 1 UNION ALL SELECT 4) \
+             MINUS ALL (SELECT 1 AS a)",
+            "INSERT INTO ice.ns.t BY NAME (SELECT 1 AS a UNION ALL SELECT 1 UNION ALL SELECT 4) \
+             EXCEPT ALL (SELECT 1 AS a)",
+        ),
+        (
+            "INSERT OVERWRITE ice.ns.t BY NAME \
+             (SELECT 1 AS a UNION ALL SELECT 1 UNION ALL SELECT 4) MINUS ALL (SELECT 1 AS a)",
+            "INSERT OVERWRITE ice.ns.t BY NAME \
+             (SELECT 1 AS a UNION ALL SELECT 1 UNION ALL SELECT 4) EXCEPT ALL (SELECT 1 AS a)",
+        ),
+        (
+            "INSERT INTO ice.ns.t REPLACE WHERE a > 0 \
+             (SELECT 1 AS a UNION ALL SELECT 1) MINUS ALL (SELECT 1 AS a)",
+            "INSERT INTO ice.ns.t REPLACE WHERE a > 0 \
+             (SELECT 1 AS a UNION ALL SELECT 1) EXCEPT ALL (SELECT 1 AS a)",
+        ),
+    ];
+    for (input, expected) in cases {
+        assert_eq!(minus_all_with(&dialect, input), expected, "{input}");
+    }
+    for untouched in [
+        "CREATE TABLE ice.ns.t USING iceberg AS \
+         (SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) s)",
+        "INSERT INTO ice.ns.t BY NAME \
+         (SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) s)",
+    ] {
+        assert!(
+            matches!(minus_all_with(&dialect, untouched), Cow::Borrowed(_)),
+            "{untouched}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn dialect_owning_minus_all_receives_raw_sql_even_under_local_fs_guard() {
+    for guarded in [false, true] {
+        let recording = Arc::new(OwningRecording::default());
+        let builder = ReparkSession::builder()
+            .config("datafusion.sql_parser.dialect", "databricks")
+            .with_sql_dialect(Arc::clone(&recording) as Arc<dyn SqlDialect>);
+        let builder = if guarded {
+            builder.with_local_fs_guard()
+        } else {
+            builder
+        };
+        let session = builder.build().unwrap();
+        let sql = "SELECT 1 AS a UNION ALL SELECT 1 MINUS ALL SELECT 1 AS a";
+        let _ = session.sql(sql).await.unwrap();
+        let seen = recording.queries.lock().unwrap().clone();
+        assert_eq!(seen, vec![sql.to_string()], "guarded={guarded}");
+    }
+}

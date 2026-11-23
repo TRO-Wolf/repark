@@ -40,10 +40,13 @@ the multiset set-operation rewrite and the `MINUS ALL` spelling.
   uses `sqlparser` (`DatabricksDialect`) to respell only `SetExpr::SetOperation { Minus, All }`
   positions as `EXCEPT` (preserving comments and spacing, leaving identifiers, aliases, literals and
   unparsable SQL untouched), on the Spark door only (the Databricks parser); the native door refuses
-  `MINUS ALL` as it refuses `MINUS` (owner ruling: Trino, then DuckDB, then refuse). It runs at the
-  first line of `ReparkSession::sql_with_write_options_inner`, on `filter` strings in the frame's
-  parser, on stored view bodies in the session's parser, and on `F.expr` (Spark grammar). The distinct
-  `MINUS` is untouched (SQL-MINUS-REFUSE-1).
+  `MINUS ALL` as it refuses `MINUS` (owner ruling: Trino, then DuckDB, then refuse). Delta 3:
+  `resolve_ddl_dml_fallback` also accepts `VALUES`, `TABLE`, and any depth-0 `(` trailing query
+  suffix (such as `BY NAME (SELECT …)`), and `SparkDialect` runs `minus_all_as_except_all` after
+  Spark normalizers (`canonicalize_verbatim`, `time_travel`, `rewrite_sql_for_execute`,
+  `strip_schema_evolution`) across statements, view bodies, `filter` strings, and `F.expr`; non-owning
+  dialects still run it at `ReparkSession::sql_with_write_options_inner`. The distinct `MINUS` is
+  untouched (SQL-MINUS-REFUSE-1).
 - [setop_all/](setop_all/map.md) — its tests.
 
 ## Pointers

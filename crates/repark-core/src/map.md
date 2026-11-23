@@ -944,7 +944,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `execute` through `PreExecute::run` instead of a bare `SessionContext::sql`, so the native
   door is guarded like the two SQL doors). `SqlDialect::on_session_built` (default no-op)
   runs from `ReparkSessionBuilder::build` after extension `register` (F-Y10-1).
-  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `SqlDialect::temp_view_name_rule` (default `None`: the ANSI and DataFusion doors keep theirs) answers the temp-view name rule from the session options, and `TempViewSession::temp_view_target_ref` (default: the home plus the legacy segment) names the reference a CREATE registers under. Case folding is the rule's job: `IgnoreCase` folds the key at creation and at lookup (fix round 2 removed the round-1 twin fallback; C-019, C-020), `Exact` is verbatim (C-011).
+  **SPARK-DOOR-TEMP-VIEW-TARGET-1 fix round 1 (2026-10-29):** `SqlDialect::temp_view_name_rule` (default `None`: ANSI/DataFusion keep theirs) returns the temp-view rule from session options; `TempViewSession::temp_view_target_ref` names the CREATE target. `IgnoreCase` folds at create and lookup (C-019, C-020), `Exact` is verbatim (C-011). `SqlDialect::owns_minus_all_rewrite` (default `false`; delegated by `LocalFsGuardedDialect`) lets a dialect run `MINUS ALL` after its normalizers.
   **IPI-40 PR6 (2026-09-24):** `TempViewSession` (`create_or_replace_temp_view_from`,
   `resolve_temp_view_home_ref`, `temp_view_home`, `list_temp_view_names`, `drop_temp_view`) is
   the session's temp-view seam; `EngineContext::temp_views` carries it (None from `new`, set by

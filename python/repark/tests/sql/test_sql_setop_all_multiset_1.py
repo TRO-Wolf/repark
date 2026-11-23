@@ -725,3 +725,221 @@ def test_f5_lossy_mixed_type_coercion_refuses_before_write_while_exact_widenings
     finally:
         session.stop()
         _reset_active_session_for_tests()
+
+
+def cold_table_rows(
+    warehouse: Path, tables: tuple[str, ...], ansi: str
+) -> dict[str, list[tuple[Any, ...]]]:
+    _reset_active_session_for_tests()
+    cold = (
+        ReparkSession.builder.appName(f"sql-setop-cold-{ansi}")
+        .config("spark.sql.session.timeZone", "UTC")
+        .config("spark.sql.ansi.enabled", ansi)
+        .getOrCreate()
+    )
+    try:
+        return {
+            table: arrow_rows(cold.read.format("iceberg").load(str(warehouse / "ns" / table)))
+            for table in tables
+        }
+    finally:
+        cold.stop()
+        _reset_active_session_for_tests()
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+def test_r1_minus_all_runs_after_spark_normalizers_across_seats(tmp_path: Path, ansi: str) -> None:
+    from decimal import Decimal
+
+    _reset_active_session_for_tests()
+    warehouse = tmp_path / f"r1-{ansi}"
+    session = (
+        ReparkSession.builder.appName(f"sql-setop-r1-{ansi}")
+        .config("spark.sql.session.timeZone", "UTC")
+        .config("spark.sql.ansi.enabled", ansi)
+        .getOrCreate()
+    )
+    try:
+        session.register_memory_catalog("ice", str(warehouse))
+        session.sql("CREATE NAMESPACE ice.ns").collect()
+        session.sql("CREATE TABLE ice.ns.base_t (a INT) USING iceberg").collect()
+        session.sql("INSERT INTO ice.ns.base_t VALUES (1), (1), (2), (3)").collect()
+        session.sql("INSERT INTO ice.ns.base_t VALUES (4)").collect()
+        snaps = [
+            row[0]
+            for row in session.sql(
+                "SELECT snapshot_id FROM ice.ns.base_t.snapshots ORDER BY committed_at"
+            ).collect()
+        ]
+        snap1, snap2 = snaps[0], snaps[-1]
+        queries = (
+            (
+                f"SELECT a FROM ice.ns.base_t FOR VERSION AS OF {snap2} "
+                f"MINUS ALL SELECT a FROM ice.ns.base_t FOR VERSION AS OF {snap1}",
+                [(4,)],
+            ),
+            (
+                r"SELECT r'a\b' AS a UNION ALL SELECT r'a\b' MINUS ALL SELECT r'a\b' AS a",
+                [(r"a\b",)],
+            ),
+            (
+                r"SELECT R'a\b' AS a UNION ALL SELECT R'a\b' MINUS ALL SELECT R'a\b' AS a",
+                [(r"a\b",)],
+            ),
+            (
+                "SELECT 1e2BD AS a UNION ALL SELECT 1e2BD MINUS ALL SELECT 100BD AS a",
+                [(Decimal("100"),)],
+            ),
+            (
+                r"SELECT 'a\'b' AS a UNION ALL SELECT 'a\'b' MINUS ALL SELECT 'a\'b' AS a",
+                [("a'b",)],
+            ),
+            (
+                "SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) t",
+                [(1,)],
+            ),
+        )
+        for sql, expected in queries:
+            assert arrow_rows(session.sql(sql)) == expected, sql
+        session.sql(
+            r"CREATE TABLE ice.ns.t_r1_raw USING iceberg AS "
+            r"SELECT r'a\b' AS a UNION ALL SELECT r'a\b' MINUS ALL SELECT r'a\b' AS a"
+        ).collect()
+        assert arrow_rows(session.sql("SELECT a FROM ice.ns.t_r1_raw")) == [(r"a\b",)]
+        session.sql("CREATE TABLE ice.ns.m_r1_raw (a STRING) USING iceberg").collect()
+        session.sql("INSERT INTO ice.ns.m_r1_raw VALUES ('z')").collect()
+        session.sql(
+            r"MERGE INTO ice.ns.m_r1_raw t USING ("
+            r"SELECT r'a\b' AS a UNION ALL SELECT r'a\b' MINUS ALL SELECT r'a\b' AS a"
+            r") s ON t.a = s.a WHEN NOT MATCHED THEN INSERT (a) VALUES (s.a)"
+        ).collect()
+        assert arrow_rows(session.sql("SELECT a FROM ice.ns.m_r1_raw")) == [(r"a\b",), ("z",)]
+        session.sql(
+            r"CREATE OR REPLACE TEMPORARY VIEW v_r1_raw AS "
+            r"SELECT r'a\b' AS a UNION ALL SELECT r'a\b' MINUS ALL SELECT r'a\b' AS a"
+        ).collect()
+        assert arrow_rows(session.sql("SELECT a FROM v_r1_raw")) == [(r"a\b",)]
+        session.sql(
+            r"CREATE VIEW ice.ns.pv_r1_raw AS "
+            r"SELECT r'a\b' AS a UNION ALL SELECT r'a\b' MINUS ALL SELECT r'a\b' AS a"
+        ).collect()
+        assert arrow_rows(session.sql("SELECT a FROM ice.ns.pv_r1_raw")) == [(r"a\b",)]
+        session.sql(
+            f"CREATE VIEW ice.ns.pv_r1_tt AS "
+            f"SELECT a FROM ice.ns.base_t FOR VERSION AS OF {snap2} "
+            f"MINUS ALL SELECT a FROM ice.ns.base_t FOR VERSION AS OF {snap1}"
+        ).collect()
+        assert arrow_rows(session.sql("SELECT a FROM ice.ns.pv_r1_tt")) == [(4,)]
+        df_s = session.sql(r"SELECT 'a\b' AS s UNION ALL SELECT 'z'")
+        assert (
+            arrow_rows(
+                df_s.filter(
+                    r"s IN (SELECT r'a\b' AS x UNION ALL SELECT r'a\b' MINUS ALL SELECT r'c' AS x)"
+                )
+            )
+            == []
+        )
+        df_raw = session.sql(r"SELECT r'a\b' AS s UNION ALL SELECT 'z'")
+        assert arrow_rows(
+            df_raw.filter(
+                r"s IN (SELECT r'a\b' AS x UNION ALL SELECT r'a\b' MINUS ALL SELECT r'c' AS x)"
+            )
+        ) == [(r"a\b",)]
+        one = session.sql("SELECT 1 AS k")
+        for expr_sql in (
+            r"(SELECT count(*) FROM (SELECT r'a\b' AS a UNION ALL "
+            r"SELECT r'a\b' MINUS ALL SELECT r'a\b' AS a) x)",
+            "(SELECT count(*) FROM (SELECT 1e2BD AS a UNION ALL "
+            "SELECT 1e2BD MINUS ALL SELECT 100BD AS a) x)",
+        ):
+            assert arrow_rows(one.select(spark_functions.expr(expr_sql).alias("c"))) == [(1,)]
+            assert arrow_rows(one.selectExpr(f"{expr_sql} AS c")) == [(1,)]
+        with pytest.raises(UnsupportedOperationException) as native_caught:
+            repark.sql("SELECT 1 AS a UNION ALL SELECT 1 MINUS ALL SELECT 1 AS a").collect()
+        assert NATIVE_MINUS_TEXT in str(native_caught.value)
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+    cold = cold_table_rows(warehouse, ("t_r1_raw", "m_r1_raw"), ansi)
+    assert cold["t_r1_raw"] == [(r"a\b",)]
+    assert cold["m_r1_raw"] == [(r"a\b",), ("z",)]
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+def test_r2_ddl_dml_values_and_insert_by_name_parens_minus_all(tmp_path: Path, ansi: str) -> None:
+    _reset_active_session_for_tests()
+    warehouse = tmp_path / f"r2-{ansi}"
+    session = (
+        ReparkSession.builder.appName(f"sql-setop-r2-{ansi}")
+        .config("spark.sql.session.timeZone", "UTC")
+        .config("spark.sql.ansi.enabled", ansi)
+        .getOrCreate()
+    )
+    write_cases = (
+        (
+            "t_r2_cv",
+            (),
+            "CREATE TABLE ice.ns.t_r2_cv USING iceberg AS "
+            "VALUES (1), (1), (4) MINUS ALL VALUES (1)",
+        ),
+        (
+            "t_r2_corv",
+            (),
+            "CREATE OR REPLACE TABLE ice.ns.t_r2_corv USING iceberg AS "
+            "VALUES (1), (1), (4) MINUS ALL VALUES (1)",
+        ),
+        (
+            "t_r2_rv",
+            ("CREATE TABLE ice.ns.t_r2_rv (a INT) USING iceberg",),
+            "REPLACE TABLE ice.ns.t_r2_rv USING iceberg AS "
+            "VALUES (1), (1), (4) MINUS ALL VALUES (1)",
+        ),
+        (
+            "t_r2_tpv",
+            (),
+            "CREATE TABLE ice.ns.t_r2_tpv USING iceberg "
+            "TBLPROPERTIES ('comment' = 'SELECT WITH') AS "
+            "VALUES (1), (1), (4) MINUS ALL VALUES (1)",
+        ),
+        (
+            "t_r2_ibn",
+            ("CREATE TABLE ice.ns.t_r2_ibn (a INT) USING iceberg",),
+            "INSERT INTO ice.ns.t_r2_ibn BY NAME "
+            "(SELECT 1 AS a UNION ALL SELECT 1 UNION ALL SELECT 4) MINUS ALL (SELECT 1 AS a)",
+        ),
+        (
+            "t_r2_iobn",
+            (
+                "CREATE TABLE ice.ns.t_r2_iobn (a INT) USING iceberg",
+                "INSERT INTO ice.ns.t_r2_iobn VALUES (9)",
+            ),
+            "INSERT OVERWRITE ice.ns.t_r2_iobn BY NAME "
+            "(SELECT 1 AS a UNION ALL SELECT 1 UNION ALL SELECT 4) MINUS ALL (SELECT 1 AS a)",
+        ),
+    )
+    try:
+        session.register_memory_catalog("ice", str(warehouse))
+        session.sql("CREATE NAMESPACE ice.ns").collect()
+        for table, setup_stmts, stmt in write_cases:
+            for setup_stmt in setup_stmts:
+                session.sql(setup_stmt).collect()
+            session.sql(stmt).collect()
+            assert arrow_rows(session.sql(f"SELECT * FROM ice.ns.{table}")) == [(1,), (4,)], stmt
+        session.sql(
+            "CREATE TABLE ice.ns.t_r2_ident USING iceberg AS "
+            "(SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) s)"
+        ).collect()
+        session.sql("CREATE TABLE ice.ns.t_r2_ibn_ident (`all` INT) USING iceberg").collect()
+        session.sql(
+            "INSERT INTO ice.ns.t_r2_ibn_ident BY NAME "
+            "(SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) s)"
+        ).collect()
+    finally:
+        session.stop()
+        _reset_active_session_for_tests()
+    names = (*(table for table, _, _ in write_cases), "t_r2_ident", "t_r2_ibn_ident")
+    cold = cold_table_rows(warehouse, names, ansi)
+    for table, _, stmt in write_cases:
+        assert cold[table] == [(1,), (4,)], stmt
+    assert cold["t_r2_ident"] == [(1,)]
+    assert cold["t_r2_ibn_ident"] == [(1,)]

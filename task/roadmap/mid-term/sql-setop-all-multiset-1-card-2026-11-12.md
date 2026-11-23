@@ -15,6 +15,11 @@ distinct twin's `Null` (`void`) schema; ALL forms check both sides and nested st
 columns (`[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE]`, distinct forms unchanged); non-lossless
 mixed-type cast-backs refuse during analysis (`AnalysisException`) naming
 [`SETOP-MIXED-TYPE-COERCION-1`](cards-2026-11-23/setop-mixed-type-coercion-1-card-2026-11-23.md).
+Delta 3 (2026-11-23): Spark-door `MINUS ALL` respelling runs after Spark pre-parse normalizers
+(`canonicalize_verbatim`, `time_travel`, `rewrite_sql_for_execute`, `strip_schema_evolution`) across
+statements, view bodies, `filter` strings, and `F.expr`, and `resolve_ddl_dml_fallback` also accepts
+`VALUES`, `TABLE`, and depth-0 parenthesized trailing queries (`INSERT ... BY NAME (SELECT ...) MINUS
+ALL (SELECT ...)`).
 
 ## Why
 

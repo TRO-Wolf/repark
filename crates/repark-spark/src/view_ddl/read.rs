@@ -158,10 +158,6 @@ async fn expand_view_body(
     if guard.level() > MAX_VIEW_EXPANSION_DEPTH {
         return Err(nested_depth_refusal());
     }
-    let body = repark_core::minus_all_as_except_all(
-        ctx.state_ref().read().config_options().sql_parser.dialect,
-        &spec.sql,
-    );
     let stored_catalog = spec
         .default_catalog
         .clone()
@@ -171,7 +167,7 @@ async fn expand_view_body(
         catalogs,
         &stored_catalog,
         &spec.default_namespace,
-        &body,
+        &spec.sql,
     )
     .await?;
     let frame = plan_prepared_body(ctx, catalogs, &prepared, &pins).await?;
@@ -183,7 +179,7 @@ async fn expand_view_body(
         catalogs,
         &stored_catalog,
         &spec.default_namespace,
-        &body,
+        &spec.sql,
     )
     .await?;
     let aliased = apply_view_aliases(&prepared, &spec.column_names);
@@ -239,6 +235,11 @@ pub(crate) async fn prepare_view_body_sql_with(
     let mut sql = body_sql.to_string();
     if sql_has_time_travel(&sql)
         && let Some(rewritten) = prepare_time_travel_sql(ctx, catalogs, &sql, &mut pins).await?
+    {
+        sql = rewritten;
+    }
+    let dialect = ctx.state_ref().read().config_options().sql_parser.dialect;
+    if let std::borrow::Cow::Owned(rewritten) = repark_core::minus_all_as_except_all(dialect, &sql)
     {
         sql = rewritten;
     }

@@ -74,6 +74,10 @@ impl SqlDialect for LocalFsGuardedDialect {
         self.inner.type_planner()
     }
 
+    fn owns_minus_all_rewrite(&self) -> bool {
+        self.inner.owns_minus_all_rewrite()
+    }
+
     fn configure_analyzer_rules(
         &self,
         rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,

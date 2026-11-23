@@ -106,7 +106,7 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   and an interval into a text column still refuses. The shared Iceberg rule is untouched.
   **C-4 fold 4 item 3 (2026-10-11):** the gap-wall refusal into a timestamptz column names the real column type: the placement arm retargets the localiser's `timestamp` label at its own site, as the read path does (`retargeted`, mirroring `repark_connect::provider::scan`). The date arm keeps the `timestamp` label (ledger §15: the shape file sits at its ceiling, so the date pin has no room yet). The store-assignment refusal text is the shared Iceberg builder, so it stays byte-identical here (ledger §15).
 - `write_options.rs` — **IPI-40 PR6 (2026-09-24):** the statement funnel sets `cx.temp_views = Some(self)`, so the dialect reaches this session's temp views.
-  **SQL-SETOP-ALL-MULTISET-1 (2026-11-23):** it runs `setop_all::minus_all_in_session_sql` first.
+  **SQL-SETOP-ALL-MULTISET-1 (2026-11-23):** skips `minus_all_in_session_sql` if dialect owns it.
   **ICE-CATALOG-CACHE-1 (2026-09-19):** the door awaits `trim_iceberg_caches()`, which settles the moka cache before it counts.
   **ICE-WRITE-OPTIONS-1 (2026-09-17):** `sql_with_write_options` and its crate-private body, the session's one statement funnel (spill SET intercept, cache trim, registry snapshot, `SqlDialect::execute_with_write_options`). **Run 22b rebase (2026-09-18, Q-22b-WO-1):** it replaced ICE-DYN-OVERWRITE-1's `static_overwrite.rs` body.
   **ICE-OVERWRITE-MODE-1 (2026-09-19):** it takes an `OverwriteIntent` and fills `EngineContext::overwrite_intent`; `ReparkSession::sql_with` passes an empty map and `Session`. pins: ice-write-options-1/C-014; ice-overwrite-mode-1/C-007
