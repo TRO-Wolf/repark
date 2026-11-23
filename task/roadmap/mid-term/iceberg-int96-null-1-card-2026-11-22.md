@@ -1,7 +1,7 @@
 # Card ICEBERG-INT96-NULL-1: an Iceberg data file holding `INT96` reads every timestamp as NULL
 
 **Date:** 2026-11-22. **Filed by:** the builder (`claude-opus-5-5`) in delta round 1 of PARQUET-INT96-AS-NTZ-1 (PR
-#1411), from that PR's verifier. **Severity:** proposed S1 (silent NULLs), the owner to rate. **Not that unit:** the
+#1411), from that PR's verifier. **Severity:** S1 (silent NULLs; owner, 2026-11-23). **Not that unit:** the
 Iceberg scan reads through iceberg-rust's own Parquet reader, which the PARQUET-INT96-AS-NTZ-1 option does not reach.
 
 ## The defect
