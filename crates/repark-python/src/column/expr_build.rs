@@ -322,6 +322,7 @@ pub(super) fn build_expr_context() -> datafusion::error::Result<SessionContext> 
     let rules = repark_core::insert_struct_setop_after_coercion(
         datafusion::optimizer::Analyzer::new().rules,
     )?;
+    let rules = repark_core::insert_multiset_set_operations(rules)?;
     let rules = repark_functions::analyzer_rules_with_higher_order_preparation(rules)?;
     let rules = repark_spark::spark_literal_typing::insert_literal_rule_before_coercion(rules)?;
     let rules = repark_functions::collection::insert_map_subscript_before_coercion(rules)?;

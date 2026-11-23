@@ -158,7 +158,8 @@ async fn expand_view_body(
     if guard.level() > MAX_VIEW_EXPANSION_DEPTH {
         return Err(nested_depth_refusal());
     }
-    repark_core::refuse_multiset_set_operation(datafusion::config::Dialect::Databricks, &spec.sql)?;
+    let body =
+        repark_core::minus_all_as_except_all(datafusion::config::Dialect::Databricks, &spec.sql);
     let stored_catalog = spec
         .default_catalog
         .clone()
@@ -168,7 +169,7 @@ async fn expand_view_body(
         catalogs,
         &stored_catalog,
         &spec.default_namespace,
-        &spec.sql,
+        &body,
     )
     .await?;
     let frame = plan_prepared_body(ctx, catalogs, &prepared, &pins).await?;
@@ -180,7 +181,7 @@ async fn expand_view_body(
         catalogs,
         &stored_catalog,
         &spec.default_namespace,
-        &spec.sql,
+        &body,
     )
     .await?;
     let aliased = apply_view_aliases(&prepared, &spec.column_names);

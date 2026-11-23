@@ -20,14 +20,14 @@ def spark() -> Iterator[ReparkSession]:
     session.stop()
 
 
-def test_intersect_all_divergence(spark: ReparkSession) -> None:
-    """intersectAll / intersect_all refuse; Spark answers the multiset intersect (EX-DF-7)."""
+def test_intersect_all_answers_the_spark_multiset_intersect(spark: ReparkSession) -> None:
     left = spark.createDataFrame([(1,), (1,), (2,)], ["n"])
     right = spark.createDataFrame([(1,), (1,), (3,)], ["n"])
-    with pytest.raises(UnsupportedOperationException, match="intersectAll"):
-        left.intersectAll(right)
-    with pytest.raises(UnsupportedOperationException, match="intersectAll"):
-        left.intersect_all(right)
+    for method in (left.intersectAll, left.intersect_all):
+        frame = method(right)
+        assert frame.columns == ["n"]
+        assert sorted(row["n"] for row in frame.collect()) == [1, 1]
+    assert left.intersectAll(right.limit(0)).collect() == []
 
 
 def test_grouping_sets_divergence(spark: ReparkSession) -> None:

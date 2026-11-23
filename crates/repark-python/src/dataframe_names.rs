@@ -117,6 +117,8 @@ pub(crate) fn filter_frame_with_sql(
     predicate: &str,
 ) -> PyResult<(DataFrame, usize, bool)> {
     repark_spark::refuse_sql_fragment(predicate).map_err(datafusion_to_py_err)?;
+    let predicate =
+        &*repark_core::minus_all_as_except_all(datafusion::config::Dialect::Databricks, predicate);
     let parsed = match frame.rule() {
         NameRule::Exact => parse_canonical_predicate_exact(frame, predicate),
         NameRule::IgnoreCase => parse_canonical_predicate(frame, predicate),

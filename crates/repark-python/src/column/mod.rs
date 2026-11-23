@@ -40,6 +40,8 @@ use window::{OverSpec, build_over_expression};
 impl PyColumn {
     async fn plan_sql_text(sql: &str, keep_verbatim: bool) -> PyResult<Expr> {
         repark_spark::refuse_sql_fragment(sql).map_err(crate::datafusion_to_py_err)?;
+        let sql =
+            &*repark_core::minus_all_as_except_all(datafusion::config::Dialect::Databricks, sql);
         let context = expr_build::sql_context(sql, true).map_err(crate::datafusion_to_py_err)?;
         let canonical = repark_spark::spark_literals::canonicalize_verbatim(sql, keep_verbatim)
             .map_err(crate::datafusion_to_py_err)?;

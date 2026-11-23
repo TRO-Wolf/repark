@@ -397,7 +397,6 @@ impl JoinWidening {
 
 fn is_set_operation(join: &Join) -> bool {
     if !matches!(join.join_type, JoinType::LeftSemi | JoinType::LeftAnti)
-        || !matches!(join.left.as_ref(), LogicalPlan::Distinct(Distinct::All(_)))
         || join.null_equality != NullEquality::NullEqualsNull
         || join.filter.is_some()
     {
@@ -467,6 +466,9 @@ fn rewrite_join(mut join: Join, decimals: bool) -> Result<Transformed<LogicalPla
             if let LogicalPlan::Distinct(Distinct::All(inner)) = join.left.as_ref() {
                 let (projected, _) = project_to(Arc::clone(inner), &targets)?;
                 join.left = Arc::new(LogicalPlan::Distinct(Distinct::All(Arc::new(projected))));
+            } else {
+                let (projected, _) = project_to(Arc::clone(&join.left), &targets)?;
+                join.left = Arc::new(projected);
             }
             let (right, _) = project_to(Arc::clone(&join.right), &targets)?;
             join.right = Arc::new(right);

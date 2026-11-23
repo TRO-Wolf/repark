@@ -2624,32 +2624,14 @@ class DataFrame:
     def intersectAll(  # noqa: N802 — PySpark method name
         self, other: DataFrame
     ) -> DataFrame:
-        """Multiset intersect (PySpark ``intersectAll``).
-
-        Engine ``INTERSECT ALL`` does not match Spark min-multiplicity bags.
-        Refuse rather than silently wrong; use :meth:`intersect` for distinct set intersect.
-        """
-        _ = other
-        raise UnsupportedOperationException(
-            "DataFrame.intersectAll multiset semantics are not Spark-correct on this engine yet; "
-            "use intersect() for distinct bags (octo C1-L-005)"
-        )
+        return self._sql_binary_set_op(other, "INTERSECT ALL")
 
     intersect_all = intersectAll
 
     def exceptAll(  # noqa: N802 — PySpark method name
         self, other: DataFrame
     ) -> DataFrame:
-        """Multiset except (PySpark ``exceptAll``).
-
-        Engine ``EXCEPT ALL`` drops all matching keys rather than min-multiplicity.
-        Refuse rather than silently wrong; use :meth:`subtract` for distinct set difference.
-        """
-        _ = other
-        raise UnsupportedOperationException(
-            "DataFrame.exceptAll multiset semantics are not Spark-correct on this engine yet; "
-            "use subtract() for distinct bags (octo C1-L-006)"
-        )
+        return self._sql_binary_set_op(other, "EXCEPT ALL")
 
     except_all = exceptAll
 

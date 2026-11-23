@@ -105,7 +105,9 @@ impl ReparkSession {
         source_by_name: bool,
         verbatim_override: Option<bool>,
     ) -> Result<DataFrame> {
-        crate::pre_execute::setop_all::refuse_in_session_sql(self.context(), query)?;
+        let rewritten =
+            crate::pre_execute::setop_all::minus_all_in_session_sql(self.context(), query);
+        let query = rewritten.as_ref();
         if let Some(frame) = super::spill::maybe_apply_runtime_set(self.context(), query)? {
             return Ok(frame);
         }
