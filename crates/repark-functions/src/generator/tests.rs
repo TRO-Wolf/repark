@@ -15,7 +15,7 @@ fn columns() -> (ListArray, ListArray, ListArray, ListArray) {
             true, false, true,
         ])),
     );
-    let arr_nn = ListArray::new(
+    let nonnull_ints = ListArray::new(
         Arc::new(Field::new("element", DataType::Int32, false)),
         OffsetBuffer::from_lengths([2_usize, 0, 0]),
         Arc::new(Int32Array::from(vec![10, 20])),
@@ -65,7 +65,7 @@ fn columns() -> (ListArray, ListArray, ListArray, ListArray) {
             true, false, true,
         ])),
     );
-    (arr_i, arr_nn, arr_s, arr_sn)
+    (arr_i, nonnull_ints, arr_s, arr_sn)
 }
 
 fn frame() -> SessionContext {
@@ -73,7 +73,7 @@ fn frame() -> SessionContext {
     crate::register_all(&ctx);
     ctx.register_udf(crate::collection::create_map_udf().as_ref().clone());
     ctx.add_analyzer_rule(Arc::new(GeneratorRewrite));
-    let (arr_i, arr_nn, arr_s, arr_sn) = columns();
+    let (arr_i, nonnull_ints, arr_s, arr_sn) = columns();
     let schema = Arc::new(Schema::new(vec![
         Field::new("id", DataType::Int32, false),
         Field::new(
@@ -82,7 +82,7 @@ fn frame() -> SessionContext {
             true,
         ),
         Field::new(
-            "arr_nn",
+            "nonnull_ints",
             DataType::List(Arc::new(Field::new("element", DataType::Int32, false))),
             true,
         ),
@@ -116,7 +116,7 @@ fn frame() -> SessionContext {
         vec![
             Arc::new(Int32Array::from(vec![1, 2, 3])) as ArrayRef,
             Arc::new(arr_i),
-            Arc::new(arr_nn),
+            Arc::new(nonnull_ints),
             Arc::new(arr_s),
             Arc::new(arr_sn),
         ],
@@ -557,7 +557,7 @@ fn json_tuple_refuses_a_single_argument() {
 
 #[test]
 fn explode_outer_and_posexplode_outer_handle_non_nullable_element_lists() {
-    let (names, rows) = run("SELECT id, explode_outer(arr_nn) FROM t").unwrap();
+    let (names, rows) = run("SELECT id, explode_outer(nonnull_ints) FROM t").unwrap();
     assert_eq!(names, ["id", "col"]);
     assert_eq!(
         rows,
@@ -568,7 +568,7 @@ fn explode_outer_and_posexplode_outer_handle_non_nullable_element_lists() {
             "Int32(3)|Int32(NULL)"
         ]
     );
-    let (names, rows) = run("SELECT id, posexplode_outer(arr_nn) FROM t").unwrap();
+    let (names, rows) = run("SELECT id, posexplode_outer(nonnull_ints) FROM t").unwrap();
     assert_eq!(names, ["id", "pos", "col"]);
     assert_eq!(
         rows,
