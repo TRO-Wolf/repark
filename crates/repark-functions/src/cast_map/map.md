@@ -51,8 +51,8 @@ the module's tests.
   (`insert_string_integral_before_coercion`, called by the Spark extension and the `F.expr` context), rewriting user
   casts to `__repark_string_to_{tinyint,smallint,int,bigint}__`, `__repark_narrow_to_{tinyint,smallint,int,bigint}__`,
   or `__repark_narrow_to_decimal_<p>_<s>__`, reading `spark.sql.ansi.enabled` at invoke. In-range integer literals,
-  synthetic `__repark_suffix_literal__` literal wrappers (`Literal` / `-Literal` only; unary-plus suffixed integer
-  literals wrapping `CAST(...)` are rewritten), non-overflowing DECIMAL casts (`DECIMAL(10,2)->INT`, `DECIMAL(10,2)->DECIMAL(10,1)`),
+  synthetic `__repark_suffix_literal__` literal wrappers (`Literal` / `-Literal` only; non-synthetic wrappers around
+  `CAST(...)` from unary-plus suffixed integer literals are peeled and rewritten so they keep `nullable = false`), non-overflowing DECIMAL casts (`DECIMAL(10,2)->INT`, `DECIMAL(10,2)->DECIMAL(10,1)`),
   `__repark_arrow_cast_operand__`, and `TRY_CAST` are left untouched so `FoldSparkNumericCasts`, `CastShieldRule` +
   `preimage` pushdown, and reader schema casts keep their paths. `SparkCoercionCastMark` (`spark_coercion_cast_mark`,
   last in `analyzer_rules()`) marks any remaining cast matching `cast_udf_for` (coercion-inserted casts) with

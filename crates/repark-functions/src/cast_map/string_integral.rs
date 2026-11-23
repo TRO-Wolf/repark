@@ -272,6 +272,19 @@ fn is_synthetic_suffix_literal(expr: &Expr) -> bool {
     }
 }
 
+fn peel_non_synthetic_suffix_literal(expr: &Expr) -> &Expr {
+    if is_synthetic_suffix_literal(expr) {
+        return expr;
+    }
+    if let Expr::ScalarFunction(function) = expr
+        && function.func.name() == SUFFIX_LITERAL_NAME
+        && let [inner] = function.args.as_slice()
+    {
+        return inner;
+    }
+    expr
+}
+
 fn cast_udf_for(
     operand: &Expr,
     source: &DataType,
@@ -554,12 +567,13 @@ fn rewrite_cast(expr: Expr, schema: &DFSchema, named: bool) -> Transformed<Expr>
     let Expr::Cast(cast) = &expr else {
         return Transformed::no(expr);
     };
-    let Ok(source) = cast.expr.get_type(schema) else {
+    let operand = peel_non_synthetic_suffix_literal(&cast.expr);
+    let Ok(source) = operand.get_type(schema) else {
         return Transformed::no(expr);
     };
-    let force_nullable = logical_operand_nullable(&cast.expr, schema);
+    let force_nullable = logical_operand_nullable(operand, schema);
     let Some(udf) = cast_udf_for(
-        &cast.expr,
+        operand,
         &source,
         cast.field.data_type(),
         named,
@@ -569,7 +583,7 @@ fn rewrite_cast(expr: Expr, schema: &DFSchema, named: bool) -> Transformed<Expr>
     };
     Transformed::yes(Expr::ScalarFunction(ScalarFunction::new_udf(
         udf,
-        vec![*cast.expr.clone()],
+        vec![operand.clone()],
     )))
 }
 

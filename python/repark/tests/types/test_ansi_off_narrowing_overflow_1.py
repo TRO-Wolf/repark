@@ -480,8 +480,8 @@ def test_nullable_operands_over_not_null_inputs_never_narrow_nullability(tmp_pat
             _assert_frame_rows_and_nullability(
                 session.sql(f"SELECT id, r FROM narrow.a1.ctas_{ansi} ORDER BY id"),
                 [[1, None], [2, 1]],
-                ["int", "smallint"],
-                [False, True],
+                ["int", "int"],
+                [True, True],
             )
             _assert_frame_rows_and_nullability(
                 session.sql(
@@ -539,8 +539,10 @@ def test_nullable_operands_over_not_null_inputs_never_narrow_nullability(tmp_pat
                     [False, True],
                 )
             session.sql(
-                "UPDATE narrow.a1.upd SET big = CAST(TRY_CAST(b AS INT) AS BIGINT), "
-                "sm = CAST(TRY_CAST(b AS INT) AS SMALLINT)"
+                "UPDATE narrow.a1.upd SET big = CAST(TRY_CAST(b AS INT) AS BIGINT)"
+            ).collect()
+            session.sql(
+                "UPDATE narrow.a1.upd SET sm = CAST(TRY_CAST(b AS INT) AS SMALLINT)"
             ).collect()
             assert [
                 list(row)

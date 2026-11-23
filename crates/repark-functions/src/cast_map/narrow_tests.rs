@@ -627,7 +627,11 @@ async fn suffix_literal_skips_synthetic_literal_only_and_rewrites_cast_operand()
             &self,
             args: ReturnFieldArgs<'_>,
         ) -> datafusion::common::Result<datafusion::arrow::datatypes::FieldRef> {
-            Ok(Arc::clone(&args.arg_fields[0]))
+            Ok(Arc::new(Field::new(
+                crate::java_double::SUFFIX_LITERAL_NAME,
+                args.arg_fields[0].data_type().clone(),
+                true,
+            )))
         }
 
         fn invoke_with_args(
@@ -658,7 +662,10 @@ async fn suffix_literal_skips_synthetic_literal_only_and_rewrites_cast_operand()
         .unwrap();
     let plan = analyzed.display_indent().to_string();
     assert!(plan.contains("__repark_narrow_to_int__"), "{plan}");
-    assert_eq!(first_cell(&df.collect().await.unwrap()), "1");
+    assert!(!analyzed.schema().field(0).is_nullable(), "{plan}");
+    let batches = df.collect().await.unwrap();
+    assert!(!batches[0].schema().field(0).is_nullable());
+    assert_eq!(first_cell(&batches), "1");
 
     let synthetic_dec = format!(
         "SELECT CAST({}(CAST(1.5 AS DECIMAL(4,2))) AS DECIMAL(3,1)) AS r",
