@@ -1,7 +1,7 @@
 # Card PARQUET-PARTITION-DISCOVERY-1: `read.parquet` of a partitioned directory drops the partition columns
 
 **Date:** 2026-11-23. **Filed by:** the orchestrator (`claude-opus-5-5`), from both verifiers of PR #1411 (each saw
-the column missing on main and on the branch) and a re-measurement here. **Severity:** S1 proposed (owner to rate):
+the column missing on main and on the branch) and a re-measurement here. **Severity:** S1 (owner, 2026-11-23):
 a read-then-write copy stores the table without its partition columns, silently. **Status:** filed, not dispatched.
 
 ## Measured
