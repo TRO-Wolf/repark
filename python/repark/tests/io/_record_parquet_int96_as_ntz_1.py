@@ -64,11 +64,28 @@ VIEWS = {
 }
 FLAT = "spark_int96_flat"
 APPEND_ZONES = ("UTC", "America/New_York")
-APPENDS = {
-    "a1_read_then_append": "",
-    "a2_literal_append": "SELECT 2 AS id, TIMESTAMP'2025-01-16 00:00:00' AS ts",
-}
+DOTTED = "spark_int96_dotted"
 APPEND_READ = "SELECT id, CAST(ts AS STRING) FROM w ORDER BY id, 2"
+DOTTED_READ = "SELECT id, CAST(`ts.utc` AS STRING) FROM w ORDER BY id, 2"
+NESTED_READ = (
+    "SELECT id, CAST(ts AS STRING), CAST(s.t AS STRING), CAST(a[0] AS STRING), "
+    "CAST(m['k'] AS STRING) FROM w ORDER BY id, 2"
+)
+LATER = "TIMESTAMP'2025-01-16 00:00:00'"
+APPENDS = {
+    "a1_read_then_append": [FLAT, "", APPEND_READ],
+    "a2_literal_append": [FLAT, f"SELECT 2 AS id, {LATER} AS ts", APPEND_READ],
+    "dotted_read_then_append": [DOTTED, "", DOTTED_READ],
+}
+REFUSALS = {
+    "map_read_then_append": ["spark_int96", "", NESTED_READ],
+    "map_literal_append": [
+        "spark_int96",
+        f"SELECT 8 AS id, {LATER} AS ts, TIMESTAMP_NTZ'2025-01-16 00:00:00' AS ntz, "
+        f"named_struct('t', {LATER}, 'k', 8) AS s, array({LATER}) AS a, map('k', {LATER}) AS m",
+        NESTED_READ,
+    ],
+}
 GAP_PINS = {
     "pyarrow_int96_naive_hint": (
         "SELECT id, CAST(ts AS STRING), typeof(ts) FROM pa_int96_naive ORDER BY id"
@@ -149,6 +166,8 @@ def write_spark_fixtures(spark: Any, root: Path) -> None:
     spark.conf.unset("spark.sql.parquet.outputTimestampType")
     flat = spark.sql("SELECT id, ts FROM b")
     flat.where("id <= 2").coalesce(1).write.mode("overwrite").parquet(str(root / FLAT))
+    dotted = spark.sql("SELECT id, ts AS `ts.utc` FROM b WHERE id <= 2").coalesce(1)
+    dotted.write.mode("overwrite").parquet(str(root / DOTTED))
     flat.where("id <= 3").coalesce(1).write.mode("overwrite").parquet(str(root / "spark_mixdir"))
     spark.conf.set("spark.sql.parquet.outputTimestampType", "TIMESTAMP_MICROS")
     flat.where("id > 3").coalesce(1).write.mode("append").parquet(str(root / "spark_mixdir"))
@@ -254,21 +273,28 @@ def measure_writes(spark: Any, fixtures: Path, scratch: Path, mode: str, found: 
             ]
 
 
+def append_and_read(spark: Any, fixtures: Path, out: Path, case: list[str], append: bool) -> list:
+    dst, query, read = case
+    shutil.rmtree(out, ignore_errors=True)
+    shutil.copytree(fixtures / dst, out)
+    if append:
+        source = spark.sql(query) if query else spark.read.parquet(str(fixtures / dst))
+        source.write.mode("append").parquet(str(out))
+    frame = spark.read.parquet(str(out))
+    frame.createOrReplaceTempView("w")
+    return [frame.schema.simpleString(), rows_of(spark, read)]
+
+
 def measure_appends(spark: Any, fixtures: Path, scratch: Path, mode: str, found: dict) -> None:
     for zone in APPEND_ZONES:
         spark.conf.set("spark.sql.session.timeZone", zone)
-        for case, query in APPENDS.items():
-            out = scratch / f"append_{case}_{zone_tag(zone)}_{mode}"
-            shutil.rmtree(out, ignore_errors=True)
-            shutil.copytree(fixtures / FLAT, out)
-            source = spark.sql(query) if query else spark.read.parquet(str(fixtures / FLAT))
-            source.write.mode("append").parquet(str(out))
-            frame = spark.read.parquet(str(out))
-            frame.createOrReplaceTempView("w")
-            found[f"append/{case}/{zone}"] = [
-                frame.schema.simpleString(),
-                rows_of(spark, APPEND_READ),
-            ]
+        for name, case in APPENDS.items():
+            out = scratch / f"append_{name}_{zone_tag(zone)}_{mode}"
+            found[f"append/{name}/{zone}"] = append_and_read(spark, fixtures, out, case, True)
+        for name, case in REFUSALS.items():
+            out = scratch / f"refusal_{name}_{zone_tag(zone)}_{mode}"
+            found[f"refusal/{name}/{zone}"] = append_and_read(spark, fixtures, out, case, False)
+            found[f"spark_append/{name}/{zone}"] = append_and_read(spark, fixtures, out, case, True)
 
 
 def measure_iceberg_add_files(spark: Any, fixtures: Path, found: dict) -> None:
@@ -310,7 +336,7 @@ def document(truth: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "flat": FLAT,
         "append_zones": list(APPEND_ZONES),
         "appends": APPENDS,
-        "append_read": APPEND_READ,
+        "refusals": REFUSALS,
         "gap_pins": GAP_PINS,
         "gaps": GAPS,
         "truth": truth,
@@ -326,7 +352,7 @@ def main(argv: list[str]) -> int:
             written = scratch / "fixtures"
             write_spark_fixtures(spark, written)
             write_pyarrow_fixtures(written)
-            copy_fixtures(written, sorted(set(VIEWS.values()) | {FLAT}))
+            copy_fixtures(written, sorted(set(VIEWS.values()) | {FLAT, DOTTED}))
         truth = measure(spark, FIXTURES, scratch / "out")
         spark.stop()
     recorded = document(truth)

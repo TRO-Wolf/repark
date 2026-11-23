@@ -508,7 +508,7 @@ class DataFrameWriter:
             dest_type_by_case: dict[str, Any] = {}
             dest_name_by_case: dict[str, str] = {}
             for part_file in part_files:
-                schema = writer_layout._session_parquet_schema(self._dataframe, part_file)
+                schema = writer_layout._session_parquet_schema(part_file)
                 for field in schema:
                     key = field.name.casefold()
                     if key not in dest_type_by_case:

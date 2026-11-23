@@ -117,14 +117,16 @@ session option, so it stays with P01-05.
   first head (`type mismatch source=timestamp[us, tz=UTC] vs path=timestamp[ns]`): `_validate_path_append_schema`
   read the destination with `pyarrow.parquet.read_schema`, which knows nothing of the option. Main appended a frame
   read from the directory (A1) but stored zone-less nanoseconds, and refused a `TIMESTAMP` literal (A2). Now
-  `writer_layout._session_parquet_schema` takes a part file's `INT96`-bearing top-level fields from the session's own
-  read of that file, as the S3 append already does (`path_write/append.rs`). A1 and A2 read back cold, on RePark and
+  `writer_layout._session_parquet_schema` changes only the destination's `INT96` leaves read as `timestamp[ns]` to
+  `timestamp[us, tz=UTC]`, the default session mapping, keeping pyarrow's field structure, names and map layout (delta
+  round 2: delta 1 swapped whole fields for the session's own read). A1 and A2 read back cold, on RePark and
   on Spark, as Spark's rows in UTC and New York; the directory then holds the `INT96` file and RePark's `INT64
   TIMESTAMP(MICROS,true)` file.
-- **`RESET` and `conf.unset` (recorded, not fixed):** they put `coerce_int96` back to DataFusion's unset value, so
-  `ns` and `timestamp_ntz` return for the rest of the session. Restoring `us`/`UTC` needs a hook on `RESET` on both SQL
-  doors and on `conf.unset`, or moving the default from the session config to read time in both Parquet seats: not
-  small. An explicit `ns` stays the user's choice and wraps values past 2262; an explicit `""` fails at the next read.
+- **SQL `RESET` (recorded, not fixed):** `RESET datafusion.execution.parquet.coerce_int96` puts the key back to
+  DataFusion's unset value, so `ns` and `timestamp_ntz` return for the rest of the session. `conf.unset` of the key
+  leaves the live value (`us`, or a value the user set) in place (measured in delta round 2's re-check). Restoring
+  `us`/`UTC` on `RESET` needs a hook on both SQL doors, or moving the default from the session config to read time in
+  both Parquet seats: not small. An explicit `ns` stays the user's choice and wraps values past 2262; an explicit `""` fails at the next read.
 - **Still unlike Spark (recorded):** an `INT96` leaf whose embedded Arrow schema is zone-less (pyarrow or pandas with
   `use_deprecated_int96_timestamps` over a naive `timestamp[us]`) reads `timestamp_ntz` with the UTC wall time on main
   and head (Spark: `timestamp`; a strict xfail); a file written with `int96RebaseModeInWrite=LEGACY` (Spark 2.x style)
@@ -134,6 +136,25 @@ session option, so it stays with P01-05.
 - **Pins added:** `append/<case>/<zone>` (A1, A2; UTC and New York; both ANSI modes) red on main and on the first
   head, green after; the zone-less-hint strict xfail; the recorded `add_files` gap (Spark's rows, RePark's NULLs, the
   card). Fixtures `spark_int96_flat/` and `pyarrow_int96_naive/`.
+
+## Delta round 2 (2026-11-22, PR #1411's re-check)
+
+- **Append, map layout (fixed):** delta 1's helper swapped a whole `INT96`-bearing top-level field for DataFusion's
+  read, so a map's `key_value` group became `entries`: an append of a map holding a timestamp then passed the check,
+  wrote an `entries` file beside Spark's `key_value` file, and RePark could no longer read the directory. The helper
+  now walks the Arrow type alongside the Parquet leaves (leaf counts per struct, list and map) and changes only the
+  `INT96` leaf types; a field whose `INT96` leaf sits under a map keeps pyarrow's type, so such an append refuses
+  cleanly, as on main, and the directory still reads back as Spark's rows.
+- **Append, dotted names (fixed):** leaves map to top-level fields by position, not by splitting the dotted path, so
+  a column named `ts.utc` appends and reads back as Spark's rows (it refused on delta 1's head; main appended it as
+  zone-less nanoseconds).
+- **Cost:** no session read in the check. 500 Spark `INT96` part files, read-then-append check, median of 5: main
+  0.027 s, delta 1 0.421 s, now 0.038 s.
+- **Not covered:** the helper assumes the default mapping (`us`, `UTC`); a session whose user set `coerce_int96`
+  to another unit compares against that default.
+- **Pins added:** `append/dotted_read_then_append/<zone>` and `refusal/map_read_then_append|map_literal_append/<zone>`
+  (UTC and New York, both ANSI modes; a refusal must leave the directory reading cold as Spark's rows); fixture
+  `spark_int96_dotted/`.
 
 ## Fix direction (P01-05, as filed)
 

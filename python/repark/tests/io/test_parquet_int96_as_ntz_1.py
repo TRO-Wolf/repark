@@ -115,22 +115,40 @@ def measure_writes(spark: Any, root: Path, mode: str, found: dict[str, Any]) -> 
             )
 
 
-def append_once(spark: Any, out: Path, query: str) -> list[Any]:
-    shutil.copytree(FIXTURES / ORACLE["flat"], out)
-    source = spark.sql(query) if query else spark.read.parquet(str(FIXTURES / ORACLE["flat"]))
+def append_once(spark: Any, out: Path, case: list[str]) -> list[Any]:
+    dst, query, read = case
+    shutil.copytree(FIXTURES / dst, out)
+    source = spark.sql(query) if query else spark.read.parquet(str(FIXTURES / dst))
     source.write.mode("append").parquet(str(out))
+    return read_cold(spark, out, read)
+
+
+def read_cold(spark: Any, out: Path, read: str) -> list[Any]:
     frame = spark.read.parquet(str(out))
     frame.createOrReplaceTempView("w")
-    return [frame.schema.simpleString(), rows_of(spark, ORACLE["append_read"])]
+    return [frame.schema.simpleString(), rows_of(spark, read)]
+
+
+def refused_append(spark: Any, out: Path, case: list[str]) -> list[Any]:
+    dst, query, read = case
+    shutil.copytree(FIXTURES / dst, out)
+    source = spark.sql(query) if query else spark.read.parquet(str(FIXTURES / dst))
+    outcome = attempt(lambda: source.write.mode("append").parquet(str(out)))
+    return [outcome, attempt(lambda: read_cold(spark, out, read))]
 
 
 def measure_appends(spark: Any, root: Path, mode: str, found: dict[str, Any]) -> None:
     for zone in ORACLE["append_zones"]:
         spark.conf.set("spark.sql.session.timeZone", zone)
-        for case, query in ORACLE["appends"].items():
-            out = root / f"append_{case}_{zone_tag(zone)}_{mode}"
-            found[f"append/{case}/{zone}"] = attempt(
-                lambda out=out, query=query: append_once(spark, out, query)
+        for name, case in ORACLE["appends"].items():
+            out = root / f"append_{name}_{zone_tag(zone)}_{mode}"
+            found[f"append/{name}/{zone}"] = attempt(
+                lambda out=out, case=case: append_once(spark, out, case)
+            )
+        for name, case in ORACLE["refusals"].items():
+            out = root / f"refusal_{name}_{zone_tag(zone)}_{mode}"
+            found[f"refusal/{name}/{zone}"] = attempt(
+                lambda out=out, case=case: refused_append(spark, out, case)
             )
 
 
@@ -207,6 +225,17 @@ def test_a_path_append_onto_a_spark_int96_directory_reads_back_as_spark(
     measured: tuple[str, dict[str, Any]], case: str
 ) -> None:
     assert_cells(measured, [f"append/{case}/{zone}" for zone in ORACLE["append_zones"]])
+
+
+@pytest.mark.parametrize("case", sorted(ORACLE["refusals"]))
+def test_a_map_append_onto_a_spark_int96_directory_refuses_and_leaves_it_readable(
+    measured: tuple[str, dict[str, Any]], case: str
+) -> None:
+    mode, found = measured
+    for zone in ORACLE["append_zones"]:
+        outcome, back = found[f"refusal/{case}/{zone}"]
+        assert outcome == "ERR AnalysisException", zone
+        assert back == ORACLE["truth"][mode][f"refusal/{case}/{zone}"], zone
 
 
 @pytest.mark.xfail(

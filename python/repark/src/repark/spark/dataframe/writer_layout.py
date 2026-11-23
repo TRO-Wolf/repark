@@ -32,23 +32,66 @@ if TYPE_CHECKING:
 _MAX_BUCKET_COUNT = 100000
 
 
-def _session_parquet_schema(dataframe: Any, part_file: Path) -> Any:
+_MAX_INT96_DEPTH = 64
+
+
+def _leaf_count(data_type: Any, depth: int) -> int:
+    import pyarrow as pa
+
+    if depth > _MAX_INT96_DEPTH:
+        return 1
+    if pa.types.is_struct(data_type):
+        return sum(_leaf_count(child.type, depth + 1) for child in data_type)
+    if pa.types.is_map(data_type):
+        return _leaf_count(data_type.key_type, depth + 1) + _leaf_count(
+            data_type.item_type, depth + 1
+        )
+    if pa.types.is_list(data_type) or pa.types.is_large_list(data_type):
+        return _leaf_count(data_type.value_type, depth + 1)
+    return 1
+
+
+def _int96_as_instant(data_type: Any, int96: list[bool], start: int, depth: int) -> Any:
+    import pyarrow as pa
+
+    if depth > _MAX_INT96_DEPTH or pa.types.is_map(data_type):
+        return data_type
+    if pa.types.is_struct(data_type):
+        fields = []
+        offset = start
+        for child in data_type:
+            fields.append(child.with_type(_int96_as_instant(child.type, int96, offset, depth + 1)))
+            offset += _leaf_count(child.type, depth + 1)
+        return pa.struct(fields)
+    if pa.types.is_list(data_type) or pa.types.is_large_list(data_type):
+        element = data_type.value_field
+        element = element.with_type(_int96_as_instant(element.type, int96, start, depth + 1))
+        return pa.list_(element) if pa.types.is_list(data_type) else pa.large_list(element)
+    if (
+        int96[start]
+        and pa.types.is_timestamp(data_type)
+        and data_type.unit == "ns"
+        and data_type.tz is None
+    ):
+        return pa.timestamp("us", tz="UTC")
+    return data_type
+
+
+def _session_parquet_schema(part_file: Path) -> Any:
     import pyarrow as pa
     import pyarrow.parquet as pa_pq
 
-    schema = pa_pq.read_schema(part_file)
-    leaves = pa_pq.ParquetFile(part_file).schema
-    roots = {
-        leaves.column(index).path.split(".")[0]
-        for index in range(len(leaves))
-        if leaves.column(index).physical_type == "INT96"
-    }
-    if not roots:
+    parquet = pa_pq.ParquetFile(part_file)
+    schema = parquet.schema_arrow
+    leaves = parquet.schema
+    int96 = [leaves.column(index).physical_type == "INT96" for index in range(len(leaves))]
+    if not any(int96):
         return schema
-    native = dataframe._session.read_parquet(str(part_file))
-    frame = type(dataframe)(native, dataframe._session, dataframe._alive_token)
-    read = frame.limit(0).to_arrow().schema
-    fields = [read.field(field.name) if field.name in roots else field for field in schema]
+    fields = []
+    offset = 0
+    for field in schema:
+        fields.append(field.with_type(_int96_as_instant(field.type, int96, offset, 0)))
+        offset += _leaf_count(field.type, 0)
     return pa.schema(fields, metadata=schema.metadata)
 
 

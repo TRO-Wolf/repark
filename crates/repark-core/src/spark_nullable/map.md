@@ -39,8 +39,8 @@ to `us` and `coerce_int96_tz` to `UTC` on every RePark session config (`../sessi
 top-level or nested, infers and decodes as `Timestamp(Microsecond, "UTC")`, Spark's `timestamp` shown in the
 session zone, on every plain Parquet route; it was `Timestamp(Nanosecond, None)`, read as `timestamp_ntz` holding
 the UTC wall time, and wrapped past 2262. `INT64` leaves keep their footer's `isAdjustedToUTC`. Arrow's statistics
-converter reads no `INT96` bounds, so the leaf is never pruned, as before. `RESET` or `conf.unset` of the key
-returns DataFusion's unset value for the session
+converter reads no `INT96` bounds, so the leaf is never pruned, as before. SQL `RESET` of the key returns DataFusion's
+unset value for the session (`conf.unset` leaves the live value)
 ([card](../../../../task/roadmap/mid-term/parquet-int96-as-ntz-1-card-2026-11-22.md)).
 
 ## Files
