@@ -28,12 +28,16 @@ const TARGETS: [(DataType, &str); 4] = [
 ];
 static STRING_INTEGRAL: LazyLock<[Arc<ScalarUDF>; 4]> = LazyLock::new(|| {
     TARGETS.map(|(target, name)| {
-        Arc::new(ScalarUDF::from(SparkStringIntegral::new(target, name, true)))
+        Arc::new(ScalarUDF::from(SparkStringIntegral::new(
+            target, name, true,
+        )))
     })
 });
 static STRING_INTEGRAL_KEYS: LazyLock<[Arc<ScalarUDF>; 4]> = LazyLock::new(|| {
     TARGETS.map(|(target, name)| {
-        Arc::new(ScalarUDF::from(SparkStringIntegral::new(target, name, false)))
+        Arc::new(ScalarUDF::from(SparkStringIntegral::new(
+            target, name, false,
+        )))
     })
 });
 static ARROW_CAST_OPERAND: LazyLock<Arc<ScalarUDF>> =
