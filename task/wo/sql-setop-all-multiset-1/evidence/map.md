@@ -2,120 +2,48 @@
 
 ## Provenance
 
-- **RePark:** main `e80e6bc8` and the branch head, release wheels (maturin 1.14.1, Python 3.12); the
-  mutant is head with `insert_multiset_set_operations` not seating the rule, so the ALL forms plan
-  DataFusion's semi and anti join: the wrong answer main's refusal guarded.
-- **Spark:** PySpark 4.1.2 with `iceberg-spark-runtime-4.1_2.13` 1.11.0, Java 17, `local[2]`, a Hadoop
-  catalog `ice`, session zone UTC, ANSI on and off; recorded into
-  `python/repark/tests/sql/setop_all_multiset_1_spark_oracle.json` by
-  `python _setop_all_multiset_1_cells.py <warehouse> <fixture>` (the persistent views live in
-  `spark_catalog.default`: a Hadoop catalog has no views).
-- **Doors:** `spark.sql` over a memory catalog `ice` in both ANSI modes; `repark.sql()` over a native
-  session's memory catalog, against Spark's ANSI-on answer. The writes are read back cold, by a new
-  session loading the table folder.
+- **RePark:** main `e80e6bc8` and the branch head (`head4` `2ce51f04`), release wheels (maturin 1.14.1, Python 3.12); the mutant (`f6376a1b`, pre-Delta-1) is head with `insert_multiset_set_operations` not seating the rule, so the ALL forms plan DataFusion's semi and anti join: the wrong answer main's refusal guarded.
+- **Spark:** PySpark 4.1.2 with `iceberg-spark-runtime-4.1_2.13` 1.11.0, Java 17, `local[2]`, a Hadoop catalog `ice`, session zone UTC, ANSI on and off; recorded into `python/repark/tests/sql/setop_all_multiset_1_spark_oracle.json` by `python _setop_all_multiset_1_cells.py <warehouse> <fixture>` (persistent views live in `spark_catalog.default`: a Hadoop catalog has no views).
+- **Doors:** `spark.sql` over a memory catalog `ice` in both ANSI modes; `repark.sql()` over a native session's memory catalog, against Spark's ANSI-on answer. Writes are read back cold by a new session loading the table folder.
 
 ## Domain table
 
-[domain-table.md](domain-table.md) holds every cell. The count by group:
+[domain-table.md](domain-table.md) holds every cell. Count by `(mode, group)` across `main`, `mutant`, and `head`:
 
-| package | mode | group | verdict | cells |
+| mode | group | main | mutant | head |
 |---|---|---|---|---|
-| head | false | control | EQUAL | 6 |
-| head | false | dataframe | EQUAL | 52 |
-| head | false | edge | EQUAL | 15 |
-| head | false | error | ERR-CLASS | 6 |
-| head | false | fragment | EQUAL | 12 |
-| head | false | shape | EQUAL | 36 |
-| head | false | spelling | EQUAL | 9 |
-| head | false | type | EQUAL | 78 |
-| head | native | control | EQUAL | 6 |
-| head | native | edge | EQUAL | 15 |
-| head | native | error | ERR-CLASS | 6 |
-| head | native | shape | EQUAL | 27 |
-| head | native | shape | REFUSED | 9 |
-| head | native | spelling | EQUAL | 9 |
-| head | native | type | EQUAL | 78 |
-| head | true | control | EQUAL | 6 |
-| head | true | dataframe | EQUAL | 52 |
-| head | true | edge | EQUAL | 15 |
-| head | true | error | ERR-CLASS | 6 |
-| head | true | fragment | EQUAL | 12 |
-| head | true | shape | EQUAL | 36 |
-| head | true | spelling | EQUAL | 9 |
-| head | true | type | EQUAL | 78 |
-| main | false | control | EQUAL | 6 |
-| main | false | dataframe | REFUSED | 52 |
-| main | false | edge | REFUSED | 15 |
-| main | false | error | ERR-DIFF | 6 |
-| main | false | fragment | REFUSED | 12 |
-| main | false | shape | REFUSED | 36 |
-| main | false | spelling | REFUSED | 9 |
-| main | false | type | REFUSED | 78 |
-| main | native | control | EQUAL | 6 |
-| main | native | edge | REFUSED | 15 |
-| main | native | error | ERR-DIFF | 6 |
-| main | native | shape | REFUSED | 36 |
-| main | native | spelling | REFUSED | 9 |
-| main | native | type | REFUSED | 78 |
-| main | true | control | EQUAL | 6 |
-| main | true | dataframe | REFUSED | 52 |
-| main | true | edge | REFUSED | 15 |
-| main | true | error | ERR-DIFF | 6 |
-| main | true | fragment | REFUSED | 12 |
-| main | true | shape | REFUSED | 36 |
-| main | true | spelling | REFUSED | 9 |
-| main | true | type | REFUSED | 78 |
-| mutant | false | control | EQUAL | 6 |
-| mutant | false | dataframe | WRONG | 52 |
-| mutant | false | edge | EQUAL | 12 |
-| mutant | false | edge | WRONG | 3 |
-| mutant | false | error | ERR-CLASS | 6 |
-| mutant | false | fragment | EQUAL | 2 |
-| mutant | false | fragment | WRONG | 10 |
-| mutant | false | shape | EQUAL | 4 |
-| mutant | false | shape | WRONG | 32 |
-| mutant | false | spelling | WRONG | 9 |
-| mutant | false | type | EQUAL | 34 |
-| mutant | false | type | WRONG | 44 |
-| mutant | native | control | EQUAL | 6 |
-| mutant | native | edge | EQUAL | 12 |
-| mutant | native | edge | WRONG | 3 |
-| mutant | native | error | ERR-CLASS | 6 |
-| mutant | native | shape | EQUAL | 4 |
-| mutant | native | shape | REFUSED | 9 |
-| mutant | native | shape | WRONG | 23 |
-| mutant | native | spelling | WRONG | 9 |
-| mutant | native | type | EQUAL | 34 |
-| mutant | native | type | WRONG | 44 |
-| mutant | true | control | EQUAL | 6 |
-| mutant | true | dataframe | WRONG | 52 |
-| mutant | true | edge | EQUAL | 12 |
-| mutant | true | edge | WRONG | 3 |
-| mutant | true | error | ERR-CLASS | 6 |
-| mutant | true | fragment | EQUAL | 2 |
-| mutant | true | fragment | WRONG | 10 |
-| mutant | true | shape | EQUAL | 4 |
-| mutant | true | shape | WRONG | 32 |
-| mutant | true | spelling | WRONG | 9 |
-| mutant | true | type | EQUAL | 34 |
-| mutant | true | type | WRONG | 44 |
+| ANSI true | control | 6 EQUAL | 6 EQUAL | 6 EQUAL |
+| ANSI true | dataframe | 52 REFUSED | 52 WRONG | 52 EQUAL |
+| ANSI true | edge | 15 REFUSED | 12 EQUAL, 3 WRONG | 15 EQUAL |
+| ANSI true | error | 6 ERR-DIFF | 6 ERR-CLASS | 6 ERR-CLASS |
+| ANSI true | fragment | 12 REFUSED | 2 EQUAL, 10 WRONG | 12 EQUAL |
+| ANSI true | guard | 12 EQUAL | 12 EQUAL | 12 EQUAL |
+| ANSI true | shape | 36 REFUSED | 4 EQUAL, 32 WRONG | 36 EQUAL |
+| ANSI true | spelling | 9 REFUSED | 9 WRONG | 9 EQUAL |
+| ANSI true | type | 78 REFUSED | 34 EQUAL, 44 WRONG | 78 EQUAL |
+| ANSI false | control | 6 EQUAL | 6 EQUAL | 6 EQUAL |
+| ANSI false | dataframe | 52 REFUSED | 52 WRONG | 52 EQUAL |
+| ANSI false | edge | 15 REFUSED | 12 EQUAL, 3 WRONG | 15 EQUAL |
+| ANSI false | error | 6 ERR-DIFF | 6 ERR-CLASS | 6 ERR-CLASS |
+| ANSI false | fragment | 12 REFUSED | 2 EQUAL, 10 WRONG | 12 EQUAL |
+| ANSI false | guard | 12 EQUAL | 12 EQUAL | 12 EQUAL |
+| ANSI false | shape | 36 REFUSED | 4 EQUAL, 32 WRONG | 36 EQUAL |
+| ANSI false | spelling | 9 REFUSED | 9 WRONG | 9 EQUAL |
+| ANSI false | type | 78 REFUSED | 34 EQUAL, 44 WRONG | 78 EQUAL |
+| native | control | 6 EQUAL | 6 EQUAL | 6 EQUAL |
+| native | edge | 15 REFUSED | 12 EQUAL, 3 WRONG | 10 EQUAL, 5 REFUSED |
+| native | error | 6 ERR-DIFF | 6 ERR-CLASS | 5 ERR-CLASS, 1 ERR-DIFF |
+| native | shape | 36 REFUSED | 4 EQUAL, 9 REFUSED, 23 WRONG | 18 EQUAL, 18 REFUSED |
+| native | spelling | 9 REFUSED | 9 WRONG | 6 EQUAL, 3 REFUSED |
+| native | type | 78 REFUSED | 34 EQUAL, 44 WRONG | 52 EQUAL, 26 REFUSED |
 
-Main refuses every multiset cell. The mutant answers the old wrong multiset: `INTERSECT ALL` keeps every
-left duplicate and `EXCEPT ALL` drops every copy. Head answers Spark's rows in every cell on the Spark
-door in both ANSI modes, output types included, and in every native cell except the three shapes the
-native door has no statement for (CTAS into Iceberg, a persistent view, `MERGE`), which refuse on main's
-native door for every source.
+Main refuses every multiset cell and answers every `control` and `guard` cell. The mutant answers the old wrong multiset: `INTERSECT ALL` keeps every left duplicate and `EXCEPT ALL` drops every copy. Head answers Spark's rows in every cell on the Spark door in both ANSI modes, output types included. On the native `repark.sql()` door, `INTERSECT ALL` and `EXCEPT ALL` answer Spark's rows in every supported shape; every `MINUS ALL` cell refuses with `UnsupportedOperationException: MINUS ALL not implemented` (43 non-gap cells plus `error / column-type / MINUS ALL` via `make_array`, while `error / column-count / MINUS ALL` raises `AnalysisException` before the refusal); and the three pre-existing unsupported native shapes (CTAS into Iceberg, persistent view, `MERGE`) refuse for all three operators as on main.
 
-**Residue:** a column count or type mismatch raises `AnalysisException`, Spark's class, with
-DataFusion's planner text and no `[NUM_COLUMNS_MISMATCH]` (`42826`) or `[INCOMPATIBLE_COLUMN_TYPE]`
-(`42825`) condition, as the distinct `INTERSECT` / `EXCEPT` and `UNION` do on main. The error is raised
-by DataFusion's planner and type coercion before the rewrite, for every set operation.
+**Residue:** a column count or type mismatch raises `AnalysisException`, Spark's class, with DataFusion's planner text and no `[NUM_COLUMNS_MISMATCH]` (`42826`) or `[INCOMPATIBLE_COLUMN_TYPE]` (`42825`) condition, as distinct `INTERSECT` / `EXCEPT` and `UNION` do on main.
 
 ## The candidate
 
-Candidate B, Spark's own `RewriteIntersectAll` / `RewriteExceptAll`, as the analyzer rule
-`setop_all_multiset` right after `struct_setop_names` (`crates/repark-core/src/pre_execute/setop_all.rs`).
-The plan of `l INTERSECT ALL r`:
+Candidate B, Spark's own `RewriteIntersectAll` / `RewriteExceptAll`, as the analyzer rule `setop_all_multiset` right after `struct_setop_names` (`crates/repark-core/src/pre_execute/setop_all.rs`). The plan of `l INTERSECT ALL r`:
 
 ```text
 Projection: the join's schema (casts back to the left types where coercion widened a key)
@@ -127,15 +55,7 @@ Projection: the join's schema (casts back to the left types where coercion widen
           Projection: r keys, 0 AS left_tag, 1 AS right_tag
 ```
 
-`EXCEPT ALL` tags `1` and `-1` and keeps `CASE WHEN sum > 0 THEN sum ELSE 0 END` copies. A group one
-side lacks keeps zero copies, so no filter runs (a filter's statistics over list-of-struct keys tripped
-a DataFusion interval assertion). Why B: the keys group once, by the same aggregate the distinct forms
-use, so NULLs, both zeros and every NaN are one key through the signed-zero key seat, and the output
-carries the normalised key, as Spark's aggregate does (`-0.0, -0.0, -0.0 INTERSECT ALL 0.0, 0.0` is two
-`0.0` rows in Spark). Candidate A numbers the rows with a window over every column and runs the
-distinct operator over `(columns, n)`: a window sort of both sides by every column, then a distinct and
-a hash join on one key more; B is one hash aggregate over both sides and a replication. Cost on 1M rows a side (one BIGINT column, 400,000 and
-600,000 distinct values, the warm median of three runs of `SELECT count(*)`, cores 32-47):
+`EXCEPT ALL` tags `1` and `-1` and keeps `CASE WHEN sum > 0 THEN sum ELSE 0 END` copies. A group one side lacks keeps zero copies, so no filter runs (a filter's statistics over list-of-struct keys tripped a DataFusion interval assertion). Keys group once by the same aggregate the distinct forms use, so NULLs, both zeros and every NaN are one key through the signed-zero key seat, and the output carries the normalised key, as Spark's aggregate does (`-0.0, -0.0, -0.0 INTERSECT ALL 0.0, 0.0` is two `0.0` rows in Spark). Cost on 1M rows a side (one BIGINT column, 400,000 and 600,000 distinct values, warm median of three `SELECT count(*)` runs, cores 32-47):
 
 | query | Spark 4.1.2 | head | main (as user SQL) |
 |---|---|---|---|
@@ -150,32 +70,26 @@ a hash join on one key more; B is one hash aggregate over both sides and a repli
 
 ## Red and green
 
-Pins (`test_sql_setop_all_multiset_1.py`, the struct set-operation, mixed-`VALUES`, EX-DF-3, EX-DF-7 and `test_df_easy.py` files), xdist `-n 4`:
+Six setop pin files (`test_sql_setop_all_multiset_1.py`, `test_struct_set_ops.py`, `test_values_mixed_types.py`, `test_examples_dataframe_a.py`, `test_examples_dataframe_b.py`, `test_df_easy.py`), `pytest -n 4`:
 
-- main: n/a
-- mutant: n/a
-- head2: n/a
+- `head4` (`2ce51f04`): **1433 passed, 0 failed** (0 guard failures).
+- `head3` (`1b1a00b3`): **9 failed, 1424 passed** (all 9 are Delta-2 finding pins; 0 guard failures).
+- `head2` (`0add094c`): **54 failed, 1379 passed** (43 native `MINUS ALL` + 11 Delta-2 finding pins; 0 guard failures).
+- `mutant` (`f6376a1b`): **416 failed, 1017 passed** (0 guard failures; EX-DF-7 kills the mutant via asymmetric multiplicity).
+- `main` (`e80e6bc8`): **660 failed, 773 passed** (0 guard failures).
 
+The mutant (`f6376a1b`, not on the branch) drops the multiplicity; the pins that catch it are the type, edge, shape, spelling, fragment and DataFrame cells of `test_sql_setop_all_multiset_1.py`, EX-DF-3, EX-DF-7, and `test_df_easy.py::test_set_ops_and_cross_join`. The Rust seat tests (`setop_all/tests.rs`) fail without the rule in the same way.
 
-The mutant (`f6376a1b`, not on the branch) drops the multiplicity; the pins that catch it are the type,
-edge, shape, spelling, fragment and DataFrame cells of `test_sql_setop_all_multiset_1.py`, the EX-DF-3
-and EX-DF-7 pins and `test_df_easy.py::test_set_ops_and_cross_join`. The Rust seat tests
-(`setop_all/tests.rs`) fail without the rule in the same way.
+## Delta 1 (owner ruling 2026-11-23: native door follows Trino, then DuckDB, then refuses)
 
-## Delta 1 (owner ruling 2026-11-23: the native door follows Trino, then DuckDB, then refuses)
+`MINUS ALL` is spelled `EXCEPT ALL` only under the Databricks parser: the statement seat (the session's parser), `filter` strings (the frame's session parser, so a `repark.sql()` frame refuses), stored view bodies (the reading session's parser), and `F.expr` (always Spark grammar).
 
-`MINUS ALL` is spelled `EXCEPT ALL` only under the Databricks parser. The seats: the statement seat
-(the session's parser), `filter` strings (the frame's session parser, so a `repark.sql()` frame
-refuses), stored view bodies (the reading session's parser), and `F.expr` (always the Spark grammar).
-
-| native `repark.sql()` | main `e80e6bc8` | head2 `0add094c` | head3 `1b1a00b3` |
+| native `repark.sql()` | main `e80e6bc8` | head2 `0add094c` | head3 `1b1a00b3` / head4 `2ce51f04` |
 |---|---|---|---|
 | `MINUS` (top, `INSERT`, CTAS) | `UnsupportedOperationException: MINUS not implemented`, nothing written | same | same |
-| `MINUS ALL` (four spellings) | `UnsupportedOperationException`, the SQL-SETOP-ALL-REFUSE-1 text, nothing written | answers `1, 1, 4`, `INSERT` stores it | `UnsupportedOperationException: This feature is not implemented: MINUS ALL not implemented`, nothing written |
+| `MINUS ALL` (four spellings) | `UnsupportedOperationException`, SQL-SETOP-ALL-REFUSE-1 text, nothing written | answers `1, 1, 4`, `INSERT` stores it | `UnsupportedOperationException: This feature is not implemented: MINUS ALL not implemented`, nothing written |
 
-Guard pins, Spark 4.1.2 (ANSI on and off answer alike), equal on main and head3 in both modes; they are
-not red on main. Left `{1, 1, 2, NULL, NULL}`, right `{1, 1, NULL, 3}`; the two-column frames pair `b`
-with `a`; the DECIMAL(10,2) left `{1.10, 1.10, 2.00, NULL}` against a DOUBLE right `{1.1, 1.1, NULL}`:
+Guard pins, Spark 4.1.2 (ANSI on and off answer alike), equal on main and head in both modes (not red on main):
 
 | join (SQL `<=>` and DataFrame `eqNullSafe`) | semi | anti | type |
 |---|---|---|---|
@@ -183,12 +97,14 @@ with `a`; the DECIMAL(10,2) left `{1.10, 1.10, 2.00, NULL}` against a DOUBLE rig
 | two columns, keys cover every column | `(1,x), (1,x), (NULL,NULL), (NULL,NULL)` | `(2,y)` | `a:int,b:string` |
 | DECIMAL left, DOUBLE right | `1.10, 1.10, NULL` | `2.00` | `a:decimal(10,2)` |
 
-Skew, 1M rows over 10 keys (100,000 copies a key) against 600,000 rows over the same keys, warm median of
-three `SELECT count(*)` runs: head3 `INTERSECT ALL` 0.016 s (600,000 rows), `EXCEPT ALL` 0.015 s (400,000),
-distinct `INTERSECT` 0.021 s, `EXCEPT` 0.019 s; Spark 4.1.2 0.380 s, 0.227 s, 0.516 s, 0.463 s. Each key's
-`range` list holds up to 100,000 entries.
+Skew, 1M rows over 10 keys (100,000 copies/key) vs 600,000 rows, warm median of three `SELECT count(*)` runs: head `INTERSECT ALL` 0.016 s (600,000 rows), `EXCEPT ALL` 0.015 s (400,000), distinct `INTERSECT` 0.021 s, `EXCEPT` 0.019 s; Spark 4.1.2 0.380 s, 0.227 s, 0.516 s, 0.463 s.
 
-Pins on the six files: head3 1424 passed; head2 43 failed, every one a native `MINUS ALL` cell that answers
-where the ruling refuses; main 650 failed, none a guard pin.
+## Delta 2 (verifier findings F-1 through F-5, B-1 through B-5, C-1)
+
+- **F-1 (parser-verified `MINUS ALL`):** `minus_all_spans` verifies `SetExpr::SetOperation { op: Minus, set_quantifier: All }` with `sqlparser` (`DatabricksDialect`), preserving comments and spacing while leaving identifiers (`minus` column/table/CTE, `all` alias, string literals, quoted `` `minus` ``) and unparseable queries untouched across statements, stored view bodies, and `filter` strings.
+- **F-2 (untyped `NULL` left column):** `rewrite_multiset` emits `lit(ScalarValue::Null)` when the output field is `DataType::Null`, matching RePark's distinct twin schema (`void` on Spark door, `null` on native door; Spark widens to the right column's type).
+- **F-3 (`MAP` on either side and nested):** `map_ordering.rs` inspects both `join.left` and `join.right` and recursively walks `Struct` and `List*` fields for `DataType::Map` on multiset set operations, refusing with `[UNSUPPORTED_FEATURE.SET_OPERATION_ON_MAP_TYPE]`; distinct forms keep main's answers.
+- **F-4 (`F.expr` boundary):** no code change; `F.expr` belongs to `pyspark.sql.functions` and is Spark grammar even when passed to a native frame. Pinned and recorded in the card, parity doc, and `crates/repark-python/src/column/map.md`.
+- **F-5 (lossy round-trip cast refusal):** `rewrite_multiset` refuses at analysis time (before any write) with `AnalysisException` naming `SETOP-MIXED-TYPE-COERCION-1` (`task/roadmap/mid-term/cards-2026-11-23/setop-mixed-type-coercion-1-card-2026-11-23.md`) whenever casting a coerced key back to its output type is not lossless (`STRING` vs numeric/`DATE`/`TIMESTAMP`/`BOOLEAN`/`BINARY`, lossy int/float/decimal/date/timestamp pairs, and nested struct/list fields). Exact widenings (`INT`/`BIGINT`, `FLOAT`/`DOUBLE`, Spark-door `DECIMAL`/`DOUBLE`) keep answering; distinct forms stay unchanged.
 
 Up: [../map.md](../map.md).

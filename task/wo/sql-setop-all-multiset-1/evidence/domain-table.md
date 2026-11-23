@@ -95,6 +95,18 @@ Every cell of `python/repark/tests/sql/_setop_all_multiset_1_cells.py` on the Sp
 | fragment / selectexpr-scalar / EXCEPT ALL | ANSI true | [[3], [3], [3], [3]] | REFUSED: UnsupportedOperationException | WRONG: [[1], [1], [1], [1]] | EQUAL |
 | fragment / selectexpr-scalar / INTERSECT ALL | ANSI true | [[3], [3], [3], [3]] | REFUSED: UnsupportedOperationException | WRONG: [[5], [5], [5], [5]] | EQUAL |
 | fragment / selectexpr-scalar / MINUS ALL | ANSI true | [[3], [3], [3], [3]] | REFUSED: UnsupportedOperationException | WRONG: [[1], [1], [1], [1]] | EQUAL |
+| guard / df / decimal / anti | ANSI true | [["d2"]] | EQUAL | EQUAL | EQUAL |
+| guard / df / decimal / semi | ANSI true | [["d1.1"], ["d1.1"], [null]] | EQUAL | EQUAL | EQUAL |
+| guard / df / one / anti | ANSI true | [[2]] | EQUAL | EQUAL | EQUAL |
+| guard / df / one / semi | ANSI true | [[1], [1], [null], [null]] | EQUAL | EQUAL | EQUAL |
+| guard / df / two / anti | ANSI true | [[2, "y"]] | EQUAL | EQUAL | EQUAL |
+| guard / df / two / semi | ANSI true | [[1, "x"], [1, "x"], [null, null], [null, null]] | EQUAL | EQUAL | EQUAL |
+| guard / sql / decimal / anti | ANSI true | [["d2"]] | EQUAL | EQUAL | EQUAL |
+| guard / sql / decimal / semi | ANSI true | [["d1.1"], ["d1.1"], [null]] | EQUAL | EQUAL | EQUAL |
+| guard / sql / one / anti | ANSI true | [[2]] | EQUAL | EQUAL | EQUAL |
+| guard / sql / one / semi | ANSI true | [[1], [1], [null], [null]] | EQUAL | EQUAL | EQUAL |
+| guard / sql / two / anti | ANSI true | [[2, "y"]] | EQUAL | EQUAL | EQUAL |
+| guard / sql / two / semi | ANSI true | [[1, "x"], [1, "x"], [null, null], [null, null]] | EQUAL | EQUAL | EQUAL |
 | shape / ctas / EXCEPT ALL | ANSI true | stored [[1], [1], [4]] | REFUSED: refused UnsupportedOperationException | WRONG: stored [[4]] | EQUAL |
 | shape / ctas / INTERSECT ALL | ANSI true | stored [[1], [2], [2]] | REFUSED: refused UnsupportedOperationException | WRONG: stored [[1], [1], [1], [2], [2]] | EQUAL |
 | shape / ctas / MINUS ALL | ANSI true | stored [[1], [1], [4]] | REFUSED: refused UnsupportedOperationException | WRONG: stored [[4]] | EQUAL |
@@ -309,6 +321,18 @@ Every cell of `python/repark/tests/sql/_setop_all_multiset_1_cells.py` on the Sp
 | fragment / selectexpr-scalar / EXCEPT ALL | ANSI false | [[3], [3], [3], [3]] | REFUSED: UnsupportedOperationException | WRONG: [[1], [1], [1], [1]] | EQUAL |
 | fragment / selectexpr-scalar / INTERSECT ALL | ANSI false | [[3], [3], [3], [3]] | REFUSED: UnsupportedOperationException | WRONG: [[5], [5], [5], [5]] | EQUAL |
 | fragment / selectexpr-scalar / MINUS ALL | ANSI false | [[3], [3], [3], [3]] | REFUSED: UnsupportedOperationException | WRONG: [[1], [1], [1], [1]] | EQUAL |
+| guard / df / decimal / anti | ANSI false | [["d2"]] | EQUAL | EQUAL | EQUAL |
+| guard / df / decimal / semi | ANSI false | [["d1.1"], ["d1.1"], [null]] | EQUAL | EQUAL | EQUAL |
+| guard / df / one / anti | ANSI false | [[2]] | EQUAL | EQUAL | EQUAL |
+| guard / df / one / semi | ANSI false | [[1], [1], [null], [null]] | EQUAL | EQUAL | EQUAL |
+| guard / df / two / anti | ANSI false | [[2, "y"]] | EQUAL | EQUAL | EQUAL |
+| guard / df / two / semi | ANSI false | [[1, "x"], [1, "x"], [null, null], [null, null]] | EQUAL | EQUAL | EQUAL |
+| guard / sql / decimal / anti | ANSI false | [["d2"]] | EQUAL | EQUAL | EQUAL |
+| guard / sql / decimal / semi | ANSI false | [["d1.1"], ["d1.1"], [null]] | EQUAL | EQUAL | EQUAL |
+| guard / sql / one / anti | ANSI false | [[2]] | EQUAL | EQUAL | EQUAL |
+| guard / sql / one / semi | ANSI false | [[1], [1], [null], [null]] | EQUAL | EQUAL | EQUAL |
+| guard / sql / two / anti | ANSI false | [[2, "y"]] | EQUAL | EQUAL | EQUAL |
+| guard / sql / two / semi | ANSI false | [[1, "x"], [1, "x"], [null, null], [null, null]] | EQUAL | EQUAL | EQUAL |
 | shape / ctas / EXCEPT ALL | ANSI false | stored [[1], [1], [4]] | REFUSED: refused UnsupportedOperationException | WRONG: stored [[4]] | EQUAL |
 | shape / ctas / INTERSECT ALL | ANSI false | stored [[1], [2], [2]] | REFUSED: refused UnsupportedOperationException | WRONG: stored [[1], [1], [1], [2], [2]] | EQUAL |
 | shape / ctas / MINUS ALL | ANSI false | stored [[1], [1], [4]] | REFUSED: refused UnsupportedOperationException | WRONG: stored [[4]] | EQUAL |
@@ -440,43 +464,43 @@ Every cell of `python/repark/tests/sql/_setop_all_multiset_1_cells.py` on the Sp
 | control / UNION ALL | native | [[1], [1], [1], [1], [2], [2], [2], [2], [3], [4]] | EQUAL | EQUAL | EQUAL |
 | edge / both-empty / EXCEPT ALL / lr | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | edge / both-empty / INTERSECT ALL / lr | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| edge / both-empty / MINUS ALL / lr | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| edge / both-empty / MINUS ALL / lr | native | [] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | edge / empty-left / EXCEPT ALL / lr | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | edge / empty-left / INTERSECT ALL / lr | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| edge / empty-left / MINUS ALL / lr | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| edge / empty-left / MINUS ALL / lr | native | [] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | edge / empty-right / EXCEPT ALL / lr | native | [[1], [1], [2]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | edge / empty-right / INTERSECT ALL / lr | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| edge / empty-right / MINUS ALL / lr | native | [[1], [1], [2]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| edge / empty-right / MINUS ALL / lr | native | [[1], [1], [2]] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | edge / only-duplicates-right-more / EXCEPT ALL / lr | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | edge / only-duplicates-right-more / INTERSECT ALL / lr | native | [[7], [7]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| edge / only-duplicates-right-more / MINUS ALL / lr | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| edge / only-duplicates-right-more / MINUS ALL / lr | native | [] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | edge / only-duplicates / EXCEPT ALL / lr | native | [[7], [7]] | REFUSED: UnsupportedOperationException | WRONG: [] | EQUAL |
 | edge / only-duplicates / INTERSECT ALL / lr | native | [[7], [7]] | REFUSED: UnsupportedOperationException | WRONG: [[7], [7], [7], [7]] | EQUAL |
-| edge / only-duplicates / MINUS ALL / lr | native | [[7], [7]] | REFUSED: UnsupportedOperationException | WRONG: [] | EQUAL |
+| edge / only-duplicates / MINUS ALL / lr | native | [[7], [7]] | REFUSED: UnsupportedOperationException | WRONG: [] | REFUSED: UnsupportedOperationException |
 | error / column-count / EXCEPT ALL | native | AnalysisException NUM_COLUMNS_MISMATCH 42826 | ERR-DIFF: UnsupportedOperationException | ERR-CLASS: AnalysisException | ERR-CLASS: AnalysisException |
 | error / column-count / INTERSECT ALL | native | AnalysisException NUM_COLUMNS_MISMATCH 42826 | ERR-DIFF: UnsupportedOperationException | ERR-CLASS: AnalysisException | ERR-CLASS: AnalysisException |
 | error / column-count / MINUS ALL | native | AnalysisException NUM_COLUMNS_MISMATCH 42826 | ERR-DIFF: UnsupportedOperationException | ERR-CLASS: AnalysisException | ERR-CLASS: AnalysisException |
-| error / column-type / EXCEPT ALL | native | AnalysisException INCOMPATIBLE_COLUMN_TYPE 42825 | ERR-DIFF: UnsupportedOperationException | ERR-CLASS: AnalysisException UNRESOLVED_ROUTINE 42883 | ERR-CLASS: AnalysisException UNRESOLVED_ROUTINE 42883 |
-| error / column-type / INTERSECT ALL | native | AnalysisException INCOMPATIBLE_COLUMN_TYPE 42825 | ERR-DIFF: UnsupportedOperationException | ERR-CLASS: AnalysisException UNRESOLVED_ROUTINE 42883 | ERR-CLASS: AnalysisException UNRESOLVED_ROUTINE 42883 |
-| error / column-type / MINUS ALL | native | AnalysisException INCOMPATIBLE_COLUMN_TYPE 42825 | ERR-DIFF: UnsupportedOperationException | ERR-CLASS: AnalysisException UNRESOLVED_ROUTINE 42883 | ERR-CLASS: AnalysisException UNRESOLVED_ROUTINE 42883 |
+| error / column-type / EXCEPT ALL | native | AnalysisException INCOMPATIBLE_COLUMN_TYPE 42825 | ERR-DIFF: UnsupportedOperationException | ERR-CLASS: AnalysisException | ERR-CLASS: AnalysisException |
+| error / column-type / INTERSECT ALL | native | AnalysisException INCOMPATIBLE_COLUMN_TYPE 42825 | ERR-DIFF: UnsupportedOperationException | ERR-CLASS: AnalysisException | ERR-CLASS: AnalysisException |
+| error / column-type / MINUS ALL | native | AnalysisException INCOMPATIBLE_COLUMN_TYPE 42825 | ERR-DIFF: UnsupportedOperationException | ERR-CLASS: AnalysisException | ERR-DIFF: UnsupportedOperationException |
 | shape / ctas / EXCEPT ALL | native | stored [[1], [1], [4]] | REFUSED: refused UnsupportedOperationException | REFUSED: refused UnsupportedOperationException | REFUSED: refused UnsupportedOperationException |
 | shape / ctas / INTERSECT ALL | native | stored [[1], [2], [2]] | REFUSED: refused UnsupportedOperationException | REFUSED: refused UnsupportedOperationException | REFUSED: refused UnsupportedOperationException |
 | shape / ctas / MINUS ALL | native | stored [[1], [1], [4]] | REFUSED: refused UnsupportedOperationException | REFUSED: refused UnsupportedOperationException | REFUSED: refused UnsupportedOperationException |
 | shape / cte / EXCEPT ALL | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
 | shape / cte / INTERSECT ALL | native | [[1], [2], [2]] | REFUSED: UnsupportedOperationException | WRONG: [[1], [1], [1], [2], [2]] | EQUAL |
-| shape / cte / MINUS ALL | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
+| shape / cte / MINUS ALL | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | REFUSED: UnsupportedOperationException |
 | shape / explain / EXCEPT ALL | native | "rows" | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | shape / explain / INTERSECT ALL | native | "rows" | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| shape / explain / MINUS ALL | native | "rows" | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| shape / explain / MINUS ALL | native | "rows" | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | shape / iceberg-source / EXCEPT ALL | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
 | shape / iceberg-source / INTERSECT ALL | native | [[1], [2], [2]] | REFUSED: UnsupportedOperationException | WRONG: [[1], [1], [1], [2], [2]] | EQUAL |
-| shape / iceberg-source / MINUS ALL | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
+| shape / iceberg-source / MINUS ALL | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | REFUSED: UnsupportedOperationException |
 | shape / insert / EXCEPT ALL | native | stored [[1], [1], [4]] | REFUSED: refused UnsupportedOperationException | WRONG: stored [[4]] | EQUAL |
 | shape / insert / INTERSECT ALL | native | stored [[1], [2], [2]] | REFUSED: refused UnsupportedOperationException | WRONG: stored [[1], [1], [1], [2], [2]] | EQUAL |
-| shape / insert / MINUS ALL | native | stored [[1], [1], [4]] | REFUSED: refused UnsupportedOperationException | WRONG: stored [[4]] | EQUAL |
+| shape / insert / MINUS ALL | native | stored [[1], [1], [4]] | REFUSED: refused UnsupportedOperationException | WRONG: stored [[4]] | REFUSED: refused UnsupportedOperationException |
 | shape / in / EXCEPT ALL | native | [[1]] | REFUSED: UnsupportedOperationException | WRONG: [] | EQUAL |
 | shape / in / INTERSECT ALL | native | [[1], [2], [2]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| shape / in / MINUS ALL | native | [[1]] | REFUSED: UnsupportedOperationException | WRONG: [] | EQUAL |
+| shape / in / MINUS ALL | native | [[1]] | REFUSED: UnsupportedOperationException | WRONG: [] | REFUSED: UnsupportedOperationException |
 | shape / merge / EXCEPT ALL | native | stored [[1], [1], [4]] | REFUSED: refused UnsupportedOperationException | REFUSED: refused UnsupportedOperationException | REFUSED: refused UnsupportedOperationException |
 | shape / merge / INTERSECT ALL | native | stored [[1], [2], [2]] | REFUSED: refused UnsupportedOperationException | REFUSED: refused UnsupportedOperationException | REFUSED: refused UnsupportedOperationException |
 | shape / merge / MINUS ALL | native | stored [[1], [1], [4]] | REFUSED: refused UnsupportedOperationException | REFUSED: refused UnsupportedOperationException | REFUSED: refused UnsupportedOperationException |
@@ -485,100 +509,100 @@ Every cell of `python/repark/tests/sql/_setop_all_multiset_1_cells.py` on the Sp
 | shape / persistent-view / MINUS ALL | native | [[1], [1], [4]] | REFUSED: AnalysisException | REFUSED: AnalysisException | REFUSED: AnalysisException |
 | shape / scalar / EXCEPT ALL | native | [[3]] | REFUSED: UnsupportedOperationException | WRONG: [[1]] | EQUAL |
 | shape / scalar / INTERSECT ALL | native | [[3]] | REFUSED: UnsupportedOperationException | WRONG: [[5]] | EQUAL |
-| shape / scalar / MINUS ALL | native | [[3]] | REFUSED: UnsupportedOperationException | WRONG: [[1]] | EQUAL |
+| shape / scalar / MINUS ALL | native | [[3]] | REFUSED: UnsupportedOperationException | WRONG: [[1]] | REFUSED: UnsupportedOperationException |
 | shape / temp-view / EXCEPT ALL | native | [[1], [1], [4]] | REFUSED: AnalysisException | WRONG: [[4]] | EQUAL |
 | shape / temp-view / INTERSECT ALL | native | [[1], [2], [2]] | REFUSED: AnalysisException | WRONG: [[1], [1], [1], [2], [2]] | EQUAL |
-| shape / temp-view / MINUS ALL | native | [[1], [1], [4]] | REFUSED: AnalysisException | WRONG: [[4]] | EQUAL |
+| shape / temp-view / MINUS ALL | native | [[1], [1], [4]] | REFUSED: AnalysisException | WRONG: [[4]] | REFUSED: AnalysisException |
 | shape / top / EXCEPT ALL | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
 | shape / top / INTERSECT ALL | native | [[1], [2], [2]] | REFUSED: UnsupportedOperationException | WRONG: [[1], [1], [1], [2], [2]] | EQUAL |
-| shape / top / MINUS ALL | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
+| shape / top / MINUS ALL | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | REFUSED: UnsupportedOperationException |
 | shape / union-nested / EXCEPT ALL | native | [[1], [1], [4], [9]] | REFUSED: UnsupportedOperationException | WRONG: [[4], [9]] | EQUAL |
 | shape / union-nested / INTERSECT ALL | native | [[1], [2], [2], [9]] | REFUSED: UnsupportedOperationException | WRONG: [[1], [1], [1], [2], [2], [9]] | EQUAL |
-| shape / union-nested / MINUS ALL | native | [[1], [1], [4], [9]] | REFUSED: UnsupportedOperationException | WRONG: [[4], [9]] | EQUAL |
+| shape / union-nested / MINUS ALL | native | [[1], [1], [4], [9]] | REFUSED: UnsupportedOperationException | WRONG: [[4], [9]] | REFUSED: UnsupportedOperationException |
 | spelling / 0 | native | [[1], [2], [2]] | REFUSED: UnsupportedOperationException | WRONG: [[1], [1], [1], [2], [2]] | EQUAL |
 | spelling / 1 | native | [[1], [2], [2]] | REFUSED: UnsupportedOperationException | WRONG: [[1], [1], [1], [2], [2]] | EQUAL |
 | spelling / 2 | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
 | spelling / 3 | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
-| spelling / 4 | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
-| spelling / 5 | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
+| spelling / 4 | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | REFUSED: UnsupportedOperationException |
+| spelling / 5 | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | REFUSED: UnsupportedOperationException |
 | spelling / 6 | native | [[1], [2], [2]] | REFUSED: UnsupportedOperationException | WRONG: [[1], [1], [1], [2], [2]] | EQUAL |
 | spelling / 7 | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
-| spelling / 8 | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
+| spelling / 8 | native | [[1], [1], [4]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | REFUSED: UnsupportedOperationException |
 | type / bigint / EXCEPT ALL / lr | native | [[4], [9000000000], [9000000000], [null], [null]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
 | type / bigint / EXCEPT ALL / rl | native | [[3]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | type / bigint / INTERSECT ALL / lr | native | [[-7], [-7], [9000000000], [null]] | REFUSED: UnsupportedOperationException | WRONG: [[-7], [-7], [9000000000], [9000000000], [9000000000], [null], [null], | EQUAL |
 | type / bigint / INTERSECT ALL / rl | native | [[-7], [-7], [9000000000], [null]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| type / bigint / MINUS ALL / lr | native | [[4], [9000000000], [9000000000], [null], [null]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
-| type / bigint / MINUS ALL / rl | native | [[3]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| type / bigint / MINUS ALL / lr | native | [[4], [9000000000], [9000000000], [null], [null]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | REFUSED: UnsupportedOperationException |
+| type / bigint / MINUS ALL / rl | native | [[3]] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | type / columns / EXCEPT ALL / lr | native | [[1, "a", "f0000000000000000"], [1, "b", "f0000000000000000"], [null,  | REFUSED: UnsupportedOperationException | WRONG: [[1, "b", "f0000000000000000"]] | EQUAL |
 | type / columns / EXCEPT ALL / rl | native | [[1, null, "f0000000000000000"], [2, "a", "f7ff8000000000000"]] | REFUSED: UnsupportedOperationException | WRONG: [[1, null, "f0000000000000000"]] | EQUAL |
 | type / columns / INTERSECT ALL / lr | native | [[1, "a", "f0000000000000000"], [1, "a", "f0000000000000000"], [2, "a" | REFUSED: UnsupportedOperationException | WRONG: [[1, "a", "f0000000000000000"], [1, "a", "f0000000000000000"], [1, "a" | EQUAL |
 | type / columns / INTERSECT ALL / rl | native | [[1, "a", "f0000000000000000"], [1, "a", "f0000000000000000"], [2, "a" | REFUSED: UnsupportedOperationException | WRONG: [[1, "a", "f0000000000000000"], [1, "a", "f0000000000000000"], [2, "a" | EQUAL |
-| type / columns / MINUS ALL / lr | native | [[1, "a", "f0000000000000000"], [1, "b", "f0000000000000000"], [null,  | REFUSED: UnsupportedOperationException | WRONG: [[1, "b", "f0000000000000000"]] | EQUAL |
-| type / columns / MINUS ALL / rl | native | [[1, null, "f0000000000000000"], [2, "a", "f7ff8000000000000"]] | REFUSED: UnsupportedOperationException | WRONG: [[1, null, "f0000000000000000"]] | EQUAL |
+| type / columns / MINUS ALL / lr | native | [[1, "a", "f0000000000000000"], [1, "b", "f0000000000000000"], [null,  | REFUSED: UnsupportedOperationException | WRONG: [[1, "b", "f0000000000000000"]] | REFUSED: UnsupportedOperationException |
+| type / columns / MINUS ALL / rl | native | [[1, null, "f0000000000000000"], [2, "a", "f7ff8000000000000"]] | REFUSED: UnsupportedOperationException | WRONG: [[1, null, "f0000000000000000"]] | REFUSED: UnsupportedOperationException |
 | type / date / EXCEPT ALL / lr | native | [["t2024-01-01"], ["t2024-01-01"], ["t2024-02-29"], [null]] | REFUSED: UnsupportedOperationException | WRONG: [["t2024-02-29"]] | EQUAL |
 | type / date / EXCEPT ALL / rl | native | [["t2000-01-01"]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | type / date / INTERSECT ALL / lr | native | [["t1970-01-01"], ["t1970-01-01"], ["t2024-01-01"], [null]] | REFUSED: UnsupportedOperationException | WRONG: [["t1970-01-01"], ["t1970-01-01"], ["t2024-01-01"], ["t2024-01-01"], [ | EQUAL |
 | type / date / INTERSECT ALL / rl | native | [["t1970-01-01"], ["t1970-01-01"], ["t2024-01-01"], [null]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| type / date / MINUS ALL / lr | native | [["t2024-01-01"], ["t2024-01-01"], ["t2024-02-29"], [null]] | REFUSED: UnsupportedOperationException | WRONG: [["t2024-02-29"]] | EQUAL |
-| type / date / MINUS ALL / rl | native | [["t2000-01-01"]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| type / date / MINUS ALL / lr | native | [["t2024-01-01"], ["t2024-01-01"], ["t2024-02-29"], [null]] | REFUSED: UnsupportedOperationException | WRONG: [["t2024-02-29"]] | REFUSED: UnsupportedOperationException |
+| type / date / MINUS ALL / rl | native | [["t2000-01-01"]] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | type / decimal / EXCEPT ALL / lr | native | [["d1.1"], ["d1.1"], ["d4"], [null], [null]] | REFUSED: UnsupportedOperationException | WRONG: [["d4"]] | EQUAL |
 | type / decimal / EXCEPT ALL / rl | native | [["d3"]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | type / decimal / INTERSECT ALL / lr | native | [["d-2.2"], ["d-2.2"], ["d1.1"], [null]] | REFUSED: UnsupportedOperationException | WRONG: [["d-2.2"], ["d-2.2"], ["d1.1"], ["d1.1"], ["d1.1"], [null], [null], [ | EQUAL |
 | type / decimal / INTERSECT ALL / rl | native | [["d-2.2"], ["d-2.2"], ["d1.1"], [null]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| type / decimal / MINUS ALL / lr | native | [["d1.1"], ["d1.1"], ["d4"], [null], [null]] | REFUSED: UnsupportedOperationException | WRONG: [["d4"]] | EQUAL |
-| type / decimal / MINUS ALL / rl | native | [["d3"]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| type / decimal / MINUS ALL / lr | native | [["d1.1"], ["d1.1"], ["d4"], [null], [null]] | REFUSED: UnsupportedOperationException | WRONG: [["d4"]] | REFUSED: UnsupportedOperationException |
+| type / decimal / MINUS ALL / rl | native | [["d3"]] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | type / double-signs / EXCEPT ALL / lr | native | [["f0000000000000000"]] | REFUSED: UnsupportedOperationException | WRONG: [] | EQUAL |
 | type / double-signs / EXCEPT ALL / rl | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | type / double-signs / INTERSECT ALL / lr | native | [["f0000000000000000"], ["f0000000000000000"]] | REFUSED: UnsupportedOperationException | WRONG: [["f8000000000000000"], ["f8000000000000000"], ["f8000000000000000"]] | EQUAL |
 | type / double-signs / INTERSECT ALL / rl | native | [["f0000000000000000"], ["f0000000000000000"]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| type / double-signs / MINUS ALL / lr | native | [["f0000000000000000"]] | REFUSED: UnsupportedOperationException | WRONG: [] | EQUAL |
-| type / double-signs / MINUS ALL / rl | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| type / double-signs / MINUS ALL / lr | native | [["f0000000000000000"]] | REFUSED: UnsupportedOperationException | WRONG: [] | REFUSED: UnsupportedOperationException |
+| type / double-signs / MINUS ALL / rl | native | [] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | type / double / EXCEPT ALL / lr | native | [["f0000000000000000"], ["f3ff8000000000000"], ["f3ff8000000000000"],  | REFUSED: UnsupportedOperationException | WRONG: [["f3ff8000000000000"], ["f3ff8000000000000"]] | EQUAL |
 | type / double / EXCEPT ALL / rl | native | [["f4004000000000000"]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | type / double / INTERSECT ALL / lr | native | [["f0000000000000000"], ["f0000000000000000"], ["f7ff8000000000000"],  | REFUSED: UnsupportedOperationException | WRONG: [["f0000000000000000"], ["f0000000000000000"], ["f7ff8000000000000"],  | EQUAL |
 | type / double / INTERSECT ALL / rl | native | [["f0000000000000000"], ["f0000000000000000"], ["f7ff8000000000000"],  | REFUSED: UnsupportedOperationException | WRONG: [["f0000000000000000"], ["f7ff8000000000000"], ["f8000000000000000"],  | EQUAL |
-| type / double / MINUS ALL / lr | native | [["f0000000000000000"], ["f3ff8000000000000"], ["f3ff8000000000000"],  | REFUSED: UnsupportedOperationException | WRONG: [["f3ff8000000000000"], ["f3ff8000000000000"]] | EQUAL |
-| type / double / MINUS ALL / rl | native | [["f4004000000000000"]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| type / double / MINUS ALL / lr | native | [["f0000000000000000"], ["f3ff8000000000000"], ["f3ff8000000000000"],  | REFUSED: UnsupportedOperationException | WRONG: [["f3ff8000000000000"], ["f3ff8000000000000"]] | REFUSED: UnsupportedOperationException |
+| type / double / MINUS ALL / rl | native | [["f4004000000000000"]] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | type / float-signs / EXCEPT ALL / lr | native | [["f0000000000000000"]] | REFUSED: UnsupportedOperationException | WRONG: [] | EQUAL |
 | type / float-signs / EXCEPT ALL / rl | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | type / float-signs / INTERSECT ALL / lr | native | [["f0000000000000000"], ["f0000000000000000"]] | REFUSED: UnsupportedOperationException | WRONG: [["f8000000000000000"], ["f8000000000000000"], ["f8000000000000000"]] | EQUAL |
 | type / float-signs / INTERSECT ALL / rl | native | [["f0000000000000000"], ["f0000000000000000"]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| type / float-signs / MINUS ALL / lr | native | [["f0000000000000000"]] | REFUSED: UnsupportedOperationException | WRONG: [] | EQUAL |
-| type / float-signs / MINUS ALL / rl | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| type / float-signs / MINUS ALL / lr | native | [["f0000000000000000"]] | REFUSED: UnsupportedOperationException | WRONG: [] | REFUSED: UnsupportedOperationException |
+| type / float-signs / MINUS ALL / rl | native | [] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | type / float / EXCEPT ALL / lr | native | [["f0000000000000000"], ["f3ff8000000000000"], ["f3ff8000000000000"],  | REFUSED: UnsupportedOperationException | WRONG: [["f3ff8000000000000"], ["f3ff8000000000000"]] | EQUAL |
 | type / float / EXCEPT ALL / rl | native | [["f4004000000000000"]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | type / float / INTERSECT ALL / lr | native | [["f0000000000000000"], ["f0000000000000000"], ["f7ff8000000000000"],  | REFUSED: UnsupportedOperationException | WRONG: [["f0000000000000000"], ["f0000000000000000"], ["f7ff8000000000000"],  | EQUAL |
 | type / float / INTERSECT ALL / rl | native | [["f0000000000000000"], ["f0000000000000000"], ["f7ff8000000000000"],  | REFUSED: UnsupportedOperationException | WRONG: [["f0000000000000000"], ["f7ff8000000000000"], ["f8000000000000000"],  | EQUAL |
-| type / float / MINUS ALL / lr | native | [["f0000000000000000"], ["f3ff8000000000000"], ["f3ff8000000000000"],  | REFUSED: UnsupportedOperationException | WRONG: [["f3ff8000000000000"], ["f3ff8000000000000"]] | EQUAL |
-| type / float / MINUS ALL / rl | native | [["f4004000000000000"]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| type / float / MINUS ALL / lr | native | [["f0000000000000000"], ["f3ff8000000000000"], ["f3ff8000000000000"],  | REFUSED: UnsupportedOperationException | WRONG: [["f3ff8000000000000"], ["f3ff8000000000000"]] | REFUSED: UnsupportedOperationException |
+| type / float / MINUS ALL / rl | native | [["f4004000000000000"]] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | type / int / EXCEPT ALL / lr | native | [[1], [1], [4], [null], [null]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
 | type / int / EXCEPT ALL / rl | native | [[3]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | type / int / INTERSECT ALL / lr | native | [[1], [2], [2], [null]] | REFUSED: UnsupportedOperationException | WRONG: [[1], [1], [1], [2], [2], [null], [null], [null]] | EQUAL |
 | type / int / INTERSECT ALL / rl | native | [[1], [2], [2], [null]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| type / int / MINUS ALL / lr | native | [[1], [1], [4], [null], [null]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | EQUAL |
-| type / int / MINUS ALL / rl | native | [[3]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| type / int / MINUS ALL / lr | native | [[1], [1], [4], [null], [null]] | REFUSED: UnsupportedOperationException | WRONG: [[4]] | REFUSED: UnsupportedOperationException |
+| type / int / MINUS ALL / rl | native | [[3]] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | type / null / EXCEPT ALL / lr | native | [[null], [null]] | REFUSED: UnsupportedOperationException | WRONG: [] | EQUAL |
 | type / null / EXCEPT ALL / rl | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | type / null / INTERSECT ALL / lr | native | [[null]] | REFUSED: UnsupportedOperationException | WRONG: [[null], [null], [null]] | EQUAL |
 | type / null / INTERSECT ALL / rl | native | [[null]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| type / null / MINUS ALL / lr | native | [[null], [null]] | REFUSED: UnsupportedOperationException | WRONG: [] | EQUAL |
-| type / null / MINUS ALL / rl | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| type / null / MINUS ALL / lr | native | [[null], [null]] | REFUSED: UnsupportedOperationException | WRONG: [] | REFUSED: UnsupportedOperationException |
+| type / null / MINUS ALL / rl | native | [] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | type / string / EXCEPT ALL / lr | native | [[""], ["A"], ["a"], ["a"], [null]] | REFUSED: UnsupportedOperationException | WRONG: [[""], ["A"]] | EQUAL |
 | type / string / EXCEPT ALL / rl | native | [[" a"], ["c"]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | type / string / INTERSECT ALL / lr | native | [["a"], ["b"], ["b"], [null]] | REFUSED: UnsupportedOperationException | WRONG: [["a"], ["a"], ["a"], ["b"], ["b"], [null], [null]] | EQUAL |
 | type / string / INTERSECT ALL / rl | native | [["a"], ["b"], ["b"], [null]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| type / string / MINUS ALL / lr | native | [[""], ["A"], ["a"], ["a"], [null]] | REFUSED: UnsupportedOperationException | WRONG: [[""], ["A"]] | EQUAL |
-| type / string / MINUS ALL / rl | native | [[" a"], ["c"]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| type / string / MINUS ALL / lr | native | [[""], ["A"], ["a"], ["a"], [null]] | REFUSED: UnsupportedOperationException | WRONG: [[""], ["A"]] | REFUSED: UnsupportedOperationException |
+| type / string / MINUS ALL / rl | native | [[" a"], ["c"]] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | type / struct / EXCEPT ALL / lr | native | [[[["x", 1], ["y", "a"]]], [[["x", 1], ["y", "a"]]], [[["x", null], [" | REFUSED: UnsupportedOperationException | WRONG: [[[["x", null], ["y", "b"]]]] | EQUAL |
 | type / struct / EXCEPT ALL / rl | native | [[[["x", 3], ["y", "c"]]]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | type / struct / INTERSECT ALL / lr | native | [[[["x", 1], ["y", "a"]]], [[["x", 2], ["y", null]]], [[["x", 2], ["y" | REFUSED: UnsupportedOperationException | WRONG: [[[["x", 1], ["y", "a"]]], [[["x", 1], ["y", "a"]]], [[["x", 1], ["y", | EQUAL |
 | type / struct / INTERSECT ALL / rl | native | [[[["x", 1], ["y", "a"]]], [[["x", 2], ["y", null]]], [[["x", 2], ["y" | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| type / struct / MINUS ALL / lr | native | [[[["x", 1], ["y", "a"]]], [[["x", 1], ["y", "a"]]], [[["x", null], [" | REFUSED: UnsupportedOperationException | WRONG: [[[["x", null], ["y", "b"]]]] | EQUAL |
-| type / struct / MINUS ALL / rl | native | [[[["x", 3], ["y", "c"]]]] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| type / struct / MINUS ALL / lr | native | [[[["x", 1], ["y", "a"]]], [[["x", 1], ["y", "a"]]], [[["x", null], [" | REFUSED: UnsupportedOperationException | WRONG: [[[["x", null], ["y", "b"]]]] | REFUSED: UnsupportedOperationException |
+| type / struct / MINUS ALL / rl | native | [[[["x", 3], ["y", "c"]]]] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
 | type / timestamp / EXCEPT ALL / lr | native | [["t2024-01-01T10:00:00"], ["t2024-01-01T10:00:00"], ["t2024-02-29T23: | REFUSED: UnsupportedOperationException | WRONG: [["t2024-02-29T23:59:59.123456"]] | EQUAL |
 | type / timestamp / EXCEPT ALL / rl | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
 | type / timestamp / INTERSECT ALL / lr | native | [["t1970-01-01T00:00:00"], ["t1970-01-01T00:00:00"], ["t2024-01-01T10: | REFUSED: UnsupportedOperationException | WRONG: [["t1970-01-01T00:00:00"], ["t1970-01-01T00:00:00"], ["t2024-01-01T10: | EQUAL |
 | type / timestamp / INTERSECT ALL / rl | native | [["t1970-01-01T00:00:00"], ["t1970-01-01T00:00:00"], ["t2024-01-01T10: | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
-| type / timestamp / MINUS ALL / lr | native | [["t2024-01-01T10:00:00"], ["t2024-01-01T10:00:00"], ["t2024-02-29T23: | REFUSED: UnsupportedOperationException | WRONG: [["t2024-02-29T23:59:59.123456"]] | EQUAL |
-| type / timestamp / MINUS ALL / rl | native | [] | REFUSED: UnsupportedOperationException | EQUAL | EQUAL |
+| type / timestamp / MINUS ALL / lr | native | [["t2024-01-01T10:00:00"], ["t2024-01-01T10:00:00"], ["t2024-02-29T23: | REFUSED: UnsupportedOperationException | WRONG: [["t2024-02-29T23:59:59.123456"]] | REFUSED: UnsupportedOperationException |
+| type / timestamp / MINUS ALL / rl | native | [] | REFUSED: UnsupportedOperationException | EQUAL | REFUSED: UnsupportedOperationException |
