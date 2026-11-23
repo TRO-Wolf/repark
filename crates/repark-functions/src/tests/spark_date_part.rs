@@ -607,8 +607,9 @@ async fn ntz_date_null_invalid_and_non_temporal_controls() {
     assert_eq!(
         run_int32_row(
             &ny,
-            "SELECT date_part('hour', NULL), extract(HOUR FROM NULL), \
-             date_part('hour', CAST(NULL AS TIMESTAMP)), date_part('hour', CAST(NULL AS DATE))"
+            "SELECT date_part('hour', NULL) AS a, extract(HOUR FROM NULL) AS b, \
+             date_part('hour', CAST(NULL AS TIMESTAMP)) AS c, \
+             date_part('hour', CAST(NULL AS DATE)) AS d"
         )
         .await,
         vec![None, None, None, None]

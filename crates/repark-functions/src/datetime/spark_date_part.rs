@@ -206,20 +206,21 @@ impl ScalarUDFImpl for SparkDatePart {
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        let mut call_args = args.args;
-        let [part_arg, value_arg] =
-            take_function_args(self.name(), std::mem::take(&mut call_args))?;
-        let raw_part = match &part_arg {
-            ColumnarValue::Scalar(scalar) => match scalar.try_as_str().flatten() {
-                Some(text) => text.to_owned(),
-                None => {
-                    return exec_err!("First argument of `DATE_PART` must be non-null scalar Utf8");
-                }
-            },
-            ColumnarValue::Array(_) => {
-                return exec_err!("First argument of `DATE_PART` must be non-null scalar Utf8");
-            }
+        let ScalarFunctionArgs {
+            args: call_args,
+            arg_fields,
+            number_rows,
+            return_field,
+            config_options,
+        } = args;
+        let [part_arg, value_arg] = take_function_args(self.name(), call_args)?;
+        let ColumnarValue::Scalar(scalar) = &part_arg else {
+            return exec_err!("First argument of `DATE_PART` must be non-null scalar Utf8");
         };
+        let Some(text) = scalar.try_as_str().flatten() else {
+            return exec_err!("First argument of `DATE_PART` must be non-null scalar Utf8");
+        };
+        let raw_part = text.to_owned();
         let normalized = normalize_part(&raw_part);
         let Some(kind) = resolve_field(&normalized) else {
             return exec_err!("Date part '{raw_part}' not supported");
@@ -232,7 +233,7 @@ impl ScalarUDFImpl for SparkDatePart {
                     ColumnarValue::Scalar(scalar) => scalar.to_array()?,
                 };
                 let extracted =
-                    extract_calendar_part(&array, args.config_options.as_ref(), part, shift)?;
+                    extract_calendar_part(&array, config_options.as_ref(), part, shift)?;
                 if is_scalar {
                     Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
                         extracted.as_ref(),
@@ -242,25 +243,20 @@ impl ScalarUDFImpl for SparkDatePart {
                     Ok(ColumnarValue::Array(extracted))
                 }
             }
-            FieldKind::SubSecond => {
+            FieldKind::SubSecond | FieldKind::Epoch => {
                 let rest = ScalarFunctionArgs {
                     args: Vec::new(),
-                    arg_fields: args.arg_fields,
-                    number_rows: args.number_rows,
-                    return_field: args.return_field,
-                    config_options: args.config_options,
+                    arg_fields,
+                    number_rows,
+                    return_field,
+                    config_options,
                 };
-                forward_to_stock(part_arg, value_arg, true, rest)
-            }
-            FieldKind::Epoch => {
-                let rest = ScalarFunctionArgs {
-                    args: Vec::new(),
-                    arg_fields: args.arg_fields,
-                    number_rows: args.number_rows,
-                    return_field: args.return_field,
-                    config_options: args.config_options,
-                };
-                forward_to_stock(part_arg, value_arg, false, rest)
+                forward_to_stock(
+                    part_arg,
+                    value_arg,
+                    matches!(kind, FieldKind::SubSecond),
+                    rest,
+                )
             }
         }
     }
@@ -311,7 +307,7 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     };
     let should_rewrite = func.func.name() == "date_part"
         && func.args.len() == 2
-        && !func.func.inner().as_any().is::<SparkDatePart>()
+        && func.func.inner().downcast_ref::<SparkDatePart>().is_none()
         && func.args[1]
             .get_type(schema)
             .is_ok_and(|data_type| is_spark_date_part_source(&data_type));
