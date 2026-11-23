@@ -106,8 +106,7 @@ def _normal(cell: dict[str, Any], literal: bool) -> dict[str, Any]:
 
 
 def _fexpr_residual(name: str) -> bool:
-    source, items = CELLS[name]
-    return source == "none" or any(" AS " not in item and "explode" in item for item in items)
+    return CELLS[name][0] == "none"
 
 
 def _scoped_keys(seat: str) -> list[str]:
@@ -191,14 +190,14 @@ def test_an_array_literal_element_stays_nullable_as_the_typed_explode_has_it(
 
 
 @pytest.mark.parametrize("zone", ZONES)
-def test_f_expr_over_a_range_frame_and_an_unaliased_f_expr_stay_as_recorded(
+def test_f_expr_over_a_range_frame_stays_as_recorded_and_view_f_expr_matches_spark(
     measured: dict[str, dict[str, Any]], zone: str
 ) -> None:
+    expected = _ORACLE["modes"][mode_key(zone, "true")]
     got = measured[mode_key(zone, "true")]
     assert "__repark_gen_col" in got["bare|expr"]["message"]
-    assert got["view-bare|expr"]["columns"] == ["id", "explode(arr)"]
-    assert got["view-bare|expr"]["schema"][1][0] == "explode(arr)"
-    assert got["view-bare|expr"]["rows"] == got["view-bare|sql"]["rows"]
+    assert _normal(got["view-bare|expr"], False) == _normal(expected["view-bare|expr"], False)
+    assert _normal(got["map-view|expr"], False) == _normal(expected["map-view|expr"], False)
 
 
 @pytest.mark.parametrize("zone", ZONES)

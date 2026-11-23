@@ -222,6 +222,15 @@ fn is_generator_call(function: &ScalarFunction) -> bool {
     generator_kind(function.func.name()).is_some()
 }
 
+#[must_use]
+pub fn is_bare_generator_expr(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::ScalarFunction(function)
+            if is_generator_call(function) || function.func.name() == GENERATOR_ALIAS_UDF
+    )
+}
+
 fn contains_generator(expr: &Expr) -> bool {
     expr.exists(|node| {
         Ok(matches!(

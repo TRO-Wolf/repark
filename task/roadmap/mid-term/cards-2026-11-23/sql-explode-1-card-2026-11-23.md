@@ -40,33 +40,35 @@ nullable for the outer spelling) and exposes `col` as its plan `schema_name`, so
 `INSERT INTO … SELECT`, and `INSERT OVERWRITE … SELECT` resolve against `col` before `GeneratorRewrite` runs.
 Explicit user aliases on `explode` / `explode_outer` (including names starting with `explode(` / `explode_outer(`)
 are kept, and a single alias like ``AS `posexplode(custom)` `` refuses `[COLUMN_ALIASES_MISMATCH]` rather than
-being dropped. The Spark door, `selectExpr`, and the write statements get them; `F.expr` gets them over a table or
-view with `.alias(...)`. The typed path is unchanged.
+being dropped. `PyColumn::is_bare_generator` and `_rewrap_rebound_column` keep `_GeneratorColumn` and unaliased
+bare generator `F.expr` calls unaliased (`_projection_name=None`), so the Spark door, `selectExpr`, the write
+statements, and `F.expr` over a table or view (both aliased and unaliased) all answer as Spark. The typed path is
+unchanged.
 
-On the head every scoped cell on `spark.sql`, `selectExpr`, and the write statements answers as Spark in the four
-modes (rows, names, types), including `explode_outer` / `posexplode_outer` over `sequence` and `split`, unaliased
-subqueries / `ORDER BY col` / `INSERT INTO` / `INSERT OVERWRITE` / `CTAS`, explicit `explode(…)` aliases, and the
-calendar-dimension shape: a projection of `year`, `extract(YEAROFWEEK …)` and `extract(DAYOFWEEK …)` cast to
-`SMALLINT` and `weekofyear` over `explode(sequence(DATE, DATE, INTERVAL 1 DAY))`, and its CTAS and
-`INSERT … SELECT` into a local Iceberg table read back cold (a fresh session reading the table path; the stored
-`SMALLINT` is an Iceberg `int`, as in Spark).
+On the head every scoped cell on `spark.sql`, `selectExpr`, `F.expr` over a table or view, and the write statements
+answers as Spark in the four modes (rows, names, types), including `explode_outer` / `posexplode_outer` over
+`sequence` and `split`, unaliased subqueries / `ORDER BY col` / `INSERT INTO` / `INSERT OVERWRITE` / `CTAS`,
+explicit `explode(…)` aliases, and the calendar-dimension shape: a projection of `year`, `extract(YEAROFWEEK …)`
+and `extract(DAYOFWEEK …)` cast to `SMALLINT` and `weekofyear` over `explode(sequence(DATE, DATE, INTERVAL 1 DAY))`,
+and its CTAS and `INSERT … SELECT` into a local Iceberg table read back cold (a fresh session reading the table
+path; the stored `SMALLINT` is an Iceberg `int`, as in Spark).
 
 ## Pins
 
 `python/repark/tests/functions/test_sql_explode_1.py` over the oracle, driven by the recorder
 `_record_sql_explode_1.py` (with `test_extract_field_aliases_1.py`: 94 items total, all green on the head and red
-on main, on the pre-delta PR head, and on both mutants); Rust `repark-functions` `generator::tests` (30 tests,
-including non-nullable-element outer lists, unaliased subquery / `ORDER BY col`, and explicit `explode(…)` aliases).
+on main, on the pre-delta PR head, and on both mutants); Rust `repark-functions` `generator::tests` (31 tests,
+including non-nullable-element outer lists, unaliased subquery / `ORDER BY col`, explicit `explode(…)` aliases,
+and `is_bare_generator_expr`).
 
 ## Still unlike Spark (out of this unit's seat)
 
 - An `array(...)` or `map(...)` literal's element is nullable, so `explode(array(1, 2))` types `col` nullable
   where Spark says not (typed `F.explode` the same on main); `sequence` keeps its element non-null. `dayofmonth`
   over an exploded date is nullable where Spark says not.
-- `F.expr("explode(...)")` over a `spark.range` frame raises `No field named __repark_gen_col`; unaliased over a
-  view it answers Spark's rows with both facade and engine column name `explode(arr)` (Spark `col`), and unaliased
-  `F.expr("explode(m)")` on a map refuses `[COLUMN_ALIASES_MISMATCH]` because `F.expr` attaches its display alias.
-  Over a view with `.alias(...)` it answers as Spark. `F.expr("<any expression> AS x")` refuses for every expression.
+- `F.expr("explode(...)")` over a `spark.range` frame raises `No field named __repark_gen_col`. `F.expr("<any
+  expression> AS x")` refuses for every expression. Over a table or view, both aliased and unaliased `F.expr`
+  answer as Spark.
 - Multi-column generators (`explode` on a `MAP`, `posexplode`, `inline`) still emit a single placeholder column
   before `GeneratorRewrite`, so an outer query cannot read `key` / `value` of a map explode or `pos` / `col` of a
   `posexplode` inside a subquery. Spark's `AS (k, v)` multi-alias refuses (FNP9-GENERATORS-1); one alias on a map

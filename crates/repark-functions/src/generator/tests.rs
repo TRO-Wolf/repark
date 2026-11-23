@@ -631,3 +631,27 @@ fn explicit_alias_starting_with_generator_name_is_kept() {
         "{error}"
     );
 }
+
+#[test]
+fn is_bare_generator_expr_distinguishes_bare_from_aliased_and_nested() {
+    let bare_explode = Expr::ScalarFunction(ScalarFunction::new_udf(
+        generator_udf("explode"),
+        vec![Expr::Column(Column::new_unqualified("arr_i"))],
+    ));
+    let bare_pos = Expr::ScalarFunction(ScalarFunction::new_udf(
+        generator_udf("posexplode"),
+        vec![Expr::Column(Column::new_unqualified("arr_i"))],
+    ));
+    let marked = Expr::ScalarFunction(ScalarFunction::new_udf(
+        generator_udf(GENERATOR_ALIAS_UDF),
+        vec![bare_pos.clone(), lit("p"), lit("v")],
+    ));
+    assert!(is_bare_generator_expr(&bare_explode));
+    assert!(is_bare_generator_expr(&bare_pos));
+    assert!(is_bare_generator_expr(&marked));
+    assert!(!is_bare_generator_expr(&bare_explode.clone().alias("x")));
+    assert!(!is_bare_generator_expr(&bare_explode.is_null()));
+    assert!(!is_bare_generator_expr(&Expr::Column(
+        Column::new_unqualified("col")
+    )));
+}

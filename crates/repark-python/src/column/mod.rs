@@ -865,6 +865,13 @@ impl PyColumn {
         })
     }
 
+    #[allow(clippy::missing_errors_doc)]
+    pub fn is_bare_generator(&self) -> PyResult<bool> {
+        fenced!("Column.is_bare_generator", {
+            Ok(self.grown_read(repark_functions::generator::is_bare_generator_expr))
+        })
+    }
+
     /// Collapse nested alias chains to one outer rename.
     ///
     /// ``col("x").alias("x").alias("x")`` and ``col("x").alias("a").alias("b")`` both become a
