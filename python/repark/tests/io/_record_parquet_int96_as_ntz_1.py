@@ -60,7 +60,21 @@ VIEWS = {
     "pa_adj": "pyarrow_adjusted",
     "pa_naive": "pyarrow_naive",
     "pa_int96": "pyarrow_int96",
+    "pa_int96_naive": "pyarrow_int96_naive",
 }
+FLAT = "spark_int96_flat"
+APPEND_ZONES = ("UTC", "America/New_York")
+APPENDS = {
+    "a1_read_then_append": "",
+    "a2_literal_append": "SELECT 2 AS id, TIMESTAMP'2025-01-16 00:00:00' AS ts",
+}
+APPEND_READ = "SELECT id, CAST(ts AS STRING) FROM w ORDER BY id, 2"
+GAP_PINS = {
+    "pyarrow_int96_naive_hint": (
+        "SELECT id, CAST(ts AS STRING), typeof(ts) FROM pa_int96_naive ORDER BY id"
+    ),
+}
+ICEBERG_ADD_FILES_READ = "SELECT id, CAST(ts AS STRING) FROM lc.db.added ORDER BY id"
 ROUTES = ("parquet", "format", "sqlpath", "view")
 PINS = {
     "str": "SELECT id, CAST(ts AS STRING) FROM t ORDER BY id",
@@ -91,6 +105,13 @@ CONTROLS = {
     "pyarrow_adjusted": "SELECT id, CAST(ts AS STRING), typeof(ts) FROM pa_adj ORDER BY id",
     "pyarrow_naive": "SELECT id, CAST(ts AS STRING), typeof(ts) FROM pa_naive ORDER BY id",
     "pyarrow_int96": "SELECT id, CAST(ts AS STRING), typeof(ts) FROM pa_int96 ORDER BY id",
+}
+GAPS = {
+    "iceberg_add_files": {
+        "card": "task/roadmap/mid-term/iceberg-int96-null-1-card-2026-11-22.md",
+        "cell": "iceberg_add_files/America/New_York",
+        "repark": [[1, None], [2, None]],
+    },
 }
 WRITE_SOURCE = "SELECT id, ts, s FROM t"
 WRITE_READ = "SELECT id, CAST(ts AS STRING), CAST(s.t AS STRING) FROM w ORDER BY id"
@@ -127,6 +148,7 @@ def write_spark_fixtures(spark: Any, root: Path) -> None:
     nested.coalesce(1).write.mode("overwrite").parquet(str(root / "spark_micros"))
     spark.conf.unset("spark.sql.parquet.outputTimestampType")
     flat = spark.sql("SELECT id, ts FROM b")
+    flat.where("id <= 2").coalesce(1).write.mode("overwrite").parquet(str(root / FLAT))
     flat.where("id <= 3").coalesce(1).write.mode("overwrite").parquet(str(root / "spark_mixdir"))
     spark.conf.set("spark.sql.parquet.outputTimestampType", "TIMESTAMP_MICROS")
     flat.where("id > 3").coalesce(1).write.mode("append").parquet(str(root / "spark_mixdir"))
@@ -143,6 +165,7 @@ def write_pyarrow_fixtures(root: Path) -> None:
         "pyarrow_adjusted": (pa.array(aware, pa.timestamp("us", tz="UTC")), False),
         "pyarrow_naive": (pa.array(list(WALLS), pa.timestamp("us")), False),
         "pyarrow_int96": (pa.array(aware, pa.timestamp("us", tz="UTC")), True),
+        "pyarrow_int96_naive": (pa.array(list(WALLS), pa.timestamp("us")), True),
     }
     for name, (values, int96) in shapes.items():
         (root / name).mkdir(parents=True, exist_ok=True)
@@ -153,8 +176,8 @@ def write_pyarrow_fixtures(root: Path) -> None:
         )
 
 
-def copy_fixtures(root: Path) -> None:
-    for name in sorted(set(VIEWS.values())):
+def copy_fixtures(root: Path, names: list[str]) -> None:
+    for name in names:
         target = FIXTURES / name
         shutil.rmtree(target, ignore_errors=True)
         target.mkdir(parents=True)
@@ -203,7 +226,7 @@ def measure_reads(spark: Any, fixtures: Path, zone: str, found: dict[str, Any]) 
     register_views(spark, fixtures)
     for route in ROUTES:
         found[f"schema/{route}/{zone}"] = schema_of(spark, route, str(fixtures / "spark_int96"))
-    for name, query in {**PINS, **CONTROLS}.items():
+    for name, query in {**PINS, **CONTROLS, **GAP_PINS}.items():
         found[f"rows/{name}/{zone}"] = rows_of(spark, query)
 
 
@@ -231,6 +254,33 @@ def measure_writes(spark: Any, fixtures: Path, scratch: Path, mode: str, found: 
             ]
 
 
+def measure_appends(spark: Any, fixtures: Path, scratch: Path, mode: str, found: dict) -> None:
+    for zone in APPEND_ZONES:
+        spark.conf.set("spark.sql.session.timeZone", zone)
+        for case, query in APPENDS.items():
+            out = scratch / f"append_{case}_{zone_tag(zone)}_{mode}"
+            shutil.rmtree(out, ignore_errors=True)
+            shutil.copytree(fixtures / FLAT, out)
+            source = spark.sql(query) if query else spark.read.parquet(str(fixtures / FLAT))
+            source.write.mode("append").parquet(str(out))
+            frame = spark.read.parquet(str(out))
+            frame.createOrReplaceTempView("w")
+            found[f"append/{case}/{zone}"] = [
+                frame.schema.simpleString(),
+                rows_of(spark, APPEND_READ),
+            ]
+
+
+def measure_iceberg_add_files(spark: Any, fixtures: Path, found: dict) -> None:
+    spark.conf.set("spark.sql.session.timeZone", "America/New_York")
+    spark.sql("CREATE NAMESPACE IF NOT EXISTS lc.db")
+    spark.sql("DROP TABLE IF EXISTS lc.db.added")
+    spark.sql("CREATE TABLE lc.db.added (id INT, ts TIMESTAMP) USING iceberg")
+    source = f"`parquet`.`{fixtures / FLAT}`"
+    spark.sql(f"CALL lc.system.add_files(table => 'db.added', source_table => '{source}')")
+    found["iceberg_add_files/America/New_York"] = rows_of(spark, ICEBERG_ADD_FILES_READ)
+
+
 def measure(spark: Any, fixtures: Path, scratch: Path) -> dict[str, dict[str, Any]]:
     truth: dict[str, dict[str, Any]] = {}
     for mode in MODES:
@@ -239,6 +289,8 @@ def measure(spark: Any, fixtures: Path, scratch: Path) -> dict[str, dict[str, An
         for zone in ZONES:
             measure_reads(spark, fixtures, zone, found)
         measure_writes(spark, fixtures, scratch, mode, found)
+        measure_appends(spark, fixtures, scratch, mode, found)
+        measure_iceberg_add_files(spark, fixtures, found)
         truth[mode] = found
     return truth
 
@@ -255,6 +307,12 @@ def document(truth: dict[str, dict[str, Any]]) -> dict[str, Any]:
         "write_read": WRITE_READ,
         "iceberg_source": ICEBERG_SOURCE,
         "iceberg_read": ICEBERG_READ,
+        "flat": FLAT,
+        "append_zones": list(APPEND_ZONES),
+        "appends": APPENDS,
+        "append_read": APPEND_READ,
+        "gap_pins": GAP_PINS,
+        "gaps": GAPS,
         "truth": truth,
     }
 
@@ -268,7 +326,7 @@ def main(argv: list[str]) -> int:
             written = scratch / "fixtures"
             write_spark_fixtures(spark, written)
             write_pyarrow_fixtures(written)
-            copy_fixtures(written)
+            copy_fixtures(written, sorted(set(VIEWS.values()) | {FLAT}))
         truth = measure(spark, FIXTURES, scratch / "out")
         spark.stop()
     recorded = document(truth)

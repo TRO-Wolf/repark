@@ -1,12 +1,12 @@
 # Card PARQUET-INT96-AS-NTZ-1: a Spark-written INT96 timestamp reads as `timestamp_ntz`
 
-**Date:** 2026-11-22. **Filed by:** the orchestrator (`claude-opus-5-5`), not dispatched. **Source:** an independent
+**Date:** 2026-11-22. **Filed by:** the orchestrator (`claude-opus-5-5`). **Source:** an independent
 workload measurement against Spark 4.1.2 found a calendar date that moved in a New York session; re-measured here on
 main `c5370be6` (the released 1.5.6 wheel's source). **Severity:** S1 (owner, 2026-11-22): silent, it changes
 which rows a date filter returns, and INT96 is Spark's default timestamp encoding.
 
-**Status:** FIXED 2026-11-22 (branch `fix/parquet-int96-as-ntz-1` off main `5caea2a5`, not merged), built by the
-builder (`claude-opus-5-5`); [registry entry](../../../docs/spark-sql-iceberg-parity.md#parquet-int96-as-ntz-1--a-spark-written-int96-timestamp-reads-as-an-instant-in-the-session-zone--fixed-2026-11-22-branch-fixparquet-int96-as-ntz-1-not-merged).
+**Status:** FIXED 2026-11-22 (PR #1411), built by the builder (`claude-opus-5-5`) on `fix/parquet-int96-as-ntz-1`;
+[registry entry](../../../docs/spark-sql-iceberg-parity.md#parquet-int96-as-ntz-1--a-spark-written-int96-timestamp-reads-as-an-instant-in-the-session-zone--fixed-2026-11-22-pr-1411).
 
 ## The defect
 
@@ -50,7 +50,8 @@ that reads such a file and writes the result stores the shifted dates and the ch
 Synthetic fixtures (`python/repark/tests/fixtures/parquet_int96_as_ntz_1/`): seven ids with a winter and a summer
 2025 instant, a NULL, `1960-03-01 05:30:00.25`, `2999-12-31 22:00:00.123456` and two instants either side of a New
 York and a Kolkata date boundary, written by Spark 4.1.2 as `INT96` (top level and inside a struct, an array and a
-map, beside an `INT64` `TIMESTAMP_NTZ`), as `TIMESTAMP_MICROS`, as one directory of both, and by pyarrow and Polars.
+map, beside an `INT64` `TIMESTAMP_NTZ`), as `TIMESTAMP_MICROS`, as one directory of both, and by pyarrow (Polars files were measured in
+the scratch domain table, not committed).
 288 compared cells (three zones, both ANSI modes, footers aside); main differed from Spark on 184, head only on the 12
 cells of a route RePark does not have (below). Beyond the card's first table, main also:
 
@@ -74,11 +75,12 @@ pruned, on main or after the fix.
 `spark_nullable::with_int96_as_instants` sets DataFusion 54.1's `datafusion.execution.parquet.coerce_int96` to `us`
 and `coerce_int96_tz` to `UTC` on every RePark session config (`session/df_guards.rs`
 `context_with_df_54_1_rule_guards`), after the explicit `datafusion.*` keys, which keep their values. DataFusion
-then infers and decodes every `INT96` leaf, nested ones included, as `Timestamp(Microsecond, "UTC")`, Spark's
+then infers and decodes an `INT96` leaf without an embedded Arrow schema, or whose embedded Arrow schema names a zone, nested ones included, as `Timestamp(Microsecond, "UTC")`, Spark's
 `timestamp`, at schema inference and in the opener, on `read.parquet`, `format("parquet").load`, temp views over
 them, and `CREATE EXTERNAL TABLE … STORED AS PARQUET`. Microseconds match Spark's precision and reach past 2262.
 `INT64` leaves keep their footer's `isAdjustedToUTC`. Iceberg scans read through iceberg-rust's own reader and do not
-pass this option; Iceberg data files never hold `INT96`.
+use this option; an Iceberg table whose data file holds `INT96` (Spark's `add_files`) reads every timestamp as NULL
+on main and head ([ICEBERG-INT96-NULL-1](iceberg-int96-null-1-card-2026-11-22.md), not this unit).
 
 After the fix every one of the 276 cells on the routes RePark has equals Spark; a write after the read stores `INT64
 TIMESTAMP(MICROS,true)` (Spark writes `INT96`): both engines read it back as the same `timestamp` instants, and the
@@ -108,6 +110,30 @@ session option, so it stays with P01-05.
 - Mutant (the `with_int96_as_instants` call in `df_guards.rs` removed): the same 44 facade pins turn red as on main and
   the 12 controls stay green; in Rust the two read tests fail (the leaf arrives as nanoseconds) and the two config
   tests, which call the function directly, pass.
+
+## Delta round 1 (2026-11-22, PR #1411's verifiers)
+
+- **Path append (fixed):** a local `write.mode("append").parquet(dst)` onto a Spark `INT96` directory refused on the
+  first head (`type mismatch source=timestamp[us, tz=UTC] vs path=timestamp[ns]`): `_validate_path_append_schema`
+  read the destination with `pyarrow.parquet.read_schema`, which knows nothing of the option. Main appended a frame
+  read from the directory (A1) but stored zone-less nanoseconds, and refused a `TIMESTAMP` literal (A2). Now
+  `writer_layout._session_parquet_schema` takes a part file's `INT96`-bearing top-level fields from the session's own
+  read of that file, as the S3 append already does (`path_write/append.rs`). A1 and A2 read back cold, on RePark and
+  on Spark, as Spark's rows in UTC and New York; the directory then holds the `INT96` file and RePark's `INT64
+  TIMESTAMP(MICROS,true)` file.
+- **`RESET` and `conf.unset` (recorded, not fixed):** they put `coerce_int96` back to DataFusion's unset value, so
+  `ns` and `timestamp_ntz` return for the rest of the session. Restoring `us`/`UTC` needs a hook on `RESET` on both SQL
+  doors and on `conf.unset`, or moving the default from the session config to read time in both Parquet seats: not
+  small. An explicit `ns` stays the user's choice and wraps values past 2262; an explicit `""` fails at the next read.
+- **Still unlike Spark (recorded):** an `INT96` leaf whose embedded Arrow schema is zone-less (pyarrow or pandas with
+  `use_deprecated_int96_timestamps` over a naive `timestamp[us]`) reads `timestamp_ntz` with the UTC wall time on main
+  and head (Spark: `timestamp`; a strict xfail); a file written with `int96RebaseModeInWrite=LEGACY` (Spark 2.x style)
+  is not rebased on read (`1500-06-01` reads `1500-06-11`, main the same; the verifier's measurement).
+- **Ballista:** not measured on executors. DataFusion 54.1's protobuf `ParquetOptions` carries `coerce_int96` and
+  `coerce_int96_tz`, so a serialized Parquet scan should keep them.
+- **Pins added:** `append/<case>/<zone>` (A1, A2; UTC and New York; both ANSI modes) red on main and on the first
+  head, green after; the zone-less-hint strict xfail; the recorded `add_files` gap (Spark's rows, RePark's NULLs, the
+  card). Fixtures `spark_int96_flat/` and `pyarrow_int96_naive/`.
 
 ## Fix direction (P01-05, as filed)
 

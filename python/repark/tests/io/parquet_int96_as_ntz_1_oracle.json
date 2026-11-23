@@ -1,4 +1,13 @@
 {
+ "append_read": "SELECT id, CAST(ts AS STRING) FROM w ORDER BY id, 2",
+ "append_zones": [
+  "UTC",
+  "America/New_York"
+ ],
+ "appends": {
+  "a1_read_then_append": "",
+  "a2_literal_append": "SELECT 2 AS id, TIMESTAMP'2025-01-16 00:00:00' AS ts"
+ },
  "basis": "PySpark 4.1.2 local[1], iceberg-spark-runtime-4.1_2.13:1.11.0",
  "controls": {
   "ntz_column": "SELECT id, CAST(ntz AS STRING), typeof(ntz) FROM t ORDER BY id",
@@ -7,6 +16,26 @@
   "pyarrow_naive": "SELECT id, CAST(ts AS STRING), typeof(ts) FROM pa_naive ORDER BY id",
   "self_join": "SELECT a.id, b.id FROM t a JOIN t b ON a.ts = b.ts ORDER BY 1",
   "spark_micros": "SELECT id, CAST(ts AS STRING), typeof(ts) FROM mic ORDER BY id"
+ },
+ "flat": "spark_int96_flat",
+ "gap_pins": {
+  "pyarrow_int96_naive_hint": "SELECT id, CAST(ts AS STRING), typeof(ts) FROM pa_int96_naive ORDER BY id"
+ },
+ "gaps": {
+  "iceberg_add_files": {
+   "card": "task/roadmap/mid-term/iceberg-int96-null-1-card-2026-11-22.md",
+   "cell": "iceberg_add_files/America/New_York",
+   "repark": [
+    [
+     1,
+     null
+    ],
+    [
+     2,
+     null
+    ]
+   ]
+  }
  },
  "iceberg_read": "SELECT id, CAST(ts AS STRING) FROM {table} ORDER BY id",
  "iceberg_source": "SELECT id, ts FROM t",
@@ -37,6 +66,92 @@
  ],
  "truth": {
   "false": {
+   "append/a1_read_then_append/America/New_York": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00"
+     ],
+     [
+      1,
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00"
+     ]
+    ]
+   ],
+   "append/a1_read_then_append/UTC": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00"
+     ],
+     [
+      1,
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00"
+     ]
+    ]
+   ],
+   "append/a2_literal_append/America/New_York": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-01-16 00:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00"
+     ]
+    ]
+   ],
+   "append/a2_literal_append/UTC": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-01-16 00:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00"
+     ]
+    ]
+   ],
+   "iceberg_add_files/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00"
+    ]
+   ],
    "rows/date_filter/America/New_York": [
     [
      1
@@ -1102,6 +1217,117 @@
     ]
    ],
    "rows/pyarrow_int96/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_int96_naive_hint/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_int96_naive_hint/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_int96_naive_hint/UTC": [
     [
      1,
      "2025-01-15 01:00:00",
@@ -2516,6 +2742,92 @@
    ]
   },
   "true": {
+   "append/a1_read_then_append/America/New_York": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00"
+     ],
+     [
+      1,
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00"
+     ]
+    ]
+   ],
+   "append/a1_read_then_append/UTC": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00"
+     ],
+     [
+      1,
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00"
+     ]
+    ]
+   ],
+   "append/a2_literal_append/America/New_York": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-14 20:00:00"
+     ],
+     [
+      2,
+      "2025-01-16 00:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 08:00:00"
+     ]
+    ]
+   ],
+   "append/a2_literal_append/UTC": [
+    "struct<id:int,ts:timestamp>",
+    [
+     [
+      1,
+      "2025-01-15 01:00:00"
+     ],
+     [
+      2,
+      "2025-01-16 00:00:00"
+     ],
+     [
+      2,
+      "2025-07-01 12:00:00"
+     ]
+    ]
+   ],
+   "iceberg_add_files/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00"
+    ]
+   ],
    "rows/date_filter/America/New_York": [
     [
      1
@@ -3581,6 +3893,117 @@
     ]
    ],
    "rows/pyarrow_int96/UTC": [
+    [
+     1,
+     "2025-01-15 01:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 12:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 05:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 22:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 03:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_int96_naive_hint/America/New_York": [
+    [
+     1,
+     "2025-01-14 20:00:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 08:00:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 00:30:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "2999-12-31 17:00:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-14 22:00:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-14 15:00:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_int96_naive_hint/Asia/Kolkata": [
+    [
+     1,
+     "2025-01-15 06:30:00",
+     "timestamp"
+    ],
+    [
+     2,
+     "2025-07-01 17:30:00",
+     "timestamp"
+    ],
+    [
+     3,
+     null,
+     "timestamp"
+    ],
+    [
+     4,
+     "1960-03-01 11:00:00.25",
+     "timestamp"
+    ],
+    [
+     5,
+     "3000-01-01 03:30:00.123456",
+     "timestamp"
+    ],
+    [
+     6,
+     "2025-01-15 08:30:00",
+     "timestamp"
+    ],
+    [
+     7,
+     "2025-01-15 01:30:00",
+     "timestamp"
+    ]
+   ],
+   "rows/pyarrow_int96_naive_hint/UTC": [
     [
      1,
      "2025-01-15 01:00:00",
@@ -5000,6 +5423,7 @@
   "mix": "spark_mixdir",
   "pa_adj": "pyarrow_adjusted",
   "pa_int96": "pyarrow_int96",
+  "pa_int96_naive": "pyarrow_int96_naive",
   "pa_naive": "pyarrow_naive",
   "t": "spark_int96"
  },

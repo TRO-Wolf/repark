@@ -35,11 +35,12 @@ it), a full range cannot form when DataFusion merges files whose own ranges are 
 
 **PARQUET-INT96-AS-NTZ-1 (2026-11-22):** `with_int96_as_instants` sets DataFusion's `execution.parquet.coerce_int96`
 to `us` and `coerce_int96_tz` to `UTC` on every RePark session config (`../session/df_guards.rs`
-`context_with_df_54_1_rule_guards`, after the explicit `datafusion.*` keys, which it keeps), so an `INT96` leaf,
+`context_with_df_54_1_rule_guards`, after the explicit `datafusion.*` keys, which it keeps), so an `INT96` leaf without an embedded Arrow schema, or whose embedded Arrow schema names a zone,
 top-level or nested, infers and decodes as `Timestamp(Microsecond, "UTC")`, Spark's `timestamp` shown in the
 session zone, on every plain Parquet route; it was `Timestamp(Nanosecond, None)`, read as `timestamp_ntz` holding
 the UTC wall time, and wrapped past 2262. `INT64` leaves keep their footer's `isAdjustedToUTC`. Arrow's statistics
-converter reads no `INT96` bounds, so the leaf is never pruned, as before
+converter reads no `INT96` bounds, so the leaf is never pruned, as before. `RESET` or `conf.unset` of the key
+returns DataFusion's unset value for the session
 ([card](../../../../task/roadmap/mid-term/parquet-int96-as-ntz-1-card-2026-11-22.md)).
 
 ## Files

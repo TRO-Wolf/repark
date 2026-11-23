@@ -19,3 +19,7 @@ and two instants either side of a New York and a Kolkata date boundary.
 - [`pyarrow_int96/`](pyarrow_int96) — pyarrow with `use_deprecated_int96_timestamps`, an `INT96` leaf
   from a writer other than parquet-mr; its embedded Arrow schema names UTC, so it read as an instant
   before the fix too.
+- [`pyarrow_int96_naive/`](pyarrow_int96_naive) — the same pyarrow `INT96` write over a zone-less
+  `timestamp[us]`, so its embedded Arrow schema has no zone (a strict-xfail gap).
+- [`spark_int96_flat/`](spark_int96_flat) — Spark `INT96`, `(id, ts)`, ids 1 and 2: the destination of the
+  path-append pins and the source of the recorded `add_files` gap.

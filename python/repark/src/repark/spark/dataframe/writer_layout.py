@@ -32,6 +32,26 @@ if TYPE_CHECKING:
 _MAX_BUCKET_COUNT = 100000
 
 
+def _session_parquet_schema(dataframe: Any, part_file: Path) -> Any:
+    import pyarrow as pa
+    import pyarrow.parquet as pa_pq
+
+    schema = pa_pq.read_schema(part_file)
+    leaves = pa_pq.ParquetFile(part_file).schema
+    roots = {
+        leaves.column(index).path.split(".")[0]
+        for index in range(len(leaves))
+        if leaves.column(index).physical_type == "INT96"
+    }
+    if not roots:
+        return schema
+    native = dataframe._session.read_parquet(str(part_file))
+    frame = type(dataframe)(native, dataframe._session, dataframe._alive_token)
+    read = frame.limit(0).to_arrow().schema
+    fields = [read.field(field.name) if field.name in roots else field for field in schema]
+    return pa.schema(fields, metadata=schema.metadata)
+
+
 def _raise_analysis(
     message: str,
     error_class: str,
