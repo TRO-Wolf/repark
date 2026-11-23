@@ -32,6 +32,93 @@ if TYPE_CHECKING:
 _MAX_BUCKET_COUNT = 100000
 
 
+_MAX_INT96_DEPTH = 64
+
+
+def _is_any_list(data_type: Any) -> bool:
+    import pyarrow as pa
+
+    return (
+        pa.types.is_list(data_type)
+        or pa.types.is_large_list(data_type)
+        or pa.types.is_fixed_size_list(data_type)
+    )
+
+
+def _leaf_count(data_type: Any, depth: int) -> int:
+    import pyarrow as pa
+
+    if depth > _MAX_INT96_DEPTH:
+        return 1
+    if pa.types.is_struct(data_type):
+        return sum(_leaf_count(child.type, depth + 1) for child in data_type)
+    if pa.types.is_map(data_type):
+        return _leaf_count(data_type.key_type, depth + 1) + _leaf_count(
+            data_type.item_type, depth + 1
+        )
+    if _is_any_list(data_type):
+        return _leaf_count(data_type.value_type, depth + 1)
+    return 1
+
+
+def _rebuild_list(data_type: Any, element: Any) -> Any:
+    import pyarrow as pa
+
+    if pa.types.is_fixed_size_list(data_type):
+        return pa.list_(element, data_type.list_size)
+    return pa.list_(element) if pa.types.is_list(data_type) else pa.large_list(element)
+
+
+def _int96_as_instant(data_type: Any, int96: list[bool], start: int, depth: int) -> Any:
+    import pyarrow as pa
+
+    if depth > _MAX_INT96_DEPTH or pa.types.is_map(data_type):
+        return data_type
+    if pa.types.is_struct(data_type):
+        fields = []
+        offset = start
+        for child in data_type:
+            fields.append(child.with_type(_int96_as_instant(child.type, int96, offset, depth + 1)))
+            offset += _leaf_count(child.type, depth + 1)
+        return pa.struct(fields)
+    if _is_any_list(data_type):
+        element = data_type.value_field
+        element = element.with_type(_int96_as_instant(element.type, int96, start, depth + 1))
+        return _rebuild_list(data_type, element)
+    if (
+        int96[start]
+        and pa.types.is_timestamp(data_type)
+        and data_type.unit == "ns"
+        and data_type.tz is None
+    ):
+        return pa.timestamp("us", tz="UTC")
+    return data_type
+
+
+def _session_parquet_schema(part_file: Path) -> Any:
+    import pyarrow as pa
+    import pyarrow.parquet as pa_pq
+
+    try:
+        parquet = pa_pq.ParquetFile(part_file)
+        schema = pa_pq.read_schema(part_file)
+    except (OSError, pa.ArrowException) as error:
+        raise AnalysisException(
+            f"cannot append to path parquet: the footer of {part_file.name} cannot be read "
+            f"({type(error).__name__}); path mode('append') leaves the directory unchanged"
+        ) from None
+    leaves = parquet.schema
+    int96 = [leaves.column(index).physical_type == "INT96" for index in range(len(leaves))]
+    if not any(int96) or b"ARROW:schema" in (parquet.metadata.metadata or {}):
+        return schema
+    fields = []
+    offset = 0
+    for field in schema:
+        fields.append(field.with_type(_int96_as_instant(field.type, int96, offset, 0)))
+        offset += _leaf_count(field.type, 0)
+    return pa.schema(fields, metadata=schema.metadata)
+
+
 def _raise_analysis(
     message: str,
     error_class: str,

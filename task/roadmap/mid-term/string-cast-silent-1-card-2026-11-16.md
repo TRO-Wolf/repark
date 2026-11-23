@@ -22,6 +22,7 @@ Report section 5, "Which give a wrong value or NULL silently?", with Spark's ans
 | `TRY_CAST` of a padded DATE text with ANSI off: `' 2026-01-05'`, `'2026-01-05 '`, `'2026'`, `'2026-01'`, `' 2026-01-05 10:00:00'`, `'2026-01-05 10:00'` | the date | NULL, silently |
 | `CAST` and `TRY_CAST` of a padded TIMESTAMP_NTZ text with ANSI off: `' 2026-01-05 10:00:00'`, `'2026-1-5'`, `'2026-01-05 10:00'`, `'2026-01-05 '`, `'2026'`, `'2026-01'` | answers | NULL, silently. With ANSI on, main refuses instead. |
 | `INSERT ... SELECT s` of a text into a FLOAT or DOUBLE column, with ANSI off | refuses (`CANNOT_SAFELY_CAST`) in both modes | stores every row of the eight-text sample: the parsed values, and NULLs for the junk texts |
+| `INSERT INTO t VALUES (1, '42')` into an INT column (added 2026-11-23 from the STRING-CAST-LENIENT-1 INT-slice builder, PR #1413; measured on main `5caea2a5`) | refuses (`INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`) in both modes | stores 42 in both modes |
 | The JSON reader, PERMISSIVE, DOUBLE or FLOAT from a JSON string value `'1.0'`, `'1e3'` or `'nan'` | NULL for every JSON string value except `'Infinity'`, which Spark returns as inf | parses them: 1.0, 1000.0 and NaN |
 | The CSV reader, explicit schema, DOUBLE, from `'nan'` | NULL | NaN |
 

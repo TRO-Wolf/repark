@@ -17,3 +17,6 @@ oracle (`.crc` sidecars skipped).
 - [`ntz_1_spark_table/`](ntz_1_spark_table/map.md) — **WO NTZ-1 slice 3
   (2026-09-27):** the Spark-written one-row `xc.ns.x`
   (`TIMESTAMP_NTZ` + `TIMESTAMP`) warehouse behind `ntz-xc-spark.json`.
+- [`parquet_int96_as_ntz_1/`](parquet_int96_as_ntz_1/map.md) — **PARQUET-INT96-AS-NTZ-1
+  (2026-11-22):** the Spark- and pyarrow-written `INT96` and `INT64` timestamp files behind
+  `parquet_int96_as_ntz_1_oracle.json`.

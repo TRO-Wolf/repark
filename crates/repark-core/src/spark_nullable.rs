@@ -20,7 +20,7 @@ use datafusion::error::Result as DataFusionResult;
 use datafusion::parquet::file::metadata::{PageIndexPolicy, ParquetMetaData, RowGroupMetaData};
 use datafusion::physical_expr_common::sort_expr::{LexOrdering, LexRequirement};
 use datafusion::physical_plan::ExecutionPlan;
-use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionContext};
+use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionContext};
 use object_store::{ObjectMeta, ObjectStore};
 
 mod extreme_bounds;
@@ -71,6 +71,16 @@ fn read_parquet_float_bounds_inexact(
             .get_file_statistic_cache(),
     );
     context.read_table(Arc::new(provider))
+}
+
+#[must_use]
+pub(crate) fn with_int96_as_instants(mut config: SessionConfig) -> SessionConfig {
+    let parquet = &mut config.options_mut().execution.parquet;
+    parquet.coerce_int96.get_or_insert_with(|| "us".to_owned());
+    parquet
+        .coerce_int96_tz
+        .get_or_insert_with(|| "UTC".to_owned());
+    config
 }
 
 pub(crate) fn register_float_bounds_inexact_parquet(
@@ -569,6 +579,9 @@ mod extreme_bounds_tests;
 
 #[cfg(test)]
 mod float_bounds_tests;
+
+#[cfg(test)]
+mod int96_tests;
 
 #[cfg(test)]
 mod tests {
