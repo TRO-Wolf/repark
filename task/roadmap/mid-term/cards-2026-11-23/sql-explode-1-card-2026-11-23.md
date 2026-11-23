@@ -27,27 +27,36 @@ subquery, a projection over a generator subquery, maps, and the write statements
 
 ## The fix
 
-`crates/repark-functions/src/generator.rs`: `explode` and `explode_outer` join the placeholder UDFs, and
+`crates/repark-functions/src/generator.rs` (with `__repark_gen_ordinality` / `__repark_gen_field` split into
+`crates/repark-functions/src/generator/udfs.rs`): `explode` and `explode_outer` join the placeholder UDFs, and
 `GeneratorKind::Explode` expands them as `posexplode` does without the position column: an `ARRAY` projects
 `col` (a single `AS` alias renames it), a `MAP` projects `key` and `value`, and the outer spelling turns a NULL or
-empty input into one NULL row. Over an `ARRAY` the placeholder types as the element (Spark's nullability: the
-element's, or nullable for the outer spelling), so the SQL planner types an outer query over a generator subquery,
-and the write statements' target checks, against the element before `GeneratorRewrite` runs. The Spark door,
-`selectExpr` and the write statements (`CREATE TABLE … AS SELECT`, `INSERT … SELECT`) get them; `F.expr` gets
-them over a table or view with `.alias(...)`. The typed path is unchanged.
+empty input into one NULL row. Outer guards widen non-nullable list element fields (`sequence`, `split`, etc.) to
+nullable and build the one-NULL-element list with `ListArray::try_new` (fixing `explode_outer` and
+`posexplode_outer` over non-nullable-element lists without panicking; `ordinality` likewise uses
+`ListArray::try_new`). Over an `ARRAY` the placeholder types as the element (Spark's nullability: the element's, or
+nullable for the outer spelling) and exposes `col` as its plan `schema_name`, so unaliased outer subqueries
+(`SELECT *`, `SELECT col`, `WHERE col`, `GROUP BY col`), `ORDER BY col`, `CREATE TABLE … AS SELECT`,
+`INSERT INTO … SELECT`, and `INSERT OVERWRITE … SELECT` resolve against `col` before `GeneratorRewrite` runs.
+Explicit user aliases on `explode` / `explode_outer` (including names starting with `explode(` / `explode_outer(`)
+are kept, and a single alias like ``AS `posexplode(custom)` `` refuses `[COLUMN_ALIASES_MISMATCH]` rather than
+being dropped. The Spark door, `selectExpr`, and the write statements get them; `F.expr` gets them over a table or
+view with `.alias(...)`. The typed path is unchanged.
 
-On the head every scoped cell on `spark.sql` and `selectExpr` answers as Spark in the four modes (rows, names,
-types), the calendar-dimension shape included: a projection of `year`, `extract(YEAROFWEEK …)` and
-`extract(DAYOFWEEK …)` cast to `SMALLINT` and `weekofyear` over `explode(sequence(DATE, DATE, INTERVAL 1 DAY))`,
-and its CTAS and `INSERT … SELECT` into a local Iceberg table read back cold (a fresh session reading the table
-path; the stored `SMALLINT` is an Iceberg `int`, as in Spark).
+On the head every scoped cell on `spark.sql`, `selectExpr`, and the write statements answers as Spark in the four
+modes (rows, names, types), including `explode_outer` / `posexplode_outer` over `sequence` and `split`, unaliased
+subqueries / `ORDER BY col` / `INSERT INTO` / `INSERT OVERWRITE` / `CTAS`, explicit `explode(…)` aliases, and the
+calendar-dimension shape: a projection of `year`, `extract(YEAROFWEEK …)` and `extract(DAYOFWEEK …)` cast to
+`SMALLINT` and `weekofyear` over `explode(sequence(DATE, DATE, INTERVAL 1 DAY))`, and its CTAS and
+`INSERT … SELECT` into a local Iceberg table read back cold (a fresh session reading the table path; the stored
+`SMALLINT` is an Iceberg `int`, as in Spark).
 
 ## Pins
 
 `python/repark/tests/functions/test_sql_explode_1.py` over the oracle, driven by the recorder
-`_record_sql_explode_1.py` (58 items with the extract file: green on the head, 44 red on main; reverting
-`generator.rs` reds 24, all in this file, with `UNRESOLVED_ROUTINE`); Rust `repark-functions`
-`generator::tests` (`explode_*` and `a_projection_over_an_explode_subquery_reads_the_element`).
+`_record_sql_explode_1.py` (with `test_extract_field_aliases_1.py`: 94 items total, all green on the head and red
+on main, on the pre-delta PR head, and on both mutants); Rust `repark-functions` `generator::tests` (30 tests,
+including non-nullable-element outer lists, unaliased subquery / `ORDER BY col`, and explicit `explode(…)` aliases).
 
 ## Still unlike Spark (out of this unit's seat)
 
@@ -55,11 +64,13 @@ path; the stored `SMALLINT` is an Iceberg `int`, as in Spark).
   where Spark says not (typed `F.explode` the same on main); `sequence` keeps its element non-null. `dayofmonth`
   over an exploded date is nullable where Spark says not.
 - `F.expr("explode(...)")` over a `spark.range` frame raises `No field named __repark_gen_col`; unaliased over a
-  view it answers Spark's rows but the facade names the column `explode(arr)` (engine name `col`). Over a view
-  with `.alias(...)` it answers as Spark. `F.expr("<any expression> AS x")` refuses for every expression.
-- A `MAP` placeholder still types as the map, so an outer query cannot read `key` / `value` of a map explode
-  inside a subquery. Spark's `AS (k, v)` multi-alias refuses (FNP9-GENERATORS-1); one alias on a map raises
-  `COLUMN_ALIASES_MISMATCH` (Spark `UDTF_ALIAS_NUMBER_MISMATCH`).
+  view it answers Spark's rows with both facade and engine column name `explode(arr)` (Spark `col`), and unaliased
+  `F.expr("explode(m)")` on a map refuses `[COLUMN_ALIASES_MISMATCH]` because `F.expr` attaches its display alias.
+  Over a view with `.alias(...)` it answers as Spark. `F.expr("<any expression> AS x")` refuses for every expression.
+- Multi-column generators (`explode` on a `MAP`, `posexplode`, `inline`) still emit a single placeholder column
+  before `GeneratorRewrite`, so an outer query cannot read `key` / `value` of a map explode or `pos` / `col` of a
+  `posexplode` inside a subquery. Spark's `AS (k, v)` multi-alias refuses (FNP9-GENERATORS-1); one alias on a map
+  or `posexplode` raises `COLUMN_ALIASES_MISMATCH` (Spark `UDTF_ALIAS_NUMBER_MISMATCH`).
 - `LATERAL VIEW [OUTER] explode(...)` refuses (`LATERAL VIEWS` not implemented, BL-19-LATERAL-1).
 - Two generators in one select list refuse; Spark 4.1.2 answers them.
 - `explode(...) + 1` and `explode(explode(...))` refuse as `UNSUPPORTED_GENERATOR`, Spark's class with its

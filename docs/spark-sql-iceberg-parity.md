@@ -6073,14 +6073,17 @@ still open is `isModifiable`.
   The stock extract planner calls DataFusion's own `date_part`, not the session's Spark one. `date_part('<field>',
   x)` already answered every spelling. After: the front-door canonicalizer
   (`crates/repark-spark/src/spark_rewrites/extract_field.rs`) spells those 22 fields as `date_part('<field>', x)`,
-  so they answer as `date_part` does, `CAST(extract(YEAROFWEEK FROM d) AS SMALLINT)` included. `DOW` is a named
+  and region-splicing passes (`spark_rewrites/struct_field.rs` for `named_struct(…).field` including nested struct
+  access, `create_options.rs`, and the `INSERT PARTITION` swap in `spark_rewrites/mod.rs`) splice inner regions so
+  the rewrite survives views, `UPDATE`, `MERGE`, `OPTIONS` CTAS, and `named_struct(…).field`. `DOW` is a named
   addition: it parsed but answered from Sunday 0, a silent wrong value at the same seat. The other fields stay as
   written and keep their answers.
 - **Apache Spark** — `DatePart.parseExtractField` maps every spelling (`YEAROFWEEK` the ISO week-year,
   `DAYOFWEEK` / `DOW` 1 = Sunday, `DAYOFWEEK_ISO` / `DOW_ISO` 1 = Monday, `H` / `HR` / `HRS` the hour) and answers
-  `int` (`decimal(8,6)` for the seconds). *(oracle: PySpark 4.1.2, 2026-11-23, DATE, TIMESTAMP and TIMESTAMP_NTZ
-  over pre-1970 values, 1582-10-15, 1900-02-28, the ISO week-53 days 2020-12-31 and 2021-01-03, a leap day and
-  year ends; zones `UTC` and `America/New_York`, ANSI on and off, three SQL seats.)*
+  `int` (`decimal(8,6)` for the seconds). *(oracle: PySpark 4.1.2, 2026-11-23, upper- and lower-case fields over
+  DATE, TIMESTAMP and TIMESTAMP_NTZ including fractional seconds, pre-1970 values, 1582-10-15, 1900-02-28, the ISO
+  week-53 days 2020-12-31 and 2021-01-03, a leap day, year ends, and `named_struct(…).field`; zones `UTC` and
+  `America/New_York`, ANSI on and off, three SQL seats.)*
 - **Still unlike Spark:** the seconds answer `int` (EXTRACT-SECOND-DECIMAL-1); a `TIMESTAMP` outside UTC reads
   its fields in UTC (DATE-PART-SESSION-ZONE-1); a `STRING` argument fails to plan (SQL-DATE-PART-STRING-1); the
   typed `F.extract` / `F.date_part` refuse `YEAROFWEEK`, `DAYOFWEEK`, `DAYOFWEEK_ISO`, `DOW_ISO` and answer `DOW`
@@ -18721,17 +18724,20 @@ field NAME.
 - **repark** — Before (main `efa72bb7`): `SELECT explode(array(1, 2))` and every `explode` / `explode_outer` in a
   select list raised `[UNRESOLVED_ROUTINE]` on `spark.sql`, `selectExpr` and `F.expr`, over literals, a table, a
   temp view, a CTE, a subquery and in `CREATE TABLE … AS SELECT` / `INSERT … SELECT`; the typed `F.explode`
-  answered. After: both names are `GeneratorRewrite` generators (`crates/repark-functions/src/generator.rs`); an
-  array projects `col` (or the `AS` name), a map projects `key` and `value`, the outer spelling keeps one NULL row
-  for a NULL or empty input, and the projection keeps the sibling columns in place. Over an array the placeholder
-  types as the element, so a projection over a generator subquery and the write statements plan.
+  answered. After: both names are `GeneratorRewrite` generators (`crates/repark-functions/src/generator.rs`, helper
+  UDFs in `generator/udfs.rs`); an array projects `col` (or the `AS` name, including aliases starting with
+  `explode(`), a map projects `key` and `value`, the outer spelling widens non-nullable list element fields
+  (`sequence`, `split`) to nullable (`ListArray::try_new`) and keeps one NULL row for a NULL or empty input, and
+  the projection keeps sibling columns in place. Over an array the placeholder types as the element and exposes
+  `col` in the plan schema, so aliased and unaliased outer subqueries (`SELECT *`, `SELECT col`, `WHERE`,
+  `GROUP BY`), `ORDER BY col`, `CTAS`, `INSERT INTO`, and `INSERT OVERWRITE` plan and answer as Spark.
 - **Apache Spark** — `Explode` / `ExplodeOuter` (`col`, or `key` / `value`); the sequence form over a leap day, a
   year end, the daylight-saving changes and the ISO week-53 years answers one row per day. *(oracle: PySpark 4.1.2
   with `iceberg-spark-runtime-4.1_2.13:1.11.0`, 2026-11-23, zones `UTC` and `America/New_York`, ANSI on and off;
   the write cells read back cold.)*
 - **Still unlike Spark:** see the card's "Still unlike Spark" (`LATERAL VIEW`, the multi-alias `AS (k, v)`, two
-  generators in one select list, an `array(...)` literal's element nullability, `F.expr` over a `range` frame or
-  unaliased, the native `repark.sql` door).
+  generators in one select list, multi-column `MAP` / `posexplode` outer subqueries, an `array(...)` literal's
+  element nullability, `F.expr` over a `range` frame or unaliased, the native `repark.sql` door).
 - **Pin** — `python/repark/tests/functions/test_sql_explode_1.py` over `sql_explode_1_spark_oracle.json`; Rust
   `repark-functions` `generator::tests::explode_*`.
 - **Rationale** — [card](../task/roadmap/mid-term/cards-2026-11-23/sql-explode-1-card-2026-11-23.md).

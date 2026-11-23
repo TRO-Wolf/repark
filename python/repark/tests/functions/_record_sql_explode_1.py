@@ -51,6 +51,19 @@ CELLS: dict[str, tuple[str, tuple[str, ...]]] = {
     "seq-week53-2026": ("none", (_sequence("2026-12-26", "2027-01-04"),)),
     "seq-no-step": ("none", ("explode(sequence(DATE '2024-02-28', DATE '2024-03-01')) AS d",)),
     "seq-pre-1970": ("none", (_sequence("1969-12-30", "1970-01-02"),)),
+    "seq-date-outer": (
+        "none",
+        ("explode_outer(sequence(DATE '2024-02-28', DATE '2024-03-01', INTERVAL 1 DAY)) AS d",),
+    ),
+    "seq-int-outer": ("none", ("explode_outer(sequence(1, 3)) AS n",)),
+    "seq-ts-outer": ("projected-ts-outer", ("CAST(t AS STRING) AS t",)),
+    "split-outer": ("none", ("explode_outer(split('a,b', ',')) AS s",)),
+    "split-null-outer": ("none", ("explode_outer(split(CAST(NULL AS STRING), ',')) AS s",)),
+    "posexplode-outer-seq": ("none", ("posexplode_outer(sequence(1, 3))",)),
+    "posexplode-outer-split-null": (
+        "none",
+        ("posexplode_outer(split(CAST(NULL AS STRING), ','))",),
+    ),
     "view": ("view", ("id", "explode(arr) AS x")),
     "view-bare": ("view", ("id", "explode(arr)")),
     "view-outer": ("view", ("id", "explode_outer(arr) AS x", "tag")),
@@ -64,6 +77,16 @@ CELLS: dict[str, tuple[str, tuple[str, ...]]] = {
     "subquery-outer": ("subquery", ("id", "explode_outer(arr) AS x")),
     "projected": ("projected", ("x + 1 AS y",)),
     "projected-dates": ("projected-dates", ("d", "dayofmonth(d) AS dom")),
+    "subq-star": ("subq-unaliased", ("*",)),
+    "subq-star-lit": ("subq-unaliased-lit", ("*",)),
+    "subq-col": ("subq-unaliased", ("col + 1 AS y",)),
+    "subq-where": ("subq-unaliased-where", ("col",)),
+    "subq-groupby": ("subq-unaliased-group", ("col", "COUNT(*) AS cnt")),
+    "orderby-col": ("table-orderby-col", ("id", "explode(arr)")),
+    "alias-explode-custom": ("table-id1", ("explode(arr) AS `explode(custom)`",)),
+    "alias-explode-custom-orderby": ("table-id1-orderby", ("explode(arr) AS `explode(custom)`",)),
+    "alias-explode-arr": ("table-id1", ("explode(arr) AS `explode(arr)`",)),
+    "alias-explode-outer-custom": ("table-id1", ("explode_outer(arr) AS `explode_outer(custom)`",)),
     "map": ("none", ("explode(map('a', 1, 'b', 2))",)),
     "map-outer-null": ("none", ("explode_outer(CAST(NULL AS MAP<STRING,INT>))",)),
     "map-view": ("view", ("id", "explode(m)")),
@@ -74,7 +97,9 @@ OBSERVED: dict[str, str] = {
     "lateral-view-outer": f"SELECT id, x FROM {VIEW} LATERAL VIEW OUTER explode(arr) g AS x",
     "map-two-aliases": "SELECT explode(map('a', 1)) AS (k, v)",
     "map-one-alias": "SELECT explode(map('a', 1)) AS k",
+    "map-alias-col": "SELECT explode(map('a', 1)) AS col",
     "posexplode": "SELECT posexplode(array(10, 20))",
+    "posexplode-alias-custom": f"SELECT posexplode(arr) AS `posexplode(custom)` FROM {VIEW}",
     "two-generators": "SELECT explode(array(1)), explode(array(2))",
     "nested-generator": "SELECT explode(explode(array(array(1))))",
     "in-expression": "SELECT explode(array(1, 2)) + 1",
@@ -86,9 +111,23 @@ OBSERVED: dict[str, str] = {
 }
 WRITES: dict[str, tuple[str | None, str]] = {
     "ctas": (None, f"CREATE TABLE {{t}} AS SELECT id, explode(arr) AS x FROM {VIEW}"),
+    "ctas-unaliased": (None, f"CREATE TABLE {{t}} AS SELECT explode(arr) FROM {VIEW}"),
     "insert-outer": (
         "CREATE TABLE {t} (id INT, x INT)",
         f"INSERT INTO {{t}} SELECT id, explode_outer(arr) AS x FROM {VIEW}",
+    ),
+    "insert-unaliased": (
+        "CREATE TABLE {t} (x INT)",
+        f"INSERT INTO {{t}} SELECT explode(arr) FROM {VIEW}",
+    ),
+    "insert-overwrite-unaliased": (
+        "CREATE TABLE {t} (x INT)",
+        f"INSERT OVERWRITE {{t}} SELECT explode(arr) FROM {VIEW}",
+    ),
+    "insert-seq-outer": (
+        "CREATE TABLE {t} (d DATE)",
+        "INSERT INTO {t} SELECT explode_outer("
+        "sequence(DATE '2024-02-28', DATE '2024-03-01', INTERVAL 1 DAY)) AS d",
     ),
     "ctas-calendar": (
         None,
@@ -105,6 +144,7 @@ WRITES: dict[str, tuple[str | None, str]] = {
     ),
 }
 _CONDITION = re.compile(r"\[([A-Z][A-Z0-9_]+(?:\.[A-Z0-9_]+)?)\]")
+_TRAILING_ALIAS = re.compile(r"^(.*)\s+AS\s+(?:`([^`]+)`|([A-Za-z_][A-Za-z0-9_]*))\s*$")
 
 
 def mode_key(zone: str, ansi: str) -> str:
@@ -130,6 +170,28 @@ def source_sql(source: str, items: tuple[str, ...], table: str) -> str:
         return f"SELECT {listed} FROM (SELECT * FROM {VIEW} WHERE id < 4) AS s"
     if source == "projected":
         return f"SELECT {listed} FROM (SELECT explode(arr) AS x FROM {VIEW}) AS g"
+    if source == "projected-ts-outer":
+        return (
+            f"SELECT {listed} FROM (SELECT explode_outer(sequence(TIMESTAMP "
+            "'2024-01-01 00:00:00', TIMESTAMP '2024-01-01 02:00:00', INTERVAL 1 HOUR)) AS t) AS g"
+        )
+    if source == "subq-unaliased":
+        return f"SELECT {listed} FROM (SELECT explode(arr) FROM {table}) AS g"
+    if source == "subq-unaliased-lit":
+        return f"SELECT {listed} FROM (SELECT explode(array(1, 2))) AS g"
+    if source == "subq-unaliased-where":
+        return f"SELECT {listed} FROM (SELECT explode(arr) FROM {table}) AS g WHERE col > 1"
+    if source == "subq-unaliased-group":
+        return (
+            f"SELECT {listed} FROM (SELECT explode(arr) FROM {table}) AS g "
+            "GROUP BY col ORDER BY col"
+        )
+    if source == "table-orderby-col":
+        return f"SELECT {listed} FROM {table} ORDER BY id, col"
+    if source == "table-id1":
+        return f"SELECT {listed} FROM {table} WHERE id = 1"
+    if source == "table-id1-orderby":
+        return f"SELECT {listed} FROM {table} WHERE id = 1 ORDER BY `explode(custom)`"
     return f"SELECT {listed} FROM (SELECT {_sequence('2024-02-27', '2024-03-02')}) AS g"
 
 
@@ -171,14 +233,18 @@ def frame_answer(frame: Any) -> dict[str, Any]:
 def guarded(build: Callable[[], Any]) -> dict[str, Any]:
     try:
         return frame_answer(build())
-    except Exception as error:
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except BaseException as error:
         return outcome(error)
 
 
 def expr_column(functions: Any, item: str) -> Any:
-    body, marker, name = item.rpartition(" AS ")
-    if not marker:
+    matched = _TRAILING_ALIAS.match(item)
+    if matched is None:
         return functions.expr(item)
+    body = matched.group(1)
+    name = matched.group(2) if matched.group(2) is not None else matched.group(3)
     return functions.expr(body).alias(name)
 
 
@@ -257,7 +323,9 @@ def write_answers(
                 session.sql(create.format(t=table)).collect()
             session.sql(statement.format(t=table)).collect()
             written[name] = table
-        except Exception as error:
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except BaseException as error:
             answers[f"{name}|write"] = outcome(error)
     read_back = cold()
     for name, table in written.items():

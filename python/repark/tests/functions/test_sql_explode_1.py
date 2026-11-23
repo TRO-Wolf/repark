@@ -86,11 +86,14 @@ class _ColdReader:
 
 
 def _literal(key: str) -> bool:
-    return CELLS.get(key.split("|")[0], ("table", ()))[0] == "none"
+    return CELLS.get(key.split("|")[0], ("table", ()))[0] in {"none", "subq-unaliased-lit"}
 
 
 def _literal_constructor(key: str) -> bool:
-    items = CELLS[key.split("|")[0]][1]
+    name = key.split("|")[0]
+    source, items = CELLS[name]
+    if source == "subq-unaliased-lit":
+        return True
     return any(item.lower().startswith(("explode(array(", "explode(map(")) for item in items)
 
 
@@ -152,7 +155,13 @@ def test_a_literal_cell_has_spark_nullability_but_for_array_and_map_literals(
     got = measured[mode_key(zone, ansi)]
     misses = []
     for key in _scoped_keys(seat):
-        if not _literal(key) or "error" in got[key] or "error" in expected[key]:
+        if not _literal(key):
+            continue
+        if "error" in got[key] or "error" in expected[key]:
+            if ("error" in got[key]) != ("error" in expected[key]) or got[key].get(
+                "error"
+            ) != expected[key].get("error"):
+                misses.append(f"{key}: spark {expected[key]} repark {got[key]}")
             continue
         for want, have in zip(expected[key]["schema"], got[key]["schema"], strict=True):
             residual = _literal_constructor(key) and want[:2] == have[:2] and have[2] > want[2]
@@ -188,7 +197,7 @@ def test_f_expr_over_a_range_frame_and_an_unaliased_f_expr_stay_as_recorded(
     got = measured[mode_key(zone, "true")]
     assert "__repark_gen_col" in got["bare|expr"]["message"]
     assert got["view-bare|expr"]["columns"] == ["id", "explode(arr)"]
-    assert got["view-bare|expr"]["schema"][1][0] == "col"
+    assert got["view-bare|expr"]["schema"][1][0] == "explode(arr)"
     assert got["view-bare|expr"]["rows"] == got["view-bare|sql"]["rows"]
 
 
@@ -200,3 +209,65 @@ def test_dayofmonth_over_an_exploded_date_is_nullable_where_spark_says_not(
     got = measured[mode_key(zone, "true")]["projected-dates|sql"]["schema"]
     assert expected == [["d", "date", False], ["dom", "int", False]]
     assert got == [["d", "date", False], ["dom", "int", True]]
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("zone", ZONES)
+def test_outer_generators_over_non_nullable_lists_answer_as_spark(
+    measured: dict[str, dict[str, Any]], zone: str, ansi: str
+) -> None:
+    expected = _ORACLE["modes"][mode_key(zone, ansi)]
+    got = measured[mode_key(zone, ansi)]
+    for key in (
+        "seq-date-outer|sql",
+        "seq-date-outer|select-expr",
+        "seq-int-outer|sql",
+        "seq-ts-outer|sql",
+        "split-outer|sql",
+        "split-null-outer|sql",
+        "posexplode-outer-seq|sql",
+        "posexplode-outer-split-null|sql",
+        "insert-seq-outer|write",
+    ):
+        assert got[key] == expected[key], key
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("zone", ZONES)
+def test_unaliased_explode_exposes_col_in_subqueries_orderby_and_writes(
+    measured: dict[str, dict[str, Any]], zone: str, ansi: str
+) -> None:
+    expected = _ORACLE["modes"][mode_key(zone, ansi)]
+    got = measured[mode_key(zone, ansi)]
+    for key in (
+        "subq-star|sql",
+        "subq-col|sql",
+        "subq-where|sql",
+        "subq-groupby|sql",
+        "orderby-col|sql",
+        "insert-unaliased|write",
+        "insert-overwrite-unaliased|write",
+        "ctas-unaliased|write",
+    ):
+        assert _normal(got[key], False) == _normal(expected[key], False), key
+    assert _normal(got["subq-star-lit|sql"], True) == _normal(expected["subq-star-lit|sql"], True)
+
+
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("zone", ZONES)
+def test_explicit_generator_prefix_aliases_are_kept_or_refused_as_spark(
+    measured: dict[str, dict[str, Any]], zone: str, ansi: str
+) -> None:
+    expected = _ORACLE["modes"][mode_key(zone, ansi)]
+    got = measured[mode_key(zone, ansi)]
+    for key in (
+        "alias-explode-custom|sql",
+        "alias-explode-custom-orderby|sql",
+        "alias-explode-arr|sql",
+        "alias-explode-outer-custom|sql",
+    ):
+        assert _normal(got[key], False) == _normal(expected[key], False), key
+    assert "error" in expected["posexplode-alias-custom|sql"]
+    assert "error" in got["posexplode-alias-custom|sql"]
+    assert "error" in expected["map-alias-col|sql"]
+    assert "error" in got["map-alias-col|sql"]

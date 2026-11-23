@@ -15,9 +15,13 @@
 Measured on main `efa72bb7`: `date_part('<field>', x)` already answered every spelling on the SQL doors;
 `extract(<field> FROM x)` failed to parse for 20 Spark spellings and raised for `DAYOFWEEK`. The front-door
 canonicalizer (`crates/repark-spark/src/spark_rewrites/extract_field.rs`) now spells those fields as
-`date_part('<field>', x)`. **Named addition:** `extract(DOW FROM x)` parsed and answered from Sunday 0 (`3` for a
-Wednesday, Spark `4`), a silent wrong value at the same seat; it is in the rewritten set and answers as Spark.
-Pins: `python/repark/tests/timestamps/test_extract_field_aliases_1.py`. Residue: the registry row.
+`date_part('<field>', x)`, and region-splicing passes (`spark_rewrites/struct_field.rs` for `named_struct(…).field`
+including nested struct access, `create_options.rs`, and the `INSERT PARTITION` swap in `spark_rewrites/mod.rs`)
+preserve its regions across views, `UPDATE`, `MERGE`, and `OPTIONS` CTAS. **Named addition:** `extract(DOW FROM x)`
+parsed and answered from Sunday 0 (`3` for a Wednesday, Spark `4`), a silent wrong value at the same seat; it is in
+the rewritten set and answers as Spark. Pins: `python/repark/tests/timestamps/test_extract_field_aliases_1.py`
+(including lower-case fields, fractional-second timestamps, and `named_struct(…).field`) and Rust
+`spark_rewrites::extract_field::tests`. Residue: the registry row.
 
 ## First step
 

@@ -55,14 +55,73 @@ FIELDS: tuple[str, ...] = (
     "SECS",
 )
 CAST_FIELDS: tuple[str, ...] = (*CARD_FIELDS, "DOW", "DOW_ISO", "WEEK")
+LOWER_FIELDS: tuple[str, ...] = (
+    "year",
+    "y",
+    "yr",
+    "yrs",
+    "yearofweek",
+    "quarter",
+    "qtr",
+    "month",
+    "mon",
+    "mons",
+    "week",
+    "w",
+    "day",
+    "d",
+    "dayofweek",
+    "dow",
+    "dayofweek_iso",
+    "dow_iso",
+    "doy",
+    "hour",
+    "h",
+    "hr",
+    "hrs",
+    "minute",
+    "m",
+    "min",
+    "mins",
+    "second",
+    "s",
+    "sec",
+    "secs",
+)
+STRUCT_FIELD_CELLS: dict[str, tuple[str, str]] = {
+    "ns-dow-lit": ("none", "named_struct('a', extract(DOW FROM DATE '2020-12-31')).a"),
+    "ns-yow-lit": ("none", "named_struct('a', extract(YEAROFWEEK FROM DATE '2020-12-31')).a"),
+    "ns-hrs-ntz-lit": (
+        "none",
+        "named_struct('a', extract(HRS FROM TIMESTAMP_NTZ '2020-12-31 13:45:30.789123')).a",
+    ),
+    "ns-hrs-ts-lit": (
+        "ts-lit",
+        "named_struct('a', extract(HRS FROM TIMESTAMP '2020-12-31 13:45:30.789123')).a",
+    ),
+    "ns-dow-lower-lit": ("none", "named_struct('a', extract(dow FROM DATE '2020-12-31')).a"),
+    "ns-nested-dow": (
+        "none",
+        "named_struct('x', named_struct('a', extract(DOW FROM DATE '2020-12-31'))).x.a",
+    ),
+    "ns-nested-dotted-yow": (
+        "none",
+        "named_struct('a', named_struct('b', extract(YEAROFWEEK FROM DATE '2020-12-31')).b).a",
+    ),
+    "ns-dow-col": ("date", "named_struct('a', extract(DOW FROM x)).a"),
+    "ns-yow-col": ("date", "named_struct('a', extract(YEAROFWEEK FROM x)).a"),
+    "ns-hrs-col": ("ntz", "named_struct('a', extract(hrs FROM x)).a"),
+}
 KINDS: dict[str, str] = {"date": "DATE", "ts": "TIMESTAMP", "ntz": "TIMESTAMP_NTZ"}
 VALUES: tuple[str | None, ...] = (
     "1969-12-31 13:45:30",
+    "1969-12-31 13:45:30.123456",
     "1950-06-15 04:05:06",
     "1582-10-15 01:02:03",
     "1900-02-28 23:59:59",
     "2019-12-30 18:00:00",
     "2020-12-31 13:45:30",
+    "2020-12-31 13:45:30.789123",
     "2021-01-03 07:08:09",
     "2021-01-04 00:00:00",
     "2024-02-29 12:00:00",
@@ -193,6 +252,80 @@ def seed(session: Any) -> None:
         session.sql(source_sql(kind)).createOrReplaceTempView(view_name(kind))
 
 
+def lower_key(kind: str, field: str, seat: str) -> str:
+    return "|".join(("lower", kind, field, seat))
+
+
+def struct_field_key(name: str, seat: str) -> str:
+    return "|".join(("struct", name, seat))
+
+
+def lower_and_struct_answers(session: Any, functions: Any) -> dict[str, dict[str, Any]]:
+    answers: dict[str, dict[str, Any]] = {}
+    for kind in KINDS:
+        view = view_name(kind)
+        for field in LOWER_FIELDS:
+            text = FORMS["extract"].format(f=field)
+            answers[lower_key(kind, field, "sql")] = guarded(
+                lambda text=text, view=view: session.sql(
+                    f"SELECT id, {text} AS r, typeof({text}) AS t FROM {view}"
+                )
+            )
+            answers[lower_key(kind, field, "expr")] = guarded(
+                lambda text=text, view=view: session.table(view).select(
+                    "id",
+                    functions.expr(text).alias("r"),
+                    functions.expr(f"typeof({text})").alias("t"),
+                )
+            )
+            answers[lower_key(kind, field, "select-expr")] = guarded(
+                lambda text=text, view=view: session.table(view).selectExpr(
+                    "id", f"{text} AS r", f"typeof({text}) AS t"
+                )
+            )
+    for name, (kind, expr_sql) in STRUCT_FIELD_CELLS.items():
+        if kind in {"none", "ts-lit"}:
+            answers[struct_field_key(name, "sql")] = guarded(
+                lambda expr_sql=expr_sql: session.sql(
+                    f"SELECT 0 AS id, {expr_sql} AS r, typeof({expr_sql}) AS t"
+                )
+            )
+            answers[struct_field_key(name, "select-expr")] = guarded(
+                lambda expr_sql=expr_sql: session.range(1).selectExpr(
+                    "CAST(id AS INT) AS id",
+                    f"{expr_sql} AS r",
+                    f"typeof({expr_sql}) AS t",
+                )
+            )
+            answers[struct_field_key(name, "expr")] = guarded(
+                lambda expr_sql=expr_sql: session.range(1).select(
+                    functions.col("id").cast("int").alias("id"),
+                    functions.expr(expr_sql).alias("r"),
+                    functions.expr(f"typeof({expr_sql})").alias("t"),
+                )
+            )
+            continue
+        view = view_name(kind)
+        answers[struct_field_key(name, "sql")] = guarded(
+            lambda expr_sql=expr_sql, view=view: session.sql(
+                f"SELECT id, {expr_sql} AS r, typeof({expr_sql}) AS t FROM {view}"
+            )
+        )
+        answers[struct_field_key(name, "select-expr")] = guarded(
+            lambda expr_sql=expr_sql, view=view: session.table(view).selectExpr(
+                "id", f"{expr_sql} AS r", f"typeof({expr_sql}) AS t"
+            )
+        )
+        answers[struct_field_key(name, "expr")] = guarded(
+            lambda expr_sql=expr_sql, view=view: session.table(view).select(
+                "id",
+                functions.expr(expr_sql).alias("r"),
+                functions.expr(f"typeof({expr_sql})").alias("t"),
+            )
+        )
+    return answers
+
+
 def seat_answers(session: Any, functions: Any) -> dict[str, dict[str, Any]]:
     answers: dict[str, dict[str, Any]] = {}
     for kind, field, form in cells():
@@ -220,6 +353,7 @@ def seat_answers(session: Any, functions: Any) -> dict[str, dict[str, Any]]:
                 functions.typeof(typed(functions, form, field, functions.col("x"))).alias("t"),
             )
         )
+    answers.update(lower_and_struct_answers(session, functions))
     return answers
 
 

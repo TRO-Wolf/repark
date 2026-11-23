@@ -10,12 +10,17 @@ from _record_extract_field_aliases_1 import (
     ANSI_MODES,
     CARD_FIELDS,
     FIXTURE,
+    KINDS,
+    LOWER_FIELDS,
+    STRUCT_FIELD_CELLS,
     ZONES,
     cell_key,
     cells,
+    lower_key,
     mode_key,
     seat_answers,
     seed,
+    struct_field_key,
 )
 
 from repark import ReparkSession
@@ -79,9 +84,10 @@ def _zone_bound(kind: str, zone: str) -> bool:
 def _miss(kind: str, field: str, zone: str, expected: dict[str, Any], got: dict[str, Any]) -> bool:
     if "error" in expected or "error" in got:
         return expected.get("error") != got.get("error")
+    upper = field.upper()
     if _zone_bound(kind, zone):
-        return got["types"] != expected["types"] and field not in _SECOND_FAMILY
-    if field in _SECOND_FAMILY:
+        return got["types"] != expected["types"] and upper not in _SECOND_FAMILY
+    if upper in _SECOND_FAMILY:
         return [_whole(value) for value in got["values"]] != [
             _whole(value) for value in expected["values"]
         ]
@@ -95,6 +101,13 @@ def test_the_fixture_holds_every_cell_and_every_mode() -> None:
         for kind, field, form in cells():
             for seat in _SQL_SEATS:
                 assert cell_key(kind, field, form, seat) in answers
+        for kind in KINDS:
+            for field in LOWER_FIELDS:
+                for seat in _SQL_SEATS:
+                    assert lower_key(kind, field, seat) in answers
+        for name in STRUCT_FIELD_CELLS:
+            for seat in _SQL_SEATS:
+                assert struct_field_key(name, seat) in answers
 
 
 @pytest.mark.parametrize("seat", _SQL_SEATS)
@@ -146,3 +159,46 @@ def test_the_card_fields_cast_to_smallint_as_spark(
         key = cell_key("date", field, "smallint", "sql")
         assert got[key] == expected[key], key
         assert got[key]["types"] == ["smallint"]
+
+
+@pytest.mark.parametrize("seat", _SQL_SEATS)
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("zone", ZONES)
+def test_lowercase_fields_with_fractional_seconds_answer_as_spark(
+    measured: dict[str, dict[str, Any]], zone: str, ansi: str, seat: str
+) -> None:
+    expected = _ORACLE["modes"][mode_key(zone, ansi)]
+    got = measured[mode_key(zone, ansi)]
+    misses = [
+        f"{key}: spark {expected[key]} repark {got[key]}"
+        for kind in KINDS
+        for field in LOWER_FIELDS
+        if _miss(
+            kind,
+            field,
+            zone,
+            expected[key := lower_key(kind, field, seat)],
+            got[key],
+        )
+    ]
+    assert not misses, "\n".join(misses)
+
+
+@pytest.mark.parametrize("seat", _SQL_SEATS)
+@pytest.mark.parametrize("ansi", ANSI_MODES)
+@pytest.mark.parametrize("zone", ZONES)
+def test_extract_inside_named_struct_field_access_answers_as_spark(
+    measured: dict[str, dict[str, Any]], zone: str, ansi: str, seat: str
+) -> None:
+    expected = _ORACLE["modes"][mode_key(zone, ansi)]
+    got = measured[mode_key(zone, ansi)]
+    misses = []
+    for name, (kind, _expr) in STRUCT_FIELD_CELLS.items():
+        key = struct_field_key(name, seat)
+        if kind == "ts-lit" and zone != "UTC":
+            if "error" in got[key] or got[key]["types"] != expected[key]["types"]:
+                misses.append(f"{key}: spark {expected[key]} repark {got[key]}")
+            continue
+        if got[key] != expected[key]:
+            misses.append(f"{key}: spark {expected[key]} repark {got[key]}")
+    assert not misses, "\n".join(misses)

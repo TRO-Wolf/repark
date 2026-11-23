@@ -1,6 +1,86 @@
 {
  "modes": {
   "America/New_York|false": {
+   "alias-explode-arr|sql": {
+    "columns": [
+     "explode(arr)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(arr)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "alias-explode-custom-orderby|sql": {
+    "columns": [
+     "explode(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "alias-explode-custom|sql": {
+    "columns": [
+     "explode(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "alias-explode-outer-custom|sql": {
+    "columns": [
+     "explode_outer(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode_outer(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
    "alias|expr": {
     "columns": [
      "x"
@@ -357,6 +437,32 @@
      ]
     ]
    },
+   "ctas-unaliased|write": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
    "ctas|write": {
     "columns": [
      "id",
@@ -707,6 +813,81 @@
      ]
     ]
    },
+   "insert-overwrite-unaliased|write": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "insert-seq-outer|write": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ]
+    ]
+   },
+   "insert-unaliased|write": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
    "lateral-view-outer|sql": {
     "columns": [
      "id",
@@ -787,13 +968,37 @@
      ]
     ]
    },
+   "map-alias-col|sql": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
    "map-one-alias|sql": {
     "error": "UDTF_ALIAS_NUMBER_MISMATCH",
     "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
    },
    "map-outer-null|expr": {
-    "error": "PARSE_SYNTAX_ERROR",
-    "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near '('. SQLSTATE: 42601 (line 1, pos 18)"
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
    },
    "map-outer-null|select-expr": {
     "columns": [
@@ -1561,6 +1766,42 @@
      ]
     ]
    },
+   "orderby-col|sql": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
    "outer-bare|expr": {
     "columns": [
      "col"
@@ -1681,6 +1922,178 @@
      ]
     ]
    },
+   "posexplode-alias-custom|sql": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
+   "posexplode-outer-seq|expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-seq|select-expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-seq|sql": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-split-null|expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-split-null|select-expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-split-null|sql": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
    "posexplode|sql": {
     "columns": [
      "pos",
@@ -1771,6 +2184,75 @@
      [
       "y",
       "int",
+      true
+     ]
+    ]
+   },
+   "seq-date-outer|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ]
+    ]
+   },
+   "seq-date-outer|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ]
+    ]
+   },
+   "seq-date-outer|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
       true
      ]
     ]
@@ -1928,6 +2410,75 @@
       "d",
       "date",
       false
+     ]
+    ]
+   },
+   "seq-int-outer|expr": {
+    "columns": [
+     "n"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "n",
+      "int",
+      true
+     ]
+    ]
+   },
+   "seq-int-outer|select-expr": {
+    "columns": [
+     "n"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "n",
+      "int",
+      true
+     ]
+    ]
+   },
+   "seq-int-outer|sql": {
+    "columns": [
+     "n"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "n",
+      "int",
+      true
      ]
     ]
    },
@@ -2162,6 +2713,29 @@
       "d",
       "date",
       false
+     ]
+    ]
+   },
+   "seq-ts-outer|sql": {
+    "columns": [
+     "t"
+    ],
+    "rows": [
+     [
+      "2024-01-01 00:00:00"
+     ],
+     [
+      "2024-01-01 01:00:00"
+     ],
+     [
+      "2024-01-01 02:00:00"
+     ]
+    ],
+    "schema": [
+     [
+      "t",
+      "string",
+      true
      ]
     ]
    },
@@ -2657,6 +3231,117 @@
      ]
     ]
    },
+   "split-null-outer|expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-null-outer|select-expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-null-outer|sql": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-outer|expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-outer|select-expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-outer|sql": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
    "strings|expr": {
     "columns": [
      "s"
@@ -2722,6 +3407,134 @@
      [
       "s",
       "string",
+      true
+     ]
+    ]
+   },
+   "subq-col|sql": {
+    "columns": [
+     "y"
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      3
+     ],
+     [
+      null
+     ],
+     [
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "subq-groupby|sql": {
+    "columns": [
+     "col",
+     "cnt"
+    ],
+    "rows": [
+     [
+      null,
+      1
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      1
+     ],
+     [
+      5,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "cnt",
+      "bigint",
+      false
+     ]
+    ]
+   },
+   "subq-star-lit|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "subq-star|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "subq-where|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
       true
      ]
     ]
@@ -3940,6 +4753,86 @@
    }
   },
   "America/New_York|true": {
+   "alias-explode-arr|sql": {
+    "columns": [
+     "explode(arr)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(arr)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "alias-explode-custom-orderby|sql": {
+    "columns": [
+     "explode(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "alias-explode-custom|sql": {
+    "columns": [
+     "explode(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "alias-explode-outer-custom|sql": {
+    "columns": [
+     "explode_outer(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode_outer(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
    "alias|expr": {
     "columns": [
      "x"
@@ -4296,6 +5189,32 @@
      ]
     ]
    },
+   "ctas-unaliased|write": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
    "ctas|write": {
     "columns": [
      "id",
@@ -4646,6 +5565,81 @@
      ]
     ]
    },
+   "insert-overwrite-unaliased|write": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "insert-seq-outer|write": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ]
+    ]
+   },
+   "insert-unaliased|write": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
    "lateral-view-outer|sql": {
     "columns": [
      "id",
@@ -4726,13 +5720,37 @@
      ]
     ]
    },
+   "map-alias-col|sql": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
    "map-one-alias|sql": {
     "error": "UDTF_ALIAS_NUMBER_MISMATCH",
     "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
    },
    "map-outer-null|expr": {
-    "error": "PARSE_SYNTAX_ERROR",
-    "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near '('. SQLSTATE: 42601 (line 1, pos 18)"
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
    },
    "map-outer-null|select-expr": {
     "columns": [
@@ -5500,6 +6518,42 @@
      ]
     ]
    },
+   "orderby-col|sql": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
    "outer-bare|expr": {
     "columns": [
      "col"
@@ -5620,6 +6674,178 @@
      ]
     ]
    },
+   "posexplode-alias-custom|sql": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
+   "posexplode-outer-seq|expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-seq|select-expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-seq|sql": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-split-null|expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-split-null|select-expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-split-null|sql": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
    "posexplode|sql": {
     "columns": [
      "pos",
@@ -5710,6 +6936,75 @@
      [
       "y",
       "int",
+      true
+     ]
+    ]
+   },
+   "seq-date-outer|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ]
+    ]
+   },
+   "seq-date-outer|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ]
+    ]
+   },
+   "seq-date-outer|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
       true
      ]
     ]
@@ -5867,6 +7162,75 @@
       "d",
       "date",
       false
+     ]
+    ]
+   },
+   "seq-int-outer|expr": {
+    "columns": [
+     "n"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "n",
+      "int",
+      true
+     ]
+    ]
+   },
+   "seq-int-outer|select-expr": {
+    "columns": [
+     "n"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "n",
+      "int",
+      true
+     ]
+    ]
+   },
+   "seq-int-outer|sql": {
+    "columns": [
+     "n"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "n",
+      "int",
+      true
      ]
     ]
    },
@@ -6101,6 +7465,29 @@
       "d",
       "date",
       false
+     ]
+    ]
+   },
+   "seq-ts-outer|sql": {
+    "columns": [
+     "t"
+    ],
+    "rows": [
+     [
+      "2024-01-01 00:00:00"
+     ],
+     [
+      "2024-01-01 01:00:00"
+     ],
+     [
+      "2024-01-01 02:00:00"
+     ]
+    ],
+    "schema": [
+     [
+      "t",
+      "string",
+      true
      ]
     ]
    },
@@ -6596,6 +7983,117 @@
      ]
     ]
    },
+   "split-null-outer|expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-null-outer|select-expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-null-outer|sql": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-outer|expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-outer|select-expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-outer|sql": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
    "strings|expr": {
     "columns": [
      "s"
@@ -6661,6 +8159,134 @@
      [
       "s",
       "string",
+      true
+     ]
+    ]
+   },
+   "subq-col|sql": {
+    "columns": [
+     "y"
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      3
+     ],
+     [
+      null
+     ],
+     [
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "subq-groupby|sql": {
+    "columns": [
+     "col",
+     "cnt"
+    ],
+    "rows": [
+     [
+      null,
+      1
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      1
+     ],
+     [
+      5,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "cnt",
+      "bigint",
+      false
+     ]
+    ]
+   },
+   "subq-star-lit|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "subq-star|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "subq-where|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
       true
      ]
     ]
@@ -7879,6 +9505,86 @@
    }
   },
   "UTC|false": {
+   "alias-explode-arr|sql": {
+    "columns": [
+     "explode(arr)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(arr)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "alias-explode-custom-orderby|sql": {
+    "columns": [
+     "explode(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "alias-explode-custom|sql": {
+    "columns": [
+     "explode(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "alias-explode-outer-custom|sql": {
+    "columns": [
+     "explode_outer(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode_outer(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
    "alias|expr": {
     "columns": [
      "x"
@@ -8235,6 +9941,32 @@
      ]
     ]
    },
+   "ctas-unaliased|write": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
    "ctas|write": {
     "columns": [
      "id",
@@ -8585,6 +10317,81 @@
      ]
     ]
    },
+   "insert-overwrite-unaliased|write": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "insert-seq-outer|write": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ]
+    ]
+   },
+   "insert-unaliased|write": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
    "lateral-view-outer|sql": {
     "columns": [
      "id",
@@ -8665,13 +10472,37 @@
      ]
     ]
    },
+   "map-alias-col|sql": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
    "map-one-alias|sql": {
     "error": "UDTF_ALIAS_NUMBER_MISMATCH",
     "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
    },
    "map-outer-null|expr": {
-    "error": "PARSE_SYNTAX_ERROR",
-    "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near '('. SQLSTATE: 42601 (line 1, pos 18)"
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
    },
    "map-outer-null|select-expr": {
     "columns": [
@@ -9439,6 +11270,42 @@
      ]
     ]
    },
+   "orderby-col|sql": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
    "outer-bare|expr": {
     "columns": [
      "col"
@@ -9559,6 +11426,178 @@
      ]
     ]
    },
+   "posexplode-alias-custom|sql": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
+   "posexplode-outer-seq|expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-seq|select-expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-seq|sql": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-split-null|expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-split-null|select-expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-split-null|sql": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
    "posexplode|sql": {
     "columns": [
      "pos",
@@ -9649,6 +11688,75 @@
      [
       "y",
       "int",
+      true
+     ]
+    ]
+   },
+   "seq-date-outer|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ]
+    ]
+   },
+   "seq-date-outer|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ]
+    ]
+   },
+   "seq-date-outer|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
       true
      ]
     ]
@@ -9806,6 +11914,75 @@
       "d",
       "date",
       false
+     ]
+    ]
+   },
+   "seq-int-outer|expr": {
+    "columns": [
+     "n"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "n",
+      "int",
+      true
+     ]
+    ]
+   },
+   "seq-int-outer|select-expr": {
+    "columns": [
+     "n"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "n",
+      "int",
+      true
+     ]
+    ]
+   },
+   "seq-int-outer|sql": {
+    "columns": [
+     "n"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "n",
+      "int",
+      true
      ]
     ]
    },
@@ -10040,6 +12217,29 @@
       "d",
       "date",
       false
+     ]
+    ]
+   },
+   "seq-ts-outer|sql": {
+    "columns": [
+     "t"
+    ],
+    "rows": [
+     [
+      "2024-01-01 00:00:00"
+     ],
+     [
+      "2024-01-01 01:00:00"
+     ],
+     [
+      "2024-01-01 02:00:00"
+     ]
+    ],
+    "schema": [
+     [
+      "t",
+      "string",
+      true
      ]
     ]
    },
@@ -10535,6 +12735,117 @@
      ]
     ]
    },
+   "split-null-outer|expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-null-outer|select-expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-null-outer|sql": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-outer|expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-outer|select-expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-outer|sql": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
    "strings|expr": {
     "columns": [
      "s"
@@ -10600,6 +12911,134 @@
      [
       "s",
       "string",
+      true
+     ]
+    ]
+   },
+   "subq-col|sql": {
+    "columns": [
+     "y"
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      3
+     ],
+     [
+      null
+     ],
+     [
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "subq-groupby|sql": {
+    "columns": [
+     "col",
+     "cnt"
+    ],
+    "rows": [
+     [
+      null,
+      1
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      1
+     ],
+     [
+      5,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "cnt",
+      "bigint",
+      false
+     ]
+    ]
+   },
+   "subq-star-lit|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "subq-star|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "subq-where|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
       true
      ]
     ]
@@ -11818,6 +14257,86 @@
    }
   },
   "UTC|true": {
+   "alias-explode-arr|sql": {
+    "columns": [
+     "explode(arr)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(arr)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "alias-explode-custom-orderby|sql": {
+    "columns": [
+     "explode(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "alias-explode-custom|sql": {
+    "columns": [
+     "explode(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
+   "alias-explode-outer-custom|sql": {
+    "columns": [
+     "explode_outer(custom)"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "explode_outer(custom)",
+      "int",
+      true
+     ]
+    ]
+   },
    "alias|expr": {
     "columns": [
      "x"
@@ -12174,6 +14693,32 @@
      ]
     ]
    },
+   "ctas-unaliased|write": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
    "ctas|write": {
     "columns": [
      "id",
@@ -12524,6 +15069,81 @@
      ]
     ]
    },
+   "insert-overwrite-unaliased|write": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "insert-seq-outer|write": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ]
+    ]
+   },
+   "insert-unaliased|write": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
    "lateral-view-outer|sql": {
     "columns": [
      "id",
@@ -12604,13 +15224,37 @@
      ]
     ]
    },
+   "map-alias-col|sql": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
    "map-one-alias|sql": {
     "error": "UDTF_ALIAS_NUMBER_MISMATCH",
     "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
    },
    "map-outer-null|expr": {
-    "error": "PARSE_SYNTAX_ERROR",
-    "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near '('. SQLSTATE: 42601 (line 1, pos 18)"
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
    },
    "map-outer-null|select-expr": {
     "columns": [
@@ -13378,6 +16022,42 @@
      ]
     ]
    },
+   "orderby-col|sql": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
    "outer-bare|expr": {
     "columns": [
      "col"
@@ -13498,6 +16178,178 @@
      ]
     ]
    },
+   "posexplode-alias-custom|sql": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
+   "posexplode-outer-seq|expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-seq|select-expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-seq|sql": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-split-null|expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-split-null|select-expr": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
+   "posexplode-outer-split-null|sql": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "string",
+      true
+     ]
+    ]
+   },
    "posexplode|sql": {
     "columns": [
      "pos",
@@ -13588,6 +16440,75 @@
      [
       "y",
       "int",
+      true
+     ]
+    ]
+   },
+   "seq-date-outer|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ]
+    ]
+   },
+   "seq-date-outer|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ]
+    ]
+   },
+   "seq-date-outer|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
       true
      ]
     ]
@@ -13745,6 +16666,75 @@
       "d",
       "date",
       false
+     ]
+    ]
+   },
+   "seq-int-outer|expr": {
+    "columns": [
+     "n"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "n",
+      "int",
+      true
+     ]
+    ]
+   },
+   "seq-int-outer|select-expr": {
+    "columns": [
+     "n"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "n",
+      "int",
+      true
+     ]
+    ]
+   },
+   "seq-int-outer|sql": {
+    "columns": [
+     "n"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "n",
+      "int",
+      true
      ]
     ]
    },
@@ -13979,6 +16969,29 @@
       "d",
       "date",
       false
+     ]
+    ]
+   },
+   "seq-ts-outer|sql": {
+    "columns": [
+     "t"
+    ],
+    "rows": [
+     [
+      "2024-01-01 00:00:00"
+     ],
+     [
+      "2024-01-01 01:00:00"
+     ],
+     [
+      "2024-01-01 02:00:00"
+     ]
+    ],
+    "schema": [
+     [
+      "t",
+      "string",
+      true
      ]
     ]
    },
@@ -14474,6 +17487,117 @@
      ]
     ]
    },
+   "split-null-outer|expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-null-outer|select-expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-null-outer|sql": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-outer|expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-outer|select-expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "split-outer|sql": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "a"
+     ],
+     [
+      "b"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
    "strings|expr": {
     "columns": [
      "s"
@@ -14539,6 +17663,134 @@
      [
       "s",
       "string",
+      true
+     ]
+    ]
+   },
+   "subq-col|sql": {
+    "columns": [
+     "y"
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      3
+     ],
+     [
+      null
+     ],
+     [
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "subq-groupby|sql": {
+    "columns": [
+     "col",
+     "cnt"
+    ],
+    "rows": [
+     [
+      null,
+      1
+     ],
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      1
+     ],
+     [
+      5,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ],
+     [
+      "cnt",
+      "bigint",
+      false
+     ]
+    ]
+   },
+   "subq-star-lit|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "subq-star|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ],
+     [
+      null
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "subq-where|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
       true
      ]
     ]
