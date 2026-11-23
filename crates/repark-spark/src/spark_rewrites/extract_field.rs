@@ -125,6 +125,47 @@ mod tests {
     }
 
     #[test]
+    fn the_rewrite_survives_region_splicing_passes() {
+        assert_eq!(
+            rewritten("SELECT named_struct('a', extract(DOW FROM DATE '2020-12-31')).a"),
+            "SELECT __repark_spark_as__('named_struct(a, extract(DOW FROM DATE ''2020-12-31'')).a', \
+             (date_part('DOW', DATE '2020-12-31')))"
+        );
+        assert_eq!(
+            rewritten(
+                "SELECT named_struct('x', named_struct('a', extract(YEAROFWEEK FROM d))).x.a"
+            ),
+            "SELECT __repark_spark_as__(\
+             'named_struct(x, named_struct(a, extract(YEAROFWEEK FROM d))).x.a', \
+             (date_part('YEAROFWEEK', d)))"
+        );
+        assert_eq!(
+            rewritten("SELECT named_struct('a', named_struct('b', extract(hrs FROM ts)).b).a"),
+            "SELECT __repark_spark_as__(\
+             'named_struct(a, named_struct(''b'', extract(hrs FROM ts)).b).a', \
+             (__repark_spark_as__('named_struct(b, extract(hrs FROM ts)).b', \
+             (date_part('hrs', ts)))))"
+        );
+        assert_eq!(
+            rewritten(
+                "INSERT INTO t PARTITION (p = extract(DOW FROM DATE '2020-12-31')) (v) \
+                 SELECT extract(YEAROFWEEK FROM DATE '2020-12-31')"
+            ),
+            "INSERT INTO t (v) PARTITION (p = date_part('DOW', DATE '2020-12-31')) \
+             SELECT date_part('YEAROFWEEK', DATE '2020-12-31')"
+        );
+        assert_eq!(
+            rewritten(
+                "CREATE TABLE t USING iceberg OPTIONS ('k'='v') AS \
+                 SELECT named_struct('a', extract(DOW FROM DATE '2020-12-31')).a"
+            ),
+            "CREATE TABLE t USING iceberg TBLPROPERTIES ('k'='v', 'option.k'='v') AS \
+             SELECT __repark_spark_as__('named_struct(a, extract(DOW FROM DATE ''2020-12-31'')).a', \
+             (date_part('DOW', DATE '2020-12-31')))"
+        );
+    }
+
+    #[test]
     fn the_planner_spans_the_extract_word_through_from() {
         let sql = "SELECT extract(W FROM d)";
         let tokens = Tokenizer::new(&GenericDialect {}, sql)

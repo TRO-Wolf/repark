@@ -1,16 +1,24 @@
 use super::*;
-use datafusion::arrow::array::{ArrayRef, Int32Array, StringArray, StructArray};
+use datafusion::arrow::array::{Array, ArrayRef, Int32Array, StringArray, StructArray};
 use datafusion::arrow::datatypes::{Field, Fields, Schema};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::datasource::MemTable;
 use datafusion::prelude::SessionContext;
 
-fn columns() -> (ListArray, ListArray, ListArray) {
+fn columns() -> (ListArray, ListArray, ListArray, ListArray) {
     let ints = Int32Array::from(vec![10, 20]);
     let arr_i = ListArray::new(
         Arc::new(Field::new("item", DataType::Int32, true)),
         OffsetBuffer::from_lengths([2_usize, 0, 0]),
         Arc::new(ints),
+        Some(datafusion::arrow::buffer::NullBuffer::from(vec![
+            true, false, true,
+        ])),
+    );
+    let arr_nn = ListArray::new(
+        Arc::new(Field::new("element", DataType::Int32, false)),
+        OffsetBuffer::from_lengths([2_usize, 0, 0]),
+        Arc::new(Int32Array::from(vec![10, 20])),
         Some(datafusion::arrow::buffer::NullBuffer::from(vec![
             true, false, true,
         ])),
@@ -57,7 +65,7 @@ fn columns() -> (ListArray, ListArray, ListArray) {
             true, false, true,
         ])),
     );
-    (arr_i, arr_s, arr_sn)
+    (arr_i, arr_nn, arr_s, arr_sn)
 }
 
 fn frame() -> SessionContext {
@@ -65,12 +73,17 @@ fn frame() -> SessionContext {
     crate::register_all(&ctx);
     ctx.register_udf(crate::collection::create_map_udf().as_ref().clone());
     ctx.add_analyzer_rule(Arc::new(GeneratorRewrite));
-    let (arr_i, arr_s, arr_sn) = columns();
+    let (arr_i, arr_nn, arr_s, arr_sn) = columns();
     let schema = Arc::new(Schema::new(vec![
         Field::new("id", DataType::Int32, false),
         Field::new(
             "arr_i",
             DataType::List(Arc::new(Field::new("item", DataType::Int32, true))),
+            true,
+        ),
+        Field::new(
+            "arr_nn",
+            DataType::List(Arc::new(Field::new("element", DataType::Int32, false))),
             true,
         ),
         Field::new(
@@ -103,6 +116,7 @@ fn frame() -> SessionContext {
         vec![
             Arc::new(Int32Array::from(vec![1, 2, 3])) as ArrayRef,
             Arc::new(arr_i),
+            Arc::new(arr_nn),
             Arc::new(arr_s),
             Arc::new(arr_sn),
         ],
@@ -474,7 +488,7 @@ fn ordinality_packs_positions_for_a_sliced_list() {
     }
     let full = builder.finish();
     let sliced = full.slice(1, 2);
-    let positions = super::ordinality(&sliced);
+    let positions = super::ordinality(&sliced).unwrap();
     assert_eq!(positions.len(), 2);
     assert_eq!(positions.offsets().first().copied(), Some(0));
     let first: Vec<i32> = positions
@@ -539,4 +553,81 @@ fn json_tuple_refuses_a_non_string_argument() {
 fn json_tuple_refuses_a_single_argument() {
     let error = run(r#"SELECT json_tuple('{"a":1}')"#).unwrap_err();
     assert!(format!("{error}").contains("WRONG_NUM_ARGS"), "{error}");
+}
+
+#[test]
+fn explode_outer_and_posexplode_outer_handle_non_nullable_element_lists() {
+    let (names, rows) = run("SELECT id, explode_outer(arr_nn) FROM t").unwrap();
+    assert_eq!(names, ["id", "col"]);
+    assert_eq!(
+        rows,
+        [
+            "Int32(1)|Int32(10)",
+            "Int32(1)|Int32(20)",
+            "Int32(2)|Int32(NULL)",
+            "Int32(3)|Int32(NULL)"
+        ]
+    );
+    let (names, rows) = run("SELECT id, posexplode_outer(arr_nn) FROM t").unwrap();
+    assert_eq!(names, ["id", "pos", "col"]);
+    assert_eq!(
+        rows,
+        [
+            "Int32(1)|Int32(0)|Int32(10)",
+            "Int32(1)|Int32(1)|Int32(20)",
+            "Int32(2)|Int32(NULL)|Int32(NULL)",
+            "Int32(3)|Int32(NULL)|Int32(NULL)"
+        ]
+    );
+    let (names, rows) = run("SELECT explode_outer(split('a,b', ',')) AS s").unwrap();
+    assert_eq!(names, ["s"]);
+    assert_eq!(rows, ["Utf8(\"a\")", "Utf8(\"b\")"]);
+    let (names, rows) =
+        run("SELECT explode_outer(split(CAST(NULL AS VARCHAR), ',')) AS s").unwrap();
+    assert_eq!(names, ["s"]);
+    assert_eq!(rows, ["Utf8(NULL)"]);
+}
+
+#[test]
+fn unaliased_explode_exposes_col_to_outer_queries_and_order_by() {
+    let (names, rows) = run("SELECT * FROM (SELECT explode(arr_i) FROM t) AS g").unwrap();
+    assert_eq!(names, ["col"]);
+    assert_eq!(rows, ["Int32(10)", "Int32(20)"]);
+    let (names, rows) =
+        run("SELECT col + 1 AS y FROM (SELECT explode(arr_i) FROM t) AS g").unwrap();
+    assert_eq!(names, ["y"]);
+    assert_eq!(rows, ["Int32(11)", "Int32(21)"]);
+    let (names, rows) = run("SELECT id, explode(arr_i) FROM t ORDER BY col DESC").unwrap();
+    assert_eq!(names, ["id", "col"]);
+    assert_eq!(rows, ["Int32(1)|Int32(20)", "Int32(1)|Int32(10)"]);
+    let (names, rows) =
+        run("SELECT col, COUNT(*) AS cnt FROM (SELECT explode(arr_i) FROM t) AS g GROUP BY col ORDER BY col")
+            .unwrap();
+    assert_eq!(names, ["col", "cnt"]);
+    assert_eq!(rows, ["Int32(10)|Int64(1)", "Int32(20)|Int64(1)"]);
+}
+
+#[test]
+fn explicit_alias_starting_with_generator_name_is_kept() {
+    let (names, rows) = run(r#"SELECT explode(arr_i) AS "explode(custom)" FROM t"#).unwrap();
+    assert_eq!(names, ["explode(custom)"]);
+    assert_eq!(rows, ["Int32(10)", "Int32(20)"]);
+    let (names, rows) =
+        run(r#"SELECT explode(arr_i) AS "explode(custom)" FROM t ORDER BY "explode(custom)" DESC"#)
+            .unwrap();
+    assert_eq!(names, ["explode(custom)"]);
+    assert_eq!(rows, ["Int32(20)", "Int32(10)"]);
+    let (names, rows) = run(r#"SELECT explode(arr_i) AS "explode(arr_i)" FROM t"#).unwrap();
+    assert_eq!(names, ["explode(arr_i)"]);
+    assert_eq!(rows, ["Int32(10)", "Int32(20)"]);
+    let error = run(r#"SELECT posexplode(arr_i) AS "posexplode(custom)" FROM t"#).unwrap_err();
+    assert!(
+        format!("{error}").contains("COLUMN_ALIASES_MISMATCH"),
+        "{error}"
+    );
+    let error = run("SELECT explode(create_map('a', id)) AS col FROM t").unwrap_err();
+    assert!(
+        format!("{error}").contains("COLUMN_ALIASES_MISMATCH"),
+        "{error}"
+    );
 }

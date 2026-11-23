@@ -294,8 +294,8 @@ fn canonical_rewrite(sql: &str, keep_verbatim: bool) -> Result<Option<CanonicalR
     regions.extend(crate::spark_rewrites::plan_keyword_regions(&tokens, sql)?);
     regions.extend(crate::spark_rewrites::plan_wildcard_except_regions(&tokens));
     regions.extend(crate::spark_rewrites::extract_field::plan_extract_field_regions(&tokens));
-    regions.extend(crate::spark_rewrites::plan_insert_partition_column_list_regions(&tokens, sql));
     crate::spark_rewrites::plan_struct_field_regions(&tokens, sql, &mut regions);
+    crate::spark_rewrites::plan_insert_partition_column_list_regions(&tokens, sql, &mut regions);
     crate::spark_rewrites::create_options::plan_create_options_regions(&tokens, sql, &mut regions);
     regions.sort_by_key(|region| (region.start.line, region.start.column));
     if regions.is_empty() {

@@ -1,7 +1,7 @@
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, Int32Builder, ListArray, new_null_array};
+use datafusion::arrow::array::{ListArray, new_null_array};
 use datafusion::arrow::buffer::OffsetBuffer;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::config::ConfigOptions;
@@ -20,10 +20,14 @@ use datafusion::optimizer::AnalyzerRule;
 use datafusion::prelude::lit;
 
 mod json_tuple;
+mod udfs;
+
+pub(crate) use udfs::GeneratorField;
+use udfs::GeneratorOrdinality;
+#[cfg(test)]
+use udfs::ordinality;
 
 pub(crate) const GENERATOR_ALIAS_UDF: &str = "__repark_gen_alias";
-const GENERATOR_ORDINALITY_UDF: &str = "__repark_gen_ordinality";
-const GENERATOR_FIELD_UDF: &str = "__repark_gen_field";
 
 pub(crate) const GENERATOR_FIELD: &str = "__repark_gen_out";
 const GENERATOR_POS_FIELD: &str = "__repark_gen_pos";
@@ -103,13 +107,20 @@ impl ScalarUDFImpl for GeneratorPlaceholder {
         {
             let nullable = self.name == "explode_outer" || item.is_nullable();
             return Ok(Arc::new(Field::new(
-                self.name,
+                "col",
                 item.data_type().clone(),
                 nullable,
             )));
         }
         let data_type = first.map_or(DataType::Null, |field| field.data_type().clone());
         Ok(Arc::new(Field::new(self.name, data_type, true)))
+    }
+
+    fn schema_name(&self, _args: &[Expr]) -> Result<String> {
+        if self.explodes_one_column() {
+            return Ok("col".to_string());
+        }
+        Ok(format!("__repark_gen_call_{}", self.name))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
@@ -122,225 +133,6 @@ impl ScalarUDFImpl for GeneratorPlaceholder {
             self.name
         )
     }
-}
-
-#[derive(Debug)]
-struct GeneratorOrdinality {
-    signature: Signature,
-}
-
-impl GeneratorOrdinality {
-    fn new() -> Self {
-        Self {
-            signature: Signature::any(1, Volatility::Immutable),
-        }
-    }
-}
-
-impl PartialEq for GeneratorOrdinality {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-
-impl Eq for GeneratorOrdinality {}
-
-impl Hash for GeneratorOrdinality {
-    fn hash<H: Hasher>(&self, _state: &mut H) {}
-}
-
-impl ScalarUDFImpl for GeneratorOrdinality {
-    fn name(&self) -> &'static str {
-        GENERATOR_ORDINALITY_UDF
-    }
-
-    fn signature(&self) -> &Signature {
-        &self.signature
-    }
-
-    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
-        Ok(DataType::List(Arc::new(Field::new(
-            "item",
-            DataType::Int32,
-            false,
-        ))))
-    }
-
-    fn return_field_from_args(
-        &self,
-        args: datafusion::logical_expr::ReturnFieldArgs,
-    ) -> Result<FieldRef> {
-        let nullable = args
-            .arg_fields
-            .first()
-            .is_some_and(|field| field.is_nullable());
-        Ok(Arc::new(Field::new(
-            self.name(),
-            self.return_type(&[])?,
-            nullable,
-        )))
-    }
-
-    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        let Some(first) = args.args.into_iter().next() else {
-            return exec_err!("'{GENERATOR_ORDINALITY_UDF}' requires one list argument");
-        };
-        match first {
-            ColumnarValue::Array(array) => {
-                let Some(list) = array.as_any().downcast_ref::<ListArray>() else {
-                    return exec_err!("'{GENERATOR_ORDINALITY_UDF}' requires a list argument");
-                };
-                Ok(ColumnarValue::Array(Arc::new(ordinality(list))))
-            }
-            ColumnarValue::Scalar(ScalarValue::List(list)) => Ok(ColumnarValue::Scalar(
-                ScalarValue::List(Arc::new(ordinality(list.as_ref()))),
-            )),
-            other @ ColumnarValue::Scalar(_) => {
-                exec_err!("'{GENERATOR_ORDINALITY_UDF}' received a non-list argument: {other:?}")
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct GeneratorField {
-    signature: Signature,
-}
-
-impl GeneratorField {
-    pub(crate) fn new() -> Self {
-        Self {
-            signature: Signature::any(2, Volatility::Immutable),
-        }
-    }
-}
-
-impl PartialEq for GeneratorField {
-    fn eq(&self, _other: &Self) -> bool {
-        true
-    }
-}
-
-impl Eq for GeneratorField {}
-
-impl Hash for GeneratorField {
-    fn hash<H: Hasher>(&self, _state: &mut H) {}
-}
-
-fn field_name_literal<'a>(
-    args: &'a datafusion::logical_expr::ReturnFieldArgs<'a>,
-) -> Result<&'a str> {
-    if let Some(Some(
-        ScalarValue::Utf8(Some(name))
-        | ScalarValue::LargeUtf8(Some(name))
-        | ScalarValue::Utf8View(Some(name)),
-    )) = args.scalar_arguments.get(1)
-    {
-        return Ok(name.as_str());
-    }
-    plan_err!("'{GENERATOR_FIELD_UDF}' requires a literal field name")
-}
-
-fn struct_field<'a>(data_type: &'a DataType, name: &str) -> Result<&'a FieldRef> {
-    let DataType::Struct(fields) = data_type else {
-        return exec_err!("'{GENERATOR_FIELD_UDF}' requires a struct argument, got {data_type}");
-    };
-    let Some(index) = fields.iter().position(|field| field.name() == name) else {
-        return exec_err!("'{GENERATOR_FIELD_UDF}' found no field named '{name}'");
-    };
-    Ok(&fields[index])
-}
-
-impl ScalarUDFImpl for GeneratorField {
-    fn name(&self) -> &'static str {
-        GENERATOR_FIELD_UDF
-    }
-
-    fn signature(&self) -> &Signature {
-        &self.signature
-    }
-
-    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
-        Ok(DataType::Null)
-    }
-
-    fn return_field_from_args(
-        &self,
-        args: datafusion::logical_expr::ReturnFieldArgs,
-    ) -> Result<FieldRef> {
-        let name = field_name_literal(&args)?;
-        let Some(base) = args.arg_fields.first() else {
-            return exec_err!("'{GENERATOR_FIELD_UDF}' requires a struct argument");
-        };
-        let field = struct_field(base.data_type(), name)?;
-        Ok(Arc::new(Field::new(name, field.data_type().clone(), true)))
-    }
-
-    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
-        let mut iter = args.args.into_iter();
-        let (Some(base), Some(name_arg)) = (iter.next(), iter.next()) else {
-            return exec_err!("'{GENERATOR_FIELD_UDF}' requires a struct and a field name");
-        };
-        let ColumnarValue::Scalar(name_scalar) = name_arg else {
-            return exec_err!("'{GENERATOR_FIELD_UDF}' requires a literal field name");
-        };
-        let (ScalarValue::Utf8(Some(name))
-        | ScalarValue::LargeUtf8(Some(name))
-        | ScalarValue::Utf8View(Some(name))) = name_scalar
-        else {
-            return exec_err!("'{GENERATOR_FIELD_UDF}' requires a literal field name");
-        };
-        let mask = |array: &Arc<dyn Array>| -> Result<datafusion::arrow::array::ArrayRef> {
-            let Some(structs) = array
-                .as_any()
-                .downcast_ref::<datafusion::arrow::array::StructArray>()
-            else {
-                return exec_err!("'{GENERATOR_FIELD_UDF}' requires a struct argument");
-            };
-            let Some(child) = structs.column_by_name(name.as_str()) else {
-                return exec_err!("'{GENERATOR_FIELD_UDF}' found no field named '{name}'");
-            };
-            let combined =
-                datafusion::arrow::buffer::NullBuffer::union(structs.nulls(), child.nulls());
-            let data = child.to_data().into_builder().nulls(combined).build()?;
-            Ok(datafusion::arrow::array::make_array(data))
-        };
-        match base {
-            ColumnarValue::Array(array) => Ok(ColumnarValue::Array(mask(&array)?)),
-            ColumnarValue::Scalar(ScalarValue::Struct(structs)) => {
-                let dyn_array: Arc<dyn Array> = structs;
-                let masked = mask(&dyn_array)?;
-                Ok(ColumnarValue::Scalar(ScalarValue::try_from_array(
-                    masked.as_ref(),
-                    0,
-                )?))
-            }
-            other @ ColumnarValue::Scalar(_) => {
-                exec_err!("'{GENERATOR_FIELD_UDF}' requires a struct argument: {other:?}")
-            }
-        }
-    }
-}
-
-fn ordinality(list: &ListArray) -> ListArray {
-    let mut values = Int32Builder::with_capacity(list.values().len());
-    let mut offsets: Vec<i32> = Vec::with_capacity(list.len() + 1);
-    let mut running: i32 = 0;
-    offsets.push(running);
-    for window in list.offsets().windows(2) {
-        let length = window[1] - window[0];
-        for position in 0..length {
-            values.append_value(position);
-        }
-        running += length;
-        offsets.push(running);
-    }
-    ListArray::new(
-        Arc::new(Field::new("item", DataType::Int32, false)),
-        OffsetBuffer::new(offsets.into()),
-        Arc::new(values.finish()),
-        list.nulls().cloned(),
-    )
 }
 
 #[must_use]
@@ -461,20 +253,35 @@ fn is_explode_temp_name(name: &str) -> bool {
         .is_some_and(|tail| tail.len() == 32 && tail.bytes().all(|byte| byte.is_ascii_hexdigit()))
 }
 
+fn unqualified_call_name(function: &ScalarFunction) -> String {
+    let args: Vec<String> = function
+        .args
+        .iter()
+        .map(|arg| match arg {
+            Expr::Column(column) => column.name.clone(),
+            other => other.schema_name().to_string(),
+        })
+        .collect();
+    format!("{}({})", function.func.name(), args.join(","))
+}
+
+fn is_restored_generator_alias(inner: &Expr, alias_name: &str) -> bool {
+    let Expr::ScalarFunction(function) = inner else {
+        return false;
+    };
+    if matches!(function.func.name(), "explode" | "explode_outer") {
+        return false;
+    }
+    alias_name == inner.schema_name().to_string() || alias_name == unqualified_call_name(function)
+}
+
 fn peel_generator(expr: &Expr) -> Result<Option<GeneratorSite>> {
     match expr {
         Expr::Alias(alias) => {
             let Some((kind, arg, inner_names)) = peel_generator(alias.expr.as_ref())? else {
                 return Ok(None);
             };
-            let restored = matches!(
-                alias.expr.as_ref(),
-                Expr::ScalarFunction(function)
-                    if alias
-                        .name
-                        .starts_with(&format!("{}(", function.func.name()))
-            );
-            if restored {
+            if is_restored_generator_alias(alias.expr.as_ref(), &alias.name) {
                 return Ok(Some((kind, arg, inner_names)));
             }
             if inner_names.is_some() {
@@ -654,13 +461,10 @@ fn unexpected_input(
 fn one_element_null_list(list_type: &DataType) -> Result<Expr> {
     match list_type {
         DataType::List(field) => {
-            let values = new_null_array(field.data_type(), 1);
-            let array = ListArray::new(
-                Arc::clone(field),
-                OffsetBuffer::from_lengths([1_usize]),
-                values,
-                None,
-            );
+            let nullable_field = Arc::new(field.as_ref().clone().with_nullable(true));
+            let values = new_null_array(nullable_field.data_type(), 1);
+            let offsets = OffsetBuffer::new(vec![0_i32, 1].into());
+            let array = ListArray::try_new(nullable_field, offsets, values, None)?;
             Ok(lit(ScalarValue::List(Arc::new(array))))
         }
         other => plan_err!("generator outer guard cannot build a one-element NULL {other}"),
@@ -693,20 +497,20 @@ fn guarded(outer: bool, cond: &Expr, list_expr: Expr, schema: &DFSchema) -> Resu
     if !outer {
         return Ok(list_expr);
     }
-    let list_type = match list_expr.get_type(schema)? {
-        list @ DataType::List(_) => list,
-        other => {
-            let Some(field) = list_element(&other) else {
-                return plan_err!("generator outer guard requires a list argument, got {other}");
-            };
-            DataType::List(Arc::clone(field))
-        }
+    let orig_type = list_expr.get_type(schema)?;
+    let Some(field) = list_element(&orig_type) else {
+        return plan_err!("generator outer guard requires a list argument, got {orig_type}");
     };
-    let then_arm = one_element_null_list(&list_type)?;
-    let else_expr = if matches!(list_expr.get_type(schema)?, DataType::List(_)) {
+    let target_type = if field.is_nullable() {
+        DataType::List(Arc::clone(field))
+    } else {
+        DataType::List(Arc::new(field.as_ref().clone().with_nullable(true)))
+    };
+    let then_arm = one_element_null_list(&target_type)?;
+    let else_expr = if orig_type == target_type {
         list_expr
     } else {
-        Expr::Cast(Cast::new(Box::new(list_expr), list_type))
+        Expr::Cast(Cast::new(Box::new(list_expr), target_type))
     };
     when(cond.clone(), then_arm).otherwise(else_expr)
 }

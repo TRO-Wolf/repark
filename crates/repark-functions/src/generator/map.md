@@ -3,12 +3,19 @@
 ## Purpose
 
 FNP-GEN-1 generator support. The parent `generator.rs` holds the placeholder
-`ScalarUDF`s, the internal `__repark_gen_alias` / `__repark_gen_ordinality` /
-`__repark_gen_field` UDFs, and the `GeneratorRewrite` analyzer rule that expands a
-single generator call in a `Projection` into list `Unnest` plans on both doors.
+`ScalarUDF`s (naming unaliased `explode` / `explode_outer` outputs `col` in the
+plan schema so outer references, `ORDER BY col`, and unaliased `INSERT` resolve
+before `GeneratorRewrite` runs) and the `GeneratorRewrite` analyzer rule that
+expands a single generator call in a `Projection` into list `Unnest` plans on
+both doors. Outer guards widen non-nullable list element fields to nullable and
+build the one-NULL-element list with `ListArray::try_new`; explicit aliases
+starting with a generator name are kept.
 
 ## Contents
 
+- `udfs.rs` — the internal `__repark_gen_ordinality` (fallible `ListArray::try_new`
+  position lists) and `__repark_gen_field` (parent-null-masking struct reader)
+  UDFs, split out of `generator.rs` to keep the parent under the file-size ceiling.
 - `tests.rs` — the module's `#[cfg(test)]` suite (moved out of `generator.rs` in
   FNP-GEN-1 remediation round 1 so the parent keeps the file-size ceiling): the
   array/map/struct answer pins, the select-position pin, the one-generator /
@@ -16,7 +23,8 @@ single generator call in a `Projection` into list `Unnest` plans on both doors.
   name-restored `Expr::Alias` pin, and the NULL-struct-element regression pin over a
   non-nullable-field `StructArray` with a NULL parent slot. **SQL-EXPLODE-1 (2026-11-23):**
   the `explode` / `explode_outer` pins (array `col`, alias, NULL and empty rows, map
-  `key` / `value`, scalar and nested refusals).
+  `key` / `value`, scalar and nested refusals, non-nullable-element outer lists,
+  unaliased subquery / `ORDER BY col` resolution, and explicit `explode(...)` aliases).
 - `json_tuple.rs` — **FNP-GEN-1 step 2 (2026-09-16, run 18a):** the `json_tuple`
   expansion (moved out of `generator.rs` so the parent keeps the file-size ceiling):
   string-type checks with `[DATATYPE_MISMATCH.NON_STRING_TYPE]`, the
