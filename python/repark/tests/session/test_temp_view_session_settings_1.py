@@ -20,7 +20,6 @@ KEYS = sorted(ORACLE["true"])
 UNSET_KEYS = sorted(ORACLE["unset"])
 RULED = "TEMP-VIEW-SESSION-SETTINGS-1 ruled class: a settings-sensitive conjunct kept above"
 AND_GUARD = "AND-GUARD-ANSI-1: the AND evaluates the guarded division on the dropped row"
-CAST_TEXT = "direct gap: a string-to-integer cast raises Arrow's text in both modes"
 KEPT_CAST = "the view body casts the text of a row the reader's kept-above filter drops in Spark"
 MOD_CLASS = "direct gap: 10 % 0 raises DIVIDE_BY_ZERO where Spark raises REMAINDER_BY_ZERO"
 SUGGESTION = "direct gap: NUMERIC_VALUE_OUT_OF_RANGE without Spark's WITH_SUGGESTION subclass"
@@ -33,7 +32,6 @@ STANDING = {
     "filter/and_free/on_off": (RULED + "; " + AND_GUARD, "DIVIDE_BY_ZERO"),
     "filter/and_free/on_on": (AND_GUARD, "DIVIDE_BY_ZERO"),
     "filter/numcast/on_off": (KEPT_CAST, "CAST_INVALID_INPUT"),
-    "filter/numcast/off_on": (CAST_TEXT, ""),
     "read/sql/plain/other/case/false>true": (CASE_KEPT, "UNRESOLVED_COLUMN.WITH_SUGGESTION"),
 }
 

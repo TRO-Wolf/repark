@@ -196,5 +196,5 @@ def test_try_cast_width_overflow_yields_null(spark: ReparkSession) -> None:
     assert rows[0]["b"] is None
     assert rows[0]["s"] is None
     # Strict cast must not silently wrap (Arrow cast error → engine exception).
-    with pytest.raises(Exception, match=r"Cast error|Int8|Int16"):
+    with pytest.raises(Exception, match=r"CAST_OVERFLOW|Cast error|Int8|Int16"):
         _ = frame.select(F.col("b_src").cast("byte")).to_arrow()
