@@ -23,6 +23,8 @@ const LEFT_COUNT: &str = "__repark_setop_all_left";
 const RIGHT_COUNT: &str = "__repark_setop_all_right";
 const COPIES: &str = "__repark_setop_all_copies";
 
+type Tags = &'static [(i64, &'static str)];
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Multiset {
     Intersect,
@@ -168,7 +170,7 @@ fn rewrite_multiset(join: &Join, kind: Multiset) -> Result<LogicalPlan> {
         right_keys.push(right_key.alias(&name));
         key_types.push(key_type);
     }
-    let (left_tags, right_tags): (&[(i64, &str)], &[(i64, &str)]) = match kind {
+    let (left_tags, right_tags): (Tags, Tags) = match kind {
         Multiset::Intersect => (
             &[(1, LEFT_COUNT), (0, RIGHT_COUNT)],
             &[(0, LEFT_COUNT), (1, RIGHT_COUNT)],
@@ -245,10 +247,9 @@ fn byte_offset(line_starts: &[usize], sql: &str, location: Location) -> Option<u
     let column = usize::try_from(location.column).ok()?.checked_sub(1)?;
     let start = *line_starts.get(line)?;
     let rest = sql.get(start..)?;
-    match rest.char_indices().nth(column) {
-        Some((offset, _)) => Some(start + offset),
-        None => None,
-    }
+    rest.char_indices()
+        .nth(column)
+        .map(|(offset, _)| start + offset)
 }
 
 const MINUS: &str = "MINUS";
