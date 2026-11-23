@@ -1,0 +1,15762 @@
+{
+ "modes": {
+  "America/New_York|false": {
+   "alias|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "alias|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "alias|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|select-expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|typed": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "beside|expr": {
+    "columns": [
+     "k",
+     "s",
+     "t"
+    ],
+    "rows": [
+     [
+      7,
+      "x",
+      "z"
+     ],
+     [
+      7,
+      "y",
+      "z"
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "int",
+      false
+     ],
+     [
+      "s",
+      "string",
+      false
+     ],
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "beside|select-expr": {
+    "columns": [
+     "k",
+     "s",
+     "t"
+    ],
+    "rows": [
+     [
+      7,
+      "x",
+      "z"
+     ],
+     [
+      7,
+      "y",
+      "z"
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "int",
+      false
+     ],
+     [
+      "s",
+      "string",
+      false
+     ],
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "beside|sql": {
+    "columns": [
+     "k",
+     "s",
+     "t"
+    ],
+    "rows": [
+     [
+      7,
+      "x",
+      "z"
+     ],
+     [
+      7,
+      "y",
+      "z"
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "int",
+      false
+     ],
+     [
+      "s",
+      "string",
+      false
+     ],
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "ctas-calendar|write": {
+    "columns": [
+     "d",
+     "y",
+     "yow",
+     "dow",
+     "woy"
+    ],
+    "rows": [
+     [
+      "2020-12-26",
+      2020,
+      2020,
+      7,
+      52
+     ],
+     [
+      "2020-12-27",
+      2020,
+      2020,
+      1,
+      52
+     ],
+     [
+      "2020-12-28",
+      2020,
+      2020,
+      2,
+      53
+     ],
+     [
+      "2020-12-29",
+      2020,
+      2020,
+      3,
+      53
+     ],
+     [
+      "2020-12-30",
+      2020,
+      2020,
+      4,
+      53
+     ],
+     [
+      "2020-12-31",
+      2020,
+      2020,
+      5,
+      53
+     ],
+     [
+      "2021-01-01",
+      2021,
+      2020,
+      6,
+      53
+     ],
+     [
+      "2021-01-02",
+      2021,
+      2020,
+      7,
+      53
+     ],
+     [
+      "2021-01-03",
+      2021,
+      2020,
+      1,
+      53
+     ],
+     [
+      "2021-01-04",
+      2021,
+      2021,
+      2,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ],
+     [
+      "y",
+      "int",
+      true
+     ],
+     [
+      "yow",
+      "int",
+      true
+     ],
+     [
+      "dow",
+      "int",
+      true
+     ],
+     [
+      "woy",
+      "int",
+      true
+     ]
+    ]
+   },
+   "ctas|write": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "cte-outer|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "cte|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty-outer|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty-outer|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty-outer|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "in-expression|sql": {
+    "error": "UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS",
+    "message": "[UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS] The generator is not supported: nested in expressions \"(explode(array(1, 2)) + 1)\". SQLSTATE: 42K0E"
+   },
+   "inline-alias|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "insert-calendar|write": {
+    "columns": [
+     "d",
+     "yow",
+     "dow_iso"
+    ],
+    "rows": [
+     [
+      "2026-12-26",
+      2026,
+      6
+     ],
+     [
+      "2026-12-27",
+      2026,
+      7
+     ],
+     [
+      "2026-12-28",
+      2026,
+      1
+     ],
+     [
+      "2026-12-29",
+      2026,
+      2
+     ],
+     [
+      "2026-12-30",
+      2026,
+      3
+     ],
+     [
+      "2026-12-31",
+      2026,
+      4
+     ],
+     [
+      "2027-01-01",
+      2026,
+      5
+     ],
+     [
+      "2027-01-02",
+      2026,
+      6
+     ],
+     [
+      "2027-01-03",
+      2026,
+      7
+     ],
+     [
+      "2027-01-04",
+      2027,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ],
+     [
+      "yow",
+      "int",
+      true
+     ],
+     [
+      "dow_iso",
+      "int",
+      true
+     ]
+    ]
+   },
+   "insert-outer|write": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "lateral-view-outer|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "lateral-view|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-one-alias|sql": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
+   "map-outer-null|expr": {
+    "error": "PARSE_SYNTAX_ERROR",
+    "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near '('. SQLSTATE: 42601 (line 1, pos 18)"
+   },
+   "map-outer-null|select-expr": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-outer-null|sql": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-two-aliases|sql": {
+    "columns": [
+     "k",
+     "v"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "string",
+      false
+     ],
+     [
+      "v",
+      "int",
+      false
+     ]
+    ]
+   },
+   "map-view-outer|expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view-outer|select-expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view-outer|sql": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view-outer|typed": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|select-expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|sql": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|typed": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map|expr": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "b",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      false
+     ]
+    ]
+   },
+   "map|select-expr": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "b",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      false
+     ]
+    ]
+   },
+   "map|sql": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "b",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      false
+     ]
+    ]
+   },
+   "nested-generator|sql": {
+    "error": "UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS",
+    "message": "[UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS] The generator is not supported: nested in expressions \"explode(explode(array(array(1))))\". SQLSTATE: 42K0E"
+   },
+   "nested|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      [
+       3
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "array<int>",
+      false
+     ]
+    ]
+   },
+   "nested|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      [
+       3
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "array<int>",
+      false
+     ]
+    ]
+   },
+   "nested|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      [
+       3
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "array<int>",
+      false
+     ]
+    ]
+   },
+   "non-array|sql": {
+    "error": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+    "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"explode(1)\" due to data type mismatch: The first parameter requires the (\"ARRAY\" or \"MAP\") type, however \"1\" has the type \"INT\". SQLSTATE: 42K09; line 1 pos 7;"
+   },
+   "null-elements|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-elements|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-elements|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-outer|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-outer|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-outer|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer-bare|expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer-bare|select-expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer-bare|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode|sql": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      10
+     ],
+     [
+      1,
+      20
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "projected-dates|sql": {
+    "columns": [
+     "d",
+     "dom"
+    ],
+    "rows": [
+     [
+      "2024-02-27",
+      27
+     ],
+     [
+      "2024-02-28",
+      28
+     ],
+     [
+      "2024-02-29",
+      29
+     ],
+     [
+      "2024-03-01",
+      1
+     ],
+     [
+      "2024-03-02",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ],
+     [
+      "dom",
+      "int",
+      false
+     ]
+    ]
+   },
+   "projected|sql": {
+    "columns": [
+     "y"
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      3
+     ],
+     [
+      null
+     ],
+     [
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "seq-dst-fall|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-11-01"
+     ],
+     [
+      "2025-11-02"
+     ],
+     [
+      "2025-11-03"
+     ],
+     [
+      "2025-11-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-fall|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-11-01"
+     ],
+     [
+      "2025-11-02"
+     ],
+     [
+      "2025-11-03"
+     ],
+     [
+      "2025-11-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-fall|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-11-01"
+     ],
+     [
+      "2025-11-02"
+     ],
+     [
+      "2025-11-03"
+     ],
+     [
+      "2025-11-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-spring|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-03-08"
+     ],
+     [
+      "2025-03-09"
+     ],
+     [
+      "2025-03-10"
+     ],
+     [
+      "2025-03-11"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-spring|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-03-08"
+     ],
+     [
+      "2025-03-09"
+     ],
+     [
+      "2025-03-10"
+     ],
+     [
+      "2025-03-11"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-spring|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-03-08"
+     ],
+     [
+      "2025-03-09"
+     ],
+     [
+      "2025-03-10"
+     ],
+     [
+      "2025-03-11"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-leap|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-27"
+     ],
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ],
+     [
+      "2024-03-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-leap|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-27"
+     ],
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ],
+     [
+      "2024-03-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-leap|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-27"
+     ],
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ],
+     [
+      "2024-03-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-no-step|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-no-step|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-no-step|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-pre-1970|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "1969-12-30"
+     ],
+     [
+      "1969-12-31"
+     ],
+     [
+      "1970-01-01"
+     ],
+     [
+      "1970-01-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-pre-1970|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "1969-12-30"
+     ],
+     [
+      "1969-12-31"
+     ],
+     [
+      "1970-01-01"
+     ],
+     [
+      "1970-01-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-pre-1970|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "1969-12-30"
+     ],
+     [
+      "1969-12-31"
+     ],
+     [
+      "1970-01-01"
+     ],
+     [
+      "1970-01-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2015|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2015-12-26"
+     ],
+     [
+      "2015-12-27"
+     ],
+     [
+      "2015-12-28"
+     ],
+     [
+      "2015-12-29"
+     ],
+     [
+      "2015-12-30"
+     ],
+     [
+      "2015-12-31"
+     ],
+     [
+      "2016-01-01"
+     ],
+     [
+      "2016-01-02"
+     ],
+     [
+      "2016-01-03"
+     ],
+     [
+      "2016-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2015|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2015-12-26"
+     ],
+     [
+      "2015-12-27"
+     ],
+     [
+      "2015-12-28"
+     ],
+     [
+      "2015-12-29"
+     ],
+     [
+      "2015-12-30"
+     ],
+     [
+      "2015-12-31"
+     ],
+     [
+      "2016-01-01"
+     ],
+     [
+      "2016-01-02"
+     ],
+     [
+      "2016-01-03"
+     ],
+     [
+      "2016-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2015|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2015-12-26"
+     ],
+     [
+      "2015-12-27"
+     ],
+     [
+      "2015-12-28"
+     ],
+     [
+      "2015-12-29"
+     ],
+     [
+      "2015-12-30"
+     ],
+     [
+      "2015-12-31"
+     ],
+     [
+      "2016-01-01"
+     ],
+     [
+      "2016-01-02"
+     ],
+     [
+      "2016-01-03"
+     ],
+     [
+      "2016-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2020|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2020-12-26"
+     ],
+     [
+      "2020-12-27"
+     ],
+     [
+      "2020-12-28"
+     ],
+     [
+      "2020-12-29"
+     ],
+     [
+      "2020-12-30"
+     ],
+     [
+      "2020-12-31"
+     ],
+     [
+      "2021-01-01"
+     ],
+     [
+      "2021-01-02"
+     ],
+     [
+      "2021-01-03"
+     ],
+     [
+      "2021-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2020|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2020-12-26"
+     ],
+     [
+      "2020-12-27"
+     ],
+     [
+      "2020-12-28"
+     ],
+     [
+      "2020-12-29"
+     ],
+     [
+      "2020-12-30"
+     ],
+     [
+      "2020-12-31"
+     ],
+     [
+      "2021-01-01"
+     ],
+     [
+      "2021-01-02"
+     ],
+     [
+      "2021-01-03"
+     ],
+     [
+      "2021-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2020|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2020-12-26"
+     ],
+     [
+      "2020-12-27"
+     ],
+     [
+      "2020-12-28"
+     ],
+     [
+      "2020-12-29"
+     ],
+     [
+      "2020-12-30"
+     ],
+     [
+      "2020-12-31"
+     ],
+     [
+      "2021-01-01"
+     ],
+     [
+      "2021-01-02"
+     ],
+     [
+      "2021-01-03"
+     ],
+     [
+      "2021-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2026|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2026-12-26"
+     ],
+     [
+      "2026-12-27"
+     ],
+     [
+      "2026-12-28"
+     ],
+     [
+      "2026-12-29"
+     ],
+     [
+      "2026-12-30"
+     ],
+     [
+      "2026-12-31"
+     ],
+     [
+      "2027-01-01"
+     ],
+     [
+      "2027-01-02"
+     ],
+     [
+      "2027-01-03"
+     ],
+     [
+      "2027-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2026|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2026-12-26"
+     ],
+     [
+      "2026-12-27"
+     ],
+     [
+      "2026-12-28"
+     ],
+     [
+      "2026-12-29"
+     ],
+     [
+      "2026-12-30"
+     ],
+     [
+      "2026-12-31"
+     ],
+     [
+      "2027-01-01"
+     ],
+     [
+      "2027-01-02"
+     ],
+     [
+      "2027-01-03"
+     ],
+     [
+      "2027-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2026|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2026-12-26"
+     ],
+     [
+      "2026-12-27"
+     ],
+     [
+      "2026-12-28"
+     ],
+     [
+      "2026-12-29"
+     ],
+     [
+      "2026-12-30"
+     ],
+     [
+      "2026-12-31"
+     ],
+     [
+      "2027-01-01"
+     ],
+     [
+      "2027-01-02"
+     ],
+     [
+      "2027-01-03"
+     ],
+     [
+      "2027-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-year-end|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2019-12-29"
+     ],
+     [
+      "2019-12-30"
+     ],
+     [
+      "2019-12-31"
+     ],
+     [
+      "2020-01-01"
+     ],
+     [
+      "2020-01-02"
+     ],
+     [
+      "2020-01-03"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-year-end|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2019-12-29"
+     ],
+     [
+      "2019-12-30"
+     ],
+     [
+      "2019-12-31"
+     ],
+     [
+      "2020-01-01"
+     ],
+     [
+      "2020-01-02"
+     ],
+     [
+      "2020-01-03"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-year-end|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2019-12-29"
+     ],
+     [
+      "2019-12-30"
+     ],
+     [
+      "2019-12-31"
+     ],
+     [
+      "2020-01-01"
+     ],
+     [
+      "2020-01-02"
+     ],
+     [
+      "2020-01-03"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "strings|expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "x"
+     ],
+     [
+      null
+     ],
+     [
+      "y"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "strings|select-expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "x"
+     ],
+     [
+      null
+     ],
+     [
+      "y"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "strings|sql": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "x"
+     ],
+     [
+      null
+     ],
+     [
+      "y"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "subquery-outer|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "subquery|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table-outer|expr": {
+    "columns": [
+     "tag",
+     "x"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      2
+     ],
+     [
+      "b",
+      null
+     ],
+     [
+      "c",
+      null
+     ],
+     [
+      "d",
+      null
+     ],
+     [
+      "d",
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "tag",
+      "string",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table-outer|select-expr": {
+    "columns": [
+     "tag",
+     "x"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      2
+     ],
+     [
+      "b",
+      null
+     ],
+     [
+      "c",
+      null
+     ],
+     [
+      "d",
+      null
+     ],
+     [
+      "d",
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "tag",
+      "string",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table-outer|sql": {
+    "columns": [
+     "tag",
+     "x"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      2
+     ],
+     [
+      "b",
+      null
+     ],
+     [
+      "c",
+      null
+     ],
+     [
+      "d",
+      null
+     ],
+     [
+      "d",
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "tag",
+      "string",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table|expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table|select-expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "ts-sequence-dst|sql": {
+    "columns": [
+     "t"
+    ],
+    "rows": [
+     [
+      "2025-03-08 12:00:00"
+     ],
+     [
+      "2025-03-09 12:00:00"
+     ],
+     [
+      "2025-03-10 12:00:00"
+     ]
+    ],
+    "schema": [
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "two-generators|sql": {
+    "columns": [
+     "col",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "upper-case|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "upper-case|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "upper-case|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "view-bare|expr": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view-bare|select-expr": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view-bare|sql": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view-nested-outer|expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested-outer|select-expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested-outer|sql": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|select-expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|sql": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|typed": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-outer|expr": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view-outer|select-expr": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view-outer|sql": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view-outer|typed": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view|expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view|select-expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view|typed": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   }
+  },
+  "America/New_York|true": {
+   "alias|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "alias|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "alias|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|select-expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|typed": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "beside|expr": {
+    "columns": [
+     "k",
+     "s",
+     "t"
+    ],
+    "rows": [
+     [
+      7,
+      "x",
+      "z"
+     ],
+     [
+      7,
+      "y",
+      "z"
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "int",
+      false
+     ],
+     [
+      "s",
+      "string",
+      false
+     ],
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "beside|select-expr": {
+    "columns": [
+     "k",
+     "s",
+     "t"
+    ],
+    "rows": [
+     [
+      7,
+      "x",
+      "z"
+     ],
+     [
+      7,
+      "y",
+      "z"
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "int",
+      false
+     ],
+     [
+      "s",
+      "string",
+      false
+     ],
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "beside|sql": {
+    "columns": [
+     "k",
+     "s",
+     "t"
+    ],
+    "rows": [
+     [
+      7,
+      "x",
+      "z"
+     ],
+     [
+      7,
+      "y",
+      "z"
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "int",
+      false
+     ],
+     [
+      "s",
+      "string",
+      false
+     ],
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "ctas-calendar|write": {
+    "columns": [
+     "d",
+     "y",
+     "yow",
+     "dow",
+     "woy"
+    ],
+    "rows": [
+     [
+      "2020-12-26",
+      2020,
+      2020,
+      7,
+      52
+     ],
+     [
+      "2020-12-27",
+      2020,
+      2020,
+      1,
+      52
+     ],
+     [
+      "2020-12-28",
+      2020,
+      2020,
+      2,
+      53
+     ],
+     [
+      "2020-12-29",
+      2020,
+      2020,
+      3,
+      53
+     ],
+     [
+      "2020-12-30",
+      2020,
+      2020,
+      4,
+      53
+     ],
+     [
+      "2020-12-31",
+      2020,
+      2020,
+      5,
+      53
+     ],
+     [
+      "2021-01-01",
+      2021,
+      2020,
+      6,
+      53
+     ],
+     [
+      "2021-01-02",
+      2021,
+      2020,
+      7,
+      53
+     ],
+     [
+      "2021-01-03",
+      2021,
+      2020,
+      1,
+      53
+     ],
+     [
+      "2021-01-04",
+      2021,
+      2021,
+      2,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ],
+     [
+      "y",
+      "int",
+      true
+     ],
+     [
+      "yow",
+      "int",
+      true
+     ],
+     [
+      "dow",
+      "int",
+      true
+     ],
+     [
+      "woy",
+      "int",
+      true
+     ]
+    ]
+   },
+   "ctas|write": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "cte-outer|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "cte|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty-outer|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty-outer|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty-outer|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "in-expression|sql": {
+    "error": "UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS",
+    "message": "[UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS] The generator is not supported: nested in expressions \"(explode(array(1, 2)) + 1)\". SQLSTATE: 42K0E"
+   },
+   "inline-alias|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "insert-calendar|write": {
+    "columns": [
+     "d",
+     "yow",
+     "dow_iso"
+    ],
+    "rows": [
+     [
+      "2026-12-26",
+      2026,
+      6
+     ],
+     [
+      "2026-12-27",
+      2026,
+      7
+     ],
+     [
+      "2026-12-28",
+      2026,
+      1
+     ],
+     [
+      "2026-12-29",
+      2026,
+      2
+     ],
+     [
+      "2026-12-30",
+      2026,
+      3
+     ],
+     [
+      "2026-12-31",
+      2026,
+      4
+     ],
+     [
+      "2027-01-01",
+      2026,
+      5
+     ],
+     [
+      "2027-01-02",
+      2026,
+      6
+     ],
+     [
+      "2027-01-03",
+      2026,
+      7
+     ],
+     [
+      "2027-01-04",
+      2027,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ],
+     [
+      "yow",
+      "int",
+      true
+     ],
+     [
+      "dow_iso",
+      "int",
+      true
+     ]
+    ]
+   },
+   "insert-outer|write": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "lateral-view-outer|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "lateral-view|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-one-alias|sql": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
+   "map-outer-null|expr": {
+    "error": "PARSE_SYNTAX_ERROR",
+    "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near '('. SQLSTATE: 42601 (line 1, pos 18)"
+   },
+   "map-outer-null|select-expr": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-outer-null|sql": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-two-aliases|sql": {
+    "columns": [
+     "k",
+     "v"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "string",
+      false
+     ],
+     [
+      "v",
+      "int",
+      false
+     ]
+    ]
+   },
+   "map-view-outer|expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view-outer|select-expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view-outer|sql": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view-outer|typed": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|select-expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|sql": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|typed": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map|expr": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "b",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      false
+     ]
+    ]
+   },
+   "map|select-expr": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "b",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      false
+     ]
+    ]
+   },
+   "map|sql": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "b",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      false
+     ]
+    ]
+   },
+   "nested-generator|sql": {
+    "error": "UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS",
+    "message": "[UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS] The generator is not supported: nested in expressions \"explode(explode(array(array(1))))\". SQLSTATE: 42K0E"
+   },
+   "nested|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      [
+       3
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "array<int>",
+      false
+     ]
+    ]
+   },
+   "nested|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      [
+       3
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "array<int>",
+      false
+     ]
+    ]
+   },
+   "nested|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      [
+       3
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "array<int>",
+      false
+     ]
+    ]
+   },
+   "non-array|sql": {
+    "error": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+    "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"explode(1)\" due to data type mismatch: The first parameter requires the (\"ARRAY\" or \"MAP\") type, however \"1\" has the type \"INT\". SQLSTATE: 42K09; line 1 pos 7;"
+   },
+   "null-elements|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-elements|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-elements|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-outer|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-outer|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-outer|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer-bare|expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer-bare|select-expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer-bare|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode|sql": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      10
+     ],
+     [
+      1,
+      20
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "projected-dates|sql": {
+    "columns": [
+     "d",
+     "dom"
+    ],
+    "rows": [
+     [
+      "2024-02-27",
+      27
+     ],
+     [
+      "2024-02-28",
+      28
+     ],
+     [
+      "2024-02-29",
+      29
+     ],
+     [
+      "2024-03-01",
+      1
+     ],
+     [
+      "2024-03-02",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ],
+     [
+      "dom",
+      "int",
+      false
+     ]
+    ]
+   },
+   "projected|sql": {
+    "columns": [
+     "y"
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      3
+     ],
+     [
+      null
+     ],
+     [
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "seq-dst-fall|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-11-01"
+     ],
+     [
+      "2025-11-02"
+     ],
+     [
+      "2025-11-03"
+     ],
+     [
+      "2025-11-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-fall|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-11-01"
+     ],
+     [
+      "2025-11-02"
+     ],
+     [
+      "2025-11-03"
+     ],
+     [
+      "2025-11-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-fall|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-11-01"
+     ],
+     [
+      "2025-11-02"
+     ],
+     [
+      "2025-11-03"
+     ],
+     [
+      "2025-11-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-spring|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-03-08"
+     ],
+     [
+      "2025-03-09"
+     ],
+     [
+      "2025-03-10"
+     ],
+     [
+      "2025-03-11"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-spring|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-03-08"
+     ],
+     [
+      "2025-03-09"
+     ],
+     [
+      "2025-03-10"
+     ],
+     [
+      "2025-03-11"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-spring|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-03-08"
+     ],
+     [
+      "2025-03-09"
+     ],
+     [
+      "2025-03-10"
+     ],
+     [
+      "2025-03-11"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-leap|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-27"
+     ],
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ],
+     [
+      "2024-03-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-leap|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-27"
+     ],
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ],
+     [
+      "2024-03-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-leap|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-27"
+     ],
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ],
+     [
+      "2024-03-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-no-step|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-no-step|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-no-step|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-pre-1970|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "1969-12-30"
+     ],
+     [
+      "1969-12-31"
+     ],
+     [
+      "1970-01-01"
+     ],
+     [
+      "1970-01-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-pre-1970|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "1969-12-30"
+     ],
+     [
+      "1969-12-31"
+     ],
+     [
+      "1970-01-01"
+     ],
+     [
+      "1970-01-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-pre-1970|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "1969-12-30"
+     ],
+     [
+      "1969-12-31"
+     ],
+     [
+      "1970-01-01"
+     ],
+     [
+      "1970-01-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2015|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2015-12-26"
+     ],
+     [
+      "2015-12-27"
+     ],
+     [
+      "2015-12-28"
+     ],
+     [
+      "2015-12-29"
+     ],
+     [
+      "2015-12-30"
+     ],
+     [
+      "2015-12-31"
+     ],
+     [
+      "2016-01-01"
+     ],
+     [
+      "2016-01-02"
+     ],
+     [
+      "2016-01-03"
+     ],
+     [
+      "2016-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2015|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2015-12-26"
+     ],
+     [
+      "2015-12-27"
+     ],
+     [
+      "2015-12-28"
+     ],
+     [
+      "2015-12-29"
+     ],
+     [
+      "2015-12-30"
+     ],
+     [
+      "2015-12-31"
+     ],
+     [
+      "2016-01-01"
+     ],
+     [
+      "2016-01-02"
+     ],
+     [
+      "2016-01-03"
+     ],
+     [
+      "2016-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2015|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2015-12-26"
+     ],
+     [
+      "2015-12-27"
+     ],
+     [
+      "2015-12-28"
+     ],
+     [
+      "2015-12-29"
+     ],
+     [
+      "2015-12-30"
+     ],
+     [
+      "2015-12-31"
+     ],
+     [
+      "2016-01-01"
+     ],
+     [
+      "2016-01-02"
+     ],
+     [
+      "2016-01-03"
+     ],
+     [
+      "2016-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2020|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2020-12-26"
+     ],
+     [
+      "2020-12-27"
+     ],
+     [
+      "2020-12-28"
+     ],
+     [
+      "2020-12-29"
+     ],
+     [
+      "2020-12-30"
+     ],
+     [
+      "2020-12-31"
+     ],
+     [
+      "2021-01-01"
+     ],
+     [
+      "2021-01-02"
+     ],
+     [
+      "2021-01-03"
+     ],
+     [
+      "2021-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2020|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2020-12-26"
+     ],
+     [
+      "2020-12-27"
+     ],
+     [
+      "2020-12-28"
+     ],
+     [
+      "2020-12-29"
+     ],
+     [
+      "2020-12-30"
+     ],
+     [
+      "2020-12-31"
+     ],
+     [
+      "2021-01-01"
+     ],
+     [
+      "2021-01-02"
+     ],
+     [
+      "2021-01-03"
+     ],
+     [
+      "2021-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2020|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2020-12-26"
+     ],
+     [
+      "2020-12-27"
+     ],
+     [
+      "2020-12-28"
+     ],
+     [
+      "2020-12-29"
+     ],
+     [
+      "2020-12-30"
+     ],
+     [
+      "2020-12-31"
+     ],
+     [
+      "2021-01-01"
+     ],
+     [
+      "2021-01-02"
+     ],
+     [
+      "2021-01-03"
+     ],
+     [
+      "2021-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2026|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2026-12-26"
+     ],
+     [
+      "2026-12-27"
+     ],
+     [
+      "2026-12-28"
+     ],
+     [
+      "2026-12-29"
+     ],
+     [
+      "2026-12-30"
+     ],
+     [
+      "2026-12-31"
+     ],
+     [
+      "2027-01-01"
+     ],
+     [
+      "2027-01-02"
+     ],
+     [
+      "2027-01-03"
+     ],
+     [
+      "2027-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2026|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2026-12-26"
+     ],
+     [
+      "2026-12-27"
+     ],
+     [
+      "2026-12-28"
+     ],
+     [
+      "2026-12-29"
+     ],
+     [
+      "2026-12-30"
+     ],
+     [
+      "2026-12-31"
+     ],
+     [
+      "2027-01-01"
+     ],
+     [
+      "2027-01-02"
+     ],
+     [
+      "2027-01-03"
+     ],
+     [
+      "2027-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2026|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2026-12-26"
+     ],
+     [
+      "2026-12-27"
+     ],
+     [
+      "2026-12-28"
+     ],
+     [
+      "2026-12-29"
+     ],
+     [
+      "2026-12-30"
+     ],
+     [
+      "2026-12-31"
+     ],
+     [
+      "2027-01-01"
+     ],
+     [
+      "2027-01-02"
+     ],
+     [
+      "2027-01-03"
+     ],
+     [
+      "2027-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-year-end|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2019-12-29"
+     ],
+     [
+      "2019-12-30"
+     ],
+     [
+      "2019-12-31"
+     ],
+     [
+      "2020-01-01"
+     ],
+     [
+      "2020-01-02"
+     ],
+     [
+      "2020-01-03"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-year-end|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2019-12-29"
+     ],
+     [
+      "2019-12-30"
+     ],
+     [
+      "2019-12-31"
+     ],
+     [
+      "2020-01-01"
+     ],
+     [
+      "2020-01-02"
+     ],
+     [
+      "2020-01-03"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-year-end|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2019-12-29"
+     ],
+     [
+      "2019-12-30"
+     ],
+     [
+      "2019-12-31"
+     ],
+     [
+      "2020-01-01"
+     ],
+     [
+      "2020-01-02"
+     ],
+     [
+      "2020-01-03"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "strings|expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "x"
+     ],
+     [
+      null
+     ],
+     [
+      "y"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "strings|select-expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "x"
+     ],
+     [
+      null
+     ],
+     [
+      "y"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "strings|sql": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "x"
+     ],
+     [
+      null
+     ],
+     [
+      "y"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "subquery-outer|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "subquery|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table-outer|expr": {
+    "columns": [
+     "tag",
+     "x"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      2
+     ],
+     [
+      "b",
+      null
+     ],
+     [
+      "c",
+      null
+     ],
+     [
+      "d",
+      null
+     ],
+     [
+      "d",
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "tag",
+      "string",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table-outer|select-expr": {
+    "columns": [
+     "tag",
+     "x"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      2
+     ],
+     [
+      "b",
+      null
+     ],
+     [
+      "c",
+      null
+     ],
+     [
+      "d",
+      null
+     ],
+     [
+      "d",
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "tag",
+      "string",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table-outer|sql": {
+    "columns": [
+     "tag",
+     "x"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      2
+     ],
+     [
+      "b",
+      null
+     ],
+     [
+      "c",
+      null
+     ],
+     [
+      "d",
+      null
+     ],
+     [
+      "d",
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "tag",
+      "string",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table|expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table|select-expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "ts-sequence-dst|sql": {
+    "columns": [
+     "t"
+    ],
+    "rows": [
+     [
+      "2025-03-08 12:00:00"
+     ],
+     [
+      "2025-03-09 12:00:00"
+     ],
+     [
+      "2025-03-10 12:00:00"
+     ]
+    ],
+    "schema": [
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "two-generators|sql": {
+    "columns": [
+     "col",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "upper-case|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "upper-case|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "upper-case|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "view-bare|expr": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view-bare|select-expr": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view-bare|sql": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view-nested-outer|expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested-outer|select-expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested-outer|sql": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|select-expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|sql": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|typed": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-outer|expr": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view-outer|select-expr": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view-outer|sql": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view-outer|typed": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view|expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view|select-expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view|typed": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   }
+  },
+  "UTC|false": {
+   "alias|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "alias|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "alias|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|select-expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|typed": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "beside|expr": {
+    "columns": [
+     "k",
+     "s",
+     "t"
+    ],
+    "rows": [
+     [
+      7,
+      "x",
+      "z"
+     ],
+     [
+      7,
+      "y",
+      "z"
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "int",
+      false
+     ],
+     [
+      "s",
+      "string",
+      false
+     ],
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "beside|select-expr": {
+    "columns": [
+     "k",
+     "s",
+     "t"
+    ],
+    "rows": [
+     [
+      7,
+      "x",
+      "z"
+     ],
+     [
+      7,
+      "y",
+      "z"
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "int",
+      false
+     ],
+     [
+      "s",
+      "string",
+      false
+     ],
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "beside|sql": {
+    "columns": [
+     "k",
+     "s",
+     "t"
+    ],
+    "rows": [
+     [
+      7,
+      "x",
+      "z"
+     ],
+     [
+      7,
+      "y",
+      "z"
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "int",
+      false
+     ],
+     [
+      "s",
+      "string",
+      false
+     ],
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "ctas-calendar|write": {
+    "columns": [
+     "d",
+     "y",
+     "yow",
+     "dow",
+     "woy"
+    ],
+    "rows": [
+     [
+      "2020-12-26",
+      2020,
+      2020,
+      7,
+      52
+     ],
+     [
+      "2020-12-27",
+      2020,
+      2020,
+      1,
+      52
+     ],
+     [
+      "2020-12-28",
+      2020,
+      2020,
+      2,
+      53
+     ],
+     [
+      "2020-12-29",
+      2020,
+      2020,
+      3,
+      53
+     ],
+     [
+      "2020-12-30",
+      2020,
+      2020,
+      4,
+      53
+     ],
+     [
+      "2020-12-31",
+      2020,
+      2020,
+      5,
+      53
+     ],
+     [
+      "2021-01-01",
+      2021,
+      2020,
+      6,
+      53
+     ],
+     [
+      "2021-01-02",
+      2021,
+      2020,
+      7,
+      53
+     ],
+     [
+      "2021-01-03",
+      2021,
+      2020,
+      1,
+      53
+     ],
+     [
+      "2021-01-04",
+      2021,
+      2021,
+      2,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ],
+     [
+      "y",
+      "int",
+      true
+     ],
+     [
+      "yow",
+      "int",
+      true
+     ],
+     [
+      "dow",
+      "int",
+      true
+     ],
+     [
+      "woy",
+      "int",
+      true
+     ]
+    ]
+   },
+   "ctas|write": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "cte-outer|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "cte|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty-outer|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty-outer|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty-outer|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "in-expression|sql": {
+    "error": "UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS",
+    "message": "[UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS] The generator is not supported: nested in expressions \"(explode(array(1, 2)) + 1)\". SQLSTATE: 42K0E"
+   },
+   "inline-alias|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "insert-calendar|write": {
+    "columns": [
+     "d",
+     "yow",
+     "dow_iso"
+    ],
+    "rows": [
+     [
+      "2026-12-26",
+      2026,
+      6
+     ],
+     [
+      "2026-12-27",
+      2026,
+      7
+     ],
+     [
+      "2026-12-28",
+      2026,
+      1
+     ],
+     [
+      "2026-12-29",
+      2026,
+      2
+     ],
+     [
+      "2026-12-30",
+      2026,
+      3
+     ],
+     [
+      "2026-12-31",
+      2026,
+      4
+     ],
+     [
+      "2027-01-01",
+      2026,
+      5
+     ],
+     [
+      "2027-01-02",
+      2026,
+      6
+     ],
+     [
+      "2027-01-03",
+      2026,
+      7
+     ],
+     [
+      "2027-01-04",
+      2027,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ],
+     [
+      "yow",
+      "int",
+      true
+     ],
+     [
+      "dow_iso",
+      "int",
+      true
+     ]
+    ]
+   },
+   "insert-outer|write": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "lateral-view-outer|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "lateral-view|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-one-alias|sql": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
+   "map-outer-null|expr": {
+    "error": "PARSE_SYNTAX_ERROR",
+    "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near '('. SQLSTATE: 42601 (line 1, pos 18)"
+   },
+   "map-outer-null|select-expr": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-outer-null|sql": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-two-aliases|sql": {
+    "columns": [
+     "k",
+     "v"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "string",
+      false
+     ],
+     [
+      "v",
+      "int",
+      false
+     ]
+    ]
+   },
+   "map-view-outer|expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view-outer|select-expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view-outer|sql": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view-outer|typed": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|select-expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|sql": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|typed": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map|expr": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "b",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      false
+     ]
+    ]
+   },
+   "map|select-expr": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "b",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      false
+     ]
+    ]
+   },
+   "map|sql": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "b",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      false
+     ]
+    ]
+   },
+   "nested-generator|sql": {
+    "error": "UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS",
+    "message": "[UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS] The generator is not supported: nested in expressions \"explode(explode(array(array(1))))\". SQLSTATE: 42K0E"
+   },
+   "nested|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      [
+       3
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "array<int>",
+      false
+     ]
+    ]
+   },
+   "nested|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      [
+       3
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "array<int>",
+      false
+     ]
+    ]
+   },
+   "nested|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      [
+       3
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "array<int>",
+      false
+     ]
+    ]
+   },
+   "non-array|sql": {
+    "error": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+    "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"explode(1)\" due to data type mismatch: The first parameter requires the (\"ARRAY\" or \"MAP\") type, however \"1\" has the type \"INT\". SQLSTATE: 42K09; line 1 pos 7;"
+   },
+   "null-elements|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-elements|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-elements|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-outer|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-outer|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-outer|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer-bare|expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer-bare|select-expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer-bare|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode|sql": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      10
+     ],
+     [
+      1,
+      20
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "projected-dates|sql": {
+    "columns": [
+     "d",
+     "dom"
+    ],
+    "rows": [
+     [
+      "2024-02-27",
+      27
+     ],
+     [
+      "2024-02-28",
+      28
+     ],
+     [
+      "2024-02-29",
+      29
+     ],
+     [
+      "2024-03-01",
+      1
+     ],
+     [
+      "2024-03-02",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ],
+     [
+      "dom",
+      "int",
+      false
+     ]
+    ]
+   },
+   "projected|sql": {
+    "columns": [
+     "y"
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      3
+     ],
+     [
+      null
+     ],
+     [
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "seq-dst-fall|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-11-01"
+     ],
+     [
+      "2025-11-02"
+     ],
+     [
+      "2025-11-03"
+     ],
+     [
+      "2025-11-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-fall|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-11-01"
+     ],
+     [
+      "2025-11-02"
+     ],
+     [
+      "2025-11-03"
+     ],
+     [
+      "2025-11-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-fall|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-11-01"
+     ],
+     [
+      "2025-11-02"
+     ],
+     [
+      "2025-11-03"
+     ],
+     [
+      "2025-11-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-spring|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-03-08"
+     ],
+     [
+      "2025-03-09"
+     ],
+     [
+      "2025-03-10"
+     ],
+     [
+      "2025-03-11"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-spring|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-03-08"
+     ],
+     [
+      "2025-03-09"
+     ],
+     [
+      "2025-03-10"
+     ],
+     [
+      "2025-03-11"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-spring|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-03-08"
+     ],
+     [
+      "2025-03-09"
+     ],
+     [
+      "2025-03-10"
+     ],
+     [
+      "2025-03-11"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-leap|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-27"
+     ],
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ],
+     [
+      "2024-03-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-leap|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-27"
+     ],
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ],
+     [
+      "2024-03-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-leap|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-27"
+     ],
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ],
+     [
+      "2024-03-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-no-step|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-no-step|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-no-step|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-pre-1970|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "1969-12-30"
+     ],
+     [
+      "1969-12-31"
+     ],
+     [
+      "1970-01-01"
+     ],
+     [
+      "1970-01-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-pre-1970|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "1969-12-30"
+     ],
+     [
+      "1969-12-31"
+     ],
+     [
+      "1970-01-01"
+     ],
+     [
+      "1970-01-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-pre-1970|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "1969-12-30"
+     ],
+     [
+      "1969-12-31"
+     ],
+     [
+      "1970-01-01"
+     ],
+     [
+      "1970-01-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2015|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2015-12-26"
+     ],
+     [
+      "2015-12-27"
+     ],
+     [
+      "2015-12-28"
+     ],
+     [
+      "2015-12-29"
+     ],
+     [
+      "2015-12-30"
+     ],
+     [
+      "2015-12-31"
+     ],
+     [
+      "2016-01-01"
+     ],
+     [
+      "2016-01-02"
+     ],
+     [
+      "2016-01-03"
+     ],
+     [
+      "2016-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2015|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2015-12-26"
+     ],
+     [
+      "2015-12-27"
+     ],
+     [
+      "2015-12-28"
+     ],
+     [
+      "2015-12-29"
+     ],
+     [
+      "2015-12-30"
+     ],
+     [
+      "2015-12-31"
+     ],
+     [
+      "2016-01-01"
+     ],
+     [
+      "2016-01-02"
+     ],
+     [
+      "2016-01-03"
+     ],
+     [
+      "2016-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2015|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2015-12-26"
+     ],
+     [
+      "2015-12-27"
+     ],
+     [
+      "2015-12-28"
+     ],
+     [
+      "2015-12-29"
+     ],
+     [
+      "2015-12-30"
+     ],
+     [
+      "2015-12-31"
+     ],
+     [
+      "2016-01-01"
+     ],
+     [
+      "2016-01-02"
+     ],
+     [
+      "2016-01-03"
+     ],
+     [
+      "2016-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2020|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2020-12-26"
+     ],
+     [
+      "2020-12-27"
+     ],
+     [
+      "2020-12-28"
+     ],
+     [
+      "2020-12-29"
+     ],
+     [
+      "2020-12-30"
+     ],
+     [
+      "2020-12-31"
+     ],
+     [
+      "2021-01-01"
+     ],
+     [
+      "2021-01-02"
+     ],
+     [
+      "2021-01-03"
+     ],
+     [
+      "2021-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2020|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2020-12-26"
+     ],
+     [
+      "2020-12-27"
+     ],
+     [
+      "2020-12-28"
+     ],
+     [
+      "2020-12-29"
+     ],
+     [
+      "2020-12-30"
+     ],
+     [
+      "2020-12-31"
+     ],
+     [
+      "2021-01-01"
+     ],
+     [
+      "2021-01-02"
+     ],
+     [
+      "2021-01-03"
+     ],
+     [
+      "2021-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2020|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2020-12-26"
+     ],
+     [
+      "2020-12-27"
+     ],
+     [
+      "2020-12-28"
+     ],
+     [
+      "2020-12-29"
+     ],
+     [
+      "2020-12-30"
+     ],
+     [
+      "2020-12-31"
+     ],
+     [
+      "2021-01-01"
+     ],
+     [
+      "2021-01-02"
+     ],
+     [
+      "2021-01-03"
+     ],
+     [
+      "2021-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2026|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2026-12-26"
+     ],
+     [
+      "2026-12-27"
+     ],
+     [
+      "2026-12-28"
+     ],
+     [
+      "2026-12-29"
+     ],
+     [
+      "2026-12-30"
+     ],
+     [
+      "2026-12-31"
+     ],
+     [
+      "2027-01-01"
+     ],
+     [
+      "2027-01-02"
+     ],
+     [
+      "2027-01-03"
+     ],
+     [
+      "2027-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2026|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2026-12-26"
+     ],
+     [
+      "2026-12-27"
+     ],
+     [
+      "2026-12-28"
+     ],
+     [
+      "2026-12-29"
+     ],
+     [
+      "2026-12-30"
+     ],
+     [
+      "2026-12-31"
+     ],
+     [
+      "2027-01-01"
+     ],
+     [
+      "2027-01-02"
+     ],
+     [
+      "2027-01-03"
+     ],
+     [
+      "2027-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2026|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2026-12-26"
+     ],
+     [
+      "2026-12-27"
+     ],
+     [
+      "2026-12-28"
+     ],
+     [
+      "2026-12-29"
+     ],
+     [
+      "2026-12-30"
+     ],
+     [
+      "2026-12-31"
+     ],
+     [
+      "2027-01-01"
+     ],
+     [
+      "2027-01-02"
+     ],
+     [
+      "2027-01-03"
+     ],
+     [
+      "2027-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-year-end|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2019-12-29"
+     ],
+     [
+      "2019-12-30"
+     ],
+     [
+      "2019-12-31"
+     ],
+     [
+      "2020-01-01"
+     ],
+     [
+      "2020-01-02"
+     ],
+     [
+      "2020-01-03"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-year-end|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2019-12-29"
+     ],
+     [
+      "2019-12-30"
+     ],
+     [
+      "2019-12-31"
+     ],
+     [
+      "2020-01-01"
+     ],
+     [
+      "2020-01-02"
+     ],
+     [
+      "2020-01-03"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-year-end|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2019-12-29"
+     ],
+     [
+      "2019-12-30"
+     ],
+     [
+      "2019-12-31"
+     ],
+     [
+      "2020-01-01"
+     ],
+     [
+      "2020-01-02"
+     ],
+     [
+      "2020-01-03"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "strings|expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "x"
+     ],
+     [
+      null
+     ],
+     [
+      "y"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "strings|select-expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "x"
+     ],
+     [
+      null
+     ],
+     [
+      "y"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "strings|sql": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "x"
+     ],
+     [
+      null
+     ],
+     [
+      "y"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "subquery-outer|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "subquery|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table-outer|expr": {
+    "columns": [
+     "tag",
+     "x"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      2
+     ],
+     [
+      "b",
+      null
+     ],
+     [
+      "c",
+      null
+     ],
+     [
+      "d",
+      null
+     ],
+     [
+      "d",
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "tag",
+      "string",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table-outer|select-expr": {
+    "columns": [
+     "tag",
+     "x"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      2
+     ],
+     [
+      "b",
+      null
+     ],
+     [
+      "c",
+      null
+     ],
+     [
+      "d",
+      null
+     ],
+     [
+      "d",
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "tag",
+      "string",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table-outer|sql": {
+    "columns": [
+     "tag",
+     "x"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      2
+     ],
+     [
+      "b",
+      null
+     ],
+     [
+      "c",
+      null
+     ],
+     [
+      "d",
+      null
+     ],
+     [
+      "d",
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "tag",
+      "string",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table|expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table|select-expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "ts-sequence-dst|sql": {
+    "columns": [
+     "t"
+    ],
+    "rows": [
+     [
+      "2025-03-08 12:00:00"
+     ],
+     [
+      "2025-03-09 12:00:00"
+     ],
+     [
+      "2025-03-10 12:00:00"
+     ]
+    ],
+    "schema": [
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "two-generators|sql": {
+    "columns": [
+     "col",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "upper-case|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "upper-case|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "upper-case|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "view-bare|expr": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view-bare|select-expr": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view-bare|sql": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view-nested-outer|expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested-outer|select-expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested-outer|sql": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|select-expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|sql": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|typed": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-outer|expr": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view-outer|select-expr": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view-outer|sql": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view-outer|typed": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view|expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view|select-expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view|typed": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   }
+  },
+  "UTC|true": {
+   "alias|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "alias|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "alias|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|select-expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "bare|typed": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "beside|expr": {
+    "columns": [
+     "k",
+     "s",
+     "t"
+    ],
+    "rows": [
+     [
+      7,
+      "x",
+      "z"
+     ],
+     [
+      7,
+      "y",
+      "z"
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "int",
+      false
+     ],
+     [
+      "s",
+      "string",
+      false
+     ],
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "beside|select-expr": {
+    "columns": [
+     "k",
+     "s",
+     "t"
+    ],
+    "rows": [
+     [
+      7,
+      "x",
+      "z"
+     ],
+     [
+      7,
+      "y",
+      "z"
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "int",
+      false
+     ],
+     [
+      "s",
+      "string",
+      false
+     ],
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "beside|sql": {
+    "columns": [
+     "k",
+     "s",
+     "t"
+    ],
+    "rows": [
+     [
+      7,
+      "x",
+      "z"
+     ],
+     [
+      7,
+      "y",
+      "z"
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "int",
+      false
+     ],
+     [
+      "s",
+      "string",
+      false
+     ],
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "ctas-calendar|write": {
+    "columns": [
+     "d",
+     "y",
+     "yow",
+     "dow",
+     "woy"
+    ],
+    "rows": [
+     [
+      "2020-12-26",
+      2020,
+      2020,
+      7,
+      52
+     ],
+     [
+      "2020-12-27",
+      2020,
+      2020,
+      1,
+      52
+     ],
+     [
+      "2020-12-28",
+      2020,
+      2020,
+      2,
+      53
+     ],
+     [
+      "2020-12-29",
+      2020,
+      2020,
+      3,
+      53
+     ],
+     [
+      "2020-12-30",
+      2020,
+      2020,
+      4,
+      53
+     ],
+     [
+      "2020-12-31",
+      2020,
+      2020,
+      5,
+      53
+     ],
+     [
+      "2021-01-01",
+      2021,
+      2020,
+      6,
+      53
+     ],
+     [
+      "2021-01-02",
+      2021,
+      2020,
+      7,
+      53
+     ],
+     [
+      "2021-01-03",
+      2021,
+      2020,
+      1,
+      53
+     ],
+     [
+      "2021-01-04",
+      2021,
+      2021,
+      2,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ],
+     [
+      "y",
+      "int",
+      true
+     ],
+     [
+      "yow",
+      "int",
+      true
+     ],
+     [
+      "dow",
+      "int",
+      true
+     ],
+     [
+      "woy",
+      "int",
+      true
+     ]
+    ]
+   },
+   "ctas|write": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "cte-outer|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "cte|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty-outer|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty-outer|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty-outer|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "empty|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "in-expression|sql": {
+    "error": "UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS",
+    "message": "[UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS] The generator is not supported: nested in expressions \"(explode(array(1, 2)) + 1)\". SQLSTATE: 42K0E"
+   },
+   "inline-alias|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "insert-calendar|write": {
+    "columns": [
+     "d",
+     "yow",
+     "dow_iso"
+    ],
+    "rows": [
+     [
+      "2026-12-26",
+      2026,
+      6
+     ],
+     [
+      "2026-12-27",
+      2026,
+      7
+     ],
+     [
+      "2026-12-28",
+      2026,
+      1
+     ],
+     [
+      "2026-12-29",
+      2026,
+      2
+     ],
+     [
+      "2026-12-30",
+      2026,
+      3
+     ],
+     [
+      "2026-12-31",
+      2026,
+      4
+     ],
+     [
+      "2027-01-01",
+      2026,
+      5
+     ],
+     [
+      "2027-01-02",
+      2026,
+      6
+     ],
+     [
+      "2027-01-03",
+      2026,
+      7
+     ],
+     [
+      "2027-01-04",
+      2027,
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      true
+     ],
+     [
+      "yow",
+      "int",
+      true
+     ],
+     [
+      "dow_iso",
+      "int",
+      true
+     ]
+    ]
+   },
+   "insert-outer|write": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "lateral-view-outer|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "lateral-view|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-one-alias|sql": {
+    "error": "UDTF_ALIAS_NUMBER_MISMATCH",
+    "message": "[UDTF_ALIAS_NUMBER_MISMATCH] The number of aliases supplied in the AS clause does not match the number of columns output by the UDTF."
+   },
+   "map-outer-null|expr": {
+    "error": "PARSE_SYNTAX_ERROR",
+    "message": "[PARSE_SYNTAX_ERROR] Syntax error at or near '('. SQLSTATE: 42601 (line 1, pos 18)"
+   },
+   "map-outer-null|select-expr": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-outer-null|sql": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      null,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-two-aliases|sql": {
+    "columns": [
+     "k",
+     "v"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ]
+    ],
+    "schema": [
+     [
+      "k",
+      "string",
+      false
+     ],
+     [
+      "v",
+      "int",
+      false
+     ]
+    ]
+   },
+   "map-view-outer|expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view-outer|select-expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view-outer|sql": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view-outer|typed": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      2,
+      null,
+      null
+     ],
+     [
+      3,
+      null,
+      null
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      true
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|select-expr": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|sql": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map-view|typed": {
+    "columns": [
+     "id",
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      1,
+      "k1",
+      1
+     ],
+     [
+      1,
+      "k2",
+      2
+     ],
+     [
+      4,
+      "k3",
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      true
+     ]
+    ]
+   },
+   "map|expr": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "b",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      false
+     ]
+    ]
+   },
+   "map|select-expr": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "b",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      false
+     ]
+    ]
+   },
+   "map|sql": {
+    "columns": [
+     "key",
+     "value"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "b",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "key",
+      "string",
+      false
+     ],
+     [
+      "value",
+      "int",
+      false
+     ]
+    ]
+   },
+   "nested-generator|sql": {
+    "error": "UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS",
+    "message": "[UNSUPPORTED_GENERATOR.NESTED_IN_EXPRESSIONS] The generator is not supported: nested in expressions \"explode(explode(array(array(1))))\". SQLSTATE: 42K0E"
+   },
+   "nested|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      [
+       3
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "array<int>",
+      false
+     ]
+    ]
+   },
+   "nested|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      [
+       3
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "array<int>",
+      false
+     ]
+    ]
+   },
+   "nested|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      [
+       3
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "array<int>",
+      false
+     ]
+    ]
+   },
+   "non-array|sql": {
+    "error": "DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE",
+    "message": "[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve \"explode(1)\" due to data type mismatch: The first parameter requires the (\"ARRAY\" or \"MAP\") type, however \"1\" has the type \"INT\". SQLSTATE: 42K09; line 1 pos 7;"
+   },
+   "null-elements|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-elements|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-elements|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      null
+     ],
+     [
+      3
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-outer|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-outer|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null-outer|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "null|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer-bare|expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer-bare|select-expr": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer-bare|sql": {
+    "columns": [
+     "col"
+    ],
+    "rows": [
+     [
+      3
+     ],
+     [
+      4
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "outer|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "posexplode|sql": {
+    "columns": [
+     "pos",
+     "col"
+    ],
+    "rows": [
+     [
+      0,
+      10
+     ],
+     [
+      1,
+      20
+     ]
+    ],
+    "schema": [
+     [
+      "pos",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "projected-dates|sql": {
+    "columns": [
+     "d",
+     "dom"
+    ],
+    "rows": [
+     [
+      "2024-02-27",
+      27
+     ],
+     [
+      "2024-02-28",
+      28
+     ],
+     [
+      "2024-02-29",
+      29
+     ],
+     [
+      "2024-03-01",
+      1
+     ],
+     [
+      "2024-03-02",
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ],
+     [
+      "dom",
+      "int",
+      false
+     ]
+    ]
+   },
+   "projected|sql": {
+    "columns": [
+     "y"
+    ],
+    "rows": [
+     [
+      2
+     ],
+     [
+      3
+     ],
+     [
+      null
+     ],
+     [
+      6
+     ]
+    ],
+    "schema": [
+     [
+      "y",
+      "int",
+      true
+     ]
+    ]
+   },
+   "seq-dst-fall|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-11-01"
+     ],
+     [
+      "2025-11-02"
+     ],
+     [
+      "2025-11-03"
+     ],
+     [
+      "2025-11-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-fall|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-11-01"
+     ],
+     [
+      "2025-11-02"
+     ],
+     [
+      "2025-11-03"
+     ],
+     [
+      "2025-11-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-fall|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-11-01"
+     ],
+     [
+      "2025-11-02"
+     ],
+     [
+      "2025-11-03"
+     ],
+     [
+      "2025-11-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-spring|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-03-08"
+     ],
+     [
+      "2025-03-09"
+     ],
+     [
+      "2025-03-10"
+     ],
+     [
+      "2025-03-11"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-spring|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-03-08"
+     ],
+     [
+      "2025-03-09"
+     ],
+     [
+      "2025-03-10"
+     ],
+     [
+      "2025-03-11"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-dst-spring|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2025-03-08"
+     ],
+     [
+      "2025-03-09"
+     ],
+     [
+      "2025-03-10"
+     ],
+     [
+      "2025-03-11"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-leap|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-27"
+     ],
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ],
+     [
+      "2024-03-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-leap|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-27"
+     ],
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ],
+     [
+      "2024-03-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-leap|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-27"
+     ],
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ],
+     [
+      "2024-03-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-no-step|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-no-step|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-no-step|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2024-02-28"
+     ],
+     [
+      "2024-02-29"
+     ],
+     [
+      "2024-03-01"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-pre-1970|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "1969-12-30"
+     ],
+     [
+      "1969-12-31"
+     ],
+     [
+      "1970-01-01"
+     ],
+     [
+      "1970-01-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-pre-1970|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "1969-12-30"
+     ],
+     [
+      "1969-12-31"
+     ],
+     [
+      "1970-01-01"
+     ],
+     [
+      "1970-01-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-pre-1970|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "1969-12-30"
+     ],
+     [
+      "1969-12-31"
+     ],
+     [
+      "1970-01-01"
+     ],
+     [
+      "1970-01-02"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2015|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2015-12-26"
+     ],
+     [
+      "2015-12-27"
+     ],
+     [
+      "2015-12-28"
+     ],
+     [
+      "2015-12-29"
+     ],
+     [
+      "2015-12-30"
+     ],
+     [
+      "2015-12-31"
+     ],
+     [
+      "2016-01-01"
+     ],
+     [
+      "2016-01-02"
+     ],
+     [
+      "2016-01-03"
+     ],
+     [
+      "2016-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2015|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2015-12-26"
+     ],
+     [
+      "2015-12-27"
+     ],
+     [
+      "2015-12-28"
+     ],
+     [
+      "2015-12-29"
+     ],
+     [
+      "2015-12-30"
+     ],
+     [
+      "2015-12-31"
+     ],
+     [
+      "2016-01-01"
+     ],
+     [
+      "2016-01-02"
+     ],
+     [
+      "2016-01-03"
+     ],
+     [
+      "2016-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2015|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2015-12-26"
+     ],
+     [
+      "2015-12-27"
+     ],
+     [
+      "2015-12-28"
+     ],
+     [
+      "2015-12-29"
+     ],
+     [
+      "2015-12-30"
+     ],
+     [
+      "2015-12-31"
+     ],
+     [
+      "2016-01-01"
+     ],
+     [
+      "2016-01-02"
+     ],
+     [
+      "2016-01-03"
+     ],
+     [
+      "2016-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2020|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2020-12-26"
+     ],
+     [
+      "2020-12-27"
+     ],
+     [
+      "2020-12-28"
+     ],
+     [
+      "2020-12-29"
+     ],
+     [
+      "2020-12-30"
+     ],
+     [
+      "2020-12-31"
+     ],
+     [
+      "2021-01-01"
+     ],
+     [
+      "2021-01-02"
+     ],
+     [
+      "2021-01-03"
+     ],
+     [
+      "2021-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2020|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2020-12-26"
+     ],
+     [
+      "2020-12-27"
+     ],
+     [
+      "2020-12-28"
+     ],
+     [
+      "2020-12-29"
+     ],
+     [
+      "2020-12-30"
+     ],
+     [
+      "2020-12-31"
+     ],
+     [
+      "2021-01-01"
+     ],
+     [
+      "2021-01-02"
+     ],
+     [
+      "2021-01-03"
+     ],
+     [
+      "2021-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2020|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2020-12-26"
+     ],
+     [
+      "2020-12-27"
+     ],
+     [
+      "2020-12-28"
+     ],
+     [
+      "2020-12-29"
+     ],
+     [
+      "2020-12-30"
+     ],
+     [
+      "2020-12-31"
+     ],
+     [
+      "2021-01-01"
+     ],
+     [
+      "2021-01-02"
+     ],
+     [
+      "2021-01-03"
+     ],
+     [
+      "2021-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2026|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2026-12-26"
+     ],
+     [
+      "2026-12-27"
+     ],
+     [
+      "2026-12-28"
+     ],
+     [
+      "2026-12-29"
+     ],
+     [
+      "2026-12-30"
+     ],
+     [
+      "2026-12-31"
+     ],
+     [
+      "2027-01-01"
+     ],
+     [
+      "2027-01-02"
+     ],
+     [
+      "2027-01-03"
+     ],
+     [
+      "2027-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2026|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2026-12-26"
+     ],
+     [
+      "2026-12-27"
+     ],
+     [
+      "2026-12-28"
+     ],
+     [
+      "2026-12-29"
+     ],
+     [
+      "2026-12-30"
+     ],
+     [
+      "2026-12-31"
+     ],
+     [
+      "2027-01-01"
+     ],
+     [
+      "2027-01-02"
+     ],
+     [
+      "2027-01-03"
+     ],
+     [
+      "2027-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-week53-2026|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2026-12-26"
+     ],
+     [
+      "2026-12-27"
+     ],
+     [
+      "2026-12-28"
+     ],
+     [
+      "2026-12-29"
+     ],
+     [
+      "2026-12-30"
+     ],
+     [
+      "2026-12-31"
+     ],
+     [
+      "2027-01-01"
+     ],
+     [
+      "2027-01-02"
+     ],
+     [
+      "2027-01-03"
+     ],
+     [
+      "2027-01-04"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-year-end|expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2019-12-29"
+     ],
+     [
+      "2019-12-30"
+     ],
+     [
+      "2019-12-31"
+     ],
+     [
+      "2020-01-01"
+     ],
+     [
+      "2020-01-02"
+     ],
+     [
+      "2020-01-03"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-year-end|select-expr": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2019-12-29"
+     ],
+     [
+      "2019-12-30"
+     ],
+     [
+      "2019-12-31"
+     ],
+     [
+      "2020-01-01"
+     ],
+     [
+      "2020-01-02"
+     ],
+     [
+      "2020-01-03"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "seq-year-end|sql": {
+    "columns": [
+     "d"
+    ],
+    "rows": [
+     [
+      "2019-12-29"
+     ],
+     [
+      "2019-12-30"
+     ],
+     [
+      "2019-12-31"
+     ],
+     [
+      "2020-01-01"
+     ],
+     [
+      "2020-01-02"
+     ],
+     [
+      "2020-01-03"
+     ]
+    ],
+    "schema": [
+     [
+      "d",
+      "date",
+      false
+     ]
+    ]
+   },
+   "strings|expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "x"
+     ],
+     [
+      null
+     ],
+     [
+      "y"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "strings|select-expr": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "x"
+     ],
+     [
+      null
+     ],
+     [
+      "y"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "strings|sql": {
+    "columns": [
+     "s"
+    ],
+    "rows": [
+     [
+      "x"
+     ],
+     [
+      null
+     ],
+     [
+      "y"
+     ]
+    ],
+    "schema": [
+     [
+      "s",
+      "string",
+      true
+     ]
+    ]
+   },
+   "subquery-outer|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "subquery|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table-outer|expr": {
+    "columns": [
+     "tag",
+     "x"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      2
+     ],
+     [
+      "b",
+      null
+     ],
+     [
+      "c",
+      null
+     ],
+     [
+      "d",
+      null
+     ],
+     [
+      "d",
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "tag",
+      "string",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table-outer|select-expr": {
+    "columns": [
+     "tag",
+     "x"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      2
+     ],
+     [
+      "b",
+      null
+     ],
+     [
+      "c",
+      null
+     ],
+     [
+      "d",
+      null
+     ],
+     [
+      "d",
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "tag",
+      "string",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table-outer|sql": {
+    "columns": [
+     "tag",
+     "x"
+    ],
+    "rows": [
+     [
+      "a",
+      1
+     ],
+     [
+      "a",
+      2
+     ],
+     [
+      "b",
+      null
+     ],
+     [
+      "c",
+      null
+     ],
+     [
+      "d",
+      null
+     ],
+     [
+      "d",
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "tag",
+      "string",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table|expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table|select-expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "table|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "ts-sequence-dst|sql": {
+    "columns": [
+     "t"
+    ],
+    "rows": [
+     [
+      "2025-03-08 12:00:00"
+     ],
+     [
+      "2025-03-09 12:00:00"
+     ],
+     [
+      "2025-03-10 12:00:00"
+     ]
+    ],
+    "schema": [
+     [
+      "t",
+      "string",
+      false
+     ]
+    ]
+   },
+   "two-generators|sql": {
+    "columns": [
+     "col",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "col",
+      "int",
+      false
+     ],
+     [
+      "col",
+      "int",
+      false
+     ]
+    ]
+   },
+   "upper-case|expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "upper-case|select-expr": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "upper-case|sql": {
+    "columns": [
+     "x"
+    ],
+    "rows": [
+     [
+      1
+     ],
+     [
+      2
+     ]
+    ],
+    "schema": [
+     [
+      "x",
+      "int",
+      false
+     ]
+    ]
+   },
+   "view-bare|expr": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view-bare|select-expr": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view-bare|sql": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view-nested-outer|expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested-outer|select-expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested-outer|sql": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      2,
+      null
+     ],
+     [
+      3,
+      null
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|select-expr": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|sql": {
+    "columns": [
+     "id",
+     "inner_list"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "inner_list",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-nested|typed": {
+    "columns": [
+     "id",
+     "col"
+    ],
+    "rows": [
+     [
+      1,
+      [
+       1,
+       2
+      ]
+     ],
+     [
+      1,
+      [
+       3
+      ]
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      [
+       null
+      ]
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "col",
+      "array<int>",
+      true
+     ]
+    ]
+   },
+   "view-outer|expr": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view-outer|select-expr": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view-outer|sql": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view-outer|typed": {
+    "columns": [
+     "id",
+     "x",
+     "tag"
+    ],
+    "rows": [
+     [
+      1,
+      1,
+      "a"
+     ],
+     [
+      1,
+      2,
+      "a"
+     ],
+     [
+      2,
+      null,
+      "b"
+     ],
+     [
+      3,
+      null,
+      "c"
+     ],
+     [
+      4,
+      null,
+      "d"
+     ],
+     [
+      4,
+      5,
+      "d"
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ],
+     [
+      "tag",
+      "string",
+      true
+     ]
+    ]
+   },
+   "view|expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view|select-expr": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view|sql": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   },
+   "view|typed": {
+    "columns": [
+     "id",
+     "x"
+    ],
+    "rows": [
+     [
+      1,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      4,
+      null
+     ],
+     [
+      4,
+      5
+     ]
+    ],
+    "schema": [
+     [
+      "id",
+      "int",
+      true
+     ],
+     [
+      "x",
+      "int",
+      true
+     ]
+    ]
+   }
+  }
+ },
+ "recorded": "2026-11-23",
+ "spark": "4.1.2"
+}
