@@ -20,8 +20,8 @@ paths, session zone `America/New_York`; RePark main `5caea2a5` (the 1.5.7 produc
 | `read.parquet(root).write.parquet(copy)`, read back | the copy keeps `p` | the copy has no `p` |
 
 A query that names the column fails loudly. A `SELECT *`, a `collect()` or a read-then-write loses the column without
-a message. RePark's own `partitionBy` Parquet writes lay out the same `key=value/` directories, so its own output
-does not read back whole either.
+a message. RePark's own `partitionBy("p")` Parquet write of `(id BIGINT, p INT)` lays out `p=1/` and `p=2/` and
+reads back as `struct<id:bigint>` (measured on the same tree), so its own output does not read back whole either.
 
 ## Not measured
 
