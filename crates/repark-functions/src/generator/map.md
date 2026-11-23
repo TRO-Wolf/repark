@@ -14,7 +14,9 @@ single generator call in a `Projection` into list `Unnest` plans on both doors.
   array/map/struct answer pins, the select-position pin, the one-generator /
   alias-arity / aggregate-input / `stack` / `__repark_arr_*` sibling refusals, the
   name-restored `Expr::Alias` pin, and the NULL-struct-element regression pin over a
-  non-nullable-field `StructArray` with a NULL parent slot.
+  non-nullable-field `StructArray` with a NULL parent slot. **SQL-EXPLODE-1 (2026-11-23):**
+  the `explode` / `explode_outer` pins (array `col`, alias, NULL and empty rows, map
+  `key` / `value`, scalar and nested refusals).
 - `json_tuple.rs` — **FNP-GEN-1 step 2 (2026-09-16, run 18a):** the `json_tuple`
   expansion (moved out of `generator.rs` so the parent keeps the file-size ceiling):
   string-type checks with `[DATATYPE_MISMATCH.NON_STRING_TYPE]`, the

@@ -149,6 +149,66 @@ fn run(sql: &str) -> Result<(Vec<String>, Vec<String>)> {
 }
 
 #[test]
+fn explode_array_answers_col_beside_other_columns() {
+    let (names, rows) = run("SELECT id, explode(arr_i), id + 1 AS next FROM t").unwrap();
+    assert_eq!(names, ["id", "col", "next"]);
+    assert_eq!(
+        rows,
+        ["Int32(1)|Int32(10)|Int32(2)", "Int32(1)|Int32(20)|Int32(2)"]
+    );
+}
+
+#[test]
+fn explode_alias_names_the_output() {
+    let (names, rows) = run("SELECT explode(arr_i) AS x FROM t").unwrap();
+    assert_eq!(names, ["x"]);
+    assert_eq!(rows, ["Int32(10)", "Int32(20)"]);
+}
+
+#[test]
+fn explode_outer_keeps_null_and_empty_rows() {
+    let (names, rows) = run("SELECT id, explode_outer(arr_i) FROM t").unwrap();
+    assert_eq!(names, ["id", "col"]);
+    assert_eq!(
+        rows,
+        [
+            "Int32(1)|Int32(10)",
+            "Int32(1)|Int32(20)",
+            "Int32(2)|Int32(NULL)",
+            "Int32(3)|Int32(NULL)"
+        ]
+    );
+}
+
+#[test]
+fn explode_map_answers_key_value() {
+    let (names, rows) = run("SELECT id, explode(create_map('a', id)) FROM t").unwrap();
+    assert_eq!(names, ["id", "key", "value"]);
+    assert_eq!(
+        rows,
+        [
+            "Int32(1)|Utf8(\"a\")|Int32(1)",
+            "Int32(2)|Utf8(\"a\")|Int32(2)",
+            "Int32(3)|Utf8(\"a\")|Int32(3)"
+        ]
+    );
+}
+
+#[test]
+fn explode_of_a_scalar_and_inside_an_expression_refuse() {
+    let scalar = run("SELECT explode(id) FROM t").unwrap_err();
+    assert!(
+        format!("{scalar}").contains("UNEXPECTED_INPUT_TYPE"),
+        "{scalar}"
+    );
+    let nested = run("SELECT explode(arr_i) IS NULL FROM t").unwrap_err();
+    assert!(
+        format!("{nested}").contains("UNSUPPORTED_GENERATOR"),
+        "{nested}"
+    );
+}
+
+#[test]
 fn posexplode_array_answers_pos_and_col() {
     let (names, rows) = run("SELECT id, posexplode(arr_i) FROM t").unwrap();
     assert_eq!(names, ["id", "pos", "col"]);

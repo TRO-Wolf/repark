@@ -320,6 +320,8 @@ pub fn generator_udf(name: &'static str) -> Arc<ScalarUDF> {
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
     vec![
+        generator_udf("explode"),
+        generator_udf("explode_outer"),
         generator_udf("posexplode"),
         generator_udf("posexplode_outer"),
         generator_udf("inline"),
@@ -331,6 +333,7 @@ pub fn functions() -> Vec<Arc<ScalarUDF>> {
 
 #[derive(Clone, Copy, Debug)]
 enum GeneratorKind {
+    Explode { outer: bool },
     PosExplode { outer: bool },
     Inline { outer: bool },
     JsonTuple,
@@ -339,6 +342,8 @@ enum GeneratorKind {
 impl GeneratorKind {
     fn label(self) -> &'static str {
         match self {
+            Self::Explode { outer: false } => "explode",
+            Self::Explode { outer: true } => "explode_outer",
             Self::PosExplode { outer: false } => "posexplode",
             Self::PosExplode { outer: true } => "posexplode_outer",
             Self::Inline { outer: false } => "inline",
@@ -349,7 +354,7 @@ impl GeneratorKind {
 
     fn outer(self) -> bool {
         match self {
-            Self::PosExplode { outer } | Self::Inline { outer } => outer,
+            Self::Explode { outer } | Self::PosExplode { outer } | Self::Inline { outer } => outer,
             Self::JsonTuple => false,
         }
     }
@@ -357,6 +362,8 @@ impl GeneratorKind {
 
 fn generator_kind(name: &str) -> Option<GeneratorKind> {
     match name {
+        "explode" => Some(GeneratorKind::Explode { outer: false }),
+        "explode_outer" => Some(GeneratorKind::Explode { outer: true }),
         "posexplode" => Some(GeneratorKind::PosExplode { outer: false }),
         "posexplode_outer" => Some(GeneratorKind::PosExplode { outer: true }),
         "inline" => Some(GeneratorKind::Inline { outer: false }),
@@ -773,40 +780,20 @@ fn rewrite_projection(
                 true,
             )
         }
+        GeneratorKind::Explode { .. } => {
+            let (is_map, specs) = collection_output(kind.label(), &arg_type, outer)?;
+            let lists = collection_lists(arg, &arg_type, is_map, outer, &cond, &input_schema)?;
+            (lists, specs, false)
+        }
         GeneratorKind::PosExplode { .. } => {
             let (is_map, mut specs) = collection_output(kind.label(), &arg_type, outer)?;
-            let mut lists: Vec<(&'static str, Expr)> = Vec::with_capacity(3);
-            if is_map {
-                lists.push((
-                    GENERATOR_POS_FIELD,
-                    ordinality_call(nested_fn::map_keys(arg.clone())),
-                ));
-                lists.push((
-                    GENERATOR_KEY_FIELD,
-                    guarded(
-                        outer,
-                        &cond,
-                        nested_fn::map_keys(arg.clone()),
-                        &input_schema,
-                    )?,
-                ));
-                lists.push((
-                    GENERATOR_VALUE_FIELD,
-                    guarded(
-                        outer,
-                        &cond,
-                        nested_fn::map_values(arg.clone()),
-                        &input_schema,
-                    )?,
-                ));
+            let mut lists = collection_lists(arg, &arg_type, is_map, outer, &cond, &input_schema)?;
+            let positions = if is_map {
+                ordinality_call(nested_fn::map_keys(arg.clone()))
             } else {
-                let list_arg = normalize_list(arg.clone(), &arg_type)?;
-                lists.push((GENERATOR_POS_FIELD, ordinality_call(list_arg.clone())));
-                lists.push((
-                    GENERATOR_COL_FIELD,
-                    guarded(outer, &cond, list_arg, &input_schema)?,
-                ));
-            }
+                ordinality_call(normalize_list(arg.clone(), &arg_type)?)
+            };
+            lists.insert(0, (GENERATOR_POS_FIELD, positions));
             specs.insert(
                 0,
                 OutputSpec {
@@ -841,6 +828,38 @@ fn rewrite_projection(
         outer,
         flatten_struct,
     )
+}
+
+fn collection_lists(
+    arg: &Expr,
+    arg_type: &DataType,
+    is_map: bool,
+    outer: bool,
+    cond: &Expr,
+    input_schema: &DFSchema,
+) -> Result<Vec<(&'static str, Expr)>> {
+    if !is_map {
+        let list_arg = normalize_list(arg.clone(), arg_type)?;
+        return Ok(vec![(
+            GENERATOR_COL_FIELD,
+            guarded(outer, cond, list_arg, input_schema)?,
+        )]);
+    }
+    Ok(vec![
+        (
+            GENERATOR_KEY_FIELD,
+            guarded(outer, cond, nested_fn::map_keys(arg.clone()), input_schema)?,
+        ),
+        (
+            GENERATOR_VALUE_FIELD,
+            guarded(
+                outer,
+                cond,
+                nested_fn::map_values(arg.clone()),
+                input_schema,
+            )?,
+        ),
+    ])
 }
 
 fn build_expansion(

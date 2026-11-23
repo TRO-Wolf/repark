@@ -32,7 +32,8 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `FNP-16-csv-xml-xpath`) likewise. `armed_names()` is 64.
   pins: fnp-15-16/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-008, C-009, C-010, C-011, C-013, fnp-gen-1/C-002, C-003
 - `generator.rs` — **FNP-GEN-1 step 2 (2026-09-16):** placeholder `ScalarUDF`s for
-  `posexplode` / `posexplode_outer` / `inline` / `inline_outer` plus the
+  `posexplode` / `posexplode_outer` / `inline` / `inline_outer` (and `explode` /
+  `explode_outer`, SQL-EXPLODE-1) plus the
   `__repark_gen_alias` marker that carries multi-name aliases out of the facade, and
   `GeneratorRewrite`, the analyzer rule that rewrites a `Projection` holding exactly one
   generator call into inner-projection → one multi-column `Unnest` →
@@ -53,7 +54,7 @@ scalars live under [`try_invert/`](try_invert/map.md).
   `[UNSUPPORTED_GENERATOR]`-class. Registered from `lib.rs::register_all`; the rule
   registers at the tail of `analyzer_rules()` in `registration.rs`, after the closing
   `TypeCoercion`. The `#[cfg(test)]` suite lives in [`generator/tests.rs`](generator/tests.rs)
-  (moved out in remediation round 1 so this file keeps the size ceiling).
+  (moved out in remediation round 1 for the size ceiling).
   **Step 2 (run 18a):** `json_tuple` joins the rule — its site carries every argument
   (the document plus the field expressions), non-string arguments refuse
   `[DATATYPE_MISMATCH.NON_STRING_TYPE]` and fewer than two arguments refuse
