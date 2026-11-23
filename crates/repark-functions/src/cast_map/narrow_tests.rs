@@ -483,48 +483,52 @@ async fn update_projection_keeps_top_level_store_cast_and_rewrites_marked_user_c
     assert!(!shown.contains("__repark_narrow_to_bigint__"), "{shown}");
 }
 
+fn register_not_null_tables(ctx: &SessionContext) {
+    let left_schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int32, false),
+        Field::new("b", DataType::Int64, false),
+        Field::new("s", DataType::Utf8, false),
+    ]));
+    let left_batch = RecordBatch::try_new(
+        Arc::clone(&left_schema),
+        vec![
+            Arc::new(Int32Array::from(vec![1i32, 2])),
+            Arc::new(Int64Array::from(vec![4_294_967_297i64, 1])),
+            Arc::new(datafusion::arrow::array::StringArray::from(vec![
+                "abc", "7",
+            ])),
+        ],
+    )
+    .unwrap();
+    ctx.register_table(
+        "nn",
+        Arc::new(MemTable::try_new(left_schema, vec![vec![left_batch]]).unwrap()),
+    )
+    .unwrap();
+    let right_schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int32, false),
+        Field::new("rb", DataType::Int64, false),
+    ]));
+    let right_batch = RecordBatch::try_new(
+        Arc::clone(&right_schema),
+        vec![
+            Arc::new(Int32Array::from(vec![2i32])),
+            Arc::new(Int64Array::from(vec![10i64])),
+        ],
+    )
+    .unwrap();
+    ctx.register_table(
+        "rr",
+        Arc::new(MemTable::try_new(right_schema, vec![vec![right_batch]]).unwrap()),
+    )
+    .unwrap();
+}
+
 #[tokio::test]
 async fn nullable_operands_over_not_null_columns_keep_nullable_output() {
     for ansi in [false, true] {
         let ctx = narrow_context(ansi);
-        let left_schema = Arc::new(Schema::new(vec![
-            Field::new("id", DataType::Int32, false),
-            Field::new("b", DataType::Int64, false),
-            Field::new("s", DataType::Utf8, false),
-        ]));
-        let left_batch = RecordBatch::try_new(
-            Arc::clone(&left_schema),
-            vec![
-                Arc::new(Int32Array::from(vec![1i32, 2])),
-                Arc::new(Int64Array::from(vec![4_294_967_297i64, 1])),
-                Arc::new(datafusion::arrow::array::StringArray::from(vec![
-                    "abc", "7",
-                ])),
-            ],
-        )
-        .unwrap();
-        ctx.register_table(
-            "nn",
-            Arc::new(MemTable::try_new(left_schema, vec![vec![left_batch]]).unwrap()),
-        )
-        .unwrap();
-        let right_schema = Arc::new(Schema::new(vec![
-            Field::new("id", DataType::Int32, false),
-            Field::new("rb", DataType::Int64, false),
-        ]));
-        let right_batch = RecordBatch::try_new(
-            Arc::clone(&right_schema),
-            vec![
-                Arc::new(Int32Array::from(vec![2i32])),
-                Arc::new(Int64Array::from(vec![10i64])),
-            ],
-        )
-        .unwrap();
-        ctx.register_table(
-            "rr",
-            Arc::new(MemTable::try_new(right_schema, vec![vec![right_batch]]).unwrap()),
-        )
-        .unwrap();
+        register_not_null_tables(&ctx);
 
         let queries = [
             (
