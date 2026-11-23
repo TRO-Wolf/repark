@@ -9,7 +9,6 @@ from collections.abc import Iterator
 import pytest
 
 from repark import ReparkSession
-from repark.errors import UnsupportedOperationException
 from repark.spark import functions as F  # noqa: N812
 
 

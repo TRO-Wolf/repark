@@ -120,7 +120,7 @@ VIEW` door and the temp-first DROP / DESCRIBE / SHOW VIEWS answers.
   temp-view CREATE, the captured map at re-plan) so bare temp names go
   to their home first; `refuse_write_query_body` answers PARSE_SYNTAX_ERROR
   for a `WITH … INSERT/UPDATE/DELETE/MERGE` temp body; `nested_depth_refusal`
-  is shared with `temp_view.rs`. **SQL-SETOP-ALL-MULTISET-1:** `expand_view_body` plans the stored body with `MINUS ALL` spelled `EXCEPT ALL` (`repark_core::minus_all_as_except_all`).
+  is shared with `temp_view.rs`. **SQL-SETOP-ALL-MULTISET-1:** `expand_view_body` runs `repark_core::minus_all_as_except_all` on the stored body first.
   **RP-56 DIFF-PROBE fold (2026-09-29):** the `_repark_view` wrapper is skipped when the
   view emits the stored names unchanged (`view_output_matches_stored`), so a catalog view
   over a twin table answers `SELECT *` like Spark, not refusing on the wrapper.
