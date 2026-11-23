@@ -350,8 +350,17 @@ async fn try_cast_key_overflow_refuses_loudly() {
 }
 
 fn integral_context(ansi: bool) -> SessionContext {
-    let ctx = context(ansi);
-    ctx.add_analyzer_rule(Arc::new(SparkStringIntegralCast));
+    let mut rules =
+        insert_string_integral_before_coercion(datafusion::optimizer::Analyzer::new().rules)
+            .unwrap();
+    rules.push(Arc::new(SparkCoercionCastMark));
+    let state = datafusion::execution::SessionStateBuilder::new()
+        .with_config(with_spark_ansi_config(SessionConfig::new(), ansi))
+        .with_default_features()
+        .with_analyzer_rules(rules)
+        .build();
+    let ctx = SessionContext::new_with_state(state);
+    register(&ctx);
     ctx
 }
 
@@ -540,8 +549,60 @@ async fn a_projection_built_without_name_checks_keeps_its_names() {
 async fn a_join_on_a_string_key_against_an_integer_key_plans_and_trims() {
     let ctx = integral_context(false);
     let sql = "SELECT l.id FROM (VALUES (1), (2)) AS l(id) \
-               FULL JOIN (VALUES (' 2'), ('3')) AS r(id) ON l.id = r.id";
+               FULL JOIN (VALUES (' 2'), ('3')) AS r(id) ON l.id = CAST(r.id AS BIGINT)";
     let batches = ctx.sql(sql).await.unwrap().collect().await.unwrap();
     let rows: usize = batches.iter().map(RecordBatch::num_rows).sum();
     assert_eq!(rows, 3);
+}
+
+#[tokio::test]
+async fn a_cast_the_coercion_inserts_keeps_arrow_parsing() {
+    for (sql, text) in [
+        ("SELECT coalesce(s, 0) FROM (VALUES ('abc')) AS t(s)", "'abc'"),
+        ("SELECT s + 1 FROM (VALUES (' 2')) AS t(s)", "' 2'"),
+        (
+            "SELECT l.id FROM (VALUES (1)) AS l(id) JOIN (VALUES (' 1')) AS r(id) ON l.id = r.id",
+            "' 1'",
+        ),
+    ] {
+        let error = integral_context(false)
+            .sql(sql)
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains(&format!("Cannot cast string {text}")), "{sql}: {error}");
+    }
+}
+
+#[tokio::test]
+async fn a_user_cast_on_the_left_of_an_in_list_trims() {
+    let ctx = integral_context(false);
+    let sql = "SELECT s FROM (VALUES (' 5 '), ('abc'), ('2')) AS t(s) WHERE CAST(s AS INT) IN (5, 1)";
+    let batches = ctx.sql(sql).await.unwrap().collect().await.unwrap();
+    assert_eq!(batches.iter().map(RecordBatch::num_rows).sum::<usize>(), 1);
+}
+
+#[tokio::test]
+async fn a_second_analysis_leaves_the_marked_coercion_cast() {
+    let ctx = integral_context(false);
+    let frame = ctx
+        .sql("SELECT coalesce(s, 0) AS c FROM (VALUES ('7')) AS t(s)")
+        .await
+        .unwrap();
+    let once = ctx.state().analyzer().execute_and_check(
+        frame.logical_plan().clone(),
+        ctx.state().config_options(),
+        |_, _| {},
+    );
+    let once = once.unwrap();
+    let twice = ctx
+        .state()
+        .analyzer()
+        .execute_and_check(once.clone(), ctx.state().config_options(), |_, _| {})
+        .unwrap();
+    assert_eq!(once, twice);
+    assert!(!twice.display_indent().to_string().contains("__repark_string_to_"));
 }

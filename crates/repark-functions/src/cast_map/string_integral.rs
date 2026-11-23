@@ -9,7 +9,7 @@ use datafusion::common::{DFSchema, Result, ScalarValue, exec_err, plan_err};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
-    ColumnarValue, Expr, ExprSchemable, LogicalPlan, Projection, ReturnFieldArgs,
+    Cast, ColumnarValue, Expr, ExprSchemable, LogicalPlan, Projection, ReturnFieldArgs,
     ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
@@ -87,7 +87,9 @@ pub struct SparkStringIntegralCast;
 
 impl AnalyzerRule for SparkStringIntegralCast {
     fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up_with_subqueries(rewrite_plan).data()
+        let stores = store_projections(&plan)?;
+        plan.transform_up_with_subqueries(|node| rewrite_plan(node, &stores))
+            .data()
     }
 
     fn name(&self) -> &'static str {
@@ -95,8 +97,87 @@ impl AnalyzerRule for SparkStringIntegralCast {
     }
 }
 
-fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
-    if matches!(plan, LogicalPlan::Values(_)) {
+#[derive(Debug, Default)]
+pub struct SparkCoercionCastMark;
+
+impl AnalyzerRule for SparkCoercionCastMark {
+    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
+        let stores = store_projections(&plan)?;
+        plan.transform_up_with_subqueries(|node| mark_plan(node, &stores))
+            .data()
+    }
+
+    fn name(&self) -> &'static str {
+        "spark_coercion_cast_mark"
+    }
+}
+
+#[allow(clippy::missing_errors_doc)]
+pub fn insert_string_integral_before_coercion(
+    mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+) -> Result<Vec<Arc<dyn AnalyzerRule + Send + Sync>>> {
+    let Some(position) = rules.iter().position(|rule| rule.name() == "type_coercion") else {
+        return plan_err!("the string integral cast rule requires the type_coercion analyzer rule");
+    };
+    rules.insert(position, Arc::new(SparkStringIntegralCast));
+    Ok(rules)
+}
+
+fn store_projections(plan: &LogicalPlan) -> Result<Vec<Vec<Expr>>> {
+    let mut stores = Vec::new();
+    plan.apply_with_subqueries(|node| {
+        if let LogicalPlan::Dml(dml) = node
+            && let LogicalPlan::Projection(projection) = dml.input.as_ref()
+        {
+            stores.push(projection.expr.clone());
+        }
+        Ok(TreeNodeRecursion::Continue)
+    })?;
+    Ok(stores)
+}
+
+fn held(plan: &LogicalPlan, stores: &[Vec<Expr>]) -> bool {
+    match plan {
+        LogicalPlan::Values(_) => true,
+        LogicalPlan::Projection(projection) => stores.contains(&projection.expr),
+        _ => false,
+    }
+}
+
+fn mark_plan(plan: LogicalPlan, stores: &[Vec<Expr>]) -> Result<Transformed<LogicalPlan>> {
+    if held(&plan, stores) {
+        return Ok(Transformed::no(plan));
+    }
+    let mut schema = DFSchema::empty();
+    for input in plan.inputs() {
+        schema.merge(input.schema());
+    }
+    plan.map_expressions(|expr| expr.transform_up(|node| Ok(mark_cast(node, &schema))))
+}
+
+fn mark_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+    let Expr::Cast(cast) = expr else {
+        return Transformed::no(expr);
+    };
+    let wants_mark = string_integral_udf(cast.field.data_type(), true).is_some()
+        && !is_arrow_cast_operand(&cast.expr)
+        && cast
+            .expr
+            .get_type(schema)
+            .is_ok_and(|source| is_string_type(&source));
+    if !wants_mark {
+        return Transformed::no(Expr::Cast(cast));
+    }
+    let Cast { expr, field } = cast;
+    let marked = Expr::ScalarFunction(ScalarFunction::new_udf(
+        Arc::clone(&ARROW_CAST_OPERAND),
+        vec![*expr],
+    ));
+    Transformed::yes(Expr::Cast(Cast::new_from_field(Box::new(marked), field)))
+}
+
+fn rewrite_plan(plan: LogicalPlan, stores: &[Vec<Expr>]) -> Result<Transformed<LogicalPlan>> {
+    if held(&plan, stores) {
         return Ok(Transformed::no(plan));
     }
     let mut schema = DFSchema::empty();
@@ -146,9 +227,6 @@ fn is_arrow_cast_operand(expr: &Expr) -> bool {
 }
 
 fn rewrite_node(expr: Expr, schema: &DFSchema, named: bool) -> Transformed<Expr> {
-    if matches!(expr, Expr::InList(_)) {
-        return Transformed::new(expr, false, TreeNodeRecursion::Jump);
-    }
     rewrite_cast(expr, schema, named)
 }
 
