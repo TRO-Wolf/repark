@@ -6098,6 +6098,35 @@ still open is `isModifiable`.
   UNIX-SECONDS-PRE-EPOCH-1 absorbed;
   [card](../task/roadmap/mid-term/unix-timestamp-truncate-1-card-2026-11-22.md).
 
+### PARQUET-INT96-AS-NTZ-1 — a Spark-written `INT96` timestamp reads as an instant in the session zone — **FIXED 2026-11-22 (branch `fix/parquet-int96-as-ntz-1`, not merged)**
+
+- **repark** — Before (main `5caea2a5`): DataFusion mapped a Parquet `INT96` leaf to `Timestamp(Nanosecond, None)`,
+  so Spark's default timestamp encoding read as `timestamp_ntz` holding the UTC wall time, top level and nested,
+  on `read.parquet`, `format("parquet").load` and views over them. Outside a UTC session every rendered value,
+  `hour`, `to_date`, date and range filter and date `GROUP BY` differed, silently; an instant past 2262 wrapped
+  (`2999-12-31` read as `1830-11-22`) in every zone; a join to an `INT64` instant raised `CAST_OVERFLOW` (ANSI on)
+  or lost rows (off); a directory of `INT96` and `INT64` files was refused; `write.parquet` stored `INT64
+  TIMESTAMP(NANOS,false)`, which Spark refuses, and an Iceberg CTAS was refused (`timestamp_ns`). After:
+  `spark_nullable::with_int96_as_instants` sets `datafusion.execution.parquet.coerce_int96 = us` and
+  `coerce_int96_tz = UTC` on every session unless a `datafusion.*` key set them, so an `INT96` leaf infers and
+  decodes as `Timestamp(Microsecond, "UTC")`, Spark's `timestamp`. `INT64` leaves keep their footer's
+  `isAdjustedToUTC`; `INT96` carries no statistics Arrow reads, so pruning is unchanged; Iceberg scans do not use
+  the option.
+- **Apache Spark** — `spark.sql.parquet.outputTimestampType` defaults to `INT96` and
+  `spark.sql.parquet.int96AsTimestamp` to true: `ParquetToSparkSchemaConverter` maps `INT96` to `TimestampType` and
+  `ParquetRowConverter` decodes Julian day plus nanoseconds to microseconds. *(oracle: PySpark 4.1.2, 2026-11-22,
+  288 cells per engine, three zones, both ANSI modes; main differed on 184, head on 12.)*
+- **Still unlike Spark:** SQL over ``parquet.`<path>` `` is not a RePark route (table not found, before and after);
+  a write stores `INT64 TIMESTAMP(MICROS,true)` where Spark writes `INT96` (both read the same instants back);
+  `spark.sql.parquet.int96TimestampConversion=true` is stored and ignored (audit family NEW-settings-5, plan item
+  P01-05; [card](../task/roadmap/mid-term/parquet-int96-as-ntz-1-card-2026-11-22.md)).
+- **Pin** — `python/repark/tests/io/test_parquet_int96_as_ntz_1.py` (56 tests against
+  `parquet_int96_as_ntz_1_oracle.json` over `python/repark/tests/fixtures/parquet_int96_as_ntz_1/`, recorded by
+  `_record_parquet_int96_as_ntz_1.py`; 44 red on main, 12 controls); Rust `repark-core`
+  `spark_nullable::int96_tests`.
+- **Rationale** — S1 (owner, 2026-11-22): silent, it changes which rows a date filter returns, and `INT96` is
+  Spark's default; [card](../task/roadmap/mid-term/parquet-int96-as-ntz-1-card-2026-11-22.md).
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### CSV-SCHEMA-TIMESTAMP-ZONE-1 — a CSV schema's `TIMESTAMP` field parses under the session zone — **FIXED 2026-11-19 on the Spark door (branch `fix/csv-schema-timestamp-zone-1`, not merged)**
