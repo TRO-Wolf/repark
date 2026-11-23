@@ -54,6 +54,12 @@ impl GeneratorPlaceholder {
     }
 }
 
+impl GeneratorPlaceholder {
+    fn explodes_one_column(&self) -> bool {
+        matches!(self.name, "explode" | "explode_outer")
+    }
+}
+
 impl PartialEq for GeneratorPlaceholder {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name
@@ -78,7 +84,32 @@ impl ScalarUDFImpl for GeneratorPlaceholder {
     }
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
-        Ok(arg_types.first().cloned().unwrap_or(DataType::Null))
+        let first = arg_types.first().cloned().unwrap_or(DataType::Null);
+        if self.explodes_one_column()
+            && let Some(item) = list_element(&first)
+        {
+            return Ok(item.data_type().clone());
+        }
+        Ok(first)
+    }
+
+    fn return_field_from_args(
+        &self,
+        args: datafusion::logical_expr::ReturnFieldArgs,
+    ) -> Result<FieldRef> {
+        let first = args.arg_fields.first();
+        if self.explodes_one_column()
+            && let Some(item) = first.and_then(|field| list_element(field.data_type()))
+        {
+            let nullable = self.name == "explode_outer" || item.is_nullable();
+            return Ok(Arc::new(Field::new(
+                self.name,
+                item.data_type().clone(),
+                nullable,
+            )));
+        }
+        let data_type = first.map_or(DataType::Null, |field| field.data_type().clone());
+        Ok(Arc::new(Field::new(self.name, data_type, true)))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {

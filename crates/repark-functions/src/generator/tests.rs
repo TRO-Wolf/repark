@@ -166,6 +166,14 @@ fn explode_alias_names_the_output() {
 }
 
 #[test]
+fn a_projection_over_an_explode_subquery_reads_the_element() {
+    let (names, rows) =
+        run("SELECT x + 1 AS y FROM (SELECT explode(arr_i) AS x FROM t) AS g").unwrap();
+    assert_eq!(names, ["y"]);
+    assert_eq!(rows, ["Int32(11)", "Int32(21)"]);
+}
+
+#[test]
 fn explode_outer_keeps_null_and_empty_rows() {
     let (names, rows) = run("SELECT id, explode_outer(arr_i) FROM t").unwrap();
     assert_eq!(names, ["id", "col"]);
