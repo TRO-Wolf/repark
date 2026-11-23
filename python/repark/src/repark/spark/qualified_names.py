@@ -194,7 +194,7 @@ def _rewrap_rebound_column(column: Any, rebound: Any) -> Any:
     from repark.spark.column import Column
     from repark.spark.functions_generators import _GeneratorColumn
 
-    bare_generator = getattr(column, "_repark_generator", False) or (
+    bare_generator = isinstance(column, _GeneratorColumn) or (
         not column._stable_name and rebound.is_bare_generator()
     )
     column_cls = _GeneratorColumn if bare_generator else Column

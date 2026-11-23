@@ -67,8 +67,10 @@ and `is_bare_generator_expr`).
   where Spark says not (typed `F.explode` the same on main); `sequence` keeps its element non-null. `dayofmonth`
   over an exploded date is nullable where Spark says not.
 - `F.expr("explode(...)")` over a `spark.range` frame raises `No field named __repark_gen_col`. `F.expr("<any
-  expression> AS x")` refuses for every expression. Over a table or view, both aliased and unaliased `F.expr`
-  answer as Spark.
+  expression> AS x")` refuses for every expression. Over a table or view, aliased and unaliased array `F.expr`
+  answer as Spark (`columns`, `schema`, rows); unaliased map `F.expr("explode(m)")` / `F.expr("explode_outer(m)")`
+  answer Spark's exact `schema`, `to_arrow()`, and rows while `DataFrame.columns` reports `['id', 'col']`
+  (unanalyzed placeholder name, same as `F.posexplode` on main).
 - Multi-column generators (`explode` on a `MAP`, `posexplode`, `inline`) still emit a single placeholder column
   before `GeneratorRewrite`, so an outer query cannot read `key` / `value` of a map explode or `pos` / `col` of a
   `posexplode` inside a subquery. Spark's `AS (k, v)` multi-alias refuses (FNP9-GENERATORS-1); one alias on a map

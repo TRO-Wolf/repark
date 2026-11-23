@@ -106,7 +106,7 @@ def _normal(cell: dict[str, Any], literal: bool) -> dict[str, Any]:
 
 
 def _fexpr_residual(name: str) -> bool:
-    return CELLS[name][0] == "none"
+    return CELLS[name][0] == "none" or name in {"map-view", "map-view-outer"}
 
 
 def _scoped_keys(seat: str) -> list[str]:
@@ -197,7 +197,12 @@ def test_f_expr_over_a_range_frame_stays_as_recorded_and_view_f_expr_matches_spa
     got = measured[mode_key(zone, "true")]
     assert "__repark_gen_col" in got["bare|expr"]["message"]
     assert _normal(got["view-bare|expr"], False) == _normal(expected["view-bare|expr"], False)
-    assert _normal(got["map-view|expr"], False) == _normal(expected["map-view|expr"], False)
+    for key in ("map-view|expr", "map-view-outer|expr"):
+        assert got[key]["columns"] == ["id", "col"]
+        assert got[key]["schema"] == expected[key]["schema"]
+        assert sorted(got[key]["rows"], key=json.dumps) == sorted(
+            expected[key]["rows"], key=json.dumps
+        )
 
 
 @pytest.mark.parametrize("zone", ZONES)

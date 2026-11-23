@@ -9,8 +9,9 @@ before `GeneratorRewrite` runs) and the `GeneratorRewrite` analyzer rule that
 expands a single generator call in a `Projection` into list `Unnest` plans on
 both doors. Outer guards widen non-nullable list element fields to nullable and
 build the one-NULL-element list with `ListArray::try_new`; explicit aliases
-starting with a generator name are kept; `is_bare_generator_expr` identifies
-unaliased top-level generator calls for the Python facade.
+starting with a generator name are kept; `is_bare_generator_expr` and
+`is_bare_explode_expr` identify unaliased top-level generator calls for the
+Python facade and attribute-id stamping.
 
 ## Contents
 

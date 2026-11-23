@@ -18737,7 +18737,8 @@ field NAME.
   the write cells read back cold.)*
 - **Still unlike Spark:** see the card's "Still unlike Spark" (`LATERAL VIEW`, the multi-alias `AS (k, v)`, two
   generators in one select list, multi-column `MAP` / `posexplode` outer subqueries, an `array(...)` literal's
-  element nullability, `F.expr` over a `range` frame, the native `repark.sql` door).
+  element nullability, `F.expr` over a `range` frame and `DataFrame.columns` on unaliased map `F.expr`, the native
+  `repark.sql` door).
 - **Pin** — `python/repark/tests/functions/test_sql_explode_1.py` over `sql_explode_1_spark_oracle.json`; Rust
   `repark-functions` `generator::tests::explode_*`.
 - **Rationale** — [card](../task/roadmap/mid-term/cards-2026-11-23/sql-explode-1-card-2026-11-23.md).

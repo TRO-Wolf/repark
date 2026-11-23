@@ -116,11 +116,15 @@ impl ScalarUDFImpl for GeneratorPlaceholder {
         Ok(Arc::new(Field::new(self.name, data_type, true)))
     }
 
-    fn schema_name(&self, _args: &[Expr]) -> Result<String> {
+    fn schema_name(&self, args: &[Expr]) -> Result<String> {
         if self.explodes_one_column() {
             return Ok("col".to_string());
         }
-        Ok(format!("__repark_gen_call_{}", self.name))
+        let formatted: Vec<String> = args
+            .iter()
+            .map(|arg| arg.schema_name().to_string())
+            .collect();
+        Ok(format!("{}({})", self.name, formatted.join(",")))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
@@ -231,6 +235,15 @@ pub fn is_bare_generator_expr(expr: &Expr) -> bool {
     )
 }
 
+#[must_use]
+pub fn is_bare_explode_expr(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::ScalarFunction(function)
+            if matches!(function.func.name(), "explode" | "explode_outer")
+    )
+}
+
 fn contains_generator(expr: &Expr) -> bool {
     expr.exists(|node| {
         Ok(matches!(
@@ -274,14 +287,54 @@ fn unqualified_call_name(function: &ScalarFunction) -> String {
     format!("{}({})", function.func.name(), args.join(","))
 }
 
+fn restored_first_arg_matches(arg: &Expr, body: &str) -> bool {
+    match arg {
+        Expr::Column(column) => {
+            body == column.name
+                || body.ends_with(&format!(".{}", column.name))
+                || body.starts_with(&format!("{},", column.name))
+                || body.contains(&format!(".{},", column.name))
+        }
+        Expr::ScalarFunction(function) => {
+            let callee = function.func.name();
+            body.starts_with(&format!("{callee}("))
+                || (callee == "map" && body.starts_with("create_map("))
+                || (callee == "make_array" && body.starts_with("array("))
+        }
+        Expr::Cast(_) | Expr::TryCast(_) => {
+            body.starts_with("CAST(") || body.starts_with("TRY_CAST(")
+        }
+        Expr::Literal(_, _) => body.starts_with("Utf8(") || body.starts_with("NULL"),
+        _ => false,
+    }
+}
+
 fn is_restored_generator_alias(inner: &Expr, alias_name: &str) -> bool {
     let Expr::ScalarFunction(function) = inner else {
         return false;
     };
-    if matches!(function.func.name(), "explode" | "explode_outer") {
+    let name = function.func.name();
+    if matches!(name, "explode" | "explode_outer") {
         return false;
     }
-    alias_name == inner.schema_name().to_string() || alias_name == unqualified_call_name(function)
+    if name == GENERATOR_ALIAS_UDF {
+        return alias_name.starts_with(&format!("{GENERATOR_ALIAS_UDF}("));
+    }
+    if alias_name == inner.schema_name().to_string()
+        || alias_name == unqualified_call_name(function)
+    {
+        return true;
+    }
+    let Some(tail) = alias_name.strip_prefix(&format!("{name}(")) else {
+        return false;
+    };
+    let Some(body) = tail.strip_suffix(')') else {
+        return false;
+    };
+    function
+        .args
+        .first()
+        .is_some_and(|first| restored_first_arg_matches(first, body))
 }
 
 fn peel_generator(expr: &Expr) -> Result<Option<GeneratorSite>> {

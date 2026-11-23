@@ -500,6 +500,17 @@ pub(crate) fn sort_child_shape(frame: &PyDataFrame) -> String {
     .to_string()
 }
 
+fn top_projection_has_bare_explode(plan: &LogicalPlan) -> bool {
+    matches!(
+        plan,
+        LogicalPlan::Projection(projection)
+            if projection
+                .expr
+                .iter()
+                .any(repark_functions::generator::is_bare_explode_expr)
+    )
+}
+
 #[allow(clippy::missing_errors_doc)]
 #[pyfunction]
 pub fn stamp_attribute_ids(frame: Py<PyDataFrame>) -> PyResult<Py<PyDataFrame>> {
@@ -507,6 +518,9 @@ pub fn stamp_attribute_ids(frame: Py<PyDataFrame>) -> PyResult<Py<PyDataFrame>> 
         Python::attach(|py| {
             let bound = frame.bind(py);
             let borrowed = bound.borrow();
+            if top_projection_has_bare_explode(borrowed.inner().logical_plan()) {
+                return Ok(frame.clone_ref(py));
+            }
             let stamped = grown_frame_work(&borrowed, || {
                 repark_core::frame_names::plan_is_stamped(borrowed.inner().logical_plan())
             });

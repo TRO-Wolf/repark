@@ -649,9 +649,14 @@ fn is_bare_generator_expr_distinguishes_bare_from_aliased_and_nested() {
     assert!(is_bare_generator_expr(&bare_explode));
     assert!(is_bare_generator_expr(&bare_pos));
     assert!(is_bare_generator_expr(&marked));
+    assert!(is_bare_explode_expr(&bare_explode));
+    assert!(!is_bare_explode_expr(&bare_pos));
+    assert!(!is_bare_explode_expr(&marked));
     assert!(!is_bare_generator_expr(&bare_explode.clone().alias("x")));
+    assert!(!is_bare_explode_expr(&bare_explode.clone().alias("x")));
     assert!(!is_bare_generator_expr(&bare_explode.is_null()));
     assert!(!is_bare_generator_expr(&Expr::Column(
         Column::new_unqualified("col")
     )));
+    assert_eq!(bare_pos.schema_name().to_string(), "posexplode(arr_i)");
 }
