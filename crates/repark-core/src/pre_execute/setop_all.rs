@@ -204,6 +204,60 @@ fn variable_list_element(data_type: &DataType) -> Option<&FieldRef> {
     }
 }
 
+fn is_lossless_scalar_widening(out_type: &DataType, key_type: &DataType) -> bool {
+    match (out_type, key_type) {
+        (DataType::Int8, DataType::Int16 | DataType::Int32 | DataType::Int64)
+        | (DataType::Int16, DataType::Int32 | DataType::Int64)
+        | (DataType::Int32, DataType::Int64)
+        | (
+            DataType::UInt8,
+            DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64,
+        )
+        | (
+            DataType::UInt16,
+            DataType::UInt32 | DataType::UInt64 | DataType::Int32 | DataType::Int64,
+        )
+        | (DataType::UInt32, DataType::UInt64 | DataType::Int64)
+        | (
+            DataType::Float16
+            | DataType::Int8
+            | DataType::UInt8
+            | DataType::Int16
+            | DataType::UInt16,
+            DataType::Float32 | DataType::Float64,
+        )
+        | (DataType::Float32 | DataType::Int32 | DataType::UInt32, DataType::Float64)
+        | (DataType::Date32, DataType::Date64)
+        | (
+            DataType::Time32(TimeUnit::Second),
+            DataType::Time32(TimeUnit::Millisecond)
+            | DataType::Time64(TimeUnit::Microsecond | TimeUnit::Nanosecond),
+        )
+        | (
+            DataType::Time32(TimeUnit::Millisecond),
+            DataType::Time64(TimeUnit::Microsecond | TimeUnit::Nanosecond),
+        )
+        | (DataType::Time64(TimeUnit::Microsecond), DataType::Time64(TimeUnit::Nanosecond)) => true,
+        (DataType::Timestamp(out_unit, out_tz), DataType::Timestamp(key_unit, key_tz))
+            if out_tz == key_tz =>
+        {
+            matches!(
+                (out_unit, key_unit),
+                (
+                    TimeUnit::Second,
+                    TimeUnit::Millisecond | TimeUnit::Microsecond
+                ) | (TimeUnit::Millisecond, TimeUnit::Microsecond)
+            )
+        }
+        _ => false,
+    }
+}
+
 pub(crate) fn is_lossless_round_trip(out_type: &DataType, key_type: &DataType) -> bool {
     let out_type = peel_encoding(out_type);
     let key_type = peel_encoding(key_type);
@@ -235,53 +289,10 @@ pub(crate) fn is_lossless_round_trip(out_type: &DataType, key_type: &DataType) -
     ) {
         return is_lossless_round_trip(out_elem.data_type(), key_elem.data_type());
     }
+    if is_lossless_scalar_widening(out_type, key_type) {
+        return true;
+    }
     match (out_type, key_type) {
-        (DataType::Int8, DataType::Int16 | DataType::Int32 | DataType::Int64)
-        | (DataType::Int16, DataType::Int32 | DataType::Int64)
-        | (DataType::Int32, DataType::Int64)
-        | (
-            DataType::UInt8,
-            DataType::UInt16
-            | DataType::UInt32
-            | DataType::UInt64
-            | DataType::Int16
-            | DataType::Int32
-            | DataType::Int64,
-        )
-        | (
-            DataType::UInt16,
-            DataType::UInt32 | DataType::UInt64 | DataType::Int32 | DataType::Int64,
-        )
-        | (DataType::UInt32, DataType::UInt64 | DataType::Int64)
-        | (DataType::Float16, DataType::Float32 | DataType::Float64)
-        | (DataType::Float32, DataType::Float64)
-        | (
-            DataType::Int8 | DataType::UInt8 | DataType::Int16 | DataType::UInt16,
-            DataType::Float32 | DataType::Float64,
-        )
-        | (DataType::Int32 | DataType::UInt32, DataType::Float64)
-        | (DataType::Date32, DataType::Date64)
-        | (
-            DataType::Time32(TimeUnit::Second),
-            DataType::Time32(TimeUnit::Millisecond)
-            | DataType::Time64(TimeUnit::Microsecond | TimeUnit::Nanosecond),
-        )
-        | (
-            DataType::Time32(TimeUnit::Millisecond),
-            DataType::Time64(TimeUnit::Microsecond | TimeUnit::Nanosecond),
-        )
-        | (DataType::Time64(TimeUnit::Microsecond), DataType::Time64(TimeUnit::Nanosecond)) => true,
-        (DataType::Timestamp(out_unit, out_tz), DataType::Timestamp(key_unit, key_tz))
-            if out_tz == key_tz =>
-        {
-            matches!(
-                (out_unit, key_unit),
-                (
-                    TimeUnit::Second,
-                    TimeUnit::Millisecond | TimeUnit::Microsecond
-                ) | (TimeUnit::Millisecond, TimeUnit::Microsecond)
-            )
-        }
         (
             DataType::FixedSizeList(out_elem, out_len),
             DataType::FixedSizeList(key_elem, key_len),
