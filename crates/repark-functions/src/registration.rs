@@ -28,7 +28,6 @@ pub fn register_udf_families(ctx: &SessionContext) {
 #[must_use]
 pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![
-        Arc::new(crate::generator::GeneratorAliasMark),
         Arc::new(crate::decimal_precision::SparkNegateNullDecimal),
         Arc::new(crate::spark_result_types::SparkIntegerLiteral),
         Arc::new(crate::lambda_rebind::LambdaRebind),

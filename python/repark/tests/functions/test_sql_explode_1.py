@@ -303,7 +303,8 @@ def test_a_coerced_generator_argument_keeps_spark_names_and_aliases(
     measured: dict[str, dict[str, Any]], zone: str, ansi: str
 ) -> None:
     keys = [f"{name}|named" for name in NAMED if name.startswith("r1-")]
-    assert not _shape_misses(measured, zone, ansi, keys)
+    misses = _shape_misses(measured, zone, ansi, keys)
+    assert not misses, "\n".join(misses)
 
 
 @pytest.mark.parametrize("ansi", ANSI_MODES)
@@ -312,7 +313,8 @@ def test_a_map_explode_beside_a_col_sibling_answers_key_value(
     measured: dict[str, dict[str, Any]], zone: str, ansi: str
 ) -> None:
     keys = [f"{name}|named" for name in NAMED if name.startswith("r2-")]
-    assert not _shape_misses(measured, zone, ansi, keys)
+    misses = _shape_misses(measured, zone, ansi, keys)
+    assert not misses, "\n".join(misses)
 
 
 @pytest.mark.parametrize("ansi", ANSI_MODES)
@@ -322,7 +324,8 @@ def test_frame_operations_over_an_unaliased_f_expr_explode_answer_as_spark(
 ) -> None:
     keys = [key for key in _ORACLE["modes"][mode_key(zone, ansi)] if key.endswith("|frame")]
     assert len(keys) == 6
-    assert not _shape_misses(measured, zone, ansi, keys)
+    misses = _shape_misses(measured, zone, ansi, keys)
+    assert not misses, "\n".join(misses)
 
 
 @pytest.mark.parametrize("ansi", ANSI_MODES)

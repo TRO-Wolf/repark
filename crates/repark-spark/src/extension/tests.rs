@@ -50,6 +50,7 @@ fn analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_
     );
     assert_eq!(configured_names[position + 8], "spark_string_integral_cast");
     assert_eq!(configured_names[position + 9], "type_coercion");
+    assert_eq!(configured_names[0], "generator_alias_mark");
     let without_insertions: Vec<String> = configured_names
         .into_iter()
         .filter(|name| {
@@ -66,6 +67,7 @@ fn analyzer_configuration_seats_hof_preparation_and_float_stringify_before_type_
                 && name != "spark_decimal_float_widen"
                 && name != "spark_negate_null_decimal"
                 && name != "spark_timestamp_unit_widen"
+                && name != "generator_alias_mark"
         })
         .collect();
     assert_eq!(without_insertions, original_names);

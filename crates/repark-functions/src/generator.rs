@@ -232,6 +232,14 @@ impl AnalyzerRule for GeneratorAliasMark {
     }
 }
 
+#[must_use]
+pub fn with_alias_mark_first(
+    mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>>,
+) -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
+    rules.insert(0, Arc::new(GeneratorAliasMark));
+    rules
+}
+
 #[allow(clippy::missing_errors_doc)]
 pub fn mark_generator_aliases(plan: LogicalPlan) -> Result<LogicalPlan> {
     mark_plan(plan).data()

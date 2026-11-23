@@ -9,7 +9,7 @@ before `GeneratorRewrite` runs) and the `GeneratorRewrite` analyzer rule that
 expands a single generator call in a `Projection` into list `Unnest` plans on
 both doors. Outer guards widen non-nullable list element fields to nullable and
 build the one-NULL-element list with `ListArray::try_new`. `GeneratorAliasMark`
-(first analyzer rule; `mark_generator_aliases` before attribute-id stamping) turns
+(first Spark-door rule; `mark_generator_aliases` before attribute-id stamping) turns
 explicit aliases into `__repark_gen_alias`, so the rewrite names bare outputs by
 type and moves a one-output stamp's metadata; `is_bare_generator_expr` feeds the facade.
 
