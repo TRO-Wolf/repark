@@ -12,7 +12,8 @@ and targeted refusals survive the session error fold; the TRUNCATE probe pins
 ## Contents
 
 - `tests.rs` — `#[cfg(test)] mod tests;` in `../dialect.rs` (`dialect_execute_runs_the_spark_router`,
-  `dialect_surfaces_router_refusals`, and Delta 3 `spark_dialect_respells_minus_all_after_spark_normalizers_and_ddl_dml_writes`).
+  `dialect_surfaces_router_refusals`, `spark_dialect_respells_minus_all_after_spark_normalizers`,
+  and `spark_dialect_respells_minus_all_in_values_ctas_and_insert_by_name`).
 
 ## Pointers
 

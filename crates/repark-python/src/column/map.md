@@ -306,8 +306,8 @@ the Python facade's Column surface while DataFrame methods bind expressions to i
   A Python `int` that fits in Int32 is an Int32 literal (Spark `IntegerType`), so
   `col(int32) + 1` stays Int32.
 - `sql` analyzes standalone Spark expressions (`F.expr`, Spark grammar even on native frames:
-  `MINUS ALL` respells under Databricks after `canonicalize_verbatim`, as do `parse_canonical_predicate*`
-  in the frame dialect) and refuses collation/absent names via `refuse_sql_fragment`.
+  `MINUS ALL` respells under Databricks after `canonicalize_verbatim`, like `parse_canonical_predicate*`
+  in the frame dialect; `expr_tests.rs` pins both) and refuses collation/absent names.
 - Higher-order lambda variables resolve against the consuming DataFrame schema.
 - Nested higher-order functions refuse loudly, never building an invalid plan.
 - `concat` embeds the door-converged `repark_functions::string::concat_udf` (DOOR-CONVERGE-2):

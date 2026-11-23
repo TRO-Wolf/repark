@@ -530,8 +530,8 @@ fn fexpr_and_filter_respell_minus_all_after_spark_canonicalization() {
             "(SELECT count(*) FROM (SELECT 1e2BD AS a UNION ALL SELECT 1e2BD MINUS ALL SELECT 100BD AS a) x)",
             "(SELECT minus all FROM (SELECT 1 AS minus, 2 AS except) t)",
         ] {
-            let parsed = super::PyColumn::sql(py, fexpr_sql, Some(false));
-            assert!(parsed.is_ok(), "F.expr {fexpr_sql}: {parsed:?}");
+            let parsed = super::PyColumn::sql(fexpr_sql, false);
+            assert!(parsed.is_ok(), "F.expr {fexpr_sql}: {:?}", parsed.err());
         }
     });
 }

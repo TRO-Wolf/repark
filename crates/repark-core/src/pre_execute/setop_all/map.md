@@ -22,7 +22,7 @@ Tests for SQL-SETOP-ALL-MULTISET-1's multiset rewrite and `MINUS ALL` spelling (
   `lossless_round_trip_classifier_allows_exact_widenings_and_refuses_lossy_pairs`,
   `lossy_mixed_type_multiset_refuses_before_write_while_exact_widenings_answer`, and Delta 3 pins
   `ddl_dml_fallback_respells_values_and_parenthesized_insert_by_name` and
-  `dialect_owning_minus_all_receives_raw_sql_even_under_local_fs_guard`.
+  `dialect_owning_minus_all_receives_raw_sql`.
 
 ## Pointers
 

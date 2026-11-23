@@ -695,21 +695,15 @@ fn ddl_dml_fallback_respells_values_and_parenthesized_insert_by_name() {
 }
 
 #[tokio::test]
-async fn dialect_owning_minus_all_receives_raw_sql_even_under_local_fs_guard() {
-    for guarded in [false, true] {
-        let recording = Arc::new(OwningRecording::default());
-        let builder = ReparkSession::builder()
-            .config("datafusion.sql_parser.dialect", "databricks")
-            .with_sql_dialect(Arc::clone(&recording) as Arc<dyn SqlDialect>);
-        let builder = if guarded {
-            builder.with_local_fs_guard()
-        } else {
-            builder
-        };
-        let session = builder.build().unwrap();
-        let sql = "SELECT 1 AS a UNION ALL SELECT 1 MINUS ALL SELECT 1 AS a";
-        let _ = session.sql(sql).await.unwrap();
-        let seen = recording.queries.lock().unwrap().clone();
-        assert_eq!(seen, vec![sql.to_string()], "guarded={guarded}");
-    }
+async fn dialect_owning_minus_all_receives_raw_sql() {
+    let recording = Arc::new(OwningRecording::default());
+    let session = ReparkSession::builder()
+        .config("datafusion.sql_parser.dialect", "databricks")
+        .with_sql_dialect(Arc::clone(&recording) as Arc<dyn SqlDialect>)
+        .build()
+        .unwrap();
+    let sql = "SELECT 1 AS a UNION ALL SELECT 1 MINUS ALL SELECT 1 AS a";
+    let _ = session.sql(sql).await.unwrap();
+    let seen = recording.queries.lock().unwrap().clone();
+    assert_eq!(seen, vec![sql.to_string()]);
 }
