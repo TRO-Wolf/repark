@@ -2,6 +2,7 @@
  "classes": {
   "and_guard": "AND-GUARD-ANSI-1: the AND evaluates the guarded division on the dropped row",
   "cast_text": "direct gap: a string-to-integer cast raises Arrow's text in both modes",
+  "kept_cast": "the view body casts the text of a row the reader's kept-above filter drops in Spark",
   "main": "kept as main answers: the walker reads through the closed frame as it read the inlined one",
   "mod": "direct gap: 10 % 0 raises DIVIDE_BY_ZERO where Spark raises REMAINDER_BY_ZERO",
   "native_join": "door not at the seat: crossJoin's native exact join plans both sides under the live state",
@@ -49,12 +50,6 @@
    },
    "class": "and_guard"
   },
-  "filter/df/cast_null/off_on": {
-   "answer": {
-    "error": ""
-   },
-   "class": "cast_text"
-  },
   "filter/df/numcast/off_on": {
    "answer": {
     "error": ""
@@ -63,9 +58,9 @@
   },
   "filter/df/numcast/on_off": {
    "answer": {
-    "error": ""
+    "error": "CAST_INVALID_INPUT"
    },
-   "class": "cast_text"
+   "class": "kept_cast"
   },
   "filter/df/or_mixed/on_off": {
    "answer": {
@@ -175,12 +170,6 @@
    },
    "class": "and_guard"
   },
-  "filter/df/cast_null/off_on": {
-   "answer": {
-    "error": ""
-   },
-   "class": "cast_text"
-  },
   "filter/df/numcast/off_on": {
    "answer": {
     "error": ""
@@ -189,9 +178,9 @@
   },
   "filter/df/numcast/on_off": {
    "answer": {
-    "error": ""
+    "error": "CAST_INVALID_INPUT"
    },
-   "class": "cast_text"
+   "class": "kept_cast"
   },
   "filter/df/or_mixed/on_off": {
    "answer": {

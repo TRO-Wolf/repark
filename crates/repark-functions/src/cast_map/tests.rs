@@ -494,3 +494,37 @@ async fn an_in_list_keeps_arrow_parsing() {
         assert!(error.contains("Cannot cast string ' 2'"), "{error}");
     }
 }
+
+#[tokio::test]
+async fn a_projection_built_without_name_checks_keeps_its_names() {
+    use datafusion::common::DFSchema;
+    use datafusion::logical_expr::{LogicalPlan, Projection, cast, col};
+    use datafusion::optimizer::AnalyzerRule;
+    let ctx = integral_context(false);
+    let source = ctx
+        .sql("SELECT s FROM (VALUES (' 4')) AS t(s)")
+        .await
+        .unwrap()
+        .into_unoptimized_plan();
+    let exprs = vec![col("t.s"), cast(col("t.s"), DataType::Int32)];
+    let input = Arc::new(source);
+    let mut fields: Vec<_> = input
+        .schema()
+        .iter()
+        .map(|(qualifier, field)| (qualifier.cloned(), Arc::clone(field)))
+        .collect();
+    fields.push((None, Arc::new(Field::new("n", DataType::Int32, true))));
+    let schema = Arc::new(DFSchema::new_with_metadata(fields, Default::default()).unwrap());
+    let plan = LogicalPlan::Projection(Projection::try_new_with_schema(exprs, input, schema).unwrap());
+    let analyzed = SparkStringIntegralCast
+        .analyze(plan, ctx.state().config_options())
+        .unwrap();
+    let names: Vec<String> = analyzed
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    assert_eq!(names, ["s", "n"].map(String::from));
+    assert!(analyzed.display_indent().to_string().contains("__repark_string_to_int__"));
+}

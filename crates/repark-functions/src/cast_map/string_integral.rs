@@ -9,8 +9,8 @@ use datafusion::common::{DFSchema, Result, ScalarValue, exec_err, plan_err};
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{
-    ColumnarValue, Expr, ExprSchemable, LogicalPlan, ReturnFieldArgs, ScalarFunctionArgs,
-    ScalarUDF, ScalarUDFImpl, Signature, Volatility,
+    ColumnarValue, Expr, ExprSchemable, LogicalPlan, Projection, ReturnFieldArgs,
+    ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
 
@@ -79,7 +79,32 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
         let rewritten = expr.transform_down(|node| Ok(rewrite_node(node, &schema)))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
-    transformed.map_data(LogicalPlan::recompute_schema)
+    let changed = transformed.transformed;
+    transformed.map_data(|plan| refresh_schema(plan, changed))
+}
+
+fn refresh_schema(plan: LogicalPlan, changed: bool) -> Result<LogicalPlan> {
+    let LogicalPlan::Projection(projection) = plan else {
+        if changed {
+            return plan.recompute_schema();
+        }
+        return Ok(plan.clone().recompute_schema().unwrap_or(plan));
+    };
+    let input_schema = projection.input.schema();
+    let mut fields = Vec::with_capacity(projection.expr.len());
+    for ((qualifier, field), expr) in projection.schema.iter().zip(&projection.expr) {
+        let nullable = field.is_nullable() || expr.nullable(input_schema)?;
+        fields.push((
+            qualifier.cloned(),
+            Arc::new(field.as_ref().clone().with_nullable(nullable)),
+        ));
+    }
+    let schema = DFSchema::new_with_metadata(fields, projection.schema.metadata().clone())?;
+    Ok(LogicalPlan::Projection(Projection::try_new_with_schema(
+        projection.expr,
+        projection.input,
+        Arc::new(schema),
+    )?))
 }
 
 fn is_arrow_cast_operand(expr: &Expr) -> bool {

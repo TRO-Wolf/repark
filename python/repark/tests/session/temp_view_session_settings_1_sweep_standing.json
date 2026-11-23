@@ -51,38 +51,6 @@
    "answer": "",
    "class": "frame"
   },
-  "sweep/ansi/str_cast_where/off>on/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_cast_where/off>on/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_cast_where/on>off/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_cast_where/on>off/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_eq_int/off>on/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_eq_int/off>on/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_eq_int/on>off/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_eq_int/on>off/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
   "sweep/ansi/str_plus/off>on/read_off": {
    "answer": "",
    "class": "frame"
@@ -96,22 +64,6 @@
    "class": "frame"
   },
   "sweep/ansi/str_plus/on>off/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/two_levels_ansi/off>on/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/two_levels_ansi/off>on/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/two_levels_ansi/on>off/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/two_levels_ansi/on>off/read_on": {
    "answer": "",
    "class": "frame"
   },
@@ -197,38 +149,6 @@
    "answer": "",
    "class": "frame"
   },
-  "sweep/ansi/str_cast_where/off>on/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_cast_where/off>on/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_cast_where/on>off/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_cast_where/on>off/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_eq_int/off>on/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_eq_int/off>on/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_eq_int/on>off/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/str_eq_int/on>off/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
   "sweep/ansi/str_plus/off>on/read_off": {
    "answer": "",
    "class": "frame"
@@ -242,22 +162,6 @@
    "class": "frame"
   },
   "sweep/ansi/str_plus/on>off/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/two_levels_ansi/off>on/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/two_levels_ansi/off>on/read_on": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/two_levels_ansi/on>off/read_off": {
-   "answer": "",
-   "class": "frame"
-  },
-  "sweep/ansi/two_levels_ansi/on>off/read_on": {
    "answer": "",
    "class": "frame"
   },
