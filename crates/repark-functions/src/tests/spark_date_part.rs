@@ -726,7 +726,11 @@ async fn a1_interval_inputs_follow_spark_semantics() {
             .value(0),
         3
     );
+}
 
+#[tokio::test]
+async fn a1_interval_arrow_unit_families_follow_spark_semantics() {
+    let ny_ansi = spark_context(NEW_YORK, true);
     let iv_schema = Arc::new(Schema::new(vec![
         Field::new(
             "ym",
